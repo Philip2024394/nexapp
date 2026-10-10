@@ -141,6 +141,50 @@ export default async function Page({ searchParams }: PageProps) {
           </div>
         )}
 
+        {/* NEX Community Watch · pinned system entry (place-based feature
+            shortcut, not a fabricated account or group chat). Routes to
+            /nex-native/community which decides between zone-select and feed
+            based on membership state. 2026-10-11 */}
+        <section className="mb-6" aria-labelledby="nex-contacts-system-pinned">
+          <h2
+            id="nex-contacts-system-pinned"
+            className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500"
+          >
+            NEX
+          </h2>
+          <ul className="grid gap-2">
+            <li
+              data-nex-contacts-system-entry="community-watch"
+              className="flex items-center justify-between gap-3 rounded border border-cyan-300 bg-cyan-50 px-3 py-3"
+            >
+              <Link
+                href="/nex-native/community"
+                className="flex min-w-0 flex-1 items-center gap-3 no-underline"
+              >
+                <span
+                  aria-hidden
+                  className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-cyan-100 text-cyan-700"
+                >
+                  {/* Watchtower / community glyph */}
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M12 2 L12 22" />
+                    <path d="M4 8 L20 8 L18 22 L6 22 Z" />
+                    <circle cx="12" cy="13" r="2" />
+                  </svg>
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-semibold text-neutral-900">
+                    NEX Community Watch
+                  </div>
+                  <div className="truncate text-xs text-neutral-600">
+                    Local outages, hazards and community notices
+                  </div>
+                </div>
+              </Link>
+            </li>
+          </ul>
+        </section>
+
         <section className="mb-6">
           <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500">
             Personal friends ({friends.length})
