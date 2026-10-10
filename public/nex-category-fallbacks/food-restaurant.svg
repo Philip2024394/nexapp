@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Representative illustration of a restaurant">
+  <desc>NEX in-house SVG · licence: NEX internal (unlimited use within NEX products) · author: NEX design system · date: 2026-10-09</desc>
+  <rect width="400" height="300" fill="#020914"/>
+  <circle cx="200" cy="155" r="78" fill="none" stroke="#FF7200" stroke-width="3"/>
+  <circle cx="200" cy="155" r="62" fill="none" stroke="#00AFFF" stroke-width="1.5" opacity="0.5"/>
+  <g stroke="#FF7200" stroke-width="4" stroke-linecap="round" fill="none">
+    <line x1="140" y1="100" x2="140" y2="210"/>
+    <line x1="132" y1="100" x2="148" y2="100"/>
+    <line x1="140" y1="130" x2="155" y2="130"/>
+  </g>
+  <g stroke="#FF7200" stroke-width="4" stroke-linecap="round" fill="none">
+    <line x1="260" y1="100" x2="260" y2="210"/>
+    <path d="M252 100 L252 140 Q252 148 260 148 Q268 148 268 140 L268 100" stroke-width="3"/>
+  </g>
+  <line x1="130" y1="235" x2="270" y2="235" stroke="#00AFFF" stroke-width="2" opacity="0.6"/>
+</svg>

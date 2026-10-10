@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Representative illustration of a cafe">
+  <desc>NEX in-house SVG · licence: NEX internal (unlimited use within NEX products) · author: NEX design system · date: 2026-10-09</desc>
+  <rect width="400" height="300" fill="#020914"/>
+  <path d="M140 110 L140 200 Q140 230 170 230 L240 230 Q270 230 270 200 L270 110 Z"
+        fill="none" stroke="#FF7200" stroke-width="3"/>
+  <path d="M270 130 Q300 130 300 160 Q300 185 270 185"
+        fill="none" stroke="#FF7200" stroke-width="3"/>
+  <line x1="140" y1="115" x2="270" y2="115" stroke="#00AFFF" stroke-width="2"/>
+  <g stroke="#00AFFF" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.75">
+    <path d="M170 95 Q165 85 170 75 Q175 65 170 55"/>
+    <path d="M200 95 Q195 85 200 75 Q205 65 200 55"/>
+    <path d="M230 95 Q225 85 230 75 Q235 65 230 55"/>
+  </g>
+  <line x1="130" y1="245" x2="280" y2="245" stroke="#FF7200" stroke-width="2" opacity="0.6"/>
+</svg>

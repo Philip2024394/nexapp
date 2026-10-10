@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Representative illustration of a bakery">
+  <desc>NEX in-house SVG · licence: NEX internal (unlimited use within NEX products) · author: NEX design system · date: 2026-10-09</desc>
+  <rect width="400" height="300" fill="#020914"/>
+  <ellipse cx="200" cy="175" rx="95" ry="55" fill="none" stroke="#FF7200" stroke-width="3"/>
+  <g stroke="#FF7200" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.75">
+    <path d="M135 155 Q145 145 150 155"/>
+    <path d="M160 150 Q170 140 175 150"/>
+    <path d="M185 145 Q195 135 200 145"/>
+    <path d="M215 145 Q225 135 230 145"/>
+    <path d="M240 150 Q250 140 255 150"/>
+    <path d="M260 155 Q270 145 275 155"/>
+  </g>
+  <g stroke="#00AFFF" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.65">
+    <path d="M160 115 Q165 100 170 115"/>
+    <path d="M190 105 Q195 90 200 105"/>
+    <path d="M220 115 Q225 100 230 115"/>
+  </g>
+  <line x1="115" y1="245" x2="285" y2="245" stroke="#00AFFF" stroke-width="2" opacity="0.6"/>
+</svg>

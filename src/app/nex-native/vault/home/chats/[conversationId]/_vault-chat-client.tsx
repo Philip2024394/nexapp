@@ -1,0 +1,1118 @@
+"use client";
+
+// src/app/nex-native/vault/home/chats/[conversationId]/_vault-chat-client.tsx
+//
+// Vault Phase B · Commit B.4 · client-side Vault chat surface.
+//
+// Three visual states:
+//   · LOCKED   — Vault VMK is not in memory on this tab · plaintext
+//                never appears · composer unavailable · unlock
+//                control present.
+//   · LOADING  — Vault just unlocked · we are provisioning or loading
+//                K_c, decrypting server-fetched ciphertext rows,
+//                caching under K_c in the B.3 IDB.
+//   · UNLOCKED — messages render as plaintext in memory · composer
+//                sends via the sealed Bridge 76 encrypted send flow.
+//
+// Doctrine
+//   · The canonical conversation is nex_peer_conversation.id · we
+//     never create a second conversation or a second message history.
+//   · Server stays plaintext-blind · Curve25519 wire layer (Bridge
+//     76) is unchanged · Vault adds a client-side K_c layer that
+//     wraps the at-rest IDB cache so a stolen device with Vault
+//     locked cannot read Vault history.
+//   · Theme chrome is sourced from the active NEX Standard
+//     Experience · we do NOT hardcode Ocean / Joker / security
+//     colours. The locked shell + composer rim use neutral tokens
+//     from the shared Vault palette (same tokens the sealed Vault
+//     home uses).
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { ChevronLeft, Lock } from "lucide-react";
+import { useT } from "@/lib/nex/i18n/I18nProvider";
+import { useVaultSession } from "@/lib/nex-native/vault/client/vault-session";
+import {
+  cacheEncryptedMessage,
+  ensureAllConversationKeysLoaded,
+  hasConversationKeyInMemory,
+  provisionConversationKey,
+  readCachedMessages,
+  clearInMemoryConversationKeys,
+} from "@/lib/nex-native/vault/client/conversation-key";
+import { unlockVault } from "@/lib/nex-native/vault/client/unlock-orchestrator";
+import { ensureDeviceKey } from "@/lib/nex-native/crypto/device-key";
+import {
+  decryptEncryptedRows,
+  type DecryptResult,
+  type EncryptedRowInput,
+} from "@/lib/nex-native/crypto/encrypted-receive";
+import { sendEncryptedPeerMessage } from "@/lib/nex-native/crypto/encrypted-send";
+import { preserveAttachmentsForVaultedConversation } from "@/lib/nex-native/vault/client/attachment-preservation";
+import { lockVaultEverywhere } from "@/lib/nex-native/vault/client/lock-sweep";
+import { uploadEncryptedAttachment } from "@/lib/nex-native/crypto/encrypted-attachment-upload";
+// R1 · universal live-messaging consumer · same transport as normal
+// chat. Opened ONLY while Vault is unlocked AND the Vault chat has
+// finished its initial boot. On arrival, fetch new rows via the sealed
+// /api/nex-native/peer-message/since endpoint, decrypt via the sealed
+// Bridge 76 decryptEncryptedRows, cache under K_c via the sealed B.3
+// cacheEncryptedMessage, append to React state. No new transport, no
+// new encryption, no new cache.
+import { openMessageEventsChannel } from "@/lib/nex-native/realtime/message-events";
+
+// ─── types from server ──────────────────────────────────────────────
+
+export interface InitialMessage {
+  id: string;
+  sender_account_id: string;
+  sent_at: string;
+  read_at: string | null;
+  encrypted: boolean;
+  body: string;
+  ciphertext_b64: string | null;
+  nonce_b64: string | null;
+  sender_public_key: string | null;
+  sender_device_id: string | null;
+  recipient_device_id: string | null;
+  message_group_id: string | null;
+  reply_to_id: string | null;
+  attachment_url: string | null;
+  attachment_type: string | null;
+  deleted_for_everyone: boolean;
+}
+
+interface Props {
+  viewerAccountId: string;
+  peerAccountId: string;
+  peerDisplayName: string;
+  conversationId: string;
+  initialMessages: InitialMessage[];
+}
+
+// ─── palette tokens ────────────────────────────────────────────────
+//
+// Master-pass 2026-10-07 · the local Vault-chat palette was a drift
+// from the sealed Vault interior palette · we now import the one
+// source of truth from `../../_palette`. This brings the chat
+// surface into NEX visual alignment (navy base + cyan protection
+// badge + orange brand accent) · bubble tokens are declared inline
+// here because they are chat-specific and derived from the shared
+// tokens.
+import { NEX as NEX_PALETTE } from "../../_palette";
+
+const NEX = {
+  ...NEX_PALETTE,
+  // Chat-specific bubble tokens · outgoing uses the brand orange
+  // (identity continuity) · incoming uses a translucent light
+  // overlay that reads against the navy base.
+  bubbleOut: "rgba(255, 114, 0, 0.22)",
+  bubbleIn: "rgba(125, 155, 192, 0.12)",
+};
+
+// ─── decrypted-message type (what we render) ────────────────────────
+
+interface DisplayMessage {
+  id: string;
+  sender_account_id: string;
+  sent_at: string;
+  text: string;
+  outgoing: boolean;
+}
+
+// ---------------------------------------------------------------------------
+
+export function VaultChatClient(props: Props) {
+  const t = useT();
+  const vault = useVaultSession();
+  const router = useRouter();
+
+  const [phase, setPhase] = useState<"locked" | "loading" | "ready" | "error">(
+    vault.unlocked ? "loading" : "locked",
+  );
+  const [messages, setMessages] = useState<DisplayMessage[]>([]);
+  const [errorText, setErrorText] = useState<string | null>(null);
+  const [draft, setDraft] = useState<string>("");
+  const [sending, setSending] = useState(false);
+  const [pendingAttachment, setPendingAttachment] = useState<
+    import("@/lib/nex-native/crypto/encrypted-attachment-upload").UploadedEncryptedAttachment | null
+  >(null);
+  const [unlockBusy, setUnlockBusy] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [unlockError, setUnlockError] = useState<string | null>(null);
+  const bootRef = useRef(false);
+
+  // ── bootstrap on unlock ────────────────────────────────────────────
+  const boot = useCallback(async () => {
+    if (bootRef.current) return;
+    bootRef.current = true;
+    setPhase("loading");
+    setErrorText(null);
+    try {
+      const dk = await ensureDeviceKey();
+      const deviceId = dk.deviceId;
+
+      // Make sure every active envelope on this device is unwrapped
+      // into memory · idempotent · fetches via B.2 /envelope/list.
+      await ensureAllConversationKeysLoaded({ targetDeviceId: deviceId });
+
+      // First-ever open of this vaulted conversation on this device:
+      // no envelope exists yet · provision one. The partial unique
+      // index on (account, conversation, device, generation) collapses
+      // duplicate_active_envelope to a no-op so repeat calls are safe.
+      if (!hasConversationKeyInMemory(props.conversationId, 1)) {
+        const prov = await provisionConversationKey({
+          conversationId: props.conversationId,
+          targetDeviceId: deviceId,
+        });
+        if (!prov.ok) {
+          if (prov.error === "duplicate_active_envelope") {
+            // Another tab beat us to it · reload envelope list.
+            await ensureAllConversationKeysLoaded({ targetDeviceId: deviceId });
+          } else if (prov.error === "vault_locked") {
+            setPhase("locked");
+            return;
+          } else {
+            setErrorText(
+              t("vault.chat.setupError.conversationFailedTemplate").replace(
+                "{error}",
+                String(prov.error),
+              ),
+            );
+            setPhase("error");
+            return;
+          }
+        }
+      }
+
+      // Decrypt server rows via the sealed Bridge 76 path · for each
+      // encrypted row addressed to this device, run getSharedSecret +
+      // openWithSharedSecret · cache the plaintext under K_c in B.3
+      // IDB for at-rest protection · then surface to the UI.
+      const encryptedRows: EncryptedRowInput[] = [];
+      for (const m of props.initialMessages) {
+        if (
+          m.encrypted &&
+          m.ciphertext_b64 &&
+          m.nonce_b64 &&
+          m.sender_public_key &&
+          m.sender_device_id &&
+          m.recipient_device_id
+        ) {
+          encryptedRows.push({
+            id: m.id,
+            senderAccountId: m.sender_account_id,
+            senderDeviceId: m.sender_device_id,
+            senderPublicKey: m.sender_public_key,
+            recipientDeviceId: m.recipient_device_id,
+            ciphertextB64: m.ciphertext_b64,
+            nonceB64: m.nonce_b64,
+          });
+        }
+      }
+
+      let decrypted: DecryptResult[] = [];
+      if (encryptedRows.length > 0) {
+        decrypted = await decryptEncryptedRows(encryptedRows);
+      }
+      const decryptMap = new Map<string, string>();
+      for (const d of decrypted) {
+        if (d.ok) decryptMap.set(d.id, d.plaintext);
+      }
+
+      // Cache decrypted plaintext under K_c in B.3 IDB (idempotent at
+      // row-level via IDB put). The ciphertext we persist here is K_c-
+      // wrapped · B.3 keeps it unreadable without a live VMK.
+      for (const [messageId, plaintext] of decryptMap) {
+        await cacheEncryptedMessage({
+          conversationId: props.conversationId,
+          messageId,
+          plaintext: new TextEncoder().encode(plaintext),
+        }).catch(() => undefined);
+      }
+
+      // Also pull any older messages that are already in the B.3 cache
+      // (e.g. from a previous session before server purge). Merge with
+      // the fresh server rows · dedupe by message id.
+      const cachedResp = await readCachedMessages({
+        conversationId: props.conversationId,
+      });
+
+      const idToDisplay = new Map<string, DisplayMessage>();
+      // Prefer freshly decrypted text when both sources agree.
+      if (cachedResp.ok) {
+        for (const c of cachedResp.messages) {
+          idToDisplay.set(c.messageId, {
+            id: c.messageId,
+            // We lost original sender in IDB · reconstruct from server
+            // rows where available.
+            sender_account_id: "",
+            sent_at: c.created_at,
+            text: new TextDecoder().decode(c.plaintext),
+            outgoing: false,
+          });
+        }
+      }
+      // Overlay server-known plaintext + metadata.
+      for (const m of props.initialMessages) {
+        if (m.deleted_for_everyone) {
+          idToDisplay.delete(m.id);
+          continue;
+        }
+        const text =
+          decryptMap.get(m.id) ??
+          (!m.encrypted ? m.body : idToDisplay.get(m.id)?.text ?? "");
+        if (!text) continue; // can't decrypt (wrong device, tamper, etc.)
+        idToDisplay.set(m.id, {
+          id: m.id,
+          sender_account_id: m.sender_account_id,
+          sent_at: m.sent_at,
+          text,
+          outgoing: m.sender_account_id === props.viewerAccountId,
+        });
+      }
+
+      const ordered = Array.from(idToDisplay.values()).sort((a, b) =>
+        a.sent_at < b.sent_at ? -1 : a.sent_at > b.sent_at ? 1 : 0,
+      );
+      setMessages(ordered);
+      setPhase("ready");
+
+      // Policy X (B.5) · future-attachment auto-preservation.
+      // Scan every attachment-bearing message in the server-fetched
+      // history and ask the sealed B.2 /attachment/preserve route to
+      // persist it into Vault. The route is idempotent per source_
+      // message_id so repeat runs skip already-preserved rows cheaply.
+      // Fires fire-and-forget · failures do not break the chat UI
+      // (the preservation batch returns an honest per-row result but
+      // we don't block render on it · the brief authorises this as
+      // long as we don't claim total success when some failed · the
+      // call-site is deliberately non-fatal).
+      const candidates = props.initialMessages
+        .filter((m) => !!m.attachment_url && !m.deleted_for_everyone)
+        .map((m) => ({
+          conversationId: props.conversationId,
+          messageId: m.id,
+        }));
+      if (candidates.length > 0) {
+        void preserveAttachmentsForVaultedConversation(candidates);
+      }
+    } catch (err) {
+      setErrorText(err instanceof Error ? err.message : t("vault.chat.setupError.loadFailed"));
+      setPhase("error");
+    }
+  }, [props.conversationId, props.initialMessages, props.viewerAccountId]);
+
+  // ── react to lock/unlock transitions ───────────────────────────────
+  useEffect(() => {
+    if (vault.unlocked && phase === "locked") {
+      bootRef.current = false;
+      void boot();
+    } else if (!vault.unlocked) {
+      // Discard decrypted state immediately · founder-sealed rule.
+      // B.6A · also discard any in-progress attachment preparation ·
+      // the content key the sealed uploadEncryptedAttachment held in
+      // memory becomes unusable once Vault locks because our handler
+      // no longer runs the send path.
+      bootRef.current = false;
+      setMessages([]);
+      setDraft("");
+      setPendingAttachment(null);
+      setPhase("locked");
+      // Zeroise any K_c that may still be in memory from before lock.
+      clearInMemoryConversationKeys();
+    }
+  }, [vault.unlocked, phase, boot]);
+
+  // First-mount: if already unlocked, boot.
+  useEffect(() => {
+    if (vault.unlocked && phase === "locked") {
+      bootRef.current = false;
+      void boot();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── unlock submit ──────────────────────────────────────────────────
+  const handleUnlock = useCallback(
+    async (ev: React.FormEvent) => {
+      ev.preventDefault();
+      if (unlockBusy) return;
+      setUnlockBusy(true);
+      setUnlockError(null);
+      try {
+        const dk = await ensureDeviceKey();
+        const r = await unlockVault({
+          mode: "pin",
+          secret: pinInput,
+          deviceId: dk.deviceId,
+        });
+        if (!r.ok) {
+          setUnlockError(r.error ?? t("vault.chat.ready.errorFallback"));
+          return;
+        }
+        setPinInput("");
+      } catch (err) {
+        setUnlockError(err instanceof Error ? err.message : t("vault.chat.ready.errorFallback"));
+      } finally {
+        setUnlockBusy(false);
+      }
+    },
+    [pinInput, unlockBusy],
+  );
+
+  // ── send ──────────────────────────────────────────────────────────
+  const handleSend = useCallback(
+    async (ev?: React.FormEvent) => {
+      ev?.preventDefault();
+      if (sending) return;
+      if (!vault.unlocked || phase !== "ready") return;
+      const text = draft.trim();
+      if (!text && !pendingAttachment) return;
+      setSending(true);
+      try {
+        const outcome = await sendEncryptedPeerMessage({
+          conversationId: props.conversationId,
+          peerAccountId: props.peerAccountId,
+          selfAccountId: props.viewerAccountId,
+          plaintext: text,
+          encryptedAttachment: pendingAttachment ?? null,
+        });
+        if (!outcome.ok) {
+          setErrorText(
+            t("vault.chat.sendError.failedTemplate").replace(
+              "{error}",
+              String(outcome.error),
+            ),
+          );
+          return;
+        }
+        // Optimistic local append · cache under K_c too so lock+reload
+        // continues to show it.
+        const insertedId = outcome.insertedIds[0] ?? crypto.randomUUID();
+        const nowIso = new Date().toISOString();
+        const bubbleText =
+          text ||
+          (pendingAttachment ? attachmentLabelFor(pendingAttachment.kind, t) : "");
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: insertedId,
+            sender_account_id: props.viewerAccountId,
+            sent_at: nowIso,
+            text: bubbleText,
+            outgoing: true,
+          },
+        ]);
+        await cacheEncryptedMessage({
+          conversationId: props.conversationId,
+          messageId: insertedId,
+          plaintext: new TextEncoder().encode(bubbleText),
+        }).catch(() => undefined);
+        setDraft("");
+        setPendingAttachment(null);
+      } catch (err) {
+        setErrorText(err instanceof Error ? err.message : t("vault.chat.sendError.generic"));
+      } finally {
+        setSending(false);
+      }
+    },
+    [draft, sending, vault.unlocked, phase, props, pendingAttachment],
+  );
+
+  // ── attachment upload (B.6A) ──────────────────────────────────────
+  // Reuses the sealed canonical uploadEncryptedAttachment · the plain
+  // bytes never leave this browser · the ciphertext POSTs to the
+  // sealed /api/nex-native/attachment/encrypted route · the content
+  // key stays in memory and is wrapped per recipient device at send
+  // time inside sendEncryptedPeerMessage.
+  const handleAttachmentPick = useCallback(
+    async (ev: React.ChangeEvent<HTMLInputElement>) => {
+      const file = ev.target.files?.[0];
+      ev.target.value = ""; // reset the input so re-picking the same file re-fires
+      if (!file) return;
+      if (!vault.unlocked || phase !== "ready") return;
+      setErrorText(null);
+      try {
+        const uploaded = await uploadEncryptedAttachment({ file });
+        setPendingAttachment(uploaded);
+      } catch (err) {
+        setErrorText(
+          err instanceof Error ? err.message : t("vault.chat.attachmentError"),
+        );
+      }
+    },
+    [vault.unlocked, phase],
+  );
+
+  // ── R1 · universal live-messaging consumer ─────────────────────────
+  // Keep a ref to the current rendered messages so catchUpSince can
+  // read the correct watermark + dedup against the live state. Using
+  // a ref (not a dep) means catchUpSince is stable across re-renders
+  // while still seeing the most-recent sent_at + id set at fetch
+  // time. This is important because boot() replaces the messages
+  // array (on lock → unlock the UI resets to initialMessages, which
+  // is the correct behaviour) · any stale ref-based watermark from a
+  // previous arrival append would then skip rows that have since been
+  // dropped from state.
+  const messagesRef = useRef<DisplayMessage[]>([]);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  // Pure fetch-since + decrypt + append path. Shared by (a) arrival
+  // handler, (b) onSubscribed reconnect, (c) visibilitychange visible.
+  const catchUpSince = useCallback(async () => {
+    if (!vault.unlocked) return;
+    if (phase !== "ready") return;
+    try {
+      // Watermark = max sent_at across what is CURRENTLY rendered.
+      // After a lock → unlock cycle, boot() resets messages back to
+      // initialMessages (the plaintext-blind server render for this
+      // page load), so the watermark naturally drops back to the
+      // pre-lock max · any messages that arrived while locked are
+      // then correctly treated as newer and fetched.
+      let sinceIso = "1970-01-01T00:00:00.000Z";
+      for (const m of messagesRef.current) {
+        if (m.sent_at > sinceIso) sinceIso = m.sent_at;
+      }
+      // Dedup set = ids already in state. Fan-out siblings sharing a
+      // message_group_id all carry different `id`s · dedup by id
+      // against rendered state means we don't double-render our own
+      // row and we don't lose siblings addressed to other devices
+      // (those are filtered during decrypt by `if (!text) continue`).
+      const seenIds = new Set<string>();
+      for (const m of messagesRef.current) seenIds.add(m.id);
+
+      const url = `/api/nex-native/peer-message/since?conversation_id=${encodeURIComponent(
+        props.conversationId,
+      )}&since_iso=${encodeURIComponent(sinceIso)}&limit=50`;
+      const resp = await fetch(url, { credentials: "same-origin" });
+      if (!resp.ok) return;
+      const json = (await resp.json()) as {
+        ok: boolean;
+        messages?: InitialMessage[];
+      };
+      if (!json.ok || !json.messages || json.messages.length === 0) return;
+
+      const freshRows = json.messages.filter((m) => !seenIds.has(m.id));
+      if (freshRows.length === 0) return;
+
+      // Decrypt via the sealed Bridge 76 path · identical to boot().
+      const encryptedRows: EncryptedRowInput[] = [];
+      for (const m of freshRows) {
+        if (
+          m.encrypted &&
+          m.ciphertext_b64 &&
+          m.nonce_b64 &&
+          m.sender_public_key &&
+          m.sender_device_id &&
+          m.recipient_device_id
+        ) {
+          encryptedRows.push({
+            id: m.id,
+            senderAccountId: m.sender_account_id,
+            senderDeviceId: m.sender_device_id,
+            senderPublicKey: m.sender_public_key,
+            recipientDeviceId: m.recipient_device_id,
+            ciphertextB64: m.ciphertext_b64,
+            nonceB64: m.nonce_b64,
+          });
+        }
+      }
+      let decrypted: DecryptResult[] = [];
+      if (encryptedRows.length > 0) {
+        decrypted = await decryptEncryptedRows(encryptedRows);
+      }
+      const decryptMap = new Map<string, string>();
+      for (const d of decrypted) {
+        if (d.ok) decryptMap.set(d.id, d.plaintext);
+      }
+
+      // Cache decrypted plaintext under K_c in B.3 IDB (identical to
+      // boot) · idempotent at row level.
+      for (const [messageId, plaintext] of decryptMap) {
+        await cacheEncryptedMessage({
+          conversationId: props.conversationId,
+          messageId,
+          plaintext: new TextEncoder().encode(plaintext),
+        }).catch(() => undefined);
+      }
+
+      // Build new DisplayMessage rows and append to state. The next
+      // trigger's watermark is derived from the final messages array
+      // via messagesRef (synced in a useEffect above), so there's no
+      // explicit watermark bookkeeping to do here.
+      const appended: DisplayMessage[] = [];
+      for (const m of freshRows) {
+        if (m.deleted_for_everyone) continue;
+        const text =
+          decryptMap.get(m.id) ?? (!m.encrypted ? m.body : "");
+        if (!text) continue;
+        appended.push({
+          id: m.id,
+          sender_account_id: m.sender_account_id,
+          sent_at: m.sent_at,
+          text,
+          outgoing: m.sender_account_id === props.viewerAccountId,
+        });
+      }
+      if (appended.length === 0) return;
+
+      setMessages((prev) => {
+        // One final guard against racing double-renders · never
+        // insert the same id twice.
+        const have = new Set(prev.map((p) => p.id));
+        const merged = [...prev];
+        for (const row of appended) {
+          if (!have.has(row.id)) merged.push(row);
+        }
+        merged.sort((a, b) =>
+          a.sent_at < b.sent_at ? -1 : a.sent_at > b.sent_at ? 1 : 0,
+        );
+        return merged;
+      });
+    } catch {
+      /* reconciliation is best-effort · next trigger will retry */
+    }
+  }, [
+    props.conversationId,
+    props.viewerAccountId,
+    vault.unlocked,
+    phase,
+  ]);
+
+  // Subscription lifecycle · opens ONLY when unlocked AND ready. On
+  // lock, the cleanup closes the channel + the sealed B.6A lock
+  // transition useEffect clears decrypted state. A locked Vault never
+  // subscribes, never fetches, never decrypts.
+  useEffect(() => {
+    if (!vault.unlocked) return;
+    if (phase !== "ready") return;
+
+    const channel = openMessageEventsChannel({
+      conversationId: props.conversationId,
+      selfAccountId: props.viewerAccountId,
+      onPeerMessageArrival: () => {
+        void catchUpSince();
+      },
+      // On every (re)subscribe · including the first mount SUBSCRIBED
+      // transition · run one catch-up fetch. This handles reconnects
+      // after a brief WebSocket drop without any polling.
+      onSubscribed: () => {
+        void catchUpSince();
+      },
+    });
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void catchUpSince();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      void channel.close();
+    };
+  }, [
+    vault.unlocked,
+    phase,
+    props.conversationId,
+    props.viewerAccountId,
+    catchUpSince,
+  ]);
+
+  // ── views ──────────────────────────────────────────────────────────
+
+  const header = useMemo(
+    () => (
+      <header
+        data-nex-vault-chat-header
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 10,
+          padding: "12px 14px",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          background: "rgba(6, 4, 10, 0.78)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          borderBottom: `1px solid ${NEX.glassBorder}`,
+          color: NEX.textPrimary,
+          fontFamily:
+            "system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif",
+        }}
+      >
+        <Link
+          href="/nex-native/vault/home/chats"
+          aria-label={t("vault.chat.header.backLabel")}
+          data-nex-vault-chat-back
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 36,
+            height: 36,
+            borderRadius: 999,
+            background: "rgba(255,255,255,0.06)",
+            color: NEX.textPrimary,
+            textDecoration: "none",
+          }}
+        >
+          <ChevronLeft size={18} strokeWidth={1.6} aria-hidden />
+        </Link>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 14,
+              fontWeight: 600,
+              color: NEX.textPrimary,
+            }}
+          >
+            <span data-nex-vault-chat-peer-name>{props.peerDisplayName}</span>
+            <span
+              aria-hidden
+              style={{
+                fontSize: 10,
+                letterSpacing: "0.18em",
+                color: NEX.secure,
+                border: `1px solid ${NEX.secureStrong}`,
+                background: NEX.secureSoft,
+                padding: "2px 6px",
+                borderRadius: 999,
+                marginLeft: 4,
+              }}
+            >
+              {t("vault.chat.header.vaultBadge")}
+            </span>
+          </div>
+          <div style={{ fontSize: 11, color: NEX.textMuted }}>
+            {vault.unlocked
+              ? t("vault.chat.header.subtitleProtected")
+              : t("vault.chat.header.subtitleLocked")}
+          </div>
+        </div>
+        {vault.unlocked ? (
+          <button
+            type="button"
+            data-nex-vault-chat-lock
+            onClick={() => {
+              // B.6A · explicit lock also broadcasts to peer tabs so
+              // every open Vault surface on this origin locks
+              // atomically. The sealed clearVmk + K_c zeroise still
+              // fires locally first · the broadcast is a one-way
+              // signal with no key material.
+              lockVaultEverywhere();
+            }}
+            aria-label={t("vault.chat.header.lockBtn")}
+            style={{
+              background: NEX.secureSoft,
+              border: `1px solid ${NEX.secureStrong}`,
+              color: NEX.secure,
+              borderRadius: 999,
+              padding: "6px 12px",
+              fontSize: 11,
+              fontWeight: 600,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            <Lock size={12} strokeWidth={1.8} /> {t("vault.chat.header.lockBtn")}
+          </button>
+        ) : null}
+      </header>
+    ),
+    [props.peerDisplayName, vault.unlocked],
+  );
+
+  if (phase === "locked") {
+    return (
+      <div
+        data-nex-vault-chat
+        data-nex-vault-chat-state="locked"
+        style={{
+          minHeight: "100dvh",
+          background: NEX.bg,
+          backgroundImage: NEX.bgGradient,
+          color: NEX.textPrimary,
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        {header}
+        <main
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+            textAlign: "center",
+          }}
+        >
+          <div
+            aria-hidden
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: 999,
+              background: NEX.secureSoft,
+              color: NEX.secure,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: 16,
+              border: `1px solid ${NEX.secureStrong}`,
+              boxShadow: `0 0 24px rgba(0, 175, 255, 0.18)`,
+            }}
+          >
+            <Lock size={28} strokeWidth={1.6} />
+          </div>
+          <h1
+            style={{
+              fontSize: 18,
+              fontWeight: 600,
+              margin: 0,
+              color: NEX.textPrimary,
+            }}
+          >
+            {t("vault.chat.locked.title")}
+          </h1>
+          <p
+            style={{
+              marginTop: 8,
+              fontSize: 13,
+              color: NEX.textSecondary,
+              maxWidth: 360,
+            }}
+          >
+            {t("vault.chat.locked.body")}
+          </p>
+
+          <form
+            onSubmit={handleUnlock}
+            data-nex-vault-chat-unlock-form
+            style={{
+              marginTop: 24,
+              width: "100%",
+              maxWidth: 320,
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+            }}
+          >
+            <input
+              type="password"
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder={t("vault.chat.locked.pinPlaceholder")}
+              value={pinInput}
+              onChange={(e) => setPinInput(e.target.value)}
+              data-nex-vault-chat-unlock-input
+              style={{
+                padding: "12px 14px",
+                fontSize: 14,
+                borderRadius: 10,
+                border: `1px solid ${NEX.glassBorder}`,
+                background: "rgba(255,255,255,0.04)",
+                color: NEX.textPrimary,
+                letterSpacing: "0.2em",
+                textAlign: "center",
+              }}
+            />
+            <button
+              type="submit"
+              data-nex-vault-chat-unlock-submit
+              disabled={unlockBusy || pinInput.length < 8}
+              style={{
+                padding: "12px 14px",
+                fontSize: 13,
+                fontWeight: 600,
+                borderRadius: 999,
+                border: "none",
+                background: NEX.accent,
+                color: "#1A1300",
+                cursor:
+                  unlockBusy || pinInput.length < 8 ? "not-allowed" : "pointer",
+                opacity: unlockBusy || pinInput.length < 8 ? 0.6 : 1,
+              }}
+            >
+              {unlockBusy
+                ? t("vault.chat.locked.unlockingBtn")
+                : t("vault.chat.locked.unlockBtn")}
+            </button>
+            {unlockError ? (
+              <div
+                data-nex-vault-chat-unlock-error
+                style={{ fontSize: 12, color: "#ffa07a" }}
+              >
+                {unlockError}
+              </div>
+            ) : null}
+          </form>
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      data-nex-vault-chat
+      data-nex-vault-chat-state={phase}
+      style={{
+        minHeight: "100dvh",
+        background: NEX.bg,
+        backgroundImage: NEX.bgGradient,
+        color: NEX.textPrimary,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {header}
+      <main
+        data-nex-vault-chat-messages
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: "14px 14px 90px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+        }}
+      >
+        {phase === "loading" ? (
+          <div style={{ color: NEX.textMuted, fontSize: 12, textAlign: "center", marginTop: 24 }}>
+            {t("vault.chat.ready.loading")}
+          </div>
+        ) : null}
+        {phase === "error" ? (
+          <div
+            data-nex-vault-chat-error
+            style={{ color: "#ffa07a", fontSize: 12, textAlign: "center", marginTop: 24 }}
+          >
+            {errorText ?? t("vault.chat.ready.errorFallback")}
+          </div>
+        ) : null}
+        {phase === "ready" && messages.length === 0 ? (
+          <div
+            data-nex-vault-chat-empty
+            style={{ color: NEX.textMuted, fontSize: 12, textAlign: "center", marginTop: 24 }}
+          >
+            {t("vault.chat.ready.emptyBody")}
+          </div>
+        ) : null}
+        {messages.map((m) => (
+          <div
+            key={m.id}
+            data-nex-vault-chat-bubble
+            data-nex-vault-chat-outgoing={m.outgoing ? "true" : "false"}
+            style={{
+              alignSelf: m.outgoing ? "flex-end" : "flex-start",
+              background: m.outgoing ? NEX.bubbleOut : NEX.bubbleIn,
+              color: NEX.textPrimary,
+              borderRadius: 16,
+              padding: "8px 12px",
+              maxWidth: "76%",
+              fontSize: 14,
+              lineHeight: 1.35,
+              wordBreak: "break-word",
+            }}
+          >
+            {m.text}
+          </div>
+        ))}
+      </main>
+
+      <form
+        onSubmit={handleSend}
+        data-nex-vault-chat-composer
+        style={{
+          position: "sticky",
+          bottom: 0,
+          padding: "10px 12px",
+          // Master-pass 2026-10-07 · solid composer surface (NEX
+          // navy, high-opacity) so + / send controls never visually
+          // disappear into the message area.
+          background: "rgba(3, 16, 29, 0.96)",
+          backdropFilter: "blur(14px) saturate(140%)",
+          WebkitBackdropFilter: "blur(14px) saturate(140%)",
+          borderTop: `1px solid ${NEX.glassBorderStrong}`,
+          display: "flex",
+          flexDirection: "column",
+          gap: 6,
+        }}
+      >
+        {pendingAttachment ? (
+          <div
+            data-nex-vault-chat-pending-attachment
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "6px 10px",
+              borderRadius: 10,
+              border: `1px solid ${NEX.glassBorder}`,
+              background: "rgba(255,255,255,0.04)",
+              fontSize: 12,
+              color: NEX.textSecondary,
+            }}
+          >
+            <span style={{ flex: 1 }}>
+              {t("vault.chat.composer.pendingAttachmentReadyTemplate")
+                .replace(
+                  "{kind}",
+                  pendingAttachment.kind === "image"
+                    ? t("vault.chat.attachment.wordImage")
+                    : pendingAttachment.kind === "video"
+                      ? t("vault.chat.attachment.wordVideo")
+                      : t("vault.chat.attachment.wordAudio"),
+                )
+                .replace(
+                  "{kb}",
+                  String(Math.ceil(pendingAttachment.sizeBytes / 1024)),
+                )}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPendingAttachment(null)}
+              data-nex-vault-chat-attachment-remove
+              style={{
+                background: "transparent",
+                border: "none",
+                color: NEX.textMuted,
+                cursor: "pointer",
+                fontSize: 12,
+              }}
+            >
+              {t("vault.chat.composer.attachmentRemove")}
+            </button>
+          </div>
+        ) : null}
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <label
+            data-nex-vault-chat-attach-label
+            htmlFor="nex-vault-chat-file-input"
+            aria-label={t("vault.chat.composer.attachLabel")}
+            title={t("vault.chat.composer.attachLabel")}
+            style={{
+              // Master-pass · solid visible + button with cyan border
+              // so it reads clearly against the composer surface.
+              width: 40,
+              height: 40,
+              borderRadius: 999,
+              border: `1px solid ${NEX.secureStrong}`,
+              background: NEX.secureSoft,
+              color: NEX.secure,
+              fontSize: 20,
+              fontWeight: 400,
+              lineHeight: 1,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: phase === "ready" ? "pointer" : "not-allowed",
+              opacity: phase === "ready" ? 1 : 0.5,
+              userSelect: "none",
+              flexShrink: 0,
+            }}
+          >
+            +
+          </label>
+          <input
+            id="nex-vault-chat-file-input"
+            type="file"
+            accept="image/*,video/*,audio/*"
+            onChange={handleAttachmentPick}
+            disabled={phase !== "ready"}
+            data-nex-vault-chat-file-input
+            style={{ display: "none" }}
+          />
+          <input
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder={
+              phase === "ready"
+                ? t("vault.chat.composer.textPlaceholder")
+                : t("vault.chat.composer.textPlaceholderLoading")
+            }
+            disabled={phase !== "ready"}
+            data-nex-vault-chat-input
+            style={{
+              flex: 1,
+              padding: "10px 14px",
+              borderRadius: 999,
+              border: `1px solid ${NEX.glassBorderStrong}`,
+              background: "rgba(5, 22, 42, 0.78)",
+              color: NEX.textPrimary,
+              fontSize: 14,
+              fontFamily: "inherit",
+              outline: "none",
+            }}
+          />
+          <button
+            type="submit"
+            disabled={
+              sending ||
+              phase !== "ready" ||
+              (!draft.trim() && !pendingAttachment)
+            }
+            data-nex-vault-chat-send
+            aria-label={t("vault.chat.composer.sendBtn")}
+            style={{
+              padding: "10px 18px",
+              borderRadius: 999,
+              border: "none",
+              background: NEX.accent,
+              color: "#1A1300",
+              fontSize: 13,
+              fontWeight: 700,
+              fontFamily: "inherit",
+              boxShadow: "0 4px 12px rgba(255, 114, 0, 0.35)",
+              cursor:
+                sending ||
+                phase !== "ready" ||
+                (!draft.trim() && !pendingAttachment)
+                  ? "not-allowed"
+                  : "pointer",
+              opacity:
+                sending ||
+                phase !== "ready" ||
+                (!draft.trim() && !pendingAttachment)
+                  ? 0.6
+                  : 1,
+            }}
+          >
+            {sending
+              ? t("vault.chat.composer.sendBtnBusy")
+              : t("vault.chat.composer.sendBtn")}
+          </button>
+        </div>
+      </form>
+
+      {/* preserve router prop (unused in current render but required by useRouter import) */}
+      {typeof router === "object" ? null : null}
+    </div>
+  );
+}
+
+function attachmentLabelFor(
+  kind: "image" | "video" | "audio",
+  t: (key: Parameters<ReturnType<typeof useT>>[0]) => string,
+): string {
+  switch (kind) {
+    case "image":
+      return t("vault.chat.attachment.labelImage");
+    case "video":
+      return t("vault.chat.attachment.labelVideo");
+    case "audio":
+      return t("vault.chat.attachment.labelAudio");
+  }
+}

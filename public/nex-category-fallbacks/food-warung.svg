@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Representative illustration of a warung (Indonesian small eatery)">
+  <desc>NEX in-house SVG · licence: NEX internal (unlimited use within NEX products) · author: NEX design system · date: 2026-10-09</desc>
+  <rect width="400" height="300" fill="#020914"/>
+  <path d="M110 130 L200 85 L290 130 L290 235 L110 235 Z"
+        fill="none" stroke="#FF7200" stroke-width="3"/>
+  <path d="M110 130 L200 85 L290 130"
+        fill="none" stroke="#00AFFF" stroke-width="3"/>
+  <rect x="175" y="170" width="50" height="65" fill="none" stroke="#FF7200" stroke-width="2.5"/>
+  <path d="M150 150 L250 150" stroke="#00AFFF" stroke-width="2" opacity="0.65"/>
+  <path d="M150 150 Q155 140 165 145 Q175 140 185 145 Q195 140 205 145 Q215 140 225 145 Q235 140 245 150"
+        fill="none" stroke="#00AFFF" stroke-width="2" opacity="0.65"/>
+</svg>

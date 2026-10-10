@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Representative illustration of fine dining">
+  <desc>NEX in-house SVG · licence: NEX internal (unlimited use within NEX products) · author: NEX design system · date: 2026-10-09</desc>
+  <rect width="400" height="300" fill="#020914"/>
+  <path d="M155 95 L155 160 Q155 175 170 180 L170 230 L185 230 L185 180 Q200 175 200 160 L200 95"
+        fill="none" stroke="#FF7200" stroke-width="3" stroke-linecap="round"/>
+  <line x1="165" y1="95" x2="165" y2="135" stroke="#FF7200" stroke-width="3" stroke-linecap="round"/>
+  <line x1="180" y1="95" x2="180" y2="135" stroke="#FF7200" stroke-width="3" stroke-linecap="round"/>
+  <path d="M220 95 Q210 100 210 130 Q210 155 230 160 L230 230 L245 230 L245 95"
+        fill="none" stroke="#00AFFF" stroke-width="3" stroke-linecap="round"/>
+  <path d="M135 60 L265 60" stroke="#FF7200" stroke-width="1.5" opacity="0.5"/>
+  <path d="M190 50 L210 50 L205 60 L195 60 Z" fill="none" stroke="#FF7200" stroke-width="1.5" opacity="0.7"/>
+</svg>

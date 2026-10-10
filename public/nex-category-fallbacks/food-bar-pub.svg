@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Representative illustration of a bar or pub">
+  <desc>NEX in-house SVG · licence: NEX internal (unlimited use within NEX products) · author: NEX design system · date: 2026-10-09</desc>
+  <rect width="400" height="300" fill="#020914"/>
+  <path d="M150 100 L250 100 L220 170 L220 220 L240 230 L160 230 L180 220 L180 170 Z"
+        fill="none" stroke="#FF7200" stroke-width="3"/>
+  <line x1="165" y1="130" x2="235" y2="130" stroke="#00AFFF" stroke-width="2" opacity="0.6"/>
+  <circle cx="210" cy="150" r="3" fill="#00AFFF"/>
+  <circle cx="190" cy="155" r="3" fill="#00AFFF" opacity="0.75"/>
+  <g stroke="#FF7200" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.7">
+    <path d="M175 85 Q180 75 175 65"/>
+    <path d="M200 80 Q205 70 200 60"/>
+    <path d="M225 85 Q230 75 225 65"/>
+  </g>
+  <line x1="130" y1="245" x2="270" y2="245" stroke="#00AFFF" stroke-width="2" opacity="0.5"/>
+</svg>

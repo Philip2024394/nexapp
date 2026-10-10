@@ -1,15 +1,29 @@
-import type { Metadata } from "next";
-import "./globals.css";
+import type { ReactNode } from "react";
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "NEX",
-  description: "Your world is waiting."
+  description: "NEX app",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+const ROOT_BG = "#020914";
+
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html
+      lang="en"
+      style={{ background: ROOT_BG, margin: 0, padding: 0 }}
+    >
+      <body
+        style={{
+          background: ROOT_BG,
+          color: "#F2F5F8",
+          margin: 0,
+          padding: 0,
+          minHeight: "100dvh",
+        }}
+      >
+        {children}
+      </body>
     </html>
   );
 }

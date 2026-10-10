@@ -1,0 +1,524 @@
+// NEX Brain Warehouse · Phase 10.5 · observability aggregator.
+//
+// Composes a "warehouse" view — six production stages a work item can be
+// in — over the state that already lives in worker_jobs + knowledge_records.
+//
+//   1 · incoming              · knowledge-context waiting (freshly dispatched)
+//   2 · context_processing    · voice/learning-context waiting or in-flight
+//                                (deterministic work in progress)
+//   3 · waiting_for_ai        · knowledge-extractor waiting jobs
+//                                (only needsLlm workers land here)
+//   4 · being_written         · extractor + image-analyst in-flight
+//   5 · quality_check         · quality-checker waiting or in-flight
+//   6 · stored                · knowledge_records status='AUTHORITATIVE'
+//
+// This module is READ-ONLY. Zero writes, zero new tables, no second
+// source of truth. Every count is derived from an existing row; the
+// "barrels" are a visual metaphor the UI applies over this snapshot.
+//
+// Zero LLM calls, zero external dependencies beyond the storage layer
+// this module already needs to survey.
+
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { WorkerType } from "./types";
+// G3-B · Truth Contract 2026-08-10. Warehouse.ts remains client-safe.
+// The KJ-level `in_production` field on WarehouseSnapshot is COMPUTED
+// by the /api/nex/brain/warehouse route (server-only) which pulls the
+// pg-backed helper. See src/app/api/nex/brain/warehouse/route.ts for
+// the pg query. The reason: warehouse.ts is imported by the operations-
+// centre client component for computeJobProgress · a top-level pg
+// import here would poison the browser bundle ("Cannot resolve dns").
+
+export type WarehouseStageKey =
+  | "incoming"
+  | "context_processing"
+  | "waiting_for_ai"
+  | "being_written"
+  | "quality_check"
+  | "stored";
+
+export interface WarehouseItemSummary {
+  worker_type: WorkerType;
+  status:      string;
+  count:       number;
+  oldest_at:   string | null;
+  oldest_age_ms: number | null;
+}
+
+export interface WarehouseEntry {
+  job_id:      string;
+  worker_type: string;
+  status:      string;
+  input_ref:   string;
+  title:       string | null;       // pulled from input_payload.title when present
+  source:      string | null;       // pulled from input_payload.source when present
+  created_at:  string;
+  age_ms:      number;
+  age_label:   string;              // human-readable · "2h 14m" / "3d"
+}
+
+export interface WarehouseStage {
+  key:      WarehouseStageKey;
+  label:    string;
+  glyph:    string;
+  count:    number;
+  oldest_at: string | null;
+  oldest_age_ms: number | null;
+  items:    WarehouseItemSummary[];   // drill-down · sub-breakdown by (worker_type, status)
+  entries?: WarehouseEntry[];         // Phase 10.5c · actual rows in the barrel (capped)
+  reason?:  string;                    // human-readable · e.g. "AI providers degraded"
+}
+
+export interface WarehouseSnapshot {
+  stages:          WarehouseStage[];
+  computed_at:     string;
+  // Phase 10.7 · vault sub-buckets · terminal states after production.
+  // These are DISTINCT from the in-flight `stages` above · they represent
+  // outcomes, not queues. All four are counted via count=exact head=true
+  // so numbers are correct regardless of PostgREST's 1000-row page cap.
+  vault_records: {
+    authoritative:         number;
+    awaiting_review:       number;   // was `under_review` · renamed for clarity
+    draft_rejected:        number;   // quality-checker ran + kept status DRAFT
+    draft_awaiting_check:  number;   // never had a completed quality-check job
+    deprecated:            number;
+  };
+  // G3-B · KJ-level "in production" · NOT a worker stage.
+  //
+  // Answers: "how many real knowledge jobs are genuinely in the pipeline
+  // right now, regardless of which sub-stage each one is in?"
+  //
+  // Source: local Postgres nex.knowledge_dump_jobs (the G1-truthful
+  // KJ lifecycle table). One KJ = one visible entry throughout its
+  // 30-90s pipeline life · unlike stages[] which surface transient
+  // per-worker `assigned` windows of a few seconds each.
+  //
+  // Excludes the 10 preserved fixture KJs per the Truth Contract.
+  in_production: {
+    total:          number;
+    by_status: {
+      queued:      number;
+      claimed:     number;
+      processing:  number;
+    };
+    oldest_at:     string | null;
+    oldest_age_ms: number | null;
+    source:        "local_postgres_knowledge_dump_jobs" | "unavailable";
+    excludes_preserved_kjids: number;   // count of exclusions applied
+    note?:         string;              // populated when source=unavailable
+  };
+  source: "supabase" | "unavailable";
+  note?:  string;
+}
+
+interface WorkerJobRow {
+  id?:          string;
+  worker_type:  string;
+  status:       string;
+  created_at:   string;
+  input_ref?:   string | null;
+  input_payload?: Record<string, unknown> | null;
+}
+
+// Cap entries surfaced per stage so the payload stays small even when
+// backlogs are large. UI shows oldest N; a "and X more" tail is inferred
+// from count - entries.length.
+const ENTRIES_PER_STAGE = 8;
+
+function humanAge(ms: number): string {
+  if (ms < 60_000) return `${Math.floor(ms / 1000)}s`;
+  if (ms < 3_600_000) return `${Math.floor(ms / 60_000)}m`;
+  if (ms < 86_400_000) {
+    const h = Math.floor(ms / 3_600_000);
+    const m = Math.floor((ms % 3_600_000) / 60_000);
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  }
+  return `${Math.floor(ms / 86_400_000)}d`;
+}
+
+function pickEntries(jobs: WorkerJobRow[], now: number): WarehouseEntry[] {
+  return jobs
+    .slice()
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    .slice(0, ENTRIES_PER_STAGE)
+    .map((j) => {
+      const created = new Date(j.created_at).getTime();
+      const age = now - created;
+      const payload = j.input_payload ?? {};
+      const title  = (payload["title"]  as string | undefined) ?? null;
+      const source = (payload["source"] as string | undefined) ?? null;
+      return {
+        job_id:      String(j.id ?? ""),
+        worker_type: j.worker_type,
+        status:      j.status,
+        input_ref:   String(j.input_ref ?? ""),
+        title,
+        source,
+        created_at:  j.created_at,
+        age_ms:      age,
+        age_label:   humanAge(age),
+      };
+    });
+}
+
+interface KnowledgeRecordRow { status: string }
+
+// ── Stage definitions · every stage names its (worker_type, status)
+//    tuples so the composition is auditable in one place. ───────────
+//
+// G3-A · Truth Contract cleanup 2026-08-10. Removed every "in-flight"
+// binding · verified with codebase-wide grep that ZERO writers ever
+// emit status='in-flight'. The JobStatus enum (types.ts:105-111)
+// declares 6 states · the Supabase worker_jobs adapter uses only 4:
+// waiting → assigned → completed/failed. The stray "in-flight" strings
+// here were dead code that misled anyone reading the filter into
+// thinking there was an intermediate execution state to observe.
+// Reality: `assigned` IS the "actively working" state throughout the
+// worker's execution · it stays that value until the row moves to
+// completed/failed.
+const STAGE_DEFINITIONS: Record<Exclude<WarehouseStageKey, "stored">, {
+  label: string;
+  glyph: string;
+  match: Array<{ worker_type: WorkerType; statuses: string[] }>;
+}> = {
+  incoming: {
+    label: "New material",
+    glyph: "📦",
+    match: [{ worker_type: "knowledge-context", statuses: ["waiting"] }],
+  },
+  context_processing: {
+    label: "Context processing",
+    glyph: "🔧",
+    match: [
+      { worker_type: "knowledge-context", statuses: ["assigned"] },
+      { worker_type: "voice-context",     statuses: ["waiting", "assigned"] },
+      { worker_type: "learning-context",  statuses: ["waiting", "assigned"] },
+    ],
+  },
+  waiting_for_ai: {
+    label: "Waiting for AI",
+    glyph: "🧠",
+    match: [
+      { worker_type: "knowledge-extractor", statuses: ["waiting"] },
+      { worker_type: "image-analyst",       statuses: ["waiting"] },
+    ],
+  },
+  being_written: {
+    label: "Being written",
+    glyph: "✍️",
+    match: [
+      { worker_type: "knowledge-extractor", statuses: ["assigned"] },
+      { worker_type: "image-analyst",       statuses: ["assigned"] },
+    ],
+  },
+  quality_check: {
+    label: "Quality check",
+    glyph: "🔍",
+    match: [{ worker_type: "quality-checker", statuses: ["waiting", "assigned"] }],
+  },
+};
+
+// Which worker types actually call an LLM. Kept here so the warehouse
+// module can enforce the invariant "only needsLlm workers land in
+// waiting_for_ai / being_written" without importing UI types.
+export const LLM_WORKER_TYPES: readonly WorkerType[] = ["knowledge-extractor", "image-analyst", "quality-checker"];
+
+// ── Public entry ─────────────────────────────────────────────────
+
+// Compute a warehouse snapshot. Returns `source: "unavailable"` when
+// the NEX Supabase credentials aren't configured — the UI still gets
+// a well-formed object with zero counts + an honest note.
+export async function computeWarehouseView(): Promise<WarehouseSnapshot> {
+  const client = openSupabase();
+  if (!client) {
+    return zeroSnapshot("NEX_SUPABASE_URL / NEX_SUPABASE_SERVICE_ROLE_KEY not configured");
+  }
+
+  const now = Date.now();
+
+  // Phase 10.7 · vault counts use `count=exact head=true` per status so
+  // the four numbers are correct even when N > PostgREST's 1000-row page
+  // cap (Phase 10.5 shipped with a silent under-count · the old select
+  // returned 1000 rows and reported "under_review = 0" when it was 134).
+  // Head-only means zero bytes returned per query · just the count header.
+  const [
+    authCountRes,
+    reviewCountRes,
+    draftCountRes,
+    deprecatedCountRes,
+    jobsRes,
+  ] = await Promise.all([
+    client.from("knowledge_records").select("*", { count: "exact", head: true }).eq("status", "AUTHORITATIVE"),
+    client.from("knowledge_records").select("*", { count: "exact", head: true }).eq("status", "UNDER_REVIEW"),
+    client.from("knowledge_records").select("*", { count: "exact", head: true }).eq("status", "DRAFT"),
+    client.from("knowledge_records").select("*", { count: "exact", head: true }).eq("status", "DEPRECATED"),
+    client
+      .from("worker_jobs")
+      .select("id,worker_type,status,created_at,input_ref,input_payload")
+      // G3-A · dead "in-flight" removed · adapter only ever emits
+      // waiting|assigned for in-progress rows.
+      .in("status", ["waiting", "assigned"])
+      .limit(10000),
+  ]);
+
+  if (jobsRes.error) {
+    return zeroSnapshot(`worker_jobs fetch failed: ${jobsRes.error.message}`);
+  }
+  const jobs = (jobsRes.data ?? []) as WorkerJobRow[];
+
+  const stages: WarehouseStage[] = (Object.keys(STAGE_DEFINITIONS) as Array<Exclude<WarehouseStageKey, "stored">>).map((key) => {
+    const def   = STAGE_DEFINITIONS[key];
+    const items: WarehouseItemSummary[] = [];
+    let total = 0;
+    let oldestMs: number | null = null;
+
+    for (const m of def.match) {
+      const matching = jobs.filter((j) => j.worker_type === m.worker_type && m.statuses.includes(j.status));
+      if (matching.length === 0) continue;
+      const oldestForBucket = matching.reduce<Date | null>((acc, j) => {
+        const d = new Date(j.created_at);
+        if (!acc || d < acc) return d;
+        return acc;
+      }, null);
+      const oldestIso = oldestForBucket?.toISOString() ?? null;
+      const ageMs     = oldestForBucket ? now - oldestForBucket.getTime() : null;
+      items.push({
+        worker_type:   m.worker_type,
+        status:        m.statuses.length === 1 ? m.statuses[0] : "any-active",
+        count:         matching.length,
+        oldest_at:     oldestIso,
+        oldest_age_ms: ageMs,
+      });
+      total += matching.length;
+      if (ageMs !== null && (oldestMs === null || ageMs > oldestMs)) oldestMs = ageMs;
+    }
+
+    // Phase 10.5c · collect actual worker_job rows for this stage so
+    // the UI drill-down can show real content, not just counters.
+    const matchedJobs = jobs.filter((j) =>
+      def.match.some((m) => j.worker_type === m.worker_type && m.statuses.includes(j.status)));
+
+    return {
+      key,
+      label: def.label,
+      glyph: def.glyph,
+      count: total,
+      oldest_at:     oldestMs !== null ? new Date(now - oldestMs).toISOString() : null,
+      oldest_age_ms: oldestMs,
+      items,
+      entries:       pickEntries(matchedJobs, now),
+    };
+  });
+
+  // Terminal-state counts. head=true means these carry no rows, just the
+  // count header, so they're cheap regardless of vault size.
+  const auth       = authCountRes.count       ?? 0;
+  const review     = reviewCountRes.count     ?? 0;
+  const draftTotal = draftCountRes.count      ?? 0;
+  const deprecated = deprecatedCountRes.count ?? 0;
+
+  // Phase 10.7 · DRAFT split: which DRAFTs were actually quality-checked
+  // (kept DRAFT because REJECTED) vs. which have never been checked at
+  // all (extractor wrote the record but the quality-check enqueue
+  // failed / worker crashed / seed script bypassed the queue). The two
+  // populations tell very different operational stories and must NOT be
+  // mixed in the UI.
+  //
+  // Method: intersect the set of DRAFT record_ids with the set of
+  // distinct input_refs on COMPLETED quality-checker jobs. Both pulls
+  // page through PostgREST's default 1000-row window · fine at current
+  // scale (~1k records) · will need a proper materialised view once
+  // record volume outgrows a few pages.
+  const draftIds     = await pageAllValues(client, "knowledge_records", "record_id", { column: "status", value: "DRAFT" });
+  const checkedInput = await pageAllValues(client, "worker_jobs", "input_ref", { column: "worker_type", value: "quality-checker", extra: { column: "status", value: "completed" } });
+  const checkedSet   = new Set<string>(checkedInput);
+  let draftRejected      = 0;
+  let draftAwaitingCheck = 0;
+  for (const id of draftIds) {
+    if (checkedSet.has(id)) draftRejected++;
+    else                    draftAwaitingCheck++;
+  }
+  // Reconciliation safety · if paging under-counted DRAFTs, fall back
+  // to using the total count-exact for accuracy in the aggregate.
+  if (draftRejected + draftAwaitingCheck < draftTotal) {
+    // trust the head-count total · distribute the remainder to
+    // awaiting_check (conservative · unknown coverage counts as unchecked)
+    draftAwaitingCheck = draftTotal - draftRejected;
+  }
+
+  // Stored stage · vault view · authoritative + terminal breakdown.
+  stages.push({
+    key: "stored",
+    label: "Stored in Brain",
+    glyph: "🧠",
+    count: auth,
+    oldest_at: null,
+    oldest_age_ms: null,
+    items: [
+      { worker_type: "knowledge-extractor" as WorkerType, status: "AUTHORITATIVE", count: auth,  oldest_at: null, oldest_age_ms: null },
+    ],
+  });
+
+  return {
+    stages,
+    computed_at: new Date(now).toISOString(),
+    vault_records: {
+      authoritative:        auth,
+      awaiting_review:      review,
+      draft_rejected:       draftRejected,
+      draft_awaiting_check: draftAwaitingCheck,
+      deprecated,
+    },
+    // G3-B · in_production is populated by the /warehouse route
+    // (server-only · pg-backed). Initialised here as unavailable so
+    // any direct caller of computeWarehouseView (server or otherwise)
+    // sees a well-formed shape · route overwrites before serialising.
+    in_production: {
+      total: 0,
+      by_status: { queued: 0, claimed: 0, processing: 0 },
+      oldest_at: null,
+      oldest_age_ms: null,
+      source: "unavailable",
+      excludes_preserved_kjids: 10,
+      note: "populated by /api/nex/brain/warehouse route",
+    },
+    source: "supabase",
+  };
+}
+
+// Page through a PostgREST endpoint that would otherwise be capped at
+// 1000 rows and return every value of a single column. Filters are
+// applied server-side so payload stays small.
+async function pageAllValues(
+  client: SupabaseClient,
+  table: string,
+  column: string,
+  filter: { column: string; value: string; extra?: { column: string; value: string } },
+  pageSize = 1000,
+  maxPages = 25,
+): Promise<string[]> {
+  const all: string[] = [];
+  for (let page = 0; page < maxPages; page++) {
+    const from = page * pageSize;
+    const to   = from + pageSize - 1;
+    let q = client.from(table).select(column).eq(filter.column, filter.value);
+    if (filter.extra) q = q.eq(filter.extra.column, filter.extra.value);
+    q = q.range(from, to);
+    const { data, error } = await q;
+    if (error) break;
+    const rows = (data ?? []) as Array<Record<string, unknown>>;
+    if (rows.length === 0) break;
+    for (const r of rows) {
+      const v = r[column];
+      if (typeof v === "string" && v.length > 0) all.push(v);
+    }
+    if (rows.length < pageSize) break;
+  }
+  return all;
+}
+
+// ── Internals ────────────────────────────────────────────────────
+
+function openSupabase(): SupabaseClient | null {
+  // NEX SUPABASE AUTHORITY (2026-09-07) · NEX-scoped env vars only ·
+  // no Project A fallback.
+  const url = process.env.NEX_SUPABASE_URL
+    || process.env.NEXT_PUBLIC_NEX_SUPABASE_URL;
+  const key = process.env.NEX_SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+}
+
+function zeroSnapshot(note: string): WarehouseSnapshot {
+  const stages: WarehouseStage[] = (Object.keys(STAGE_DEFINITIONS) as Array<Exclude<WarehouseStageKey, "stored">>).map((key) => ({
+    key,
+    label: STAGE_DEFINITIONS[key].label,
+    glyph: STAGE_DEFINITIONS[key].glyph,
+    count: 0,
+    oldest_at: null,
+    oldest_age_ms: null,
+    items: [],
+  }));
+  stages.push({ key: "stored", label: "Stored in Brain", glyph: "🧠", count: 0, oldest_at: null, oldest_age_ms: null, items: [] });
+  return {
+    stages,
+    computed_at: new Date().toISOString(),
+    vault_records: {
+      authoritative:        0,
+      awaiting_review:      0,
+      draft_rejected:       0,
+      draft_awaiting_check: 0,
+      deprecated:           0,
+    },
+    // G3-B · zero shape · /warehouse route overwrites with the real
+    // pg-backed value before serialising to the client.
+    in_production: {
+      total: 0,
+      by_status: { queued: 0, claimed: 0, processing: 0 },
+      oldest_at: null,
+      oldest_age_ms: null,
+      source: "unavailable",
+      excludes_preserved_kjids: 10,
+      note: "zero snapshot",
+    },
+    source: "unavailable",
+    note,
+  };
+}
+
+// ── Truthful progress helper · used by the UI to render real progress
+//    bars per active job. Returns null when we lack the information to
+//    compute an honest percentage; the caller must NOT invent one. ───
+
+export interface JobProgressHint {
+  percent: number | null;         // null · caller must not render a bar
+  stage_label: string;            // always non-empty · e.g. "Extracting knowledge"
+  is_deterministic: boolean;      // true iff this worker type never needs an LLM
+}
+
+// Deterministic mapping · state → percent. Every value is anchored to a
+// real transition observable in worker_jobs. No animation, no time-based
+// interpolation, no random walk.
+// G3-A · dead "in-flight" key removed from the type and every entry.
+// Adapter never emits `in-flight` · callers passing it fall through to
+// the generic-status fallback in computeJobProgress below.
+const WORKER_PROGRESS_TABLE: Record<WorkerType, { waiting: JobProgressHint; assigned: JobProgressHint }> = {
+  "knowledge-context":   {
+    waiting:    { percent:  5, stage_label: "Received · queued for context",  is_deterministic: true  },
+    assigned:   { percent: 15, stage_label: "Reading source · building context", is_deterministic: true },
+  },
+  "voice-context":       {
+    waiting:    { percent: 20, stage_label: "Awaiting voice + brand pass",    is_deterministic: true  },
+    assigned:   { percent: 25, stage_label: "Applying voice + brand guide",   is_deterministic: true  },
+  },
+  "learning-context":    {
+    waiting:    { percent: 30, stage_label: "Awaiting learning bundle",       is_deterministic: true  },
+    assigned:   { percent: 35, stage_label: "Loading past feedback",          is_deterministic: true  },
+  },
+  "knowledge-extractor": {
+    waiting:    { percent: 40, stage_label: "Awaiting AI capacity",           is_deterministic: false },
+    assigned:   { percent: 55, stage_label: "Extracting knowledge",           is_deterministic: false },
+  },
+  "image-analyst":       {
+    waiting:    { percent: 40, stage_label: "Awaiting vision capacity",       is_deterministic: false },
+    assigned:   { percent: 55, stage_label: "Analysing image",                is_deterministic: false },
+  },
+  "quality-checker":     {
+    waiting:    { percent: 75, stage_label: "Awaiting quality check",         is_deterministic: false },
+    assigned:   { percent: 85, stage_label: "Quality checking against Constitution", is_deterministic: false },
+  },
+  "memory-guardian":     {
+    waiting:    { percent: null, stage_label: "Idle · runs on schedule",      is_deterministic: true  },
+    assigned:   { percent: null, stage_label: "Sweeping memory",              is_deterministic: true  },
+  },
+};
+
+export function computeJobProgress(worker_type: WorkerType, status: string): JobProgressHint {
+  const table = WORKER_PROGRESS_TABLE[worker_type];
+  if (!table) return { percent: null, stage_label: "Unknown worker", is_deterministic: false };
+  if (status === "completed") return { percent: 100, stage_label: "Complete",         is_deterministic: !LLM_WORKER_TYPES.includes(worker_type) };
+  if (status === "failed")    return { percent: null, stage_label: "Failed",          is_deterministic: !LLM_WORKER_TYPES.includes(worker_type) };
+  const hint = (table as Record<string, JobProgressHint | undefined>)[status];
+  if (hint) return hint;
+  return { percent: null, stage_label: status, is_deterministic: !LLM_WORKER_TYPES.includes(worker_type) };
+}

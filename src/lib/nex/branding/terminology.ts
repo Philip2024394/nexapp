@@ -1,0 +1,99 @@
+// NEX branded-design terminology · single source of truth for customer
+// facing surfaces (Philip 2026-08-05 · S2 execution).
+//
+// Every customer-facing surface (Trade Centre · brain chat · configurator ·
+// customer education · marketing) imports from this file rather than
+// hardcoding brand strings. Technical documentation (engineering IDs,
+// YAML filenames, DB enums, CAD/CAM identifiers, construction rules,
+// docstrings, code comments, joiner-facing detail) continues using the
+// industry terms unchanged — never call any helper from technical code.
+//
+// Framing rule (Philip 2026-08-05): NEX brand terms do NOT replace
+// industry terms. They are the NEX customer-voice for the same
+// underlying construction. The technicalTerm() helper is the bridge:
+// use it whenever a customer surface needs to acknowledge the industry
+// vocabulary for context, honesty, or expert-audience clarity.
+
+export type BrandingKey =
+  | "closed-string"
+  | "split-newel"
+  | "connected-staircase"
+  | "nex-premium";
+
+type Entry = {
+  /** First mention on a page · always with the ™ symbol. */
+  brand: string;
+  /** Subsequent mentions on the same page · no ™ symbol. */
+  brandPlain: string;
+  /** The industry / engineering / manufacturing term. */
+  technical: string;
+  /** First mention bridged to industry vocabulary for customer clarity. */
+  explanation: string;
+};
+
+const REGISTRY: Record<BrandingKey, Entry> = {
+  "closed-string": {
+    brand: "NexString™",
+    brandPlain: "NexString",
+    technical: "closed string staircase",
+    explanation:
+      "NexString™ (our branded enclosed outer string design, traditionally known as a closed string staircase)",
+  },
+  "split-newel": {
+    // Nex Newel™ is the branded family; Split Base Design is the first
+    // specific design within it (Philip 2026-08-05, refined from the
+    // earlier "NEX Split Newel™" standalone framing). Future Nex Newel™
+    // designs (Turned, Fluted, Metal-Clad, Illuminated, Cantilever) will
+    // each receive their own key alongside this one.
+    brand: "Nex Newel™ Split Base Design",
+    brandPlain: "Nex Newel Split Base",
+    technical: "split newel post",
+    explanation:
+      "Nex Newel™ Split Base Design (our branded two-part timber newel with a stainless steel spacer)",
+  },
+  "connected-staircase": {
+    // The NEX product-family brand covering all coordinated staircase
+    // designs across every tier (Essentials, Classic, Heritage,
+    // Contemporary, Signature). Philip 2026-08-05. Used in Trade Centre
+    // categorisation, marketing surfaces, and brain content whenever
+    // the staircase family framing is surfaced to customers.
+    brand: "Connected Staircase™",
+    brandPlain: "Connected Staircase",
+    technical: "staircase product family",
+    explanation:
+      "Connected Staircase™ (our coordinated staircase family — staircases designed to compose with the home's flooring, walls, lighting and joinery rather than stand apart from them)",
+  },
+  "nex-premium": {
+    // Presentation-layer brand — NOT a tier. Any Connected Staircase™
+    // tier can be presented through NEX Premium™ specifications
+    // (architectural-grade materials, solid brass rods, wool runners,
+    // high-CRI lighting, precision installation tolerances). Philip
+    // 2026-08-05. Used as a header ("NEX Premium™ Vision Scan") on the
+    // highest-specification presentations.
+    brand: "NEX Premium™",
+    brandPlain: "NEX Premium",
+    technical: "premium specification layer",
+    explanation:
+      "NEX Premium™ (our premium presentation layer — architectural-grade materials, precision installation, and layered specifications that can be applied to any Connected Staircase™ tier)",
+  },
+};
+
+/** First mention on a customer-facing surface · includes ™ symbol. */
+export function brandTerm(key: BrandingKey): string {
+  return REGISTRY[key].brand;
+}
+
+/** Subsequent mentions on the same customer-facing surface · no ™. */
+export function brandTermPlain(key: BrandingKey): string {
+  return REGISTRY[key].brandPlain;
+}
+
+/** Engineering / manufacturing / industry vocabulary. */
+export function technicalTerm(key: BrandingKey): string {
+  return REGISTRY[key].technical;
+}
+
+/** First mention paired with a bridge to the industry term. */
+export function customerExplanation(key: BrandingKey): string {
+  return REGISTRY[key].explanation;
+}
