@@ -49,7 +49,7 @@ async function ensureDir(collection: string): Promise<void> {
 async function readAll<T>(collection: string): Promise<T[]> {
   const file = fileFor(collection);
   let raw: string;
-  try { raw = await fs.readFile(file, "utf8"); }
+  try { raw = await fs.readFile(/* turbopackIgnore: true */ file, "utf8"); }
   catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw err;
@@ -169,7 +169,7 @@ export class JsonlStorage implements StorageBackend {
     let size_bytes = 0;
     let latest_write_at: string | null = null;
     try {
-      const s = await fs.stat(file);
+      const s = await fs.stat(/* turbopackIgnore: true */ file);
       size_bytes = s.size;
       latest_write_at = s.mtime.toISOString();
     } catch (err) {

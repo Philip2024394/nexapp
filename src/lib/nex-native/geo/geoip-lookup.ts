@@ -74,7 +74,7 @@ async function loadReader(): Promise<MaxMindReader | null> {
   // Check file existence before dynamic-importing maxmind so we fail
   // fast and silently when the DB is not provisioned on this machine.
   try {
-    const stat = await fs.promises.stat(dbPath);
+    const stat = await fs.promises.stat(/* turbopackIgnore: true */ dbPath);
     if (!stat.isFile() || stat.size < 1024) return null;
   } catch {
     return null;

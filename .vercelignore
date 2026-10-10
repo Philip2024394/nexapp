@@ -1,0 +1,34 @@
+# 2026-10-11 · Exclude from the Vercel source tarball to keep each
+# serverless function bundle under the 50MB compressed / 250MB
+# uncompressed per-function limit.
+#
+# public/ is still served by Vercel's static asset layer — the ignore
+# only affects the function-bundle traced input, not the deployed
+# public assets.
+
+# Build + dev artifacts
+.next/
+.turbopack/
+dist/
+build/
+coverage/
+node_modules.cache/
+
+# Backups + rotations (shouldn't ever ship)
+*.pre-llm-removal.*
+*.pre-nex-fork-*
+build.log
+dev.log
+.next-dev.log
+backups/
+data/.manifest-backups/
+
+# PostgreSQL dumps (safety nets live elsewhere)
+*.dump
+*.sql.gz
+
+# IDE + OS cruft
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
