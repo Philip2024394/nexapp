@@ -65,6 +65,17 @@ export default async function SettingsIndex() {
       title: "Chat theme",
       subtitle: "Pick the theme applied to your chat bubbles",
     },
+    {
+      // 2026-10-11 · NEX Community Watch · place-based noticeboard
+      // (power outages, water outages, road closures, weather hazards).
+      // Routes to /nex-native/community which auto-decides between
+      // zone-selection and the feed based on membership state.
+      href: "/nex-native/community",
+      emoji: "🏘️",
+      title: "NEX Community Watch",
+      subtitle:
+        "Local outages · hazards · road closures · neighbourhood notices",
+    },
     // Bridge 42 · 2026-09-28 · face-sign-in enrolment surface retired.
     // Previously-enrolled devices still see the "Sign in with face"
     // button on /sign-in because that reads the nex-has-face cookie
