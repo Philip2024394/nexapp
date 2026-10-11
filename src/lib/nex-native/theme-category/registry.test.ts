@@ -2,10 +2,11 @@
 //
 // Theme Category Registry · regression tests · re-sealed 2026-10-11.
 //
-// Protects the nine-category IA the owner re-authorised on 2026-10-11:
+// Protects the thirteen-category IA the owner re-authorised on 2026-10-11:
 //
-//   · exactly nine categories registered: food, bakery, products,
-//     services, rentals, accommodation, haunted, waterworld, explore
+//   · exactly thirteen categories registered: food, bakery, products,
+//     services, rentals, accommodation, hollywood, vitamins, teddy,
+//     property, haunted, waterworld, explore
 //   · ids are stable, unique and valid
 //   · resolveCategoryId defaults missing/unknown ids to "explore"
 //   · every code-registered live-world ThemePackage declares a
@@ -35,7 +36,7 @@ const MIGRATIONS_DIR = path.join(REPO_ROOT, "nex-supabase/migrations");
 
 // ─── A · the four registered categories ─────────────────────────────
 
-describe("A · exactly nine categories registered (food · bakery · products · services · rentals · accommodation · haunted · waterworld · explore)", () => {
+describe("A · exactly thirteen categories registered (food · bakery · products · services · rentals · accommodation · hollywood · vitamins · teddy · property · haunted · waterworld · explore)", () => {
   test("food category exists", () => {
     const cat = getCategory("food");
     expect(cat).not.toBeNull();
@@ -80,6 +81,34 @@ describe("A · exactly nine categories registered (food · bakery · products ·
     expect(cat?.name).toBe("Accommodation");
   });
 
+  test("property category exists", () => {
+    const cat = getCategory("property");
+    expect(cat).not.toBeNull();
+    expect(cat?.id).toBe("property");
+    expect(cat?.name).toBe("Property");
+  });
+
+  test("teddy category exists", () => {
+    const cat = getCategory("teddy");
+    expect(cat).not.toBeNull();
+    expect(cat?.id).toBe("teddy");
+    expect(cat?.name).toBe("Teddy");
+  });
+
+  test("vitamins category exists", () => {
+    const cat = getCategory("vitamins");
+    expect(cat).not.toBeNull();
+    expect(cat?.id).toBe("vitamins");
+    expect(cat?.name).toBe("Vitamins");
+  });
+
+  test("hollywood category exists", () => {
+    const cat = getCategory("hollywood");
+    expect(cat).not.toBeNull();
+    expect(cat?.id).toBe("hollywood");
+    expect(cat?.name).toBe("Hollywood");
+  });
+
   test("haunted category exists", () => {
     const cat = getCategory("haunted");
     expect(cat).not.toBeNull();
@@ -112,7 +141,7 @@ describe("A · exactly nine categories registered (food · bakery · products ·
     expect(isRegisteredCategory("cafe")).toBe(false);
   });
 
-  test("listCategories returns exactly those nine", () => {
+  test("listCategories returns exactly those thirteen", () => {
     const cats = listCategories();
     const ids = cats.map((c) => c.id).sort();
     expect(ids).toEqual([
@@ -121,9 +150,13 @@ describe("A · exactly nine categories registered (food · bakery · products ·
       "explore",
       "food",
       "haunted",
+      "hollywood",
       "products",
+      "property",
       "rentals",
       "services",
+      "teddy",
+      "vitamins",
       "waterworld",
     ]);
   });

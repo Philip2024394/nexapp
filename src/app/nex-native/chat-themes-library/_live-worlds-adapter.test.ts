@@ -50,8 +50,14 @@ describe("A · live-worlds adapter · every world appears in the Library collect
     "french-cafe",
     "food",
     "pizza",
+    "crispy-chicken",
     "bike-rental",
     "ac-service",
+    "property1",
+    "teddy-play",
+    "pink-dream",
+    "hollywood",
+    "vitamin-fruit",
   ] as const;
 
   test("listLiveWorldsAsBrowserRows returns a row for every registered live-world", () => {
@@ -240,6 +246,10 @@ describe("C2 · category_id is populated on every live-world row (Step 1C re-sea
         "services",
         "rentals",
         "accommodation",
+        "hollywood",
+        "vitamins",
+        "teddy",
+        "property",
         "haunted",
         "waterworld",
         "explore",

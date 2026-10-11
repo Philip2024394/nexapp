@@ -119,10 +119,35 @@ const RULES: readonly KeywordRule[] = [
       "doughnut",
     ],
   },
+  // ─── Property · real-estate · listing · agent · house for sale ·
+  //     evaluated BEFORE Accommodation so "modern villa for sale"
+  //     routes to Property via 'property' / 'real-estate' / 'sale'
+  //     rather than Accommodation via 'villa'. Evaluated AFTER
+  //     Haunted so "haunted house" still routes to Haunted. ────────
+  {
+    categoryId: "property",
+    keywords: [
+      // Property-specific tokens only · "house" + "agent" are
+      // deliberately NOT included (both collide too readily with
+      // non-property worlds · "coffee house" / "pancake house" /
+      // "travel agent" / "booking agent"). The resolver fires on
+      // real-estate-specific signals.
+      "property",
+      "real-estate",
+      "realestate",
+      "realtor",
+      "realty",
+      "estate",
+      "listing",
+      "home",
+      "apartment",
+      "condo",
+      "mortgage",
+    ],
+  },
   // ─── Accommodation · evaluated BEFORE Rentals so "Hotel Neo"
   //     routes here rather than Rentals via a stray keyword.
-  //     Evaluated AFTER Haunted so "Haunted Hotel" still routes to
-  //     Haunted. Added Step 1H. ────────────────────────────────────
+  //     Evaluated AFTER Haunted + Property. Added Step 1H. ─────────
   {
     categoryId: "accommodation",
     keywords: [
@@ -174,6 +199,59 @@ const RULES: readonly KeywordRule[] = [
       "restaurant",
       "warung",
       "nasi",
+    ],
+  },
+  // ─── Hollywood · red carpet · premiere · spotlight · evaluated
+  //     BEFORE Property so a "hollywood star" theme routes to
+  //     Hollywood rather than Property via a stray keyword · and
+  //     captures the sealed DB `theme-0` Joker via the 'joker'
+  //     keyword without a per-id branch. ────────────────────────
+  {
+    categoryId: "hollywood",
+    keywords: [
+      "hollywood",
+      "cinema",
+      "redcarpet",
+      "red-carpet",
+      "premiere",
+      "spotlight",
+      "oscar",
+      "blockbuster",
+      "joker",
+      // 'star' is deliberately NOT included · collides with
+      // "lucky star" / "star gazing" / generic star references.
+      // Hollywood theme ids / names should use the 'spotlight' or
+      // 'premiere' or 'hollywood' keyword instead.
+    ],
+  },
+  // ─── Vitamins · supplement · pharmacy · wellness · evaluated
+  //     BEFORE Products so "vitamin shop" routes to Vitamins
+  //     rather than Products via 'shop'. ──────────────────────────
+  {
+    categoryId: "vitamins",
+    keywords: [
+      "vitamin",
+      "vitamins",
+      "supplement",
+      "supplements",
+      "wellness",
+      "pharmacy",
+      "nutrition",
+    ],
+  },
+  // ─── Teddy · plush / soft toy · cuddle · gift Worlds · evaluated
+  //     BEFORE Products so "plush shop" / "teddy store" routes to
+  //     Teddy rather than Products via 'shop' / 'store'. ───────────
+  {
+    categoryId: "teddy",
+    keywords: [
+      // Deliberately NOT 'bear' (collides with beer brands / sports
+      // mascots) nor 'doll' (collides with "doll house" → Property).
+      "teddy",
+      "plush",
+      "cuddle",
+      "stuffie",
+      "soft-toy",
     ],
   },
   // ─── Products · retail · shop · catalogue ─────────────────────────

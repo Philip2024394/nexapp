@@ -62,6 +62,22 @@ export function StandardIntroOverlay({
     intro && (intro.kind === "standard" || intro.kind === "business")
       ? intro.videoUrl
       : null;
+  // Sealed 2026-10-11 · a StandardIntro may opt into audio playback.
+  // Mobile browsers still require a user gesture to actually produce
+  // sound · we flip `muted=false` on the video element and let the
+  // browser decide. If audio is blocked, the clip plays silently and
+  // the overlay still dismisses on `ended` or Skip. BusinessIntro
+  // never opts into audio in this phase.
+  const withAudio = intro?.kind === "standard" ? intro.withAudio === true : false;
+  // Scripted fallback (sealed 2026-10-11) · when a world declares an
+  // `intro.scriptedAnimation` but NO `videoUrl`, play a short scripted
+  // intro (theme name + palette gradient, 2s) before the live chat
+  // reveals. Driven by the SAME twice-then-skip policy as video intros
+  // so repeat visits don't annoy. Rule flipped from "scripted intros
+  // are intentionally untouched" to "every theme plays an intro."
+  const scriptedAnimation =
+    intro && intro.kind === "standard" ? intro.scriptedAnimation ?? null : null;
+  const hasAnyIntro = videoUrl !== null || scriptedAnimation !== null;
   const themeId = pkg.identity.id;
   const storageKey = React.useMemo(
     () => `${STORAGE_PREFIX}${themeId}`,
@@ -78,7 +94,7 @@ export function StandardIntroOverlay({
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
 
   React.useEffect(() => {
-    if (!videoUrl) {
+    if (!hasAnyIntro) {
       setPlayCount(0);
       return;
     }
@@ -89,7 +105,38 @@ export function StandardIntroOverlay({
     } catch {
       setPlayCount(0);
     }
-  }, [videoUrl, storageKey]);
+  }, [hasAnyIntro, storageKey]);
+
+  // Scripted fallback auto-dismiss · fires once when the scripted
+  // branch is active · after 2s the overlay increments the counter
+  // and reveals the live chat. Independent of the <video>'s onEnded
+  // handler so the two paths never fight for dismiss semantics.
+  React.useEffect(() => {
+    if (videoUrl) return;
+    if (!scriptedAnimation) return;
+    if (playCount === null) return;
+    if (!isBusinessIntro && playCount >= STANDARD_PLAY_LIMIT) return;
+    if (dismissed) return;
+    const id = window.setTimeout(() => {
+      try {
+        if (!isBusinessIntro) {
+          const next = (playCount ?? 0) + 1;
+          window.localStorage.setItem(storageKey, String(next));
+        }
+      } catch {
+        /* storage unavailable · best effort */
+      }
+      setDismissed(true);
+    }, 2000);
+    return () => window.clearTimeout(id);
+  }, [
+    videoUrl,
+    scriptedAnimation,
+    playCount,
+    dismissed,
+    isBusinessIntro,
+    storageKey,
+  ]);
 
   const incrementCount = React.useCallback(() => {
     if (isBusinessIntro) return; // BusinessIntro always plays · no cap
@@ -113,13 +160,134 @@ export function StandardIntroOverlay({
 
   // Early return guards · evaluated AFTER hooks per the Rules of
   // Hooks · never conditionally skip a hook above this point.
-  if (!videoUrl) return null;
+  if (!hasAnyIntro) return null;
   if (playCount === null) return null;
   if (!isBusinessIntro && playCount >= STANDARD_PLAY_LIMIT) return null;
   if (dismissed) return null;
 
   // Universal Theme Colour Rule · every surface here is theme-derived.
   const colours = engine.colours;
+  const skipButton = (
+    <button
+      type="button"
+      data-nex-standard-intro-skip
+      onClick={handleSkip}
+      aria-label="Skip intro"
+      style={{
+        position: "absolute",
+        top: "calc(env(safe-area-inset-top, 0) + 14px)",
+        right: 14,
+        zIndex: 10,
+        padding: "8px 14px",
+        borderRadius: 999,
+        background: colours.deep,
+        color: colours.highlight,
+        border: `1px solid ${colours.primary}`,
+        fontSize: 12,
+        fontWeight: 700,
+        cursor: "pointer",
+        letterSpacing: "0.08em",
+        textTransform: "uppercase",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+        fontFamily: "inherit",
+      }}
+    >
+      Skip intro →
+    </button>
+  );
+
+  // Scripted fallback · no video declared but the package declares an
+  // intro.scriptedAnimation · render a 2s branded intro using the
+  // theme palette so every theme has a visible intro before the chat
+  // reveals.
+  if (!videoUrl) {
+    return (
+      <div
+        data-nex-standard-intro-overlay
+        data-nex-intro-kind="scripted"
+        data-nex-intro-theme-id={themeId}
+        data-nex-intro-scripted-animation={scriptedAnimation ?? ""}
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 100,
+          background: `radial-gradient(circle at 50% 35%, ${colours.primary}44 0%, transparent 55%), linear-gradient(180deg, #000 0%, ${colours.deep} 22%, ${colours.deep} 78%, #000 100%)`,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "40px 24px",
+          animation: "nex-standard-intro-scripted-fade 2000ms ease-out forwards",
+        }}
+      >
+        <style>{`
+          @keyframes nex-standard-intro-scripted-fade {
+            0%   { opacity: 0; }
+            12%  { opacity: 1; }
+            80%  { opacity: 1; }
+            100% { opacity: 0; }
+          }
+          @keyframes nex-standard-intro-scripted-rise {
+            0%   { opacity: 0; transform: translateY(16px) scale(0.96); }
+            60%  { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+          }
+        `}</style>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 10,
+            animation:
+              "nex-standard-intro-scripted-rise 1400ms cubic-bezier(0.2, 0.9, 0.3, 1.1) both",
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              fontSize: 10,
+              letterSpacing: "0.42em",
+              textTransform: "uppercase",
+              fontWeight: 700,
+              color: colours.primary,
+            }}
+          >
+            NEX Theme
+          </span>
+          <span
+            style={{
+              fontSize: 32,
+              fontWeight: 800,
+              letterSpacing: "-0.01em",
+              color: colours.highlight,
+              textAlign: "center",
+              lineHeight: 1.1,
+              textShadow: `0 2px 20px ${colours.primary}66`,
+            }}
+          >
+            {pkg.identity.name}
+          </span>
+          {pkg.identity.tagline && (
+            <span
+              style={{
+                fontSize: 13,
+                color: colours.highlight,
+                opacity: 0.78,
+                textAlign: "center",
+                lineHeight: 1.4,
+                maxWidth: 320,
+              }}
+            >
+              {pkg.identity.tagline}
+            </span>
+          )}
+        </div>
+        {skipButton}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -144,7 +312,7 @@ export function StandardIntroOverlay({
         ref={videoRef}
         src={videoUrl}
         autoPlay
-        muted
+        muted={!withAudio}
         playsInline
         onEnded={handleEnded}
         onError={() => setDismissed(true)}
@@ -154,36 +322,7 @@ export function StandardIntroOverlay({
           objectFit: "cover",
         }}
       />
-      <button
-        type="button"
-        data-nex-standard-intro-skip
-        onClick={handleSkip}
-        aria-label="Skip intro"
-        style={{
-          position: "absolute",
-          top: "calc(env(safe-area-inset-top, 0) + 14px)",
-          right: 14,
-          zIndex: 10,
-          padding: "8px 14px",
-          borderRadius: 999,
-          // Skip-button chrome is theme-tinted · the deep anchor as
-          // background + the theme highlight for text + primary for
-          // border = the button sits inside the world, not outside it.
-          background: colours.deep,
-          color: colours.highlight,
-          border: `1px solid ${colours.primary}`,
-          fontSize: 12,
-          fontWeight: 700,
-          cursor: "pointer",
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          backdropFilter: "blur(8px)",
-          WebkitBackdropFilter: "blur(8px)",
-          fontFamily: "inherit",
-        }}
-      >
-        Skip intro →
-      </button>
+      {skipButton}
     </div>
   );
 }

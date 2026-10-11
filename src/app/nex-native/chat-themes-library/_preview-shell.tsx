@@ -40,6 +40,9 @@ import {
 } from "@/lib/nex-native/chat-render/theme-world";
 import type { BrowserThemeRow } from "./_theme-browser-client";
 import {
+  miniPhoneBubbleBackground,
+} from "../chat-standard/_engine/preview-mini-phone";
+import {
   appendLocalMessage,
   buildPreviewUrl,
   canSendLocalMessage,
@@ -198,8 +201,22 @@ export function ImmersivePreviewShell(
   const bubblePreset: BubblePreset =
     theme.wallpaper_config?.bubbleStyle?.preset ?? "classic";
   const bubbleRim = theme.bubble_rim_hex ?? theme.accent_hex;
-  const accentGlassMine = "rgba(0,159,239,0.26)";
-  const accentGlassPeer = "rgba(30,44,66,0.72)";
+  // Sealed Final Parity Pass 2026-10-11 · bubble background now
+  // dispatches through the LIVE engine's `resolveBubbleBackground`
+  // via the shared helper, keyed off this theme's actual
+  // `bubble_material`. Each material branch (glass · solid · gradient
+  // · neon-glass · warm-liquid · etc.) paints byte-identical to the
+  // live chat.
+  const accentGlassMine = miniPhoneBubbleBackground(
+    theme.palette,
+    true,
+    theme.bubble_material,
+  );
+  const accentGlassPeer = miniPhoneBubbleBackground(
+    theme.palette,
+    false,
+    theme.bubble_material,
+  );
 
   return (
     <>
@@ -233,9 +250,12 @@ export function ImmersivePreviewShell(
           left: 0;
           right: 0;
           z-index: 25;
-          background: linear-gradient(180deg, rgba(2,9,20,0.68) 0%, rgba(2,9,20,0.42) 70%, rgba(2,9,20,0) 100%);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
+          /* Founder-flipped 2026-10-11 · the navy shade band at the
+           * top of the preview is gone · the back-arrow button sits
+           * directly on the live theme stage. */
+          background: transparent;
+          backdrop-filter: none;
+          -webkit-backdrop-filter: none;
           border-bottom: none;
         }
         [data-nex-immersive-preview] [data-nex-preview-footer-mobile] {
@@ -452,12 +472,7 @@ export function ImmersivePreviewShell(
 // ─── Top strip ──────────────────────────────────────────────────────
 
 function TopStrip({
-  theme,
   onClose,
-  onPrev,
-  onNext,
-  onShare,
-  openFullScreenHref: _openFullScreenHref,
 }: {
   theme: BrowserThemeRow;
   onClose: () => void;
@@ -466,17 +481,21 @@ function TopStrip({
   onShare: () => void;
   openFullScreenHref: string | null;
 }): React.JSX.Element {
+  // Founder-flipped 2026-10-11 · trimmed to a single back-arrow
+  // affordance · the earlier name block + tier chip + prev/next
+  // + share buttons are gone so the live theme fills the whole
+  // preview surface uninterrupted. The share flow still exists on
+  // the browser-client card · it just no longer floats over the
+  // immersive preview.
   return (
     <div
       data-nex-preview-topstrip
       style={{
-        height: 56,
         flexShrink: 0,
         display: "flex",
         alignItems: "center",
-        gap: 10,
         padding:
-          "calc(env(safe-area-inset-top, 0) + 4px) 14px 4px",
+          "calc(env(safe-area-inset-top, 0) + 8px) 14px 4px",
         zIndex: 25,
       }}
     >
@@ -500,97 +519,6 @@ function TopStrip({
       >
         <span aria-hidden style={{ fontSize: 18, lineHeight: 1 }}>
           ←
-        </span>
-      </button>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            fontSize: 15,
-            fontWeight: 700,
-            lineHeight: 1.2,
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {theme.name}
-        </div>
-        <div
-          style={{
-            fontSize: 10,
-            color: NEX.textMute,
-            letterSpacing: "0.02em",
-            marginTop: 2,
-          }}
-        >
-          {theme.tier === "bisnis" ? "Premium" : "Free"}
-        </div>
-      </div>
-      <button
-        type="button"
-        onClick={onPrev ?? undefined}
-        disabled={!onPrev}
-        aria-label="Previous theme"
-        style={{
-          width: 34,
-          height: 34,
-          borderRadius: 999,
-          background: "rgba(0,0,0,0.42)",
-          border: "1px solid rgba(255,255,255,0.1)",
-          color: onPrev ? NEX.text : NEX.textMute,
-          cursor: onPrev ? "pointer" : "default",
-          padding: 0,
-          display: "grid",
-          placeItems: "center",
-        }}
-      >
-        <span aria-hidden style={{ fontSize: 14 }}>
-          ‹
-        </span>
-      </button>
-      <button
-        type="button"
-        onClick={onNext ?? undefined}
-        disabled={!onNext}
-        aria-label="Next theme"
-        style={{
-          width: 34,
-          height: 34,
-          borderRadius: 999,
-          background: "rgba(0,0,0,0.42)",
-          border: "1px solid rgba(255,255,255,0.1)",
-          color: onNext ? NEX.text : NEX.textMute,
-          cursor: onNext ? "pointer" : "default",
-          padding: 0,
-          display: "grid",
-          placeItems: "center",
-        }}
-      >
-        <span aria-hidden style={{ fontSize: 14 }}>
-          ›
-        </span>
-      </button>
-      <button
-        type="button"
-        onClick={onShare}
-        aria-label="Share theme"
-        data-nex-preview-share-button
-        style={{
-          width: 36,
-          height: 36,
-          borderRadius: 999,
-          background: `${theme.accent_hex}22`,
-          border: `1px solid ${theme.accent_hex}99`,
-          color: theme.accent_hex,
-          cursor: "pointer",
-          padding: 0,
-          display: "grid",
-          placeItems: "center",
-          flexShrink: 0,
-        }}
-      >
-        <span aria-hidden style={{ fontSize: 15, fontWeight: 700 }}>
-          ↗
         </span>
       </button>
     </div>
@@ -1281,6 +1209,9 @@ function ActionFooter({
       ) : (
         <>
           {openFullScreenHref && (
+            // Founder-flipped 2026-10-11 · the "Open full screen →"
+            // button is now a theme-tinted container (not transparent)
+            // so the live theme colour reads clearly on both buttons.
             <a
               href={openFullScreenHref}
               style={{
@@ -1288,7 +1219,7 @@ function ActionFooter({
                 textAlign: "center",
                 padding: "10px",
                 borderRadius: 10,
-                background: "transparent",
+                background: `${theme.accent_hex}22`,
                 border: `1px solid ${theme.accent_hex}`,
                 color: theme.accent_hex,
                 textDecoration: "none",
@@ -1314,10 +1245,11 @@ function ActionFooter({
                 borderRadius: 10,
                 background: theme.accent_hex,
                 color: "#0B0F1A",
-                border: "none",
+                border: `1px solid ${theme.accent_hex}`,
                 fontSize: 14,
                 fontWeight: 700,
                 cursor: "pointer",
+                boxShadow: `0 6px 18px -10px ${theme.accent_hex}`,
               }}
             >
               This theme →

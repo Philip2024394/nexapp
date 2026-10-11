@@ -282,6 +282,121 @@ const CATEGORY_REGISTRY: Readonly<Record<string, ThemeCategory>> = {
     // kicks in if the id ever drifts (defence in depth).
     heroThemeId: "waterworld",
   },
+  hollywood: {
+    id: "hollywood",
+    name: "Hollywood",
+    tagline: "Red carpet · premiere · spotlight · star",
+    icon: "🎬",
+    // Hollywood palette · gold + red-carpet crimson + champagne cream
+    // over cinematic black · reads as "premiere night". Distinct from
+    // Property's terracotta (which is real-estate hospitality) and
+    // Haunted's indigo (atmospheric mystery · different cinematic
+    // register from Hollywood's glamour).
+    //
+    // Keyword rule (sealed 2026-10-11): theme name/id contains
+    // 'hollywood', 'cinema', 'redcarpet', 'red-carpet', 'premiere',
+    // 'spotlight', 'star', 'joker', 'oscar', 'blockbuster' · falls
+    // through to Hollywood. The 'joker' keyword captures the sealed
+    // DB theme `theme-0` (its name/tagline carries 'joker') so the
+    // Library auto-files it into this room without a per-id branch.
+    colours: {
+      primary: "#D4A542", // hollywood gold
+      secondary: "#E85E5E", // red-carpet crimson
+      highlight: "#FFF4D6", // champagne cream · light text on deep bg
+      glow: "rgba(255,210,100,0.52)",
+      deep: "#0D0608", // cinematic black · page background
+    },
+    heroThemeId: "hollywood",
+  },
+  vitamins: {
+    id: "vitamins",
+    name: "Vitamins",
+    tagline: "Supplements · health · wellness · pharmacy",
+    icon: "💊",
+    // Vitamins palette · bright citrus + health cream · reads as
+    // "wellness aisle" without being clinical. Distinct from
+    // Services sage (which is practitioner territory) and Products
+    // slate (which is retail generic).
+    //
+    // Keyword rule (2026-10-11): theme name/id contains 'vitamin',
+    // 'supplement', 'wellness', 'pharmacy', 'nutrition', 'health' ·
+    // falls through to Vitamins. Evaluated AFTER Food so a
+    // "health kitchen" theme still routes to Food.
+    colours: {
+      primary: "#F5A623", // citrus amber
+      secondary: "#7ED957", // fresh green
+      highlight: "#FFF8E1", // health cream · light text on deep bg
+      glow: "rgba(245,166,35,0.52)",
+      deep: "#1A1507", // deep amber shadow · page background
+    },
+    // Vitamin Fruit is the first Vitamins live-world with a real
+    // wallpaper + intro video (sealed 2026-10-11) · it becomes the
+    // category hero. The DB-backed `vitamins` row (migration 137)
+    // also files here via the keyword resolver.
+    heroThemeId: "vitamin-fruit",
+  },
+  teddy: {
+    id: "teddy",
+    name: "Teddy",
+    tagline: "Plush · soft toy · cuddle · gift Worlds",
+    icon: "🧸",
+    // Teddy palette · warm honey + apricot cream + buttermilk · reads
+    // as "soft plush shelf". Distinct from Food's espresso warmth
+    // (Food is dining · Teddy is huggable). Distinct from Bakery's
+    // berry pink (Bakery is sweet-tooth · Teddy is cuddly). Distinct
+    // from Accommodation's walnut gold (Accommodation is hospitality
+    // · Teddy is toy-shelf).
+    //
+    // Keyword rule (2026-10-11): theme name/id contains 'teddy',
+    // 'plush', 'cuddle', 'stuffie', 'soft-toy' · falls through to
+    // Teddy. Deliberately NOT included: 'bear' (collides with
+    // "bear beer" / "bear brand" / sports mascots) and 'doll'
+    // (collides with "doll house" which is Property / "fashion
+    // doll" which is Products).
+    colours: {
+      primary: "#C68246", // warm honey · plush fur
+      secondary: "#F0C597", // peach cream · stuffing cotton
+      highlight: "#FEF3DE", // buttermilk · light text on deep bg
+      glow: "rgba(240,197,151,0.52)",
+      deep: "#2B1A0C", // dark hazelnut · page background
+    },
+    // TeddyPlay is the first Teddy live-world with a real wallpaper
+    // + intro (sealed 2026-10-11) · it becomes the category hero.
+    // Pink Dream also lives in Teddy but ships with no wallpaper
+    // asset so TeddyPlay reads better as the room's visual anchor.
+    heroThemeId: "teddy-play",
+  },
+  property: {
+    id: "property",
+    name: "Property",
+    tagline: "Real-estate · house · apartment · land · agent",
+    icon: "🏡",
+    // Property palette · warm slate / terracotta / dusk cream · reads
+    // as "real estate", "modern home at golden hour". Distinct from
+    // Accommodation (which is about hosting a stay) and Waterworld
+    // (which is deep water-blue). Property is sale / listing / agent
+    // territory · the room is purposely warmer than Products' cool
+    // slate so it reads as a human-scale real-estate listing surface.
+    //
+    // Keyword rule (2026-10-11 · evaluated BEFORE Accommodation so a
+    // "property listing" routes here rather than Accommodation via
+    // 'villa'; evaluated AFTER Haunted so "haunted estate" still
+    // routes to Haunted):
+    //   'property', 'real-estate', 'realestate', 'realtor', 'realty',
+    //   'estate', 'listing', 'home', 'apartment', 'condo', 'mortgage'.
+    // Deliberately NOT included: 'house', 'agent' (collide too
+    // readily with "coffee house" / "travel agent").
+    colours: {
+      primary: "#B45B3C", // terracotta
+      secondary: "#D8A08A", // dusk clay
+      highlight: "#F5E7D8", // dusk cream · light text on deep bg
+      glow: "rgba(216,160,138,0.50)",
+      deep: "#1E130C", // deep walnut night · page background
+    },
+    // Hero · the sealed property1 world ships as the first Property
+    // theme and acts as the category hero.
+    heroThemeId: "property1",
+  },
   [EXPLORE_CATEGORY_ID]: {
     id: EXPLORE_CATEGORY_ID,
     name: "Explore",

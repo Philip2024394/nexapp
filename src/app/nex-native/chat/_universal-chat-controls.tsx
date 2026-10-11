@@ -52,10 +52,32 @@ import * as React from "react";
 import { TrustScan } from "@/app/nex-native/_trust-scan/TrustScan";
 import { mockTrustScanProvider } from "@/app/nex-native/_trust-scan/trust-scan-mock-provider";
 import { NEX_TRUST_SCAN_SKIN } from "@/app/nex-native/_trust-scan/trust-scan-skin";
+import { JokerMotionOverlay } from "@/app/nex-native/themes/[id]/_joker-motion";
+import {
+  JOKER_MOTION_INDEX,
+  type JokerMotionVariant,
+} from "@/app/nex-native/themes/[id]/_joker-motion-data";
 
 const NEX_CYAN = "#00AFFF";
 const NEX_DEEP = "#020914";
 const NEX_HIGHLIGHT = "#F4F7FC";
+
+/** Glyph map · one emoji per sealed JokerMotionVariant. Keyed off
+ *  the variant id so adding a new variant to `JOKER_MOTION_INDEX`
+ *  requires adding a glyph here (otherwise it falls back to •). */
+const MOTION_GLYPH: Record<JokerMotionVariant, string> = {
+  rain: "💧",
+  sparks: "⚡",
+  bat: "🦇",
+  cards: "🃏",
+  lightning: "🌩",
+  bubbles: "🫧",
+  confetti: "🎉",
+  smoke: "💨",
+  embers: "🔥",
+  glitch: "🌀",
+  kiss: "💋",
+};
 
 export interface UniversalChatControlsProps {
   accent?: string;
@@ -72,6 +94,37 @@ export function UniversalChatControls({
 }: UniversalChatControlsProps): React.JSX.Element {
   const [actionsOpen, setActionsOpen] = React.useState(false);
   const [trustScanOpen, setTrustScanOpen] = React.useState(false);
+
+  // Sealed 2026-10-11 · auto-close timer · when the 3-dot opens, if
+  // the user does nothing for 5 seconds, both slider groups
+  // (horizontal call actions + vertical motion variants) auto-close.
+  // Timer is cleared the moment the user manually closes (toggles
+  // the 3-dot off) OR unmounts the chat. Simple time-based close
+  // without interaction tracking · if the user is actively picking
+  // animations, the toggles still work until the 5s elapses · tap
+  // the 3-dot again to re-open.
+  React.useEffect(() => {
+    if (!actionsOpen) return;
+    const id = window.setTimeout(() => setActionsOpen(false), 5000);
+    return () => window.clearTimeout(id);
+  }, [actionsOpen]);
+  // Sealed 2026-10-11 · when the 3-dot opens, a vertical column of
+  // JokerMotionVariant toggles slides UP alongside the horizontal
+  // call-actions row that slides LEFT. Each button toggles ONE
+  // motion variant on/off independently · the enabled Set renders
+  // real `JokerMotionOverlay`s below. Same renderer the Animation
+  // gallery page uses · universal across every theme that mounts
+  // UniversalChatControls (every theme using PortraitBloomShell).
+  const [enabledMotions, setEnabledMotions] = React.useState<
+    Set<JokerMotionVariant>
+  >(() => new Set());
+  const toggleMotion = (v: JokerMotionVariant) =>
+    setEnabledMotions((prev) => {
+      const next = new Set(prev);
+      if (next.has(v)) next.delete(v);
+      else next.add(v);
+      return next;
+    });
 
   const circle: React.CSSProperties = {
     width: 40,
@@ -107,15 +160,128 @@ export function UniversalChatControls({
 
   const showTrustScan = !!scannedAccountId;
 
+  // Sealed 2026-10-11 (final) · 3-dot sits DIRECTLY ABOVE the +
+  // button. The composer footer paints `[pill] [send] [+]` at
+  // bottom:safe+10 with 10px right padding · the + button is at
+  // right:10 · the send button is at right:58. Placing the 3-dot
+  // at right:58 (my earlier mistake) covered the send button.
+  // Correct position: right:10 (same horizontal as +), bottom:63
+  // (10 base + 40 button + 8 gap + 5 lift · founder-sealed
+  // "move up 3-dot 5px" 2026-10-11).
+  const CHROME_BOTTOM = 10 + 40 + 8 + 5; // 5px above the + button gap
+  const CHROME_RIGHT = 10; // same horizontal lane as +
+  // The animation column stacks above the 3-dot · anchor at
+  // 3-dot bottom + 3-dot height + gap.
+  const COLUMN_BOTTOM = CHROME_BOTTOM + 40 + 8;
+
   return (
     <>
+      {/* Vertical motion-variant column · slides UP from the 3-dot
+          when `actionsOpen`. Each button toggles one of the 10
+          sealed JOKER_MOTION_INDEX variants. Shares actionsOpen
+          state with the horizontal call-actions row. */}
+      <div
+        aria-hidden={!actionsOpen}
+        data-nex-universal-animation-column={actionsOpen ? "open" : "closed"}
+        style={{
+          position: "fixed",
+          right: CHROME_RIGHT,
+          bottom: `calc(env(safe-area-inset-bottom, 0) + ${COLUMN_BOTTOM}px)`,
+          zIndex: 60,
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          alignItems: "center",
+          opacity: actionsOpen ? 1 : 0,
+          transform: actionsOpen ? "translateY(0)" : "translateY(16px)",
+          pointerEvents: actionsOpen ? "auto" : "none",
+          transition:
+            "opacity 220ms ease-out, transform 300ms cubic-bezier(0.2, 0.9, 0.3, 1.1)",
+        }}
+      >
+        {JOKER_MOTION_INDEX.map((motion) => {
+          const isOn = enabledMotions.has(motion.variant);
+          const glyph = MOTION_GLYPH[motion.variant] ?? "•";
+          return (
+            <button
+              key={motion.variant}
+              type="button"
+              aria-label={`${motion.label} ${isOn ? "on" : "off"}`}
+              aria-pressed={isOn}
+              data-nex-animation-variant={motion.variant}
+              data-nex-animation-variant-state={isOn ? "on" : "off"}
+              onClick={() => toggleMotion(motion.variant)}
+              style={{
+                position: "relative",
+                width: 40,
+                height: 40,
+                borderRadius: 999,
+                background: isOn
+                  ? `linear-gradient(180deg, ${accent}, ${accent}cc)`
+                  : "rgba(2,9,20,0.72)",
+                border: `1px solid ${isOn ? accent : "rgba(244,247,252,0.2)"}`,
+                color: isOn ? deep : NEX_HIGHLIGHT,
+                display: "grid",
+                placeItems: "center",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                padding: 0,
+                fontSize: 18,
+                backdropFilter: "blur(6px)",
+                WebkitBackdropFilter: "blur(6px)",
+                boxShadow: isOn
+                  ? `0 4px 14px -4px ${accent}99`
+                  : `0 4px 10px -4px rgba(0,0,0,0.6)`,
+                transition: "background 160ms ease, border-color 160ms ease",
+              }}
+            >
+              <span aria-hidden>{glyph}</span>
+              <span
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  bottom: -2,
+                  right: -2,
+                  width: 10,
+                  height: 10,
+                  borderRadius: 999,
+                  background: isOn ? "#22C55E" : "rgba(244,247,252,0.25)",
+                  border: `2px solid ${deep}`,
+                }}
+              />
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Live motion overlays · one per enabled variant · each uses
+          the same JokerMotionOverlay the Animation gallery renders.
+          One-shot variants (kiss) receive an `onComplete` that
+          removes them from the enabled set so the user returns to
+          chat automatically when playback ends · ambient looping
+          variants ignore the callback and stay on until the user
+          toggles them off. */}
+      {[...enabledMotions].map((variant) => (
+        <JokerMotionOverlay
+          key={variant}
+          variant={variant}
+          onComplete={() =>
+            setEnabledMotions((prev) => {
+              const next = new Set(prev);
+              next.delete(variant);
+              return next;
+            })
+          }
+        />
+      ))}
+
       <div
         data-nex-universal-chat-controls
         data-nex-universal-chat-controls-state={actionsOpen ? "open" : "closed"}
         style={{
           position: "fixed",
-          right: 14,
-          bottom: "calc(env(safe-area-inset-bottom, 0) + 76px)",
+          right: CHROME_RIGHT,
+          bottom: `calc(env(safe-area-inset-bottom, 0) + ${CHROME_BOTTOM}px)`,
           zIndex: 60,
           display: "flex",
           flexDirection: "row",

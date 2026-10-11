@@ -113,7 +113,19 @@ export interface PortraitBloomMessage {
     | "cart_order"
     | "product_share"
     | "sticker"
+    | "theme-emoji"
     | null;
+  /** Sealed 2026-10-11 · theme-emoji attachment · emoji that was
+   *  picked from the composer's emoji picker and sent as its own
+   *  message. Renders LARGER than inline text (~56px) but smaller
+   *  than a full sticker (~140px) · "1× larger" per founder spec.
+   *  Received-side is tap-interactive · tap opens a center-screen
+   *  zoom with a transparent backdrop · auto-dismiss after 5s. */
+  attachment_theme_emoji?: {
+    theme_id: string;
+    slug: string;
+    label: string;
+  } | null;
   /** Bridge ThemeSticker · sealed 2026-10-01 · when attachment_type
    *  = 'sticker' this carries the frozen sticker snapshot so the
    *  bubble renders ~140px tall even if the sticker is later removed
@@ -656,6 +668,18 @@ export function PortraitBloomShell({
   const handleIntroComplete = React.useCallback(() => {
     setIntroStillPlaying(false);
   }, []);
+  // Sealed 2026-10-11 · theme-emoji tap-to-zoom · peer-side emoji
+  // bubbles tap into `setZoomedThemeEmoji` which renders a center-
+  // screen enlarged overlay with a transparent backdrop · an effect
+  // below auto-dismisses after 5000ms. Null = closed.
+  const [zoomedThemeEmoji, setZoomedThemeEmoji] = React.useState<
+    { image_url: string; label: string } | null
+  >(null);
+  React.useEffect(() => {
+    if (!zoomedThemeEmoji) return;
+    const id = window.setTimeout(() => setZoomedThemeEmoji(null), 5000);
+    return () => window.clearTimeout(id);
+  }, [zoomedThemeEmoji]);
 
   return (
     <>
@@ -1425,9 +1449,20 @@ export function PortraitBloomShell({
                               // theme palette without animating (no
                               // ping — pings only live on the header
                               // portrait so the scarcity rule holds).
+                              // Sealed 2026-10-11 · per-bubble avatar
+                              // rim now matches the HEADER portrait's
+                              // online presence ring thickness (2px) ·
+                              // founder-flipped: the hairline felt
+                              // disconnected from the header on Joker ·
+                              // bumping to 2px ties the identity rail
+                              // together without introducing a second
+                              // animation (pings still live on header
+                              // only). Alpha dropped to 0.75 so the
+                              // thicker stroke doesn't overpower the
+                              // 31px chip.
                               border: (() => {
                                 const r = hexToRgb(rippleColor);
-                                return `1px solid rgba(${r.r},${r.g},${r.b},0.6)`;
+                                return `2px solid rgba(${r.r},${r.g},${r.b},0.75)`;
                               })(),
                               position: "relative",
                             }}
@@ -1677,6 +1712,79 @@ export function PortraitBloomShell({
                             </div>
                           )}
                         </div>
+                      ) : m.attachment_type === "theme-emoji" &&
+                        m.attachment_url &&
+                        m.attachment_theme_emoji ? (
+                        /* Sealed 2026-10-11 · theme-emoji bubble ·
+                           renders ~56px tall (1× larger than inline
+                           text, smaller than a 140px sticker). The
+                           peer-side image is interactive · tap opens
+                           the center-screen `EmojiZoomOverlay` which
+                           dims the backdrop and auto-dismisses after
+                           5s. Own-side is non-interactive · you cannot
+                           zoom your own emoji. */
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setZoomedThemeEmoji({
+                              image_url: m.attachment_url!,
+                              label:
+                                m.attachment_theme_emoji!.label ||
+                                m.attachment_theme_emoji!.slug,
+                            })
+                          }
+                          aria-label={`Zoom ${
+                            m.attachment_theme_emoji.label ||
+                            m.attachment_theme_emoji.slug
+                          }`}
+                          data-nex-theme-emoji={m.attachment_theme_emoji.slug}
+                          style={{
+                            appearance: "none",
+                            background: "transparent",
+                            border: "none",
+                            padding: 0,
+                            // Sealed 2026-10-11 · emoji sits on its OWN
+                            // row via `display:block + marginBottom` so
+                            // the body text below it never overlaps.
+                            // Flex-column parent is NOT guaranteed on
+                            // this bubble (some branches render inline)
+                            // so a positive bottom margin + block
+                            // display gives us bullet-proof stacking.
+                            margin: m.body ? "0 0 8px" : 0,
+                            // Tap-to-zoom is enabled for mine AND peer
+                            // bubbles · founder-flipped 2026-10-11
+                            // ("will enlarge when clicked" without
+                            // sender-side gating). Cursor hints it's
+                            // interactive on every side.
+                            cursor: "zoom-in",
+                            display: "block",
+                            width: "fit-content",
+                          }}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={m.attachment_url}
+                            alt={
+                              m.attachment_theme_emoji.label ||
+                              m.attachment_theme_emoji.slug
+                            }
+                            style={{
+                              display: "block",
+                              // Chunky-stamp scale · sealed 2026-10-11 ·
+                              // bumped 56 → 96 → 160px after two founder
+                              // reviews ("we can not see the emoji on
+                              // chat bubble it needs more large"). 160
+                              // reads at a glance on mobile without
+                              // pushing the bubble wider than the chat
+                              // column (bubble maxWidth ~ 70vw ≈ 260px
+                              // on 375 viewports — 160 fits with margin).
+                              width: 160,
+                              height: 160,
+                              objectFit: "contain",
+                              pointerEvents: "none",
+                            }}
+                          />
+                        </button>
                       ) : m.attachment_envelope_b64 &&
                         (m.attachment_type === "image" ||
                           m.attachment_type === "video" ||
@@ -1945,6 +2053,55 @@ export function PortraitBloomShell({
         scannedAccountId={scannedAccountId}
         viewerAccountId={viewerAccountId}
       />
+      {/* Sealed 2026-10-11 · theme-emoji zoom overlay · opened when
+          the viewer taps a received emoji bubble · transparent dim
+          backdrop + center-stage enlarged image + 5s auto-dismiss
+          via the effect above. Tap backdrop to close early. */}
+      {zoomedThemeEmoji && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Enlarged ${zoomedThemeEmoji.label}`}
+          data-nex-theme-emoji-zoom="open"
+          onClick={() => setZoomedThemeEmoji(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 200,
+            display: "grid",
+            placeItems: "center",
+            background: "rgba(0,0,0,0.42)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            cursor: "pointer",
+            animation: "nex-theme-emoji-zoom-fade 220ms ease-out both",
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={zoomedThemeEmoji.image_url}
+            alt={zoomedThemeEmoji.label}
+            style={{
+              width: "min(60vw, 60vh)",
+              height: "auto",
+              objectFit: "contain",
+              pointerEvents: "none",
+              filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.5))",
+              animation: "nex-theme-emoji-zoom-pop 320ms cubic-bezier(0.2,0.9,0.3,1.1) both",
+            }}
+          />
+          <style>{`
+            @keyframes nex-theme-emoji-zoom-fade {
+              from { opacity: 0; }
+              to   { opacity: 1; }
+            }
+            @keyframes nex-theme-emoji-zoom-pop {
+              from { opacity: 0; transform: scale(0.6); }
+              to   { opacity: 1; transform: scale(1); }
+            }
+          `}</style>
+        </div>
+      )}
     </>
   );
 }

@@ -36,6 +36,22 @@ import { resolveNexAppSessionOrGuest } from "@/lib/nex-native/app/session-or-gue
 import { listBusinessesByOwner } from "@/lib/nex-native/business-service";
 import { themeCategoryIdForBusinessCategory } from "@/lib/nex-native/theme-category/industry-order";
 import type { BrowserThemeRow } from "./_theme-browser-client";
+import {
+  hexToRgba,
+  miniPhoneBubbleBackground,
+  miniPhoneBubbleBorder,
+  miniPhoneBubbleTextColor,
+  miniPhoneComposerBackground,
+  miniPhoneComposerBorder,
+  miniPhoneComposerPlaceholderColor,
+  miniPhoneSendBackground,
+  miniPhoneSendIconColor,
+  miniPhoneStageBackground,
+  miniPhoneFrameRim,
+  miniPhoneFrameShadow,
+  miniPhoneAmbient,
+} from "../chat-standard/_engine/preview-mini-phone";
+import { MiniPhoneAmbientLayer } from "./_mini-phone-ambient-layer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -395,23 +411,31 @@ function FreeNexPhone({
 }) {
   const accent = theme.accent_hex;
   const rim = theme.bubble_rim_hex ?? accent;
-  const composer = theme.composer_rim_hex ?? accent;
   const nextUrl = themePreviewHref(theme.id);
-  // Step 1I re-seal (2026-10-11) · founder flipped the NEX New
-  // "no chat text" rule · both free NEX phones now paint a full
-  // live chat preview (profile header + varied bubbles) so visitors
-  // see a real conversation in the theme's own palette. NEX New
-  // keeps the ambient floating-bubbles treatment OVER the chat.
-  const phoneBg = theme.hero_image_url
-    ? `url("${encodeURI(theme.hero_image_url)}") center/cover, ${accent}`
-    : theme.id === "nex-flat"
-      ? `radial-gradient(circle at 50% 110%, ${NEX.cyanFaint} 0%, transparent 60%), linear-gradient(165deg, ${composer} 0%, ${rim} 40%, ${accent} 100%)`
-      : `linear-gradient(165deg, ${accent} 0%, ${rim} 55%, ${composer} 100%)`;
+  // Live-chat parity (sealed 2026-10-11) · the free NEX phones now
+  // consume the SHARED mini-phone treatment (`preview-mini-phone.ts`)
+  // · byte-identical formulas to the live engine's glass material
+  // · deep/highlight pulled from `theme.palette` (populated by the
+  // live-world adapter from `pkg.colours` so a theme-package colour
+  // edit propagates automatically).
+  //
+  // nex-flat variant · the live chat paints an orange centre glow +
+  // rising orange bubbles via `liveWorldChatOverlay(moonGlow +
+  // particleDrift)` + ambient family "bubbles-rising". The mini-phone
+  // reproduces that visual signature with a radial gradient at the
+  // centre over the deep stage.
+  const palette = theme.palette;
+  const stageBase = miniPhoneStageBackground(palette, theme.hero_image_url);
+  const phoneBg =
+    !theme.hero_image_url && theme.id === "nex-flat"
+      ? `radial-gradient(circle at 50% 45%, ${hexToRgba(accent, 0.42)} 0%, transparent 60%), ${stageBase}`
+      : stageBase;
   const showAmbientBubbles = theme.id === "nex-flat";
+  // Founder-flipped 2026-10-11 · trimmed to the two sealed lines ·
+  // "i want" (peer) + "check themes on NEX" (mine). Matches the
+  // category phone grid.
   const sampleMessages: readonly { text: string; mine: boolean }[] = [
-    { text: "hey", mine: false },
-    { text: "love this", mine: true },
-    { text: "wow", mine: false },
+    { text: "i want", mine: false },
     { text: "check themes on NEX 👆", mine: true },
   ];
   return (
@@ -421,10 +445,9 @@ function FreeNexPhone({
         display: "flex",
         flexDirection: "column",
         gap: 10,
-        padding: 12,
-        borderRadius: 20,
-        background: `linear-gradient(180deg, ${NEX.panelHi} 0%, ${NEX.panel} 100%)`,
-        border: `1px solid ${NEX.cyanSoft}`,
+        padding: 0,
+        background: "transparent",
+        border: "none",
       }}
     >
       {/* Phone tap · same as "Preview {theme.name}" · opens the live
@@ -443,10 +466,10 @@ function FreeNexPhone({
           maxWidth: 150,
           borderRadius: 24,
           background: phoneBg,
-          border: `2px solid ${rim}`,
+          border: `2px solid ${miniPhoneFrameRim(palette)}`,
           overflow: "hidden",
           textDecoration: "none",
-          boxShadow: `0 10px 30px -16px rgba(0,0,0,0.6), 0 0 20px -12px ${accent}`,
+          boxShadow: miniPhoneFrameShadow(palette),
         }}
       >
         <span
@@ -522,30 +545,41 @@ function FreeNexPhone({
               flex: "none",
             }}
           >
-            {[
-              {
-                glyph: "⌂",
-                key: "home",
-                bg: "linear-gradient(180deg, #4FC3FF 0%, #00AFFF 100%)",
-                border: "rgba(0,175,255,0.6)",
-                shadow: "0 1px 3px rgba(0,175,255,0.35)",
-              },
-              {
-                glyph: "🛍",
-                key: "shop",
-                bg: "linear-gradient(180deg, #FF9033 0%, #FF7800 100%)",
-                border: "rgba(255,120,0,0.6)",
-                shadow: "0 1px 3px rgba(255,120,0,0.35)",
-              },
-              {
-                glyph: "🛒",
-                key: "cart",
-                bg: "linear-gradient(180deg, #FF6DB5 0%, #FF3F9F 100%)",
-                border: "rgba(255,63,159,0.6)",
-                shadow: "0 1px 3px rgba(255,63,159,0.35)",
-                hasBadge: true,
-              },
-            ].map((b) => (
+            {(() => {
+              // Founder-flipped 2026-10-11 · right-cluster buttons
+              // now follow the free NEX theme palette rather than
+              // the fixed NEX cyan/orange/pink trio. For the two
+              // free NEX themes `accent`/`rim` are both NEX orange,
+              // so the row reads as a single branded orange cluster
+              // instead of a tri-colour one.
+              const home = accent;
+              const shop = rim;
+              const cart = theme.composer_rim_hex ?? rim;
+              return [
+                {
+                  glyph: "⌂",
+                  key: "home",
+                  bg: `linear-gradient(180deg, ${home}, ${home}cc)`,
+                  border: `${home}99`,
+                  shadow: `0 1px 3px ${home}66`,
+                },
+                {
+                  glyph: "🛍",
+                  key: "shop",
+                  bg: `linear-gradient(180deg, ${shop}, ${shop}cc)`,
+                  border: `${shop}99`,
+                  shadow: `0 1px 3px ${shop}66`,
+                },
+                {
+                  glyph: "🛒",
+                  key: "cart",
+                  bg: `linear-gradient(180deg, ${cart}, ${cart}cc)`,
+                  border: `${cart}99`,
+                  shadow: `0 1px 3px ${cart}66`,
+                  hasBadge: true,
+                },
+              ];
+            })().map((b) => (
               <span
                 key={b.key}
                 style={{
@@ -582,35 +616,23 @@ function FreeNexPhone({
             ))}
           </span>
         </div>
-        {/* Ambient floating blue bubbles · NEX New only · layered
-            BEHIND the chat preview rather than replacing it. */}
-        {showAmbientBubbles && (
-          <span aria-hidden style={{ position: "absolute", inset: 0, overflow: "hidden", zIndex: 1 }}>
-            {[
-              { size: 10, left: "22%", bottom: "18%" },
-              { size: 14, left: "60%", bottom: "28%" },
-              { size: 8, left: "40%", bottom: "48%" },
-              { size: 12, left: "70%", bottom: "62%" },
-              { size: 6, left: "28%", bottom: "72%" },
-              { size: 9, left: "55%", bottom: "82%" },
-            ].map((b, i) => (
-              <span
-                key={i}
-                style={{
-                  position: "absolute",
-                  left: b.left,
-                  bottom: b.bottom,
-                  width: b.size,
-                  height: b.size,
-                  borderRadius: 999,
-                  background: NEX.cyan,
-                  opacity: 0.55,
-                  boxShadow: `0 0 ${b.size * 2}px ${NEX.cyan}66`,
-                }}
-              />
-            ))}
-          </span>
-        )}
+        {/* Final Parity Pass 2026-10-11 · bespoke orange-dots block
+            REMOVED · the two free NEX phones now consume the SAME
+            shared ambient layer every other preview surface uses.
+            nex-flat's declared families (bubbles-rising + heat-
+            shimmer + sparkles) all paint via `miniPhoneAmbient()`;
+            nex-bubbles (light-rays + sparkles + pollen-float) also
+            paints its full identity for the first time. */}
+        <MiniPhoneAmbientLayer
+          specs={miniPhoneAmbient(
+            palette,
+            theme.ambient_families,
+            "sparse",
+          )}
+        />
+        {/* `showAmbientBubbles` is retired · the ambient layer is now
+            universal · the former bespoke-dots condition drops. */}
+        {false && showAmbientBubbles && null}
         {/* Live chat preview · four bubbles alternating peer / me so
             every free NEX phone paints a real conversation. Message
             copy sealed by the founder 2026-10-11. */}
@@ -632,31 +654,38 @@ function FreeNexPhone({
                 padding: "2.5px 6px",
                 borderRadius: 999,
                 maxWidth: "82%",
-                // Step 1I re-seal · each theme's bubbles derive from
-                // ITS OWN palette · peer uses primary (accent), me
-                // uses secondary (rim) tinted · no two themes share
-                // the same me-bubble color.
-                background: m.mine
-                  ? hexToRgba(rim, 0.78)
-                  : `${accent}cc`,
-                border: m.mine
-                  ? `1px solid ${hexToRgba(rim, 0.95)}`
-                  : "none",
-                color: m.mine ? "#F2F5F8" : "#021022",
+                // Sealed Final Parity Pass 2026-10-11 · bubble bg +
+                // border now dispatch through the LIVE engine's
+                // material resolver via the shared helper · each
+                // theme paints its own declared material (nex-flat
+                // is solid · nex-bubbles is glass · etc).
+                background: miniPhoneBubbleBackground(
+                  palette,
+                  m.mine,
+                  theme.bubble_material,
+                ),
+                border: miniPhoneBubbleBorder(
+                  palette,
+                  m.mine,
+                  theme.bubble_material,
+                ),
+                color: miniPhoneBubbleTextColor(palette),
                 fontSize: 7,
-                fontWeight: m.mine ? 600 : 700,
+                fontWeight: 500,
                 lineHeight: 1.25,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
-                textShadow: m.mine ? "0 1px 2px rgba(0,0,0,0.5)" : undefined,
+                textShadow: "0 1px 2px rgba(0,0,0,0.55)",
               }}
             >
               {m.text}
             </div>
           ))}
         </div>
-        {/* Composer footer · theme-tinted pill with send glyph. */}
+        {/* Composer footer · live-chat parity · deep-tinted glass pill
+            with an orange send glyph · matches the real glass composer
+            over navy in StandardExperience. */}
         <div
           aria-hidden
           style={{
@@ -669,8 +698,11 @@ function FreeNexPhone({
             gap: 3,
             padding: "2.5px 2.5px 2.5px 7px",
             borderRadius: 999,
-            background: hexToRgba(accent, 0.16),
-            border: `0.5px solid ${hexToRgba(accent, 0.4)}`,
+            // Sealed 2026-10-11 · composer background + border consumed
+            // from the SHARED mini-phone treatment · identical formula
+            // to `_phone-tile.tsx` and the category grid phones.
+            background: miniPhoneComposerBackground(palette),
+            border: miniPhoneComposerBorder(palette),
             backdropFilter: "blur(6px)",
             WebkitBackdropFilter: "blur(6px)",
             zIndex: 4,
@@ -680,7 +712,7 @@ function FreeNexPhone({
             style={{
               flex: 1,
               fontSize: 6,
-              color: "rgba(242,245,248,0.55)",
+              color: miniPhoneComposerPlaceholderColor(palette),
               fontStyle: "italic",
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -694,10 +726,12 @@ function FreeNexPhone({
               width: 10,
               height: 10,
               borderRadius: 999,
-              background:
-                "linear-gradient(180deg, #FF9033 0%, #FF7800 100%)",
-              border: "0.5px solid rgba(255,120,0,0.6)",
-              color: "#0B0F1A",
+              // Sealed 2026-10-11 · send button = solid theme primary ·
+              // mirrors `controlsTreatment().sendButton` on the live
+              // engine · was hardcoded NEX orange gradient.
+              background: miniPhoneSendBackground(palette),
+              border: `0.5px solid ${hexToRgba(palette.primary, 0.6)}`,
+              color: miniPhoneSendIconColor(palette),
               display: "grid",
               placeItems: "center",
               fontSize: 6,
@@ -740,13 +774,15 @@ function FreeNexPhone({
           pick-theme account wall). Keeping the two actions on
           separate surfaces fits the semantic: Explore = "take me
           there", This theme → = "apply it". */}
-      <Link
-        href={nextUrl}
-        data-nex-space-free-explore={theme.id}
-        style={freeUseLinkStyle(accent)}
-      >
-        Explore →
-      </Link>
+      <div style={{ display: "flex", justifyContent: "center" }}>
+        <Link
+          href={nextUrl}
+          data-nex-space-free-explore={theme.id}
+          style={freeUseLinkStyle(accent)}
+        >
+          Explore →
+        </Link>
+      </div>
     </div>
   );
 }
@@ -847,13 +883,12 @@ function freeUseLinkStyle(accent: string): React.CSSProperties {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    width: "100%",
-    minHeight: 40,
+    minHeight: 30,
     padding: "0 14px",
-    borderRadius: 10,
+    borderRadius: 999,
     background: accent,
     color: "#021022",
-    fontSize: 12.5,
+    fontSize: 11.5,
     fontWeight: 700,
     border: `1px solid ${accent}`,
     textDecoration: "none",
@@ -862,31 +897,7 @@ function freeUseLinkStyle(accent: string): React.CSSProperties {
   };
 }
 
-/** Convert a hex colour (#RRGGBB or #RGB) to an rgba() string. Falls
- *  back to the input when parsing fails so the theme never renders
- *  a broken value. Used by the mini-phone preview bubbles so each
- *  theme's me-side bubble pulls from its own palette rather than a
- *  hardcoded navy. */
-function hexToRgba(colour: string, alpha: number): string {
-  const trimmed = colour.trim();
-  if (trimmed.startsWith("#") && (trimmed.length === 7 || trimmed.length === 4)) {
-    const hex =
-      trimmed.length === 4
-        ? `#${trimmed[1]}${trimmed[1]}${trimmed[2]}${trimmed[2]}${trimmed[3]}${trimmed[3]}`
-        : trimmed;
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    if (!Number.isNaN(r) && !Number.isNaN(g) && !Number.isNaN(b)) {
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    }
-  }
-  const rgbaMatch = trimmed.match(/^rgba?\(([^)]+)\)$/i);
-  if (rgbaMatch) {
-    const parts = rgbaMatch[1].split(",").map((s) => s.trim());
-    if (parts.length >= 3) {
-      return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${alpha})`;
-    }
-  }
-  return trimmed;
-}
+// Local `hexToRgba` was DELETED 2026-10-11 · the single implementation
+// now lives at `src/app/nex-native/chat-standard/_engine/preview-mini-
+// phone.ts` and is imported at the top of this file. Every preview
+// surface shares that one path.

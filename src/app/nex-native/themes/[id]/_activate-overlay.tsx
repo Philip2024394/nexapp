@@ -1,27 +1,25 @@
 // src/app/nex-native/themes/[id]/_activate-overlay.tsx
 //
-// NEX Theme Viewer · slim top-anchored preview bar · 2026-10-11.
-// --------------------------------------------------------------
-// Replaces the earlier tall bottom-anchored card that overlapped
-// the composer footer on `/themes/[id]`. The new treatment is a
-// thin top bar (~56px) that stays out of the chat chrome:
+// NEX Theme Viewer · centred square popup · 2026-10-11.
+// -----------------------------------------------------
+// Founder-sealed redesign · the slim top bar is replaced with a
+// true viewport-centred popup card that reads vertically:
 //
-//   [ ← ] · PREVIEW · <Theme Name> · [ Use this theme → ]
+//     [ × ]
+//     PREVIEW
+//     <Theme Name>
+//     [ This theme → ]
 //
-// · Left tap  → return to /chat-themes-library (safe local path)
-// · Right tap → session: posts updateChatThemeAction with
-//               next=/home · guest: opens the pick-theme account
-//               wall.
-// · The bar does NOT render over the composer / shop footer at the
-//   bottom of the viewer. It sits above the top of the viewport,
-//   honouring safe-area-inset-top so iOS notches don't hide it.
-//
-// Rationale: the earlier bottom overlay carried three stacked CTAs
-// (Use / View / Return) + a label block, which the founder
-// explicitly flagged as "blocking footer area on themes and looks
-// shit ui". This slim bar surfaces the single primary action with
-// one-tap close (back arrow) and leaves the "view all themes"
-// affordance to the NEX Space landing's own CTAs.
+// · Backdrop · soft dim behind the card so the chat preview stays
+//   visible (reduced-opacity navy veil).
+// · Card · ~220×220 square · navy glass surface · theme-accent rim.
+// · Close × · top-right corner · returns to /chat-themes-library.
+// · Primary CTA · session: posts updateChatThemeAction with
+//                 next=/home · guest: opens the pick-theme account
+//                 wall.
+// · The backdrop itself is NOT clickable-to-close · we don't want
+//   the viewer accidentally bouncing to the library before they
+//   see the preview. The explicit × is the only exit.
 
 import * as React from "react";
 import Link from "next/link";
@@ -59,93 +57,92 @@ export function ThemeActivateOverlay({
     <div
       data-nex-theme-activate-bar
       data-nex-theme-id={themeId}
-      role="group"
+      role="dialog"
+      aria-modal="true"
       aria-label={`Preview controls for ${themeName}`}
       style={{
         position: "fixed",
-        left: 0,
-        right: 0,
-        top: 0,
+        inset: 0,
         zIndex: 100,
-        padding: "calc(env(safe-area-inset-top, 0px) + 8px) 12px 8px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "max(env(safe-area-inset-top, 0px), 12px) 12px max(env(safe-area-inset-bottom, 0px), 12px)",
+        background: "rgba(2, 9, 20, 0.42)",
+        backdropFilter: "blur(2px)",
+        WebkitBackdropFilter: "blur(2px)",
         pointerEvents: "none",
       }}
     >
       <div
         style={{
           position: "relative",
+          width: "min(240px, 72vw)",
+          aspectRatio: "1 / 1",
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
+          justifyContent: "center",
           gap: 10,
-          height: 44,
-          padding: "0 6px 0 4px",
-          margin: "0 auto",
-          maxWidth: 440,
-          borderRadius: 999,
-          background: "rgba(2, 9, 20, 0.72)",
+          padding: "20px 18px",
+          borderRadius: 20,
+          background: "rgba(2, 9, 20, 0.86)",
           border: `1px solid ${rim}66`,
           boxShadow:
-            `0 12px 28px -14px rgba(0,0,0,0.6), 0 0 24px -14px ${accent}`,
-          backdropFilter: "blur(14px)",
-          WebkitBackdropFilter: "blur(14px)",
+            `0 20px 48px -20px rgba(0,0,0,0.72), 0 0 36px -16px ${accent}`,
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
           pointerEvents: "auto",
         }}
       >
         <Link
           href="/nex-native/chat-themes-library"
           data-nex-theme-return
-          aria-label="Return to theme library"
+          aria-label="Close preview"
           style={{
+            position: "absolute",
+            top: 8,
+            right: 8,
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            width: 36,
-            height: 36,
+            width: 28,
+            height: 28,
             borderRadius: 999,
-            background: "transparent",
+            background: "rgba(255,255,255,0.06)",
             color: NEX.textMuted,
-            fontSize: 16,
+            fontSize: 15,
+            lineHeight: 1,
             textDecoration: "none",
-            flex: "none",
           }}
         >
-          ←
+          ×
         </Link>
 
-        <div
+        <span
           style={{
-            flex: 1,
-            minWidth: 0,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            lineHeight: 1.1,
+            fontSize: 9.5,
+            letterSpacing: "0.3em",
+            textTransform: "uppercase",
+            fontWeight: 700,
+            color: accent,
           }}
         >
-          <span
-            style={{
-              fontSize: 9,
-              letterSpacing: "0.26em",
-              textTransform: "uppercase",
-              fontWeight: 700,
-              color: accent,
-            }}
-          >
-            Preview
-          </span>
-          <span
-            style={{
-              fontSize: 13,
-              fontWeight: 700,
-              color: NEX.textPrimary,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {themeName}
-          </span>
-        </div>
+          Preview
+        </span>
+        <span
+          style={{
+            fontSize: 16,
+            fontWeight: 700,
+            color: NEX.textPrimary,
+            textAlign: "center",
+            lineHeight: 1.2,
+            maxWidth: "100%",
+            overflowWrap: "break-word",
+          }}
+        >
+          {themeName}
+        </span>
 
         {isGuest ? (
           <RequireAccount
@@ -166,7 +163,12 @@ export function ThemeActivateOverlay({
         ) : (
           <form action={updateChatThemeAction}>
             <input type="hidden" name="chat_theme" value={themeId} />
-            <input type="hidden" name="next" value="/nex-native/home" />
+            {/* After apply, land on the LIVE chat of the newly applied
+                theme · `/chat/preview` redirects to `/themes/<viewer
+                chat_theme>` which paints the full StandardExperience
+                live chat for that id. Was `/home` · founder flipped
+                2026-10-11 ("should open the chat theme live"). */}
+            <input type="hidden" name="next" value="/nex-native/chat/preview" />
             <button
               type="submit"
               data-nex-theme-activate-cta
@@ -176,9 +178,35 @@ export function ThemeActivateOverlay({
             </button>
           </form>
         )}
+
+        <Link
+          href="/nex-native/chat-themes-library"
+          data-nex-theme-back
+          style={backLinkStyle()}
+        >
+          ← Back to themes
+        </Link>
       </div>
     </div>
   );
+}
+
+function backLinkStyle(): React.CSSProperties {
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
+    padding: "4px 10px",
+    borderRadius: 999,
+    background: "transparent",
+    color: NEX.textMuted,
+    fontSize: 11,
+    fontWeight: 600,
+    textDecoration: "none",
+    fontFamily: "inherit",
+    whiteSpace: "nowrap",
+  };
 }
 
 function primaryPillStyle(): React.CSSProperties {
@@ -186,16 +214,17 @@ function primaryPillStyle(): React.CSSProperties {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    height: 36,
-    padding: "0 14px",
+    height: 38,
+    padding: "0 18px",
+    marginTop: 4,
     borderRadius: 999,
     background: NEX.orange,
     color: "#0a0608",
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: 700,
     border: `1px solid ${NEX.orange}`,
     cursor: "pointer",
-    boxShadow: `0 1px 0 rgba(255,255,255,0.18) inset, 0 6px 14px -8px ${NEX.orange}`,
+    boxShadow: `0 1px 0 rgba(255,255,255,0.18) inset, 0 8px 18px -8px ${NEX.orange}`,
     fontFamily: "inherit",
     whiteSpace: "nowrap",
     flex: "none",

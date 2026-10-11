@@ -7,6 +7,7 @@
 
 import "server-only";
 import { nexSupabaseAdmin } from "./supabase-admin";
+import { getBuiltInEmoji } from "./theme-asset-fallback";
 
 export const NEX_THEME_EMOJI_MAX_BYTES = 512 * 1024; // 512 KB
 export const NEX_THEME_EMOJI_ALLOWED_MIMES: Record<string, string> = {
@@ -27,7 +28,14 @@ export interface NexThemeEmojiRow {
 }
 
 /** List every emoji for a theme (sorted). Returns empty array when
- *  the theme has no custom set · caller falls back to the default. */
+ *  the theme has no custom set AND no built-in fallback · caller
+ *  then falls back to the default Unicode set. Sealed 2026-10-11 ·
+ *  when the DB is empty for a theme that has a known built-in
+ *  catalog (e.g. "theme-0" Joker · 23 PNGs under
+ *  `public/nex-themes/joker/emoji/`), return the built-in rows so
+ *  the picker paints the original Joker set without a Supabase
+ *  seed. DB rows WIN when they exist · the fallback only fires on
+ *  a truly empty query result. */
 export async function listThemeEmojis(
   themeId: string,
 ): Promise<NexThemeEmojiRow[]> {
@@ -44,9 +52,32 @@ export async function listThemeEmojis(
     console.error(
       `theme-emoji-service.listThemeEmojis(${themeId}): ${error.message}`,
     );
-    return [];
+    // DB failure still falls through to the built-in catalog if one
+    // exists · the picker never goes blank for a known theme.
+    return builtInEmojiRows(themeId);
   }
-  return (data ?? []) as NexThemeEmojiRow[];
+  const rows = (data ?? []) as NexThemeEmojiRow[];
+  if (rows.length > 0) return rows;
+  return builtInEmojiRows(themeId);
+}
+
+/** Shape the built-in catalog into the same `NexThemeEmojiRow` type
+ *  the consumer expects · deterministic ids keyed off slug so React
+ *  reconciliation stays stable across re-renders. */
+function builtInEmojiRows(themeId: string): NexThemeEmojiRow[] {
+  const builtIn = getBuiltInEmoji(themeId);
+  if (!builtIn || builtIn.length === 0) return [];
+  const now = new Date().toISOString();
+  return builtIn.map((e) => ({
+    id: `builtin:${themeId}:${e.slug}`,
+    theme_id: themeId,
+    slug: e.slug,
+    image_url: e.image_url,
+    label: e.label,
+    sort_order: e.sort_order,
+    created_at: now,
+    updated_at: now,
+  }));
 }
 
 /** Upload a raw file to the nex-theme-emoji bucket then insert a

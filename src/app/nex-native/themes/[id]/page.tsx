@@ -34,8 +34,6 @@ import { StandardExperienceLiveClient } from "./_standard-experience-live-client
 import { UniversalChromeOverlay } from "../../chat-standard/_universal-chrome-overlay";
 import { UniversalComposerFooter } from "../../chat-standard/_universal-composer-footer";
 import { UniversalHeaderIconsOverlay } from "../../chat-standard/_universal-header-icons-overlay";
-import { resolveNexAppSessionOrGuest } from "@/lib/nex-native/app/session-or-guest";
-import { ThemeActivateOverlay } from "./_activate-overlay";
 import { trackThemeView } from "@/lib/nex-native/theme-view-service";
 
 export const runtime = "nodejs";
@@ -55,12 +53,6 @@ export default async function ThemeViewerPage({
   const { id } = await params;
   const sp = (await searchParams) ?? {};
 
-  // Phase 0 integration · resolve viewer state up front · the activation
-  // bar swaps between the session form path (real updateChatThemeAction)
-  // and the guest wall path (RequireAccount → signup intercept).
-  const viewer = await resolveNexAppSessionOrGuest();
-  const isGuest = viewer.kind === "guest";
-
   // Step 1G · fire-and-forget view tracking so the NEX Space landing's
   // "Popular" row ranks by real activity. Never awaited · the counter
   // is non-fatal and the preview page must stay fast.
@@ -74,18 +66,7 @@ export default async function ThemeViewerPage({
   // midnight-cafe · french-cafe.
   if (isLiveWorldId(id)) {
     const pkg = LIVE_WORLD_PACKAGES[id];
-    return (
-      <>
-        <StandardExperienceLiveClient pkg={pkg} />
-        <ThemeActivateOverlay
-          themeId={id}
-          themeName={pkg.identity.name}
-          isGuest={isGuest}
-          accentHex={pkg.colours.primary}
-          bubbleRimHex={pkg.colours.secondary ?? pkg.colours.primary}
-        />
-      </>
-    );
+    return <StandardExperienceLiveClient pkg={pkg} />;
   }
 
   // The Haunted Hotel preview IS the depth-cards experience that the
@@ -185,22 +166,12 @@ export default async function ThemeViewerPage({
           hidden by the UniversalComposerFooter CSS block so the
           universal 3-dots becomes the sole lower-right affordance. */}
       <UniversalChromeOverlay accent={theme.accent_hex} />
-      {/* UNIVERSAL COMPOSER FOOTER OVERLAY · sealed R3 revision 2 ·
-          Prototype 5 pattern is the ONE default footer across every
-          live theme · no exceptions. UniversalComposerFooter itself
-          injects the CSS that hides native composers underneath. */}
-      <UniversalComposerFooter accent={theme.accent_hex} themeId={theme.id} />
-      {/* Task #37 · chat-bubble activate affordance painted in the
-          theme's own palette · for guests the primary CTA opens the
-          account wall (pick-theme) · for session viewers it posts
-          to the sealed updateChatThemeAction with next=/home. */}
-      <ThemeActivateOverlay
-        themeId={theme.id}
-        themeName={theme.name}
-        isGuest={isGuest}
-        accentHex={theme.accent_hex}
-        bubbleRimHex={theme.bubble_rim_hex ?? theme.accent_hex}
-      />
+      {/* Sealed 2026-10-11 · UniversalComposerFooter was previously
+          mounted here as a sibling · now owned by ThemeViewerClient
+          (above) so the overlay's Send button has a working
+          onSendMessage callback that appends to the preview message
+          list. Removing the duplicate mount keeps the composer as
+          a single instance per route. */}
     </>
   );
 }

@@ -8,6 +8,7 @@
 
 import "server-only";
 import { nexSupabaseAdmin } from "./supabase-admin";
+import { getBuiltInStickers } from "./theme-asset-fallback";
 
 export const NEX_THEME_STICKER_MAX_BYTES = 2 * 1024 * 1024; // 2 MB
 export const NEX_THEME_STICKER_ALLOWED_MIMES: Record<string, string> = {
@@ -35,8 +36,12 @@ export interface NexThemeStickerRow {
   updated_at: string;
 }
 
-/** List every sticker for a theme (sorted). Returns empty array when
- *  the theme has no sticker set · caller shows an empty-state hint. */
+/** List every sticker for a theme (sorted). Sealed 2026-10-11 ·
+ *  when the DB is empty for a theme that has a known built-in
+ *  catalog (e.g. "theme-0" Joker · 9 PNGs under
+ *  `public/nex-themes/joker/sticker/`), return the built-in rows
+ *  so the stickers tab paints the original set without a Supabase
+ *  seed. DB rows WIN when they exist. */
 export async function listThemeStickers(
   themeId: string,
 ): Promise<NexThemeStickerRow[]> {
@@ -53,9 +58,31 @@ export async function listThemeStickers(
     console.error(
       `theme-sticker-service.listThemeStickers(${themeId}): ${error.message}`,
     );
-    return [];
+    return builtInStickerRows(themeId);
   }
-  return (data ?? []) as NexThemeStickerRow[];
+  const rows = (data ?? []) as NexThemeStickerRow[];
+  if (rows.length > 0) return rows;
+  return builtInStickerRows(themeId);
+}
+
+/** Shape the built-in catalog into the same `NexThemeStickerRow` type
+ *  the consumer expects · deterministic ids keyed off slug. */
+function builtInStickerRows(themeId: string): NexThemeStickerRow[] {
+  const builtIn = getBuiltInStickers(themeId);
+  if (!builtIn || builtIn.length === 0) return [];
+  const now = new Date().toISOString();
+  return builtIn.map((s) => ({
+    id: `builtin:${themeId}:${s.slug}`,
+    theme_id: themeId,
+    slug: s.slug,
+    image_url: s.image_url,
+    label: s.label,
+    sort_order: s.sort_order,
+    sticker_type: s.sticker_type,
+    aspect_ratio: s.aspect_ratio,
+    created_at: now,
+    updated_at: now,
+  }));
 }
 
 /** Upload a raw sticker file to the nex-theme-sticker bucket then

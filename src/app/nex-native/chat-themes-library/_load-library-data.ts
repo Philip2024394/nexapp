@@ -27,6 +27,7 @@ import type { BrowserThemeRow } from "./_theme-browser-client";
 import { listLiveWorldsAsBrowserRows } from "./_live-worlds-adapter";
 import { EXPLORE_CATEGORY_ID } from "@/lib/nex-native/theme-category/registry";
 import { inferCategoryIdFromSignals } from "@/lib/nex-native/theme-category/keyword-resolver";
+import { inferPaletteFromRow } from "../chat-standard/_engine/preview-mini-phone";
 
 // Re-export the pure helper so existing callers (if any) continue to
 // find `countCategoryMembers` here · the actual implementation lives
@@ -124,6 +125,24 @@ export async function loadLibraryData(): Promise<LibraryLoadResult> {
       intro_video_url: t.intro_video_url,
       intro_poster_url: t.intro_poster_url,
       wallpaper_config: t.wallpaper_config,
+      // Sealed 2026-10-11 · DB rows don't carry `deep` / `highlight`
+      // columns yet, so the inferrer promotes accent_hex to primary
+      // and inherits NEX chrome defaults for the two universal
+      // tokens (navy stage · off-white text). When those columns
+      // land on nex_chat_theme we pass them in and this call picks
+      // them up automatically.
+      palette: inferPaletteFromRow({
+        accent_hex: t.accent_hex,
+        bubble_rim_hex: t.bubble_rim_hex,
+        composer_rim_hex: t.composer_rim_hex,
+      }),
+      // DB rows carry no ambient column yet · null matches their
+      // actual live-chat behaviour which has no ambient layer either.
+      ambient_families: null,
+      // DB rows carry no bubble_material column yet · default to
+      // "glass" which is the engine's default material. When a
+      // migration adds the column, this default is overridden.
+      bubble_material: "glass" as string | null,
     })),
   ];
 

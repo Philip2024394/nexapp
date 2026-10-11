@@ -35,6 +35,10 @@ import {
   type LiveWorldId,
 } from "../chat-standard/_live-worlds";
 import {
+  NEX_DEFAULT_PALETTE,
+  type MiniPhonePalette,
+} from "../chat-standard/_engine/preview-mini-phone";
+import {
   EXPLORE_CATEGORY_ID,
   isRegisteredCategory,
   resolveCategoryId,
@@ -85,6 +89,34 @@ export function liveWorldAsBrowserRow(id: LiveWorldId): BrowserThemeRow {
     intro_video_url: introVideoUrl,
     intro_poster_url: null,
     wallpaper_config: null,
+    // Sealed 2026-10-11 · live-worlds hand the preview layer the FULL
+    // ColourSystem the engine resolves. This is the byte-level ground
+    // truth · a mini-phone with this palette paints identical bubbles
+    // / composer / send button to the live chat.
+    palette: paletteFromPackageColours(pkg.colours),
+    // Final Parity Pass 2026-10-11 · hand the ambient family list
+    // from the ThemePackage to the preview layer so each mini-phone
+    // paints a static representation of its live ambient identity.
+    ambient_families: pkg.ambient?.families
+      ? ([...pkg.ambient.families] as readonly string[])
+      : null,
+    // Final Parity Pass 2026-10-11 · hand the bubble material from
+    // the ThemePackage to the preview layer so each mini-phone
+    // paints bubbles using the SAME engine formula the live chat
+    // uses (solid for nex-flat, neon-glass for midnight-cafe, etc).
+    bubble_material: pkg.bubbles?.material ?? "glass",
+  };
+}
+
+function paletteFromPackageColours(
+  colours: (typeof LIVE_WORLD_PACKAGES)[LiveWorldId]["colours"],
+): MiniPhonePalette {
+  return {
+    primary: colours.primary ?? NEX_DEFAULT_PALETTE.primary,
+    secondary: colours.secondary ?? NEX_DEFAULT_PALETTE.secondary,
+    highlight: colours.highlight ?? NEX_DEFAULT_PALETTE.highlight,
+    glow: colours.glow ?? `${colours.primary ?? NEX_DEFAULT_PALETTE.primary}55`,
+    deep: colours.deep ?? NEX_DEFAULT_PALETTE.deep,
   };
 }
 

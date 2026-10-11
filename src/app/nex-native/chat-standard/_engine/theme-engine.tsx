@@ -37,6 +37,10 @@ import {
   resolveControlsTreatment,
   type ControlsTreatment,
 } from "./control-resolver";
+import {
+  resolveBubbleBackground as _internalResolveBubbleBackground,
+  resolveBubbleBorder as _internalResolveBubbleBorder,
+} from "./bubble-material-resolver";
 
 // ─── Default colour system ──────────────────────────────────────────
 
@@ -148,12 +152,12 @@ export function createEngine(pkg: ThemePackage): ResolvedEngine {
     isReacting?: boolean;
   }): BubbleTreatment {
     const borderRadius = resolveBubbleGeometry(bubbleShape, mine);
-    const background = resolveBubbleBackground(
+    const background = _internalResolveBubbleBackground(
       bubbleMaterial,
       colours,
       mine,
     );
-    const border = resolveBubbleBorder(bubbleMaterial, colours, mine);
+    const border = _internalResolveBubbleBorder(bubbleMaterial, colours, mine);
     const shadow = resolveBubbleShadow(bubbleMaterial, colours, mine);
     const backdropFilter = resolveBackdropFilter(bubbleMaterial);
     const effects = {
@@ -247,8 +251,8 @@ export function createEngine(pkg: ThemePackage): ResolvedEngine {
     const sendGlyph = pkg.composer?.sendGlyph ?? "↑";
     const shape = pkg.composer?.shape ?? "pill";
     const material = pkg.composer?.material ?? bubbleMaterial;
-    const containerBg = resolveBubbleBackground(material, colours, false);
-    const containerBorder = resolveBubbleBorder(material, colours, false);
+    const containerBg = _internalResolveBubbleBackground(material, colours, false);
+    const containerBorder = _internalResolveBubbleBorder(material, colours, false);
     const borderRadius =
       shape === "water"
         ? "28px 36px 24px 32px / 24px 28px 20px 26px"
@@ -405,7 +409,7 @@ export function createEngine(pkg: ThemePackage): ResolvedEngine {
     const cardStyle = pkg.shop?.cardStyle ?? "glass";
     const scrollFeel = pkg.shop?.scrollFeel ?? "momentum";
     const productFraming = pkg.shop?.productFraming ?? "card";
-    const base = resolveBubbleBackground("glass", colours, false);
+    const base = _internalResolveBubbleBackground("glass", colours, false);
     // When the theme uses a water-adjacent card style, overlay a thin
     // diagonal sheen that drifts across the tile · same shared
     // keyframe (nex-se-water-tile-sheen) any theme can opt into.
@@ -448,7 +452,7 @@ export function createEngine(pkg: ThemePackage): ResolvedEngine {
                       linear-gradient(140deg, ${hexToRgba(colours.highlight, 0.95)} 0%, ${hexToRgba(colours.secondary, 0.85)} 60%, ${hexToRgba(colours.highlight, 0.9)} 100%)
                     `
                     : base;
-    const cardBorder = resolveBubbleBorder("glass", colours, false);
+    const cardBorder = _internalResolveBubbleBorder("glass", colours, false);
     const scrollSnap =
       scrollFeel === "snap"
         ? "mandatory"
@@ -591,143 +595,17 @@ function resolveBubbleGeometry(shape: string, mine: boolean): string {
   }
 }
 
-function resolveBubbleBackground(
-  material: string,
-  c: Required<ColourSystem>,
-  mine: boolean,
-): string {
-  switch (material) {
-    case "solid":
-      return mine ? c.primary : hexToRgba(c.secondary, 0.9);
-    case "gradient":
-      return mine
-        ? `linear-gradient(135deg, ${hexToRgba(c.primary, 0.85)}, ${hexToRgba(c.deep, 0.9)})`
-        : `linear-gradient(135deg, ${hexToRgba(c.secondary, 0.5)}, ${hexToRgba(c.deep, 0.7)})`;
-    case "glow":
-      return mine
-        ? `radial-gradient(circle at 30% 30%, ${hexToRgba(c.primary, 0.75)}, ${hexToRgba(c.primary, 0.25)})`
-        : `radial-gradient(circle at 30% 30%, ${hexToRgba(c.secondary, 0.45)}, ${hexToRgba(c.deep, 0.6)})`;
-    case "parchment":
-      // UNIVERSAL RULE sealed 2026-10-05 · every theme needs TWO
-      // visually distinct bubble colours. Mine bubbles carry the
-      // theme primary dominantly (handwritten note on wax/wood);
-      // peer bubbles stay cream paper. Together they read as paired
-      // but clearly distinguishable at a glance.
-      return mine
-        ? `
-          radial-gradient(ellipse 72% 40% at 50% 10%, ${hexToRgba(c.highlight, 0.3)} 0%, transparent 60%),
-          linear-gradient(180deg, ${hexToRgba(c.primary, 0.82)} 0%, ${hexToRgba(c.primary, 0.92)} 100%)
-        `
-        : `
-          radial-gradient(ellipse 72% 40% at 50% 10%, ${hexToRgba(c.highlight, 0.4)} 0%, transparent 60%),
-          linear-gradient(180deg, ${hexToRgba(c.highlight, 0.95)} 0%, ${hexToRgba(c.secondary, 0.85)} 100%)
-        `;
-    case "frosting":
-      return mine
-        ? `linear-gradient(145deg, ${hexToRgba(c.primary, 0.65)}, ${hexToRgba(c.highlight, 0.35)})`
-        : `linear-gradient(145deg, ${hexToRgba(c.highlight, 0.7)}, ${hexToRgba(c.secondary, 0.4)})`;
-    case "water":
-      // Translucent water · multi-layer refraction. The top-left
-      // radial highlight simulates light catching a droplet; a second
-      // narrow highlight along the top edge adds a "surface line"
-      // feel. Base gradient carries the ocean tint from highlight
-      // (foam) → primary (shallow) → deep (abyss). Peer bubbles cool
-      // toward secondary so inbound/outbound feel related but distinct.
-      return mine
-        ? `
-          radial-gradient(ellipse 60% 50% at 25% 18%, ${hexToRgba(c.highlight, 0.45)} 0%, ${hexToRgba(c.highlight, 0.05)} 55%, transparent 75%),
-          linear-gradient(170deg, ${hexToRgba(c.highlight, 0.22)} 0%, ${hexToRgba(c.highlight, 0)} 18%, transparent 32%),
-          linear-gradient(180deg, ${hexToRgba(c.highlight, 0.14)} 0%, ${hexToRgba(c.primary, 0.52)} 55%, ${hexToRgba(c.deep, 0.68)} 100%)
-        `
-        : `
-          radial-gradient(ellipse 60% 50% at 20% 15%, ${hexToRgba(c.highlight, 0.4)} 0%, ${hexToRgba(c.highlight, 0.04)} 55%, transparent 75%),
-          linear-gradient(170deg, ${hexToRgba(c.highlight, 0.2)} 0%, ${hexToRgba(c.highlight, 0)} 18%, transparent 32%),
-          linear-gradient(180deg, ${hexToRgba(c.highlight, 0.12)} 0%, ${hexToRgba(c.secondary, 0.48)} 55%, ${hexToRgba(c.deep, 0.68)} 100%)
-        `;
-    case "driftwood":
-      return mine
-        ? `linear-gradient(135deg, ${hexToRgba(c.secondary, 0.55)}, ${hexToRgba(c.deep, 0.8)})`
-        : `linear-gradient(135deg, ${hexToRgba(c.highlight, 0.4)}, ${hexToRgba(c.secondary, 0.5)})`;
-    case "ceramic":
-      // Matte-glazed solid · soft top-light highlight + warm body +
-      // slightly darker base. Mine vs peer differ in body tint so they
-      // read as paired vessels, not identical cups.
-      return mine
-        ? `
-          radial-gradient(ellipse 70% 50% at 50% 10%, ${hexToRgba(c.highlight, 0.4)} 0%, transparent 55%),
-          linear-gradient(180deg, ${hexToRgba(c.secondary, 0.85)} 0%, ${hexToRgba(c.primary, 0.78)} 55%, ${hexToRgba(c.deep, 0.82)} 100%)
-        `
-        : `
-          radial-gradient(ellipse 70% 50% at 50% 10%, ${hexToRgba(c.highlight, 0.5)} 0%, transparent 55%),
-          linear-gradient(180deg, ${hexToRgba(c.highlight, 0.72)} 0%, ${hexToRgba(c.secondary, 0.72)} 55%, ${hexToRgba(c.deep, 0.78)} 100%)
-        `;
-    case "warm-liquid":
-      // Hot drink · rich amber core, deeper edges, faint surface
-      // steam-haze near top. The visible top-strip simulates a crema
-      // ring sitting on the drink surface.
-      return mine
-        ? `
-          radial-gradient(ellipse 85% 30% at 50% 8%, ${hexToRgba(c.highlight, 0.35)} 0%, transparent 65%),
-          linear-gradient(180deg, ${hexToRgba(c.secondary, 0.5)} 0%, ${hexToRgba(c.primary, 0.9)} 25%, ${hexToRgba(c.deep, 0.95)} 100%)
-        `
-        : `
-          radial-gradient(ellipse 85% 30% at 50% 8%, ${hexToRgba(c.highlight, 0.45)} 0%, transparent 65%),
-          linear-gradient(180deg, ${hexToRgba(c.highlight, 0.42)} 0%, ${hexToRgba(c.secondary, 0.72)} 25%, ${hexToRgba(c.deep, 0.9)} 100%)
-        `;
-    case "neon-glass":
-      // Dark glass body with a brightly saturated interior rim. The
-      // body stays almost black; the saturated primary tint reads as
-      // the content of a neon tube catching the viewer. mine vs peer
-      // differ only in which colour fills the tube.
-      return mine
-        ? `
-          radial-gradient(ellipse 70% 55% at 50% 55%, ${hexToRgba(c.primary, 0.5)} 0%, transparent 72%),
-          linear-gradient(180deg, ${hexToRgba(c.deep, 0.95)} 0%, ${hexToRgba(c.deep, 0.9)} 100%)
-        `
-        : `
-          radial-gradient(ellipse 70% 55% at 50% 55%, ${hexToRgba(c.secondary, 0.42)} 0%, transparent 72%),
-          linear-gradient(180deg, ${hexToRgba(c.deep, 0.95)} 0%, ${hexToRgba(c.deep, 0.9)} 100%)
-        `;
-    case "glass":
-    default:
-      return mine ? hexToRgba(c.primary, 0.26) : hexToRgba(c.deep, 0.72);
-  }
-}
-
-function resolveBubbleBorder(
-  material: string,
-  c: Required<ColourSystem>,
-  mine: boolean,
-): string {
-  if (material === "water") {
-    return mine
-      ? `1px solid ${hexToRgba(c.highlight, 0.55)}`
-      : `1px solid ${hexToRgba(c.secondary, 0.5)}`;
-  }
-  if (material === "parchment") {
-    return `1px solid ${hexToRgba(c.deep, 0.3)}`;
-  }
-  if (material === "frosting") {
-    return `1px solid ${hexToRgba(c.highlight, 0.5)}`;
-  }
-  if (material === "ceramic" || material === "warm-liquid") {
-    // Soft rim-light border rather than hard outline.
-    return mine
-      ? `1px solid ${hexToRgba(c.highlight, 0.42)}`
-      : `1px solid ${hexToRgba(c.secondary, 0.5)}`;
-  }
-  if (material === "neon-glass") {
-    // Thick saturated rim that reads as the neon tube itself. mine
-    // uses primary; peer uses secondary so inbound/outbound are
-    // paired-but-distinct tubes.
-    return mine
-      ? `2px solid ${hexToRgba(c.primary, 0.95)}`
-      : `2px solid ${hexToRgba(c.secondary, 0.9)}`;
-  }
-  return mine
-    ? `1px solid ${hexToRgba(c.primary, 0.85)}`
-    : `1px solid rgba(150,160,180,0.55)`;
-}
+// Sealed Final Parity Pass 2026-10-11 · the per-material formulas
+// have been extracted to the server-safe module
+// `./bubble-material-resolver` so BOTH this client-only engine AND
+// the server-renderable preview surfaces consume the same pure
+// implementation. Re-imported for internal callers above and
+// re-exported for every external consumer that used to import these
+// names from `theme-engine` directly · byte-identical output.
+export {
+  resolveBubbleBackground,
+  resolveBubbleBorder,
+} from "./bubble-material-resolver";
 
 function resolveBubbleShadow(
   material: string,

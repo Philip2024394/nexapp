@@ -28,6 +28,12 @@
 
 import * as React from "react";
 import { resolveControlsTreatment } from "./_engine/control-resolver";
+import {
+  getBuiltInEmoji,
+  getBuiltInStickers,
+  type BuiltInThemeEmoji,
+  type BuiltInThemeSticker,
+} from "@/lib/nex-native/theme-asset-fallback";
 
 const NEX_CYAN = "#00AFFF";
 const NEX_SECONDARY = "#4FC3DC";
@@ -49,6 +55,16 @@ export interface UniversalComposerFooterProps {
   /** The current theme id · used by the + menu's Animation action so
    *  it routes to this theme's motion page. */
   themeId?: string;
+  /** Sealed 2026-10-11 · when supplied, the composer's Send button
+   *  calls this with the current body + staged emoji instead of
+   *  silently clearing. Lets the parent surface append the message
+   *  to its live chat state (e.g. `_viewer.tsx` setMessages). When
+   *  omitted the overlay behaves as before · locally clears, no
+   *  posting. */
+  onSendMessage?: (payload: {
+    body: string;
+    emoji: BuiltInThemeEmoji | null;
+  }) => void;
 }
 
 export function UniversalComposerFooter({
@@ -58,44 +74,45 @@ export function UniversalComposerFooter({
   secondary = NEX_SECONDARY,
   sendGlyph,
   themeId,
+  onSendMessage,
 }: UniversalComposerFooterProps): React.JSX.Element {
   const [value, setValue] = React.useState("");
   const [emojiActive, setEmojiActive] = React.useState(false);
   const [plusOpen, setPlusOpen] = React.useState(false);
+  // Sealed 2026-10-11 · the picker tap now STAGES the picked emoji
+  // in the composer alongside any text the user types · they can
+  // delete it via a red X · they press Send when ready and the
+  // chat gets emoji + text together. Null when nothing picked.
+  const [pendingEmoji, setPendingEmoji] =
+    React.useState<BuiltInThemeEmoji | null>(null);
+  // Send is enabled when there is EITHER text OR a staged emoji.
   const hasText = value.trim().length > 0;
+  const canSend = hasText || !!pendingEmoji;
   const controls = resolveControlsTreatment({
     primary: accent,
     secondary,
     highlight,
     deep,
   });
+  const sendAndClear = () => {
+    if (!canSend) return;
+    if (onSendMessage) {
+      onSendMessage({ body: value.trim(), emoji: pendingEmoji });
+    }
+    setValue("");
+    setPendingEmoji(null);
+  };
 
   return (
     <>
-      {/* SEALED RULE 2026-10-05 · "one default footer for every live
-          theme, no exceptions" · UniversalComposerFooter is the single
-          source of truth for the composer on every legacy theme. Each
-          legacy shell has its own native composer underneath; we hide
-          them via CSS so only the universal pill is visible. The
-          sealed shells are NOT edited · just display:none'd via their
-          known selectors. */}
       <style
         dangerouslySetInnerHTML={{
           __html: `
-            /* ThemeViewerClient / PortraitBloomShell · covers Joker
-               (theme-0), motorbike, vitamins, cakes, Haunted Hotel */
             [data-nex-peer-composer] { display: none !important; }
-            /* Joker · hide native dancing-dots trigger · the Animation
-               action moved under the universal + menu */
             button[aria-label="Theme animations"] { display: none !important; }
           `,
         }}
       />
-      {/* Bottom composer bar · fixed to the viewport, full width.
-          OUTER CONTAINER BACKGROUND REMOVED (sealed 2026-10-05
-          refinement) · just a transparent wrapper hosting the pill
-          + round send + round plus. Chat / theme content shows
-          through everywhere except on the actual button fills. */}
       <div
         data-nex-universal-composer-footer
         style={{
@@ -118,18 +135,18 @@ export function UniversalComposerFooter({
             value={value}
             onChange={setValue}
             onSend={() => {
-              if (hasText) setValue("");
+              sendAndClear();
             }}
             emojiActive={emojiActive}
             onToggleEmoji={() => setEmojiActive((v) => !v)}
+            pendingEmoji={pendingEmoji}
+            onClearPendingEmoji={() => setPendingEmoji(null)}
           />
         </div>
         <SendButton
           controls={controls}
-          disabled={!hasText}
-          onClick={() => {
-            if (hasText) setValue("");
-          }}
+          disabled={!canSend}
+          onClick={sendAndClear}
           glyph={sendGlyph}
         />
         <PlusButton
@@ -147,6 +164,29 @@ export function UniversalComposerFooter({
         onClose={() => setPlusOpen(false)}
         themeId={themeId}
       />
+
+      {/* Sealed 2026-10-11 · the emoji button in the composer pill
+          used to flip `emojiActive` state and render nothing · tap
+          did nothing visible. This picker is the missing center-
+          screen container · 3 tabs (Emoji · Stickers · GIF) ·
+          Emoji + Stickers pull from the sealed Joker built-in
+          catalog (23 emoji + 9 stickers · `theme-asset-fallback.ts`)
+          when theme-id is "theme-0" · GIF tab is a placeholder
+          until the GIF catalog ships. */}
+      <EmojiStickerGifPicker
+        open={emojiActive}
+        onClose={() => setEmojiActive(false)}
+        themeId={themeId}
+        accent={accent}
+        deep={deep}
+        highlight={highlight}
+        onPickEmoji={(e) => {
+          // Stage the emoji in the composer · DO NOT send yet · the
+          // user may add text, then press Send to deliver both.
+          setPendingEmoji(e);
+          setEmojiActive(false);
+        }}
+      />
     </>
   );
 }
@@ -162,6 +202,8 @@ function ComposerPill({
   onSend,
   emojiActive,
   onToggleEmoji,
+  pendingEmoji,
+  onClearPendingEmoji,
 }: {
   controls: ResolvedControls;
   value: string;
@@ -169,6 +211,8 @@ function ComposerPill({
   onSend: () => void;
   emojiActive: boolean;
   onToggleEmoji: () => void;
+  pendingEmoji: BuiltInThemeEmoji | null;
+  onClearPendingEmoji: () => void;
 }): React.JSX.Element {
   const { primary, highlight } = controls.colors;
   const inlineIconStyle: React.CSSProperties = {
@@ -223,6 +267,68 @@ function ComposerPill({
       >
         <ClipIcon />
       </button>
+      {/* Pending emoji chip · sealed 2026-10-11 · when the user
+          picks an emoji from the picker panel it stages HERE in
+          the pill (not sent) alongside any text they type · the
+          red circle removes it · Send delivers emoji + text
+          together. */}
+      {pendingEmoji && (
+        <span
+          data-nex-composer-pending-emoji={pendingEmoji.slug}
+          style={{
+            position: "relative",
+            flexShrink: 0,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 32,
+            height: 32,
+            borderRadius: 10,
+            background: `${highlight}10`,
+            border: `1px solid ${highlight}22`,
+            marginLeft: 4,
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={pendingEmoji.image_url}
+            alt={pendingEmoji.label || pendingEmoji.slug}
+            style={{
+              width: 24,
+              height: 24,
+              objectFit: "contain",
+              pointerEvents: "none",
+            }}
+          />
+          <button
+            type="button"
+            aria-label="Remove emoji"
+            onClick={onClearPendingEmoji}
+            style={{
+              position: "absolute",
+              top: -4,
+              right: -4,
+              width: 16,
+              height: 16,
+              borderRadius: 999,
+              background: "#FF3B30",
+              color: "#FFFFFF",
+              border: "1.5px solid #0B0F1A",
+              fontSize: 10,
+              fontWeight: 800,
+              lineHeight: 1,
+              cursor: "pointer",
+              padding: 0,
+              display: "grid",
+              placeItems: "center",
+              fontFamily: "inherit",
+              boxShadow: "0 2px 4px rgba(255,59,48,0.45)",
+            }}
+          >
+            ×
+          </button>
+        </span>
+      )}
       <input
         type="text"
         value={value}
@@ -233,7 +339,9 @@ function ComposerPill({
             onSend();
           }
         }}
-        placeholder="Say something…"
+        placeholder={
+          pendingEmoji ? "Add a message…" : "Say something…"
+        }
         style={{
           flex: 1,
           minWidth: 0,
@@ -324,29 +432,33 @@ function PlusMenu({
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: 8,
-    padding: "12px 8px",
+    gap: 6,
+    padding: "10px 4px",
     width: "100%",
     minWidth: 0,
-    borderRadius: 16,
+    boxSizing: "border-box",
+    borderRadius: 14,
     border: `1px solid ${accent}66`,
     background: `${accent}1a`,
     color: highlight,
     cursor: "pointer",
     textAlign: "center",
     fontFamily: "inherit",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 600,
+    lineHeight: 1.1,
+    overflow: "hidden",
   };
   const iconCircle: React.CSSProperties = {
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 36,
     borderRadius: 999,
     display: "grid",
     placeItems: "center",
     background: `linear-gradient(135deg, ${accent}, ${accent}aa)`,
     color: highlight,
-    boxShadow: `0 4px 12px ${accent}55`,
+    boxShadow: `0 2px 6px ${accent}55`,
+    flex: "none",
   };
   return (
     <div
@@ -377,16 +489,16 @@ function PlusMenu({
         role="dialog"
         style={{
           position: "relative",
-          padding: 20,
-          borderRadius: 24,
+          padding: 18,
+          borderRadius: 22,
           background: `linear-gradient(180deg, ${deep}e6, ${deep}f5)`,
           border: `1px solid ${accent}99`,
           boxShadow: `0 20px 50px rgba(0,0,0,0.55), 0 0 0 1px ${accent}22`,
           display: "flex",
           flexDirection: "column",
           gap: 14,
-          minWidth: 340,
-          maxWidth: "92%",
+          width: "min(360px, 92vw)",
+          boxSizing: "border-box",
           transform: `scale(${open ? 1 : 0.9})`,
           transition: "transform 240ms cubic-bezier(0.2, 0.9, 0.3, 1.1)",
         }}
@@ -502,5 +614,346 @@ function SettingsIcon(): React.JSX.Element {
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.6 1.6 0 0 0 .4 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.4 1.6 1.6 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .4-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.4-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.4H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.4l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.4 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z" />
     </svg>
+  );
+}
+
+// ─── Emoji / Sticker / GIF picker ──────────────────────────────────
+//
+// Centred modal panel that opens when the composer's emoji button is
+// tapped. Three tabs:
+//   · Emoji   · reads `getBuiltInEmoji(themeId)` from the sealed
+//               fallback catalog · 23 Joker faces on theme-0 · empty
+//               state for themes without a built-in set
+//   · Stickers · reads `getBuiltInStickers(themeId)` · 9 Joker
+//                scenes on theme-0
+//   · GIF     · placeholder · no catalog shipped yet · shows a
+//               "coming soon" state so the surface exists for when
+//               the GIF library lands
+
+type PickerTab = "emoji" | "sticker" | "gif";
+
+function EmojiStickerGifPicker({
+  open,
+  onClose,
+  themeId,
+  accent,
+  deep,
+  highlight,
+  onPickEmoji,
+}: {
+  open: boolean;
+  onClose: () => void;
+  themeId?: string;
+  accent: string;
+  deep: string;
+  highlight: string;
+  /** Fired when the user taps an emoji tile · parent stages it in
+   *  the composer input alongside any typed text. */
+  onPickEmoji: (emoji: BuiltInThemeEmoji) => void;
+}): React.JSX.Element | null {
+  const [tab, setTab] = React.useState<PickerTab>("emoji");
+  if (!open) return null;
+  const emoji = themeId ? getBuiltInEmoji(themeId) : null;
+  const stickers = themeId ? getBuiltInStickers(themeId) : null;
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Insert emoji, sticker or GIF"
+      data-nex-emoji-sticker-gif-picker={open ? "open" : "closed"}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 75,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "16px",
+        pointerEvents: "auto",
+      }}
+    >
+      <div
+        aria-hidden
+        onClick={onClose}
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "rgba(0,0,0,0.5)",
+          backdropFilter: "blur(4px)",
+          WebkitBackdropFilter: "blur(4px)",
+        }}
+      />
+      <div
+        style={{
+          position: "relative",
+          width: "min(360px, 92vw)",
+          maxHeight: "70vh",
+          display: "flex",
+          flexDirection: "column",
+          borderRadius: 20,
+          background: `linear-gradient(180deg, ${deep}f0, ${deep}fa)`,
+          border: `1px solid ${accent}88`,
+          boxShadow: `0 24px 56px rgba(0,0,0,0.55), 0 0 0 1px ${accent}22`,
+          color: highlight,
+          overflow: "hidden",
+        }}
+      >
+        <PickerTabs tab={tab} onChange={setTab} accent={accent} highlight={highlight} />
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto",
+            padding: "12px 14px 14px",
+          }}
+        >
+          {tab === "emoji" && (
+            <PickerEmojiGrid
+              items={emoji}
+              highlight={highlight}
+              onPick={onPickEmoji}
+            />
+          )}
+          {tab === "sticker" && <PickerStickerGrid items={stickers} highlight={highlight} />}
+          {tab === "gif" && <PickerGifEmpty accent={accent} highlight={highlight} />}
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            alignSelf: "center",
+            margin: "6px 0 10px",
+            padding: "6px 16px",
+            borderRadius: 999,
+            background: "transparent",
+            border: `1px solid ${highlight}33`,
+            color: highlight,
+            fontSize: 11,
+            cursor: "pointer",
+            fontFamily: "inherit",
+          }}
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PickerTabs({
+  tab,
+  onChange,
+  accent,
+  highlight,
+}: {
+  tab: PickerTab;
+  onChange: (t: PickerTab) => void;
+  accent: string;
+  highlight: string;
+}): React.JSX.Element {
+  const tabs: readonly { id: PickerTab; label: string }[] = [
+    { id: "emoji", label: "Emoji" },
+    { id: "sticker", label: "Stickers" },
+    { id: "gif", label: "GIF" },
+  ];
+  return (
+    <div
+      role="tablist"
+      aria-label="Picker tabs"
+      style={{
+        display: "flex",
+        padding: "6px 10px 0",
+        gap: 6,
+        borderBottom: `1px solid ${accent}33`,
+      }}
+    >
+      {tabs.map((t) => {
+        const active = tab === t.id;
+        return (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(t.id)}
+            style={{
+              appearance: "none",
+              background: "transparent",
+              border: "none",
+              padding: "10px 14px 12px",
+              fontFamily: "inherit",
+              fontSize: 12,
+              fontWeight: active ? 700 : 500,
+              letterSpacing: "0.02em",
+              color: active ? accent : `${highlight}99`,
+              borderBottom: active ? `2px solid ${accent}` : "none",
+              cursor: "pointer",
+              textTransform: "capitalize",
+            }}
+          >
+            {t.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function PickerEmojiGrid({
+  items,
+  highlight,
+  onPick,
+}: {
+  items: readonly BuiltInThemeEmoji[] | null;
+  highlight: string;
+  onPick: (emoji: BuiltInThemeEmoji) => void;
+}): React.JSX.Element {
+  if (!items || items.length === 0) {
+    return <PickerEmptyState text="No emoji for this theme yet." highlight={highlight} />;
+  }
+  // Sealed 2026-10-11 · 5 columns (was 6) so each tile is larger
+  // and easier to pick. Panel body is already overflowY:auto so
+  // the user scrolls down to reach rows beyond the viewport.
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+        gap: 10,
+      }}
+    >
+      {items.map((e) => (
+        <button
+          key={e.slug}
+          type="button"
+          aria-label={e.label || e.slug}
+          onClick={() => onPick(e)}
+          style={{
+            appearance: "none",
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 12,
+            padding: 4,
+            cursor: "pointer",
+            display: "grid",
+            placeItems: "center",
+            aspectRatio: "1 / 1",
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={e.image_url}
+            alt={e.label || e.slug}
+            style={{ width: "100%", height: "100%", objectFit: "contain" }}
+          />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function PickerStickerGrid({
+  items,
+  highlight,
+}: {
+  items: readonly BuiltInThemeSticker[] | null;
+  highlight: string;
+}): React.JSX.Element {
+  if (!items || items.length === 0) {
+    return <PickerEmptyState text="No stickers for this theme yet." highlight={highlight} />;
+  }
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+        gap: 10,
+      }}
+    >
+      {items.map((s) => (
+        <button
+          key={s.slug}
+          type="button"
+          aria-label={s.label || s.slug}
+          style={{
+            appearance: "none",
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 12,
+            padding: 4,
+            cursor: "pointer",
+            display: "grid",
+            placeItems: "center",
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={s.image_url}
+            alt={s.label || s.slug}
+            style={{
+              width: "100%",
+              aspectRatio: `${s.aspect_ratio}`,
+              objectFit: "contain",
+            }}
+          />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function PickerGifEmpty({
+  accent,
+  highlight,
+}: {
+  accent: string;
+  highlight: string;
+}): React.JSX.Element {
+  return (
+    <div
+      style={{
+        padding: "32px 20px",
+        textAlign: "center",
+        color: `${highlight}aa`,
+        fontSize: 12,
+        lineHeight: 1.6,
+      }}
+    >
+      <div style={{ fontSize: 36, marginBottom: 10, color: accent }}>
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <rect x="3" y="5" width="18" height="14" rx="2" />
+          <path d="M7 10v4M7 12h2M12 10v4M15 10v4h2" />
+        </svg>
+      </div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: highlight, marginBottom: 4 }}>
+        GIF library coming soon
+      </div>
+      <div>
+        Theme-specific animated clips will land here · same picker,
+        new tab · you'll see them when the catalog ships.
+      </div>
+    </div>
+  );
+}
+
+function PickerEmptyState({
+  text,
+  highlight,
+}: {
+  text: string;
+  highlight: string;
+}): React.JSX.Element {
+  return (
+    <div
+      style={{
+        padding: "32px 20px",
+        textAlign: "center",
+        color: `${highlight}99`,
+        fontSize: 12,
+        lineHeight: 1.5,
+      }}
+    >
+      {text}
+    </div>
   );
 }

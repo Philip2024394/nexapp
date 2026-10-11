@@ -45,6 +45,11 @@
 
 import * as React from "react";
 import { resolveControlsTreatment } from "./_engine/control-resolver";
+import { JokerMotionOverlay } from "../themes/[id]/_joker-motion";
+import {
+  JOKER_MOTION_INDEX,
+  type JokerMotionVariant,
+} from "../themes/[id]/_joker-motion-data";
 
 const NEX_CYAN = "#00AFFF";
 const NEX_SECONDARY = "#4FC3DC";
@@ -61,23 +66,20 @@ export interface UniversalChromeOverlayProps {
 }
 
 export function UniversalChromeOverlay({
-  accent = NEX_CYAN,
-  deep = NEX_DEEP,
-  highlight = NEX_HIGHLIGHT,
-  secondary = NEX_SECONDARY,
-}: UniversalChromeOverlayProps): React.JSX.Element {
-  const [callActionsOpen, setCallActionsOpen] = React.useState(false);
-
-  return (
-    <FloatingCallActions
-      accent={accent}
-      deep={deep}
-      highlight={highlight}
-      secondary={secondary}
-      open={callActionsOpen}
-      onToggle={() => setCallActionsOpen((v) => !v)}
-    />
-  );
+  accent: _accent = NEX_CYAN,
+  deep: _deep = NEX_DEEP,
+  highlight: _highlight = NEX_HIGHLIGHT,
+  secondary: _secondary = NEX_SECONDARY,
+}: UniversalChromeOverlayProps): React.JSX.Element | null {
+  // Sealed 2026-10-11 (final) · PortraitBloomShell carries
+  // `UniversalChatControls` internally with its OWN 3-dot + call
+  // actions. Mounting a duplicate `FloatingCallActions` here
+  // produced TWO 3-dot buttons on Joker (and every other theme
+  // using PortraitBloomShell). The animation column + 3-dot combo
+  // reveal have been migrated to the shell's `UniversalChatControls`
+  // so there is exactly ONE 3-dot. This overlay now renders null ·
+  // the export is preserved so existing imports don't break.
+  return null;
 }
 
 // ─── Floating + button (lower-left) ─────────────────────────────────
@@ -188,13 +190,22 @@ function FloatingCallActions({
       "opacity 220ms ease-out, transform 300ms cubic-bezier(0.2, 0.9, 0.3, 1.1)",
     pointerEvents: open ? "auto" : "none",
   };
-  const bottomOffset = 76;
+  // Sealed 2026-10-11 · 3-dot now sits INLINE with the composer's
+  // + button (same vertical level, immediately to the left of +).
+  // Composer footer paints `[pill] [send] [+]` at `bottom:
+  // safe + 10px`. The + button is at approx `right: 10px` from the
+  // viewport edge (10px padding, 40px wide). The 3-dot sits at
+  // `right: 58px` (10 padding + 40 plus-width + 8 gap) so the two
+  // read as a tight pair. Previous `bottom: 76px` put the 3-dot
+  // ABOVE the composer · founder-flipped per the Joker request.
+  const bottomOffset = 10;
+  const rightOffset = 58;
   return (
     <div
       data-nex-universal-call-actions={open ? "open" : "closed"}
       style={{
         position: "fixed",
-        right: 14,
+        right: rightOffset,
         bottom: `calc(env(safe-area-inset-bottom, 0) + ${bottomOffset}px)`,
         zIndex: 60,
         display: "flex",
@@ -255,6 +266,160 @@ function FloatingCallActions({
   );
 }
 
+// ─── Floating animation column (lower-right · slides UP) ─────────────
+//
+// Sealed 2026-10-11 · "3-dot combo reveal" pattern · the vertical
+// stack of ambient-family toggles that appears above the 3-dot when
+// the user opens the chat chrome controls. Six buttons · one per
+// family · ON state is theme-primary gradient · OFF is near-black
+// glass · green/dim bottom-right dot indicator mirrors TikTok's
+// count-slot convention.
+//
+// State: scoped to this component for now (per-session) · a future
+// commit can hoist state up to a per-account preference row keyed
+// by theme id. The visual pattern is final; the persistence layer
+// is swappable without touching rendering.
+//
+// Note: these toggles do NOT yet affect the live chat rendering ·
+// they emit `data-nex-animation-family-{id}="on|off"` on each
+// button so a future chat shell can read the current state and
+// gate its ambient rendering. Prototype acknowledgement intentional.
+
+// Glyph map · one emoji per sealed JokerMotionVariant. Keyed off
+// the variant id so adding a new variant to `JOKER_MOTION_INDEX`
+// requires adding a glyph here (otherwise it falls back to •).
+const MOTION_GLYPH: Record<JokerMotionVariant, string> = {
+  rain: "💧",
+  sparks: "⚡",
+  bat: "🦇",
+  cards: "🃏",
+  lightning: "🌩",
+  bubbles: "🫧",
+  confetti: "🎉",
+  smoke: "💨",
+  embers: "🔥",
+  glitch: "🌀",
+};
+
+function FloatingAnimationColumn({
+  accent,
+  deep,
+  highlight,
+  open,
+  enabled,
+  onToggle,
+}: {
+  accent: string;
+  deep: string;
+  highlight: string;
+  open: boolean;
+  enabled: Set<JokerMotionVariant>;
+  onToggle: (variant: JokerMotionVariant) => void;
+}): React.JSX.Element {
+  const circle: React.CSSProperties = {
+    position: "relative",
+    width: 40,
+    height: 40,
+    borderRadius: 999,
+    display: "grid",
+    placeItems: "center",
+    cursor: "pointer",
+    fontFamily: "inherit",
+    padding: 0,
+    fontSize: 18,
+    backdropFilter: "blur(6px)",
+    WebkitBackdropFilter: "blur(6px)",
+    transition: "background 160ms ease, border-color 160ms ease",
+  };
+  // Sealed 2026-10-11 · 3-dot now anchors at `right: 58, bottom: 10`
+  // (inline with composer's + button). The animation column stacks
+  // vertically ABOVE the 3-dot, so its bottom = 10 + 40 + 8 = 58
+  // and its right matches the 3-dot's `right: 58`. Previously
+  // 76+40+8=124 which left a big gap above the composer.
+  const bottomOffset = 10 + 40 + 8;
+  const rightOffset = 58;
+  return (
+    <div
+      data-nex-universal-animation-column={open ? "open" : "closed"}
+      style={{
+        position: "fixed",
+        right: rightOffset,
+        bottom: `calc(env(safe-area-inset-bottom, 0) + ${bottomOffset}px)`,
+        zIndex: 60,
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        alignItems: "center",
+        opacity: open ? 1 : 0,
+        transform: open ? "translateY(0)" : "translateY(16px)",
+        pointerEvents: open ? "auto" : "none",
+        transition:
+          "opacity 220ms ease-out, transform 300ms cubic-bezier(0.2, 0.9, 0.3, 1.1)",
+      }}
+    >
+      {JOKER_MOTION_INDEX.map((motion) => {
+        const isOn = enabled.has(motion.variant);
+        const glyph = MOTION_GLYPH[motion.variant] ?? "•";
+        return (
+          <button
+            key={motion.variant}
+            type="button"
+            aria-label={`${motion.label} ${isOn ? "on" : "off"}`}
+            aria-pressed={isOn}
+            data-nex-animation-variant={motion.variant}
+            data-nex-animation-variant-state={isOn ? "on" : "off"}
+            onClick={() => onToggle(motion.variant)}
+            style={{
+              ...circle,
+              background: isOn
+                ? `linear-gradient(180deg, ${accent}, ${hexToRgba(accent, 0.8)})`
+                : "rgba(2,9,20,0.72)",
+              border: `1px solid ${isOn ? accent : hexToRgba(highlight, 0.2)}`,
+              color: isOn ? deep : highlight,
+              boxShadow: isOn
+                ? `0 4px 14px -4px ${hexToRgba(accent, 0.6)}`
+                : `0 4px 10px -4px rgba(0,0,0,0.6)`,
+            }}
+          >
+            <span aria-hidden>{glyph}</span>
+            <span
+              aria-hidden
+              style={{
+                position: "absolute",
+                bottom: -2,
+                right: -2,
+                width: 10,
+                height: 10,
+                borderRadius: 999,
+                background: isOn ? "#22C55E" : hexToRgba(highlight, 0.25),
+                border: `2px solid ${deep}`,
+              }}
+            />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Convert a hex colour (#RGB · #RRGGBB) to an rgba() string. Local
+ *  helper so this file remains self-contained (overlays are the
+ *  universal chrome · no engine import). */
+function hexToRgba(hex: string, alpha: number): string {
+  const clean = (hex ?? "").replace(/^#/, "");
+  if (clean.length !== 3 && clean.length !== 6) return `rgba(0,175,255,${alpha})`;
+  const full =
+    clean.length === 3
+      ? clean.split("").map((c) => c + c).join("")
+      : clean;
+  const n = parseInt(full, 16);
+  if (!Number.isFinite(n)) return `rgba(0,175,255,${alpha})`;
+  const r = (n >> 16) & 0xff;
+  const g = (n >> 8) & 0xff;
+  const b = n & 0xff;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 // ─── + menu (centered dialog) ───────────────────────────────────────
 
 function FloatingPlusMenu({
@@ -272,30 +437,34 @@ function FloatingPlusMenu({
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: 8,
-    padding: "12px 8px",
+    gap: 6,
+    padding: "10px 4px",
     width: "100%",
     minWidth: 0,
-    borderRadius: 16,
+    boxSizing: "border-box",
+    borderRadius: 14,
     border: `1px solid ${accent}66`,
     background: `${accent}1a`,
     color: NEX_HIGHLIGHT,
     cursor: "pointer",
     textAlign: "center",
     fontFamily: "inherit",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 600,
+    lineHeight: 1.1,
+    overflow: "hidden",
     transition: "background 160ms ease-out, transform 160ms ease-out",
   };
   const iconCircle: React.CSSProperties = {
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 36,
     borderRadius: 999,
     display: "grid",
     placeItems: "center",
     background: `linear-gradient(135deg, ${accent}, ${accent}aa)`,
     color: NEX_HIGHLIGHT,
-    boxShadow: `0 4px 12px ${accent}55`,
+    boxShadow: `0 2px 6px ${accent}55`,
+    flex: "none",
   };
   return (
     <div
@@ -329,16 +498,16 @@ function FloatingPlusMenu({
         aria-label="Chat actions"
         style={{
           position: "relative",
-          padding: 20,
-          borderRadius: 24,
+          padding: 18,
+          borderRadius: 22,
           background: `linear-gradient(180deg, ${deep}e6, ${deep}f5)`,
           border: `1px solid ${accent}99`,
           boxShadow: `0 20px 50px rgba(0,0,0,0.55), 0 0 0 1px ${accent}22`,
           display: "flex",
           flexDirection: "column",
           gap: 14,
-          minWidth: 340,
-          maxWidth: "92%",
+          width: "min(360px, 92vw)",
+          boxSizing: "border-box",
           transform: `scale(${open ? 1 : 0.9})`,
           transition:
             "transform 240ms cubic-bezier(0.2, 0.9, 0.3, 1.1), opacity 220ms ease-out",

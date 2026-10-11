@@ -43,6 +43,7 @@ const NEX = {
   orangeSoft: "rgba(255,120,0,0.5)",
   pink: "#FF3F9F",
   pinkGlow: "rgba(255,63,159,0.55)",
+  cyan: "#00AFFF", // NEX cyan · fallback when a theme passes no accent
 };
 
 interface Props {
@@ -304,6 +305,7 @@ export function HeaderRightCluster({
           backgroundImageUrl={shopBackgroundImageUrl ?? null}
           showSetupChooser={showShopSetupChooser}
           onSelectShopType={onSelectShopType}
+          themeAccent={themeAccent ?? null}
         />
       )}
     </>
@@ -320,12 +322,18 @@ const CIRCLE: React.CSSProperties = {
   borderRadius: 0,
   background: "transparent",
   border: "none",
-  // Sealed 2026-10-01 · muted-until-touched · icons sit at 55% white
-  // so they disappear into the environment · they light up to the
-  // theme accent via `[data-nex-header-cluster-btn]:hover` in the
-  // stylesheet attached to the cluster wrapper below. Scarcity rule
-  // applied to chrome.
-  color: "rgba(255,255,255,0.55)",
+  // Sealed 2026-10-01 · ORIGINAL: muted-until-touched · icons sat at
+  // 55% white and only lit up to the theme accent on :hover /
+  // :focus-visible / :active. Mobile has no hover state, so Joker's
+  // acid green (and every other theme accent) never appeared on
+  // touch devices · users read it as "the theme colour is missing".
+  //
+  // Flipped 2026-10-11 · persistent theme accent · the CSS variable
+  // `--nex-header-accent` is set on the cluster wrapper from
+  // `themeAccent` (defaults to NEX cyan) · falling back to muted
+  // white only when no theme is active. The :hover rule still
+  // brightens on interaction (desktop pointer still gets a lift).
+  color: "var(--nex-header-accent, rgba(255,255,255,0.55))",
   padding: 6,
   display: "grid",
   placeItems: "center",

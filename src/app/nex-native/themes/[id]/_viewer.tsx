@@ -24,6 +24,8 @@ import {
 } from "./_joker-motion";
 import { JokerController } from "./_joker-controller";
 import { getThemeAssets } from "@/lib/nex-native/theme-assets";
+import { UniversalComposerFooter } from "../../chat-standard/_universal-composer-footer";
+import type { BuiltInThemeEmoji } from "@/lib/nex-native/theme-asset-fallback";
 import { TrustScan } from "@/app/nex-native/_trust-scan/TrustScan";
 import { mockTrustScanProvider } from "@/app/nex-native/_trust-scan/trust-scan-mock-provider";
 import { NEX_TRUST_SCAN_SKIN } from "@/app/nex-native/_trust-scan/trust-scan-skin";
@@ -256,6 +258,47 @@ export default function ThemeViewerClient(
     [props.themeId, props.themeStickers],
   );
 
+  // Sealed 2026-10-11 · UniversalComposerFooter's Send button fires
+  // this · body + optional staged emoji land in the preview message
+  // list exactly like the sealed sticker send. Emoji becomes an
+  // attachment_type="theme-emoji" message · body (if any) is text
+  // sent on the SAME message · the shell's bubble renderer paints
+  // both text + 56px emoji together.
+  const previewSendMessage = React.useCallback(
+    (payload: { body: string; emoji: BuiltInThemeEmoji | null }) => {
+      const trimmed = payload.body.trim();
+      const emoji = payload.emoji;
+      if (!trimmed && !emoji) return;
+      const now = new Date().toISOString();
+      setMessages((prev) => [
+        ...prev,
+        emoji
+          ? {
+              id: `preview-emoji-${Date.now()}`,
+              body: trimmed,
+              sent_at: now,
+              read_at: null,
+              mine: true,
+              attachment_url: emoji.image_url,
+              attachment_type: "theme-emoji",
+              attachment_theme_emoji: {
+                theme_id: props.themeId,
+                slug: emoji.slug,
+                label: emoji.label,
+              },
+            }
+          : {
+              id: `preview-msg-${Date.now()}`,
+              body: trimmed,
+              sent_at: now,
+              read_at: null,
+              mine: true,
+            },
+      ]);
+    },
+    [props.themeId],
+  );
+
   // Client-side simulation of toggleMessageReaction · mirrors the
   // server semantics: 0→1 append to reactions_order, N→0 remove from
   // reactions_order · other transitions leave the order alone.
@@ -427,6 +470,17 @@ export default function ThemeViewerClient(
           }}
         />
       )}
+      {/* Sealed 2026-10-11 · UniversalComposerFooter mounted HERE
+          (was in page.tsx as a sibling · the shared `setMessages`
+          state is in this client scope, so hoisting the composer
+          into the viewer gives it a working onSendMessage → chat
+          wire). Picked emoji + typed text post into the preview
+          message list immediately and render in the shell. */}
+      <UniversalComposerFooter
+        accent={props.accent}
+        themeId={props.themeId}
+        onSendMessage={previewSendMessage}
+      />
     </>
   );
 }

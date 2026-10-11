@@ -202,12 +202,20 @@ export function StandardExperience({
 
         {/* Messages */}
         <div
+          data-nex-se-messages
           style={{
             position: "relative",
             zIndex: 5,
             flex: 1,
             overflowY: "auto",
-            padding: "10px 14px",
+            // Universal 2026-10-11 · bottom reserve so chat bubbles
+            // never hide beneath the floating 3-dot stack mounted by
+            // UniversalChromeOverlay (fixed at `bottom: safe + 76px`,
+            // 40×40 button + 8px gap + 14px edge). Also keeps the
+            // last bubble clear of the composer pill above the
+            // safe-area band.
+            padding:
+              "10px 14px calc(env(safe-area-inset-bottom, 0) + 128px)",
             display: "flex",
             flexDirection: "column",
             gap: 8,

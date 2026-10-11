@@ -18,6 +18,7 @@
 // Real session wiring is Phase 2A.1 work.
 
 import * as React from "react";
+import Link from "next/link";
 import { createEngine } from "../../chat-standard/_engine/theme-engine";
 import type { ThemePackage } from "../../chat-standard/_engine/types";
 import {
@@ -100,6 +101,15 @@ export function StandardExperienceLiveClient({
   // frame border, no header strip, no chip row. The Standard
   // Experience owns the entire viewport so what the user sees IS the
   // live theme.
+  //
+  // Back-nav button (sealed 2026-10-11) · a single 36px circular
+  // back arrow pinned top-left of the viewport, above the sealed
+  // StandardHeader's R1 cluster z-index. Replaces the removed
+  // `ThemeActivateOverlay` without re-introducing its square popup
+  // or multi-button layout · users told us the overlay was too
+  // intrusive · a single discreet back arrow is the minimum
+  // navigation affordance that keeps the live chat preview
+  // escapable without the browser back button.
   return (
     <div
       data-nex-standard-experience-live
@@ -121,6 +131,32 @@ export function StandardExperienceLiveClient({
         localMessages={localMessages}
         wallpaperFallback="theme-gradient"
       />
+      <Link
+        href="/nex-native/chat-themes-library"
+        data-nex-theme-preview-back
+        aria-label="Back to themes"
+        style={{
+          position: "fixed",
+          top: "calc(env(safe-area-inset-top, 0) + 10px)",
+          left: 10,
+          zIndex: 150,
+          width: 36,
+          height: 36,
+          borderRadius: 999,
+          background: "rgba(0,0,0,0.55)",
+          color: "#F4F7FC",
+          border: "1px solid rgba(255,255,255,0.22)",
+          display: "grid",
+          placeItems: "center",
+          fontSize: 18,
+          textDecoration: "none",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
+          boxShadow: "0 4px 14px -4px rgba(0,0,0,0.6)",
+        }}
+      >
+        <span aria-hidden>←</span>
+      </Link>
     </div>
   );
 }

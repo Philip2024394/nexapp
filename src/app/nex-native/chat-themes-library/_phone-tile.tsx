@@ -36,6 +36,11 @@ import {
   type BubblePreset,
 } from "@/lib/nex-native/chat-render/theme-world";
 import type { BrowserThemeRow } from "./_theme-browser-client";
+import {
+  miniPhoneBubbleBackground,
+  miniPhoneAmbient,
+} from "../chat-standard/_engine/preview-mini-phone";
+import { MiniPhoneAmbientLayer } from "./_mini-phone-ambient-layer";
 
 const NEX = {
   bg: "#020914",
@@ -225,11 +230,22 @@ function PhoneTile({
   const preset: BubblePreset = theme.wallpaper_config?.bubbleStyle?.preset ?? "classic";
   const bubbleRim = theme.bubble_rim_hex ?? theme.accent_hex;
 
-  // Accent-tinted glass values · chosen to read on both light and dark
-  // wallpapers. These match the shell's defaults (shell uses the same
-  // pattern via its own peerCrystal/myCrystal constants).
-  const accentGlassMine = "rgba(0,159,239,0.26)";
-  const accentGlassPeer = "rgba(30,44,66,0.72)";
+  // Sealed Final Parity Pass 2026-10-11 · bubble background now
+  // dispatches through the LIVE engine's `resolveBubbleBackground`
+  // via the shared helper, keyed off this theme's actual
+  // `bubble_material`. nex-flat (solid), midnight-cafe (neon-glass),
+  // coffee (warm-liquid), etc. each paint their own material
+  // formula identically to the live chat.
+  const accentGlassMine = miniPhoneBubbleBackground(
+    theme.palette,
+    true,
+    theme.bubble_material,
+  );
+  const accentGlassPeer = miniPhoneBubbleBackground(
+    theme.palette,
+    false,
+    theme.bubble_material,
+  );
 
   return (
     <button
@@ -286,6 +302,17 @@ function PhoneTile({
             wallpaperUrl={theme.hero_image_url}
             wallpaperConfig={scaledConfig}
             size="tile"
+          />
+          {/* Sealed Final Parity Pass 2026-10-11 · static ambient
+              layer · each theme's `ambient.families` renders a
+              lightweight representation at phone scale. Behind
+              bubbles (z-index 2 vs bubble zone z-index 3). */}
+          <MiniPhoneAmbientLayer
+            specs={miniPhoneAmbient(
+              theme.palette,
+              theme.ambient_families,
+              "sparse",
+            )}
           />
           <div
             style={{

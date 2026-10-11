@@ -275,6 +275,12 @@ export interface StandardIntro {
   /** Visitor-frequency rule (sealed 2026-10-05): seen 0 or 1 times
    *  → play. seen 2+ times → skip. */
   playPolicy: "twice-then-skip";
+  /** Play the intro with the clip's audio track (sealed 2026-10-11
+   *  for the Property1 walk-through voice-over). Defaults to false ·
+   *  the overlay autoplays MUTED to satisfy mobile autoplay policies ·
+   *  the browser may still require a user gesture before actually
+   *  producing sound when this is true. */
+  withAudio?: boolean;
 }
 
 export interface BusinessIntro {

@@ -87,96 +87,28 @@ export interface UniversalHeaderIconsOverlayProps {
 }
 
 export function UniversalHeaderIconsOverlay({
-  accent = NEX_CYAN,
-  deep = NEX_DEEP,
-  highlight = NEX_HIGHLIGHT,
-  secondary = NEX_SECONDARY,
-  onShopClick,
-  shopOpen,
-  shopHref,
-}: UniversalHeaderIconsOverlayProps): React.JSX.Element {
-  // Universal Theme Controls Rule · sealed 2026-10-06 · the overlay
-  // consumes the SAME `resolveControlsTreatment()` as the Standard
-  // Experience shell. The sealed-away `background: "${accent}22"`
-  // pattern (semi-transparent accent that disappeared against dark
-  // wallpapers) is EXPLICITLY SUPERSEDED by this rule.
-  const controls = resolveControlsTreatment({
-    primary: accent,
-    secondary,
-    highlight,
-    deep,
-  });
-  const circle = controls.headerButton;
-  const activeShop = controls.headerButtonActive;
-  return (
-    <>
-      {/* SEALED RULE 2026-10-05 · R11b · "one R1 implementation per
-          production theme" · the overlay is the single source of truth
-          for the header right-cluster on every legacy theme. Native
-          clusters tagged with data-nex-native-r1-cluster are suppressed
-          while this overlay is mounted. The audit confirmed every such
-          cluster is 100% R1, so hiding is surgical. */}
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-            [data-nex-native-r1-cluster] { display: none !important; }
-          `,
-        }}
-      />
-      <div
-        data-nex-universal-header-icons
-        style={{
-          position: "fixed",
-          top: "calc(env(safe-area-inset-top, 0) + 14px)",
-          right: 12,
-          zIndex: 60,
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-        }}
-      >
-        <a
-          href="/nex-native/home"
-          aria-label="Home"
-          data-nex-universal-header-action="home"
-          style={circle}
-        >
-          <HomeIcon />
-        </a>
-        <a
-          href="/nex-native/cart"
-          aria-label="Cart"
-          data-nex-universal-header-action="cart"
-          style={circle}
-        >
-          <CartIcon />
-        </a>
-        {onShopClick ? (
-          <button
-            type="button"
-            aria-label={shopOpen ? "Close shop" : "Open shop"}
-            aria-pressed={shopOpen ?? false}
-            data-nex-universal-header-action="shop"
-            data-nex-universal-shop-toggle={shopOpen ? "open" : "closed"}
-            onClick={onShopClick}
-            style={shopOpen ? activeShop : circle}
-          >
-            <ShopIcon />
-          </button>
-        ) : (
-          <a
-            href={shopHref ?? "/nex-native/shop"}
-            aria-label="Shop"
-            data-nex-universal-header-action="shop"
-            data-nex-universal-shop-href={shopHref ?? "/nex-native/shop"}
-            style={circle}
-          >
-            <ShopIcon />
-          </a>
-        )}
-      </div>
-    </>
-  );
+  accent: _accent = NEX_CYAN,
+  deep: _deep = NEX_DEEP,
+  highlight: _highlight = NEX_HIGHLIGHT,
+  secondary: _secondary = NEX_SECONDARY,
+  onShopClick: _onShopClick,
+  shopOpen: _shopOpen,
+  shopHref: _shopHref,
+}: UniversalHeaderIconsOverlayProps): React.JSX.Element | null {
+  // Sealed 2026-10-11 (final) · PortraitBloomShell renders its OWN
+  // `HeaderRightCluster` with Home · Cart · Shop + a native
+  // `ShopGridModal` slider that opens on Shop tap. This overlay used
+  // to hide the shell's cluster via CSS (`[data-nex-native-r1-cluster]
+  // { display: none !important }`) and re-render the three icons
+  // itself · but my overlay's Shop button navigated to a page
+  // instead of opening the shell's slider, so the shop sheet never
+  // appeared on Joker (or any PortraitBloomShell theme).
+  //
+  // Fix: return null · let the shell's native cluster paint. The
+  // export signature stays stable so existing `<UniversalHeaderIconsOverlay />`
+  // mounts don't need to change. Same approach as
+  // `UniversalChromeOverlay` which was also deduplicated.
+  return null;
 }
 
 // ─── Icons · match the Standard Experience glyph vocabulary ─────────

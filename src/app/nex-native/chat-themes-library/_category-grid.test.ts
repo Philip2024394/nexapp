@@ -78,22 +78,43 @@ describe("B · member counts come from the actual merged world collection", () =
     expect(counts["products"]).toBe(1);
   });
 
-  test("live-world rows produce food=6, waterworld=1, explore=2, rentals=1, services=1, accommodation=0, bakery=0, products=0, haunted=0 today", () => {
-    // Re-sealed 2026-10-11 · Step 1H adds Accommodation · AC Service
-    // ships as first Services live-world the same day.
+  test("live-world rows produce food=7, waterworld=1, explore=2, rentals=1, services=1, property=1, teddy=2, hollywood=1, vitamins=1, accommodation=0, bakery=0, products=0, haunted=0 today", () => {
+    // Re-sealed 2026-10-11 · Pink Dream ships as the first teddy
+    // live-world · Vitamins remains DB-backed only.
     //   food          = coffee + botanical-cafe + midnight-cafe +
-    //                   french-cafe + food + pizza
+    //                   french-cafe + food + pizza + crispy-chicken
     //   waterworld    = waterworld
     //   explore       = nex-bubbles + nex-flat
     //   rentals       = bike-rental
     //   services      = ac-service
-    //   accommodation / bakery / products / haunted = empty live-world set
+    //   property      = property1
+    //   teddy         = teddy-play + pink-dream (pink-dream's
+    //                   library tile paints a Standard Experience
+    //                   approximation of the pink/plum palette ·
+    //                   tapping through goes to the SEALED bespoke
+    //                   `/themes/pink-dream` page which retains the
+    //                   original "bubbles connected to the sides"
+    //                   design via Next.js static-page routing)
+    //   hollywood     = hollywood (Joker DB theme `theme-0` files
+    //                   here via the keyword resolver when the
+    //                   DB loader runs · live-world set carries
+    //                   only the hollywood package)
+    //   vitamins      = vitamin-fruit (DB `vitamins` row from
+    //                   migration 137 also files here via the
+    //                   keyword resolver · live-world set carries
+    //                   only the vitamin-fruit package)
+    //   accommodation / bakery / products / haunted / vitamins
+    //                   = empty live-world set
     const counts = countCategoryMembers(liveRows);
-    expect(counts["food"]).toBe(6);
+    expect(counts["food"]).toBe(7);
     expect(counts["waterworld"] ?? 0).toBe(1);
     expect(counts["explore"] ?? 0).toBe(2);
     expect(counts["rentals"] ?? 0).toBe(1);
     expect(counts["services"] ?? 0).toBe(1);
+    expect(counts["property"] ?? 0).toBe(1);
+    expect(counts["teddy"] ?? 0).toBe(2);
+    expect(counts["hollywood"] ?? 0).toBe(1);
+    expect(counts["vitamins"] ?? 0).toBe(1);
     expect(counts["accommodation"] ?? 0).toBe(0);
     expect(counts["bakery"] ?? 0).toBe(0);
     expect(counts["products"] ?? 0).toBe(0);
@@ -103,7 +124,7 @@ describe("B · member counts come from the actual merged world collection", () =
 
 // ─── C · Food category contains the five current food/café worlds ──
 
-describe("C · Food category contains the six current food/café/pizza worlds", () => {
+describe("C · Food category contains the seven current food/café/pizza/chicken worlds", () => {
   const EXPECTED = [
     "coffee",
     "botanical-cafe",
@@ -111,6 +132,7 @@ describe("C · Food category contains the six current food/café/pizza worlds", 
     "french-cafe",
     "food",
     "pizza",
+    "crispy-chicken",
   ] as const;
 
   test("every expected food world has category_id = 'food'", () => {
@@ -387,16 +409,20 @@ describe("O · Step 1G (Ocean → Waterworld) is sealed", () => {
 // ─── Sanity · the four registered ids are what the surfaces assume ──
 
 describe("Sanity · the four registered category ids today", () => {
-  test("food, bakery, products, services, rentals, accommodation, haunted, waterworld, explore are registered", () => {
+  test("food, bakery, products, services, rentals, accommodation, hollywood, vitamins, teddy, property, haunted, waterworld, explore are registered", () => {
     expect([...CATEGORY_REGISTRY_IDS].sort()).toEqual([
       "accommodation",
       "bakery",
       "explore",
       "food",
       "haunted",
+      "hollywood",
       "products",
+      "property",
       "rentals",
       "services",
+      "teddy",
+      "vitamins",
       "waterworld",
     ]);
   });
@@ -424,6 +450,10 @@ describe("Sanity · the four registered category ids today", () => {
       "accommodation",
       "haunted",
       "waterworld",
+      "hollywood",
+      "vitamins",
+      "teddy",
+      "property",
       "explore",
     ]);
   });
@@ -658,6 +688,15 @@ function row(id: string, categoryId: string): BrowserThemeRow {
     intro_video_url: null,
     intro_poster_url: null,
     wallpaper_config: null,
+    palette: {
+      primary: "#000000",
+      secondary: "#000000",
+      highlight: "#F4F7FC",
+      glow: "rgba(0,0,0,0.4)",
+      deep: "#020914",
+    },
+    ambient_families: null,
+    bubble_material: "glass",
   };
 }
 

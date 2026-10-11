@@ -129,6 +129,13 @@ interface Props {
    *  Parent decides what to do (navigate to onboarding, show the
    *  profession picker, open the affiliate waitlist, etc.). */
   onSelectShopType?: (type: "products" | "food" | "affiliate") => void;
+  /** Sealed 2026-10-11 · theme accent threaded from HeaderRightCluster
+   *  (which gets it from `themeAccent` which gets it from the
+   *  ThemePackage `accent_hex`). When supplied every rim · active-tab
+   *  underline · CTA border · chip border + accent-coloured text
+   *  switches to the theme hue instead of the hardcoded NEX cyan.
+   *  Null falls back to NEX cyan for routes without a theme. */
+  themeAccent?: string | null;
 }
 
 export function ShopGridModal({
@@ -146,7 +153,16 @@ export function ShopGridModal({
   backgroundImageUrl,
   showSetupChooser,
   onSelectShopType,
+  themeAccent,
 }: Props) {
+  // Sealed 2026-10-11 · theme accent plumbed from HeaderRightCluster.
+  // Every "NEX.cyan*" below used to be hardcoded cyan which produced
+  // a BLUE rim on Joker's acid-green chat · now the rim adopts the
+  // theme's accent. Alpha variants (soft / border) derive from the
+  // same accent so the whole modal reads as one coherent theme.
+  const accentSolid = themeAccent ?? NEX.cyan;
+  const accentSoft = themeAccent ? `${themeAccent}80` : NEX.cyanSoft;
+  const accentBorder = themeAccent ? `${themeAccent}5A` : NEX.cyanBorder;
   const [mounted, setMounted] = React.useState(false);
   const [selectedProductId, setSelectedProductId] = React.useState<
     string | null
@@ -255,11 +271,10 @@ export function ShopGridModal({
           background: backgroundImageUrl
             ? `linear-gradient(180deg, rgba(6,15,28,0.18) 0%, rgba(3,10,20,0.32) 100%), url(${backgroundImageUrl}) center center / cover no-repeat`
             : "linear-gradient(180deg, rgba(6,15,28,0.96) 0%, rgba(3,10,20,0.98) 100%)",
-          borderTop: `1px solid ${NEX.cyanSoft}`,
+          borderTop: `1px solid ${accentSoft}`,
           borderTopLeftRadius: 22,
           borderTopRightRadius: 22,
-          boxShadow:
-            "0 -20px 60px rgba(0,0,0,0.7), 0 0 60px rgba(0,159,239,0.12), inset 0 1px 0 rgba(255,255,255,0.06)",
+          boxShadow: `0 -20px 60px rgba(0,0,0,0.7), 0 0 60px ${accentSolid}1F, inset 0 1px 0 rgba(255,255,255,0.06)`,
           zIndex: 1001,
           color: NEX.text,
           fontFamily: "inherit",
@@ -298,7 +313,7 @@ export function ShopGridModal({
                 fontSize: 10,
                 letterSpacing: "0.16em",
                 textTransform: "uppercase",
-                color: NEX.cyan,
+                color: accentSolid,
                 fontWeight: 600,
                 marginBottom: 2,
               }}
@@ -345,7 +360,12 @@ export function ShopGridModal({
              lets a new user declare their shop type before anything
              else loads. Category Tabs are suppressed because they'd
              be meaningless with no sections. */
-          <ShopTypeChooser onSelect={onSelectShopType} />
+          <ShopTypeChooser
+            onSelect={onSelectShopType}
+            accentSolid={accentSolid}
+            accentSoft={accentSoft}
+            accentBorder={accentBorder}
+          />
         ) : (
           <>
             {/* Category Tabs · sealed 2026-09-30 · appears above the grid
@@ -354,6 +374,7 @@ export function ShopGridModal({
               sections={sections}
               activeId={activeSectionId}
               onSelect={setActiveSectionId}
+              accentSolid={accentSolid}
             />
 
             {/* Product grid */}
@@ -618,10 +639,12 @@ function ShopCategoryTabs({
   sections,
   activeId,
   onSelect,
+  accentSolid,
 }: {
   sections: ShopSection[];
   activeId: string;
   onSelect: (id: string) => void;
+  accentSolid: string;
 }) {
   if (sections.length <= 1) return null;
 
@@ -662,9 +685,9 @@ function ShopCategoryTabs({
               fontSize: 12,
               fontWeight: isActive ? 700 : 500,
               letterSpacing: "0.02em",
-              color: isActive ? NEX.cyan : NEX.textDim,
+              color: isActive ? accentSolid : NEX.textDim,
               borderBottom: isActive
-                ? `2px solid ${NEX.cyan}`
+                ? `2px solid ${accentSolid}`
                 : "none",
               transition: "color 160ms ease, border-color 160ms ease",
               whiteSpace: "nowrap",
@@ -693,8 +716,14 @@ function ShopCategoryTabs({
 
 function ShopTypeChooser({
   onSelect,
+  accentSolid,
+  accentSoft,
+  accentBorder,
 }: {
   onSelect?: (type: "products" | "food" | "affiliate") => void;
+  accentSolid: string;
+  accentSoft: string;
+  accentBorder: string;
 }): React.JSX.Element {
   return (
     <div
@@ -745,6 +774,9 @@ function ShopTypeChooser({
           caption="Physical goods · home-made, retail, trades, maker."
           href={SHOP_TYPE_HREFS.products}
           onClick={() => onSelect?.("products")}
+          accentSolid={accentSolid}
+          accentSoft={accentSoft}
+          accentBorder={accentBorder}
         />
         <ShopTypeButton
           icon={<ShopTypeFoodIcon />}
@@ -752,6 +784,9 @@ function ShopTypeChooser({
           caption="Kitchen, cafe, bar, catering · menu driven."
           href={SHOP_TYPE_HREFS.food}
           onClick={() => onSelect?.("food")}
+          accentSolid={accentSolid}
+          accentSoft={accentSoft}
+          accentBorder={accentBorder}
         />
         <ShopTypeButton
           icon={<ShopTypeAffiliateIcon />}
@@ -759,6 +794,9 @@ function ShopTypeChooser({
           caption="Promote others' products · earn commission."
           href={SHOP_TYPE_HREFS.affiliate}
           onClick={() => onSelect?.("affiliate")}
+          accentSolid={accentSolid}
+          accentSoft={accentSoft}
+          accentBorder={accentBorder}
         />
       </div>
 
@@ -784,8 +822,11 @@ function ShopTypeButton({
   label,
   caption,
   href,
-  comingSoon,
+  comingSoon: _comingSoon,
   onClick,
+  accentSolid,
+  accentSoft,
+  accentBorder,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -793,6 +834,9 @@ function ShopTypeButton({
   href: string;
   comingSoon?: boolean;
   onClick?: () => void;
+  accentSolid: string;
+  accentSoft: string;
+  accentBorder: string;
 }): React.JSX.Element {
   return (
     <Link
@@ -802,47 +846,56 @@ function ShopTypeButton({
         textDecoration: "none",
         display: "flex",
         alignItems: "center",
-        gap: 14,
-        padding: "14px 16px",
+        // Sealed 2026-10-11 · tighter gap + tighter horizontal
+        // padding so the row fits a 390px (minus 28px parent
+        // padding = 362px) card without wrapping the caption into
+        // a third line. Horizontal padding reduced 16 → 12 ·
+        // icon-to-text gap reduced 14 → 10 · the right arrow
+        // margin uses auto so it pins to the row's right edge
+        // without needing extra width.
+        gap: 10,
+        padding: "12px 12px",
         borderRadius: 14,
-        background:
-          "linear-gradient(180deg, rgba(0,159,239,0.14) 0%, rgba(0,159,239,0.06) 100%)",
-        border: `1px solid ${NEX.cyanSoft}`,
+        background: `linear-gradient(180deg, ${accentSolid}24 0%, ${accentSolid}10 100%)`,
+        border: `1px solid ${accentSoft}`,
         color: NEX.text,
         cursor: "pointer",
         textAlign: "left",
         position: "relative",
         width: "100%",
+        boxSizing: "border-box",
+        minWidth: 0,
         transition:
           "transform 140ms ease, box-shadow 140ms ease, background 140ms ease",
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = "translateX(2px)";
-        e.currentTarget.style.boxShadow =
-          "0 10px 24px rgba(0,159,239,0.25)";
+        e.currentTarget.style.boxShadow = `0 10px 24px ${accentSolid}40`;
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = "translateX(0)";
         e.currentTarget.style.boxShadow = "none";
       }}
     >
-      {/* Icon · left */}
+      {/* Icon · left · slightly smaller to make room on narrow phones */}
       <div
         style={{
           flexShrink: 0,
-          width: 48,
-          height: 48,
+          width: 42,
+          height: 42,
           borderRadius: 12,
           background: "rgba(0,0,0,0.4)",
-          border: `1px solid ${NEX.cyanBorder}`,
+          border: `1px solid ${accentBorder}`,
           display: "grid",
           placeItems: "center",
-          color: NEX.cyan,
+          color: accentSolid,
         }}
       >
         {icon}
       </div>
-      {/* Label + caption · middle */}
+      {/* Label + caption · middle · min-width:0 lets the flex item
+          actually shrink so long captions wrap instead of forcing
+          overflow. */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
@@ -857,32 +910,26 @@ function ShopTypeButton({
         <div
           style={{
             marginTop: 3,
-            // Sealed 2026-10-01 · caption-readability proto #05 ·
-            // "TV-broadcast legibility" · dual-shadow holds the gray
-            // against any backdrop (cyan-tinted card, alley wallpaper,
-            // dark fog) · 0 0 2px tight dark halo + a soft drop
-            // shadow gives every letter its own edge without touching
-            // the structural hierarchy of the card.
-            fontSize: 13,
-            fontWeight: 600,
-            lineHeight: 1.4,
+            fontSize: 12,
+            fontWeight: 500,
+            lineHeight: 1.35,
             color: "#B4BAC3",
-            textShadow:
-              "0 0 2px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,0.5)",
+            textShadow: "0 0 2px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,0.5)",
+            overflowWrap: "anywhere",
           }}
         >
           {caption}
         </div>
       </div>
-      {/* Right · arrow · "Soon" chip removed because every path
-          (Products / Food / Affiliate) now routes to a real page. */}
+      {/* Right · arrow · theme-tinted · flexShrink keeps it tight */}
       <div
         aria-hidden
         style={{
           flexShrink: 0,
-          color: NEX.cyan,
+          color: accentSolid,
           fontSize: 18,
           lineHeight: 1,
+          marginLeft: 2,
         }}
       >
         →

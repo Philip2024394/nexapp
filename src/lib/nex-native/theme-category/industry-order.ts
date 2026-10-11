@@ -15,14 +15,15 @@
 //     to return its deterministic snapshot (sealed by the IA tests).
 //     The reorder is a VIEW-time operation applied by the landing
 //     page before rendering.
-//   · Business category → Theme category mapping (Step 1H · 2026-10-11):
+//   · Business category → Theme category mapping (updated 2026-10-11):
 //       food          → food
 //       products      → products
 //       services      → services
 //       accommodation → accommodation (own room since Step 1H)
-//       property      → accommodation (real-estate rental is still
-//                        a hosting business · the Accommodation room
-//                        welcomes it)
+//       property      → property (own room from 2026-10-11 · the
+//                        Property room owns real-estate / listing /
+//                        agent worlds · Accommodation stays dedicated
+//                        to hosting a stay)
 //   · Unknown / unset business category → no reorder (keep sealed
 //     registration order).
 //   · The viewer's business is already resolved by the caller · this
@@ -45,8 +46,9 @@ export function themeCategoryIdForBusinessCategory(
     case "services":
       return "services";
     case "accommodation":
-    case "property":
       return "accommodation";
+    case "property":
+      return "property";
     default:
       return null;
   }

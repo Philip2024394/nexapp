@@ -13,6 +13,7 @@ import {
   ImmersivePreviewShell,
   useInitialPreviewFromUrl,
 } from "./_preview-shell";
+import type { MiniPhonePalette } from "../chat-standard/_engine/preview-mini-phone";
 
 const NEX = {
   bg: "#020914",
@@ -68,6 +69,51 @@ export interface BrowserThemeRow {
    *  config don't paint overlays. Not consumed by the legacy
    *  ThemeGridCard code path · it stays flat regardless. */
   wallpaper_config: WallpaperConfig | null;
+  /** Shared mini-phone palette · sealed 2026-10-11 ·
+   *  `preview-mini-phone.ts`. Carries the full `ColourSystem` the
+   *  live Standard Experience engine would resolve for this theme
+   *  (primary · secondary · highlight · glow · deep) so every
+   *  preview surface can paint byte-identical bubbles / composer /
+   *  send button / stage without inventing its own palette.
+   *
+   *  · Live-world rows: populated by the adapter directly from
+   *    `pkg.colours` (full fidelity).
+   *  · DB-backed rows: populated by the loaders via
+   *    `inferPaletteFromRow()` which promotes `accent_hex` to
+   *    primary + inherits NEX defaults for `highlight` + `deep`
+   *    (the two universal chrome tokens).
+   *
+   *  Required (not optional) so every consumer gets a real palette ·
+   *  the regression test guards that no new preview path inlines
+   *  cyan/pink/orange chrome literals instead of consuming this. */
+  palette: MiniPhonePalette;
+  /** Ambient family list · sealed 2026-10-11 Final Parity Pass ·
+   *  mirrors `pkg.ambient.families` from the live ThemePackage so
+   *  preview surfaces can render a lightweight STATIC representation
+   *  of each theme's ambient identity (bubbles-rising, light-rays,
+   *  sparkles, etc). The shared helper `miniPhoneAmbient()` in
+   *  `preview-mini-phone.ts` maps each family name to a positioned
+   *  element spec that the preview JSX materialises.
+   *
+   *  · Live-world rows: populated by the adapter from
+   *    `pkg.ambient.families`.
+   *  · DB-backed rows: `null` (no ambient column yet · the preview
+   *    renders no ambient layer, matching the DB theme's actual
+   *    live-chat behaviour which also carries no ambient). */
+  ambient_families: readonly string[] | null;
+  /** Bubble material · sealed 2026-10-11 Final Parity Pass ·
+   *  mirrors `pkg.bubbles.material` from the live ThemePackage so
+   *  the mini-phone's bubble rendering dispatches to the SAME
+   *  live-engine formula branch the live chat uses. Known values
+   *  include "glass" · "solid" · "gradient" · "parchment" ·
+   *  "frosting" · "water" · "driftwood" · "ceramic" · "warm-liquid" ·
+   *  "neon-glass". Unknown or null falls back to "glass".
+   *
+   *  · Live-world rows: populated by the adapter from
+   *    `pkg.bubbles.material`.
+   *  · DB-backed rows: "glass" (the engine's default · matches the
+   *    DB theme's actual live-chat behaviour). */
+  bubble_material: string | null;
 }
 
 type FilterMode = "all" | "gratis" | "bisnis";
@@ -929,6 +975,11 @@ function PreviewModal({
               Upgrade to NEX Bisnis to unlock →
             </a>
           ) : (
+            // Founder-flipped 2026-10-11 · both containers now carry
+            // the live theme colour. The outlined button gets a tinted
+            // fill (${accent}22) so visitors see the theme hue even
+            // without an active hover; the filled CTA gets a soft
+            // accent-shadow for depth.
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <a
                 href={themePreviewHref(theme.id)}
@@ -937,7 +988,7 @@ function PreviewModal({
                   textAlign: "center",
                   padding: "11px",
                   borderRadius: 10,
-                  background: "transparent",
+                  background: `${theme.accent_hex}22`,
                   border: `1px solid ${theme.accent_hex}`,
                   color: theme.accent_hex,
                   textDecoration: "none",
@@ -964,11 +1015,12 @@ function PreviewModal({
                     borderRadius: 10,
                     background: theme.accent_hex,
                     color: "#0B0F1A",
-                    border: "none",
+                    border: `1px solid ${theme.accent_hex}`,
                     fontSize: 14,
                     fontWeight: 700,
                     cursor: "pointer",
                     letterSpacing: "0.02em",
+                    boxShadow: `0 6px 18px -10px ${theme.accent_hex}`,
                   }}
                 >
                   This theme →

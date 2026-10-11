@@ -26,6 +26,15 @@ function row(id: string, overrides: Partial<BrowserThemeRow> = {}): BrowserTheme
     intro_video_url: null,
     intro_poster_url: null,
     wallpaper_config: null,
+    palette: {
+      primary: "#000000",
+      secondary: "#000000",
+      highlight: "#F4F7FC",
+      glow: "rgba(0,0,0,0.4)",
+      deep: "#020914",
+    },
+    ambient_families: null,
+    bubble_material: "glass",
     ...overrides,
   };
 }

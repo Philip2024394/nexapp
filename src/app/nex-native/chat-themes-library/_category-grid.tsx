@@ -75,6 +75,17 @@ import {
   type BubblePreset,
 } from "@/lib/nex-native/chat-render/theme-world";
 import type { BrowserThemeRow } from "./_theme-browser-client";
+import {
+  miniPhoneBubbleBackground,
+  miniPhoneAvatarBorder,
+  miniPhoneAvatarGlow,
+  miniPhoneHeaderCluster,
+  miniPhoneSendBackground,
+  miniPhoneSendIconColor,
+  miniPhoneAmbient,
+  hexToRgba as paletteHexToRgba,
+} from "../chat-standard/_engine/preview-mini-phone";
+import { MiniPhoneAmbientLayer } from "./_mini-phone-ambient-layer";
 
 // Soft caption/text colours used on top of the category's own palette.
 // The category's `highlight` slot carries the on-dark text colour · we
@@ -137,7 +148,13 @@ export function CategoryGrid({
          * stay legible without a layout shift. */
         .nex-category-phone-grid {
           display: grid;
-          gap: 16px;
+          /* Category phones get space on BOTH axes · founder-flipped
+           * 2026-10-11 twice ("space between them on each row" ·
+           * "category phone screens should have space between them").
+           * Column + row gap generous enough that adjacent phones
+           * never touch · each tile reads as its own object. */
+          column-gap: 28px;
+          row-gap: 40px;
           grid-template-columns: repeat(2, minmax(0, 1fr));
           max-width: 760px;
           margin: 18px auto 0;
@@ -145,7 +162,8 @@ export function CategoryGrid({
         }
         @media (min-width: 601px) {
           .nex-category-phone-grid {
-            gap: 24px;
+            column-gap: 44px;
+            row-gap: 56px;
           }
         }
         .nex-category-phone-tile {
@@ -385,15 +403,22 @@ function HeroScreen({
   const preset: BubblePreset =
     hero.wallpaper_config?.bubbleStyle?.preset ?? "classic";
   const bubbleRim = hero.bubble_rim_hex ?? hero.accent_hex;
-  // Step 1I re-seal (2026-10-11) · chat bubbles MUST NOT be the
-  // same color on any theme. Prior values were hardcoded
-  // "rgba(0,159,239,0.26)" (cyan) and "rgba(30,44,66,0.72)" (navy)
-  // for EVERY theme · the preview read identically regardless of
-  // which theme sat behind it. Derive both glass tints from the
-  // theme's own `accent_hex` + `bubble_rim_hex` so each phone
-  // paints a theme-authentic conversation.
-  const accentGlassMine = withAlpha(hero.accent_hex, 0.26);
-  const accentGlassPeer = withAlpha(hero.bubble_rim_hex ?? hero.accent_hex, 0.78);
+  // Sealed Final Parity Pass 2026-10-11 · bubble background now
+  // dispatches through the LIVE engine's `resolveBubbleBackground`
+  // via the shared helper, keyed off this theme's actual
+  // `bubble_material`. Each theme paints its own declared material
+  // (solid for nex-flat · neon-glass for midnight-cafe · etc) so
+  // the category phone matches the live chat per-theme.
+  const accentGlassMine = miniPhoneBubbleBackground(
+    hero.palette,
+    true,
+    hero.bubble_material,
+  );
+  const accentGlassPeer = miniPhoneBubbleBackground(
+    hero.palette,
+    false,
+    hero.bubble_material,
+  );
 
   const hasWallpaper = Boolean(hero.hero_image_url);
   const gradientTop = hero.accent_hex;
@@ -429,6 +454,16 @@ function HeroScreen({
         wallpaperConfig={hero.wallpaper_config}
         size="preview"
       />
+      {/* Sealed Final Parity Pass 2026-10-11 · static ambient layer
+          · each theme's `ambient.families` renders a lightweight
+          representation at category-phone scale. Behind bubbles. */}
+      <MiniPhoneAmbientLayer
+        specs={miniPhoneAmbient(
+          hero.palette,
+          hero.ambient_families,
+          "sparse",
+        )}
+      />
       {/* Phone top-header · matches the live chat shell layout:
           avatar with pink/green rim on the left + theme name +
           three circular right-cluster buttons (Home · Shop · Cart)
@@ -462,8 +497,13 @@ function HeroScreen({
             fontSize: 9,
             fontWeight: 800,
             flex: "none",
-            border: "1.5px solid #FF3F9F",
-            boxShadow: "0 0 6px rgba(255,63,159,0.55)",
+            // Sealed 2026-10-11 · avatar border is UNIVERSAL GREEN
+            // (presence indicator) · mirrors the live chat's semantic
+            // for the online dot which is green on every theme. Was
+            // hardcoded NEX pink · a wrong semantic (pink implied
+            // notification/active · but this is presence).
+            border: miniPhoneAvatarBorder(),
+            boxShadow: miniPhoneAvatarGlow(),
           }}
         >
           {(hero.name ?? "N").charAt(0).toUpperCase()}
@@ -484,41 +524,18 @@ function HeroScreen({
         >
           {hero.name}
         </span>
-        {/* Right-cluster · each of the three buttons uses its own
-            semantic colour so Home / Shop / Cart read distinctly
-            instead of as one monotone orange row:
-              · Home → NEX cyan (navigation back to the hub)
-              · Shop → NEX orange (NEX commerce brand accent)
-              · Cart → NEX pink (badge-aligned active state) */}
+        {/* Right-cluster · sealed 2026-10-11 · home/shop/cart derived
+            from the SHARED mini-phone treatment so every category
+            phone reads in its own palette (Haunted purples, Ocean
+            blues, Property terracotta, NEX orange). `preview-mini-
+            phone.ts` owns the formula so a change to the live
+            engine's R1 cluster propagates to every preview. */}
         <span
           aria-hidden
           data-nex-category-phone-right-cluster
           style={{ display: "inline-flex", alignItems: "center", gap: 3, flex: "none" }}
         >
-          {[
-            {
-              glyph: "⌂",
-              key: "home",
-              bg: "linear-gradient(180deg, #4FC3FF 0%, #00AFFF 100%)",
-              border: "rgba(0,175,255,0.6)",
-              shadow: "0 2px 4px rgba(0,175,255,0.4)",
-            },
-            {
-              glyph: "🛍",
-              key: "shop",
-              bg: "linear-gradient(180deg, #FF9033 0%, #FF7800 100%)",
-              border: "rgba(255,120,0,0.6)",
-              shadow: "0 2px 4px rgba(255,120,0,0.4)",
-            },
-            {
-              glyph: "🛒",
-              key: "cart",
-              bg: "linear-gradient(180deg, #FF6DB5 0%, #FF3F9F 100%)",
-              border: "rgba(255,63,159,0.6)",
-              shadow: "0 2px 4px rgba(255,63,159,0.4)",
-              hasBadge: true,
-            },
-          ].map((b) => (
+          {miniPhoneHeaderCluster(hero.palette).map((b) => (
             <span
               key={b.key}
               style={{
@@ -527,8 +544,8 @@ function HeroScreen({
                 height: 14,
                 borderRadius: 999,
                 background: b.bg,
-                border: `0.5px solid ${b.border}`,
-                color: "#0B0F1A",
+                border: b.border,
+                color: b.color,
                 display: "grid",
                 placeItems: "center",
                 fontSize: 7.5,
@@ -546,8 +563,8 @@ function HeroScreen({
                     width: 5,
                     height: 5,
                     borderRadius: 999,
-                    background: "#F2F5F8",
-                    border: "0.5px solid #0B0F1A",
+                    background: hero.palette.highlight,
+                    border: `0.5px solid ${hero.palette.deep}`,
                   }}
                 />
               )}
@@ -571,10 +588,10 @@ function HeroScreen({
         }}
       >
         {[
-          { text: "hey", mine: false },
-          { text: "love this", mine: true },
-          { text: "wow", mine: false },
-          { text: "supercool", mine: true },
+          // Founder-flipped 2026-10-11 · trimmed to two sealed lines ·
+          // "i want" (peer) + "check themes on NEX" (mine). The earlier
+          // 6-line conversation (hey / love this / wow / supercool /
+          // i want / check themes on NEX) is gone.
           { text: "i want", mine: false },
           { text: "check themes on NEX 👆", mine: true },
         ].map((m, i) => (
@@ -632,16 +649,20 @@ function HeroScreen({
             width: 14,
             height: 14,
             borderRadius: 999,
-            background:
-              "linear-gradient(180deg, #FF9033 0%, #FF7800 100%)",
-            border: "0.5px solid rgba(255,120,0,0.6)",
-            color: "#0B0F1A",
+            // Sealed 2026-10-11 · send button derived from the SHARED
+            // mini-phone treatment · solid theme primary matches the
+            // live engine's `resolveControlsTreatment().sendButton`
+            // (never a gradient · always solid). Was hardcoded NEX
+            // orange gradient on every theme.
+            background: miniPhoneSendBackground(hero.palette),
+            border: `0.5px solid ${paletteHexToRgba(hero.palette.primary, 0.6)}`,
+            color: miniPhoneSendIconColor(hero.palette),
             display: "grid",
             placeItems: "center",
             fontSize: 8,
             fontWeight: 800,
             flex: "none",
-            boxShadow: "0 1px 3px rgba(255,120,0,0.4)",
+            boxShadow: `0 1px 3px ${paletteHexToRgba(hero.palette.primary, 0.4)}`,
           }}
         >
           ➤
@@ -740,25 +761,11 @@ export function resolveHeroWorld(
  *  string with the given alpha. Falls back to the input unchanged if
  *  parsing fails so a category with an unexpected colour format still
  *  paints something. */
+// Sealed 2026-10-11 · local `withAlpha` body REMOVED · the single
+// implementation now lives in `preview-mini-phone.ts#hexToRgba`.
+// `withAlpha` stays as a thin aliased re-export so the ~11 existing
+// call sites below (captions · notch · bezel · composer pill) keep
+// their compact name while sharing the one implementation.
 function withAlpha(colour: string, alpha: number): string {
-  const trimmed = colour.trim();
-  if (trimmed.startsWith("#") && (trimmed.length === 7 || trimmed.length === 4)) {
-    const hex = trimmed.length === 4
-      ? `#${trimmed[1]}${trimmed[1]}${trimmed[2]}${trimmed[2]}${trimmed[3]}${trimmed[3]}`
-      : trimmed;
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    if (!Number.isNaN(r) && !Number.isNaN(g) && !Number.isNaN(b)) {
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    }
-  }
-  const rgbaMatch = trimmed.match(/^rgba?\(([^)]+)\)$/i);
-  if (rgbaMatch) {
-    const parts = rgbaMatch[1].split(",").map((s) => s.trim());
-    if (parts.length >= 3) {
-      return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${alpha})`;
-    }
-  }
-  return trimmed;
+  return paletteHexToRgba(colour, alpha);
 }

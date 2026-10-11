@@ -54,10 +54,8 @@ describe("themeCategoryIdForBusinessCategory", () => {
       "accommodation",
     );
   });
-  test("property → accommodation (real-estate rental is a hosting · Step 1H)", () => {
-    expect(themeCategoryIdForBusinessCategory("property")).toBe(
-      "accommodation",
-    );
+  test("property → property (own room from 2026-10-11)", () => {
+    expect(themeCategoryIdForBusinessCategory("property")).toBe("property");
   });
   test("null → null (no reorder)", () => {
     expect(themeCategoryIdForBusinessCategory(null)).toBeNull();

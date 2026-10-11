@@ -40,6 +40,7 @@
 // ────────────────────────────────────────────────────────────────────
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import type { JokerMotionVariant } from "./_joker-motion-data";
 
 // Re-export the type so existing client importers of this module keep
@@ -103,8 +104,14 @@ const JOKER_SHOWCASE_MESSAGES = [
 
 export function JokerMotionOverlay({
   variant,
+  onComplete,
 }: {
   variant: JokerMotionVariant | null;
+  /** Fires when a one-shot variant finishes playback · currently only
+   *  `kiss` uses it so the controller can auto-remove it from the
+   *  enabled set and return the user to chat. The ambient looping
+   *  variants (rain, bat, lightning, …) ignore this callback. */
+  onComplete?: () => void;
 }): React.JSX.Element | null {
   if (!variant) return null;
   switch (variant) {
@@ -128,7 +135,107 @@ export function JokerMotionOverlay({
       return <EmbersOverlay />;
     case "glitch":
       return <GlitchOverlay />;
+    case "kiss":
+      return <KissOverlay onComplete={onComplete} />;
   }
+}
+
+// ─── Kiss ────────────────────────────────────────────────────────────
+// One-shot cinematic full-bleed clip · sealed 2026-10-11.
+//
+// Unlike the ambient looping variants above, Kiss plays through once
+// and dismisses itself via `onComplete`. Rendered via `createPortal`
+// to document.body so no ancestor `transform` / `filter` can trap
+// its `position: fixed` into a mid-page layer — the earlier
+// in-tree render was leaving the chat header visible across the
+// top of the video on some surfaces.
+function KissOverlay({
+  onComplete,
+}: {
+  onComplete?: () => void;
+}): React.JSX.Element | null {
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  // SSR guard · createPortal needs document.body which doesn't exist
+  // during the server render pass. We mount on first client paint.
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+
+  // Auto-dismiss safety · if `onEnded` AND `onError` both miss
+  // (very rare but possible if the tab is backgrounded mid-decode),
+  // fall back to a 12s timer so the overlay can't strand the user.
+  React.useEffect(() => {
+    if (!onComplete) return;
+    const id = window.setTimeout(onComplete, 12_000);
+    return () => window.clearTimeout(id);
+  }, [onComplete]);
+
+  if (!mounted || typeof document === "undefined") return null;
+
+  const overlay = (
+    <div
+      data-nex-joker-kiss
+      style={{
+        position: "fixed",
+        inset: 0,
+        // Highest in the sealed overlay stack · beats every chat
+        // chrome layer (chat header, universal controls, chrome
+        // overlay, joker-controller 9995/10000).
+        zIndex: 2147483000,
+        overflow: "hidden",
+        background: "#000",
+        pointerEvents: "auto",
+      }}
+      onClick={onComplete}
+    >
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+      <video
+        ref={videoRef}
+        src="/nex-themes/joker/motion/kiss.mp4"
+        autoPlay
+        // Muted is required for mobile browser autoplay in most
+        // modern engines even when triggered by user gesture · we
+        // trade sound for guaranteed playback. Future enhancement:
+        // detect capability and unmute when the device allows it.
+        muted
+        playsInline
+        preload="auto"
+        onEnded={onComplete}
+        // If the asset 404s or the decoder rejects the stream,
+        // dismiss immediately so the user isn't stuck staring at
+        // a frozen error state. Previously a decode failure left
+        // the Chrome / Safari "broken video" glyph visible at the
+        // top of the viewport — the symptom the founder flagged
+        // as "header of video is showing error".
+        onError={onComplete}
+        style={{
+          display: "block",
+          width: "100vw",
+          // Sealed 2026-10-11 · founder-tuned edge crops · top
+          // crop 35px · bottom crop 65px (both strips baked
+          // into the source clip). We render the video 100px
+          // taller than the viewport (35 + 65) and shift it
+          // UP by 35px so the overlay's `overflow: hidden`
+          // clips both edges simultaneously · the extra height
+          // scales the video content up via objectFit: cover
+          // ("slight stretch" is acceptable per founder). Visible
+          // viewport stays a clean 100vh.
+          height: "calc(100vh + 100px)",
+          marginTop: -35,
+          objectFit: "cover",
+          cursor: "pointer",
+          // Belt-and-braces · a native video can show a thin
+          // control strip on some mobile engines when it enters
+          // "inline fullscreen" automatically; nulling outline +
+          // background keeps the frame pure black during the
+          // first-frame paint gap.
+          outline: "none",
+          background: "#000",
+        }}
+      />
+    </div>
+  );
+
+  return createPortal(overlay, document.body);
 }
 
 // ─── Rain ────────────────────────────────────────────────────────────

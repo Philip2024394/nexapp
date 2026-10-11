@@ -19,6 +19,7 @@ import { listLiveWorldsAsBrowserRows } from "./_live-worlds-adapter";
 import type { BrowserThemeRow } from "./_theme-browser-client";
 import { EXPLORE_CATEGORY_ID } from "@/lib/nex-native/theme-category/registry";
 import { inferCategoryIdFromSignals } from "@/lib/nex-native/theme-category/keyword-resolver";
+import { inferPaletteFromRow } from "../chat-standard/_engine/preview-mini-phone";
 
 export interface GuestLibraryData {
   browserThemes: BrowserThemeRow[];
@@ -53,6 +54,13 @@ export async function loadLibraryDataAsGuest(): Promise<GuestLibraryData> {
       intro_video_url: t.intro_video_url,
       intro_poster_url: t.intro_poster_url,
       wallpaper_config: t.wallpaper_config,
+      palette: inferPaletteFromRow({
+        accent_hex: t.accent_hex,
+        bubble_rim_hex: t.bubble_rim_hex,
+        composer_rim_hex: t.composer_rim_hex,
+      }),
+      ambient_families: null,
+      bubble_material: "glass" as string | null,
     })),
   ];
 
