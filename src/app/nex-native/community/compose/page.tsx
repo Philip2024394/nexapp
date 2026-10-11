@@ -99,6 +99,19 @@ export default async function ComposePage({ searchParams }: PageProps) {
               </select>
             </Field>
 
+            <Field label="Urgency" required help="Mark 'urgent' only for genuine hazards">
+              <select
+                name="urgency_level"
+                required
+                defaultValue="moderate"
+                style={selectStyle()}
+              >
+                <option value="low">Low — informational</option>
+                <option value="moderate">Moderate — standard outage/hazard</option>
+                <option value="urgent">Urgent — immediate attention</option>
+              </select>
+            </Field>
+
             <Field label="Title" required help="Short, factual, no names of people">
               <input
                 type="text"

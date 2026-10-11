@@ -12,9 +12,22 @@ import "server-only";
 import { nexSupabaseAdmin } from "../supabase-admin";
 import type { NexUuid } from "../types";
 import type {
+  NexCommunityEventsPref,
+  NexCommunityLifeNewsPref,
   NexCommunityMembershipRow,
   NexCommunityNotificationPref,
+  NexCommunityVotingPref,
 } from "./types";
+
+/** Phase 2A · partial per-section preference input used by the
+ *  settings page to patch any subset of the five section columns. */
+export interface NexCommunityPreferencePatch {
+  safety_pref?: NexCommunityNotificationPref;
+  lost_found_pref?: NexCommunityNotificationPref;
+  events_pref?: NexCommunityEventsPref;
+  voting_pref?: NexCommunityVotingPref;
+  life_news_pref?: NexCommunityLifeNewsPref;
+}
 import { getZoneById, resolveDistrictFor } from "./zone-service";
 
 /** Load the current account's membership row, or null if the user has
@@ -37,7 +50,12 @@ export async function getMembershipForAccount(
 
 /** Confirm (or re-confirm) the account's membership. Idempotent per
  *  (account_id); re-calling updates hyperlocal_zone_id. The district
- *  zone is derived from the hyperlocal zone's ancestor chain. */
+ *  zone is derived from the hyperlocal zone's ancestor chain.
+ *
+ *  Phase 2A · writes both the legacy single-column `notification_preference`
+ *  AND the per-section safety_pref/lost_found_pref so the data is
+ *  consistent while legacy readers remain. Other sections (events,
+ *  voting, life_news) default 'off'. */
 export async function confirmMembership(input: {
   accountId: NexUuid;
   hyperlocalZoneId: NexUuid;
@@ -59,6 +77,11 @@ export async function confirmMembership(input: {
     district_zone_id: district.id,
     confirmed_at: now,
     notification_preference: notificationPreference,
+    safety_pref: notificationPreference,
+    lost_found_pref: notificationPreference,
+    events_pref: "off" as NexCommunityEventsPref,
+    voting_pref: "off" as NexCommunityVotingPref,
+    life_news_pref: "off" as NexCommunityLifeNewsPref,
     updated_at: now,
   };
 
@@ -76,8 +99,10 @@ export async function confirmMembership(input: {
   return data as NexCommunityMembershipRow;
 }
 
-/** Update only the notification preference for an existing membership.
- *  Throws if no membership exists (caller must confirmMembership first). */
+/** Legacy single-column preference update · writes both the legacy
+ *  column AND the two active-section columns (safety + lost_found) so
+ *  the per-section data remains consistent for old callers.
+ *  Reserved sections (events/voting/life_news) are NOT touched. */
 export async function updateNotificationPreference(input: {
   accountId: NexUuid;
   preference: NexCommunityNotificationPref;
@@ -92,6 +117,8 @@ export async function updateNotificationPreference(input: {
     .from("nex_community_membership")
     .update({
       notification_preference: input.preference,
+      safety_pref: input.preference,
+      lost_found_pref: input.preference,
       updated_at: new Date().toISOString(),
     })
     .eq("account_id", input.accountId)
@@ -100,6 +127,41 @@ export async function updateNotificationPreference(input: {
   if (error) {
     throw new Error(
       `community-membership-service.updateNotificationPreference · ${error.message}`,
+    );
+  }
+  return data as NexCommunityMembershipRow;
+}
+
+/** Phase 2A · patch any subset of the per-section preference columns.
+ *  Does not touch the deprecated single-column notification_preference. */
+export async function patchSectionPreferences(input: {
+  accountId: NexUuid;
+  patch: NexCommunityPreferencePatch;
+}): Promise<NexCommunityMembershipRow> {
+  const existing = await getMembershipForAccount(input.accountId);
+  if (!existing) {
+    throw new Error(
+      `community-membership-service.patchSectionPreferences · no membership for ${input.accountId}`,
+    );
+  }
+  const update: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+  if (input.patch.safety_pref !== undefined) update.safety_pref = input.patch.safety_pref;
+  if (input.patch.lost_found_pref !== undefined) update.lost_found_pref = input.patch.lost_found_pref;
+  if (input.patch.events_pref !== undefined) update.events_pref = input.patch.events_pref;
+  if (input.patch.voting_pref !== undefined) update.voting_pref = input.patch.voting_pref;
+  if (input.patch.life_news_pref !== undefined) update.life_news_pref = input.patch.life_news_pref;
+
+  const { data, error } = await nexSupabaseAdmin
+    .from("nex_community_membership")
+    .update(update)
+    .eq("account_id", input.accountId)
+    .select("*")
+    .single();
+  if (error) {
+    throw new Error(
+      `community-membership-service.patchSectionPreferences · ${error.message}`,
     );
   }
   return data as NexCommunityMembershipRow;

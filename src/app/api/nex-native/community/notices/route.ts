@@ -73,6 +73,7 @@ export async function POST(req: Request): Promise<NextResponse> {
   }
   const b = body as {
     category?: string;
+    urgencyLevel?: string;
     title?: string;
     body?: string | null;
     affectedAreaText?: string | null;
@@ -87,6 +88,13 @@ export async function POST(req: Request): Promise<NextResponse> {
       { status: 400 },
     );
   }
+  const urgencyLevel =
+    typeof b.urgencyLevel === "string" &&
+    (b.urgencyLevel === "low" ||
+      b.urgencyLevel === "moderate" ||
+      b.urgencyLevel === "urgent")
+      ? b.urgencyLevel
+      : undefined;
   if (
     typeof b.title !== "string" ||
     b.title.trim().length === 0 ||
@@ -116,6 +124,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     const notice = await createNotice({
       accountId: session.account.id,
       category: b.category as NexCommunityNoticeCategory,
+      urgencyLevel,
       title: b.title,
       body: b.body ?? null,
       affectedAreaText: b.affectedAreaText ?? null,

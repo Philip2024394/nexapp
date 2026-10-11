@@ -115,8 +115,12 @@ export default async function CommunitySettingsPage({ searchParams }: PageProps)
             }}
           >
             <div style={{ fontSize: 11, letterSpacing: "0.14em", color: NEX.textMuted, fontWeight: 700, textTransform: "uppercase" }}>
-              Notifications
+              Safety &amp; Lost &amp; Found notifications
             </div>
+            <p style={{ margin: "6px 0 0", fontSize: 12, color: NEX.textMuted, lineHeight: 1.55 }}>
+              Applies to the Safety &amp; Watch and Lost &amp; Found sections.
+              Per-section controls will separate as more sections ship.
+            </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
               {(
                 [

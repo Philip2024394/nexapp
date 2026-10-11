@@ -20,6 +20,7 @@ import {
   type NexCommunityNoticeStatus,
   type NexCommunityNoticeUpdateRow,
   type NexCommunityReportReason,
+  type NexCommunityUrgencyLevel,
 } from "./types";
 import { getMembershipForAccount } from "./membership-service";
 import { recordIfAllowed } from "./rate-limit";
@@ -80,6 +81,7 @@ export async function getNoticeById(
 export async function createNotice(input: {
   accountId: NexUuid;
   category: NexCommunityNoticeCategory;
+  urgencyLevel?: NexCommunityUrgencyLevel;
   title: string;
   body?: string | null;
   affectedAreaText?: string | null;
@@ -102,6 +104,7 @@ export async function createNotice(input: {
     district_zone_id: membership.district_zone_id,
     author_account_id: input.accountId,
     category: input.category,
+    urgency_level: input.urgencyLevel ?? "moderate",
     title: input.title.trim(),
     body: input.body?.trim() || null,
     status: "active" as NexCommunityNoticeStatus,

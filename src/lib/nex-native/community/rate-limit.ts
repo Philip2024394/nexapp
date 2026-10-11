@@ -18,9 +18,10 @@ import type { NexUuid } from "../types";
 import {
   NEX_COMMUNITY_RATE_LIMITS,
   NexCommunityRateLimitError,
+  type NexCommunityRateLimitAction,
 } from "./types";
 
-type RateLimitedAction = keyof typeof NEX_COMMUNITY_RATE_LIMITS;
+type RateLimitedAction = NexCommunityRateLimitAction;
 
 function floorWindow(nowMs: number, windowMinutes: number): Date {
   const windowMs = windowMinutes * 60_000;

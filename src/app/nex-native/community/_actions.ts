@@ -86,6 +86,7 @@ export async function leaveCommunityAction(): Promise<void> {
 export async function createNoticeAction(formData: FormData): Promise<void> {
   const accountId = await requireAccountId();
   const categoryRaw = String(formData.get("category") ?? "");
+  const urgencyRaw = String(formData.get("urgency_level") ?? "moderate");
   const title = String(formData.get("title") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
   const affectedAreaText = String(formData.get("affected_area_text") ?? "").trim();
@@ -93,6 +94,8 @@ export async function createNoticeAction(formData: FormData): Promise<void> {
   if (!(NEX_COMMUNITY_NOTICE_CATEGORIES as readonly string[]).includes(categoryRaw)) {
     redirect("/nex-native/community/compose?e=bad_category");
   }
+  const urgencyLevel: "low" | "moderate" | "urgent" =
+    urgencyRaw === "low" || urgencyRaw === "urgent" ? urgencyRaw : "moderate";
   if (title.length === 0 || title.length > 120) {
     redirect("/nex-native/community/compose?e=bad_title");
   }
@@ -107,6 +110,7 @@ export async function createNoticeAction(formData: FormData): Promise<void> {
     const notice = await createNotice({
       accountId,
       category: categoryRaw as NexCommunityNoticeCategory,
+      urgencyLevel,
       title,
       body: body.length > 0 ? body : null,
       affectedAreaText: affectedAreaText.length > 0 ? affectedAreaText : null,

@@ -13,9 +13,39 @@ import {
   confirmMembership,
   getMembershipForAccount,
   leaveCommunity,
+  patchSectionPreferences,
   updateNotificationPreference,
+  type NexCommunityPreferencePatch,
 } from "@/lib/nex-native/community/membership-service";
-import type { NexCommunityNotificationPref } from "@/lib/nex-native/community/types";
+import type {
+  NexCommunityEventsPref,
+  NexCommunityLifeNewsPref,
+  NexCommunityNotificationPref,
+  NexCommunityVotingPref,
+} from "@/lib/nex-native/community/types";
+
+const SAFETY_LOST_PREFS: readonly NexCommunityNotificationPref[] = [
+  "quiet",
+  "urgent_only",
+  "all",
+] as const;
+const EVENTS_PREFS: readonly NexCommunityEventsPref[] = [
+  "off",
+  "invited_only",
+  "rsvp_reminders",
+  "all",
+] as const;
+const VOTING_PREFS: readonly NexCommunityVotingPref[] = [
+  "off",
+  "my_proposals",
+  "closing_soon",
+  "all",
+] as const;
+const LIFE_NEWS_PREFS: readonly NexCommunityLifeNewsPref[] = [
+  "off",
+  "subscribed_families",
+  "all",
+] as const;
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -97,17 +127,76 @@ export async function PATCH(req: Request): Promise<NextResponse> {
   } catch {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
-  const b = body as { notificationPreference?: string };
-  if (!invalidPref(b.notificationPreference)) {
-    return NextResponse.json(
-      { error: "bad_request", field: "notificationPreference" },
-      { status: 400 },
-    );
+  const b = body as {
+    notificationPreference?: string;
+    safety_pref?: string;
+    lost_found_pref?: string;
+    events_pref?: string;
+    voting_pref?: string;
+    life_news_pref?: string;
+  };
+
+  // Backward-compatible path: legacy single-pref payload.
+  if (b.notificationPreference !== undefined) {
+    if (!invalidPref(b.notificationPreference)) {
+      return NextResponse.json(
+        { error: "bad_request", field: "notificationPreference" },
+        { status: 400 },
+      );
+    }
+    try {
+      const membership = await updateNotificationPreference({
+        accountId: session.account.id,
+        preference: b.notificationPreference,
+      });
+      return NextResponse.json({ membership }, { status: 200 });
+    } catch (err) {
+      return NextResponse.json(
+        { error: "internal", message: err instanceof Error ? err.message : "unknown" },
+        { status: 500 },
+      );
+    }
+  }
+
+  // Phase 2A per-section patch.
+  const patch: NexCommunityPreferencePatch = {};
+  if (b.safety_pref !== undefined) {
+    if (!(SAFETY_LOST_PREFS as readonly string[]).includes(b.safety_pref)) {
+      return NextResponse.json({ error: "bad_request", field: "safety_pref" }, { status: 400 });
+    }
+    patch.safety_pref = b.safety_pref as NexCommunityNotificationPref;
+  }
+  if (b.lost_found_pref !== undefined) {
+    if (!(SAFETY_LOST_PREFS as readonly string[]).includes(b.lost_found_pref)) {
+      return NextResponse.json({ error: "bad_request", field: "lost_found_pref" }, { status: 400 });
+    }
+    patch.lost_found_pref = b.lost_found_pref as NexCommunityNotificationPref;
+  }
+  if (b.events_pref !== undefined) {
+    if (!(EVENTS_PREFS as readonly string[]).includes(b.events_pref)) {
+      return NextResponse.json({ error: "bad_request", field: "events_pref" }, { status: 400 });
+    }
+    patch.events_pref = b.events_pref as NexCommunityEventsPref;
+  }
+  if (b.voting_pref !== undefined) {
+    if (!(VOTING_PREFS as readonly string[]).includes(b.voting_pref)) {
+      return NextResponse.json({ error: "bad_request", field: "voting_pref" }, { status: 400 });
+    }
+    patch.voting_pref = b.voting_pref as NexCommunityVotingPref;
+  }
+  if (b.life_news_pref !== undefined) {
+    if (!(LIFE_NEWS_PREFS as readonly string[]).includes(b.life_news_pref)) {
+      return NextResponse.json({ error: "bad_request", field: "life_news_pref" }, { status: 400 });
+    }
+    patch.life_news_pref = b.life_news_pref as NexCommunityLifeNewsPref;
+  }
+  if (Object.keys(patch).length === 0) {
+    return NextResponse.json({ error: "bad_request", message: "no preference fields" }, { status: 400 });
   }
   try {
-    const membership = await updateNotificationPreference({
+    const membership = await patchSectionPreferences({
       accountId: session.account.id,
-      preference: b.notificationPreference,
+      patch,
     });
     return NextResponse.json({ membership }, { status: 200 });
   } catch (err) {

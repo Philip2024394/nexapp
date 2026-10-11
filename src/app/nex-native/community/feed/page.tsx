@@ -108,6 +108,21 @@ export default async function FeedPage({ searchParams }: PageProps) {
               </Link>
             ))}
             <Link
+              href="/nex-native/community/lost-found"
+              style={{
+                padding: "9px 16px",
+                borderRadius: 999,
+                background: NEX.panel,
+                color: NEX.textSecondary,
+                border: `1px solid ${NEX.borderSoft}`,
+                textDecoration: "none",
+                fontSize: 13,
+                fontWeight: 600,
+              }}
+            >
+              Lost &amp; Found
+            </Link>
+            <Link
               href="/nex-native/community/compose"
               style={{
                 marginLeft: "auto",
@@ -216,7 +231,7 @@ function NoticeCard({ notice }: { notice: NexCommunityNoticeRow }) {
         color: NEX.textPrimary,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <span
           style={{
             fontSize: 10.5,
@@ -231,6 +246,22 @@ function NoticeCard({ notice }: { notice: NexCommunityNoticeRow }) {
         >
           {notice.status}
         </span>
+        {notice.urgency_level === "urgent" && (
+          <span
+            style={{
+              fontSize: 10.5,
+              letterSpacing: "0.12em",
+              padding: "2px 8px",
+              borderRadius: 999,
+              background: `${NEX.danger}22`,
+              color: NEX.danger,
+              fontWeight: 700,
+              textTransform: "uppercase",
+            }}
+          >
+            urgent
+          </span>
+        )}
         <span style={{ fontSize: 11.5, color: NEX.textMuted }}>
           {NEX_COMMUNITY_NOTICE_CATEGORY_LABEL[notice.category]}
         </span>
