@@ -1,6 +1,6 @@
 // src/lib/nex-native/community/rate-limit.ts
 //
-// NEX Community Watch · rolling-window rate limiter.
+// NEX Community Noticeboard · rolling-window rate limiter.
 //
 // A tiny primitive that reads/writes nex_community_rate_limit. The
 // window is floored to the nearest `windowMinutes` minute boundary so

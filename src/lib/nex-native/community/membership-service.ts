@@ -1,6 +1,6 @@
 // src/lib/nex-native/community/membership-service.ts
 //
-// NEX Community Watch · membership + notification preference service.
+// NEX Community Noticeboard · membership + notification preference service.
 //
 // A membership is one row per nex_account. It links the account to a
 // confirmed hyperlocal zone + its district zone, and records the user's

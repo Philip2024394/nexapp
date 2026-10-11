@@ -1,6 +1,6 @@
 // src/app/nex-native/community/page.tsx
 //
-// Entry point for NEX Community Watch. Routes to:
+// Entry point for NEX Community Noticeboard. Routes to:
 //   · /nex-native/community/select  if the user has no confirmed membership
 //   · /nex-native/community/feed    otherwise
 //

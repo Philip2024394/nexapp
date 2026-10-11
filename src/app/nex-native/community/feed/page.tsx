@@ -1,6 +1,6 @@
 // src/app/nex-native/community/feed/page.tsx
 //
-// NEX Community Watch · notices feed with hyperlocal + district tabs.
+// NEX Community Noticeboard · notices feed with hyperlocal + district tabs.
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -74,7 +74,7 @@ export default async function FeedPage({ searchParams }: PageProps) {
                 textTransform: "uppercase",
               }}
             >
-              Community Watch
+              Community Noticeboard
             </div>
             <h1 style={{ margin: "6px 0 0", fontSize: 22, fontWeight: 700 }}>
               {zone?.name ?? "Your community"}
@@ -145,7 +145,7 @@ export default async function FeedPage({ searchParams }: PageProps) {
               lineHeight: 1.6,
             }}
           >
-            Community Watch shares non-emergency local information only. It is
+            Community Noticeboard shares non-emergency local information only. It is
             not a replacement for emergency services. In Indonesia dial 112.
             <Link
               href="/nex-native/community/settings"

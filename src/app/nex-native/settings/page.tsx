@@ -66,13 +66,13 @@ export default async function SettingsIndex() {
       subtitle: "Pick the theme applied to your chat bubbles",
     },
     {
-      // 2026-10-11 · NEX Community Watch · place-based noticeboard
+      // 2026-10-11 · NEX Community Noticeboard · place-based noticeboard
       // (power outages, water outages, road closures, weather hazards).
       // Routes to /nex-native/community which auto-decides between
       // zone-selection and the feed based on membership state.
       href: "/nex-native/community",
       emoji: "🏘️",
-      title: "NEX Community Watch",
+      title: "NEX Community Noticeboard",
       subtitle:
         "Local outages · hazards · road closures · neighbourhood notices",
     },

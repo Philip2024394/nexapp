@@ -1,6 +1,6 @@
 // src/lib/nex-native/community/zone-service.ts
 //
-// NEX Community Watch · zone discovery + hierarchy queries.
+// NEX Community Noticeboard · zone discovery + hierarchy queries.
 //
 // Server-only. Uses the sealed nexSupabaseAdmin service-role client.
 // All reads honour archived_at IS NULL unless explicitly asked.

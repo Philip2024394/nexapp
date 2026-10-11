@@ -2,7 +2,7 @@
 
 // src/app/nex-native/community/_actions.ts
 //
-// Server actions for Community Watch forms. All actions resolve the
+// Server actions for Community Noticeboard forms. All actions resolve the
 // session, call the service, and redirect / revalidate.
 
 import { revalidatePath } from "next/cache";

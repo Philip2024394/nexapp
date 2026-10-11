@@ -1,6 +1,6 @@
 // src/lib/nex-native/community/types.ts
 //
-// NEX Community Watch · shared types for the service + API + UI.
+// NEX Community Noticeboard · shared types for the service + API + UI.
 // Must mirror nex-supabase/migrations/146_nex_community_watch_core.sql.
 //
 // Load-bearing invariants (do NOT soften without matching migration):

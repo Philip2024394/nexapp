@@ -1,6 +1,6 @@
 // src/lib/nex-native/community/notice-service.ts
 //
-// NEX Community Watch · notice CRUD + lifecycle + corroboration + report.
+// NEX Community Noticeboard · notice CRUD + lifecycle + corroboration + report.
 //
 // Every write enforces membership + rate limits server-side. The service
 // never trusts a client-supplied zone id — it reads the author's

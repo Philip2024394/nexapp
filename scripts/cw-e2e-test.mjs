@@ -1,6 +1,6 @@
 // scripts/cw-e2e-test.mjs
 //
-// NEX Community Watch · end-to-end verification against production.
+// NEX Community Noticeboard · end-to-end verification against production.
 // Requires two legitimate test accounts (created via admin API, no bypass).
 // Loads /tmp/cw-test.json with their access tokens + cookies.
 
@@ -55,12 +55,12 @@ if (
   pass("1", "sign-in page serves · dev-admin form NOT rendered");
 else fail("1", `unexpected · HTTP ${sip.status} · dev-admin markers present`);
 
-// Step 2 · Pinned Community Watch entry in Contacts
+// Step 2 · Pinned Community Noticeboard entry in Contacts
 const contacts = await call("GET", "/nex-native/contacts", cookieA);
 if (
   contacts.status === 200 &&
-  /NEX Community Watch/.test(contacts.raw) &&
-  /data-nex-contacts-system-entry="community-watch"/.test(contacts.raw)
+  /NEX Community Noticeboard/.test(contacts.raw) &&
+  /data-nex-contacts-system-entry="community-noticeboard"/.test(contacts.raw)
 )
   pass(
     "2",

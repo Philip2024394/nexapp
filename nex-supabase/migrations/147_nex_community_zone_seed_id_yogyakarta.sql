@@ -1,6 +1,6 @@
 -- nex-supabase/migrations/147_nex_community_zone_seed_id_yogyakarta.sql
 --
--- NEX Community Watch · initial reference-zone seed for Yogyakarta, Indonesia.
+-- NEX Community Noticeboard · initial reference-zone seed for Yogyakarta, Indonesia.
 -- Founder-authorised 2026-10-11.
 --
 -- WHAT THIS DOES

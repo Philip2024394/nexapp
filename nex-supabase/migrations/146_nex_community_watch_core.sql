@@ -1,9 +1,9 @@
 -- nex-supabase/migrations/146_nex_community_watch_core.sql
 --
--- NEX Community Watch · Phase 1 MVP · founder-authorised 2026-10-11.
+-- NEX Community Noticeboard · Phase 1 MVP · founder-authorised 2026-10-11.
 --
 -- WHAT THIS DOES
---   Introduces the full data substrate for NEX Community Watch:
+--   Introduces the full data substrate for NEX Community Noticeboard:
 --     1. nex_community_zone           · hierarchical geographic zones
 --                                        (country → province → city →
 --                                         kecamatan → kelurahan → rw → rt
@@ -26,7 +26,7 @@
 --                                        rate-limit counter.
 --
 -- WHY
---   Community Watch is place-based (NEX Chat is person-based, Vault is
+--   Community Noticeboard is place-based (NEX Chat is person-based, Vault is
 --   private, Family Safety is a separate trust domain). The directive
 --   is explicit that these trust domains do not share tables,
 --   permissions, or notification rules. This migration therefore
@@ -43,7 +43,7 @@
 --     enforced at the application layer).
 --   · One nex_community_membership per nex_account (unique(account_id)).
 --   · Reports NEVER re-use nex_report (sealed 2026-09-28 for safe-trade
---     reports) — Community Watch has its own report table.
+--     reports) — Community Noticeboard has its own report table.
 --   · Confirmations are 1-per-(notice, account) unique — no vote stacking.
 --   · Notice categories are a closed set — adding "suspicious_person" or
 --     "crime" requires a new migration + explicit founder authorisation
@@ -301,7 +301,7 @@ CREATE INDEX IF NOT EXISTS idx_confirmation_notice ON nex_community_notice_confi
 -- 6 · nex_community_notice_report · moderation report (dedicated)
 --
 -- Per sealed doctrine 2026-09-28, nex_report is reserved for safe-trade
--- reports and must not be repurposed. Community Watch reports therefore
+-- reports and must not be repurposed. Community Noticeboard reports therefore
 -- live in their own table with their own status machine.
 -- ========================================================================
 

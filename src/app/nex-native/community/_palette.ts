@@ -1,6 +1,6 @@
 // src/app/nex-native/community/_palette.ts
 //
-// Shared design tokens for the Community Watch surface. Mirrors the
+// Shared design tokens for the Community Noticeboard surface. Mirrors the
 // sealed NEX palette and glass aesthetic.
 
 export const NEX = {

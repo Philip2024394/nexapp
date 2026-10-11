@@ -1,6 +1,6 @@
 // src/app/nex-native/community/compose/page.tsx
 //
-// Create a new Community Watch notice. Phase 1 category whitelist only.
+// Create a new Community Noticeboard notice. Phase 1 category whitelist only.
 
 import { redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
@@ -134,7 +134,7 @@ export default async function ComposePage({ searchParams }: PageProps) {
             </Field>
 
             <p style={{ fontSize: 11.5, color: NEX.textMuted, lineHeight: 1.6 }}>
-              Phase 1 of Community Watch supports utility outages, road hazards
+              Phase 1 of Community Noticeboard supports utility outages, road hazards
               and weather warnings only. Do not post photos, personal names, or
               accusations about individuals. Reports are moderated. For
               emergencies in Indonesia dial 112 — do not rely on this feed.

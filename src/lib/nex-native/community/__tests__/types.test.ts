@@ -1,6 +1,6 @@
 // src/lib/nex-native/community/__tests__/types.test.ts
 //
-// Deterministic unit tests for the Community Watch types + rate-limit
+// Deterministic unit tests for the Community Noticeboard types + rate-limit
 // constants. These tests do NOT touch the database — they exercise
 // pure constants + the RateLimitError class.
 

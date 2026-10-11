@@ -52,7 +52,7 @@ export default async function SelectZonePage({ searchParams }: PageProps) {
           <header style={{ textAlign: "center", margin: "28px 0 20px" }}>
             <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: "-0.01em" }}>
               <span style={{ color: NEX.accent }}>NEX</span>{" "}
-              <span>Community Watch</span>
+              <span>Community Noticeboard</span>
             </h1>
             <p
               style={{
@@ -232,7 +232,7 @@ export default async function SelectZonePage({ searchParams }: PageProps) {
                   lineHeight: 1.6,
                 }}
               >
-                Community Watch is for sharing non-emergency local information
+                Community Noticeboard is for sharing non-emergency local information
                 (outages, road hazards, weather alerts). It does <strong>not</strong>{" "}
                 replace emergency services. For emergencies in Indonesia dial
                 112.
