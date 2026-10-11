@@ -62,16 +62,52 @@ describe("A · every registered category declares a ColourSystem", () => {
     },
   );
 
-  test("Ocean category palette is blue/cyan (matches the Ocean world's atmosphere)", () => {
-    const ocean = getCategory("ocean");
-    expect(ocean?.colours.primary).toBe("#2E90B5");
-    expect(ocean?.colours.deep).toBe("#0A2535");
+  test("Food category palette is warm/espresso (inherited from the folded Café family atmosphere)", () => {
+    const food = getCategory("food");
+    expect(food?.colours.primary).toBe("#6B3F22");
+    expect(food?.colours.deep).toBe("#2A160A");
   });
 
-  test("Café category palette is warm/espresso (matches the café family atmosphere)", () => {
-    const cafe = getCategory("cafe");
-    expect(cafe?.colours.primary).toBe("#6B3F22");
-    expect(cafe?.colours.deep).toBe("#2A160A");
+  test("Products category palette is cool slate blue (distinct from Food warmth + Explore cyan)", () => {
+    const products = getCategory("products");
+    expect(products?.colours.primary).toBe("#4A6B8A");
+    expect(products?.colours.deep).toBe("#0E1824");
+  });
+
+  test("Services category palette is sage olive (professional/calm · distinct room)", () => {
+    const services = getCategory("services");
+    expect(services?.colours.primary).toBe("#5A6E42");
+    expect(services?.colours.deep).toBe("#141A0D");
+  });
+
+  test("Rentals category palette is teal/aqua (travel · unlock · keys)", () => {
+    const rentals = getCategory("rentals");
+    expect(rentals?.colours.primary).toBe("#1E7F8B");
+    expect(rentals?.colours.deep).toBe("#0C2229");
+  });
+
+  test("Bakery category palette is berry/butter cream (cake · pastry · patisserie)", () => {
+    const bakery = getCategory("bakery");
+    expect(bakery?.colours.primary).toBe("#C66988");
+    expect(bakery?.colours.deep).toBe("#3A1420");
+  });
+
+  test("Haunted category palette is midnight indigo / fog green (spooky · ghost · phantom)", () => {
+    const haunted = getCategory("haunted");
+    expect(haunted?.colours.primary).toBe("#5A3A8E");
+    expect(haunted?.colours.deep).toBe("#0C0918");
+  });
+
+  test("Waterworld category palette is deep blue / turquoise (ocean · river · dive · Step 1G)", () => {
+    const wworld = getCategory("waterworld");
+    expect(wworld?.colours.primary).toBe("#2E90B5");
+    expect(wworld?.colours.deep).toBe("#0A2535");
+  });
+
+  test("Accommodation category palette is warm gold / sand (hotel · villa · resort · Step 1H)", () => {
+    const acc = getCategory("accommodation");
+    expect(acc?.colours.primary).toBe("#B8893A");
+    expect(acc?.colours.deep).toBe("#1E1407");
   });
 
   test("Explore category palette is the NEX default (coherent with its uncategorised-bucket role)", () => {
@@ -143,11 +179,23 @@ describe("C · architectural guards · no per-category colour branches", () => {
 
   test("no `if categoryId === \"ocean\"` style per-category colour selection", () => {
     const forbidden = [
-      /categoryId\s*===\s*["'`]ocean["'`]/,
-      /categoryId\s*===\s*["'`]cafe["'`]/,
+      /categoryId\s*===\s*["'`]food["'`]/,
+      /categoryId\s*===\s*["'`]bakery["'`]/,
+      /categoryId\s*===\s*["'`]products["'`]/,
+      /categoryId\s*===\s*["'`]services["'`]/,
+      /categoryId\s*===\s*["'`]rentals["'`]/,
+      /categoryId\s*===\s*["'`]accommodation["'`]/,
+      /categoryId\s*===\s*["'`]haunted["'`]/,
+      /categoryId\s*===\s*["'`]waterworld["'`]/,
       /categoryId\s*===\s*["'`]explore["'`]/,
-      /category\.id\s*===\s*["'`]ocean["'`]/,
-      /category\.id\s*===\s*["'`]cafe["'`]/,
+      /category\.id\s*===\s*["'`]food["'`]/,
+      /category\.id\s*===\s*["'`]bakery["'`]/,
+      /category\.id\s*===\s*["'`]products["'`]/,
+      /category\.id\s*===\s*["'`]services["'`]/,
+      /category\.id\s*===\s*["'`]rentals["'`]/,
+      /category\.id\s*===\s*["'`]accommodation["'`]/,
+      /category\.id\s*===\s*["'`]haunted["'`]/,
+      /category\.id\s*===\s*["'`]waterworld["'`]/,
       /category\.id\s*===\s*["'`]explore["'`]/,
     ];
     for (const pat of forbidden) {

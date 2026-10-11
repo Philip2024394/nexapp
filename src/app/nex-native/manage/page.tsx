@@ -506,6 +506,12 @@ export default async function Page({ searchParams }: PageProps) {
             <Link href="/nex-native/manage/analytics" className="text-neutral-700 underline">
               analytics →
             </Link>
+            <Link
+              href="/nex-native/manage/community-discovery"
+              className="text-neutral-700 underline"
+            >
+              community discovery →
+            </Link>
           </div>
         </div>
         {products.length === 0 ? (

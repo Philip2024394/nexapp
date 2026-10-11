@@ -1320,7 +1320,7 @@ function ActionFooter({
                 cursor: "pointer",
               }}
             >
-              Use this theme
+              This theme →
             </button>
           </form>
         </>

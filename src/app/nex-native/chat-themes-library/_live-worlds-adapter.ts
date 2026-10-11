@@ -34,7 +34,12 @@ import {
   LIVE_WORLD_PACKAGES,
   type LiveWorldId,
 } from "../chat-standard/_live-worlds";
-import { resolveCategoryId } from "@/lib/nex-native/theme-category/registry";
+import {
+  EXPLORE_CATEGORY_ID,
+  isRegisteredCategory,
+  resolveCategoryId,
+} from "@/lib/nex-native/theme-category/registry";
+import { inferCategoryIdFromSignals } from "@/lib/nex-native/theme-category/keyword-resolver";
 import type { BrowserThemeRow } from "./_theme-browser-client";
 
 /** Convert a single live-world `ThemePackage` into the shape the
@@ -62,7 +67,15 @@ export function liveWorldAsBrowserRow(id: LiveWorldId): BrowserThemeRow {
     // derived from the ThemePackage. `resolveCategoryId` guarantees we
     // always emit a valid registered category id · typos default to
     // "explore" and are caught at CI by the registry test suite.
-    category_id: resolveCategoryId(pkg.identity.categoryId),
+    //
+    // Step 1E (2026-10-11) · keyword-rule FALLBACK · when a package
+    // declares no categoryId OR declares the universal "explore"
+    // bucket, run the sealed keyword resolver against the package's
+    // id / name / tagline / conceptOneLine. If it finds a specific
+    // match (cake → Bakery · bike → Rentals · etc) we promote the
+    // row into that room. Explicit non-explore declarations always
+    // win so sealed packages don't shift under us.
+    category_id: resolveCategoryIdForPackage(pkg),
     hero_image_url: pkg.wallpaperUrl ?? null,
     // Sort live-worlds before DB themes · DB themes typically carry
     // positive sort_order values · a negative value puts live-worlds
@@ -81,4 +94,27 @@ export function liveWorldAsBrowserRow(id: LiveWorldId): BrowserThemeRow {
  *  `_live-worlds.ts`. */
 export function listLiveWorldsAsBrowserRows(): BrowserThemeRow[] {
   return LIVE_WORLD_IDS.map((id) => liveWorldAsBrowserRow(id));
+}
+
+/** Step 1E resolver · explicit declaration wins when it points at a
+ *  REAL (non-explore) category; otherwise the keyword rule infers. */
+function resolveCategoryIdForPackage(
+  pkg: (typeof LIVE_WORLD_PACKAGES)[LiveWorldId],
+): string {
+  const declared = pkg.identity.categoryId;
+  if (
+    declared &&
+    isRegisteredCategory(declared) &&
+    declared !== EXPLORE_CATEGORY_ID
+  ) {
+    return declared;
+  }
+  const inferred = inferCategoryIdFromSignals({
+    id: pkg.identity.id,
+    name: pkg.identity.name,
+    tagline: pkg.identity.tagline,
+    conceptOneLine: pkg.identity.conceptOneLine,
+  });
+  if (inferred) return inferred;
+  return resolveCategoryId(declared);
 }

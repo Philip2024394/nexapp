@@ -692,7 +692,9 @@ export default async function Page({
       <FloatingChatButton
         ownerAccountId={business.owner_account_id}
         sellerFirstName={sellerFirstName}
+        businessSlug={business.slug}
         isOwnerViewing={isOwnerViewing}
+        isGuest={!viewerSession}
       />
     </div>
   );

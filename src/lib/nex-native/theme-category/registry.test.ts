@@ -1,19 +1,19 @@
 // src/lib/nex-native/theme-category/registry.test.ts
 //
-// Theme Category Registry · regression tests · sealed 2026-10-06.
+// Theme Category Registry · regression tests · re-sealed 2026-10-11.
 //
-// Protects the architectural rules authorised by the founder for
-// Step 1A of the Category → World architecture:
+// Protects the nine-category IA the owner re-authorised on 2026-10-11:
 //
-//   · exactly three categories registered: ocean, cafe, explore
+//   · exactly nine categories registered: food, bakery, products,
+//     services, rentals, accommodation, haunted, waterworld, explore
 //   · ids are stable, unique and valid
 //   · resolveCategoryId defaults missing/unknown ids to "explore"
 //   · every code-registered live-world ThemePackage declares a
-//     REGISTERED categoryId (ocean → ocean · 4 cafés → cafe)
+//     REGISTERED categoryId · all current café worlds + food fold into
+//     "food" · ocean folds into "explore"
 //   · no DB migration seeds category rows / columns
-//   · no category-specific Library UI exists yet (Step 1B scope)
-//   · no "waterworld" implementation yet (Step 3 scope)
-//   · the current Ocean world's identity.id remains "ocean"
+//   · no category-specific Library UI exists (any per-category branch
+//     is a doctrine violation — Universal Theme Colour Rule)
 
 import { describe, test, expect } from "vitest";
 import * as fs from "node:fs";
@@ -32,28 +32,66 @@ import {
 
 const REPO_ROOT = path.resolve(__dirname, "../../../..");
 const MIGRATIONS_DIR = path.join(REPO_ROOT, "nex-supabase/migrations");
-const LIBRARY_DIR = path.join(
-  REPO_ROOT,
-  "src/app/nex-native/chat-themes-library",
-);
 
-// ─── A · the three registered categories ────────────────────────────
+// ─── A · the four registered categories ─────────────────────────────
 
-describe("A · exactly three categories registered (ocean · cafe · explore)", () => {
-  test("ocean category exists", () => {
-    const cat = getCategory("ocean");
+describe("A · exactly nine categories registered (food · bakery · products · services · rentals · accommodation · haunted · waterworld · explore)", () => {
+  test("food category exists", () => {
+    const cat = getCategory("food");
     expect(cat).not.toBeNull();
-    expect(cat?.id).toBe("ocean");
-    expect(cat?.name).toBe("Ocean");
+    expect(cat?.id).toBe("food");
+    expect(cat?.name).toBe("Food");
     expect(cat?.tagline).not.toBeNull();
     expect(cat?.icon).not.toBeNull();
   });
 
-  test("cafe category exists", () => {
-    const cat = getCategory("cafe");
+  test("bakery category exists", () => {
+    const cat = getCategory("bakery");
     expect(cat).not.toBeNull();
-    expect(cat?.id).toBe("cafe");
-    expect(cat?.name).toBe("Café");
+    expect(cat?.id).toBe("bakery");
+    expect(cat?.name).toBe("Bakery");
+  });
+
+  test("products category exists", () => {
+    const cat = getCategory("products");
+    expect(cat).not.toBeNull();
+    expect(cat?.id).toBe("products");
+    expect(cat?.name).toBe("Products");
+  });
+
+  test("services category exists", () => {
+    const cat = getCategory("services");
+    expect(cat).not.toBeNull();
+    expect(cat?.id).toBe("services");
+    expect(cat?.name).toBe("Services");
+  });
+
+  test("rentals category exists", () => {
+    const cat = getCategory("rentals");
+    expect(cat).not.toBeNull();
+    expect(cat?.id).toBe("rentals");
+    expect(cat?.name).toBe("Rentals");
+  });
+
+  test("accommodation category exists", () => {
+    const cat = getCategory("accommodation");
+    expect(cat).not.toBeNull();
+    expect(cat?.id).toBe("accommodation");
+    expect(cat?.name).toBe("Accommodation");
+  });
+
+  test("haunted category exists", () => {
+    const cat = getCategory("haunted");
+    expect(cat).not.toBeNull();
+    expect(cat?.id).toBe("haunted");
+    expect(cat?.name).toBe("Haunted");
+  });
+
+  test("waterworld category exists", () => {
+    const cat = getCategory("waterworld");
+    expect(cat).not.toBeNull();
+    expect(cat?.id).toBe("waterworld");
+    expect(cat?.name).toBe("Waterworld");
   });
 
   test("explore category exists", () => {
@@ -67,10 +105,27 @@ describe("A · exactly three categories registered (ocean · cafe · explore)", 
     expect(EXPLORE_CATEGORY_ID).toBe("explore");
   });
 
-  test("listCategories returns exactly those three", () => {
+  test("retired categories do NOT return (ocean · cafe)", () => {
+    expect(getCategory("ocean")).toBeNull();
+    expect(getCategory("cafe")).toBeNull();
+    expect(isRegisteredCategory("ocean")).toBe(false);
+    expect(isRegisteredCategory("cafe")).toBe(false);
+  });
+
+  test("listCategories returns exactly those nine", () => {
     const cats = listCategories();
     const ids = cats.map((c) => c.id).sort();
-    expect(ids).toEqual(["cafe", "explore", "ocean"]);
+    expect(ids).toEqual([
+      "accommodation",
+      "bakery",
+      "explore",
+      "food",
+      "haunted",
+      "products",
+      "rentals",
+      "services",
+      "waterworld",
+    ]);
   });
 
   test("category ids are unique", () => {
@@ -108,21 +163,40 @@ describe("B · resolveCategoryId behaviour", () => {
   });
 
   test("registered id → same id", () => {
-    expect(resolveCategoryId("ocean")).toBe("ocean");
-    expect(resolveCategoryId("cafe")).toBe("cafe");
+    expect(resolveCategoryId("food")).toBe("food");
+    expect(resolveCategoryId("bakery")).toBe("bakery");
+    expect(resolveCategoryId("products")).toBe("products");
+    expect(resolveCategoryId("services")).toBe("services");
+    expect(resolveCategoryId("rentals")).toBe("rentals");
+    expect(resolveCategoryId("accommodation")).toBe("accommodation");
+    expect(resolveCategoryId("haunted")).toBe("haunted");
+    expect(resolveCategoryId("waterworld")).toBe("waterworld");
     expect(resolveCategoryId("explore")).toBe("explore");
   });
 
+  test("retired ids → explore (not a throw)", () => {
+    // ocean + cafe are no longer in the registry · they resolve to
+    // explore via the safe-default path, same as any typo'd id.
+    expect(resolveCategoryId("ocean")).toBe("explore");
+    expect(resolveCategoryId("cafe")).toBe("explore");
+  });
+
   test("unknown id → explore (safe default · not a throw)", () => {
-    expect(resolveCategoryId("ocean-typo")).toBe("explore");
+    expect(resolveCategoryId("food-typo")).toBe("explore");
     expect(resolveCategoryId("not-a-category")).toBe("explore");
   });
 
   test("isRegisteredCategory distinguishes registered from unknown", () => {
-    expect(isRegisteredCategory("ocean")).toBe(true);
-    expect(isRegisteredCategory("cafe")).toBe(true);
+    expect(isRegisteredCategory("food")).toBe(true);
+    expect(isRegisteredCategory("bakery")).toBe(true);
+    expect(isRegisteredCategory("products")).toBe(true);
+    expect(isRegisteredCategory("services")).toBe(true);
+    expect(isRegisteredCategory("rentals")).toBe(true);
+    expect(isRegisteredCategory("accommodation")).toBe(true);
+    expect(isRegisteredCategory("haunted")).toBe(true);
+    expect(isRegisteredCategory("waterworld")).toBe(true);
     expect(isRegisteredCategory("explore")).toBe(true);
-    expect(isRegisteredCategory("ocean-typo")).toBe(false);
+    expect(isRegisteredCategory("food-typo")).toBe(false);
     expect(isRegisteredCategory("")).toBe(false);
   });
 });
@@ -130,18 +204,35 @@ describe("B · resolveCategoryId behaviour", () => {
 // ─── C · live-world Theme Packages reference REGISTERED categories ──
 
 describe("C · code-registered packages reference only registered categories", () => {
-  test("ocean package → identity.categoryId = 'ocean'", () => {
-    const pkg = LIVE_WORLD_PACKAGES.ocean;
-    expect(pkg.identity.categoryId).toBe("ocean");
+  test("waterworld package → identity.categoryId = 'waterworld' (Step 1G rename)", () => {
+    const pkg = LIVE_WORLD_PACKAGES.waterworld;
+    expect(pkg.identity.categoryId).toBe("waterworld");
   });
 
-  const CAFE_WORLDS = ["coffee", "botanical-cafe", "midnight-cafe", "french-cafe"] as const;
-  for (const id of CAFE_WORLDS) {
-    test(`${id} package → identity.categoryId = 'cafe'`, () => {
+  const FOOD_WORLDS = [
+    "coffee",
+    "botanical-cafe",
+    "midnight-cafe",
+    "french-cafe",
+    "food",
+    "pizza",
+  ] as const;
+  for (const id of FOOD_WORLDS) {
+    test(`${id} package → identity.categoryId = 'food'`, () => {
       const pkg = LIVE_WORLD_PACKAGES[id];
-      expect(pkg.identity.categoryId).toBe("cafe");
+      expect(pkg.identity.categoryId).toBe("food");
     });
   }
+
+  test("bike-rental package → identity.categoryId = 'rentals'", () => {
+    const pkg = LIVE_WORLD_PACKAGES["bike-rental"];
+    expect(pkg.identity.categoryId).toBe("rentals");
+  });
+
+  test("ac-service package → identity.categoryId = 'services'", () => {
+    const pkg = LIVE_WORLD_PACKAGES["ac-service"];
+    expect(pkg.identity.categoryId).toBe("services");
+  });
 
   test("every live-world package declares an identity.categoryId", () => {
     for (const id of LIVE_WORLD_IDS) {
@@ -167,9 +258,7 @@ describe("C · code-registered packages reference only registered categories", (
   });
 
   test("future package declaring a registered id auto-resolves (parametric)", () => {
-    // Simulate a future package shape · the registry has to accept any
-    // id we add to it later without a Library code change.
-    const futureCategoryId = "ocean"; // already registered
+    const futureCategoryId = "food"; // already registered
     expect(resolveCategoryId(futureCategoryId)).toBe(futureCategoryId);
   });
 
@@ -191,10 +280,6 @@ describe("D · architectural guards", () => {
         path.join(MIGRATIONS_DIR, file),
         "utf8",
       );
-      // Fail if a migration adds a category_id column or seeds category
-      // rows into the themes table. Only exact-identifier matches so a
-      // legitimate migration mentioning the string "category" in a
-      // comment doesn't false-positive.
       const addsCategoryColumn =
         /ALTER\s+TABLE\s+(?:public\.)?nex_chat_theme[\s\S]{0,120}ADD\s+COLUMN\s+category_id/i.test(
           content,
@@ -206,33 +291,22 @@ describe("D · architectural guards", () => {
     }
   });
 
-  // Step 1A originally asserted that no category UI existed. Step 1B
-  // (sealed in a follow-up commit) INTRODUCED the category landing +
-  // showcase route · the assertion is now the opposite and lives in
-  // `src/app/nex-native/chat-themes-library/_category-grid.test.ts`.
-  // Keeping a stub here would misrepresent the architecture; deletion
-  // is the correct move. Retained as a comment so git-blame explains
-  // the removal.
-
-  test("no 'waterworld' implementation exists yet (Step 3 scope)", () => {
-    // Step 3 renames the Ocean World to Waterworld. Step 1A must not
-    // touch Ocean's id. Confirm Waterworld does not exist anywhere in
-    // the committed source tree.
+  test("Step 1G sealed · 'waterworld' package exists AND 'ocean' package is retired", () => {
     const packagesDir = path.join(
       REPO_ROOT,
       "src/app/nex-native/chat-standard/packages",
     );
-    const files = fs.readdirSync(packagesDir).filter((f) => f.endsWith(".ts"));
-    for (const file of files) {
-      expect(file.toLowerCase()).not.toContain("waterworld");
-    }
-    // Also guard against a world id "waterworld" sneaking in via the
-    // LIVE_WORLD_PACKAGES map.
-    expect(LIVE_WORLD_IDS as readonly string[]).not.toContain("waterworld");
+    const files = fs
+      .readdirSync(packagesDir)
+      .filter((f) => f.endsWith(".ts"));
+    expect(files.some((f) => f.toLowerCase() === "waterworld.package.ts")).toBe(true);
+    expect(files.some((f) => f.toLowerCase() === "ocean.package.ts")).toBe(false);
+    expect(LIVE_WORLD_IDS as readonly string[]).toContain("waterworld");
+    expect(LIVE_WORLD_IDS as readonly string[]).not.toContain("ocean");
   });
 
-  test("Ocean world's identity.id remains 'ocean' (Step 3 is NOT this commit)", () => {
-    const pkg = LIVE_WORLD_PACKAGES.ocean;
-    expect(pkg.identity.id).toBe("ocean");
+  test("Waterworld world's identity.id is 'waterworld' (ocean renamed · Step 1G)", () => {
+    const pkg = LIVE_WORLD_PACKAGES.waterworld;
+    expect(pkg.identity.id).toBe("waterworld");
   });
 });

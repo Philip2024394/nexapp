@@ -40,10 +40,15 @@
 //     This preserves the room/world distinction: the category room
 //     stays its own colour even when you see a world of a different
 //     palette inside the phone.
-//   · ZERO-MEMBER categories are HIDDEN from the landing · users
-//     should not navigate into an empty room. The showcase route
-//     still handles zero-member categories gracefully for deep-link
-//     correctness (tested).
+//   · ZERO-MEMBER categories ARE SHOWN on the landing with a visible
+//     "Coming soon" state (re-seal 2026-10-11 · Step 1C). Prior rule
+//     hid empty categories · the founder reversed that so visitors
+//     can see the full IA on day one (e.g. Products / Services ship
+//     empty but visible). The empty-tile marker is
+//     `data-nex-category-empty="true"` and the phone screen paints
+//     the category's own palette plus a `Coming soon` glyph.
+//     The showcase route still handles zero-member categories
+//     gracefully for deep-link correctness (tested).
 //   · The Explore collection is a general / uncategorised bucket ·
 //     presented as a phone-frame tile but NEVER described as a visual
 //     family. The caption copy comes from the registry so a future
@@ -62,6 +67,7 @@ import {
   EXPLORE_CATEGORY_ID,
   listCategories,
 } from "@/lib/nex-native/theme-category/registry";
+import { sortCategoriesByIndustry } from "@/lib/nex-native/theme-category/industry-order";
 import type { ThemeCategory } from "@/lib/nex-native/theme-category/types";
 import {
   ThemeBubble,
@@ -84,55 +90,62 @@ export interface CategoryGridProps {
    *  themes themselves at the per-world level · that happens inside
    *  the showcase route. */
   browserThemes: ReadonlyArray<BrowserThemeRow>;
+  /** Optional industry-first ordering · when the viewer's business
+   *  category maps to a theme category id, that category moves to the
+   *  front of the grid. The sealed registry snapshot stays
+   *  deterministic · reorder is a pure view-time operation. */
+  preferredCategoryId?: string | null;
 }
 
 export function CategoryGrid({
   browserThemes,
+  preferredCategoryId,
 }: CategoryGridProps): React.JSX.Element {
-  // Universal rule · iterate the registry · one tile per entry · hide
-  // categories with zero worlds. No per-category conditionals.
-  const categoriesWithMembers = listCategories()
-    .map((category) => {
-      const inCategory = browserThemes.filter(
-        (t) => t.category_id === category.id,
-      );
-      return {
-        category,
-        count: inCategory.length,
-        hero: resolveHeroWorld(category, inCategory),
-      };
-    })
-    .filter(({ count }) => count > 0);
+  // Universal rule · iterate the registry · one tile per entry.
+  // Re-seal 2026-10-11 (Step 1C) · empty categories ARE shown with
+  // the EmptyScreen fallback + a `data-nex-category-empty` marker ·
+  // the previous hide-rule has been dropped so the founder-authorised
+  // Food/Products/Services/Explore IA is visible on day one even when
+  // Products + Services have zero worlds.
+  //
+  // Industry-first reorder (2026-10-11) · if the caller passes a
+  // preferredCategoryId that resolves to a registered category, that
+  // category moves to the front · the rest keep the sealed order.
+  const orderedCategories = sortCategoriesByIndustry(
+    listCategories(),
+    preferredCategoryId ?? null,
+  );
+  const categoriesWithMembers = orderedCategories.map((category) => {
+    const inCategory = browserThemes.filter(
+      (t) => t.category_id === category.id,
+    );
+    return {
+      category,
+      count: inCategory.length,
+      hero: resolveHeroWorld(category, inCategory),
+    };
+  });
 
   return (
     <>
       <style>{`
-        /* Step 1B.1 phone-grid · tuned so each phone frame feels like
-         * a real device at every mainstream width. The max-width keeps
-         * the gallery from spreading past a comfortable reading pace.
-         *   ≤ 600 px  → 1 phone  (one World at a time, dominant)
-         *   601-900   → 2 phones (side-by-side pair)
-         *   ≥ 901     → 3 phones (full row for the three categories)
-         * Phones themselves max at 300px wide (9:18 → ~600px tall) so
-         * the gallery never bloats on ultra-wide displays. */
+        /* Step 1H · 2026-10-11 · forced 2-per-row at every breakpoint.
+         * Prior 1/2/3-col auto-fit layout dropped to 1 column on
+         * mobile and bloated to 3 columns on desktop. Founder set the
+         * design to a strict 2-column grid for predictable scanning.
+         * Phones scale down inside their column so narrow phones
+         * stay legible without a layout shift. */
         .nex-category-phone-grid {
           display: grid;
-          gap: 20px;
-          grid-template-columns: 1fr;
-          max-width: 1120px;
+          gap: 16px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          max-width: 760px;
           margin: 18px auto 0;
           justify-items: center;
         }
         @media (min-width: 601px) {
           .nex-category-phone-grid {
-            grid-template-columns: repeat(2, 1fr);
             gap: 24px;
-          }
-        }
-        @media (min-width: 901px) {
-          .nex-category-phone-grid {
-            grid-template-columns: repeat(3, 1fr);
-            gap: 28px;
           }
         }
         .nex-category-phone-tile {
@@ -191,12 +204,14 @@ function CategoryTile({
   const captionDim = withAlpha(colours.highlight, CAPTION_DIM_ALPHA);
   const captionMute = withAlpha(colours.highlight, CAPTION_MUTE_ALPHA);
 
+  const isEmpty = count === 0;
   return (
     <Link
       href={`/nex-native/chat-themes-library/category/${category.id}`}
       prefetch={false}
       data-nex-category-tile
       data-nex-category-id={category.id}
+      data-nex-category-empty={isEmpty ? "true" : undefined}
       className="nex-category-phone-tile"
       aria-label={`${category.name} · ${count} ${count === 1 ? "world" : "worlds"} · ${category.tagline ?? ""}`.trim()}
     >
@@ -250,13 +265,15 @@ function CategoryTile({
           data-nex-category-member-count
           style={{
             fontSize: 11,
-            color: isExplore ? captionMute : captionDim,
+            color: isEmpty || isExplore ? captionMute : captionDim,
             letterSpacing: "0.12em",
             textTransform: "uppercase",
             fontWeight: 700,
           }}
         >
-          {count} {count === 1 ? "World" : "Worlds"}
+          {isEmpty
+            ? "Coming soon"
+            : `${count} ${count === 1 ? "World" : "Worlds"}`}
         </div>
         {category.tagline && (
           <div
@@ -368,10 +385,15 @@ function HeroScreen({
   const preset: BubblePreset =
     hero.wallpaper_config?.bubbleStyle?.preset ?? "classic";
   const bubbleRim = hero.bubble_rim_hex ?? hero.accent_hex;
-  // Mirror the gallery tile's accent-glass values so the two surfaces
-  // read the same when both are visible in the same session.
-  const accentGlassMine = "rgba(0,159,239,0.26)";
-  const accentGlassPeer = "rgba(30,44,66,0.72)";
+  // Step 1I re-seal (2026-10-11) · chat bubbles MUST NOT be the
+  // same color on any theme. Prior values were hardcoded
+  // "rgba(0,159,239,0.26)" (cyan) and "rgba(30,44,66,0.72)" (navy)
+  // for EVERY theme · the preview read identically regardless of
+  // which theme sat behind it. Derive both glass tints from the
+  // theme's own `accent_hex` + `bubble_rim_hex` so each phone
+  // paints a theme-authentic conversation.
+  const accentGlassMine = withAlpha(hero.accent_hex, 0.26);
+  const accentGlassPeer = withAlpha(hero.bubble_rim_hex ?? hero.accent_hex, 0.78);
 
   const hasWallpaper = Boolean(hero.hero_image_url);
   const gradientTop = hero.accent_hex;
@@ -407,6 +429,135 @@ function HeroScreen({
         wallpaperConfig={hero.wallpaper_config}
         size="preview"
       />
+      {/* Phone top-header · matches the live chat shell layout:
+          avatar with pink/green rim on the left + theme name +
+          three circular right-cluster buttons (Home · Shop · Cart)
+          painted in NEX orange with a pink cart dot · identical
+          visual language to the real `/chat/peer/<id>` surface. */}
+      <div
+        aria-hidden
+        data-nex-category-phone-header
+        style={{
+          position: "absolute",
+          top: 20,
+          left: 8,
+          right: 8,
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          zIndex: 4,
+        }}
+      >
+        <span
+          data-nex-category-phone-avatar
+          style={{
+            position: "relative",
+            width: 20,
+            height: 20,
+            borderRadius: 999,
+            background: `linear-gradient(135deg, ${hero.accent_hex}, ${hero.bubble_rim_hex ?? hero.accent_hex})`,
+            color: "#021022",
+            display: "grid",
+            placeItems: "center",
+            fontSize: 9,
+            fontWeight: 800,
+            flex: "none",
+            border: "1.5px solid #FF3F9F",
+            boxShadow: "0 0 6px rgba(255,63,159,0.55)",
+          }}
+        >
+          {(hero.name ?? "N").charAt(0).toUpperCase()}
+        </span>
+        <span
+          style={{
+            fontSize: 8,
+            fontWeight: 700,
+            color: "#F2F5F8",
+            letterSpacing: "0.01em",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            textShadow: "0 1px 3px rgba(0,0,0,0.65)",
+            flex: 1,
+            minWidth: 0,
+          }}
+        >
+          {hero.name}
+        </span>
+        {/* Right-cluster · each of the three buttons uses its own
+            semantic colour so Home / Shop / Cart read distinctly
+            instead of as one monotone orange row:
+              · Home → NEX cyan (navigation back to the hub)
+              · Shop → NEX orange (NEX commerce brand accent)
+              · Cart → NEX pink (badge-aligned active state) */}
+        <span
+          aria-hidden
+          data-nex-category-phone-right-cluster
+          style={{ display: "inline-flex", alignItems: "center", gap: 3, flex: "none" }}
+        >
+          {[
+            {
+              glyph: "⌂",
+              key: "home",
+              bg: "linear-gradient(180deg, #4FC3FF 0%, #00AFFF 100%)",
+              border: "rgba(0,175,255,0.6)",
+              shadow: "0 2px 4px rgba(0,175,255,0.4)",
+            },
+            {
+              glyph: "🛍",
+              key: "shop",
+              bg: "linear-gradient(180deg, #FF9033 0%, #FF7800 100%)",
+              border: "rgba(255,120,0,0.6)",
+              shadow: "0 2px 4px rgba(255,120,0,0.4)",
+            },
+            {
+              glyph: "🛒",
+              key: "cart",
+              bg: "linear-gradient(180deg, #FF6DB5 0%, #FF3F9F 100%)",
+              border: "rgba(255,63,159,0.6)",
+              shadow: "0 2px 4px rgba(255,63,159,0.4)",
+              hasBadge: true,
+            },
+          ].map((b) => (
+            <span
+              key={b.key}
+              style={{
+                position: "relative",
+                width: 14,
+                height: 14,
+                borderRadius: 999,
+                background: b.bg,
+                border: `0.5px solid ${b.border}`,
+                color: "#0B0F1A",
+                display: "grid",
+                placeItems: "center",
+                fontSize: 7.5,
+                fontWeight: 800,
+                boxShadow: b.shadow,
+              }}
+            >
+              {b.glyph}
+              {b.hasBadge && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: -2,
+                    right: -2,
+                    width: 5,
+                    height: 5,
+                    borderRadius: 999,
+                    background: "#F2F5F8",
+                    border: "0.5px solid #0B0F1A",
+                  }}
+                />
+              )}
+            </span>
+          ))}
+        </span>
+      </div>
+      {/* Live chat preview · six bubbles alternating peer / me so
+          the phone paints a real conversation in the theme's own
+          palette. Message copy sealed by the founder 2026-10-11. */}
       <div
         style={{
           position: "absolute",
@@ -414,31 +565,87 @@ function HeroScreen({
           display: "flex",
           flexDirection: "column",
           justifyContent: "flex-end",
-          gap: 8,
-          padding: "0 14px 22px",
+          gap: 5,
+          padding: "0 10px 44px",
           zIndex: 3,
         }}
       >
-        <ThemeBubble
-          preset={preset}
-          mine={false}
-          bubbleRim={bubbleRim}
-          accentGlassMine={accentGlassMine}
-          accentGlassPeer={accentGlassPeer}
-          size="preview"
+        {[
+          { text: "hey", mine: false },
+          { text: "love this", mine: true },
+          { text: "wow", mine: false },
+          { text: "supercool", mine: true },
+          { text: "i want", mine: false },
+          { text: "check themes on NEX 👆", mine: true },
+        ].map((m, i) => (
+          <ThemeBubble
+            key={i}
+            preset={preset}
+            mine={m.mine}
+            bubbleRim={bubbleRim}
+            accentGlassMine={accentGlassMine}
+            accentGlassPeer={accentGlassPeer}
+            size="preview"
+          >
+            {m.text}
+          </ThemeBubble>
+        ))}
+      </div>
+      {/* Composer footer · theme-tinted pill matching the live
+          chat shell composer. Send glyph is the universal NEX
+          orange cone sealed by the composer-footer rule. */}
+      <div
+        aria-hidden
+        data-nex-category-phone-footer
+        style={{
+          position: "absolute",
+          left: 8,
+          right: 8,
+          bottom: 12,
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
+          padding: "4px 4px 4px 10px",
+          borderRadius: 999,
+          background: withAlpha(hero.accent_hex, 0.14),
+          border: `1px solid ${withAlpha(hero.accent_hex, 0.35)}`,
+          backdropFilter: "blur(6px)",
+          WebkitBackdropFilter: "blur(6px)",
+          zIndex: 4,
+        }}
+      >
+        <span
+          style={{
+            flex: 1,
+            fontSize: 7,
+            color: "rgba(242, 245, 248, 0.55)",
+            fontStyle: "italic",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
         >
-          hey!
-        </ThemeBubble>
-        <ThemeBubble
-          preset={preset}
-          mine={true}
-          bubbleRim={bubbleRim}
-          accentGlassMine={accentGlassMine}
-          accentGlassPeer={accentGlassPeer}
-          size="preview"
+          Message…
+        </span>
+        <span
+          style={{
+            width: 14,
+            height: 14,
+            borderRadius: 999,
+            background:
+              "linear-gradient(180deg, #FF9033 0%, #FF7800 100%)",
+            border: "0.5px solid rgba(255,120,0,0.6)",
+            color: "#0B0F1A",
+            display: "grid",
+            placeItems: "center",
+            fontSize: 8,
+            fontWeight: 800,
+            flex: "none",
+            boxShadow: "0 1px 3px rgba(255,120,0,0.4)",
+          }}
         >
-          love this ✨
-        </ThemeBubble>
+          ➤
+        </span>
       </div>
     </div>
   );
@@ -458,19 +665,58 @@ function EmptyScreen({
   return (
     <div
       aria-hidden
+      data-nex-category-empty-screen
       style={{
         position: "absolute",
         inset: 0,
         background: `linear-gradient(180deg, ${colours.deep} 0%, ${colours.primary} 100%)`,
-        display: "grid",
-        placeItems: "center",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 10,
         color: colours.highlight,
-        fontSize: 11,
-        letterSpacing: "0.12em",
-        textTransform: "uppercase",
+        padding: "0 20px",
+        textAlign: "center",
       }}
     >
-      No preview
+      <div
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: 999,
+          background: withAlpha(colours.highlight, 0.1),
+          border: `1px solid ${withAlpha(colours.highlight, 0.25)}`,
+          display: "grid",
+          placeItems: "center",
+          fontSize: 20,
+          lineHeight: 1,
+          color: colours.highlight,
+        }}
+      >
+        ✨
+      </div>
+      <div
+        style={{
+          fontSize: 11,
+          letterSpacing: "0.22em",
+          textTransform: "uppercase",
+          fontWeight: 700,
+          color: colours.highlight,
+        }}
+      >
+        Coming soon
+      </div>
+      <div
+        style={{
+          fontSize: 11.5,
+          lineHeight: 1.45,
+          color: withAlpha(colours.highlight, 0.7),
+          maxWidth: 180,
+        }}
+      >
+        No Worlds in this family yet
+      </div>
     </div>
   );
 }

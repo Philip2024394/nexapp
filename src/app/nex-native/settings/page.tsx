@@ -1,22 +1,22 @@
 // src/app/nex-native/settings/page.tsx
 //
 // NEX Settings landing · gear icon in the shared page header points here.
-// Lists the settings sub-surfaces as landscape cards, matching the visual
-// language of /nex-native/home.
+// Hero row: three equal icon tiles (Emergency Help · Family Safe · Community
+// Noticeboard) → the three safety-adjacent destinations. Below the hero:
+// the landscape settings cards (profile, plan, chat theme, wallet).
 //
 // Settings is a FUNCTIONAL control surface · it uses the solid NEX palette
 // (navy #020914 bg, cyan #00AFFF accent, orange #FF7200 brand). Never
 // theme Settings per active World · the sealed universal theme controls
-// doctrine applies here. (This comment is the regression anchor read by
-// `_settings-ia.test.ts § E`.)
+// doctrine applies here. (Regression anchor read by _settings-ia.test.ts § E.)
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import { NexPageHeader } from "../_page-header";
 import { signOutAction } from "../_actions";
-import { EmergencyHelpEntry } from "./_emergency-help-entry";
-import { FamilySafeChatEntry } from "./_family-safe-chat-entry";
+import { isFamilySafetyEnabled } from "@/lib/nex-native/family-safety/feature-flag";
+import { isAffiliateAccount } from "@/lib/nex-native/affiliate-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,13 +24,25 @@ export const dynamic = "force-dynamic";
 const NEX = {
   bg: "#020914",
   panel: "#03101D",
+  panelHi: "#0A1A2D",
   textPrimary: "#F2F5F8",
   textSecondary: "#7D9BC0",
+  textMuted: "#4B6683",
   cyan: "#00AFFF",
   cyanSoft: "rgba(0, 175, 255, 0.35)",
   cyanFaint: "rgba(0, 175, 255, 0.12)",
   orange: "#FF7200",
+  orangeFaint: "rgba(255, 114, 0, 0.14)",
+  danger: "#FF4D5E",
+  dangerFaint: "rgba(255, 77, 94, 0.14)",
 };
+
+interface HeroTile {
+  href: string;
+  icon: string;
+  title: string;
+  tone: "danger" | "cyan" | "orange";
+}
 
 interface SettingRow {
   href: string | null;
@@ -43,6 +55,34 @@ interface SettingRow {
 export default async function SettingsIndex() {
   const session = await resolveNexAppSessionFromContext();
   if (!session) redirect("/nex-native/sign-in");
+
+  const familyEnabled = isFamilySafetyEnabled();
+  const joinedAffiliate = await isAffiliateAccount(session.account.id).catch(() => false);
+
+  const heroTiles: HeroTile[] = [
+    {
+      href: "/nex-native/emergency-help",
+      icon: "🚨",
+      title: "Emergency Help",
+      tone: "danger",
+    },
+    ...(familyEnabled
+      ? [
+          {
+            href: "/nex-native/family-safety",
+            icon: "🛡",
+            title: "Family Safe",
+            tone: "cyan" as const,
+          },
+        ]
+      : []),
+    {
+      href: "/nex-native/community",
+      icon: "🏘",
+      title: "Community",
+      tone: "orange",
+    },
+  ];
 
   const rows: SettingRow[] = [
     {
@@ -63,29 +103,27 @@ export default async function SettingsIndex() {
       href: "/nex-native/chat-themes-library",
       emoji: "🎨",
       title: "Chat theme",
-      subtitle: "Pick the theme applied to your chat bubbles",
-    },
-    {
-      // 2026-10-11 · NEX Community Noticeboard · place-based noticeboard
-      // (power outages, water outages, road closures, weather hazards).
-      // Routes to /nex-native/community which auto-decides between
-      // zone-selection and the feed based on membership state.
-      href: "/nex-native/community",
-      emoji: "🏘️",
-      title: "NEX Community Noticeboard",
       subtitle:
-        "Local outages · hazards · road closures · neighbourhood notices",
+        "Pick the theme applied to your chat bubbles · see it live at /chat/preview",
     },
-    // Bridge 42 · 2026-09-28 · face-sign-in enrolment surface retired.
-    // Previously-enrolled devices still see the "Sign in with face"
-    // button on /sign-in because that reads the nex-has-face cookie
-    // and calls the WebAuthn API directly. New enrolment is out of
-    // scope for now · Founder simplified the auth surface to one
-    // email + password path.
+    joinedAffiliate
+      ? {
+          href: "/nex-native/affiliate",
+          emoji: "🤝",
+          title: "Affiliate · dashboard",
+          subtitle:
+            "Your marketplace · promoted products · earnings ledger",
+        }
+      : {
+          href: "/nex-native/settings/affiliate",
+          emoji: "🤝",
+          title: "Earn with NEX · Affiliate",
+          subtitle:
+            "No products to sell? Promote others' listings and earn commission",
+        },
+    // Phase 2A/2B · the three hero tiles above own the Community + safety
+    // entries. The row list below is only lifestyle/account settings.
     {
-      // Placeholder · sealed 2026-09-27. Deferred until the token ledger
-      // + wallet backend exist as a bounded Bridge. Reserves the settings
-      // slot so visitors know where the affordance will live.
       href: null,
       emoji: "⚡",
       title: "Power tokens & wallet",
@@ -156,11 +194,41 @@ export default async function SettingsIndex() {
             )}
           </p>
 
-          <EmergencyHelpEntry />
+          <section
+            aria-label="Safety & community shortcuts"
+            data-nex-settings-hero="true"
+            style={{
+              display: "grid",
+              gridTemplateColumns: `repeat(${heroTiles.length}, minmax(0, 1fr))`,
+              gap: 10,
+              marginBottom: 24,
+            }}
+          >
+            {heroTiles.map((t) => (
+              <HeroTileCard key={t.href} tile={t} />
+            ))}
+          </section>
 
-          <FamilySafeChatEntry />
+          <div
+            aria-hidden
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              margin: "0 0 14px",
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "0.22em",
+              textTransform: "uppercase",
+              color: NEX.textMuted,
+            }}
+          >
+            <span style={{ flex: 1, height: 1, background: `${NEX.textMuted}22` }} />
+            <span>Settings</span>
+            <span style={{ flex: 1, height: 1, background: `${NEX.textMuted}22` }} />
+          </div>
 
-          <div style={{ display: "grid", gap: 12 }}>
+          <div style={{ display: "grid", gap: 10 }}>
             {rows.map((r, i) => {
               const style: React.CSSProperties = {
                 display: "flex",
@@ -172,7 +240,7 @@ export default async function SettingsIndex() {
                 borderRadius: 12,
                 textDecoration: "none",
                 color: NEX.textPrimary,
-                minHeight: 76,
+                minHeight: 72,
                 opacity: r.comingSoon ? 0.7 : 1,
               };
               const body = (
@@ -181,14 +249,14 @@ export default async function SettingsIndex() {
                     aria-hidden
                     style={{
                       flexShrink: 0,
-                      width: 48,
-                      height: 48,
+                      width: 44,
+                      height: 44,
                       borderRadius: 12,
                       background: NEX.cyanFaint,
                       color: r.comingSoon ? NEX.orange : NEX.cyan,
                       display: "grid",
                       placeItems: "center",
-                      fontSize: 22,
+                      fontSize: 20,
                     }}
                   >
                     {r.emoji}
@@ -289,5 +357,82 @@ export default async function SettingsIndex() {
         </div>
       </main>
     </>
+  );
+}
+
+function HeroTileCard({ tile }: { tile: HeroTile }) {
+  const toneColor =
+    tile.tone === "danger"
+      ? NEX.danger
+      : tile.tone === "cyan"
+        ? NEX.cyan
+        : NEX.orange;
+  const toneFaint =
+    tile.tone === "danger"
+      ? NEX.dangerFaint
+      : tile.tone === "cyan"
+        ? NEX.cyanFaint
+        : NEX.orangeFaint;
+  return (
+    <Link
+      href={tile.href}
+      data-nex-settings-hero-tile={tile.tone}
+      style={{
+        position: "relative",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 10,
+        padding: "18px 10px 14px",
+        borderRadius: 16,
+        background: `linear-gradient(180deg, ${NEX.panelHi} 0%, ${NEX.panel} 100%)`,
+        border: `1px solid ${toneColor}55`,
+        boxShadow: `0 1px 0 ${toneColor}18 inset, 0 8px 24px -16px ${toneColor}`,
+        textDecoration: "none",
+        color: NEX.textPrimary,
+        overflow: "hidden",
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: `radial-gradient(60% 50% at 50% 0%, ${toneFaint}, transparent 80%)`,
+          pointerEvents: "none",
+        }}
+      />
+      <span
+        aria-hidden
+        style={{
+          position: "relative",
+          width: 48,
+          height: 48,
+          borderRadius: 999,
+          background: toneFaint,
+          color: toneColor,
+          display: "grid",
+          placeItems: "center",
+          fontSize: 22,
+          border: `1px solid ${toneColor}33`,
+        }}
+      >
+        {tile.icon}
+      </span>
+      <span
+        style={{
+          position: "relative",
+          fontSize: 12,
+          fontWeight: 600,
+          letterSpacing: "0.01em",
+          textAlign: "center",
+          lineHeight: 1.25,
+          color: NEX.textPrimary,
+        }}
+      >
+        {tile.title}
+      </span>
+    </Link>
   );
 }

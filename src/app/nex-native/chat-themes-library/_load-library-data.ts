@@ -26,6 +26,7 @@ import type { NexAccountRow } from "@/lib/nex-native/types";
 import type { BrowserThemeRow } from "./_theme-browser-client";
 import { listLiveWorldsAsBrowserRows } from "./_live-worlds-adapter";
 import { EXPLORE_CATEGORY_ID } from "@/lib/nex-native/theme-category/registry";
+import { inferCategoryIdFromSignals } from "@/lib/nex-native/theme-category/keyword-resolver";
 
 // Re-export the pure helper so existing callers (if any) continue to
 // find `countCategoryMembers` here · the actual implementation lives
@@ -94,9 +95,12 @@ export async function loadLibraryData(): Promise<LibraryLoadResult> {
 
   // Merged theme collection: live-worlds (code) + DB themes (filtered
   // against id collisions · code wins). Live-world rows carry their
-  // category_id from the ThemePackage; DB rows default to
-  // EXPLORE_CATEGORY_ID until a future authorisation decides whether
-  // to add a DB column. Mirrors the Step 1A adapter / page.tsx logic.
+  // category_id from the ThemePackage; DB rows have no category
+  // column yet — so Step 1E runs the sealed keyword resolver over
+  // each DB row's name/tagline to route it (cake-shop theme →
+  // Bakery · bike-rental theme → Rentals). When the resolver finds
+  // no match the DB row falls back to EXPLORE_CATEGORY_ID exactly
+  // as before.
   const dbThemes = await chatThemeService.listActiveThemes();
   const liveWorldRows = listLiveWorldsAsBrowserRows();
   const liveWorldIds = new Set(liveWorldRows.map((r) => r.id));
@@ -112,7 +116,9 @@ export async function loadLibraryData(): Promise<LibraryLoadResult> {
       composer_rim_hex: t.composer_rim_hex,
       tier: t.tier,
       category: t.category,
-      category_id: EXPLORE_CATEGORY_ID,
+      category_id:
+        inferCategoryIdFromSignals({ id: t.id, name: t.name, tagline: t.tagline }) ??
+        EXPLORE_CATEGORY_ID,
       hero_image_url: t.hero_image_url,
       sort_order: t.sort_order,
       intro_video_url: t.intro_video_url,

@@ -30,7 +30,7 @@ export default async function StatusViewerV1Page({
   if (!isDev && !prodOverride) notFound();
 
   const sp = await searchParams;
-  const themeId = isLiveWorldId(sp.theme) ? sp.theme : "ocean";
+  const themeId = isLiveWorldId(sp.theme) ? sp.theme : "waterworld";
   const pkg = LIVE_WORLD_PACKAGES[themeId];
 
   return (

@@ -16,18 +16,27 @@
 // awkward "chat with yourself" UX. Caller checks ownership.
 
 import Link from "next/link";
+import { RequireAccount } from "@/components/nex-native/account-wall/RequireAccount";
 
 export function FloatingChatButton({
   ownerAccountId,
   sellerFirstName,
+  businessSlug,
   isOwnerViewing = false,
+  isGuest = false,
 }: {
   ownerAccountId: string;
   /** Used only for the accessible label · "Chat with Priya". */
   sellerFirstName: string;
+  /** The business's URL slug · used to build the return URL for the
+   *  account wall so the user comes back to the shop they were on. */
+  businessSlug: string;
   /** When true (viewer IS the shop owner) the button doesn't
    *  render · avoids "chat with yourself". */
   isOwnerViewing?: boolean;
+  /** True when the viewer is not signed in. Phase 2 integration · the
+   *  CTA swaps for the message-business account wall when guest. */
+  isGuest?: boolean;
 }) {
   if (isOwnerViewing) return null;
 
@@ -46,35 +55,43 @@ export function FloatingChatButton({
           pointerEvents: "none",
         }}
       >
-        <Link
-          href={`/nex-native/chat/peer/${ownerAccountId}`}
-          aria-label={`Chat with ${sellerFirstName}`}
-          title={`Chat with ${sellerFirstName}`}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 32,
-            height: 32,
-            borderRadius: 999,
-            background:
-              "linear-gradient(180deg, #FF9033 0%, #FF7200 100%)",
-            border: "1px solid rgba(255,114,0,0.60)",
-            color: "#0B0F1A",
-            fontSize: 14,
-            textDecoration: "none",
-            boxShadow:
-              "0 10px 24px rgba(255,114,0,0.42), 0 3px 8px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35)",
-            pointerEvents: "auto",
-            transition: "transform 120ms ease-out",
-            fontFamily:
-              "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-          }}
+        <RequireAccount
+          isGuest={isGuest}
+          action="message-business"
+          nextUrl={`/nex-native/${encodeURIComponent(businessSlug)}?commerce=1`}
+          payload={ownerAccountId}
+          onCloseHref={`/nex-native/${encodeURIComponent(businessSlug)}?commerce=1`}
         >
-          <span aria-hidden style={{ lineHeight: 1 }}>
-            💬
-          </span>
-        </Link>
+          <Link
+            href={`/nex-native/chat/peer/${ownerAccountId}`}
+            aria-label={`Chat with ${sellerFirstName}`}
+            title={`Chat with ${sellerFirstName}`}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 32,
+              height: 32,
+              borderRadius: 999,
+              background:
+                "linear-gradient(180deg, #FF9033 0%, #FF7200 100%)",
+              border: "1px solid rgba(255,114,0,0.60)",
+              color: "#0B0F1A",
+              fontSize: 14,
+              textDecoration: "none",
+              boxShadow:
+                "0 10px 24px rgba(255,114,0,0.42), 0 3px 8px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.35)",
+              pointerEvents: "auto",
+              transition: "transform 120ms ease-out",
+              fontFamily:
+                "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+            }}
+          >
+            <span aria-hidden style={{ lineHeight: 1 }}>
+              💬
+            </span>
+          </Link>
+        </RequireAccount>
         {/* Tiny "Chat" caption beneath · optional legibility. */}
         <div
           aria-hidden

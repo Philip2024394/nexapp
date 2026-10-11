@@ -25,8 +25,10 @@ import type { ThemePackage } from "../_engine/types";
 
 export const BOTANICAL_CAFE_PACKAGE: ThemePackage = {
   identity: {
-    // Step 1A (sealed 2026-10-06) · belongs to the Café visual family.
-    categoryId: "cafe",
+    // Step 1C re-seal (2026-10-11) · Café category folded into Food.
+    // Belongs to the Food visual family (coffee + café worlds all live
+    // under Food now).
+    categoryId: "food",
     id: "botanical-cafe",
     name: "Botanical Café",
     tagline: "Sunlit greenhouse · ceramic + living plants",

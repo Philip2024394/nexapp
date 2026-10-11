@@ -21,8 +21,9 @@ import type { ThemePackage } from "../_engine/types";
 
 export const COFFEE_PACKAGE: ThemePackage = {
   identity: {
-    // Step 1A (sealed 2026-10-06) · belongs to the Café visual family.
-    categoryId: "cafe",
+    // Step 1C re-seal (2026-10-11) · Café category folded into Food.
+    // Coffee is the Food hero World (the archetypal baseline).
+    categoryId: "food",
     id: "coffee",
     name: "Coffee",
     tagline: "Slow mornings · warm aroma · amber light",

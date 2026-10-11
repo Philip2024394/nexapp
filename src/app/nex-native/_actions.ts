@@ -218,12 +218,28 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
       "Check your email for a confirmation link, then sign in.",
     );
   }
-  // Bridge 42 · 2026-09-28 · after signup, land the user on the
-  // add-to-home-screen welcome. Session is already established by
-  // supabase.auth.signUp above so the welcome page loads for them.
-  // Whichever CTA they hit continues to /nex-native/chat (contacts).
-  revalidatePath("/nex-native/create-account/welcome");
-  redirect("/nex-native/create-account/welcome");
+  // Account-wall continuation · if the user arrived at signup via a
+  // guest-mode wall (e.g. "Use this theme"), carry their intended
+  // action through the auth boundary. The intercept route consumes
+  // the cookie, applies safe preferences, and forwards to the
+  // original destination with a success banner.
+  {
+    const { peekPendingAccountWall } = await import(
+      "@/lib/nex-native/account-wall/pending-action"
+    );
+    const pending = await peekPendingAccountWall();
+    if (pending) {
+      revalidatePath("/nex-native/post-signup-apply");
+      redirect("/nex-native/post-signup-apply");
+    }
+  }
+  // Task #32 · 2026-10-11 · a fresh signup with no pending wall lands
+  // on the post-signup theme choice surface so the first visible
+  // decision is "make NEX yours". The pick-theme page redirects to
+  // the sealed add-to-home-screen welcome after a selection OR skip,
+  // keeping Bridge 42's end-of-signup flow intact.
+  revalidatePath("/nex-native/create-account/pick-theme");
+  redirect("/nex-native/create-account/pick-theme");
 }
 
 function redirectToOnboardingWithError(code: string, message: string): never {
@@ -298,6 +314,19 @@ export async function signInAction(formData: FormData): Promise<ActionResult> {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
     redirectToSignInWithError("sign_in_failed", error.message);
+  }
+  // Account-wall continuation · same hook as createNexAccountAction so
+  // an existing user who clicks "Already have one? Sign in" inside a
+  // guest-mode wall is routed back to their intended action.
+  {
+    const { peekPendingAccountWall } = await import(
+      "@/lib/nex-native/account-wall/pending-action"
+    );
+    const pending = await peekPendingAccountWall();
+    if (pending) {
+      revalidatePath("/nex-native/post-signup-apply");
+      redirect("/nex-native/post-signup-apply");
+    }
   }
   revalidatePath("/nex-native/home");
   redirect("/nex-native/home");
@@ -4373,8 +4402,17 @@ export async function updateChatThemeAction(formData: FormData): Promise<never> 
       // DB blip · row stays null · validation falls through to the
       // static-list check below.
     }
+    // Step 1G hotfix (2026-10-11) · live-world themes (nex-bubbles,
+    // nex-flat, waterworld, coffee, café family, food, pizza,
+    // bike-rental) are code-registered packages that never land in
+    // nex_chat_theme. The DB lookup returns null for them so the
+    // old 2-branch gate (catalogue OR static list) would reject
+    // every live-world id with "unknown theme". We additionally
+    // accept any id that resolves to a LIVE_WORLD_PACKAGES key.
+    const { isLiveWorldId } = await import("./chat-standard/_live-worlds");
+    const allowedByLiveWorld = isLiveWorldId(theme);
     const allowedByCatalogue = Boolean(row && row.is_active);
-    if (!allowedByCatalogue && !(NEX_CHAT_THEMES as readonly string[]).includes(theme)) {
+    if (!allowedByCatalogue && !allowedByLiveWorld && !(NEX_CHAT_THEMES as readonly string[]).includes(theme)) {
       const qs = new URLSearchParams({
         e: "invalid_theme",
         m: `unknown theme '${raw}'`,

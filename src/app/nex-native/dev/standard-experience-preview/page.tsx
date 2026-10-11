@@ -38,7 +38,7 @@ export default async function StandardExperiencePreviewPage({
   const sp = await searchParams;
   const wallpaperFallback =
     sp.wallpaper === "off" ? ("none" as const) : ("theme-gradient" as const);
-  const themeId: ThemeId = isAllowedThemeId(sp.theme) ? sp.theme : "ocean";
+  const themeId: ThemeId = isAllowedThemeId(sp.theme) ? sp.theme : "waterworld";
 
   return (
     <>
@@ -81,7 +81,7 @@ export default async function StandardExperiencePreviewPage({
             <br />
             <a
               href={`?${new URLSearchParams({
-                ...(themeId !== "ocean" ? { theme: themeId } : {}),
+                ...(themeId !== "waterworld" ? { theme: themeId } : {}),
                 ...(wallpaperFallback !== "none" ? { wallpaper: "off" } : {}),
               }).toString()}`}
               style={{ color: "#00AFFF" }}
@@ -106,7 +106,7 @@ export default async function StandardExperiencePreviewPage({
                 <a
                   key={t}
                   href={`?${new URLSearchParams({
-                    ...(t !== "ocean" ? { theme: t } : {}),
+                    ...(t !== "waterworld" ? { theme: t } : {}),
                     ...(wallpaperFallback === "none"
                       ? { wallpaper: "off" }
                       : {}),

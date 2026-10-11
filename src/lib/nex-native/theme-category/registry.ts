@@ -1,37 +1,69 @@
 // src/lib/nex-native/theme-category/registry.ts
 //
-// Theme Category Registry · sealed 2026-10-06 (Step 1A).
-// Category colour palettes added 2026-10-06 (Step 2 · Universal Theme
-// Colour Rule).
+// Theme Category Registry · re-sealed 2026-10-11 (Step 1G).
 //
-// The single source of truth for which Theme Categories NEX recognises
-// and what each one's display metadata is. Lives in core (not app) so
-// Theme Brain, the Library and future consumers can read it without
-// crossing the sealed dependency direction.
+// History:
+//   Step 1A · 2026-10-06 · Ocean · Café · Explore (three categories).
+//   Step 1C · 2026-10-11 · Food · Products · Services · Explore (four).
+//   Step 1D · 2026-10-11 · Food · Products · Services · Rentals ·
+//     Explore (five). Rentals is added for accommodation, vehicle,
+//     equipment and tool rentals.
+//   Step 1E · 2026-10-11 · Food · Bakery · Products · Services ·
+//     Rentals · Explore (six). Bakery is a sibling of Food for
+//     cake / bread / pastry worlds.
+//   Step 1F · 2026-10-11 · Food · Bakery · Products · Services ·
+//     Rentals · Haunted · Explore (seven). Haunted added for
+//     spooky / horror / ghost themes. Haunted's keyword rule beats
+//     Rentals so "Haunted Hotel" routes correctly.
+//   Step 1G · 2026-10-11 · adds Waterworld (eighth category) +
+//     renames the ocean World to Waterworld.
+//   Step 1H · 2026-10-11 · adds Accommodation (ninth category) ·
+//     splits hotel / villa / resort / lodge / guesthouse / airbnb
+//     keywords out of Rentals so Accommodation (hosting) and
+//     Rentals (vehicle / equipment) are distinct rooms. Keyword
+//     rule evaluates between Haunted and Rentals so "haunted
+//     hotel" → Haunted, a plain "hotel neo" → Accommodation, and
+//     "bike rental" → Rentals. The founder-authorised rule
+//     "theme name decides category" is implemented in
+//     `./keyword-resolver.ts` and used by the live-worlds adapter +
+//     DB loaders as a FALLBACK when a ThemePackage does not declare
+//     its own `categoryId`. Explicit declarations always win.
 //
-// Rules sealed with the founder 2026-10-06:
+// Migration carried out alongside this seal:
+//   · the four café worlds (coffee · botanical-cafe · midnight-cafe ·
+//     french-cafe) + the food world all fold into the new `food`
+//     category.
+//   · the ocean world drops into `explore` (no better home among
+//     food/products/services).
+//   · `products` and `services` are REGISTERED but ship with zero
+//     worlds — the "coming soon" state in the Library landing is the
+//     intentional day-one presentation (soft rule change authorised
+//     2026-10-11; see Step 1C note on `_category-grid.tsx`).
+//
+// Rules re-sealed with the founder 2026-10-11:
 //
 //   · ids are stable + lowercase + hyphenated · never emoji / display
 //     strings.
 //   · "explore" is NOT a visual family · it is the universal bucket
 //     for Worlds that do not yet have a dedicated category. Treating
 //     it as a real family would be a doctrine violation.
-//   · A real category is only added when a genuine family of Worlds
-//     warrants it. Do not invent categories to fill slots.
-//   · DB-backed themes default to "explore" in Step 1A · later phases
-//     may migrate specific DB themes into real categories, but that
-//     is a separate authorisation.
+//   · Empty-but-REGISTERED categories (products · services) ARE shown
+//     on the landing with a "Coming soon · no worlds yet" state. The
+//     "do not invent categories to fill slots" doctrine is PRESERVED:
+//     we are not inventing worlds · we are declaring the IA so
+//     visitors can see where new families will live.
+//   · DB-backed themes default to "explore" · later phases may migrate
+//     specific DB themes into Food / Products / Services, but that is
+//     a separate authorisation.
 //   · When a package references a categoryId that is NOT in this
 //     registry, the Library adapter defaults it to "explore" so the
 //     Library never crashes · a focused test guards that EVERY code-
-//     registered Theme Package declares a REGISTERED categoryId (or
-//     none at all), so typos cannot land silently.
+//     registered Theme Package declares a REGISTERED categoryId.
 //   · UNIVERSAL THEME COLOUR RULE (sealed 2026-10-06): every category
-//     declares its OWN ColourSystem · the showcase surface derives
-//     its atmosphere from these colours · it is DELIBERATELY NOT
-//     derived from any one world inside the category. Adding or
-//     removing worlds therefore never changes a category's visual
-//     identity.
+//     declares its OWN ColourSystem · the showcase surface derives its
+//     atmosphere from these colours · it is DELIBERATELY NOT derived
+//     from any one world inside the category. Adding or removing
+//     worlds therefore never changes a category's visual identity.
 
 import type { ThemeCategory } from "./types";
 
@@ -41,39 +73,23 @@ import type { ThemeCategory } from "./types";
 export const EXPLORE_CATEGORY_ID = "explore" as const;
 
 /** All currently-registered Theme Categories. Add a row to this map
- *  to introduce a new category · zero code change elsewhere needed. */
+ *  to introduce a new category · zero code change elsewhere needed.
+ *
+ *  Order here = order on the Library landing (listCategories snapshot). */
 const CATEGORY_REGISTRY: Readonly<Record<string, ThemeCategory>> = {
-  ocean: {
-    id: "ocean",
-    name: "Ocean",
-    tagline: "Underwater worlds + voyages",
-    icon: "🌊",
-    // Ocean category palette · the atmosphere a visitor meets when
-    // they open the Ocean room. Deliberately NOT read from any one
-    // ocean World (so new ocean worlds inherit this room, they don't
-    // redefine it).
-    colours: {
-      primary: "#2E90B5", // deep blue
-      secondary: "#4FC3DC", // turquoise
-      highlight: "#E8F7FF", // white foam · light text on deep bg
-      glow: "rgba(130,210,255,0.55)", // aqua glow
-      deep: "#0A2535", // abyss · page background
-    },
-    // Hero World · the Ocean room has one world today and it's
-    // obviously the face. If a second ocean world ships, the hero
-    // stays stable here unless re-authorised.
-    heroThemeId: "ocean",
-  },
-  cafe: {
-    id: "cafe",
-    name: "Café",
-    tagline: "Coffee · warmth · pastry",
-    icon: "☕",
-    // Café category palette · warm archetypal "café-ness" that works
-    // across the whole family (coffee browns + botanical greens +
-    // french rose-wood + midnight neon all live inside this room).
-    // The individual world tiles keep their own palettes · only the
-    // surrounding chrome is Café-warm.
+  food: {
+    id: "food",
+    name: "Food",
+    tagline: "Café · coffee · grill · warmth",
+    icon: "🍽️",
+    // Keyword rule (Step 1E · 2026-10-11): theme name/id contains
+    // 'food', 'cafe', 'café', 'coffee', 'grill', 'kitchen', 'dining',
+    // 'bar', 'bistro', 'meal', 'eat' · falls through to Food.
+    // Food palette · warm archetypal café/food-ness that works across
+    // the whole family (coffee browns + botanical greens + french
+    // rose-wood + midnight neon + grilled fire all live inside this
+    // room). The individual world tiles keep their own palettes · only
+    // the surrounding chrome is Food-warm.
     colours: {
       primary: "#6B3F22", // espresso
       secondary: "#C8976B", // caramel
@@ -81,11 +97,190 @@ const CATEGORY_REGISTRY: Readonly<Record<string, ThemeCategory>> = {
       glow: "rgba(232,170,90,0.55)", // amber warm glow
       deep: "#2A160A", // dark roast · page background
     },
-    // Hero World · "coffee" is the archetypal / baseline café world
-    // and matches the warm-espresso palette most directly. The other
-    // three Café worlds (botanical / midnight / french) remain visible
-    // inside the Café showcase room.
-    heroThemeId: "coffee",
+    // Hero · the "food" world is the Food category hero as of
+    // 2026-10-11 · its real grilled-food wallpaper reads as "food"
+    // more directly than coffee cup imagery. The café worlds
+    // (coffee / botanical / midnight / french) + pizza remain
+    // visible inside the Food showcase room alongside it.
+    heroThemeId: "food",
+  },
+  bakery: {
+    id: "bakery",
+    name: "Bakery",
+    tagline: "Cake · bread · pastry · patisserie",
+    icon: "🧁",
+    // Bakery palette · pink pastry + butter cream · a specialised
+    // room for cake / bread / pastry worlds · distinct from Food's
+    // warm espresso so a cake theme feels at home rather than
+    // dropped into a cafe context.
+    //
+    // Keyword rule (Step 1E · 2026-10-11): theme name/id contains
+    // 'cake', 'bakery', 'baker', 'bread', 'pastry', 'patisserie',
+    // 'croissant', 'muffin', 'cupcake', 'dessert', 'macaron', 'donut'
+    // · falls through to Bakery (specific-first · wins over Food).
+    colours: {
+      primary: "#C66988", // berry rose
+      secondary: "#F3C2CF", // pastry pink
+      highlight: "#FBEAE1", // butter cream · light text on deep bg
+      glow: "rgba(243,194,207,0.55)",
+      deep: "#3A1420", // deep berry · page background
+    },
+    // Zero worlds today · first bakery world (cake-shop · patisserie)
+    // swaps hero in. Empty-tile "Coming soon" treatment paints the
+    // palette so the room has identity even without a resident world.
+    heroThemeId: null,
+  },
+  products: {
+    id: "products",
+    name: "Products",
+    tagline: "Shops · catalogues · retail Worlds",
+    icon: "🛍️",
+    // Keyword rule (Step 1E · 2026-10-11): theme name/id contains
+    // 'product', 'shop', 'store', 'retail', 'boutique', 'market',
+    // 'goods', 'merch' · falls through to Products.
+    // Products palette · cool slate-blue retail room · intentionally
+    // distinct from Food's warmth and from Explore's NEX cyan.
+    colours: {
+      primary: "#4A6B8A", // slate blue
+      secondary: "#7FA6CC", // mist blue
+      highlight: "#E8EFF7", // pale cloud · light text on deep bg
+      glow: "rgba(127,166,204,0.45)",
+      deep: "#0E1824", // night slate · page background
+    },
+    // Zero worlds today · landing tile paints the EmptyScreen fallback
+    // using these colours. Hero id reserved for the first Products
+    // world when it ships.
+    heroThemeId: null,
+  },
+  services: {
+    id: "services",
+    name: "Services",
+    tagline: "Studios · practitioners · booking Worlds",
+    icon: "🛠️",
+    // Keyword rule (Step 1E · 2026-10-11): theme name/id contains
+    // 'service', 'studio', 'salon', 'agency', 'workshop', 'clinic',
+    // 'consulting', 'spa', 'barber' · falls through to Services.
+    // Services palette · sage/olive professional room · reads as calm
+    // and competent · distinct from Food warmth and Products cool.
+    colours: {
+      primary: "#5A6E42", // sage olive
+      secondary: "#9CB37A", // moss light
+      highlight: "#EEF2E4", // chalk green · light text on deep bg
+      glow: "rgba(156,179,122,0.45)",
+      deep: "#141A0D", // deep forest · page background
+    },
+    // Zero worlds today · same empty-tile treatment as Products.
+    heroThemeId: null,
+  },
+  rentals: {
+    id: "rentals",
+    name: "Rentals",
+    tagline: "Ride · hire · bike · car · equipment",
+    icon: "🔑",
+    // Keyword rule (Step 1H · 2026-10-11): theme name/id contains
+    // 'rental', 'rent', 'hire', 'bike', 'scooter', 'moped',
+    // 'motorbike', 'car', 'auto' · falls through to Rentals.
+    // Accommodation keywords (hotel · villa · resort · ...) are
+    // now owned by the Accommodation category, which evaluates
+    // BEFORE Rentals.
+    // Rentals palette · teal / aqua / foam · reads as "away for a
+    // while": accommodation, vehicle, equipment. Distinct from
+    // Services sage and Products slate · evokes travel / water /
+    // keys-on-a-counter.
+    colours: {
+      primary: "#1E7F8B", // teal
+      secondary: "#4FBBC9", // aqua
+      highlight: "#DFF4F7", // foam · light text on deep bg
+      glow: "rgba(79,187,201,0.45)",
+      deep: "#0C2229", // deep lagoon · page background
+    },
+    // Zero live-world rentals until a motorbike/car-workshop world
+    // ships (bike-rental lives here now). Empty-tile treatment
+    // paints the palette until a first world lands.
+    heroThemeId: null,
+  },
+  accommodation: {
+    id: "accommodation",
+    name: "Accommodation",
+    tagline: "Hotel · villa · resort · guesthouse · homestay",
+    icon: "🏨",
+    // Accommodation palette · warm gold + sand + hospitality cream ·
+    // reads as "welcome in" rather than Rentals' asphalt / mechanical
+    // vibe or Waterworld's deep blue.
+    //
+    // Keyword rule (Step 1H · 2026-10-11): theme name/id contains
+    // 'hotel', 'villa', 'resort', 'lodge', 'guesthouse', 'homestay',
+    // 'airbnb', 'bnb', 'inn', 'motel', 'hostel', 'bed-and-breakfast',
+    // 'stay' · falls through to Accommodation. Evaluated AFTER
+    // Haunted (so "Haunted Hotel" still routes to Haunted) but
+    // BEFORE Rentals (so a plain "Hotel Neo" routes to Accommodation
+    // rather than Rentals via a stray keyword).
+    colours: {
+      primary: "#B8893A", // warm gold
+      secondary: "#DEBE7E", // sand
+      highlight: "#F6EBD2", // hospitality cream · light text on deep bg
+      glow: "rgba(222,190,126,0.50)",
+      deep: "#1E1407", // deep walnut · page background
+    },
+    // Zero worlds today · first accommodation world (boutique hotel ·
+    // beach villa · mountain lodge) swaps hero in.
+    heroThemeId: null,
+  },
+  haunted: {
+    id: "haunted",
+    name: "Haunted",
+    tagline: "Spooky · ghost · phantom · horror Worlds",
+    icon: "👻",
+    // Haunted palette · midnight indigo + fog green + candle amber ·
+    // reads as "half-lit corridor" without being gory. A visitor
+    // opening the room should feel atmospheric mystery, not shock.
+    //
+    // Keyword rule (Step 1F · 2026-10-11): theme name/id contains
+    // 'haunted', 'ghost', 'spooky', 'horror', 'spirit', 'phantom',
+    // 'graveyard', 'witch', 'cursed', 'spectre', 'specter', 'eerie' ·
+    // falls through to Haunted. Evaluated BEFORE Rentals so a
+    // "Haunted Hotel" theme does not get routed to Rentals via 'hotel'.
+    colours: {
+      primary: "#5A3A8E", // midnight indigo
+      secondary: "#8FB89C", // fog green
+      highlight: "#F0E6CC", // candle amber · light text on deep bg
+      glow: "rgba(143,184,156,0.45)", // ghostly green glow
+      deep: "#0C0918", // night corridor · page background
+    },
+    // Haunted Hotel is DB-registered (nex_chat_theme) · the loader
+    // runs the keyword resolver and files it under this category.
+    // Hero stays null here so the live-worlds hero resolution falls
+    // through to the first in-category row (which is Haunted Hotel
+    // once the loader paints it).
+    heroThemeId: null,
+  },
+  waterworld: {
+    id: "waterworld",
+    name: "Waterworld",
+    tagline: "Ocean · river · lake · aquarium · dive",
+    icon: "🌊",
+    // Waterworld palette · deep ocean blue + turquoise + foam · same
+    // family as the former Ocean category (which this category
+    // succeeds), tightened to a slightly deeper blue so the Waterworld
+    // room reads as "below the surface" rather than "beach".
+    //
+    // Keyword rule (Step 1G · 2026-10-11): theme name/id contains
+    // 'water', 'waterworld', 'ocean', 'sea', 'river', 'lake', 'dive',
+    // 'reef', 'coral', 'aquarium', 'surf', 'sail', 'yacht', 'boat' ·
+    // falls through to Waterworld. Evaluated after Haunted (so
+    // "haunted ship" → Haunted) but before Rentals (so a plain
+    // "river rafting" → Waterworld rather than Rentals via 'rafting'
+    // which isn't a rental keyword anyway).
+    colours: {
+      primary: "#2E90B5", // deep blue · same anchor as the Waterworld world
+      secondary: "#4FC3DC", // turquoise
+      highlight: "#E8F7FF", // white foam · light text on deep bg
+      glow: "rgba(130,210,255,0.55)",
+      deep: "#0A2535", // abyss · page background
+    },
+    // Hero · the renamed Waterworld world. First in-category fallback
+    // kicks in if the id ever drifts (defence in depth).
+    heroThemeId: "waterworld",
   },
   [EXPLORE_CATEGORY_ID]: {
     id: EXPLORE_CATEGORY_ID,
@@ -102,12 +297,11 @@ const CATEGORY_REGISTRY: Readonly<Record<string, ThemeCategory>> = {
       glow: "rgba(0,175,255,0.35)",
       deep: "#020914",
     },
-    // Hero World · Explore is a mixed bucket · "food" is the strongest
-    // visual asset in it today (grilled intro video + wallpaper).
-    // When Explore no longer contains food (e.g. food graduates into a
-    // dedicated Food category later), the fallback in the Library grid
-    // picks the first world in Explore so this stays safe.
-    heroThemeId: "food",
+    // Hero · after the Step 1G rename, Ocean became Waterworld and
+    // moved out of Explore into its own Waterworld category. Explore
+    // now contains only the two free NEX-brand themes (nex-bubbles +
+    // nex-flat). nex-bubbles wins as hero (NEX brand identity).
+    heroThemeId: "nex-bubbles",
   },
 };
 

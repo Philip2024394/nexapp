@@ -11,7 +11,7 @@
 
 import * as React from "react";
 import { createEngine } from "../../chat-standard/_engine/theme-engine";
-import { OCEAN_PACKAGE } from "../../chat-standard/packages/ocean.package";
+import { WATERWORLD_PACKAGE } from "../../chat-standard/packages/waterworld.package";
 import {
   StandardExperience,
   type StandardExperienceSeedMessage,
@@ -73,12 +73,12 @@ const PRODUCTS = [
 
 export function OceanPilotBody({
   wallpaperFallback,
-  themeId = "ocean",
+  themeId = "waterworld",
 }: {
   wallpaperFallback: "theme-gradient" | "none";
   themeId?: ThemeId;
 }): React.JSX.Element {
-  const pkg = THEME_PACKAGES[themeId] ?? OCEAN_PACKAGE;
+  const pkg = THEME_PACKAGES[themeId] ?? WATERWORLD_PACKAGE;
   const engine = React.useMemo(() => createEngine(pkg), [pkg]);
   const [localMessages, setLocalMessages] = React.useState<
     StandardExperienceSeedMessage[]

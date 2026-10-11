@@ -70,7 +70,9 @@ export type NexChatThemeLayoutStyle =
   | "timeline_ribbon";
 
 /** Structured shape of nex_chat_theme.wallpaper_config JSONB. Every
- *  key is optional so themes can opt into whichever overlays fit. */
+ *  key is optional so themes can opt into whichever overlays fit.
+ *  Mirrors the overlays natively supported by `PortraitBloomShell`
+ *  (migration 056 + Bridge 97). */
 export interface NexChatThemeWallpaperConfig {
   /** Soft breathing halo positioned over a moon (or other point
    *  source) in the wallpaper photograph. */
@@ -83,6 +85,34 @@ export interface NexChatThemeWallpaperConfig {
     size: number;
     /** Core colour of the halo · e.g. "rgba(225, 238, 255, 0.6)" */
     color?: string;
+  };
+  /** Soft particles drifting upward across the chat canvas · drives
+   *  the NEX Orange Centre "orange bubbles floating up" overlay. */
+  particleDrift?: {
+    color: string;
+    count?: number;
+    direction?: "up";
+    size?: number;
+    speedSeconds?: number;
+  };
+  /** Twinkling star-like sparkles over the wallpaper. */
+  sparkle?: {
+    color: string;
+    count?: number;
+    size?: number;
+    twinkleSeconds?: number;
+  };
+  /** Fog blobs that rise from below the composer. */
+  mistDrift?: {
+    color?: string;
+    count?: number;
+    size?: number;
+    blur?: number;
+    speedSeconds?: number;
+  };
+  /** Bubble-shape preset the shell applies to every message bubble. */
+  bubbleStyle?: {
+    preset: "classic" | "pill" | "square" | "outlined" | "gradient";
   };
 }
 
@@ -149,7 +179,58 @@ export async function getThemeById(
   if (error) {
     throw new Error(`chat-theme-service.getThemeById: ${error.message}`);
   }
-  return (data as NexChatThemeRow | null) ?? null;
+  if (data) return data as NexChatThemeRow;
+  // Step 1G/1H hotfix (2026-10-11) · live-world themes (nex-bubbles,
+  // nex-flat, waterworld, coffee, café family, food, pizza,
+  // bike-rental) are code-registered packages that never land in
+  // nex_chat_theme. The chat renderer, peer-chat page, cover-content
+  // loader and every other consumer of `getThemeById` was coming up
+  // empty-handed and falling back to the generic cyan+navy default ·
+  // which looked identical to app chrome. We synthesise a
+  // NexChatThemeRow from the matching ThemePackage so every consumer
+  // paints the correct per-theme palette automatically.
+  try {
+    const { LIVE_WORLD_PACKAGES, isLiveWorldId } = await import(
+      "@/app/nex-native/chat-standard/_live-worlds"
+    );
+    if (!isLiveWorldId(id)) return null;
+    const pkg = LIVE_WORLD_PACKAGES[id];
+    const introVideoUrl =
+      pkg.intro && pkg.intro.kind === "standard" ? pkg.intro.videoUrl : null;
+    const nowIso = new Date().toISOString();
+    // Step 1J (2026-10-11) · attach the real-chat overlay for the
+    // two FREE NEX themes so PortraitBloomShell actually paints the
+    // moonGlow + particleDrift when the theme is applied in a live
+    // peer chat. The shell reads these fields natively today · no
+    // shell change needed. Other live-worlds keep the null overlay
+    // and rely on wallpaperUrl + colour tokens alone.
+    const wallpaperConfig = liveWorldChatOverlay(pkg.identity.id);
+    const synthetic: NexChatThemeRow = {
+      id: pkg.identity.id,
+      name: pkg.identity.name,
+      tagline: pkg.identity.tagline ?? null,
+      accent_hex: pkg.colours.primary,
+      bubble_rim_hex: pkg.colours.secondary ?? pkg.colours.primary,
+      composer_rim_hex: pkg.colours.highlight ?? pkg.colours.primary,
+      tier: "gratis",
+      category: "standard",
+      hero_image_url: pkg.wallpaperUrl ?? null,
+      is_active: true,
+      sort_order: -1,
+      wallpaper_config: wallpaperConfig,
+      layout_style: "bubbles",
+      intro_video_url: introVideoUrl,
+      intro_duration_ms: null,
+      intro_poster_url: null,
+      created_at: nowIso,
+      updated_at: nowIso,
+    };
+    return synthetic;
+  } catch {
+    // Fallback failed (import error / unexpected shape) · behave as
+    // if no theme was found. Caller already handles null.
+    return null;
+  }
 }
 
 /** Resolve the accent hex for a chat_theme value with a safe fallback
@@ -242,6 +323,41 @@ export async function uploadThemeHero(
   }
   const { data } = bucket.getPublicUrl(objectPath);
   return data.publicUrl;
+}
+
+/** Step 1J helper · maps live-world ids to the sealed
+ *  PortraitBloomShell `wallpaper_config` shape so the two FREE NEX
+ *  themes paint their signature overlays inside the real chat shell.
+ *  Live-worlds that don't need a chat-canvas overlay return null ·
+ *  the shell renders with wallpaper + colour tokens alone. */
+function liveWorldChatOverlay(
+  themeId: string,
+): NexChatThemeWallpaperConfig | null {
+  if (themeId === "nex-flat") {
+    // NEX Orange Centre · glowing orange centre + 14 small orange
+    // bubbles floating up. Both overlays are first-class in the
+    // sealed PortraitBloomShell (migration 056 + Bridge 97). The
+    // shell already honours prefers-reduced-motion for both.
+    return {
+      moonGlow: {
+        x: "50%",
+        y: "45%",
+        size: 240,
+        color: "rgba(255, 120, 0, 0.42)",
+      },
+      particleDrift: {
+        color: "#FF7200",
+        count: 14,
+        direction: "up",
+        size: 8,
+        speedSeconds: 10,
+      },
+    };
+  }
+  // NEX Original (nex-bubbles) + every other live-world · no overlay.
+  // The shell paints bubbles + composer with the theme palette and
+  // the default navy stage.
+  return null;
 }
 
 /** Group themes by category for picker rendering.

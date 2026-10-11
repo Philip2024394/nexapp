@@ -33,7 +33,10 @@ export const FOOD_PACKAGE: ThemePackage = {
     name: "Food",
     tagline: "Grilled · fire · warmth",
     conceptOneLine: "Food · grilled · fire · warmth · premium",
-    categoryId: "explore",
+    // Step 1C re-seal (2026-10-11) · Food is now a first-class
+    // category · the grilled/fire world lives inside it alongside the
+    // four café worlds.
+    categoryId: "food",
   },
   colours: {
     primary: "#D97845", // ember orange · the flame kissing the meat

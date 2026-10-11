@@ -138,6 +138,23 @@ export async function updateChatTheme(
     } catch {
       // fall through to static allow-list
     }
+    // Step 1G hotfix (2026-10-11) · live-world themes
+    // (nex-bubbles, nex-flat, waterworld, coffee, café family,
+    // food, pizza, bike-rental) are code-registered and never
+    // appear in nex_chat_theme · the DB lookup returns null for
+    // them. Accept any id that resolves to a LIVE_WORLD_PACKAGES
+    // key so a user picking "NEX New" (nex-flat) doesn't hit the
+    // unknown-theme throw.
+    if (!allowed) {
+      try {
+        const { isLiveWorldId } = await import(
+          "@/app/nex-native/chat-standard/_live-worlds"
+        );
+        if (isLiveWorldId(theme)) allowed = true;
+      } catch {
+        // live-worlds import failed (test harness) · fall through
+      }
+    }
     if (!allowed && !(NEX_CHAT_THEMES as readonly string[]).includes(theme)) {
       throw new Error(
         `account-service.updateChatTheme: unknown theme '${theme}'`,

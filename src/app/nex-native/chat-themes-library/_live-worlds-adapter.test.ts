@@ -41,12 +41,17 @@ const MIGRATIONS_DIR = path.join(REPO_ROOT, "nex-supabase/migrations");
 
 describe("A · live-worlds adapter · every world appears in the Library collection", () => {
   const EXPECTED_WORLDS = [
-    "ocean",
+    "nex-bubbles",
+    "nex-flat",
+    "waterworld",
     "coffee",
     "botanical-cafe",
     "midnight-cafe",
     "french-cafe",
     "food",
+    "pizza",
+    "bike-rental",
+    "ac-service",
   ] as const;
 
   test("listLiveWorldsAsBrowserRows returns a row for every registered live-world", () => {
@@ -101,11 +106,12 @@ describe("A · live-worlds adapter · every world appears in the Library collect
     }
   });
 
-  test("Ocean carries the sealed intro + wallpaper assets threaded from its ThemePackage", () => {
-    const row = liveWorldAsBrowserRow("ocean");
-    // Both of these were sealed into ocean.package.ts in commit
-    // 8672b5a4 · if someone unsets them in the package the adapter
-    // propagates null and this test fails loudly.
+  test("Waterworld (renamed from Ocean · Step 1G) carries the sealed intro + wallpaper assets", () => {
+    const row = liveWorldAsBrowserRow("waterworld");
+    // The asset filenames are retained (ocean-ship.png / ocean-
+    // intro.mp4) · only the package id + category changed in the
+    // rename. If someone unsets the paths in the package, the
+    // adapter propagates null and this test fails loudly.
     expect(row.hero_image_url).toBe("/nex-themes/ocean-ship.png");
     expect(row.intro_video_url).toBe("/nex-themes/ocean-intro.mp4");
   });
@@ -116,7 +122,14 @@ describe("A · live-worlds adapter · every world appears in the Library collect
 describe("B · code remains the source of truth · DB is never augmented", () => {
   test("no migration file seeds nex_chat_theme rows for live-worlds", () => {
     const files = fs.readdirSync(MIGRATIONS_DIR);
-    const forbidden = ["ocean", "coffee", "botanical-cafe", "midnight-cafe", "french-cafe"];
+    const forbidden = [
+      "waterworld",
+      "ocean",
+      "coffee",
+      "botanical-cafe",
+      "midnight-cafe",
+      "french-cafe",
+    ];
     for (const file of files) {
       if (!file.endsWith(".sql")) continue;
       const content = fs.readFileSync(path.join(MIGRATIONS_DIR, file), "utf8");
@@ -146,6 +159,7 @@ describe("B · code remains the source of truth · DB is never augmented", () =>
       /theme\.id\s*===\s*["'`]botanical-cafe["'`]/,
       /theme\.id\s*===\s*["'`]midnight-cafe["'`]/,
       /theme\.id\s*===\s*["'`]french-cafe["'`]/,
+      /theme\.id\s*===\s*["'`]food["'`]/,
       /themeId\s*===\s*["'`]ocean["'`]/,
       /t\.id\s*===\s*["'`]ocean["'`]/,
     ];
@@ -187,19 +201,26 @@ describe("B · code remains the source of truth · DB is never augmented", () =>
   });
 });
 
-// ─── C2 · Step 1A · category_id field is populated universally ──────
+// ─── C2 · Step 1C · category_id reflects the re-sealed four-cat IA ──
 
-describe("C2 · category_id is populated on every live-world row (Step 1A)", () => {
-  test("Ocean row carries category_id = 'ocean'", () => {
-    const row = liveWorldAsBrowserRow("ocean");
-    expect(row.category_id).toBe("ocean");
+describe("C2 · category_id is populated on every live-world row (Step 1C re-seal 2026-10-11)", () => {
+  test("Waterworld row carries category_id = 'waterworld' (Step 1G rename · was ocean → explore)", () => {
+    const row = liveWorldAsBrowserRow("waterworld");
+    expect(row.category_id).toBe("waterworld");
   });
 
-  const CAFE_WORLDS = ["coffee", "botanical-cafe", "midnight-cafe", "french-cafe"] as const;
-  for (const id of CAFE_WORLDS) {
-    test(`${id} row carries category_id = 'cafe'`, () => {
+  const FOOD_WORLDS = [
+    "coffee",
+    "botanical-cafe",
+    "midnight-cafe",
+    "french-cafe",
+    "food",
+    "pizza",
+  ] as const;
+  for (const id of FOOD_WORLDS) {
+    test(`${id} row carries category_id = 'food'`, () => {
       const row = liveWorldAsBrowserRow(id);
-      expect(row.category_id).toBe("cafe");
+      expect(row.category_id).toBe("food");
     });
   }
 
@@ -212,8 +233,28 @@ describe("C2 · category_id is populated on every live-world row (Step 1A)", () 
 
   test("category_id is always a REGISTERED category id (never a raw / unknown value)", () => {
     for (const row of listLiveWorldsAsBrowserRows()) {
-      expect(["ocean", "cafe", "explore"]).toContain(row.category_id);
+      expect([
+        "food",
+        "bakery",
+        "products",
+        "services",
+        "rentals",
+        "accommodation",
+        "haunted",
+        "waterworld",
+        "explore",
+      ]).toContain(row.category_id);
     }
+  });
+
+  test("bike-rental row carries category_id = 'rentals'", () => {
+    const row = liveWorldAsBrowserRow("bike-rental");
+    expect(row.category_id).toBe("rentals");
+  });
+
+  test("ac-service row carries category_id = 'services'", () => {
+    const row = liveWorldAsBrowserRow("ac-service");
+    expect(row.category_id).toBe("services");
   });
 });
 

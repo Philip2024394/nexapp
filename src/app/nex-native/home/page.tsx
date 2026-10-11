@@ -10,9 +10,10 @@
 // (Bridge 98 · /cover/preview/{layoutId}?theme={themeId}) is one tap
 // away on every slide.
 //
-// The three nav doorways (Chat · Themes · Profile) are preserved as a
-// compact three-column secondary strip beneath the carousel so core
-// navigation stays reachable without crowding the showcase.
+// The daily nav doorways (Chat · Calls · Shop (when commerce is on) ·
+// Contacts) are preserved as a compact secondary strip beneath the
+// carousel so core navigation stays reachable without crowding the
+// showcase. Themes is NOT on home · it lives in Settings → Chat theme.
 //
 // Signed-out visitors are bounced to /nex-native/sign-in so this
 // surface never accidentally leaks a signed-in shape.
@@ -54,10 +55,13 @@ interface TileCopy {
   title: string;
 }
 
-/** Compact doorway · nav strip beneath the carousel. */
-function shopTile(kind: NexAccountKind | null, hasBusiness: boolean): TileCopy {
+/** Compact doorway · nav strip beneath the carousel.
+ *  Returns null when commerce is disabled · home drops to 3 tiles
+ *  (Chat · Calls · Contacts) instead of filling the slot with a
+ *  Themes shortcut (Themes lives in Settings, not on home). */
+function shopTile(kind: NexAccountKind | null, hasBusiness: boolean): TileCopy | null {
   if (!NEX_COMMERCE_ENABLED) {
-    return { href: "/nex-native/chat-themes-library", emoji: "🎨", title: "Themes" };
+    return null;
   }
   if (kind === "professional") {
     return { href: "/nex-native/settings/profile", emoji: "🧰", title: "My work" };
@@ -80,7 +84,7 @@ function shopTile(kind: NexAccountKind | null, hasBusiness: boolean): TileCopy {
 }
 
 function contactsTile(_kind: NexAccountKind | null): TileCopy {
-  return { href: "/nex-native/chat", emoji: "👥", title: "Contacts" };
+  return { href: "/nex-native/contacts", emoji: "👥", title: "Contacts" };
 }
 
 // ─── Carousel slide composition ─────────────────────────────────────────
@@ -164,27 +168,24 @@ export default async function HomePage() {
       }))
     : [];
 
+  const shop = shopTile(kind, hasBusiness);
   const navTiles: TileCopy[] = [
     { href: "/nex-native/chat/inbox", emoji: "💬", title: "Chat" },
     { href: "/nex-native/calls", emoji: "📞", title: "Calls" },
-    shopTile(kind, hasBusiness),
+    ...(shop ? [shop] : []),
     contactsTile(kind),
   ];
 
   const displayName = session.account.display_name || "there";
   const handle = session.account.nex_handle ?? null;
 
-  // Theme-asset warm-up · One NEX Identity doctrine demands atomic
-  // theme reveal. Preload the current theme's wallpaper so the iframe's
-  // first paint has it in cache; prefetch the first two upcoming slide
-  // URLs so a fast swipe never catches an unloaded cover; prefetch the
-  // three primary nav destinations so tapping Chat / Themes / Contacts
-  // feels instant on the first attempt (Next's auto-prefetch waits for
-  // hover + is disabled in dev).
+  // Theme-asset warm-up · preload the current theme's wallpaper +
+  // prefetch upcoming slide URLs + the nav destinations so taps feel
+  // instant on first try (Next's auto-prefetch waits for hover and is
+  // disabled in dev). De-dup nav hrefs in case shopTile ever returns
+  // the same route as another tile.
   const preloadWallpaper = currentTheme?.hero_image_url ?? null;
   const prefetchSlideHrefs = slides.slice(1, 3).map((s) => s.href);
-  // Both Chat and Contacts route to /nex-native/chat · dedupe so React
-  // doesn't warn about duplicate <link> keys.
   const prefetchNavHrefs = Array.from(new Set(navTiles.map((t) => t.href)));
 
   return (
@@ -323,8 +324,6 @@ export default async function HomePage() {
                   ? "/nex-native/home-icon-contacts.png"
                   : t.title === "Chat"
                   ? "/nex-native/home-icon-chat.png"
-                  : t.title === "Themes"
-                  ? "/nex-native/home-icon-themes.png"
                   : null;
               const label = (
                 <div

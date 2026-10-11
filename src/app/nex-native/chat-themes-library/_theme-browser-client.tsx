@@ -971,7 +971,7 @@ function PreviewModal({
                     letterSpacing: "0.02em",
                   }}
                 >
-                  Use this theme
+                  This theme →
                 </button>
               </form>
             </div>

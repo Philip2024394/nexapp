@@ -151,13 +151,14 @@ export interface NexCommunityNoticeRow {
 // Phase 2A · super-card (nex_community_card) + Lost & Found kind
 // =========================================================================
 
-/** Card kinds other than safety · see migration 148 CHECK. */
+/** Card kinds other than safety · see migrations 148 + 152 CHECK. */
 export type NexCommunityCardKind =
   | "lost_found"
   | "event"
   | "voice"
   | "local_help"
-  | "life_news";
+  | "life_news"
+  | "business_welcome";
 
 export type NexCommunityCardStatus = NexCommunityNoticeStatus;
 
@@ -313,7 +314,9 @@ export type NexCommunityRateLimitAction =
   | "card_confirm"
   | "card_resolve"
   | "card_report"
-  | "card_photo_upload";
+  | "card_photo_upload"
+  | "business_welcome_publish"
+  | "business_welcome_retract";
 
 export const NEX_COMMUNITY_RATE_LIMITS: Record<
   NexCommunityRateLimitAction,
@@ -330,7 +333,20 @@ export const NEX_COMMUNITY_RATE_LIMITS: Record<
   card_resolve: { windowMinutes: 60, maxPerWindow: 10 },
   card_report: { windowMinutes: 60, maxPerWindow: 5 },
   card_photo_upload: { windowMinutes: 60, maxPerWindow: 10 },
+  business_welcome_publish: { windowMinutes: 60, maxPerWindow: 3 },
+  business_welcome_retract: { windowMinutes: 60, maxPerWindow: 10 },
 };
+
+/** Phase 2B.1 business-welcome card lifecycle. 14 days from feature event. */
+export const NEX_COMMUNITY_BUSINESS_WELCOME_EXPIRY_DAYS = 14;
+
+export interface NexCommunityBusinessWelcomeDetailRow {
+  card_id: NexUuid;
+  business_id: NexUuid;
+  featured_at: NexTimestamp;
+  featured_by: NexUuid;
+  expires_at: NexTimestamp;
+}
 
 /** Default notice expiry window if the author doesn't specify one. */
 export const NEX_COMMUNITY_DEFAULT_NOTICE_EXPIRY_HOURS = 24;
