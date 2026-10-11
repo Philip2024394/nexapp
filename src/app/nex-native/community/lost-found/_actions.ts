@@ -9,10 +9,12 @@ import { redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import {
   appendLostFoundUpdate,
+  attachLostFoundPhoto,
   confirmLostFoundCard,
   createLostFoundCard,
   reportLostFoundCard,
 } from "@/lib/nex-native/community/lost-found-service";
+import { uploadLostFoundPhoto } from "@/lib/nex-native/community/photo-upload-service";
 import {
   NEX_COMMUNITY_LOST_FOUND_SUBJECTS,
   NEX_COMMUNITY_REPORT_REASONS,
@@ -52,6 +54,21 @@ export async function createLostFoundAction(formData: FormData): Promise<void> {
   if (area.length > 200) {
     redirect("/nex-native/community/lost-found/compose?e=bad_area");
   }
+  // Optional file upload. Only accept a single File in Phase 2A.5.
+  // Form must be enctype="multipart/form-data" for this to arrive as File.
+  const photoEntry = formData.get("photo");
+  const photoFile: File | null =
+    photoEntry instanceof File && photoEntry.size > 0 ? photoEntry : null;
+  if (photoFile) {
+    if (photoFile.size > 2 * 1024 * 1024) {
+      redirect("/nex-native/community/lost-found/compose?e=photo_too_large");
+    }
+    if (!photoFile.type.startsWith("image/")) {
+      redirect("/nex-native/community/lost-found/compose?e=photo_bad_mime");
+    }
+  }
+
+  let cardId: string | null = null;
   try {
     const result = await createLostFoundCard({
       accountId,
@@ -61,8 +78,36 @@ export async function createLostFoundAction(formData: FormData): Promise<void> {
       body: body.length > 0 ? body : null,
       approximateAreaText: area.length > 0 ? area : null,
     });
+    cardId = result.card.id;
+
+    // Attach the photo if provided. Failure here does NOT roll back the
+    // card — the author lands on the detail page without the photo and
+    // can retry via a future upload affordance.
+    if (photoFile) {
+      try {
+        const buf = Buffer.from(await photoFile.arrayBuffer());
+        const processed = await uploadLostFoundPhoto({
+          cardId: cardId,
+          displayOrder: 0,
+          file: { buffer: buf, mimeType: photoFile.type, sizeBytes: photoFile.size },
+        });
+        await attachLostFoundPhoto({
+          accountId,
+          cardId,
+          storagePath: processed.storage_path,
+          bytes: processed.bytes,
+          widthPx: processed.width_px,
+          heightPx: processed.height_px,
+        });
+      } catch (photoErr) {
+        // Swallow the photo error · the card is created and visible.
+        // The error surfaces to logs via the thrown-but-caught path.
+        console.error("lost-found-compose · photo upload failed", photoErr);
+      }
+    }
+
     revalidatePath("/nex-native/community/lost-found");
-    redirect(`/nex-native/community/lost-found/${result.card.id}`);
+    redirect(`/nex-native/community/lost-found/${cardId}`);
   } catch (err) {
     if (err instanceof NexCommunityMembershipRequiredError) {
       redirect("/nex-native/community/select?e=no_membership");

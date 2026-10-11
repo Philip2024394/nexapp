@@ -59,7 +59,7 @@ export default async function LostFoundComposePage({ searchParams }: PageProps) 
               Post a Lost or Found card
             </h1>
             <p style={{ margin: "6px 0 0", fontSize: 13, color: NEX.textMuted }}>
-              Posting to <strong style={{ color: NEX.cyan }}>{zone?.name ?? "your area"}</strong>
+              Community <strong style={{ color: NEX.cyan }}>({zone?.name ?? "your area"})</strong>
             </p>
           </header>
 
@@ -80,7 +80,11 @@ export default async function LostFoundComposePage({ searchParams }: PageProps) 
             </div>
           )}
 
-          <form action={createLostFoundAction} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <form
+            action={createLostFoundAction}
+            encType="multipart/form-data"
+            style={{ display: "flex", flexDirection: "column", gap: 14 }}
+          >
             <Field label="Lost or Found" required>
               <div style={{ display: "flex", gap: 10 }}>
                 <label style={radioStyle}>
@@ -138,11 +142,28 @@ export default async function LostFoundComposePage({ searchParams }: PageProps) 
               />
             </Field>
 
+            <Field
+              label="Photo (optional)"
+              help="One image · max 2 MB · JPEG, PNG or WebP · GPS data is removed before upload"
+            >
+              <input
+                type="file"
+                name="photo"
+                accept="image/jpeg,image/png,image/webp"
+                style={{
+                  ...inputStyle(),
+                  padding: "10px 14px",
+                  color: NEX.textMuted,
+                  cursor: "pointer",
+                }}
+              />
+            </Field>
+
             <p style={{ fontSize: 11.5, color: NEX.textMuted, lineHeight: 1.6 }}>
               Lost & Found cards expire after 60 days. You can mark them resolved
-              earlier. Photos can be added after posting (not in this release).
-              Finders and owners can message privately through NEX — no phone
-              numbers are shared automatically.
+              earlier. If you attach a photo, NEX strips GPS and camera metadata
+              before publishing. Finders and owners can message privately through
+              NEX — no phone numbers are shared automatically.
             </p>
 
             <button

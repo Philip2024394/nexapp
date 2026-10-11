@@ -15,6 +15,7 @@ import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import { getLostFoundCardById } from "@/lib/nex-native/community/lost-found-service";
 import {
   NEX_COMMUNITY_LOST_FOUND_SUBJECT_LABEL,
+  NEX_COMMUNITY_PHOTO_BUCKET,
   NEX_COMMUNITY_REPORT_REASONS,
 } from "@/lib/nex-native/community/types";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
@@ -69,6 +70,11 @@ export default async function LostFoundDetailPage({ params, searchParams }: Page
 
   const isAuthor = entry.card.author_account_id === session.account.id;
   const primaryPhoto = entry.photos[0] ?? null;
+  const supabaseUrl =
+    process.env.NEX_SUPABASE_URL ?? process.env.NEXT_PUBLIC_NEX_SUPABASE_URL ?? "";
+  const photoUrl = primaryPhoto
+    ? `${supabaseUrl.replace(/\/+$/, "")}/storage/v1/object/public/${NEX_COMMUNITY_PHOTO_BUCKET}/${primaryPhoto.storage_path}`
+    : null;
   const banner =
     sp.m === "confirmed"
       ? { tone: "ok" as const, msg: "Thanks — your confirmation was recorded." }
@@ -148,9 +154,9 @@ export default async function LostFoundDetailPage({ params, searchParams }: Page
               border: `1px solid ${NEX.borderSoft}`,
             }}
           >
-            {primaryPhoto && (
+            {photoUrl && (
               <img
-                src={primaryPhoto.storage_path}
+                src={photoUrl}
                 alt=""
                 style={{
                   width: "100%",

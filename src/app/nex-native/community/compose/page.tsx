@@ -59,7 +59,7 @@ export default async function ComposePage({ searchParams }: PageProps) {
               Share a notice
             </h1>
             <p style={{ margin: "6px 0 0", fontSize: 13, color: NEX.textMuted }}>
-              Posting to <strong style={{ color: NEX.cyan }}>{zone?.name ?? "your area"}</strong>
+              Community <strong style={{ color: NEX.cyan }}>({zone?.name ?? "your area"})</strong>
             </p>
           </header>
 

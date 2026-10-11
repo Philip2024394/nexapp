@@ -141,6 +141,81 @@ export default async function Page({ searchParams }: PageProps) {
           </div>
         )}
 
+        {/* NEX system entries · pinned at the top of Contacts for every
+            NEX account. Order: customer service → Community Noticeboard.
+            These are feature shortcuts, not fabricated accounts/bots. */}
+        <section className="mb-6" aria-labelledby="nex-contacts-system-pinned">
+          <h2
+            id="nex-contacts-system-pinned"
+            className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500"
+          >
+            NEX
+          </h2>
+          <ul className="grid gap-2">
+            <li
+              data-nex-contacts-system-entry="customer-service"
+              className="flex items-center justify-between gap-3 rounded border border-orange-300 bg-orange-50 px-3 py-3"
+            >
+              <Link
+                href="/nex-native/support"
+                className="flex min-w-0 flex-1 items-center gap-3 no-underline"
+              >
+                <span
+                  aria-hidden
+                  className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-orange-100 text-orange-700"
+                >
+                  {/* Headset glyph */}
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M3 14v-2a9 9 0 0 1 18 0v2" />
+                    <path d="M21 14a2 2 0 0 1-2 2h-1v-6h1a2 2 0 0 1 2 2z" />
+                    <path d="M3 14a2 2 0 0 0 2 2h1v-6H5a2 2 0 0 0-2 2z" />
+                    <path d="M12 20h3a2 2 0 0 0 2-2" />
+                  </svg>
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-semibold text-neutral-900">
+                    NEX customer service
+                  </div>
+                  <div className="truncate text-xs text-neutral-600">
+                    Help &amp; support · plans · account questions
+                  </div>
+                </div>
+              </Link>
+            </li>
+            <li
+              data-nex-contacts-system-entry="community-noticeboard"
+              className="flex items-center justify-between gap-3 rounded border border-cyan-300 bg-cyan-50 px-3 py-3"
+            >
+              <Link
+                href="/nex-native/community"
+                className="flex min-w-0 flex-1 items-center gap-3 no-underline"
+              >
+                <span
+                  aria-hidden
+                  className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-cyan-100 text-cyan-700"
+                >
+                  {/* Noticeboard / community glyph */}
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M4 4h16v12H4z" />
+                    <path d="M8 20h8" />
+                    <path d="M12 16v4" />
+                    <path d="M8 8h8" />
+                    <path d="M8 12h5" />
+                  </svg>
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-semibold text-neutral-900">
+                    NEX Community Noticeboard
+                  </div>
+                  <div className="truncate text-xs text-neutral-600">
+                    Local outages · lost &amp; found · neighbourhood notices
+                  </div>
+                </div>
+              </Link>
+            </li>
+          </ul>
+        </section>
+
         <section className="mb-6">
           <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500">
             Personal friends ({friends.length})

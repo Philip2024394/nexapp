@@ -11,6 +11,8 @@ import { getMembershipForAccount } from "@/lib/nex-native/community/membership-s
 import { listLostFoundCards } from "@/lib/nex-native/community/lost-found-service";
 import {
   NEX_COMMUNITY_LOST_FOUND_SUBJECT_LABEL,
+  NEX_COMMUNITY_PHOTO_BUCKET,
+  type NexCommunityCardPhotoRow,
   type NexCommunityLostFoundCard,
 } from "@/lib/nex-native/community/types";
 import { getZoneById } from "@/lib/nex-native/community/zone-service";
@@ -174,7 +176,12 @@ function Card({ entry }: { entry: NexCommunityLostFoundCard }) {
     hour: "2-digit",
     minute: "2-digit",
   });
-  const primaryPhoto = entry.photos[0] ?? null;
+  const primaryPhoto: NexCommunityCardPhotoRow | null = entry.photos[0] ?? null;
+  const supabaseUrl =
+    process.env.NEX_SUPABASE_URL ?? process.env.NEXT_PUBLIC_NEX_SUPABASE_URL ?? "";
+  const photoUrl = primaryPhoto
+    ? `${supabaseUrl.replace(/\/+$/, "")}/storage/v1/object/public/${NEX_COMMUNITY_PHOTO_BUCKET}/${primaryPhoto.storage_path}`
+    : null;
   return (
     <Link
       href={`/nex-native/community/lost-found/${entry.card.id}`}
@@ -189,7 +196,7 @@ function Card({ entry }: { entry: NexCommunityLostFoundCard }) {
         color: NEX.textPrimary,
       }}
     >
-      {primaryPhoto && (
+      {photoUrl && (
         <span
           aria-hidden
           style={{
@@ -198,7 +205,7 @@ function Card({ entry }: { entry: NexCommunityLostFoundCard }) {
             flex: "none",
             borderRadius: 10,
             overflow: "hidden",
-            background: `url("${encodeURI(primaryPhoto.storage_path)}") center/cover`,
+            background: `url("${encodeURI(photoUrl)}") center/cover`,
             border: `1px solid ${NEX.borderSoft}`,
           }}
         />
