@@ -64,6 +64,9 @@ import {
   partitionCategories,
   type CategoryMetadata,
 } from "@/lib/nex-native/directory/category-metadata";
+import { DiscoverThisArea } from "@/components/nex-native/directory/DiscoverThisArea";
+import { fetchAreaIntelligence } from "@/lib/nex-native/directory/area-intelligence-service";
+import type { AreaIntelligence } from "@/lib/nex-native/directory/area-intelligence-types";
 import { UserLocationProvider } from "@/lib/nex-native/user-location/user-location-provider";
 import { readUserLocationFromAccount } from "@/lib/nex-native/user-location/actions";
 import { flagEmojiForIso } from "@/lib/nex-native/geo/flag-emoji";
@@ -134,6 +137,12 @@ export default async function DirectoryDetailPage(
 
   const { listing, destination, hasEvidence } = outcome.result;
 
+  // Pass-10b · Discover this area · fetch shared area intelligence
+  // for the listing's (city, country) tuple. Returns null when no
+  // researched area entry exists · the UI handles the honest
+  // "not yet researched" case.
+  const areaIntel = await fetchAreaIntelligence(listing.city, listing.country);
+
   // Owner-claimed destinations redirect to the owner's existing cover /
   // profile. The Directory detail page is specifically for unowned /
   // place-only canonical rows.
@@ -166,6 +175,7 @@ export default async function DirectoryDetailPage(
         listing={listing}
         destination={destination}
         hasEvidence={hasEvidence}
+        areaIntel={areaIntel}
       />
     </UserLocationProvider>
   );
@@ -279,8 +289,9 @@ function DetailShell(props: {
   readonly listing: DirectoryListingVM;
   readonly destination: DirectoryDestination;
   readonly hasEvidence: boolean;
+  readonly areaIntel: AreaIntelligence | null;
 }): React.ReactElement {
-  const { listing, destination, hasEvidence } = props;
+  const { listing, destination, hasEvidence, areaIntel } = props;
 
   // Owner-claim affordance renders only when the destination is NOT the
   // owner's own cover · for `nex_business` / `nex_user_profile` the
@@ -311,6 +322,7 @@ function DetailShell(props: {
         <OpeningHoursSection listing={listing} />
         <ContactSection listing={listing} />
       </article>
+      <DiscoverThisArea intel={areaIntel} />
       <RelatedBusinessesPageSection listing={listing} />
       {canClaim ? <ClaimListingPageSection listing={listing} /> : null}
     </PageFrame>

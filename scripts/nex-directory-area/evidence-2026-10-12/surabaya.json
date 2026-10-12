@@ -1,0 +1,31 @@
+{
+  "city": "Surabaya",
+  "country": "ID",
+  "short_summary": "East Java's capital is renowned for distinctive cuisine, historic architecture, and role as Indonesia's second-busiest seaport.",
+  "method": "nexapp-subagent-explore-v1",
+  "method_note": "Agent reported WebFetch unavailable · evidence from WebSearch result snippets. Strong Wikipedia + travel guide mix.",
+  "researched_at": "2026-10-12T10:15:00Z",
+  "known_for": {
+    "food": [
+      { "claim": "Rawon, a black beef soup made with keluak nut, rated world's best soup by TasteAtlas in 2024.", "source_url": "https://www.baconismagic.ca/indonesia/surabaya-food/", "accessed_at": "2026-10-12T10:15:00Z" },
+      { "claim": "Rujak cingur, signature Surabaya salad using cow's mouth with fried tempeh, tofu, and vegetables.", "source_url": "https://restaurantguru.com/guides/7-must-try-local-dishes-in-surabaya-indonesia-where-to-eat-them-right", "accessed_at": "2026-10-12T10:15:00Z" },
+      { "claim": "Lontong balap, street food of compressed rice cakes with bean sprouts and shrimp paste, originating in 1950s Surabaya.", "source_url": "https://en.wikipedia.org/wiki/Lontong_balap", "accessed_at": "2026-10-12T10:15:00Z" }
+    ],
+    "shopping": [
+      { "claim": "Pasar Pabean, indoor seafood market linking Arab Quarter and Chinatown with fresh catches from Madura Strait.", "source_url": "https://www.arrivalguides.com/en/Travelguide/SURABAYA/shopping/pasar-pabean-105082", "accessed_at": "2026-10-12T10:15:00Z" },
+      { "claim": "Tunjungan Plaza, East Java's largest mall with 52-story tower containing 500+ stores and international brands.", "source_url": "https://kelilingnusantara.com/shopping-in-surabaya/", "accessed_at": "2026-10-12T10:15:00Z" }
+    ],
+    "attractions": [
+      { "claim": "House of Sampoerna, 19th-century Dutch building showcasing traditional hand-rolled clove cigarette manufacturing.", "source_url": "https://www.lonelyplanet.com/points-of-interest/house-of-sampoerna/1189671", "accessed_at": "2026-10-12T10:15:00Z" },
+      { "claim": "Heroes Monument, 41-meter obelisk commemorating November 10, 1945 battle with attached museum and memorial park.", "source_url": "https://en.wikipedia.org/wiki/Heroes_Monument", "accessed_at": "2026-10-12T10:15:00Z" },
+      { "claim": "Ampel, historic Arab Quarter centered on Sunan Ampel mosque with Middle Eastern cuisine and coffee shops.", "source_url": "https://www.roughguides.com/indonesia/java/surabaya/", "accessed_at": "2026-10-12T10:15:00Z" },
+      { "claim": "Chinatown near Old Town, featuring atmospheric streets and Hong Tiek Hian Temple, one of Surabaya's oldest Chinese temples.", "source_url": "https://www.kayak.com/Surabaya.6498.guide", "accessed_at": "2026-10-12T10:15:00Z" }
+    ],
+    "transport": [
+      { "claim": "Juanda International Airport, major gateway with taxi service to city center taking 17 minutes.", "source_url": "https://en.wikipedia.org/wiki/Juanda_International_Airport", "accessed_at": "2026-10-12T10:15:00Z" },
+      { "claim": "Gubeng Station, central railway hub serving east, south and west destinations via Java's southern line.", "source_url": "https://www.rome2rio.com/s/Juanda-Surabaya-Airport/Surabaya-Gubeng", "accessed_at": "2026-10-12T10:15:00Z" },
+      { "claim": "Pasar Turi Station, northwestern railway hub opened 1900, serving Jakarta and Semarang via Java's northern line.", "source_url": "https://en.wikipedia.org/wiki/Surabaya_Pasar_Turi_railway_station", "accessed_at": "2026-10-12T10:15:00Z" },
+      { "claim": "Port of Tanjung Perak, Indonesia's second-busiest seaport connecting Southeast Asia, East Asia, and global trade networks.", "source_url": "https://en.wikipedia.org/wiki/Port_of_Tanjung_Perak", "accessed_at": "2026-10-12T10:15:00Z" }
+    ]
+  }
+}

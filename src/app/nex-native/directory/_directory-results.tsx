@@ -37,6 +37,7 @@ import type {
 import type { CategoryImageLibraryRow } from "@/lib/nex-native/directory/category-image-resolver";
 import { ListingDetailPanel } from "@/components/nex-native/directory/ListingDetailPanel";
 import { useUserLocationContext } from "@/lib/nex-native/user-location/user-location-provider";
+import type { AreaIntelligence } from "@/lib/nex-native/directory/area-intelligence-types";
 
 const PALETTE = {
   surface: "#0E1526",
@@ -52,6 +53,7 @@ export interface DirectoryResultsProps {
   readonly results: ReadonlyArray<{
     readonly listing: DirectoryListingVM;
     readonly destination: DirectoryDestination;
+    readonly areaIntel?: AreaIntelligence | null;
   }>;
   /** Signals that at least one listing has non-null coordinates ·
    *  the geolocation opt-in button only shows if there's a reason
@@ -96,6 +98,7 @@ type DirectoryCardWithCallbacks = React.ComponentType<
   React.ComponentProps<typeof DirectoryCard> & {
     readonly onOpenDetail?: () => void;
     readonly onOpenChat?: () => void;
+    readonly areaIntel?: AreaIntelligence | null;
   }
 >;
 
@@ -170,7 +173,7 @@ export function DirectoryResults(props: DirectoryResultsProps): React.ReactEleme
       {props.anyListingHasCoords && savedCtx.location === null ? (
         <DistanceOptIn geo={geo} onEnable={requestLocation} />
       ) : null}
-      {props.results.map(({ listing, destination }) => (
+      {props.results.map(({ listing, destination, areaIntel }) => (
         <DirectoryCardWithCbs
           key={listing.canonicalBusinessId}
           listing={listing}
@@ -179,6 +182,7 @@ export function DirectoryResults(props: DirectoryResultsProps): React.ReactEleme
           onOpenDetail={() => openDetails(listing, destination)}
           onOpenChat={() => openChat(listing, destination)}
           categoryImageLibrary={props.categoryImageLibrary}
+          areaIntel={areaIntel ?? null}
         />
       ))}
       {panelFor !== null ? (

@@ -60,6 +60,7 @@ import {
   type CategoryImageLibraryRow,
   type CategoryImageResolved,
 } from "@/lib/nex-native/directory/category-image-resolver";
+import type { AreaIntelligence } from "@/lib/nex-native/directory/area-intelligence-types";
 
 const PALETTE = {
   surface: "#0E1526",
@@ -107,6 +108,12 @@ export interface DirectoryCardProps {
    *  library has not been seeded · the card then renders the honest
    *  no-image fallback. */
   readonly categoryImageLibrary?: readonly CategoryImageLibraryRow[];
+  /** Pass-10b · optional shared area intelligence. When present, the
+   *  card renders a compact "Known for: …" chip derived from the
+   *  area's shortSummary. Null when the listing's (city, country) has
+   *  not been researched yet · no chip is shown rather than
+   *  fabricating one. */
+  readonly areaIntel?: AreaIntelligence | null;
 }
 
 export function DirectoryCard(props: DirectoryCardProps): React.ReactElement {
@@ -117,6 +124,7 @@ export function DirectoryCard(props: DirectoryCardProps): React.ReactElement {
     onOpenDetail,
     onOpenChat,
     categoryImageLibrary,
+    areaIntel,
   } = props;
 
   const distanceKm = haversineKmOrNull(userCoords, listing.coordinates);
@@ -367,6 +375,28 @@ export function DirectoryCard(props: DirectoryCardProps): React.ReactElement {
             }}
           >
             Also known as: {keywords.slice(0, 3).join(" · ")}
+          </p>
+        ) : null}
+        {areaIntel !== null && areaIntel !== undefined ? (
+          <p
+            data-nex-directory-card-area-known-for
+            data-nex-directory-card-area-id={areaIntel.areaId}
+            style={{
+              margin: "2px 0 0 0",
+              color: PALETTE.textDim,
+              fontSize: 12,
+              lineHeight: 1.35,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+            }}
+          >
+            <span style={{ color: PALETTE.textSoft, fontWeight: 600, marginRight: 4 }}>
+              Known for:
+            </span>
+            {areaIntel.shortSummary}
           </p>
         ) : null}
         {contactChips.length > 0 ? (

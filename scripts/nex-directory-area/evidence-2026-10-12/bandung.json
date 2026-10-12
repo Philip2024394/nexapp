@@ -1,0 +1,33 @@
+{
+  "city": "Bandung",
+  "country": "ID",
+  "short_summary": "Bandung is a highland city in West Java known for Sundanese cuisine, Art Deco architecture, volcanic landscapes, and factory outlet shopping.",
+  "method": "nexapp-subagent-explore-v1",
+  "method_note": "Agent reported WebFetch unavailable · evidence from WebSearch result snippets citing Wikipedia + indonesia.travel + travel guides. One stale-prone claim about Husein Sastranegara flagged for lower confidence.",
+  "researched_at": "2026-10-12T14:32:00Z",
+  "known_for": {
+    "food": [
+      { "claim": "Batagor and siomay, savory fried fish cakes served with spicy peanut sauce, are signature street foods.", "source_url": "https://www.indonesia.travel/my/zh-cn/travel-ideas/gastronomy/dont-miss-these-5-must-try-street-foods-in-bandung/", "accessed_at": "2026-10-12T14:32:00Z" },
+      { "claim": "Sundanese cuisine emphasizes fresh raw vegetables in dishes like lalab and karedok with sambal.", "source_url": "https://en.wikipedia.org/wiki/Sundanese_cuisine", "accessed_at": "2026-10-12T14:32:00Z" },
+      { "claim": "Punclut district food stalls serve traditional Sundanese dishes including nasi timbel and ketan bakar.", "source_url": "https://www.indonesia.travel/us/en/travel-ideas/gastronomy/bandung---bandung-culinary/", "accessed_at": "2026-10-12T14:32:00Z" }
+    ],
+    "shopping": [
+      { "claim": "Pasar Baru Trade Center, founded 1884, offers textiles, batik, fashion, and Muslim clothing with haggling culture.", "source_url": "https://www.tripadvisor.com/Attraction_Review-g297704-d1759865-Reviews-Pasar_Baru_Trade_Center-Bandung_West_Java_Java.html", "accessed_at": "2026-10-12T14:32:00Z" },
+      { "claim": "Rumah Mode Factory Outlet sells original discounted items with Balinese architectural design.", "source_url": "https://www.tripadvisor.com/Attraction_Review-g297704-d2487405-Reviews-Rumah_Mode_Factory_Outlet-Bandung_West_Java_Java.html", "accessed_at": "2026-10-12T14:32:00Z" },
+      { "claim": "Bandung's textile factories on outskirts sell sisa export items at factory outlets with local designer linkages.", "source_url": "https://www.indonesia.travel/us/en/travel-ideas/culture/5-budget-shopping-spots-in-bandung-that-worth-your-trip/", "accessed_at": "2026-10-12T14:32:00Z" }
+    ],
+    "attractions": [
+      { "claim": "Braga Street features well-preserved colonial Art Deco architecture earning Bandung the nickname 'Paris of Java.'", "source_url": "https://en.wikipedia.org/wiki/Bandung", "accessed_at": "2026-10-12T14:32:00Z" },
+      { "claim": "Bandung contains one of the world's largest collections of Art Deco-Nieuwe Bouwen tropical colonial buildings.", "source_url": "https://en.wikipedia.org/wiki/List_of_colonial_buildings_in_Bandung", "accessed_at": "2026-10-12T14:32:00Z" },
+      { "claim": "Tangkuban Perahu volcano crater north of city offers hiking and hot springs tourist experiences.", "source_url": "https://en.wikipedia.org/wiki/Tangkuban_Perahu", "accessed_at": "2026-10-12T14:32:00Z" },
+      { "claim": "Bandung Institute of Technology, designed 1918 by Henri Maclaine Pont, blends Indonesian vernacular with modern architecture.", "source_url": "https://en.wikipedia.org/wiki/Bandung_Institute_of_Technology", "accessed_at": "2026-10-12T14:32:00Z" }
+    ],
+    "transport": [
+      { "claim": "Argo Parahyangan train connects Bandung Station to Jakarta Gambir in approximately 3.5 hours.", "source_url": "https://en.wikipedia.org/wiki/Bandung", "accessed_at": "2026-10-12T14:32:00Z" },
+      { "claim": "Whoosh high-speed rail connects Padalarang/Tegalluar stations to Jakarta Halim in about 35 minutes.", "source_url": "https://www.tripadvisor.com/ShowTopic-g297704-i10689-k14579031-o10-Jkt_to_Bandung_HSR-Bandung_West_Java_Java.html", "accessed_at": "2026-10-12T14:32:00Z" }
+    ]
+  },
+  "excluded_claims": [
+    { "claim": "Husein Sastranegara International Airport reactivated June 2026 serves domestic and international flights.", "reason": "Specific recent-date claim · needs human review before shipping unqualified", "source_url": "https://en.wikipedia.org/wiki/Husein_Sastranegara_International_Airport" }
+  ]
+}

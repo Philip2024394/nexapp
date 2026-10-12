@@ -68,6 +68,8 @@ import {
   projectDirectoryListings,
   type DirectoryVerticalEnrichment,
 } from "./project-canonical-row";
+import { fetchAreaIntelligenceByCityCountry, areaIntelMapKey } from "./area-intelligence-service";
+import type { AreaIntelligence } from "./area-intelligence-types";
 import { resolveDirectoryDestinations } from "./resolve-destination";
 import type {
   DirectoryCanonicalRow,
@@ -139,6 +141,11 @@ export interface ListDirectoryArgs {
 export interface DirectoryListingResult {
   readonly listing: DirectoryListingVM;
   readonly destination: DirectoryDestination;
+  /** Pass-10b · optional shared area intelligence attached when the
+   *  listing's (city, country) matches a researched area. Null when
+   *  no evidence-backed area record exists · the UI then shows no
+   *  "Known for" chip rather than fabricating one. */
+  readonly areaIntel: AreaIntelligence | null;
 }
 
 export interface ListDirectoryOutcome {
@@ -694,9 +701,22 @@ export async function listDirectory(
     claimsByCanonicalId: claims,
   });
 
+  // Fetch shared area intelligence for the unique (city, country)
+  // tuples on this page. Null for listings in cities not yet
+  // researched · the UI then renders no area chip rather than
+  // fabricating one.
+  const areaIntelMap = await fetchAreaIntelligenceByCityCountry(
+    listings
+      .filter((l) => l.city !== null)
+      .map((l) => ({ city: l.city as string, country: l.country })),
+  );
+
   const results: DirectoryListingResult[] = [];
   for (let i = 0; i < listings.length; i++) {
-    results.push({ listing: listings[i], destination: destinations[i] });
+    const l = listings[i];
+    const key = areaIntelMapKey(l.country, l.city);
+    const areaIntel = key === null ? null : areaIntelMap.get(key) ?? null;
+    results.push({ listing: l, destination: destinations[i], areaIntel });
   }
 
   return { results, systemReady: true, diagnostic: null, total };

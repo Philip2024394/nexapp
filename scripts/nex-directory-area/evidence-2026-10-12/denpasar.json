@@ -1,0 +1,28 @@
+{
+  "city": "Denpasar",
+  "country": "ID",
+  "short_summary": "Bali's capital blends Hindu temples, traditional markets, authentic street food, and direct airport access.",
+  "method": "nexapp-subagent-explore-v1",
+  "method_note": "Agent reported WebFetch unavailable · evidence from WebSearch result snippets. Mix of authoritative (indonesia.travel, Wikipedia) and travel-blog sources (pickyourtrail, balitouristic, baliholidaysecrets).",
+  "researched_at": "2026-10-12T00:00:00Z",
+  "known_for": {
+    "food": [
+      { "claim": "Badung Market offers fresh tropical fruits, spices, and street food in climate-controlled setting.", "source_url": "https://pickyourtrail.com/attractions/bali/badung-market", "accessed_at": "2026-10-12T00:00:00Z" },
+      { "claim": "Kreneng Night Market serves sate tusuk, bebek betutu, and bothok from 8pm-10pm.", "source_url": "https://www.baliholidaysecrets.com/kreneng-market/", "accessed_at": "2026-10-12T00:00:00Z" },
+      { "claim": "Lawar and sate lilit are signature Balinese dishes featuring minced meat, grated coconut, spices.", "source_url": "https://wanderlostedits.com/traditional-balinese-food-guide-top-food-stops-bali-locals-love-in-denpasar/", "accessed_at": "2026-10-12T00:00:00Z" }
+    ],
+    "shopping": [
+      { "claim": "Pasar Badung is Bali's largest traditional market with four climate-controlled floors and escalators.", "source_url": "https://www.indonesia.travel/us/en/destination/bali-nusa-tenggara/bali/pasar-badung", "accessed_at": "2026-10-12T00:00:00Z" },
+      { "claim": "Kumbasari Traditional Art Market features authentic Balinese handicrafts, arts, and souvenirs.", "source_url": "https://www.balitouristic.com/denpasar-highlights-the-best-places-to-visit-right-now/", "accessed_at": "2026-10-12T00:00:00Z" }
+    ],
+    "attractions": [
+      { "claim": "Jagatnatha Temple, built 1953, dedicates to supreme god with intricate carvings and ceremonies.", "source_url": "https://pickyourtrail.com/attractions/bali/pura-agung-jagatnatha-denpasar", "accessed_at": "2026-10-12T00:00:00Z" },
+      { "claim": "Bali Museum houses prehistoric artifacts, textiles, ritual masks, and gamelan instruments.", "source_url": "https://balistarisland.com/bali-tourist-attractions/bali-museum/", "accessed_at": "2026-10-12T00:00:00Z" },
+      { "claim": "Werdhi Budaya Art Centre hosts annual Bali Arts Festival with Kecak, Barong, and Legong dances.", "source_url": "https://en.wikipedia.org/wiki/Taman_Werdhi_Budaya_Art_Centre", "accessed_at": "2026-10-12T00:00:00Z" }
+    ],
+    "transport": [
+      { "claim": "Ngurah Rai International Airport serves Denpasar via Bus #3 (3,500 IDR) and bemo minibuses.", "source_url": "https://airmundo.com/en/bali-ngurah-rai-airport/transportation/", "accessed_at": "2026-10-12T00:00:00Z" },
+      { "claim": "Bemo (minibus) transport connects throughout Denpasar; ask airport staff for bemo departure points.", "source_url": "https://www.virginaustralia.com/au/en/destinations/bali/getting-around-bali/", "accessed_at": "2026-10-12T00:00:00Z" }
+    ]
+  }
+}

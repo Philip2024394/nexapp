@@ -1,0 +1,31 @@
+{
+  "city": "Jakarta",
+  "country": "ID",
+  "short_summary": "Indonesia's capital is renowned for its vibrant Betawi cuisine, historic Dutch colonial Old Town, and major regional economic hub.",
+  "method": "nexapp-subagent-explore-v1",
+  "method_note": "Agent reported WebFetch unavailable · evidence from WebSearch result snippets citing Wikipedia + travel guides",
+  "researched_at": "2026-10-12T00:00:00Z",
+  "known_for": {
+    "food": [
+      { "claim": "Betawi soto with ghee reflects Arab and Muslim Indian culinary influences unique to Jakarta.", "source_url": "https://en.wikipedia.org/wiki/Street_food_of_Indonesia", "accessed_at": "2026-10-12T00:00:00Z" },
+      { "claim": "Gado-gado and ketoprak signature vegetables salads in peanut sauce originate from Jakarta region.", "source_url": "https://en.wikipedia.org/wiki/Gado-gado", "accessed_at": "2026-10-12T00:00:00Z" },
+      { "claim": "Pasar Baru established 1820 offers textile and jewellery shopping in historic commercial district.", "source_url": "https://en.wikipedia.org/wiki/Pasar_Baru", "accessed_at": "2026-10-12T00:00:00Z" }
+    ],
+    "shopping": [
+      { "claim": "Tanah Abang is Jakarta's major wholesale textile trade centre spanning multiple blocks.", "source_url": "https://en.wikipedia.org/wiki/Jakarta", "accessed_at": "2026-10-12T00:00:00Z" },
+      { "claim": "Petak Sembilan Market in historic Glodok Chinatown dates to 1760 with traditional atmosphere.", "source_url": "https://en.wikipedia.org/wiki/Chinatown", "accessed_at": "2026-10-12T00:00:00Z" },
+      { "claim": "Blok M shopping and nightlife quarter in Kebayoran Baru is prominent business district.", "source_url": "https://en.wikipedia.org/wiki/Blok_M,_Jakarta", "accessed_at": "2026-10-12T00:00:00Z" }
+    ],
+    "attractions": [
+      { "claim": "National Monument 132-metre tower in Merdeka Square commemorates Indonesian independence.", "source_url": "https://en.wikipedia.org/wiki/Jakarta", "accessed_at": "2026-10-12T00:00:00Z" },
+      { "claim": "Kota Tua preserves colonial Dutch Batavia architecture around Taman Fatahillah square.", "source_url": "https://en.wikipedia.org/wiki/Jakarta", "accessed_at": "2026-10-12T00:00:00Z" },
+      { "claim": "Istiqlal Mosque is Southeast Asia's largest mosque with significant architectural importance.", "source_url": "https://en.wikipedia.org/wiki/Jakarta", "accessed_at": "2026-10-12T00:00:00Z" },
+      { "claim": "National Museum contains millennia-old Indonesian statuary and cultural artefacts.", "source_url": "https://lonelyplanet.com/indonesia/jakarta/attractions/museum-nasional/a/poi-sig/406074/356569", "accessed_at": "2026-10-12T00:00:00Z" }
+    ],
+    "transport": [
+      { "claim": "Soekarno-Hatta International Airport serves as Indonesia's primary international aviation gateway.", "source_url": "https://en.wikipedia.org/wiki/Soekarno%E2%80%93Hatta_International_Airport", "accessed_at": "2026-10-12T00:00:00Z" },
+      { "claim": "Airport rail link connects Soekarno-Hatta to Manggarai station in 45 minutes.", "source_url": "https://en.wikipedia.org/wiki/Soekarno%E2%80%93Hatta_Airport_Commuter_Line", "accessed_at": "2026-10-12T00:00:00Z" },
+      { "claim": "TransJakarta, LRT, MRT and KRL Commuterline provide integrated rapid transit network.", "source_url": "https://en.wikipedia.org/wiki/Transport_in_Jakarta", "accessed_at": "2026-10-12T00:00:00Z" }
+    ]
+  }
+}

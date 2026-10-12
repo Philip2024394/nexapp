@@ -1,0 +1,30 @@
+{
+  "city": "Yogyakarta",
+  "country": "ID",
+  "short_summary": "Cultural heart of Java known for Javanese arts, gudeg cuisine, batik textiles, and UNESCO-adjacent heritage.",
+  "method": "nexapp-subagent-explore-v1",
+  "method_note": "Agent reported WebFetch unavailable · evidence from WebSearch result snippets. Agent correctly scoped claims to Yogyakarta city (Kraton, Taman Sari, Malioboro, YIA/Tugu) and noted that UNESCO Borobudur/Prambanan are near but OUTSIDE the city boundary.",
+  "researched_at": "2026-10-12T00:00:00Z",
+  "known_for": {
+    "food": [
+      { "claim": "Gudeg, young jackfruit stewed with palm sugar and coconut milk, is Yogyakarta's signature dish and trademark.", "source_url": "https://en.wikipedia.org/wiki/Gudeg", "accessed_at": "2026-10-12T00:00:00Z" },
+      { "claim": "Traditional Javanese dishes include lotek vegetable salad, mie Jawa noodles, brongkos stew, and sambal goreng krecek.", "source_url": "https://www.wheregoesrose.com/best-javanese-food-yogykarta/", "accessed_at": "2026-10-12T00:00:00Z" },
+      { "claim": "Yu Djum restaurant is renowned for authentic gudeg, Yogyakarta's most famous traditional food.", "source_url": "https://www.timetravelturtle.com/indonesia/gudeg-in-yogyakarta/", "accessed_at": "2026-10-12T00:00:00Z" }
+    ],
+    "shopping": [
+      { "claim": "Jalan Malioboro, a 1-2 km street, is a batik shopping hub with hundreds of shops selling traditional and modern batik textiles.", "source_url": "https://en.wikipedia.org/wiki/Jalan_Malioboro", "accessed_at": "2026-10-12T00:00:00Z" },
+      { "claim": "Hamzah Batik on Malioboro Street is celebrated for high-quality hand-drawn batik and traditional batik-making techniques.", "source_url": "https://whatsnewindonesia.com/yogyakarta/ultimate-guide/shops/batik-treasures-yogyakarta-locals-guide-best-shops", "accessed_at": "2026-10-12T00:00:00Z" },
+      { "claim": "Yogyakarta is renowned as a centre for batik textiles and silversmithing in Central Java.", "source_url": "https://en.wikipedia.org/wiki/Yogyakarta", "accessed_at": "2026-10-12T00:00:00Z" }
+    ],
+    "attractions": [
+      { "claim": "Kraton Ngayogyakarta Hadiningrat, founded 1755, is the royal palace and residence of Yogyakarta's Sultan with traditional Javanese architecture.", "source_url": "https://en.wikipedia.org/wiki/Kraton_Ngayogyakarta_Hadiningrat", "accessed_at": "2026-10-12T00:00:00Z" },
+      { "claim": "Taman Sari, built 1758, is a royal water garden resting place within the Kraton grounds with multiple historical functions.", "source_url": "https://en.wikipedia.org/wiki/Taman_Sari_(Yogyakarta)", "accessed_at": "2026-10-12T00:00:00Z" },
+      { "claim": "UNESCO World Heritage Sites Borobudur temple and Prambanan temple are located near but outside Yogyakarta city boundaries.", "source_url": "https://en.wikipedia.org/wiki/Yogyakarta", "accessed_at": "2026-10-12T00:00:00Z" }
+    ],
+    "transport": [
+      { "claim": "Yogyakarta International Airport (YIA) in Kulon Progo serves the city with rail and road connections.", "source_url": "https://www.geckoroutes.com/indonesia/yogyakarta-airport/", "accessed_at": "2026-10-12T00:00:00Z" },
+      { "claim": "Railink train service connects YIA to Tugu Station hourly in 35 minutes, most affordable transport option.", "source_url": "https://www.rome2rio.com/s/Yogyakarta-International-Airport/Yogyakarta-Tugu-Station", "accessed_at": "2026-10-12T00:00:00Z" },
+      { "claim": "Tugu Station is Yogyakarta's main railway hub serving regional and intercity train connections.", "source_url": "https://en.wikipedia.org/wiki/Tugu_Yogyakarta", "accessed_at": "2026-10-12T00:00:00Z" }
+    ]
+  }
+}
