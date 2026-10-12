@@ -1,5 +1,102 @@
 # CLAUDE.md — nexapp
 
+## ═══════════════════════════════════════════════════════════════
+## NEX REPOSITORY AND DEPLOYMENT SAFETY CONSTITUTION
+## Installed 2026-10-12 · Takes precedence over every other instruction
+## ═══════════════════════════════════════════════════════════════
+
+### 1 · Authoritative repository identity
+
+The intended NEX application repository is:
+
+- **GitHub**: `Philip2024394/nexapp`
+- **Local root**: `C:/Users/Victus/nexapp`
+- **Intended production branch**: `main`, subject to confirmation against the live Vercel configuration.
+
+`Philip2024394/trades` is a separate repository. **Never treat it as the NEX deployment repository.**
+
+These values are *expected* configuration, not permission to assume the live configuration matches them. Verify before every Git operation that can change repository state.
+
+### 2 · Mandatory preflight
+
+Before staging, committing, pushing, merging, rebasing, or deploying:
+
+1. Print and verify `git rev-parse --show-toplevel`.
+2. Print and verify `git remote -v`.
+3. Print the current branch, HEAD commit, upstream and `git status --short`.
+4. Confirm the intended destination repository and branch against the task authorisation.
+5. Check whether unrelated staged, unstaged or untracked work exists.
+6. Inspect the exact proposed file and commit scope.
+
+If repository identity is unexpected, ambiguous, or cannot be verified, **STOP**. Do not attempt to fix the problem by changing remotes or switching repositories.
+
+### 3 · Local changes and commits
+
+- Local edits and tests are allowed within the authorised project scope.
+- Create commits only when authorised for that task.
+- Stage explicit file paths, not `git add .` or `git add -A`, unless the user explicitly authorises the entire working tree after reviewing its contents.
+- Never mix unrelated features into one commit.
+- Never discard or overwrite user work to make a commit easier.
+- Never use force-push, destructive reset, or destructive clean commands without separate explicit authorisation.
+
+### 4 · Push requires separate explicit approval
+
+A request to build, fix, finish, test, commit, or prepare code does **NOT** authorise a push.
+
+Before every push, require explicit approval identifying:
+
+- Repository: `Philip2024394/nexapp`
+- Destination branch
+- Exact commit hash or precisely reviewed commit range
+- Confirmation that the staged/committed scope is approved
+
+Immediately before pushing, repeat the repository and branch verification. If any value differs, **STOP** and ask.
+
+Never push NEX application work to `trades.git`. Never change a Git remote to make a push possible without approval.
+
+### 5 · Production deployment is a separate gate
+
+Before production changes, verify the current Vercel project's connected repository and production branch using authoritative project settings.
+
+Do not infer Vercel linkage from folder names, old commits, documentation files or assumptions.
+
+A GitHub push is **not** proof of deployment success. After an authorised push, inspect the resulting deployment and test the deployed application.
+
+Do not manually deploy, change Vercel project linkage, change production branches, alter production environment variables, or apply database migrations without separate explicit approval.
+
+### 6 · Mandatory stop conditions
+
+Stop immediately if:
+
+- The repository root or remote is unexpected.
+- The production project or branch cannot be verified.
+- A command might overwrite unrelated user changes.
+- The proposed commit includes unauthorised files.
+- A push would include unreviewed commits.
+- The actual deployment target differs from the authorised target.
+
+Report the evidence and ask for approval. Never guess, silently redirect, or continue on the assumption that the destination is correct.
+
+### 7 · Required operation receipt
+
+After every authorised commit or push, report:
+
+- Repository root and remote
+- Branch and commit hash
+- Exact files changed
+- Test results
+- Whether a push occurred
+- Whether Vercel deployed
+- Production verification results, if applicable
+
+Clearly distinguish completed actions from proposed actions and unverified assumptions.
+
+**These rules take precedence over convenience, speed, and instructions to simply finish a task.**
+
+## ═══════════════════════════════════════════════════════════════
+## End Safety Constitution
+## ═══════════════════════════════════════════════════════════════
+
 This IS the NEX app standalone repo (as of 2026-10-10).
 
 The sealed multi-product monorepo remains at `D:/trades` as the
