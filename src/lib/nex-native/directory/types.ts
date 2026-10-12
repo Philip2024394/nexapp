@@ -242,6 +242,13 @@ export interface DirectoryListingVM {
   readonly websiteApex: string | null;
 
   readonly osmId: string | null;
+  /** TRUE when the listing has at least one business_evidence row
+   *  citing an OSM-derived source (currently
+   *  `nex_food_business_legacy`, planned for
+   *  `nex_accommodation_business_legacy` and
+   *  `nex_service_business_legacy`). Drives mandatory ODbL
+   *  attribution rendering (R-A1 / R-S1 doctrine mitigation). */
+  readonly isOsmAttributed: boolean;
   readonly wikidataQid: string | null;
 
   readonly categoryIds: readonly string[];

@@ -435,6 +435,46 @@ export async function fetchFoodEnrichmentByCanonicalId(
   return map;
 }
 
+/** Set of source_id values that trigger mandatory ODbL attribution ·
+ *  all are OSM-derived legacy sources. Kept in sync with the sealed
+ *  vertical-clearance doctrine 2026-10-10. */
+const OSM_ATTRIBUTED_SOURCE_IDS = [
+  "nex_food_business_legacy",
+  "nex_accommodation_business_legacy",
+  "nex_service_business_legacy",
+] as const;
+
+/** Fetch the subset of the given canonical IDs that have at least one
+ *  business_evidence row citing an OSM-derived source. Pure read ·
+ *  returns an empty Set on DB error so the UI degrades honestly
+ *  (no attribution shown) rather than throwing. */
+export async function fetchOsmAttributedCanonicalIds(
+  canonicalIds: readonly string[],
+): Promise<ReadonlySet<string>> {
+  const set = new Set<string>();
+  if (canonicalIds.length === 0) return set;
+  const uniqueIds = Array.from(new Set(canonicalIds));
+  const sql =
+    "SELECT DISTINCT canonical_business_id " +
+    "FROM nex.business_evidence " +
+    "WHERE canonical_business_id = ANY($1::uuid[]) " +
+    "AND source_id = ANY($2::text[])";
+  try {
+    const result = await withClient(async (client) =>
+      client.query(sql, [uniqueIds, OSM_ATTRIBUTED_SOURCE_IDS]),
+    );
+    if (result === null) return set;
+    for (const row of result.rows as unknown as readonly {
+      canonical_business_id: string;
+    }[]) {
+      set.add(row.canonical_business_id);
+    }
+  } catch {
+    return set;
+  }
+  return set;
+}
+
 /** Treat the empty string as absent · the DB may hold `''` where the
  *  OSM feed had no value. The projector's enrichment-fallback semantics
  *  need a true null to recognise "no vertical value either". */
@@ -685,9 +725,10 @@ export async function listDirectory(
   // fills gaps for OSM-origin rows where the resolver did not populate
   // presentation fields.
   const canonicalIdsOnPage = adapted.map((a) => a.canonical_business_id);
-  const [enrichment, claims] = await Promise.all([
+  const [enrichment, claims, osmAttributedCanonicalIds] = await Promise.all([
     fetchFoodEnrichmentByCanonicalId(canonicalIdsOnPage),
     fetchOwnerClaimsByCanonicalId(canonicalIdsOnPage),
+    fetchOsmAttributedCanonicalIds(canonicalIdsOnPage),
   ]);
 
   // Project → VMs. Media is null today (migration 173 deferred).
@@ -695,6 +736,7 @@ export async function listDirectory(
     rows: adapted,
     mediaByCanonicalId: EMPTY_MEDIA_MAP,
     enrichmentByCanonicalId: enrichment,
+    osmAttributedCanonicalIds,
   });
   const destinations = resolveDirectoryDestinations({
     listings,
@@ -834,14 +876,16 @@ export async function getCanonicalBusinessById(
     return { result: null, systemReady: true, diagnostic: null };
   }
 
-  const [enrichment, claims] = await Promise.all([
+  const [enrichment, claims, osmAttributedCanonicalIds] = await Promise.all([
     fetchFoodEnrichmentByCanonicalId([adapted.canonical_business_id]),
     fetchOwnerClaimsByCanonicalId([adapted.canonical_business_id]),
+    fetchOsmAttributedCanonicalIds([adapted.canonical_business_id]),
   ]);
   const listings = projectDirectoryListings({
     rows: [adapted],
     mediaByCanonicalId: EMPTY_MEDIA_MAP,
     enrichmentByCanonicalId: enrichment,
+    osmAttributedCanonicalIds,
   });
   const destinations = resolveDirectoryDestinations({
     listings,

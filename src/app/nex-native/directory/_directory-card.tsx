@@ -61,6 +61,7 @@ import {
   type CategoryImageResolved,
 } from "@/lib/nex-native/directory/category-image-resolver";
 import type { AreaIntelligence } from "@/lib/nex-native/directory/area-intelligence-types";
+import { OsmAttributionBadge } from "@/components/nex-native/directory/OsmAttributionBadge";
 
 const PALETTE = {
   surface: "#0E1526",
@@ -430,6 +431,11 @@ export function DirectoryCard(props: DirectoryCardProps): React.ReactElement {
               </li>
             ))}
           </ul>
+        ) : null}
+        {listing.isOsmAttributed ? (
+          <div style={{ marginTop: 4 }}>
+            <OsmAttributionBadge osmId={listing.osmId} size="compact" />
+          </div>
         ) : null}
         <CardAction destination={destination} actionLabel={actionLabel} />
         {/* Data-conditional CTA strip. Buttons appear only when the

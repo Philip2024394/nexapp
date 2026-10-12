@@ -107,6 +107,11 @@ export interface ProjectDirectoryListingArgs {
    *  available · the VM's enrichment-fallback fields fall back to
    *  their canonical counterparts (null if those are also null). */
   readonly enrichment?: DirectoryVerticalEnrichment | null;
+  /** Pre-computed by the service · whether at least one business_evidence
+   *  row for this canonical cites an OSM-derived source. The badge
+   *  renders based on this flag · the projector never guesses · the
+   *  caller must pass the correct value. */
+  readonly isOsmAttributed?: boolean;
 }
 
 /**
@@ -175,6 +180,7 @@ export function projectDirectoryListing(
     websiteApex,
 
     osmId: row.osm_id,
+    isOsmAttributed: args.isOsmAttributed === true,
     wikidataQid: row.wikidata_qid,
 
     categoryIds: verticalCategoryList,
@@ -215,9 +221,14 @@ export function projectDirectoryListings(args: {
     string,
     DirectoryVerticalEnrichment
   >;
+  /** Set of canonical IDs whose evidence cites an OSM-derived source.
+   *  Rows NOT in this set resolve to `isOsmAttributed: false`. Empty
+   *  set means no attribution shown · the projector never fabricates. */
+  readonly osmAttributedCanonicalIds?: ReadonlySet<string>;
 }): DirectoryListingVM[] {
   const map = args.mediaByCanonicalId;
   const enrichmentMap = args.enrichmentByCanonicalId;
+  const osmSet = args.osmAttributedCanonicalIds;
   const out: DirectoryListingVM[] = [];
   for (const row of args.rows) {
     const media =
@@ -226,7 +237,11 @@ export function projectDirectoryListings(args: {
       enrichmentMap === undefined
         ? null
         : (enrichmentMap.get(row.canonical_business_id) ?? null);
-    out.push(projectDirectoryListing({ row, media, enrichment }));
+    const isOsmAttributed =
+      osmSet !== undefined && osmSet.has(row.canonical_business_id);
+    out.push(
+      projectDirectoryListing({ row, media, enrichment, isOsmAttributed }),
+    );
   }
   return out;
 }

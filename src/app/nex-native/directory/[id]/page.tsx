@@ -59,6 +59,7 @@ import { DetailDistanceChip } from "./_detail-distance";
 import { RelatedBusinessesSectionClient } from "@/components/nex-native/directory/RelatedBusinessesSectionClient";
 import { OwnerClaimForm } from "@/components/nex-native/directory/OwnerClaimForm";
 import { MapPinPing } from "@/components/nex-native/directory/MapPinPing";
+import { OsmAttributionBadge } from "@/components/nex-native/directory/OsmAttributionBadge";
 import {
   getPrimaryCategoryMetadata,
   partitionCategories,
@@ -998,6 +999,17 @@ function LocationSection(props: {
         </p>
       ) : null}
       <DetailDistanceChip listingCoords={coordinates} />
+      {props.listing.isOsmAttributed ? (
+        <div
+          data-nex-directory-detail-location-attribution
+          style={{ marginTop: 10 }}
+        >
+          <OsmAttributionBadge
+            osmId={props.listing.osmId}
+            size="detail"
+          />
+        </div>
+      ) : null}
     </SectionBlock>
   );
 }
