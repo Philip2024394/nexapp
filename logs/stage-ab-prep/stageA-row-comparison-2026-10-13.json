@@ -1,0 +1,29 @@
+{
+  "run_timestamp": "2026-10-12T18:01:01.212Z",
+  "project_id": "ijvqdvsvwtwxzcqmoqit",
+  "canonical_count": 40738,
+  "directory_v_count": 40541,
+  "gap_count": 197,
+  "gap_classification": {
+    "no_evidence": 197,
+    "evidence_but_no_can_display": 0,
+    "superseded": 0,
+    "unverified_state": 1
+  },
+  "in_view_not_in_canonical": [],
+  "dump_vs_current": {
+    "in_dump_still_in_canonical": 197,
+    "in_dump_gone_from_canonical": [],
+    "in_dump_still_orphaned": 197,
+    "in_dump_now_has_evidence": [],
+    "new_orphans_since_dump": []
+  },
+  "orphan_fingerprint_stage0": "8126d77daf495a64bf02fff4ae767fa3fb24a502411271d49f8fd3955b4d416d",
+  "orphan_fingerprint_stageA": "8126d77daf495a64bf02fff4ae767fa3fb24a502411271d49f8fd3955b4d416d",
+  "orphan_fingerprint_match": true,
+  "orphan_creation_distribution": {
+    "2026-10-08": 1,
+    "2026-10-09": 189,
+    "2026-10-11": 7
+  }
+}

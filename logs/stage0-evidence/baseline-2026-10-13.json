@@ -1,0 +1,32 @@
+{
+  "canonical_total": 40738,
+  "directory_v": 40541,
+  "evidence": 40703,
+  "lifecycle_log": 17118,
+  "category_image_library": 307,
+  "source_registry": 10,
+  "nex_business": 169,
+  "nex_product_live": 120,
+  "business_claim": 0,
+  "orphan_canonical_count": 197,
+  "synthetic_proof_row_count": 1,
+  "distinct_slugs_in_canonical": 50,
+  "ref_fk_tables": [
+    "nex.business_canonical",
+    "nex.business_canonical",
+    "nex.food_business",
+    "nex.accommodation_business",
+    "nex.service_business",
+    "nex.mp_seller",
+    "nex.business_evidence",
+    "nex.business_media",
+    "nex.business_claim",
+    "nex.business_canonical_lifecycle_log",
+    "nex.business_canonical_lifecycle_log",
+    "nex.business_fact_conflict"
+  ],
+  "recorded_at": "2026-10-12T17:54:18.673Z",
+  "project_id": "ijvqdvsvwtwxzcqmoqit",
+  "orphan_ids_fingerprint": "8126d77daf495a64bf02fff4ae767fa3fb24a502411271d49f8fd3955b4d416d",
+  "canonical_slugs_fingerprint": "b80a51035f38c43bed00d87eb02ece8e87ad5116b40df8db9c457394baba51dc"
+}

@@ -1,0 +1,405 @@
+{
+  "run_timestamp": "2026-10-12T18:03:07.394Z",
+  "project_id": "ijvqdvsvwtwxzcqmoqit",
+  "mapping": [
+    {
+      "from": "yoga-v2",
+      "to": "yoga",
+      "kind": "variant",
+      "reason": "duplicate image for the same yoga category · keep as library variant",
+      "before": {
+        "canonical_rows_with_from_slug": 0,
+        "canonical_rows_with_to_slug": 0,
+        "library_rows_from": 1,
+        "library_rows_to": 2,
+        "owner_profile_from": 0,
+        "owner_profile_to": 0
+      },
+      "expected_after": {
+        "canonical_rows_with_from_slug": 0,
+        "canonical_rows_with_to_slug": 0,
+        "library_rows_from": 1,
+        "library_rows_to": 2,
+        "owner_profile_from": 0,
+        "owner_profile_to": 0
+      }
+    },
+    {
+      "from": "camping-v2",
+      "to": "camping",
+      "kind": "variant",
+      "reason": "duplicate image for the same camping category",
+      "before": {
+        "canonical_rows_with_from_slug": 0,
+        "canonical_rows_with_to_slug": 0,
+        "library_rows_from": 1,
+        "library_rows_to": 2,
+        "owner_profile_from": 0,
+        "owner_profile_to": 0
+      },
+      "expected_after": {
+        "canonical_rows_with_from_slug": 0,
+        "canonical_rows_with_to_slug": 0,
+        "library_rows_from": 1,
+        "library_rows_to": 2,
+        "owner_profile_from": 0,
+        "owner_profile_to": 0
+      }
+    },
+    {
+      "from": "fishing-v2",
+      "to": "fishing",
+      "kind": "variant",
+      "reason": "duplicate image for the same fishing category",
+      "before": {
+        "canonical_rows_with_from_slug": 0,
+        "canonical_rows_with_to_slug": 0,
+        "library_rows_from": 1,
+        "library_rows_to": 2,
+        "owner_profile_from": 0,
+        "owner_profile_to": 0
+      },
+      "expected_after": {
+        "canonical_rows_with_from_slug": 0,
+        "canonical_rows_with_to_slug": 0,
+        "library_rows_from": 1,
+        "library_rows_to": 2,
+        "owner_profile_from": 0,
+        "owner_profile_to": 0
+      }
+    },
+    {
+      "from": "bike-rental-v2",
+      "to": "bike-rental",
+      "kind": "variant",
+      "reason": "duplicate image for the same bike-rental category",
+      "before": {
+        "canonical_rows_with_from_slug": 0,
+        "canonical_rows_with_to_slug": 0,
+        "library_rows_from": 1,
+        "library_rows_to": 2,
+        "owner_profile_from": 0,
+        "owner_profile_to": 0
+      },
+      "expected_after": {
+        "canonical_rows_with_from_slug": 0,
+        "canonical_rows_with_to_slug": 0,
+        "library_rows_from": 1,
+        "library_rows_to": 2,
+        "owner_profile_from": 0,
+        "owner_profile_to": 0
+      }
+    },
+    {
+      "from": "coat-seller",
+      "to": "clothes",
+      "kind": "alias-merge",
+      "reason": "coat-seller is a sub-set of shop=clothes OSM mapping · merge to clothes",
+      "before": {
+        "canonical_rows_with_from_slug": 246,
+        "canonical_rows_with_to_slug": 0,
+        "library_rows_from": 1,
+        "library_rows_to": 2,
+        "owner_profile_from": 0,
+        "owner_profile_to": 0
+      },
+      "expected_after": {
+        "canonical_rows_with_from_slug": 0,
+        "canonical_rows_with_to_slug": 246,
+        "library_rows_from": 0,
+        "library_rows_to": 3,
+        "owner_profile_from": 0,
+        "owner_profile_to": 0
+      }
+    },
+    {
+      "from": "kebab-house",
+      "to": "meat-kebab",
+      "kind": "alias-merge",
+      "reason": "kebab-house and meat-kebab both read as kebab outlets · merge",
+      "before": {
+        "canonical_rows_with_from_slug": 0,
+        "canonical_rows_with_to_slug": 1,
+        "library_rows_from": 1,
+        "library_rows_to": 2,
+        "owner_profile_from": 0,
+        "owner_profile_to": 0
+      },
+      "expected_after": {
+        "canonical_rows_with_from_slug": 0,
+        "canonical_rows_with_to_slug": 1,
+        "library_rows_from": 0,
+        "library_rows_to": 3,
+        "owner_profile_from": 0,
+        "owner_profile_to": 0
+      }
+    },
+    {
+      "from": "wedding-events",
+      "to": "wedding-agents",
+      "kind": "alias-merge",
+      "reason": "same business type · merge to wedding-agents",
+      "before": {
+        "canonical_rows_with_from_slug": 0,
+        "canonical_rows_with_to_slug": 0,
+        "library_rows_from": 1,
+        "library_rows_to": 2,
+        "owner_profile_from": 0,
+        "owner_profile_to": 0
+      },
+      "expected_after": {
+        "canonical_rows_with_from_slug": 0,
+        "canonical_rows_with_to_slug": 0,
+        "library_rows_from": 0,
+        "library_rows_to": 3,
+        "owner_profile_from": 0,
+        "owner_profile_to": 0
+      }
+    },
+    {
+      "from": "pets-supplier",
+      "to": "pet-supplies",
+      "kind": "alias-merge",
+      "reason": "same business type · merge to pet-supplies",
+      "before": {
+        "canonical_rows_with_from_slug": 0,
+        "canonical_rows_with_to_slug": 43,
+        "library_rows_from": 1,
+        "library_rows_to": 2,
+        "owner_profile_from": 0,
+        "owner_profile_to": 0
+      },
+      "expected_after": {
+        "canonical_rows_with_from_slug": 0,
+        "canonical_rows_with_to_slug": 43,
+        "library_rows_from": 0,
+        "library_rows_to": 3,
+        "owner_profile_from": 0,
+        "owner_profile_to": 0
+      }
+    },
+    {
+      "from": "ALIAS_REMOVE·health·dentist",
+      "to": "(drop alias only)",
+      "kind": "alias-split",
+      "reason": "health and dentist are distinct · drop 'dentist' from health.aliases",
+      "note": "no row movement · drop alias in CATEGORY_METADATA only"
+    },
+    {
+      "from": "ALIAS_REMOVE·travel-agency·tour-guide",
+      "to": "(drop alias only)",
+      "kind": "alias-split",
+      "reason": "travel-agency and tour-guide are distinct roles · drop 'tour-guide' from travel-agency.aliases",
+      "note": "no row movement · drop alias in CATEGORY_METADATA only"
+    },
+    {
+      "from": "ALIAS_REMOVE·massage·massage-spa",
+      "to": "(drop alias only)",
+      "kind": "alias-split",
+      "reason": "massage (practitioner) and massage-spa (venue) differ · drop 'massage-spa' from massage.aliases",
+      "note": "no row movement · drop alias in CATEGORY_METADATA only"
+    }
+  ],
+  "full_canonical_category_distribution": [
+    {
+      "slug": "apartment",
+      "n": 96
+    },
+    {
+      "slug": "atm-machines",
+      "n": 213
+    },
+    {
+      "slug": "baby-clothes",
+      "n": 13
+    },
+    {
+      "slug": "bakso-soup",
+      "n": 2
+    },
+    {
+      "slug": "banks",
+      "n": 1667
+    },
+    {
+      "slug": "barber-hair",
+      "n": 27
+    },
+    {
+      "slug": "bars",
+      "n": 82
+    },
+    {
+      "slug": "building-only",
+      "n": 57
+    },
+    {
+      "slug": "bus-service",
+      "n": 103
+    },
+    {
+      "slug": "car-rental",
+      "n": 27
+    },
+    {
+      "slug": "car-repair",
+      "n": 606
+    },
+    {
+      "slug": "car-taxi",
+      "n": 8
+    },
+    {
+      "slug": "carpenter",
+      "n": 9
+    },
+    {
+      "slug": "chalet",
+      "n": 78
+    },
+    {
+      "slug": "coat-seller",
+      "n": 246
+    },
+    {
+      "slug": "fish-seller",
+      "n": 3
+    },
+    {
+      "slug": "florist",
+      "n": 36
+    },
+    {
+      "slug": "garden-supplies",
+      "n": 7
+    },
+    {
+      "slug": "grilled-fish",
+      "n": 30
+    },
+    {
+      "slug": "guesthouse",
+      "n": 1706
+    },
+    {
+      "slug": "gyms",
+      "n": 292
+    },
+    {
+      "slug": "handbag-seller",
+      "n": 12
+    },
+    {
+      "slug": "home-appliances",
+      "n": 1
+    },
+    {
+      "slug": "homestay",
+      "n": 1
+    },
+    {
+      "slug": "hostel",
+      "n": 267
+    },
+    {
+      "slug": "hotel",
+      "n": 6718
+    },
+    {
+      "slug": "kos",
+      "n": 215
+    },
+    {
+      "slug": "language-teacher",
+      "n": 37
+    },
+    {
+      "slug": "laptop-repair",
+      "n": 13
+    },
+    {
+      "slug": "laundry",
+      "n": 79
+    },
+    {
+      "slug": "leather-products",
+      "n": 3
+    },
+    {
+      "slug": "make-up",
+      "n": 17
+    },
+    {
+      "slug": "meat-kebab",
+      "n": 1
+    },
+    {
+      "slug": "motel",
+      "n": 65
+    },
+    {
+      "slug": "noodle-soup",
+      "n": 31
+    },
+    {
+      "slug": "pet-supplies",
+      "n": 43
+    },
+    {
+      "slug": "petrol-station",
+      "n": 851
+    },
+    {
+      "slug": "pizza",
+      "n": 24
+    },
+    {
+      "slug": "property-agent",
+      "n": 24
+    },
+    {
+      "slug": "relax-therapy",
+      "n": 3
+    },
+    {
+      "slug": "restaurants",
+      "n": 1890
+    },
+    {
+      "slug": "salons",
+      "n": 615
+    },
+    {
+      "slug": "sandwiches",
+      "n": 4
+    },
+    {
+      "slug": "shoe-seller",
+      "n": 52
+    },
+    {
+      "slug": "spaghetti",
+      "n": 8
+    },
+    {
+      "slug": "steak",
+      "n": 4
+    },
+    {
+      "slug": "super-market",
+      "n": 632
+    },
+    {
+      "slug": "tour-guide",
+      "n": 100
+    },
+    {
+      "slug": "train-service",
+      "n": 94
+    },
+    {
+      "slug": "vitamins",
+      "n": 6
+    }
+  ]
+}
