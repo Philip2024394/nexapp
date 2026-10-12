@@ -50,8 +50,11 @@ export interface AreaIntelligence {
   /** City the area belongs to (may equal areaName for city-level
    *  entries, or be the parent city for neighbourhoods). */
   readonly city: string;
-  /** Short area summary (one sentence · 15-25 words). */
-  readonly shortSummary: string;
+  /** Short area summary (one sentence · 15-25 words). Null when the
+   *  Wikidata/Wikipedia pass has not populated it yet · the OSM
+   *  landmark collector writes null and the UI omits the summary
+   *  paragraph when this is null (see DiscoverThisArea component). */
+  readonly shortSummary: string | null;
   /** Research method used · surfaced in UI as the "evidence badge". */
   readonly method: string;
   /** Optional note about the research method (e.g. "WebSearch only ·
@@ -86,11 +89,16 @@ export function parseAreaIntelligence(
   if (payload === null || typeof payload !== "object") return null;
   const p = payload as Record<string, unknown>;
 
+  // short_summary is now OPTIONAL · honest-null support. The OSM
+  // landmark collector writes short_summary=null until the Wikidata/
+  // Wikipedia pass lands (see history-source-plan.md). The panel is
+  // still useful without it · the known_for buckets carry the main
+  // content. If the parser bailed here, Phase 1 OSM-only coverage
+  // couldn't render at all · relaxing this is a straight bug fix.
   const shortSummary =
     typeof p.short_summary === "string" && p.short_summary.trim().length > 0
       ? p.short_summary.trim()
       : null;
-  if (shortSummary === null) return null;
 
   const method = typeof p.method === "string" ? p.method : "unknown";
   const methodNote = typeof p.method_note === "string" ? p.method_note : null;

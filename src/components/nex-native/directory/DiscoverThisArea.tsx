@@ -83,17 +83,19 @@ export function DiscoverThisArea(
       >
         Discover this area · {intel.areaName}
       </h2>
-      <p
-        data-nex-discover-this-area-summary
-        style={{
-          margin: "6px 0 14px 0",
-          color: PALETTE.text,
-          fontSize: 14,
-          lineHeight: 1.5,
-        }}
-      >
-        {intel.shortSummary}
-      </p>
+      {intel.shortSummary !== null ? (
+        <p
+          data-nex-discover-this-area-summary
+          style={{
+            margin: "6px 0 14px 0",
+            color: PALETTE.text,
+            fontSize: 14,
+            lineHeight: 1.5,
+          }}
+        >
+          {intel.shortSummary}
+        </p>
+      ) : null}
       <div
         style={{
           display: "flex",

@@ -146,20 +146,24 @@ function buildOverpassFilter(filter) {
   return `["${filter.key}"="${filter.value}"]`;
 }
 
-async function queryOverpass(filters, cityAreaName, countryIso) {
-  // Query the city's admin boundary via area filter · country-scoped so
-  // "Bandung" in ID doesn't catch Bandungs elsewhere.
+async function queryOverpass(filters, centroid, radiusMeters) {
+  // Query by RADIUS around the city centroid. The centroid is
+  // computed from the AVG of listing coordinates in business_directory_v
+  // for the target city (see computeCityCentroid). This bypasses OSM
+  // admin-boundary naming entirely · one Indonesian city may be tagged
+  // as "Kota Yogyakarta" or "Daerah Istimewa Yogyakarta" or just
+  // "Yogyakarta" and the previous area-name match missed most of them.
+  // Radius-based queries never miss the real geographic area.
   const unionBody = filters
     .map((f) => {
       const brack = buildOverpassFilter(f);
-      return `node${brack}(area.city);way${brack}(area.city);relation${brack}(area.city);`;
+      const around = `(around:${radiusMeters},${centroid.lat},${centroid.lng})`;
+      return `node${brack}${around};way${brack}${around};relation${brack}${around};`;
     })
     .join("");
 
   const q =
     `[out:json][timeout:180];` +
-    `area["ISO3166-1"="${countryIso}"][admin_level=2]->.country;` +
-    `area["name"="${cityAreaName}"](area.country)->.city;` +
     `(${unionBody});` +
     `out center tags 500;`;
 
@@ -281,14 +285,44 @@ for (const f of TRANSPORT_FILTERS) {
   else TRANSPORT_KEY_MAP.set(f.key, f.value);
 }
 
-async function collectCity(city, country) {
+async function computeCityCentroid(client, city, country) {
+  // Average lat/lng of every live canonical listing in this (city, country).
+  // We clamp to listings with coordinates (every walker-sourced row has
+  // them by construction). This gives us a reliable commercial-area
+  // centroid without needing OSM admin boundaries at all.
+  const r = await client.query(
+    `SELECT COUNT(*)::int AS n,
+            AVG(ST_Y(coordinates::geometry))::float8 AS lat,
+            AVG(ST_X(coordinates::geometry))::float8 AS lng
+       FROM nex.business_directory_v
+      WHERE lower(city) = lower($1)
+        AND country = $2
+        AND coordinates IS NOT NULL`,
+    [city, country],
+  );
+  const row = r.rows[0];
+  if (!row || row.n === 0 || typeof row.lat !== "number" || typeof row.lng !== "number") {
+    return null;
+  }
+  return { lat: row.lat, lng: row.lng, listingCount: row.n };
+}
+
+async function collectCity(client, city, country, radiusMeters = 7000) {
   console.log(`\n=== ${city} / ${country} ===`);
+  const centroid = await computeCityCentroid(client, city, country);
+  if (centroid === null) {
+    console.log(`  no listings with coordinates in business_directory_v · cannot compute centroid · skipping`);
+    return null;
+  }
+  console.log(`  centroid: lat=${centroid.lat.toFixed(5)} lng=${centroid.lng.toFixed(5)} · computed from ${centroid.listingCount} listings`);
+  console.log(`  radius:   ${radiusMeters}m`);
+
   const t0 = Date.now();
-  const attractionElements = await queryOverpass(ATTRACTION_FILTERS, city, country);
+  const attractionElements = await queryOverpass(ATTRACTION_FILTERS, centroid, radiusMeters);
   console.log(`  attractions: ${attractionElements.length} elements in ${Math.round((Date.now() - t0) / 1000)}s`);
   await sleep(5000);
   const t1 = Date.now();
-  const transportElements = await queryOverpass(TRANSPORT_FILTERS, city, country);
+  const transportElements = await queryOverpass(TRANSPORT_FILTERS, centroid, radiusMeters);
   console.log(`  transport:   ${transportElements.length} elements in ${Math.round((Date.now() - t1) / 1000)}s`);
 
   const attractionClaims = rankAndClaim(attractionElements, ATTRACTION_KEY_MAP);
@@ -300,24 +334,41 @@ async function collectCity(city, country) {
     return null;
   }
 
-  // Build the AreaIntelligence payload. Food + shopping stay empty by
-  // design (rule 1 · never list competing businesses in the same
-  // category).
+  // Build the AreaIntelligence payload. Keys MUST be snake_case to
+  // match `parseAreaIntelligence` in area-intelligence-types.ts
+  // (short_summary, method_note, researched_at, known_for +
+  // source_url, accessed_at on each claim). Food + shopping stay
+  // empty by design (rule 1 · never list competing businesses in
+  // the same category).
+  //
+  // short_summary: null is now accepted by the parser (honest-null ·
+  // the Wikidata/Wikipedia pass fills it later). The parser will
+  // render the panel using the known_for buckets alone.
+  const snakeAttractionClaims = attractionClaims.map((c) => ({
+    claim: c.claim,
+    source_url: c.sourceUrl,
+    accessed_at: c.accessedAt,
+  }));
+  const snakeTransportClaims = transportClaims.map((c) => ({
+    claim: c.claim,
+    source_url: c.sourceUrl,
+    accessed_at: c.accessedAt,
+  }));
   const payload = {
     namespace: PROVENANCE_NAMESPACE,
     areaName: city,
     country,
     city,
-    shortSummary: null, // deferred to the Wikidata/Wikipedia pass
+    short_summary: null, // deferred to the Wikidata/Wikipedia pass
     method: METHOD,
-    methodNote: `OSM Overpass · attraction + transport tag whitelist · ${attractionClaims.length} attractions + ${transportClaims.length} transport hubs`,
-    researchedAt: new Date().toISOString(),
+    method_note: `OSM Overpass · centroid=(${centroid.lat.toFixed(4)},${centroid.lng.toFixed(4)}) · radius=${radiusMeters}m · attractions ${attractionClaims.length} · transport ${transportClaims.length}`,
+    researched_at: new Date().toISOString(),
     attribution: ATTRIBUTION,
-    knownFor: {
+    known_for: {
       food: [],
       shopping: [],
-      attractions: attractionClaims,
-      transport: transportClaims,
+      attractions: snakeAttractionClaims,
+      transport: snakeTransportClaims,
     },
   };
   return payload;
@@ -335,10 +386,17 @@ async function main() {
 
   mkdirSync("logs/stage-area-intel", { recursive: true });
 
+  // Open the DB client up front · the centroid query needs it even in
+  // dry-run mode (we compute `AVG(lat,lng) FROM business_directory_v`
+  // · pure SELECT · zero writes · the --commit flag still gates all
+  // DB mutations below).
+  const centroidClient = new pg.Client({ connectionString: url });
+  await centroidClient.connect();
+
   const results = [];
   for (const city of cities) {
     try {
-      const payload = await collectCity(city, country);
+      const payload = await collectCity(centroidClient, city, country);
       results.push({ city, country, payload, error: null });
       await sleep(5000);
     } catch (e) {
@@ -346,6 +404,7 @@ async function main() {
       results.push({ city, country, payload: null, error: String(e.message || e).slice(0, 400) });
     }
   }
+  await centroidClient.end();
 
   const reviewPath = `logs/stage-area-intel/review-${new Date().toISOString().slice(0, 10)}.json`;
   writeFileSync(
