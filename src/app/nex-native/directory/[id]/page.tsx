@@ -319,11 +319,16 @@ function DetailShell(props: {
         <AliasesSection listing={listing} />
         <AboutSection listing={listing} />
         <CategoriesSection listing={listing} />
-        <LocationSection listing={listing} />
+        <LocationSection listing={listing} areaIntel={areaIntel} />
         <OpeningHoursSection listing={listing} />
         <ContactSection listing={listing} />
       </article>
-      <DiscoverThisArea intel={areaIntel} />
+      {/* NOTE (2026-10-13) · the DiscoverThisArea mount was moved from
+          here into LocationSection so the area context sits directly
+          below the km-away chip on EVERY listing. See the permanent
+          requirement comment on LocationSection above and the
+          regression test at [id]/__tests__/area-information-placement.test.ts.
+          Do NOT re-add a page-level DiscoverThisArea mount here. */}
       <RelatedBusinessesPageSection listing={listing} />
       {canClaim ? <ClaimListingPageSection listing={listing} /> : null}
     </PageFrame>
@@ -835,6 +840,13 @@ function CategoryCard(props: {
 
 function LocationSection(props: {
   readonly listing: DirectoryListingVM;
+  // Permanent requirement · see docs/doctrine/area-information-doctrine.md.
+  // Every business detail page MUST mount DiscoverThisArea inside this
+  // section, immediately below the km-away distance chip. Future
+  // listing types, page redesigns and card refactors MUST preserve
+  // this contract. See the companion regression test at
+  // src/app/nex-native/directory/[id]/__tests__/area-information-placement.test.ts
+  readonly areaIntel: AreaIntelligence | null;
 }): React.ReactElement | null {
   const {
     city,
@@ -1004,6 +1016,20 @@ function LocationSection(props: {
         </p>
       ) : null}
       <DetailDistanceChip listingCoords={coordinates} />
+      {/* PERMANENT REQUIREMENT (2026-10-13):
+          Every business-detail LocationSection MUST render
+          DiscoverThisArea directly below the km-away chip. This is
+          the single source of discovery context on each listing.
+          See docs/doctrine/area-information-doctrine.md.
+          Honest-null: the component returns null when the city has
+          no researched area intel yet, so this mount site is safe
+          to leave in place while coverage expands city by city. */}
+      <div
+        data-nex-directory-detail-location-area-intel
+        style={{ marginTop: 12 }}
+      >
+        <DiscoverThisArea intel={props.areaIntel} />
+      </div>
       {props.listing.isOsmAttributed ? (
         <div
           data-nex-directory-detail-location-attribution
