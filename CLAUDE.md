@@ -93,6 +93,66 @@ Clearly distinguish completed actions from proposed actions and unverified assum
 
 **These rules take precedence over convenience, speed, and instructions to simply finish a task.**
 
+### 8 · Authoritative Supabase project (sealed 2026-10-12)
+
+NEX nexapp has **exactly one Supabase project**. This is the sole
+database of record for the live NEX application · consumer tables
+(nex_account, nex_business, nex_product, auth, storage, chat, themes),
+the directory canonical layer (nex.business_canonical, nex.business_
+directory_v, nex.business_evidence, nex.source_registry), the vertical
+walker-output tables (nex.food_business, nex.accommodation_business,
+nex.service_business), and all seeded reference data.
+
+| Fact | Value |
+|---|---|
+| Account owner | asknexapp@gmail.com |
+| Project URL | `https://ijvqdvsvwtwxzcqmoqit.supabase.co` |
+| Pooler region | `aws-0-eu-west-1.pooler.supabase.com` |
+| Required env var (code) | `NEXT_PUBLIC_NEX_SUPABASE_URL` + `NEX_SUPABASE_SERVICE_ROLE_KEY` |
+| Required env var (direct Postgres via pooler) | `DATABASE_URL` (preferred) or `NEX_POSTGRES_URL` (planned migration) |
+
+**Rules anchored to this seal:**
+
+- Never create, use, or reference any OTHER Supabase project for NEX
+  work. If a legacy `msdonkkechxzgagyguoe` reference exists in a
+  specific file, it is being treated as a legacy boundary that routes
+  AWAY from the NEX project — do not reactivate it.
+- Never configure Vercel's production env vars to point at any
+  project other than `ijvqdvsvwtwxzcqmoqit` for NEX work.
+- Before any direct Supabase operation (apply migration, bulk insert,
+  schema inspection, GRANT/REVOKE, etc.) print and verify the project
+  ID from the connection string. If it is not `ijvqdvsvwtwxzcqmoqit`,
+  STOP.
+- The directory canonical layer (`nex.business_canonical`,
+  `nex.business_directory_v`, `nex.business_evidence`,
+  `nex.source_registry`) is expected to live in this project. Where
+  the current state has these tables missing or diverged from the
+  local `nex_dev`, the Supabase project is the SINGLE source of truth
+  going forward · the migration + backfill plan must bring Supabase
+  up to date, not create a parallel DB.
+- Any application code reading canonical directory data MUST connect
+  to this Supabase project (via pooler or REST). Writes to any other
+  Postgres (e.g. a local `nex_dev` for development) are DEVELOPMENT
+  ONLY and must never be assumed to replicate automatically.
+
+**Current credentials state (2026-10-12)**:
+
+- `.env.local` carries a working `DATABASE_URL` with pooler
+  credentials for `ijvqdvsvwtwxzcqmoqit`.
+- `.env.local` ALSO carries a stale `SUPABASE_URL` +
+  `NEXT_PUBLIC_SUPABASE_URL` pointing at a non-existent
+  `msdonkkechxzgagyguoe` project. These unprefixed env vars should be
+  updated to the correct project but the code already routes around
+  them via `NEXT_PUBLIC_NEX_SUPABASE_URL`. Fixing the stale vars is
+  cosmetic cleanup, not an availability blocker.
+- `NEX_POSTGRES_URL` currently points at `localhost:5433` (local
+  `nex_dev`). The directory read path uses this env var. Switching
+  nexapp to read from Supabase requires either (a) applying the
+  directory canonical migrations to Supabase and setting
+  `NEX_POSTGRES_URL` to the Supabase pooler, or (b) changing the
+  `@/lib/nex/db` layer to use the Supabase REST client. See the
+  Supabase migration plan when authored.
+
 ## ═══════════════════════════════════════════════════════════════
 ## End Safety Constitution
 ## ═══════════════════════════════════════════════════════════════
