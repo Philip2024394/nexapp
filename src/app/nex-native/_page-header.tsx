@@ -60,14 +60,15 @@ export function NexPageHeader({ dataScope }: NexPageHeaderProps) {
           textDecoration: "none",
           display: "inline-flex",
           alignItems: "baseline",
+          gap: 2,
           fontSize: 22,
           lineHeight: 1,
-          letterSpacing: "0.04em",
-          fontWeight: 700,
-          color: NEX.orange,
+          letterSpacing: "0.08em",
+          fontWeight: 600,
         }}
       >
-        <span data-nex-page-header-brand-text>NEX</span>
+        <span style={{ color: NEX.textPrimary }}>NE</span>
+        <span style={{ color: NEX.orange }}>X</span>
       </Link>
 
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
