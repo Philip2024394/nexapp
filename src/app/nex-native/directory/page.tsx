@@ -49,6 +49,9 @@ import { DirectoryResults } from "./_directory-results";
 import { listCountryCounts, joinWithIso } from "@/lib/nex-native/directory/country-counts";
 import { ISO_COUNTRIES, parseIsoAlpha2 } from "@/lib/nex-native/geo/iso-countries";
 import { CountryPicker } from "@/components/nex-native/directory/CountryPicker";
+import { LocationGate } from "@/components/nex-native/directory/LocationGate";
+import { UserLocationProvider } from "@/lib/nex-native/user-location/user-location-provider";
+import { readUserLocationFromAccount } from "@/lib/nex-native/user-location/actions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -129,6 +132,11 @@ export default async function DirectoryPage({ searchParams }: PageProps) {
   const page = parsePage(sp.page);
 
   await resolveNexAppSessionFromContext();
+
+  // Pass-10 user-location: SSR hint for the hybrid saved-location
+  // system. Null for anonymous visitors (localStorage takes over
+  // client-side) · also null for signed-in users with nothing saved.
+  const initialServerLocation = await readUserLocationFromAccount();
 
   // Country-counts for the picker · derived from business_directory_v so
   // we never offer a country with zero listings. Falls back to a single
@@ -215,37 +223,41 @@ export default async function DirectoryPage({ searchParams }: PageProps) {
       >
         <NexPageHeader dataScope="directory" />
 
-        <HeroSection
-          activeTab={tab}
-          systemReady={outcome.systemReady}
-          resultCount={renderable.length}
-        />
+        <UserLocationProvider initialServerLocation={initialServerLocation}>
+          <LocationGate />
 
-        <SearchForm q={q} tab={tab} country={country} countryEntries={countryEntries} />
+          <HeroSection
+            activeTab={tab}
+            systemReady={outcome.systemReady}
+            resultCount={renderable.length}
+          />
 
-        <ClassificationTabs active={tab} q={q} country={country} />
+          <SearchForm q={q} tab={tab} country={country} countryEntries={countryEntries} />
 
-        <ResultsSection
-          outcome={outcome}
-          renderable={renderable}
-          anyListingHasCoords={anyListingHasCoords}
-          q={q}
-          tab={tab}
-          categoryImageLibrary={categoryImageLibrary}
-        />
+          <ClassificationTabs active={tab} q={q} country={country} />
 
-        {outcome.systemReady && total > 0 ? (
-          <Pagination
-            page={page}
-            totalPages={totalPages}
-            total={total}
-            pageSize={PAGE_SIZE}
-            currentPageSize={renderable.length}
-            country={country}
+          <ResultsSection
+            outcome={outcome}
+            renderable={renderable}
+            anyListingHasCoords={anyListingHasCoords}
             q={q}
             tab={tab}
+            categoryImageLibrary={categoryImageLibrary}
           />
-        ) : null}
+
+          {outcome.systemReady && total > 0 ? (
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              pageSize={PAGE_SIZE}
+              currentPageSize={renderable.length}
+              country={country}
+              q={q}
+              tab={tab}
+            />
+          ) : null}
+        </UserLocationProvider>
       </div>
     </main>
   );

@@ -33,6 +33,9 @@
 import type * as React from "react";
 import Link from "next/link";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { LocationGate } from "@/components/nex-native/directory/LocationGate";
+import { UserLocationProvider } from "@/lib/nex-native/user-location/user-location-provider";
+import { readUserLocationFromAccount } from "@/lib/nex-native/user-location/actions";
 import * as businessService from "@/lib/nex-native/business-service";
 import * as discoveryService from "@/lib/nex-native/discovery-service";
 import * as localDirectory from "@/lib/nex-native/local-directory-service";
@@ -142,6 +145,10 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const offset = (page - 1) * PAGE_SIZE;
 
   await resolveNexAppSessionFromContext();
+
+  // Pass-10 user-location: SSR hint for signed-in users · null for
+  // anonymous (localStorage takes over client-side).
+  const initialServerLocation = await readUserLocationFromAccount();
 
   const hasSearch = query.length > 0 || category.length > 0;
 
@@ -291,6 +298,9 @@ export default async function SearchPage({ searchParams }: PageProps) {
         >
           <NexPageHeader dataScope="search" />
 
+          <UserLocationProvider initialServerLocation={initialServerLocation}>
+          <LocationGate />
+
           {hasSearch ? (
             <ResultsHeading query={query} />
           ) : (
@@ -362,6 +372,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
               hrefFor={hrefFor}
             />
           )}
+          </UserLocationProvider>
         </div>
       </main>
     </>

@@ -36,6 +36,7 @@ import type {
 } from "@/lib/nex-native/directory";
 import type { CategoryImageLibraryRow } from "@/lib/nex-native/directory/category-image-resolver";
 import { ListingDetailPanel } from "@/components/nex-native/directory/ListingDetailPanel";
+import { useUserLocationContext } from "@/lib/nex-native/user-location/user-location-provider";
 
 const PALETTE = {
   surface: "#0E1526",
@@ -104,6 +105,11 @@ const DirectoryCardWithCbs =
 export function DirectoryResults(props: DirectoryResultsProps): React.ReactElement {
   const [geo, setGeo] = useState<GeoState>({ kind: "idle" });
   const [panelFor, setPanelFor] = useState<PanelState | null>(null);
+  // Pass-10 user-location integration: when the viewer has a saved
+  // location (GPS or manual_city centroid), use it as the user coords
+  // source for distance. A live-granted GPS still wins when the user
+  // taps "Enable location" in the inline opt-in (overrides saved).
+  const savedCtx = useUserLocationContext();
 
   const requestLocation = useCallback(() => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
@@ -128,7 +134,12 @@ export function DirectoryResults(props: DirectoryResultsProps): React.ReactEleme
     );
   }, []);
 
-  const userCoords = geo.kind === "granted" ? geo.coords : null;
+  const userCoords: DirectoryCoordinates | null =
+    geo.kind === "granted"
+      ? geo.coords
+      : savedCtx.location !== null
+        ? { lat: savedCtx.location.lat, lng: savedCtx.location.lng }
+        : null;
 
   const openDetails = useCallback(
     (listing: DirectoryListingVM, destination: DirectoryDestination) => {
@@ -156,7 +167,7 @@ export function DirectoryResults(props: DirectoryResultsProps): React.ReactEleme
       data-nex-directory-panel-open={panelFor !== null ? "true" : "false"}
       style={{ display: "flex", flexDirection: "column", gap: 12 }}
     >
-      {props.anyListingHasCoords ? (
+      {props.anyListingHasCoords && savedCtx.location === null ? (
         <DistanceOptIn geo={geo} onEnable={requestLocation} />
       ) : null}
       {props.results.map(({ listing, destination }) => (
