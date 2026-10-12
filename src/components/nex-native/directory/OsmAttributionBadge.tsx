@@ -71,11 +71,24 @@ export function OsmAttributionBadge(
   );
 
   if (href !== null) {
+    // Rendered as a <button> rather than <a> because this badge is
+    // frequently placed inside a card-wide <a> link (DirectoryCard,
+    // ListingDetailPanel). Nesting <a> inside <a> is invalid HTML and
+    // breaks React hydration. The button stops click propagation so
+    // the parent card link does not also fire when the user taps the
+    // badge · then window.open takes the user to OSM in a new tab.
+    const open = () => {
+      if (typeof window === "undefined") return;
+      window.open(href, "_blank", "noopener,noreferrer");
+    };
     return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          open();
+        }}
         data-nex-osm-attribution-badge
         data-nex-osm-attribution-badge-ref={trimmed}
         aria-label={`OpenStreetMap source: ${trimmed} · opens on openstreetmap.org`}
@@ -91,10 +104,12 @@ export function OsmAttributionBadge(
           lineHeight: 1.3,
           textDecoration: "none",
           border: `1px solid ${PALETTE.borderSoft}`,
+          cursor: "pointer",
+          font: "inherit",
         }}
       >
         {inner}
-      </a>
+      </button>
     );
   }
 

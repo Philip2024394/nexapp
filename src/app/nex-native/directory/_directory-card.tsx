@@ -168,7 +168,6 @@ export function DirectoryCard(props: DirectoryCardProps): React.ReactElement {
   // `data-nex-directory-card-destination-kind` for future acquisition work.
   const href = buildHref(destination);
   const isLinkable = href !== null;
-  const actionLabel = buildActionLabel(destination);
 
   // Resolve a representative category illustration when the listing
   // has no OWNER_IMAGE / VERIFIED_REAL primary image. Pure · deterministic:
@@ -204,19 +203,12 @@ export function DirectoryCard(props: DirectoryCardProps): React.ReactElement {
         flexDirection: "column",
       }}
     >
-      {/* Hero slot · fills the full card width above the body row. When
-          the listing has a real primary image, the inline <CardImage>
-          below still renders the small 92×92 identity thumb inside the
-          body so claimed listings keep their proven card shape · this
-          hero is purely the representative-illustration layer for
-          unclaimed canonical rows (ADR-0022-compliant). */}
-      {listing.primaryImage === null ? (
-        <CategoryHero
-          resolved={representativeImage}
-          classification={listing.classification}
-          name={listing.name}
-        />
-      ) : null}
+      {/* Landscape card · small 92×92 image on the left, body on the
+          right. The hero-illustration slot has been removed per owner
+          decision (2026-10-12) · a listing without an owner photo now
+          shows the representative category illustration inline as the
+          small thumb (ADR-0022-compliant · still flagged
+          `isRepresentative:true` to the caption contract). */}
       <div
         style={{
           padding: 14,
@@ -228,6 +220,7 @@ export function DirectoryCard(props: DirectoryCardProps): React.ReactElement {
       <CardImage
         listing={listing}
         classification={listing.classification}
+        representativeImage={representativeImage}
       />
       <div
         style={{
@@ -437,14 +430,16 @@ export function DirectoryCard(props: DirectoryCardProps): React.ReactElement {
             <OsmAttributionBadge osmId={listing.osmId} size="compact" />
           </div>
         ) : null}
-        <CardAction destination={destination} actionLabel={actionLabel} />
-        {/* Data-conditional CTA strip. Buttons appear only when the
-            underlying field on the real VM is present — never
-            fabricated. Message is always shown; it defers to the
-            parent-wired onOpenChat. "View X" is entity-type-aware and
-            defers to onOpenDetail. The strip's stopPropagation on
-            CTA clicks prevents the surrounding whole-card <Link>
-            from swallowing the tap. */}
+        {/* Data-conditional CTA strip · the primary interaction
+            surface on each card (Message · Call · Website ·
+            Directions · View X). Horizontally scrollable on mobile.
+            Buttons appear only when the underlying field on the real
+            VM is present — never fabricated. The strip's
+            stopPropagation on CTA clicks prevents the surrounding
+            whole-card <Link> from swallowing the tap.
+            The legacy "View shop →" chevron row was removed
+            2026-10-12 · the CTA strip's "View X" button now carries
+            the open-detail affordance so there is no duplicate CTA. */}
         <CardCtaStrip
           listing={listing}
           onOpenDetail={onOpenDetail}
@@ -471,104 +466,16 @@ export function DirectoryCard(props: DirectoryCardProps): React.ReactElement {
 }
 
 // ═════════════════════════════════════════════════════════════════════
-// §0 · Category hero (representative illustration · ADR-0022)
-// ═════════════════════════════════════════════════════════════════════
-
-/** The full-width hero that renders at the top of a card when the
- *  listing has no OWNER_IMAGE / VERIFIED_REAL primary image. If the
- *  resolver returned a representative illustration from the curated
- *  library (nex.category_image_library · migration 112) we render it
- *  with an honest "Representative illustration" caption. If the
- *  resolver returned null (library empty / unseeded / no tier match)
- *  we render a styled no-image panel at the same dimensions so card
- *  heights stay consistent. */
-function CategoryHero(props: {
-  readonly resolved: CategoryImageResolved | null;
-  readonly classification: DirectoryClassification;
-  readonly name: string;
-}): React.ReactElement {
-  const { resolved, classification, name } = props;
-  if (resolved === null) {
-    return (
-      <div
-        data-nex-directory-card-hero="absent"
-        style={{
-          width: "100%",
-          aspectRatio: "4 / 3",
-          background: PALETTE.surfaceHi,
-          borderBottom: `1px solid ${PALETTE.borderSoft}`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <NoImage classification={classification} name={name} size="hero" />
-      </div>
-    );
-  }
-  return (
-    <div
-      data-nex-directory-card-hero="representative"
-      data-nex-directory-card-hero-slug={resolved.category_slug}
-      data-nex-directory-card-hero-variant={resolved.variant_tag ?? ""}
-      style={{
-        width: "100%",
-        aspectRatio: "4 / 3",
-        position: "relative",
-        background: PALETTE.surfaceHi,
-        borderBottom: `1px solid ${PALETTE.borderSoft}`,
-        overflow: "hidden",
-      }}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={resolved.url}
-        alt={`Representative illustration · ${resolved.category_slug}${resolved.variant_tag ? ` · ${resolved.variant_tag}` : ""}`}
-        data-nex-directory-card-hero-img
-        loading="lazy"
-        decoding="async"
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          display: "block",
-        }}
-      />
-      {/* Honest ADR-0022 caption · overlaid bottom-right · the Directory
-          never pretends a representative illustration is a photograph of
-          the specific business. */}
-      <span
-        data-nex-directory-card-hero-caption
-        style={{
-          position: "absolute",
-          right: 8,
-          bottom: 8,
-          padding: "3px 8px",
-          fontSize: 10.5,
-          fontWeight: 600,
-          letterSpacing: "0.02em",
-          color: PALETTE.textDim,
-          background: "rgba(2,9,20,0.72)",
-          border: `1px solid ${PALETTE.borderSoft}`,
-          borderRadius: 999,
-          pointerEvents: "none",
-        }}
-      >
-        Representative illustration
-      </span>
-    </div>
-  );
-}
-
-// ═════════════════════════════════════════════════════════════════════
 // §1 · Card image slot
 // ═════════════════════════════════════════════════════════════════════
 
 function CardImage(props: {
   readonly listing: DirectoryListingVM;
   readonly classification: DirectoryClassification;
+  readonly representativeImage: CategoryImageResolved | null;
 }): React.ReactElement {
-  const { listing, classification } = props;
+  const { listing, classification, representativeImage } = props;
+  // Tier 1 · owner-uploaded primary image
   if (listing.primaryImage !== null) {
     return (
       <div
@@ -583,9 +490,6 @@ function CardImage(props: {
           position: "relative",
         }}
       >
-        {/* Plain <img> tag · the Phase B contract exposes a plain URL
-            string. If a future wave adds next/image optimisation + an
-            allowlist for Supabase storage domains, this swaps in-place. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={listing.primaryImage.url}
@@ -603,6 +507,40 @@ function CardImage(props: {
       </div>
     );
   }
+  // Tier 2 · resolved representative category image. Shown as the
+  // same 92×92 thumb · never as a full-width hero.
+  if (representativeImage !== null) {
+    return (
+      <div
+        data-nex-directory-card-image="representative"
+        data-nex-directory-card-image-category-slug={representativeImage.category_slug}
+        style={{
+          width: 92,
+          height: 92,
+          flexShrink: 0,
+          borderRadius: 14,
+          overflow: "hidden",
+          background: PALETTE.surfaceHi,
+          position: "relative",
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={representativeImage.url}
+          alt={`${listing.name} · representative illustration for ${representativeImage.category_slug}`}
+          loading="lazy"
+          decoding="async"
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
+      </div>
+    );
+  }
+  // Tier 3 · no image anywhere · honest absent-state glyph
   return (
     <div data-nex-directory-card-image="absent" style={{ flexShrink: 0 }}>
       <NoImage classification={classification} name={listing.name} />
@@ -611,70 +549,7 @@ function CardImage(props: {
 }
 
 // ═════════════════════════════════════════════════════════════════════
-// §2 · Card action footer
-// ═════════════════════════════════════════════════════════════════════
-
-function CardAction(props: {
-  readonly destination: DirectoryDestination;
-  readonly actionLabel: string;
-}): React.ReactElement | null {
-  const { destination, actionLabel } = props;
-  // Visitor-facing action is a uniform inline chevron for every real
-  // destination kind. The label varies with the destination kind
-  // (see buildActionLabel) but the ownership state is NEVER exposed
-  // to the visitor as copy — the Directory does not say "Unclaimed",
-  // does not say "coming soon", does not expose any internal state.
-  // Internal state remains in data-nex-directory-card-destination-kind
-  // on the <article> for future acquisition / Marketing work.
-  if (
-    destination.kind === "nex_business" ||
-    destination.kind === "nex_user_profile" ||
-    destination.kind === "claim_available" ||
-    destination.kind === "place_detail"
-  ) {
-    return (
-      <div
-        data-nex-directory-card-action="link"
-        style={{
-          marginTop: 4,
-          color: PALETTE.orange,
-          fontSize: 13,
-          fontWeight: 600,
-          display: "flex",
-          alignItems: "center",
-          gap: 4,
-        }}
-      >
-        {actionLabel}
-        <ArrowGlyph />
-      </div>
-    );
-  }
-  // Pre-filtered redirect_to_canonical / unresolved should never reach
-  // the card; defence in depth returns null (no action).
-  return null;
-}
-
-function ArrowGlyph(): React.ReactElement {
-  return (
-    <svg
-      width={13}
-      height={13}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M9 6l6 6-6 6" />
-    </svg>
-  );
-}
-
-// ═════════════════════════════════════════════════════════════════════
-// §3 · Pure helpers
+// §2 · Pure helpers
 // ═════════════════════════════════════════════════════════════════════
 
 function joinPlace(
@@ -741,13 +616,3 @@ function buildHref(destination: DirectoryDestination): string | null {
   return null;
 }
 
-/** Visitor-facing action label. Does NOT expose ownership state.
- *  claim_available and place_detail both read "View details" so a
- *  visitor sees the Directory as one coherent discovery surface. */
-function buildActionLabel(destination: DirectoryDestination): string {
-  if (destination.kind === "nex_business") return "Open on NEX";
-  if (destination.kind === "nex_user_profile") return "View profile";
-  if (destination.kind === "claim_available") return "View details";
-  if (destination.kind === "place_detail") return "View details";
-  return "";
-}

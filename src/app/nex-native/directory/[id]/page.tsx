@@ -849,18 +849,23 @@ function LocationSection(props: {
   // Each location field is rendered independently when present ·
   // honoring the no-concatenation rule. We do NOT fabricate a full
   // address by stitching together partial fields from the source.
+  // The address jsonb column is open-shape · fields may be absent
+  // entirely (undefined), explicitly null, or a trimmable string.
+  // Guard against all three with a single typeof check so a canonical
+  // row written by any walker (OSM Overpass, legacy backfill, future
+  // sources) renders without a Runtime TypeError.
   const addressLine1HasValue =
     address !== null &&
-    address.line1 !== null &&
+    typeof address.line1 === "string" &&
     address.line1.trim().length > 0;
   const addressPostalHasValue =
     address !== null &&
-    address.postal_code !== null &&
+    typeof address.postal_code === "string" &&
     address.postal_code.trim().length > 0;
   const streetLineHasValue =
-    streetLine !== null && streetLine.trim().length > 0;
+    typeof streetLine === "string" && streetLine.trim().length > 0;
   const neighbourhoodHasValue =
-    neighbourhood !== null && neighbourhood.trim().length > 0;
+    typeof neighbourhood === "string" && neighbourhood.trim().length > 0;
   const districtHasValue = district !== null && district.length > 0;
   const cityHasValue = city !== null && city.length > 0;
   const countryHasValue = country.length > 0;

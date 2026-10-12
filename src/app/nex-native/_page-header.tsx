@@ -60,11 +60,12 @@ export function NexPageHeader({ dataScope }: NexPageHeaderProps) {
           textDecoration: "none",
           display: "inline-flex",
           alignItems: "baseline",
-          gap: 2,
-          fontSize: 22,
+          fontSize: 24,
           lineHeight: 1,
-          letterSpacing: "0.08em",
-          fontWeight: 600,
+          letterSpacing: "0",
+          fontWeight: 800,
+          fontFamily:
+            "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
         }}
       >
         <span style={{ color: NEX.textPrimary }}>NE</span>
