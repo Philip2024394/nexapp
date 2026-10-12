@@ -108,6 +108,9 @@ export const AC_SERVICE_PACKAGE: ThemePackage = {
   // 16/17 Shop + Product cards · glass cards · momentum scroll ·
   // coaster framing so service packages sit on tidy round discs.
   shop: {
+    // Unified 2026-10-13 · owner directive: every theme's shop slider
+    // must use the EXACT same style and layout as the Joker/Hollywood
+    // theme slider · glass cards · momentum scroll · coaster framing.
     cardStyle: "glass",
     scrollFeel: "momentum",
     productFraming: "coaster",

@@ -115,9 +115,12 @@ export const MIDNIGHT_CAFE_PACKAGE: ThemePackage = {
   // snap scroll (crisp, precise · the stage is quiet enough to want
   // it) + float framing (products appear suspended, lit from behind).
   shop: {
+    // Unified 2026-10-13 · owner directive: every theme's shop slider
+    // must use the EXACT same style and layout as the Joker/Hollywood
+    // theme slider · glass cards · momentum scroll · coaster framing.
     cardStyle: "glass",
-    scrollFeel: "snap",
-    productFraming: "float",
+    scrollFeel: "momentum",
+    productFraming: "coaster",
   },
 
   // 23 Ambient · the Midnight signature exactly as approved:

@@ -105,9 +105,12 @@ export const NEX_FLAT_PACKAGE: ThemePackage = {
   // 16/17 Shop + Product cards · glass cards with momentum scroll.
   // Same as NEX Bubbles · the product grid is a shared surface.
   shop: {
+    // Unified 2026-10-13 · owner directive: every theme's shop slider
+    // must use the EXACT same style and layout as the Joker/Hollywood
+    // theme slider · glass cards · momentum scroll · coaster framing.
     cardStyle: "glass",
     scrollFeel: "momentum",
-    productFraming: "card",
+    productFraming: "coaster",
   },
 
   // 23 Ambient · Step 1I polish · dense floating blue bubbles are

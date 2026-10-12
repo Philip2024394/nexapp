@@ -132,9 +132,12 @@ export const FRENCH_CAFE_PACKAGE: ThemePackage = {
   // saucer-under-glass product framing (round, museum-case feel ·
   // precisely what a patisserie counter looks like).
   shop: {
-    cardStyle: "marble-top",
+    // Unified 2026-10-13 · owner directive: every theme's shop slider
+    // must use the EXACT same style and layout as the Joker/Hollywood
+    // theme slider · glass cards · momentum scroll · coaster framing.
+    cardStyle: "glass",
     scrollFeel: "momentum",
-    productFraming: "saucer-under-glass",
+    productFraming: "coaster",
   },
 
   // 23 Ambient · the French signature. Deliberately NOT dense ·

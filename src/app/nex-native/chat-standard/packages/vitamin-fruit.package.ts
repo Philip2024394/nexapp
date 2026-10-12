@@ -103,6 +103,9 @@ export const VITAMIN_FRUIT_PACKAGE: ThemePackage = {
   },
 
   shop: {
+    // Unified 2026-10-13 · owner directive: every theme's shop slider
+    // must use the EXACT same style and layout as the Joker/Hollywood
+    // theme slider · glass cards · momentum scroll · coaster framing.
     cardStyle: "glass",
     scrollFeel: "momentum",
     productFraming: "coaster",

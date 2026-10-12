@@ -110,6 +110,9 @@ export const NEX_BUBBLES_PACKAGE: ThemePackage = {
 
   // 16/17 Shop + Product cards · clean glass cards with momentum scroll.
   shop: {
+    // Unified 2026-10-13 · owner directive: every theme's shop slider
+    // must use the EXACT same style and layout as the Joker/Hollywood
+    // theme slider · glass cards · momentum scroll · coaster framing.
     cardStyle: "glass",
     scrollFeel: "momentum",
     productFraming: "coaster",

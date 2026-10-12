@@ -306,13 +306,16 @@ const baseButtonStyle: React.CSSProperties = {
   alignItems: "center",
   gap: 6,
   flexShrink: 0,
-  fontSize: 12.5,
+  // Mobile standard reading size (2026-10-13 owner directive · 14px
+  // is the browser default body size on mobile; smaller renders as
+  // sub-standard reading-size on retina displays).
+  fontSize: 14,
   fontWeight: 600,
-  padding: "6px 12px",
+  padding: "8px 14px",
   borderRadius: 999,
   lineHeight: 1,
   whiteSpace: "nowrap",
-  minHeight: 32,
+  minHeight: 36,
 };
 
 // ─────────────────────────────────────────────────────────────────────

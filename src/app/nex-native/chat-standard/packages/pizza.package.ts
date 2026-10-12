@@ -117,7 +117,10 @@ export const PIZZA_PACKAGE: ThemePackage = {
   // scroll · coaster framing so each menu item sits on a round
   // terracotta disc like a bread plate.
   shop: {
-    cardStyle: "ceramic-tile",
+    // Unified 2026-10-13 · owner directive: every theme's shop slider
+    // must use the EXACT same style and layout as the Joker/Hollywood
+    // theme slider · glass cards · momentum scroll · coaster framing.
+    cardStyle: "glass",
     scrollFeel: "momentum",
     productFraming: "coaster",
   },

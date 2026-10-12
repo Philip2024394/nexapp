@@ -121,9 +121,12 @@ export const FOOD_PACKAGE: ThemePackage = {
   // gentle current scroll and card framing so dishes read as
   // menu items.
   shop: {
-    cardStyle: "menu-card",
-    scrollFeel: "current",
-    productFraming: "card",
+    // Unified 2026-10-13 · owner directive: every theme's shop slider
+    // must use the EXACT same style and layout as the Joker/Hollywood
+    // theme slider · glass cards · momentum scroll · coaster framing.
+    cardStyle: "glass",
+    scrollFeel: "momentum",
+    productFraming: "coaster",
   },
 
   // 23 Ambient animation · drifting warm embers + a thin smoke band ·

@@ -120,7 +120,10 @@ export const BOTANICAL_CAFE_PACKAGE: ThemePackage = {
   // tabletop) with momentum scroll + coaster framing (round warm
   // discs under each product · like a saucer under a potted herb).
   shop: {
-    cardStyle: "ceramic-tile",
+    // Unified 2026-10-13 · owner directive: every theme's shop slider
+    // must use the EXACT same style and layout as the Joker/Hollywood
+    // theme slider · glass cards · momentum scroll · coaster framing.
+    cardStyle: "glass",
     scrollFeel: "momentum",
     productFraming: "coaster",
   },

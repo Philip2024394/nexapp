@@ -231,26 +231,41 @@ export function DirectoryCard(props: DirectoryCardProps): React.ReactElement {
           gap: 6,
         }}
       >
+        {/* Title row · name on the left · km-distance pushed to the
+            RIGHT side (2026-10-13 owner directive). The Business /
+            Place / Person classification BADGE was removed in the
+            same change · the internal `classification` state is
+            still exposed via `data-nex-directory-card-classification`
+            on the parent <article> for acquisition/analytics work,
+            but it is NOT a visible UI chip anymore. */}
         <div
           style={{
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-start",
             gap: 8,
-            flexWrap: "wrap",
+            flexWrap: "nowrap",
           }}
         >
-          <span
-            data-nex-directory-card-chip="classification"
+          <h3
+            data-nex-directory-card-name
             style={{
-              fontSize: 10.5,
-              fontWeight: 700,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: CLASSIFICATION_ACCENT[listing.classification],
+              margin: 0,
+              flex: 1,
+              minWidth: 0,
+              color: PALETTE.text,
+              fontSize: 16,
+              fontWeight: 600,
+              lineHeight: 1.3,
+              wordBreak: "break-word",
+              overflowWrap: "anywhere",
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
             }}
           >
-            {CLASSIFICATION_LABEL[listing.classification]}
-          </span>
+            {listing.name}
+          </h3>
           <span
             data-nex-directory-card-chip="distance"
             data-nex-directory-card-distance-kind={distanceChipKind}
@@ -260,50 +275,35 @@ export function DirectoryCard(props: DirectoryCardProps): React.ReactElement {
                 : "Distance from you is unavailable because location has not been shared or this listing has no coordinates"
             }
             style={{
-              fontSize: 11,
+              flexShrink: 0,
+              marginLeft: "auto",
+              fontSize: 14,
               fontWeight: 600,
               color:
                 distanceChipKind === "known"
                   ? PALETTE.textDim
                   : PALETTE.textSoft,
-              padding: "2px 8px",
+              padding: "2px 10px",
               borderRadius: 999,
               border: `1px solid ${PALETTE.borderSoft}`,
               background:
                 distanceChipKind === "known"
                   ? PALETTE.surfaceHi
                   : "transparent",
+              whiteSpace: "nowrap",
             }}
           >
             {distanceChipLabel}
           </span>
         </div>
-        <h3
-          data-nex-directory-card-name
-          style={{
-            margin: 0,
-            color: PALETTE.text,
-            fontSize: 17,
-            fontWeight: 600,
-            lineHeight: 1.25,
-            wordBreak: "break-word",
-            overflowWrap: "anywhere",
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-          }}
-        >
-          {listing.name}
-        </h3>
         {place !== null ? (
           <p
             data-nex-directory-card-place
             style={{
               margin: 0,
               color: PALETTE.textMuted,
-              fontSize: 13,
-              lineHeight: 1.35,
+              fontSize: 14,
+              lineHeight: 1.4,
             }}
           >
             {place}
@@ -315,8 +315,8 @@ export function DirectoryCard(props: DirectoryCardProps): React.ReactElement {
             style={{
               margin: 0,
               color: PALETTE.textSoft,
-              fontSize: 12,
-              lineHeight: 1.35,
+              fontSize: 14,
+              lineHeight: 1.4,
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
@@ -342,9 +342,9 @@ export function DirectoryCard(props: DirectoryCardProps): React.ReactElement {
               <li
                 key={c}
                 style={{
-                  fontSize: 11,
+                  fontSize: 13,
                   fontWeight: 500,
-                  padding: "2px 8px",
+                  padding: "3px 10px",
                   background: PALETTE.surfaceHi,
                   color: PALETTE.textDim,
                   borderRadius: 999,
@@ -361,8 +361,8 @@ export function DirectoryCard(props: DirectoryCardProps): React.ReactElement {
             style={{
               margin: 0,
               color: PALETTE.textSoft,
-              fontSize: 12,
-              lineHeight: 1.35,
+              fontSize: 13,
+              lineHeight: 1.4,
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
@@ -378,8 +378,8 @@ export function DirectoryCard(props: DirectoryCardProps): React.ReactElement {
             style={{
               margin: "2px 0 0 0",
               color: PALETTE.textDim,
-              fontSize: 12,
-              lineHeight: 1.35,
+              fontSize: 13,
+              lineHeight: 1.4,
               overflow: "hidden",
               textOverflow: "ellipsis",
               display: "-webkit-box",
@@ -411,9 +411,9 @@ export function DirectoryCard(props: DirectoryCardProps): React.ReactElement {
                 key={chip.key}
                 data-nex-directory-card-contact-chip={chip.key}
                 style={{
-                  fontSize: 11,
+                  fontSize: 13,
                   fontWeight: 500,
-                  padding: "2px 8px",
+                  padding: "3px 10px",
                   background: PALETTE.surfaceHi,
                   color: PALETTE.textDim,
                   borderRadius: 999,
