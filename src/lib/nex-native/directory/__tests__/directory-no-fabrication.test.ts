@@ -279,14 +279,15 @@ describe("Phase B · projector has no content-fabricating fallbacks", () => {
     //     fabricated literal · only chains to a legitimate alternate-
     //     source field recorded in business_evidence.
     //     legacy_source_table).
-    // Total expected: 6. If a future field needs to be enrichment-
-    // fallback-aware, update this expectation deliberately · do NOT
-    // silently relax the invariant.
-    // WhatsApp is deliberately NOT in this set · NEX is the messaging
-    // product (the WhatsApp replacement) · OSM WhatsApp numbers stay
-    // out of the public enrichment overlay entirely and live in
+    // Expected: 7 · base 6 + openingHoursText trailing `?? null`
+    // (opening hours have no canonical column today, only an
+    // enrichment overlay source). WhatsApp remains deliberately
+    // excluded from the set · NEX is the messaging product (the
+    // WhatsApp replacement) and OSM WhatsApp numbers live in
     // `nex.food_business.whatsapp_number` for HQ marketing use only.
-    expect(nullCoalesce.length).toBe(6);
+    // Update this expectation deliberately for any future
+    // overlay-fallback field · do NOT silently relax it.
+    expect(nullCoalesce.length).toBe(7);
   });
 });
 

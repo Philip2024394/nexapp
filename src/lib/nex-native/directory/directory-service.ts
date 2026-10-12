@@ -387,7 +387,7 @@ export async function fetchFoodEnrichmentByCanonicalId(
 
   const sql =
     "SELECT canonical_business_id, phone, website, " +
-    "category, categories, address " +
+    "category, categories, address, opening_information " +
     "FROM nex.food_business " +
     "WHERE canonical_business_id = ANY($1::uuid[])";
 
@@ -407,6 +407,7 @@ export async function fetchFoodEnrichmentByCanonicalId(
       category: string | null;
       categories: string[] | null;
       address: string | null;
+      opening_information: unknown;
     }[];
     for (const row of rows) {
       map.set(row.canonical_business_id, {
@@ -415,6 +416,7 @@ export async function fetchFoodEnrichmentByCanonicalId(
         verticalCategory: nonEmpty(row.category),
         verticalCategories: row.categories ?? [],
         streetLineRaw: nonEmpty(row.address),
+        openingHoursText: extractOpeningHoursText(row.opening_information),
       });
     }
   } catch {
@@ -433,6 +435,25 @@ function nonEmpty(v: string | null): string | null {
   if (v === null) return null;
   const trimmed = v.trim();
   return trimmed.length === 0 ? null : trimmed;
+}
+
+/** Extract an opening-hours string from the vertical row's
+ *  `opening_information` jsonb. The sealed OSM ingestion writes
+ *  `{"notes":"OSM opening_hours: <string>","timezone":"..."}`;
+ *  future ingestion formats may use different shapes. We ONLY return
+ *  the string we recognise · everything else returns null (and the
+ *  UI shows "Opening hours unknown" rather than fabricating). Pure. */
+function extractOpeningHoursText(raw: unknown): string | null {
+  if (raw === null || typeof raw !== "object") return null;
+  const notes = (raw as { notes?: unknown }).notes;
+  if (typeof notes !== "string") return null;
+  const prefix = "OSM opening_hours:";
+  const idx = notes.indexOf(prefix);
+  if (idx === -1) return null;
+  const value = notes.slice(idx + prefix.length).trim();
+  if (value.length === 0) return null;
+  if (value.length > 240) return value.slice(0, 240);
+  return value;
 }
 
 // ═════════════════════════════════════════════════════════════════════

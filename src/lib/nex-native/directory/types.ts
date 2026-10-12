@@ -246,6 +246,11 @@ export interface DirectoryListingVM {
 
   readonly categoryIds: readonly string[];
   readonly verticalPayload: unknown | null;
+  /** Opening-hours text projected from the vertical enrichment
+   *  overlay (OSM-style string like "Mo-Su 10:00-23:00" or "24/7").
+   *  Null when the row has no recorded hours · the UI must render
+   *  "Opening hours unknown" rather than fabricating. */
+  readonly openingHoursText: string | null;
 
   readonly primaryImage: DirectoryImage | null;
 

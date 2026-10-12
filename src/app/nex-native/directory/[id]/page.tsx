@@ -58,6 +58,11 @@ import { DetailDistanceChip } from "./_detail-distance";
 // surface, not a replacement.
 import { RelatedBusinessesSectionClient } from "@/components/nex-native/directory/RelatedBusinessesSectionClient";
 import { OwnerClaimForm } from "@/components/nex-native/directory/OwnerClaimForm";
+import { MapPinPing } from "@/components/nex-native/directory/MapPinPing";
+import { UserLocationProvider } from "@/lib/nex-native/user-location/user-location-provider";
+import { readUserLocationFromAccount } from "@/lib/nex-native/user-location/actions";
+import { flagEmojiForIso } from "@/lib/nex-native/geo/flag-emoji";
+import { ISO_COUNTRIES } from "@/lib/nex-native/geo/iso-countries";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -107,6 +112,12 @@ export default async function DirectoryDetailPage(
   const { id } = await props.params;
   await resolveNexAppSessionFromContext();
 
+  // Pass-10 user-location: SSR hint lets the detail page's distance
+  // chip use the viewer's saved location without re-prompting GPS.
+  // The LocationGate overlay is NOT mounted here (detail routes are
+  // exempt per decision 2) · we only provide the saved coords.
+  const initialServerLocation = await readUserLocationFromAccount();
+
   const outcome = await getCanonicalBusinessById(id);
 
   if (!outcome.systemReady) {
@@ -145,11 +156,13 @@ export default async function DirectoryDetailPage(
 
   // destination.kind is now `claim_available` or `place_detail`.
   return (
-    <DetailShell
-      listing={listing}
-      destination={destination}
-      hasEvidence={hasEvidence}
-    />
+    <UserLocationProvider initialServerLocation={initialServerLocation}>
+      <DetailShell
+        listing={listing}
+        destination={destination}
+        hasEvidence={hasEvidence}
+      />
+    </UserLocationProvider>
   );
 }
 
@@ -290,6 +303,7 @@ function DetailShell(props: {
         <AboutSection listing={listing} />
         <CategoriesSection listing={listing} />
         <LocationSection listing={listing} />
+        <OpeningHoursSection listing={listing} />
         <ContactSection listing={listing} />
       </article>
       <RelatedBusinessesPageSection listing={listing} />
@@ -679,13 +693,16 @@ function LocationSection(props: {
   const cityHasValue = city !== null && city.length > 0;
   const countryHasValue = country.length > 0;
 
-  // Area line (district / city / country) composed deterministically
-  // in that order with " · " separators · each component is a real
-  // field from the canonical row.
+  // Area line (district / city / country-name) composed
+  // deterministically. The country token resolves ISO 3166 alpha-2 to
+  // the common English name via ISO_COUNTRIES; when the lookup misses
+  // we show the raw ISO code honestly rather than skipping.
+  const countryName = resolveCountryName(country);
+  const flag = flagEmojiForIso(country);
   const areaParts: string[] = [];
   if (districtHasValue) areaParts.push(district!);
   if (cityHasValue) areaParts.push(city!);
-  if (countryHasValue) areaParts.push(country);
+  if (countryHasValue) areaParts.push(countryName);
   const hasAreaLine = areaParts.length > 0;
 
   const hasAnyText =
@@ -710,6 +727,45 @@ function LocationSection(props: {
 
   return (
     <SectionBlock title="Location" dataAttr="location">
+      <div
+        data-nex-directory-detail-location-head
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 8,
+        }}
+      >
+        <MapPinPing size={22} accentColor={NEX.cyan} />
+        <div
+          data-nex-directory-detail-location-head-primary
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            flexWrap: "wrap",
+            fontSize: 14,
+            color: NEX.text,
+            fontWeight: 500,
+          }}
+        >
+          {flag !== null ? (
+            <span
+              aria-hidden="true"
+              data-nex-directory-detail-location-flag
+              style={{ fontSize: 18, lineHeight: 1 }}
+            >
+              {flag}
+            </span>
+          ) : null}
+          <span
+            data-nex-directory-detail-location-area
+            data-nex-directory-detail-location-iso={country}
+          >
+            {hasAreaLine ? areaParts.join(" · ") : countryName}
+          </span>
+        </div>
+      </div>
       {addressLine1HasValue ? (
         <p
           data-nex-directory-detail-location-line="address-line1"
@@ -752,24 +808,11 @@ function LocationSection(props: {
           {neighbourhood}
         </p>
       ) : null}
-      {hasAreaLine ? (
-        <p
-          data-nex-directory-detail-location-line="area"
-          style={{
-            margin:
-              addressLine1HasValue ||
-              streetLineHasValue ||
-              neighbourhoodHasValue
-                ? "4px 0 0 0"
-                : 0,
-            color: NEX.textDim,
-            fontSize: 14,
-            lineHeight: 1.5,
-          }}
-        >
-          {areaParts.join(" · ")}
-        </p>
-      ) : null}
+      {/* The area line (district · city · country) is rendered in the
+          Location head above (next to the map-pin ping + flag). We do
+          NOT duplicate it here · the head is now the authoritative
+          area display. The address-line1 / street / neighbourhood
+          children stay as additional detail below the head. */}
       {addressPostalHasValue ? (
         <p
           data-nex-directory-detail-location-line="postal_code"
@@ -784,6 +827,77 @@ function LocationSection(props: {
         </p>
       ) : null}
       <DetailDistanceChip listingCoords={coordinates} />
+    </SectionBlock>
+  );
+}
+
+// ─── Country name helper · ISO 3166 alpha-2 → common English name ───
+
+/** Resolve "ID" to "Indonesia" via the sealed ISO_COUNTRIES table.
+ *  Falls back to the raw code when the lookup misses rather than
+ *  returning a fabricated name. Pure. */
+function resolveCountryName(iso: string): string {
+  if (!/^[A-Z]{2}$/.test(iso)) return iso;
+  for (const entry of ISO_COUNTRIES) {
+    if (entry.isoAlpha2 === iso) return entry.name;
+  }
+  return iso;
+}
+
+// ─── Opening hours section · honest "unknown" fallback ──────────────
+
+function OpeningHoursSection(props: {
+  readonly listing: DirectoryListingVM;
+}): React.ReactElement {
+  // Business owners who claim the listing can later set structured
+  // weekly hours; today the only source is the OSM `opening_hours`
+  // tag projected through the enrichment overlay. If the overlay
+  // did not carry a value, the row has no recorded hours · we show
+  // "Opening hours unknown" rather than fabricating.
+  //
+  // The section ALWAYS renders · "unknown" is a legitimate status
+  // the visitor needs to see so they don't assume the business is
+  // open or closed without evidence.
+  const raw = props.listing.openingHoursText;
+  const text =
+    raw !== null && raw.trim().length > 0 ? raw.trim() : null;
+  return (
+    <SectionBlock title="Opening hours" dataAttr="opening-hours">
+      <div
+        data-nex-directory-detail-hours
+        data-nex-directory-detail-hours-known={text !== null ? "true" : "false"}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <ClockGlyph muted={text === null} />
+        {text !== null ? (
+          <span
+            style={{
+              fontSize: 14,
+              color: NEX.text,
+              lineHeight: 1.4,
+              wordBreak: "break-word",
+            }}
+          >
+            {text}
+          </span>
+        ) : (
+          <span
+            style={{
+              fontSize: 13,
+              color: NEX.textMuted,
+              lineHeight: 1.4,
+              fontStyle: "italic",
+            }}
+          >
+            Opening hours unknown — the owner can add them when they claim
+            this listing.
+          </span>
+        )}
+      </div>
     </SectionBlock>
   );
 }
@@ -982,6 +1096,26 @@ function PhoneGlyph(): React.ReactElement {
       aria-hidden="true"
     >
       <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.12.9.34 1.78.66 2.63a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.45-1.45a2 2 0 012.11-.45c.85.32 1.73.54 2.63.66A2 2 0 0122 16.92z" />
+    </svg>
+  );
+}
+
+function ClockGlyph(props: { readonly muted?: boolean }): React.ReactElement {
+  const stroke = props.muted ? NEX.textSoft : NEX.cyan;
+  return (
+    <svg
+      width={16}
+      height={16}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={stroke}
+      strokeWidth={2.2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
     </svg>
   );
 }

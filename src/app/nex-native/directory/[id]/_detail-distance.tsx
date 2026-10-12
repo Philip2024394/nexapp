@@ -28,6 +28,7 @@ import type * as React from "react";
 import { useCallback, useState } from "react";
 import type { DirectoryCoordinates } from "@/lib/nex-native/directory";
 import { formatKmDistance, haversineKmOrNull } from "../_distance";
+import { useUserLocationContext } from "@/lib/nex-native/user-location/user-location-provider";
 
 const PALETTE = {
   surface: "#0E1526",
@@ -80,7 +81,17 @@ export function DetailDistanceChip(
     );
   }, []);
 
-  const userCoords = geo.kind === "granted" ? geo.coords : null;
+  // Pass-10: a saved user location (GPS or manual_city centroid)
+  // flows in via context from UserLocationProvider on this route.
+  // Live-granted GPS still wins when the viewer taps "Show distance
+  // from me" (overrides saved · higher precision).
+  const savedCtx = useUserLocationContext();
+  const userCoords: DirectoryCoordinates | null =
+    geo.kind === "granted"
+      ? geo.coords
+      : savedCtx.location !== null
+        ? { lat: savedCtx.location.lat, lng: savedCtx.location.lng }
+        : null;
   const distanceKm = haversineKmOrNull(userCoords, listingCoords);
   const distanceLabel =
     distanceKm === null ? null : formatKmDistance(distanceKm);
@@ -121,7 +132,7 @@ export function DetailDistanceChip(
           ? `${distanceLabel} away`
           : "Location Unconfirmed"}
       </span>
-      {geo.kind === "idle" ? (
+      {geo.kind === "idle" && savedCtx.location === null ? (
         <button
           type="button"
           onClick={requestLocation}

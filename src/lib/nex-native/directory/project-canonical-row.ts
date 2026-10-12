@@ -85,6 +85,13 @@ export interface DirectoryVerticalEnrichment {
   /** Street-line as the vertical row holds it (e.g.
    *  "Jalan Bypass Gatot Subroto, Denpasar"). */
   readonly streetLineRaw: string | null;
+  /** Opening-hours text extracted from the vertical row (today ·
+   *  the `notes` field of nex.food_business.opening_information,
+   *  which carries an OSM `opening_hours` string prefixed with
+   *  "OSM opening_hours: ..."). Null when the row has no hours or
+   *  the notes do not contain a recognisable prefix · the UI then
+   *  renders "Opening hours unknown" rather than fabricating. */
+  readonly openingHoursText: string | null;
 }
 
 export interface ProjectDirectoryListingArgs {
@@ -145,6 +152,7 @@ export function projectDirectoryListing(
         ]
       : [];
   const streetLine = row.street_line ?? enrichment?.streetLineRaw ?? null;
+  const openingHoursText = enrichment?.openingHoursText ?? null;
 
   return {
     canonicalBusinessId: row.canonical_business_id,
@@ -171,6 +179,7 @@ export function projectDirectoryListing(
 
     categoryIds: verticalCategoryList,
     verticalPayload: row.services_products,
+    openingHoursText,
 
     primaryImage: media === null ? null : media.primaryImage,
 
