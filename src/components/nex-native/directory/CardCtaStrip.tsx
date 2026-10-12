@@ -260,33 +260,44 @@ function AnchorButton(props: {
   readonly rel?: string;
   readonly icon: React.ReactElement;
 }): React.ReactElement {
+  // Rendered as <button> rather than <a> because this component sits
+  // inside a card-level <Link> from Next.js, and the HTML spec forbids
+  // nested anchors (reported hydration error 2026-10-12). The button
+  // simulates anchor behaviour via window.open · for `target="_blank"`
+  // this opens a new tab · for tel: and other same-tab destinations it
+  // falls back to window.location. This loses one piece of anchor
+  // UX (middle-click / cmd-click open-in-new-tab) · the trade-off is
+  // valid HTML + no hydration mismatch.
   const { label, testKey, href, target, rel, icon } = props;
   return (
-    <a
+    <button
+      type="button"
       data-nex-directory-cta={testKey}
       data-nex-directory-cta-variant="anchor"
+      data-nex-directory-cta-href={href}
+      data-nex-directory-cta-target={target ?? ""}
       aria-label={label}
-      href={href}
-      target={target}
-      rel={rel}
       onClick={(e) => {
-        // Prevent the surrounding card <Link> from intercepting the
-        // tap. The anchor's own default action still fires (tel://,
-        // external link, maps) because we are not calling
-        // preventDefault.
+        e.preventDefault();
         e.stopPropagation();
+        if (typeof window === "undefined") return;
+        if (target === "_blank") {
+          window.open(href, "_blank", rel ?? "noopener,noreferrer");
+        } else {
+          window.location.href = href;
+        }
       }}
       style={{
         ...baseButtonStyle,
         background: "transparent",
         color: PALETTE.cyan,
         border: `1px solid ${PALETTE.cyan}`,
-        textDecoration: "none",
+        cursor: "pointer",
       }}
     >
       {icon}
       <span>{label}</span>
-    </a>
+    </button>
   );
 }
 
