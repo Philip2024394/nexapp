@@ -371,7 +371,7 @@ async function collectCity(client, city, country, radiusMeters = 7000) {
       transport: snakeTransportClaims,
     },
   };
-  return payload;
+  return { payload, centroid, radiusMeters };
 }
 
 async function main() {
@@ -396,12 +396,23 @@ async function main() {
   const results = [];
   for (const city of cities) {
     try {
-      const payload = await collectCity(centroidClient, city, country);
-      results.push({ city, country, payload, error: null });
+      const r = await collectCity(centroidClient, city, country);
+      if (r === null) {
+        results.push({ city, country, payload: null, centroid: null, radius_m: null, error: null });
+      } else {
+        results.push({
+          city,
+          country,
+          payload: r.payload,
+          centroid: { lat: r.centroid.lat, lng: r.centroid.lng, n: r.centroid.listingCount },
+          radius_m: r.radiusMeters,
+          error: null,
+        });
+      }
       await sleep(5000);
     } catch (e) {
       console.log(`  ERROR · ${e.message.slice(0, 200)}`);
-      results.push({ city, country, payload: null, error: String(e.message || e).slice(0, 400) });
+      results.push({ city, country, payload: null, centroid: null, radius_m: null, error: String(e.message || e).slice(0, 400) });
     }
   }
   await centroidClient.end();
@@ -444,44 +455,88 @@ async function main() {
   await client.connect();
   console.log("\n=== LIVE WRITE PATH ===");
 
-  let written = 0;
-  for (const r of results) {
-    if (!r.payload) continue;
-    // Idempotent UPSERT keyed on (city, country) with the provenance
-    // namespace set to our fixed value. If another provenance namespace
-    // exists on the SAME row (e.g. a legacy brain-pipeline entry), we
-    // merge our namespace into the existing provenance jsonb · never
-    // overwrite other namespaces. The SELECT-then-INSERT-or-UPDATE
-    // dance is explicit so the operator can see every write.
-    const existing = await client.query(
-      `SELECT area_id, provenance FROM nex.meaningful_area
-        WHERE lower(city) = lower($1) AND country = $2
-        LIMIT 1`,
-      [r.city, r.country],
-    );
-    if (existing.rowCount && existing.rowCount > 0) {
-      const existingProvenance = existing.rows[0].provenance ?? {};
-      const merged = { ...existingProvenance, [PROVENANCE_NAMESPACE]: r.payload };
-      await client.query(
-        `UPDATE nex.meaningful_area
-            SET provenance = $1::jsonb, updated_at = now()
-          WHERE area_id = $2`,
-        [JSON.stringify(merged), existing.rows[0].area_id],
-      );
-      console.log(`  UPDATE · ${r.city} · merged ${PROVENANCE_NAMESPACE} into existing area_id=${existing.rows[0].area_id}`);
-    } else {
-      await client.query(
-        `INSERT INTO nex.meaningful_area
-           (name, country, city, provenance, precedence, created_at, updated_at)
-         VALUES ($1, $2, $3, $4::jsonb, 5, now(), now())`,
-        [r.city, r.country, r.city, JSON.stringify({ [PROVENANCE_NAMESPACE]: r.payload })],
-      );
-      console.log(`  INSERT · ${r.city}`);
+  // Schema-correct values. All validated against nex.meaningful_area
+  // constraints (area_kind IN enum, radius_km > 0) and the existing
+  // area_id / precedence convention (the one existing fallback row
+  // 'yogya-city-core' uses area_kind='fallback' at precedence=99 ·
+  // more-specific curated rows at precedence 1-2 outrank us).
+  const AREA_KIND = "fallback";
+  const PRECEDENCE = 99;
+  const SOURCE_TAG = "osm-landmarks-collector-v1";
+  const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  const areaIdFor = (city) => `${slug(city)}-city-core`;
+
+  await client.query("BEGIN");
+  try {
+    let inserted = 0;
+    let updated = 0;
+    let skipped = 0;
+    for (const r of results) {
+      if (!r.payload) continue;
+      if (!r.centroid) {
+        console.log(`  SKIP · ${r.city} · no centroid captured`);
+        skipped++;
+        continue;
+      }
+      const aid = areaIdFor(r.city);
+      const tags = [];
+      if ((r.payload.known_for?.attractions?.length ?? 0) > 0) tags.push("has-attractions");
+      if ((r.payload.known_for?.transport?.length ?? 0) > 0) tags.push("has-transport");
+
+      // UPSERT guard: if a conflict occurs on area_id, only merge if
+      // the existing row's source matches ours (same collector) · we
+      // never overwrite rows from the brain-pipeline, manual seeds,
+      // or other sources. The jsonb || operator preserves other
+      // provenance namespace keys when merging.
+      const sql = `
+        INSERT INTO nex.meaningful_area
+          (area_id, name, area_kind, precedence, country, city,
+           centroid_lat, centroid_lng, radius_km, character_tags,
+           source, provenance, created_at, updated_at)
+        VALUES
+          ($1, $2, $3, $4, $5, $6,
+           $7, $8, $9, $10::text[],
+           $11, $12::jsonb, now(), now())
+        ON CONFLICT (area_id) DO UPDATE
+          SET provenance = nex.meaningful_area.provenance || EXCLUDED.provenance,
+              updated_at = now()
+          WHERE nex.meaningful_area.source = EXCLUDED.source
+        RETURNING xmax = 0 AS inserted`;
+      const radiusKm = (r.radius_m ?? 7000) / 1000;
+      const result = await client.query(sql, [
+        aid,
+        r.city,
+        AREA_KIND,
+        PRECEDENCE,
+        r.country,
+        r.city,
+        r.centroid.lat,
+        r.centroid.lng,
+        radiusKm,
+        tags,
+        SOURCE_TAG,
+        JSON.stringify({ [PROVENANCE_NAMESPACE]: r.payload }),
+      ]);
+      if (result.rowCount === 0) {
+        console.log(`  SKIP · ${r.city} · area_id=${aid} already held by a different source (guard refused merge)`);
+        skipped++;
+      } else if (result.rows[0].inserted) {
+        inserted++;
+        console.log(`  INSERT · ${r.city} · area_id=${aid}`);
+      } else {
+        updated++;
+        console.log(`  UPDATE · ${r.city} · area_id=${aid} (merged namespace)`);
+      }
     }
-    written++;
+    await client.query("COMMIT");
+    console.log(`\nLIVE WRITE COMPLETE · inserted=${inserted} updated=${updated} skipped=${skipped}`);
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error(`\nFATAL · txn rolled back:`, err.message);
+    throw err;
+  } finally {
+    await client.end();
   }
-  console.log(`\nLIVE WRITE COMPLETE · ${written} city rows upserted into nex.meaningful_area.`);
-  await client.end();
 }
 
 main().catch((err) => {
