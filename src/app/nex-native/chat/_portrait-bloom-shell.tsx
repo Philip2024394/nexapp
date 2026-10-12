@@ -884,6 +884,38 @@ export function PortraitBloomShell({
           </>
         )}
 
+        {/* Sealed 2026-10-11 · ambient-weather portal anchor · the
+            Smoke + Rain motion variants (toggled from
+            UniversalChatControls) portal their effects into this div
+            so they live INSIDE the shell's local stacking context ·
+            they paint above the wallpaper (z: 0) but below the chat
+            ripple (z: 2), bubble scroll zone (z: 3), and composer
+            footer (z: 4) · founder-sealed intent "fog + rain must be
+            behind the chat bubbles and footer". The anchor is
+            `position: absolute inset: 0` so children with
+            position: fixed/absolute fill the shell naturally.
+            `overflow: hidden` keeps atmospheric effects from leaking
+            out of the chat frame if the shell is embedded in a
+            non-fullscreen context (e.g. mini-phone preview).
+
+            IDs: keeping the legacy `nex-ambient-smoke-mount` as a
+            back-compat alias so any already-shipped SmokeOverlay
+            instance keeps working during hot reloads · the current
+            name is `nex-ambient-behind-chat-mount`. */}
+        <div
+          id="nex-ambient-behind-chat-mount"
+          data-nex-ambient-behind-chat-mount
+          data-nex-ambient-smoke-mount
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 1,
+            overflow: "hidden",
+            pointerEvents: "none",
+          }}
+        />
+
         {/* Chat-theme ripple · flashes over the wallpaper when a
             fresh inbound arrives. */}
         <div
@@ -956,8 +988,13 @@ export function PortraitBloomShell({
               style={{
                 position: "relative",
                 flexShrink: 0,
-                width: 42,
-                height: 42,
+                // Sealed 2026-10-11 · bumped 42 → 56 ·  "profile
+                // image in header needs larger size" · the inner
+                // circle + presence ring + heartbeat animation
+                // scale with inset positioning so no other number
+                // needs to move. Face-first identity read.
+                width: 56,
+                height: 56,
               }}
             >
               {/* Presence ring · sealed 2026-09-27 · reverted 2026-10-01.
@@ -1041,7 +1078,7 @@ export function PortraitBloomShell({
                 icon was visually occluded on themes with long peer
                 names · the fix is a passive reserve, no structural
                 change. */}
-            <div style={{ minWidth: 0, flex: 1, paddingRight: 120 }}>
+            <div style={{ minWidth: 0, flex: 1, paddingRight: 150 }}>
               <div
                 style={{
                   display: "flex",

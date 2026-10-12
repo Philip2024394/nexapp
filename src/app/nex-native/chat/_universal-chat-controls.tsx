@@ -77,6 +77,8 @@ const MOTION_GLYPH: Record<JokerMotionVariant, string> = {
   embers: "🔥",
   glitch: "🌀",
   kiss: "💋",
+  lamp: "💡",
+  congrats: "🧨",
 };
 
 export interface UniversalChatControlsProps {

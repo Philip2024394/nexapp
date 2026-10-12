@@ -34,6 +34,12 @@ import {
   type BuiltInThemeEmoji,
   type BuiltInThemeSticker,
 } from "@/lib/nex-native/theme-asset-fallback";
+import { JokerKeypad } from "./_joker-keypad";
+
+/** Joker-theme id · the only theme that overrides the native OS
+ *  keyboard with the custom `JokerKeypad`. Centralised here so adding
+ *  a second themed keypad later is a one-line change. */
+const JOKER_KEYPAD_THEME_ID = "theme-0";
 
 const NEX_CYAN = "#00AFFF";
 const NEX_SECONDARY = "#4FC3DC";
@@ -79,6 +85,14 @@ export function UniversalComposerFooter({
   const [value, setValue] = React.useState("");
   const [emojiActive, setEmojiActive] = React.useState(false);
   const [plusOpen, setPlusOpen] = React.useState(false);
+  // Sealed 2026-10-12 · Joker custom keypad · opens when the user
+  // taps the composer pill AND the active theme is Joker. The native
+  // OS keyboard is suppressed via `readOnly inputMode="none"` on the
+  // input (see ComposerPill) so this keypad becomes the ONLY way to
+  // type when Joker is on. Every other theme keeps the native
+  // keyboard · we are not building a keypad for every world.
+  const useJokerKeypad = themeId === JOKER_KEYPAD_THEME_ID;
+  const [keypadOpen, setKeypadOpen] = React.useState(false);
   // Sealed 2026-10-11 · the picker tap now STAGES the picked emoji
   // in the composer alongside any text the user types · they can
   // delete it via a red X · they press Send when ready and the
@@ -94,8 +108,30 @@ export function UniversalComposerFooter({
     highlight,
     deep,
   });
+  // Sealed 2026-10-11 · ref on the Send button so send-triggered
+  // animations (e.g. the Bats variant bursting bats OUT of the Send
+  // button) can read the button's viewport position at the moment
+  // of send without any prop drilling.
+  const sendButtonRef = React.useRef<HTMLButtonElement | null>(null);
   const sendAndClear = () => {
     if (!canSend) return;
+    // Dispatch a global burst event with the send button's viewport
+    // centre point · atmospheric motion overlays (currently the Bats
+    // variant) listen for this on `window` and spawn particles from
+    // that exact pixel so bats appear to fly out of the button. Fire
+    // BEFORE onSendMessage so the burst starts simultaneous with the
+    // optimistic bubble insert · no visible lag.
+    if (typeof window !== "undefined" && sendButtonRef.current) {
+      const r = sendButtonRef.current.getBoundingClientRect();
+      window.dispatchEvent(
+        new CustomEvent("nex-chat-send-burst", {
+          detail: {
+            x: r.left + r.width / 2,
+            y: r.top + r.height / 2,
+          },
+        }),
+      );
+    }
     if (onSendMessage) {
       onSendMessage({ body: value.trim(), emoji: pendingEmoji });
     }
@@ -141,9 +177,12 @@ export function UniversalComposerFooter({
             onToggleEmoji={() => setEmojiActive((v) => !v)}
             pendingEmoji={pendingEmoji}
             onClearPendingEmoji={() => setPendingEmoji(null)}
+            suppressNativeKeyboard={useJokerKeypad}
+            onOpenCustomKeypad={() => setKeypadOpen(true)}
           />
         </div>
         <SendButton
+          ref={sendButtonRef}
           controls={controls}
           disabled={!canSend}
           onClick={sendAndClear}
@@ -187,6 +226,26 @@ export function UniversalComposerFooter({
           setEmojiActive(false);
         }}
       />
+
+      {/* Joker custom keypad · mounted whenever the Joker theme is
+          active · controls its own open/close state through
+          `keypadOpen`. See `_joker-keypad.tsx` for the visual
+          specification. Phase 1 2026-10-12 · wires `themeId` +
+          `onPickEmoji` so the inline emoji drawer surfaces the
+          sealed Joker catalog and tapping an emoji stages it in
+          `pendingEmoji` (identical path to the pre-keypad
+          `EmojiStickerGifPicker`). */}
+      {useJokerKeypad && (
+        <JokerKeypad
+          open={keypadOpen}
+          value={value}
+          onChange={setValue}
+          onSend={sendAndClear}
+          onClose={() => setKeypadOpen(false)}
+          themeId={themeId}
+          onPickEmoji={(e) => setPendingEmoji(e)}
+        />
+      )}
     </>
   );
 }
@@ -204,6 +263,8 @@ function ComposerPill({
   onToggleEmoji,
   pendingEmoji,
   onClearPendingEmoji,
+  suppressNativeKeyboard = false,
+  onOpenCustomKeypad,
 }: {
   controls: ResolvedControls;
   value: string;
@@ -213,6 +274,12 @@ function ComposerPill({
   onToggleEmoji: () => void;
   pendingEmoji: BuiltInThemeEmoji | null;
   onClearPendingEmoji: () => void;
+  /** When true, the native OS keyboard is suppressed via
+   *  `readOnly inputMode="none"` and tapping the input opens the
+   *  theme's custom keypad via `onOpenCustomKeypad`. Sealed
+   *  2026-10-12 for the Joker keypad override. */
+  suppressNativeKeyboard?: boolean;
+  onOpenCustomKeypad?: () => void;
 }): React.JSX.Element {
   const { primary, highlight } = controls.colors;
   const inlineIconStyle: React.CSSProperties = {
@@ -342,6 +409,30 @@ function ComposerPill({
         placeholder={
           pendingEmoji ? "Add a message…" : "Say something…"
         }
+        // Sealed 2026-10-12 · Joker override · `readOnly` makes iOS
+        // and Android skip the native keyboard, `inputMode="none"`
+        // tells mobile browsers no on-screen keyboard is wanted at
+        // all. Tapping the input then triggers the parent-owned
+        // `onOpenCustomKeypad`. We keep `type="text"` + the
+        // controlled value so cursor rendering, selection, and
+        // accessibility (screen reader name/role) all behave
+        // identically to a regular input.
+        readOnly={suppressNativeKeyboard}
+        inputMode={suppressNativeKeyboard ? "none" : undefined}
+        onFocus={() => {
+          if (suppressNativeKeyboard) onOpenCustomKeypad?.();
+        }}
+        onMouseDown={(e) => {
+          if (!suppressNativeKeyboard) return;
+          // Keep the tap from stealing selection focus if the
+          // keypad is already open · we want a second tap on the
+          // pill to be a no-op, not a flicker.
+          e.preventDefault();
+          onOpenCustomKeypad?.();
+        }}
+        onTouchStart={() => {
+          if (suppressNativeKeyboard) onOpenCustomKeypad?.();
+        }}
         style={{
           flex: 1,
           minWidth: 0,
@@ -352,6 +443,7 @@ function ComposerPill({
           fontSize: 13,
           fontFamily: "inherit",
           paddingLeft: 6,
+          cursor: suppressNativeKeyboard ? "text" : undefined,
         }}
       />
     </div>
@@ -360,19 +452,18 @@ function ComposerPill({
 
 // ─── Send button ────────────────────────────────────────────────────
 
-function SendButton({
-  controls,
-  disabled,
-  onClick,
-  glyph,
-}: {
-  controls: ResolvedControls;
-  disabled: boolean;
-  onClick: () => void;
-  glyph?: React.ReactNode;
-}): React.JSX.Element {
+const SendButton = React.forwardRef<
+  HTMLButtonElement,
+  {
+    controls: ResolvedControls;
+    disabled: boolean;
+    onClick: () => void;
+    glyph?: React.ReactNode;
+  }
+>(function SendButton({ controls, disabled, onClick, glyph }, ref) {
   return (
     <button
+      ref={ref}
       type="button"
       aria-label="Send"
       disabled={disabled}
@@ -382,7 +473,7 @@ function SendButton({
       {glyph ?? <SendIcon />}
     </button>
   );
-}
+});
 
 // ─── Plus button ────────────────────────────────────────────────────
 

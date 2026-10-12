@@ -137,7 +137,236 @@ export function JokerMotionOverlay({
       return <GlitchOverlay />;
     case "kiss":
       return <KissOverlay onComplete={onComplete} />;
+    case "lamp":
+      return <LampOverlay />;
+    case "congrats":
+      return <CongratsOverlay onComplete={onComplete} />;
   }
+}
+
+// ─── Congratulations · one-shot full-bleed clip ──────────────────────
+// Sealed 2026-10-12 · founder-provided clip "Joker throws lit
+// dynamite". Same portal + auto-dismiss architecture as Kiss · plays
+// through once, fades back on its own. Rendered into document.body
+// so no ancestor transform/filter can trap its position: fixed.
+function CongratsOverlay({
+  onComplete,
+}: {
+  onComplete?: () => void;
+}): React.JSX.Element | null {
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const [mounted, setMounted] = React.useState(false);
+  // Sealed 2026-10-12 · founder-flagged "no black screen at start".
+  // The overlay used to mount at opacity 1 with a #000 backdrop ·
+  // the video element paints black until its first frame is
+  // decoded, so the user saw a brief black flash between tap and
+  // picture. We now mount the overlay transparent and fade in to
+  // opacity 1 only after `onCanPlay` fires (first frame ready to
+  // paint). The 200 ms CSS transition means the tap → first frame
+  // feels like a direct cut, with the chat behind briefly bleeding
+  // through if the decoder is slow.
+  const [videoReady, setVideoReady] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+
+  // Safety net · if `onEnded` AND `onError` both miss, auto-dismiss
+  // at 12 s so the overlay can't strand the viewer.
+  React.useEffect(() => {
+    if (!onComplete) return;
+    const id = window.setTimeout(onComplete, 12_000);
+    return () => window.clearTimeout(id);
+  }, [onComplete]);
+
+  if (!mounted || typeof document === "undefined") return null;
+
+  const overlay = (
+    <div
+      data-nex-joker-congrats
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 2147483000,
+        overflow: "hidden",
+        background: videoReady ? "#000" : "transparent",
+        pointerEvents: "auto",
+        opacity: videoReady ? 1 : 0,
+        transition: "opacity 200ms ease-out",
+      }}
+      onClick={onComplete}
+    >
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+      <video
+        ref={videoRef}
+        src="/nex-themes/joker/motion/dynamite.mp4"
+        autoPlay
+        muted
+        playsInline
+        preload="auto"
+        onCanPlay={() => setVideoReady(true)}
+        onEnded={onComplete}
+        onError={onComplete}
+        style={{
+          display: "block",
+          width: "100vw",
+          height: "100vh",
+          objectFit: "cover",
+          cursor: "pointer",
+          outline: "none",
+          background: "transparent",
+        }}
+      />
+    </div>
+  );
+
+  return createPortal(overlay, document.body);
+}
+
+// ─── Broken Lamp · sparks falling from a wallpaper light ─────────────
+// Sealed 2026-10-11 · founder-anchored emission point ·
+// "down from header 150px · left side 90px from center". Mirrors the
+// Haunted Hotel wave-burst pattern · damaged light sputtering hot
+// droplets, not a continuous shower:
+//
+//   · One burst every ~3s (3-7 sparks per burst, uneven count)
+//   · Each spark: 2-4px pinprick · white-hot core → warm amber → dark
+//   · Fall path: 32-55vh downward with per-waypoint horizontal drift
+//     (small shimmer sideways, drops still read as "falling from the
+//     light")
+//   · Each spark fades to black BEFORE it reaches the composer so the
+//     chat zone stays readable
+//   · Soft halo pulse behind the emission point so the lamp itself
+//     reads as "flickering" when sparks fire
+//
+// Emission position · absolute from the overlay root:
+//   top:  calc(env(safe-area-inset-top, 0) + 165px)   (header ~0 + 165)
+//   left: calc(50% - 47px)                             (47px left of centre)
+// Sealed 2026-10-12 · founder-nudged in four steps from the initial
+// 90px-left / 150px-top anchor: +25px right · +10px right & +5px
+// down · +8px right & +5px down · +5px down. Lamp fixture in the
+// Joker wallpaper sits roughly 47px left of centre, 165px below the
+// safe-area top.
+function LampOverlay(): React.JSX.Element {
+  const rand = seededRand(808);
+  // Burst schedule · 5 bursts across a 15s cycle · uneven cadence so
+  // the lamp feels "about to go" rather than clockwork.
+  const CYCLE = 15;
+  const bursts: Array<[number, number]> = [
+    [0.3, 5],
+    [3.2, 2],
+    [6.0, 7],
+    [9.4, 3],
+    [12.1, 4],
+  ];
+  interface Spark {
+    delay: number;
+    offsetX: number;
+    size: number;
+  }
+  const sparks: Spark[] = [];
+  for (const [startAt, count] of bursts) {
+    for (let k = 0; k < count; k++) {
+      sparks.push({
+        delay: startAt + k * (0.08 + rand() * 0.07),
+        offsetX: (rand() - 0.5) * 18, // -9..+9 px spawn jitter around the lamp
+        size: 2 + rand() * 2, // 2..4 px · matches Haunted Hotel scale
+      });
+    }
+  }
+  return (
+    <div aria-hidden style={OVERLAY_STYLE_BASE}>
+      <style>{`
+        /* Spark drip · sealed 2026-10-12 (tenth pass) · founder-
+           sealed "longer 30 px". Total fall now 170 → 200 px.
+           Waypoints scaled proportionally so the HH cool-down
+           curve stays accurate. Straight-down (no drift). */
+        @keyframes joker-lamp-drip {
+          0%   { opacity: 0; transform: translate(0, 0) scale(1); background: #fffbe6; box-shadow: 0 0 8px #fffbe6, 0 0 14px rgba(255,220,120,0.9); }
+          1%   { opacity: 1; }
+          4%   { transform: translate(0, 31px) scale(0.95); background: #ffe28a; box-shadow: 0 0 7px #ffe28a, 0 0 12px rgba(255,180,80,0.85); }
+          8%   { transform: translate(0, 84px) scale(0.75); background: #ffb348; box-shadow: 0 0 5px #ffb348, 0 0 10px rgba(255,120,30,0.7); opacity: 0.9; }
+          11%  { transform: translate(0, 143px) scale(0.5); background: #ff6a1a; box-shadow: 0 0 3px #ff6a1a; opacity: 0.4; }
+          14%  { transform: translate(0, 200px) scale(0.25); background: #7a1a0a; opacity: 0; }
+          100% { opacity: 0; transform: translate(0, 0) scale(1); }
+        }
+        /* Lamp halo pulse · the fixture itself glows a little right
+           when sparks fire · ties the sparks to the "light" visually. */
+        @keyframes joker-lamp-halo {
+          0%, 100% { transform: scale(1);   opacity: 0.35; }
+          2%       { transform: scale(1.1); opacity: 0.65; }
+          4%       { transform: scale(1);   opacity: 0.35; }
+          21%      { transform: scale(1.1); opacity: 0.65; }
+          24%      { transform: scale(1);   opacity: 0.35; }
+          40%      { transform: scale(1.1); opacity: 0.6;  }
+          44%      { transform: scale(1);   opacity: 0.35; }
+          62%      { transform: scale(1.1); opacity: 0.6;  }
+          66%      { transform: scale(1);   opacity: 0.35; }
+          81%      { transform: scale(1.1); opacity: 0.55; }
+          85%      { transform: scale(1);   opacity: 0.35; }
+        }
+      `}</style>
+
+      {/* Emission anchor · founder-sealed position. Everything spark-
+          related is positioned absolute within this anchor so the
+          emission can be re-tuned by moving one element. */}
+      <div
+        style={{
+          position: "absolute",
+          top: "calc(env(safe-area-inset-top, 0px) + 165px)",
+          left: "calc(50% - 47px)",
+          width: 0,
+          height: 0,
+          pointerEvents: "none",
+        }}
+      >
+        {/* Soft halo behind the lamp · pulses in sync with the burst
+            schedule so the fixture reads as "sputtering". The CYCLE
+            matches the sparks' animationDuration so halo + sparks
+            stay phase-locked. */}
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            top: -40,
+            left: -40,
+            width: 80,
+            height: 80,
+            borderRadius: "50%",
+            background:
+              "radial-gradient(circle, rgba(255,232,168,0.75) 0%, rgba(255,184,74,0.35) 40%, transparent 75%)",
+            filter: "blur(6px)",
+            animation: `joker-lamp-halo ${CYCLE}s linear infinite`,
+            willChange: "transform, opacity",
+          }}
+        />
+        {sparks.map((s, i) => (
+          // Drip spark · DIRECT port of the Haunted Hotel pattern.
+          // Round dot (border-radius: 50%) whose colour, scale and
+          // glow all decay through the keyframe (joker-lamp-drip).
+          // The spark bursts for ~14% of the cycle, falls through
+          // five hardcoded Y waypoints (0 → 22 → 59 → 100 → 140 px)
+          // and rests dark the rest of the time · matches HH's
+          // sputtering-lamp cadence exactly. `mixBlendMode: screen`
+          // gives the additive-light bloom that reads as hot molten
+          // metal against any wallpaper.
+          <span
+            key={i}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: s.offsetX,
+              width: s.size,
+              height: s.size,
+              marginLeft: -s.size / 2,
+              borderRadius: "50%",
+              animation: `joker-lamp-drip ${CYCLE}s linear infinite`,
+              animationDelay: `${s.delay - CYCLE}s`,
+              mixBlendMode: "screen",
+              willChange: "transform, opacity, background",
+            } as React.CSSProperties}
+          />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 // ─── Kiss ────────────────────────────────────────────────────────────
@@ -158,6 +387,12 @@ function KissOverlay({
   // SSR guard · createPortal needs document.body which doesn't exist
   // during the server render pass. We mount on first client paint.
   const [mounted, setMounted] = React.useState(false);
+  // Sealed 2026-10-12 · founder-flagged "no black screen at start".
+  // Overlay stays transparent (opacity 0) until the video's first
+  // frame is decodable (`onCanPlay`) · fades in with a 200 ms CSS
+  // transition. Removes the brief black flash between tap and
+  // first picture frame.
+  const [videoReady, setVideoReady] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
 
   // Auto-dismiss safety · if `onEnded` AND `onError` both miss
@@ -182,8 +417,10 @@ function KissOverlay({
         // overlay, joker-controller 9995/10000).
         zIndex: 2147483000,
         overflow: "hidden",
-        background: "#000",
+        background: videoReady ? "#000" : "transparent",
         pointerEvents: "auto",
+        opacity: videoReady ? 1 : 0,
+        transition: "opacity 200ms ease-out",
       }}
       onClick={onComplete}
     >
@@ -199,6 +436,7 @@ function KissOverlay({
         muted
         playsInline
         preload="auto"
+        onCanPlay={() => setVideoReady(true)}
         onEnded={onComplete}
         // If the asset 404s or the decoder rejects the stream,
         // dismiss immediately so the user isn't stuck staring at
@@ -229,7 +467,7 @@ function KissOverlay({
           // background keeps the frame pure black during the
           // first-frame paint gap.
           outline: "none",
-          background: "#000",
+          background: "transparent",
         }}
       />
     </div>
@@ -238,51 +476,153 @@ function KissOverlay({
   return createPortal(overlay, document.body);
 }
 
+// ─── Shared hook · portal into the shell's "behind-chat" layer ──────
+// Sealed 2026-10-11 · Smoke + Rain both paint below bubbles / footer
+// by portaling into the shell's `nex-ambient-behind-chat-mount`
+// anchor. Returns null when no anchor exists (fallback renders inline
+// at z: 1 at the root).
+function useBehindChatAnchor(): HTMLElement | null {
+  const [anchor, setAnchor] = React.useState<HTMLElement | null>(null);
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    setAnchor(document.getElementById("nex-ambient-behind-chat-mount"));
+  }, []);
+  return anchor;
+}
+
 // ─── Rain ────────────────────────────────────────────────────────────
-// Natural rain · translucent silver-blue drops · smaller streaks ·
-// drops read as real rainfall rather than toxic drip. Founder-tuned
-// 2026-10-01.
-function RainOverlay(): React.JSX.Element {
+// Rewritten 2026-10-11 · founder direction "straight down with little
+// randomly to left and right · must be behind the chat bubbles and
+// footer". Two-layer parallax rain where every drop falls
+// VERTICALLY · the only horizontal variation is a small per-drop
+// sway (-2vw..+2vw total drift over the fall) so some drops trail
+// slightly left, some slightly right · reads as uneven air currents,
+// not a cross-wind shower.
+//
+//   · NEAR layer (60 drops) · fast 0.55-0.95s · 2px wide · tall
+//     32-72px streaks · brighter.
+//   · FAR layer (45 drops) · slow 1.2-2.0s · 1px wide · shorter
+//     18-34px streaks · dimmer · parallax depth cue.
+//
+// GPU-clean · compositor only touches transform + opacity.
+function RainOverlay(): React.JSX.Element | null {
   const rand = seededRand(101);
-  const drops = Array.from({ length: 40 }, () => ({
+  const anchor = useBehindChatAnchor();
+
+  // Per-drop total horizontal drift (expressed as vw at end of fall).
+  // Signed so some drops lean left, some right · magnitude capped at
+  // 2vw so the dominant motion is straight down.
+  const randDrift = () => (rand() - 0.5) * 4; // -2vw..+2vw
+
+  // NEAR layer · fast + bright + fat streaks.
+  const nearDrops = Array.from({ length: 60 }, () => ({
     left: rand() * 100,
-    dur: 0.7 + rand() * 0.6, // slightly faster · reads as real rain cadence
-    delay: -rand() * 2,
-    height: 14 + rand() * 20, // 14-34px · roughly half the previous size
-    opacity: 0.3 + rand() * 0.35,
+    dur: 0.55 + rand() * 0.4, // 0.55..0.95s · urgent cadence
+    delay: -rand() * 1.4,
+    height: 32 + rand() * 40, // 32..72px streaks
+    width: rand() > 0.75 ? 2 : 1, // 25% of drops are "fat" 2px drops
+    opacity: 0.55 + rand() * 0.4, // 0.55..0.95 · heavier presence
+    drift: randDrift(),
   }));
-  // Natural rain palette · faint silvery-blue with a brighter leading
-  // edge · reads over any wallpaper without tinting the scene green.
-  const RAIN_HEAD = "rgba(215,230,245,0.85)";
-  const RAIN_TAIL = "rgba(170,195,220,0.25)";
-  return (
-    <div aria-hidden style={OVERLAY_STYLE_BASE}>
+
+  // FAR layer · slower, thinner, lower opacity for parallax depth.
+  const farDrops = Array.from({ length: 45 }, () => ({
+    left: rand() * 100,
+    dur: 1.2 + rand() * 0.8, // 1.2..2.0s · noticeably slower
+    delay: -rand() * 2.4,
+    height: 18 + rand() * 16, // 18..34px shorter streaks
+    width: 1,
+    opacity: 0.2 + rand() * 0.3, // 0.2..0.5 dim atmosphere
+    drift: randDrift(),
+  }));
+
+  // Palette · silvery-blue with a brighter leading edge · reads over
+  // any wallpaper without tinting the scene.
+  const RAIN_HEAD = "rgba(220,235,250,0.95)"; // leading tip (bottom of streak)
+  const RAIN_MID = "rgba(190,210,232,0.55)";
+  const RAIN_TAIL = "rgba(170,195,220,0.15)"; // trailing wisp
+
+  // Sealed 2026-10-11 · when portaled into the shell's behind-chat
+  // anchor, rain lives inside the shell's local stacking context ·
+  // paints above the wallpaper, below bubbles + footer. Fallback
+  // renders inline at the standard overlay z: 9997 at the root.
+  const inPortal = anchor !== null;
+  const content = (
+    <div
+      aria-hidden
+      style={
+        inPortal
+          ? {
+              position: "absolute",
+              inset: 0,
+              pointerEvents: "none",
+              overflow: "hidden",
+            }
+          : OVERLAY_STYLE_BASE
+      }
+    >
       <style>{`
+        /* Vertical fall · the X component comes from the per-drop
+           --jx-drift CSS variable, kept small (±2vw) so the dominant
+           read is straight-down rainfall. One keyframe drives both
+           layers · duration/delay/drift vary per drop. */
         @keyframes joker-rain-fall {
-          0%   { transform: translate3d(0, -20vh, 0); opacity: 0; }
-          10%  { opacity: 1; }
-          100% { transform: translate3d(0, 120vh, 0); opacity: 0; }
+          0%   { transform: translate3d(0, 0, 0); opacity: 0; }
+          8%   { opacity: 1; }
+          92%  { opacity: 1; }
+          100% { transform: translate3d(var(--jx-drift, 0vw), 140vh, 0); opacity: 0; }
         }
       `}</style>
-      {drops.map((d, i) => (
+
+      {/* FAR layer first so NEAR paints OVER it in DOM order (both are
+          position: absolute within the overlay · same z-index). */}
+      {farDrops.map((d, i) => (
         <span
-          key={i}
+          key={`far-${i}`}
           style={{
             position: "absolute",
-            top: 0,
+            top: "-20vh",
             left: `${d.left}%`,
-            width: 1,
+            width: d.width,
             height: d.height,
-            background: `linear-gradient(to bottom, transparent 0%, ${RAIN_TAIL} 55%, ${RAIN_HEAD} 100%)`,
+            background: `linear-gradient(to bottom, transparent 0%, ${RAIN_TAIL} 40%, ${RAIN_MID} 80%, ${RAIN_HEAD} 100%)`,
             opacity: d.opacity,
             animation: `joker-rain-fall ${d.dur}s linear infinite`,
             animationDelay: `${d.delay}s`,
             willChange: "transform, opacity",
-          }}
+            borderRadius: 1,
+            ["--jx-drift" as string]: `${d.drift}vw`,
+          } as React.CSSProperties}
+        />
+      ))}
+
+      {nearDrops.map((d, i) => (
+        <span
+          key={`near-${i}`}
+          style={{
+            position: "absolute",
+            top: "-20vh",
+            left: `${d.left}%`,
+            width: d.width,
+            height: d.height,
+            background: `linear-gradient(to bottom, transparent 0%, ${RAIN_TAIL} 30%, ${RAIN_MID} 70%, ${RAIN_HEAD} 100%)`,
+            opacity: d.opacity,
+            animation: `joker-rain-fall ${d.dur}s linear infinite`,
+            animationDelay: `${d.delay}s`,
+            willChange: "transform, opacity",
+            borderRadius: 1,
+            ["--jx-drift" as string]: `${d.drift}vw`,
+            // Fat drops get a tiny glow at the leading tip so they
+            // read like real droplets catching light, not pencil
+            // lines. Thin drops skip the glow for performance.
+            filter: d.width > 1 ? "drop-shadow(0 0 1.5px rgba(220,235,250,0.4))" : undefined,
+          } as React.CSSProperties}
         />
       ))}
     </div>
   );
+
+  return inPortal && anchor ? createPortal(content, anchor) : content;
 }
 
 // ─── Welding Sparks ──────────────────────────────────────────────────
@@ -393,36 +733,23 @@ function SparksOverlay(): React.JSX.Element {
 // a startled flock bursting out of the inbox. Each bat has its own
 // drift path, scale, rotation jitter, and timing so the flock never
 // marches in formation. Founder-tuned 2026-10-01.
+// Reverted 2026-10-11 · founder direction "bats always flying up
+// screen in packs like before more larger and black". Back to the
+// ambient flock pattern (14 bats cycling continuously), BUT scaled
+// larger (0.55-0.95, up from 0.3-0.65) and silhouetted to pure black
+// via a brightness(0) filter so the shape reads cleanly on every
+// wallpaper without the PNG's residual mid-grey tones showing.
 function BatOverlay(): React.JSX.Element {
   const rand = seededRand(404);
-  // 14 bats spawn from a cluster near the send button (bottom-right)
-  // then drift UP + LEFT across the screen in a slow glide ·
-  // Founder-tuned 2026-10-01 · "slow down + fly left up randomly".
-  // Each bat picks its own leftward reach so the flock fans out across
-  // the top-left quadrant rather than marching in one lane.
   const bats = Array.from({ length: 14 }, (_, i) => {
-    // Slow glide · 9-16s to clear the screen · roughly twice the
-    // previous 4-7.5s so a bat lingers long enough to read.
-    const dur = 9 + rand() * 7;
-    // Wider stagger window to match the slower cycle · otherwise the
-    // sky would feel sparse between bats.
+    const dur = 9 + rand() * 7; // 9-16s · slow glide
     const delay = -(i * 1.0 + rand() * 1.4);
-    // Spawn position · tight cluster around the send button.
-    const spawnLeft = 76 + rand() * 16; // 76-92% of width
+    const spawnLeft = 76 + rand() * 16; // 76-92% of width (near send button)
     const spawnBottomPx = 70 + rand() * 40;
-    // Direction · ALWAYS leftward (negative x drift) · magnitude
-    // varies so some bats veer sharply, others only slightly ·
-    // range -8 to -55 vw so the flock fans out across the left side
-    // of the screen rather than exits straight up.
-    const xDrift = -(8 + rand() * 47);
-    // Vertical reach · all bats clear the top but at different
-    // speeds · more vertical for sharp-leftward bats so the whole
-    // flock disperses to the upper-left corner.
-    const yDrift = -(95 + rand() * 25); // -95 to -120 vh
-    // Rotation jitter · slight back-and-forth tilt during flight · each
-    // bat uses its own phase so the flock doesn't rock in sync.
+    const xDrift = -(8 + rand() * 47); // leftward -8..-55 vw
+    const yDrift = -(95 + rand() * 25); // upward -95..-120 vh
     const rotPhase = rand();
-    const scale = 0.3 + rand() * 0.35; // 0.3-0.65 · small bats
+    const scale = 0.55 + rand() * 0.4; // 0.55-0.95 · larger silhouettes
     return {
       dur,
       delay,
@@ -438,28 +765,16 @@ function BatOverlay(): React.JSX.Element {
   return (
     <div aria-hidden style={OVERLAY_STYLE_BASE}>
       <style>{`
-        /* Rise · bat lifts from near the send button toward the UPPER
-           LEFT of the screen · x drifts leftward (negative) while y
-           climbs · each bat supplies its own target via --jx-x and
-           --jx-y CSS variables so the flock fans across the left side
-           instead of climbing in a column. */
         @keyframes joker-bat-rise {
           0%   { transform: translate3d(0, 0, 0) scale(0.9); opacity: 0; }
           8%   { opacity: 1; }
           85%  { opacity: 1; }
           100% { transform: translate3d(var(--jx-x, 0), var(--jx-y, -115vh), 0) scale(1.05); opacity: 0; }
         }
-        /* Wing flap · fast scaleY pulse on the bat sprite itself · PNG
-           has wings baked into the artwork so we can't rotate each
-           wing independently, but a quick vertical pulse reads as
-           flapping-in-silhouette. */
         @keyframes joker-bat-flap {
           0%, 100% { transform: scaleY(1); }
           50%      { transform: scaleY(0.72); }
         }
-        /* Yaw · slight left-right tilt as the bat climbs · each bat
-           uses an animation-delay keyed off its own rotPhase so the
-           flock looks organic, not synchronized. */
         @keyframes joker-bat-yaw {
           0%, 100% { transform: rotate(-6deg); }
           50%      { transform: rotate(6deg); }
@@ -481,7 +796,6 @@ function BatOverlay(): React.JSX.Element {
             willChange: "transform, opacity",
           } as React.CSSProperties}
         >
-          {/* Yaw wrapper · gentle left-right tilt during the climb */}
           <span
             style={{
               display: "block",
@@ -491,8 +805,6 @@ function BatOverlay(): React.JSX.Element {
               animationDelay: `${-b.rotPhase * 1.2}s`,
             }}
           >
-            {/* Flap wrapper · fast vertical pulse · reads as wingbeat
-                even though the PNG has wings baked in. */}
             <span
               style={{
                 display: "block",
@@ -503,7 +815,14 @@ function BatOverlay(): React.JSX.Element {
                 backgroundSize: "contain",
                 backgroundRepeat: "no-repeat",
                 backgroundPosition: "center",
-                filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.65))",
+                // Sealed 2026-10-11 · PURE BLACK silhouette ·
+                // brightness(0) crushes every pixel of the PNG to
+                // black while preserving its alpha channel, so the
+                // bat reads as a crisp dark shape against ANY
+                // wallpaper (acid green sky, red alley, blue night).
+                // Soft shadow retained for depth so bats don't look
+                // pasted-on-flat.
+                filter: "brightness(0) drop-shadow(0 2px 6px rgba(0,0,0,0.75))",
               }}
             />
           </span>
@@ -1338,55 +1657,196 @@ function ConfettiOverlay(): React.JSX.Element {
   );
 }
 
-// ─── Smoke Wisps ─────────────────────────────────────────────────────
-function SmokeOverlay(): React.JSX.Element {
+// ─── Smoke · heavy rising fog ────────────────────────────────────────
+// Rewritten 2026-10-11 · founder direction "heavy smoke clouds natural
+// effect floating from behind footer up · thick fog style like real
+// rising". Replaces the earlier left-to-right drifting wisps with a
+// bottom-anchored rising-fog system.
+//
+// Behaviour:
+//   · 14 overlapping cloud puffs seeded off the whole viewport width
+//   · each puff starts below the viewport (translateY starts positive)
+//     and rises past the top edge over 14-22 seconds · stagger via
+//     negative animationDelay so the viewport is always full of fog
+//   · each puff also drifts horizontally with a sine-wave sway so the
+//     motion looks organic, never like a conveyor belt
+//   · four low "base fog" bands sit near the bottom and sway slowly
+//     without rising · they build the thick ground-fog layer that
+//     the rising puffs appear to emerge FROM
+//   · colour mix leans grey-soot (rgba(55,60,66,x)) with a cold-blue
+//     core so it reads as cinematic fog not black ink
+//   · zIndex overridden to 50 so the composer footer (z: 60) stays
+//     sharp on top · fog billows UP FROM BEHIND the footer exactly
+//     the way the founder described
+function SmokeOverlay(): React.JSX.Element | null {
   const rand = seededRand(606);
-  const wisps = Array.from({ length: 8 }, () => ({
-    top: 10 + rand() * 70,
-    dur: 12 + rand() * 6,
-    delay: -rand() * 12,
-    size: 240 + rand() * 200,
-    opacity: 0.35 + rand() * 0.35,
-    direction: rand() > 0.5 ? 1 : -1,
-  }));
-  return (
-    <div aria-hidden style={OVERLAY_STYLE_BASE}>
+  // Portal target · sealed 2026-10-11 · fog must paint BEHIND the
+  // chat bubbles. PortraitBloomShell exposes an anchor div with
+  // `position: absolute inset: 0 zIndex: 1` sitting above the
+  // wallpaper (z: 0) and below the bubble scroll zone (z: 3). We
+  // portal there so the fog joins the shell's local stacking
+  // context instead of fighting the overlay's `position: fixed`
+  // against the shell's own fixed root. If the anchor is missing
+  // (e.g. this overlay is rendered outside a PortraitBloomShell
+  // host), we gracefully render inline at z: 1 as a fallback.
+  const anchor = useBehindChatAnchor();
+  // Rising puffs · the main volumetric body of the effect.
+  // Sealed 2026-10-11 · founder-flipped: distribute puffs across
+  // the full width in evenly-spaced columns ("same on left side as
+  // right"). The previous `rand() * 110` form happened to cluster
+  // on the right half with this seed. We now compute each puff's
+  // left anchor from its index (column) plus small jitter so the
+  // viewport is covered symmetrically. Count reduced 14 → 10
+  // ("reduce the effect little") so the fog feels present but not
+  // overwhelming.
+  const PUFF_COUNT = 10;
+  const puffs = Array.from({ length: PUFF_COUNT }, (_, i) => {
+    const columnLeft = ((i + 0.5) / PUFF_COUNT) * 100; // 5..95% centred
+    const jitter = (rand() - 0.5) * (100 / PUFF_COUNT) * 0.8;
+    return {
+      left: columnLeft + jitter, // guaranteed left + right coverage
+      size: 300 + rand() * 320, // 300..620 px (slightly smaller)
+      dur: 15 + rand() * 8, // 15..23 s
+      delay: -rand() * 23, // stagger across whole cycle
+      sway: 5 + rand() * 8, // 5..13 vw sine amplitude (tamer)
+      swayDur: 7 + rand() * 5, // 7..12 s per sway cycle
+      opacity: 0.4 + rand() * 0.3, // 0.4..0.7 · lighter density
+      tilt: i % 2 === 0 ? 1 : -1, // alternate sway direction
+    };
+  });
+  // Low ground-fog bands · wider, flatter, stay near the bottom.
+  // Sealed 2026-10-11 · bands also evenly distributed across the
+  // viewport width · 4 → 3 to match the lighter overall effect.
+  const BAND_COUNT = 3;
+  const bands = Array.from({ length: BAND_COUNT }, (_, i) => {
+    const columnLeft = -20 + ((i + 0.5) / BAND_COUNT) * 140;
+    const jitter = (rand() - 0.5) * 20;
+    return {
+      left: columnLeft + jitter, // evenly spaced across + bleed
+      bottom: 2 + rand() * 14, // 2..16% from bottom
+      width: 100 + rand() * 50, // 100..150 vw
+      height: 160 + rand() * 140, // 160..300 px
+      dur: 22 + rand() * 10, // 22..32 s slow drift
+      delay: -rand() * 22,
+      opacity: 0.5 + rand() * 0.2, // 0.5..0.7 · lighter base
+    };
+  });
+  // Sealed 2026-10-11 · when portaled into the shell anchor, the
+  // fog fills `position: absolute inset: 0` INSIDE the anchor
+  // (which is itself absolute inset:0 at the shell layer z:1).
+  // When no anchor exists (standalone usage), fall back to the
+  // standard fixed-viewport overlay at z:1 at the root.
+  const inPortal = anchor !== null;
+  const content = (
+    <div
+      aria-hidden
+      style={
+        inPortal
+          ? {
+              position: "absolute",
+              inset: 0,
+              pointerEvents: "none",
+              overflow: "hidden",
+            }
+          : {
+              ...OVERLAY_STYLE_BASE,
+              zIndex: 1,
+            }
+      }
+    >
       <style>{`
-        @keyframes joker-smoke-drift {
-          0%   { transform: translate3d(-40vw, 0, 0) scale(0.9); opacity: 0; }
-          15%  { opacity: var(--jx-op, 0.5); }
-          85%  { opacity: var(--jx-op, 0.5); }
-          100% { transform: translate3d(140vw, 0, 0) scale(1.1); opacity: 0; }
+        @keyframes joker-smoke-rise {
+          0%   { transform: translate3d(0, 30vh, 0) scale(0.85); opacity: 0; }
+          10%  { opacity: var(--jx-op, 0.7); }
+          78%  { opacity: var(--jx-op, 0.7); }
+          100% { transform: translate3d(0, -110vh, 0) scale(1.35); opacity: 0; }
         }
-        @keyframes joker-smoke-drift-rev {
-          0%   { transform: translate3d(140vw, 0, 0) scale(0.9); opacity: 0; }
-          15%  { opacity: var(--jx-op, 0.5); }
-          85%  { opacity: var(--jx-op, 0.5); }
-          100% { transform: translate3d(-40vw, 0, 0) scale(1.1); opacity: 0; }
+        @keyframes joker-smoke-sway {
+          0%, 100% { margin-left: 0vw; }
+          50%      { margin-left: var(--jx-sway, 6vw); }
+        }
+        @keyframes joker-smoke-band {
+          0%   { transform: translate3d(0, 0, 0) scaleX(1); opacity: 0; }
+          15%  { opacity: var(--jx-op, 0.7); }
+          85%  { opacity: var(--jx-op, 0.7); }
+          100% { transform: translate3d(60vw, -4vh, 0) scaleX(1.15); opacity: 0; }
         }
       `}</style>
-      {wisps.map((w, i) => (
+
+      {/* Ground-fog bands · sit near the bottom + drift slowly.
+          Rendered FIRST so they live beneath the rising puffs in
+          paint order · the bands build the "thick base" layer the
+          rising clouds appear to emerge from. */}
+      {bands.map((b, i) => (
         <span
-          key={i}
+          key={`band-${i}`}
           style={{
             position: "absolute",
-            top: `${w.top}%`,
-            left: 0,
-            width: w.size,
-            height: w.size / 2,
+            left: `${b.left}vw`,
+            bottom: `${b.bottom}%`,
+            width: `${b.width}vw`,
+            height: b.height,
             borderRadius: "50%",
-            background: `radial-gradient(ellipse at center, rgba(10,20,30,0.7), rgba(10,20,30,0.2) 45%, transparent 75%)`,
-            filter: "blur(24px)",
-            animation:
-              `${w.direction > 0 ? "joker-smoke-drift" : "joker-smoke-drift-rev"} ${w.dur}s linear infinite`,
-            animationDelay: `${w.delay}s`,
-            ["--jx-op" as string]: `${w.opacity}`,
+            // Sealed 2026-10-11 · founder-flipped to white fog ·
+            // base bands lean just slightly cool (240/245/250)
+            // against the warmer rising puffs below for depth,
+            // but read as white in motion. Alpha climbs to 0.95
+            // at the core so the ground layer feels DENSE.
+            background: `radial-gradient(ellipse at center, rgba(248,250,253,0.95) 0%, rgba(238,242,247,0.72) 35%, rgba(224,230,238,0.38) 65%, transparent 85%)`,
+            filter: "blur(42px)",
+            animation: `joker-smoke-band ${b.dur}s ease-in-out infinite`,
+            animationDelay: `${b.delay}s`,
+            ["--jx-op" as string]: `${b.opacity}`,
             willChange: "transform, opacity",
+            mixBlendMode: "normal",
           } as React.CSSProperties}
         />
       ))}
+
+      {/* Rising puffs · the main cinematic body · wrapped in a sway
+          container so the horizontal sine motion is independent of
+          the vertical rise. Keyframes animate transform + opacity
+          only · GPU-clean per the motion standards block above. */}
+      {puffs.map((p, i) => (
+        <span
+          key={`puff-${i}`}
+          style={{
+            position: "absolute",
+            left: `${p.left}%`,
+            bottom: "-20vh",
+            width: p.size,
+            height: p.size * 0.75,
+            animation: `joker-smoke-sway ${p.swayDur}s ease-in-out infinite`,
+            animationDelay: `${p.delay}s`,
+            ["--jx-sway" as string]: `${p.sway * p.tilt}vw`,
+            willChange: "margin-left",
+          } as React.CSSProperties}
+        >
+          <span
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: "50%",
+              // Sealed 2026-10-11 · white rising fog · pure white
+              // core (255/255/255 @ 0.98) softens to a near-white
+              // mid-tone (248/250/253) then thin cream haze. Reads
+              // as thick cumulus / theatre-fog on screen · heavy
+              // enough to obscure the wallpaper, light enough that
+              // the chat bubbles painted ABOVE still cut cleanly.
+              background: `radial-gradient(ellipse at 50% 55%, rgba(255,255,255,0.98) 0%, rgba(248,250,253,0.82) 25%, rgba(236,241,246,0.55) 55%, rgba(220,228,236,0.22) 78%, transparent 92%)`,
+              filter: "blur(28px)",
+              animation: `joker-smoke-rise ${p.dur}s ease-in infinite`,
+              animationDelay: `${p.delay}s`,
+              ["--jx-op" as string]: `${p.opacity}`,
+              willChange: "transform, opacity",
+            } as React.CSSProperties}
+          />
+        </span>
+      ))}
     </div>
   );
+
+  return inPortal && anchor ? createPortal(content, anchor) : content;
 }
 
 // ─── Rising Embers ───────────────────────────────────────────────────

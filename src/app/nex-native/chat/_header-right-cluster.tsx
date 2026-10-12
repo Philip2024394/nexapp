@@ -317,8 +317,12 @@ export function HeaderRightCluster({
  * -------------------------------------------------------------- */
 
 const CIRCLE: React.CSSProperties = {
-  width: 36,
-  height: 36,
+  // Sealed 2026-10-11 · bumped 36 → 44 · "icons on the right side"
+  // need to match the larger header portrait (now 56px) so the
+  // identity row + action row read as one scale. SVG strokes
+  // bumped 22 → 26 in sync below.
+  width: 44,
+  height: 44,
   borderRadius: 0,
   background: "transparent",
   border: "none",
@@ -400,8 +404,8 @@ function ClusterActionButton({
 function HomeIcon() {
   return (
     <svg
-      width={22}
-      height={22}
+      width={26}
+      height={26}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -419,8 +423,8 @@ function HomeIcon() {
 function ShopBagIcon() {
   return (
     <svg
-      width={22}
-      height={22}
+      width={26}
+      height={26}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -439,8 +443,8 @@ function ShopBagIcon() {
 function CutleryIcon() {
   return (
     <svg
-      width={22}
-      height={22}
+      width={26}
+      height={26}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -460,8 +464,8 @@ function CutleryIcon() {
 function CartIcon() {
   return (
     <svg
-      width={22}
-      height={22}
+      width={26}
+      height={26}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

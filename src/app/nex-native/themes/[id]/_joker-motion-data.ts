@@ -25,7 +25,9 @@ export type JokerMotionVariant =
   | "smoke"
   | "embers"
   | "glitch"
-  | "kiss";
+  | "kiss"
+  | "lamp"
+  | "congrats";
 
 /** User-facing labels + short experiential descriptions used by the
  *  Animation gallery. The `isNew` flag surfaces a subtle NEW badge
@@ -105,6 +107,20 @@ export const JOKER_MOTION_INDEX: {
     label: "Joker Kiss",
     description:
       "A one-shot cinematic clip plays over your chat, then fades back on its own.",
+    isNew: true,
+  },
+  {
+    variant: "lamp",
+    label: "Broken Lamp",
+    description:
+      "A sputtering light overhead throws occasional showers of hot sparks across the chat.",
+    isNew: true,
+  },
+  {
+    variant: "congrats",
+    label: "Congratulations",
+    description:
+      "A one-shot celebratory clip plays full screen, then returns to chat on its own.",
     isNew: true,
   },
 ];
