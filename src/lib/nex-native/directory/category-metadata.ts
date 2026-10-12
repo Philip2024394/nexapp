@@ -42,6 +42,14 @@ export interface CategoryMetadata {
   readonly heroImageUrl: string;
   /** Alt text for the hero image · screen-reader friendly, honest. */
   readonly altText: string;
+  /** Alternate slugs that resolve to this same metadata entry.
+   *  Required when the acquisition engine wrote a slug that differs
+   *  from this registry's canonical slug (e.g. the DB uses "salons"
+   *  while this entry is keyed "hair-salon"). All alias lookups go
+   *  through the same case- and whitespace-tolerant match path.
+   *  Omitted entries have no aliases · the canonical slug is the
+   *  only match. */
+  readonly aliases?: readonly string[];
 }
 
 /**
@@ -62,11 +70,12 @@ export const CATEGORY_METADATA: Readonly<Record<string, CategoryMetadata>> =
     }),
     hotel: Object.freeze({
       slug: "hotel",
-      title: "Hotel",
+      title: "Hotel and overnight stays",
       description:
-        "This business is listed on NEX as a hotel · typically offering overnight rooms, breakfast and front-desk reception. The owner may offer other amenities not shown here · if in doubt, contact the business directly.",
+        "This business is listed on NEX as accommodation · hotels, guesthouses, hostels, kos, apartments, resorts or homestays. Rooms, amenities and nightly rates vary by property. For current availability or longer-stay terms, contact the business directly.",
       heroImageUrl: "/nex-category-images/hotel/p02.png",
       altText: "Hotel · guest rooms and reception",
+      aliases: ["guesthouse", "hostel", "kos", "apartment", "resort", "homestay"],
     }),
     villa: Object.freeze({
       slug: "villa",
@@ -96,9 +105,10 @@ export const CATEGORY_METADATA: Readonly<Record<string, CategoryMetadata>> =
       slug: "car-service",
       title: "Car service",
       description:
-        "This business is listed on NEX as a car service · typically offering mechanical repair, inspection and routine maintenance. The owner may offer other vehicle services not shown here · if in doubt, contact the business directly.",
+        "This business is listed on NEX as a car service · mechanical repair, inspection, routine maintenance or wash. The owner may offer other vehicle services not shown here · if in doubt, contact the business directly.",
       heroImageUrl: "/nex-category-images/car-service/p06.png",
       altText: "Car service · workshop and vehicle maintenance",
+      aliases: ["car-repair", "car-wash", "car_repair", "car_wash"],
     }),
     "massage-spa": Object.freeze({
       slug: "massage-spa",
@@ -112,9 +122,10 @@ export const CATEGORY_METADATA: Readonly<Record<string, CategoryMetadata>> =
       slug: "health",
       title: "Health",
       description:
-        "This business is listed on NEX as a health service · typically offering medical, dental or allied health consultations. The owner may provide other services not shown here · if in doubt, contact the business directly.",
+        "This business is listed on NEX as a health service · pharmacy, clinic, dental practice, optician or allied health. Specific services, prescriptions and consultations are set by the practice. For hours and availability, contact the business directly.",
       heroImageUrl: "/nex-category-images/health/p08.png",
       altText: "Health · medical consultation and care",
+      aliases: ["pharmacy", "pharmacies", "clinic", "doctor", "doctors", "dentist", "dentists", "optician", "opticians"],
     }),
     education: Object.freeze({
       slug: "education",
@@ -182,11 +193,12 @@ export const CATEGORY_METADATA: Readonly<Record<string, CategoryMetadata>> =
     }),
     sports: Object.freeze({
       slug: "sports",
-      title: "Sports",
+      title: "Sports and fitness",
       description:
-        "This business is listed on NEX as a sports venue, shop or service · typically offering sporting goods, training or facilities. The owner may offer other activities not shown here · if in doubt, contact the business directly.",
+        "This business is listed on NEX as a sports or fitness venue, shop or service · gyms, training facilities, sporting goods or coaching. For membership, class schedules or product availability, contact the business directly.",
       heroImageUrl: "/nex-category-images/sports/p17.png",
       altText: "Sports · equipment and activity",
+      aliases: ["gym", "gyms", "fitness", "fitness-centre", "fitness-center"],
     }),
     pets: Object.freeze({
       slug: "pets",
@@ -222,11 +234,12 @@ export const CATEGORY_METADATA: Readonly<Record<string, CategoryMetadata>> =
     }),
     "hair-salon": Object.freeze({
       slug: "hair-salon",
-      title: "Hair salon",
+      title: "Hair and beauty salon",
       description:
-        "This business is listed on NEX as a hair salon · typically offering cuts, styling, colour and treatments. The owner may offer other services not shown here · if in doubt, contact the business directly.",
+        "This business is listed on NEX as a hair or beauty salon · cuts, styling, colour, nails or related treatments. The owner may offer other services not shown here · if in doubt, contact the business directly.",
       heroImageUrl: "/nex-category-images/hair-salon/p22.png",
       altText: "Hair salon · styling chair and tools",
+      aliases: ["salon", "salons", "beauty-salon", "hairdresser"],
     }),
     plumbing: Object.freeze({
       slug: "plumbing",
@@ -286,16 +299,37 @@ export const CATEGORY_METADATA: Readonly<Record<string, CategoryMetadata>> =
     }),
   });
 
-/** Look up a single category's metadata by slug. Returns null when the
- *  slug is not in the registry · the UI then shows the chip-only
- *  treatment for that category. Pure. */
+/** Pre-built lookup from any registered slug or alias (lowercased)
+ *  back to its CategoryMetadata entry. Computed once at module load ·
+ *  O(1) lookup. Collision detection: if two entries declare the same
+ *  slug/alias, the LAST-written one wins (deterministic by registry
+ *  insertion order) · in practice we author the registry carefully
+ *  so this never happens. */
+const SLUG_INDEX: ReadonlyMap<string, CategoryMetadata> = (() => {
+  const m = new Map<string, CategoryMetadata>();
+  for (const entry of Object.values(CATEGORY_METADATA)) {
+    m.set(entry.slug.trim().toLowerCase(), entry);
+    if (entry.aliases) {
+      for (const a of entry.aliases) {
+        const key = typeof a === "string" ? a.trim().toLowerCase() : "";
+        if (key.length === 0) continue;
+        m.set(key, entry);
+      }
+    }
+  }
+  return m;
+})();
+
+/** Look up a single category's metadata by slug or alias. Returns null
+ *  when the slug is not registered · the UI then shows the chip-only
+ *  treatment. Pure · case- and whitespace-tolerant. */
 export function getCategoryMetadata(
   slug: string | null | undefined,
 ): CategoryMetadata | null {
   if (typeof slug !== "string") return null;
   const normalized = slug.trim().toLowerCase();
   if (normalized.length === 0) return null;
-  return CATEGORY_METADATA[normalized] ?? null;
+  return SLUG_INDEX.get(normalized) ?? null;
 }
 
 /** Given an ordered list of category slugs (as the projector yields:
@@ -315,7 +349,13 @@ export function getPrimaryCategoryMetadata(
 
 /** Partition a list of category slugs into {known, unknown}. The
  *  detail page renders known categories as full cards and unknown
- *  ones as chips below. Preserves input order within each bucket. */
+ *  ones as chips below. Preserves input order within each bucket.
+ *
+ *  Alias-aware: when multiple input slugs alias to the same
+ *  registry entry (e.g. ["hotel", "guesthouse"] both mapping to the
+ *  hotel entry), the entry is included only once · first-seen wins.
+ *  Prevents duplicate cards on listings carrying two slugs from the
+ *  same family. */
 export function partitionCategories(
   categoryIds: readonly string[],
 ): {
@@ -324,15 +364,20 @@ export function partitionCategories(
 } {
   const known: CategoryMetadata[] = [];
   const unknown: string[] = [];
-  const seenSlugs = new Set<string>();
+  const seenInputSlugs = new Set<string>();
+  const seenCanonicalSlugs = new Set<string>();
   for (const raw of categoryIds) {
     if (typeof raw !== "string") continue;
     const slug = raw.trim().toLowerCase();
     if (slug.length === 0) continue;
-    if (seenSlugs.has(slug)) continue;
-    seenSlugs.add(slug);
+    if (seenInputSlugs.has(slug)) continue;
+    seenInputSlugs.add(slug);
     const meta = getCategoryMetadata(slug);
     if (meta !== null) {
+      // Deduplicate by canonical registry slug · a hotel entry
+      // reached via "hotel" OR "guesthouse" counts once.
+      if (seenCanonicalSlugs.has(meta.slug)) continue;
+      seenCanonicalSlugs.add(meta.slug);
       known.push(meta);
     } else {
       unknown.push(raw.trim());

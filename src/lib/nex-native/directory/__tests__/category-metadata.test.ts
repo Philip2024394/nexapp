@@ -44,6 +44,42 @@ describe("getCategoryMetadata", () => {
     expect(getCategoryMetadata("restaurant")).toBeNull();
   });
 
+  it("resolves aliases to the canonical entry · accommodation family", () => {
+    for (const alias of ["guesthouse", "hostel", "kos", "apartment", "resort", "homestay"]) {
+      const meta = getCategoryMetadata(alias);
+      expect(meta?.slug).toBe("hotel");
+    }
+  });
+
+  it("resolves aliases to the canonical entry · car-service family", () => {
+    for (const alias of ["car-repair", "car-wash", "car_repair", "car_wash"]) {
+      expect(getCategoryMetadata(alias)?.slug).toBe("car-service");
+    }
+  });
+
+  it("resolves aliases to the canonical entry · health family", () => {
+    for (const alias of ["pharmacy", "pharmacies", "clinic", "dentist", "dentists", "optician", "opticians"]) {
+      expect(getCategoryMetadata(alias)?.slug).toBe("health");
+    }
+  });
+
+  it("resolves aliases to the canonical entry · sports/fitness family", () => {
+    for (const alias of ["gym", "gyms", "fitness"]) {
+      expect(getCategoryMetadata(alias)?.slug).toBe("sports");
+    }
+  });
+
+  it("resolves aliases to the canonical entry · hair/beauty family", () => {
+    for (const alias of ["salon", "salons", "beauty-salon", "hairdresser"]) {
+      expect(getCategoryMetadata(alias)?.slug).toBe("hair-salon");
+    }
+  });
+
+  it("alias lookup is case- and whitespace-tolerant", () => {
+    expect(getCategoryMetadata("  Guesthouse  ")?.slug).toBe("hotel");
+    expect(getCategoryMetadata("CAR-REPAIR")?.slug).toBe("car-service");
+  });
+
   it("returns null for malformed input", () => {
     expect(getCategoryMetadata("")).toBeNull();
     expect(getCategoryMetadata("   ")).toBeNull();
@@ -105,6 +141,23 @@ describe("partitionCategories", () => {
     ]);
     expect(result.known.length).toBe(1);
     expect(result.unknown).toEqual(["cafe"]);
+  });
+
+  it("deduplicates by canonical entry when multiple aliases hit the same registry row", () => {
+    const result = partitionCategories(["hotel", "guesthouse", "hostel"]);
+    expect(result.known.length).toBe(1);
+    expect(result.known[0].slug).toBe("hotel");
+    expect(result.unknown).toEqual([]);
+  });
+
+  it("mixes known+alias+unknown without crashing", () => {
+    const result = partitionCategories([
+      "pharmacies",
+      "mystery-category",
+      "car-repair",
+    ]);
+    expect(result.known.map((k) => k.slug)).toEqual(["health", "car-service"]);
+    expect(result.unknown).toEqual(["mystery-category"]);
   });
 
   it("drops empty / whitespace-only strings honestly", () => {
