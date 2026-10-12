@@ -43,6 +43,16 @@ import { CountryPicker } from "@/components/nex-native/directory/CountryPicker";
 import { NEX_BUSINESS_CATEGORIES } from "@/lib/nex-native/site-templates";
 import type { NexBusinessRow, NexProductRow } from "@/lib/nex-native/types";
 import { NexPageHeader } from "../_page-header";
+// Phase 3b · unify the search-page cards with the sealed Directory
+// card visual · pull the same curated category_image_library + the
+// same deterministic resolver the DirectoryCard uses. Walker-sourced
+// rows have `logo_url = null` after the adapter so this is the only
+// path to a representative thumbnail.
+import { getCategoryImageLibrary } from "@/lib/nex-native/directory/category-image-library-reader";
+import {
+  resolveCategoryImage,
+  type CategoryImageLibraryRow,
+} from "@/lib/nex-native/directory/category-image-resolver";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -242,6 +252,15 @@ export default async function SearchPage({ searchParams }: PageProps) {
       ]);
   }
 
+  // Phase 3b · the curated category image library (same source the
+  // Directory page uses). We fetch it unconditionally so every
+  // ResultBusinessCard · including the Discover-on-NEX section · gets
+  // a representative thumbnail when `logo_url` is null. Empty array
+  // on fetch failure · the card then renders the honest no-image
+  // fallback glyph exactly like today.
+  const categoryImageLibrary: readonly CategoryImageLibraryRow[] =
+    await getCategoryImageLibrary().catch(() => [] as CategoryImageLibraryRow[]);
+
   function hrefFor(opts: {
     q?: string;
     tab?: string;
@@ -364,12 +383,14 @@ export default async function SearchPage({ searchParams }: PageProps) {
               hasPrev={hasPrev}
               hasNext={hasNext}
               hrefFor={hrefFor}
+              categoryImageLibrary={categoryImageLibrary}
             />
           ) : (
             <LandingBody
               popularTags={popularTags}
               discoverListings={discoverListings}
               hrefFor={hrefFor}
+              categoryImageLibrary={categoryImageLibrary}
             />
           )}
           </UserLocationProvider>
@@ -828,10 +849,12 @@ function LandingBody({
   popularTags,
   discoverListings,
   hrefFor,
+  categoryImageLibrary,
 }: {
   popularTags: Array<{ tag: string; count: number }>;
   discoverListings: NexBusinessRow[];
   hrefFor: (opts: { q?: string; tab?: string; category?: string; page?: number }) => string;
+  categoryImageLibrary: readonly CategoryImageLibraryRow[];
 }): React.JSX.Element {
   // Explore grid · "Shops & products" tile only.
   // The Services / Places / Companies dormant tiles were removed
@@ -901,6 +924,7 @@ function LandingBody({
                 key={b.id}
                 business={b}
                 isLastInSection={idx === discoverListings.length - 1}
+                categoryImageLibrary={categoryImageLibrary}
               />
             ))}
           </div>
@@ -1113,6 +1137,7 @@ function ResultsBody({
   hasPrev,
   hasNext,
   hrefFor,
+  categoryImageLibrary,
 }: {
   productsPaged: NexProductRow[];
   businessesPaged: NexBusinessRow[];
@@ -1125,6 +1150,7 @@ function ResultsBody({
   hasPrev: boolean;
   hasNext: boolean;
   hrefFor: (opts: { q?: string; tab?: string; category?: string; page?: number }) => string;
+  categoryImageLibrary: readonly CategoryImageLibraryRow[];
 }): React.JSX.Element {
   const noResults =
     productsPaged.length === 0 && businessesPaged.length === 0;
@@ -1150,6 +1176,7 @@ function ResultsBody({
                   key={b.id}
                   business={b}
                   isLastInSection={idx === businessesPaged.length - 1}
+                  categoryImageLibrary={categoryImageLibrary}
                 />
               ))}
             </section>
@@ -1258,9 +1285,11 @@ function EmptyState({ query, tab }: { query: string; tab: ResultTab }): React.JS
 function ResultBusinessCard({
   business,
   isLastInSection,
+  categoryImageLibrary,
 }: {
   business: NexBusinessRow;
   isLastInSection: boolean;
+  categoryImageLibrary: readonly CategoryImageLibraryRow[];
 }): React.JSX.Element {
   const b = business as NexBusinessRow & {
     city?: string | null;
@@ -1280,6 +1309,40 @@ function ResultBusinessCard({
     : typeLabel && typeLabel.toLowerCase().includes("manufactur")
       ? "View company →"
       : "View shop →";
+
+  // Phase 3b · unify the search card thumbnail path with the sealed
+  // Directory card. Walker-sourced rows (adaptCanonical in
+  // local-directory-service.ts) always set logo_url=null, so the only
+  // way they get a representative image is via the category image
+  // library resolver. We prefer the owner's uploaded logo when
+  // present; otherwise we fall through to Tier 1/2/3 of the resolver
+  // using the same curated library the Directory page uses. Honest
+  // null when nothing matches · ResultThumb then renders the no-
+  // image glyph exactly like before.
+  const representativeImage =
+    business.logo_url === null
+      ? resolveCategoryImage({
+          libraryRows: categoryImageLibrary,
+          entityType: b.business_category ?? "",
+          categoryIds: (b.search_keywords ?? []) as readonly string[],
+          canonicalBusinessId: business.id,
+        })
+      : null;
+  const thumbSrc = business.logo_url ?? representativeImage?.url ?? null;
+
+  // Phase 3b · CTA strip to match the Directory card's bottom row.
+  // We render the actions available for THIS row's shape:
+  //   · Call      iff public_phone is non-null
+  //   · Website   iff website_url is non-null
+  //   · View shop (always · routes to the same href as the whole card)
+  // We deliberately do NOT render "Message" or "Directions" on the
+  // search card: Message requires an owner_account_id that walker-
+  // adapted rows never have (adapter sets owner_account_id="");
+  // Directions requires raw lat/lng that the adapter does not thread
+  // through. Both become available once the Stage B identity bridge
+  // + a coords projection land · keeping them off today is honest.
+  const hasPhone = typeof business.public_phone === "string" && business.public_phone.length > 0;
+  const hasWebsite = typeof business.website_url === "string" && business.website_url.length > 0;
   // Pass-10 route resolver. `/nex-native/<slug>` is the owner's shop
   // route · it is behind the commerce launch gate (bounces to /home
   // when `NEX_COMMERCE_ENABLED` is falsy). Search results from the
@@ -1302,19 +1365,32 @@ function ResultBusinessCard({
     ? `/nex-native/directory/${slug}`
     : `/nex-native/${slug}`;
   return (
-    <div>
+    <div
+      data-nex-search-card
+      style={{ paddingBottom: 20 }}
+    >
+      {/* Phase 3b · the Link wraps ONLY the thumb + name/meta/chips
+          block. The CTA strip is a SIBLING of the Link (not nested
+          inside it) so each CTA can be a plain <a> element without
+          triggering invalid-HTML nested-anchor hydration errors. The
+          server component boundary stays intact · no onClick handlers
+          cross from the server render to the client. */}
       <Link
         href={href}
         style={{
           display: "flex",
           alignItems: "stretch",
           gap: 16,
-          padding: "4px 4px 20px",
+          padding: "4px 4px 0 4px",
           textDecoration: "none",
           color: NEX.text,
         }}
       >
-        <ResultThumb src={business.logo_url ?? null} alt={business.display_name} />
+        <ResultThumb
+          src={thumbSrc}
+          alt={business.display_name}
+          isRepresentative={business.logo_url === null && representativeImage !== null}
+        />
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
             <span
@@ -1362,17 +1438,101 @@ function ResultBusinessCard({
               ))}
             </div>
           )}
-          <span style={{ marginTop: 4, color: NEX.orange, fontSize: 13.5, fontWeight: 700 }}>
-            {cta}
-          </span>
         </div>
       </Link>
+      {/* Phase 3b · CTA strip · sibling of the Link so these anchors
+          are NOT nested inside the outer card <a>. Plain <a href>
+          elements · no onClick handlers · no server/client boundary
+          issue. The parent <div> is a flex container that keeps the
+          strip left-aligned with the text column; thumb-width (92) +
+          gap (16) pushes the CTAs under the body copy, not under the
+          thumbnail. */}
+      <div
+        data-nex-search-card-cta-strip
+        style={{
+          marginLeft: 92 + 16 + 4, // thumb width + gap + Link padding-left
+          marginTop: 6,
+          display: "flex",
+          gap: 6,
+          flexWrap: "wrap",
+          alignItems: "center",
+          paddingRight: 4,
+        }}
+      >
+        {hasPhone ? (
+          <a
+            data-nex-search-card-cta="call"
+            data-nex-search-card-cta-variant="anchor"
+            href={`tel:${business.public_phone}`}
+            aria-label="Call"
+            style={ctaAnchorStyle}
+          >
+            Call
+          </a>
+        ) : null}
+        {hasWebsite ? (
+          <a
+            data-nex-search-card-cta="website"
+            data-nex-search-card-cta-variant="anchor"
+            href={business.website_url as string}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Website"
+            style={ctaAnchorStyle}
+          >
+            Website
+          </a>
+        ) : null}
+        <Link
+          data-nex-search-card-cta="view"
+          data-nex-search-card-cta-variant="primary"
+          href={href}
+          aria-label={cta.replace(" →", "")}
+          style={ctaPrimaryStyle}
+        >
+          {cta.replace(" →", "")}
+        </Link>
+      </div>
       {!isLastInSection && (
-        <div aria-hidden style={{ height: 1, background: NEX.divider, margin: 0 }} />
+        <div aria-hidden style={{ height: 1, background: NEX.divider, margin: "16px 0 0" }} />
       )}
     </div>
   );
 }
+
+const ctaAnchorStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
+  fontSize: 12.5,
+  fontWeight: 600,
+  padding: "6px 12px",
+  borderRadius: 999,
+  lineHeight: 1,
+  whiteSpace: "nowrap",
+  minHeight: 32,
+  textDecoration: "none",
+  background: "transparent",
+  color: NEX.cyan,
+  border: `1px solid ${NEX.cyan}`,
+};
+
+const ctaPrimaryStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
+  fontSize: 12.5,
+  fontWeight: 600,
+  padding: "6px 12px",
+  borderRadius: 999,
+  lineHeight: 1,
+  whiteSpace: "nowrap",
+  minHeight: 32,
+  textDecoration: "none",
+  background: NEX.orange,
+  color: "#1A1300",
+  border: `1px solid ${NEX.orange}`,
+};
 
 function ResultProductCard({
   product,
@@ -1470,10 +1630,25 @@ function ResultProductCard({
   );
 }
 
-function ResultThumb({ src, alt }: { src: string | null; alt: string }): React.JSX.Element {
+function ResultThumb({
+  src,
+  alt,
+  isRepresentative = false,
+}: {
+  src: string | null;
+  alt: string;
+  /** Phase 3b · when the resolved image came from the shared
+   *  category_image_library (not an owner upload), surface the
+   *  honest ADR-0022 caption via a data-attr for downstream testing
+   *  and future caption rendering. The visual is identical today. */
+  isRepresentative?: boolean;
+}): React.JSX.Element {
   return (
     <span
       aria-hidden={!src}
+      data-nex-search-card-thumb={
+        src === null ? "absent" : isRepresentative ? "representative" : "owner_image"
+      }
       style={{
         width: 92,
         height: 92,
@@ -1494,6 +1669,7 @@ function ResultThumb({ src, alt }: { src: string | null; alt: string }): React.J
     </span>
   );
 }
+
 
 function ChipPill({ label }: { label: string }): React.JSX.Element {
   return (
