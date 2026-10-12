@@ -1269,10 +1269,31 @@ function ResultBusinessCard({
     : typeLabel && typeLabel.toLowerCase().includes("manufactur")
       ? "View company →"
       : "View shop →";
+  // Pass-10 route resolver. `/nex-native/<slug>` is the owner's shop
+  // route · it is behind the commerce launch gate (bounces to /home
+  // when `NEX_COMMERCE_ENABLED` is falsy). Search results from the
+  // local-directory-service carry a `slug = canonical_business_id`
+  // (bare UUID · no owner has claimed the listing yet). Sending the
+  // visitor to the shop route would hit the commerce gate; sending
+  // them to `/nex-native/directory/<uuid>` reaches the Directory
+  // detail page which is NOT behind the commerce gate and shows the
+  // real enrichment overlay. Real human slugs (owner-claimed shops)
+  // keep routing to the shop route unchanged.
+  //
+  // The guard is intentionally UUID-shape only · we never fabricate
+  // a slug or hide a defective one · the fallback destination for a
+  // UUID-slug is a REAL working page, not a dead card.
+  const UUID_RE =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const slug = typeof business.slug === "string" ? business.slug.trim() : "";
+  const slugLooksLikeUuid = slug.length > 0 && UUID_RE.test(slug);
+  const href = slugLooksLikeUuid
+    ? `/nex-native/directory/${slug}`
+    : `/nex-native/${slug}`;
   return (
     <div>
       <Link
-        href={`/nex-native/${business.slug}`}
+        href={href}
         style={{
           display: "flex",
           alignItems: "stretch",

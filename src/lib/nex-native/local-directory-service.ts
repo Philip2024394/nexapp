@@ -71,6 +71,23 @@ interface CanonicalRow {
   website_apex: string | null;
   phone_e164: string | null;
   last_verified_at: Date | null;
+  // Pass-10 vertical-table enrichment overlay (joined via
+  // `nex.food_business.canonical_business_id`). Each column is null
+  // when the row does not have a food_business row OR when the
+  // vertical column itself is null. The adapter uses these as
+  // fallback for the display fields when the canonical column is null.
+  //
+  // WhatsApp is intentionally NOT selected · NEX is the messaging
+  // product (NEX chat with NEX ID is the WhatsApp replacement) ·
+  // surfacing WhatsApp here would send search visitors to a
+  // competitor. OSM WhatsApp numbers remain in
+  // `nex.food_business.whatsapp_number` for HQ marketing outreach
+  // only.
+  fb_phone: string | null;
+  fb_website: string | null;
+  fb_category: string | null;
+  fb_categories: string[] | null;
+  fb_address: string | null;
 }
 
 const VERIFIED_LIFECYCLE_STATES = new Set([
@@ -79,13 +96,61 @@ const VERIFIED_LIFECYCLE_STATES = new Set([
   "OWNER_VERIFIED",
 ]);
 
+/** Empty-string → null · OSM-origin food_business rows sometimes hold
+ *  `''` where the upstream feed had no value. The fallback semantics
+ *  need a true null to recognise "no vertical value either". Pure. */
+function nonEmpty(v: string | null): string | null {
+  if (v === null) return null;
+  const trimmed = v.trim();
+  return trimmed.length === 0 ? null : trimmed;
+}
+
 function adaptCanonical(row: CanonicalRow): NexBusinessRow {
   const verifiedAt = VERIFIED_LIFECYCLE_STATES.has(row.lifecycle_state)
     ? row.last_verified_at?.toISOString() ?? new Date(0).toISOString()
     : null;
   const slug = row.canonical_business_id;
+
+  // Enrichment-fallback semantics: canonical column wins when non-null,
+  // enrichment overlay fills gaps for OSM-origin rows where the sealed
+  // resolver did not re-project presentation fields. Not fabrication ·
+  // the food_business row is the canonical row's upstream evidence
+  // (recorded in business_evidence.legacy_source_table).
+  const fbPhone = nonEmpty(row.fb_phone);
+  const fbWebsite = nonEmpty(row.fb_website);
+  const fbCategory = nonEmpty(row.fb_category);
+  const fbCategories = row.fb_categories ?? [];
+  const fbAddress = nonEmpty(row.fb_address);
+
+  // chips: canonical category_ids win when non-empty; otherwise fall
+  // back to the vertical primary + secondary categories.
+  const canonicalChips = (row.category_ids ?? []).filter(
+    (c) => typeof c === "string" && c.trim().length > 0,
+  );
+  const verticalChipsList = fbCategory
+    ? [fbCategory, ...fbCategories.filter((c) => c !== fbCategory)]
+    : fbCategories;
+  const chips =
+    canonicalChips.length > 0 ? canonicalChips.slice(0, 3) : verticalChipsList.slice(0, 3);
+
+  // phone: canonical phone_e164 wins; fallback to food_business.phone.
+  const phoneResolved = row.phone_e164 ?? fbPhone;
+
+  // website_url: canonical website_apex wins (prefixed https://);
+  // fallback to food_business.website which may already be a full URL
+  // or a bare host · pass through verbatim when non-empty.
+  const websiteResolved = row.website_apex
+    ? `https://${row.website_apex}`
+    : fbWebsite;
+
+  // address: prefer the richer vertical address line when the canonical
+  // row only has district + city granularity. Falls back to the joined
+  // district+city string when neither vertical address nor those parts
+  // exist. Never fabricated.
   const addressPieces = [row.district, row.city].filter(Boolean) as string[];
-  const chips = (row.category_ids ?? []).slice(0, 3);
+  const canonicalAddressLine = addressPieces.join(", ") || null;
+  const addressResolved = fbAddress ?? canonicalAddressLine;
+
   return {
     id: row.canonical_business_id,
     owner_account_id: "",
@@ -94,10 +159,10 @@ function adaptCanonical(row: CanonicalRow): NexBusinessRow {
     description: null,
     logo_url: null,
     hours: null,
-    address: addressPieces.join(", ") || null,
-    public_phone: row.phone_e164,
+    address: addressResolved,
+    public_phone: phoneResolved,
     public_email: null,
-    website_url: row.website_apex ? `https://${row.website_apex}` : null,
+    website_url: websiteResolved,
     payment_instructions: null,
     accepts_cod: false,
     accepts_pickup: false,
@@ -113,10 +178,29 @@ function adaptCanonical(row: CanonicalRow): NexBusinessRow {
   } as unknown as NexBusinessRow;
 }
 
-const LIST_COLUMNS = `
-  canonical_business_id, name_canonical, entity_type, country,
-  lifecycle_state, city, district, category_ids, website_apex,
-  phone_e164, last_verified_at
+// Pass-10: LEFT JOIN on `nex.food_business` adds the vertical-table
+// enrichment fields in a single round trip. The join key is
+// `canonical_business_id` on both tables · identity-matched, never
+// name-matched. The LEFT JOIN preserves canonical rows that have no
+// food_business row (non-food verticals, pre-link rows) · their fb_*
+// columns resolve to null and the adapter degrades gracefully.
+//
+// NEVER select `whatsapp_number` here · see interface comment above.
+const LIST_SELECT = `
+  bc.canonical_business_id, bc.name_canonical, bc.entity_type, bc.country,
+  bc.lifecycle_state, bc.city, bc.district, bc.category_ids, bc.website_apex,
+  bc.phone_e164, bc.last_verified_at,
+  fb.phone        AS fb_phone,
+  fb.website      AS fb_website,
+  fb.category     AS fb_category,
+  fb.categories   AS fb_categories,
+  fb.address      AS fb_address
+`;
+
+const LIST_FROM = `
+  nex.business_canonical bc
+  LEFT JOIN nex.food_business fb
+    ON fb.canonical_business_id = bc.canonical_business_id
 `;
 
 export async function listRandomCanonicalBusinesses(
@@ -124,10 +208,10 @@ export async function listRandomCanonicalBusinesses(
 ): Promise<NexBusinessRow[]> {
   const clamped = Math.min(50, Math.max(1, Math.floor(limit)));
   const rows = await readOnlyQuery<CanonicalRow>(
-    `SELECT ${LIST_COLUMNS}
-       FROM nex.business_canonical
-      WHERE superseded_by_business_id IS NULL
-        AND length(trim(name_canonical)) > 0
+    `SELECT ${LIST_SELECT}
+       FROM ${LIST_FROM}
+      WHERE bc.superseded_by_business_id IS NULL
+        AND length(trim(bc.name_canonical)) > 0
       ORDER BY random()
       LIMIT $1`,
     [clamped],
@@ -185,16 +269,16 @@ export async function searchCanonicalBusinesses(
   const entityType = resolveEntityType(q);
   const pattern = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
   const rows = await readOnlyQuery<CanonicalRow>(
-    `SELECT ${LIST_COLUMNS}
-       FROM nex.business_canonical
-      WHERE superseded_by_business_id IS NULL
+    `SELECT ${LIST_SELECT}
+       FROM ${LIST_FROM}
+      WHERE bc.superseded_by_business_id IS NULL
         AND (
-          name_canonical ILIKE $1
-          OR name_norm ILIKE $1
-          OR $2 = ANY(aliases)
-          OR ($3::text IS NOT NULL AND entity_type = $3)
+          bc.name_canonical ILIKE $1
+          OR bc.name_norm ILIKE $1
+          OR $2 = ANY(bc.aliases)
+          OR ($3::text IS NOT NULL AND bc.entity_type = $3)
         )
-      ORDER BY (entity_type = COALESCE($3::text, '')) DESC, name_canonical
+      ORDER BY (bc.entity_type = COALESCE($3::text, '')) DESC, bc.name_canonical
       LIMIT $4 OFFSET $5`,
     [pattern, q.toLowerCase(), entityType, limit, offset],
   );
