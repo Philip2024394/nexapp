@@ -145,6 +145,27 @@ const RULES: readonly KeywordRule[] = [
       "mortgage",
     ],
   },
+  // ─── Watches · luxury timepiece worlds · evaluated AFTER Property
+  //     so "property watch" (a listing-watch service, unlikely) stays
+  //     in Property, and BEFORE Accommodation / Rentals so a watch
+  //     brand name doesn't collide via a stray generic keyword. The
+  //     watch keyword list is specific enough that false positives
+  //     are extremely rare in practice. Added 2026-10-13. ────────────
+  {
+    categoryId: "watches",
+    keywords: [
+      "watch",
+      "watches",
+      "chronograph",
+      "rolex",
+      "omega",
+      "timepiece",
+      "dial",
+      "bezel",
+      "horology",
+      "wristwatch",
+    ],
+  },
   // ─── Accommodation · evaluated BEFORE Rentals so "Hotel Neo"
   //     routes here rather than Rentals via a stray keyword.
   //     Evaluated AFTER Haunted + Property. Added Step 1H. ─────────

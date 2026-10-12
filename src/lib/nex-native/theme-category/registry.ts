@@ -366,6 +366,39 @@ const CATEGORY_REGISTRY: Readonly<Record<string, ThemeCategory>> = {
     // asset so TeddyPlay reads better as the room's visual anchor.
     heroThemeId: "teddy-play",
   },
+  watches: {
+    id: "watches",
+    name: "Watches",
+    tagline: "Luxury · chronograph · dial · craftsmanship Worlds",
+    icon: "⌚",
+    // Watches palette · Rolex-green anchor + champagne gold + ivory
+    // dial cream · reads as "under the loupe at the jeweller".
+    // Distinct from Hollywood's hollywood gold (which is premiere /
+    // red carpet) and from Teddy's warm honey (which is soft toy).
+    // The deep walnut/forest stage reads as a vitrine with directional
+    // lighting · the champagne glow is reflected off a polished bezel.
+    //
+    // Keyword rule (2026-10-13 · evaluated AFTER Haunted/Waterworld
+    // so a "water-resistant watch" doesn't fall into Waterworld, and
+    // AFTER Property/Accommodation so a "homes watch" collision is
+    // avoided · keywords are specific enough that an actual watch
+    // theme reliably wins):
+    //   'watch', 'watches', 'chronograph', 'rolex', 'omega',
+    //   'timepiece', 'dial', 'bezel', 'horology', 'wristwatch'.
+    // Deliberately NOT included: 'time' (collides with "time to go"
+    // ambient themes) and 'luxury' (too broad · hotel / car /
+    // jewellery worlds).
+    colours: {
+      primary: "#006039", // Rolex green anchor
+      secondary: "#C9A961", // champagne gold
+      highlight: "#F5F0E6", // ivory dial cream · light text on deep bg
+      glow: "rgba(201,169,97,0.52)", // polished-bezel gold glow
+      deep: "#0A1F15", // deep forest · vitrine shadow background
+    },
+    // Hero · the sealed watches-rolex world is the first (and
+    // currently only) Watches theme and acts as the category hero.
+    heroThemeId: "watches-rolex",
+  },
   property: {
     id: "property",
     name: "Property",

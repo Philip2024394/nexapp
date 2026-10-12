@@ -115,6 +115,7 @@ describe("B · member counts come from the actual merged world collection", () =
     expect(counts["teddy"] ?? 0).toBe(2);
     expect(counts["hollywood"] ?? 0).toBe(1);
     expect(counts["vitamins"] ?? 0).toBe(1);
+    expect(counts["watches"] ?? 0).toBe(1);
     expect(counts["accommodation"] ?? 0).toBe(0);
     expect(counts["bakery"] ?? 0).toBe(0);
     expect(counts["products"] ?? 0).toBe(0);
@@ -408,8 +409,8 @@ describe("O · Step 1G (Ocean → Waterworld) is sealed", () => {
 
 // ─── Sanity · the four registered ids are what the surfaces assume ──
 
-describe("Sanity · the four registered category ids today", () => {
-  test("food, bakery, products, services, rentals, accommodation, hollywood, vitamins, teddy, property, haunted, waterworld, explore are registered", () => {
+describe("Sanity · the registered category ids today", () => {
+  test("food, bakery, products, services, rentals, accommodation, hollywood, vitamins, teddy, watches, property, haunted, waterworld, explore are registered", () => {
     expect([...CATEGORY_REGISTRY_IDS].sort()).toEqual([
       "accommodation",
       "bakery",
@@ -423,6 +424,7 @@ describe("Sanity · the four registered category ids today", () => {
       "services",
       "teddy",
       "vitamins",
+      "watches",
       "waterworld",
     ]);
   });
@@ -453,6 +455,7 @@ describe("Sanity · the four registered category ids today", () => {
       "hollywood",
       "vitamins",
       "teddy",
+      "watches",
       "property",
       "explore",
     ]);

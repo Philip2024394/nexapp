@@ -58,6 +58,7 @@ describe("A · live-worlds adapter · every world appears in the Library collect
     "pink-dream",
     "hollywood",
     "vitamin-fruit",
+    "watches-rolex",
   ] as const;
 
   test("listLiveWorldsAsBrowserRows returns a row for every registered live-world", () => {
@@ -249,6 +250,7 @@ describe("C2 · category_id is populated on every live-world row (Step 1C re-sea
         "hollywood",
         "vitamins",
         "teddy",
+        "watches",
         "property",
         "haunted",
         "waterworld",

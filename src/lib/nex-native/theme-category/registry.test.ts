@@ -141,7 +141,7 @@ describe("A · exactly thirteen categories registered (food · bakery · product
     expect(isRegisteredCategory("cafe")).toBe(false);
   });
 
-  test("listCategories returns exactly those thirteen", () => {
+  test("listCategories returns exactly those fourteen", () => {
     const cats = listCategories();
     const ids = cats.map((c) => c.id).sort();
     expect(ids).toEqual([
@@ -157,6 +157,7 @@ describe("A · exactly thirteen categories registered (food · bakery · product
       "services",
       "teddy",
       "vitamins",
+      "watches",
       "waterworld",
     ]);
   });
