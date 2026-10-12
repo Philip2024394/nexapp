@@ -59,6 +59,11 @@ import { DetailDistanceChip } from "./_detail-distance";
 import { RelatedBusinessesSectionClient } from "@/components/nex-native/directory/RelatedBusinessesSectionClient";
 import { OwnerClaimForm } from "@/components/nex-native/directory/OwnerClaimForm";
 import { MapPinPing } from "@/components/nex-native/directory/MapPinPing";
+import {
+  getPrimaryCategoryMetadata,
+  partitionCategories,
+  type CategoryMetadata,
+} from "@/lib/nex-native/directory/category-metadata";
 import { UserLocationProvider } from "@/lib/nex-native/user-location/user-location-provider";
 import { readUserLocationFromAccount } from "@/lib/nex-native/user-location/actions";
 import { flagEmojiForIso } from "@/lib/nex-native/geo/flag-emoji";
@@ -562,6 +567,66 @@ function HeroImage(props: {
       </div>
     );
   }
+
+  // No owner-uploaded primary image. If the listing's primary
+  // category is one we have an approved category image for, use that
+  // as a representative hero · with an EXPLICIT caption so the
+  // visitor knows it is a category-level example and not a photo of
+  // this specific business.
+  const categoryHero = getPrimaryCategoryMetadata(listing.categoryIds);
+  if (categoryHero !== null) {
+    return (
+      <div
+        data-nex-directory-detail-image="category-example"
+        data-nex-directory-detail-image-category={categoryHero.slug}
+        style={{
+          width: 140,
+          flexShrink: 0,
+          display: "flex",
+          flexDirection: "column",
+          gap: 4,
+        }}
+      >
+        <div
+          style={{
+            width: 140,
+            height: 140,
+            borderRadius: 18,
+            overflow: "hidden",
+            background: NEX.surfaceHi,
+            border: `1px solid ${NEX.borderSoft}`,
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={categoryHero.heroImageUrl}
+            alt={categoryHero.altText}
+            data-nex-directory-detail-image-src
+            loading="lazy"
+            decoding="async"
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+            }}
+          />
+        </div>
+        <span
+          data-nex-directory-detail-image-caption
+          style={{
+            fontSize: 10.5,
+            color: NEX.textSoft,
+            lineHeight: 1.3,
+            textAlign: "center",
+          }}
+        >
+          Example image · owner has not uploaded photos
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div
       data-nex-directory-detail-image="absent"
@@ -623,39 +688,133 @@ function CategoriesSection(props: {
     (c) => c.trim().length > 0,
   );
   if (categories.length === 0) return null;
+  const { known, unknown } = partitionCategories(categories);
   return (
-    <SectionBlock
-      title="Services and categories"
-      dataAttr="categories"
+    <SectionBlock title="Services and categories" dataAttr="categories">
+      {known.length > 0 ? (
+        <div
+          data-nex-directory-detail-category-cards
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 14,
+          }}
+        >
+          {known.map((meta) => (
+            <CategoryCard key={meta.slug} meta={meta} />
+          ))}
+        </div>
+      ) : null}
+      {unknown.length > 0 ? (
+        <ul
+          aria-label="Other categories"
+          data-nex-directory-detail-category-chips
+          style={{
+            margin: known.length > 0 ? "12px 0 0 0" : 0,
+            padding: 0,
+            listStyle: "none",
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap",
+          }}
+        >
+          {unknown.map((c) => (
+            <li
+              key={c}
+              data-nex-directory-detail-category-chip={c}
+              style={{
+                fontSize: 12.5,
+                fontWeight: 500,
+                padding: "4px 10px",
+                background: NEX.surfaceHi,
+                color: NEX.textDim,
+                borderRadius: 999,
+              }}
+            >
+              {c}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </SectionBlock>
+  );
+}
+
+/** Known-category card · square image with rounded corners, title,
+ *  and a visitor-facing description. Category-level content, never
+ *  specific to the individual business. */
+function CategoryCard(props: {
+  readonly meta: CategoryMetadata;
+}): React.ReactElement {
+  const { meta } = props;
+  return (
+    <div
+      data-nex-directory-detail-category-card
+      data-nex-directory-detail-category-card-slug={meta.slug}
+      style={{
+        display: "flex",
+        gap: 14,
+        alignItems: "flex-start",
+      }}
     >
-      <ul
-        aria-label="Services and categories"
+      <div
         style={{
-          margin: 0,
-          padding: 0,
-          listStyle: "none",
-          display: "flex",
-          gap: 8,
-          flexWrap: "wrap",
+          flexShrink: 0,
+          width: 96,
+          height: 96,
+          borderRadius: 14,
+          overflow: "hidden",
+          background: NEX.surfaceHi,
+          border: `1px solid ${NEX.borderSoft}`,
         }}
       >
-        {categories.map((c) => (
-          <li
-            key={c}
-            style={{
-              fontSize: 12.5,
-              fontWeight: 500,
-              padding: "4px 10px",
-              background: NEX.surfaceHi,
-              color: NEX.textDim,
-              borderRadius: 999,
-            }}
-          >
-            {c}
-          </li>
-        ))}
-      </ul>
-    </SectionBlock>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={meta.heroImageUrl}
+          alt={meta.altText}
+          data-nex-directory-detail-category-card-image
+          loading="lazy"
+          decoding="async"
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
+      </div>
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          display: "flex",
+          flexDirection: "column",
+          gap: 6,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 15,
+            fontWeight: 700,
+            color: NEX.text,
+            lineHeight: 1.2,
+          }}
+        >
+          {meta.title}
+        </div>
+        <p
+          data-nex-directory-detail-category-card-description
+          style={{
+            margin: 0,
+            fontSize: 13,
+            lineHeight: 1.5,
+            color: NEX.textDim,
+          }}
+        >
+          {meta.description}
+        </p>
+      </div>
+    </div>
   );
 }
 
