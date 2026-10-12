@@ -27,34 +27,62 @@ export interface StandardShopSliderProps {
   engine: ResolvedEngine;
   products: StandardShopProduct[];
   onProductTap?: (productId: string) => void;
+  /** Phase 3 · deep-link focus. When non-null AND the id matches a
+   *  product in `products`, that card is scrolled into view on mount
+   *  and rendered with a 2px accent border. When null (default) the
+   *  slider renders exactly as before · prop is additive. */
+  focusProductId?: string | null;
 }
 
 export function StandardShopSlider({
   engine,
   products,
   onProductTap,
+  focusProductId = null,
 }: StandardShopSliderProps): React.JSX.Element {
   const t = engine.shopTreatment();
+  const focusedCardRef = React.useRef<HTMLButtonElement | null>(null);
+  // Scroll the focused card into view once on mount (and whenever the
+  // focus id changes). Guard against zero-match: if the id isn't in
+  // `products`, the effect no-ops · the slider still renders normally.
+  React.useEffect(() => {
+    if (focusProductId === null) return;
+    const target = focusedCardRef.current;
+    if (!target) return;
+    // `scrollIntoView` with `inline:center` lines the card up in the
+    // middle of the horizontal viewport · the shop sheet host decides
+    // how tall it is, so we only control the horizontal placement.
+    target.scrollIntoView({ behavior: "auto", block: "nearest", inline: "center" });
+  }, [focusProductId]);
   return (
     <div
       data-nex-se-shop-slider
+      data-nex-se-shop-slider-focus-id={focusProductId ?? ""}
       style={t.containerStyle}
     >
-      {products.map((p) => (
-        <button
-          key={p.id}
-          type="button"
-          onClick={() => onProductTap?.(p.id)}
-          data-nex-se-product-card={p.id}
-          style={{
-            ...t.cardStyle,
-            cursor: "pointer",
-            display: "flex",
-            flexDirection: "column",
-            gap: 6,
-            textAlign: "left",
-          }}
-        >
+      {products.map((p) => {
+        const isFocused = focusProductId !== null && p.id === focusProductId;
+        return (
+          <button
+            key={p.id}
+            type="button"
+            ref={isFocused ? focusedCardRef : null}
+            onClick={() => onProductTap?.(p.id)}
+            data-nex-se-product-card={p.id}
+            data-nex-se-product-card-focused={isFocused ? "true" : "false"}
+            style={{
+              ...t.cardStyle,
+              cursor: "pointer",
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+              textAlign: "left",
+              // Accent ring on the focused card · uses the engine's
+              // primary accent so the border honours the active theme.
+              outline: isFocused ? `2px solid ${engine.colours.primary}` : undefined,
+              outlineOffset: isFocused ? 2 : undefined,
+            }}
+          >
           <div
             style={{
               aspectRatio: "1 / 1",
@@ -105,7 +133,8 @@ export function StandardShopSlider({
             {p.price}
           </div>
         </button>
-      ))}
+        );
+      })}
     </div>
   );
 }

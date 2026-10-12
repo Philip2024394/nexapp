@@ -237,6 +237,55 @@ export async function listProductsByBusiness(
   return (data as NexProductRow[]) ?? [];
 }
 
+/** Thin product-thumbnail shape consumed by the business-page thumbnail
+ *  row and the chat shop slider. Only the fields a card actually needs
+ *  are selected so the SELECT stays cheap and the client bundle stays
+ *  small. All fields are honest · never fabricated. */
+export interface ProductThumbnail {
+  readonly id: string;
+  readonly name: string;
+  readonly price_pence: number | null;
+  readonly currency: string | null;
+  readonly image_url: string | null;
+}
+
+/** Return a business's live products in a deterministic order suitable
+ *  for the business-page thumbnail row and the chat shop slider.
+ *
+ *  Ordering · `created_at DESC, id ASC`.
+ *  The DESC on created_at surfaces newest items first (owner's natural
+ *  curation signal). The ASC on id breaks ties stably so two renders
+ *  of the same set never reorder.
+ *
+ *  Scope · ONLY `status = 'live'` rows are returned. Draft, archived
+ *  and sold-out products never surface here. This matches the
+ *  existing `listProductsByBusiness(id, 'live')` contract used by the
+ *  business page's full product feed.
+ *
+ *  `limit` of 0 means "all live products". A finite limit caps the
+ *  pre-fetched set; the horizontally-scrollable thumbnail row then
+ *  decides how many are initially visible on the viewport. */
+export async function getProductThumbnailsByBusiness(
+  businessId: NexUuid,
+  limit = 0,
+): Promise<ProductThumbnail[]> {
+  let q = nexSupabaseAdmin
+    .from("nex_product")
+    .select("id, name, price_pence, currency, image_url")
+    .eq("business_id", businessId)
+    .eq("status", "live")
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: true });
+  if (limit > 0) q = q.limit(limit);
+  const { data, error } = await q;
+  if (error) {
+    throw new Error(
+      `product-service.getProductThumbnailsByBusiness: ${error.message}`,
+    );
+  }
+  return (data as ProductThumbnail[]) ?? [];
+}
+
 /** Create a new product. Fails if business doesn't exist (FK). */
 export async function createProduct(input: NexProductInsert): Promise<NexProductRow> {
   // Tier gate · Gratis owners capped at 10 live/draft products per business.

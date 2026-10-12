@@ -24,7 +24,23 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  searchParams: Promise<{ e?: string; m?: string }>;
+  searchParams: Promise<{ e?: string; m?: string; next?: string }>;
+}
+
+/** Whitelist a `?next=` destination before echoing it into the form.
+ *  Only same-origin, nex-native paths may round-trip. Anything else
+ *  returns null so the sign-in action falls back to the default
+ *  home redirect. Phase 3 · 2026-10-13. */
+function safeNext(next: string | undefined): string | null {
+  if (typeof next !== "string" || next.length === 0) return null;
+  // Must start with "/nex-native/" (relative-same-origin) and must
+  // not contain protocol-relative characters that could escape the
+  // app. Query string with `?` and `&` is allowed; fragments are not.
+  if (!next.startsWith("/nex-native/")) return null;
+  if (next.includes("//")) return null;
+  if (next.includes("\\")) return null;
+  if (next.length > 1024) return null;
+  return next;
 }
 
 const NEX = {
@@ -45,6 +61,7 @@ export default async function SignInPage({ searchParams }: PageProps) {
 
   const params = await searchParams;
   const banner = params.e && params.m ? { code: params.e, message: params.m } : null;
+  const nextParam = safeNext(params.next);
 
   // Only render the SIGN IN WITH FACE button on devices where enrolment
   // happened. The cookie carries no PII · it's a boolean device hint
@@ -154,6 +171,20 @@ export default async function SignInPage({ searchParams }: PageProps) {
 
           {/* 5 · SIGN-IN FORM PANEL */}
           <form action={signInAction} data-nex-sign-in-form>
+            {/* Phase 3 · preserve the deep-link destination across the
+                auth round-trip. `safeNext` whitelists the value to
+                relative /nex-native/ paths before it ever reaches the
+                hidden field, so an unsigned visitor who tapped a
+                product thumbnail lands back on the exact chat URL
+                (including `?focus_product=<id>`) after login. */}
+            {nextParam ? (
+              <input
+                type="hidden"
+                name="next"
+                value={nextParam}
+                data-nex-sign-in-next
+              />
+            ) : null}
             <div
               style={{
                 marginTop: 22,

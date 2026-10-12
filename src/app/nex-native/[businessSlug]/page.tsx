@@ -25,6 +25,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import * as businessService from "@/lib/nex-native/business-service";
 import * as productService from "@/lib/nex-native/product-service";
+import { BusinessThumbnailRow } from "./_business-thumbnail-row";
 import * as menuService from "@/lib/nex-native/menu-service";
 import * as sellerResponsivenessService from "@/lib/nex-native/seller-responsiveness-service";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
@@ -143,6 +144,15 @@ export default async function Page({
     business.id,
     "live",
   );
+
+  // Phase 3 · thin thumbnail-shape slice for the row that renders
+  // directly under the business name. Reuses the live-product pool so
+  // the row and the full feed stay honest — no synthesised items. The
+  // row renders ONLY when products.length > 0 (component short-circuits
+  // on empty · never an empty strip).
+  const thumbnailProducts = await productService
+    .getProductThumbnailsByBusiness(business.id, 0)
+    .catch(() => [] as productService.ProductThumbnail[]);
 
   // Bridge 15a · restaurant/cafe menu · lifted to the top of the
   // landing when the shop is one of the menu categories.
@@ -324,6 +334,15 @@ export default async function Page({
           {/* Bridge 13 · activity badge · green/amber/purple/gray
               signal computed from last_seller_activity_at */}
           <ActivityBadge activity={activity} />
+          {/* Phase 3 · compact owner-shop product thumbnail row ·
+              horizontally scrollable · each tile links to the owner's
+              peer chat with ?focus_product so the shop sheet auto-
+              opens scrolled to the selected item. Renders nothing
+              when the business has zero live products. */}
+          <BusinessThumbnailRow
+            ownerAccountId={business.owner_account_id}
+            products={thumbnailProducts}
+          />
           {/* Bridge 14 · category chip removed from hero per Founder
               direction 2026-09-28 · still used on Directory facet
               chips + shop-settings picker · component kept below. */}

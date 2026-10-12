@@ -52,6 +52,7 @@ import { DeviceKeyHub } from "./_device-key-hub";
 import { E2eDecryptor } from "./_e2e-decryptor";
 import { E2eComposerIntercept } from "./_e2e-composer-intercept";
 import { ArchivePanel } from "./_archive-panel";
+import { FocusedShopSheet } from "./_focused-shop-sheet";
 import type {
   SideNavContact,
   PendingInvite,
@@ -99,6 +100,11 @@ export default async function PeerChatPage({
     attachment_encrypted?: string;
     upload_error?: string;
     lang?: string;
+    /** Phase 3 · product id to auto-open the shop sheet focused on.
+     *  When present, the FocusedShopSheet mounts and scrolls that
+     *  card into view with a 2px accent border. Honest-null · an
+     *  unknown id still mounts the sheet but no card is highlighted. */
+    focus_product?: string;
   }>;
 }) {
   const { accountId: peerAccountId } = await params;
@@ -115,8 +121,26 @@ export default async function PeerChatPage({
   // a proper toast is a follow-up.
   void sp.delete_error;
 
+  // Phase 3 · deep-link preservation across sign-in. When an unsigned
+  // visitor taps a product thumbnail on a business page, their path
+  // is `/nex-native/chat/peer/<peer>?focus_product=<id>`. We hand
+  // that exact URL to sign-in via `?next=…`; the sign-in action
+  // reads it back and redirects after a successful login, so the
+  // selected product survives the auth round-trip. The reconstructed
+  // url re-encodes to avoid injection; only chat-page params are
+  // whitelisted here.
+  const focusProductIdFromUrl =
+    typeof sp.focus_product === "string" && sp.focus_product.length > 0
+      ? sp.focus_product
+      : null;
   const session = await resolveNexAppSessionFromContext();
-  if (!session) redirect("/nex-native/sign-in");
+  if (!session) {
+    const base = `/nex-native/chat/peer/${peerAccountId}`;
+    const nextUrl = focusProductIdFromUrl
+      ? `${base}?focus_product=${encodeURIComponent(focusProductIdFromUrl)}`
+      : base;
+    redirect(`/nex-native/sign-in?next=${encodeURIComponent(nextUrl)}`);
+  }
   if (peerAccountId === session.account.id) redirect("/nex-native/chat");
 
   // Bridge 16d · locale resolution now considers the account's
@@ -826,6 +850,44 @@ export default async function PeerChatPage({
         selfAccountId={session.account.id}
         disabled={isNexOfficialAccount(peer.id)}
       />
+      {/* Phase 3 · auto-opening shop sheet triggered by
+          `?focus_product=<id>`. Mounts only when the peer owns a
+          business AND the business has live products · otherwise the
+          server-side guard here hides the sheet entirely. The sheet
+          handles honest-null stale ids by rendering without an accent
+          card. The server passes a plain `name_canonical / price_pence
+          / currency / image_url` projection so the client bundle
+          stays small. */}
+      {focusProductIdFromUrl && peerBusiness && peerProducts.length > 0 ? (
+        <FocusedShopSheet
+          focusProductId={focusProductIdFromUrl}
+          products={peerProducts.map((p) => ({
+            id: p.id,
+            name: p.name,
+            priceLabel:
+              typeof p.price_pence === "number" && p.currency
+                ? formatProductPriceLabel(p.price_pence, p.currency)
+                : null,
+            imageUrl: p.image_url ?? null,
+          }))}
+        />
+      ) : null}
     </>
   );
+}
+
+/** Pure · format `price_pence` + currency as a short label. Falls back
+ *  to the raw integer when `Intl.NumberFormat` doesn't accept the
+ *  currency string (never fabricates currency metadata). */
+function formatProductPriceLabel(pricePence: number, currency: string): string {
+  const whole = pricePence / 100;
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: whole % 1 === 0 ? 0 : 2,
+    }).format(whole);
+  } catch {
+    return `${currency} ${whole.toLocaleString()}`;
+  }
 }

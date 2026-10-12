@@ -328,6 +328,22 @@ export async function signInAction(formData: FormData): Promise<ActionResult> {
       redirect("/nex-native/post-signup-apply");
     }
   }
+  // Phase 3 · deep-link return. If the sign-in form carried a `next`
+  // hidden input (set by the sign-in page from `?next=…` after a
+  // whitelist pass), prefer it over the default /home landing. We
+  // re-validate it here as defence-in-depth so a hand-crafted form
+  // post can't redirect anywhere outside the app's own routes.
+  const nextRaw = formData.get("next");
+  if (typeof nextRaw === "string" && nextRaw.length > 0 && nextRaw.length <= 1024) {
+    if (
+      nextRaw.startsWith("/nex-native/") &&
+      !nextRaw.includes("//") &&
+      !nextRaw.includes("\\")
+    ) {
+      revalidatePath(nextRaw);
+      redirect(nextRaw);
+    }
+  }
   revalidatePath("/nex-native/home");
   redirect("/nex-native/home");
 }
