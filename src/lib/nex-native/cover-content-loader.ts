@@ -100,6 +100,20 @@ export async function loadCoverContent(
   // never breaks the cover.
   const terminology = await resolveTerminology(business.id);
 
+  // Founder-sealed architecture 2026-09-30 · owner's chat_theme is
+  // the SINGLE visual identity across Chat + Cover. Pull it from the
+  // account row; fall back to pink-dream only if the owner has never
+  // set one (matches the existing NEX default). NEVER read a
+  // business-specific theme column · templates are information
+  // architecture only, not visual identity.
+  //
+  // Must be declared BEFORE the themeEmojis fetch below because
+  // listThemeEmojis takes themeId as its argument. The original
+  // ordering (declaration after use) was a temporal dead zone
+  // ReferenceError that returned HTTP 500 for every business with a
+  // cover_layout_id. Fixed 2026-10-14 during Hammerexproducts build.
+  const themeId = owner?.chat_theme ?? "pink-dream";
+
   // Bridge ThemeEmoji-B · load the owner's chat_theme emoji set (if
   // any). CoverComposer swaps its picker to these when non-empty ·
   // else falls back to the default 40-emoji hardcoded array.
@@ -109,14 +123,6 @@ export async function loadCoverContent(
     imageUrl: row.image_url,
     label: row.label,
   }));
-
-  // Founder-sealed architecture 2026-09-30 · owner's chat_theme is
-  // the SINGLE visual identity across Chat + Cover. Pull it from the
-  // account row; fall back to pink-dream only if the owner has never
-  // set one (matches the existing NEX default). NEVER read a
-  // business-specific theme column · templates are information
-  // architecture only, not visual identity.
-  const themeId = owner?.chat_theme ?? "pink-dream";
 
   const sections = isVenue
     ? menuSectionsRaw.map((s) => ({
