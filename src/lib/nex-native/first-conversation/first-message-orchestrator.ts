@@ -172,9 +172,13 @@ export async function orchestrateFirstMessage(
     };
   }
   if (input.session.kind === "provisional") {
+    // Returning provisional caller · the dedicated guest-chat surface
+    // accepts the provisional cookie. The authenticated peer-chat page
+    // would reject it at the sealed strict session gate.
+    // Fixed 2026-10-14 during Hammerexproducts guest-handoff build.
     return {
       status: "existing_session",
-      redirect_to: `/nex-native/chat/peer/${input.owner_account_id}`,
+      redirect_to: `/nex-native/chat/guest/${input.owner_account_id}`,
       account_id: input.session.account.id,
     };
   }
@@ -280,7 +284,16 @@ export async function orchestrateFirstMessage(
     // Sealed §7B activation-boundary + §9 post-send ack contract:
     // the "?born=1" flag tells the client to render the "We've created
     // your NEX" banner exactly once.
-    redirect_to: `/nex-native/chat/peer/${input.owner_account_id}?born=1`,
+    //
+    // Status 'created' means a BRAND-NEW provisional account was just
+    // minted · route to the dedicated guest-chat surface which accepts
+    // provisional sessions and surfaces soft sign-up prompts. The
+    // authenticated peer-chat page keeps its sealed strict session
+    // gate · authenticated and returning-provisional callers continue
+    // to land there via the 'existing_session' branch above.
+    //
+    // Fixed 2026-10-14 during Hammerexproducts guest-handoff build.
+    redirect_to: `/nex-native/chat/guest/${input.owner_account_id}?born=1`,
   };
 
   // Note: session_lifetime_ms is currently unused in the orchestrator

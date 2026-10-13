@@ -109,7 +109,10 @@ describe("orchestrateFirstMessage · session=none + risk pass → create", () =>
     expect(r.session.session_id).toMatch(/^[0-9a-f-]{36}$/i);
     expect(r.session.signed_cookie_token.split(".")).toHaveLength(2);
     expect(r.session.expires_at_ms).toBeGreaterThan(Date.now());
-    expect(r.redirect_to).toBe(`/nex-native/chat/peer/${ownerAccountId}?born=1`);
+    // Updated 2026-10-14 · status='created' (new provisional) now
+    // routes to the dedicated guest-chat surface rather than the
+    // authenticated peer-chat page (which has a strict session gate).
+    expect(r.redirect_to).toBe(`/nex-native/chat/guest/${ownerAccountId}?born=1`);
 
     // Cookie verifies + payload matches
     const verify = verifySessionToken(r.session.signed_cookie_token, cryptoCfg);
