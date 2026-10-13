@@ -184,6 +184,7 @@ export default async function GuestChatPage({
       ownerDisplayName={owner.display_name}
       businessDisplayName={business?.display_name ?? null}
       businessSlug={business?.slug ?? null}
+      businessLogoUrl={business?.logo_url ?? null}
       conversationId={conversation.id}
       initialMessages={projected}
       isBorn={isBorn}

@@ -2,13 +2,22 @@
 
 // src/app/nex-native/chat/guest/[ownerAccountId]/_guest-chat-client.tsx
 //
-// Guest chat surface · wrapped in CoverThemeSkin so the wallpaper +
-// accent + motion exactly match the cover the visitor arrived from
-// (ONE NEX IDENTITY doctrine). Minimal feature set: message list,
-// composer, waiting-for-reply status, dismissible sign-up prompt.
-// No admin, Vault, friend, reaction, sticker, or shop-setup chrome.
+// Guest chat surface. Wraps in CoverThemeSkin so the wallpaper +
+// accent + motion exactly match whatever theme the business owner has
+// set (ONE NEX IDENTITY doctrine). Uses the sealed Joker/standard
+// chat header + aurora-pill composer design (Bridge 53 · founder-
+// sealed 2026-09-27 / 2026-09-29) so every theme's guest chat reads
+// the same shape.
+//
+// Visual tokens (match sealed PortraitBloomShell + HeaderRightCluster):
+//   · 56px round profile avatar · left-aligned · presence ring
+//   · Business name 26px bold · subtitle below · soft text-shadow
+//   · 44px circle buttons · right-aligned fixed · Home + Sign-up
+//   · Aurora-pill composer · 24px rounded · accent send button
+//   · Glass bubbles · accent rim for guest · frosted navy for owner
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CoverThemeSkin } from "../../../cover/theme-skin";
 import { sendGuestMessageAction } from "./_actions";
@@ -37,10 +46,23 @@ interface Props {
   ownerDisplayName: string;
   businessDisplayName: string | null;
   businessSlug: string | null;
+  businessLogoUrl: string | null;
   conversationId: string;
   initialMessages: ClientMessage[];
   isBorn: boolean;
   theme: ThemeInfo;
+}
+
+const GREEN = "#16D66B";
+const AMBER = "#F59E0B";
+const CYAN_DEEP = "#063B67";
+const CYAN = "#00AFFF";
+
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 0 || parts[0].length === 0) return "·";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 export function GuestChatClient(props: Props): React.JSX.Element {
@@ -53,9 +75,6 @@ export function GuestChatClient(props: Props): React.JSX.Element {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       wallpaperConfig={props.theme.wallpaperConfig as any}
       themeId={props.theme.themeId}
-      // Guest view doesn't own a specific cover layout · pass through
-      // "product" so the skin's downstream primitives (if any) resolve.
-      // The guest view only consumes the CSS vars + wallpaper layer.
       layoutId="product"
     >
       <GuestChatInner {...props} />
@@ -69,11 +88,17 @@ function GuestChatInner(props: Props): React.JSX.Element {
     ownerDisplayName,
     businessDisplayName,
     businessSlug,
+    businessLogoUrl,
     initialMessages,
     isBorn,
+    theme,
   } = props;
   const router = useRouter();
   const businessLabel = businessDisplayName ?? ownerDisplayName;
+  const shopHref = businessSlug
+    ? `/nex-native/${businessSlug}?commerce=1`
+    : "/nex-native/home";
+  const signUpHref = `/nex-native/sign-up?next=${encodeURIComponent(`/nex-native/chat/guest/${ownerAccountId}`)}`;
 
   const [messages, setMessages] = React.useState<ClientMessage[]>(initialMessages);
   const [composerText, setComposerText] = React.useState("");
@@ -84,10 +109,8 @@ function GuestChatInner(props: Props): React.JSX.Element {
     React.useState(false);
 
   const guestMessageCount = messages.filter((m) => m.isFromGuest).length;
-  const ownerMessageCount = messages.filter((m) => !m.isFromGuest).length;
-  const anyOwnerReply = ownerMessageCount > 0;
+  const anyOwnerReply = messages.some((m) => !m.isFromGuest);
 
-  // Prompt triggers: owner reply, guest 2nd message, 90s dwell fallback.
   React.useEffect(() => {
     if (signUpPromptDismissed) return;
     if (anyOwnerReply || guestMessageCount >= 2) setShowSignUpPrompt(true);
@@ -105,6 +128,15 @@ function GuestChatInner(props: Props): React.JSX.Element {
     if (!el) return;
     el.scrollTop = el.scrollHeight;
   }, [messages.length]);
+
+  const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
+  const autoGrow = React.useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "0px";
+    el.style.height = Math.min(el.scrollHeight, 120) + "px";
+  }, []);
+  React.useEffect(autoGrow, [composerText, autoGrow]);
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -141,84 +173,158 @@ function GuestChatInner(props: Props): React.JSX.Element {
     router.refresh();
   }
 
-  const signUpHref = `/nex-native/sign-up?next=${encodeURIComponent(`/nex-native/chat/guest/${ownerAccountId}`)}`;
-
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
         minHeight: "100dvh",
-        color: "var(--nex-text)",
-        fontFamily: "var(--nex-font-body, system-ui, sans-serif)",
+        color: "var(--nex-text, #F4F7FC)",
+        fontFamily: "var(--nex-font-body, Inter, system-ui, sans-serif)",
         position: "relative",
         zIndex: 1,
       }}
     >
-      {/* ─── Header ─────────────────────────────────────────── */}
+      {/* ─── HEADER · profile LEFT · 44px circle buttons RIGHT ─── */}
       <header
         style={{
-          padding: "12px 16px",
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          borderBottom: "1px solid var(--nex-card-border, rgba(255,255,255,0.08))",
-          background: "var(--nex-panel, rgba(2,9,20,0.72))",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
+          position: "relative",
+          flexShrink: 0,
+          padding:
+            "calc(env(safe-area-inset-top, 0) + 14px) 62px 12px 20px",
+          textShadow: "0 2px 20px rgba(0,0,0,0.75)",
         }}
       >
-        {businessSlug ? (
-          <a
-            href={`/nex-native/${businessSlug}?commerce=1`}
-            style={{
-              color: "var(--nex-text-dim, #8BA9D1)",
-              textDecoration: "none",
-              fontSize: 22,
-              lineHeight: 1,
-              padding: "4px 8px",
-            }}
-            aria-label="Back to shop"
-          >
-            ←
-          </a>
-        ) : null}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {/* 56px round profile · business logo or initials fallback */}
           <div
+            aria-label={`${businessLabel} · chatting as guest`}
+            title={businessLabel}
             style={{
-              fontFamily: "var(--nex-font-display, 'Cormorant Garamond', Georgia, serif)",
-              fontSize: 20,
-              fontWeight: 500,
-              lineHeight: 1.2,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
+              position: "relative",
+              flexShrink: 0,
+              width: 56,
+              height: 56,
             }}
           >
-            {businessLabel}
-          </div>
-          <div
-            style={{
-              fontSize: 12,
-              color: "var(--nex-text-dim, #8BA9D1)",
-              marginTop: 2,
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-            }}
-          >
-            <span
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                background: "var(--nex-accent, #FF7800)",
-                boxShadow: "0 0 6px var(--nex-glow, rgba(255,120,0,0.6))",
-              }}
+            {/* Presence ring · guest doesn't know if owner is live, so
+                we show a steady accent ring (not the heartbeat pulse)
+                to indicate "ready to respond" without faking presence */}
+            <div
               aria-hidden
+              style={{
+                position: "absolute",
+                inset: -2,
+                borderRadius: "50%",
+                border: `2px solid var(--nex-accent, ${theme.accentHex})`,
+                boxShadow: `0 0 10px var(--nex-glow, ${theme.accentHex}66)`,
+                pointerEvents: "none",
+              }}
             />
-            Chatting as guest
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                borderRadius: "50%",
+                overflow: "hidden",
+                border: `2px solid ${GREEN}`,
+                boxShadow:
+                  "0 0 0 3px rgba(22,214,107,0.12), 0 4px 14px rgba(0,0,0,0.6)",
+                backgroundImage: businessLogoUrl
+                  ? `url(${businessLogoUrl})`
+                  : `linear-gradient(135deg, ${CYAN_DEEP} 0%, #05101f 100%)`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }}
+            >
+              {!businessLogoUrl && (
+                <div
+                  aria-hidden
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "grid",
+                    placeItems: "center",
+                    color: CYAN,
+                    fontSize: 16,
+                    fontWeight: 700,
+                    letterSpacing: "0.06em",
+                    opacity: 0.9,
+                  }}
+                >
+                  {initialsFromName(businessLabel)}
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Name stack · right-pad reserves space for the R1 cluster */}
+          <div style={{ minWidth: 0, flex: 1, paddingRight: 150 }}>
+            <div
+              style={{
+                fontSize: 26,
+                fontWeight: 700,
+                color: "var(--nex-text, #F4F7FC)",
+                lineHeight: 1.1,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {businessLabel}
+            </div>
+            <div
+              style={{
+                fontSize: 13,
+                color: "var(--nex-text-dim, rgba(244,247,252,0.72))",
+                marginTop: 2,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <span
+                aria-hidden
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: "50%",
+                  background: "var(--nex-accent, " + theme.accentHex + ")",
+                  boxShadow: `0 0 6px var(--nex-glow, ${theme.accentHex}aa)`,
+                }}
+              />
+              Chatting as guest
+            </div>
+          </div>
+        </div>
+
+        {/* R1 cluster · 44px circle buttons · absolutely positioned */}
+        <div
+          data-nex-guest-cluster
+          style={{
+            position: "absolute",
+            top: "calc(env(safe-area-inset-top, 0) + 14px)",
+            right: 12,
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            zIndex: 6,
+          }}
+        >
+          <HeaderCircleLink
+            href={shopHref}
+            ariaLabel="Back to shop"
+            title="Shop"
+          >
+            <ShopIcon />
+          </HeaderCircleLink>
+          <HeaderCircleLink
+            href={signUpHref}
+            ariaLabel="Sign up to save this chat"
+            title="Sign up"
+          >
+            <SaveIcon />
+          </HeaderCircleLink>
         </div>
       </header>
 
@@ -226,20 +332,20 @@ function GuestChatInner(props: Props): React.JSX.Element {
       {isBorn && (
         <div
           style={{
-            margin: "12px 16px 0",
+            margin: "4px 16px 0",
             padding: "10px 14px",
             borderRadius: 12,
-            background: "rgba(0,0,0,0.42)",
-            backdropFilter: "blur(8px)",
-            WebkitBackdropFilter: "blur(8px)",
-            border: "1px solid var(--nex-accent-soft, rgba(255,120,0,0.5))",
+            background: "rgba(2,9,20,0.6)",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+            border: `1px solid var(--nex-accent-soft, ${theme.accentHex}80)`,
             fontSize: 13,
-            color: "var(--nex-text)",
+            color: "var(--nex-text, #F4F7FC)",
           }}
           data-nex-guest-born
         >
-          Your message was delivered to {businessLabel}. Keep this tab open
-          to see their reply.
+          Your message was delivered to {businessLabel}. Keep this tab
+          open to see their reply.
         </div>
       )}
 
@@ -260,7 +366,7 @@ function GuestChatInner(props: Props): React.JSX.Element {
           <div
             style={{
               textAlign: "center",
-              color: "var(--nex-text-mute, #526B89)",
+              color: "var(--nex-text-mute, rgba(244,247,252,0.5))",
               fontSize: 14,
               padding: "40px 20px",
             }}
@@ -268,14 +374,16 @@ function GuestChatInner(props: Props): React.JSX.Element {
             Say hello to {businessLabel}
           </div>
         ) : (
-          messages.map((m) => <GuestMessageBubble key={m.id} message={m} />)
+          messages.map((m) => (
+            <GuestMessageBubble key={m.id} message={m} />
+          ))
         )}
 
         {!anyOwnerReply && guestMessageCount > 0 && (
           <div
             style={{
               textAlign: "center",
-              color: "var(--nex-text-dim, #8BA9D1)",
+              color: "var(--nex-text-dim, rgba(244,247,252,0.72))",
               fontSize: 12,
               padding: "6px 16px 2px",
               fontStyle: "italic",
@@ -297,7 +405,7 @@ function GuestChatInner(props: Props): React.JSX.Element {
             background: "rgba(2,9,20,0.72)",
             backdropFilter: "blur(12px)",
             WebkitBackdropFilter: "blur(12px)",
-            border: "1px solid var(--nex-accent-soft, rgba(255,120,0,0.5))",
+            border: `1px solid var(--nex-accent-soft, ${theme.accentHex}80)`,
             display: "flex",
             alignItems: "center",
             gap: 12,
@@ -311,7 +419,7 @@ function GuestChatInner(props: Props): React.JSX.Element {
             <div
               style={{
                 fontSize: 12,
-                color: "var(--nex-text-dim, #8BA9D1)",
+                color: "var(--nex-text-dim, rgba(244,247,252,0.72))",
                 marginTop: 2,
               }}
             >
@@ -323,7 +431,7 @@ function GuestChatInner(props: Props): React.JSX.Element {
             style={{
               padding: "8px 14px",
               borderRadius: 10,
-              background: "var(--nex-accent, #FF7800)",
+              background: "var(--nex-accent, " + theme.accentHex + ")",
               color: "#1A1300",
               textDecoration: "none",
               fontSize: 13,
@@ -340,7 +448,7 @@ function GuestChatInner(props: Props): React.JSX.Element {
             style={{
               background: "transparent",
               border: "none",
-              color: "var(--nex-text-mute, #526B89)",
+              color: "var(--nex-text-mute, rgba(244,247,252,0.5))",
               fontSize: 22,
               cursor: "pointer",
               padding: "4px 8px",
@@ -353,92 +461,144 @@ function GuestChatInner(props: Props): React.JSX.Element {
         </div>
       )}
 
-      {/* ─── Composer ───────────────────────────────────────── */}
+      {/* ─── AURORA PILL COMPOSER ───────────────────────────── */}
       <form
         onSubmit={handleSend}
         style={{
-          padding: "10px 12px 14px",
-          borderTop: "1px solid var(--nex-card-border, rgba(255,255,255,0.08))",
-          background: "rgba(2,9,20,0.78)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          display: "flex",
-          gap: 8,
-          alignItems: "flex-end",
+          padding: "0 12px calc(env(safe-area-inset-bottom, 0) + 12px)",
+          flexShrink: 0,
         }}
         data-nex-guest-composer
       >
-        <textarea
-          value={composerText}
-          onChange={(e) => setComposerText(e.target.value)}
-          placeholder={`Message ${businessLabel}…`}
-          rows={1}
-          maxLength={2000}
-          style={{
-            flex: 1,
-            resize: "none",
-            padding: "10px 14px",
-            borderRadius: 22,
-            background: "rgba(6,15,28,0.6)",
-            border: "1px solid var(--nex-accent-soft, rgba(255,120,0,0.5))",
-            color: "var(--nex-text, #F4F7FC)",
-            fontFamily: "var(--nex-font-body, system-ui, sans-serif)",
-            fontSize: 15,
-            outline: "none",
-            minHeight: 42,
-            maxHeight: 120,
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              void handleSend(e as unknown as React.FormEvent);
-            }
-          }}
-        />
-        <button
-          type="submit"
-          disabled={sending || composerText.trim().length === 0}
-          style={{
-            padding: "10px 18px",
-            borderRadius: 22,
-            background:
-              sending || composerText.trim().length === 0
-                ? "rgba(6,15,28,0.6)"
-                : "var(--nex-accent, #FF7800)",
-            color:
-              sending || composerText.trim().length === 0
-                ? "var(--nex-text-mute, #526B89)"
-                : "#1A1300",
-            border: "none",
-            fontSize: 14,
-            fontWeight: 600,
-            cursor:
-              sending || composerText.trim().length === 0
-                ? "default"
-                : "pointer",
-            minWidth: 68,
-          }}
-        >
-          {sending ? "…" : "Send"}
-        </button>
-      </form>
-
-      {sendError && (
         <div
           style={{
-            padding: "4px 16px 10px",
-            fontSize: 12,
-            color: "#F59E0B",
-            background: "rgba(2,9,20,0.78)",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "6px 6px 6px 12px",
+            borderRadius: 24,
+            background: "rgba(4,20,36,0.90)",
+            border: `1px solid var(--nex-composer-rim, ${theme.composerRimHex ?? theme.accentHex})`,
+            backdropFilter: "blur(16px)",
+            WebkitBackdropFilter: "blur(16px)",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
           }}
-          data-nex-guest-send-error
         >
-          {sendError}
+          {/* + button · info trigger (disabled for guest · media attach
+              is Phase C+ ·  shown for visual parity with authenticated
+              composer) */}
+          <button
+            type="button"
+            disabled
+            title="Attach media available after you sign up"
+            aria-label="Attach"
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: "50%",
+              background: "rgba(255,255,255,0.04)",
+              border: "none",
+              color: "var(--nex-text-mute, rgba(244,247,252,0.4))",
+              fontSize: 20,
+              lineHeight: 1,
+              cursor: "not-allowed",
+              display: "grid",
+              placeItems: "center",
+              flexShrink: 0,
+            }}
+          >
+            +
+          </button>
+
+          <textarea
+            ref={textareaRef}
+            value={composerText}
+            onChange={(e) => setComposerText(e.target.value)}
+            placeholder={`Message ${businessLabel}…`}
+            rows={1}
+            maxLength={2000}
+            style={{
+              flex: 1,
+              resize: "none",
+              padding: "8px 4px",
+              background: "transparent",
+              border: "none",
+              color: "var(--nex-text, #F4F7FC)",
+              fontFamily:
+                "var(--nex-font-body, Inter, system-ui, sans-serif)",
+              fontSize: 15,
+              outline: "none",
+              minHeight: 24,
+              maxHeight: 120,
+              lineHeight: 1.4,
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void handleSend(e as unknown as React.FormEvent);
+              }
+            }}
+          />
+
+          <button
+            type="submit"
+            disabled={sending || composerText.trim().length === 0}
+            aria-label="Send"
+            title="Send"
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: "50%",
+              background:
+                sending || composerText.trim().length === 0
+                  ? "rgba(255,255,255,0.08)"
+                  : "var(--nex-accent, " + theme.accentHex + ")",
+              color:
+                sending || composerText.trim().length === 0
+                  ? "rgba(244,247,252,0.4)"
+                  : "#1A1300",
+              border: "none",
+              cursor:
+                sending || composerText.trim().length === 0
+                  ? "default"
+                  : "pointer",
+              display: "grid",
+              placeItems: "center",
+              flexShrink: 0,
+              boxShadow:
+                sending || composerText.trim().length === 0
+                  ? "none"
+                  : `0 6px 18px var(--nex-glow, ${theme.accentHex}66)`,
+              transition: "background 180ms ease, box-shadow 180ms ease",
+            }}
+          >
+            {sending ? (
+              <span style={{ fontSize: 18, fontWeight: 600 }}>…</span>
+            ) : (
+              <SendIcon />
+            )}
+          </button>
         </div>
-      )}
+        {sendError && (
+          <div
+            style={{
+              marginTop: 6,
+              padding: "6px 12px",
+              fontSize: 12,
+              color: AMBER,
+              textAlign: "center",
+            }}
+            data-nex-guest-send-error
+          >
+            {sendError}
+          </div>
+        )}
+      </form>
     </div>
   );
 }
+
+/* ───────────────── Message bubble ──────────────────────────────── */
 
 function GuestMessageBubble({
   message,
@@ -446,15 +606,12 @@ function GuestMessageBubble({
   message: ClientMessage;
 }): React.JSX.Element {
   const align = message.isFromGuest ? "flex-end" : "flex-start";
-  // Guest's own bubbles get the accent-tinted fill, like outgoing
-  // messages in sealed chat themes. Owner's bubbles sit on the frosted
-  // panel so they read against the wallpaper.
   const bg = message.isFromGuest
     ? "var(--nex-accent-faint, rgba(255,120,0,0.14))"
     : "rgba(2,9,20,0.68)";
   const rim = message.isFromGuest
-    ? "var(--nex-accent-soft, rgba(255,120,0,0.5))"
-    : "var(--nex-card-border, rgba(255,255,255,0.08))";
+    ? "var(--nex-bubble-rim, var(--nex-accent-soft, rgba(255,120,0,0.5)))"
+    : "rgba(139,169,209,0.3)";
   return (
     <div style={{ display: "flex", justifyContent: align }}>
       <div
@@ -470,6 +627,7 @@ function GuestMessageBubble({
           wordBreak: "break-word",
           backdropFilter: "blur(8px)",
           WebkitBackdropFilter: "blur(8px)",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
         }}
         data-nex-guest-bubble
         data-sender={message.isFromGuest ? "guest" : "owner"}
@@ -477,5 +635,106 @@ function GuestMessageBubble({
         {message.body}
       </div>
     </div>
+  );
+}
+
+/* ───────────────── Header circle button primitive ──────────────── */
+
+function HeaderCircleLink({
+  href,
+  ariaLabel,
+  title,
+  children,
+}: {
+  href: string;
+  ariaLabel: string;
+  title: string;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <Link
+      href={href}
+      aria-label={ariaLabel}
+      title={title}
+      style={{
+        width: 44,
+        height: 44,
+        display: "grid",
+        placeItems: "center",
+        color: "var(--nex-text, #F4F7FC)",
+        textDecoration: "none",
+        filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.65))",
+        transition: "transform 120ms ease, opacity 120ms ease",
+      }}
+    >
+      {children}
+    </Link>
+  );
+}
+
+/* ───────────────── SVG icons (match sealed cluster) ────────────── */
+
+function ShopIcon(): React.JSX.Element {
+  // Shop-bag · same silhouette the sealed R1 cluster uses when the
+  // peer owns a non-venue business.
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="26"
+      height="26"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <path d="M16 10a4 4 0 0 1-8 0" />
+    </svg>
+  );
+}
+
+function SaveIcon(): React.JSX.Element {
+  // Bookmark-plus · "save this chat" affordance.
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="26"
+      height="26"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+      <line x1="12" y1="7" x2="12" y2="13" />
+      <line x1="9" y1="10" x2="15" y2="10" />
+    </svg>
+  );
+}
+
+function SendIcon(): React.JSX.Element {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <line x1="22" y1="2" x2="11" y2="13" />
+      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </svg>
   );
 }
