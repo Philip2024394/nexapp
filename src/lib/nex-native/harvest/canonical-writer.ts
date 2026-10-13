@@ -65,14 +65,18 @@ export async function writeCanonicalRowsFromOverpass(
         // the partial-index predicate exactly for PG to pick it.
         // The row still carries `osmRef` in `aliases` so downstream
         // consumers that search aliases keep working.
+        //
+        // name_norm is a generated column on production · PG rejects
+        // explicit values for generated columns (SQLSTATE 428C9) so
+        // we must omit it from the column list and let PG compute it.
         const { rowCount } = await client.query(
           `
           INSERT INTO nex.business_canonical
-            (canonical_business_id, name_canonical, name_norm,
+            (canonical_business_id, name_canonical,
              entity_type, country, lifecycle_state, city, district,
              category_ids, aliases, osm_id, metadata)
           VALUES
-            (gen_random_uuid(), $1, lower($1),
+            (gen_random_uuid(), $1,
              $2, $3, 'DISCOVERED', $4, $5,
              $6::text[], ARRAY[$7]::text[], $7, $8::jsonb)
           ON CONFLICT (country, osm_id) WHERE osm_id IS NOT NULL DO NOTHING

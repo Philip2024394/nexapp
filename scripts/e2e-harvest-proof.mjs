@@ -141,10 +141,16 @@ const FIXTURE_SCHEMA_SQL = `
   -- uq_bc_country_osm_id on (country, osm_id) WHERE osm_id IS NOT NULL
   -- (not a UNIQUE constraint on aliases, which would collide with
   -- the 40k+ existing rows that have aliases = {}).
+  -- Production's name_norm is a GENERATED ALWAYS column backed by
+  -- nex.name_norm(). Replicate the stub here so the fixture rejects
+  -- any attempt to explicitly INSERT into name_norm, matching prod.
+  CREATE OR REPLACE FUNCTION nex.name_norm(src text) RETURNS text
+    LANGUAGE sql IMMUTABLE AS $fn$ SELECT lower(coalesce(src, '')) $fn$;
+
   CREATE TABLE IF NOT EXISTS nex.business_canonical (
     canonical_business_id    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     name_canonical           text NOT NULL,
-    name_norm                text,
+    name_norm                text GENERATED ALWAYS AS (nex.name_norm(name_canonical)) STORED,
     entity_type              text NOT NULL,
     country                  text NOT NULL,
     lifecycle_state          text NOT NULL,
