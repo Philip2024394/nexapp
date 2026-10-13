@@ -494,8 +494,8 @@ function GuestChatInner(props: Props): React.JSX.Element {
                 marginTop: 2,
               }}
             >
-              {businessLabel} will need your chat window to reply — only
-              takes 1 minute.
+              To receive reply from {businessLabel} you will require to
+              create your free account.
             </div>
           </div>
           <a
