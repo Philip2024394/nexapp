@@ -239,6 +239,50 @@ async function main() {
       console.log(`[0c] created business ${BUSINESS_SLUG} · id=${businessId}`);
     }
 
+    // ─── 2a-package. Store PROPOSED Rp 2M service package record ──
+    // Lives in nex_business.profile jsonb so it travels with the
+    // business without a schema migration. status='proposed' means
+    // this is NOT a published commercial claim · it's the shape of
+    // the offer we intend to publish once founder-approved.
+    const servicePackage = {
+      service_package: {
+        status: "proposed",
+        price_idr: 2_000_000,
+        currency: "IDR",
+        type: "one_time_setup",
+        name: "NEX Premium Business Setup",
+        inclusions: [
+          "Business profile + slug",
+          "Theme + logo treatment",
+          "Business introduction block",
+          "Chat wallpaper (custom per business)",
+          "NEX Chat enabled",
+          "Up to 50 product entries loaded by NEX",
+          "1 round of revisions within 14 days",
+        ],
+        separately_billed: [
+          "Hosting (recurring)",
+          "Ongoing support",
+          "Custom code or bespoke features",
+          "Third-party integrations",
+          "Additional products beyond 50",
+          "Change requests beyond included revision round",
+        ],
+        proposed_at: new Date().toISOString(),
+        proposed_by: "founder-managed",
+        notes:
+          "Price is PROPOSED only · not a published commercial agreement. Terms subject to founder approval before any customer billing.",
+      },
+      is_founder_showcase: true,
+      founder_notice:
+        "This business is the first live NEX premium showcase · managed by the founder until a real business owner is assigned.",
+    };
+    await pg.query(
+      `UPDATE nex_business SET profile=$1 WHERE id=$2`,
+      [servicePackage, businessId],
+    );
+    console.log(`[2a-pkg] service package record stored in nex_business.profile · status=proposed`);
+
     // ─── 2b. Seed products ─────────────────────────────────────────
     let inserted = 0, updated = 0;
     for (const [i, p] of SAMPLE_PRODUCTS.entries()) {
