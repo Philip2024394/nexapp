@@ -226,13 +226,20 @@ function GuestChatInner(props: Props): React.JSX.Element {
         backgroundAttachment: "fixed",
       }}
     >
-      {/* ─── HEADER · profile LEFT · 44px circle buttons RIGHT ─── */}
+      {/* ─── HEADER · profile LEFT · 44px circle buttons RIGHT ───
+          Layout contract (fixed 2026-10-14 after name was clipping
+          under the R1 cluster): the header has a single tight right
+          padding of 12px, and the name container alone carries the
+          "reserve the R1 lane" padding of 108px (= 2 buttons × 44 +
+          4px gap + 12px right offset + 4px air). This replaces the
+          earlier double-padding that squeezed the name to ~75px of
+          content width on narrow phones. */}
       <header
         style={{
           position: "relative",
           flexShrink: 0,
           padding:
-            "calc(env(safe-area-inset-top, 0) + 14px) 62px 12px 20px",
+            "calc(env(safe-area-inset-top, 0) + 14px) 12px 12px 20px",
           textShadow: "0 2px 20px rgba(0,0,0,0.75)",
         }}
       >
@@ -309,32 +316,33 @@ function GuestChatInner(props: Props): React.JSX.Element {
             </div>
           </div>
 
-          {/* Name stack · hard-capped maxWidth so the name block can
-              NEVER overflow under the absolutely-positioned R1 cluster.
-              150px reserved on the right (44px buttons × 2 + gap + 12px
-              right offset = ~108px, so 150px is a safe margin). Each
-              word on its own line via word-spacing hack. */}
+          {/* Name stack · paddingRight: 108 is the ONLY reservation
+              for the R1 cluster lane (header has no extra right pad).
+              overflow: hidden + overflowWrap: break-word guarantee the
+              name NEVER crosses behind the icons regardless of length.
+              Font size held at 16 so a single long word still fits
+              inside the available text column on a 360px-wide phone. */}
           <div
             style={{
               minWidth: 0,
               flex: 1,
-              paddingRight: 150,
-              maxWidth: "calc(100% - 56px - 12px)",
+              paddingRight: 108,
               overflow: "hidden",
             }}
           >
             <div
               data-nex-guest-business-name
               style={{
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: 700,
                 color: "var(--nex-text, #F4F7FC)",
                 lineHeight: 1.1,
                 // One-word-per-line wrap for multi-word names; single-
-                // word names (e.g. "Hammerexproducts") stay on one line.
+                // word names (e.g. "Hammerexproducts") stay on one
+                // line and are hard-clipped by the parent's overflow.
                 wordSpacing: "100vw",
-                wordBreak: "normal",
-                overflowWrap: "normal",
+                wordBreak: "break-word",
+                overflowWrap: "break-word",
               }}
             >
               {businessLabel}
