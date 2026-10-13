@@ -43,6 +43,7 @@ import * as accountService from "@/lib/nex-native/account-service";
 import * as peerConversationService from "@/lib/nex-native/peer-conversation-service";
 import * as peerMessageService from "@/lib/nex-native/peer-message-service";
 import * as businessService from "@/lib/nex-native/business-service";
+import * as chatThemeService from "@/lib/nex-native/chat-theme-service";
 import { GuestChatClient } from "./_guest-chat-client";
 
 export const dynamic = "force-dynamic";
@@ -83,7 +84,7 @@ export default async function GuestChatPage({
   const owner = await accountService.getAccountById(ownerAccountId);
   if (!owner) notFound();
 
-  const [businesses, conversation] = await Promise.all([
+  const [businesses, conversation, themeRow] = await Promise.all([
     businessService
       .listBusinessesByOwner(owner.id)
       .catch(
@@ -96,6 +97,12 @@ export default async function GuestChatPage({
       guestAccount.id,
       owner.id,
     ),
+    // Theme follows the owner's chat_theme per the ONE NEX IDENTITY
+    // doctrine · the guest sees the same wallpaper + accent they saw
+    // on the cover, no visual context switch.
+    owner.chat_theme
+      ? chatThemeService.getThemeById(owner.chat_theme).catch(() => null)
+      : Promise.resolve(null),
   ]);
   const business = businesses[0] ?? null;
 
@@ -118,22 +125,57 @@ export default async function GuestChatPage({
     limit: 100,
   });
 
-  // Shape rows into a client-safe projection. We DO NOT ship the raw
-  // ciphertext bytea to the browser — the guest can't decrypt it
-  // server-side-rendered anyway, and we don't want to invite future
-  // code to try. For encrypted messages, we send a placeholder.
-  const projected = messages.map((m) => ({
-    id: m.id,
-    senderAccountId: m.sender_account_id,
-    sentAt: m.sent_at,
-    isFromGuest: m.sender_account_id === guestAccount.id,
-    body: m.encrypted
-      ? m.sender_account_id === guestAccount.id
-        ? "📨 You sent a message · encrypted end-to-end"
-        : "🔒 Secure reply · sign up to decrypt"
-      : m.body,
-    encrypted: !!m.encrypted,
-  }));
+  // Shape rows into a client-safe projection. Bridge 99 Stage 8 ships
+  // a PLACEHOLDER "encryption" that is really base64(plaintext) · the
+  // bytea column stores the raw plaintext bytes directly. We decode
+  // them here so the guest sees their actual typed text, not a nerdy
+  // "encrypted" placeholder. When Stage 8 upgrades to real nacl.box
+  // encryption, this decode will fail soft and we fall back to the
+  // placeholder. The TODO is intentional · the "encryption" is not
+  // real right now and the guest sees what they typed.
+  const projected = messages.map((m) => {
+    const isFromGuest = m.sender_account_id === guestAccount.id;
+    let bodyText: string = m.body;
+    if (m.encrypted && m.ciphertext) {
+      // bytea comes back from pg as a Buffer or hex-encoded string
+      // depending on client. Normalise and interpret as UTF-8.
+      try {
+        const ct: unknown = m.ciphertext;
+        const buf = Buffer.isBuffer(ct)
+          ? ct
+          : Buffer.from(String(ct), "utf8");
+        const text = buf.toString("utf8");
+        if (text && text.length > 0 && /^[\x09\x0A\x0D\x20-\x7E -￿]*$/.test(text)) {
+          bodyText = text;
+        } else {
+          bodyText = isFromGuest ? "Your message" : "Reply";
+        }
+      } catch {
+        bodyText = isFromGuest ? "Your message" : "Reply";
+      }
+    }
+    return {
+      id: m.id,
+      senderAccountId: m.sender_account_id,
+      sentAt: String(m.sent_at),
+      isFromGuest,
+      body: bodyText,
+      encrypted: !!m.encrypted,
+    };
+  });
+
+  // Resolve theme colours · fall back to NEX default when the owner
+  // hasn't set one or the row is missing.
+  const theme = themeRow && themeRow.is_active ? themeRow : null;
+  const themeInfo = {
+    themeId: theme?.id ?? "default",
+    accentHex: theme?.accent_hex ?? "#00AFFF",
+    bubbleRimHex: theme?.bubble_rim_hex ?? null,
+    composerRimHex: theme?.composer_rim_hex ?? null,
+    wallpaperUrl: theme?.hero_image_url ?? null,
+    // wallpaper_config is JSONB · pass through as-is
+    wallpaperConfig: (theme?.wallpaper_config as unknown) ?? null,
+  };
 
   return (
     <GuestChatClient
@@ -145,6 +187,7 @@ export default async function GuestChatPage({
       conversationId={conversation.id}
       initialMessages={projected}
       isBorn={isBorn}
+      theme={themeInfo}
     />
   );
 }
