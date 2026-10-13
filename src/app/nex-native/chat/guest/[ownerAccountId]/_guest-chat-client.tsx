@@ -414,7 +414,7 @@ function GuestChatInner(props: Props): React.JSX.Element {
         >
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 14, fontWeight: 600 }}>
-              Save this chat to your NEX account
+              Create Your Free Chat Window
             </div>
             <div
               style={{
@@ -423,7 +423,8 @@ function GuestChatInner(props: Props): React.JSX.Element {
                 marginTop: 2,
               }}
             >
-              Keep the conversation with {businessLabel} on any device.
+              {businessLabel} will need your chat window to reply — only
+              takes 1 minute.
             </div>
           </div>
           <a
@@ -440,7 +441,7 @@ function GuestChatInner(props: Props): React.JSX.Element {
             }}
             data-nex-guest-signup-cta
           >
-            Sign up
+            Create
           </a>
           <button
             type="button"
