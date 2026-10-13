@@ -118,7 +118,7 @@ function GuestChatInner(props: Props): React.JSX.Element {
   const shopHref = businessSlug
     ? `/nex-native/${businessSlug}?commerce=1`
     : "/nex-native/home";
-  const signUpHref = `/nex-native/sign-up?next=${encodeURIComponent(`/nex-native/chat/guest/${ownerAccountId}`)}`;
+  const signUpHref = `/nex-native/create-account?next=${encodeURIComponent(`/nex-native/chat/guest/${ownerAccountId}`)}`;
 
   const [messages, setMessages] = React.useState<ClientMessage[]>(initialMessages);
   const [composerText, setComposerText] = React.useState("");
