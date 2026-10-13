@@ -226,24 +226,30 @@ function GuestChatInner(props: Props): React.JSX.Element {
         backgroundAttachment: "fixed",
       }}
     >
-      {/* ─── HEADER · profile LEFT · 44px circle buttons RIGHT ───
-          Layout contract (fixed 2026-10-14 after name was clipping
-          under the R1 cluster): the header has a single tight right
-          padding of 12px, and the name container alone carries the
-          "reserve the R1 lane" padding of 108px (= 2 buttons × 44 +
-          4px gap + 12px right offset + 4px air). This replaces the
-          earlier double-padding that squeezed the name to ~75px of
-          content width on narrow phones. */}
+      {/* ─── HEADER · 2-ROW layout ─────────────────────────────────
+          Row 1 · avatar (left) + R1 icon cluster (right) · fixed-height
+          Row 2 · business name + "chatting as guest" subtitle · the
+                  name has the FULL header width available so it never
+                  competes with the icons for horizontal space.
+          Replaces the single-row layout that forced the name into a
+          cramped column beside the icons · founder direction 2026-10-14. */}
       <header
         style={{
           position: "relative",
           flexShrink: 0,
           padding:
-            "calc(env(safe-area-inset-top, 0) + 14px) 12px 12px 20px",
+            "calc(env(safe-area-inset-top, 0) + 14px) 12px 14px 20px",
           textShadow: "0 2px 20px rgba(0,0,0,0.75)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        {/* ─── Row 1 · avatar left + icons right ─── */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
           {/* 56px round profile · business logo or initials fallback */}
           <div
             aria-label={`${businessLabel} · chatting as guest`}
@@ -316,94 +322,92 @@ function GuestChatInner(props: Props): React.JSX.Element {
             </div>
           </div>
 
-          {/* Name stack · paddingRight: 108 is the ONLY reservation
-              for the R1 cluster lane (header has no extra right pad).
-              overflow: hidden + overflowWrap: break-word guarantee the
-              name NEVER crosses behind the icons regardless of length.
-              Font size held at 16 so a single long word still fits
-              inside the available text column on a 360px-wide phone. */}
+          {/* R1 cluster · inline flex on the right side of Row 1 ·
+              44px circle buttons · Shop (glowing accent-coloured pulse)
+              + Settings (gear). No longer absolute-positioned · lives
+              in the same flex row as the avatar so neither can overlap
+              the other. */}
           <div
+            data-nex-guest-cluster
             style={{
-              minWidth: 0,
-              flex: 1,
-              paddingRight: 108,
-              overflow: "hidden",
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              flexShrink: 0,
             }}
           >
-            <div
-              data-nex-guest-business-name
-              style={{
-                fontSize: 16,
-                fontWeight: 700,
-                color: "var(--nex-text, #F4F7FC)",
-                lineHeight: 1.1,
-                // One-word-per-line wrap for multi-word names; single-
-                // word names (e.g. "Hammerexproducts") stay on one
-                // line and are hard-clipped by the parent's overflow.
-                wordSpacing: "100vw",
-                wordBreak: "break-word",
-                overflowWrap: "break-word",
-              }}
+            <HeaderCircleButton
+              onClick={() => setShopOpen(true)}
+              ariaLabel={`Browse ${businessLabel} products`}
+              title="Shop"
+              glow
+              accentHex={theme.accentHex}
             >
-              {businessLabel}
-            </div>
-            <div
-              style={{
-                fontSize: 12,
-                color: "var(--nex-text-dim, rgba(244,247,252,0.72))",
-                marginTop: 4,
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                whiteSpace: "nowrap",
-              }}
+              <ShopIcon />
+            </HeaderCircleButton>
+            <HeaderCircleButton
+              onClick={() => setSettingsOpen(true)}
+              ariaLabel="Settings"
+              title="Settings"
+              accentHex={theme.accentHex}
             >
-              <span
-                aria-hidden
-                style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: "50%",
-                  background: GREEN,
-                  boxShadow: `0 0 6px ${GREEN}aa`,
-                  flexShrink: 0,
-                }}
-              />
-              Chatting as guest
-            </div>
+              <SettingsIcon />
+            </HeaderCircleButton>
           </div>
         </div>
 
-        {/* R1 cluster · 44px circle buttons · absolutely positioned */}
+        {/* ─── Row 2 · business name + subtitle · FULL WIDTH ─── */}
         <div
-          data-nex-guest-cluster
+          data-nex-guest-identity
           style={{
-            position: "absolute",
-            top: "calc(env(safe-area-inset-top, 0) + 14px)",
-            right: 12,
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-            zIndex: 6,
+            marginTop: 10,
+            overflow: "hidden",
           }}
         >
-          <HeaderCircleButton
-            onClick={() => setShopOpen(true)}
-            ariaLabel={`Browse ${businessLabel} products`}
-            title="Shop"
-            glow
-            accentHex={theme.accentHex}
+          <div
+            data-nex-guest-business-name
+            style={{
+              fontSize: 22,
+              fontWeight: 700,
+              color: "var(--nex-text, #F4F7FC)",
+              lineHeight: 1.15,
+              // Natural wrap for multi-word names · character-break
+              // fallback for anything truly huge · hard-clip at 2 lines
+              // via line-clamp so the header never grows unbounded.
+              wordBreak: "break-word",
+              overflowWrap: "break-word",
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
           >
-            <ShopIcon />
-          </HeaderCircleButton>
-          <HeaderCircleButton
-            onClick={() => setSettingsOpen(true)}
-            ariaLabel="Settings"
-            title="Settings"
-            accentHex={theme.accentHex}
+            {businessLabel}
+          </div>
+          <div
+            style={{
+              fontSize: 12,
+              color: "var(--nex-text-dim, rgba(244,247,252,0.72))",
+              marginTop: 4,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              whiteSpace: "nowrap",
+            }}
           >
-            <SettingsIcon />
-          </HeaderCircleButton>
+            <span
+              aria-hidden
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                background: GREEN,
+                boxShadow: `0 0 6px ${GREEN}aa`,
+                flexShrink: 0,
+              }}
+            />
+            Chatting as guest
+          </div>
         </div>
       </header>
 
