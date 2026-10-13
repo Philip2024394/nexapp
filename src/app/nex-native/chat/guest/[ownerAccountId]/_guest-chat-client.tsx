@@ -76,6 +76,7 @@ const GREEN = "#16D66B";
 const AMBER = "#F59E0B";
 const CYAN_DEEP = "#063B67";
 const CYAN = "#00AFFF";
+const NEX_PINK = "#FF3F9F";
 
 function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -236,29 +237,19 @@ function GuestChatInner(props: Props): React.JSX.Element {
               height: 56,
             }}
           >
-            {/* Presence ring · guest doesn't know if owner is live, so
-                we show a steady accent ring (not the heartbeat pulse)
-                to indicate "ready to respond" without faking presence */}
-            <div
-              aria-hidden
-              style={{
-                position: "absolute",
-                inset: -2,
-                borderRadius: "50%",
-                border: `2px solid var(--nex-accent, ${theme.accentHex})`,
-                boxShadow: `0 0 10px var(--nex-glow, ${theme.accentHex}66)`,
-                pointerEvents: "none",
-              }}
-            />
+            {/* Profile rim · single NEX pink ring. No accent orange, no
+                green identity border · founder direction 2026-10-14 ·
+                pink is the brand's "connection" colour on guest chats
+                because it matches the cart badge and reads as the one
+                neutral NEX identity across every theme. */}
             <div
               style={{
                 position: "absolute",
                 inset: 0,
                 borderRadius: "50%",
                 overflow: "hidden",
-                border: `2px solid ${GREEN}`,
-                boxShadow:
-                  "0 0 0 3px rgba(22,214,107,0.12), 0 4px 14px rgba(0,0,0,0.6)",
+                border: `2px solid ${NEX_PINK}`,
+                boxShadow: `0 0 0 3px ${NEX_PINK}22, 0 4px 14px rgba(0,0,0,0.6)`,
                 backgroundImage: businessLogoUrl
                   ? `url(${businessLogoUrl})`
                   : `linear-gradient(135deg, ${CYAN_DEEP} 0%, #05101f 100%)`,
@@ -287,17 +278,26 @@ function GuestChatInner(props: Props): React.JSX.Element {
             </div>
           </div>
 
-          {/* Name stack · right-pad reserves space for the R1 cluster */}
+          {/* Name stack · right-pad reserves space for the R1 cluster.
+              Business names that fit on one line do · multi-word names
+              that would overflow wrap one-word-per-line via the split
+              below · founder direction 2026-10-14 (replaces the ellipsis
+              truncation that silently hid the end of long names). */}
           <div style={{ minWidth: 0, flex: 1, paddingRight: 150 }}>
             <div
+              data-nex-guest-business-name
               style={{
                 fontSize: 26,
                 fontWeight: 700,
                 color: "var(--nex-text, #F4F7FC)",
-                lineHeight: 1.1,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
+                lineHeight: 1.05,
+                // One-word-per-line wrap for multi-word names: huge
+                // word-spacing forces a line-break at every space,
+                // keeping each word on its own row. Single-word names
+                // (e.g. "Hammerexproducts") are unaffected.
+                wordSpacing: "100vw",
+                wordBreak: "normal",
+                overflowWrap: "normal",
               }}
             >
               {businessLabel}
@@ -306,10 +306,11 @@ function GuestChatInner(props: Props): React.JSX.Element {
               style={{
                 fontSize: 13,
                 color: "var(--nex-text-dim, rgba(244,247,252,0.72))",
-                marginTop: 2,
+                marginTop: 4,
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
+                whiteSpace: "nowrap",
               }}
             >
               <span
@@ -318,8 +319,9 @@ function GuestChatInner(props: Props): React.JSX.Element {
                   width: 7,
                   height: 7,
                   borderRadius: "50%",
-                  background: "var(--nex-accent, " + theme.accentHex + ")",
-                  boxShadow: `0 0 6px var(--nex-glow, ${theme.accentHex}aa)`,
+                  background: NEX_PINK,
+                  boxShadow: `0 0 6px ${NEX_PINK}aa`,
+                  flexShrink: 0,
                 }}
               />
               Chatting as guest
