@@ -208,11 +208,22 @@ function GuestChatInner(props: Props): React.JSX.Element {
       style={{
         display: "flex",
         flexDirection: "column",
-        minHeight: "100dvh",
+        height: "100dvh",
         color: "var(--nex-text, #F4F7FC)",
         fontFamily: "var(--nex-font-body, Inter, system-ui, sans-serif)",
         position: "relative",
         zIndex: 1,
+        // Explicit full-viewport wallpaper so it visibly covers the
+        // entire screen regardless of CoverThemeSkin's 0.35-opacity
+        // layer. Dark gradient scrim keeps text readable.
+        backgroundColor: "#020914",
+        backgroundImage: theme.wallpaperUrl
+          ? `linear-gradient(180deg, rgba(2,9,20,0.35) 0%, rgba(2,9,20,0.65) 100%), url(${theme.wallpaperUrl})`
+          : undefined,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        backgroundAttachment: "fixed",
       }}
     >
       {/* ─── HEADER · profile LEFT · 44px circle buttons RIGHT ─── */}
@@ -237,19 +248,39 @@ function GuestChatInner(props: Props): React.JSX.Element {
               height: 56,
             }}
           >
-            {/* Profile rim · single NEX pink ring. No accent orange, no
-                green identity border · founder direction 2026-10-14 ·
-                pink is the brand's "connection" colour on guest chats
-                because it matches the cart badge and reads as the one
-                neutral NEX identity across every theme. */}
+            {/* Ping ring · scales out from the avatar on a 1800ms cycle,
+                signalling "this is a live chat surface" · same spirit
+                as the sealed PortraitBloomShell presence heartbeat. */}
+            <style>{`
+              @keyframes nex-guest-presence-ping {
+                0% { transform: scale(1); opacity: 0.9; }
+                75% { transform: scale(1.5); opacity: 0; }
+                100% { transform: scale(1.5); opacity: 0; }
+              }
+            `}</style>
+            <div
+              aria-hidden
+              style={{
+                position: "absolute",
+                inset: 0,
+                borderRadius: "50%",
+                border: `2px solid ${GREEN}`,
+                pointerEvents: "none",
+                animation:
+                  "nex-guest-presence-ping 1800ms cubic-bezier(0.4, 0, 0.2, 1) infinite",
+                willChange: "transform, opacity",
+              }}
+            />
+            {/* Avatar container · solid green rim · same green as the
+                sealed online-presence border on authenticated chat. */}
             <div
               style={{
                 position: "absolute",
                 inset: 0,
                 borderRadius: "50%",
                 overflow: "hidden",
-                border: `2px solid ${NEX_PINK}`,
-                boxShadow: `0 0 0 3px ${NEX_PINK}22, 0 4px 14px rgba(0,0,0,0.6)`,
+                border: `2px solid ${GREEN}`,
+                boxShadow: `0 0 0 3px ${GREEN}22, 0 4px 14px rgba(0,0,0,0.6)`,
                 backgroundImage: businessLogoUrl
                   ? `url(${businessLogoUrl})`
                   : `linear-gradient(135deg, ${CYAN_DEEP} 0%, #05101f 100%)`,
@@ -278,23 +309,29 @@ function GuestChatInner(props: Props): React.JSX.Element {
             </div>
           </div>
 
-          {/* Name stack · right-pad reserves space for the R1 cluster.
-              Business names that fit on one line do · multi-word names
-              that would overflow wrap one-word-per-line via the split
-              below · founder direction 2026-10-14 (replaces the ellipsis
-              truncation that silently hid the end of long names). */}
-          <div style={{ minWidth: 0, flex: 1, paddingRight: 150 }}>
+          {/* Name stack · hard-capped maxWidth so the name block can
+              NEVER overflow under the absolutely-positioned R1 cluster.
+              150px reserved on the right (44px buttons × 2 + gap + 12px
+              right offset = ~108px, so 150px is a safe margin). Each
+              word on its own line via word-spacing hack. */}
+          <div
+            style={{
+              minWidth: 0,
+              flex: 1,
+              paddingRight: 150,
+              maxWidth: "calc(100% - 56px - 12px)",
+              overflow: "hidden",
+            }}
+          >
             <div
               data-nex-guest-business-name
               style={{
-                fontSize: 26,
+                fontSize: 18,
                 fontWeight: 700,
                 color: "var(--nex-text, #F4F7FC)",
-                lineHeight: 1.05,
-                // One-word-per-line wrap for multi-word names: huge
-                // word-spacing forces a line-break at every space,
-                // keeping each word on its own row. Single-word names
-                // (e.g. "Hammerexproducts") are unaffected.
+                lineHeight: 1.1,
+                // One-word-per-line wrap for multi-word names; single-
+                // word names (e.g. "Hammerexproducts") stay on one line.
                 wordSpacing: "100vw",
                 wordBreak: "normal",
                 overflowWrap: "normal",
@@ -304,7 +341,7 @@ function GuestChatInner(props: Props): React.JSX.Element {
             </div>
             <div
               style={{
-                fontSize: 13,
+                fontSize: 12,
                 color: "var(--nex-text-dim, rgba(244,247,252,0.72))",
                 marginTop: 4,
                 display: "flex",
@@ -319,8 +356,8 @@ function GuestChatInner(props: Props): React.JSX.Element {
                   width: 7,
                   height: 7,
                   borderRadius: "50%",
-                  background: NEX_PINK,
-                  boxShadow: `0 0 6px ${NEX_PINK}aa`,
+                  background: GREEN,
+                  boxShadow: `0 0 6px ${GREEN}aa`,
                   flexShrink: 0,
                 }}
               />
@@ -1206,7 +1243,7 @@ function SettingsSignupModal({
         </h2>
         <p
           style={{
-            margin: "0 0 12px",
+            margin: "0 0 18px",
             fontSize: 14,
             color: "rgba(244,247,252,0.8)",
             lineHeight: 1.5,
@@ -1215,27 +1252,6 @@ function SettingsSignupModal({
           Create your free chat window to control notifications, saved
           chats and media attachments.
         </p>
-        <div
-          style={{
-            margin: "0 0 18px",
-            padding: "10px 14px",
-            borderRadius: 10,
-            background: "rgba(255,255,255,0.04)",
-            fontSize: 12,
-            color: "rgba(244,247,252,0.72)",
-            lineHeight: 1.5,
-            textAlign: "left",
-          }}
-        >
-          <strong style={{ color: "var(--nex-text, #F4F7FC)" }}>
-            About your chat with {businessLabel}
-          </strong>
-          <br />
-          Your conversation is powered by <strong>NEX</strong> — a free
-          app that handles chat between you and the businesses you
-          message. Your chat window is yours · free · reusable with any
-          NEX business.
-        </div>
 
         <div
           style={{
