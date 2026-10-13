@@ -93,10 +93,13 @@ export async function POST(req: Request): Promise<NextResponse<TickResponse>> {
     });
   }
 
-  // Record the picked city BEFORE the Overpass call so a failed
-  // request still advances the cursor on the next tick (no hot-loop
-  // on a bad city).
-  await writeRotationCursor(city.id);
+  // Note: cursor advancement is implicit via the aof_cycle row that
+  // recordCycle() writes at the end of this invocation. That row's
+  // triggered_by column embeds the picked city.id, which the next
+  // tick's readRotationCursor parses to find the next-in-rotation.
+  // No separate "cursor write" is needed · the aof_cycle row is the
+  // ledger. If the function dies before recordCycle (rare · Vercel
+  // 300s hard-stop), the next tick will re-pick this city.
 
   // ─── Fetch Overpass ─────────────────────────────────────────────
   const overpass = await fetchOsmBusinessesInBbox(city);
@@ -213,40 +216,39 @@ async function resolveOptedInIsos(): Promise<Set<string>> {
   return new Set(result ?? []);
 }
 
-/** Rotation cursor lives on `nex.discovery_rotation_state` if the
- *  table exists · otherwise fall back to the most recently harvested
- *  canonical row's city (approximated via metadata). The cursor is a
- *  city id from CITY_ROTATION. */
+/** Rotation cursor is derived from the most recent `nex.aof_cycle`
+ *  row this harvester produced. The row's `triggered_by` column has
+ *  the shape `nexapp-harvester-tick:<city.id>`, so we parse the city
+ *  id back out. No dedicated cursor table · the aof_cycle ledger is
+ *  the source of truth. Returns null on first-ever run so the picker
+ *  starts from the first opted-in city.
+ *
+ *  Historically this code wrote to `nex.discovery_rotation_state`,
+ *  but that table in production is a different per-city/round state
+ *  tracker with no `scope`/`cursor` columns · writes silently failed
+ *  and the harvester got stuck on gb-london. Fixed 2026-10-13 by
+ *  parsing `triggered_by` instead. */
 async function readRotationCursor(): Promise<string | null> {
   const result = await withClient(async (client) => {
     const probe = await client
       .query(
-        `SELECT cursor
-           FROM nex.discovery_rotation_state
-          WHERE scope = 'nexapp-harvester-tick'
+        `SELECT triggered_by
+           FROM nex.aof_cycle
+          WHERE triggered_by LIKE 'nexapp-harvester-tick:%'
+          ORDER BY started_at DESC
           LIMIT 1`,
       )
       .catch(() => null);
-    if (probe && probe.rows[0]) {
-      const row = probe.rows[0] as { cursor: string | null };
-      return row.cursor;
-    }
-    return null;
+    if (!probe || !probe.rows[0]) return null;
+    const triggeredBy = (probe.rows[0] as { triggered_by: string | null })
+      .triggered_by;
+    if (!triggeredBy) return null;
+    const prefix = "nexapp-harvester-tick:";
+    if (!triggeredBy.startsWith(prefix)) return null;
+    const cityId = triggeredBy.slice(prefix.length).trim();
+    return cityId.length > 0 ? cityId : null;
   });
   return result ?? null;
-}
-
-async function writeRotationCursor(cursor: string): Promise<void> {
-  await withClient(async (client) => {
-    await client
-      .query(
-        `INSERT INTO nex.discovery_rotation_state (scope, cursor, updated_at)
-         VALUES ('nexapp-harvester-tick', $1, now())
-         ON CONFLICT (scope) DO UPDATE SET cursor = EXCLUDED.cursor, updated_at = now()`,
-        [cursor],
-      )
-      .catch(() => undefined);
-  });
 }
 
 async function recordCycle(
