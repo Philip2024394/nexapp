@@ -322,38 +322,9 @@ function GuestChatInner(props: Props): React.JSX.Element {
             </div>
           </div>
 
-          {/* R1 cluster · inline flex on the right side of Row 1 ·
-              44px circle buttons · Shop (glowing accent-coloured pulse)
-              + Settings (gear). No longer absolute-positioned · lives
-              in the same flex row as the avatar so neither can overlap
-              the other. */}
-          <div
-            data-nex-guest-cluster
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-              flexShrink: 0,
-            }}
-          >
-            <HeaderCircleButton
-              onClick={() => setShopOpen(true)}
-              ariaLabel={`Browse ${businessLabel} products`}
-              title="Shop"
-              glow
-              accentHex={theme.accentHex}
-            >
-              <ShopIcon />
-            </HeaderCircleButton>
-            <HeaderCircleButton
-              onClick={() => setSettingsOpen(true)}
-              ariaLabel="Settings"
-              title="Settings"
-              accentHex={theme.accentHex}
-            >
-              <SettingsIcon />
-            </HeaderCircleButton>
-          </div>
+          {/* Row 1 right slot is empty · all actions moved to the
+              TikTok-style right-edge dock below. The avatar sits alone
+              in Row 1, letting Row 2 run the full width of the header. */}
         </div>
 
         {/* ─── Row 2 · business name + subtitle · FULL WIDTH ─── */}
@@ -476,6 +447,54 @@ function GuestChatInner(props: Props): React.JSX.Element {
             Waiting for {businessLabel} to reply…
           </div>
         )}
+      </div>
+
+      {/* ─── TIKTOK-STYLE RIGHT-EDGE DOCK ──────────────────────
+          Vertical column of 48px round action buttons · pinned to the
+          right edge, vertically positioned above the composer. Each
+          button has a text-shadow filter so it stays legible against
+          any wallpaper. Replaces the header R1 cluster · founder
+          direction 2026-10-14. */}
+      <div
+        data-nex-guest-right-dock
+        aria-label="Chat actions"
+        style={{
+          position: "fixed",
+          right: 10,
+          bottom: "calc(env(safe-area-inset-bottom, 0) + 110px)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 14,
+          zIndex: 20,
+          pointerEvents: "none",
+        }}
+      >
+        <DockButton
+          onClick={() => setShopOpen(true)}
+          ariaLabel={`Browse ${businessLabel} products`}
+          label="Shop"
+          glow
+          accentHex={theme.accentHex}
+        >
+          <ShopIcon />
+        </DockButton>
+        <DockButton
+          onClick={() => setSettingsOpen(true)}
+          ariaLabel="Settings"
+          label="Settings"
+          accentHex={theme.accentHex}
+        >
+          <SettingsIcon />
+        </DockButton>
+        <DockLink
+          href="/nex-native/cart"
+          ariaLabel="Cart"
+          label="Cart"
+          accentHex={theme.accentHex}
+        >
+          <CartIcon />
+        </DockLink>
       </div>
 
       {/* ─── Sign-up prompt (dismissible, event-triggered) ──── */}
@@ -745,69 +764,161 @@ function GuestMessageBubble({
   );
 }
 
-/* ───────────────── Header circle button primitive ──────────────── */
+/* ───────────────── Right-edge dock button primitives ─────────── */
+// TikTok-style 48px round action with text label beneath · translucent
+// navy fill with accent-coloured rim · pointerEvents:none on the
+// container is overridden here with auto so taps register.
 
-function HeaderCircleButton({
+const DOCK_BUTTON_SIZE = 48;
+const DOCK_LABEL_FONT = 11;
+
+function DockButton({
   onClick,
   ariaLabel,
-  title,
+  label,
   glow,
   accentHex,
   children,
 }: {
   onClick: () => void;
   ariaLabel: string;
-  title: string;
+  label: string;
   glow?: boolean;
   accentHex: string;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <DockShell glow={glow} accentHex={accentHex} label={label}>
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={ariaLabel}
+        style={DOCK_PRESSABLE_STYLE(accentHex)}
+      >
+        {children}
+      </button>
+    </DockShell>
+  );
+}
+
+function DockLink({
+  href,
+  ariaLabel,
+  label,
+  accentHex,
+  children,
+}: {
+  href: string;
+  ariaLabel: string;
+  label: string;
+  accentHex: string;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <DockShell accentHex={accentHex} label={label}>
+      <Link href={href} aria-label={ariaLabel} style={DOCK_PRESSABLE_STYLE(accentHex)}>
+        {children}
+      </Link>
+    </DockShell>
+  );
+}
+
+function DockShell({
+  glow,
+  accentHex,
+  label,
+  children,
+}: {
+  glow?: boolean;
+  accentHex: string;
+  label: string;
   children: React.ReactNode;
 }): React.JSX.Element {
   return (
     <>
       {glow && (
         <style>{`
-          @keyframes nex-guest-shop-pulse {
+          @keyframes nex-guest-dock-shop-pulse {
             0%, 100% {
-              filter:
-                drop-shadow(0 2px 6px rgba(0,0,0,0.65))
-                drop-shadow(0 0 4px ${accentHex}aa);
+              box-shadow:
+                0 4px 12px rgba(0,0,0,0.55),
+                0 0 6px ${accentHex}80,
+                inset 0 0 0 1.5px ${accentHex};
             }
             50% {
-              filter:
-                drop-shadow(0 2px 6px rgba(0,0,0,0.65))
-                drop-shadow(0 0 14px ${accentHex}dd);
+              box-shadow:
+                0 4px 12px rgba(0,0,0,0.55),
+                0 0 18px ${accentHex}dd,
+                inset 0 0 0 1.5px ${accentHex};
             }
+          }
+          [data-nex-guest-dock-shop] {
+            animation: nex-guest-dock-shop-pulse 2200ms ease-in-out infinite;
           }
         `}</style>
       )}
-      <button
-        type="button"
-        onClick={onClick}
-        aria-label={ariaLabel}
-        title={title}
+      <div
+        data-nex-guest-dock-item
+        data-nex-guest-dock-shop={glow ? "true" : undefined}
         style={{
-          width: 44,
-          height: 44,
-          display: "grid",
-          placeItems: "center",
-          color: "var(--nex-text, #F4F7FC)",
-          background: "transparent",
-          border: "none",
-          cursor: "pointer",
-          padding: 0,
-          filter: glow
-            ? undefined
-            : "drop-shadow(0 2px 6px rgba(0,0,0,0.65))",
-          animation: glow
-            ? "nex-guest-shop-pulse 2200ms ease-in-out infinite"
-            : undefined,
-          transition: "transform 120ms ease, opacity 120ms ease",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 4,
+          pointerEvents: "auto",
         }}
       >
-        {children}
-      </button>
+        <div
+          style={{
+            width: DOCK_BUTTON_SIZE,
+            height: DOCK_BUTTON_SIZE,
+            borderRadius: "50%",
+            background: "rgba(2,9,20,0.72)",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+            border: glow ? "none" : `1.5px solid ${accentHex}99`,
+            boxShadow: glow
+              ? undefined
+              : `0 4px 12px rgba(0,0,0,0.55), inset 0 0 0 0 ${accentHex}`,
+            display: "grid",
+            placeItems: "center",
+            overflow: "hidden",
+          }}
+        >
+          {children}
+        </div>
+        <div
+          style={{
+            fontSize: DOCK_LABEL_FONT,
+            fontWeight: 600,
+            color: "var(--nex-text, #F4F7FC)",
+            textShadow: "0 2px 6px rgba(0,0,0,0.9)",
+            letterSpacing: "0.02em",
+          }}
+        >
+          {label}
+        </div>
+      </div>
     </>
   );
+}
+
+function DOCK_PRESSABLE_STYLE(accentHex: string): React.CSSProperties {
+  return {
+    width: "100%",
+    height: "100%",
+    display: "grid",
+    placeItems: "center",
+    color: "var(--nex-text, #F4F7FC)",
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+    padding: 0,
+    textDecoration: "none",
+    // Hover/focus affordance is subtle · the accent-rim already
+    // signals interactivity. accentHex kept here for future states.
+    outlineColor: accentHex,
+  };
 }
 
 /* ───────────────── SVG icons (match sealed cluster) ────────────── */
@@ -831,6 +942,28 @@ function ShopIcon(): React.JSX.Element {
       <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
       <line x1="3" y1="6" x2="21" y2="6" />
       <path d="M16 10a4 4 0 0 1-8 0" />
+    </svg>
+  );
+}
+
+function CartIcon(): React.JSX.Element {
+  // Shopping-cart glyph · matches the sealed R1 cart icon shape.
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="26"
+      height="26"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="9" cy="21" r="1" />
+      <circle cx="20" cy="21" r="1" />
+      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
     </svg>
   );
 }
