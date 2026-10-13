@@ -40,6 +40,14 @@ interface ThemeInfo {
   wallpaperConfig: unknown;
 }
 
+interface GuestProduct {
+  id: string;
+  name: string;
+  pricePence: number;
+  currency: string;
+  imageUrl: string | null;
+}
+
 interface Props {
   guestAccountId: string;
   ownerAccountId: string;
@@ -51,6 +59,17 @@ interface Props {
   initialMessages: ClientMessage[];
   isBorn: boolean;
   theme: ThemeInfo;
+  products: GuestProduct[];
+}
+
+function formatPriceIDR(pence: number, currency: string): string {
+  // price_pence is historically "smallest-unit"; for IDR we treat it
+  // as whole rupiah already (no sub-unit). Fall through to en-US for
+  // other currencies in a sane way.
+  if (currency.toUpperCase() === "IDR") {
+    return `Rp ${pence.toLocaleString("en-US")}`;
+  }
+  return `${currency} ${(pence / 100).toFixed(2)}`;
 }
 
 const GREEN = "#16D66B";
@@ -107,6 +126,8 @@ function GuestChatInner(props: Props): React.JSX.Element {
   const [showSignUpPrompt, setShowSignUpPrompt] = React.useState(false);
   const [signUpPromptDismissed, setSignUpPromptDismissed] =
     React.useState(false);
+  const [shopOpen, setShopOpen] = React.useState(false);
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
 
   const guestMessageCount = messages.filter((m) => m.isFromGuest).length;
   const anyOwnerReply = messages.some((m) => !m.isFromGuest);
@@ -137,6 +158,14 @@ function GuestChatInner(props: Props): React.JSX.Element {
     el.style.height = Math.min(el.scrollHeight, 120) + "px";
   }, []);
   React.useEffect(autoGrow, [composerText, autoGrow]);
+
+  function attachProductToComposer(product: GuestProduct) {
+    const line = `I'm interested in: ${product.name}`;
+    setComposerText((prev) => (prev.trim().length > 0 ? `${prev}\n\n${line}` : line));
+    setShopOpen(false);
+    // Focus the composer so the user can edit before sending.
+    setTimeout(() => textareaRef.current?.focus(), 10);
+  }
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -311,20 +340,23 @@ function GuestChatInner(props: Props): React.JSX.Element {
             zIndex: 6,
           }}
         >
-          <HeaderCircleLink
-            href={shopHref}
-            ariaLabel="Back to shop"
+          <HeaderCircleButton
+            onClick={() => setShopOpen(true)}
+            ariaLabel={`Browse ${businessLabel} products`}
             title="Shop"
+            glow
+            accentHex={theme.accentHex}
           >
             <ShopIcon />
-          </HeaderCircleLink>
-          <HeaderCircleLink
-            href={signUpHref}
-            ariaLabel="Sign up to save this chat"
-            title="Sign up"
+          </HeaderCircleButton>
+          <HeaderCircleButton
+            onClick={() => setSettingsOpen(true)}
+            ariaLabel="Settings"
+            title="Settings"
+            accentHex={theme.accentHex}
           >
-            <SaveIcon />
-          </HeaderCircleLink>
+            <SettingsIcon />
+          </HeaderCircleButton>
         </div>
       </header>
 
@@ -595,6 +627,27 @@ function GuestChatInner(props: Props): React.JSX.Element {
           </div>
         )}
       </form>
+
+      {/* ─── PRODUCT BOTTOM SHEET ──────────────────────────── */}
+      {shopOpen && (
+        <ProductSheet
+          products={props.products}
+          businessLabel={businessLabel}
+          accentHex={theme.accentHex}
+          onClose={() => setShopOpen(false)}
+          onPick={attachProductToComposer}
+        />
+      )}
+
+      {/* ─── SETTINGS MODAL (sign-up gate with NEX framing) ─── */}
+      {settingsOpen && (
+        <SettingsSignupModal
+          businessLabel={businessLabel}
+          accentHex={theme.accentHex}
+          signUpHref={signUpHref}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
     </div>
   );
 }
@@ -641,35 +694,66 @@ function GuestMessageBubble({
 
 /* ───────────────── Header circle button primitive ──────────────── */
 
-function HeaderCircleLink({
-  href,
+function HeaderCircleButton({
+  onClick,
   ariaLabel,
   title,
+  glow,
+  accentHex,
   children,
 }: {
-  href: string;
+  onClick: () => void;
   ariaLabel: string;
   title: string;
+  glow?: boolean;
+  accentHex: string;
   children: React.ReactNode;
 }): React.JSX.Element {
   return (
-    <Link
-      href={href}
-      aria-label={ariaLabel}
-      title={title}
-      style={{
-        width: 44,
-        height: 44,
-        display: "grid",
-        placeItems: "center",
-        color: "var(--nex-text, #F4F7FC)",
-        textDecoration: "none",
-        filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.65))",
-        transition: "transform 120ms ease, opacity 120ms ease",
-      }}
-    >
-      {children}
-    </Link>
+    <>
+      {glow && (
+        <style>{`
+          @keyframes nex-guest-shop-pulse {
+            0%, 100% {
+              filter:
+                drop-shadow(0 2px 6px rgba(0,0,0,0.65))
+                drop-shadow(0 0 4px ${accentHex}aa);
+            }
+            50% {
+              filter:
+                drop-shadow(0 2px 6px rgba(0,0,0,0.65))
+                drop-shadow(0 0 14px ${accentHex}dd);
+            }
+          }
+        `}</style>
+      )}
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={ariaLabel}
+        title={title}
+        style={{
+          width: 44,
+          height: 44,
+          display: "grid",
+          placeItems: "center",
+          color: "var(--nex-text, #F4F7FC)",
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          padding: 0,
+          filter: glow
+            ? undefined
+            : "drop-shadow(0 2px 6px rgba(0,0,0,0.65))",
+          animation: glow
+            ? "nex-guest-shop-pulse 2200ms ease-in-out infinite"
+            : undefined,
+          transition: "transform 120ms ease, opacity 120ms ease",
+        }}
+      >
+        {children}
+      </button>
+    </>
   );
 }
 
@@ -698,8 +782,8 @@ function ShopIcon(): React.JSX.Element {
   );
 }
 
-function SaveIcon(): React.JSX.Element {
-  // Bookmark-plus · "save this chat" affordance.
+function SettingsIcon(): React.JSX.Element {
+  // Standard gear/settings glyph.
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -713,9 +797,8 @@ function SaveIcon(): React.JSX.Element {
       strokeLinejoin="round"
       aria-hidden
     >
-      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-      <line x1="12" y1="7" x2="12" y2="13" />
-      <line x1="9" y1="10" x2="15" y2="10" />
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
     </svg>
   );
 }
@@ -737,5 +820,374 @@ function SendIcon(): React.JSX.Element {
       <line x1="22" y1="2" x2="11" y2="13" />
       <polygon points="22 2 15 22 11 13 2 9 22 2" />
     </svg>
+  );
+}
+
+/* ───────────────── Product bottom-sheet ───────────────────────── */
+
+function ProductSheet({
+  products,
+  businessLabel,
+  accentHex,
+  onClose,
+  onPick,
+}: {
+  products: GuestProduct[];
+  businessLabel: string;
+  accentHex: string;
+  onClose: () => void;
+  onPick: (p: GuestProduct) => void;
+}): React.JSX.Element {
+  // Lock scroll behind the sheet.
+  React.useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        role="presentation"
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.55)",
+          backdropFilter: "blur(4px)",
+          WebkitBackdropFilter: "blur(4px)",
+          zIndex: 50,
+        }}
+      />
+      {/* Sheet */}
+      <div
+        role="dialog"
+        aria-modal
+        aria-label={`${businessLabel} products`}
+        data-nex-guest-shop-sheet
+        style={{
+          position: "fixed",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          maxHeight: "72vh",
+          background: "rgba(4,20,36,0.95)",
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          borderTop: `1px solid ${accentHex}66`,
+          boxShadow: "0 -20px 60px rgba(0,0,0,0.5)",
+          zIndex: 51,
+          display: "flex",
+          flexDirection: "column",
+          color: "var(--nex-text, #F4F7FC)",
+          paddingBottom: "env(safe-area-inset-bottom, 0)",
+        }}
+      >
+        {/* Grab handle */}
+        <div
+          style={{
+            width: 44,
+            height: 4,
+            borderRadius: 2,
+            background: "rgba(244,247,252,0.3)",
+            margin: "10px auto 6px",
+          }}
+          aria-hidden
+        />
+        <div
+          style={{
+            padding: "4px 20px 10px",
+            display: "flex",
+            alignItems: "baseline",
+            justifyContent: "space-between",
+            borderBottom: "1px solid rgba(255,255,255,0.06)",
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>
+              {businessLabel} shop
+            </div>
+            <div
+              style={{
+                fontSize: 12,
+                color: "rgba(244,247,252,0.6)",
+                marginTop: 2,
+              }}
+            >
+              Tap a product to attach it to your message
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "rgba(244,247,252,0.5)",
+              fontSize: 24,
+              cursor: "pointer",
+              padding: "4px 8px",
+              lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
+        </div>
+        <div
+          style={{
+            overflowY: "auto",
+            padding: "10px 12px 18px",
+            display: "grid",
+            gridTemplateColumns: "repeat(2, 1fr)",
+            gap: 10,
+          }}
+        >
+          {products.length === 0 ? (
+            <div
+              style={{
+                gridColumn: "1 / -1",
+                textAlign: "center",
+                padding: "40px 20px",
+                color: "rgba(244,247,252,0.5)",
+                fontSize: 14,
+              }}
+            >
+              No products listed yet.
+            </div>
+          ) : (
+            products.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => onPick(p)}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 6,
+                  padding: 8,
+                  borderRadius: 12,
+                  background: "rgba(255,255,255,0.03)",
+                  border: `1px solid ${accentHex}33`,
+                  color: "var(--nex-text, #F4F7FC)",
+                  cursor: "pointer",
+                  textAlign: "left",
+                }}
+              >
+                <div
+                  style={{
+                    width: "100%",
+                    aspectRatio: "1 / 1",
+                    borderRadius: 8,
+                    background: p.imageUrl
+                      ? `#0a1120 url(${p.imageUrl}) center/cover no-repeat`
+                      : "linear-gradient(135deg, #0A1930 0%, #061423 100%)",
+                    display: "grid",
+                    placeItems: "center",
+                    color: "rgba(244,247,252,0.4)",
+                    fontSize: 11,
+                  }}
+                >
+                  {!p.imageUrl && "No image"}
+                </div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    lineHeight: 1.3,
+                    minHeight: "2.6em",
+                  }}
+                >
+                  {p.name}
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: accentHex,
+                    fontWeight: 600,
+                  }}
+                >
+                  {formatPriceIDR(p.pricePence, p.currency)}
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ───────────────── Settings · signup gate modal ──────────────── */
+
+function SettingsSignupModal({
+  businessLabel,
+  accentHex,
+  signUpHref,
+  onClose,
+}: {
+  businessLabel: string;
+  accentHex: string;
+  signUpHref: string;
+  onClose: () => void;
+}): React.JSX.Element {
+  React.useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+  return (
+    <>
+      <div
+        onClick={onClose}
+        role="presentation"
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.6)",
+          backdropFilter: "blur(6px)",
+          WebkitBackdropFilter: "blur(6px)",
+          zIndex: 60,
+        }}
+      />
+      <div
+        role="dialog"
+        aria-modal
+        aria-labelledby="nex-guest-settings-title"
+        data-nex-guest-settings-modal
+        style={{
+          position: "fixed",
+          left: "50%",
+          top: "50%",
+          transform: "translate(-50%, -50%)",
+          width: "min(92vw, 420px)",
+          padding: 24,
+          borderRadius: 18,
+          background: "rgba(4,20,36,0.96)",
+          border: `1px solid ${accentHex}88`,
+          boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
+          zIndex: 61,
+          color: "var(--nex-text, #F4F7FC)",
+          textAlign: "center",
+        }}
+      >
+        {/* Settings icon badge · echoes the header gear so the user
+            understands which button opened this modal. */}
+        <div
+          style={{
+            width: 56,
+            height: 56,
+            margin: "0 auto 14px",
+            borderRadius: "50%",
+            background: `${accentHex}22`,
+            border: `1px solid ${accentHex}aa`,
+            display: "grid",
+            placeItems: "center",
+            color: accentHex,
+          }}
+          aria-hidden
+        >
+          <SettingsIcon />
+        </div>
+
+        <h2
+          id="nex-guest-settings-title"
+          style={{
+            margin: "0 0 8px",
+            fontSize: 18,
+            fontWeight: 700,
+            lineHeight: 1.3,
+          }}
+        >
+          Settings need a chat window
+        </h2>
+        <p
+          style={{
+            margin: "0 0 12px",
+            fontSize: 14,
+            color: "rgba(244,247,252,0.8)",
+            lineHeight: 1.5,
+          }}
+        >
+          Create your free chat window to control notifications, saved
+          chats and media attachments.
+        </p>
+        <div
+          style={{
+            margin: "0 0 18px",
+            padding: "10px 14px",
+            borderRadius: 10,
+            background: "rgba(255,255,255,0.04)",
+            fontSize: 12,
+            color: "rgba(244,247,252,0.72)",
+            lineHeight: 1.5,
+            textAlign: "left",
+          }}
+        >
+          <strong style={{ color: "var(--nex-text, #F4F7FC)" }}>
+            About your chat with {businessLabel}
+          </strong>
+          <br />
+          Your conversation is powered by <strong>NEX</strong> — a free
+          app that handles chat between you and the businesses you
+          message. Your chat window is yours · free · reusable with any
+          NEX business.
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            gap: 10,
+            justifyContent: "center",
+          }}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              padding: "10px 16px",
+              borderRadius: 10,
+              background: "rgba(255,255,255,0.06)",
+              color: "rgba(244,247,252,0.9)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              fontSize: 14,
+              fontWeight: 500,
+              cursor: "pointer",
+              minWidth: 100,
+            }}
+          >
+            Not now
+          </button>
+          <a
+            href={signUpHref}
+            style={{
+              padding: "10px 18px",
+              borderRadius: 10,
+              background: accentHex,
+              color: "#1A1300",
+              textDecoration: "none",
+              fontSize: 14,
+              fontWeight: 700,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              minWidth: 140,
+              justifyContent: "center",
+            }}
+          >
+            Create window
+          </a>
+        </div>
+      </div>
+    </>
   );
 }

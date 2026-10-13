@@ -43,6 +43,7 @@ import * as accountService from "@/lib/nex-native/account-service";
 import * as peerConversationService from "@/lib/nex-native/peer-conversation-service";
 import * as peerMessageService from "@/lib/nex-native/peer-message-service";
 import * as businessService from "@/lib/nex-native/business-service";
+import * as productService from "@/lib/nex-native/product-service";
 import * as chatThemeService from "@/lib/nex-native/chat-theme-service";
 import { GuestChatClient } from "./_guest-chat-client";
 
@@ -105,6 +106,17 @@ export default async function GuestChatPage({
       : Promise.resolve(null),
   ]);
   const business = businesses[0] ?? null;
+
+  // Fetch live products for the shop-slider bottom sheet (guest can
+  // tap one to drop "I'm interested in <name>" into the composer).
+  const products = business
+    ? await productService
+        .listProductsByBusiness(business.id, "live")
+        .catch(
+          () =>
+            [] as Awaited<ReturnType<typeof productService.listProductsByBusiness>>,
+        )
+    : [];
 
   // ─── Hard authorization check ──────────────────────────────────────
   // The service-role reads below bypass RLS. We MUST verify the guest
@@ -189,6 +201,13 @@ export default async function GuestChatPage({
       initialMessages={projected}
       isBorn={isBorn}
       theme={themeInfo}
+      products={products.map((p) => ({
+        id: p.id,
+        name: p.name,
+        pricePence: Number(p.price_pence ?? 0),
+        currency: p.currency ?? "IDR",
+        imageUrl: p.image_url ?? null,
+      }))}
     />
   );
 }
