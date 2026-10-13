@@ -635,7 +635,9 @@ function GuestChatInner(props: Props): React.JSX.Element {
         <ProductSheet
           products={props.products}
           businessLabel={businessLabel}
+          businessSlug={businessSlug}
           accentHex={theme.accentHex}
+          wallpaperUrl={theme.wallpaperUrl}
           onClose={() => setShopOpen(false)}
           onPick={attachProductToComposer}
         />
@@ -805,6 +807,28 @@ function SettingsIcon(): React.JSX.Element {
   );
 }
 
+function MagnifierIcon(): React.JSX.Element {
+  // Matches the sealed round-product-variant magnifier rim affordance
+  // from cover primitives · 20px standard search icon.
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="11" cy="11" r="7" />
+      <line x1="21" y1="21" x2="16" y2="16" />
+    </svg>
+  );
+}
+
 function SendIcon(): React.JSX.Element {
   return (
     <svg
@@ -830,13 +854,17 @@ function SendIcon(): React.JSX.Element {
 function ProductSheet({
   products,
   businessLabel,
+  businessSlug,
   accentHex,
+  wallpaperUrl,
   onClose,
   onPick,
 }: {
   products: GuestProduct[];
   businessLabel: string;
+  businessSlug: string | null;
   accentHex: string;
+  wallpaperUrl: string | null;
   onClose: () => void;
   onPick: (p: GuestProduct) => void;
 }): React.JSX.Element {
@@ -863,7 +891,9 @@ function ProductSheet({
           zIndex: 50,
         }}
       />
-      {/* Sheet */}
+      {/* Sheet · wallpaper layer behind a dark scrim so the theme
+          wallpaper reads as the shop background. ONE NEX IDENTITY ·
+          same image the cover + chat use, no separate shop-bg asset. */}
       <div
         role="dialog"
         aria-modal
@@ -875,7 +905,13 @@ function ProductSheet({
           right: 0,
           bottom: 0,
           maxHeight: "72vh",
-          background: "rgba(4,20,36,0.95)",
+          backgroundColor: "rgba(2,9,20,0.82)",
+          backgroundImage: wallpaperUrl
+            ? `linear-gradient(180deg, rgba(2,9,20,0.72) 0%, rgba(2,9,20,0.88) 100%), url(${wallpaperUrl})`
+            : undefined,
+          backgroundSize: wallpaperUrl ? "cover" : undefined,
+          backgroundPosition: wallpaperUrl ? "center" : undefined,
+          backgroundRepeat: wallpaperUrl ? "no-repeat" : undefined,
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
           borderTop: `1px solid ${accentHex}66`,
@@ -960,66 +996,122 @@ function ProductSheet({
               No products listed yet.
             </div>
           ) : (
-            products.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => onPick(p)}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 6,
-                  padding: 8,
-                  borderRadius: 12,
-                  background: "rgba(255,255,255,0.03)",
-                  border: `1px solid ${accentHex}33`,
-                  color: "var(--nex-text, #F4F7FC)",
-                  cursor: "pointer",
-                  textAlign: "left",
-                }}
-              >
+            products.map((p) => {
+              const detailHref = businessSlug
+                ? `/nex-native/${businessSlug}/${p.id}?commerce=1`
+                : null;
+              return (
                 <div
+                  key={p.id}
                   style={{
-                    width: "100%",
-                    aspectRatio: "1 / 1",
-                    borderRadius: 8,
-                    background: p.imageUrl
-                      ? `#0a1120 url(${p.imageUrl}) center/cover no-repeat`
-                      : "linear-gradient(135deg, #0A1930 0%, #061423 100%)",
-                    display: "grid",
-                    placeItems: "center",
-                    color: "rgba(244,247,252,0.4)",
-                    fontSize: 11,
+                    position: "relative",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                    padding: 8,
+                    borderRadius: 12,
+                    background: "rgba(2,9,20,0.5)",
+                    backdropFilter: "blur(6px)",
+                    WebkitBackdropFilter: "blur(6px)",
+                    border: `1px solid ${accentHex}44`,
+                    color: "var(--nex-text, #F4F7FC)",
                   }}
                 >
-                  {!p.imageUrl && "No image"}
+                  <button
+                    type="button"
+                    onClick={() => onPick(p)}
+                    aria-label={`Ask about ${p.name}`}
+                    style={{
+                      position: "relative",
+                      width: "100%",
+                      aspectRatio: "1 / 1",
+                      borderRadius: 8,
+                      overflow: "hidden",
+                      background: p.imageUrl
+                        ? `#0a1120 url(${p.imageUrl}) center/cover no-repeat`
+                        : "linear-gradient(135deg, #0A1930 0%, #061423 100%)",
+                      border: "none",
+                      padding: 0,
+                      cursor: "pointer",
+                      color: "rgba(244,247,252,0.4)",
+                      fontSize: 11,
+                      display: "grid",
+                      placeItems: "center",
+                    }}
+                  >
+                    {!p.imageUrl && "No image"}
+                    {detailHref && (
+                      <a
+                        href={detailHref}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label={`Inspect ${p.name}`}
+                        title="Inspect product"
+                        style={{
+                          position: "absolute",
+                          right: 8,
+                          bottom: 8,
+                          width: 36,
+                          height: 36,
+                          borderRadius: "50%",
+                          background: "rgba(2,9,20,0.75)",
+                          border: `1.5px solid ${accentHex}`,
+                          color: accentHex,
+                          display: "grid",
+                          placeItems: "center",
+                          backdropFilter: "blur(6px)",
+                          WebkitBackdropFilter: "blur(6px)",
+                          boxShadow: `0 4px 12px rgba(0,0,0,0.4), 0 0 10px ${accentHex}44`,
+                          textDecoration: "none",
+                          transition: "transform 140ms ease",
+                        }}
+                      >
+                        <MagnifierIcon />
+                      </a>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onPick(p)}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      padding: 0,
+                      color: "inherit",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 4,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        lineHeight: 1.3,
+                        minHeight: "2.6em",
+                      }}
+                    >
+                      {p.name}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: accentHex,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {formatPriceIDR(p.pricePence, p.currency)}
+                    </div>
+                  </button>
                 </div>
-                <div
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    display: "-webkit-box",
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: "vertical",
-                    lineHeight: 1.3,
-                    minHeight: "2.6em",
-                  }}
-                >
-                  {p.name}
-                </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: accentHex,
-                    fontWeight: 600,
-                  }}
-                >
-                  {formatPriceIDR(p.pricePence, p.currency)}
-                </div>
-              </button>
-            ))
+              );
+            })
           )}
         </div>
       </div>
