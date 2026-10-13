@@ -135,39 +135,53 @@ const FIXTURE_SCHEMA_SQL = `
     notes        text
   );
 
-  -- The writer inserts into nex.business_canonical. We only replicate
-  -- the columns the writer actually sets, with the aliases uniqueness
-  -- constraint it depends on for ON CONFLICT dedup.
+  -- The writer inserts into nex.business_canonical. The fixture
+  -- shape mirrors production Supabase (project ijvqdvsvwtwxzcqmoqit)
+  -- as of migration 190 · dedup is via the partial unique index
+  -- uq_bc_country_osm_id on (country, osm_id) WHERE osm_id IS NOT NULL
+  -- (not a UNIQUE constraint on aliases, which would collide with
+  -- the 40k+ existing rows that have aliases = {}).
   CREATE TABLE IF NOT EXISTS nex.business_canonical (
     canonical_business_id    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     name_canonical           text NOT NULL,
-    name_norm                text NOT NULL,
+    name_norm                text,
     entity_type              text NOT NULL,
-    country                  char(2) NOT NULL,
+    country                  text NOT NULL,
     lifecycle_state          text NOT NULL,
     city                     text,
     district                 text,
-    category_ids             text[] NOT NULL DEFAULT '{}',
+    osm_id                   text,
     aliases                  text[] NOT NULL,
-    metadata                 jsonb NOT NULL DEFAULT '{}',
+    category_ids             text[] NOT NULL DEFAULT '{}',
+    metadata                 jsonb NOT NULL DEFAULT '{}'::jsonb,
     superseded_by_business_id uuid,
     created_at               timestamptz NOT NULL DEFAULT now(),
-    last_verified_at         timestamptz,
-    CONSTRAINT uq_business_canonical_aliases UNIQUE (aliases)
+    updated_at               timestamptz NOT NULL DEFAULT now(),
+    last_verified_at         timestamptz
   );
+  CREATE UNIQUE INDEX IF NOT EXISTS uq_bc_country_osm_id
+    ON nex.business_canonical (country, osm_id) WHERE osm_id IS NOT NULL;
 
+  -- aof_cycle fixture mirrors the production shape · cycle_seq is a
+  -- NOT NULL bigint backed by a sequence so inserters can omit it.
+  CREATE SEQUENCE IF NOT EXISTS nex.aof_cycle_seq_seq;
   CREATE TABLE IF NOT EXISTS nex.aof_cycle (
     cycle_id            uuid PRIMARY KEY,
+    cycle_seq           bigint NOT NULL DEFAULT nextval('nex.aof_cycle_seq_seq'),
     started_at          timestamptz NOT NULL,
     ended_at            timestamptz,
     ended_kind          text,
     candidates_added    int NOT NULL DEFAULT 0,
+    walks_completed     int NOT NULL DEFAULT 0,
     evidence_added      int NOT NULL DEFAULT 0,
     emails_captured     int NOT NULL DEFAULT 0,
     triggered_by        text,
+    programme_id        uuid,
+    countries_touched   text[],
     sources_attempted   text[] NOT NULL DEFAULT '{}',
     sources_succeeded   text[] NOT NULL DEFAULT '{}',
-    sources_cooled_down text[] NOT NULL DEFAULT '{}'
+    sources_cooled_down text[] NOT NULL DEFAULT '{}',
+    metadata            jsonb NOT NULL DEFAULT '{}'::jsonb
   );
 `;
 

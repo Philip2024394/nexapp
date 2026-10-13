@@ -59,19 +59,23 @@ export async function writeCanonicalRowsFromOverpass(
         cycleId,
       });
       try {
-        // ON CONFLICT DO NOTHING on the aliases uniqueness so a
-        // re-harvest of the same OSM id doesn't duplicate the row.
+        // Dedup target is the existing partial unique index
+        // `uq_bc_country_osm_id` on (country, osm_id) WHERE osm_id
+        // IS NOT NULL. The ON CONFLICT inference clause must match
+        // the partial-index predicate exactly for PG to pick it.
+        // The row still carries `osmRef` in `aliases` so downstream
+        // consumers that search aliases keep working.
         const { rowCount } = await client.query(
           `
           INSERT INTO nex.business_canonical
             (canonical_business_id, name_canonical, name_norm,
              entity_type, country, lifecycle_state, city, district,
-             category_ids, aliases, metadata)
+             category_ids, aliases, osm_id, metadata)
           VALUES
             (gen_random_uuid(), $1, lower($1),
              $2, $3, 'DISCOVERED', $4, $5,
-             $6::text[], ARRAY[$7]::text[], $8::jsonb)
-          ON CONFLICT (aliases) DO NOTHING
+             $6::text[], ARRAY[$7]::text[], $7, $8::jsonb)
+          ON CONFLICT (country, osm_id) WHERE osm_id IS NOT NULL DO NOTHING
           `,
           [
             name,
