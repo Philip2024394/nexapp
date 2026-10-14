@@ -31,6 +31,11 @@ import { NexPageHeader } from "../_page-header";
 import { COVER_LAYOUT_LABELS } from "../cover/layout-ids";
 import type { CoverLayoutId } from "../cover/layout-ids";
 import { ThemeCoverCarousel, type ThemeCoverSlide } from "./_theme-cover-carousel";
+import {
+  FirstContactPanel,
+  resolveFirstContactSignals,
+} from "./_first-contact-panel";
+import { shouldShowFirstContact } from "./_first-contact-predicate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -127,6 +132,18 @@ export default async function HomePage() {
     businessService.listBusinessesByOwner(session.account.id).catch(() => []),
     chatThemeService.listActiveThemes().catch(() => []),
   ]);
+
+  // U10 · first-contact signal resolution (NEX first-contact · 2026-10-14).
+  // Reads only sealed services (peer-conversation-service +
+  // peer-message-service) and fails closed on any error. Keeps the
+  // sealed Promise.all 3-tuple above untouched so this change is
+  // additive. See:
+  //   docs/doctrine/nex-first-contact-decision-table-2026-10-14.md §U10
+  //   docs/doctrine/nex-first-contact-implementation-2026-10-14.md
+  const firstContactSignals = await resolveFirstContactSignals(session.account.id);
+  const showFirstContact = shouldShowFirstContact(firstContactSignals);
+  const canShareProfileUrl = profile?.is_discoverable === true;
+
   const kind = (profile?.kind ?? null) as NexAccountKind | null;
   const hasBusiness = ownedBusinesses.length > 0;
 
@@ -411,6 +428,25 @@ export default async function HomePage() {
               );
             })}
           </div>
+
+          {/* ─── First-contact panel · 2026-10-14 ──────────────────────
+              Appears for genuinely new users whose only peer
+              conversation (if any) is the auto-created NEX1 welcome
+              and who have not yet replied. Hides automatically once
+              the user replies to NEX1 OR starts any non-NEX1 peer
+              conversation · completion is derived from existing
+              state (no new DB column, flag, or cookie). Fails closed
+              on either read error. See:
+                docs/doctrine/nex-first-contact-implementation-2026-10-14.md
+                docs/doctrine/nex-first-contact-decision-table-2026-10-14.md */}
+          {showFirstContact && handle && (
+            <FirstContactPanel
+              handle={handle}
+              firstName={displayName.split(/\s+/)[0] ?? "there"}
+              canShareProfileUrl={canShareProfileUrl}
+              accentHex={themeAccent}
+            />
+          )}
 
           {/* ─── Business NEX activation banner · Phase 2 · 2026-10-02 ──
               Shown ONLY when the account has not yet activated Business NEX.
