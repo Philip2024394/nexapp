@@ -19,6 +19,7 @@
 //   · "Decide later ·  skip →" · /nex-native/create-account/welcome
 //     (goes to the add-to-home-screen flow sealed by Bridge 42)
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
@@ -26,6 +27,11 @@ import { updateChatThemeAction } from "../../_actions";
 import { listLiveWorldsAsBrowserRows } from "../../chat-themes-library/_live-worlds-adapter";
 import { NexPageHeader } from "../../_page-header";
 import type { BrowserThemeRow } from "../../chat-themes-library/_theme-browser-client";
+import {
+  WELCOME_INTENT_COOKIE,
+  isWelcomeIntent,
+  pickThemeIntentCopy,
+} from "../../welcome/_welcome-intent";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,6 +56,22 @@ const NEX_FREE_IDS = ["nex-bubbles", "nex-flat"] as const;
 export default async function PickThemePage() {
   const session = await resolveNexAppSessionFromContext();
   if (!session) redirect("/nex-native/sign-in");
+
+  // Owner-authorised intent persistence · 2026-10-15.
+  // Read the welcome-intent cookie set when the user tapped one of
+  // the three chat-NEX welcome cards. We surface it as a banner here
+  // AND clear the cookie so it never applies twice. The pick-theme
+  // behaviour (which free theme the user chooses) is UNCHANGED · the
+  // banner is additive context, not a selection override.
+  const cookieJar = await cookies();
+  const rawIntent = cookieJar.get(WELCOME_INTENT_COOKIE)?.value ?? null;
+  const intent = isWelcomeIntent(rawIntent) ? rawIntent : null;
+  if (intent) {
+    // Clear immediately so a user who revisits pick-theme via the
+    // "Decide later · skip" path doesn't see the banner twice.
+    cookieJar.delete(WELCOME_INTENT_COOKIE);
+  }
+  const intentCopy = intent ? pickThemeIntentCopy(intent) : null;
 
   const liveRows = listLiveWorldsAsBrowserRows();
   const freeThemes = NEX_FREE_IDS.map((id) =>
@@ -128,6 +150,47 @@ export default async function PickThemePage() {
               Two NEX looks come free. You can change any time.
             </p>
           </header>
+
+          {/* Welcome-intent banner · surfaces the card the user tapped
+              on /nex-native/welcome · owner-authorised intent
+              persistence (2026-10-15). Additive context only · the
+              theme-pick behaviour below is unchanged. Null when no
+              intent cookie was set or the user signed up without
+              going through welcome cards. */}
+          {intentCopy && (
+            <div
+              role="status"
+              data-nex-pick-theme-intent-banner
+              data-nex-pick-theme-intent={intent ?? "none"}
+              style={{
+                margin: "0 auto 22px",
+                maxWidth: 480,
+                padding: "12px 14px",
+                borderRadius: 12,
+                background: NEX.cyanFaint,
+                border: `1px solid ${NEX.cyanSoft}`,
+                color: NEX.textPrimary,
+                fontSize: 13,
+                lineHeight: 1.5,
+                textAlign: "left",
+              }}
+            >
+              <strong
+                style={{
+                  display: "block",
+                  color: NEX.cyan,
+                  fontSize: 10.5,
+                  letterSpacing: "0.22em",
+                  textTransform: "uppercase",
+                  fontWeight: 700,
+                  marginBottom: 4,
+                }}
+              >
+                From your welcome choice
+              </strong>
+              {intentCopy}
+            </div>
+          )}
 
           <section
             aria-label="Free NEX themes"

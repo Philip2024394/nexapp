@@ -124,9 +124,19 @@ describe("welcome page · honesty guardrails", () => {
     }
   });
 
-  it("G3 · primary CTA → /create-account · secondary CTA → /sign-in", () => {
-    expect(SOURCE).toContain(`href="${PRIMARY_CTA_HREF}"`);
+  it("G3 · primary CTA → /create-account (base URL preserved · may carry ?intent) · secondary CTA → /sign-in", () => {
+    // Updated 2026-10-15 · owner-authorised intent persistence · the
+    // primary CTA href is now dynamic: `${PRIMARY_CTA_HREF}` or
+    // `${PRIMARY_CTA_HREF}?intent=<token>` based on the welcome-intent
+    // cookie. The invariant preserved is that the BASE URL is still
+    // the sealed /create-account route (so the signup chain is
+    // unchanged · intent only joins the URL as a query param).
+    expect(SOURCE).toContain(PRIMARY_CTA_HREF);
+    // The sign-in secondary CTA has not changed · still a literal href.
     expect(SOURCE).toContain(`href="${SECONDARY_CTA_HREF}"`);
+    // Explicit · the primary CTA Link reads from the dynamic
+    // createAccountHref variable, not a hardcoded href.
+    expect(SOURCE).toMatch(/href=\{createAccountHref\}/);
   });
 
   it("G4 · no forbidden purchase/ownership/chat phrases appear in the welcome source", () => {

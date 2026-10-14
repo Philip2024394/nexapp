@@ -43,9 +43,15 @@
 
 import type * as React from "react";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { resolveNexAppSessionOrGuest } from "@/lib/nex-native/app/session-or-guest";
 import { ChatIdentityHeader } from "@/lib/nex-native/chat-chrome/chat-identity-header";
+import { rememberWelcomeIntentAction } from "./_remember-intent-action";
+import {
+  WELCOME_INTENT_COOKIE,
+  isWelcomeIntent,
+} from "./_welcome-intent";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -108,6 +114,21 @@ export default async function WelcomePage({
     // Settings "View the welcome page →" affordance) stay on the page.
     redirect("/nex-native/home");
   }
+
+  // Owner-authorised intent persistence · 2026-10-15.
+  // Read the welcome-intent cookie (if set by an earlier card tap).
+  // The cookie survives through signup · pick-theme reads + clears it.
+  // Guests who have never tapped a card have no cookie → null →
+  // signup URL is the plain /create-account (no intent query).
+  const cookieJar = await cookies();
+  const rememberedIntentRaw =
+    cookieJar.get(WELCOME_INTENT_COOKIE)?.value ?? null;
+  const rememberedIntent = isWelcomeIntent(rememberedIntentRaw)
+    ? rememberedIntentRaw
+    : null;
+  const createAccountHref = rememberedIntent
+    ? `/nex-native/create-account?intent=${encodeURIComponent(rememberedIntent)}`
+    : "/nex-native/create-account";
 
   // Three chat-NEX cards · all point to /chat-themes-library because
   // that is the ONLY guest-safe destination today that reasonably
@@ -289,8 +310,9 @@ export default async function WelcomePage({
             }}
           >
             <Link
-              href="/nex-native/create-account"
+              href={createAccountHref}
               data-nex-welcome-primary-cta
+              data-nex-welcome-primary-cta-intent={rememberedIntent ?? "none"}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -380,30 +402,47 @@ export default async function WelcomePage({
 function LandscapeCard({ card }: { card: ChatNexCard }): React.ReactElement {
   const { title, blurb, chip, href, accentHex, key } = card;
 
+  // Owner-authorised intent persistence · 2026-10-15.
+  // The whole card is a <form> that POSTs to rememberWelcomeIntentAction.
+  // Hidden inputs carry the card's intent token + the whitelisted
+  // redirect destination (`href` which is on the welcome-honesty
+  // allowlist). The server action sets the cookie, then redirects.
+  // Visual language is byte-identical to the original <Link>-based
+  // card · we just swap the outer element from <Link> to <button>
+  // wrapped in a <form> so the submit visually looks the same but
+  // can carry server-side state. `all: unset` resets the button's
+  // default UA styles so our inline styles paint untouched.
   return (
-    <Link
-      href={href}
-      data-nex-welcome-card={key}
-      data-nex-welcome-card-layout="landscape"
-      data-nex-welcome-card-status={card.publicStatus}
-      aria-label={`${title} · ${chip}`}
-      style={{
-        display: "flex",
-        flexDirection: "row",
-        alignItems: "stretch",
-        gap: 12,
-        padding: 12,
-        background: NEX.panel,
-        border: `1px solid ${NEX.borderStrong}`,
-        borderRadius: 14,
-        textDecoration: "none",
-        color: NEX.textPrimary,
-        position: "relative",
-        overflow: "hidden",
-        minHeight: 112,
-        WebkitTapHighlightColor: "transparent",
-      }}
-    >
+    <form action={rememberWelcomeIntentAction} style={{ margin: 0, padding: 0 }}>
+      <input type="hidden" name="intent" value={key} />
+      <input type="hidden" name="redirect_to" value={href} />
+      <button
+        type="submit"
+        data-nex-welcome-card={key}
+        data-nex-welcome-card-layout="landscape"
+        data-nex-welcome-card-status={card.publicStatus}
+        aria-label={`${title} · ${chip}`}
+        style={{
+          all: "unset",
+          cursor: "pointer",
+          boxSizing: "border-box",
+          width: "100%",
+          display: "flex",
+          flexDirection: "row",
+          alignItems: "stretch",
+          gap: 12,
+          padding: 12,
+          background: NEX.panel,
+          border: `1px solid ${NEX.borderStrong}`,
+          borderRadius: 14,
+          textDecoration: "none",
+          color: NEX.textPrimary,
+          position: "relative",
+          overflow: "hidden",
+          minHeight: 112,
+          WebkitTapHighlightColor: "transparent",
+        }}
+      >
       {/* Accent band · thin left stripe matches the card accent */}
       <div
         aria-hidden
@@ -545,6 +584,7 @@ function LandscapeCard({ card }: { card: ChatNexCard }): React.ReactElement {
           </span>
         </div>
       </div>
-    </Link>
+      </button>
+    </form>
   );
 }

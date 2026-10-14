@@ -110,13 +110,20 @@ describe("welcome · ?preview=1 lets Settings reopen the page for signed-in user
     expect(WELCOME_SRC).toMatch(/viewer\.kind\s*===\s*["']session["']/);
   });
 
-  it("preview mode never mutates account / theme / contacts / settings · no server actions in page", () => {
-    expect(WELCOME_SRC).not.toMatch(/<form\b/);
+  it("preview mode never mutates account / theme / contacts / settings · no persistence side-effects in page", () => {
+    // Updated 2026-10-15 · owner-authorised intent persistence · the
+    // welcome page now hosts 3 card <form>s that submit to the sealed
+    // rememberWelcomeIntentAction (which sets an HTTP-only cookie for
+    // post-signup intent-replay). The <form> presence is INTENTIONAL
+    // and does NOT mutate account state. The welcome page module
+    // itself still never writes to the DB, never sets cookies inline,
+    // and never calls server actions directly.
     expect(WELCOME_SRC).not.toMatch(/\.insert\(/);
     expect(WELCOME_SRC).not.toMatch(/\.update\(/);
     expect(WELCOME_SRC).not.toMatch(/\.upsert\(/);
     expect(WELCOME_SRC).not.toMatch(/\.rpc\(/);
-    expect(WELCOME_SRC).not.toMatch(/cookies\(\)\.set\(/);
+    expect(WELCOME_SRC).not.toMatch(/cookieJar\.set\(/);
+    expect(WELCOME_SRC).not.toMatch(/cookieJar\.delete\(/);
   });
 });
 

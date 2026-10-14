@@ -192,8 +192,13 @@ describe("welcome · card destinations are real + guest-safe", () => {
 /* ─── D · primary + secondary CTAs ───────────────────────────── */
 
 describe("welcome · primary + secondary CTAs", () => {
-  it("primary CTA → /create-account with data attribute", () => {
-    expect(WELCOME_SRC).toContain('href="/nex-native/create-account"');
+  it("primary CTA → /create-account (base URL preserved · may carry ?intent) with data attribute", () => {
+    // Updated 2026-10-15 · owner-authorised intent persistence · the
+    // primary CTA href is now dynamic: `/create-account` or
+    // `/create-account?intent=<token>` based on the welcome-intent
+    // cookie. The invariant: the BASE URL is still /create-account.
+    expect(WELCOME_SRC).toContain('"/nex-native/create-account"');
+    expect(WELCOME_SRC).toMatch(/href=\{createAccountHref\}/);
     expect(WELCOME_SRC).toContain("data-nex-welcome-primary-cta");
     expect(WELCOME_SRC).toMatch(/Create free account/);
   });
@@ -237,13 +242,34 @@ describe("welcome · routing + auth preservation", () => {
     );
   });
 
-  it("writes nothing · no form, no DB mutation, no cookie, no server action", () => {
-    expect(WELCOME_SRC).not.toMatch(/<form\b/);
+  it("writes nothing · no DB mutation, no fake success", () => {
+    // Updated 2026-10-15 · owner-authorised intent persistence added
+    // three card <form>s that POST to rememberWelcomeIntentAction (a
+    // Server Action that sets an HTTP-only cookie and redirects to
+    // a whitelisted destination). The form itself is NOT a DB mutation
+    // or a cookie SETTER inline · it just submits to the Server Action
+    // which handles state. The welcome page module itself still writes
+    // nothing to the DB.
     expect(WELCOME_SRC).not.toMatch(/\.insert\(/);
     expect(WELCOME_SRC).not.toMatch(/\.update\(/);
     expect(WELCOME_SRC).not.toMatch(/\.upsert\(/);
     expect(WELCOME_SRC).not.toMatch(/\.rpc\(/);
-    expect(WELCOME_SRC).not.toMatch(/cookies\(\)/);
+    // The only cookie read is the welcome-intent lookup for the
+    // primary-CTA dynamic href · it does NOT set or mutate any cookie
+    // (that happens in the sealed rememberWelcomeIntentAction).
+    expect(WELCOME_SRC).not.toMatch(/cookieJar\.set\(/);
+    expect(WELCOME_SRC).not.toMatch(/cookieJar\.delete\(/);
+  });
+
+  it("card <form>s wrap the chat-NEX landscape visuals · action = rememberWelcomeIntentAction", () => {
+    // The forms replace <Link> for the cards · they carry the user's
+    // intent to the Server Action which sets the welcome-intent cookie
+    // and redirects to the card's whitelisted href.
+    expect(WELCOME_SRC).toMatch(
+      /<form\s+action=\{rememberWelcomeIntentAction\}/,
+    );
+    expect(WELCOME_SRC).toContain('name="intent"');
+    expect(WELCOME_SRC).toContain('name="redirect_to"');
   });
 
   it("preserves the sealed 'Does not show controls for features that do not work' rule (G5 ally)", () => {
