@@ -17,7 +17,9 @@ import { redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import * as businessService from "@/lib/nex-native/business-service";
 import { listColorPalette } from "@/lib/nex-native/color-palette-service";
+import { isBusinessCategory } from "@/lib/nex-native/business/categories";
 import { FirstProductClient } from "./_first-product-client";
+import { CategoryFirstEntryClient } from "./_category-first-entry-client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,6 +48,37 @@ export default async function Page({ searchParams }: PageProps) {
   }
 
   const banner = sp.e && sp.m ? { code: sp.e, message: sp.m } : null;
+
+  // Track B · 2026-10-14 · category-aware first-entry.
+  // The sealed `createBusinessAction` terminal redirect (sealed
+  // 2026-10-01) sends every new business to THIS page regardless of
+  // their chosen `business_category`. Previously everyone saw the
+  // product-oriented celebration; food/services/accommodation
+  // sellers landed on the wrong form. We now branch on the business
+  // category: products (or unspecified) continues with the sealed
+  // FirstProductClient; other categories render a category-correct
+  // celebration that deep-links into THEIR management surface. All
+  // sealed services + redirects remain untouched · see:
+  //   docs/doctrine/nex-bisnis-end-to-end-acceptance-gate-2026-10-14.md
+  const rawCategory = business.business_category;
+  const isNonProductCategory =
+    typeof rawCategory === "string" &&
+    isBusinessCategory(rawCategory) &&
+    rawCategory !== "products";
+
+  if (isNonProductCategory) {
+    return (
+      <CategoryFirstEntryClient
+        category={rawCategory}
+        slug={business.slug}
+        displayName={business.display_name}
+        logoUrl={business.logo_url ?? null}
+        businessId={business.id}
+        banner={banner}
+      />
+    );
+  }
+
   const colorPalette = await listColorPalette().catch(() => []);
 
   return (
@@ -59,6 +92,7 @@ export default async function Page({ searchParams }: PageProps) {
         label: c.label,
         hex: c.hex,
       }))}
+      businessId={business.id}
     />
   );
 }

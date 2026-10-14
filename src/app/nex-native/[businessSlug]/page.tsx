@@ -71,7 +71,7 @@ export default async function Page({
   searchParams,
 }: {
   params: Promise<{ businessSlug: string }>;
-  searchParams?: Promise<{ commerce?: string }>;
+  searchParams?: Promise<{ commerce?: string; setup?: string }>;
 }) {
   // Bridge 55 · Phase 1 launch gate · shop landings hidden by default.
   // Admins can still reach with ?commerce=1.
@@ -85,6 +85,54 @@ export default async function Page({
   const { businessSlug } = await params;
   const business = await businessService.getBusinessBySlug(businessSlug);
   if (!business) notFound();
+
+  // Track B · 2026-10-14 · setup-complete banner · owner-only.
+  // When the owner lands here with `?setup=complete` after finishing
+  // the Phase 2 two-step setup, show an honest 3-state visibility
+  // explanation above the normal shop content. Non-owners never see
+  // the banner (guard: owner_account_id === viewer.account.id). Also
+  // guarded on the exact param value so URL-fragment manipulation
+  // from outside the setup flow doesn't accidentally surface the
+  // banner. See:
+  //   docs/doctrine/nex-bisnis-end-to-end-acceptance-gate-2026-10-14.md
+  //
+  // Track B.1 · 2026-10-14 · personalise invitation · owner-only.
+  // Mutually exclusive with the setup-complete banner. When the owner
+  // lands here WITHOUT ?setup=complete (e.g. after submitting their
+  // first product · the sealed createFirstProductAction redirect
+  // bypasses the Phase 2 two-step), surface an always-available
+  // deep-link to the Phase 2 flow. Honest · never claims the setup
+  // is incomplete · never reads chat_theme or cover_layout_id to
+  // infer completion state. See:
+  //   docs/doctrine/nex-bisnis-track-b-acceptance-review-2026-10-14.md
+  let setupBanner: React.ReactElement | null = null;
+  if (sp.setup === "complete") {
+    const bannerSession = await resolveNexAppSessionFromContext().catch(
+      () => null,
+    );
+    if (
+      bannerSession &&
+      bannerSession.account.id === business.owner_account_id
+    ) {
+      const { SetupCompleteBanner } = await import(
+        "./_setup-complete-banner"
+      );
+      setupBanner = <SetupCompleteBanner business={business} />;
+    }
+  } else {
+    const inviteSession = await resolveNexAppSessionFromContext().catch(
+      () => null,
+    );
+    if (
+      inviteSession &&
+      inviteSession.account.id === business.owner_account_id
+    ) {
+      const { PersonaliseInvitation } = await import(
+        "./_personalise-invitation"
+      );
+      setupBanner = <PersonaliseInvitation business={business} />;
+    }
+  }
 
   // Cover-A · sealed 2026-09-30 · when the seller has picked one of
   // the 10 sealed cover layouts (Migration 100 · nex_business.
@@ -108,21 +156,24 @@ export default async function Page({
         .catch(() => null);
       if (theme && theme.is_active) {
         return (
-          <CoverThemeSkin
-            accentHex={theme.accent_hex}
-            bubbleRimHex={theme.bubble_rim_hex}
-            composerRimHex={theme.composer_rim_hex}
-            wallpaperUrl={theme.hero_image_url}
-            wallpaperConfig={theme.wallpaper_config}
-            themeId={theme.id}
-            layoutId={bundle.layoutId}
-          >
-            <CoverLayoutSwitch
-              layoutId={bundle.layoutId}
-              content={bundle.content}
+          <>
+            {setupBanner}
+            <CoverThemeSkin
+              accentHex={theme.accent_hex}
+              bubbleRimHex={theme.bubble_rim_hex}
+              composerRimHex={theme.composer_rim_hex}
+              wallpaperUrl={theme.hero_image_url}
+              wallpaperConfig={theme.wallpaper_config}
               themeId={theme.id}
-            />
-          </CoverThemeSkin>
+              layoutId={bundle.layoutId}
+            >
+              <CoverLayoutSwitch
+                layoutId={bundle.layoutId}
+                content={bundle.content}
+                themeId={theme.id}
+              />
+            </CoverThemeSkin>
+          </>
         );
       }
     }
@@ -187,6 +238,7 @@ export default async function Page({
         fontFamily: SANS,
       }}
     >
+      {setupBanner}
       {/* --- TOP HEADER · NEX brand + home + settings ----------------
           Transparent · no container · floats directly over the hero
           photograph. The wordmark carries a subtle text-shadow and

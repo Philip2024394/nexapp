@@ -63,6 +63,13 @@ interface Props {
   logoUrl: string | null;
   banner: { code: string; message: string } | null;
   colorPalette: PaletteColor[];
+  /** NEX Bisnis first-entry · 2026-10-14. The newly-created business
+   *  id · forwarded as a URL-signal into Step 1 of the two-step
+   *  "Make it yours" setup when the user taps "Skip for now". The
+   *  server-side `createFirstProductAction` is NOT modified · its
+   *  sealed terminal redirect to `/${slug}` remains the submit path.
+   *  See docs/doctrine/nex-bisnis-first-entry-phase-2-plan-2026-10-14.md */
+  businessId: string;
 }
 
 const MAX_COLORS_PER_PRODUCT = 10;
@@ -73,6 +80,7 @@ export function FirstProductClient({
   logoUrl,
   banner,
   colorPalette,
+  businessId,
 }: Props): React.JSX.Element {
   // Sealed 2026-10-01 · each product supports up to 4 images.
   // Slot 0 is the primary image (persisted to nex_product.image_url);
@@ -424,6 +432,28 @@ export function FirstProductClient({
               maxLength={200}
               placeholder="e.g. Hand-poured soy candle"
               style={inputStyle}
+            />
+          </div>
+
+          {/* 1b · Product description · Track B · 2026-10-14.
+              The sealed createFirstProductAction already reads
+              `product_description` from FormData (_actions.ts:3364);
+              this input surfaces the field in the UI so the seller
+              can include a short description at creation time
+              instead of needing a post-launch edit trip. */}
+          <div>
+            <FieldLabel label="Short description · optional" />
+            <textarea
+              name="product_description"
+              rows={3}
+              maxLength={1000}
+              placeholder="Scent · size · what it's good for · who it's for"
+              style={{
+                ...inputStyle,
+                minHeight: 72,
+                resize: "vertical",
+                fontFamily: "inherit",
+              }}
             />
           </div>
 
@@ -1038,7 +1068,8 @@ export function FirstProductClient({
             Add product & open shop →
           </button>
           <Link
-            href={`/nex-native/${slug}`}
+            href={`/nex-native/business-setup/make-it-yours/theme?businessId=${encodeURIComponent(businessId)}`}
+            data-nex-first-product-skip-to-make-it-yours
             style={{
               textAlign: "center",
               fontSize: 12,
@@ -1047,7 +1078,7 @@ export function FirstProductClient({
               padding: "6px 12px",
             }}
           >
-            Skip for now · add later from /manage/products
+            Skip for now · make it yours in 2 steps →
           </Link>
         </form>
       </main>

@@ -9,6 +9,7 @@
 
 import "server-only";
 import { nexSupabaseAdmin } from "./supabase-admin";
+import { isValidCoverLayoutId } from "@/app/nex-native/cover/layout-ids";
 import type {
   NexBusinessInsert,
   NexBusinessProfilePatch,
@@ -405,28 +406,23 @@ import {
 } from "./shipping-scope";
 
 /** Migration 100 · Bridge 98 · set the business's cover layout · one
- *  of the 10 sealed CoverLayoutId values. Pass null to clear (falls
- *  back to legacy /[businessSlug] shop landing). */
+ *  of the 10 sealed CoverLayoutId values from the canonical source at
+ *  `src/app/nex-native/cover/layout-ids.ts`. Pass null to clear
+ *  (falls back to legacy /[businessSlug] shop landing).
+ *
+ *  Phase 1 fix 2026-10-14 · the previous implementation carried a
+ *  stale hardcoded VALID list (restaurant · tradesperson · salon ·
+ *  creator · fashion · street_food · premium_business) that was
+ *  removed from the sealed catalogue on 2026-09-30 · it would have
+ *  REJECTED 7 of the 10 current sealed IDs. We now defer to the
+ *  canonical `isValidCoverLayoutId` helper so there is a single
+ *  source of truth. See
+ *  `docs/doctrine/nex-bisnis-first-entry-audit-2026-10-14.md` §B7. */
 export async function updateCoverLayoutId(
   businessId: NexUuid,
   layoutId: string | null,
 ): Promise<void> {
-  const VALID = [
-    "cafe",
-    "restaurant",
-    "product",
-    "tradesperson",
-    "salon",
-    "creator",
-    "fashion",
-    "street_food",
-    "premium_business",
-    "personal_brand",
-  ] as const;
-  if (
-    layoutId !== null &&
-    !(VALID as readonly string[]).includes(layoutId)
-  ) {
+  if (layoutId !== null && !isValidCoverLayoutId(layoutId)) {
     throw new Error(
       `business-service.updateCoverLayoutId: invalid layoutId "${layoutId}"`,
     );
