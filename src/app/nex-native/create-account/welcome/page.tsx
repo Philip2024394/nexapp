@@ -39,7 +39,13 @@ const NEX = {
   orange: "#FF7200",
 };
 
-const CONTACTS_HREF = "/nex-native/chat";
+// 2026-10-15 · owner-authorised NEX landing/welcome/returning-user flow:
+// post-signup CTAs now route to the canonical contacts list route
+// (/nex-native/contacts), matching the PWA manifest start_url so the
+// FIRST post-install arrival and EVERY subsequent home-screen launch
+// land at the same destination. Legacy /nex-native/chat (recent-chats
+// inbox) remains intact for its own entry points.
+const CONTACTS_HREF = "/nex-native/contacts";
 
 export default async function WelcomePage() {
   const session = await resolveNexAppSessionFromContext();

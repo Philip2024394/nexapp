@@ -1,9 +1,9 @@
 {
-  "$comment": "NEX PWA manifest · Bridge 64 sealed 2026-09-29. Referenced from src/app/nex-native/layout.tsx via metadata.manifest. Add-to-home-screen from /nex-native/* opens the NEX chat + themes surface (start_url /nex-native/home) with NEX branding, dark navy theme, and full-bleed status bar. Legacy /nexapp still exists but that's an older scaffold — NEX product lives at /nex-native.",
+  "$comment": "NEX PWA manifest · Bridge 64 sealed 2026-09-29 · start_url updated 2026-10-15 (owner-authorised NEX landing/welcome/returning-user flow): home-screen launches land directly on the contacts list (/nex-native/contacts), not /home. First-ever visit still uses the full Landing → Welcome → signup chain. Legacy /nexapp still exists but that's an older scaffold — NEX product lives at /nex-native.",
   "name": "NEX · Chat that's yours",
   "short_name": "NEX",
   "description": "Beautiful chat themes · every friend sees your look · premium themes free for 7 days.",
-  "start_url": "/nex-native/home",
+  "start_url": "/nex-native/contacts",
   "scope": "/nex-native/",
   "display": "standalone",
   "orientation": "portrait-primary",

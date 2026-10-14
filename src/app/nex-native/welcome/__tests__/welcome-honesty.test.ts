@@ -1,0 +1,189 @@
+// Static source-content tests for the sealed /nex-native/welcome page.
+//
+// Why this test exists:
+//   The welcome page is the first thing a brand-new anonymous visitor
+//   sees. The sealed load-bearing rule in welcome/page.tsx is:
+//     "Does not show controls for features that do not work."
+//   Phase 1 is a chat-first launch (see src/lib/nex-native/launch-flags.ts
+//   NEX_COMMERCE_ENABLED), so the Bridge 99 "message a business without
+//   signing up" entry point is gated behind the commerce flag and not
+//   reachable from the welcome page today. Direct theme purchase is
+//   unimplemented (migrations 191-196 are drafts). Any tile on the
+//   welcome page that claims a feature which does not work would be
+//   dishonest and must be caught at test time.
+//
+//   This file enforces the current honest state as a regression guard.
+//   The welcome page can grow new tiles in future · each one must
+//   point at a verified, guest-accessible NEX route AND must not
+//   invent a chat / purchase / ownership surface that does not exist.
+//
+// Why this is a static source test (not a jsdom render test):
+//   The page is a server component with a module-local inline
+//   `insideCards` array. Extracting it to a separate exported module
+//   would be a sealed-file edit for no runtime benefit. Reading the
+//   source and asserting invariants against its text is the
+//   lowest-blast-radius guard.
+//
+// Guardrails this test protects:
+//   G1 · All three "insideCard" entries carry publicStatus: "open".
+//        Guests MUST be able to reach every tile linked from here.
+//   G2 · Every tile href starts with "/nex-native/" and points at
+//        exactly one of the known guest-open NEX routes (library,
+//        discover, community). No external URL, no payment URL, no
+//        /nex-native/[businessSlug] (which is commerce-gated).
+//   G3 · Primary + secondary CTAs route to the real sign-in and
+//        create-account surfaces.
+//   G4 · No tile text claims chat / purchase / ownership — these
+//        features either exist elsewhere (chat requires signup
+//        today) or do not exist yet (direct purchase is not wired).
+//        A future refactor that adds a tile like "Start chatting
+//        now" MUST either back it with a real guest-chat entry
+//        AND update this allowlist, or the build fails here.
+
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+import { describe, expect, it } from "vitest";
+
+const WELCOME_PAGE_PATH = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "page.tsx",
+);
+
+const SOURCE = readFileSync(WELCOME_PAGE_PATH, "utf8");
+
+// Known guest-open routes · a tile may ONLY point at one of these
+// unless this allowlist is explicitly extended by a future authorised
+// commit (in which case the matching route must prove guest-accessible
+// with its own test).
+const ALLOWED_TILE_HREFS: readonly string[] = [
+  "/nex-native/chat-themes-library",
+  "/nex-native/discover",
+  "/nex-native/community/feed",
+] as const;
+
+const PRIMARY_CTA_HREF = "/nex-native/create-account";
+const SECONDARY_CTA_HREF = "/nex-native/sign-in";
+
+// Phrases that would misrepresent the current product state. If any
+// of these appears on the welcome page, something has gone wrong —
+// direct theme purchase is not wired, guest chat is only reachable
+// via commerce-gated business covers, and ownership is not granted
+// without signup.
+const FORBIDDEN_PHRASES: readonly string[] = [
+  "buy now",
+  "complete purchase",
+  "purchase theme",
+  "pay now",
+  "add to cart",
+  "checkout",
+  "you own",
+  "payment success",
+  "chat with anyone",
+] as const;
+
+describe("welcome page · honesty guardrails", () => {
+  it("G1 · every insideCard tile carries publicStatus: 'open'", () => {
+    // The sealed welcome page uses `publicStatus: "open"` for tiles
+    // that are reachable without an account and `requires-account`
+    // for anything else. Phase 1 should NEVER ship a tile marked
+    // `requires-account` on the welcome page because that would
+    // display a non-functional guest surface (sealed load-bearing
+    // rule: "does not show controls for features that do not work").
+    const openCount = (SOURCE.match(/publicStatus:\s*"open"/g) ?? []).length;
+    const requiresAccountCount = (SOURCE.match(
+      /publicStatus:\s*"requires-account"/g,
+    ) ?? []).length;
+    expect(requiresAccountCount).toBe(0);
+    expect(openCount).toBeGreaterThanOrEqual(3);
+  });
+
+  it("G2 · every tile href is on the allowlist · no commerce-gated route, no external URL", () => {
+    const hrefs = Array.from(
+      SOURCE.matchAll(/href:\s*"(\/nex-native\/[^"]+)"/g),
+    ).map((m) => m[1]);
+    expect(hrefs.length).toBeGreaterThanOrEqual(3);
+    for (const href of hrefs) {
+      expect(
+        ALLOWED_TILE_HREFS.includes(href) ||
+          href === PRIMARY_CTA_HREF ||
+          href === SECONDARY_CTA_HREF ||
+          href.startsWith("/nex-native/about/"),
+        `href "${href}" is not on the welcome allowlist`,
+      ).toBe(true);
+    }
+    // Explicit negative assertions on sealed commerce-gated routes.
+    for (const commerceGated of [
+      "/nex-native/[businessSlug]",
+      "/nex-native/cart",
+      "/nex-native/orders",
+      "/nex-native/manage/",
+    ]) {
+      expect(SOURCE.includes(`href: "${commerceGated}`)).toBe(false);
+    }
+  });
+
+  it("G3 · primary CTA → /create-account · secondary CTA → /sign-in", () => {
+    expect(SOURCE).toContain(`href="${PRIMARY_CTA_HREF}"`);
+    expect(SOURCE).toContain(`href="${SECONDARY_CTA_HREF}"`);
+  });
+
+  it("G4 · no forbidden purchase/ownership/chat phrases appear in the welcome source", () => {
+    const haystack = SOURCE.toLowerCase();
+    for (const phrase of FORBIDDEN_PHRASES) {
+      expect(
+        haystack.includes(phrase.toLowerCase()),
+        `welcome page must not contain the phrase "${phrase}" · current product state does not back it`,
+      ).toBe(false);
+    }
+  });
+
+  it("G5 · the sealed load-bearing rule is preserved in the file header", () => {
+    // If a future refactor silently removes this comment, the test
+    // flips red and surfaces the drift. The exact wording of the
+    // rule can change · the gist cannot.
+    expect(
+      SOURCE.includes("Does not show controls for features that do not work"),
+      "welcome page must preserve the sealed 'no fake controls' header rule",
+    ).toBe(true);
+  });
+
+  it("G6 · signed-in visitors are redirected to /home · the welcome page is guest-only", () => {
+    // Keeps the ONE NEX IDENTITY doctrine intact: a signed-in viewer
+    // never gets dropped back into guest onboarding.
+    expect(SOURCE).toMatch(/redirect\(\s*["']\/nex-native\/home["']/);
+  });
+
+  it("G7 · the themes card honestly signals premium themes are available inside the library", () => {
+    // The welcome themes card deep-links to /chat-themes-library,
+    // which carries both standard and premium themes (sealed column
+    // nex_chat_theme.category = 'standard' | 'premium' · migration
+    // 048). The PREMIUM chip on _phone-tile.tsx and the honest
+    // premium banner on /themes/[id] surface the catalog section
+    // inside the library. The welcome card blurb must mention
+    // 'premium' so visitors know the library includes premium
+    // themes · without implying purchase (checked by G4).
+    //
+    // Updated 2026-10-15 · chat-NEX redesign renames "Themes" to
+    // "Chat Themes" per owner-authorised Option A. The G7 intent
+    // (premium mentioned in the themes-card blurb) is preserved ·
+    // the regex anchor now matches the new title.
+    const match = SOURCE.match(
+      /title:\s*"Chat Themes"[\s\S]*?blurb:\s*"([^"]+)"/,
+    );
+    expect(
+      match,
+      "could not locate the Chat Themes card in welcome/page.tsx",
+    ).not.toBeNull();
+    const blurb = match![1]!.toLowerCase();
+    expect(blurb).toContain("premium");
+    // Honesty: the mention must NOT imply a shop or purchase path.
+    // The dedicated "Theme Shop" and "Premium Themes" routes do not
+    // exist today (sealed Phase 1 doctrine) and a tile that pointed
+    // visitors there would be a dead-end.
+    for (const phrase of ["theme shop", "shop premium", "buy premium"]) {
+      expect(blurb).not.toContain(phrase);
+    }
+  });
+});

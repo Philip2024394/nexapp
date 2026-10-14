@@ -339,7 +339,44 @@ export default async function SettingsIndex() {
             })}
           </div>
 
-          <form action={signOutAction} style={{ marginTop: 28, textAlign: "center" }}>
+          {/* View the welcome page → · owner-authorised escape hatch
+              2026-10-15 · lets a signed-in user re-open the chat-NEX
+              welcome page without affecting their account, theme,
+              contacts or settings. Uses ?preview=1 which bypasses
+              the welcome page's signed-in-→-home redirect while
+              preserving every other auth guarantee. */}
+          <div
+            style={{
+              marginTop: 24,
+              display: "flex",
+              justifyContent: "center",
+            }}
+          >
+            <Link
+              href="/nex-native/welcome?preview=1"
+              data-nex-settings-view-welcome
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                padding: "10px 20px",
+                minHeight: 44,
+                borderRadius: 10,
+                background: "transparent",
+                border: `1px solid ${NEX.cyanSoft ?? "rgba(0,175,255,0.35)"}`,
+                color: NEX.cyan ?? "#00AFFF",
+                fontSize: 13,
+                fontWeight: 600,
+                textDecoration: "none",
+                letterSpacing: "0.02em",
+              }}
+            >
+              View the welcome page →
+            </Link>
+          </div>
+
+          <form action={signOutAction} style={{ marginTop: 20, textAlign: "center" }}>
             <button
               type="submit"
               style={{
