@@ -68,12 +68,20 @@ const VAULT_SETTINGS_PAGE = path.join(
   REPO,
   "src/app/nex-native/vault/settings/page.tsx",
 );
+// Gate B1 2026-10-15 · the file-room upload server action is one of the
+// two direct call sites of insertVaultFileMetadata · load its source so
+// Gate B1 tests can verify it passes the explicit legacy ingest marker.
+const VAULT_UPLOAD_ACTION = path.join(
+  REPO,
+  "src/app/nex-native/vault/_upload-action.ts",
+);
 
 const migration140 = fs.readFileSync(MIGRATION_140, "utf-8");
 const vaultFileService = fs.readFileSync(VAULT_FILE_SERVICE, "utf-8");
 const vaultPersistence = fs.readFileSync(VAULT_PERSISTENCE_SERVICE, "utf-8");
 const vaultEntryService = fs.readFileSync(VAULT_ENTRY_SERVICE, "utf-8");
 const vaultSettings = fs.readFileSync(VAULT_SETTINGS_PAGE, "utf-8");
+const vaultUploadAction = fs.readFileSync(VAULT_UPLOAD_ACTION, "utf-8");
 
 // ─── A · Migration 140 shape ────────────────────────────────────────
 
@@ -519,6 +527,103 @@ describe("F · nothing bypasses server-side ownership", () => {
       expect(src).not.toMatch(/body\.accountId/);
     });
   }
+});
+
+// ─── D · Gate B1 · explicit legacy ingest contract (2026-10-15) ─────
+//
+// Owner-approved narrow Gate B1 fix. The nex_vault_file INSERT path
+// previously relied on the migration_state DB default (`'encrypted'`)
+// without passing wrapped_content_key, which would violate the sealed
+// migration-141 CHECK invariant when enforced. These tests lock in the
+// corrected contract and the two direct caller fixes.
+//
+// Boundary: pure source-grep. No live Supabase call. No upload. No
+// legacy migration execution. No commit, no push.
+
+describe("D · Gate B1 · explicit legacy ingest contract", () => {
+  test("CreateVaultFileInput requires migrationState: 'legacy' as a literal field", () => {
+    // Field declaration must appear in the interface · literal type
+    // forces callers to acknowledge the ingest contract at TS level.
+    expect(vaultFileService).toMatch(
+      /CreateVaultFileInput[\s\S]+?migrationState:\s*["']legacy["']/,
+    );
+  });
+
+  test("insertVaultFileMetadata writes migration_state from input and legacy_bytes_path = bucket_path", () => {
+    const section = extractFunction(vaultFileService, "insertVaultFileMetadata");
+    const code = stripComments(section);
+    // Must stamp migration_state from the explicit input (not a
+    // hard-coded string in the service, not a DB default).
+    expect(code).toContain("migration_state: input.migrationState");
+    // Must set legacy_bytes_path to the deterministic plaintext path
+    // (which is bucket_path by sealed path contract).
+    expect(code).toContain("legacy_bytes_path: bucket_path");
+  });
+
+  test("insertVaultFileMetadata runtime-asserts returned row matches sealed legacy shape", () => {
+    const section = extractFunction(vaultFileService, "insertVaultFileMetadata");
+    const code = stripComments(section);
+    // Must detect missing column (indicates migration 141 not applied).
+    expect(code).toMatch(/typeof observed\.migration_state === ["']undefined["']/);
+    expect(code).toMatch(/Migration 141 may not be applied/);
+    // Must reject anything other than 'legacy' as the observed state.
+    expect(code).toMatch(/observed\.migration_state !== ["']legacy["']/);
+    // Must reject a legacy_bytes_path that doesn't match the
+    // deterministic plaintext path (sealed path contract).
+    expect(code).toMatch(/observed\.legacy_bytes_path !== bucket_path/);
+  });
+
+  test("file-room upload action (direct caller 1 of 2) passes migrationState: 'legacy'", () => {
+    expect(vaultUploadAction).toMatch(
+      /insertVaultFileMetadata\(\{[\s\S]+?migrationState:\s*["']legacy["'][\s\S]+?\}\)/,
+    );
+  });
+
+  test("copyConversationAttachmentsToVault (direct caller 2 of 2) passes migrationState: 'legacy'", () => {
+    const section = extractFunction(
+      vaultPersistence,
+      "copyConversationAttachmentsToVault",
+    );
+    expect(section).toMatch(
+      /insertVaultFileMetadata\(\{[\s\S]+?migrationState:\s*["']legacy["'][\s\S]+?\}\)/,
+    );
+  });
+
+  test("no third INSERT path · B.2 preserve route delegates through copyConversationAttachmentsToVault only", () => {
+    // Guard against a future caller forgetting the explicit legacy
+    // marker. Only two production call sites may exist; a third would
+    // need its own explicit `migrationState` and this test to be
+    // updated. If this ever flips to `.toBeGreaterThan(2)` without a
+    // deliberate contract change, the author must come back to this
+    // test suite.
+    const occurrences = (
+      vaultFileService + vaultPersistence + vaultUploadAction
+    ).match(/insertVaultFileMetadata\(/g);
+    expect(occurrences?.length ?? 0).toBe(3);
+    // 3 = 1 definition (vault-file-service) + 2 call sites. The B.2
+    // preserve route is a delegator (calls copyConversationAttachments-
+    // ToVault), not a direct caller.
+  });
+
+  test("existing invariant-compat tests still pass with new fields", () => {
+    // The B · vault-file-service imports test above asserts the service
+    // still goes through the NEX object-storage abstraction. The C ·
+    // vault-persistence-service tests still assert the metadata-before-
+    // upload-with-rollback ordering. Gate B1 does not perturb either.
+    // This test is a load-bearing marker that if either of those
+    // sections turn red because of a Gate B1 edit, we halt and
+    // reconsider rather than patch over.
+    expect(vaultFileService).toContain(
+      'import { getObjectStorage } from "@/lib/nex/storage/object-registry"',
+    );
+    const copySection = extractFunction(
+      vaultPersistence,
+      "copyConversationAttachmentsToVault",
+    );
+    expect(copySection).toContain("insertVaultFileMetadata");
+    expect(copySection).toContain("uploadVaultFileBytes");
+    expect(copySection).toContain("deleteVaultFile");
+  });
 });
 
 // ─── Helpers ────────────────────────────────────────────────────────

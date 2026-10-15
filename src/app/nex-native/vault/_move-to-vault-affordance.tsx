@@ -21,6 +21,10 @@ import {
   removeConversationFromVaultAction,
   removeFriendFromVaultAction,
 } from "./_actions";
+// P1b-C 2026-10-15 · partial-success surfacing. The sealed service
+// returns per-attachment counts and we must not report full success
+// when any failed. See docs/doctrine/… and Gate B3 audit.
+import type { VaultAttachmentCopyResult } from "@/lib/nex-native/vault-persistence-service";
 
 type Mode =
   | { kind: "move-conversation"; conversationId: string; friendName: string }
@@ -42,11 +46,22 @@ export function MoveToVaultAffordance({ mode, children, showChip = true }: Props
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // P1b-C 2026-10-15 · partial-success state. Non-null when the entry
+  // row was written but some attachment copies failed. The sheet stays
+  // open to display these counts so the user is NEVER told the move
+  // fully succeeded when it did not. We deliberately do NOT render a
+  // "retry" button · the service is idempotent at the entry-row level
+  // and resumes attachment copying on a re-move, but we have not yet
+  // verified end-to-end that re-triggering the move picks up failed-
+  // attachment rows cleanly in every scenario, so claiming
+  // recoverability here would be a false promise.
+  const [partial, setPartial] = useState<VaultAttachmentCopyResult | null>(null);
   const timerRef = useRef<number | null>(null);
   const consumedRef = useRef(false);
 
   const openSheet = useCallback(() => {
     setErr(null);
+    setPartial(null);
     setOpen(true);
   }, []);
 
@@ -94,12 +109,34 @@ export function MoveToVaultAffordance({ mode, children, showChip = true }: Props
   async function runAction(): Promise<void> {
     setBusy(true);
     setErr(null);
+    setPartial(null);
     try {
+      // P1b-C 2026-10-15 · move-conversation returns the sealed
+      // VaultAttachmentCopyResult alongside ok. We handle it inline
+      // so TypeScript does not have to widen the union across all
+      // four modes. If attachments_failed > 0, we hold the sheet
+      // open with an honest status instead of claiming success.
+      if (mode.kind === "move-conversation") {
+        const result = await moveConversationToVaultAction(mode.conversationId);
+        if (!result.ok) {
+          setErr(result.reason);
+          setBusy(false);
+          return;
+        }
+        if (result.attachments.attachments_failed > 0) {
+          setPartial(result.attachments);
+          setBusy(false);
+          return;
+        }
+        // Full success · the conversation moved AND every attachment
+        // either copied this run or was already preserved earlier.
+        setOpen(false);
+        setBusy(false);
+        return;
+      }
+      // Non-attachment modes · existing behaviour unchanged.
       let result: { ok: true } | { ok: false; reason: string };
       switch (mode.kind) {
-        case "move-conversation":
-          result = await moveConversationToVaultAction(mode.conversationId);
-          break;
         case "move-friend":
           result = await moveFriendToVaultAction(mode.friendId);
           break;
@@ -238,6 +275,60 @@ export function MoveToVaultAffordance({ mode, children, showChip = true }: Props
                 {err}
               </p>
             )}
+            {partial && (
+              <div
+                data-nex-vault-affordance-partial
+                data-nex-vault-affordance-partial-failed={partial.attachments_failed}
+                data-nex-vault-affordance-partial-copied={partial.attachments_copied}
+                data-nex-vault-affordance-partial-skipped={partial.attachments_skipped}
+                data-nex-vault-affordance-partial-total={partial.attachments_total}
+                role="status"
+                aria-live="polite"
+                style={{
+                  margin: "12px 0 0",
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(255, 177, 100, 0.4)",
+                  background: "rgba(255, 177, 100, 0.08)",
+                  color: "#FFC68A",
+                }}
+              >
+                {/* P1b-C 2026-10-15 · honest partial-success copy.
+                    The conversation IS in Vault (entry row written +
+                    Bridge 78 purge exemption active), but some
+                    attachment copies did not land. We state what
+                    happened without implying auto-recovery; the
+                    sealed B.5 orchestrator attempts preservation on
+                    next Vault chat open · we do NOT promise that
+                    here because it depends on the user re-opening
+                    this specific conversation inside Vault. */}
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  Conversation moved to Vault · {partial.attachments_failed} of{" "}
+                  {partial.attachments_total} attachment
+                  {partial.attachments_total === 1 ? "" : "s"} could not be saved
+                  to Vault.
+                </p>
+                <p
+                  style={{
+                    margin: "6px 0 0",
+                    fontSize: 11.5,
+                    opacity: 0.8,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  The conversation history is protected. The failed attachment
+                  file{partial.attachments_failed === 1 ? "" : "s"} may still
+                  be visible to the other participant via the original chat.
+                </p>
+              </div>
+            )}
             <div
               style={{
                 marginTop: 20,
@@ -266,7 +357,12 @@ export function MoveToVaultAffordance({ mode, children, showChip = true }: Props
               <button
                 type="button"
                 onClick={() => void runAction()}
-                disabled={busy}
+                // P1b-C 2026-10-15 · disable confirm once a partial
+                // result is displayed · the action already ran and
+                // re-running from the same sheet without a dismiss
+                // would be confusing. User must close + retry via
+                // the original trigger.
+                disabled={busy || partial !== null}
                 data-nex-vault-affordance-confirm
                 style={{
                   background: "#FF8A2A",
@@ -276,8 +372,8 @@ export function MoveToVaultAffordance({ mode, children, showChip = true }: Props
                   padding: "10px 20px",
                   fontSize: 13.5,
                   fontWeight: 600,
-                  cursor: busy ? "wait" : "pointer",
-                  opacity: busy ? 0.72 : 1,
+                  cursor: busy || partial !== null ? "not-allowed" : "pointer",
+                  opacity: busy || partial !== null ? 0.72 : 1,
                 }}
               >
                 {busy ? "Working…" : sheet.confirm}

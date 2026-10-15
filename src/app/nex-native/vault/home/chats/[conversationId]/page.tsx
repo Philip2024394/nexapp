@@ -182,7 +182,22 @@ export default async function VaultChatPage({ params }: Params) {
   });
 
   return (
+    // P1b-D 2026-10-15 · finding 2.7 correction · the `key={row.id}`
+    // ties this component's React identity to the conversation. When
+    // the user navigates between vaulted chats via the same client-
+    // side route (which Next.js reuses the leaf by default), React
+    // sees a different key and unmounts + remounts cleanly. That
+    // atomically resets ALL conversation-specific state inside
+    // VaultChatClient (phase, messages, draft, pendingAttachment,
+    // bootRef, preservationStatus) AND fires the component's sealed
+    // unmount cleanup which invalidates the preservation token so
+    // any in-flight B.5 batch from the previous conversation cannot
+    // setState on the new instance. The sealed B.4 boot flow then
+    // runs from scratch for the new conversation, including its own
+    // preservation scan. No change to any sealed server behaviour,
+    // ownership check, step-up, encryption, or RLS.
     <VaultChatClient
+      key={row.id}
       viewerAccountId={viewerAccountId}
       peerAccountId={peerAccountId}
       peerDisplayName={peerDisplayName}

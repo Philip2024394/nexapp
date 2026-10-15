@@ -20,6 +20,9 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import * as vaultEntryService from "@/lib/nex-native/vault-entry-service";
+// P1b-C 2026-10-15 · surface attachment-copy counts to the UI so the
+// user never sees unqualified success when some attachments failed.
+import type { VaultAttachmentCopyResult } from "@/lib/nex-native/vault-persistence-service";
 
 async function viewerAccountIdOrRedirect(): Promise<string> {
   const session = await resolveNexAppSessionFromContext();
@@ -68,12 +71,27 @@ export async function listVaultedFriendIdsForViewerAction(): Promise<
 
 export async function moveConversationToVaultAction(
   conversationId: string,
-): Promise<{ ok: true } | { ok: false; reason: string }> {
+): Promise<
+  | { ok: true; attachments: VaultAttachmentCopyResult }
+  | { ok: false; reason: string }
+> {
+  // P1b-C 2026-10-15 · the sealed service already returns a rich
+  // VaultAttachmentCopyResult with total / copied / skipped / failed
+  // counts (vault-entry-service.moveConversationToVault). This action
+  // previously discarded that payload, which let the UI claim
+  // "moved to Vault" even when some attachments silently failed. We
+  // now surface the counts verbatim so the UI can distinguish full
+  // success from partial preservation. The entry row itself is NOT
+  // surfaced · the UI never needs it, and keeping the payload shape
+  // minimal avoids leaking Vault metadata into the client bundle.
   try {
     const me = await viewerAccountIdOrRedirect();
-    await vaultEntryService.moveConversationToVault(me, conversationId);
+    const result = await vaultEntryService.moveConversationToVault(
+      me,
+      conversationId,
+    );
     revalidateAfterVaultChange();
-    return { ok: true };
+    return { ok: true, attachments: result.attachments };
   } catch (err) {
     return { ok: false, reason: (err as Error).message };
   }

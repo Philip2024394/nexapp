@@ -197,9 +197,23 @@ describe("B.5 · wiring · fires on open for every attachment-bearing message", 
     );
   });
 
-  test("call is fire-and-forget · does not block the ready phase", () => {
+  test("call is non-blocking · does not block the ready phase", () => {
+    // P1b-D 2026-10-15 · the sealed fire-and-forget `void` prefix was
+    // replaced with a controlled `.then(fulfilled, rejected)` chain
+    // under owner authorisation. The non-blocking guarantee is
+    // preserved · we no longer await the promise · but the result is
+    // observed via `.then` + token-ref guards so failures can be
+    // surfaced in an accessible status element. The B.5 "does not
+    // block ready phase" invariant stays · what changed is the
+    // post-promise handling.
     expect(code).toMatch(
-      /if\s*\(candidates\.length\s*>\s*0\)[\s\S]*?void\s+preserveAttachmentsForVaultedConversation/,
+      /if\s*\(candidates\.length\s*>\s*0\)[\s\S]*?preserveAttachmentsForVaultedConversation\(candidates\)\.then\(/,
+    );
+    // The non-blocking guarantee is still that we do NOT `await` the
+    // batch result inside boot() · the ready phase is set before the
+    // promise resolves.
+    expect(code).not.toMatch(
+      /await\s+preserveAttachmentsForVaultedConversation\(/,
     );
   });
 

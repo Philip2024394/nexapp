@@ -125,12 +125,53 @@ export interface CreateVaultFileInput {
   sourceMessageId?: NexUuid | null;
   /** Phase A.1 · the conversation the attachment belonged to. */
   sourceConversationId?: NexUuid | null;
+  /** Phase A · Gate B1 2026-10-15 · ingest contract.
+   *
+   *  Every new Vault file enters the system as plaintext in the private
+   *  Vault bucket. The sealed A.6 client-side migration runner encrypts
+   *  it to `encrypted` on next Vault unlock (see
+   *  `src/lib/nex-native/vault/client/legacy-migration.ts`). Callers
+   *  MUST declare this intent explicitly as `migrationState: "legacy"`
+   *  so the DB column receives the correct state rather than silently
+   *  inheriting the `migration_state` default (`'encrypted'`), which
+   *  combined with NULL encryption columns would violate the sealed
+   *  nex_vault_file_migration_invariant CHECK constraint from
+   *  migration 141 (lines 253-278).
+   *
+   *  There is no code path today that inserts a row directly as
+   *  `encrypted`. That transition is produced only by the A.6 migration
+   *  flow (`UPDATE` on an existing legacy row via
+   *  `/api/nex-native/vault/migration/finalize*`), never by this helper.
+   *  Hence the input literal type is deliberately `"legacy"` only. */
+  migrationState: "legacy";
 }
 
-/** Inserts a metadata row for a file that has already been uploaded to
- *  the bucket at `bucketPathFor(accountId, newId)`. The caller is
- *  responsible for the actual byte upload. If the metadata insert fails,
- *  the caller MUST delete the uploaded object to avoid orphan bytes. */
+/** Inserts a metadata row for a file that will be uploaded to the
+ *  bucket at `bucketPathFor(accountId, newId)` as plaintext. The caller
+ *  is responsible for the actual byte upload. If the metadata insert
+ *  fails, the caller MUST delete the uploaded object to avoid orphan
+ *  bytes.
+ *
+ *  Sealed path contract (migrations 129 + 141, verified at
+ *  `vault/ciphertext-structural-validator.ts:146-184`):
+ *    · `bucket_path`      = `${accountId}/${fileId}`   (the plaintext location)
+ *    · `legacy_bytes_path` = same string, same path    (the migration-state
+ *                                                      machine's handle on
+ *                                                      the plaintext object)
+ *    · The two columns diverge ONLY after A.6 finalise, where
+ *      `legacy_bytes_path` is nulled and the plaintext object is
+ *      deleted. The encrypted replacement lives at
+ *      `${accountId}/encrypted/g${generation}/${fileId}` and is only
+ *      populated by the A.6 migration flow, never by this helper.
+ *
+ *  The returned row is runtime-verified against the sealed invariant.
+ *  If the live database returns a `migration_state` that is missing or
+ *  not `'legacy'`, or a `legacy_bytes_path` that does not match the
+ *  deterministic plaintext path, this helper throws rather than
+ *  silently proceeding. The error only reports what we just wrote and
+ *  what the sealed contract requires · it does not independently
+ *  verify live schema state (live migration-141 application remains a
+ *  pre-production gate per Gate A). */
 export async function insertVaultFileMetadata(
   input: CreateVaultFileInput,
 ): Promise<VaultFileRow> {
@@ -149,12 +190,36 @@ export async function insertVaultFileMetadata(
       bucket_path,
       source_message_id: input.sourceMessageId ?? null,
       source_conversation_id: input.sourceConversationId ?? null,
+      // Phase A · Gate B1 2026-10-15 · explicit legacy ingest. Prevents
+      // silent inheritance of the migration_state DB default.
+      migration_state: input.migrationState,
+      legacy_bytes_path: bucket_path,
     })
     .select("*")
     .single();
   if (error || !data) {
     throw new Error(
       `vault-file-service.insertVaultFileMetadata: ${error?.message ?? "no row"}`,
+    );
+  }
+  // Runtime guard against DB-default drift. These checks only encode
+  // what we just wrote and what the sealed invariant requires for a
+  // legacy-state row; they do NOT claim to verify live schema state
+  // (that remains a pre-production gate per Gate A).
+  const observed = data as Record<string, unknown>;
+  if (typeof observed.migration_state === "undefined") {
+    throw new Error(
+      `vault-file-service.insertVaultFileMetadata: returned row has no migration_state column. Migration 141 may not be applied to the connected database.`,
+    );
+  }
+  if (observed.migration_state !== "legacy") {
+    throw new Error(
+      `vault-file-service.insertVaultFileMetadata: expected migration_state 'legacy', got '${String(observed.migration_state)}'.`,
+    );
+  }
+  if (observed.legacy_bytes_path !== bucket_path) {
+    throw new Error(
+      `vault-file-service.insertVaultFileMetadata: expected legacy_bytes_path '${bucket_path}', got '${String(observed.legacy_bytes_path)}'. Sealed path contract violated.`,
     );
   }
   return data as VaultFileRow;

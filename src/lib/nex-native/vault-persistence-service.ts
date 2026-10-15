@@ -150,6 +150,14 @@ export async function copyConversationAttachmentsToVault(
         folderPath: `chat/${conversationId}`,
         sourceMessageId: candidate.message_id,
         sourceConversationId: conversationId,
+        // Phase A · Gate B1 2026-10-15 · explicit legacy ingest.
+        // The move-to-Vault copy lands plaintext bytes in the private
+        // Vault bucket; the sealed A.6 migration runner encrypts this
+        // row on next Vault unlock. See vault-file-service.ts for the
+        // sealed ingest + path contract. B.2's attachment-preserve
+        // route delegates through this function, so no third INSERT
+        // path exists for this change to miss.
+        migrationState: "legacy",
       });
 
       try {

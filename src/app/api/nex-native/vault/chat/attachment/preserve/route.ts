@@ -20,10 +20,22 @@
 //
 // Note on encryption: the sealed Phase A.1 copy lands the attachment
 // bytes in migration_state='legacy' (plaintext in the private Vault
-// bucket). The sealed A.6 migration runner on vault/home encrypts
-// legacy files to 'encrypted' on next Vault unlock. This route does
-// NOT encrypt the attachment inline · it only persists · the same
-// posture every other Vault attachment uses today.
+// bucket). Encryption of legacy files is handled by the A.6 migration
+// runner at `src/app/nex-native/vault/home/_migration-runner-client.tsx`,
+// which mounts when the user visits /vault/home while Vault is
+// unlocked.
+//
+// P1b-B 2026-10-15 correction (was: "encrypts legacy files to
+// 'encrypted' on next Vault unlock"): the runner does NOT auto-run on
+// unlock. It fetches the queue of legacy/failed files on mount and
+// displays a banner inviting the user to tap "Secure now" to run the
+// per-file encryption flow. If the user never visits /vault/home while
+// unlocked, OR visits it but never taps the button, legacy files
+// remain unencrypted at the Vault layer. Automatic migration is an
+// explicit future design decision (see Gate B3 report item P1b-A).
+//
+// This route does NOT encrypt the attachment inline · it only
+// persists · the same posture every other Vault attachment uses today.
 
 import { NextResponse, type NextRequest } from "next/server";
 import { resolveNexAppSession } from "@/lib/nex-native/app/session";

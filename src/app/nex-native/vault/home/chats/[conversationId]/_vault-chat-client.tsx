@@ -141,6 +141,26 @@ export function VaultChatClient(props: Props) {
   const [pinInput, setPinInput] = useState("");
   const [unlockError, setUnlockError] = useState<string | null>(null);
   const bootRef = useRef(false);
+  // P1b-D 2026-10-15 · controlled lifecycle for the B.5 future-
+  // attachment preservation orchestrator (previously fire-and-forget
+  // via `void preserveAttachmentsForVaultedConversation(…)`). The
+  // token ref lets us drop stale state updates on unmount, lock, and
+  // re-boot without altering the sealed server-side behaviour or
+  // ownership/step-up/idempotency contracts.
+  type PreservationStatus =
+    | { kind: "idle" }
+    | { kind: "running"; total: number }
+    | {
+        kind: "done";
+        preserved: number;
+        already_preserved: number;
+        skipped: number;
+        failed: number;
+      }
+    | { kind: "error"; message: string };
+  const [preservationStatus, setPreservationStatus] =
+    useState<PreservationStatus>({ kind: "idle" });
+  const preservationTokenRef = useRef<symbol | null>(null);
 
   // ── bootstrap on unlock ────────────────────────────────────────────
   const boot = useCallback(async () => {
@@ -283,11 +303,14 @@ export function VaultChatClient(props: Props) {
       // history and ask the sealed B.2 /attachment/preserve route to
       // persist it into Vault. The route is idempotent per source_
       // message_id so repeat runs skip already-preserved rows cheaply.
-      // Fires fire-and-forget · failures do not break the chat UI
-      // (the preservation batch returns an honest per-row result but
-      // we don't block render on it · the brief authorises this as
-      // long as we don't claim total success when some failed · the
-      // call-site is deliberately non-fatal).
+      //
+      // P1b-D 2026-10-15 · we no longer discard the batch result.
+      // The call is still non-blocking (so chat render is not held
+      // up by attachment preservation) but we now observe the
+      // promise, drop stale updates via `preservationTokenRef`, and
+      // surface failures through `preservationStatus`. Sealed
+      // server-side authorization / ownership / step-up / idempotency
+      // remain unchanged · this is purely client-side error handling.
       const candidates = props.initialMessages
         .filter((m) => !!m.attachment_url && !m.deleted_for_everyone)
         .map((m) => ({
@@ -295,7 +318,34 @@ export function VaultChatClient(props: Props) {
           messageId: m.id,
         }));
       if (candidates.length > 0) {
-        void preserveAttachmentsForVaultedConversation(candidates);
+        const token = Symbol("vault.chat.preservation");
+        preservationTokenRef.current = token;
+        setPreservationStatus({ kind: "running", total: candidates.length });
+        preserveAttachmentsForVaultedConversation(candidates).then(
+          (batch) => {
+            if (preservationTokenRef.current !== token) return;
+            setPreservationStatus({
+              kind: "done",
+              preserved: batch.preserved,
+              already_preserved: batch.already_preserved,
+              skipped: batch.skipped,
+              failed: batch.failed,
+            });
+          },
+          (err) => {
+            if (preservationTokenRef.current !== token) return;
+            setPreservationStatus({
+              kind: "error",
+              message:
+                err instanceof Error ? err.message : "preservation_batch_failed",
+            });
+          },
+        );
+      } else {
+        // No candidates on this boot · clear any leftover status
+        // from a previous mount of the same component instance.
+        preservationTokenRef.current = null;
+        setPreservationStatus({ kind: "idle" });
       }
     } catch (err) {
       setErrorText(err instanceof Error ? err.message : t("vault.chat.setupError.loadFailed"));
@@ -321,8 +371,26 @@ export function VaultChatClient(props: Props) {
       setPhase("locked");
       // Zeroise any K_c that may still be in memory from before lock.
       clearInMemoryConversationKeys();
+      // P1b-D 2026-10-15 · invalidate any in-flight B.5 preservation
+      // promise so late `.then` callbacks don't push stale status
+      // through a locked UI. The underlying server calls (if any
+      // are still mid-flight) continue · they are idempotent per
+      // sealed B.2 route and will complete harmlessly.
+      preservationTokenRef.current = null;
+      setPreservationStatus({ kind: "idle" });
     }
   }, [vault.unlocked, phase, boot]);
+
+  // P1b-D 2026-10-15 · on unmount, invalidate the token so any
+  // outstanding B.5 preservation promise cannot setState on a dead
+  // component. React 18 StrictMode double-invokes effects in dev,
+  // so this must be idempotent · setting the ref to null is safe to
+  // re-run.
+  useEffect(() => {
+    return () => {
+      preservationTokenRef.current = null;
+    };
+  }, []);
 
   // First-mount: if already unlocked, boot.
   useEffect(() => {
@@ -900,6 +968,80 @@ export function VaultChatClient(props: Props) {
           >
             {errorText ?? t("vault.chat.ready.errorFallback")}
           </div>
+        ) : null}
+        {/* P1b-D 2026-10-15 · restrained preservation status · only
+            renders when there is something honest to report. We never
+            announce "all preserved" when the batch succeeded with
+            zero failures · that would be noise. We DO announce
+            failures (count > 0) and transport errors. Running state
+            is announced too so the user understands a background
+            check is happening after chat open. role=status + polite
+            live region keeps assistive tech informed without
+            interrupting. */}
+        {phase === "ready" && preservationStatus.kind !== "idle" ? (
+          preservationStatus.kind === "running" ? (
+            <div
+              role="status"
+              aria-live="polite"
+              data-nex-vault-chat-preservation-status="running"
+              data-nex-vault-chat-preservation-total={preservationStatus.total}
+              style={{
+                color: NEX.textMuted,
+                fontSize: 11.5,
+                textAlign: "center",
+                margin: "6px 0",
+                opacity: 0.85,
+              }}
+            >
+              Checking {preservationStatus.total} attachment
+              {preservationStatus.total === 1 ? "" : "s"} are saved to Vault…
+            </div>
+          ) : preservationStatus.kind === "done" ? (
+            preservationStatus.failed > 0 ? (
+              <div
+                role="status"
+                aria-live="polite"
+                data-nex-vault-chat-preservation-status="partial"
+                data-nex-vault-chat-preservation-failed={preservationStatus.failed}
+                data-nex-vault-chat-preservation-preserved={preservationStatus.preserved}
+                data-nex-vault-chat-preservation-already={preservationStatus.already_preserved}
+                style={{
+                  color: "#FFC68A",
+                  fontSize: 12,
+                  textAlign: "center",
+                  margin: "6px 10px",
+                  padding: "8px 12px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(255, 177, 100, 0.35)",
+                  background: "rgba(255, 177, 100, 0.08)",
+                  lineHeight: 1.4,
+                }}
+              >
+                {preservationStatus.failed} attachment
+                {preservationStatus.failed === 1 ? "" : "s"} could not be saved
+                to Vault.
+              </div>
+            ) : null
+          ) : preservationStatus.kind === "error" ? (
+            <div
+              role="status"
+              aria-live="polite"
+              data-nex-vault-chat-preservation-status="error"
+              style={{
+                color: "#ffa07a",
+                fontSize: 12,
+                textAlign: "center",
+                margin: "6px 10px",
+                padding: "8px 12px",
+                borderRadius: 10,
+                border: "1px solid rgba(255, 160, 122, 0.35)",
+                background: "rgba(255, 160, 122, 0.08)",
+                lineHeight: 1.4,
+              }}
+            >
+              Couldn't check attachment preservation on this device.
+            </div>
+          ) : null
         ) : null}
         {phase === "ready" && messages.length === 0 ? (
           <div

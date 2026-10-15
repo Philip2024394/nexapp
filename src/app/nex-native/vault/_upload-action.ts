@@ -61,6 +61,12 @@ export async function uploadVaultFileAction(
       mimeType: file.type || "application/octet-stream",
       byteSize: file.size,
       folderPath,
+      // Phase A · Gate B1 2026-10-15 · explicit legacy ingest.
+      // File-room uploads land plaintext bytes in the private Vault
+      // bucket; the sealed A.6 migration runner encrypts this row on
+      // next Vault unlock. See vault-file-service.ts for the sealed
+      // ingest + path contract.
+      migrationState: "legacy",
     });
   } catch (err) {
     return { ok: false, reason: (err as Error).message };
