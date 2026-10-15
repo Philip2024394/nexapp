@@ -47,6 +47,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { resolveNexAppSessionOrGuest } from "@/lib/nex-native/app/session-or-guest";
 import { ChatIdentityHeader } from "@/lib/nex-native/chat-chrome/chat-identity-header";
+import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
 import { rememberWelcomeIntentAction } from "./_remember-intent-action";
 import {
   WELCOME_INTENT_COOKIE,
@@ -89,6 +90,9 @@ interface ChatNexCard {
   readonly href: string;
   readonly publicStatus: "open" | "requires-account";
   readonly accentHex: string;
+  /** Owner-supplied neon banner graphic · phone mockup on the left,
+   *  empty space on the right where the title + blurb + chip render. */
+  readonly visualSrc: string;
 }
 
 export default async function WelcomePage({
@@ -150,32 +154,40 @@ export default async function WelcomePage({
     {
       key: "themes",
       title: "Chat Themes",
+      // Option A reword applied 2026-10-15 · tighter so the shorter
+      // card height fits 2 lines of blurb cleanly. "premium" is
+      // retained so the sealed welcome-honesty G7 guardrail stays
+      // satisfied (users must know premium themes exist from this
+      // card, not just the Shop card).
       blurb:
-        "Every NEX chat theme · including premium showcases · open any one to see it live.",
+        "Every NEX chat theme · free + premium · tap any to preview it live.",
       chip: "Browse now",
       href: "/nex-native/chat-themes-library",
       publicStatus: "open",
       accentHex: NEX.cyan,
+      visualSrc: "/nex-native/welcome-card-1-blue.png",
     },
     {
       key: "shop",
       title: "Chat Themes Shop",
       blurb:
-        "Preview the premium theme catalogue · try any premium theme free for 7 days when you join.",
+        "Browse premium themes · 7 days free when you join.",
       chip: "Preview inside",
       href: "/nex-native/chat-themes-library",
       publicStatus: "open",
       accentHex: NEX.orange,
+      visualSrc: "/nex-native/welcome-card-2-orange.png",
     },
     {
       key: "personalised",
       title: "Personalised Chat",
       blurb:
-        "See how different NEX themes paint your chat · pick a theme that feels like you.",
+        "See themes come alive in your chat · pick one that fits.",
       chip: "See it live",
       href: "/nex-native/chat-themes-library",
       publicStatus: "open",
       accentHex: NEX.violet,
+      visualSrc: "/nex-native/welcome-card-3-violet.png",
     },
   ];
 
@@ -188,90 +200,213 @@ export default async function WelcomePage({
         data-nex-welcome-root
         data-nex-welcome-variant="chat-nex"
         style={{
+          position: "relative",
           minHeight: "100dvh",
           background: NEX.bg,
           color: NEX.textPrimary,
           fontFamily: SANS,
           display: "flex",
           flexDirection: "column",
+          // 2026-10-15 · owner directive "cards increase width 20px".
+          // No horizontal padding on main · section + cards extend
+          // viewport-edge-to-edge. Hero text + CTAs re-add their
+          // own 14px side padding so they do not touch the edge.
+          paddingLeft: 0,
+          paddingRight: 0,
         }}
       >
-        {/* ─── NEX identity header (sealed primitive · same as /chat/first-visit) ─── */}
+        {/* Full-viewport Cyber Assistant backdrop · owner-supplied
+         *  2026-10-15 · pinned to the viewport (position: fixed +
+         *  width/height 100dvw/100dvh) so the image ALWAYS fills the
+         *  user's screen regardless of scroll position (owner rule
+         *  2026-10-15: "the back ground image must fit height and
+         *  width"). All interactive content renders on top with
+         *  position: relative + zIndex. */}
+        <img
+          src="/nex-native/welcome-hero.png"
+          alt=""
+          aria-hidden
+          data-nex-welcome-backdrop
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100dvh",
+            objectFit: "cover",
+            objectPosition: "center center",
+            zIndex: 0,
+            pointerEvents: "none",
+            userSelect: "none",
+          }}
+        />
+        {/* ─── NEX identity header · template-matched 2026-10-15.
+            Replaced the sealed ChatIdentityHeader call with a bespoke
+            row so the owner-supplied NexPingBadge (blue ring + ping +
+            "NE") can sit on the left, matching the owner-authorised
+            template (az.png). ChatIdentityHeader still imported for
+            parity with other NEX surfaces that aren't template-locked. */}
         <header
           style={{
             position: "relative",
+            zIndex: 1,
             flexShrink: 0,
             padding:
-              "calc(env(safe-area-inset-top, 0) + 14px) 12px 14px 20px",
-            textShadow: "0 2px 20px rgba(0,0,0,0.75)",
+              "calc(env(safe-area-inset-top, 0) + 14px) 12px 14px 18px",
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
           }}
           data-nex-welcome-header
         >
-          <ChatIdentityHeader
-            avatarUrl={null}
-            displayName="NEX"
-            subtitle={headerSubtitle}
-            presenceKind="online"
-            rightReserveWidth={0}
-            isOfficial
+          {/* Owner-supplied blue speech bubble · hero-right decoration
+           *  2026-10-15 · matches the template (az.png) which shows a
+           *  cyan speech bubble floating to the right of the NEX
+           *  identity row. Absolute-positioned so it doesn't shift the
+           *  identity row layout. */}
+          <img
+            src="/nex-native/welcome-speech-bubble.png"
+            alt=""
+            aria-hidden
+            data-nex-welcome-hero-speech-bubble
+            style={{
+              position: "absolute",
+              top: "calc(env(safe-area-inset-top, 0) + 44px)",
+              right: 6,
+              width: 56,
+              height: "auto",
+              zIndex: 2,
+              userSelect: "none",
+              pointerEvents: "none",
+              filter: "drop-shadow(0 4px 10px rgba(0,175,255,0.35))",
+            }}
           />
+          <NexPingBadge size={56} accent="#00AFFF" dataTestId="welcome-nex" />
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+              minWidth: 0,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 26,
+                  fontWeight: 900,
+                  letterSpacing: "-0.01em",
+                  color: NEX.textPrimary,
+                  lineHeight: 1,
+                  textShadow: "0 2px 10px rgba(0,0,0,0.6)",
+                }}
+              >
+                NEX
+              </span>
+              {/* Green ✓ NEX verified pill removed 2026-10-15 per
+                  owner directive "remove the green nex badge from
+                  header". */}
+            </div>
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 500,
+                color: NEX.textSecondary,
+                lineHeight: 1.2,
+                textShadow: "0 1px 3px rgba(0,0,0,0.55)",
+              }}
+            >
+              {headerSubtitle}
+            </span>
+          </div>
         </header>
 
         {/* ─── Centre column ─── */}
         <section
           aria-label="Welcome to NEX Chat"
           style={{
+            position: "relative",
+            zIndex: 1,
             flex: 1,
             display: "flex",
             flexDirection: "column",
             gap: 16,
-            padding: "6px 16px 24px",
+            // Side padding dropped to 2px so the 3 banner cards get
+            // the full width (owner directive 2026-10-15 · "wider
+            // cards 20px" · final iteration). Hero text and CTA
+            // buttons re-add their own 14px side padding below so
+            // only the cards go edge-to-edge.
+            padding: "6px 2px 24px",
             maxWidth: 640,
             margin: "0 auto",
             width: "100%",
             boxSizing: "border-box",
           }}
         >
-          {/* Hero copy · owner-approved exciting explanation */}
+          {/* Hero copy · matches owner-supplied az.png template exactly.
+              Narrow LEFT column so the Cyber Assistant backdrop stays
+              visible on the right. Headline splits over two lines with
+              "NEX Chat." in cyan. Subtitle is bold cyan on two lines.
+              Body paragraph is left-aligned white. */}
           <div
             data-nex-welcome-hero
             style={{
-              textAlign: "center",
-              padding: "6px 4px 4px",
+              textAlign: "left",
+              // Hero re-adds its own left/right padding so it doesn't
+              // touch the viewport edge even though the section no
+              // longer pads horizontally (section was dropped to 2px
+              // L/R so banner cards get full viewport width).
+              padding: "6px 14px 4px",
+              maxWidth: 254,
             }}
           >
             <h1
               data-nex-welcome-h1
               style={{
                 margin: 0,
-                fontSize: 26,
-                lineHeight: 1.18,
-                fontWeight: 700,
-                letterSpacing: "-0.015em",
+                fontSize: 34,
+                lineHeight: 1.1,
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
                 color: NEX.textPrimary,
-                fontFamily: SERIF,
+                // Owner-matched to template · modern sans-serif
+                // (Inter at weight 800), NOT serif. Dropped the
+                // Cormorant/EB Garamond fallback.
+                fontFamily: SANS,
+                textShadow: "0 2px 10px rgba(0,0,0,0.6)",
               }}
             >
-              Welcome to NEX Chat.
+              Welcome to{" "}
+              <span style={{ color: NEX.cyan }}>NEX Chat.</span>
             </h1>
             <div
               style={{
                 marginTop: 8,
                 fontSize: 13,
-                lineHeight: 1.45,
+                lineHeight: 1.3,
                 color: NEX.cyan,
-                letterSpacing: "0.02em",
-                fontWeight: 600,
+                letterSpacing: "0.01em",
+                fontWeight: 700,
+                textShadow: "0 1px 3px rgba(0,0,0,0.5)",
               }}
             >
-              The ultimate chat experience · plus business features.
+              The ultimate chat experience
+              <br />
+              plus business features.
             </div>
             <p
               style={{
-                margin: "10px 2px 0",
-                fontSize: 13,
-                lineHeight: 1.6,
-                color: NEX.textSecondary,
+                margin: "10px 0 0",
+                fontSize: 12.5,
+                lineHeight: 1.5,
+                color: NEX.textPrimary,
+                textShadow: "0 1px 3px rgba(0,0,0,0.6)",
               }}
             >
               Pick a theme that feels like you · say it with emoji ·
@@ -286,7 +421,11 @@ export default async function WelcomePage({
             data-nex-welcome-cards-layout="landscape"
             style={{
               listStyle: "none",
-              margin: 0,
+              // Negative horizontal margin extends the cards ~20px
+              // beyond the section on each side (+40px total width ·
+              // iterated 2026-10-15 "cards increase width 20px" then
+              // "increase card width 15px" · final value -20 per side).
+              margin: "0 -20px",
               padding: 0,
               display: "flex",
               flexDirection: "column",
@@ -307,6 +446,7 @@ export default async function WelcomePage({
               flexDirection: "column",
               gap: 10,
               marginTop: 4,
+              padding: "0 14px",
             }}
           >
             <Link
@@ -361,32 +501,10 @@ export default async function WelcomePage({
             </div>
           </div>
 
-          <footer
-            style={{
-              marginTop: 8,
-              fontSize: 11,
-              color: NEX.textMuted,
-              textAlign: "center",
-              lineHeight: 1.5,
-              padding: "0 10px",
-            }}
-          >
-            By creating an account you accept the{" "}
-            <Link
-              href="/nex-native/about/terms"
-              style={{ color: NEX.textSecondary, textDecoration: "underline" }}
-            >
-              NEX terms
-            </Link>{" "}
-            and{" "}
-            <Link
-              href="/nex-native/about/terms"
-              style={{ color: NEX.textSecondary, textDecoration: "underline" }}
-            >
-              privacy notice
-            </Link>
-            .
-          </footer>
+          {/* Terms + privacy footer removed 2026-10-15 · owner directive
+              "exact same text as template image · remove old text" ·
+              template ends at "15 seconds · no card needed" with no
+              additional footer. */}
         </section>
       </main>
     </>
@@ -400,18 +518,20 @@ export default async function WelcomePage({
    fit the welcome page content column on mobile. */
 
 function LandscapeCard({ card }: { card: ChatNexCard }): React.ReactElement {
-  const { title, blurb, chip, href, accentHex, key } = card;
+  const { title, blurb, chip, href, accentHex, key, visualSrc } = card;
 
   // Owner-authorised intent persistence · 2026-10-15.
   // The whole card is a <form> that POSTs to rememberWelcomeIntentAction.
   // Hidden inputs carry the card's intent token + the whitelisted
   // redirect destination (`href` which is on the welcome-honesty
   // allowlist). The server action sets the cookie, then redirects.
-  // Visual language is byte-identical to the original <Link>-based
-  // card · we just swap the outer element from <Link> to <button>
-  // wrapped in a <form> so the submit visually looks the same but
-  // can carry server-side state. `all: unset` resets the button's
-  // default UA styles so our inline styles paint untouched.
+  //
+  // Owner-supplied neon banner update · 2026-10-15. Each card now
+  // uses an owner-authored PNG banner (phone mockup on the left,
+  // neon-outlined empty area on the right where text renders). The
+  // banner is an absolute-positioned <img> that fills the card.
+  // Title + blurb + chip sit in the right ~65% so they do not overlap
+  // the phone mockup.
   return (
     <form action={rememberWelcomeIntentAction} style={{ margin: 0, padding: 0 }}>
       <input type="hidden" name="intent" value={key} />
@@ -427,109 +547,67 @@ function LandscapeCard({ card }: { card: ChatNexCard }): React.ReactElement {
           cursor: "pointer",
           boxSizing: "border-box",
           width: "100%",
-          display: "flex",
-          flexDirection: "row",
-          alignItems: "stretch",
-          gap: 12,
-          padding: 12,
-          background: NEX.panel,
-          border: `1px solid ${NEX.borderStrong}`,
-          borderRadius: 14,
+          display: "block",
           textDecoration: "none",
           color: NEX.textPrimary,
           position: "relative",
           overflow: "hidden",
+          // Shorter card height (owner directive 2026-10-15 "reduce
+          // height of the cards"). Title + 2-line blurb + chip fit
+          // tightly with the Option A rewords. 112px is the iOS HIG
+          // tap-target floor + welcome-honesty guardrail.
           minHeight: 112,
+          height: 112,
           WebkitTapHighlightColor: "transparent",
         }}
       >
-      {/* Accent band · thin left stripe matches the card accent */}
-      <div
+      {/* Neon banner background · owner-supplied PNG with phone
+          mockup on left + empty neon-outlined area on right. */}
+      <img
+        src={visualSrc}
+        alt=""
         aria-hidden
+        data-nex-welcome-card-banner
         style={{
           position: "absolute",
-          top: 0,
-          bottom: 0,
-          left: 0,
-          width: 3,
-          background: `linear-gradient(180deg, ${accentHex} 0%, transparent 100%)`,
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "fill",
+          zIndex: 0,
+          pointerEvents: "none",
+          userSelect: "none",
         }}
       />
 
-      {/* Left · landscape gradient visual */}
+      {/* Right · title + blurb + chip overlay. Left padding (~30%)
+          keeps text clear of the phone mockup baked into the banner.
+          Right padding bumped to 28px so title + blurb + chip arrow
+          never bleed into the banner's neon rim glow (owner directive
+          2026-10-15 "text is over flowing on right side of cards"). */}
       <div
-        aria-hidden
-        data-nex-welcome-card-visual
         style={{
-          flexShrink: 0,
-          width: 112,
-          height: 84,
-          alignSelf: "center",
-          borderRadius: 10,
-          background: `linear-gradient(135deg, ${accentHex}44 0%, ${accentHex}11 60%, transparent 100%)`,
-          border: `1px solid ${accentHex}44`,
           position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            top: 12,
-            left: 16,
-            width: 24,
-            height: 24,
-            borderRadius: "50%",
-            background: `radial-gradient(circle at 30% 30%, ${accentHex}, ${accentHex}66 70%, transparent 100%)`,
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            bottom: 12,
-            right: 14,
-            width: 50,
-            height: 10,
-            borderRadius: 999,
-            background: `${accentHex}66`,
-            opacity: 0.85,
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            top: 22,
-            right: 48,
-            width: 10,
-            height: 10,
-            borderRadius: "50%",
-            background: `${accentHex}aa`,
-          }}
-        />
-      </div>
-
-      {/* Right · title + blurb + chip */}
-      <div
-        style={{
-          flex: 1,
-          minWidth: 0,
+          zIndex: 1,
+          height: "100%",
+          minHeight: "inherit",
           display: "flex",
           flexDirection: "column",
           gap: 4,
-          paddingRight: 2,
-          paddingLeft: 2,
-          justifyContent: "center",
+          padding: "11px 36px 8px 30%",
+          justifyContent: "flex-start",
         }}
       >
         <h2
           style={{
             margin: 0,
-            fontSize: 17,
-            fontWeight: 700,
-            lineHeight: 1.2,
+            fontSize: 18,
+            fontWeight: 800,
+            lineHeight: 1.15,
             color: NEX.textPrimary,
-            fontFamily: SERIF,
+            fontFamily: SANS,
             letterSpacing: "-0.005em",
+            textShadow: "0 1px 3px rgba(0,0,0,0.6)",
           }}
         >
           {title}
@@ -537,13 +615,10 @@ function LandscapeCard({ card }: { card: ChatNexCard }): React.ReactElement {
         <p
           style={{
             margin: 0,
-            fontSize: 12.5,
-            lineHeight: 1.45,
-            color: NEX.textSecondary,
-            overflow: "hidden",
-            display: "-webkit-box",
-            WebkitLineClamp: 3,
-            WebkitBoxOrient: "vertical",
+            fontSize: 11.5,
+            lineHeight: 1.35,
+            color: NEX.textPrimary,
+            textShadow: "0 1px 2px rgba(0,0,0,0.55)",
           }}
         >
           {blurb}
@@ -553,7 +628,12 @@ function LandscapeCard({ card }: { card: ChatNexCard }): React.ReactElement {
             display: "flex",
             alignItems: "center",
             gap: 6,
-            marginTop: 2,
+            marginTop: 4,
+            // Nudge the ● dot + chip text 35px to the right (owner
+            // directive 2026-10-15 · iterated 10 → 35). The arrow
+            // keeps its right-edge position because it uses
+            // marginLeft: auto.
+            paddingLeft: 35,
             fontSize: 10.5,
             color: NEX.textMuted,
           }}
@@ -573,11 +653,15 @@ function LandscapeCard({ card }: { card: ChatNexCard }): React.ReactElement {
           </span>
           <span
             aria-hidden
+            data-nex-welcome-card-arrow
             style={{
               marginLeft: "auto",
-              color: accentHex,
-              fontWeight: 700,
-              fontSize: 15,
+              marginRight: 8,
+              color: "#FFFFFF",
+              fontWeight: 900,
+              fontSize: 20,
+              lineHeight: 1,
+              textShadow: `0 0 8px ${accentHex}, 0 1px 3px rgba(0,0,0,0.7)`,
             }}
           >
             →

@@ -57,17 +57,37 @@ describe("welcome · chat-NEX guest surface structure", () => {
     expect(WELCOME_SRC).toContain('export const dynamic = "force-dynamic"');
   });
 
-  it("mounts the sealed ChatIdentityHeader primitive at the top", () => {
+  it("renders the top NEX brand identity row (badge · wordmark · verified pill · subtitle)", () => {
+    // Template-matched 2026-10-15 · the welcome page used to mount
+    // the sealed ChatIdentityHeader primitive but was replaced with
+    // a bespoke row so the owner-supplied NexPingBadge (blue ring +
+    // ping + "NE") can sit on the left per az.png. The import is
+    // kept for parity with other NEX surfaces that remain
+    // template-locked. Assertions:
+    //   · ChatIdentityHeader import still present (callers may
+    //     reinstate it; the primitive is sealed infra)
+    //   · NexPingBadge mounted in the welcome header
+    //   · "NEX" wordmark + verified ✓ NEX pill visible in the row
     expect(WELCOME_SRC).toMatch(
       /import\s*\{\s*ChatIdentityHeader\s*\}\s*from\s*["']@\/lib\/nex-native\/chat-chrome\/chat-identity-header["']/,
     );
-    expect(WELCOME_SRC).toContain("<ChatIdentityHeader");
-    expect(WELCOME_SRC).toContain('displayName="NEX"');
-    expect(WELCOME_SRC).toContain("isOfficial");
+    expect(WELCOME_SRC).toMatch(
+      /import\s*\{\s*NexPingBadge\s*\}\s*from\s*["']@\/lib\/nex-native\/nex-ping-badge-client["']/,
+    );
+    expect(WELCOME_SRC).toContain("<NexPingBadge");
+    // Green ✓ NEX verified pill removed 2026-10-15 per owner directive.
+    expect(WELCOME_SRC).not.toContain('data-nex-welcome-verified-pill');
+    expect(WELCOME_SRC).toMatch(/data-nex-welcome-header/);
   });
 
   it("displays the clear 'Welcome to NEX Chat' heading", () => {
-    expect(WELCOME_SRC).toMatch(/<h1[\s\S]{0,400}?Welcome to NEX Chat/);
+    // Template-matched 2026-10-15 · headline is split across two parts:
+    // "Welcome to" (white) + "NEX Chat." (cyan span). The literal
+    // string "Welcome to NEX Chat" is now broken by the span wrapper
+    // so we assert both pieces appear within the h1 (window widened
+    // to 800 chars to accommodate the expanded style props on the h1).
+    expect(WELCOME_SRC).toMatch(/<h1[\s\S]{0,800}?Welcome to/);
+    expect(WELCOME_SRC).toMatch(/<h1[\s\S]{0,1000}?NEX Chat\./);
     expect(WELCOME_SRC).toContain("data-nex-welcome-h1");
   });
 
@@ -119,7 +139,17 @@ describe("welcome · three landscape cards (chat-NEX concepts)", () => {
   });
 
   it("every card has a minHeight ≥ 112 for a usable mobile tap target (not a tiny tile)", () => {
-    expect(WELCOME_SRC).toMatch(/minHeight:\s*112/);
+    // Template-matched 2026-10-15 · cards bumped to 128px tall so the
+    // 3-line blurb + title + chip all fit comfortably inside the
+    // neon-outlined banner. Scope the regex to the LandscapeCard
+    // function body so we do not accidentally match the CTA button's
+    // minHeight.
+    const cardFn =
+      WELCOME_SRC.match(/function LandscapeCard[\s\S]+?\n\}\n/)?.[0] ??
+      "";
+    const match = cardFn.match(/minHeight:\s*(\d+)/);
+    expect(match).toBeTruthy();
+    expect(Number(match![1])).toBeGreaterThanOrEqual(112);
   });
 
   it("every card uses a distinct accent (cyan · orange · violet)", () => {

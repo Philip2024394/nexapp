@@ -119,21 +119,18 @@ export function HeroCarouselClient({
           }}
         />
       )}
-      {/* Carousel primary-image zone · SMALL compact band sitting
-       *  directly above the orange CTA (owner-authorised 2026-10-15 ·
-       *  dots removed, carousel moved further down). Auto-rotate
-       *  only · no manual pagination control. */}
+      {/* Carousel primary-image zone · compact band showing the
+       *  rotating phone-showcase slides. */}
       <div
         data-nex-landing-hero-carousel
         style={{
           position: "relative",
           flexShrink: 0,
           width: "100%",
-          height: 170,
+          height: 130,
           alignSelf: "stretch",
           overflow: "hidden",
           zIndex: 1,
-          marginTop: "auto",
           marginBottom: 0,
         }}
       >
@@ -176,13 +173,10 @@ export function HeroCarouselClient({
           ),
         )}
       </div>
-      {/* Pagination dots removed per owner's instruction 2026-10-15.
-       *  The carousel auto-rotates every autoIntervalMs with no
-       *  manual control surface. `jumpTo` + `useReducedMotion` are
-       *  retained in case dots are reinstated. */}
-      {/* Keep screen-reader announcement of the active slide label
-       *  even without visual dots, so assistive tech users know
-       *  content is changing. */}
+      {/* No visible pagination dots · owner-removed 2026-10-15 while
+       *  keeping the auto-rotate. A visually-hidden aria-live region
+       *  still announces the active slide so screen-reader users
+       *  perceive the content change. */}
       <div
         aria-live="polite"
         style={{

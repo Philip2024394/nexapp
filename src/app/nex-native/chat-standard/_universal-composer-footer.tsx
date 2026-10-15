@@ -35,6 +35,8 @@ import {
   type BuiltInThemeSticker,
 } from "@/lib/nex-native/theme-asset-fallback";
 import { JokerKeypad } from "./_joker-keypad";
+import { ChatComposerPill } from "@/lib/nex-native/chat-chrome/chat-composer-pill";
+import { useVirtualKeyboardInset } from "@/lib/nex-native/use-virtual-keyboard-inset";
 
 /** Joker-theme id · the only theme that overrides the native OS
  *  keyboard with the custom `JokerKeypad`. Centralised here so adding
@@ -113,6 +115,16 @@ export function UniversalComposerFooter({
   // button) can read the button's viewport position at the moment
   // of send without any prop drilling.
   const sendButtonRef = React.useRef<HTMLButtonElement | null>(null);
+  // 2026-10-15 · B.1a · iOS virtual-keyboard lift. This footer is
+  // `position: fixed; bottom: 0`, which pins it to the LAYOUT
+  // viewport bottom. On iOS Safari the layout viewport does not
+  // shrink when the keyboard opens, so the composer sits under the
+  // keyboard. The hook returns the pixel height of the on-screen
+  // keyboard (0 when none / no visualViewport support) and we lift
+  // the fixed container by that amount via translateY. Progressive
+  // enhancement · when visualViewport is unavailable the inset is
+  // always 0 and behaviour matches today.
+  const keyboardInset = useVirtualKeyboardInset();
   const sendAndClear = () => {
     if (!canSend) return;
     // Dispatch a global burst event with the send button's viewport
@@ -149,8 +161,16 @@ export function UniversalComposerFooter({
           `,
         }}
       />
+      {/* Universal footer bar · master layout rule 2026-10-14 ·
+          delegates the pill shape (bg, buttons, textarea, send) to the
+          sealed ChatComposerPill primitive so every theme viewer, cover
+          prototype, and Standard Experience surface renders the exact
+          same composer as the Joker master. The outer SendButton +
+          PlusButton that used to float outside the pill have been
+          dropped · the primitive owns Send and + inside the pill. */}
       <div
         data-nex-universal-composer-footer
+        data-nex-keyboard-inset={keyboardInset}
         style={{
           position: "fixed",
           left: 0,
@@ -158,41 +178,45 @@ export function UniversalComposerFooter({
           bottom: 0,
           zIndex: 55,
           padding: "10px 10px calc(env(safe-area-inset-bottom, 0) + 10px)",
-          background: "transparent",
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
           pointerEvents: "none",
+          // B.1a · iOS keyboard lift. 0 when no keyboard is open or
+          // when `visualViewport` is unavailable, so desktop + older
+          // browsers get the exact pre-fix behaviour. On iOS Safari
+          // the composer lifts above the keyboard. willChange hints
+          // the compositor to pre-promote the layer so the lift
+          // doesn't repaint every frame.
+          transform: keyboardInset > 0
+            ? `translateY(-${keyboardInset}px)`
+            : undefined,
+          willChange: keyboardInset > 0 ? "transform" : undefined,
+          transition: "transform 180ms ease-out",
         }}
       >
-        <div style={{ flex: 1, minWidth: 0, pointerEvents: "auto" }}>
-          <ComposerPill
-            controls={controls}
+        <div style={{ pointerEvents: "auto" }}>
+          <ChatComposerPill
             value={value}
             onChange={setValue}
-            onSend={() => {
-              sendAndClear();
-            }}
-            emojiActive={emojiActive}
-            onToggleEmoji={() => setEmojiActive((v) => !v)}
-            pendingEmoji={pendingEmoji}
-            onClearPendingEmoji={() => setPendingEmoji(null)}
+            onSend={sendAndClear}
+            placeholder={pendingEmoji ? "Add a message…" : "Say something…"}
+            accentHex={accent ?? NEX_CYAN}
+            armed={canSend}
+            maxLength={4000}
+            onPlusAction={() => setPlusOpen((v) => !v)}
+            onEmoji={() => setEmojiActive((v) => !v)}
             suppressNativeKeyboard={useJokerKeypad}
-            onOpenCustomKeypad={() => setKeypadOpen(true)}
+            onFocusTextarea={() => setKeypadOpen(true)}
+            sendButtonRef={sendButtonRef}
+            prefixSlot={
+              pendingEmoji ? (
+                <PendingEmojiChip
+                  emoji={pendingEmoji}
+                  highlight={highlight ?? NEX_HIGHLIGHT}
+                  onClear={() => setPendingEmoji(null)}
+                />
+              ) : null
+            }
           />
         </div>
-        <SendButton
-          ref={sendButtonRef}
-          controls={controls}
-          disabled={!canSend}
-          onClick={sendAndClear}
-          glyph={sendGlyph}
-        />
-        <PlusButton
-          controls={controls}
-          open={plusOpen}
-          onToggle={() => setPlusOpen((v) => !v)}
-        />
       </div>
 
       <PlusMenu
@@ -252,7 +276,79 @@ export function UniversalComposerFooter({
 
 type ResolvedControls = ReturnType<typeof resolveControlsTreatment>;
 
-// ─── Composer input pill ────────────────────────────────────────────
+// ─── Pending-emoji chip · renders inside ChatComposerPill's prefix slot
+//     when the user has staged a theme-emoji picked from the picker.
+
+function PendingEmojiChip({
+  emoji,
+  highlight,
+  onClear,
+}: {
+  emoji: BuiltInThemeEmoji;
+  highlight: string;
+  onClear: () => void;
+}): React.JSX.Element {
+  return (
+    <span
+      data-nex-composer-pending-emoji={emoji.slug}
+      style={{
+        position: "relative",
+        flexShrink: 0,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 32,
+        height: 32,
+        borderRadius: 10,
+        background: `${highlight}10`,
+        border: `1px solid ${highlight}22`,
+        marginLeft: 4,
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={emoji.image_url}
+        alt={emoji.label || emoji.slug}
+        style={{
+          width: 24,
+          height: 24,
+          objectFit: "contain",
+          pointerEvents: "none",
+        }}
+      />
+      <button
+        type="button"
+        aria-label="Remove emoji"
+        onClick={onClear}
+        style={{
+          position: "absolute",
+          top: -4,
+          right: -4,
+          width: 16,
+          height: 16,
+          borderRadius: 999,
+          background: "#FF3B30",
+          color: "#FFFFFF",
+          border: "1.5px solid #0B0F1A",
+          fontSize: 10,
+          fontWeight: 800,
+          lineHeight: 1,
+          cursor: "pointer",
+          padding: 0,
+          display: "grid",
+          placeItems: "center",
+          fontFamily: "inherit",
+          boxShadow: "0 2px 4px rgba(255,59,48,0.45)",
+        }}
+      >
+        ×
+      </button>
+    </span>
+  );
+}
+
+// ─── Composer input pill (LEGACY · unused after 2026-10-14 master
+//     layout seal · ChatComposerPill is now the renderer) ──────────
 
 function ComposerPill({
   controls,
