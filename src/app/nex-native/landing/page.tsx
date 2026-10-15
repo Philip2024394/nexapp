@@ -1,29 +1,28 @@
 // src/app/nex-native/landing/page.tsx
 //
-// NEX landing · full-viewport hero with complete-artwork display.
+// NEX landing · three-slide hero carousel with complete-artwork display.
 // -----------------------------------------------------------------------------
-// 2026-10-15 · owner-authorised final visual acceptance pass.
+// 2026-10-15.
 //
-// Design intent: the "Neon NEX Cosmic Wanderer" artwork is a tall
-// portrait illustration (852 × 1846) where the character + NEX cap is
-// the brand focal point. On phone-aspect viewports (390 × 844 etc.)
-// the image fits almost perfectly. On wider viewports (tablets,
-// desktops) a `cover`-sized hero cropped the character's body and
-// the entire bottom nebula, which was not an intentional art
-// decision — just whatever fit.
+// Design intent: the landing rotates through three owner-supplied
+// hero images with pagination dots:
+//   1. Cosmic Wanderer character (852 × 1846, portrait aspect 0.46)
+//   2. Futuristic App Showcase (1677 × 938, landscape aspect 1.79)
+//   3. Neon App Showcase (1677 × 938, landscape aspect 1.79)
 //
-// Fix: layered backgrounds.
-//   · Backdrop: the same hero image scaled with `cover`, heavily
-//     blurred and dimmed, fills the extra viewport space on wide
-//     screens so the surrounding area reads as atmospheric nebula
-//     rather than dead black bars.
-//   · Primary: the same hero image sized with `contain`, aligned to
-//     the top, renders the COMPLETE artwork crisply at every viewport
-//     so the character, planet, phone and lower nebula are all
-//     visible.
-// This is the standard "ambient art" pattern (iTunes, Spotify,
-// Apple TV album art) · zero new assets · deterministic across every
-// screen size.
+// Each slide uses the layered backdrop pattern (iTunes/Spotify
+// ambient art) so the complete artwork is visible at every viewport
+// regardless of the mismatch between slide aspect and viewport aspect:
+//   · Backdrop: same image, cover + heavy blur + scale 1.08, fills
+//     leftover viewport space with atmospheric colour rather than
+//     dead black bars.
+//   · Primary: same image, contain + top-aligned, renders the whole
+//     artwork crisply.
+//
+// The carousel itself (interactivity, auto-rotate, dot pagination,
+// reduced-motion handling) lives in the Client Component sibling
+// `_hero-carousel-client.tsx`. This file stays a Server Component so
+// the session-redirect server gate and SEO metadata are preserved.
 //
 // Routing contract preserved · a signed-in viewer is still redirected
 // to /nex-native/home so the first-visit image is only shown to
@@ -33,6 +32,30 @@ import type * as React from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { resolveNexAppSessionOrGuest } from "@/lib/nex-native/app/session-or-guest";
+import { HeroCarouselClient, type HeroSlide } from "./_hero-carousel-client";
+
+// Three SMALL phone-showcase images rotating in a compact carousel
+// above the orange CTA. The Cosmic Wanderer character stays as the
+// STATIC full-viewport backdrop · it is NOT part of the rotating
+// slides. These three are all phone-showcase style and share visual
+// language.
+const HERO_SLIDES: readonly HeroSlide[] = [
+  {
+    src: "/nex-native/landing-phone-screen.png",
+    alt: "NEX chat on five phones",
+    label: "Chat showcase",
+  },
+  {
+    src: "/nex-native/landing-hero-2-futuristic.png",
+    alt: "Futuristic NEX App Showcase on multiple phones",
+    label: "Futuristic app showcase",
+  },
+  {
+    src: "/nex-native/landing-hero-3-neon.png",
+    alt: "Neon NEX App Showcase on multiple phones",
+    label: "Neon app showcase",
+  },
+] as const;
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -99,7 +122,10 @@ export default async function LandingPage(): Promise<React.ReactElement> {
           background: "#06060F",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "flex-end",
+          // The carousel container inside owns the top area via flex:1.
+          // Dots + CTA + sign-in stack naturally below. No justify-end
+          // because the carousel's flex-grow pushes them down.
+          justifyContent: "flex-start",
           alignItems: "center",
           padding:
             "0 25px calc(env(safe-area-inset-bottom, 0px) + 32px)",
@@ -107,66 +133,14 @@ export default async function LandingPage(): Promise<React.ReactElement> {
             "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
         }}
       >
-        {/* Layer 0 · ambient blurred backdrop · fills empty viewport
-         *  on wide screens so the extra space reads as atmospheric
-         *  nebula rather than dead black. Transform:scale slightly
-         *  larger than 100% so the blur radius doesn't produce a
-         *  visible soft edge inside the viewport. */}
-        <img
-          src="/nex-native/landing-hero.png"
-          alt=""
-          aria-hidden
-          data-nex-landing-hero-backdrop
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            objectPosition: "center center",
-            filter: "blur(44px) brightness(0.55) saturate(1.1)",
-            transform: "scale(1.08)",
-            zIndex: 0,
-            pointerEvents: "none",
-            userSelect: "none",
-          }}
-        />
-        {/* Layer 1 · the complete hero artwork · `contain` guarantees
-         *  the whole image is visible on every viewport, aligned to
-         *  the top so the character + NEX cap sit high and the
-         *  bottom nebula tapers into the CTA area below. */}
-        <img
-          src="/nex-native/landing-hero.png"
-          alt="NEX Cosmic Wanderer"
-          data-nex-landing-hero-image
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "contain",
-            objectPosition: "center top",
-            zIndex: 1,
-            pointerEvents: "none",
-            userSelect: "none",
-          }}
-        />
-        <img
-          src="/nex-native/landing-phone-screen.png"
-          alt=""
-          aria-hidden
-          data-nex-landing-above-cta-image
-          style={{
-            display: "block",
-            position: "relative",
-            zIndex: 2,
-            width: "100%",
-            maxWidth: 420,
-            height: "auto",
-            marginBottom: 14,
-            userSelect: "none",
-            pointerEvents: "none",
-          }}
+        {/* Compact carousel · 3 small phone-showcase images rotating
+         *  just above the orange CTA. The Cosmic Wanderer character
+         *  is the STATIC full-viewport backdrop below, decoupled from
+         *  the rotating slides · it never appears inside the carousel.
+         *  Dots render immediately below the carousel band. */}
+        <HeroCarouselClient
+          slides={HERO_SLIDES}
+          backdropSrc="/nex-native/landing-hero.png"
         />
         <Link
           href="/nex-native/welcome"

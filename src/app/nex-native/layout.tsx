@@ -67,9 +67,19 @@ export const metadata: Metadata = {
     address: false,
   },
   icons: {
-    icon: "/apple-touch-icon.png",
-    apple: "/apple-touch-icon.png",
-    shortcut: "/apple-touch-icon.png",
+    // 2026-10-15 · generated from the sealed NEX wordmark at
+    // /brand/nex-logo.png · wordmark + ® on white, matches brand
+    // palette (black letters + orange X slash on light surfaces).
+    icon: [
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16.png", sizes: "16x16", type: "image/png" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+    shortcut: "/favicon-32.png",
   },
   openGraph: {
     type: "website",
