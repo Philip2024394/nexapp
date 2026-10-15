@@ -138,7 +138,11 @@ export default async function NexNativeLayout({
 
   return (
     <I18nProvider initialLang={initialLang}>
-      {children}
+      <div className="nex-native-stage">
+        <div className="nex-native-frame">
+          {children}
+        </div>
+      </div>
       {/* Caching SW · runs for signed-in AND signed-out visitors so
           returning sign-in / create-account pages are instant too. */}
       <SwCacheRegister />

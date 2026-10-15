@@ -131,3 +131,78 @@ body::-webkit-scrollbar,
     transition-duration: 0ms !important;
   }
 }
+
+/* ─── 2026-10-15 · Desktop mobile-frame preview ──────────────────────────
+ * The NEX surface is mobile-first. On desktop/laptop viewports, clamp
+ * the app to a phone-sized column so designers and the owner can see
+ * exactly what mobile users see without opening DevTools responsive
+ * mode. Real mobile phones (viewport < 500px) stay full-width and are
+ * never clamped.
+ *
+ *   .nex-native-stage  = outer scaffold · black page background
+ *   .nex-native-frame  = inner column · 390px wide (iPhone 14 Pro base)
+ *                        centered · subtle shadow so it "pops" off the
+ *                        black backdrop · 100dvh tall so hero images
+ *                        and footer anchors behave as on a real phone
+ *
+ * Known limitation: elements that use `position: fixed` anchor to the
+ * real viewport, not the frame. The incoming-call modal, PWA install
+ * banner, and NEX1 FAB will escape the frame on desktop. That is a
+ * known tradeoff for this preview mode. */
+.nex-native-stage {
+  width: 100%;
+  min-height: 100dvh;
+}
+@media (min-width: 500px) {
+  html,
+  body {
+    background: #000 !important;
+    /* Pin the page viewport so content that overshoots the frame
+     * can't scroll the whole document. The frame handles its own
+     * internal scroll below. */
+    height: 100dvh;
+    overflow: hidden;
+  }
+  .nex-native-stage {
+    display: flex;
+    justify-content: center;
+    /* Centre the phone frame vertically on tall desktop screens so
+     * black bars appear above AND below rather than only below. */
+    align-items: center;
+    height: 100dvh;
+    min-height: 0;
+    background: #000;
+    overflow: hidden;
+  }
+  .nex-native-frame {
+    /* iPhone 14 Pro aspect reference · 390 × 844 (0.462). The frame
+     * ALWAYS maintains that aspect so children laid out for mobile
+     * (and background images sized at phone aspect, like the Cosmic
+     * Wanderer landing hero) never crop. If the desktop window is
+     * tall enough, the frame renders at the full 390 × 844. If the
+     * window is shorter, both dimensions scale down proportionally
+     * (height limited by 100dvh, width derived from aspect-ratio),
+     * so the whole phone preview always fits on screen and image
+     * cover == contain. */
+    width: min(390px, calc((100dvh - 32px) * 390 / 844));
+    height: min(844px, calc(100dvh - 32px));
+    aspect-ratio: 390 / 844;
+    min-height: 0;
+    position: relative;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-radius: 32px;
+    box-shadow:
+      0 24px 64px -12px rgba(0, 0, 0, 0.9),
+      0 0 0 1px rgba(255, 255, 255, 0.06);
+    background: #06060F;
+  }
+}
+@media (max-width: 499.98px) {
+  .nex-native-frame {
+    width: 100%;
+    height: 100dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+}

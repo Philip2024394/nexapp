@@ -75,9 +75,14 @@ describe("landing · Get Started CTAs route to /welcome", () => {
     expect(code).not.toMatch(/href="\/nex-native\/create-account"/);
   });
 
-  it("landing still exposes the primary + footer CTA data attributes", () => {
+  it("landing exposes the primary CTA data attribute (one CTA on the stripped full-bleed hero)", () => {
+    // Owner-authorised 2026-10-15 · the landing was stripped to a
+    // full-viewport hero image with a single bottom-anchored CTA +
+    // sign-in link. The prior "footer CTA" section (duplicate Get
+    // Started lower on the page) was removed as part of that pass,
+    // so only the single primary data attribute is asserted now.
     expect(LANDING_SRC).toContain("data-nex-landing-primary-cta");
-    expect(LANDING_SRC).toContain("data-nex-landing-footer-primary-cta");
+    expect(LANDING_SRC).toContain("data-nex-landing-signin-link");
   });
 
   it("landing · signed-in viewers are redirected to /home (same as welcome)", () => {
