@@ -6,7 +6,7 @@
 //   0a. Upgrade founder philip's tier to 'bisnis' (allows 5 businesses)
 //   0b. Create nex_business row for 'hammerexproducts' slug
 //   1a. Upload intro video + wallpaper to Supabase storage
-//   1b. Create nex_chat_theme 'hammerex-industrial' with those URLs
+//   1b. Create nex_chat_theme 'hammerex-products' with those URLs
 //   1c. Point founder's chat_theme at the new theme (so cover-content-
 //       loader picks it up via owner.chat_theme per sealed architecture)
 //   2a. Seed 20 SAMPLE products marked spec.is_sample=true
@@ -62,12 +62,13 @@ if (!SUPABASE_URL || !SERVICE_KEY) {
 
 const ASSET_VIDEO = "C:/Users/Victus/Downloads/Industrial_tool_backpacks_on_floor_20261013221844.mp4";
 const ASSET_WALLPAPER = "C:/Users/Victus/Pictures/plasterers max.png";
+const ASSET_LOGO = "C:/Users/Victus/Downloads/Hammerex Chrome and Orange Logo.png";
 const BUSINESS_SLUG = "hammerexproducts";
 const BUSINESS_NAME = "Hammerexproducts";
 const BUSINESS_DESCRIPTION =
   "⚠️ SAMPLE SHOWCASE · built on the NEX premium business platform. Industrial construction tool backpacks, site organisers, and premium hard-wearing field equipment. Not a real offer · product data is placeholder.";
-const THEME_ID = "hammerex-industrial";
-const THEME_NAME = "Hammerex Industrial";
+const THEME_ID = "hammerex-products";
+const THEME_NAME = "Hammerex Products";
 const THEME_ACCENT = "#FF7800";
 const THEME_BUBBLE_RIM = "#FF7800";
 const THEME_COMPOSER_RIM = "#FF7800";
@@ -132,18 +133,12 @@ async function main() {
     const owner = ownerRow.rows[0];
     console.log(`[0a] founder · ${owner.display_name} · ${owner.id} · tier=${owner.tier} · chat_theme=${owner.chat_theme}`);
 
-    // ─── 0b. Upgrade tier to bisnis so philip can own 2+ businesses ─
-    if (owner.tier !== "bisnis") {
-      await pg.query(
-        `UPDATE nex_account SET tier='bisnis', bisnis_expires_at='9999-12-31'::timestamptz WHERE id=$1`,
-        [owner.id],
-      );
-      console.log(`[0b] upgraded ${owner.display_name} tier gratis → bisnis`);
-    } else {
-      console.log(`[0b] founder already on bisnis tier`);
-    }
-
     // ─── 1a. Upload assets to storage ──────────────────────────────
+    // Storage uploads happen BEFORE opening the DB transaction so
+    // the Postgres tx window is as short as possible. Supabase
+    // Storage uploads cannot participate in a PG tx; a partial
+    // upload leaves well-known paths with upsert:true semantics,
+    // so a re-run safely overwrites them (no orphans).
     console.log(`[1a] uploading intro video → nex-theme-intro/${THEME_ID}.mp4`);
     const introUrl = await uploadAsset(
       "nex-theme-intro",
@@ -160,6 +155,41 @@ async function main() {
       "image/png",
     );
     console.log(`      ${wallpaperUrl}`);
+    // Business logo · reuses the sealed onboarding-logo bucket
+    // (nex-peer-chat-attachments → business-logo/{slug}/logo.png)
+    // so the file lives alongside production-uploaded seller logos.
+    console.log(`[1a] uploading logo → nex-peer-chat-attachments/business-logo/${BUSINESS_SLUG}/logo.png`);
+    const logoUrl = await uploadAsset(
+      "nex-peer-chat-attachments",
+      ASSET_LOGO,
+      `business-logo/${BUSINESS_SLUG}/logo.png`,
+      "image/png",
+    );
+    console.log(`      ${logoUrl}`);
+
+    // ─── Open the DB transaction · all PG writes below are atomic ──
+    // Any failure between BEGIN and COMMIT triggers ROLLBACK in the
+    // catch · no partial DB state persists. Storage objects uploaded
+    // above remain (deterministic paths, idempotent re-run).
+    //
+    // Hoisted to the outer scope so the post-COMMIT summary logger
+    // (which lives OUTSIDE the inner tx-try's block scope) can read
+    // these values without a ReferenceError.
+    let businessId;
+    let productCountQuery;
+
+    await pg.query("BEGIN");
+    try {
+    // ─── 0b. Upgrade tier to bisnis so philip can own 2+ businesses ─
+    if (owner.tier !== "bisnis") {
+      await pg.query(
+        `UPDATE nex_account SET tier='bisnis', bisnis_expires_at='9999-12-31'::timestamptz WHERE id=$1`,
+        [owner.id],
+      );
+      console.log(`[0b] upgraded ${owner.display_name} tier gratis → bisnis`);
+    } else {
+      console.log(`[0b] founder already on bisnis tier`);
+    }
 
     // ─── 1b. Create / update chat theme ────────────────────────────
     await pg.query(
@@ -206,12 +236,24 @@ async function main() {
       console.log(`[1c] founder already on theme ${THEME_ID}`);
     }
 
+    // ─── 1d. Set founder's account_profile avatar to the Hammerex logo ──
+    // Shown wherever the viewer sees their own identity (dashboard,
+    // chat cards, settings), via nex_account_profile.avatar_url (M045).
+    await pg.query(
+      `
+      INSERT INTO nex_account_profile (account_id, avatar_url)
+      VALUES ($1, $2)
+      ON CONFLICT (account_id) DO UPDATE SET avatar_url = EXCLUDED.avatar_url
+      `,
+      [owner.id, logoUrl],
+    );
+    console.log(`[1d] founder avatar_url set → logo`);
+
     // ─── 2a. Create / update business row ─────────────────────────
     const existing = await pg.query(
       `SELECT id, cover_layout_id FROM nex_business WHERE slug=$1`,
       [BUSINESS_SLUG],
     );
-    let businessId;
     if (existing.rows[0]) {
       businessId = existing.rows[0].id;
       await pg.query(
@@ -220,20 +262,21 @@ async function main() {
            description=$2,
            cover_layout_id=$3,
            business_category=$4,
+           logo_url=$5,
            market_reach='both',
            updated_at=now()
-         WHERE id=$5`,
-        [BUSINESS_NAME, BUSINESS_DESCRIPTION, COVER_LAYOUT_ID, BUSINESS_CATEGORY, businessId],
+         WHERE id=$6`,
+        [BUSINESS_NAME, BUSINESS_DESCRIPTION, COVER_LAYOUT_ID, BUSINESS_CATEGORY, logoUrl, businessId],
       );
       console.log(`[0c] business ${BUSINESS_SLUG} already existed · updated · id=${businessId}`);
     } else {
       const ins = await pg.query(
         `INSERT INTO nex_business
            (owner_account_id, display_name, slug, description, cover_layout_id,
-            business_category, market_reach, accepts_cod, accepts_pickup)
-         VALUES ($1, $2, $3, $4, $5, $6, 'both', true, true)
+            business_category, logo_url, market_reach, accepts_cod, accepts_pickup)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'both', true, true)
          RETURNING id`,
-        [owner.id, BUSINESS_NAME, BUSINESS_SLUG, BUSINESS_DESCRIPTION, COVER_LAYOUT_ID, BUSINESS_CATEGORY],
+        [owner.id, BUSINESS_NAME, BUSINESS_SLUG, BUSINESS_DESCRIPTION, COVER_LAYOUT_ID, BUSINESS_CATEGORY, logoUrl],
       );
       businessId = ins.rows[0].id;
       console.log(`[0c] created business ${BUSINESS_SLUG} · id=${businessId}`);
@@ -277,11 +320,18 @@ async function main() {
       founder_notice:
         "This business is the first live NEX premium showcase · managed by the founder until a real business owner is assigned.",
     };
+    // Shallow jsonb merge · preserves any pre-existing top-level keys
+    // (Rev 6 §5 primary/secondary classification, future owner-set
+    // keys, etc.) while overriding service_package / is_founder_showcase
+    // / founder_notice with the seed's authoritative values. Safe when
+    // profile is NULL (COALESCE → {}) and idempotent on re-runs.
     await pg.query(
-      `UPDATE nex_business SET profile=$1 WHERE id=$2`,
+      `UPDATE nex_business
+         SET profile = COALESCE(profile, '{}'::jsonb) || $1::jsonb
+       WHERE id = $2`,
       [servicePackage, businessId],
     );
-    console.log(`[2a-pkg] service package record stored in nex_business.profile · status=proposed`);
+    console.log(`[2a-pkg] service package record merged into nex_business.profile · status=proposed`);
 
     // ─── 2b. Seed products ─────────────────────────────────────────
     let inserted = 0, updated = 0;
@@ -316,11 +366,23 @@ async function main() {
     }
     console.log(`[2a] products · inserted=${inserted} · updated=${updated} · total=${SAMPLE_PRODUCTS.length}`);
 
-    // ─── Final sanity ─────────────────────────────────────────────
-    const q = await pg.query(
+    // ─── Final sanity (inside tx; read-only but counts post-write state) ──
+    productCountQuery = await pg.query(
       `SELECT count(*)::int AS n FROM nex_product WHERE business_id=$1 AND status='live'`,
       [businessId],
     );
+
+    // Commit the whole DB transaction atomically.
+    await pg.query("COMMIT");
+    } catch (err) {
+      // Any PG error between BEGIN and COMMIT lands here. ROLLBACK
+      // discards every write in this transaction (0b, 1b, 1c, 1d,
+      // 2a, 2a-pkg, 2b). Re-throw so the top-level handler reports
+      // non-zero exit · the storage objects uploaded above remain
+      // at their deterministic paths (safe idempotent re-run).
+      try { await pg.query("ROLLBACK"); } catch { /* best-effort */ }
+      throw err;
+    }
     console.log(`\n═══ SEEDED ═══`);
     console.log(`business       : ${BUSINESS_NAME}`);
     console.log(`slug           : ${BUSINESS_SLUG}`);
@@ -330,7 +392,7 @@ async function main() {
     console.log(`chat theme     : ${THEME_ID}`);
     console.log(`intro video    : ${introUrl}`);
     console.log(`wallpaper      : ${wallpaperUrl}`);
-    console.log(`live products  : ${q.rows[0].n}`);
+    console.log(`live products  : ${productCountQuery.rows[0].n}`);
     console.log(`shop link      : https://nexapp-mu.vercel.app/nex-native/${BUSINESS_SLUG}?commerce=1`);
   } finally {
     await pg.end();
