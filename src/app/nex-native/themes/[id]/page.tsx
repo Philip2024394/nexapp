@@ -20,6 +20,7 @@
 // preview stubs) so nothing writes to the DB.
 
 import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
 import * as chatThemeService from "@/lib/nex-native/chat-theme-service";
 import { listThemeEmojis } from "@/lib/nex-native/theme-emoji-service";
 import { listThemeStickers } from "@/lib/nex-native/theme-sticker-service";
@@ -35,6 +36,12 @@ import { UniversalChromeOverlay } from "../../chat-standard/_universal-chrome-ov
 import { UniversalComposerFooter } from "../../chat-standard/_universal-composer-footer";
 import { UniversalHeaderIconsOverlay } from "../../chat-standard/_universal-header-icons-overlay";
 import { trackThemeView } from "@/lib/nex-native/theme-view-service";
+import { resolveNexAppSessionOrGuest } from "@/lib/nex-native/app/session-or-guest";
+import {
+  effectiveTier,
+  isThemesTrialActive,
+} from "@/lib/nex-native/account-service";
+import { pickPremiumBannerCopy } from "./_premium-banner-copy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -131,8 +138,105 @@ export default async function ThemeViewerPage({
     aspectRatio: row.aspect_ratio,
   }));
 
+  // Honest premium banner · sealed 2026-10-14 · bounded addition.
+  //
+  // Shown ONLY when the theme is category='premium' AND the viewer
+  // cannot activate it today. The copy is sourced from
+  // _premium-banner-copy.ts (pure helper with its own test suite,
+  // including the forbidden-phrase guard that fails the build if a
+  // future refactor silently claims payment works). Direct theme
+  // purchase is NOT available · migrations 191–196 are drafts.
+  // Service-role reads of nex_chat_theme (nexSupabaseAdmin) make
+  // the theme row visible regardless of RLS, which is correct for
+  // the viewer preview path.
+  const viewer = await resolveNexAppSessionOrGuest();
+  const canUsePremium =
+    viewer.kind === "session" &&
+    (effectiveTier(viewer.session.account) === "bisnis" ||
+      effectiveTier(viewer.session.account) === "pro" ||
+      isThemesTrialActive(viewer.session.account));
+  const premiumBanner = pickPremiumBannerCopy({
+    viewerKind: viewer.kind,
+    category: theme.category,
+    canUsePremium,
+  });
+
   return (
     <>
+      {premiumBanner ? (
+        <div
+          data-nex-themes-premium-banner
+          style={{
+            position: "fixed",
+            top: "calc(env(safe-area-inset-top, 0px) + 10px)",
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 6,
+            maxWidth: 420,
+            width: "calc(100vw - 24px)",
+            padding: "10px 14px",
+            borderRadius: 14,
+            background: "rgba(2, 9, 20, 0.78)",
+            border: "1px solid rgba(0, 175, 255, 0.42)",
+            boxShadow:
+              "0 10px 28px rgba(0, 0, 0, 0.55), 0 0 24px rgba(0, 175, 255, 0.18)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            color: "#F2F5F8",
+            fontFamily:
+              "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+          }}
+          role="region"
+          aria-label="Premium theme information"
+        >
+          <div
+            style={{
+              fontSize: 9,
+              letterSpacing: "0.22em",
+              textTransform: "uppercase",
+              fontWeight: 800,
+              color: "#00AFFF",
+            }}
+          >
+            {premiumBanner.eyebrow}
+          </div>
+          <div
+            style={{
+              fontSize: 13,
+              fontWeight: 700,
+              lineHeight: 1.3,
+            }}
+          >
+            {premiumBanner.headline}
+          </div>
+          <div
+            style={{
+              fontSize: 11,
+              lineHeight: 1.4,
+              color: "#B5C3D6",
+            }}
+          >
+            {premiumBanner.subheading}
+          </div>
+          <Link
+            href={premiumBanner.ctaHref}
+            style={{
+              marginTop: 4,
+              alignSelf: "flex-start",
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.04em",
+              color: "#FF7200",
+              textDecoration: "none",
+            }}
+          >
+            {premiumBanner.ctaLabel} →
+          </Link>
+        </div>
+      ) : null}
       <ThemeViewerClient
         themeId={theme.id}
         themeName={theme.name}

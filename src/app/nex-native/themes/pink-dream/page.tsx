@@ -26,6 +26,7 @@ import {
 import { UniversalChromeOverlay } from "../../chat-standard/_universal-chrome-overlay";
 import { UniversalComposerFooter } from "../../chat-standard/_universal-composer-footer";
 import { UniversalHeaderIconsOverlay } from "../../chat-standard/_universal-header-icons-overlay";
+import { ChatIdentityHeader } from "@/lib/nex-native/chat-chrome/chat-identity-header";
 
 // -- Palette -----------------------------------------------------
 const P = {
@@ -351,76 +352,19 @@ export default function PinkDreamPreviewPage() {
           gap: 10,
         }}
       >
-        {/* Portrait · two ping rings + heart charm at bottom-right */}
-        <div
-          style={{
-            position: "relative",
-            width: 52,
-            height: 52,
-            flexShrink: 0,
-          }}
-        >
-          <span aria-hidden data-portrait-ping />
-          <span aria-hidden data-portrait-ping data-portrait-ping-2 />
-          <div
-            aria-hidden
-            style={{
-              position: "relative",
-              width: 52,
-              height: 52,
-              borderRadius: "50%",
-              background: "url(/nex-themes/pink-dream.png) center/cover",
-              border: "2px solid rgba(255,255,255,0.85)",
-              boxShadow: "0 0 12px rgba(255,79,163,0.65)",
-            }}
-          />
-          {/* Bridge 24aj · heart sits DIRECTLY on the portrait rim ·
-             no dark-navy badge, no white ring · just the SVG heart
-             with its own gradient + glow floating on the corner. */}
-          <span
-            aria-hidden
-            style={{
-              position: "absolute",
-              bottom: -4,
-              right: -4,
-              zIndex: 3,
-              lineHeight: 0,
-            }}
-          >
-            <PinkHeart size={20} />
-          </span>
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: 16,
-              fontWeight: 700,
-              letterSpacing: "-0.005em",
-              color: P.softWhite,
-              lineHeight: 1.15,
-            }}
-          >
-            Bunny
-          </div>
-          {/* Bridge 24ai · profession is a golden-rule NEX field ·
-             every account picks one at create-time · always shown
-             under the display name in the chat header. */}
-          <div
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-              color: P.softBabyPink,
-              marginTop: 2,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            Illustrator
-          </div>
-        </div>
+        {/* Master layout rule 2026-10-14 · identity row delegates to
+            the shared ChatIdentityHeader primitive. Pink Dream passes
+            its hot-pink heartbeat colour and the PinkHeart charm as
+            the approved avatar decoration. */}
+        <ChatIdentityHeader
+          avatarUrl="/nex-themes/pink-dream.png"
+          displayName="Bunny"
+          subtitle="Illustrator"
+          presenceKind="online"
+          heartbeatColor="#FF4FA3"
+          avatarDecoration={<PinkHeart size={20} />}
+          rightReserveWidth={0}
+        />
         {/* Bridge 53 · standard chat header right-cluster · order
            refined to [Home] [Cart] [Shop/Menu] · nested flex row
            with a tighter gap so the profession subtitle has more

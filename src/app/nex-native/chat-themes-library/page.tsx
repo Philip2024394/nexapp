@@ -26,7 +26,6 @@
 // Doctrine · doctrine_theme_ownership_2026_09_27.md.
 
 import Link from "next/link";
-import { startThemesTrialAction } from "../_actions";
 import { CategoryGrid } from "./_category-grid";
 import { loadLibraryData } from "./_load-library-data";
 import { loadLibraryDataAsGuest } from "./_load-library-data-guest";
@@ -194,12 +193,9 @@ export default async function ThemePickerPage({
 
           <FreeNexPhonePair themes={browserThemes} isGuest={isGuest} />
 
-          <section
-            aria-label="Free trial 7 days"
-            style={{ maxWidth: 720, margin: "0 auto 20px" }}
-          >
-            <FreeTrialSevenDaysCard />
-          </section>
+          {/* Free Trial 7 Days callout removed 2026-10-15 per owner
+              directive. Entry-point to a trial is handled elsewhere
+              in the signup / pick-theme flow. */}
 
           <div style={{ maxWidth: 720, margin: "0 auto" }}>
             <SectionDivider label="Chat Themes" accentColor={NEX.cyan} />
@@ -787,93 +783,10 @@ function FreeNexPhone({
   );
 }
 
-// ─── Free Trial 7 Days callout · lightweight pill-ish card ─────────
-//
-// Sits between the two free NEX phones and the Chat Themes grid.
-// Rendered unconditionally for every viewer (session + guest). The
-// trial state (active / unused / used) that the earlier
-// TrySevenDaysFreeCard tracked lives in a separate account-settings
-// flow now · this card is a top-of-funnel pointer to Try 7 days free,
-// not an entitlement surface.
-
-function FreeTrialSevenDaysCard() {
-  return (
-    <form
-      action={startThemesTrialAction}
-      data-nex-trial-card="offer"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        padding: "12px 16px",
-        borderRadius: 14,
-        background: `linear-gradient(180deg, ${NEX.orangeFaint} 0%, rgba(3,16,29,0.72) 100%)`,
-        border: `1px solid ${NEX.orange}66`,
-        flexWrap: "wrap",
-      }}
-    >
-      <span
-        aria-hidden
-        style={{
-          padding: "3px 10px",
-          borderRadius: 999,
-          background: `linear-gradient(180deg, #FF9033 0%, ${NEX.orange} 100%)`,
-          color: "#0B0F1A",
-          fontSize: 10,
-          fontWeight: 900,
-          letterSpacing: "0.14em",
-          flex: "none",
-        }}
-      >
-        FREE
-      </span>
-      <div style={{ flex: 1, minWidth: 160 }}>
-        <div
-          style={{
-            fontSize: 14,
-            fontWeight: 700,
-            color: NEX.text,
-            letterSpacing: "-0.005em",
-            marginBottom: 2,
-          }}
-        >
-          Free Trial 7 Days
-        </div>
-        <div
-          style={{
-            fontSize: 11.5,
-            color: NEX.textDim,
-            lineHeight: 1.5,
-          }}
-        >
-          Try any theme free for 7 days and impress your contacts.
-          Just notice their reactions.
-        </div>
-      </div>
-      <input type="hidden" name="package_id" value="bisnis" />
-      <button
-        type="submit"
-        style={{
-          padding: "8px 14px",
-          borderRadius: 999,
-          background:
-            "linear-gradient(180deg, #FF9033 0%, #FF7200 100%)",
-          border: `1px solid ${NEX.orange}99`,
-          color: "#0B0F1A",
-          fontSize: 11.5,
-          fontWeight: 800,
-          letterSpacing: "0.04em",
-          cursor: "pointer",
-          fontFamily: "inherit",
-          whiteSpace: "nowrap",
-          flex: "none",
-        }}
-      >
-        Start trial →
-      </button>
-    </form>
-  );
-}
+// ─── Free Trial 7 Days callout REMOVED 2026-10-15 per owner
+//     directive. Trial entry lives in the signup / pick-theme flow.
+//     Component definition, call site, and startThemesTrialAction
+//     import all deleted.
 
 /** Shared pill-link style for the "Explore →" CTA on each free NEX
  *  phone tile. Renders as an anchor (next/link) · navigates to the

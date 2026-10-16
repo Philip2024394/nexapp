@@ -25,12 +25,27 @@ import {
   StandardExperience,
   type StandardExperienceSeedMessage,
 } from "../../chat-standard/_standard-experience";
+import { NexPlanetApproachClient } from "@/lib/nex-native/nex-planet-approach-client";
+import { MarkSelectedThemeClient } from "./_mark-selected-theme-client";
 
-const PEER = {
+// Default fixture peer · used for every non-NEX-brand preview so
+// non-NEX themes still show a believable chat partner. NEX-brand
+// themes (NEX Original · NEX Blue Centre · future NEX themes)
+// override this to show the NEX identity itself until the viewer
+// creates an account (owner directive 2026-10-15).
+const FIXTURE_PEER = {
   accountId: "fx-maria",
   displayName: "Maria Santos",
   tagline: "Footwear Designer · Lisbon",
-  avatarUrl: null,
+  avatarUrl: null as string | null,
+  isOnline: true,
+};
+
+const NEX_GUEST_PEER = {
+  accountId: "fx-nex-brand",
+  displayName: "NEX",
+  tagline: "You are a guest · create an account to chat",
+  avatarUrl: null as string | null,
   isOnline: true,
 };
 
@@ -90,6 +105,18 @@ export function StandardExperienceLiveClient({
     StandardExperienceSeedMessage[]
   >([]);
 
+  // 2026-10-15 · owner directive · NEX-brand theme previews (NEX
+  // Original · NEX Blue Centre · any future "NEX "-prefixed theme)
+  // present NEX itself as the chat peer until the user creates an
+  // account, instead of the Maria Santos fixture used for other
+  // theme previews. The condition matches the same shape used by
+  // _viewer.tsx so both routing paths stay consistent.
+  const isNexBrandTheme = pkg.identity.name
+    .trim()
+    .toUpperCase()
+    .startsWith("NEX ");
+  const peer = isNexBrandTheme ? NEX_GUEST_PEER : FIXTURE_PEER;
+
   const handleSend = React.useCallback((body: string) => {
     setLocalMessages((prev) => [
       ...prev,
@@ -122,9 +149,23 @@ export function StandardExperienceLiveClient({
         background: "#000",
       }}
     >
+      {/* NEX planet-approach control + animation · 3-dots trigger in
+          the bottom-right opens a vertical panel with one button that
+          plays the "planet approaching the camera and flying by"
+          animation. Mounted only on NEX-brand theme previews
+          (owner directive 2026-10-15). */}
+      {isNexBrandTheme && <NexPlanetApproachClient />}
+
+      {/* 2026-10-15 · owner-authorised · remember which free NEX
+          theme the guest previewed so `createNexAccountAction` can
+          redirect them straight back to it after signup. Fire-and-
+          forget cookie beacon · no visual UI · harmless when the
+          viewer is already authenticated. */}
+      {isNexBrandTheme && <MarkSelectedThemeClient themeId={pkg.identity.id} />}
+
       <StandardExperience
         engine={engine}
-        peer={PEER}
+        peer={peer}
         seedMessages={SEED_MESSAGES}
         products={PRODUCTS}
         onSendLocalMessage={handleSend}

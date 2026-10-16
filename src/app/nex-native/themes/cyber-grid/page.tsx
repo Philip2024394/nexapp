@@ -26,6 +26,7 @@ import * as React from "react";
 import { UniversalChromeOverlay } from "../../chat-standard/_universal-chrome-overlay";
 import { UniversalComposerFooter } from "../../chat-standard/_universal-composer-footer";
 import { UniversalHeaderIconsOverlay } from "../../chat-standard/_universal-header-icons-overlay";
+import { ChatIdentityHeader } from "@/lib/nex-native/chat-chrome/chat-identity-header";
 
 const PALETTE = {
   bg: "#050b09",            // near-black with a green undertone
@@ -194,58 +195,18 @@ export default function CyberGridPreviewPage(): React.JSX.Element {
             borderBottom: `1px solid rgba(76,255,122,0.18)`,
           }}
         >
-          {/* Peer avatar · maria portrait behind a green rim ·
-              paired with a pulsing "online" ping (two rings offset
-              0.9s apart, matching the Theme 1 pattern but tinted
-              emerald for Cyber Grid). Ping only renders when the
-              peer is online · here it's on because the fixture peer
-              is live. */}
-          <div style={{ position: "relative", width: 52, height: 52, flexShrink: 0 }}>
-            <span aria-hidden data-cg-ping />
-            <span aria-hidden data-cg-ping data-cg-ping-2 />
-            <div
-              aria-hidden
-              style={{
-                position: "relative",
-                width: 52,
-                height: 52,
-                borderRadius: "50%",
-                background: `url(${MARIA_PORTRAIT}) center/cover`,
-                border: `2px solid ${PALETTE.cursor}`,
-                boxShadow: `0 0 12px ${PALETTE.glow}, inset 0 0 6px rgba(0,0,0,0.35)`,
-              }}
-            />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: 16,
-                fontWeight: 700,
-                letterSpacing: "-0.005em",
-                color: PALETTE.body,
-                lineHeight: 1.15,
-                fontFamily: MONO,
-              }}
-            >
-              maria
-            </div>
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 600,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: PALETTE.mariaName,
-                marginTop: 2,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                textShadow: `0 0 6px ${PALETTE.glow}`,
-              }}
-            >
-              photographer
-            </div>
-          </div>
+          {/* Master layout rule 2026-10-14 · identity row delegates
+              to the shared ChatIdentityHeader primitive. Cyber-Grid
+              passes its emerald as the heartbeat colour so the ring
+              reads as theme-tinted while the chrome stays locked. */}
+          <ChatIdentityHeader
+            avatarUrl={MARIA_PORTRAIT}
+            displayName="maria"
+            subtitle="photographer"
+            presenceKind="online"
+            heartbeatColor={PALETTE.cursor}
+            rightReserveWidth={0}
+          />
           {/* Standard right-cluster · Home · Cart · Shop · tinted to
               the emerald accent so the icons read as green outlines
               consistent with the terminal palette.

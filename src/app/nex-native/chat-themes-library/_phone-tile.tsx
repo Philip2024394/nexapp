@@ -52,6 +52,24 @@ const NEX = {
   textDim: "#8BA9D1",
 };
 
+/** Chip kinds that a tile can display in its top-right corner.
+ *  Priority order (highest first): active · locked · trial · premium.
+ *  Pure function so it can be unit-tested without jsdom. */
+export type TileChipKind = "active" | "locked" | "trial" | "premium" | null;
+
+export function pickTileChipKind(args: {
+  active: boolean;
+  locked: boolean;
+  trialBadge: boolean;
+  category: "standard" | "premium";
+}): TileChipKind {
+  if (args.active) return "active";
+  if (args.locked) return "locked";
+  if (args.trialBadge) return "trial";
+  if (args.category === "premium") return "premium";
+  return null;
+}
+
 // Scales the DB overlay config down for a 160–220 px wide tile. 24
 // sparkles on a tile reads as noise; 6 reads as "this theme has stars".
 function scaleConfigForTile(
@@ -367,8 +385,13 @@ function PhoneTile({
           }}
         />
 
-        {/* State chip (top-right corner) · active beats locked beats
-            trial badge. One chip at a time to keep the tile calm. */}
+        {/* State chip (top-right corner) · priority: active · locked ·
+            trial · premium. One chip at a time to keep the tile calm.
+            PREMIUM is a honest catalogue-section signal driven by
+            nex_chat_theme.category · it does NOT imply purchase/
+            activation state (those are gated by tier + canUsePremium
+            via `locked`). Keep the priority order aligned with
+            pickTileChipKind() above so unit tests reflect UI reality. */}
         {active ? (
           <span
             style={{
@@ -428,6 +451,27 @@ function PhoneTile({
             }}
           >
             FREE
+          </span>
+        ) : theme.category === "premium" ? (
+          <span
+            data-nex-themes-tile-chip="premium"
+            style={{
+              position: "absolute",
+              top: 10,
+              right: 10,
+              fontSize: 8,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              fontWeight: 800,
+              padding: "3px 7px",
+              borderRadius: 999,
+              background: NEX.cyanFaint,
+              border: `1px solid ${NEX.cyanBorder}`,
+              color: NEX.cyan,
+              zIndex: 5,
+            }}
+          >
+            Premium
           </span>
         ) : null}
       </div>

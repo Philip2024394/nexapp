@@ -130,8 +130,8 @@ export function PinkDreamBottomTabs({
                     padding: "0 4px",
                     borderRadius: 999,
                     background:
-                      "linear-gradient(180deg, #FF77BC, #FF3F9F)",
-                    color: "#0B0F1A",
+                      "linear-gradient(180deg, #CC1818, #7A0000)",
+                    color: "#FFFFFF",
                     fontSize: 9,
                     fontWeight: 800,
                     lineHeight: 1,
@@ -139,7 +139,7 @@ export function PinkDreamBottomTabs({
                     alignItems: "center",
                     justifyContent: "center",
                     border: "1.5px solid rgba(12, 7, 18, 0.85)",
-                    boxShadow: "0 3px 8px rgba(255, 63, 159, 0.55)",
+                    boxShadow: "0 3px 8px rgba(122, 0, 0, 0.65)",
                     fontFamily: SANS,
                   }}
                 >

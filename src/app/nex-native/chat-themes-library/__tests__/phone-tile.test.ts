@@ -5,7 +5,7 @@
 // tile. Scales particle/sparkle counts and omits mist entirely.
 
 import { describe, expect, it } from "vitest";
-import { scaleConfigForTile } from "../_phone-tile";
+import { scaleConfigForTile, pickTileChipKind } from "../_phone-tile";
 
 describe("scaleConfigForTile", () => {
   it("returns null for null input", () => {
@@ -142,5 +142,70 @@ describe("scaleConfigForTile", () => {
     expect(out?.sparkle).toBeUndefined();
     expect(out?.particleDrift).toBeUndefined();
     expect(out?.mistDrift).toBeUndefined();
+  });
+});
+
+describe("pickTileChipKind · state-chip priority", () => {
+  // Rationale: encodes the honest priority the tile JSX actually
+  // renders · active > locked > trial > premium. If the priority
+  // ever changes in the JSX, this test must change too. Pure
+  // function · no jsdom required.
+
+  it("returns 'active' when the viewer's current theme matches, overriding every other flag", () => {
+    expect(
+      pickTileChipKind({ active: true, locked: true, trialBadge: true, category: "premium" }),
+    ).toBe("active");
+    expect(
+      pickTileChipKind({ active: true, locked: false, trialBadge: false, category: "standard" }),
+    ).toBe("active");
+  });
+
+  it("returns 'locked' when the theme is Bisnis-gated and the viewer can't use premium, overriding trial + premium chips", () => {
+    expect(
+      pickTileChipKind({ active: false, locked: true, trialBadge: true, category: "premium" }),
+    ).toBe("locked");
+    expect(
+      pickTileChipKind({ active: false, locked: true, trialBadge: false, category: "standard" }),
+    ).toBe("locked");
+  });
+
+  it("returns 'trial' when a trial badge is active and the theme is not already locked/active, overriding the premium chip", () => {
+    expect(
+      pickTileChipKind({ active: false, locked: false, trialBadge: true, category: "premium" }),
+    ).toBe("trial");
+    expect(
+      pickTileChipKind({ active: false, locked: false, trialBadge: true, category: "standard" }),
+    ).toBe("trial");
+  });
+
+  it("returns 'premium' for category='premium' tiles when no higher-priority chip applies · covers free-premium showcases and premium-accessible viewers", () => {
+    expect(
+      pickTileChipKind({ active: false, locked: false, trialBadge: false, category: "premium" }),
+    ).toBe("premium");
+  });
+
+  it("returns null for category='standard' tiles when no chip applies · keeps the standard-tile UI calm", () => {
+    expect(
+      pickTileChipKind({ active: false, locked: false, trialBadge: false, category: "standard" }),
+    ).toBe(null);
+  });
+
+  it("never claims purchase or ownership state · chip kinds are strictly { active · locked · trial · premium · null }", () => {
+    // Exhaustive-type guard: this test exists so a future refactor
+    // that adds (for example) an "owned" or "purchased" chip MUST
+    // also update the sealed boundary that no ownership/purchase
+    // UI state is driven from this helper. Those states require
+    // migrations 191-196 which are not yet applied.
+    const kinds = new Set<string | null>();
+    for (const active of [false, true]) {
+      for (const locked of [false, true]) {
+        for (const trialBadge of [false, true]) {
+          for (const category of ["standard", "premium"] as const) {
+            kinds.add(pickTileChipKind({ active, locked, trialBadge, category }));
+          }
+        }
+      }
+    }
+    expect(kinds).toEqual(new Set(["active", "locked", "trial", "premium", null]));
   });
 });

@@ -23,6 +23,7 @@ import {
 import { UniversalChromeOverlay } from "../../chat-standard/_universal-chrome-overlay";
 import { UniversalComposerFooter } from "../../chat-standard/_universal-composer-footer";
 import { UniversalHeaderIconsOverlay } from "../../chat-standard/_universal-header-icons-overlay";
+import { ChatIdentityHeader } from "@/lib/nex-native/chat-chrome/chat-identity-header";
 
 const P = {
   accent: "#7EB6FF",      // Theme 1 accent (light sky blue)
@@ -212,64 +213,19 @@ export default function Theme1PreviewPage() {
           gap: 10,
         }}
       >
-        {/* Portrait · ping rings + camera charm (Maria is a
-           photographer · her identity glyph = camera in blue) */}
-        <div style={{ position: "relative", width: 52, height: 52, flexShrink: 0 }}>
-          <span aria-hidden data-t1-ping />
-          <span aria-hidden data-t1-ping data-t1-ping-2 />
-          <div
-            aria-hidden
-            style={{
-              position: "relative",
-              width: 52,
-              height: 52,
-              borderRadius: "50%",
-              background: `url(${WALLPAPER}) center/cover`,
-              border: "2px solid rgba(255,255,255,0.85)",
-              boxShadow: `0 0 12px ${P.accentDeep}`,
-            }}
-          />
-          <span
-            aria-hidden
-            style={{
-              position: "absolute",
-              bottom: -4,
-              right: -4,
-              zIndex: 3,
-              lineHeight: 0,
-            }}
-          >
-            <BlueCamera size={20} />
-          </span>
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: 16,
-              fontWeight: 700,
-              letterSpacing: "-0.005em",
-              color: P.softWhite,
-              lineHeight: 1.15,
-            }}
-          >
-            Maria
-          </div>
-          <div
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-              color: P.accent,
-              marginTop: 2,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            Photographer
-          </div>
-        </div>
+        {/* Master layout rule 2026-10-14 · identity row delegates to
+            the shared ChatIdentityHeader primitive. Theme 1 passes
+            its sky-blue heartbeat colour and the BlueCamera charm as
+            the approved avatar decoration (Maria = photographer). */}
+        <ChatIdentityHeader
+          avatarUrl={WALLPAPER}
+          displayName="Maria"
+          subtitle="Photographer"
+          presenceKind="online"
+          heartbeatColor={P.accentDeep}
+          avatarDecoration={<BlueCamera size={20} />}
+          rightReserveWidth={0}
+        />
         {/* Bridge 53 · standard chat header right-cluster · order
            refined to [Home] [Cart] [Shop/Menu] · nested flex row
            with a tighter gap so the profession subtitle has more

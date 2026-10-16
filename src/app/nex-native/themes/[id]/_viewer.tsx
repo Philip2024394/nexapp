@@ -25,6 +25,7 @@ import {
 import { JokerController } from "./_joker-controller";
 import { getThemeAssets } from "@/lib/nex-native/theme-assets";
 import { UniversalComposerFooter } from "../../chat-standard/_universal-composer-footer";
+import { PlanetFlyThroughOverlay } from "@/lib/nex-native/planet-fly-through-client";
 import type { BuiltInThemeEmoji } from "@/lib/nex-native/theme-asset-fallback";
 import { TrustScan } from "@/app/nex-native/_trust-scan/TrustScan";
 import { mockTrustScanProvider } from "@/app/nex-native/_trust-scan/trust-scan-mock-provider";
@@ -94,9 +95,9 @@ interface ThemeViewerClientProps {
 // items. Both kinds always appear in the array; PortraitBloomShell's
 // ShopGridModal renders them uniformly, only the header icon +
 // eyebrow copy toggle based on isVenue.
-const MOCK_PREVIEW_SHOP = {
-  name: "Maria's Studio",
-  href: null,
+// Shop name + shop_display_name are filled from the current theme name
+// at render time so the slider always reads as the business viewing it.
+const MOCK_PREVIEW_SHOP_PRODUCTS = {
   products: [
     {
       id: "preview-p1",
@@ -158,7 +159,6 @@ const MOCK_PREVIEW_SHOP = {
     shop_id: "preview-shop",
     shop_slug: null,
     shop_owner_account_id: "preview-owner",
-    shop_display_name: "Maria's Studio",
   },
 };
 
@@ -344,6 +344,18 @@ export default function ThemeViewerClient(
   // for now · Phase 3 lifts them into runtime chromes.
   const effectiveLayout = props.layoutStyle === "bubbles" ? "bubbles" : "bubbles";
 
+  // 2026-10-15 · owner-authorised flag for the two free NEX themes.
+  // Any theme whose name starts with "NEX " (NEX Original · NEX Blue
+  // Centre · future NEX-brand themes) opts in to:
+  //   · PortraitBloomShell `useNexPingBadge` (shared ping identity)
+  //   · PlanetFlyThroughOverlay (ambient planets drifting across the
+  //     viewport · pure CSS gradient circles · zero runtime cost after
+  //     mount · respects prefers-reduced-motion)
+  const isNexBrandTheme = (props.themeName || "")
+    .trim()
+    .toUpperCase()
+    .startsWith("NEX ");
+
   return (
     <>
       {/* Founder direction 2026-10-01 · the "← Gallery", "Preview ·
@@ -355,6 +367,8 @@ export default function ThemeViewerClient(
           To flip the shop slider between Shop and Menu presentation
           use ?mode=menu on the URL · no on-screen toggle. */}
 
+      {isNexBrandTheme && <PlanetFlyThroughOverlay />}
+
       <PortraitBloomShell
         scope="theme-preview"
         /* Founder direction 2026-10-01 · the peer display name in the
@@ -365,6 +379,10 @@ export default function ThemeViewerClient(
            preview). */
         displayName={props.themeName || "Maria"}
         subtitle="Photographer"
+        /* 2026-10-15 · NEX-brand theme previews swap the Maria portrait
+           for the shared NEX ping badge (blue ring + ping + "NE") so
+           the preview matches landing + welcome brand identity. */
+        useNexPingBadge={isNexBrandTheme}
         portraitUrl={MARIA_PORTRAIT}
         presenceKind="online"
         presenceLabel="OPEN · here now"
@@ -386,7 +404,13 @@ export default function ThemeViewerClient(
            theme's colours applied. Cart-order + inquiry actions
            are noop stubs so nothing writes to the DB. */
         peerShop={{
-          ...MOCK_PREVIEW_SHOP,
+          name: props.themeName,
+          href: null,
+          products: MOCK_PREVIEW_SHOP_PRODUCTS.products,
+          context: {
+            ...MOCK_PREVIEW_SHOP_PRODUCTS.context,
+            shop_display_name: props.themeName,
+          },
           isVenue: props.isVenueMode,
         }}
         sendCartOrderAction={noopAction}
