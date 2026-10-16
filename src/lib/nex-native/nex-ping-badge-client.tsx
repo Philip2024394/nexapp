@@ -33,8 +33,11 @@ export function NexPingBadge({
 }: NexPingBadgeProps): React.ReactElement {
   // Core measurements · derived once per render so a bigger badge
   // scales ring thickness, inner text, and ping diameter together.
+  // "NEX" (3 chars) needs a smaller font-size ratio than "NE" (2
+  // chars) did so the word fits inside the circle without clipping ·
+  // owner directive 2026-10-15.
   const ringThickness = Math.max(2, Math.round(size * 0.055));
-  const textSize = Math.round(size * 0.32);
+  const textSize = Math.round(size * 0.26);
 
   // Static keyframe name + class · same for every badge instance.
   // Multiple badges on one page share the keyframe and the reduced-
@@ -110,7 +113,7 @@ export function NexPingBadge({
             lineHeight: 1,
           }}
         >
-          NE
+          NEX
         </div>
       </div>
     </>

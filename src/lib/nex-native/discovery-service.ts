@@ -284,6 +284,49 @@ export async function allBusinessIdsWithLiveProducts(): Promise<Set<string>> {
  *
  * Never fabricates. Returns [] when the directory is empty.
  */
+/**
+ * Deterministic paged list of non-archived businesses · ordered newest
+ * first by created_at. Added 2026-10-13 for NEX Discover pagination
+ * (24-per-page). Unlike `listRandomBusinesses` this does NOT shuffle
+ * so Prev/Next flows return a stable set per page.
+ *
+ * Hard cap: limit ≤ 100, offset ≥ 0.
+ *
+ * Never fabricates. Returns [] when the directory is empty.
+ */
+export async function listBusinessesPaged(
+  limit: number = 24,
+  offset: number = 0,
+): Promise<NexBusinessRow[]> {
+  const clampedLimit = Math.max(1, Math.min(100, Math.floor(limit)));
+  const clampedOffset = Math.max(0, Math.floor(offset));
+  const { data, error } = await nexSupabaseAdmin
+    .from("nex_business")
+    .select("*")
+    .is("archived_at", null)
+    .order("created_at", { ascending: false })
+    .range(clampedOffset, clampedOffset + clampedLimit - 1);
+  if (error) {
+    throw new Error(`discovery-service.listBusinessesPaged: ${error.message}`);
+  }
+  return (data as NexBusinessRow[]) ?? [];
+}
+
+/**
+ * Total count of non-archived businesses · drives hasNext for the
+ * pagination controls on NEX Discover.
+ */
+export async function countActiveBusinesses(): Promise<number> {
+  const { count, error } = await nexSupabaseAdmin
+    .from("nex_business")
+    .select("id", { head: true, count: "exact" })
+    .is("archived_at", null);
+  if (error) {
+    throw new Error(`discovery-service.countActiveBusinesses: ${error.message}`);
+  }
+  return count ?? 0;
+}
+
 export async function listRandomBusinesses(
   limit: number = 12,
   pool: number = 300,

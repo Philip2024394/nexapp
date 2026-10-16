@@ -88,6 +88,29 @@ interface CanonicalRow {
   fb_category: string | null;
   fb_categories: string[] | null;
   fb_address: string | null;
+  // Added 2026-10-13 · accommodation vertical enrichment overlay
+  // (joined via `nex.accommodation_business.canonical_business_id`).
+  // Hotel / villa / guesthouse rows carry amenities + rating + review
+  // count sourced from the walker. The adapter surfaces these on the
+  // adapted row via loose fields so NEX Discover's AmenityChips and
+  // RatingChip can read them without widening NexBusinessRow for
+  // every non-accommodation caller.
+  ab_amenities: string[] | null;
+  ab_rating: number | null;
+  ab_review_count: number | null;
+  ab_rating_source: string | null;
+  // Walker-sourced coordinates · nex_business.location_lat/lng is
+  // populated for 0/169 shops today, but 9,203 accommodation rows +
+  // 23,328 food_business rows carry real coords. Projecting them
+  // through the adapter unlocks the distance pill on the full
+  // directory corpus. Added 2026-10-13.
+  // NUMERIC columns · node-postgres returns them as string. Keep the
+  // row interface honest so the adapter uses `coerceLatLng` instead of
+  // a strict typeof-number guard that would silently drop every value.
+  fb_lat: number | string | null;
+  fb_lng: number | string | null;
+  ab_lat: number | string | null;
+  ab_lng: number | string | null;
 }
 
 const VERIFIED_LIFECYCLE_STATES = new Set([
@@ -95,6 +118,18 @@ const VERIFIED_LIFECYCLE_STATES = new Set([
   "OWNER_CLAIMED",
   "OWNER_VERIFIED",
 ]);
+
+/** node-postgres returns NUMERIC columns as strings by default to
+ *  preserve precision. Coerce to a validated finite number · null
+ *  on failure. Used for the walker lat/lng columns. */
+function coerceLatLng(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string") {
+    const n = Number(v);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
 
 /** Empty-string → null · OSM-origin food_business rows sometimes hold
  *  `''` where the upstream feed had no value. The fallback semantics
@@ -175,6 +210,25 @@ function adaptCanonical(row: CanonicalRow): NexBusinessRow {
     business_category: row.entity_type,
     search_keywords: chips,
     verified_at: verifiedAt,
+    // Walker-sourced coords · prefer food_business.coords, fall back
+    // to accommodation_business.coords. These populate the standard
+    // location_lat / location_lng fields so distance calc works for
+    // 32k+ directory rows that would otherwise be location-blind.
+    // NUMERIC columns arrive as string from node-postgres by
+    // default; the coerceLatLng helper handles both number + string.
+    location_lat: coerceLatLng(row.fb_lat ?? row.ab_lat),
+    location_lng: coerceLatLng(row.fb_lng ?? row.ab_lng),
+    // Accommodation-vertical overlay · surfaced via loose fields so
+    // NEX Discover's AmenityChips + RatingChip can read them without
+    // widening NexBusinessRow for non-accommodation callers. Values
+    // from `nex.accommodation_business` via LEFT JOIN · all null on
+    // non-accommodation canonical rows.
+    amenities: Array.isArray(row.ab_amenities) ? row.ab_amenities : null,
+    rating: typeof row.ab_rating === "number" ? row.ab_rating : null,
+    review_count:
+      typeof row.ab_review_count === "number" ? row.ab_review_count : null,
+    rating_source:
+      typeof row.ab_rating_source === "string" ? row.ab_rating_source : null,
   } as unknown as NexBusinessRow;
 }
 
@@ -194,13 +248,23 @@ const LIST_SELECT = `
   fb.website      AS fb_website,
   fb.category     AS fb_category,
   fb.categories   AS fb_categories,
-  fb.address      AS fb_address
+  fb.address      AS fb_address,
+  ab.amenities    AS ab_amenities,
+  ab.rating       AS ab_rating,
+  ab.review_count AS ab_review_count,
+  ab.rating_source AS ab_rating_source,
+  fb.coordinates_lat AS fb_lat,
+  fb.coordinates_lng AS fb_lng,
+  ab.coordinates_lat AS ab_lat,
+  ab.coordinates_lng AS ab_lng
 `;
 
 const LIST_FROM = `
   nex.business_canonical bc
   LEFT JOIN nex.food_business fb
     ON fb.canonical_business_id = bc.canonical_business_id
+  LEFT JOIN nex.accommodation_business ab
+    ON ab.canonical_business_id = bc.canonical_business_id
 `;
 
 export async function listRandomCanonicalBusinesses(
@@ -217,6 +281,104 @@ export async function listRandomCanonicalBusinesses(
     [clamped],
   );
   return rows.map(adaptCanonical);
+}
+
+/**
+ * Deterministic paged list for NEX Discover (added 2026-10-13).
+ * Ordered by canonical_business_id (stable UUID sort) so Prev/Next
+ * returns a consistent set per page. Does NOT shuffle.
+ */
+export async function listCanonicalBusinessesPaged(
+  limit = 24,
+  offset = 0,
+  opts: { readonly country?: string | null; readonly seed?: string | null } = {},
+): Promise<NexBusinessRow[]> {
+  const l = Math.min(100, Math.max(1, Math.floor(limit)));
+  const o = Math.max(0, Math.floor(offset));
+  const country =
+    typeof opts.country === "string" && /^[A-Z]{2}$/.test(opts.country.toUpperCase())
+      ? opts.country.toUpperCase()
+      : null;
+  // Per-visit seed · drives md5-hashed ORDER BY so first-page content
+  // varies between fresh visits but STAYS STABLE across pagination
+  // within the same visit (same seed → same sort → same page content).
+  // Null seed → deterministic canonical_business_id sort (reproducible
+  // in tests and for cached CDN requests).
+  const seed =
+    typeof opts.seed === "string" && opts.seed.length > 0 && opts.seed.length <= 64
+      ? opts.seed
+      : null;
+
+  const baseWhere = `bc.superseded_by_business_id IS NULL
+                      AND length(trim(bc.name_canonical)) > 0`;
+  const where = country ? `${baseWhere} AND bc.country = $3` : baseWhere;
+  const orderBy = seed
+    ? `ORDER BY md5(bc.canonical_business_id::text || $${country ? 4 : 3})`
+    : `ORDER BY bc.canonical_business_id`;
+
+  const params: unknown[] = country ? [l, o, country] : [l, o];
+  if (seed) params.push(seed);
+
+  const rows = await readOnlyQuery<CanonicalRow>(
+    `SELECT ${LIST_SELECT}
+       FROM ${LIST_FROM}
+      WHERE ${where}
+      ${orderBy}
+      LIMIT $1 OFFSET $2`,
+    params,
+  );
+  return rows.map(adaptCanonical);
+}
+
+/** Total non-superseded canonical businesses with a non-empty name.
+ *  Drives hasNext on the Discover pagination control. Country filter
+ *  added 2026-10-13 for the country selector · empty / unknown ISO
+ *  returns the global total. */
+export async function countCanonicalBusinessesAll(
+  opts: { readonly country?: string | null } = {},
+): Promise<number> {
+  const country =
+    typeof opts.country === "string" && /^[A-Z]{2}$/.test(opts.country.toUpperCase())
+      ? opts.country.toUpperCase()
+      : null;
+  const sql = country
+    ? `SELECT COUNT(*)::text AS n
+         FROM nex.business_canonical bc
+        WHERE bc.superseded_by_business_id IS NULL
+          AND length(trim(bc.name_canonical)) > 0
+          AND bc.country = $1`
+    : `SELECT COUNT(*)::text AS n
+         FROM nex.business_canonical bc
+        WHERE bc.superseded_by_business_id IS NULL
+          AND length(trim(bc.name_canonical)) > 0`;
+  const rows = await readOnlyQuery<{ n: string }>(
+    sql,
+    country ? [country] : [],
+  );
+  const parsed = Number(rows[0]?.n ?? "0");
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export interface CountryTotalRow {
+  readonly iso: string;
+  readonly n: number;
+}
+
+/** List every country ISO that has at least one canonical row, with
+ *  its canonical count. Drives the NEX Discover country selector so
+ *  it can show real buckets with real counts (0-count countries are
+ *  surfaced separately via the world_country / discovery_programme
+ *  tables, not from here). */
+export async function listCountriesWithCanonical(): Promise<CountryTotalRow[]> {
+  const rows = await readOnlyQuery<{ country: string; n: string }>(
+    `SELECT country, COUNT(*)::text AS n
+       FROM nex.business_canonical
+      WHERE superseded_by_business_id IS NULL
+        AND length(trim(name_canonical)) > 0
+   GROUP BY country
+   ORDER BY COUNT(*) DESC`,
+  );
+  return rows.map((r) => ({ iso: r.country, n: Number(r.n) || 0 }));
 }
 
 // Query shortcuts that map a plain word to a canonical entity_type.

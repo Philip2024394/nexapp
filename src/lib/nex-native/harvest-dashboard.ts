@@ -28,6 +28,11 @@ export interface HarvestDashboardSummary {
   readonly totalCanonical: number;
   readonly mediaApproved: number;
   readonly mediaTotal: number;
+  // Email-qualification summary · sealed 2026-10-16 · migration 202.
+  // Both fields fall back to [] when the migration is not yet applied,
+  // so the dashboard renders truthful partial state before rollout.
+  readonly canonicalQualificationCounts: readonly QualificationCount[];
+  readonly emailStatusCounts: readonly EmailStatusCount[];
 }
 
 export interface CountryCoverage {
@@ -69,6 +74,20 @@ export interface SourceRegistryRow {
 
 export interface LifecycleCount {
   readonly lifecycleState: string;
+  readonly n: number;
+}
+
+/** Qualification-status partition · sealed 2026-10-16 · migration 202. */
+export interface QualificationCount {
+  readonly qualificationStatus: string;
+  readonly n: number;
+}
+
+/** Email-status partition · sealed 2026-10-16 · migration 202.
+ *  NULL `emailStatus` is reported as the string 'NEVER_ATTEMPTED' so
+ *  the dashboard can show it as a distinct cell. */
+export interface EmailStatusCount {
+  readonly emailStatus: string;
   readonly n: number;
 }
 
@@ -247,6 +266,49 @@ export async function loadHarvestDashboard(): Promise<HarvestDashboardSummary | 
       n: r.n,
     }));
 
+    // Canonical by qualification_status (migration 202 · falls back to []
+    // when the column has not yet been added · dashboard renders truthful
+    // partial state in that case).
+    const qsResult = (await client
+      .query(
+        `SELECT qualification_status, COUNT(*)::int AS n
+           FROM nex.business_canonical
+          WHERE superseded_by_business_id IS NULL
+       GROUP BY qualification_status
+       ORDER BY n DESC`,
+      )
+      .catch(() => ({ rows: [] }))) as QueryResult<{
+      qualification_status: string;
+      n: number;
+    }>;
+    const canonicalQualificationCounts: QualificationCount[] = qsResult.rows.map(
+      (r) => ({
+        qualificationStatus: r.qualification_status,
+        n: r.n,
+      }),
+    );
+
+    // Email status partition (migration 202 · same fallback shape).
+    // NULL email_status is reported as 'NEVER_ATTEMPTED' so the UI can
+    // distinguish never-walked from walked-and-not-found rows.
+    const esResult = (await client
+      .query(
+        `SELECT COALESCE(email_status, 'NEVER_ATTEMPTED') AS email_status,
+                COUNT(*)::int AS n
+           FROM nex.business_canonical
+          WHERE superseded_by_business_id IS NULL
+       GROUP BY COALESCE(email_status, 'NEVER_ATTEMPTED')
+       ORDER BY n DESC`,
+      )
+      .catch(() => ({ rows: [] }))) as QueryResult<{
+      email_status: string;
+      n: number;
+    }>;
+    const emailStatusCounts: EmailStatusCount[] = esResult.rows.map((r) => ({
+      emailStatus: r.email_status,
+      n: r.n,
+    }));
+
     // Totals.
     const totResult = (await client
       .query(
@@ -279,6 +341,8 @@ export async function loadHarvestDashboard(): Promise<HarvestDashboardSummary | 
       totalCanonical,
       mediaApproved,
       mediaTotal,
+      canonicalQualificationCounts,
+      emailStatusCounts,
     };
   });
 }

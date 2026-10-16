@@ -41,6 +41,76 @@ export interface UploadedEncryptedAttachment {
 export interface UploadEncryptedAttachmentOptions {
   file: File;
   onProgress?: (fraction: number) => void;
+  /**
+   * R14 Stage 6 (2026-10-15 · migration 201 unapplied) · upload quality
+   * tier. When "standard" (default), images are downsampled client-side
+   * before encryption to save bandwidth · videos and audio pass through
+   * unchanged (browsers do not natively transcode video). When "hd",
+   * the file is encrypted as-is. If omitted, defaults to "standard".
+   */
+  uploadQuality?: "standard" | "hd";
+}
+
+/**
+ * R14 Stage 6 helper · downsample an image file via canvas when the
+ * caller's `uploadQuality` is "standard". Returns the original file
+ * for videos, audio, and HD uploads · the compression step is
+ * idempotent for small images (we only resample when the longest edge
+ * exceeds the ceiling). Never silently converts formats · stays within
+ * JPEG for already-JPEG inputs and PNG otherwise.
+ *
+ * This runs ONLY in the browser · requires createImageBitmap +
+ * OffscreenCanvas. If either is unavailable (older browsers), the
+ * compression step is a graceful no-op · the file encrypts at its
+ * original size.
+ */
+async function compressImageIfStandard(
+  file: File,
+  quality: "standard" | "hd",
+): Promise<File> {
+  if (quality === "hd") return file;
+  if (!file.type.startsWith("image/")) return file;
+  if (file.type === "image/gif") return file; // preserve animation
+  if (typeof createImageBitmap !== "function") return file;
+  if (typeof OffscreenCanvas === "undefined") return file;
+
+  const MAX_EDGE_PX = 1600;
+  const JPEG_QUALITY = 0.85;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const longest = Math.max(bitmap.width, bitmap.height);
+    if (longest <= MAX_EDGE_PX) {
+      bitmap.close();
+      return file; // already within target · no benefit from re-encode
+    }
+    const scale = MAX_EDGE_PX / longest;
+    const w = Math.round(bitmap.width * scale);
+    const h = Math.round(bitmap.height * scale);
+    const canvas = new OffscreenCanvas(w, h);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      bitmap.close();
+      return file;
+    }
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    bitmap.close();
+    const outType =
+      file.type === "image/jpeg" || file.type === "image/jpg"
+        ? "image/jpeg"
+        : "image/jpeg"; // default to JPEG for downsized output (smaller than PNG)
+    const blob = await canvas.convertToBlob({
+      type: outType,
+      quality: JPEG_QUALITY,
+    });
+    // If compressed is somehow larger than original (rare), use original.
+    if (blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.(png|webp|heic|heif)$/i, ".jpg"), {
+      type: outType,
+    });
+  } catch {
+    // Any failure in the compression pipeline falls through to original.
+    return file;
+  }
 }
 
 /**
@@ -48,6 +118,12 @@ export interface UploadEncryptedAttachmentOptions {
  * /api/nex-native/attachment/encrypted. Resolves with a pending
  * attachment descriptor the caller stashes until the peer message
  * send. Rejects on network / storage / MIME failure.
+ *
+ * R14 Stage 6 enforcement · when `uploadQuality='standard'` and the
+ * file is an image larger than 1600px on its longest edge, the file
+ * is downsampled client-side before encryption. Video and audio pass
+ * through unchanged (browser-native video transcoding is not viable
+ * without a new client-side library · documented limitation).
  */
 export async function uploadEncryptedAttachment(
   opts: UploadEncryptedAttachmentOptions,
@@ -57,9 +133,18 @@ export async function uploadEncryptedAttachment(
     throw new Error(`unsupported attachment MIME '${opts.file.type}'`);
   }
 
+  // R14 Stage 6 · apply client-side image compression per the viewer's
+  // upload_quality preference. Default to "standard" when the caller
+  // has not yet migrated to pass the opt (preserves historic bandwidth-
+  // conscious behaviour · same shape as the sealed default on migration
+  // 201).
+  const quality = opts.uploadQuality ?? "standard";
+  const effectiveFile = await compressImageIfStandard(opts.file, quality);
+  opts.onProgress?.(0.05);
+
   // Read the file bytes into memory. For >50 MB files this can spike
   // memory · current cap is 25 MB per NEX_PEER_ATTACHMENT_MAX_BYTES.
-  const rawBytes = new Uint8Array(await opts.file.arrayBuffer());
+  const rawBytes = new Uint8Array(await effectiveFile.arrayBuffer());
   opts.onProgress?.(0.15);
 
   // Encrypt · nacl.secretbox is streaming-ish but pure JS, so a 25MB
@@ -67,8 +152,10 @@ export async function uploadEncryptedAttachment(
   const enc: EncryptFileResult = encryptFileBytes(rawBytes);
   opts.onProgress?.(0.4);
 
-  // Upload the ciphertext as raw bytes.
-  const ext = extForMime(opts.file.type);
+  // Upload the ciphertext as raw bytes. Use the effective (possibly
+  // compressed) file's MIME + size · recipients render based on the
+  // delivered bytes, not the pre-compression original.
+  const ext = extForMime(effectiveFile.type);
   const resp = await fetch("/api/nex-native/attachment/encrypted", {
     method: "POST",
     headers: {
@@ -96,8 +183,8 @@ export async function uploadEncryptedAttachment(
   return {
     storageUrl: json.storage_url,
     storagePath: json.storage_path,
-    contentType: opts.file.type,
-    sizeBytes: opts.file.size,
+    contentType: effectiveFile.type,
+    sizeBytes: effectiveFile.size,
     contentKey: enc.contentKey,
     contentNonce: enc.contentNonce,
     kind,

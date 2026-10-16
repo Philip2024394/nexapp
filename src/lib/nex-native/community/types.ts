@@ -302,7 +302,16 @@ export interface NexCommunityNoticeReportRow {
 }
 
 /** Rate-limit configuration per action. Window is a rolling 1-hour
- *  bucket for v1 (floored to the hour). Service layer enforces the cap. */
+ *  bucket for v1 (floored to the hour). Service layer enforces the cap.
+ *
+ *  `peer_message_guest` added 2026-10-14 by the Stage 1.1 guest-chat
+ *  protection PR. Keyed on the provisional `nex_account.id` of the
+ *  guest sender. Backing CHECK extension in migration 197. Closes
+ *  design-contract gap G1 across every guest-chat caller. The
+ *  companion gap G2 (fingerprint re-check on follow-up) is NOT
+ *  covered here · it requires extending the sendGuestMessageAction
+ *  client contract to pass the sealed §7A fingerprint signals and
+ *  is deferred to a separate design pass. */
 export type NexCommunityRateLimitAction =
   | "notice_create"
   | "notice_update"
@@ -316,7 +325,8 @@ export type NexCommunityRateLimitAction =
   | "card_report"
   | "card_photo_upload"
   | "business_welcome_publish"
-  | "business_welcome_retract";
+  | "business_welcome_retract"
+  | "peer_message_guest";
 
 export const NEX_COMMUNITY_RATE_LIMITS: Record<
   NexCommunityRateLimitAction,
@@ -335,6 +345,13 @@ export const NEX_COMMUNITY_RATE_LIMITS: Record<
   card_photo_upload: { windowMinutes: 60, maxPerWindow: 10 },
   business_welcome_publish: { windowMinutes: 60, maxPerWindow: 3 },
   business_welcome_retract: { windowMinutes: 60, maxPerWindow: 10 },
+  // peer_message_guest · 10 messages per rolling 60-minute window per
+  // provisional account. Starting hypothesis per the design contract
+  // §4.2 · requires live-traffic validation before being tightened
+  // or loosened. Rate-limit alone is NOT protection until migration
+  // 197 is applied and the adversarial burst test (included in this
+  // PR) runs green.
+  peer_message_guest: { windowMinutes: 60, maxPerWindow: 10 },
 };
 
 /** Phase 2B.1 business-welcome card lifecycle. 14 days from feature event. */

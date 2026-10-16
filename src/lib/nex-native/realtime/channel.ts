@@ -81,6 +81,34 @@ export function openNexChannel<T extends BroadcastPayload = BroadcastPayload>(
   opts: OpenChannelOptions<T>,
 ): NexChannelHandle {
   const supabase = getNexBrowserSupabase();
+
+  // Supabase's RealtimeClient caches channels by topic: a second
+  // `supabase.channel(name)` with the same name returns the previously-
+  // registered (and possibly already-subscribed) instance. The SDK then
+  // rejects `.on("presence", ...)` on a channel that has entered joining
+  // or joined state, throwing "cannot add presence callbacks after
+  // subscribe()". This fires on React Strict Mode's double-mount and on
+  // HMR re-runs: our useEffect cleanup kicks off `supabase.removeChannel`
+  // but that is async, and React re-runs the effect before the removal
+  // settles. Evict any stale channel for this topic from the client's
+  // registry synchronously so the next `.channel()` call creates a fresh
+  // instance in the same tick. The orphaned channel's `unsubscribe` is
+  // still awaited via the earlier `close()`, so no transport leak.
+  const topic = `realtime:${opts.name}`;
+  const stale = supabase.getChannels().find((c) => c.topic === topic);
+  if (stale) {
+    void supabase.removeChannel(stale);
+    // SupabaseClient's getChannels/removeChannel delegate to its internal
+    // RealtimeClient (`this.realtime`), which is where `channels` actually
+    // lives. The top-level SupabaseClient has no `channels` property.
+    const realtime = (supabase as unknown as {
+      realtime?: { channels?: RealtimeChannel[] };
+    }).realtime;
+    if (realtime && Array.isArray(realtime.channels)) {
+      realtime.channels = realtime.channels.filter((c) => c.topic !== topic);
+    }
+  }
+
   const channel: RealtimeChannel = supabase.channel(opts.name, {
     config: {
       broadcast: { self: false, ack: false },

@@ -75,7 +75,15 @@ export async function findPeerConversation(
 /** Get the peer conversation between two accounts, creating it if
  *  needed. Idempotent · safe to call repeatedly. Callers should ensure
  *  the viewer is one of the two accounts (RLS also blocks otherwise).
- *  Throws if x === y (same-account self-chat is not supported). */
+ *  Throws if x === y (same-account self-chat is not supported).
+ *
+ *  R10 Stage 5 (2026-10-15) · this symmetric legacy function does NOT
+ *  consult who_can_message because it has no sender/recipient
+ *  distinction. New UI callers that initiate a conversation should
+ *  prefer `getOrCreatePeerConversationAsSender` (below) which enforces
+ *  the recipient's who_can_message preference. Internal callers
+ *  (e.g., welcome-outbox, system-authored flows) that already have
+ *  a trusted invariant may continue to use this function. */
 export async function getOrCreatePeerConversation(
   x: NexUuid,
   y: NexUuid,
@@ -102,6 +110,66 @@ export async function getOrCreatePeerConversation(
     );
   }
   return data as NexPeerConversationRow;
+}
+
+/**
+ * R10 Stage 5 (2026-10-15) · gated conversation-creation wrapper for
+ * UI callers that initiate a new conversation on behalf of a specific
+ * sender.
+ *
+ *   senderAccountId    · the account taking action (viewer in UI)
+ *   recipientAccountId · the account being contacted
+ *
+ * If the conversation already exists, returns it unchanged (gate does
+ * NOT apply to existing conversations · users who have chatted before
+ * remain able to continue). If creating a new conversation, consults
+ * the recipient's who_can_message preference:
+ *
+ *   recipient.who_can_message === 'everyone'          → allow
+ *   recipient.who_can_message === 'contacts' + friend → allow
+ *   recipient.who_can_message === 'contacts' + not    → reject with
+ *     error message "recipient_contacts_only" that the UI maps to a
+ *     localised explanation.
+ *
+ * Fail-closed · a service-layer error reading the recipient's prefs
+ * returns PRIVACY-MAXIMUM (contacts-only) · same discipline as other
+ * privacy-sensitive gates.
+ *
+ * Legacy callers (welcome-outbox, system flows) use
+ * `getOrCreatePeerConversation` directly; they do not have a
+ * sender/recipient distinction and are trusted invariants.
+ */
+export async function getOrCreatePeerConversationAsSender(
+  senderAccountId: NexUuid,
+  recipientAccountId: NexUuid,
+): Promise<NexPeerConversationRow> {
+  if (senderAccountId === recipientAccountId) {
+    throw new Error(
+      "peer-conversation-service.getOrCreatePeerConversationAsSender: cannot create self-conversation",
+    );
+  }
+  // Existing conversations bypass the gate · users who have chatted
+  // before continue to see each other even if preferences change.
+  const existing = await findPeerConversation(senderAccountId, recipientAccountId);
+  if (existing) return existing;
+
+  // Lazy-load the privacy service to keep the module graph light for
+  // callers that only use the legacy function.
+  const { canSenderInitiateConversation } = await import(
+    "./privacy-preferences-service"
+  );
+  const permission = await canSenderInitiateConversation(
+    senderAccountId,
+    recipientAccountId,
+  );
+  if (!permission.allowed) {
+    throw new Error(
+      `peer-conversation-service.getOrCreatePeerConversationAsSender: ${permission.reason}`,
+    );
+  }
+
+  // Delegate to the sealed symmetric creator for the actual insert.
+  return getOrCreatePeerConversation(senderAccountId, recipientAccountId);
 }
 
 /** List every peer conversation the given account is part of.

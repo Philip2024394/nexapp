@@ -36,13 +36,24 @@ export const NEX_COMMERCE_ENABLED: boolean = (() => {
 
 /** Admin bypass · when a request carries ?commerce=1 in the query,
  *  commerce surfaces still render even if the flag is off. Lets
- *  admins keep testing the whole commerce loop while regular users
- *  see only chat + themes. Caller responsibility to check the
- *  search-params BEFORE gating. */
+ *  admins keep testing the whole commerce loop in DEVELOPMENT while
+ *  regular users see only chat + themes. Caller responsibility to
+ *  check the search-params BEFORE gating.
+ *
+ *  Production hardening (B9/B10 · 2026-10-14): the query-string bypass
+ *  is REFUSED when NODE_ENV === "production". In production the only
+ *  path to enabling commerce is `NEX_COMMERCE_ENABLED=1` on the server
+ *  env. This prevents an unauthenticated URL probe like
+ *  `localhost/nex-native/cart?commerce=1` from unlocking the commerce
+ *  UI in a Phase-1 chat+themes-only deployment. See
+ *  docs/doctrine/nex-production-route-containment-review-2026-10-14.md. */
 export function commerceEnabledForRequest(
   searchParams: URLSearchParams | Record<string, string | string[] | undefined> | null | undefined,
 ): boolean {
   if (NEX_COMMERCE_ENABLED) return true;
+  // Query-string bypass is development-only. Must not activate commerce
+  // in production. See doctrine note above.
+  if (process.env.NODE_ENV === "production") return false;
   if (!searchParams) return false;
   if (searchParams instanceof URLSearchParams) {
     const v = searchParams.get("commerce");
@@ -90,11 +101,18 @@ export const NEX_SEARCH_ENABLED: boolean = (() => {
 /** Admin bypass · when a request carries ?search=1 in the query,
  *  the NEX Search surface renders even if the flag is off. Separate
  *  from ?commerce=1 on purpose · they do not share state and must
- *  not accidentally un-gate each other. */
+ *  not accidentally un-gate each other.
+ *
+ *  Production hardening (B9/B10 · 2026-10-14): same posture as
+ *  commerceEnabledForRequest. The query-string bypass is REFUSED when
+ *  NODE_ENV === "production". In production the only path to enabling
+ *  Search is `NEX_SEARCH_ENABLED=1` on the server env. */
 export function searchEnabledForRequest(
   searchParams: URLSearchParams | Record<string, string | string[] | undefined> | null | undefined,
 ): boolean {
   if (NEX_SEARCH_ENABLED) return true;
+  // Query-string bypass is development-only. See doctrine note above.
+  if (process.env.NODE_ENV === "production") return false;
   if (!searchParams) return false;
   if (searchParams instanceof URLSearchParams) {
     const v = searchParams.get("search");
