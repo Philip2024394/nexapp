@@ -318,6 +318,10 @@ tmp-live/
 playwright-report/
 test-results/
 tests/e2e-screenshots/
+# B2 Phase 2 · owner-generated Playwright storage state (session cookies +
+# localStorage). Produced ONCE via an interactive sign-in · never committed.
+# Added 2026-10-14.
+tests/e2e/.auth/
 *.pre-wave3.2.bak
 /vault-*.png
 /vault-*.pdf

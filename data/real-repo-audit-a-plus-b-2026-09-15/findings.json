@@ -1,0 +1,144 @@
+{
+  "audit_id": "§36-RRD-AB · REAL-REPO-DEMO-A-PLUS-B · 2026-09-15",
+  "generated_at": "2026-10-15T21:13:49.907Z",
+  "curated_files_count": 6,
+  "files_audited": 6,
+  "total_findings_wave_a": 7,
+  "total_findings_wave_b": 4,
+  "total_critical": 4,
+  "total_warning": 4,
+  "total_advisory": 3,
+  "per_file": [
+    {
+      "file": "src/app/api/nex/hq/agents/route.ts",
+      "error": "not_found"
+    },
+    {
+      "file": "src/app/nex-driver-directory-demo/page.tsx",
+      "error": "not_found"
+    },
+    {
+      "file": "src/lib/nex/db.ts",
+      "candidate_sha256": "f98afc5b48b09ed6cf9c9a257e15c5ed0716513411397e60ca811f6582a134da",
+      "wave_a": {
+        "overall_verdict": "no_findings",
+        "total_findings": 0
+      },
+      "wave_b": {
+        "overall_verdict": "action_required",
+        "total_findings": 1
+      },
+      "findings": [
+        {
+          "dispatcher": "wave-b",
+          "specialist_id": "nex-security-specialist",
+          "finding_id": "NSE_DISABLED_TLS",
+          "severity": "critical",
+          "evidence_summary": "TLS verification disabled · never acceptable in production · fix the certificate chain instead"
+        }
+      ]
+    },
+    {
+      "file": "db/migrations/001_nex_brain_schema.sql",
+      "error": "not_found"
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/wave-a-language-framework/wave-a-language-framework.ts",
+      "candidate_sha256": "de86af267a82a924eb25e56e7f26589b43755c98b7a5fe309c09c900a02638e7",
+      "wave_a": {
+        "overall_verdict": "action_required",
+        "total_findings": 7
+      },
+      "wave_b": {
+        "overall_verdict": "action_required",
+        "total_findings": 1
+      },
+      "findings": [
+        {
+          "dispatcher": "wave-a",
+          "specialist_id": "nex-typescript-engineering",
+          "finding_id": "NTS_TS_IGNORE_COMMENT",
+          "severity": "warning",
+          "evidence_summary": "@ts-ignore present · prefer @ts-expect-error with justification or fix the underlying type error"
+        },
+        {
+          "dispatcher": "wave-a",
+          "specialist_id": "nex-typescript-engineering",
+          "finding_id": "NTS_TS_EXPECT_ERROR_UNJUSTIFIED",
+          "severity": "warning",
+          "evidence_summary": "@ts-expect-error without inline justification · add '-- reason' or ': reason' explaining why"
+        },
+        {
+          "dispatcher": "wave-a",
+          "specialist_id": "nex-typescript-engineering",
+          "finding_id": "NTS_NON_NULL_ASSERTION_CHAIN",
+          "severity": "warning",
+          "evidence_summary": "chained non-null assertions (a!.b!.c) · consider a proper null check or optional chaining"
+        },
+        {
+          "dispatcher": "wave-a",
+          "specialist_id": "nex-typescript-engineering",
+          "finding_id": "NTS_UNTYPED_JSON_PARSE",
+          "severity": "advisory",
+          "evidence_summary": "JSON.parse(...) without an immediate 'as <Type>' assertion · parsed value is untyped"
+        },
+        {
+          "dispatcher": "wave-a",
+          "specialist_id": "nex-postgresql-engineering",
+          "finding_id": "NPG_TIMESTAMP_WITHOUT_TIMEZONE",
+          "severity": "warning",
+          "evidence_summary": "TIMESTAMP without time zone · prefer TIMESTAMPTZ (WITH TIME ZONE) for correctness across zones"
+        },
+        {
+          "dispatcher": "wave-a",
+          "specialist_id": "nex-postgresql-engineering",
+          "finding_id": "NPG_UNBOUNDED_VARCHAR",
+          "severity": "advisory",
+          "evidence_summary": "VARCHAR without explicit length · prefer VARCHAR(n) or TEXT for clarity"
+        },
+        {
+          "dispatcher": "wave-a",
+          "specialist_id": "nex-postgresql-engineering",
+          "finding_id": "NPG_SERIAL_INSTEAD_OF_IDENTITY",
+          "severity": "advisory",
+          "evidence_summary": "SERIAL/BIGSERIAL used · modern PostgreSQL prefers GENERATED ALWAYS AS IDENTITY (SQL standard, cleaner semantics)"
+        },
+        {
+          "dispatcher": "wave-b",
+          "specialist_id": "nex-git-change-impact-specialist",
+          "finding_id": "NGI_TOUCHES_PROTECTED_MODULE",
+          "severity": "critical",
+          "evidence_summary": "file_content on protected module 'src/lib/nex-agent-runtime/wave-a-language-framework/wave-a-language-framework.ts' · needs an amendment referencing the affected wave"
+        }
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/skills/skill-schema.ts",
+      "candidate_sha256": "a7643cb480d961c690f76ddc1c59758c5be4f7c0df1a3f5b5766d6c839f33448",
+      "wave_a": {
+        "overall_verdict": "no_findings",
+        "total_findings": 0
+      },
+      "wave_b": {
+        "overall_verdict": "action_required",
+        "total_findings": 2
+      },
+      "findings": [
+        {
+          "dispatcher": "wave-b",
+          "specialist_id": "nex-git-change-impact-specialist",
+          "finding_id": "NGI_TOUCHES_PROTECTED_MODULE",
+          "severity": "critical",
+          "evidence_summary": "file_content on protected module 'src/lib/nex-agent-runtime/skills/skill-schema.ts' · needs an amendment referencing the affected wave"
+        },
+        {
+          "dispatcher": "wave-b",
+          "specialist_id": "nex-security-specialist",
+          "finding_id": "NSE_EVAL_LIKE_EXECUTION",
+          "severity": "critical",
+          "evidence_summary": "eval(...) / new Function(...) / Function()() detected · dynamic code execution is a strict refusal in NEX runtime"
+        }
+      ]
+    }
+  ]
+}
