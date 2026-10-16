@@ -1,304 +1,560 @@
 // src/app/nex-native/search/page.tsx
 //
-// NEX Search · Phase 1.5 visual refresh · 2026-10-04.
-// --------------------------------------------------
-// Landing + results surface built to the sealed design pair:
-//   · c:\Users\Victus\Pictures\pagesearch.png         (landing)
-//   · c:\Users\Victus\Pictures\search page results.png (results)
+// NEX Discover · the shop + menu finder that replaces NEX Directory
+// as the live search surface (founder directive 2026-10-13).
+// -----------------------------------------------------------------
+// Lists NEX users who have a shop or menu on NEX Chat. The entry
+// point is a HARD location gate: if the viewer declines, they are
+// redirected to /nex-native/home (see _hard-location-gate.tsx).
 //
-// What this refresh changes from Phase 1 (shipped 7297d2e6):
-//   · Hero title simplified to "NEX Search" (orange NEX + white Search)
-//   · Search field flattened · dark pill · no gradient rim
-//   · Tab set DIFFERS between landing and results per the design:
-//       Landing · All | Companies | Services | Places
-//       Results · All results | Shops | Companies | Wholesale
-//   · Shops demoted from a landing tab to an Explore tile
-//     (still searchable on results via the Shops sub-tab)
-//   · 2×2 "Explore NEX" grid replaces the single shortcut card
-//   · Example queries row shown on landing only (static illustrative
-//     copy, not clickable prefill)
-//   · Landscape result cards redesigned · thumbnail + name + meta
-//     line (type · city) + description + chip rows + "View shop →" /
-//     "View company →" CTA
+// Visual language matches the "Neon European Food Discovery App"
+// mockup supplied by the founder (dark navy, orange CTAs, rounded
+// cards, chip row, "View menu" + "Chat with owner" per card).
 //
-// What stays sealed from Phase 1:
-//   · NEX_SEARCH_ENABLED narrow launch gate · commerce flag untouched
-//   · Companies / Services / Places / Wholesale tabs honestly dormant
-//     where backing data is empty · tapping lands on a "coming later"
-//     panel · no fabricated results, no misleading classifications
-//   · Theme scope boundary · search renders NEX only, never a theme
-//   · Discovery-service calls unchanged · no new DB queries required
-//   · Preserved ?q=, ?tab=, ?category=, ?page=, ?search= semantics
+// Data:
+//   · Default feed · listRandomBusinesses(20) · newest 300 shuffled
+//   · Query mode  · searchBusinesses(q, 20) when ?q= present
+//   · Category    · filtered to one NEX_BUSINESS_CATEGORIES id
+//   · Distance    · haversine when viewer has saved location AND
+//                   business row has location_lat/location_lng
+//
+// Each card:
+//   · logo_url thumbnail (null → initials tile)
+//   · display_name + friendly business-category label + city
+//   · distance (km, rounded 1 dp) when both sides have coords
+//   · short description preview (max 1 line)
+//   · "View menu" → /nex-native/{slug} (existing shop landing)
+//   · "Chat with owner" → /nex-native/chat/peer/{owner_account_id}
 
-import type * as React from "react";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
-import { LocationGate } from "@/components/nex-native/directory/LocationGate";
-import { UserLocationProvider } from "@/lib/nex-native/user-location/user-location-provider";
 import { readUserLocationFromAccount } from "@/lib/nex-native/user-location/actions";
-import * as businessService from "@/lib/nex-native/business-service";
 import * as discoveryService from "@/lib/nex-native/discovery-service";
 import * as localDirectory from "@/lib/nex-native/local-directory-service";
-import { CountryPicker } from "@/components/nex-native/directory/CountryPicker";
 import { NEX_BUSINESS_CATEGORIES } from "@/lib/nex-native/site-templates";
-import type { NexBusinessRow, NexProductRow } from "@/lib/nex-native/types";
+import type { NexBusinessRow } from "@/lib/nex-native/types";
 import { NexPageHeader } from "../_page-header";
-// Phase 3b · unify the search-page cards with the sealed Directory
-// card visual · pull the same curated category_image_library + the
-// same deterministic resolver the DirectoryCard uses. Walker-sourced
-// rows have `logo_url = null` after the adapter so this is the only
-// path to a representative thumbnail.
-import { getCategoryImageLibrary } from "@/lib/nex-native/directory/category-image-library-reader";
+import { HardLocationGate } from "./_hard-location-gate";
+import { DiscoverControls } from "./_discover-controls";
+import { CountrySelector, type CountryOption } from "./_country-selector";
+import { ShopCard } from "./_shop-card";
+import { fetchDiscoverCardContext } from "@/lib/nex-native/discover-card-context";
 import {
-  resolveCategoryImage,
-  type CategoryImageLibraryRow,
-} from "@/lib/nex-native/directory/category-image-resolver";
+  parseSavedLocation,
+  type SavedLocation,
+} from "@/lib/nex-native/user-location/types";
+import {
+  flagEmojiForIso,
+  countryNameForIso,
+} from "@/lib/nex-native/user-location/country-labels";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/* ─── Palette · aligned to NEX brand + mock design ───────────────── */
 const NEX = {
   bg: "#020914",
-  surface: "#0E1526",      // dark pills + card backgrounds
-  surfaceHi: "#182540",     // chip row background
+  surface: "#07152A",
+  panel: "#0A1B36",
   text: "#F2F5F8",
   textDim: "#B5C3D6",
-  textMuted: "#7D9BC0",
-  textSoft: "#4B6683",
+  textMuted: "#8BA9D1",
+  textSoft: "#6B82A5",
   orange: "#FF7200",
+  orangeSoft: "rgba(255,114,0,0.4)",
   cyan: "#00AFFF",
-  cyanFaint: "rgba(0,175,255,0.06)",
-  darkRed: "#991B1B",
-  divider: "rgba(255,255,255,0.08)",
+  cyanSoft: "rgba(0,175,255,0.4)",
+  cyanFaint: "rgba(0,175,255,0.1)",
+  border: "rgba(255,255,255,0.1)",
   borderSoft: "rgba(255,255,255,0.06)",
 };
 
-/* ─── Tabs ───────────────────────────────────────────────────────── */
-// Landing tab bar removed 2026-10-04 · replaced by the Food & Drinks +
-// Taxi Service vertical-entry buttons at the top of the landing. The
-// old All | Companies | Services | Places chrome and its dormant copy
-// cards are no longer surfaced. Results (query mode) retains its own
-// tab set below.
+// Chip row dropped 2026-10-13 per founder direction · the "Viewing
+// <city>, <country>" line + the country-flag badge in the search
+// field replace the Nearby/Restaurant/Café/Bakery/Salon/Fitness
+// chips. Category filtering now happens via the search query itself
+// (the directory-service query matches entity_type synonyms:
+// "restaurant" / "cafe" / "hotel" / "service" all route to the right
+// vertical in local-directory-service).
 
-// Results (query present) tab set · 4 result-filtering chips.
-type ResultTab = "all" | "shops" | "companies" | "wholesale";
-const RESULT_TABS: readonly ResultTab[] = ["all", "shops", "companies", "wholesale"];
-const RESULT_TAB_LABEL: Record<ResultTab, string> = {
-  all: "All results",
-  shops: "Shops",
-  companies: "Companies",
-  wholesale: "Wholesale",
-};
-// All + Shops operate on real data today. Companies + Wholesale are
-// dormant (no classification coverage · no reliable wholesale signal).
-const RESULT_TAB_ACTIVE: Record<ResultTab, boolean> = {
-  all: true,
-  shops: true,
-  companies: false,
-  wholesale: false,
-};
+const CATEGORY_FOOD_LIKE = new Set([
+  "restaurant",
+  "cafe",
+  "bakery",
+  "ice-cream",
+  "dessert-shop",
+  "drinks-shop",
+  "juice-bar",
+]);
 
-const DORMANT_COPY: Record<string, { title: string; body: string }> = {
-  companies: {
-    title: "Company discovery coming later",
-    body: "Business categories are still being added. Company discovery will be available as more businesses complete their profiles.",
-  },
-  services: {
-    title: "Service discovery coming later",
-    body: "Independent professionals and service providers will be discoverable once services are added to NEX.",
-  },
-  places: {
-    title: "Place discovery coming later",
-    body: "Restaurants, hotels, tourist destinations and other places will be discoverable in a future update.",
-  },
-  wholesale: {
-    title: "Wholesale filter coming later",
-    body: "The wholesale filter will activate once businesses declare their wholesale offering reliably across the directory.",
-  },
-};
+/** ISO 3166-1 alpha-2 → human country name. Falls back to the ISO
+ *  itself when unknown, so a country we didn't name is still
+ *  rendered as "GB" / "US" rather than left blank. */
+function countryDisplayName(iso: string): string {
+  const u = iso.toUpperCase();
+  const map: Record<string, string> = {
+    ID: "Indonesia",
+    GB: "United Kingdom",
+    US: "United States",
+    AU: "Australia",
+    NZ: "New Zealand",
+    DE: "Germany",
+    FR: "France",
+    ES: "Spain",
+    IT: "Italy",
+    NL: "Netherlands",
+    BE: "Belgium",
+    CH: "Switzerland",
+    AT: "Austria",
+    DK: "Denmark",
+    SE: "Sweden",
+    NO: "Norway",
+    IE: "Ireland",
+    LU: "Luxembourg",
+    PT: "Portugal",
+    JP: "Japan",
+    KR: "South Korea",
+    SG: "Singapore",
+    MY: "Malaysia",
+    TH: "Thailand",
+    VN: "Vietnam",
+    PH: "Philippines",
+    IN: "India",
+    AE: "United Arab Emirates",
+    CA: "Canada",
+  };
+  return map[u] ?? u;
+}
 
-const PAGE_SIZE = 20;
-const SAFE_CATEGORIES: readonly string[] = NEX_BUSINESS_CATEGORIES;
+function categoryLabel(id: string | null): string {
+  if (id === null) return "Shop";
+  // Humanize the id (hyphens → spaces, title-case).
+  return id
+    .split("-")
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+    .join(" ");
+}
 
-interface PageProps {
+function categoryKind(id: string | null): string {
+  if (id === null) return "Shop";
+  if (CATEGORY_FOOD_LIKE.has(id)) return "Restaurant";
+  return "Service";
+}
+
+function haversineKm(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const R = 6371;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+const PAGE_SIZE = 24;
+
+interface SearchPageProps {
   searchParams: Promise<{
     q?: string;
-    tab?: string;
     category?: string;
+    lat?: string;
+    lng?: string;
+    city?: string;
+    country?: string;
     page?: string;
-    search?: string;
+    /** Explicit seed overrides the session-anchored default so a URL
+     *  shared with another user shows the same order. Must be 1-64
+     *  chars; longer values are ignored and the daily default is used. */
+    seed?: string;
+    /** `?dev_promos=1` overlays fixture promos on the first 6 cards
+     *  so the founder can preview promo bubbles live before migration
+     *  159 is applied. Dev-only · clearly labelled "DEMO" in each
+     *  fixture title · no production effect. */
+    dev_promos?: string;
   }>;
 }
 
-export default async function SearchPage({ searchParams }: PageProps) {
-  const sp = await searchParams;
+// Dev-only · deterministic fixture promos used when ?dev_promos=1.
+// Clearly branded "DEMO" so there's no mistaking these for real
+// owner-created promos. Overlaid on the first 6 cards of the page
+// in a rotating 1/2/3-slot pattern so the user can see all layout
+// variants (1 bubble, 2 bubbles, 3 bubbles).
 
-  // NEX Search Phase 1 launch gate (sealed 2026-10-04 · unchanged).
-  const { searchEnabledForRequest } = await import(
-    "@/lib/nex-native/launch-flags"
-  );
-  if (!searchEnabledForRequest(sp)) {
-    const { redirect } = await import("next/navigation");
-    redirect("/nex-native/home");
+/** Inline SVG data URI · TRANSPARENT circle art with big centered
+ *  CRIMSON "N%". No stroke · the frosted-glass bubble behind it
+ *  tints the backdrop dark enough that solid crimson reads cleanly.
+ *  A subtle drop-shadow filter adds a touch of depth without adding
+ *  a competing outline. */
+function makeDiscountPromoSvg(_hue: number, percent: number): string {
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'>
+    <defs>
+      <filter id='sh' x='-20%' y='-20%' width='140%' height='140%'>
+        <feDropShadow dx='0' dy='1' stdDeviation='1.2' flood-color='rgba(0,0,0,0.55)'/>
+      </filter>
+    </defs>
+    <text x='60' y='60' text-anchor='middle' dominant-baseline='central' font-size='46' font-weight='900' fill='#E11D48' filter='url(#sh)' font-family='Inter, system-ui, -apple-system, sans-serif' letter-spacing='-1'>${percent}%</text>
+  </svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+const DEV_PROMO_FIXTURES: ReadonlyArray<{
+  readonly id: string;
+  readonly position: 1 | 2 | 3;
+  readonly title: string;
+  readonly description: string;
+  readonly backgroundHex: string;
+  readonly imageUrl: string;
+  readonly hoursToExpiry: number;
+}> = [
+  {
+    id: "demo-1",
+    position: 1,
+    title: "DEMO · 20% off today",
+    description:
+      "20% off your first order via NEX chat. Mention this promo at checkout. Dine-in or takeaway, no minimum spend.",
+    backgroundHex: "#FF7200",
+    imageUrl: makeDiscountPromoSvg(22, 20),
+    hoursToExpiry: 22,
+  },
+  {
+    id: "demo-2",
+    position: 2,
+    title: "DEMO · 15% off this week",
+    description:
+      "15% off any main dish, Monday to Thursday. Dine-in only. Limited slots per evening.",
+    backgroundHex: "#00AFFF",
+    imageUrl: makeDiscountPromoSvg(205, 15),
+    hoursToExpiry: 72,
+  },
+  {
+    id: "demo-3",
+    position: 3,
+    title: "DEMO · 30% off weekend brunch",
+    description:
+      "30% off the weekend brunch set · coffee and juice included. Reserve ahead via chat.",
+    backgroundHex: "#16D66B",
+    imageUrl: makeDiscountPromoSvg(140, 30),
+    hoursToExpiry: 168,
+  },
+];
+
+function fixturePromoFor(
+  position: 1 | 2 | 3,
+  bid: string,
+): import("@/lib/nex-native/discover-card-context").DiscoverCardPromo {
+  const seed = DEV_PROMO_FIXTURES[position - 1];
+  const expiresAt = new Date(Date.now() + seed.hoursToExpiry * 3600_000).toISOString();
+  return {
+    id: `${bid}:${seed.id}`,
+    position,
+    title: seed.title,
+    description: seed.description,
+    imageUrl: seed.imageUrl,
+    backgroundHex: seed.backgroundHex,
+    expiresAt,
+  };
+}
+
+export default async function NexDiscoverPage({ searchParams }: SearchPageProps) {
+  const sp = await searchParams;
+  const session = await resolveNexAppSessionFromContext();
+  const isSignedIn = session?.account?.id != null;
+
+  // ─── Resolve viewer location (hard gate falls through when it's set)
+  // Priority: URL ?lat/?lng (set by the gate on first grant), then
+  // account-saved location, then null.
+  let viewerLocation: SavedLocation | null = null;
+  const spLat = sp.lat ? Number(sp.lat) : NaN;
+  const spLng = sp.lng ? Number(sp.lng) : NaN;
+  if (Number.isFinite(spLat) && Number.isFinite(spLng)) {
+    viewerLocation = parseSavedLocation({
+      lat: spLat,
+      lng: spLng,
+      cityLabel: typeof sp.city === "string" && sp.city.trim().length > 0 ? sp.city.trim() : null,
+      countryIso:
+        typeof sp.country === "string" && /^[A-Za-z]{2}$/.test(sp.country)
+          ? sp.country.toUpperCase()
+          : null,
+      source: "gps",
+      setAt: new Date().toISOString(),
+    });
+  }
+  if (!viewerLocation) {
+    viewerLocation = await readUserLocationFromAccount().catch(() => null);
   }
 
-  const rawQuery = (sp.q ?? "").trim();
-  const query = rawQuery.length > 100 ? rawQuery.slice(0, 100) : rawQuery;
-  const rawTab = (sp.tab ?? "all").trim().toLowerCase();
-  const rawCategory = (sp.category ?? "").trim().toLowerCase();
-  const category =
-    rawCategory && SAFE_CATEGORIES.includes(rawCategory) ? rawCategory : "";
-  const pageRaw = Number(sp.page ?? "1");
-  const page =
-    Number.isFinite(pageRaw) && pageRaw >= 1 ? Math.floor(pageRaw) : 1;
+  // Human-readable "Viewing <city>, <country>" + flag for the top of
+  // the surface. All derived from the resolved SavedLocation only ·
+  // never fabricated when the fields are null.
+  const viewerCity = viewerLocation?.cityLabel ?? null;
+  const viewerCountryIso = viewerLocation?.countryIso ?? null;
+  const viewerCountryName = countryNameForIso(viewerCountryIso);
+  const viewerCountryFlag = flagEmojiForIso(viewerCountryIso);
+  const viewingLine = viewerCity
+    ? viewerCountryName
+      ? `Viewing ${viewerCity}, ${viewerCountryName}`
+      : `Viewing ${viewerCity}`
+    : viewerCountryName
+      ? `Viewing ${viewerCountryName}`
+      : null;
+
+  const query = (sp.q ?? "").trim();
+  const activeCategory = (sp.category ?? "").trim();
+  const effectiveCategory =
+    activeCategory.length > 0 &&
+    (NEX_BUSINESS_CATEGORIES as readonly string[]).includes(activeCategory)
+      ? activeCategory
+      : null;
+
+  // 1-based page param · clamped to [1, 10000] so a hostile URL
+  // can't ask for the 999999th page.
+  const rawPage = sp.page ? Number(sp.page) : 1;
+  const page = Number.isFinite(rawPage) && rawPage >= 1 ? Math.min(10000, Math.floor(rawPage)) : 1;
   const offset = (page - 1) * PAGE_SIZE;
 
-  await resolveNexAppSessionFromContext();
+  // Per-visit discovery seed · threaded through so page 1 looks fresh
+  // on each new session but pages 2+ stay stable while the visitor
+  // browses. Priority: explicit ?seed=…  →  session-anchored seed
+  // (daily rotation + account id when signed in · daily-only for
+  // anon) → deterministic null (test / server-render fallback).
+  const explicitSeed =
+    typeof sp.seed === "string" && sp.seed.length > 0 && sp.seed.length <= 64
+      ? sp.seed
+      : null;
+  const todayKey = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const defaultSeed = session?.account?.id
+    ? `${todayKey}:${session.account.id.slice(0, 8)}`
+    : todayKey;
+  const feedSeed = explicitSeed ?? defaultSeed;
 
-  // Pass-10 user-location: SSR hint for signed-in users · null for
-  // anonymous (localStorage takes over client-side).
-  const initialServerLocation = await readUserLocationFromAccount();
+  // ─── Country selector · scopes the directory feed to one ISO
+  //     (e.g. "ID", "GB", "DE"). Null = all countries. The chip row
+  //     renders real counts per country, honest-null for empty ones.
+  const activeCountryIso =
+    typeof sp.country === "string" && /^[A-Z]{2}$/i.test(sp.country)
+      ? sp.country.toUpperCase()
+      : null;
 
-  const hasSearch = query.length > 0 || category.length > 0;
-
-  // Validate the tab against the result set when a query is present.
-  // The landing surface has no tab UI anymore (replaced by the Food &
-  // Drinks + Taxi Service quick-entry buttons) · so landing always
-  // runs as tab="all" and a URL-manipulated `?tab=` is ignored.
-  let tab: ResultTab = "all";
-  if (hasSearch) {
-    tab = (RESULT_TABS as readonly string[]).includes(rawTab)
-      ? (rawTab as ResultTab)
-      : "all";
-  }
-  const isDormantTab = hasSearch && !RESULT_TAB_ACTIVE[tab];
-
-  // ── Data fetch ────────────────────────────────────────────────────
-  let errorMsg: string | null = null;
-  let products: NexProductRow[] = [];
-  let businesses: NexBusinessRow[] = [];
-  let productCount = 0;
-  let businessCount = 0;
-
-  if (hasSearch && !isDormantTab) {
+  // Country options for the selector · pulled live from the directory.
+  // Shows every ISO that has at least one canonical row, plus an
+  // "All" option. Honest-null · unknown ISOs show the ISO code itself
+  // as a fallback name.
+  const countryOptions: CountryOption[] = await (async () => {
     try {
-      const businessFilter = category ? { category } : {};
-      if (tab === "shops") {
-        [businesses, businessCount] = await Promise.all([
-          discoveryService.searchShops(
-            query,
-            { limit: PAGE_SIZE, offset },
-            businessFilter,
-          ),
-          discoveryService.countShops(query, businessFilter),
-        ]);
-      } else {
-        [products, businesses, productCount, businessCount] = await Promise.all([
-          query.length > 0
-            ? discoveryService.searchProducts(query, { limit: PAGE_SIZE, offset })
-            : Promise.resolve([]),
-          query.length > 0
-            ? localDirectory.searchCanonicalBusinesses(query, { limit: PAGE_SIZE, offset })
-            : Promise.resolve([] as NexBusinessRow[]),
-          query.length > 0
-            ? discoveryService.countProducts(query)
-            : Promise.resolve(0),
-          query.length > 0
-            ? localDirectory.countCanonicalBusinesses(query)
-            : Promise.resolve(0),
-        ]);
+      const list = await localDirectory.listCountriesWithCanonical();
+      const total = list.reduce((acc, r) => acc + r.n, 0);
+      const options: CountryOption[] = [
+        { iso: null, name: "All", canonicalCount: total, includedInProgramme: true },
+      ];
+      for (const r of list) {
+        options.push({
+          iso: r.iso,
+          name: countryDisplayName(r.iso),
+          canonicalCount: r.n,
+          includedInProgramme: true,
+        });
       }
-    } catch (e) {
-      errorMsg = e instanceof Error ? e.message : String(e);
+      return options;
+    } catch {
+      return [{ iso: null, name: "All", canonicalCount: 0, includedInProgramme: true }];
     }
-  }
+  })();
 
-  const productsPaged = tab === "all" ? products : [];
-  const businessesPaged = (tab === "all" || tab === "shops") ? businesses : [];
-  const hasNextProducts =
-    tab === "all" && offset + products.length < productCount;
-  const hasNextBusinesses =
-    (tab === "all" || tab === "shops") &&
-    offset + businessesPaged.length < businessCount;
-  const hasPrev = page > 1 && !isDormantTab;
-  const hasNext = (hasNextProducts || hasNextBusinesses) && !isDormantTab;
-
-  // Enrich product rows with their parent business for the "View shop" link.
-  const productBizIds = Array.from(new Set(productsPaged.map((p) => p.business_id)));
-  const productBizRows = await Promise.all(
-    productBizIds.map((id) => businessService.getBusinessById(id)),
-  );
-  const productBizById = new Map(
-    productBizRows.filter(Boolean).map((b) => [b!.id, b!]),
-  );
-
-  // Popular tags only on the landing · All tab (unchanged behaviour).
-  let popularTags: Array<{ tag: string; count: number }> = [];
-  let discoverListings: NexBusinessRow[] = [];
-  let totalLiveListings = 0;
-  let countryEntries: localDirectory.CountryCount[] = [];
-  if (!hasSearch && tab === "all") {
-    [popularTags, discoverListings, totalLiveListings, countryEntries] =
-      await Promise.all([
-        discoveryService.getPopularTags(12).catch(() => []),
-        localDirectory
-          .listRandomCanonicalBusinesses(12)
-          .catch(() => [] as NexBusinessRow[]),
-        localDirectory.countCanonicalBusinesses("").catch(() => 0),
-        localDirectory
-          .listCountryCounts()
-          .catch(() => [] as localDirectory.CountryCount[]),
-      ]);
-  }
-
-  // Phase 3b · the curated category image library (same source the
-  // Directory page uses). We fetch it unconditionally so every
-  // ResultBusinessCard · including the Discover-on-NEX section · gets
-  // a representative thumbnail when `logo_url` is null. Empty array
-  // on fetch failure · the card then renders the honest no-image
-  // fallback glyph exactly like today.
-  const categoryImageLibrary: readonly CategoryImageLibraryRow[] =
-    await getCategoryImageLibrary().catch(() => [] as CategoryImageLibraryRow[]);
-
-  function hrefFor(opts: {
-    q?: string;
-    tab?: string;
-    category?: string;
-    page?: number;
-    preserveSearchBypass?: boolean;
-  }): string {
-    const p = new URLSearchParams();
-    const nextQ = opts.q ?? query;
-    const nextTab = opts.tab ?? tab;
-    const nextCategory = opts.category ?? category;
-    const nextPage = opts.page ?? 1;
-    if (nextQ) p.set("q", nextQ);
-    if (nextTab && nextTab !== "all") p.set("tab", nextTab);
-    if (nextCategory) p.set("category", nextCategory);
-    if (nextPage > 1) p.set("page", String(nextPage));
-    if (opts.preserveSearchBypass !== false) {
-      const bypass = sp.search === "1" || sp.search === "true";
-      if (bypass) p.set("search", "1");
+  // ─── Fetch feed from BOTH sources (founder directive 2026-10-13:
+  //     "add all our business listing from nex directory to nex search"):
+  //
+  //       A. nex_business  (Supabase · merchant-claimed shops with owners)
+  //       B. nex.business_canonical (local nex_dev · 22k+ directory
+  //          canonical rows · unclaimed · no owner_account_id)
+  //
+  //     Both branches tolerate the other failing (postgres offline in
+  //     prod, Supabase hiccup in dev) so the surface stays useful.
+  //     Dedup is by slug (`display_name|slug` collision is vanishingly
+  //     rare but guarded against). Chat button suppresses itself when
+  //     owner_account_id is empty — the row is still visible but
+  //     tagged as a Directory listing instead of a Chat partner.
+  const supabaseRows: NexBusinessRow[] = await (async () => {
+    // When the viewer scopes to a specific country, skip Supabase
+    // nex_business entirely · it has no formal country column, so
+    // mixing those rows into (say) ?country=GB would misrepresent
+    // the market as populated when it isn't. Honest-null.
+    if (activeCountryIso !== null) return [];
+    try {
+      if (query.length > 0) {
+        return await discoveryService.searchBusinesses(
+          query,
+          { limit: PAGE_SIZE, offset },
+          { category: effectiveCategory },
+        );
+      }
+      if (effectiveCategory) {
+        const all = await discoveryService.listBusinessesPaged(
+          PAGE_SIZE,
+          offset,
+        );
+        return all.filter((b) => b.business_category === effectiveCategory);
+      }
+      return await discoveryService.listBusinessesPaged(PAGE_SIZE, offset);
+    } catch {
+      return [];
     }
-    const qs = p.toString();
-    return qs ? `/nex-native/search?${qs}` : "/nex-native/search";
+  })();
+  const directoryRows: NexBusinessRow[] = await (async () => {
+    try {
+      if (query.length > 0) {
+        return await localDirectory.searchCanonicalBusinesses(query, {
+          limit: PAGE_SIZE,
+          offset,
+        });
+      }
+      return await localDirectory.listCanonicalBusinessesPaged(
+        PAGE_SIZE,
+        offset,
+        { country: activeCountryIso, seed: feedSeed },
+      );
+    } catch {
+      return [];
+    }
+  })();
+  // Merge, dedup by slug, then clamp to PAGE_SIZE for the page. The
+  // claimed Supabase rows are prepended so they tend to appear above
+  // directory rows on the first page.
+  const seenSlugs = new Set<string>();
+  const merged: NexBusinessRow[] = [];
+  for (const r of [...supabaseRows, ...directoryRows]) {
+    const key = r.slug || r.id;
+    if (seenSlugs.has(key)) continue;
+    seenSlugs.add(key);
+    merged.push(r);
   }
+  const rows = merged.slice(0, PAGE_SIZE);
+
+  // Honest totals for hasNext · sums both corpora. Any failure
+  // degrades to "unknown total" (Next always clickable) rather than
+  // showing a wrong number.
+  const [supabaseTotal, directoryTotal] = await Promise.all([
+    discoveryService.countActiveBusinesses().catch(() => null),
+    localDirectory
+      .countCanonicalBusinessesAll({ country: activeCountryIso })
+      .catch(() => null),
+  ]);
+  const combinedTotal =
+    supabaseTotal === null && directoryTotal === null
+      ? null
+      : (supabaseTotal ?? 0) + (directoryTotal ?? 0);
+  const hasNext =
+    combinedTotal === null ? rows.length === PAGE_SIZE : page * PAGE_SIZE < combinedTotal;
+  const hasPrev = page > 1;
+
+  // Batch-fetch cover + price context for the 24 cards on the page.
+  // One Supabase round-trip returns heroImageUrl + minPricePence +
+  // currency per claimed business. Directory rows (no business_id)
+  // return nothing; the card falls back to the category gradient.
+  const cardCtxMap = await fetchDiscoverCardContext(rows.map((r) => r.id));
+
+  // Dev overlay · fixture promos on the first 6 cards (1 / 2 / 3
+  // rotating) so promo bubbles are visible before migration 159 is
+  // applied in production. Clearly branded "DEMO" in each title.
+  //
+  // Default-ON in dev so visiting /nex-native/search shows the
+  // bubbles without hunting for a URL flag. Pass `?dev_promos=0` to
+  // force the empty state locally. In production (NODE_ENV !=
+  // "development") the overlay only activates when the flag is
+  // explicitly set to "1" / "true" — so a prod viewer never sees a
+  // DEMO promo unless they ask for it with a query string.
+  const isDev = process.env.NODE_ENV === "development";
+  const devPromosOn = sp.dev_promos === "0" || sp.dev_promos === "false"
+    ? false
+    : sp.dev_promos === "1" || sp.dev_promos === "true"
+      ? true
+      : isDev;
+  if (devPromosOn) {
+    // Single-slot model (2026-10-13 · supersedes the 3-circle stack):
+    // one discount per card, rotating through the 3 fixture presets so
+    // the user sees variety (20% orange, 15% cyan, 30% green) across
+    // the first 6 cards.
+    rows.slice(0, 6).forEach((r, i) => {
+      const presetIdx = (i % 3) as 0 | 1 | 2;
+      const promos = [fixturePromoFor((presetIdx + 1) as 1 | 2 | 3, r.id)];
+      const existing = cardCtxMap.get(r.id) ?? {
+        heroImageUrl: null,
+        minPricePence: null,
+        currency: null,
+        maxSpiceLevel: null,
+        promos: [],
+        menuPreview: [],
+      };
+      cardCtxMap.set(r.id, { ...existing, promos });
+    });
+  }
+
+  // Enrich with distance when both viewer and business have coords.
+  const enriched = rows.map((b) => {
+    let distanceKm: number | null = null;
+    if (
+      viewerLocation !== null &&
+      typeof b.location_lat === "number" &&
+      typeof b.location_lng === "number"
+    ) {
+      distanceKm = haversineKm(
+        { lat: viewerLocation.lat, lng: viewerLocation.lng },
+        { lat: b.location_lat, lng: b.location_lng },
+      );
+    }
+    return { row: b, distanceKm };
+  });
+
+  // Default sort · "Nearby" chip is the no-category path. When we have
+  // the viewer's location and the active chip is "Nearby" (""), sort by
+  // distance ascending (nulls last so unlocated shops don't dominate).
+  if (viewerLocation !== null && effectiveCategory === null) {
+    enriched.sort((a, b) => {
+      const ad = a.distanceKm ?? Number.POSITIVE_INFINITY;
+      const bd = b.distanceKm ?? Number.POSITIVE_INFINITY;
+      return ad - bd;
+    });
+  }
+
+  const feedHeadline =
+    query.length > 0
+      ? `Results for "${query}"`
+      : effectiveCategory !== null
+        ? `${categoryLabel(effectiveCategory)} near you`
+        : "Shops near you";
 
   return (
     <>
-      <style>{`html, body { background: ${NEX.bg} !important; }`}</style>
+      <style>{`
+        html, body { background: ${NEX.bg} !important; }
+        html, body { scrollbar-width: none; -ms-overflow-style: none; }
+        html::-webkit-scrollbar, body::-webkit-scrollbar { width: 0; height: 0; display: none; }
+        @keyframes nex-discover-presence-heartbeat {
+          0%   { transform: scale(1);    opacity: 0.55; }
+          70%  { transform: scale(1.32); opacity: 0; }
+          100% { transform: scale(1.32); opacity: 0; }
+        }
+        /* Subtle "life" on the promo circles · 1.5-2% scale breathe
+           on a 1.6s ease-in-out loop. Peripheral-eye attention
+           without being spammy. */
+        @keyframes nex-promo-pulse {
+          0%, 100% { transform: scale(1); }
+          50%      { transform: scale(1.04); }
+        }
+      `}</style>
       <main
-        data-nex-search-root
+        data-nex-discover-root
         style={{
           minHeight: "100dvh",
           background: NEX.bg,
           color: NEX.text,
           fontFamily:
             "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-          padding: "calc(env(safe-area-inset-top, 0) + 16px) 20px 48px",
+          padding: "16px 18px 48px",
           position: "relative",
-          overflow: "hidden",
         }}
       >
         <div
@@ -307,1620 +563,322 @@ export default async function SearchPage({ searchParams }: PageProps) {
             position: "absolute",
             inset: 0,
             background:
-              "radial-gradient(60% 40% at 50% 0%, rgba(0,175,255,0.09), transparent 70%)",
+              "radial-gradient(70% 50% at 50% 0%, rgba(0,175,255,0.08), transparent 70%)",
             pointerEvents: "none",
           }}
         />
+        <div style={{ position: "relative", maxWidth: 460, margin: "0 auto" }}>
+          <NexPageHeader dataScope="discover" />
 
-        <div
-          style={{ position: "relative", zIndex: 1, maxWidth: 720, margin: "0 auto" }}
-        >
-          <NexPageHeader dataScope="search" />
-
-          <UserLocationProvider initialServerLocation={initialServerLocation}>
-          <LocationGate />
-
-          {hasSearch ? (
-            <ResultsHeading query={query} />
-          ) : (
-            <LandingHero totalLiveListings={totalLiveListings} />
-          )}
-
-          <SearchForm
-            query={query}
-            hasSearch={hasSearch}
-            tab={tab}
-            category={category}
-          />
-
-          {!hasSearch && countryEntries.length > 0 && (
+          <section style={{ marginTop: 22 }}>
+            <h1
+              style={{
+                margin: 0,
+                fontSize: 26,
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
+                lineHeight: 1.1,
+                color: NEX.text,
+              }}
+            >
+              NEX Discover
+            </h1>
             <div
               style={{
+                marginTop: 6,
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                gap: 10,
-                margin: "0 0 14px",
-                position: "relative",
-                zIndex: 2,
+                justifyContent: "space-between",
+                gap: 12,
               }}
-              data-nex-search-country-row
             >
-              <span style={{ fontSize: 12.5, color: NEX.textMuted }}>
-                Browse by country:
-              </span>
-              <CountryPicker
-                entries={countryEntries}
-                initialSelected={countryEntries[0]?.isoAlpha2 ?? "ID"}
-                triggerIcon="globe"
-                ariaLabel="Select directory country"
-              />
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 14,
+                  color: NEX.textMuted,
+                  lineHeight: 1.5,
+                }}
+              >
+                Find people, food and local services
+              </p>
+              {combinedTotal !== null ? (
+                <span
+                  aria-label={`${combinedTotal.toLocaleString("en-US")} listings on NEX`}
+                  style={{
+                    flex: "0 0 auto",
+                    padding: "4px 10px",
+                    borderRadius: 999,
+                    background: "rgba(255,114,0,0.14)",
+                    border: `1px solid ${NEX.orangeSoft}`,
+                    color: NEX.orange,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: "0.02em",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {combinedTotal.toLocaleString("en-US")} listings
+                </span>
+              ) : null}
             </div>
-          )}
+            {viewingLine ? (
+              <div
+                style={{
+                  marginTop: 10,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "6px 12px",
+                  background: "rgba(0,175,255,0.08)",
+                  border: `1px solid ${NEX.cyanSoft}`,
+                  borderRadius: 999,
+                  fontSize: 12,
+                  color: NEX.text,
+                  fontWeight: 600,
+                  letterSpacing: "0.01em",
+                }}
+                aria-live="polite"
+              >
+                {viewerCountryFlag ? (
+                  <span role="img" aria-label={viewerCountryName ?? "country"} style={{ fontSize: 16, lineHeight: 1 }}>
+                    {viewerCountryFlag}
+                  </span>
+                ) : null}
+                <span>{viewingLine}</span>
+              </div>
+            ) : null}
+          </section>
 
-          {hasSearch ? (
-            <ResultsTabBar activeTab={tab} query={query} category={category} hrefFor={hrefFor} />
-          ) : (
-            <VerticalButtonsRow hrefFor={hrefFor} />
-          )}
-
-          {!hasSearch && <ExampleQueriesRow />}
-
-          {errorMsg && <ErrorBanner message={errorMsg} />}
-
-          {isDormantTab ? (
-            <DormantPanel tabKey={tab} />
-          ) : hasSearch ? (
-            <ResultsBody
-              productsPaged={productsPaged}
-              businessesPaged={businessesPaged}
-              productBizById={productBizById}
-              productCount={productCount}
-              businessCount={businessCount}
-              tab={tab}
-              query={query}
-              page={page}
-              hasPrev={hasPrev}
-              hasNext={hasNext}
-              hrefFor={hrefFor}
-              categoryImageLibrary={categoryImageLibrary}
+          <section style={{ marginTop: 18 }}>
+            <DiscoverControls
+              initialQuery={query}
+              countryFlagEmoji={viewerCountryFlag}
+              countryName={viewerCountryName}
             />
-          ) : (
-            <LandingBody
-              popularTags={popularTags}
-              discoverListings={discoverListings}
-              hrefFor={hrefFor}
-              categoryImageLibrary={categoryImageLibrary}
+            <CountrySelector
+              options={countryOptions}
+              activeIso={activeCountryIso}
             />
-          )}
-          </UserLocationProvider>
+          </section>
+
+          <section style={{ marginTop: 24 }}>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: 17,
+                fontWeight: 700,
+                letterSpacing: "-0.01em",
+                color: NEX.text,
+              }}
+            >
+              {feedHeadline}
+            </h2>
+
+            <ul
+              style={{
+                listStyle: "none",
+                margin: "14px 0 0",
+                padding: 0,
+                display: "flex",
+                flexDirection: "column",
+                gap: 14,
+              }}
+            >
+              {enriched.length === 0 ? (
+                <EmptyFeed query={query} activeCategory={effectiveCategory} />
+              ) : (
+                enriched.map(({ row, distanceKm }) => (
+                  <li key={row.id}>
+                    <ShopCard
+                      row={row}
+                      distanceKm={distanceKm}
+                      cardCtx={cardCtxMap.get(row.id) ?? null}
+                      /* Prototype presence proxy: claimed shops read
+                         as "online" so the green rim + heartbeat ping
+                         is visible across the Discover feed. Flip to
+                         a real presence resolver when the activity
+                         service lands. Unclaimed directory rows read
+                         "unknown" (neutral ring, no ping). */
+                      presence={
+                        typeof row.owner_account_id === "string" &&
+                        row.owner_account_id.length > 0
+                          ? "online"
+                          : "unknown"
+                      }
+                      viewerCountryIso={viewerCountryIso}
+                    />
+                  </li>
+                ))
+              )}
+            </ul>
+
+            {rows.length > 0 ? (
+              <Pager
+                page={page}
+                hasPrev={hasPrev}
+                hasNext={hasNext}
+                totalShown={combinedTotal}
+                baseParams={{ ...sp, seed: feedSeed }}
+              />
+            ) : null}
+          </section>
+
+          <p
+            style={{
+              marginTop: 32,
+              textAlign: "center",
+              fontSize: 11,
+              color: NEX.textSoft,
+              lineHeight: 1.55,
+            }}
+          >
+            Only verified NEX businesses with shops or menus appear here ·
+            tap <strong style={{ color: NEX.text }}>Chat with owner</strong>{" "}
+            to open a direct conversation.
+          </p>
         </div>
       </main>
+      <HardLocationGate
+        initialLocation={viewerLocation}
+        isSignedIn={isSignedIn}
+      />
     </>
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════ *
- * Landing hero · "NEX Search" + tagline                               *
- * ═══════════════════════════════════════════════════════════════════ */
+// ShopCard moved to ./_shop-card.tsx (world-class layout · cover
+// photo · open-now · from-price · retained Safe Trade + chips).
 
-function LandingHero({
-  totalLiveListings,
-}: {
-  totalLiveListings: number;
-}): React.JSX.Element {
-  return (
-    <header
-      style={{ textAlign: "center", margin: "48px 0 18px", position: "relative", zIndex: 2 }}
-    >
-      <h1
-        style={{
-          margin: 0,
-          fontSize: 28,
-          fontWeight: 700,
-          letterSpacing: "-0.01em",
-          lineHeight: 1,
-        }}
-      >
-        <span style={{ color: NEX.orange }}>NEX</span>{" "}
-        <span style={{ color: NEX.text }}>Search</span>
-      </h1>
-      <p
-        style={{
-          margin: "12px auto 0",
-          maxWidth: 460,
-          fontSize: 14.5,
-          color: NEX.textDim,
-          lineHeight: 1.5,
-        }}
-      >
-        Find businesses, products, services and places
-      </p>
-      {totalLiveListings > 0 && (
-        <p
-          style={{
-            margin: "10px auto 0",
-            fontSize: 12.5,
-            color: NEX.textMuted,
-            letterSpacing: "0.04em",
-          }}
-          data-nex-search-total-live
-        >
-          <span style={{ color: NEX.cyan, fontWeight: 700 }}>
-            {totalLiveListings.toLocaleString("en-US")}
-          </span>{" "}
-          live listings in the NEX directory
-        </p>
-      )}
-    </header>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════════ *
- * Results heading · query echoed back as a title                      *
- * ═══════════════════════════════════════════════════════════════════ */
-
-function ResultsHeading({ query }: { query: string }): React.JSX.Element {
-  return (
-    <header style={{ margin: "22px 0 14px", position: "relative", zIndex: 2 }}>
-      <h1
-        style={{
-          margin: 0,
-          fontSize: 20,
-          fontWeight: 700,
-          color: NEX.text,
-          letterSpacing: "-0.005em",
-        }}
-      >
-        {query || "Search results"}
-      </h1>
-    </header>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════════ *
- * Search form · flat dark pill · mic honestly muted                   *
- * ═══════════════════════════════════════════════════════════════════ */
-
-function SearchForm({
-  query,
-  hasSearch,
-  tab,
-  category,
-}: {
-  query: string;
-  hasSearch: boolean;
-  tab: string;
-  category: string;
-}): React.JSX.Element {
-  return (
-    <form
-      action="/nex-native/search"
-      method="get"
-      style={{
-        display: "flex",
-        margin: "0 0 14px",
-        position: "relative",
-        zIndex: 2,
-      }}
-    >
-      {tab !== "all" && <input type="hidden" name="tab" value={tab} />}
-      {category && <input type="hidden" name="category" value={category} />}
-      <label
-        style={{
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          padding: "12px 16px",
-          borderRadius: 999,
-          background: NEX.surface,
-          border: `1px solid ${NEX.borderSoft}`,
-          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03)",
-        }}
-      >
-        <SearchGlyph tint={NEX.orange} />
-        <input
-          type="text"
-          name="q"
-          defaultValue={query}
-          placeholder="What are you looking for?"
-          maxLength={100}
-          autoComplete="off"
-          style={{
-            flex: 1,
-            minWidth: 0,
-            background: "transparent",
-            border: "none",
-            outline: "none",
-            color: NEX.text,
-            fontSize: 15,
-            fontFamily: "inherit",
-          }}
-        />
-        {hasSearch ? (
-          // Results · a quiet filter affordance (visual only · the
-          // sub-tab row below carries the real filter controls today).
-          <span
-            aria-hidden
-            title="Filters"
-            style={{
-              display: "grid",
-              placeItems: "center",
-              width: 32,
-              height: 32,
-              borderRadius: 999,
-              color: NEX.textMuted,
-              background: "rgba(255,255,255,0.03)",
-            }}
-          >
-            <FilterGlyph />
-          </span>
-        ) : (
-          // Landing · honestly-muted mic icon. No handler. aria-label
-          // tells screen readers it's not yet active. Zero fake action.
-          <span
-            aria-label="Voice search coming later"
-            title="Voice search coming later"
-            style={{
-              display: "grid",
-              placeItems: "center",
-              width: 32,
-              height: 32,
-              borderRadius: 999,
-              color: NEX.textSoft,
-              opacity: 0.6,
-            }}
-          >
-            <MicGlyph />
-          </span>
-        )}
-      </label>
-    </form>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════════ *
- * Tab bars · landing vs results                                       *
- * ═══════════════════════════════════════════════════════════════════ */
-
-function ResultsTabBar({
-  activeTab,
-  query,
-  category,
-  hrefFor,
-}: {
-  activeTab: ResultTab;
-  query: string;
-  category: string;
-  hrefFor: (opts: { q?: string; tab?: string; category?: string; page?: number }) => string;
-}): React.JSX.Element {
-  return (
-    <TabRow>
-      {RESULT_TABS.map((t) => {
-        const active = t === activeTab;
-        const dormant = !RESULT_TAB_ACTIVE[t];
-        return (
-          <TabChip
-            key={t}
-            active={active}
-            dormant={dormant}
-            href={hrefFor({ q: query, tab: t, category, page: 1 })}
-            label={RESULT_TAB_LABEL[t]}
-          />
-        );
-      })}
-    </TabRow>
-  );
-}
-
-function TabRow({ children }: { children: React.ReactNode }): React.JSX.Element {
-  return (
-    <nav
-      aria-label="Search categories"
-      style={{
-        display: "flex",
-        gap: 8,
-        overflowX: "auto",
-        padding: "2px 2px 10px",
-        margin: "0 0 4px",
-        position: "relative",
-        zIndex: 2,
-      }}
-    >
-      {children}
-    </nav>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════════ *
- * Vertical quick-entry buttons · landing only                         *
- * ─────────────────────────────────────────────────────────────────── *
- * Replaces the old All | Companies | Services | Places tab row.       *
- * Two primary verticals land first:                                   *
- *   · Food & Drinks → runs a q=food search (hits restaurants, cafes,  *
- *     bakeries, ice-cream, juice bars, etc. · all existing categories *
- *     in NEX_BUSINESS_CATEGORIES already classified as menu-first).   *
- *   · Taxi Service → runs a q=taxi search · honestly empty today      *
- *     (no taxi businesses on NEX yet) · lights up when drivers join.  *
- *                                                                     *
- * These are app-wide verticals, not UI-only chips · they go through   *
- * the same full-text search path as the search box so pagination,     *
- * category filters and shop/product mixing stay consistent.           *
- * ═══════════════════════════════════════════════════════════════════ */
-
-function VerticalButtonsRow({
-  hrefFor,
-}: {
-  hrefFor: (opts: { q?: string; tab?: string; category?: string; page?: number }) => string;
-}): React.JSX.Element {
-  return (
-    <nav
-      aria-label="Quick verticals"
-      style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: 10,
-        padding: "2px 2px 12px",
-        margin: "0 0 4px",
-        position: "relative",
-        zIndex: 2,
-      }}
-    >
-      <VerticalButton
-        label="Food & Drinks"
-        glyph={<FoodDrinksGlyph />}
-        href={hrefFor({ q: "food", page: 1 })}
-      />
-      <VerticalButton
-        label="Taxi Service"
-        glyph={<TaxiGlyph />}
-        href={hrefFor({ q: "taxi", page: 1 })}
-      />
-    </nav>
-  );
-}
-
-function VerticalButton({
-  label,
-  glyph,
-  href,
-}: {
-  label: string;
-  glyph: React.ReactNode;
-  href: string;
-}): React.JSX.Element {
-  return (
-    <Link
-      href={href}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 10,
-        padding: "16px 14px",
-        borderRadius: 14,
-        background: NEX.surface,
-        border: `1px solid ${NEX.borderSoft}`,
-        color: NEX.text,
-        fontSize: 14.5,
-        fontWeight: 600,
-        letterSpacing: "0.01em",
-        textDecoration: "none",
-      }}
-    >
-      <span aria-hidden style={{ display: "inline-flex", color: NEX.orange }}>
-        {glyph}
-      </span>
-      {label}
-    </Link>
-  );
-}
-
-function FoodDrinksGlyph(): React.JSX.Element {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M4 3v8a4 4 0 0 0 4 4v6" />
-      <path d="M8 3v8" />
-      <path d="M12 3v8" />
-      <path d="M18 3c-1.5 0-3 1.5-3 4v6a2 2 0 0 0 2 2h1v6" />
-    </svg>
-  );
-}
-
-function TaxiGlyph(): React.JSX.Element {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M9 3h6l1 3H8z" />
-      <rect x="3" y="10" width="18" height="7" rx="2" />
-      <circle cx="7.5" cy="18.5" r="1.5" />
-      <circle cx="16.5" cy="18.5" r="1.5" />
-      <path d="M3 13h18" />
-    </svg>
-  );
-}
-
-function TabChip({
-  active,
-  dormant,
-  href,
-  label,
-}: {
-  active: boolean;
-  dormant: boolean;
-  href: string;
-  label: string;
-}): React.JSX.Element {
-  return (
-    <Link
-      href={href}
-      aria-current={active ? "page" : undefined}
-      style={{
-        flex: "none",
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-        padding: "9px 16px",
-        borderRadius: 999,
-        background: active ? NEX.orange : NEX.surface,
-        color: active ? "#0a0608" : dormant ? NEX.textSoft : NEX.textDim,
-        fontSize: 13,
-        fontWeight: active ? 700 : 600,
-        textDecoration: "none",
-        letterSpacing: "0.005em",
-        border: `1px solid ${active ? NEX.orange : NEX.borderSoft}`,
-      }}
-    >
-      {label}
-      {dormant && !active && (
-        <span
-          aria-hidden
-          style={{
-            width: 4,
-            height: 4,
-            borderRadius: 999,
-            background: NEX.cyan,
-            opacity: 0.6,
-          }}
-        />
-      )}
-    </Link>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════════ *
- * Example queries row · static illustrative copy (never prefills)     *
- * ═══════════════════════════════════════════════════════════════════ */
-
-function ExampleQueriesRow(): React.JSX.Element {
-  const examples = [
-    "Restaurants near me",
-    "Handbag suppliers in Jakarta",
-    "Electrician in Yogyakarta",
-  ];
-  return (
-    <p
-      style={{
-        margin: "4px 0 18px",
-        textAlign: "center",
-        fontSize: 12.5,
-        color: NEX.textMuted,
-        lineHeight: 1.5,
-      }}
-    >
-      Try:{" "}
-      {examples.map((e, i) => (
-        <span key={e}>
-          <span style={{ color: NEX.textDim }}>&ldquo;{e}&rdquo;</span>
-          {i < examples.length - 1 && (
-            <span style={{ color: NEX.textSoft }}> · </span>
-          )}
-        </span>
-      ))}
-    </p>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════════ *
- * Landing body · Explore NEX 2×2 grid + popular tags                  *
- * ═══════════════════════════════════════════════════════════════════ */
-
-function LandingBody({
-  popularTags,
-  discoverListings,
-  hrefFor,
-  categoryImageLibrary,
-}: {
-  popularTags: Array<{ tag: string; count: number }>;
-  discoverListings: NexBusinessRow[];
-  hrefFor: (opts: { q?: string; tab?: string; category?: string; page?: number }) => string;
-  categoryImageLibrary: readonly CategoryImageLibraryRow[];
-}): React.JSX.Element {
-  // Explore grid · "Shops & products" tile only.
-  // The Services / Places / Companies dormant tiles were removed
-  // 2026-10-04 along with the Companies / Services / Places landing
-  // tabs · the Food & Drinks + Taxi Service buttons at the top of the
-  // landing are now the primary vertical entry points.
-  const exploreTiles: Array<{
-    label: string;
-    glyph: React.ReactNode;
-    href: string;
-    dormant: boolean;
-  }> = [
-    {
-      label: "Shops & products",
-      glyph: <ShopsGlyph />,
-      href: hrefFor({ q: "shops", tab: "shops", page: 1 }),
-      dormant: false,
-    },
-  ];
-  return (
-    <div style={{ marginTop: 8 }}>
-      <HairlineDivider />
-      <section aria-label="Explore NEX" style={{ margin: "22px 0 8px" }}>
-        <h2
-          style={{
-            margin: "0 0 16px",
-            fontSize: 16,
-            fontWeight: 700,
-            color: NEX.text,
-            textAlign: "center",
-            letterSpacing: "0.005em",
-          }}
-        >
-          Explore NEX
-        </h2>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns:
-              exploreTiles.length === 1 ? "1fr" : "repeat(2, 1fr)",
-            gap: 12,
-          }}
-        >
-          {exploreTiles.map((t) => (
-            <ExploreTile key={t.label} {...t} />
-          ))}
-        </div>
-      </section>
-
-      {discoverListings.length > 0 && (
-        <section aria-label="Discover on NEX" style={{ marginTop: 28 }}>
-          <div
-            style={{
-              fontSize: 10.5,
-              color: NEX.textMuted,
-              letterSpacing: "0.2em",
-              fontWeight: 700,
-              marginBottom: 12,
-              textAlign: "center",
-            }}
-          >
-            DISCOVER ON NEX
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {discoverListings.map((b, idx) => (
-              <ResultBusinessCard
-                key={b.id}
-                business={b}
-                isLastInSection={idx === discoverListings.length - 1}
-                categoryImageLibrary={categoryImageLibrary}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {popularTags.length > 0 && (
-        <section aria-label="Popular tags" style={{ marginTop: 28 }}>
-          <div
-            style={{
-              fontSize: 10.5,
-              color: NEX.textMuted,
-              letterSpacing: "0.2em",
-              fontWeight: 700,
-              marginBottom: 12,
-              textAlign: "center",
-            }}
-          >
-            POPULAR TAGS
-          </div>
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 8,
-              justifyContent: "center",
-            }}
-          >
-            {popularTags.map(({ tag, count }) => (
-              <Link
-                key={tag}
-                href={hrefFor({ q: tag, tab: "all", category: "", page: 1 })}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "6px 12px",
-                  borderRadius: 999,
-                  background: NEX.surface,
-                  border: `1px solid ${NEX.borderSoft}`,
-                  color: NEX.textDim,
-                  fontSize: 12.5,
-                  fontWeight: 600,
-                  textDecoration: "none",
-                }}
-              >
-                {tag}
-                <span style={{ color: NEX.textSoft, fontSize: 10.5 }}>{count}</span>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-    </div>
-  );
-}
-
-function ExploreTile({
-  label,
-  glyph,
-  href,
-  dormant,
-}: {
-  label: string;
-  glyph: React.ReactNode;
-  href: string;
-  dormant: boolean;
-}): React.JSX.Element {
-  return (
-    <Link
-      href={href}
-      style={{
-        position: "relative",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 10,
-        padding: "22px 14px",
-        borderRadius: 16,
-        background: NEX.surface,
-        border: `1px solid ${NEX.borderSoft}`,
-        color: NEX.text,
-        textDecoration: "none",
-        minHeight: 110,
-        opacity: dormant ? 0.78 : 1,
-      }}
-    >
-      <span aria-hidden style={{ color: NEX.orange }}>{glyph}</span>
-      <span
-        style={{
-          fontSize: 14.5,
-          fontWeight: 700,
-          color: NEX.text,
-          textAlign: "center",
-          letterSpacing: "0.005em",
-        }}
-      >
-        {label}
-      </span>
-      {dormant && (
-        <span
-          aria-label="coming later"
-          style={{
-            position: "absolute",
-            top: 10,
-            right: 10,
-            fontSize: 9,
-            letterSpacing: "0.18em",
-            color: NEX.cyan,
-            fontWeight: 700,
-            opacity: 0.7,
-          }}
-        >
-          SOON
-        </span>
-      )}
-    </Link>
-  );
-}
-
-function HairlineDivider(): React.JSX.Element {
-  return (
-    <div
-      aria-hidden
-      style={{
-        height: 1,
-        margin: "4px 0 0",
-        background: NEX.divider,
-      }}
-    />
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════════ *
- * Dormant panel · honest "coming later" state                         *
- * ═══════════════════════════════════════════════════════════════════ */
-
-function DormantPanel({ tabKey }: { tabKey: string }): React.JSX.Element {
-  const copy = DORMANT_COPY[tabKey];
-  if (!copy) return <></>;
-  return (
-    <section
-      aria-live="polite"
-      style={{
-        marginTop: 18,
-        padding: "32px 24px",
-        borderRadius: 16,
-        background: NEX.surface,
-        border: `1px solid ${NEX.borderSoft}`,
-        textAlign: "center",
-      }}
-    >
-      <div
-        aria-hidden
-        style={{
-          margin: "0 auto 14px",
-          width: 54,
-          height: 54,
-          borderRadius: 14,
-          background: NEX.surfaceHi,
-          color: NEX.cyan,
-          display: "grid",
-          placeItems: "center",
-          border: `1px solid ${NEX.cyan}22`,
-        }}
-      >
-        <SearchGlyph tint={NEX.cyan} />
-      </div>
-      <h2
-        style={{
-          margin: 0,
-          fontSize: 16,
-          fontWeight: 700,
-          color: NEX.text,
-          letterSpacing: "-0.005em",
-        }}
-      >
-        {copy.title}
-      </h2>
-      <p
-        style={{
-          margin: "8px auto 0",
-          maxWidth: 420,
-          fontSize: 13,
-          color: NEX.textDim,
-          lineHeight: 1.55,
-        }}
-      >
-        {copy.body}
-      </p>
-    </section>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════════ *
- * Results body · landscape result cards + pagination                  *
- * ═══════════════════════════════════════════════════════════════════ */
-
-function ResultsBody({
-  productsPaged,
-  businessesPaged,
-  productBizById,
-  businessCount,
-  productCount,
-  tab,
-  query,
+function Pager({
   page,
   hasPrev,
   hasNext,
-  hrefFor,
-  categoryImageLibrary,
+  totalShown,
+  baseParams,
 }: {
-  productsPaged: NexProductRow[];
-  businessesPaged: NexBusinessRow[];
-  productBizById: Map<string, NexBusinessRow>;
-  businessCount: number;
-  productCount: number;
-  tab: ResultTab;
-  query: string;
-  page: number;
-  hasPrev: boolean;
-  hasNext: boolean;
-  hrefFor: (opts: { q?: string; tab?: string; category?: string; page?: number }) => string;
-  categoryImageLibrary: readonly CategoryImageLibraryRow[];
+  readonly page: number;
+  readonly hasPrev: boolean;
+  readonly hasNext: boolean;
+  readonly totalShown: number | null;
+  readonly baseParams: {
+    q?: string;
+    category?: string;
+    lat?: string;
+    lng?: string;
+    city?: string;
+    country?: string;
+    seed?: string;
+  };
 }): React.JSX.Element {
-  const noResults =
-    productsPaged.length === 0 && businessesPaged.length === 0;
-  return (
-    <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 18 }}>
-      <ResultsSummary
-        tab={tab}
-        businessCount={businessCount}
-        productCount={productCount}
-      />
-
-      {noResults ? (
-        <EmptyState query={query} tab={tab} />
-      ) : (
-        <>
-          {businessesPaged.length > 0 && (
-            <section
-              aria-label={tab === "shops" ? "Shops" : "Businesses"}
-              style={{ display: "flex", flexDirection: "column", gap: 14 }}
-            >
-              {businessesPaged.map((b, idx) => (
-                <ResultBusinessCard
-                  key={b.id}
-                  business={b}
-                  isLastInSection={idx === businessesPaged.length - 1}
-                  categoryImageLibrary={categoryImageLibrary}
-                />
-              ))}
-            </section>
-          )}
-
-          {productsPaged.length > 0 && (
-            <section
-              aria-label="Products"
-              style={{ display: "flex", flexDirection: "column", gap: 14 }}
-            >
-              {productsPaged.map((p, idx) => {
-                const biz = productBizById.get(p.business_id);
-                return (
-                  <ResultProductCard
-                    key={p.id}
-                    product={p}
-                    business={biz ?? null}
-                    isLastInSection={idx === productsPaged.length - 1}
-                  />
-                );
-              })}
-            </section>
-          )}
-
-          <Pagination
-            page={page}
-            hasPrev={hasPrev}
-            hasNext={hasNext}
-            prevHref={hrefFor({ page: page - 1 })}
-            nextHref={hrefFor({ page: page + 1 })}
-          />
-        </>
-      )}
-    </div>
-  );
-}
-
-function ResultsSummary({
-  tab,
-  businessCount,
-  productCount,
-}: {
-  tab: ResultTab;
-  businessCount: number;
-  productCount: number;
-}): React.JSX.Element {
-  const parts: string[] = [];
-  if (tab === "all") {
-    if (businessCount > 0) {
-      parts.push(`${businessCount} ${businessCount === 1 ? "business" : "businesses"}`);
-    }
-    if (productCount > 0) {
-      parts.push(`${productCount} ${productCount === 1 ? "product" : "products"}`);
-    }
-  } else if (tab === "shops") {
-    if (businessCount > 0) {
-      parts.push(
-        `${businessCount} ${businessCount === 1 ? "shop" : "shops"} with live products`,
-      );
-    }
+  function hrefForPage(p: number): string {
+    const u = new URLSearchParams();
+    if (baseParams.q) u.set("q", baseParams.q);
+    if (baseParams.category) u.set("category", baseParams.category);
+    if (baseParams.lat) u.set("lat", baseParams.lat);
+    if (baseParams.lng) u.set("lng", baseParams.lng);
+    if (baseParams.city) u.set("city", baseParams.city);
+    if (baseParams.country) u.set("country", baseParams.country);
+    // Seed is threaded through pagination so pages 2+ reproduce the
+    // same visual order as page 1 within the same visit.
+    if (baseParams.seed) u.set("seed", baseParams.seed);
+    if (p > 1) u.set("page", String(p));
+    const qs = u.toString();
+    return qs.length > 0 ? `/nex-native/search?${qs}` : "/nex-native/search";
   }
-  if (parts.length === 0) return <></>;
-  return (
-    <div style={{ fontSize: 12, color: NEX.textMuted, letterSpacing: "0.02em" }}>
-      {parts.join(" · ")}
-    </div>
-  );
-}
-
-function EmptyState({ query, tab }: { query: string; tab: ResultTab }): React.JSX.Element {
-  return (
-    <section
-      style={{
-        marginTop: 4,
-        padding: "28px 20px",
-        borderRadius: 16,
-        background: NEX.surface,
-        border: `1px solid ${NEX.borderSoft}`,
-        textAlign: "center",
-      }}
-    >
-      <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: NEX.text }}>
-        No results{query ? ` for “${query}”` : ""}
-      </h3>
-      <p
-        style={{
-          margin: "6px auto 0",
-          maxWidth: 360,
-          fontSize: 12.5,
-          color: NEX.textDim,
-          lineHeight: 1.55,
-        }}
-      >
-        {tab === "shops"
-          ? "Try removing a filter, broadening the query, or switching to All results."
-          : "Try a different query or check the spelling."}
-      </p>
-    </section>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════════ *
- * Result cards · landscape · match the mock exactly                   *
- * ═══════════════════════════════════════════════════════════════════ */
-
-function ResultBusinessCard({
-  business,
-  isLastInSection,
-  categoryImageLibrary,
-}: {
-  business: NexBusinessRow;
-  isLastInSection: boolean;
-  categoryImageLibrary: readonly CategoryImageLibraryRow[];
-}): React.JSX.Element {
-  const b = business as NexBusinessRow & {
-    city?: string | null;
-    business_category?: string | null;
-    verified_at?: string | null;
-    search_keywords?: string[] | null;
-  };
-  const typeLabel = businessTypeLabel(b.business_category);
-  const location = b.city ?? null;
-  const metaParts = [typeLabel, location].filter(Boolean) as string[];
-  // Visible chips: first 3 search keywords when present. No fabrication.
-  const chips = (b.search_keywords ?? [])
-    .filter((k): k is string => typeof k === "string" && k.trim().length > 0)
-    .slice(0, 3);
-  const cta = typeLabel && typeLabel.toLowerCase().includes("company")
-    ? "View company →"
-    : typeLabel && typeLabel.toLowerCase().includes("manufactur")
-      ? "View company →"
-      : "View shop →";
-
-  // Phase 3b · unify the search card thumbnail path with the sealed
-  // Directory card. Walker-sourced rows (adaptCanonical in
-  // local-directory-service.ts) always set logo_url=null, so the only
-  // way they get a representative image is via the category image
-  // library resolver. We prefer the owner's uploaded logo when
-  // present; otherwise we fall through to Tier 1/2/3 of the resolver
-  // using the same curated library the Directory page uses. Honest
-  // null when nothing matches · ResultThumb then renders the no-
-  // image glyph exactly like before.
-  const representativeImage =
-    business.logo_url === null
-      ? resolveCategoryImage({
-          libraryRows: categoryImageLibrary,
-          entityType: b.business_category ?? "",
-          categoryIds: (b.search_keywords ?? []) as readonly string[],
-          canonicalBusinessId: business.id,
-        })
-      : null;
-  const thumbSrc = business.logo_url ?? representativeImage?.url ?? null;
-
-  // Phase 3b · CTA strip to match the Directory card's bottom row.
-  // We render the actions available for THIS row's shape:
-  //   · Call      iff public_phone is non-null
-  //   · Website   iff website_url is non-null
-  //   · View shop (always · routes to the same href as the whole card)
-  // We deliberately do NOT render "Message" or "Directions" on the
-  // search card: Message requires an owner_account_id that walker-
-  // adapted rows never have (adapter sets owner_account_id="");
-  // Directions requires raw lat/lng that the adapter does not thread
-  // through. Both become available once the Stage B identity bridge
-  // + a coords projection land · keeping them off today is honest.
-  const hasPhone = typeof business.public_phone === "string" && business.public_phone.length > 0;
-  const hasWebsite = typeof business.website_url === "string" && business.website_url.length > 0;
-  // Pass-10 route resolver. `/nex-native/<slug>` is the owner's shop
-  // route · it is behind the commerce launch gate (bounces to /home
-  // when `NEX_COMMERCE_ENABLED` is falsy). Search results from the
-  // local-directory-service carry a `slug = canonical_business_id`
-  // (bare UUID · no owner has claimed the listing yet). Sending the
-  // visitor to the shop route would hit the commerce gate; sending
-  // them to `/nex-native/directory/<uuid>` reaches the Directory
-  // detail page which is NOT behind the commerce gate and shows the
-  // real enrichment overlay. Real human slugs (owner-claimed shops)
-  // keep routing to the shop route unchanged.
-  //
-  // The guard is intentionally UUID-shape only · we never fabricate
-  // a slug or hide a defective one · the fallback destination for a
-  // UUID-slug is a REAL working page, not a dead card.
-  const UUID_RE =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  const slug = typeof business.slug === "string" ? business.slug.trim() : "";
-  const slugLooksLikeUuid = slug.length > 0 && UUID_RE.test(slug);
-  const href = slugLooksLikeUuid
-    ? `/nex-native/directory/${slug}`
-    : `/nex-native/${slug}`;
-  return (
-    <div
-      data-nex-search-card
-      style={{ paddingBottom: 20 }}
-    >
-      {/* Phase 3b · the Link wraps ONLY the thumb + name/meta/chips
-          block. The CTA strip is a SIBLING of the Link (not nested
-          inside it) so each CTA can be a plain <a> element without
-          triggering invalid-HTML nested-anchor hydration errors. The
-          server component boundary stays intact · no onClick handlers
-          cross from the server render to the client. */}
-      <Link
-        href={href}
-        style={{
-          display: "flex",
-          alignItems: "stretch",
-          gap: 16,
-          padding: "4px 4px 0 4px",
-          textDecoration: "none",
-          color: NEX.text,
-        }}
-      >
-        <ResultThumb
-          src={thumbSrc}
-          alt={business.display_name}
-          isRepresentative={business.logo_url === null && representativeImage !== null}
-        />
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-            <span
-              style={{
-                fontSize: 16,
-                fontWeight: 700,
-                letterSpacing: "-0.005em",
-                color: NEX.text,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {business.display_name}
-            </span>
-            {b.verified_at && (
-              <VerifiedBadge />
-            )}
-          </div>
-          {metaParts.length > 0 && (
-            <div style={{ fontSize: 12.5, color: NEX.orange, fontWeight: 600 }}>
-              {metaParts.join(" · ")}
-            </div>
-          )}
-          {business.description && (
-            <p
-              style={{
-                margin: 0,
-                fontSize: 13.5,
-                color: NEX.textDim,
-                lineHeight: 1.45,
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-              }}
-            >
-              {business.description}
-            </p>
-          )}
-          {chips.length > 0 && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 2 }}>
-              {chips.map((c) => (
-                <ChipPill key={c} label={c} />
-              ))}
-            </div>
-          )}
-        </div>
-      </Link>
-      {/* Phase 3b · CTA strip · sibling of the Link so these anchors
-          are NOT nested inside the outer card <a>. Plain <a href>
-          elements · no onClick handlers · no server/client boundary
-          issue. The parent <div> is a flex container that keeps the
-          strip left-aligned with the text column; thumb-width (92) +
-          gap (16) pushes the CTAs under the body copy, not under the
-          thumbnail. */}
-      <div
-        data-nex-search-card-cta-strip
-        style={{
-          marginLeft: 92 + 16 + 4, // thumb width + gap + Link padding-left
-          marginTop: 6,
-          display: "flex",
-          gap: 6,
-          flexWrap: "wrap",
-          alignItems: "center",
-          paddingRight: 4,
-        }}
-      >
-        {hasPhone ? (
-          <a
-            data-nex-search-card-cta="call"
-            data-nex-search-card-cta-variant="anchor"
-            href={`tel:${business.public_phone}`}
-            aria-label="Call"
-            style={ctaAnchorStyle}
-          >
-            Call
-          </a>
-        ) : null}
-        {hasWebsite ? (
-          <a
-            data-nex-search-card-cta="website"
-            data-nex-search-card-cta-variant="anchor"
-            href={business.website_url as string}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Website"
-            style={ctaAnchorStyle}
-          >
-            Website
-          </a>
-        ) : null}
-        <Link
-          data-nex-search-card-cta="view"
-          data-nex-search-card-cta-variant="primary"
-          href={href}
-          aria-label={cta.replace(" →", "")}
-          style={ctaPrimaryStyle}
-        >
-          {cta.replace(" →", "")}
-        </Link>
-      </div>
-      {!isLastInSection && (
-        <div aria-hidden style={{ height: 1, background: NEX.divider, margin: "16px 0 0" }} />
-      )}
-    </div>
-  );
-}
-
-const ctaAnchorStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 4,
-  fontSize: 12.5,
-  fontWeight: 600,
-  padding: "6px 12px",
-  borderRadius: 999,
-  lineHeight: 1,
-  whiteSpace: "nowrap",
-  minHeight: 32,
-  textDecoration: "none",
-  background: "transparent",
-  color: NEX.cyan,
-  border: `1px solid ${NEX.cyan}`,
-};
-
-const ctaPrimaryStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 4,
-  fontSize: 12.5,
-  fontWeight: 600,
-  padding: "6px 12px",
-  borderRadius: 999,
-  lineHeight: 1,
-  whiteSpace: "nowrap",
-  minHeight: 32,
-  textDecoration: "none",
-  background: NEX.orange,
-  color: "#1A1300",
-  border: `1px solid ${NEX.orange}`,
-};
-
-function ResultProductCard({
-  product,
-  business,
-  isLastInSection,
-}: {
-  product: NexProductRow;
-  business: NexBusinessRow | null;
-  isLastInSection: boolean;
-}): React.JSX.Element {
-  const b = business as (NexBusinessRow & { city?: string | null; business_category?: string | null }) | null;
-  const location = b?.city ?? null;
-  const bizTypeLabel = b ? businessTypeLabel(b.business_category) : null;
-  const metaParts = ["Product", bizTypeLabel, location].filter(Boolean) as string[];
-  const price =
-    typeof product.price_pence === "number" && product.price_pence > 0
-      ? formatPrice(product.price_pence, product.currency)
-      : null;
-  const chips = (product.tags ?? [])
-    .filter((t): t is string => typeof t === "string" && t.trim().length > 0)
-    .slice(0, 3);
-  return (
-    <div>
-      <Link
-        href={business ? `/nex-native/${business.slug}` : `/nex-native/search`}
-        style={{
-          display: "flex",
-          alignItems: "stretch",
-          gap: 16,
-          padding: "4px 4px 20px",
-          textDecoration: "none",
-          color: NEX.text,
-        }}
-      >
-        <ResultThumb src={product.image_url ?? null} alt={product.name} />
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 10, minWidth: 0 }}>
-            <span
-              style={{
-                flex: 1,
-                fontSize: 16,
-                fontWeight: 700,
-                letterSpacing: "-0.005em",
-                color: NEX.text,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {product.name}
-            </span>
-            {price && (
-              <span style={{ color: NEX.orange, fontSize: 14, fontWeight: 700, flex: "none" }}>
-                {price}
-              </span>
-            )}
-          </div>
-          {metaParts.length > 0 && (
-            <div style={{ fontSize: 12.5, color: NEX.orange, fontWeight: 600 }}>
-              {metaParts.join(" · ")}
-            </div>
-          )}
-          {product.description && (
-            <p
-              style={{
-                margin: 0,
-                fontSize: 13.5,
-                color: NEX.textDim,
-                lineHeight: 1.45,
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-              }}
-            >
-              {product.description}
-            </p>
-          )}
-          {chips.length > 0 && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 2 }}>
-              {chips.map((c) => (
-                <ChipPill key={c} label={c} />
-              ))}
-            </div>
-          )}
-          <span style={{ marginTop: 4, color: NEX.orange, fontSize: 13.5, fontWeight: 700 }}>
-            {business ? "View shop →" : "View details →"}
-          </span>
-        </div>
-      </Link>
-      {!isLastInSection && (
-        <div aria-hidden style={{ height: 1, background: NEX.divider, margin: 0 }} />
-      )}
-    </div>
-  );
-}
-
-function ResultThumb({
-  src,
-  alt,
-  isRepresentative = false,
-}: {
-  src: string | null;
-  alt: string;
-  /** Phase 3b · when the resolved image came from the shared
-   *  category_image_library (not an owner upload), surface the
-   *  honest ADR-0022 caption via a data-attr for downstream testing
-   *  and future caption rendering. The visual is identical today. */
-  isRepresentative?: boolean;
-}): React.JSX.Element {
-  return (
-    <span
-      aria-hidden={!src}
-      data-nex-search-card-thumb={
-        src === null ? "absent" : isRepresentative ? "representative" : "owner_image"
-      }
-      style={{
-        width: 92,
-        height: 92,
-        flex: "none",
-        borderRadius: 14,
-        overflow: "hidden",
-        background: src
-          ? `url(${src}) center/cover`
-          : `linear-gradient(135deg, ${NEX.orange}22, ${NEX.cyan}22)`,
-        border: `1px solid ${NEX.borderSoft}`,
-        display: "grid",
-        placeItems: "center",
-        color: NEX.textMuted,
-      }}
-    >
-      {!src && <ShopsGlyph />}
-      {src && <span style={{ display: "none" }}>{alt}</span>}
-    </span>
-  );
-}
-
-
-function ChipPill({ label }: { label: string }): React.JSX.Element {
-  return (
-    <span
-      style={{
-        display: "inline-block",
-        padding: "4px 10px",
-        borderRadius: 999,
-        background: NEX.surfaceHi,
-        border: `1px solid ${NEX.borderSoft}`,
-        color: NEX.textDim,
-        fontSize: 11.5,
-        fontWeight: 600,
-        letterSpacing: "0.01em",
-      }}
-    >
-      {label}
-    </span>
-  );
-}
-
-function VerifiedBadge(): React.JSX.Element {
-  return (
-    <span
-      aria-label="Verified"
-      title="Verified business"
-      style={{
-        flex: "none",
-        fontSize: 10,
-        color: NEX.cyan,
-        padding: "2px 7px",
-        borderRadius: 999,
-        border: `1px solid ${NEX.cyan}44`,
-        background: `${NEX.cyan}14`,
-        fontWeight: 700,
-        letterSpacing: "0.06em",
-        textTransform: "uppercase",
-      }}
-    >
-      ✓
-    </span>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════════ *
- * Business-type label derivation · honest, data-backed only           *
- * ═══════════════════════════════════════════════════════════════════ */
-
-/** Convert nex_business.business_category (nullable, snake-case
- *  vertical slug) into a human-readable label that fits the mock's
- *  "{Type} · {Location}" line. Returns null when the category is
- *  not populated · which is the common case (96.4% null in current
- *  data). Honest · never fabricates a type to populate the slot. */
-function businessTypeLabel(cat: string | null | undefined): string | null {
-  if (!cat) return null;
-  const map: Record<string, string> = {
-    bakery: "Bakery",
-    restaurant: "Restaurant",
-    cafe: "Café",
-    "ice-cream": "Ice cream shop",
-    "dessert-shop": "Dessert shop",
-    "drinks-shop": "Drinks shop",
-    "juice-bar": "Juice bar",
-    tradesperson: "Tradesperson",
-    construction: "Construction",
-    "staircase-company": "Staircase company",
-    salon: "Salon",
-    beauty: "Beauty",
-    fitness: "Fitness",
-    consultant: "Consultant",
-    agency: "Agency",
-    ecommerce: "Online shop",
-    "product-brand": "Brand",
-    "local-service": "Local service",
-    portfolio: "Portfolio",
-    community: "Community",
-    event: "Event",
-    creator: "Creator",
-    "professional-service": "Professional service",
-  };
-  return map[cat] ?? null;
-}
-
-/* ═══════════════════════════════════════════════════════════════════ *
- * Pagination · minimal · matches the Phase 1 behaviour                *
- * ═══════════════════════════════════════════════════════════════════ */
-
-function Pagination({
-  page,
-  hasPrev,
-  hasNext,
-  prevHref,
-  nextHref,
-}: {
-  page: number;
-  hasPrev: boolean;
-  hasNext: boolean;
-  prevHref: string;
-  nextHref: string;
-}): React.JSX.Element {
-  if (!hasPrev && !hasNext) return <></>;
+  const totalPages =
+    totalShown !== null ? Math.max(1, Math.ceil(totalShown / PAGE_SIZE)) : null;
   return (
     <nav
-      aria-label="Pagination"
+      aria-label="Discover pagination"
       style={{
+        marginTop: 20,
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
         gap: 10,
-        marginTop: 8,
       }}
     >
       {hasPrev ? (
-        <Link href={prevHref} style={pagerLinkStyle(true)}>← Prev</Link>
+        <Link href={hrefForPage(page - 1)} style={pagerBtn("solid")}>
+          ← Previous
+        </Link>
       ) : (
-        <span style={pagerLinkStyle(false)}>← Prev</span>
+        <span style={pagerBtn("disabled")} aria-disabled="true">
+          ← Previous
+        </span>
       )}
-      <span style={{ fontSize: 12, color: NEX.textMuted, letterSpacing: "0.02em" }}>
+      <span
+        style={{
+          fontSize: 12,
+          fontWeight: 600,
+          color: NEX.textMuted,
+          letterSpacing: "0.02em",
+        }}
+      >
         Page {page}
+        {totalPages !== null ? ` of ${totalPages.toLocaleString("en-US")}` : ""}
       </span>
       {hasNext ? (
-        <Link href={nextHref} style={pagerLinkStyle(true)}>Next →</Link>
+        <Link href={hrefForPage(page + 1)} style={pagerBtn("solid")}>
+          Next →
+        </Link>
       ) : (
-        <span style={pagerLinkStyle(false)}>Next →</span>
+        <span style={pagerBtn("disabled")} aria-disabled="true">
+          Next →
+        </span>
       )}
     </nav>
   );
 }
 
-function pagerLinkStyle(enabled: boolean): React.CSSProperties {
+function pagerBtn(kind: "solid" | "disabled"): CSSProperties {
+  const disabled = kind === "disabled";
   return {
-    display: "inline-block",
-    padding: "8px 16px",
+    padding: "9px 16px",
     borderRadius: 999,
-    background: enabled ? NEX.surface : "transparent",
-    border: `1px solid ${enabled ? NEX.borderSoft : "transparent"}`,
-    color: enabled ? NEX.text : NEX.textSoft,
-    fontSize: 12.5,
-    fontWeight: 600,
+    border: `1px solid ${disabled ? NEX.borderSoft : NEX.cyanSoft}`,
+    background: disabled ? "transparent" : "rgba(0,175,255,0.08)",
+    color: disabled ? NEX.textSoft : NEX.cyan,
+    fontSize: 12,
+    fontWeight: 700,
+    letterSpacing: "0.02em",
     textDecoration: "none",
-    cursor: enabled ? "pointer" : "not-allowed",
-    pointerEvents: enabled ? "auto" : "none",
-    opacity: enabled ? 1 : 0.45,
-    fontFamily: "inherit",
+    cursor: disabled ? "not-allowed" : "pointer",
+    userSelect: "none",
   };
 }
 
-/* ═══════════════════════════════════════════════════════════════════ *
- * Error banner                                                        *
- * ═══════════════════════════════════════════════════════════════════ */
-
-function ErrorBanner({ message }: { message: string }): React.JSX.Element {
+function EmptyFeed({
+  query,
+  activeCategory,
+}: {
+  readonly query: string;
+  readonly activeCategory: string | null;
+}): React.JSX.Element {
+  const title = query.length > 0 ? `No results for "${query}"` : "No shops here yet";
+  const body =
+    query.length > 0
+      ? "Try a different word · or clear your category filter."
+      : activeCategory !== null
+        ? `No ${categoryLabel(activeCategory).toLowerCase()} shops are on NEX Chat yet in this area.`
+        : "As NEX businesses complete their profiles they'll show up here.";
   return (
-    <div
-      role="status"
-      style={{
-        marginTop: 10,
-        padding: "12px 14px",
-        borderRadius: 12,
-        border: `1px solid ${NEX.darkRed}99`,
-        background: "rgba(153,27,27,0.14)",
-        color: "#FFB4C0",
-        fontSize: 13,
-      }}
-    >
-      {message}
-    </div>
-  );
-}
-
-function formatPrice(pence: number, currency: string | null | undefined): string {
-  const amount = pence / 100;
-  const c = (currency ?? "").toUpperCase();
-  if (c === "IDR") return `Rp ${Math.round(amount).toLocaleString("id-ID")}`;
-  if (c === "GBP") return `£${amount.toFixed(2)}`;
-  if (c === "USD") return `$${amount.toFixed(2)}`;
-  if (c === "EUR") return `€${amount.toFixed(2)}`;
-  if (!c) return `${amount.toFixed(2)}`;
-  return `${c} ${amount.toFixed(2)}`;
-}
-
-/* ═══════════════════════════════════════════════════════════════════ *
- * Inline glyphs                                                       *
- * ═══════════════════════════════════════════════════════════════════ */
-
-function SearchGlyph({ tint }: { tint: string }): React.JSX.Element {
-  return (
-    <svg width={20} height={20} viewBox="0 0 24 24" fill="none"
-         stroke={tint} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <circle cx={11} cy={11} r={7} />
-      <line x1={21} y1={21} x2={16.65} y2={16.65} />
-    </svg>
-  );
-}
-function MicGlyph(): React.JSX.Element {
-  return (
-    <svg width={18} height={18} viewBox="0 0 24 24" fill="none"
-         stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <rect x={9} y={2} width={6} height={12} rx={3} />
-      <path d="M5 10v2a7 7 0 0 0 14 0v-2" />
-      <line x1={12} y1={19} x2={12} y2={22} />
-      <line x1={8} y1={22} x2={16} y2={22} />
-    </svg>
-  );
-}
-function FilterGlyph(): React.JSX.Element {
-  return (
-    <svg width={18} height={18} viewBox="0 0 24 24" fill="none"
-         stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <line x1={4} y1={6} x2={14} y2={6} />
-      <line x1={4} y1={12} x2={11} y2={12} />
-      <line x1={4} y1={18} x2={8} y2={18} />
-      <circle cx={17} cy={6} r={2} />
-      <circle cx={14} cy={12} r={2} />
-      <circle cx={11} cy={18} r={2} />
-    </svg>
-  );
-}
-function ShopsGlyph(): React.JSX.Element {
-  return (
-    <svg width={28} height={28} viewBox="0 0 24 24" fill="none"
-         stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M3 7h18l-1.5 11a2 2 0 0 1-2 1.75H6.5A2 2 0 0 1 4.5 18L3 7z" />
-      <path d="M8 7V5a4 4 0 0 1 8 0v2" />
-    </svg>
-  );
-}
-function ServicesGlyph(): React.JSX.Element {
-  return (
-    <svg width={28} height={28} viewBox="0 0 24 24" fill="none"
-         stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M14.7 6.3a4 4 0 0 1 5.3 5.3L10.5 21.1 3 22l.9-7.5L14.7 6.3z" />
-    </svg>
-  );
-}
-function PlacesGlyph(): React.JSX.Element {
-  return (
-    <svg width={28} height={28} viewBox="0 0 24 24" fill="none"
-         stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M12 22s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z" />
-      <circle cx={12} cy={10} r={2.4} />
-    </svg>
-  );
-}
-function CompaniesGlyph(): React.JSX.Element {
-  return (
-    <svg width={28} height={28} viewBox="0 0 24 24" fill="none"
-         stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <rect x={3} y={6} width={18} height={14} rx={2} />
-      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-      <line x1={3} y1={11} x2={21} y2={11} />
-    </svg>
+    <li>
+      <div
+        style={{
+          padding: "20px 18px",
+          borderRadius: 14,
+          background: NEX.surface,
+          border: `1px dashed ${NEX.cyanSoft}`,
+          textAlign: "center",
+        }}
+      >
+        <div style={{ fontSize: 15, fontWeight: 700, color: NEX.text }}>{title}</div>
+        <div style={{ marginTop: 6, fontSize: 12, color: NEX.textMuted, lineHeight: 1.55 }}>
+          {body}
+        </div>
+      </div>
+    </li>
   );
 }
