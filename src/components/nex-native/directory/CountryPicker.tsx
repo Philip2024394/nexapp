@@ -92,50 +92,11 @@ function GlobeIcon({ size }: { size: number }) {
   );
 }
 
-interface FlagBadgeProps {
-  readonly isoAlpha2: string;
-  readonly size: number;
-  readonly flagSrcFor?: (isoAlpha2: string) => string | null;
-}
-
-function FlagBadge({ isoAlpha2, size, flagSrcFor }: FlagBadgeProps) {
-  const src = flagSrcFor ? flagSrcFor(isoAlpha2) : null;
-  const style: React.CSSProperties = {
-    width: size,
-    height: size,
-    borderRadius: "50%",
-    overflow: "hidden",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#1A1300",
-    color: "#F2F5F8",
-    fontSize: Math.max(10, Math.floor(size * 0.42)),
-    fontWeight: 600,
-    letterSpacing: 0,
-    userSelect: "none",
-    border: "1px solid rgba(255, 255, 255, 0.08)",
-  };
-  if (src) {
-    return (
-      <span style={style} aria-hidden="true">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={src}
-          alt=""
-          width={size}
-          height={size}
-          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-        />
-      </span>
-    );
-  }
-  return (
-    <span style={style} aria-hidden="true">
-      {isoAlpha2}
-    </span>
-  );
-}
+// FlagBadge was extracted to `./country-flag.tsx` on 2026-10-16 so
+// the directory listing card can reuse it. Re-exported here as a
+// local alias so this file's own render path stays unchanged.
+import { CountryFlag as FlagBadge } from "./country-flag";
+export { CountryFlag as FlagBadge } from "./country-flag";
 
 export function CountryPicker(props: CountryPickerProps) {
   const { entries, initialSelected, flagSrcFor, onChange, ariaLabel } = props;

@@ -69,6 +69,7 @@ import {
   type DirectoryVerticalEnrichment,
 } from "./project-canonical-row";
 import { fetchAreaIntelligenceByCityCountry, areaIntelMapKey } from "./area-intelligence-service";
+import { fetchDirectoryMediaByCanonicalId } from "./media-resolver";
 import type { AreaIntelligence } from "./area-intelligence-types";
 import { resolveDirectoryDestinations } from "./resolve-destination";
 import type {
@@ -725,16 +726,21 @@ export async function listDirectory(
   // fills gaps for OSM-origin rows where the resolver did not populate
   // presentation fields.
   const canonicalIdsOnPage = adapted.map((a) => a.canonical_business_id);
-  const [enrichment, claims, osmAttributedCanonicalIds] = await Promise.all([
+  const [enrichment, claims, osmAttributedCanonicalIds, mediaByCanonicalId] = await Promise.all([
     fetchFoodEnrichmentByCanonicalId(canonicalIdsOnPage),
     fetchOwnerClaimsByCanonicalId(canonicalIdsOnPage),
     fetchOsmAttributedCanonicalIds(canonicalIdsOnPage),
+    fetchDirectoryMediaByCanonicalId(canonicalIdsOnPage),
   ]);
 
-  // Project → VMs. Media is null today (migration 173 deferred).
+  // Project → VMs. `mediaByCanonicalId` is populated from
+  // `nex.business_media` filtered by (approved = true AND
+  // source_registry.can_display = true). Canonical rows with no
+  // approved image get `primaryImage: null` and the UI renders the
+  // honest no-image state.
   const listings = projectDirectoryListings({
     rows: adapted,
-    mediaByCanonicalId: EMPTY_MEDIA_MAP,
+    mediaByCanonicalId,
     enrichmentByCanonicalId: enrichment,
     osmAttributedCanonicalIds,
   });
@@ -764,7 +770,10 @@ export async function listDirectory(
   return { results, systemReady: true, diagnostic: null, total };
 }
 
-const EMPTY_MEDIA_MAP: ReadonlyMap<string, DirectoryListingMedia> = new Map();
+// EMPTY_MEDIA_MAP removed 2026-10-13 · the service now populates the
+// media map via `fetchDirectoryMediaByCanonicalId`. Callers needing a
+// typed empty fallback should import `EMPTY_DIRECTORY_MEDIA_MAP` from
+// `./media-resolver`.
 
 // ═════════════════════════════════════════════════════════════════════
 // §6b · getCanonicalBusinessById · single-row read for the detail page
@@ -876,14 +885,15 @@ export async function getCanonicalBusinessById(
     return { result: null, systemReady: true, diagnostic: null };
   }
 
-  const [enrichment, claims, osmAttributedCanonicalIds] = await Promise.all([
+  const [enrichment, claims, osmAttributedCanonicalIds, mediaByCanonicalId] = await Promise.all([
     fetchFoodEnrichmentByCanonicalId([adapted.canonical_business_id]),
     fetchOwnerClaimsByCanonicalId([adapted.canonical_business_id]),
     fetchOsmAttributedCanonicalIds([adapted.canonical_business_id]),
+    fetchDirectoryMediaByCanonicalId([adapted.canonical_business_id]),
   ]);
   const listings = projectDirectoryListings({
     rows: [adapted],
-    mediaByCanonicalId: EMPTY_MEDIA_MAP,
+    mediaByCanonicalId,
     enrichmentByCanonicalId: enrichment,
     osmAttributedCanonicalIds,
   });
