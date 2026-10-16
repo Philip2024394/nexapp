@@ -348,30 +348,11 @@ export async function signInAction(formData: FormData): Promise<ActionResult> {
   redirect("/nex-native/home");
 }
 
-/** One-click dev-only sign-in as the provisioned Dev Admin account. Gated
- *  by NEX_ALLOW_DEV_ADMIN=1 in .env.local · never enabled in production.
- *  Uses the well-known credentials from scripts/nex-provision-dev-admin.mts. */
-export async function signInAsDevAdminAction(_formData: FormData): Promise<never> {
-  if (process.env.NEX_ALLOW_DEV_ADMIN !== "1") {
-    redirectToSignInWithError(
-      "dev_admin_disabled",
-      "dev-admin sign-in is disabled · set NEX_ALLOW_DEV_ADMIN=1 in .env.local",
-    );
-  }
-  const supabase = await nexAppSsrServerClient();
-  const { error } = await supabase.auth.signInWithPassword({
-    email: "dev-admin@nex-native.local",
-    password: "NexDevAdmin!2026",
-  });
-  if (error) {
-    redirectToSignInWithError(
-      "dev_admin_sign_in_failed",
-      `${error.message} · run 'npx tsx scripts/nex-provision-dev-admin.mts' to provision the dev account`,
-    );
-  }
-  revalidatePath("/nex-native/home");
-  redirect("/nex-native/home");
-}
+// `signInAsDevAdminAction` removed · owner directive 2026-10-16. The
+// one-click dev-admin sign-in surface is gone from /nex-native/sign-in
+// and /nex-native/conversations. Dev-admin accounts can still be
+// provisioned via `scripts/nex-provision-dev-admin.mts` and sign in
+// through the standard email+password form.
 
 export async function signUpAction(formData: FormData): Promise<ActionResult> {
   const email = String(formData.get("email") ?? "").trim();
