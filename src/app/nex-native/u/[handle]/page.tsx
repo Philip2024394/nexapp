@@ -26,6 +26,19 @@ import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import * as accountService from "@/lib/nex-native/account-service";
 import * as accountProfileService from "@/lib/nex-native/account-profile-service";
 import * as businessService from "@/lib/nex-native/business-service";
+// R10 Stage 5 (2026-10-15 · migration 200 unapplied) · profile-
+// visibility gate. Adds a second axis on top of the sealed Phase 3A
+// is_discoverable check. Behaviour:
+//   · owner always sees own profile (unchanged)
+//   · is_discoverable=false → 404 (sealed Phase 3A rule · unchanged)
+//   · profile_visibility=private + not owner → 404 (prevents enumeration
+//     per owner directive 2026-10-15)
+//   · profile_visibility=contacts + not friend → 404 (same reason)
+//   · profile_visibility=public → render as before
+// The two axes are intentionally SEPARATE · is_discoverable gates
+// Socials/directory exposure; profile_visibility gates handle-reach
+// reads. Owner directive sealed 2026-10-15.
+import { resolveProfileVisibilityForViewer } from "@/lib/nex-native/privacy-preferences-service";
 import { NexPageHeader } from "../../_page-header";
 
 export const runtime = "nodejs";
@@ -80,6 +93,27 @@ export default async function Page({
   const isDiscoverable = profile?.is_discoverable === true;
   if (!isDiscoverable && !isSelf) {
     notFound();
+  }
+
+  // R10 Stage 5 (2026-10-15) · second-axis profile_visibility gate.
+  // Even if is_discoverable=true, the owner may have set
+  // profile_visibility='contacts' or 'private'. We honour that via
+  // the sealed privacy-preferences-service resolver · which returns
+  // a 404 instruction for private (non-owner) OR limited (contacts-only
+  // + non-friend viewer). Both outcomes map to notFound() in this
+  // surface · the "limited" view would be a future reduced-profile
+  // render (owner can expose a minimal card without biographical
+  // detail) · until that scope ships we 404 to be privacy-safe. Owner
+  // directive 2026-10-15: "A UI toggle without enforcement is not
+  // completion."
+  if (!isSelf) {
+    const visibility = await resolveProfileVisibilityForViewer(
+      session?.account.id ?? null,
+      account.id,
+    );
+    if (!visibility.visible) {
+      notFound();
+    }
   }
 
   // Phase 3A Adoption-Ready UX · owner-only visitor preview mode.

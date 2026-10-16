@@ -19,7 +19,12 @@ import {
 } from "./_intent-catalog";
 import type { SocialIntent } from "./_actions";
 
-const BG_URL = "/nex-socials/night-life-background.png";
+// Owner-authorised 2026-10-15 · updated Socials landing hero to the
+// owner-supplied "Earth Selfie in a Cyber City" composition. The sealed
+// night-life-background.png file is preserved on disk and may be swapped
+// back by reverting this one line. Code references the file only via
+// src; no character art is drawn in code.
+const BG_URL = "/nex-socials/socials-landing-background.png";
 
 const NEX = {
   navy: "#020914",

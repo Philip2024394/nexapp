@@ -25,17 +25,22 @@ import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import * as accountProfileService from "@/lib/nex-native/account-profile-service";
 import * as businessService from "@/lib/nex-native/business-service";
 import * as chatThemeService from "@/lib/nex-native/chat-theme-service";
+import * as peerConversationService from "@/lib/nex-native/peer-conversation-service";
+import {
+  FirstVisitInvitation,
+  shouldShowFirstVisitInvitation,
+} from "./_first-visit-invitation";
+import {
+  FirstContactPanel,
+  resolveFirstContactSignals,
+} from "./_first-contact-panel";
+import { shouldShowFirstContact } from "./_first-contact-predicate";
 import type { NexAccountKind } from "@/lib/nex-native/types";
 import { NEX_COMMERCE_ENABLED } from "@/lib/nex-native/launch-flags";
 import { NexPageHeader } from "../_page-header";
 import { COVER_LAYOUT_LABELS } from "../cover/layout-ids";
 import type { CoverLayoutId } from "../cover/layout-ids";
 import { ThemeCoverCarousel, type ThemeCoverSlide } from "./_theme-cover-carousel";
-import {
-  FirstContactPanel,
-  resolveFirstContactSignals,
-} from "./_first-contact-panel";
-import { shouldShowFirstContact } from "./_first-contact-predicate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -127,19 +132,28 @@ export default async function HomePage() {
   const session = await resolveNexAppSessionFromContext();
   if (!session) redirect("/nex-native/sign-in");
 
-  const [profile, ownedBusinesses, themes] = await Promise.all([
+  const [profile, ownedBusinesses, themes, conversationCount] = await Promise.all([
     accountProfileService.getProfileByAccountId(session.account.id).catch(() => null),
     businessService.listBusinessesByOwner(session.account.id).catch(() => []),
     chatThemeService.listActiveThemes().catch(() => []),
+    // First-visit invitation gate (B9/B10 follow-up · 2026-10-14):
+    // RESOLVES ONLY when the peer-conversation query completes server-
+    // side. A rejected promise maps to `null` which the predicate
+    // treats as "unknown · don't invite". A resolved empty list maps
+    // to 0 which is the sole case that shows the invitation.
+    peerConversationService
+      .listPeerConversationsForAccount(session.account.id)
+      .then((rows): number | null => rows.length)
+      .catch((): number | null => null),
   ]);
+  const showFirstVisitInvitation = shouldShowFirstVisitInvitation(conversationCount);
 
-  // U10 · first-contact signal resolution (NEX first-contact · 2026-10-14).
-  // Reads only sealed services (peer-conversation-service +
-  // peer-message-service) and fails closed on any error. Keeps the
-  // sealed Promise.all 3-tuple above untouched so this change is
-  // additive. See:
+  // U10 · first-contact signal resolution. Separate sequential read
+  // to keep the sealed Promise.all 4-tuple shape intact for the
+  // existing invitation's pinned test assertions. Resolver fails
+  // closed on any read error · returns a `*_unknown` signal that
+  // the predicate maps to false. See:
   //   docs/doctrine/nex-first-contact-decision-table-2026-10-14.md §U10
-  //   docs/doctrine/nex-first-contact-implementation-2026-10-14.md
   const firstContactSignals = await resolveFirstContactSignals(session.account.id);
   const showFirstContact = shouldShowFirstContact(firstContactSignals);
   const canShareProfileUrl = profile?.is_discoverable === true;
@@ -446,6 +460,16 @@ export default async function HomePage() {
               canShareProfileUrl={canShareProfileUrl}
               accentHex={themeAccent}
             />
+          )}
+
+          {/* ─── First-visit theme invitation · 2026-10-14 ─────────────
+              Appears ONLY when the account's peer-conversation query
+              reliably resolves to zero rows. A rejected promise or a
+              non-zero count hides the invitation entirely. Dismissal
+              is naturally driven by the user starting any conversation
+              (no persistent state introduced for this task). */}
+          {showFirstVisitInvitation && (
+            <FirstVisitInvitation accent={themeAccent} />
           )}
 
           {/* ─── Business NEX activation banner · Phase 2 · 2026-10-02 ──

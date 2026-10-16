@@ -99,8 +99,8 @@ export function HeaderCartIcon({
           height: isInline ? 14 : 20,
           padding: isInline ? "0 3px" : "0 5px",
           borderRadius: 999,
-          background: "linear-gradient(180deg, #FF77BC, #FF3F9F)",
-          color: "#0B0F1A",
+          background: "linear-gradient(180deg, #CC1818, #7A0000)",
+          color: "#FFFFFF",
           fontSize: isInline ? 9 : 11,
           fontWeight: 800,
           lineHeight: 1,
@@ -108,7 +108,7 @@ export function HeaderCartIcon({
           alignItems: "center",
           justifyContent: "center",
           border: isInline ? "1px solid #050f1e" : "1.5px solid #050f1e",
-          boxShadow: "0 4px 10px rgba(255,63,159,0.55)",
+          boxShadow: "0 4px 10px rgba(122,0,0,0.65)",
           fontFamily:
             "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
         }}

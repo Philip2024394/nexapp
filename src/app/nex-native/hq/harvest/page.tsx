@@ -154,6 +154,22 @@ export default async function HarvestDashboardPage() {
               rows={data.canonicalLifecycleCounts}
               total={data.totalCanonical}
             />
+            {/* Email qualification sections · sealed 2026-10-16 ·
+                migration 202. Render only when the dashboard query
+                returned data · pre-migration both arrays are [] and
+                the section hides automatically. */}
+            {data.canonicalQualificationCounts.length > 0 && (
+              <QualificationSection
+                rows={data.canonicalQualificationCounts}
+                total={data.totalCanonical}
+              />
+            )}
+            {data.emailStatusCounts.length > 0 && (
+              <EmailStatusSection
+                rows={data.emailStatusCounts}
+                total={data.totalCanonical}
+              />
+            )}
           </>
         )}
 
@@ -643,6 +659,139 @@ function SourceGovernanceSection({
           ))}
         </div>
       )}
+    </section>
+  );
+}
+
+// Email qualification sections · sealed 2026-10-16 · migration 202.
+// Mirror the LifecycleSection visual shape so the dashboard reads as
+// a single document. Both sections hide automatically if the migration
+// hasn't been applied (parent component gates on rows.length).
+
+function QualificationSection({
+  rows,
+  total,
+}: {
+  readonly rows: HarvestDashboardSummary["canonicalQualificationCounts"];
+  readonly total: number;
+}): React.JSX.Element {
+  return (
+    <section style={{ marginTop: 32 }}>
+      <SectionTitle>Canonical qualification status</SectionTitle>
+      <div
+        style={{
+          marginTop: 10,
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+          gap: 10,
+        }}
+      >
+        {rows.map((r) => {
+          const pct = total === 0 ? 0 : (r.n / total) * 100;
+          return (
+            <div
+              key={r.qualificationStatus}
+              data-nex-hq-harvest-qualification-cell={r.qualificationStatus}
+              style={{
+                padding: 12,
+                background: NEX.panel,
+                border: `1px solid ${NEX.border}`,
+                borderRadius: 10,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 10,
+                  color: NEX.textMuted,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  fontWeight: 700,
+                }}
+              >
+                {r.qualificationStatus}
+              </div>
+              <div
+                style={{
+                  marginTop: 4,
+                  fontSize: 20,
+                  fontWeight: 800,
+                  color: NEX.text,
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                {r.n.toLocaleString("en-US")}
+              </div>
+              <div style={{ marginTop: 4, fontSize: 10, color: NEX.textSoft }}>
+                {pct.toFixed(1)}% of total
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function EmailStatusSection({
+  rows,
+  total,
+}: {
+  readonly rows: HarvestDashboardSummary["emailStatusCounts"];
+  readonly total: number;
+}): React.JSX.Element {
+  return (
+    <section style={{ marginTop: 32 }}>
+      <SectionTitle>Email status breakdown</SectionTitle>
+      <div
+        style={{
+          marginTop: 10,
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+          gap: 10,
+        }}
+      >
+        {rows.map((r) => {
+          const pct = total === 0 ? 0 : (r.n / total) * 100;
+          return (
+            <div
+              key={r.emailStatus}
+              data-nex-hq-harvest-email-status-cell={r.emailStatus}
+              style={{
+                padding: 12,
+                background: NEX.panel,
+                border: `1px solid ${NEX.border}`,
+                borderRadius: 10,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 10,
+                  color: NEX.textMuted,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  fontWeight: 700,
+                }}
+              >
+                {r.emailStatus}
+              </div>
+              <div
+                style={{
+                  marginTop: 4,
+                  fontSize: 20,
+                  fontWeight: 800,
+                  color: NEX.text,
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                {r.n.toLocaleString("en-US")}
+              </div>
+              <div style={{ marginTop: 4, fontSize: 10, color: NEX.textSoft }}>
+                {pct.toFixed(1)}% of total
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </section>
   );
 }

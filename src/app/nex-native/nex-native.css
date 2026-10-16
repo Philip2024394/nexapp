@@ -175,26 +175,33 @@ body::-webkit-scrollbar,
     overflow: hidden;
   }
   .nex-native-frame {
-    /* iPhone 14 Pro aspect reference · 390 × 844 (0.462). The frame
-     * ALWAYS maintains that aspect so children laid out for mobile
-     * (and background images sized at phone aspect, like the Cosmic
-     * Wanderer landing hero) never crop. If the desktop window is
-     * tall enough, the frame renders at the full 390 × 844. If the
-     * window is shorter, both dimensions scale down proportionally
-     * (height limited by 100dvh, width derived from aspect-ratio),
-     * so the whole phone preview always fits on screen and image
+    /* Phone frame · reference 420 × 909 (ratio 0.462) · owner-approved
+     * 2026-10-16 · widened from 390 → 420 for extra breathing room
+     * while keeping the EXACT same aspect ratio as the original
+     * iPhone 14 Pro reference (390/844 = 420/909). Scaling the width
+     * + height proportionally preserves every mobile-first layout +
+     * background image (like the Cosmic Wanderer landing hero) that
+     * assumes a phone-aspect canvas. If the desktop window is tall
+     * enough, the frame renders at the full 420 × 909. If the window
+     * is shorter, both dimensions scale down proportionally (height
+     * limited by 100dvh, width derived from aspect-ratio), so the
+     * whole phone preview always fits on screen and image
      * cover == contain. */
-    width: min(390px, calc((100dvh - 32px) * 390 / 844));
-    height: min(844px, calc(100dvh - 32px));
-    aspect-ratio: 390 / 844;
+    width: min(420px, calc((100dvh - 32px) * 420 / 909));
+    height: min(909px, calc(100dvh - 32px));
+    aspect-ratio: 420 / 909;
     min-height: 0;
     position: relative;
     overflow-y: auto;
     overflow-x: hidden;
-    border-radius: 32px;
+    border-radius: 44px;
+    /* Owner-authorised 2026-10-15 · "real phone frames black color".
+       The 12px black outer ring reads as a physical phone bezel on
+       desktop previews; the drop shadow stays below for depth. */
     box-shadow:
-      0 24px 64px -12px rgba(0, 0, 0, 0.9),
-      0 0 0 1px rgba(255, 255, 255, 0.06);
+      0 0 0 12px #000000,
+      0 32px 72px -14px rgba(0, 0, 0, 0.95),
+      0 0 0 1px rgba(255, 255, 255, 0.08);
     background: #06060F;
   }
 }
@@ -204,5 +211,63 @@ body::-webkit-scrollbar,
     height: 100dvh;
     overflow-y: auto;
     overflow-x: hidden;
+  }
+}
+
+/* ─── 2026-10-16 · Admin / operational route opt-out ──────────────────
+ * Owner-approved selective opt-out via `:has()` · desktop viewports
+ * only (mobile stays untouched · phone-sized experience is correct
+ * for every mobile user, admin or consumer).
+ *
+ * How it works:
+ *   · Admin / operational segment layouts wrap their children in
+ *     <div className="nex-admin-root">
+ *   · This CSS detects that marker via `:has()` on the ancestor
+ *     scaffold and lifts the frame clamp:
+ *       - html / body stop being black + overflow-hidden
+ *       - .nex-native-stage drops the flex-center + fixed height
+ *       - .nex-native-frame drops the 420x909 clamp, bezel + shadow,
+ *         so the admin surface uses the full desktop width naturally
+ *
+ * Browser support: :has() is stable in Safari 15.4+, Chrome 105+,
+ * Firefox 121+ (universally available 2024+). Admin / operational
+ * surfaces are internal-use so this baseline is comfortable.
+ *
+ * Routes using the opt-out (via their segment layout):
+ *   · /nex-native/admin/*
+ *   · /nex-native/hq/*
+ *   · /nex-native/manage/*
+ *   · /nex-native/dev/*
+ *   · /nex-native/home-prototypes/*
+ *   · /nex-native/prototypes/*
+ *   · /nex-native/shop-prototypes/*
+ */
+@media (min-width: 500px) {
+  html:has(.nex-admin-root),
+  body:has(.nex-admin-root) {
+    background: #020914 !important;
+    height: auto !important;
+    overflow: auto !important;
+  }
+  .nex-native-stage:has(.nex-admin-root) {
+    display: block;
+    align-items: initial;
+    justify-content: initial;
+    height: auto;
+    min-height: 100dvh;
+    background: transparent;
+    overflow: visible;
+  }
+  .nex-native-frame:has(.nex-admin-root) {
+    width: 100%;
+    max-width: none;
+    height: auto;
+    aspect-ratio: initial;
+    min-height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+    overflow: visible;
+    position: static;
   }
 }

@@ -5,13 +5,13 @@
 //   · Left  · NEX wordmark → /nex-native (session-aware router: signed-in
 //              lands on /home, signed-out lands on /create-account)
 //   · Right · home icon       → /nex-native/home
-//            magnifying glass → /nex-native/search (Directory)
+//            magnifying glass → /nex-native/search (NEX Discover · the
+//                               shop-finder that lists NEX users with
+//                               shops or menus · location-gated · opens
+//                               Chat with owner on tap)
 //            gear / lock      → /nex-native/settings (gear) OR
 //                               account-gate modal (3D lock) when the
-//                               current viewer has no `nex_account` row
-//                               (Settings Header Account-Gate · sealed
-//                               2026-10-10 · see
-//                               docs/doctrine/nex-settings-account-gate-2026-10-10.md).
+//                               current viewer has no `nex_account` row.
 //
 // Server Component · no hooks · uses inline styles keyed to the NEX
 // dark-navy palette. Signed-out pages that render the header link the
@@ -83,7 +83,7 @@ export function NexPageHeader({ dataScope }: NexPageHeaderProps) {
         </Link>
         <Link
           href="/nex-native/search"
-          aria-label="NEX Directory search"
+          aria-label="NEX Discover · find shops & menus"
           data-nex-page-header-search
           style={iconLinkStyle}
         >

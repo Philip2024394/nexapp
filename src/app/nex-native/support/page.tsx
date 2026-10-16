@@ -73,7 +73,17 @@ export default async function SupportPage({
     <div
       style={{
         minHeight: "100dvh",
-        background: NEX.bg,
+        // Full-width · full-height NEX customer-service backdrop
+        // (owner-supplied 2026-10-14). Dark overlay preserves text
+        // legibility; NEX.bg underlies the overlay so the page never
+        // flashes white while the image loads.
+        backgroundColor: NEX.bg,
+        backgroundImage:
+          `linear-gradient(rgba(2,9,20,0.55), rgba(2,9,20,0.55)), url("/nex-native/support-background.png")`,
+        backgroundSize: "cover",
+        backgroundPosition: "center center",
+        backgroundRepeat: "no-repeat",
+        backgroundAttachment: "fixed",
         color: NEX.text,
         fontFamily: SANS,
         paddingBottom: 80,

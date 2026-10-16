@@ -263,12 +263,17 @@ describe("home/page.tsx · first-contact integration", () => {
     expect(HOME_SRC).toMatch(/firstName=\{displayName\.split/);
   });
 
-  // NOTE: pins for the sealed `shouldShowFirstVisitInvitation` path are
-  // intentionally omitted from this first-contact test file · they live
-  // (and will continue to live) in `_first-visit-invitation.test.ts`
-  // which pins the same source shape as part of the first-visit scope.
-  // Duplicating them here would couple two separately-committed
-  // features' test invariants.
+  it("preserves the sealed shouldShowFirstVisitInvitation path", () => {
+    expect(HOME_SRC).toContain(
+      "shouldShowFirstVisitInvitation(conversationCount)",
+    );
+    expect(HOME_SRC).toContain(
+      "const showFirstVisitInvitation = shouldShowFirstVisitInvitation",
+    );
+    expect(HOME_SRC).toMatch(
+      /\{showFirstVisitInvitation\s*&&\s*\(\s*<FirstVisitInvitation/,
+    );
+  });
 
   it("does NOT introduce a DB mutation, cookie set, or RPC call", () => {
     expect(HOME_SRC).not.toMatch(/cookies\(\)\.set\(/);
@@ -288,10 +293,12 @@ describe("home/page.tsx · first-contact integration", () => {
     expect(HOME_SRC).toContain('export const dynamic = "force-dynamic"');
   });
 
-  // NOTE: pinning the 4-tuple destructure + ".catch((): number | null => null)"
-  // is the responsibility of `_first-visit-invitation.test.ts`.
-  // Same reasoning as the omission above · keeping first-contact test
-  // scope self-contained avoids cross-feature test coupling.
+  it("preserves the pinned Promise.all destructure name order", () => {
+    expect(HOME_SRC).toMatch(
+      /\[\s*profile\s*,\s*ownedBusinesses\s*,\s*themes\s*,\s*conversationCount\s*\]/,
+    );
+    expect(HOME_SRC).toMatch(/\.catch\(\(\):\s*number\s*\|\s*null\s*=>\s*null\s*\)/);
+  });
 });
 
 /* ─── D · panel component honesty invariants ──────────────────── */
@@ -390,12 +397,40 @@ describe("_first-contact-panel.tsx · structure and honesty", () => {
     expect(PANEL_SRC).toContain("data-nex-first-contact-handle");
     expect(PANEL_SRC).toContain("data-nex-home-first-contact-panel");
     // Action cards wire the sealed data-attribute through a dataKey
-    // prop · lock both the key literals AND the attribute binding.
+    // prop · lock the three key literals AND the attribute binding.
     expect(PANEL_SRC).toContain('dataKey="meet-nex1"');
     expect(PANEL_SRC).toContain('dataKey="community"');
+    expect(PANEL_SRC).toContain('dataKey="themes"');
     expect(PANEL_SRC).toContain(
       "data-nex-first-contact-action-card={dataKey}",
     );
+  });
+
+  it("themes action card routes to the sealed first-visit landing", () => {
+    // The sealed three-destination tour lives at /nex-native/chat/first-visit.
+    // Fresh signups otherwise miss it because the sealed
+    // shouldShowFirstVisitInvitation gate hides the home tile for
+    // accounts whose conversationCount === 1 (the auto-NEX1 conv).
+    // This test locks that the first-contact panel includes a
+    // deliberate entry into the themes tour via the EXISTING route.
+    expect(PANEL_SRC).toContain('href="/nex-native/chat/first-visit"');
+  });
+
+  it("preserves all three action cards · no reorder, no removal", () => {
+    // The three card literals must all be present. If any one is
+    // removed, this test fails loudly so a future refactor can't
+    // silently drop a destination.
+    expect(PANEL_SRC).toContain('title="Meet NEX1"');
+    expect(PANEL_SRC).toContain('title="NEX Community"');
+    expect(PANEL_SRC).toContain('title="Explore Chat Themes"');
+    const cardOpenings = PANEL_SRC.match(/<ActionCard\b/g) ?? [];
+    expect(cardOpenings).toHaveLength(3);
+  });
+
+  it("themes card uses the NEX violet accent · not the primary accent", () => {
+    // Visual separation: each card gets a distinct accent so three
+    // destinations don't visually collapse into one block.
+    expect(PANEL_SRC).toMatch(/accent=\{NEX\.violet\}/);
   });
 
   it("deep-links to Settings → Profile to enable discoverability (never flips it here)", () => {

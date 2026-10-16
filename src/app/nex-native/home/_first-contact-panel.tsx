@@ -246,7 +246,15 @@ export function FirstContactPanel(
         />
       </div>
 
-      {/* Action cards · Meet NEX1 · NEX Community */}
+      {/* Action cards · Meet NEX1 · NEX Community · Explore Chat Themes.
+          The themes card routes to the sealed three-destination
+          first-visit landing (/nex-native/chat/first-visit) which is
+          hidden from fresh signups by the sealed invitation predicate
+          (conversationCount === 1 for a brand-new account because of
+          the auto-NEX1 welcome). Adding the route here does NOT change
+          the sealed predicate · it just gives first-contact users a
+          deliberate entry into the themes experience they'd otherwise
+          miss. */}
       <div
         style={{
           display: "flex",
@@ -269,6 +277,14 @@ export function FirstContactPanel(
           title="NEX Community"
           tagline="Discover what's happening in your area."
           accent={NEX.orange}
+        />
+        <ActionCard
+          href="/nex-native/chat/first-visit"
+          dataKey="themes"
+          eyebrow="Make it yours"
+          title="Explore Chat Themes"
+          tagline="Browse themes, see the shop preview, and personalise how NEX looks."
+          accent={NEX.violet}
         />
       </div>
     </section>

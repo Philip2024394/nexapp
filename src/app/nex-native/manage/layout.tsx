@@ -28,5 +28,9 @@ export default function ManageLayout({
   if (!NEX_COMMERCE_ENABLED) {
     redirect("/nex-native/home");
   }
-  return <>{children}</>;
+  // Owner directive 2026-10-16 · opt out of the desktop phone-frame
+  // via the `nex-admin-root` marker · CSS `:has()` lifts the frame
+  // clamp so merchant dashboards use the full desktop workspace.
+  // Mobile viewports stay unaffected (phone-sized is correct there).
+  return <div className="nex-admin-root">{children}</div>;
 }

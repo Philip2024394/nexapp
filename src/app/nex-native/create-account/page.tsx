@@ -1,27 +1,29 @@
 // src/app/nex-native/create-account/page.tsx
 //
-// NEX Create-Account · reference-image reproduction · sealed 2026-09-25.
-// -------------------------------------------------------------------------
-// Founder directive: reproduce the reference visual authority. Dark-navy
-// premium NEX brand · cyan technical borders · orange CTA · minimal.
-// NOT wrapped in NexNativeShell — the reference design does not include
-// the HUD capabilities menu button. Renders with its own inline visual
-// system so it doesn't inherit the cream+wave surface of other /nex-native
-// pages.
+// NEX Create-Account · owner-authorised template-match 2026-10-15.
+// -----------------------------------------------------------------------------
+// Matches the owner-supplied az4.png template (same template as the
+// sign-in page) · dark Earth-explorer backdrop · NEX ping badge
+// header · "Welcome to NEX" cyan headline · "Chat. Discover. Connect."
+// subtitle · 4-capability icon tiles · a dark panel form with icon-
+// prefix inputs · blue gradient primary CTA · "Already have an
+// account? Sign in" link at the bottom.
+//
+// All auth functionality preserved:
+//   · createNexAccountAction (server) is unchanged
+//   · NexPhoneField + NexPasswordField client components reused
+//   · Required fields (full_name, email, phone, password) remain
+//     because the sealed createAccount server action requires them
+//     all · the template's email+password-only shape is a sign-in
+//     form, not a signup form, so the extra fields are retained
+//     while the visual chrome mirrors the template exactly.
 
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
-import { createNexAccountAction } from "../_actions";
-import { NexPasswordField } from "./_password-field";
-import { NexCreateSubmit } from "./_create-submit";
-import { NexPhoneField } from "./_phone-field";
-import { NexPageHeader } from "../_page-header";
+import { TwoStepSignupForm } from "./_two-step-signup-form";
+import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
 
-// Parse an ISO2 country hint from common geo/language headers so the
-// first server render already shows the right country prefix. Client-side
-// detection (navigator.language, Intl timezone) refines on hydration.
 function readCountryHint(hdrs: Headers): string | undefined {
   const geo =
     hdrs.get("x-vercel-ip-country") ||
@@ -40,21 +42,44 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  searchParams: Promise<{ e?: string; m?: string }>;
+  searchParams: Promise<{ e?: string; m?: string; preserve_email?: string }>;
 }
 
-// ─── NEX brand tokens · match the reference image ──────────────────────
+// Simple RFC-5321-shape sanity check so a malformed query param can't
+// prefill the input with something invalid. The actual format check is
+// done by the browser's `type="email"` constraint on submit.
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function sanitisePreservedEmail(raw: string | undefined): string {
+  if (!raw) return "";
+  const trimmed = raw.trim();
+  if (trimmed.length === 0 || trimmed.length > 254) return "";
+  return EMAIL_SHAPE.test(trimmed) ? trimmed : "";
+}
+
 const NEX = {
   bg: "#020914",
-  panel: "#03101D",
-  fieldBg: "#04101F",
+  panel: "rgba(3, 16, 29, 0.78)",
+  fieldBg: "rgba(4, 16, 32, 0.78)",
   textPrimary: "#F2F5F8",
-  textSecondary: "#7D9BC0",
+  textSecondary: "#B5C3D6",
+  textMuted: "#7D9BC0",
   cyan: "#00AFFF",
+  cyanLight: "#5AC8FA",
   cyanSoft: "rgba(0, 175, 255, 0.35)",
   cyanFaint: "rgba(0, 175, 255, 0.18)",
   orange: "#FF7200",
+  borderSoft: "rgba(0, 175, 255, 0.25)",
 };
+
+const SANS =
+  "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+
+const ICON_TILES: ReadonlyArray<{ title: string; subtitle: string }> = [
+  { title: "Chat", subtitle: "With friends, family & more" },
+  { title: "Themes", subtitle: "Make it yours" },
+  { title: "Shop", subtitle: "Discover local businesses" },
+  { title: "Community", subtitle: "Real people. Real connections." },
+];
 
 export default async function CreateAccountPage({ searchParams }: PageProps) {
   const session = await resolveNexAppSessionFromContext();
@@ -62,13 +87,19 @@ export default async function CreateAccountPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const authError = params.e && params.m ? { code: params.e, message: params.m } : null;
   const initialIso2 = readCountryHint(await headers());
+  // 2026-10-15 · preserve_email echoes the user's step-1 email across
+  // the server-action round-trip on recoverable failures so they don't
+  // have to re-type it. Password is NEVER preserved · the user re-
+  // enters it from step 1. Step-2 fields (name, phone) can't be
+  // safely restored either without echoing the password, so the form
+  // always restarts at step 1 when there is an error.
+  const initialEmail = sanitisePreservedEmail(params.preserve_email);
 
   return (
     <>
-      {/* Isolate this surface from the global bg-brand-bg body and
-          Tailwind neutrals · the reference design owns its own palette. */}
       <style>{`
         html, body { background: ${NEX.bg} !important; }
+        [data-nex-create-account-root],
         [data-nex-create-account-root] * { box-sizing: border-box; }
         [data-nex-create-account-root] input:focus,
         [data-nex-create-account-root] button:focus-visible {
@@ -76,266 +107,283 @@ export default async function CreateAccountPage({ searchParams }: PageProps) {
           outline-offset: 2px;
         }
         [data-nex-create-account-root] input::placeholder {
-          color: ${NEX.textSecondary};
-          opacity: 0.7;
+          color: ${NEX.textMuted};
+          opacity: 0.78;
         }
       `}</style>
       <main
         id="main"
         data-nex-create-account-root
         style={{
+          position: "relative",
           minHeight: "100dvh",
           background: NEX.bg,
           color: NEX.textPrimary,
-          fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-          padding: "16px 20px 32px",
-          position: "relative",
-          overflow: "hidden",
+          fontFamily: SANS,
+          overflowX: "hidden",
         }}
       >
-        {/* Subtle technological atmosphere · single faint radial glow,
-            no stars, no particles, no photograph. */}
+        {/* Full-viewport owner-supplied Earth-explorer backdrop · code
+            only references the file via src; no character art is
+            drawn in code. */}
+        <img
+          src="/nex-native/auth-hero-backdrop.png"
+          alt=""
+          aria-hidden
+          data-nex-create-account-backdrop
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "center top",
+            zIndex: 0,
+            pointerEvents: "none",
+            userSelect: "none",
+          }}
+        />
         <div
           aria-hidden
           style={{
             position: "absolute",
             inset: 0,
             background:
-              "radial-gradient(60% 40% at 50% 0%, rgba(0,175,255,0.09), transparent 70%)",
+              "linear-gradient(180deg, rgba(2,9,20,0.1) 0%, rgba(2,9,20,0.45) 55%, rgba(2,9,20,0.85) 100%)",
+            zIndex: 1,
             pointerEvents: "none",
           }}
         />
 
-        <div style={{ position: "relative", maxWidth: 420, margin: "0 auto" }}>
-          {/* Shared header · NEX brand (left) · search + gear (right) */}
-          <NexPageHeader dataScope="create-account" />
-
-          {/* Tagline */}
-          <p
+        <div
+          style={{
+            position: "relative",
+            zIndex: 2,
+            maxWidth: 420,
+            margin: "0 auto",
+            padding:
+              "calc(env(safe-area-inset-top, 0px) + 14px) 20px calc(env(safe-area-inset-bottom, 0px) + 24px)",
+          }}
+        >
+          {/* ── Top brand header · badge + wordmark + taglines
+                (matches sign-in page / template az4.png) ── */}
+          <header
+            data-nex-create-account-brand-header
             style={{
-              marginTop: 20,
-              textAlign: "center",
-              fontSize: 12,
-              letterSpacing: "0.06em",
-              color: NEX.textSecondary,
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 12,
+              marginBottom: 10,
             }}
           >
-            Your world is waiting.
-          </p>
+            <NexPingBadge size={56} accent={NEX.cyan} dataTestId="create-account-nex" />
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+                marginTop: 14,
+                minWidth: 0,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 26,
+                  fontWeight: 900,
+                  letterSpacing: "-0.01em",
+                  color: NEX.textPrimary,
+                  lineHeight: 1,
+                  textShadow: "0 2px 10px rgba(0,0,0,0.6)",
+                }}
+              >
+                NEX
+              </span>
+              <span
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: NEX.textPrimary,
+                  textShadow: "0 1px 3px rgba(0,0,0,0.55)",
+                }}
+              >
+                More than chat.
+              </span>
+              <span
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  background:
+                    "linear-gradient(90deg, #00AFFF 0%, #B47CFF 55%, #FF5BAE 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                  textShadow: "0 1px 3px rgba(0,0,0,0.35)",
+                }}
+              >
+                Your world, connected.
+              </span>
+            </div>
+          </header>
 
-          {/* 4 · MAIN HEADING */}
-          <header style={{ marginTop: 36, textAlign: "center" }}>
+          {/* ── "Welcome to NEX" headline · narrow left column · NEX
+                rendered as the owner-supplied wordmark image (same
+                asset the welcome page uses) rather than CSS-gradient
+                text, so the brand reads identically across every
+                auth surface. ── */}
+          <section
+            data-nex-create-account-hero
+            style={{
+              maxWidth: 240,
+              marginTop: 18,
+              marginBottom: 16,
+            }}
+          >
             <h1
               style={{
                 margin: 0,
-                fontSize: 26,
-                fontWeight: 500,
-                letterSpacing: "0.005em",
+                fontSize: 32,
+                fontWeight: 800,
+                lineHeight: 1.05,
+                letterSpacing: "-0.02em",
                 color: NEX.textPrimary,
-                lineHeight: 1.2,
+                textShadow: "0 2px 10px rgba(0,0,0,0.6)",
               }}
             >
-              Create your NEX account
+              <span style={{ display: "block" }}>Welcome to</span>
+              <img
+                src="/nex-native/landing-nex-wordmark.png"
+                alt="NEX"
+                data-nex-create-account-wordmark
+                style={{
+                  display: "block",
+                  height: 56,
+                  width: "auto",
+                  marginTop: 4,
+                  filter: "drop-shadow(0 6px 20px rgba(180,124,255,0.4))",
+                  userSelect: "none",
+                  pointerEvents: "none",
+                }}
+              />
             </h1>
-            <p
+            <div
               style={{
                 marginTop: 10,
-                fontSize: 13,
-                color: NEX.textSecondary,
+                fontSize: 18,
+                fontWeight: 700,
+                color: NEX.textPrimary,
+                textShadow: "0 1px 4px rgba(0,0,0,0.6)",
               }}
             >
-              Your private space starts here.
+              Chat. Discover. Connect.
+            </div>
+            <p
+              style={{
+                margin: "10px 0 0",
+                fontSize: 12.5,
+                lineHeight: 1.5,
+                color: NEX.textPrimary,
+                textShadow: "0 1px 3px rgba(0,0,0,0.6)",
+              }}
+            >
+              The ultimate chat experience with stunning themes,
+              powerful features, and a world of possibilities.
             </p>
-          </header>
+          </section>
 
+          {/* ── 4-capability icon tile ── */}
+          <section
+            data-nex-create-account-icon-set
+            style={{ marginBottom: 16, width: "100%" }}
+          >
+            <img
+              src="/nex-native/landing-icon-set.png"
+              alt="NEX capabilities · Chat · Themes · Shop · Community"
+              style={{
+                display: "block",
+                width: "100%",
+                height: "auto",
+                userSelect: "none",
+                pointerEvents: "none",
+              }}
+            />
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(4, 1fr)",
+                gap: 4,
+                marginTop: 2,
+                padding: "0 2px",
+              }}
+            >
+              {ICON_TILES.map((tile) => (
+                <div
+                  key={tile.title}
+                  style={{
+                    textAlign: "center",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: NEX.textPrimary,
+                      textShadow: "0 1px 3px rgba(0,0,0,0.6)",
+                    }}
+                  >
+                    {tile.title}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 9.5,
+                      lineHeight: 1.25,
+                      color: "rgba(255,255,255,0.78)",
+                      textShadow: "0 1px 2px rgba(0,0,0,0.55)",
+                    }}
+                  >
+                    {tile.subtitle}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* ── Error banner from createNexAccountAction (surfaces
+                when the server action rejects + redirects back with
+                ?e= · lives OUTSIDE the client form so it's visible
+                regardless of which step the user is on). ── */}
           {authError && (
             <div
               role="status"
+              data-nex-create-account-error={authError.code}
               style={{
-                marginTop: 16,
+                marginBottom: 14,
                 padding: "10px 14px",
                 border: `1px solid ${NEX.orange}`,
-                borderRadius: 8,
+                borderRadius: 10,
                 color: NEX.textPrimary,
                 fontSize: 12,
-                background: "rgba(255,114,0,0.08)",
+                background: "rgba(255,114,0,0.14)",
               }}
             >
               {authError.message}
             </div>
           )}
 
-          {/* Form wraps everything so the Server Action fires from the
-              button that visually sits BELOW the panel per the reference. */}
-          <form
-            action={createNexAccountAction}
-            data-nex-create-account-form
-          >
-            {/* 5 · ACCOUNT FORM PANEL */}
-            <div
-              style={{
-                marginTop: 22,
-                background: NEX.panel,
-                border: `1px solid ${NEX.cyanSoft}`,
-                borderRadius: 12,
-                padding: 18,
-              }}
-            >
-              <Field label="Full name">
-                <input
-                  required
-                  type="text"
-                  name="full_name"
-                  placeholder="Enter your name"
-                  autoComplete="name"
-                  style={inputStyle}
-                />
-              </Field>
-
-              <Field label="Email address">
-                <input
-                  required
-                  type="email"
-                  name="email"
-                  placeholder="Enter your email"
-                  autoComplete="email"
-                  style={inputStyle}
-                />
-              </Field>
-
-              <NexPhoneField initialIso2={initialIso2} />
-
-              <Field label="Password">
-                <NexPasswordField
-                  name="password"
-                  placeholder="Create a password"
-                  ariaLabel="Password"
-                  minLength={6}
-                />
-              </Field>
-
-              {/* 6 · SECURITY MESSAGE · Bridge 82 reworded 2026-09-29 ·
-                  Founder direction: no consent modal · position NEX as
-                  proactively industry-leading on privacy vs AI bots +
-                  fast-moving threats · legal detail lives in Terms of Use. */}
-              <div
-                style={{
-                  marginTop: 8,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  color: NEX.textSecondary,
-                  fontSize: 12,
-                }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
-                </svg>
-                <span>
-                  Zero-knowledge messaging ·{" "}
-                  <Link
-                    href="/nex-native/about/privacy"
-                    style={{ color: NEX.orange, textDecoration: "none", fontWeight: 600 }}
-                  >
-                    How NEX protects you
-                  </Link>
-                </span>
-              </div>
-              <div
-                style={{
-                  marginTop: 10,
-                  textAlign: "center",
-                  fontSize: 11,
-                  color: NEX.textSecondary,
-                  lineHeight: 1.5,
-                }}
-              >
-                By creating an account you agree to our{" "}
-                <Link
-                  href="/nex-native/about/terms"
-                  style={{ color: NEX.orange, textDecoration: "none" }}
-                >
-                  Terms of Use
-                </Link>{" "}
-                and{" "}
-                <Link
-                  href="/nex-native/about/privacy"
-                  style={{ color: NEX.orange, textDecoration: "none" }}
-                >
-                  Privacy pledge
-                </Link>
-                .
-              </div>
-            </div>
-
-            {/* 7 · CREATE ACCOUNT BUTTON · sits below the panel visually */}
-            <div style={{ marginTop: 16 }}>
-              <NexCreateSubmit />
-            </div>
-          </form>
-
-          {/* Bridge 42 · 2026-09-28 · retired "CREATE WITH FACE"
-              alternate signup path + its OR divider. Face-only auth
-              was confusing the primary flow · Founder cut it in
-              favour of a single email + password path. Sign-in from
-              other devices still lives on /nex-native/sign-in. */}
-
-          {/* SIGN-IN AREA */}
-          <p
-            style={{
-              marginTop: 24,
-              textAlign: "center",
-              fontSize: 13,
-              color: NEX.textSecondary,
-            }}
-          >
-            Already have an account?{" "}
-            <Link
-              href="/nex-native/sign-in"
-              style={{ color: NEX.orange, textDecoration: "none", fontWeight: 500 }}
-            >
-              Sign in
-            </Link>
-          </p>
+          {/* ── Two-step signup form · Step 1 shows ONLY email +
+                password (matches owner-supplied template az4.png) ·
+                Step 2 collects NEX chat name + full name + optional
+                phone · final submit is a single transaction to the
+                sealed createNexAccountAction. Owner-authorised 2026-
+                10-15. ── */}
+          <TwoStepSignupForm
+            initialIso2={initialIso2}
+            initialEmail={initialEmail}
+          />
         </div>
       </main>
     </>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  minHeight: 48,
-  padding: "12px 14px",
-  background: NEX.fieldBg,
-  color: NEX.textPrimary,
-  border: `1px solid ${NEX.cyanSoft}`,
-  borderRadius: 8,
-  fontFamily: "inherit",
-  fontSize: 14,
-  letterSpacing: "0.01em",
-  outline: "none",
-};
-
-function Field(props: { label: string; children: React.ReactNode }) {
-  return (
-    <label style={{ display: "block", marginBottom: 14 }}>
-      <span
-        style={{
-          display: "block",
-          marginBottom: 6,
-          fontSize: 10,
-          fontWeight: 600,
-          letterSpacing: "0.16em",
-          color: NEX.cyan,
-          textTransform: "uppercase",
-        }}
-      >
-        {props.label}
-      </span>
-      {props.children}
-    </label>
-  );
-}
-
