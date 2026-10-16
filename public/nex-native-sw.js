@@ -51,7 +51,36 @@ self.addEventListener("push", (event) => {
         ]
       : undefined,
   };
-  event.waitUntil(self.registration.showNotification(title, options));
+
+  // Owner directive 2026-10-16 · home-screen app badge update.
+  // When the server embeds `data.appBadgeCount` in the push payload,
+  // call the Badging API so the installed PWA icon reflects the
+  // viewer's current total unread count. Feature-detect every call ·
+  // iOS Safari, Firefox and some corporate browsers lack the API ·
+  // on those platforms we silently skip and users see the badge
+  // through the OS's own notification-count behaviour instead. No
+  // throw ever propagates out of this handler.
+  const badgePromises = [];
+  const rawBadge = payload && payload.data && payload.data.appBadgeCount;
+  if (typeof rawBadge === "number" && Number.isFinite(rawBadge) && rawBadge >= 0) {
+    const count = Math.max(0, Math.min(9999, Math.floor(rawBadge)));
+    if (self.navigator && typeof self.navigator.setAppBadge === "function") {
+      try {
+        badgePromises.push(
+          count > 0
+            ? self.navigator.setAppBadge(count).catch(() => {})
+            : self.navigator.clearAppBadge().catch(() => {}),
+        );
+      } catch { /* no-op · badge is best-effort */ }
+    }
+  }
+
+  event.waitUntil(
+    Promise.all([
+      self.registration.showNotification(title, options),
+      ...badgePromises,
+    ]),
+  );
 });
 
 self.addEventListener("notificationclick", (event) => {

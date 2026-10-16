@@ -32,6 +32,7 @@ import { I18nProvider } from "@/lib/nex/i18n/I18nProvider";
 import { resolveServerLocale } from "@/lib/nex/i18n/server";
 import { IncomingCallHub } from "./_incoming-call-hub";
 import { PushSubscribeHub } from "./_push-subscribe-hub";
+import { AppBadgeSyncClient } from "./_app-badge-sync-client";
 import { SwCacheRegister } from "./_sw-cache-register";
 // NEX surface stylesheet · imported here (not only inside _shell) so
 // every /nex-native/* route receives the shared tokens and the global
@@ -151,20 +152,32 @@ export default async function NexNativeLayout({
       <div className="nex-native-stage">
         <div className="nex-native-frame">
           {children}
+          {/* Owner directive 2026-10-16 · the IncomingCallHub +
+              PushSubscribeHub are mounted INSIDE the frame (not as
+              layout-root siblings) so their position-absolute children
+              anchor to the phone frame on desktop. The hub itself
+              uses position: absolute · see _incoming-call-hub.tsx. */}
+          {selfAccountId && selfDisplayName && (
+            <>
+              <IncomingCallHub
+                selfAccountId={selfAccountId}
+                selfDisplayName={selfDisplayName}
+              />
+              <PushSubscribeHub vapidPublicKey={vapidPublicKey} />
+              {/* Owner directive 2026-10-16 · home-screen app badge sync.
+                  Mounted only for signed-in viewers (anonymous has no
+                  messages). Feature-detects navigator.setAppBadge and
+                  silently degrades on platforms without the Badging
+                  API (iOS Safari, Firefox). */}
+              <AppBadgeSyncClient />
+            </>
+          )}
         </div>
       </div>
       {/* Caching SW · runs for signed-in AND signed-out visitors so
-          returning sign-in / create-account pages are instant too. */}
+          returning sign-in / create-account pages are instant too.
+          Lives outside the frame · no visual surface. */}
       <SwCacheRegister />
-      {selfAccountId && selfDisplayName && (
-        <>
-          <IncomingCallHub
-            selfAccountId={selfAccountId}
-            selfDisplayName={selfDisplayName}
-          />
-          <PushSubscribeHub vapidPublicKey={vapidPublicKey} />
-        </>
-      )}
     </I18nProvider>
   );
 }

@@ -45,6 +45,7 @@ import type * as React from "react";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { InstallHomeButtonClient } from "../_install-home-button-client";
 import { resolveNexAppSessionOrGuest } from "@/lib/nex-native/app/session-or-guest";
 import { ChatIdentityHeader } from "@/lib/nex-native/chat-chrome/chat-identity-header";
 import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
@@ -505,6 +506,24 @@ export default async function WelcomePage({
               "exact same text as template image · remove old text" ·
               template ends at "15 seconds · no card needed" with no
               additional footer. */}
+
+          {/* Home-screen install prompt · owner directive 2026-10-16.
+              The button hides itself when NEX is already installed
+              (display-mode: standalone), falls back to an iOS Share
+              tooltip on Safari, and silently renders nothing on
+              browsers without the install API. No persistent banner
+              elsewhere in the app · this surface + Directory Landing
+              are the only two the owner authorised. */}
+          <div
+            style={{
+              marginTop: 20,
+              display: "flex",
+              justifyContent: "center",
+            }}
+            data-nex-welcome-install-slot
+          >
+            <InstallHomeButtonClient />
+          </div>
         </section>
       </main>
     </>

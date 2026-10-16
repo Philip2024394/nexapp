@@ -33,6 +33,12 @@ import {
 // (sendEncryptedPeerMessages) is NOT hooked by design.
 import { isSafeChatPhase1LoggingEnabled } from "./safechat/feature-flag";
 import { safechatClassifyAndLog } from "./safechat/_hook";
+// Owner directive 2026-10-16 (Vault-exclusion corrective pass) · the
+// home-screen badge must count unread messages from NORMAL
+// conversations only. We reuse the sealed canonical function that the
+// notification-dispatch service already uses to enforce the Vault
+// boundary on push notifications · no new Vault detector invented.
+import { listVaultedConversationIds } from "./vault-entry-service";
 
 export interface NexPeerMessageRow {
   id: NexUuid;
@@ -491,11 +497,29 @@ export async function getLastPeerMessageInConversation(
 }
 
 /** Mark every inbound (not-from-viewer) message in the conversation as
- *  read. Idempotent side-effect · safe to call on every page load. */
+ *  read. Idempotent side-effect · safe to call on every page load.
+ *
+ *  R9 Stage 4 gate (2026-10-15 · migration 199 unapplied as of this
+ *  commit · service reads defaults from DEFAULT_CHAT_PREFS when the
+ *  columns are absent): the viewer here IS the recipient of the
+ *  inbound messages. When the recipient has `read_receipts_enabled`
+ *  disabled, their saved intent is "nobody sees when I've read a
+ *  message." We honour that by SKIPPING the read_at write entirely ·
+ *  the sender's view never surfaces a receipt because the column
+ *  stays NULL. Fail-closed · a service-layer error reading prefs
+ *  resolves to PRIVACY-MAXIMUM (receipts suppressed) via
+ *  getChatPreferencesSafe. This is the primary server-side
+ *  enforcement for reciprocal read-receipt privacy. */
 export async function markPeerMessagesRead(
   conversationId: NexUuid,
   viewerAccountId: NexUuid,
 ): Promise<void> {
+  const { getChatPreferencesSafe } = await import("./chat-preferences-service");
+  const prefs = await getChatPreferencesSafe(viewerAccountId);
+  if (!prefs.read_receipts_enabled) {
+    // Honest no-op · the recipient has opted out of the receipt signal.
+    return;
+  }
   const now = new Date().toISOString();
   const { error } = await nexSupabaseAdmin
     .from("nex_peer_message")
@@ -738,10 +762,34 @@ export async function sendEncryptedPeerMessages(
 }
 
 /** Mark an encrypted row as delivered after the recipient's client
- *  decrypts successfully · triggers Bridge 78 purge eligibility. */
+ *  decrypts successfully · triggers Bridge 78 purge eligibility.
+ *
+ *  R9 Stage 4 extension (2026-10-15 · migration 199 unapplied):
+ *  optional `viewerAccountId` enables encrypted-path read-receipt
+ *  reciprocity. When supplied, the recipient's `read_receipts_enabled`
+ *  preference is checked via `getChatPreferencesSafe` · if disabled,
+ *  this helper is an honest no-op (the sender never sees "delivered"
+ *  because `delivered_at` stays NULL). Callers that already know the
+ *  recipient's account (the sealed `/api/.../peer-message/delivered`
+ *  route authenticates the session, so the viewer === recipient) should
+ *  pass it. Legacy callers that omit the parameter continue to work
+ *  (gate bypassed · ciphertext purge semantics preserved) · they are
+ *  tracked as follow-up migration targets for Stage 4b encrypted
+ *  caller sweep.
+ */
 export async function markPeerMessageDelivered(
   messageId: NexUuid,
+  viewerAccountId?: NexUuid,
 ): Promise<void> {
+  if (viewerAccountId) {
+    const { getChatPreferencesSafe } = await import("./chat-preferences-service");
+    const prefs = await getChatPreferencesSafe(viewerAccountId);
+    if (!prefs.read_receipts_enabled) {
+      // Honest no-op · the recipient has opted out of the delivered
+      // signal in the reciprocal receipt contract.
+      return;
+    }
+  }
   const { error } = await nexSupabaseAdmin
     .from("nex_peer_message")
     .update({ delivered_at: new Date().toISOString() })
@@ -855,4 +903,99 @@ export async function countUnreadPeerMessages(
     .is("read_at", null);
   if (error) return 0;
   return count ?? 0;
+}
+
+/** Count TOTAL unread messages for a viewer across EVERY NON-VAULT
+ *  peer conversation they participate in. Used for the home-screen
+ *  app badge (owner directive 2026-10-16) and any UI that aggregates
+ *  unread state across the inbox.
+ *
+ *  Three queries by design:
+ *    1. list conversation ids where viewer is participant_a OR
+ *       participant_b (sealed `nex_peer_conversation` shape ·
+ *       migration 047 ordered-pair constraint)
+ *    2. subtract the viewer's vaulted conversation ids via the
+ *       sealed `listVaultedConversationIds` · same canonical source
+ *       the notification-dispatch service uses to enforce the Vault
+ *       boundary on push notifications (owner directive 2026-10-16 ·
+ *       Vault activity must not inflate the public home-screen badge)
+ *    3. count unread messages in the remaining (non-vault)
+ *       conversations where the sender is NOT the viewer and
+ *       `read_at IS NULL`
+ *
+ *  Error handling · owner directive 2026-10-16 (corrective pass) ·
+ *  THROWS on any DB failure so the API boundary can distinguish a
+ *  genuine zero count from an outage. The previous implementation
+ *  returned 0 on any error, which would clear a user's badge during
+ *  a transient DB blip. The API route is responsible for returning
+ *  a non-2xx response so the client's `if (!res.ok) return;` guard
+ *  preserves the last known badge state. */
+export async function countTotalUnreadPeerMessages(
+  viewerAccountId: NexUuid,
+): Promise<number> {
+  const convs = await nexSupabaseAdmin
+    .from("nex_peer_conversation")
+    .select("id")
+    .or(
+      `participant_a_id.eq.${viewerAccountId},participant_b_id.eq.${viewerAccountId}`,
+    );
+  if (convs.error) {
+    throw new Error(
+      `peer-message-service.countTotalUnreadPeerMessages conversations: ${convs.error.message}`,
+    );
+  }
+  if (!convs.data || convs.data.length === 0) return 0;
+
+  // Owner directive 2026-10-16 · Vault exclusion. The viewer's
+  // vaulted-conversation set is the canonical source of truth used
+  // by the sealed notification-dispatch service (vault_rejected
+  // branch). We MUST propagate errors here · if we cannot determine
+  // Vault membership, we cannot safely compute the badge count and
+  // the caller should preserve the last known value.
+  const vaulted = await listVaultedConversationIds(viewerAccountId);
+  const nonVaultedIds = convs.data
+    .map((row: { id: NexUuid }) => row.id)
+    .filter((id: NexUuid) => !vaulted.has(id));
+  if (nonVaultedIds.length === 0) return 0;
+
+  const { count, error } = await nexSupabaseAdmin
+    .from("nex_peer_message")
+    .select("id", { count: "exact", head: true })
+    .in("conversation_id", nonVaultedIds)
+    .neq("sender_account_id", viewerAccountId)
+    .is("read_at", null);
+  if (error) {
+    throw new Error(
+      `peer-message-service.countTotalUnreadPeerMessages count: ${error.message}`,
+    );
+  }
+  return count ?? 0;
+}
+
+/**
+ * R8 Stage 3b helper · lightweight read of a message's author and
+ * conversation so a server action can route a push notification to
+ * the right recipient (the original message author) without duplicating
+ * row-fetch logic. Returns null when the message does not exist.
+ * Throws on database error so the caller can fail-closed.
+ */
+export async function getMessageAuthorContext(
+  messageId: NexUuid,
+): Promise<{ sender_account_id: NexUuid; conversation_id: NexUuid } | null> {
+  const { data, error } = await nexSupabaseAdmin
+    .from("nex_peer_message")
+    .select("sender_account_id, conversation_id")
+    .eq("id", messageId)
+    .maybeSingle();
+  if (error) {
+    throw new Error(
+      `peer-message-service.getMessageAuthorContext: ${error.message}`,
+    );
+  }
+  if (!data) return null;
+  const row = data as { sender_account_id: NexUuid; conversation_id: NexUuid };
+  return {
+    sender_account_id: row.sender_account_id,
+    conversation_id: row.conversation_id,
+  };
 }

@@ -14,6 +14,7 @@
 // by the Reality Check scripts in scripts/nex-*-reality-check.mts.
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
   nexAppSsrServerClient,
@@ -27,6 +28,8 @@ import * as peerMessageService from "@/lib/nex-native/peer-message-service";
 // src/lib/nex-native/realtime/message-arrival.ts for the strict
 // payload contract (conversation_id, message_group_id, sent_at only).
 import { emitMessageArrival } from "@/lib/nex-native/realtime/message-arrival";
+import { dispatchPushNotification } from "@/lib/nex-native/notification-dispatch-service";
+import { resolveAccountLocale, t as tI18n } from "@/lib/nex/i18n/server";
 import * as sellerResponsivenessService from "@/lib/nex-native/seller-responsiveness-service";
 import { getThemeStickerBySlug } from "@/lib/nex-native/theme-sticker-service";
 import {
@@ -75,8 +78,16 @@ function redirectToInboxWithError(code: string, message: string): never {
   redirect(`/nex-native/conversations?${qs.toString()}`);
 }
 
-function redirectToCreateAccountWithError(code: string, message: string): never {
+function redirectToCreateAccountWithError(
+  code: string,
+  message: string,
+  preserve?: { email?: string },
+): never {
   const qs = new URLSearchParams({ e: code, m: message });
+  // 2026-10-15 · Preserve non-sensitive step-2 fields across the
+  // round-trip so the user doesn't re-type their email. Password is
+  // NEVER echoed back · it is dropped on failure by design.
+  if (preserve?.email) qs.set("preserve_email", preserve.email);
   redirect(`/nex-native/create-account?${qs.toString()}`);
 }
 
@@ -104,23 +115,50 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
   if (!password || password.length < 6) {
     redirectToCreateAccountWithError("short_password", "Password must be 6+ characters");
   }
-  // Phone shape · same CHECKs as migration 024: country code +digits (1-4),
-  // national number 5-15 digits. Whitespace / dashes / parens stripped so
+  // 2026-10-15 · Phone optional (two-step signup step 2) · migration
+  // 024 keeps both columns nullable at DB level. Validate shape only
+  // when provided. Both-or-neither: incomplete pair rejected.
+  // Whitespace / dashes / parens stripped from the national number so
   // "+62 812-345-6789" resolves cleanly.
-  const phoneCountryCode = phoneCountryCodeRaw;
-  const phoneNationalNumber = phoneNationalNumberRaw.replace(/[\s\-()]/g, "");
-  if (!phoneCountryCode || !/^\+[0-9]{1,4}$/.test(phoneCountryCode)) {
+  const phoneNationalNumberNormalized = phoneNationalNumberRaw.replace(
+    /[\s\-()]/g,
+    "",
+  );
+  const hasPhoneCountryCode = phoneCountryCodeRaw.length > 0;
+  const hasPhoneNationalNumber = phoneNationalNumberNormalized.length > 0;
+  if (hasPhoneCountryCode !== hasPhoneNationalNumber) {
+    redirectToCreateAccountWithError(
+      "incomplete_phone",
+      "Enter both country code and phone number, or leave both empty.",
+      { email },
+    );
+  }
+  if (
+    hasPhoneCountryCode &&
+    !/^\+[0-9]{1,4}$/.test(phoneCountryCodeRaw)
+  ) {
     redirectToCreateAccountWithError(
       "invalid_phone_country_code",
-      "Country code required · format like +44 · digits only after the +",
+      "Country code must be like +44 · digits only after the +",
+      { email },
     );
   }
-  if (!phoneNationalNumber || !/^[0-9]{5,15}$/.test(phoneNationalNumber)) {
+  if (
+    hasPhoneNationalNumber &&
+    !/^[0-9]{5,15}$/.test(phoneNationalNumberNormalized)
+  ) {
     redirectToCreateAccountWithError(
       "invalid_phone_number",
-      "Phone number required · digits only · 5-15 characters",
+      "Phone number must be digits only · 5-15 characters",
+      { email },
     );
   }
+  const phoneCountryCode: string | null = hasPhoneCountryCode
+    ? phoneCountryCodeRaw
+    : null;
+  const phoneNationalNumber: string | null = hasPhoneNationalNumber
+    ? phoneNationalNumberNormalized
+    : null;
 
   // Bridge 82 (reworded 2026-09-29) · No explicit consent checkbox ·
   // Founder direction: NEX leads industry standards, doesn't ask
@@ -140,7 +178,9 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
       },
     },
   });
-  if (error) redirectToCreateAccountWithError("sign_up_failed", error.message);
+  if (error) {
+    redirectToCreateAccountWithError("sign_up_failed", error.message, { email });
+  }
 
   if (data.user?.id) {
     try {
@@ -216,6 +256,7 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
     redirectToCreateAccountWithError(
       "email_confirmation_required",
       "Check your email for a confirmation link, then sign in.",
+      { email },
     );
   }
   // Account-wall continuation · if the user arrived at signup via a
@@ -231,6 +272,25 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
     if (pending) {
       revalidatePath("/nex-native/post-signup-apply");
       redirect("/nex-native/post-signup-apply");
+    }
+  }
+  // 2026-10-15 · Theme-return cookie · if the guest previewed a free
+  // NEX-brand theme before signing up (nex-bubbles / nex-flat), take
+  // them straight back to that exact theme viewer. Hard whitelist in
+  // parseSelectedThemeId prevents arbitrary-redirect via a crafted
+  // cookie. Consumed here on success so a later signup doesn't inherit
+  // a stale selection.
+  {
+    const { parseSelectedThemeId, SELECTED_THEME_COOKIE, selectedThemeHref } =
+      await import("@/lib/nex-native/selected-theme-cookie");
+    const jar = await cookies();
+    const raw = jar.get(SELECTED_THEME_COOKIE)?.value ?? null;
+    const chosen = parseSelectedThemeId(raw);
+    if (chosen) {
+      jar.delete(SELECTED_THEME_COOKIE);
+      const dest = selectedThemeHref(chosen);
+      revalidatePath(dest);
+      redirect(dest);
     }
   }
   // Task #32 · 2026-10-11 · a fresh signup with no pending wall lands
@@ -550,6 +610,61 @@ export async function sendPeerMessageAction(
     messageGroupId: insertedRow.id,
     sentAtIso: insertedRow.sent_at,
   });
+
+  // R8 Stage 3b · fan a push notification to the recipient's registered
+  // devices. Non-blocking fire-and-forget · a dispatch failure MUST NOT
+  // flip this successful send into a failed send. Vault boundary + saved
+  // category prefs are enforced server-side inside dispatchPushNotification
+  // (sealed 2026-10-15); the body preview below is deliberately generic
+  // and MUST NOT carry decrypted conversation content. The body is
+  // localised in the RECIPIENT's saved nex_account.locale so an
+  // Indonesian user receives Bahasa Indonesia on their lock screen even
+  // when the sender's locale is English (and vice versa).
+  const senderDisplayName = session.account.display_name || "Someone";
+  void (async () => {
+    try {
+      const recipient = await accountService.getAccountById(peerAccountId);
+      const recipientLocale = resolveAccountLocale(recipient?.locale);
+      const previewKey =
+        attachmentType === "image"
+          ? "push.body.sentYouAPhoto"
+          : attachmentType === "video"
+            ? "push.body.sentYouAVideo"
+            : attachmentType === "audio"
+              ? "push.body.sentYouAVoiceNote"
+              : "push.body.sentYouAMessage";
+      const previewBody = tI18n(previewKey, recipientLocale);
+      // Owner directive 2026-10-16 · compute the recipient's post-send
+      // total unread count so the SW can call `navigator.setAppBadge`
+      // and update the home-screen icon badge. Failure here must NOT
+      // block the push · we fall back to omitting the field, in which
+      // case the SW simply doesn't touch the badge (silent degrade).
+      let appBadgeCount: number | null = null;
+      try {
+        appBadgeCount = await peerMessageService.countTotalUnreadPeerMessages(peerAccountId);
+      } catch {
+        /* fall back · badge stays unchanged on the recipient device */
+      }
+      await dispatchPushNotification(peerAccountId, "message", {
+        kind: "conversation",
+        conversationId: conversation.id,
+        title: senderDisplayName,
+        body: previewBody,
+        data: {
+          type: "peer_message",
+          conversationId: conversation.id,
+          messageId: insertedRow.id,
+          senderAccountId: session.account.id,
+          // Opt-in badge update field · SW reads this and calls
+          // navigator.setAppBadge where supported. Absent on
+          // platforms we don't update (e.g. degraded count path).
+          ...(appBadgeCount !== null ? { appBadgeCount } : {}),
+        },
+      });
+    } catch {
+      /* fire-and-forget · errors are swallowed by design */
+    }
+  })();
 
   // Bridge 13 · every send bumps the sender's shop activity so the
   // green pulse on their landing stays honest. Best-effort · a
@@ -2797,7 +2912,19 @@ export async function upsertPushSubscriptionAction(
  * Bridge 89b · Fire a Web Push wakeup to every subscription registered
  * for the target account. Used by the calling flow to wake up a peer's
  * closed tab / locked phone alongside the Realtime inbox ring.
- * Best-effort · returns delivered counts + prunes dead endpoints.
+ *
+ * R8 Stage 3b (sealed 2026-10-15) · Call-push now routes through
+ * `dispatchPushNotification` so the recipient's "call" category
+ * preference AND Vault conversation boundary are enforced server-side.
+ * The Realtime signalling ring remains the authoritative in-app signal;
+ * this push is the discoverability layer that wakes a closed tab. When
+ * the recipient has calls OFF or has moved this conversation to Vault,
+ * no push wakes their device — the realtime ring still fires inside
+ * the app for anyone with an open tab, and that is the correct
+ * trade-off (user has explicitly opted into privacy-maximum).
+ *
+ * Returns delivered counts + skip reason. Dead endpoints are pruned by
+ * the dispatch service.
  */
 export async function sendCallPushAction(
   peerAccountId: string,
@@ -2807,53 +2934,49 @@ export async function sendCallPushAction(
     callerName: string;
     media: "audio" | "video";
   },
-): Promise<{ ok: true; delivered: number } | { ok: false; error: string }> {
+): Promise<
+  | { ok: true; delivered: number; skipped_reason?: string }
+  | { ok: false; error: string }
+> {
   const session = await resolveNexAppSessionFromContext();
   if (!session) return { ok: false, error: "not_signed_in" };
   try {
-    const [svc, push] = await Promise.all([
-      import("@/lib/nex-native/push-subscription-service"),
-      import("@/lib/nex/push/server"),
-    ]);
-    if (!push.isVapidConfigured()) {
-      return { ok: false, error: "vapid_not_configured" };
-    }
-    const subs = await svc.listPushSubscriptions(peerAccountId);
-    if (subs.length === 0) return { ok: true, delivered: 0 };
-
     const acceptUrl =
       `/nex-native/chat/peer/${session.account.id}` +
       `?accept_call=${encodeURIComponent(payload.callId)}` +
       `&call_media=${payload.media}`;
-    const wire: push.PushPayload = {
-      title: `${payload.callerName} is calling…`,
-      body: payload.media === "video" ? "Incoming NEX video call" : "Incoming NEX voice call",
-      tag: `nex-call-${payload.callId}`,
-      requireInteraction: true,
+    // Localise the title + body in the RECIPIENT's saved locale so the
+    // peer sees "Alice sedang menelepon…" on an Indonesian device.
+    const recipient = await accountService.getAccountById(peerAccountId);
+    const recipientLocale = resolveAccountLocale(recipient?.locale);
+    const title = tI18n(
+      "push.title.isCallingTemplate",
+      recipientLocale,
+    ).replace("{name}", payload.callerName);
+    const body = tI18n(
+      payload.media === "video"
+        ? "push.body.incomingVideoCall"
+        : "push.body.incomingVoiceCall",
+      recipientLocale,
+    );
+    const result = await dispatchPushNotification(peerAccountId, "call", {
+      kind: "conversation",
+      conversationId: payload.conversationId,
+      title,
+      body,
       data: {
         url: acceptUrl,
         kind: "incoming_call",
         callId: payload.callId,
+        tag: `nex-call-${payload.callId}`,
+        requireInteraction: true,
       },
+    });
+    return {
+      ok: true,
+      delivered: result.delivered,
+      ...(result.skipped_reason ? { skipped_reason: result.skipped_reason } : {}),
     };
-    let delivered = 0;
-    await Promise.all(
-      subs.map(async (row) => {
-        const res = await push.sendPushNow(
-          { endpoint: row.endpoint, keys: { p256dh: row.p256dh, auth: row.auth } },
-          wire,
-        );
-        if (res.ok) {
-          delivered += 1;
-          return;
-        }
-        // 404 / 410 → prune dead endpoint · silently swallow other errors.
-        if (res.statusCode === 404 || res.statusCode === 410) {
-          await svc.prunePushSubscription(row.endpoint);
-        }
-      }),
-    );
-    return { ok: true, delivered };
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }
@@ -2938,8 +3061,11 @@ export async function toggleMessageReactionAction(
     redirect(`/nex-native/chat/peer/${peerAccountId}`);
   }
 
+  let nextReactions: Awaited<
+    ReturnType<typeof peerMessageService.toggleMessageReaction>
+  >;
   try {
-    await peerMessageService.toggleMessageReaction(
+    nextReactions = await peerMessageService.toggleMessageReaction(
       messageId,
       session.account.id,
       emoji,
@@ -2948,6 +3074,49 @@ export async function toggleMessageReactionAction(
     const msg = e instanceof Error ? e.message : String(e);
     const qs = new URLSearchParams({ reaction_error: msg });
     redirect(`/nex-native/chat/peer/${peerAccountId}?${qs.toString()}`);
+  }
+
+  // R8 Stage 3b · Only fire a push when the reaction was ADDED (not when
+  // the user toggled their reaction off). The returned reactions map
+  // contains the caller's account id in the emoji list iff the add path
+  // ran. The push goes to the ORIGINAL message author (not the current
+  // peer-chat partner) · which may be the viewer themselves if they
+  // reacted to their own message. The service skips self-dispatch below
+  // via the equality check. Fire-and-forget · never flips a successful
+  // toggle into a failure.
+  const wasAdded =
+    nextReactions[emoji]?.includes(session.account.id) ?? false;
+  if (wasAdded) {
+    void (async () => {
+      try {
+        const ctx = await peerMessageService.getMessageAuthorContext(messageId);
+        if (!ctx) return;
+        if (ctx.sender_account_id === session.account.id) return; // self-react
+        const recipient = await accountService.getAccountById(
+          ctx.sender_account_id,
+        );
+        const recipientLocale = resolveAccountLocale(recipient?.locale);
+        const body = tI18n(
+          "push.body.reactedToYourMessageTemplate",
+          recipientLocale,
+        ).replace("{emoji}", emoji);
+        await dispatchPushNotification(ctx.sender_account_id, "reaction", {
+          kind: "conversation",
+          conversationId: ctx.conversation_id,
+          title: session.account.display_name || "Someone",
+          body,
+          data: {
+            type: "peer_reaction",
+            conversationId: ctx.conversation_id,
+            messageId,
+            reactorAccountId: session.account.id,
+            emoji,
+          },
+        });
+      } catch {
+        /* fire-and-forget */
+      }
+    })();
   }
 
   revalidatePath(`/nex-native/chat/peer/${peerAccountId}`);

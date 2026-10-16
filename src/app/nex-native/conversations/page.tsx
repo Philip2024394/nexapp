@@ -14,7 +14,7 @@ import { redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import * as conversationService from "@/lib/nex-native/conversation-service";
 import * as businessService from "@/lib/nex-native/business-service";
-import { signInAction, signInAsDevAdminAction, signUpAction, signOutAction } from "../_actions";
+import { signInAction, signUpAction, signOutAction } from "../_actions";
 import { SubmitButton } from "../_submit-button";
 import { NexNativeShell } from "../_shell";
 import { YourNexCard } from "../_your-nex-card";
@@ -103,20 +103,11 @@ export default async function Page({ searchParams }: PageProps) {
           </label>
           <SubmitButton label="Sign in" pendingLabel="Signing in…" fullWidth />
         </form>
-        {process.env.NEX_ALLOW_DEV_ADMIN === "1" && (
-          <form action={signInAsDevAdminAction} className="mb-4 rounded border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
-            <p className="mb-2">
-              <strong>Dev mode active.</strong> One-click sign-in as the provisioned dev-admin
-              (email <code className="font-mono">dev-admin@nex-native.local</code> · handle{" "}
-              <code className="font-mono">nex-10375</code>) · no password needed.
-            </p>
-            <SubmitButton label="Sign in as Dev Admin" pendingLabel="Signing in…" fullWidth />
-            <p className="mt-2 text-[10px] text-amber-700">
-              Disabled in production · set <code className="font-mono">NEX_ALLOW_DEV_ADMIN=1</code> in{" "}
-              <code className="font-mono">.env.local</code> to expose this button.
-            </p>
-          </form>
-        )}
+        {/* Dev-admin one-click sign-in block removed · owner directive
+            2026-10-16. All viewers must use the normal credential
+            sign-in form above. Dev-admin provisioning still exists in
+            scripts/nex-provision-dev-admin.mts for creating a test
+            account; sign-in is then via the standard flow. */}
         <details className="rounded border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-700">
           <summary className="cursor-pointer font-medium">No account yet? Create one</summary>
           <form action={signUpAction} className="mt-3">
