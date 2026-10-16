@@ -195,15 +195,29 @@ describe("F · Coming Soon placeholder pages reuse the shared shell", () => {
   // (landing + devices + activity + password). It is intentionally
   // absent from this list · the Phase 1.0 Security brief is the
   // regression anchor instead.
+  //
+  // Stage 1/2 note (2026-10-15): `about`, `blocked`, and `help`
+  // graduated OUT of the Coming Soon shell on 2026-10-15 as the owner-
+  // authorised Stage 1 + Stage 2 build. They are intentionally absent
+  // from this list · the real surfaces are regression-anchored by the
+  // _landing-renders-ia.test.ts § I "graduated real surfaces" block.
+  //
+  // Stage 3 note (2026-10-15): `notifications` graduated OUT of the
+  // Coming Soon shell on 2026-10-15 as the owner-authorised Stage 3
+  // build. The preferences UI is functional and persists state through
+  // the sealed notification-preferences-service (migration 198); the
+  // dispatch helper exists with server-side Vault boundary enforcement
+  // and fail-closed semantics. Event sources (incoming-call push, new-
+  // message push, etc.) are deferred to Stage 3b.
+  //
+  // Stage 4/5/6 note (2026-10-15): `chat-settings`, `privacy`, and
+  // `data-usage` graduated OUT of the Coming Soon shell on 2026-10-15
+  // as the consolidated owner-authorised R9/R10/R14 build. Each has
+  // a real preferences surface backed by migrations 199/200/201 (all
+  // AUTHORED · NOT YET APPLIED per owner directive). Only `storage`
+  // remains as an orphaned placeholder (sealed as Phase E deferred).
   const PLACEHOLDER_ROUTES = [
-    "notifications",
-    "chat-settings",
-    "privacy",
-    "blocked",
     "storage",
-    "data-usage",
-    "help",
-    "about",
   ];
 
   for (const route of PLACEHOLDER_ROUTES) {

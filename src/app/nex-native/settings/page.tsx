@@ -3,20 +3,44 @@
 // NEX Settings landing · gear icon in the shared page header points here.
 // Hero row: three equal icon tiles (Emergency Help · Family Safe · Community
 // Noticeboard) → the three safety-adjacent destinations. Below the hero:
-// the landscape settings cards (profile, plan, chat theme, wallet).
+// every sealed Settings group and row rendered from the single source of
+// truth at `./_sections.ts` (SETTINGS_GROUPS). No inline duplication of row
+// definitions.
 //
 // Settings is a FUNCTIONAL control surface · it uses the solid NEX palette
 // (navy #020914 bg, cyan #00AFFF accent, orange #FF7200 brand). Never
 // theme Settings per active World · the sealed universal theme controls
 // doctrine applies here. (Regression anchor read by _settings-ia.test.ts § E.)
+//
+// 2026-10-15 · Phase 0 discoverability refresh. The landing now walks
+// SETTINGS_GROUPS and renders every legitimate row with its sealed
+// destination. Previously-missing groups (Messages, Privacy & Safety,
+// Help) become visible. ComingSoon rows carry a Soon chip and route to
+// their honest ComingSoonSettingsPage sub-pages. Hero tiles, welcome
+// preview and sign-out behaviour are unchanged.
+//
+// 2026-10-15 · Phase 1 landing localisation. Every user-facing string
+// now flows through the universal NEX i18n registry (settings.* keys
+// in src/lib/nex/i18n/keys.ts · translations in packs/en.ts +
+// packs/id.ts). Locale is resolved server-side via
+// `resolveServerLocale({urlParam, accountLocale, acceptLanguage})` so
+// first paint is deterministic and no hydration flash occurs. Row and
+// group titles/subtitles are keyed off their SETTINGS_GROUPS entries
+// (settings.rows.<key>.title / settings.groups.<key>.label) so adding
+// a new row forces a translation pack update at compile time.
 
+import type * as React from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import { NexPageHeader } from "../_page-header";
 import { signOutAction } from "../_actions";
 import { isFamilySafetyEnabled } from "@/lib/nex-native/family-safety/feature-flag";
 import { isAffiliateAccount } from "@/lib/nex-native/affiliate-service";
+import { SETTINGS_GROUPS, type SettingsRowDef } from "./_sections";
+import { resolveServerLocale, tFor } from "@/lib/nex/i18n/server";
+import type { I18nKey } from "@/lib/nex/i18n/keys";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,24 +61,51 @@ const NEX = {
   dangerFaint: "rgba(255, 77, 94, 0.14)",
 };
 
+type T = (key: I18nKey) => string;
+
 interface HeroTile {
   href: string;
   icon: string;
-  title: string;
+  titleKey: I18nKey;
   tone: "danger" | "cyan" | "orange";
 }
 
-interface SettingRow {
-  href: string | null;
-  emoji: string;
-  title: string;
-  subtitle: string;
-  comingSoon?: boolean;
+// Resolved presentational row · the registry (SETTINGS_GROUPS) is the
+// source of structure (keys + href + emoji + flags); i18n is the source
+// of visible copy. We resolve both into this shape at the top of the
+// component so child cards never do key lookups.
+interface ResolvedRow {
+  readonly key: string;
+  readonly href: string | null;
+  readonly emoji: string;
+  readonly title: string;
+  readonly subtitle: string;
+  readonly comingSoon: boolean;
+  readonly highlighted: boolean;
 }
 
-export default async function SettingsIndex() {
+export default async function SettingsIndex({
+  searchParams,
+}: {
+  searchParams: Promise<{ lang?: string }>;
+}) {
   const session = await resolveNexAppSessionFromContext();
   if (!session) redirect("/nex-native/sign-in");
+
+  // Phase 1 · universal locale resolution. Precedence sealed in
+  // src/lib/nex/i18n/server.ts: URL ?lang → account.locale →
+  // Accept-Language → DEFAULT_LANG ("id"). The provider mounted at
+  // src/app/nex-native/layout.tsx has already picked a lang for the
+  // client-side pipe; we repeat the resolution here so the server-
+  // rendered copy agrees with the eventual client state.
+  const sp = await searchParams;
+  const acceptLanguage = (await headers()).get("accept-language");
+  const locale = resolveServerLocale({
+    urlParam: sp.lang ?? null,
+    accountLocale: session.account.locale ?? null,
+    acceptLanguage,
+  });
+  const t: T = tFor(locale);
 
   const familyEnabled = isFamilySafetyEnabled();
   const joinedAffiliate = await isAffiliateAccount(session.account.id).catch(() => false);
@@ -63,7 +114,7 @@ export default async function SettingsIndex() {
     {
       href: "/nex-native/emergency-help",
       icon: "🚨",
-      title: "Emergency Help",
+      titleKey: "settings.hero.emergencyHelp",
       tone: "danger",
     },
     ...(familyEnabled
@@ -71,7 +122,7 @@ export default async function SettingsIndex() {
           {
             href: "/nex-native/family-safety",
             icon: "🛡",
-            title: "Family Safe",
+            titleKey: "settings.hero.familySafe" as const,
             tone: "cyan" as const,
           },
         ]
@@ -79,59 +130,44 @@ export default async function SettingsIndex() {
     {
       href: "/nex-native/community",
       icon: "🏘",
-      title: "Community",
+      titleKey: "settings.hero.community",
       tone: "orange",
     },
   ];
 
-  const rows: SettingRow[] = [
-    {
-      href: "/nex-native/settings/profile",
-      emoji: "🪪",
-      title: "Profile",
-      subtitle:
-        "Kind · headline · profession · bio · skills · location · privacy",
-    },
-    {
-      href: "/nex-native/settings/tier",
-      emoji: "🎯",
-      title: "Your NEX plan",
-      subtitle:
-        "See your current tier · compare Gratis vs. Bisnis · upgrade path",
-    },
-    {
-      href: "/nex-native/chat-themes-library",
-      emoji: "🎨",
-      title: "Chat theme",
-      subtitle:
-        "Pick the theme applied to your chat bubbles · see it live at /chat/preview",
-    },
-    joinedAffiliate
-      ? {
-          href: "/nex-native/affiliate",
-          emoji: "🤝",
-          title: "Affiliate · dashboard",
-          subtitle:
-            "Your marketplace · promoted products · earnings ledger",
-        }
-      : {
-          href: "/nex-native/settings/affiliate",
-          emoji: "🤝",
-          title: "Earn with NEX · Affiliate",
-          subtitle:
-            "No products to sell? Promote others' listings and earn commission",
-        },
-    // Phase 2A/2B · the three hero tiles above own the Community + safety
-    // entries. The row list below is only lifestyle/account settings.
-    {
-      href: null,
-      emoji: "⚡",
-      title: "Power tokens & wallet",
-      subtitle:
-        "Earn · spend · tip · affiliate commissions · chat boosts",
-      comingSoon: true,
-    },
-  ];
+  // Phase 0 render-time transform: a user who has already joined the
+  // affiliate programme sees a dashboard-oriented row instead of the
+  // explainer. The IA registry carries the not-joined default
+  // (settings/affiliate), and the sub-page itself handles the server-
+  // side redirect for joined users; this transform is purely a label
+  // upgrade so the landing says what it does. Phase 1 extends this to
+  // use the sealed titleJoined/subtitleJoined keys instead of a
+  // hard-coded English override, so Indonesian users see the Bahasa
+  // Indonesia variant too.
+  function resolveRow(row: SettingsRowDef): ResolvedRow {
+    const titleKey = `settings.rows.${row.key}.title` as I18nKey;
+    const subtitleKey = `settings.rows.${row.key}.subtitle` as I18nKey;
+    if (row.key === "affiliate" && joinedAffiliate) {
+      return {
+        key: row.key,
+        href: "/nex-native/affiliate",
+        emoji: row.emoji,
+        title: t("settings.rows.affiliate.titleJoined"),
+        subtitle: t("settings.rows.affiliate.subtitleJoined"),
+        comingSoon: false,
+        highlighted: row.highlighted === true,
+      };
+    }
+    return {
+      key: row.key,
+      href: row.href,
+      emoji: row.emoji,
+      title: t(titleKey),
+      subtitle: t(subtitleKey),
+      comingSoon: row.comingSoon === true,
+      highlighted: row.highlighted === true,
+    };
+  }
 
   return (
     <>
@@ -170,7 +206,7 @@ export default async function SettingsIndex() {
               letterSpacing: "0.005em",
             }}
           >
-            Settings
+            {t("settings.page.title")}
           </h1>
           <p
             style={{
@@ -180,7 +216,7 @@ export default async function SettingsIndex() {
               color: NEX.textSecondary,
             }}
           >
-            Signed in as{" "}
+            {t("settings.page.signedInAs")}{" "}
             <span style={{ color: NEX.textPrimary }}>
               {session.account.display_name}
             </span>
@@ -195,7 +231,7 @@ export default async function SettingsIndex() {
           </p>
 
           <section
-            aria-label="Safety & community shortcuts"
+            aria-label={t("settings.hero.ariaLabel")}
             data-nex-settings-hero="true"
             style={{
               display: "grid",
@@ -204,140 +240,46 @@ export default async function SettingsIndex() {
               marginBottom: 24,
             }}
           >
-            {heroTiles.map((t) => (
-              <HeroTileCard key={t.href} tile={t} />
+            {heroTiles.map((tile) => (
+              <HeroTileCard key={tile.href} tile={tile} t={t} />
             ))}
           </section>
 
-          <div
-            aria-hidden
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              margin: "0 0 14px",
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.22em",
-              textTransform: "uppercase",
-              color: NEX.textMuted,
-            }}
-          >
-            <span style={{ flex: 1, height: 1, background: `${NEX.textMuted}22` }} />
-            <span>Settings</span>
-            <span style={{ flex: 1, height: 1, background: `${NEX.textMuted}22` }} />
-          </div>
-
-          <div style={{ display: "grid", gap: 10 }}>
-            {rows.map((r, i) => {
-              const style: React.CSSProperties = {
-                display: "flex",
-                alignItems: "center",
-                gap: 14,
-                padding: "14px 16px",
-                background: NEX.panel,
-                border: `1px solid ${r.comingSoon ? "rgba(0,175,255,0.18)" : NEX.cyanSoft}`,
-                borderRadius: 12,
-                textDecoration: "none",
-                color: NEX.textPrimary,
-                minHeight: 72,
-                opacity: r.comingSoon ? 0.7 : 1,
-              };
-              const body = (
-                <>
-                  <div
-                    aria-hidden
-                    style={{
-                      flexShrink: 0,
-                      width: 44,
-                      height: 44,
-                      borderRadius: 12,
-                      background: NEX.cyanFaint,
-                      color: r.comingSoon ? NEX.orange : NEX.cyan,
-                      display: "grid",
-                      placeItems: "center",
-                      fontSize: 20,
-                    }}
-                  >
-                    {r.emoji}
-                  </div>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "baseline",
-                        gap: 8,
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <span style={{ fontSize: 15, fontWeight: 500 }}>{r.title}</span>
-                      {r.comingSoon && (
-                        <span
-                          aria-label="coming soon"
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            padding: "1px 6px",
-                            fontSize: 9,
-                            fontWeight: 600,
-                            letterSpacing: "0.14em",
-                            textTransform: "uppercase",
-                            color: NEX.orange,
-                            border: `1px solid ${NEX.orange}`,
-                            borderRadius: 4,
-                            lineHeight: 1.3,
-                          }}
-                        >
-                          Soon
-                        </span>
-                      )}
-                    </div>
-                    <div
-                      style={{
-                        marginTop: 2,
-                        fontSize: 12,
-                        color: NEX.textSecondary,
-                        lineHeight: 1.4,
-                      }}
-                    >
-                      {r.subtitle}
-                    </div>
-                  </div>
-                  <div
-                    aria-hidden
-                    style={{
-                      color: r.comingSoon ? NEX.textSecondary : NEX.cyan,
-                      fontSize: 18,
-                    }}
-                  >
-                    →
-                  </div>
-                </>
-              );
-              if (!r.href) {
-                return (
-                  <div
-                    key={`row-${i}`}
-                    data-nex-settings-row
-                    data-nex-settings-row-coming-soon="true"
-                    style={style}
-                  >
-                    {body}
-                  </div>
-                );
-              }
-              return (
-                <Link
-                  key={r.href}
-                  href={r.href}
-                  data-nex-settings-row
-                  style={style}
+          {SETTINGS_GROUPS.map((group) => {
+            const groupLabelKey = `settings.groups.${group.key}.label` as I18nKey;
+            return (
+              <section
+                key={group.key}
+                data-nex-settings-group={group.key}
+                style={{ marginBottom: 20 }}
+              >
+                <div
+                  aria-hidden
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    margin: "0 0 10px",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.22em",
+                    textTransform: "uppercase",
+                    color: NEX.textMuted,
+                  }}
                 >
-                  {body}
-                </Link>
-              );
-            })}
-          </div>
+                  <span style={{ flex: 1, height: 1, background: `${NEX.textMuted}22` }} />
+                  <span>{t(groupLabelKey)}</span>
+                  <span style={{ flex: 1, height: 1, background: `${NEX.textMuted}22` }} />
+                </div>
+                <div style={{ display: "grid", gap: 10 }}>
+                  {group.rows.map((raw) => {
+                    const r = resolveRow(raw);
+                    return <SettingsRowCard key={r.key} row={r} t={t} />;
+                  })}
+                </div>
+              </section>
+            );
+          })}
 
           {/* View the welcome page → · owner-authorised escape hatch
               2026-10-15 · lets a signed-in user re-open the chat-NEX
@@ -372,7 +314,7 @@ export default async function SettingsIndex() {
                 letterSpacing: "0.02em",
               }}
             >
-              View the welcome page →
+              {t("settings.page.viewWelcome")}
             </Link>
           </div>
 
@@ -388,7 +330,7 @@ export default async function SettingsIndex() {
                 textDecoration: "underline",
               }}
             >
-              sign out
+              {t("settings.page.signOut")}
             </button>
           </form>
         </div>
@@ -397,7 +339,209 @@ export default async function SettingsIndex() {
   );
 }
 
-function HeroTileCard({ tile }: { tile: HeroTile }) {
+function SettingsRowCard({ row, t }: { row: ResolvedRow; t: T }) {
+  const isComingSoon = row.comingSoon;
+  // Compact-card doctrine · revised 2026-10-16.
+  //
+  // Owner update: subtitle now wraps across up to TWO lines (was one).
+  // Rationale: long subtitles like "Read receipts, online status,
+  // typing visibility and chat behaviour" were truncating mid-sentence
+  // on mobile, hurting readability. Two-line clamp lets the full
+  // meaning show without unbounded growth. The card no longer has a
+  // fixed height · it uses `minHeight` so cards without a subtitle
+  // (or with a short one) stay compact while two-line subtitles get
+  // the room they need. Fixed-height alignment was replaced by a
+  // consistent minHeight + the shared `alignItems: center` discipline.
+  //
+  // Horizontal fit: the chevron now sits tighter against the right
+  // edge (fontSize 18, no marginLeft) to free a few pixels on narrow
+  // phone viewports and keep the whole card inside the content column.
+  const style: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: "12px 14px",
+    background: NEX.panel,
+    border: `1px solid ${isComingSoon ? "rgba(0,175,255,0.18)" : NEX.cyanSoft}`,
+    borderRadius: 12,
+    textDecoration: "none",
+    color: NEX.textPrimary,
+    // minHeight preserves the 44px touch-target floor while allowing
+    // naturally-tall rows for 2-line subtitles. Short-subtitle rows
+    // stay close to 64px; long-subtitle rows grow to ~78px.
+    minHeight: 64,
+    // Guard against any descendant pushing the card beyond the
+    // available content column on narrow viewports.
+    maxWidth: "100%",
+    boxSizing: "border-box",
+    opacity: isComingSoon ? 0.7 : 1,
+  };
+  const body = (
+    <>
+      <div
+        aria-hidden
+        style={{
+          flexShrink: 0,
+          width: 40,
+          height: 40,
+          borderRadius: 10,
+          background: NEX.cyanFaint,
+          color: isComingSoon ? NEX.orange : NEX.cyan,
+          display: "grid",
+          placeItems: "center",
+          fontSize: 18,
+        }}
+      >
+        {row.emoji}
+      </div>
+      {/* The flex child needs `minWidth: 0` so its single-line
+         children can truncate via text-overflow: ellipsis. Without
+         this, a long subtitle would otherwise force the row to grow. */}
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            // No wrap · the chip stays inline with the title and the
+            // whole row truncates together when necessary.
+            flexWrap: "nowrap",
+            minWidth: 0,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 15,
+              fontWeight: 600,
+              lineHeight: 1.2,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              minWidth: 0,
+            }}
+          >
+            {row.title}
+          </span>
+          {row.highlighted && !isComingSoon && (
+            <span
+              aria-label={t("settings.chip.new.aria")}
+              style={{
+                flexShrink: 0,
+                display: "inline-flex",
+                alignItems: "center",
+                padding: "1px 6px",
+                fontSize: 9,
+                fontWeight: 600,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: NEX.cyan,
+                border: `1px solid ${NEX.cyan}`,
+                borderRadius: 4,
+                lineHeight: 1.3,
+              }}
+            >
+              {t("settings.chip.new.label")}
+            </span>
+          )}
+          {isComingSoon && (
+            <span
+              aria-label={t("settings.chip.soon.aria")}
+              style={{
+                flexShrink: 0,
+                display: "inline-flex",
+                alignItems: "center",
+                padding: "1px 6px",
+                fontSize: 9,
+                fontWeight: 600,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: NEX.orange,
+                border: `1px solid ${NEX.orange}`,
+                borderRadius: 4,
+                lineHeight: 1.3,
+              }}
+            >
+              {t("settings.chip.soon.label")}
+            </span>
+          )}
+        </div>
+        <div
+          style={{
+            marginTop: 3,
+            fontSize: 12,
+            color: NEX.textSecondary,
+            lineHeight: 1.35,
+            // Two-line clamp (sealed 2026-10-16 revision) · subtitles
+            // wrap to a 2nd line when they would otherwise truncate
+            // mid-sentence. The `-webkit-line-clamp: 2` cap prevents
+            // any subtitle from exceeding 2 lines; browsers without
+            // the extension still see the full text (they ignore the
+            // clamp without any horizontal overflow because the
+            // container has `minWidth: 0 + flex: 1`).
+            display: "-webkit-box",
+            WebkitBoxOrient: "vertical",
+            WebkitLineClamp: 2,
+            overflow: "hidden",
+            // Preserve the full-text tooltip for truncated subtitles.
+            wordBreak: "break-word",
+          }}
+          title={row.subtitle}
+        >
+          {row.subtitle}
+        </div>
+      </div>
+      <div
+        aria-hidden
+        style={{
+          flexShrink: 0,
+          color: isComingSoon ? NEX.textSecondary : NEX.cyan,
+          // Tighter chevron (sealed 2026-10-16 revision) · fontSize 18
+          // and zero left margin give a couple of pixels back to the
+          // body column on narrow phones so long subtitles stop
+          // bumping the right edge.
+          fontSize: 18,
+          fontWeight: 400,
+          lineHeight: 1,
+        }}
+      >
+        ›
+      </div>
+    </>
+  );
+
+  // Null-href rows are permanently non-navigable (e.g., Wallet which is
+  // comingSoon with no backing route). ComingSoon rows WITH an href
+  // (notifications, chat-settings, privacy, blocked, data-usage, help,
+  // about) remain clickable — their sub-pages render the shared
+  // ComingSoonSettingsPage shell which honestly declares "coming soon"
+  // and in some cases (help) offers a CTA to NEX1 chat. The Soon chip
+  // on the landing + the honest sub-page is the sealed §28 pattern.
+  if (!row.href) {
+    return (
+      <div
+        data-nex-settings-row
+        data-nex-settings-row-key={row.key}
+        data-nex-settings-row-coming-soon="true"
+        style={style}
+      >
+        {body}
+      </div>
+    );
+  }
+  return (
+    <Link
+      href={row.href}
+      data-nex-settings-row
+      data-nex-settings-row-key={row.key}
+      data-nex-settings-row-coming-soon={isComingSoon ? "true" : undefined}
+      style={style}
+    >
+      {body}
+    </Link>
+  );
+}
+
+function HeroTileCard({ tile, t }: { tile: HeroTile; t: T }) {
   const toneColor =
     tile.tone === "danger"
       ? NEX.danger
@@ -468,7 +612,7 @@ function HeroTileCard({ tile }: { tile: HeroTile }) {
           color: NEX.textPrimary,
         }}
       >
-        {tile.title}
+        {t(tile.titleKey)}
       </span>
     </Link>
   );
