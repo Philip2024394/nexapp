@@ -90,6 +90,23 @@ export function tFor(locale: Lang): (key: I18nKey) => string {
   return (key) => t(key, locale);
 }
 
+/** Resolve a saved `nex_account.locale` value to a supported Lang.
+ *  Narrower + fallback matching `resolveServerLocale` but without
+ *  URL/header inputs · for server contexts that only have an account
+ *  id (e.g. the push-dispatch callers that resolve the recipient's
+ *  saved language before building a localised preview body). Returns
+ *  the sealed `DEFAULT_LANG` when the stored value is null, missing,
+ *  or outside the supported-locale registry. Pure. */
+export function resolveAccountLocale(
+  accountLocale: string | null | undefined,
+): Lang {
+  return resolveServerLocale({
+    urlParam: null,
+    accountLocale: accountLocale ?? null,
+    acceptLanguage: null,
+  });
+}
+
 // ─── internal helpers ────────────────────────────────────────────
 
 /** Extract the primary language tag from an `Accept-Language`
