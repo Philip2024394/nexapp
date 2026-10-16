@@ -20,10 +20,19 @@ import {
   sendEncryptedPeerMessages,
   type EncryptedPeerMessageInsert,
 } from "@/lib/nex-native/peer-message-service";
+import { getPeerConversationById } from "@/lib/nex-native/peer-conversation-service";
 // R1 · universal live-messaging arrival nudge. Fire-and-forget AFTER
 // the canonical DB write succeeds · broadcast failure MUST NOT flip
 // a successful send into a failed send.
 import { emitMessageArrival } from "@/lib/nex-native/realtime/message-arrival";
+// R8 Stage 3b (2026-10-16) · fan a push notification to the recipient
+// AFTER the encrypted insert succeeds. The dispatch service enforces
+// recipient-pref + Vault boundary + fail-closed. Preview is strictly
+// generic · the route never sees plaintext and MUST NOT surface
+// ciphertext in a push payload.
+import { dispatchPushNotification } from "@/lib/nex-native/notification-dispatch-service";
+import { getAccountById } from "@/lib/nex-native/account-service";
+import { resolveAccountLocale, t as tI18n } from "@/lib/nex/i18n/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -119,6 +128,58 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       messageGroupId: body.message_group_id,
       sentAtIso: new Date().toISOString(),
     });
+
+    // R8 Stage 3b (encrypted-path extension) · fan a SINGLE push to the
+    // recipient's registered devices. The N inserted rows correspond to
+    // N device-copies for ONE logical message · subscribers dedup via
+    // the push `tag`, so emitting one dispatch here matches R1 semantics.
+    // Generic preview strings only, localised in the RECIPIENT's saved
+    // nex_account.locale. Never ciphertext. Never plaintext · the server
+    // literally cannot decrypt. The dispatch service enforces recipient
+    // category pref + Vault boundary + fail-closed on error.
+    // Fire-and-forget · a push failure MUST NOT flip a successful send.
+    void (async () => {
+      try {
+        const conversationId = inserts[0]!.conversation_id;
+        const conv = await getPeerConversationById(conversationId);
+        if (!conv) return;
+        const recipient =
+          session.account.id === conv.participant_a_id
+            ? conv.participant_b_id
+            : conv.participant_a_id;
+        if (!recipient || recipient === session.account.id) return;
+        const recipientAccount = await getAccountById(recipient);
+        const recipientLocale = resolveAccountLocale(recipientAccount?.locale);
+        const firstAttachmentType = inserts[0]!.attachment_type;
+        const previewKey =
+          firstAttachmentType === "image"
+            ? "push.body.sentYouAPhoto"
+            : firstAttachmentType === "video"
+              ? "push.body.sentYouAVideo"
+              : firstAttachmentType === "audio"
+                ? "push.body.sentYouAVoiceNote"
+                : "push.body.sentYouAMessage";
+        const preview = tI18n(previewKey, recipientLocale);
+        await dispatchPushNotification(recipient, "message", {
+          kind: "conversation",
+          conversationId,
+          title: session.account.display_name || "Someone",
+          body: preview,
+          data: {
+            type: "peer_message_encrypted",
+            conversationId,
+            messageGroupId: body.message_group_id,
+            senderAccountId: session.account.id,
+            // Push `tag` collapses duplicates across the N device rows
+            // · browsers show at most one notification per tag.
+            tag: `nex-msg-${body.message_group_id}`,
+          },
+        });
+      } catch {
+        /* fire-and-forget · errors swallowed by design */
+      }
+    })();
+
     return NextResponse.json({ ok: true, ids });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

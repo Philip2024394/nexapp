@@ -138,6 +138,20 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     );
   }
 
+  // R9 Stage 4 gate (2026-10-15) · reciprocity defence-in-depth.
+  // If the VIEWER has receipts disabled, they have opted out of the
+  // signal in BOTH directions · they should not see the other party's
+  // read_at on messages they sent. The primary enforcement is at the
+  // write path (peer-message-service.markPeerMessagesRead) · this
+  // filter covers the edge case where read_at was written when the
+  // viewer had receipts ON and later turned them OFF. Fail-closed via
+  // getChatPreferencesSafe (returns receipts=false on service error).
+  const { getChatPreferencesSafe } = await import(
+    "@/lib/nex-native/chat-preferences-service"
+  );
+  const viewerPrefs = await getChatPreferencesSafe(viewerId);
+  const stripViewerReadAt = !viewerPrefs.read_receipts_enabled;
+
   const rows: SinceMessageRow[] = (data ?? []).map((r) => {
     const raw = r as unknown as {
       id: string;
@@ -157,11 +171,19 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       attachment_type: string | null;
       deleted_for_everyone: boolean | null;
     };
+    // Strip read_at ONLY for messages the viewer SENT (where read_at
+    // is the OTHER party's read signal · the sensitive one). Messages
+    // the viewer RECEIVED carry the viewer's own read state, which is
+    // not a privacy-sensitive signal from the viewer's own perspective.
+    const effectiveReadAt =
+      stripViewerReadAt && raw.sender_account_id === viewerId
+        ? null
+        : raw.read_at;
     return {
       id: raw.id,
       sender_account_id: raw.sender_account_id,
       sent_at: raw.sent_at,
-      read_at: raw.read_at,
+      read_at: effectiveReadAt,
       encrypted: Boolean(raw.encrypted),
       body: raw.body,
       ciphertext_b64: raw.ciphertext ?? null,

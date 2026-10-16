@@ -27,7 +27,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, error: "missing_id" }, { status: 400 });
   }
   try {
-    await markPeerMessageDelivered(id);
+    // R9 Stage 4 (2026-10-15) · pass the viewer's account id so the
+    // sealed service can gate on the recipient's read_receipts_enabled
+    // preference. The route is authenticated · the session owner IS
+    // the recipient (they're the ones acking a successful decrypt).
+    await markPeerMessageDelivered(id, session.account.id);
     return NextResponse.json({ ok: true });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
