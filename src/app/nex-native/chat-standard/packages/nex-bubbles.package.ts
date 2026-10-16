@@ -52,10 +52,11 @@ export const NEX_BUBBLES_PACKAGE: ThemePackage = {
     playPolicy: "twice-then-skip",
   },
 
-  // 03 Environment · no wallpaper · engine's deep-navy gradient paints
-  // the stage. Keeps the theme fully self-contained with zero asset
-  // dependency so it ships without missing-file risk.
-  wallpaperUrl: null,
+  // 03 Environment · owner-supplied Earth-from-space wallpaper
+  // (2026-10-15 · "nex chat screen.png"). The deep-navy gradient
+  // still shows through the sealed scrim so bubble + text contrast
+  // stays legible on top of the planet artwork.
+  wallpaperUrl: "/nex-native/chat-wallpaper-earth.png",
   wallpaperScrim: "default",
 
   // 06-09 Bubbles · pill-shaped glass bubbles · the drift family's

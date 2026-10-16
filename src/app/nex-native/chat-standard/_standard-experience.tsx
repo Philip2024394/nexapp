@@ -19,6 +19,7 @@
 
 import * as React from "react";
 import type { ResolvedEngine } from "./_engine/theme-engine";
+import { ChatIdentityHeader } from "@/lib/nex-native/chat-chrome/chat-identity-header";
 import { StandardAmbientLayer } from "./_surfaces/_ambient-layer";
 import { StandardBubble } from "./_surfaces/_bubble";
 import { StandardComposer } from "./_surfaces/_composer";
@@ -506,7 +507,13 @@ function StandardHeader({
   shopOpen: boolean;
   onToggleShop: () => void;
 }): React.JSX.Element {
-  const colours = engine.colours;
+  // Master layout rule 2026-10-14 · identity row delegates to the
+  // shared ChatIdentityHeader primitive so Standard Experience worlds
+  // render the exact same 56×56 avatar + 26px name + 13px subtitle as
+  // Joker chat. Right-cluster (Home/Cart/Shop) stays as the Standard
+  // Experience's own 3-button action set alongside the primitive.
+  const isOnline = peer.isOnline !== false;
+  const viewerHref = `/nex-native/dev/status-viewer-v1?theme=${encodeURIComponent(engine.package.identity.id)}`;
   return (
     <div
       style={{
@@ -519,27 +526,14 @@ function StandardHeader({
         gap: 10,
       }}
     >
-      <PeerAvatarWithPresence peer={peer} engine={engine} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            fontSize: 14,
-            fontWeight: 700,
-            textShadow: "0 1px 4px rgba(0,0,0,0.6)",
-          }}
-        >
-          {peer.displayName}
-        </div>
-        <div
-          style={{
-            fontSize: 11,
-            color: "rgba(255,255,255,0.7)",
-            textShadow: "0 1px 3px rgba(0,0,0,0.5)",
-          }}
-        >
-          {peer.tagline}
-        </div>
-      </div>
+      <ChatIdentityHeader
+        avatarUrl={peer.avatarUrl ?? null}
+        displayName={peer.displayName}
+        subtitle={peer.tagline}
+        presenceKind={isOnline ? "online" : "offline"}
+        avatarHref={viewerHref}
+        rightReserveWidth={0}
+      />
       <StandardHeaderActions
         engine={engine}
         shopOpen={shopOpen}

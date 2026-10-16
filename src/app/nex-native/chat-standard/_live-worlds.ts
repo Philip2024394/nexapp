@@ -31,6 +31,7 @@ import { NEX_FLAT_PACKAGE } from "./packages/nex-flat.package";
 import { PROPERTY1_PACKAGE } from "./packages/property1.package";
 import { CRISPY_CHICKEN_PACKAGE } from "./packages/crispy-chicken.package";
 import { TEDDY_PLAY_PACKAGE } from "./packages/teddy-play.package";
+import { LULU_PACKAGE } from "./packages/lulu.package";
 import { PINK_DREAM_PACKAGE } from "./packages/pink-dream.package";
 import { HOLLYWOOD_PACKAGE } from "./packages/hollywood.package";
 import { VITAMIN_FRUIT_PACKAGE } from "./packages/vitamin-fruit.package";
@@ -65,6 +66,7 @@ export const LIVE_WORLD_PACKAGES = {
   "ac-service": AC_SERVICE_PACKAGE,
   property1: PROPERTY1_PACKAGE,
   "teddy-play": TEDDY_PLAY_PACKAGE,
+  lulu: LULU_PACKAGE,
   "pink-dream": PINK_DREAM_PACKAGE,
   hollywood: HOLLYWOOD_PACKAGE,
   "vitamin-fruit": VITAMIN_FRUIT_PACKAGE,
