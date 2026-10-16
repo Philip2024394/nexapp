@@ -30,6 +30,24 @@ const nextConfig = {
         destination: "/nex-native/chat-themes-library",
         permanent: true,
       },
+      // Owner-approved 2026-10-16 · the repository folder is `nexapp`
+      // but the Next route segment is `/nex-native/`. New visitors who
+      // type the obvious repository-name URL (or follow a shared
+      // `/nexapp/landing` link) should land on the real NEX Directory
+      // landing page rather than seeing a 404. Non-permanent (307) so
+      // browsers don't cache the mapping while it is being validated.
+      // Does NOT add `/nexapp/:path*` catch-all · each alias is an
+      // intentional, verified destination per owner directive.
+      {
+        source: "/nexapp",
+        destination: "/nex-native/directory/landing",
+        permanent: false,
+      },
+      {
+        source: "/nexapp/landing",
+        destination: "/nex-native/directory/landing",
+        permanent: false,
+      },
     ];
   },
   async headers() {
