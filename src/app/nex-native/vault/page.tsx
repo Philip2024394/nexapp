@@ -48,7 +48,11 @@ export default async function VaultEntryPage() {
     .maybeSingle();
 
   if (!setup) {
-    redirect("/nex-native/vault/setup");
+    // 2026-10-15 · first-time users see the Vault intro landing before
+    // the setup wizard. The intro's "Enter NEX Vault →" CTA leads to
+    // /vault/setup; "Maybe later" sends them back to /home. Returning
+    // users with a setup row skip the intro entirely.
+    redirect("/nex-native/vault/intro");
   }
 
   const headerBag = await headers();

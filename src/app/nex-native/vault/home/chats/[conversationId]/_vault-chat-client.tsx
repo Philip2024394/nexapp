@@ -52,6 +52,7 @@ import { sendEncryptedPeerMessage } from "@/lib/nex-native/crypto/encrypted-send
 import { preserveAttachmentsForVaultedConversation } from "@/lib/nex-native/vault/client/attachment-preservation";
 import { lockVaultEverywhere } from "@/lib/nex-native/vault/client/lock-sweep";
 import { uploadEncryptedAttachment } from "@/lib/nex-native/crypto/encrypted-attachment-upload";
+import { getMyDataUsagePrefsAction } from "@/app/nex-native/settings/data-usage/_actions";
 // R1 · universal live-messaging consumer · same transport as normal
 // chat. Opened ONLY while Vault is unlocked AND the Vault chat has
 // finished its initial boot. On arrival, fetch new rows via the sealed
@@ -126,6 +127,27 @@ export function VaultChatClient(props: Props) {
   const t = useT();
   const vault = useVaultSession();
   const router = useRouter();
+
+  // R14 Stage 6b (code-only · 2026-10-16) · viewer's upload-quality
+  // preference, resolved once on mount via the sealed data-usage
+  // server action. `standard` default is safe pre-migration-201.
+  const [uploadQuality, setUploadQuality] = useState<"standard" | "hd">(
+    "standard",
+  );
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await getMyDataUsagePrefsAction();
+        if (!cancelled && res.ok) setUploadQuality(res.prefs.upload_quality);
+      } catch {
+        /* keep sealed default · fail-safe */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const [phase, setPhase] = useState<"locked" | "loading" | "ready" | "error">(
     vault.unlocked ? "loading" : "locked",
@@ -502,7 +524,10 @@ export function VaultChatClient(props: Props) {
       if (!vault.unlocked || phase !== "ready") return;
       setErrorText(null);
       try {
-        const uploaded = await uploadEncryptedAttachment({ file });
+        const uploaded = await uploadEncryptedAttachment({
+          file,
+          uploadQuality,
+        });
         setPendingAttachment(uploaded);
       } catch (err) {
         setErrorText(
