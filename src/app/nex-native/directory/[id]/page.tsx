@@ -38,6 +38,26 @@ import type * as React from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCanonicalBusinessById } from "@/lib/nex-native/directory/directory-service";
+// Phase A dual-purpose · the [id] segment doubles as the category
+// slug for the landing-feed view. Known landing slugs
+// (products / food / stay / services / events / travel / transport /
+//  deals / food-drink / accommodation / experiences) are intercepted
+// at the top of DirectoryDetailPage and routed to LandingDirectoryView.
+// Non-matching segments fall through to the canonical UUID lookup.
+// This resolves the Next.js same-level dynamic-slug collision cleanly
+// without needing a nested /category/{slug} path.
+import {
+  getLandingFeed,
+  pickOrMintSeed,
+} from "@/lib/nex-native/directory/landing-feed-service";
+import {
+  isLandingCategorySlug,
+  type LandingCategorySlug,
+} from "@/lib/nex-native/directory/landing-category-mapping";
+import { LandingDirectoryView } from "../_landing-directory-view";
+import { parseIsoAlpha2 } from "@/lib/nex-native/geo/iso-countries";
+import { fetchDirectoryThumbnailStripByCanonicalId } from "@/lib/nex-native/directory/media-resolver";
+import { ThumbnailStrip } from "./_thumbnail-strip";
 import type {
   DirectoryClassification,
   DirectoryDestination,
@@ -113,12 +133,80 @@ const CLASSIFICATION_ACCENT: Record<DirectoryClassification, string> = {
 
 interface PageProps {
   readonly params: Promise<{ readonly id: string }>;
+  readonly searchParams?: Promise<{
+    readonly s?: string;
+    readonly page?: string;
+    readonly country?: string;
+    readonly km?: string;
+  }>;
+}
+
+const LANDING_PAGE_SIZE = 24;
+const LANDING_DEFAULT_COUNTRY = "ID";
+const LANDING_MAX_PAGE = 10_000;
+const LANDING_KM_ALLOWED = new Set<number>([5, 10, 25, 50, 100]);
+
+function parseLandingPage(raw: string | undefined): number {
+  const n = Number.parseInt((raw ?? "").trim(), 10);
+  if (!Number.isFinite(n) || n < 1) return 1;
+  if (n > LANDING_MAX_PAGE) return LANDING_MAX_PAGE;
+  return n;
+}
+
+function parseLandingKm(raw: string | undefined): number | null {
+  const n = Number.parseInt((raw ?? "").trim(), 10);
+  if (!Number.isFinite(n)) return null;
+  return LANDING_KM_ALLOWED.has(n) ? n : null;
 }
 
 export default async function DirectoryDetailPage(
   props: PageProps,
 ): Promise<React.ReactElement> {
   const { id } = await props.params;
+
+  // ─── Phase A · landing-category slug interception ───────────────
+  //
+  // If the [id] segment is one of the known landing-category slugs,
+  // render the shared LandingDirectoryView instead of the canonical-
+  // UUID detail page. Allow-list is sealed by `isLandingCategorySlug`
+  // · a visitor cannot invent an arbitrary category by URL. Non-slug
+  // segments fall through to the existing detail logic below.
+  if (isLandingCategorySlug(id)) {
+    const landingSlug = id as LandingCategorySlug;
+    const sp = (await props.searchParams) ?? {};
+    const seed = pickOrMintSeed(typeof sp.s === "string" ? sp.s : null);
+    const page = parseLandingPage(sp.page);
+    const requestedCountry = parseIsoAlpha2(sp.country);
+    const country = requestedCountry ?? LANDING_DEFAULT_COUNTRY;
+    const distanceKm = parseLandingKm(sp.km);
+    // Viewer location via sealed helper · null for anonymous visitors.
+    const viewerLocation = await readUserLocationFromAccount();
+    const hasViewerLocation = viewerLocation !== null;
+    const feed = await getLandingFeed({
+      limit: LANDING_PAGE_SIZE,
+      visitorSeed: seed,
+      categorySlug: landingSlug,
+      country: requestedCountry,
+      offset: (page - 1) * LANDING_PAGE_SIZE,
+      maxDistanceKm: hasViewerLocation ? distanceKm : null,
+      viewerLat: viewerLocation?.lat ?? null,
+      viewerLng: viewerLocation?.lng ?? null,
+    });
+    return (
+      <LandingDirectoryView
+        seed={seed}
+        category={landingSlug}
+        country={country}
+        countryFilter={requestedCountry}
+        distanceKm={hasViewerLocation ? distanceKm : null}
+        hasViewerLocation={hasViewerLocation}
+        page={page}
+        pageSize={LANDING_PAGE_SIZE}
+        feed={feed}
+      />
+    );
+  }
+
   await resolveNexAppSessionFromContext();
 
   // Pass-10 user-location: SSR hint lets the detail page's distance
@@ -143,6 +231,12 @@ export default async function DirectoryDetailPage(
   // researched area entry exists · the UI handles the honest
   // "not yet researched" case.
   const areaIntel = await fetchAreaIntelligence(listing.city, listing.country);
+
+  // Thumbnail strip · fetches up to N approved + display-eligible images.
+  // Tagged result: ok=true/images (populated or empty) OR ok=false/reason
+  // (error). The component renders three distinct states accordingly.
+  // No fabrication: images must pass BOTH approval gates in the resolver.
+  const thumbnailStripResult = await fetchDirectoryThumbnailStripByCanonicalId(id);
 
   // Owner-claimed destinations redirect to the owner's existing cover /
   // profile. The Directory detail page is specifically for unowned /
@@ -177,6 +271,7 @@ export default async function DirectoryDetailPage(
         destination={destination}
         hasEvidence={hasEvidence}
         areaIntel={areaIntel}
+        thumbnailStripResult={thumbnailStripResult}
       />
     </UserLocationProvider>
   );
@@ -291,8 +386,11 @@ function DetailShell(props: {
   readonly destination: DirectoryDestination;
   readonly hasEvidence: boolean;
   readonly areaIntel: AreaIntelligence | null;
+  readonly thumbnailStripResult: Awaited<
+    ReturnType<typeof fetchDirectoryThumbnailStripByCanonicalId>
+  >;
 }): React.ReactElement {
-  const { listing, destination, hasEvidence, areaIntel } = props;
+  const { listing, destination, hasEvidence, areaIntel, thumbnailStripResult } = props;
 
   // Owner-claim affordance renders only when the destination is NOT the
   // owner's own cover · for `nex_business` / `nex_user_profile` the
@@ -316,6 +414,11 @@ function DetailShell(props: {
         style={{ marginTop: 12 }}
       >
         <HeroSection listing={listing} />
+        <ThumbnailStrip
+          result={thumbnailStripResult}
+          businessName={listing.name}
+          suppressEmpty={listing.primaryImage !== null}
+        />
         <AliasesSection listing={listing} />
         <AboutSection listing={listing} />
         <CategoriesSection listing={listing} />
@@ -486,6 +589,7 @@ function HeroSection(props: {
           flexDirection: "column",
           gap: 8,
         }}
+        data-nex-directory-detail-thumbnail-strip-anchor
       >
         <div
           style={{

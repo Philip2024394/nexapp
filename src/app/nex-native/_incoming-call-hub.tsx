@@ -183,11 +183,16 @@ export function IncomingCallHub(props: IncomingCallHubProps): React.JSX.Element 
       aria-label={`Incoming ${active.media} call from ${displayedCallerName}`}
       data-nex-call-hub-privacy-hidden={hidePeerIdentity ? "true" : "false"}
       style={{
-        position: "fixed",
+        // Owner directive 2026-10-16 · absolute within the
+        // `.nex-native-frame` ancestor (position: relative) so the
+        // incoming-call modal stays INSIDE the phone frame on
+        // desktop. On mobile the frame IS viewport-sized · absolute
+        // positioning is visually identical to fixed.
+        position: "absolute",
         top: "calc(env(safe-area-inset-top, 0) + 16px)",
         left: "50%",
         transform: "translateX(-50%)",
-        width: "min(360px, calc(100vw - 24px))",
+        width: "min(360px, calc(100% - 24px))",
         zIndex: 2000,
         borderRadius: 20,
         background: NEX.panel,
