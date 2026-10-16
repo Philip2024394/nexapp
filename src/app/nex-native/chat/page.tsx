@@ -604,12 +604,7 @@ export default async function ChatHubPage({ searchParams }: PageProps) {
     friendCards = withPresence
       .map(({ account: r, profile, presence, presenceRank }) => {
         const kind = profile?.kind ?? null;
-        const hasShop =
-          kind === "business_owner" ||
-          kind === "reseller" ||
-          kind === "seller" ||
-          kind === "maker" ||
-          kind === "affiliate";
+        const hasShop = kind === "business_owner" || kind === "reseller";
         return {
           id: r.id,
           name: r.display_name,
@@ -828,7 +823,7 @@ export default async function ChatHubPage({ searchParams }: PageProps) {
                       // Preview business cards route to the Story Reel
                       // prototype · the current interactive shop-swipe
                       // surface · until real seeded businesses land.
-                      href={MOCK_SHOP_HREF}
+                      href={MOCK_SHOP_HREF.restaurant}
                       name={c.name}
                       slug={c.slug}
                       sells={c.sells}

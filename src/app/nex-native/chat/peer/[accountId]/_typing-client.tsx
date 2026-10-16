@@ -36,16 +36,28 @@ export interface PeerTypingClientProps {
   /** Skip entirely for NEX1 · typing echo from ops is not a signal
    *  the buyer needs. */
   disabled?: boolean;
+  /**
+   * R9 Stage 4 (2026-10-15 · migration 199 unapplied) · server-
+   * resolved typing-indicator preference. When FALSE, this component
+   * does NOT open the broadcast channel at all · no ping ever reaches
+   * the realtime bus · peers never see "typing…" from this account.
+   * Defaults to TRUE (preserves existing behaviour for callers that
+   * have not yet migrated to pass the prop).
+   */
+  typingEnabled?: boolean;
 }
 
 export function PeerTypingClient(props: PeerTypingClientProps): React.JSX.Element | null {
   const [peerTypingAt, setPeerTypingAt] = React.useState<number | null>(null);
   const channelRef = React.useRef<TypingChannel | null>(null);
   const lastPingSentRef = React.useRef<number>(0);
+  // Server-resolved typing-indicator pref · default TRUE for backward
+  // compat with callers that haven't yet migrated to pass the prop.
+  const typingEnabled = props.typingEnabled !== false;
 
   // Open the typing channel + subscribe.
   React.useEffect(() => {
-    if (props.disabled) return;
+    if (props.disabled || !typingEnabled) return;
     const channel = openTypingChannel({
       conversationId: props.conversationId,
       selfAccountId: props.selfAccountId,
@@ -62,13 +74,17 @@ export function PeerTypingClient(props: PeerTypingClientProps): React.JSX.Elemen
     props.selfAccountId,
     props.selfDisplayName,
     props.disabled,
+    typingEnabled,
   ]);
 
   // Attach a local input listener to the composer textarea. The
   // composer lives inside PortraitBloomShell and hydrates after us,
   // so we retry until it appears (usually first attempt succeeds).
+  //
+  // R9 Stage 4 · when typingEnabled is false the input listener is
+  // not attached · no ping event ever fires locally.
   React.useEffect(() => {
-    if (props.disabled) return;
+    if (props.disabled || !typingEnabled) return;
     let attempt = 0;
     let attached: HTMLTextAreaElement | null = null;
 
@@ -98,7 +114,7 @@ export function PeerTypingClient(props: PeerTypingClientProps): React.JSX.Elemen
     return () => {
       if (attached) attached.removeEventListener("input", onInput);
     };
-  }, [props.disabled]);
+  }, [props.disabled, typingEnabled]);
 
   // Auto-clear the peer typing pill after TYPING_EXPIRY_MS of silence.
   React.useEffect(() => {

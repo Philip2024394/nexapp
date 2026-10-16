@@ -41,6 +41,8 @@ import { UniversalChatControls } from "./_universal-chat-controls";
 import { ImageQrProbe } from "./_qr-image-scanner";
 import { ThemeIntroInterstitial } from "./_theme-intro-interstitial";
 import { TradeAgreementCard } from "./_trade-agreement-card";
+import { ChatIdentityHeader } from "@/lib/nex-native/chat-chrome/chat-identity-header";
+import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
 
 const NEX = {
   bg: "#020914",
@@ -288,6 +290,14 @@ export interface PortraitBloomShellProps {
    *  renders a compact "NEX · Official" chip next to the display name.
    *  Bridge 32b · sealed 2026-09-28. */
   isOfficialPeer?: boolean;
+  /** When true, the sealed ChatIdentityHeader avatar is replaced by
+   *  the shared NexPingBadge (blue ring + pulsing halo + "NE") so
+   *  NEX-brand theme previews present the official NEX identity
+   *  instead of the Maria portrait fallback. Owner-authorised
+   *  2026-10-15 for the theme-viewer surface on NEX Original + NEX
+   *  Blue Centre. Defaults to false so every other theme / chat
+   *  surface keeps the sealed avatar behaviour. */
+  useNexPingBadge?: boolean;
   /** Bridge 34 · feed shape driven by the peer's theme catalog row ·
    *  nex_chat_theme.layout_style. Defaults to 'bubbles' (classic
    *  Portrait Bloom). Set to 'sky_cards' or 'timeline_ribbon' to
@@ -567,7 +577,9 @@ export interface PortraitBloomShellProps {
   forceShowCart?: boolean;
   /** Optional per-theme shop background image · threaded straight
    *  through to ShopGridModal via HeaderRightCluster. Resolved
-   *  upstream from theme-assets.ts (e.g. Joker → alley wallpaper). */
+   *  upstream from theme-assets.ts (e.g. Joker → alley wallpaper).
+   *  Falls back to the chat wallpaperUrl when not set so the shop
+   *  slider inherits the chat background by default. */
   shopBackgroundImageUrl?: string | null;
   /** Shop-type chooser · when true, the Shop header icon opens the
    *  slider in first-time setup mode. Resolved upstream (viewer / peer-
@@ -580,6 +592,7 @@ export interface PortraitBloomShellProps {
 export function PortraitBloomShell({
   displayName,
   isOfficialPeer,
+  useNexPingBadge,
   layoutStyle = "bubbles",
   subtitle,
   portraitUrl,
@@ -967,210 +980,84 @@ export function PortraitBloomShell({
             textShadow: "0 2px 20px rgba(0,0,0,0.75)",
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-            }}
-          >
-            {/* Small round profile avatar · the peer's face lives
-                here now that the hero portrait layer is gone. The
-                theme wallpaper is the environment · this dot is the
-                person. Presence colour lives on the ring. */}
-            {/* Chip wrapper · outer container carries the heartbeat
-                pulse ring (overflow:visible so it can expand past
-                the chip's 42px). The inner chip keeps overflow:
-                hidden so the avatar image stays circle-cropped. */}
+          {/* Sealed identity row · delegated to the shared
+              ChatIdentityHeader primitive so authenticated peer chat,
+              guest chat, and theme viewers render the exact same
+              avatar + name + subtitle shape. See
+              src/lib/nex-native/chat-chrome/chat-identity-header.tsx. */}
+          {useNexPingBadge ? (
+            // Owner-authorised 2026-10-15 · NEX-brand theme previews
+            // render the shared NexPingBadge instead of the sealed
+            // ChatIdentityHeader avatar. Keeps the same name +
+            // subtitle layout so the shell's measurements are
+            // byte-identical for callers that depend on the header
+            // height (presence pill, right-reserve space, etc.).
             <div
-              aria-label={presenceLabel}
-              title={presenceLabel}
+              data-nex-shell-nex-identity
               style={{
-                position: "relative",
-                flexShrink: 0,
-                // Sealed 2026-10-11 · bumped 42 → 56 ·  "profile
-                // image in header needs larger size" · the inner
-                // circle + presence ring + heartbeat animation
-                // scale with inset positioning so no other number
-                // needs to move. Face-first identity read.
-                width: 56,
-                height: 56,
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                paddingRight: 150,
               }}
             >
-              {/* Presence ring · sealed 2026-09-27 · reverted 2026-10-01.
-                  Earlier Joker-specific lamp animation (steps + glow
-                  flicker, then smooth breathe) felt either broken or
-                  flat vs. the expand+fade ping. Founder preferred the
-                  heartbeat ping on every theme · we just override the
-                  border colour so Joker's ping lands in acid green and
-                  non-Joker themes keep the default NEX green. */}
-              {presenceKind === "online" && (
-                <div
-                  aria-hidden
-                  style={{
-                    position: "absolute",
-                    inset: -2,
-                    borderRadius: "50%",
-                    border: `2px solid ${
-                      rippleColor === "#8FFF6E" ? "#8FFF6E" : NEX.green
-                    }`,
-                    animation:
-                      "nex-presence-heartbeat 1200ms cubic-bezier(0.4, 0, 0.2, 1) infinite",
-                    pointerEvents: "none",
-                    willChange: "transform, opacity",
-                  }}
-                />
-              )}
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  borderRadius: "50%",
-                  overflow: "hidden",
-                  border: `2px solid ${
-                    presenceKind === "online"
-                      ? NEX.green
-                      : presenceKind === "away"
-                        ? "#F59E0B"
-                        : "rgba(139,169,209,0.5)"
-                  }`,
-                  boxShadow:
-                    presenceKind === "online"
-                      ? `0 0 0 3px ${NEX.green}22, 0 4px 14px rgba(0,0,0,0.6)`
-                      : "0 4px 14px rgba(0,0,0,0.6)",
-                  backgroundImage: portraitUrl
-                    ? `url(${portraitUrl})`
-                    : `linear-gradient(135deg, ${NEX.cyanDeep} 0%, #05101f 100%)`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center 22%",
-                  transition:
-                    "border-color 500ms ease, box-shadow 500ms ease",
-                }}
-              >
-                {!portraitUrl && (
-                  <div
-                    aria-hidden
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      display: "grid",
-                      placeItems: "center",
-                      color: NEX.cyan,
-                      fontSize: 15,
-                      fontWeight: 700,
-                      letterSpacing: "0.06em",
-                      opacity: 0.9,
-                    }}
-                  >
-                    {initialsFromName(displayName)}
-                  </div>
-                )}
-              </div>
-            </div>
-            {/* Right column · name stacks over subtitle so
-                "Footwear designer" sits directly under "Maria",
-                not under the whole row. Sealed 2026-09-27.
-                Stage 1 refinement (sealed 2026-10-06) · reserve 120px
-                on the right so long peer names (e.g. "Motorbike
-                Rental/Sale") truncate with an ellipsis before they
-                overflow into the HeaderRightCluster's absolute-
-                positioned R1 icons at right:12. Previously the Home
-                icon was visually occluded on themes with long peer
-                names · the fix is a passive reserve, no structural
-                change. */}
-            <div style={{ minWidth: 0, flex: 1, paddingRight: 150 }}>
+              <NexPingBadge size={56} accent="#00AFFF" dataTestId="shell-nex" />
               <div
                 style={{
                   display: "flex",
-                  alignItems: "center",
-                  gap: 8,
+                  flexDirection: "column",
+                  gap: 2,
                   minWidth: 0,
                 }}
               >
-                <div
+                <span
                   style={{
-                    // Sealed 2026-10-01 · header name reads as
-                    // "cinematic identity" instead of "metadata."
-                    // Bumped from 22→26, pushed to full white, and
-                    // picks up a soft text-shadow so it holds against
-                    // the busy alley wallpaper without needing a bar
-                    // or background chip underneath it.
                     fontSize: 26,
-                    fontWeight: 700,
-                    lineHeight: 1.1,
+                    fontWeight: 900,
                     letterSpacing: "-0.01em",
-                    color: "#FFFFFF",
-                    textShadow: "0 1px 3px rgba(0,0,0,0.65)",
-                    minWidth: 0,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    flexShrink: 1,
+                    color: "#F2F5F8",
+                    lineHeight: 1,
+                    textShadow: "0 2px 10px rgba(0,0,0,0.6)",
                   }}
                 >
                   {displayName}
-                </div>
-                {isOfficialPeer && (
+                </span>
+                {subtitle && (
                   <span
-                    aria-label="Official NEX support account"
-                    title="Official NEX · verified"
                     style={{
-                      flexShrink: 0,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 4,
-                      padding: "3px 8px",
-                      borderRadius: 999,
-                      background: NEX.cyan,
-                      color: "#0B0F1A",
-                      fontSize: 9,
-                      fontWeight: 800,
-                      letterSpacing: "0.10em",
-                      textTransform: "uppercase",
-                      lineHeight: 1,
+                      fontSize: 12,
+                      fontWeight: 500,
+                      color: "#B5C3D6",
+                      lineHeight: 1.2,
+                      textShadow: "0 1px 3px rgba(0,0,0,0.55)",
                     }}
                   >
-                    <svg
-                      width="9"
-                      height="9"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={3.4}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden
-                    >
-                      <path d="M5 12 L10 17 L20 6" />
-                    </svg>
-                    NEX
+                    {subtitle}
                   </span>
                 )}
               </div>
-              {subtitle && (
-                <div
-                  style={{
-                    marginTop: 2,
-                    // Sealed 2026-10-01 · proto #05 · TV-broadcast
-                    // legibility · brighter neutral gray + dual
-                    // shadow so the role under the header name holds
-                    // against the alley wallpaper and matches the
-                    // caption treatment used everywhere else (shop
-                    // chooser cards, animation panel cards).
-                    fontSize: 13,
-                    fontWeight: 600,
-                    letterSpacing: "0.04em",
-                    color: "#B4BAC3",
-                    textShadow:
-                      "0 0 2px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,0.5)",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {subtitle}
-                </div>
-              )}
             </div>
-          </div>
+          ) : (
+            <ChatIdentityHeader
+              avatarUrl={portraitUrl}
+              displayName={displayName}
+              subtitle={subtitle}
+              presenceKind={presenceKind}
+              heartbeatColor={
+                rippleColor === "#8FFF6E" ? "#8FFF6E" : undefined
+              }
+              isOfficial={isOfficialPeer}
+              rightReserveWidth={150}
+            />
+          )}
+          {/* ChatIdentityHeader above owns avatar + name + subtitle.
+              The 150-line hand-rolled block that lived here (sealed
+              2026-09-27 / 2026-10-01 / 2026-10-11) now lives inside the
+              primitive at src/lib/nex-native/chat-chrome/
+              chat-identity-header.tsx — same visual tokens, one source
+              of truth across peer chat, guest chat, theme viewers.
+              The orphaned @keyframes nex-presence-heartbeat earlier in
+              this file is unused and may be dropped. */}
           {contextChip && (
             <div
               style={{
@@ -2072,7 +1959,7 @@ export function PortraitBloomShell({
         sendCartOrderAction={sendCartOrderAction}
         inquiryAction={productInquiryAction}
         forceShowCart={forceShowCart}
-        shopBackgroundImageUrl={shopBackgroundImageUrl ?? null}
+        shopBackgroundImageUrl={shopBackgroundImageUrl ?? wallpaperUrl ?? null}
         showShopSetupChooser={showShopSetupChooser}
         onSelectShopType={onSelectShopType}
         themeAccent={rippleColor}

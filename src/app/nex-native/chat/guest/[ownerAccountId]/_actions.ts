@@ -9,13 +9,27 @@
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import { resolveNexAppOrProvisionalSession } from "@/lib/nex-native/first-conversation/provisional-session";
 import * as peerConversationService from "@/lib/nex-native/peer-conversation-service";
+import { recordIfAllowed } from "@/lib/nex-native/community/rate-limit";
+import { NexCommunityRateLimitError } from "@/lib/nex-native/community/types";
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 
 export interface SendGuestMessageResult {
   ok: boolean;
-  reason?: "unauthenticated" | "not_participant" | "empty" | "too_long" | "db_error";
+  reason?:
+    | "unauthenticated"
+    | "not_participant"
+    | "empty"
+    | "too_long"
+    | "rate_limited"
+    | "db_error";
   message_id?: string;
+  /** When the rate-limit kicks in, the service-layer error carries the
+   *  configured window/cap · surfaced here so an honest "try again in
+   *  N minutes" message can be rendered without the client having to
+   *  know the config. */
+  rate_limited_window_minutes?: number;
+  rate_limited_max_per_window?: number;
 }
 
 const MAX_GUEST_MESSAGE_LENGTH = 2000;
@@ -28,6 +42,23 @@ const MAX_GUEST_MESSAGE_LENGTH = 2000;
  * authenticated chat renders plaintext bodies just fine (same column
  * the welcome-delivery module uses). When the guest signs up, their
  * provisional account is linked and future messages gain encryption.
+ *
+ * Stage 1.1 (2026-10-14) · wrapped with the sealed community rate-
+ * limit primitive keyed on the provisional nex_account.id and action
+ * `peer_message_guest`. Closes design-contract gap G1 across every
+ * guest-chat caller (not just NEX1). The sealed §7A fingerprint re-
+ * check (gap G2) is NOT applied here · it would require extending the
+ * action signature to carry the five fingerprint signals and is
+ * deferred to a separate design pass.
+ *
+ * Fail-open behaviour on primitive failure (not rate-limit): until
+ * migration 197 is applied, calling the primitive with action
+ * 'peer_message_guest' violates the sealed CHECK and throws. The
+ * action catches that error, logs a warning, and ALLOWS the message
+ * through. This preserves the current behaviour exactly (no rate
+ * limit today) during the deploy window where code has shipped but
+ * migration has not. Once migration 197 applies, the limit becomes
+ * a hard enforcement.
  */
 export async function sendGuestMessageAction(
   ownerAccountId: string,
@@ -43,6 +74,36 @@ export async function sendGuestMessageAction(
   if (trimmed.length === 0) return { ok: false, reason: "empty" };
   if (trimmed.length > MAX_GUEST_MESSAGE_LENGTH) {
     return { ok: false, reason: "too_long" };
+  }
+
+  // Stage 1.1 · frequency rate limit (design-contract G1 fix).
+  // Uses the sealed community rate-limit primitive on the provisional
+  // nex_account.id. Hard enforcement once migration 197 is applied.
+  // Known limitation (sealed in community/rate-limit.ts): "not atomic
+  // in the strict sense — two concurrent calls at a cold bucket could
+  // both pass." Acceptable for the current guest-chat volume; the
+  // adversarial burst test for this PR characterises the overshoot
+  // and the design contract §4.1.1 flags the atomic-enforcement
+  // conditions.
+  try {
+    await recordIfAllowed(guestAccount.id, "peer_message_guest");
+  } catch (err) {
+    if (err instanceof NexCommunityRateLimitError) {
+      return {
+        ok: false,
+        reason: "rate_limited",
+        rate_limited_window_minutes: err.windowMinutes,
+        rate_limited_max_per_window: err.maxPerWindow,
+      };
+    }
+    // Fail-open on any other error · including the pre-migration-197
+    // CHECK violation. The limit becomes effective only once the
+    // migration is applied. Current no-rate-limit behaviour is
+    // preserved during the deploy window.
+    console.warn(
+      "[guest-chat] rate-limit primitive failed · falling through (soft limit until migration 197 applies)",
+      err instanceof Error ? err.message : err,
+    );
   }
 
   // Resolve conversation idempotently.

@@ -20,6 +20,8 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CoverThemeSkin } from "../../../cover/theme-skin";
+import { ChatIdentityHeader } from "@/lib/nex-native/chat-chrome/chat-identity-header";
+import { ChatComposerPill } from "@/lib/nex-native/chat-chrome/chat-composer-pill";
 import { sendGuestMessageAction } from "./_actions";
 
 interface ClientMessage {
@@ -70,19 +72,6 @@ function formatPriceIDR(pence: number, currency: string): string {
     return `Rp ${pence.toLocaleString("en-US")}`;
   }
   return `${currency} ${(pence / 100).toFixed(2)}`;
-}
-
-const GREEN = "#16D66B";
-const AMBER = "#F59E0B";
-const CYAN_DEEP = "#063B67";
-const CYAN = "#00AFFF";
-const NEX_PINK = "#FF3F9F";
-
-function initialsFromName(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 0 || parts[0].length === 0) return "·";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 export function GuestChatClient(props: Props): React.JSX.Element {
@@ -152,13 +141,6 @@ function GuestChatInner(props: Props): React.JSX.Element {
   }, [messages.length]);
 
   const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
-  const autoGrow = React.useCallback(() => {
-    const el = textareaRef.current;
-    if (!el) return;
-    el.style.height = "0px";
-    el.style.height = Math.min(el.scrollHeight, 120) + "px";
-  }, []);
-  React.useEffect(autoGrow, [composerText, autoGrow]);
 
   function attachProductToComposer(product: GuestProduct) {
     const line = `I'm interested in: ${product.name}`;
@@ -226,13 +208,10 @@ function GuestChatInner(props: Props): React.JSX.Element {
         backgroundAttachment: "fixed",
       }}
     >
-      {/* ─── HEADER · 2-ROW layout ─────────────────────────────────
-          Row 1 · avatar (left) + R1 icon cluster (right) · fixed-height
-          Row 2 · business name + "chatting as guest" subtitle · the
-                  name has the FULL header width available so it never
-                  competes with the icons for horizontal space.
-          Replaces the single-row layout that forced the name into a
-          cramped column beside the icons · founder direction 2026-10-14. */}
+      {/* ─── HEADER · sealed ChatIdentityHeader primitive ──────────
+          Single source of truth · identical shape across authenticated
+          peer chat, guest chat, and theme viewers. See
+          src/lib/nex-native/chat-chrome/chat-identity-header.tsx. */}
       <header
         style={{
           position: "relative",
@@ -242,144 +221,13 @@ function GuestChatInner(props: Props): React.JSX.Element {
           textShadow: "0 2px 20px rgba(0,0,0,0.75)",
         }}
       >
-        {/* ─── Row 1 · avatar left + icons right ─── */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          {/* 56px round profile · business logo or initials fallback */}
-          <div
-            aria-label={`${businessLabel} · chatting as guest`}
-            title={businessLabel}
-            style={{
-              position: "relative",
-              flexShrink: 0,
-              width: 56,
-              height: 56,
-            }}
-          >
-            {/* Ping ring · scales out from the avatar on a 1800ms cycle,
-                signalling "this is a live chat surface" · same spirit
-                as the sealed PortraitBloomShell presence heartbeat. */}
-            <style>{`
-              @keyframes nex-guest-presence-ping {
-                0% { transform: scale(1); opacity: 0.9; }
-                75% { transform: scale(1.5); opacity: 0; }
-                100% { transform: scale(1.5); opacity: 0; }
-              }
-            `}</style>
-            <div
-              aria-hidden
-              style={{
-                position: "absolute",
-                inset: 0,
-                borderRadius: "50%",
-                border: `2px solid ${GREEN}`,
-                pointerEvents: "none",
-                animation:
-                  "nex-guest-presence-ping 1800ms cubic-bezier(0.4, 0, 0.2, 1) infinite",
-                willChange: "transform, opacity",
-              }}
-            />
-            {/* Avatar container · solid green rim · same green as the
-                sealed online-presence border on authenticated chat. */}
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                borderRadius: "50%",
-                overflow: "hidden",
-                border: `2px solid ${GREEN}`,
-                boxShadow: `0 0 0 3px ${GREEN}22, 0 4px 14px rgba(0,0,0,0.6)`,
-                backgroundImage: businessLogoUrl
-                  ? `url(${businessLogoUrl})`
-                  : `linear-gradient(135deg, ${CYAN_DEEP} 0%, #05101f 100%)`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }}
-            >
-              {!businessLogoUrl && (
-                <div
-                  aria-hidden
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    display: "grid",
-                    placeItems: "center",
-                    color: CYAN,
-                    fontSize: 16,
-                    fontWeight: 700,
-                    letterSpacing: "0.06em",
-                    opacity: 0.9,
-                  }}
-                >
-                  {initialsFromName(businessLabel)}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Row 1 right slot is empty · all actions moved to the
-              TikTok-style right-edge dock below. The avatar sits alone
-              in Row 1, letting Row 2 run the full width of the header. */}
-        </div>
-
-        {/* ─── Row 2 · business name + subtitle · FULL WIDTH ─── */}
-        <div
-          data-nex-guest-identity
-          style={{
-            marginTop: 10,
-            overflow: "hidden",
-          }}
-        >
-          <div
-            data-nex-guest-business-name
-            style={{
-              fontSize: 22,
-              fontWeight: 700,
-              color: "var(--nex-text, #F4F7FC)",
-              lineHeight: 1.15,
-              // Natural wrap for multi-word names · character-break
-              // fallback for anything truly huge · hard-clip at 2 lines
-              // via line-clamp so the header never grows unbounded.
-              wordBreak: "break-word",
-              overflowWrap: "break-word",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-            }}
-          >
-            {businessLabel}
-          </div>
-          <div
-            style={{
-              fontSize: 12,
-              color: "var(--nex-text-dim, rgba(244,247,252,0.72))",
-              marginTop: 4,
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              whiteSpace: "nowrap",
-            }}
-          >
-            <span
-              aria-hidden
-              style={{
-                width: 7,
-                height: 7,
-                borderRadius: "50%",
-                background: GREEN,
-                boxShadow: `0 0 6px ${GREEN}aa`,
-                flexShrink: 0,
-              }}
-            />
-            Chatting as guest
-          </div>
-        </div>
+        <ChatIdentityHeader
+          avatarUrl={businessLogoUrl}
+          displayName={businessLabel}
+          subtitle="Chatting as guest"
+          presenceKind="online"
+          rightReserveWidth={0}
+        />
       </header>
 
       {/* ─── "Delivered" banner on first arrival ─────────────── */}
@@ -564,139 +412,33 @@ function GuestChatInner(props: Props): React.JSX.Element {
         </div>
       )}
 
-      {/* ─── AURORA PILL COMPOSER ───────────────────────────── */}
-      <form
-        onSubmit={handleSend}
+      {/* ─── COMPOSER · sealed ChatComposerPill primitive ──────────
+          Byte-identical to the Joker/PortraitBloomShell PeerComposer
+          pill shape, driven by sendGuestMessageAction. */}
+      <div
         style={{
           padding: "0 12px calc(env(safe-area-inset-bottom, 0) + 12px)",
           flexShrink: 0,
         }}
         data-nex-guest-composer
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "6px 6px 6px 12px",
-            borderRadius: 24,
-            background: "rgba(4,20,36,0.90)",
-            border: `1px solid var(--nex-composer-rim, ${theme.composerRimHex ?? theme.accentHex})`,
-            backdropFilter: "blur(16px)",
-            WebkitBackdropFilter: "blur(16px)",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
-          }}
-        >
-          {/* + button · info trigger (disabled for guest · media attach
-              is Phase C+ ·  shown for visual parity with authenticated
-              composer) */}
-          <button
-            type="button"
-            disabled
-            title="Attach media available after you sign up"
-            aria-label="Attach"
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: "50%",
-              background: "rgba(255,255,255,0.04)",
-              border: "none",
-              color: "var(--nex-text-mute, rgba(244,247,252,0.4))",
-              fontSize: 20,
-              lineHeight: 1,
-              cursor: "not-allowed",
-              display: "grid",
-              placeItems: "center",
-              flexShrink: 0,
-            }}
-          >
-            +
-          </button>
-
-          <textarea
-            ref={textareaRef}
-            value={composerText}
-            onChange={(e) => setComposerText(e.target.value)}
-            placeholder={`Message ${businessLabel}…`}
-            rows={1}
-            maxLength={2000}
-            style={{
-              flex: 1,
-              resize: "none",
-              padding: "8px 4px",
-              background: "transparent",
-              border: "none",
-              color: "var(--nex-text, #F4F7FC)",
-              fontFamily:
-                "var(--nex-font-body, Inter, system-ui, sans-serif)",
-              fontSize: 15,
-              outline: "none",
-              minHeight: 24,
-              maxHeight: 120,
-              lineHeight: 1.4,
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                void handleSend(e as unknown as React.FormEvent);
-              }
-            }}
-          />
-
-          <button
-            type="submit"
-            disabled={sending || composerText.trim().length === 0}
-            aria-label="Send"
-            title="Send"
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: "50%",
-              background:
-                sending || composerText.trim().length === 0
-                  ? "rgba(255,255,255,0.08)"
-                  : "var(--nex-accent, " + theme.accentHex + ")",
-              color:
-                sending || composerText.trim().length === 0
-                  ? "rgba(244,247,252,0.4)"
-                  : "#1A1300",
-              border: "none",
-              cursor:
-                sending || composerText.trim().length === 0
-                  ? "default"
-                  : "pointer",
-              display: "grid",
-              placeItems: "center",
-              flexShrink: 0,
-              boxShadow:
-                sending || composerText.trim().length === 0
-                  ? "none"
-                  : `0 6px 18px var(--nex-glow, ${theme.accentHex}66)`,
-              transition: "background 180ms ease, box-shadow 180ms ease",
-            }}
-          >
-            {sending ? (
-              <span style={{ fontSize: 18, fontWeight: 600 }}>…</span>
-            ) : (
-              <SendIcon />
-            )}
-          </button>
-        </div>
-        {sendError && (
-          <div
-            style={{
-              marginTop: 6,
-              padding: "6px 12px",
-              fontSize: 12,
-              color: AMBER,
-              textAlign: "center",
-            }}
-            data-nex-guest-send-error
-          >
-            {sendError}
-          </div>
-        )}
-      </form>
+        <ChatComposerPill
+          value={composerText}
+          onChange={setComposerText}
+          onSend={() =>
+            void handleSend({
+              preventDefault: () => undefined,
+            } as React.FormEvent)
+          }
+          placeholder={`Message ${businessLabel}…`}
+          accentHex={theme.accentHex}
+          composerBg={theme.composerRimHex ? undefined : undefined}
+          sending={sending}
+          maxLength={2000}
+          textareaRef={textareaRef}
+          errorText={sendError ?? undefined}
+        />
+      </div>
 
       {/* ─── PRODUCT BOTTOM SHEET ──────────────────────────── */}
       {shopOpen && (
@@ -765,11 +507,13 @@ function GuestMessageBubble({
 }
 
 /* ───────────────── Right-edge dock button primitives ─────────── */
-// TikTok-style 48px round action with text label beneath · translucent
-// navy fill with accent-coloured rim · pointerEvents:none on the
+// TikTok-style naked floating glyphs · no circular chrome · each icon
+// sits on a transparent hit target with a drop-shadow filter so it
+// stays legible against any wallpaper. 40px hit target holds a 32px
+// glyph with a 11px label beneath · pointerEvents:none on the
 // container is overridden here with auto so taps register.
 
-const DOCK_BUTTON_SIZE = 48;
+const DOCK_HIT_SIZE = 40;
 const DOCK_LABEL_FONT = 11;
 
 function DockButton({
@@ -840,19 +584,17 @@ function DockShell({
         <style>{`
           @keyframes nex-guest-dock-shop-pulse {
             0%, 100% {
-              box-shadow:
-                0 4px 12px rgba(0,0,0,0.55),
-                0 0 6px ${accentHex}80,
-                inset 0 0 0 1.5px ${accentHex};
+              filter:
+                drop-shadow(0 2px 4px rgba(0,0,0,0.8))
+                drop-shadow(0 0 4px ${accentHex}80);
             }
             50% {
-              box-shadow:
-                0 4px 12px rgba(0,0,0,0.55),
-                0 0 18px ${accentHex}dd,
-                inset 0 0 0 1.5px ${accentHex};
+              filter:
+                drop-shadow(0 2px 4px rgba(0,0,0,0.8))
+                drop-shadow(0 0 12px ${accentHex}dd);
             }
           }
-          [data-nex-guest-dock-shop] {
+          [data-nex-guest-dock-shop] [data-nex-guest-dock-glyph] {
             animation: nex-guest-dock-shop-pulse 2200ms ease-in-out infinite;
           }
         `}</style>
@@ -869,20 +611,16 @@ function DockShell({
         }}
       >
         <div
+          data-nex-guest-dock-glyph
           style={{
-            width: DOCK_BUTTON_SIZE,
-            height: DOCK_BUTTON_SIZE,
-            borderRadius: "50%",
-            background: "rgba(2,9,20,0.72)",
-            backdropFilter: "blur(10px)",
-            WebkitBackdropFilter: "blur(10px)",
-            border: glow ? "none" : `1.5px solid ${accentHex}99`,
-            boxShadow: glow
-              ? undefined
-              : `0 4px 12px rgba(0,0,0,0.55), inset 0 0 0 0 ${accentHex}`,
+            width: DOCK_HIT_SIZE,
+            height: DOCK_HIT_SIZE,
             display: "grid",
             placeItems: "center",
-            overflow: "hidden",
+            color: "#FFFFFF",
+            filter: glow
+              ? undefined
+              : "drop-shadow(0 2px 4px rgba(0,0,0,0.8))",
           }}
         >
           {children}
@@ -891,7 +629,7 @@ function DockShell({
           style={{
             fontSize: DOCK_LABEL_FONT,
             fontWeight: 600,
-            color: "var(--nex-text, #F4F7FC)",
+            color: "#FFFFFF",
             textShadow: "0 2px 6px rgba(0,0,0,0.9)",
             letterSpacing: "0.02em",
           }}
@@ -929,8 +667,8 @@ function ShopIcon(): React.JSX.Element {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      width="26"
-      height="26"
+      width="32"
+      height="32"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -951,8 +689,8 @@ function CartIcon(): React.JSX.Element {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      width="26"
-      height="26"
+      width="32"
+      height="32"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -973,8 +711,8 @@ function SettingsIcon(): React.JSX.Element {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      width="26"
-      height="26"
+      width="32"
+      height="32"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -1007,26 +745,6 @@ function MagnifierIcon(): React.JSX.Element {
     >
       <circle cx="11" cy="11" r="7" />
       <line x1="21" y1="21" x2="16" y2="16" />
-    </svg>
-  );
-}
-
-function SendIcon(): React.JSX.Element {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <line x1="22" y1="2" x2="11" y2="13" />
-      <polygon points="22 2 15 22 11 13 2 9 22 2" />
     </svg>
   );
 }

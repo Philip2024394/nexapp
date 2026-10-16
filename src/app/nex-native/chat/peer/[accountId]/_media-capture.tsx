@@ -29,6 +29,7 @@ import { createPortal } from "react-dom";
 import { useRouter, usePathname } from "next/navigation";
 import { uploadEncryptedAttachment } from "@/lib/nex-native/crypto/encrypted-attachment-upload";
 import { stashEncryptedAttachmentKey } from "@/lib/nex-native/crypto/encrypted-attachment-stash";
+import { getMyDataUsagePrefsAction } from "@/app/nex-native/settings/data-usage/_actions";
 
 export type CaptureKind = "camera" | "video" | "voice";
 
@@ -65,7 +66,33 @@ export const MediaCapture = React.forwardRef<MediaCaptureHandle, Props>(
 
     const [uploading, setUploading] = React.useState<CaptureKind | null>(null);
     const [mounted, setMounted] = React.useState(false);
+    // R14 Stage 6b (code-only · 2026-10-16) · the viewer's upload-
+    // quality preference drives encrypted-attachment-upload's
+    // client-side image compression. We resolve once on mount via
+    // the sealed server action · "standard" is the safe default when
+    // the migration is not yet applied OR when the fetch races the
+    // first upload (the enforcement-anchor test proves
+    // `opts.uploadQuality ?? "standard"` on the service side).
+    const [uploadQuality, setUploadQuality] = React.useState<
+      "standard" | "hd"
+    >("standard");
     React.useEffect(() => setMounted(true), []);
+    React.useEffect(() => {
+      let cancelled = false;
+      void (async () => {
+        try {
+          const res = await getMyDataUsagePrefsAction();
+          if (!cancelled && res.ok) {
+            setUploadQuality(res.prefs.upload_quality);
+          }
+        } catch {
+          /* keep the sealed default · fail-safe */
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, []);
 
     const router = useRouter();
     const pathname = usePathname();
@@ -109,7 +136,10 @@ export const MediaCapture = React.forwardRef<MediaCaptureHandle, Props>(
         if (encryptedUploadEnabled) {
           void (async () => {
             try {
-              const enc = await uploadEncryptedAttachment({ file });
+              const enc = await uploadEncryptedAttachment({
+                file,
+                uploadQuality,
+              });
               stashEncryptedAttachmentKey(enc.storageUrl, {
                 contentKey: Array.from(enc.contentKey),
                 contentNonce: Array.from(enc.contentNonce),

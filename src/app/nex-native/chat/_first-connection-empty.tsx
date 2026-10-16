@@ -202,7 +202,7 @@ export function FirstConnectionEmpty({
             }}
           >
             {pieces.map((p) => {
-              const style: React.CSSProperties & { [key: string]: string } = {
+              const style = {
                 position: "fixed",
                 top: origin.y,
                 left: origin.x,
@@ -225,7 +225,7 @@ export function FirstConnectionEmpty({
                 "--py": `${p.peakY}px`,
                 "--fx": `${p.fallX}px`,
                 "--fy": `${p.fallY}px`,
-              };
+              } as React.CSSProperties;
               return <div key={p.id} style={style} />;
             })}
           </div>,

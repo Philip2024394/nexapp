@@ -221,50 +221,38 @@ export function HeaderRightCluster({
           title="Cart"
         >
           <CartIcon />
-          {hydrated && cartCount > 0 && (() => {
-            // Sealed 2026-10-01 · the cart-count badge adopts a
-            // theme-specific colour where it makes sense. On Joker
-            // and Haunted Hotel the dark-red reads as "look here"
-            // against each theme's accent (acid-green · brass)
-            // without introducing a third accent colour. Other
-            // themes keep the original pink.
-            const useDarkRed =
-              themeAccent === "#8FFF6E" || themeAccent === "#d8a856";
-            const bg = useDarkRed
-              ? "linear-gradient(180deg, #CC1818, #7A0000)"
-              : "linear-gradient(180deg, #FF77BC, #FF3F9F)";
-            const glow = useDarkRed
-              ? "rgba(122,0,0,0.65)"
-              : NEX.pinkGlow;
-            return (
-              <span
-                aria-hidden
-                style={{
-                  position: "absolute",
-                  top: -4,
-                  right: -4,
-                  minWidth: 18,
-                  height: 18,
-                  padding: "0 5px",
-                  borderRadius: 999,
-                  background: bg,
-                  color: useDarkRed ? "#FFFFFF" : "#0B0F1A",
-                  fontSize: 10,
-                  fontWeight: 800,
-                  lineHeight: 1,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  border: "1.5px solid #050f1e",
-                  boxShadow: `0 4px 10px ${glow}`,
-                  fontFamily:
-                    "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-                }}
-              >
-                {cartCount > 99 ? "99+" : cartCount}
-              </span>
-            );
-          })()}
+          {hydrated && cartCount > 0 && (
+            // Sealed 2026-10-14 · universal Joker-red cart badge on
+            // every theme (founder direction). Removes the earlier
+            // per-theme pink/red split; the dark-red reads as "look
+            // here" against any accent without a third colour.
+            <span
+              aria-hidden
+              style={{
+                position: "absolute",
+                top: -4,
+                right: -4,
+                minWidth: 18,
+                height: 18,
+                padding: "0 5px",
+                borderRadius: 999,
+                background: "linear-gradient(180deg, #CC1818, #7A0000)",
+                color: "#FFFFFF",
+                fontSize: 10,
+                fontWeight: 800,
+                lineHeight: 1,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "1.5px solid #050f1e",
+                boxShadow: "0 4px 10px rgba(122,0,0,0.65)",
+                fontFamily:
+                  "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+              }}
+            >
+              {cartCount > 99 ? "99+" : cartCount}
+            </span>
+          )}
         </ClusterLinkButton>
         )}
 

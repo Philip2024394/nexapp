@@ -18,6 +18,7 @@ import { redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import * as accountService from "@/lib/nex-native/account-service";
 import * as friendService from "@/lib/nex-native/friend-service";
+import * as relationshipService from "@/lib/nex-native/relationship-service";
 import * as peerConversationService from "@/lib/nex-native/peer-conversation-service";
 import * as peerMessageService from "@/lib/nex-native/peer-message-service";
 import * as chatThemeService from "@/lib/nex-native/chat-theme-service";
@@ -77,6 +78,12 @@ import * as menuService from "@/lib/nex-native/menu-service";
 import * as productSectionService from "@/lib/nex-native/product-section-service";
 import { isVenueCategory } from "@/lib/nex-native/types";
 import { isNexOfficialAccount } from "@/lib/nex-native/nex-official";
+// R9 Stage 4 (2026-10-15 · migration 199 unapplied) · server-resolve
+// the viewer's chat preferences so the sealed typing/presence client
+// components can honour them. getChatPreferencesSafe never throws ·
+// on service error returns PRIVACY-MAXIMUM (typing + online status
+// both disabled) which is the correct fail-closed stance.
+import { getChatPreferencesSafe } from "@/lib/nex-native/chat-preferences-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -142,6 +149,15 @@ export default async function PeerChatPage({
     redirect(`/nex-native/sign-in?next=${encodeURIComponent(nextUrl)}`);
   }
   if (peerAccountId === session.account.id) redirect("/nex-native/chat");
+
+  // R9 Stage 4 (2026-10-15 · migration 199 unapplied as of this commit)
+  // · resolve the viewer's chat privacy preferences server-side.
+  // getChatPreferencesSafe reads nex_account columns; when the migration
+  // is not yet applied, every column is null → sealed defaults apply
+  // (typing=true, last_seen='nobody', online='nobody'). The props below
+  // flow through to PeerTypingClient + PeerPresenceClient so the client-
+  // side gates match the server-side preference without an extra fetch.
+  const chatPrefs = await getChatPreferencesSafe(session.account.id);
 
   // Bridge 16d · locale resolution now considers the account's
   // persisted preference (migration 071). URL param > account > header
@@ -340,13 +356,32 @@ export default async function PeerChatPage({
         }
       : null;
 
+  // See-My-Theme gate (sealed 2026-10-16) · AND-rule mutual visibility.
+  // When either participant has disabled theme visibility for this
+  // specific friend, both sides see the NEX default. Grandfathered
+  // when no prefs row exists so pre-feature relationships keep their
+  // theme experience. Server-authoritative · fail-closed on friend-
+  // edge resolution, fail-open on prefs resolution. Owner directive:
+  // the viewer's SELECTED theme (nex_account.chat_theme) is never
+  // modified by this gate · only its visibility in this one
+  // conversation changes.
+  const canShowPeerTheme =
+    await relationshipService.isThemeMutuallyVisibleSafe(
+      session.account.id,
+      peer.id,
+    );
+
   // Resolve peer's theme colours · bubble rims + composer rim +
   // ripple. Multi-colour themes (Rose etc.) supply per-element hex
   // overrides · single-accent themes fall back to accent for every
-  // slot. Sealed 2026-09-27 · migration 051.
-  const peerThemeRow = peer.chat_theme
-    ? await chatThemeService.getThemeById(peer.chat_theme).catch(() => null)
-    : null;
+  // slot. Sealed 2026-09-27 · migration 051. When the See-My-Theme
+  // gate forbids visibility, `peerThemeRow` stays null and every
+  // downstream dependent (emoji set, sticker set, intro video,
+  // atmosphere layer) cascades to the sealed NEX default.
+  const peerThemeRow =
+    canShowPeerTheme && peer.chat_theme
+      ? await chatThemeService.getThemeById(peer.chat_theme).catch(() => null)
+      : null;
   const themeColours = peerThemeRow
     ? chatThemeService.resolveThemeColours(peerThemeRow)
     : { accent: "#00AFFF", bubbleRim: "#00AFFF", composerRim: "#00AFFF" };
@@ -795,23 +830,33 @@ export default async function PeerChatPage({
       />
       {/* Bridge 70 · typing indicator · disabled for NEX1 (support
           agents typing is not a signal buyers need). Same conversation
-          channel keyed on conversation.id. */}
+          channel keyed on conversation.id.
+          R9 Stage 4 (2026-10-15) · typingEnabled prop sourced from
+          chat-preferences-service · when the viewer has set
+          typing_indicator_enabled=false, the channel never opens and
+          no ping ever broadcasts. */}
       <PeerTypingClient
         conversationId={conversation.id}
         selfAccountId={session.account.id}
         selfDisplayName={session.account.display_name}
         peerDisplayName={peer.display_name}
+        typingEnabled={chatPrefs.typing_indicator_enabled}
         disabled={isNexOfficialAccount(peer.id)}
       />
       {/* Bridge 71 · live presence · publishes self on global roster,
           renders "Online now" pill when peer is active. Also fires
           window CustomEvents ("nex-peer-presence") for future ring/dot
-          consumers. Disabled for NEX1 support. */}
+          consumers. Disabled for NEX1 support.
+          R9 Stage 4 (2026-10-15) · publishPresence prop sourced from
+          chat-preferences-service · when online_status_visibility is
+          'nobody', the client opens the channel in receive-only mode
+          and never publishes a tracked presence state. */}
       <PeerPresenceClient
         conversationId={conversation.id}
         selfAccountId={session.account.id}
         selfDisplayName={session.account.display_name}
         peerAccountId={peer.id}
+        publishPresence={chatPrefs.online_status_visibility !== "nobody"}
         peerDisplayName={peer.display_name}
         disabled={isNexOfficialAccount(peer.id)}
       />

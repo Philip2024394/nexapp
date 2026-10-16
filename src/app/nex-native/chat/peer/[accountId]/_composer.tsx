@@ -23,6 +23,7 @@ import {
   type CaptureKind,
 } from "./_media-capture";
 import { MediaRecorderModal } from "./_media-recorder";
+import { ChatComposerPill } from "@/lib/nex-native/chat-chrome/chat-composer-pill";
 
 const NEX = {
   bg: "#020914",
@@ -616,164 +617,126 @@ export function PeerComposer({
             — only ONE 3-dot should live on-screen at a time, and it
             belongs to the theme's animation panel. */}
 
-        {/* Row 2 · glass input rectangle · matches the outgoing
-            chat bubble family. Rim adopts the peer's chat theme so
-            the composer belongs to the peer's chat space, not a
-            neutral universal element. */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            minHeight: 44,
-            padding: "4px 6px 4px 6px",
-            borderRadius: 14,
-            background: composerBg ?? "rgba(12,32,58,0.62)",
-            backdropFilter: "blur(24px) saturate(1.2)",
-            WebkitBackdropFilter: "blur(24px) saturate(1.2)",
-            border: `1px solid ${composerRim(themeAccent ?? NEX.cyan)}`,
-            boxShadow: `0 0 14px ${composerGlow(themeAccent ?? NEX.cyan)}, 0 6px 20px rgba(0,0,0,0.45)`,
-          }}
-        >
-            <PlusButton onClick={() => setModalOpen(true)} />
-            {/* Attachment-file button · founder direction 2026-10-04.
-                Left-side paperclip opens a generic file picker that
-                accepts any mime, then posts the file via uploadAction
-                (same path camera / video / voice capture use). Only
-                rendered when an uploadAction is wired. */}
-            {uploadAction && (
-              <>
-                <input
-                  ref={attachInputRef}
-                  type="file"
-                  accept="*/*"
-                  style={{ display: "none" }}
-                  onChange={(e) => {
-                    const f = e.currentTarget.files?.[0];
-                    if (!f) return;
-                    const fd = new FormData();
-                    fd.append("attachment_file", f);
-                    uploadAction(fd);
-                    // Reset so the same file can be re-picked.
-                    e.currentTarget.value = "";
-                  }}
-                />
-                <AttachButton
-                  onClick={() => attachInputRef.current?.click()}
-                  accent={themeAccent ?? NEX.cyan}
-                />
-              </>
-            )}
-            {/* Bridge ThemeEmoji-C · pinned theme-emoji chips render
-             *  inline before the textarea so the picked emoji reads as
-             *  if it is inside the input bar. Each chip is tappable ·
-             *  tap × to unpin. The body serialization prepends the
-             *  chips as ":slug:" markers to the outgoing message. */}
-            {hasPendingEmojis && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 4,
-                  flexShrink: 0,
-                  maxWidth: "60%",
-                  overflowX: "auto",
-                  scrollbarWidth: "none",
-                }}
-              >
-                {pendingThemeEmojis.map((tile, i) => (
-                  <span
-                    key={`${tile.slug}-${i}`}
-                    style={{
-                      position: "relative",
-                      flex: "0 0 auto",
-                      width: 30,
-                      height: 30,
-                      borderRadius: 8,
-                      background: "rgba(0,159,239,0.14)",
-                      border: "1px solid rgba(0,159,239,0.35)",
-                      display: "grid",
-                      placeItems: "center",
+        {/* Row 2 · master composer pill · delegated to the shared
+            ChatComposerPill primitive so every chat surface renders
+            the same shape. PeerComposer keeps ownership of the
+            form submission, encryption, media modal, reply header,
+            attachment preview, and pending-emoji chip row (passed
+            inside the pill via prefixSlot). The primitive owns ONLY
+            the visual pill, the + button, the textarea, the emoji
+            button, and the send button. See
+            src/lib/nex-native/chat-chrome/chat-composer-pill.tsx. */}
+        <ChatComposerPill
+          value={text}
+          onChange={setText}
+          onSend={() => formRef.current?.requestSubmit()}
+          placeholder={placeholder}
+          accentHex={themeAccent}
+          composerBg={composerBg}
+          sendButtonImageUrl={themeSendButtonUrl ?? null}
+          armed={canSend}
+          maxLength={4000}
+          textareaRef={textareaRef}
+          textareaDataAttr="data-nex-composer-textarea"
+          onPlusAction={() => setModalOpen(true)}
+          onEmoji={() => setEmojiOpen(true)}
+          prefixSlot={
+            <>
+              {uploadAction && (
+                <>
+                  <input
+                    ref={attachInputRef}
+                    type="file"
+                    accept="*/*"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const f = e.currentTarget.files?.[0];
+                      if (!f) return;
+                      const fd = new FormData();
+                      fd.append("attachment_file", f);
+                      uploadAction(fd);
+                      e.currentTarget.value = "";
                     }}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={tile.imageUrl}
-                      alt={tile.label || tile.slug}
-                      width={22}
-                      height={22}
+                  />
+                  <AttachButton
+                    onClick={() => attachInputRef.current?.click()}
+                    accent={themeAccent ?? NEX.cyan}
+                  />
+                </>
+              )}
+              {hasPendingEmojis && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                    flexShrink: 0,
+                    maxWidth: "60%",
+                    overflowX: "auto",
+                    scrollbarWidth: "none",
+                  }}
+                >
+                  {pendingThemeEmojis.map((tile, i) => (
+                    <span
+                      key={`${tile.slug}-${i}`}
                       style={{
-                        width: 22,
-                        height: 22,
-                        objectFit: "contain",
-                        pointerEvents: "none",
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removePendingEmoji(i)}
-                      aria-label={`Remove ${tile.label || tile.slug}`}
-                      title="Remove"
-                      style={{
-                        position: "absolute",
-                        top: -6,
-                        right: -6,
-                        width: 16,
-                        height: 16,
-                        padding: 0,
-                        borderRadius: "50%",
-                        border: "none",
-                        background: "rgba(2,9,20,0.92)",
-                        color: NEX.textPrimary,
-                        fontSize: 10,
-                        lineHeight: 1,
-                        cursor: "pointer",
+                        position: "relative",
+                        flex: "0 0 auto",
+                        width: 30,
+                        height: 30,
+                        borderRadius: 8,
+                        background: "rgba(0,159,239,0.14)",
+                        border: "1px solid rgba(0,159,239,0.35)",
                         display: "grid",
                         placeItems: "center",
-                        boxShadow: "0 2px 6px rgba(0,0,0,0.4)",
                       }}
                     >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-            <textarea
-              ref={textareaRef}
-              maxLength={4000}
-              placeholder={placeholder}
-              rows={1}
-              value={text}
-              /* Bridge 70 · marker so PeerTypingClient can attach an
-                 input listener + broadcast typing pings without needing
-                 the composer to know the conversationId. Non-invasive
-                 (attribute-only) so business/NEX1 chats are unaffected. */
-              data-nex-composer-textarea
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              style={{
-                flex: 1,
-                width: "100%",
-                minHeight: 22,
-                maxHeight: 112,
-                padding: "0 6px",
-                background: "transparent",
-                color: NEX.textPrimary,
-                border: "none",
-                outline: "none",
-                fontSize: 16,
-                lineHeight: 1.35,
-                fontFamily: "inherit",
-                resize: "none",
-                overflow: "auto",
-              }}
-            />
-            <EmojiButton
-              onClick={() => setEmojiOpen(true)}
-              themeAccent={themeAccent ?? null}
-            />
-            <SendButton armed={canSend} themeSendButtonUrl={themeSendButtonUrl ?? null} />
-        </div>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={tile.imageUrl}
+                        alt={tile.label || tile.slug}
+                        width={22}
+                        height={22}
+                        style={{
+                          width: 22,
+                          height: 22,
+                          objectFit: "contain",
+                          pointerEvents: "none",
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removePendingEmoji(i)}
+                        aria-label={`Remove ${tile.label || tile.slug}`}
+                        title="Remove"
+                        style={{
+                          position: "absolute",
+                          top: -6,
+                          right: -6,
+                          width: 16,
+                          height: 16,
+                          padding: 0,
+                          borderRadius: "50%",
+                          border: "none",
+                          background: "rgba(2,9,20,0.92)",
+                          color: NEX.textPrimary,
+                          fontSize: 10,
+                          lineHeight: 1,
+                          cursor: "pointer",
+                          display: "grid",
+                          placeItems: "center",
+                          boxShadow: "0 2px 6px rgba(0,0,0,0.4)",
+                        }}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </>
+          }
+        />
       </form>
     </>
   );

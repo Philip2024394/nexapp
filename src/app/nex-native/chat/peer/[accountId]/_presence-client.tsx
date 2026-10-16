@@ -41,6 +41,17 @@ export interface PeerPresenceClientProps {
   peerDisplayName: string;
   /** Skip entirely for NEX1 · ops presence isn't a signal buyers need. */
   disabled?: boolean;
+  /**
+   * R9 Stage 4 (2026-10-15 · migration 199 unapplied) · server-
+   * resolved online-status visibility. When FALSE (owner has set
+   * online_status_visibility='nobody'), this component opens the
+   * channel in RECEIVE-ONLY mode · the peer's presence is still
+   * displayed to us, but our own `trackPresence` is never called ·
+   * our roster entry is absent · peers never see us as "online now".
+   * Defaults to TRUE for backward compat with callers that have not
+   * yet migrated to pass the prop.
+   */
+  publishPresence?: boolean;
 }
 
 const PRESENCE_EVENT = "nex-peer-presence";
@@ -48,6 +59,8 @@ const PRESENCE_EVENT = "nex-peer-presence";
 export function PeerPresenceClient(props: PeerPresenceClientProps): React.JSX.Element | null {
   const [peerKind, setPeerKind] = React.useState<PresenceKind | null>(null);
   const channelRef = React.useRef<PresenceChannel | null>(null);
+  // Server-resolved publish gate · default TRUE for backward compat.
+  const publishPresence = props.publishPresence !== false;
 
   React.useEffect(() => {
     if (props.disabled) return;
@@ -56,7 +69,11 @@ export function PeerPresenceClient(props: PeerPresenceClientProps): React.JSX.El
       conversationId: props.conversationId,
       selfAccountId: props.selfAccountId,
       selfDisplayName: props.selfDisplayName,
-      initialKind: "online",
+      // R9 Stage 4 · when the local user has
+      // online_status_visibility='nobody', open the channel but never
+      // enter the "online" roster · publish `offline` which Supabase
+      // Realtime treats as "no state tracked for this key".
+      initialKind: publishPresence ? "online" : "offline",
       onRosterChange: (roster) => {
         // Find the peer in the roster; missing = offline.
         const peer = roster.find((r) => r.accountId === props.peerAccountId);
@@ -89,6 +106,7 @@ export function PeerPresenceClient(props: PeerPresenceClientProps): React.JSX.El
     props.selfDisplayName,
     props.peerAccountId,
     props.disabled,
+    publishPresence,
   ]);
 
   // Also flip self's state to "busy" when a call is active on this page.
