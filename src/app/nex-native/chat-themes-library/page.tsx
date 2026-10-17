@@ -49,6 +49,11 @@ import {
 } from "./_marketplace-filter-pills";
 import { MarketplaceCategoryRow } from "./_marketplace-category-row";
 import { MarketplaceThemeCard } from "./_marketplace-theme-card";
+// Owner-sealed 2026-10-18 · "we have only 2 free themes · all other
+// are paid themes". The DB `tier='gratis'` field is NOT reliable
+// (legacy rows) · the sealed allowlist in _sealed-free-themes.ts is
+// authoritative. Owner can swap which 2 IDs are free in one place.
+import { isSealedFreeTheme } from "./_sealed-free-themes";
 import {
   hexToRgba,
   miniPhoneBubbleBackground,
@@ -133,8 +138,12 @@ export default async function ThemePickerPage({
   const requestedFilter: MarketplaceFilter =
     sp.filter === "free" || sp.filter === "premium" ? sp.filter : "all";
 
-  const freeThemes = browserThemes.filter((t) => t.tier === "gratis");
-  const premiumThemes = browserThemes.filter((t) => t.tier === "bisnis");
+  // Owner-sealed 2026-10-18 · the DB `tier='gratis'` field is NOT
+  // the "is free forever" signal · the sealed allowlist in
+  // `_sealed-free-themes.ts` is authoritative. Only the 2 listed IDs
+  // appear in the Free section · everything else is Premium.
+  const freeThemes = browserThemes.filter((t) => isSealedFreeTheme(t.id));
+  const premiumThemes = browserThemes.filter((t) => !isSealedFreeTheme(t.id));
 
   const showFree = requestedFilter !== "premium";
   const showPremium = requestedFilter !== "free";
@@ -185,7 +194,7 @@ export default async function ThemePickerPage({
               subline={
                 freeThemes.length === 0
                   ? "No free themes yet"
-                  : `${freeThemes.length} ${freeThemes.length === 1 ? "theme" : "themes"}. Free forever.`
+                  : `${freeThemes.length} ${freeThemes.length === 1 ? "theme" : "themes"} · free forever.`
               }
               accent="#00AFFF"
               seeAllHref="/nex-native/chat-themes-library?filter=free"
@@ -198,7 +207,9 @@ export default async function ThemePickerPage({
                 gap: 10,
               }}
             >
-              {freeThemes.slice(0, 6).map((t) => (
+              {/* Sealed allowlist caps the free pair at length 2 ·
+                  no .slice() needed · all free entries render. */}
+              {freeThemes.map((t) => (
                 <MarketplaceThemeCard key={t.id} theme={t} variant="free" />
               ))}
             </div>
