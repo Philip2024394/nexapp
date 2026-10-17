@@ -822,12 +822,19 @@ export function PortraitBloomShell({
       <main
         data-nex-bloom-scope={scope}
         style={{
-          position: "fixed",
+          /* Owner directive 2026-10-18 · theme-preview scope respects
+             the `.nex-native-frame` phone-frame on desktop (iPhone
+             preview mode). Real chat surfaces (peer / guest / vault /
+             business) keep the fixed-viewport mount so composer +
+             name never slip off screen under mobile browser chrome.
+             scope === "theme-preview" is the signal from the viewer
+             route and is the ONLY surface that drops `position: fixed`. */
+          position: scope === "theme-preview" ? "absolute" : "fixed",
           inset: 0,
           // dvh accounts for mobile browser chrome (URL bar collapse/
-          // expand) · pins the shell exactly to the visible viewport
-          // so composer + name never slip off screen.
-          height: "100dvh",
+          // expand) on real chat. Preview mode uses 100% because the
+          // frame already clips to the correct viewport.
+          height: scope === "theme-preview" ? "100%" : "100dvh",
           background: NEX.bg,
           color: NEX.text,
           fontFamily:

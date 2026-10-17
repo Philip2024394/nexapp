@@ -63,6 +63,16 @@ export interface ControlDrawerProps {
   /** Null when the viewer is anonymous · the drawer shows a sign-in
    *  prompt instead of the identity bar + Business groups. */
   readonly session: ControlDrawerSession | null;
+  /** Optional portal target · when the trigger has no `.nex-native-frame`
+   *  ancestor (e.g. full-viewport chat theme previews) the drawer would
+   *  silently fail to render. Supplying `document.body` here keeps the
+   *  slide-in working on those surfaces. 2026-10-18 · owner directive ·
+   *  same drawer on chat theme previews. */
+  readonly portalTarget?: HTMLElement | null;
+  /** Optional style overrides spread onto the trigger button so a caller
+   *  (preview surfaces, custom chrome) can match the surrounding button
+   *  cluster's size + colour. */
+  readonly triggerStyle?: React.CSSProperties;
 }
 
 // ─── Destinations · all verified to exist in the audit ──────────────

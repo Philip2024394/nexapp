@@ -37,11 +37,14 @@ import { UniversalComposerFooter } from "../../chat-standard/_universal-composer
 import { UniversalHeaderIconsOverlay } from "../../chat-standard/_universal-header-icons-overlay";
 import { trackThemeView } from "@/lib/nex-native/theme-view-service";
 import { resolveNexAppSessionOrGuest } from "@/lib/nex-native/app/session-or-guest";
+import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import {
   effectiveTier,
   isThemesTrialActive,
 } from "@/lib/nex-native/account-service";
 import { pickPremiumBannerCopy } from "./_premium-banner-copy";
+import { ThemePreviewDrawer } from "./_theme-preview-drawer";
+import type { ControlDrawerSession } from "@/components/nex-native/control-drawer/control-drawer-client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,11 +72,35 @@ export default async function ThemeViewerPage({
   // viewer path · they are code-registered in `_live-worlds.ts` and
   // render the full Standard Experience (header icons + bubbles +
   // composer + shop sheet + call actions + + menu) as the live chat.
+  /* Owner directive 2026-10-18 · chat theme previews mount the same
+     ControlDrawer used on /welcome + /directory/landing. Resolved up
+     here (before the Standard Experience / Haunted Hotel branches) so
+     every preview path can mount the drawer as a sibling. Session
+     null = guest = sign-in prompt rendered inside the drawer. */
+  let drawerSession: ControlDrawerSession | null = null;
+  try {
+    const sess = await resolveNexAppSessionFromContext();
+    if (sess) {
+      drawerSession = {
+        displayName: sess.account.display_name,
+        nexHandle: sess.account.nex_handle,
+        isBisnis: effectiveTier(sess.account) === "bisnis",
+      };
+    }
+  } catch {
+    // guest · keep drawerSession = null
+  }
+
   // Rule sealed 2026-10-05 · scope: ocean · coffee · botanical-cafe ·
   // midnight-cafe · french-cafe.
   if (isLiveWorldId(id)) {
     const pkg = LIVE_WORLD_PACKAGES[id];
-    return <StandardExperienceLiveClient pkg={pkg} />;
+    return (
+      <>
+        <StandardExperienceLiveClient pkg={pkg} />
+        <ThemePreviewDrawer session={drawerSession} />
+      </>
+    );
   }
 
   // The Haunted Hotel preview IS the depth-cards experience that the
@@ -161,6 +188,9 @@ export default async function ThemeViewerPage({
     canUsePremium,
   });
 
+  /* drawerSession already resolved above the Standard Experience
+     early-return · used here for the viewer path. */
+
   return (
     <>
       {premiumBanner ? (
@@ -240,6 +270,11 @@ export default async function ThemeViewerPage({
       <ThemeViewerClient
         themeId={theme.id}
         themeName={theme.name}
+        /* Owner directive 2026-10-18 · subtitle is the theme's own
+           tagline · per-theme copy from nex_chat_theme.tagline ·
+           null hides the subline row. Retired the hardcoded
+           "Photographer" fallback. */
+        subtitle={theme.tagline ?? null}
         accent={theme.accent_hex}
         bubbleRim={theme.bubble_rim_hex ?? theme.accent_hex}
         composerRim={theme.composer_rim_hex ?? theme.accent_hex}
@@ -276,6 +311,12 @@ export default async function ThemeViewerPage({
           onSendMessage callback that appends to the preview message
           list. Removing the duplicate mount keeps the composer as
           a single instance per route. */}
+      {/* Owner directive 2026-10-18 · Home button replaced by the
+          shared ControlDrawer (same drawer on /welcome +
+          /directory/landing). Mounted as a sibling of the chat
+          chrome · hides the native Home via a scoped CSS block and
+          positions its 3-dot trigger in the Home-slot. */}
+      <ThemePreviewDrawer session={drawerSession} />
     </>
   );
 }

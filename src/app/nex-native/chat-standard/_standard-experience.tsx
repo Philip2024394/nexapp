@@ -37,7 +37,10 @@ import { StandardIntroOverlay } from "./_standard-intro-overlay";
 export interface StandardExperienceFixturePeer {
   accountId: string;
   displayName: string;
-  tagline: string;
+  /** Subline rendered under the display name · null hides the row
+   *  rather than printing a placeholder. 2026-10-18 · nullable so
+   *  theme-derived identities with no tagline don't fake copy. */
+  tagline: string | null;
   avatarUrl?: string | null;
   /** Universal rule · peer avatar always carries a green rim. When
    *  `isOnline` is true an outer pulsing ring (ping) animates around
@@ -531,6 +534,12 @@ function StandardHeader({
         displayName={peer.displayName}
         subtitle={peer.tagline}
         presenceKind={isOnline ? "online" : "offline"}
+        /* Owner directive 2026-10-18 · preview surfaces tint the
+           avatar heartbeat ring with the theme's own accent so the
+           chrome visibly reads as "this theme on your chat". The
+           master primitive still defaults to green on real chat
+           routes · scope is preview only. */
+        heartbeatColor={engine.package.colours.primary}
         avatarHref={viewerHref}
         rightReserveWidth={0}
       />

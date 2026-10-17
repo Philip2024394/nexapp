@@ -4,10 +4,12 @@
 // -------------------------------------------------------------------
 // Owner-sealed design (NEX Themes Neon Marketplace reference):
 //   · Left   · NexPingBadge + "NEX THEMES" title ("THEMES" cyan)
-//   · Right  · circular search-icon button
+//   · Right  · 3-dots (kebab) button · opens the side drawer
+//              (replaces the earlier magnifying-glass search button ·
+//              2026-10-18 owner directive)
 //   · Below  · tagline "Personalise your chat. Make it yours."
 //
-// Server Component · identity primitives are client-safe.
+// Server Component · identity primitives + drawer trigger are client-safe.
 
 import type * as React from "react";
 import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
@@ -15,14 +17,13 @@ import {
   NEX_FONT_SANS,
   NEX_PING_BADGE_HEADER_SIZE,
 } from "@/lib/nex-native/design-tokens";
+import { MarketplaceSideDrawer } from "./_marketplace-side-drawer";
 
 const NEX = {
   text: "#F2F5F8",
   textDim: "#B5C3D6",
   textMuted: "#7D9BC0",
   cyan: "#00AFFF",
-  cyanSoft: "rgba(0, 175, 255, 0.35)",
-  cyanFaint: "rgba(0, 175, 255, 0.14)",
 };
 
 export function MarketplaceHeader(): React.JSX.Element {
@@ -66,45 +67,7 @@ export function MarketplaceHeader(): React.JSX.Element {
           Personalise your chat. Make it yours.
         </p>
       </div>
-      <button
-        type="button"
-        aria-label="Search themes"
-        data-nex-themes-search-trigger
-        style={{
-          all: "unset",
-          cursor: "pointer",
-          flexShrink: 0,
-          display: "grid",
-          placeItems: "center",
-          width: 40,
-          height: 40,
-          borderRadius: "50%",
-          border: `1px solid ${NEX.cyanSoft}`,
-          background: NEX.cyanFaint,
-          color: NEX.cyan,
-        }}
-      >
-        <SearchIcon />
-      </button>
+      <MarketplaceSideDrawer />
     </header>
-  );
-}
-
-function SearchIcon(): React.JSX.Element {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2.2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <circle cx="11" cy="11" r="7" />
-      <line x1="21" y1="21" x2="16.65" y2="16.65" />
-    </svg>
   );
 }

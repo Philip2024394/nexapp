@@ -34,6 +34,11 @@ import { NEX_TRUST_SCAN_SKIN } from "@/app/nex-native/_trust-scan/trust-scan-ski
 interface ThemeViewerClientProps {
   themeId: string;
   themeName: string;
+  /** Subline rendered under the theme name in the preview header.
+   *  Sourced from `nex_chat_theme.tagline` (per-theme copy). Null
+   *  hides the subline rather than showing a placeholder. Owner
+   *  directive 2026-10-18 · retired the hardcoded "Photographer". */
+  subtitle: string | null;
   accent: string;
   bubbleRim: string;
   composerRim: string;
@@ -371,14 +376,15 @@ export default function ThemeViewerClient(
 
       <PortraitBloomShell
         scope="theme-preview"
-        /* Founder direction 2026-10-01 · the peer display name in the
-           theme deep-dive uses the THEME's name (Joker · Pink Dream ·
-           Night Sky etc.) so each preview reads as its own persona.
-           Falls back to "Maria" for older themes without a persona
-           mapping (kept for continuity with the earlier photographer
-           preview). */
-        displayName={props.themeName || "Maria"}
-        subtitle="Photographer"
+        /* Founder direction 2026-10-01 · the peer display name is the
+           theme's name (Joker · Pink Dream · Night Sky · …).
+           Owner directive 2026-10-18 · retired the "Maria" fallback
+           and the hardcoded "Photographer" subtitle · the preview
+           reads as the Theme, not a fictional persona. Subtitle is
+           per-theme (nex_chat_theme.tagline) and may be null · the
+           primitive hides the row rather than printing a placeholder. */
+        displayName={props.themeName}
+        subtitle={props.subtitle}
         /* 2026-10-15 · NEX-brand theme previews swap the Maria portrait
            for the shared NEX ping badge (blue ring + ping + "NE") so
            the preview matches landing + welcome brand identity. */

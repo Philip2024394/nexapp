@@ -28,19 +28,17 @@ import {
 import { NexPlanetApproachClient } from "@/lib/nex-native/nex-planet-approach-client";
 import { MarkSelectedThemeClient } from "./_mark-selected-theme-client";
 
-// Default fixture peer · used for every non-NEX-brand preview so
-// non-NEX themes still show a believable chat partner. NEX-brand
-// themes (NEX Original · NEX Blue Centre · future NEX themes)
-// override this to show the NEX identity itself until the viewer
-// creates an account (owner directive 2026-10-15).
-const FIXTURE_PEER = {
-  accountId: "fx-maria",
-  displayName: "Maria Santos",
-  tagline: "Footwear Designer · Lisbon",
-  avatarUrl: null as string | null,
-  isOnline: true,
-};
-
+// Owner directive 2026-10-18 · removed the Maria Santos / Footwear
+// Designer · Lisbon fixture persona · a theme preview should read as
+// "this is what the theme looks like", not as a stolen peek at a
+// fictional person's chat. The identity now comes from the theme
+// itself (name + tagline from the sealed ThemeIdentity).
+//
+// NEX_GUEST_PEER stays · it is a guest-onboarding affordance, not
+// a persona · NEX-brand previews (NEX Original · NEX Blue Centre ·
+// future "NEX "-prefixed themes) show this instead so the viewer
+// sees the brand identity + "create an account" prompt until signed
+// in. Owner directive 2026-10-15, preserved.
 const NEX_GUEST_PEER = {
   accountId: "fx-nex-brand",
   displayName: "NEX",
@@ -108,14 +106,26 @@ export function StandardExperienceLiveClient({
   // 2026-10-15 · owner directive · NEX-brand theme previews (NEX
   // Original · NEX Blue Centre · any future "NEX "-prefixed theme)
   // present NEX itself as the chat peer until the user creates an
-  // account, instead of the Maria Santos fixture used for other
-  // theme previews. The condition matches the same shape used by
-  // _viewer.tsx so both routing paths stay consistent.
+  // account. For every other theme the identity now derives from
+  // the theme itself (owner directive 2026-10-18 · Maria Santos
+  // fixture retired). `pkg.identity.name` is the theme name, and
+  // `pkg.identity.tagline` is the theme-authored subline · each
+  // package controls its own copy, so Ocean reads as "Ocean" +
+  // Ocean's tagline, Hammerex reads as "Hammerex Industrial" +
+  // its tagline, etc.
   const isNexBrandTheme = pkg.identity.name
     .trim()
     .toUpperCase()
     .startsWith("NEX ");
-  const peer = isNexBrandTheme ? NEX_GUEST_PEER : FIXTURE_PEER;
+  const peer = isNexBrandTheme
+    ? NEX_GUEST_PEER
+    : {
+        accountId: `theme-${pkg.identity.id}`,
+        displayName: pkg.identity.name,
+        tagline: pkg.identity.tagline?.trim() || null,
+        avatarUrl: null as string | null,
+        isOnline: true,
+      };
 
   const handleSend = React.useCallback((body: string) => {
     setLocalMessages((prev) => [
@@ -141,10 +151,16 @@ export function StandardExperienceLiveClient({
     <div
       data-nex-standard-experience-live
       style={{
-        position: "fixed",
+        /* Owner directive 2026-10-18 · "iPhone frame on desktop keeping
+           screen size max size" · dropped `position: fixed` escape so
+           the preview respects the surrounding `.nex-native-frame`
+           (420×909 on desktop · full-viewport on mobile). Previous
+           full-viewport mount escaped the frame on desktop and made
+           the preview look like a different product. */
+        position: "absolute",
         inset: 0,
-        width: "100dvw",
-        height: "100dvh",
+        width: "100%",
+        height: "100%",
         overflow: "hidden",
         background: "#000",
       }}

@@ -13,7 +13,11 @@ import type * as React from "react";
 import Link from "next/link";
 import { NEX_FONT_SANS } from "@/lib/nex-native/design-tokens";
 
-export type MarketplaceFilter = "all" | "free" | "premium";
+// Owner-sealed 2026-10-18 · the first pill became "New" (replacing
+// "All Themes") · selecting it shows the newest themes first. The
+// token name follows the label · "new" is the default when no
+// ?filter query parameter is present.
+export type MarketplaceFilter = "new" | "free" | "premium";
 
 const NEX = {
   text: "#F2F5F8",
@@ -45,10 +49,10 @@ export function MarketplaceFilterPills(
       }}
     >
       <Pill
-        label="All Themes"
-        icon={<GiftIcon />}
-        href={pillHref("all")}
-        active={props.active === "all"}
+        label="New"
+        icon={<SparkleIcon />}
+        href={pillHref("new")}
+        active={props.active === "new"}
         accent={NEX.cyan}
         accentSoft={NEX.cyanSoft}
         accentFaint={NEX.cyanFaint}
@@ -67,16 +71,16 @@ export function MarketplaceFilterPills(
         icon={<CrownIcon />}
         href={pillHref("premium")}
         active={props.active === "premium"}
-        accent={NEX.gold}
-        accentSoft={NEX.goldSoft}
-        accentFaint={NEX.goldFaint}
+        accent={NEX.cyan}
+        accentSoft={NEX.cyanSoft}
+        accentFaint={NEX.cyanFaint}
       />
     </nav>
   );
 }
 
 function pillHref(f: MarketplaceFilter): string {
-  if (f === "all") return "/nex-native/chat-themes-library";
+  if (f === "new") return "/nex-native/chat-themes-library";
   return `/nex-native/chat-themes-library?filter=${f}`;
 }
 
@@ -139,6 +143,25 @@ function GiftIcon(): React.JSX.Element {
       <line x1="12" y1="22" x2="12" y2="7" />
       <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
       <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+    </svg>
+  );
+}
+
+function SparkleIcon(): React.JSX.Element {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4L12 3z" />
+      <path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z" />
     </svg>
   );
 }

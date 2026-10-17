@@ -133,10 +133,12 @@ export default async function ThemePickerPage({
 
   // Owner-sealed 2026-10-18 · Neon Marketplace layout. The sealed
   // data-loader output `browserThemes` is split into free + premium
-  // for the two sections. Filter pills via ?filter=all|free|premium
+  // for the two sections. Filter pills via ?filter=new|free|premium
   // override the natural split so viewers can focus on one bucket.
+  // "new" is the default · when no ?filter param is present or the
+  // value is unrecognised we fall through to the Latest view.
   const requestedFilter: MarketplaceFilter =
-    sp.filter === "free" || sp.filter === "premium" ? sp.filter : "all";
+    sp.filter === "free" || sp.filter === "premium" ? sp.filter : "new";
 
   // Owner-sealed 2026-10-18 · the DB `tier='gratis'` field is NOT
   // the "is free forever" signal · the sealed allowlist in
@@ -145,8 +147,18 @@ export default async function ThemePickerPage({
   const freeThemes = browserThemes.filter((t) => isSealedFreeTheme(t.id));
   const premiumThemes = browserThemes.filter((t) => !isSealedFreeTheme(t.id));
 
-  const showFree = requestedFilter !== "premium";
-  const showPremium = requestedFilter !== "free";
+  // Owner-sealed 2026-10-18 · "New" shows the latest themes · we sort
+  // by `sort_order` DESC (highest = newest · the sealed registry +
+  // DB migrations always append with a higher sort_order). Capped at
+  // 12 so the Latest grid stays scannable · the full catalogue is
+  // reachable via the Free / Premium pills.
+  const latestThemes = [...browserThemes]
+    .sort((a, b) => b.sort_order - a.sort_order)
+    .slice(0, 12);
+
+  const showNew = requestedFilter === "new";
+  const showFree = requestedFilter === "free";
+  const showPremium = requestedFilter === "premium";
 
   // Keep the sealed references used below so legacy renderers do not
   // throw type errors when the Neon Marketplace path short-circuits
@@ -165,19 +177,96 @@ export default async function ThemePickerPage({
       <main
         data-nex-themes-marketplace
         style={{
+          position: "relative",
           minHeight: "100dvh",
           background: NEX.bg,
           color: NEX.text,
-          display: "flex",
-          flexDirection: "column",
-          gap: 18,
-          paddingBottom: 32,
+          overflow: "hidden",
         }}
       >
+        {/* Full-bleed background · same owner-supplied "Neon Earth
+            on a Starry Horizon" asset the Contacts hub uses · scrolls
+            with the page (position: absolute · pinned top · one
+            viewport-height tall) so the hero gets a dramatic entrance
+            moment and the rest of the page sits on clean navy. Matches
+            the Contacts shell pattern · owner directive 2026-10-18
+            "scroll as one". */}
+        <img
+          src="/nex-native/contacts/neon-earth-bg.png"
+          alt=""
+          aria-hidden
+          data-nex-themes-bg-image
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100dvh",
+            objectFit: "cover",
+            objectPosition: "top center",
+            zIndex: 0,
+            pointerEvents: "none",
+            userSelect: "none",
+          }}
+        />
+        <div
+          data-nex-themes-marketplace-content
+          style={{
+            position: "relative",
+            zIndex: 1,
+            display: "flex",
+            flexDirection: "column",
+            gap: 18,
+            paddingBottom: 32,
+          }}
+        >
         <MarketplaceHeader />
         <MarketplaceSearchBar />
         <MarketplaceFilterPills active={requestedFilter} />
         <MarketplaceCategoryRow />
+
+        {showNew ? (
+          <section
+            data-nex-themes-latest-section
+            style={{
+              padding: "0 14px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+            }}
+          >
+            <SectionTitle
+              label="Latest Themes"
+              subline={
+                latestThemes.length === 0
+                  ? "No themes yet"
+                  : `${latestThemes.length} freshest ${latestThemes.length === 1 ? "arrival" : "arrivals"}`
+              }
+              accent="#00AFFF"
+              seeAllHref="/nex-native/chat-themes-library?filter=premium"
+            />
+            <div
+              data-nex-themes-latest-grid
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 10,
+              }}
+            >
+              {latestThemes.map((t) => {
+                const isFreeTheme = isSealedFreeTheme(t.id);
+                return (
+                  <MarketplaceThemeCard
+                    key={t.id}
+                    theme={t}
+                    variant={isFreeTheme ? "free" : "premium"}
+                    priceLabel={isFreeTheme ? undefined : "£1.99"}
+                  />
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
 
         {showFree ? (
           <section
@@ -233,7 +322,7 @@ export default async function ThemePickerPage({
                   ? "Premium catalogue coming soon"
                   : null
               }
-              accent="#FFC24A"
+              accent="#00AFFF"
               crown
               seeAllHref="/nex-native/chat-themes-library?filter=premium"
             />
@@ -262,6 +351,7 @@ export default async function ThemePickerPage({
             </div>
           </section>
         ) : null}
+        </div>
       </main>
     </>
   );
