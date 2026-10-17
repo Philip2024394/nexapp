@@ -103,7 +103,10 @@ export default async function ThemeViewerPage({
           session={drawerSession}
           themeAccent={pkg.colours.primary}
         />
-        <ThemePreviewRail accent={pkg.colours.primary} />
+        <ThemePreviewRail
+          accent={pkg.colours.primary}
+          themeName={pkg.identity.name}
+        />
       </>
     );
   }
@@ -325,7 +328,11 @@ export default async function ThemeViewerPage({
         session={drawerSession}
         themeAccent={theme.accent_hex}
       />
-      <ThemePreviewRail accent={theme.accent_hex} />
+      <ThemePreviewRail
+        accent={theme.accent_hex}
+        themeName={theme.name}
+        isVenue={isVenueMode}
+      />
     </>
   );
 }
