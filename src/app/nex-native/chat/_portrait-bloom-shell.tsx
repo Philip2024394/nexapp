@@ -1050,9 +1050,26 @@ export function PortraitBloomShell({
               displayName={displayName}
               subtitle={subtitle}
               presenceKind={presenceKind}
-              heartbeatColor={
-                rippleColor === "#8FFF6E" ? "#8FFF6E" : undefined
+              /* Owner directive 2026-10-18 · theme-preview scope
+                 tints BOTH the solid presence rim AND the heartbeat
+                 ring with the theme accent (rippleColor). Real chat
+                 routes keep the sealed universal rim colour
+                 (previously green) + the Joker-only heartbeat
+                 exception. */
+              avatarRimColor={
+                scope === "theme-preview" ? rippleColor : undefined
               }
+              heartbeatColor={
+                scope === "theme-preview"
+                  ? rippleColor
+                  : rippleColor === "#8FFF6E"
+                    ? "#8FFF6E"
+                    : undefined
+              }
+              /* Owner directive 2026-10-18 · preview surfaces cap
+                 name to 1 line (ellipsis past ~14 chars). Real chat
+                 keeps the 2-line default for user names. */
+              maxNameLines={scope === "theme-preview" ? 1 : 2}
               isOfficial={isOfficialPeer}
               rightReserveWidth={150}
             />

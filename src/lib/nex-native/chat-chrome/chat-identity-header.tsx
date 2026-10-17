@@ -30,6 +30,13 @@ export interface ChatIdentityHeaderProps {
   presenceKind?: ChatIdentityPresenceKind;
   /** Override the heartbeat ring colour (e.g. Joker's acid green). */
   heartbeatColor?: string;
+  /** Override the solid presence rim colour · when supplied this
+   *  wins over the presence-kind-derived default (universal green
+   *  for online). Owner directive 2026-10-18 · chat theme previews
+   *  tint the full rim to match the theme accent so the avatar
+   *  visibly reads as "this theme on your chat". Real chat routes
+   *  omit this prop and keep the universal green rim. */
+  avatarRimColor?: string;
   /** When true renders the NEX cyan verified pill after the name. */
   isOfficial?: boolean;
   /** Right-side padding on the identity column so the title ellipses
@@ -47,6 +54,12 @@ export interface ChatIdentityHeaderProps {
    *  may supply approved decorative charms via this slot without
    *  altering the sealed avatar chrome. */
   avatarDecoration?: React.ReactNode;
+  /** Max line count for the display name · default 2 preserves the
+   *  sealed 2-line wrap for user-chosen display names (migration
+   *  204). Owner directive 2026-10-18 · chat theme previews pass 1
+   *  so overlong theme names ellipsis cleanly instead of wrapping to
+   *  a second line. */
+  maxNameLines?: 1 | 2;
 }
 
 const NEX = {
@@ -78,14 +91,19 @@ export function ChatIdentityHeader(
           ? "Offline"
           : "";
 
+  /* Owner directive 2026-10-18 · caller-supplied avatarRimColor wins
+     over the presence-derived default. Preview surfaces pass the
+     theme accent · real chat routes omit it and keep the sealed
+     universal rim colours (green/amber/dim). */
   const ringColor =
-    presenceKind === "online"
+    props.avatarRimColor ??
+    (presenceKind === "online"
       ? NEX.green
       : presenceKind === "away"
         ? "#F59E0B"
         : presenceKind === "offline"
           ? "rgba(139,169,209,0.5)"
-          : "rgba(139,169,209,0.3)";
+          : "rgba(139,169,209,0.3)");
 
   return (
     <>
@@ -135,9 +153,14 @@ export function ChatIdentityHeader(
             borderRadius: "50%",
             overflow: "hidden",
             border: `2px solid ${ringColor}`,
+            /* Owner directive 2026-10-18 · the outer glow halo tints
+               to the same ringColor as the rim · preview surfaces
+               passing avatarRimColor get a theme-coloured halo too
+               (not just the inner rim). 22 (~13%) alpha keeps the
+               glow subtle. */
             boxShadow:
               presenceKind === "online"
-                ? `0 0 0 3px ${NEX.green}22, 0 4px 14px rgba(0,0,0,0.6)`
+                ? `0 0 0 3px ${ringColor}22, 0 4px 14px rgba(0,0,0,0.6)`
                 : "0 4px 14px rgba(0,0,0,0.6)",
             backgroundImage: props.avatarUrl
               ? `url(${props.avatarUrl})`
@@ -209,11 +232,16 @@ export function ChatIdentityHeader(
               // chat-identity properties unchanged. See memory
               // feedback_nex_chat_master_layout_rule.md for the
               // sealed primitive doctrine addendum.
-              whiteSpace: "normal",
+              // 2026-10-18 · owner directive · preview surfaces pass
+              // maxNameLines=1 so overlong theme names ellipsis
+              // instead of wrapping ("Crispy Chicken" is the
+              // reference max · ~14 chars).
+              whiteSpace: (props.maxNameLines ?? 2) === 1 ? "nowrap" : "normal",
               display: "-webkit-box",
               WebkitBoxOrient: "vertical",
-              WebkitLineClamp: 2,
+              WebkitLineClamp: props.maxNameLines ?? 2,
               overflow: "hidden",
+              textOverflow: "ellipsis",
               wordBreak: "break-word",
               overflowWrap: "anywhere",
               flexShrink: 1,

@@ -73,6 +73,13 @@ export interface ControlDrawerProps {
    *  (preview surfaces, custom chrome) can match the surrounding button
    *  cluster's size + colour. */
   readonly triggerStyle?: React.CSSProperties;
+  /** Optional theme accent hex · when supplied the drawer panel picks
+   *  it up on the left border, section divider borders, and a subtle
+   *  top-of-panel accent-tinted glow so the drawer visibly belongs to
+   *  the current theme. Owner directive 2026-10-18 · chat theme
+   *  previews pass theme accent. Real chat surfaces omit this and keep
+   *  the sealed NEX cyan rims. */
+  readonly themeAccent?: string;
 }
 
 // ─── Destinations · all verified to exist in the audit ──────────────
@@ -155,7 +162,7 @@ const PREFERENCES_ROWS: ReadonlyArray<MenuRow> = [
 
 // ─── Entry component · trigger + drawer + confirmation modal ────────
 
-export function ControlDrawer({ session }: ControlDrawerProps) {
+export function ControlDrawer({ session, themeAccent }: ControlDrawerProps) {
   const [open, setOpen] = React.useState(false);
   // `rendered` tracks whether the drawer+backdrop are in the DOM at
   // all. It stays true for ~200ms after close so the slide-out
@@ -251,12 +258,31 @@ export function ControlDrawer({ session }: ControlDrawerProps) {
         ref={panelRef}
         style={{
           ...drawerStyle,
+          /* Owner directive 2026-10-18 · "side drawer back ground
+             color is same as themes color · same all themes". The
+             FULL panel background is a dark version of the theme
+             accent (navy base + 48% accent-tint) so the drawer
+             visibly belongs to the theme instead of reading as a
+             generic NEX navy. Left border + section dividers inherit
+             the pure accent via --nex-drawer-accent. Falls back to
+             the sealed NEX cyan rim when themeAccent is omitted
+             (real chat routes). */
+          ...(themeAccent
+            ? {
+                borderLeft: `1.5px solid ${themeAccent}`,
+                background: `linear-gradient(180deg, ${themeAccent}55 0%, ${themeAccent}33 100%), ${BG}`,
+                boxShadow: `-8px 0 32px rgba(0,0,0,0.6), -2px 0 32px ${themeAccent}44`,
+              }
+            : {}),
+          ["--nex-drawer-accent" as unknown as string]:
+            themeAccent ?? PANEL_BORDER,
           transform: visible ? "translateX(0)" : "translateX(100%)",
         }}
         role="dialog"
         aria-label="NEX menu"
         aria-modal="true"
         data-nex-control-drawer
+        data-nex-control-drawer-themed={themeAccent ? "true" : "false"}
         data-nex-control-drawer-visible={visible ? "true" : "false"}
       >
         <DrawerHeader onClose={close} closeRef={closeButtonRef} />
@@ -337,7 +363,7 @@ function DrawerHeader({
         aria-label="Close menu"
         style={closeButtonStyle}
       >
-        ×
+        Close
       </button>
     </div>
   );
@@ -381,6 +407,7 @@ function DrawerBody({
             style={logoutButtonStyle}
             data-nex-control-drawer-logout
           >
+            <DoorIcon />
             Log out
           </button>
         </div>
@@ -518,6 +545,29 @@ function ThreeDotIcon() {
   );
 }
 
+// Owner directive 2026-10-18 · door glyph for the Log out row.
+// Open-door shape with an arrow pointing out · universally reads as
+// "exit / sign out" without a danger-red badge.
+function DoorIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M9 3h8a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H9" />
+      <path d="M15 12H3" />
+      <path d="M6 9l-3 3 3 3" />
+    </svg>
+  );
+}
+
 // ─── Styles ────────────────────────────────────────────────────────
 
 const CYAN = "#00AFFF";
@@ -596,7 +646,7 @@ const drawerHeaderStyle: React.CSSProperties = {
   alignItems: "center",
   justifyContent: "space-between",
   padding: "14px 16px 10px 16px",
-  borderBottom: `1px solid ${PANEL_BORDER}`,
+  borderBottom: `1px solid var(--nex-drawer-accent, ${PANEL_BORDER})`,
 };
 const drawerTitleStyle: React.CSSProperties = {
   margin: 0,
@@ -605,20 +655,25 @@ const drawerTitleStyle: React.CSSProperties = {
   fontWeight: 800,
   letterSpacing: 0.3,
 };
+// Owner directive 2026-10-18 · close is now the text word "Close"
+// styled in the drawer's theme accent (not an × glyph). Padding +
+// rounded border keep it tap-friendly without a filled badge.
 const closeButtonStyle: React.CSSProperties = {
-  width: 32,
-  height: 32,
+  minHeight: 32,
+  padding: "4px 12px",
   background: "transparent",
-  border: "none",
-  color: CYAN,
-  fontSize: 24,
+  border: `1px solid var(--nex-drawer-accent, ${CYAN})`,
+  color: `var(--nex-drawer-accent, ${CYAN})`,
+  fontSize: 13,
+  fontWeight: 700,
+  letterSpacing: 0.4,
   lineHeight: 1,
   cursor: "pointer",
-  padding: 0,
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  borderRadius: 10,
+  borderRadius: 999,
+  fontFamily: "inherit",
 };
 
 const drawerBodyStyle: React.CSSProperties = {
@@ -628,14 +683,20 @@ const drawerBodyStyle: React.CSSProperties = {
   padding: "12px 12px 24px 12px",
 };
 
+// Owner directive 2026-10-18 · the identity-bar container picks up
+// the drawer's theme color. Background drops from solid PANEL to
+// a semi-transparent dark navy so the drawer's accent-tinted panel
+// shows through · border inherits from --nex-drawer-accent (already
+// in place) · handle text swaps from fixed CYAN to the accent var
+// so NEX-10842 reads in the active theme colour.
 const identityBarStyle: React.CSSProperties = {
   display: "flex",
   flexDirection: "column",
   gap: 2,
   padding: "12px 12px",
   marginBottom: 6,
-  background: PANEL,
-  border: `1px solid ${PANEL_BORDER}`,
+  background: "rgba(2, 9, 20, 0.55)",
+  border: `1px solid var(--nex-drawer-accent, ${PANEL_BORDER})`,
   borderRadius: 12,
 };
 const identityNameStyle: React.CSSProperties = {
@@ -649,7 +710,9 @@ const identityHandleStyle: React.CSSProperties = {
   // bold" · bumped from 11px/regular to 20px/800 with tighter
   // letter-spacing to read as a title. Monospace is kept so the
   // digits align like an ID badge.
-  color: CYAN,
+  // Owner directive 2026-10-18 · colour is now the drawer's theme
+  // accent (CSS var) so NEX-10842 reads in the active theme colour.
+  color: `var(--nex-drawer-accent, ${CYAN})`,
   fontSize: 20,
   fontWeight: 800,
   lineHeight: 1.1,
@@ -722,19 +785,28 @@ const rowSubtitleStyle: React.CSSProperties = {
 const logoutRowStyle: React.CSSProperties = {
   marginTop: 18,
   paddingTop: 14,
-  borderTop: `1px solid ${PANEL_BORDER}`,
+  borderTop: `1px solid var(--nex-drawer-accent, ${PANEL_BORDER})`,
 };
+// Owner directive 2026-10-18 · "remove the badge and add logout with
+// door icon". The Log out row is now a subtle text + door-icon
+// button · no red danger outline / badge. Still routes through the
+// confirmation modal so the one-click-signout protection stays.
 const logoutButtonStyle: React.CSSProperties = {
   width: "100%",
   minHeight: 44,
-  borderRadius: 999,
+  padding: "0 16px",
+  borderRadius: 10,
   background: "transparent",
-  color: DANGER,
-  border: `1.5px solid ${DANGER}66`,
+  color: MUTED,
+  border: "none",
   fontSize: 14,
   fontWeight: 700,
   cursor: "pointer",
   fontFamily: "inherit",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 10,
 };
 
 // ─── Logout confirmation modal · nested dialog ──────────────────────

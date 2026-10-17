@@ -167,10 +167,11 @@ const MOCK_PREVIEW_SHOP_PRODUCTS = {
   },
 };
 
-// Same portrait Theme 1 uses so previews across every theme share
-// one "peer" identity — makes them easy to compare side-by-side.
-const MARIA_PORTRAIT =
-  "https://ijvqdvsvwtwxzcqmoqit.supabase.co/storage/v1/object/public/nex-chat-theme-hero/maria-santos-hero-1790481483761.png";
+// Owner directive 2026-10-18 · retired. The Maria Santos portrait is
+// no longer used as the preview peer avatar · each theme now shows a
+// cropped section of its own wallpaper (or the sealed initials
+// gradient when wallpaperUrl is null). Constant removed to keep the
+// file honest about current behaviour.
 
 export default function ThemeViewerClient(
   props: ThemeViewerClientProps,
@@ -389,7 +390,13 @@ export default function ThemeViewerClient(
            for the shared NEX ping badge (blue ring + ping + "NE") so
            the preview matches landing + welcome brand identity. */
         useNexPingBadge={isNexBrandTheme}
-        portraitUrl={MARIA_PORTRAIT}
+        /* Owner directive 2026-10-18 · the theme profile avatar
+           renders a cropped section of the theme's own wallpaper
+           so the circle visibly reads as "this theme". Null falls
+           back to the sealed initials gradient (ChatIdentityHeader
+           handles the fallback internally) · the retired Maria
+           portrait is no longer used anywhere in the preview. */
+        portraitUrl={props.wallpaperUrl}
         presenceKind="online"
         presenceLabel="OPEN · here now"
         rippleColor={props.accent}

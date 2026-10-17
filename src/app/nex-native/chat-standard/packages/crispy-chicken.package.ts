@@ -24,7 +24,7 @@ export const CRISPY_CHICKEN_PACKAGE: ThemePackage = {
   identity: {
     id: "crispy-chicken",
     name: "Crispy Chicken",
-    tagline: "Golden-fried · steam · comfort food",
+    tagline: "Golden-fried · steam",
     conceptOneLine: "Crispy Chicken · golden · steam · comfort",
     categoryId: "food",
   },

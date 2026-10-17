@@ -24,7 +24,7 @@ export const NEX_BUBBLES_PACKAGE: ThemePackage = {
   identity: {
     id: "nex-bubbles",
     name: "NEX Original",
-    tagline: "The default NEX chat · off-white · orange · gray",
+    tagline: "Default · off-white",
     conceptOneLine: "NEX Original · the default NEX chat theme",
     // Free NEX themes live in Explore · they're the universal brand
     // bucket, not a visual family like Food / Products / Services.

@@ -190,16 +190,13 @@ function FloatingCallActions({
       "opacity 220ms ease-out, transform 300ms cubic-bezier(0.2, 0.9, 0.3, 1.1)",
     pointerEvents: open ? "auto" : "none",
   };
-  // Sealed 2026-10-11 · 3-dot now sits INLINE with the composer's
-  // + button (same vertical level, immediately to the left of +).
-  // Composer footer paints `[pill] [send] [+]` at `bottom:
-  // safe + 10px`. The + button is at approx `right: 10px` from the
-  // viewport edge (10px padding, 40px wide). The 3-dot sits at
-  // `right: 58px` (10 padding + 40 plus-width + 8 gap) so the two
-  // read as a tight pair. Previous `bottom: 76px` put the 3-dot
-  // ABOVE the composer · founder-flipped per the Joker request.
-  const bottomOffset = 10;
-  const rightOffset = 58;
+  // Owner directive 2026-10-18 (clarified) · "move the 3-dot button
+  // back OVER the plus button · inline vertical". The 3-dot now
+  // stacks DIRECTLY ABOVE the + button at the same horizontal X.
+  // The + button sits at approx right: 10 inside the composer row ·
+  // bottom: 72 lifts the 3-dot one button-height + gap above it.
+  const bottomOffset = 72;
+  const rightOffset = 10;
   return (
     <div
       data-nex-universal-call-actions={open ? "open" : "closed"}

@@ -25,7 +25,7 @@ export const VITAMIN_FRUIT_PACKAGE: ThemePackage = {
   identity: {
     id: "vitamin-fruit",
     name: "Vitamin Fruit",
-    tagline: "Water splash · fresh wellness · citrus",
+    tagline: "Fresh wellness · citrus",
     conceptOneLine: "Vitamin Fruit · splash · fresh · wellness",
     categoryId: "vitamins",
   },

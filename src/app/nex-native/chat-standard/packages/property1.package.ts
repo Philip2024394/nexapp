@@ -37,7 +37,7 @@ export const PROPERTY1_PACKAGE: ThemePackage = {
   identity: {
     id: "property1",
     name: "Property",
-    tagline: "Real-estate · modern home · dusk walk-through",
+    tagline: "Modern home · dusk walk",
     conceptOneLine: "Property · listing · agent · dusk",
     categoryId: "property",
   },

@@ -98,7 +98,10 @@ export default async function ThemeViewerPage({
     return (
       <>
         <StandardExperienceLiveClient pkg={pkg} />
-        <ThemePreviewDrawer session={drawerSession} />
+        <ThemePreviewDrawer
+          session={drawerSession}
+          themeAccent={pkg.colours.primary}
+        />
       </>
     );
   }
@@ -316,7 +319,10 @@ export default async function ThemeViewerPage({
           /directory/landing). Mounted as a sibling of the chat
           chrome · hides the native Home via a scoped CSS block and
           positions its 3-dot trigger in the Home-slot. */}
-      <ThemePreviewDrawer session={drawerSession} />
+      <ThemePreviewDrawer
+        session={drawerSession}
+        themeAccent={theme.accent_hex}
+      />
     </>
   );
 }

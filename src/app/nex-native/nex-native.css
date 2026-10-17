@@ -156,7 +156,12 @@ body::-webkit-scrollbar,
 @media (min-width: 500px) {
   html,
   body {
-    background: #000 !important;
+    /* Owner directive 2026-10-18 · desktop backdrop around the phone
+     * frame is NEX dark navy (#020914 · brand background token) ·
+     * previously flat black (#000) which felt disconnected from the
+     * NEX palette. The 12px bezel ring stays black so the frame
+     * still reads as a physical phone edge against the navy stage. */
+    background: #020914 !important;
     /* Pin the page viewport so content that overshoots the frame
      * can't scroll the whole document. The frame handles its own
      * internal scroll below. */
@@ -167,11 +172,12 @@ body::-webkit-scrollbar,
     display: flex;
     justify-content: center;
     /* Centre the phone frame vertically on tall desktop screens so
-     * black bars appear above AND below rather than only below. */
+     * the NEX navy backdrop appears above AND below rather than
+     * only below. */
     align-items: center;
     height: 100dvh;
     min-height: 0;
-    background: #000;
+    background: #020914;
     overflow: hidden;
   }
   .nex-native-frame {

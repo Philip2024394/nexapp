@@ -27,7 +27,7 @@ export const PIZZA_PACKAGE: ThemePackage = {
   identity: {
     id: "pizza",
     name: "Pizza",
-    tagline: "Wood-fired · dough · tomato · basil",
+    tagline: "Wood-fired · dough · basil",
     conceptOneLine: "Pizza · wood-fired oven · hearth warmth",
     categoryId: "food",
   },

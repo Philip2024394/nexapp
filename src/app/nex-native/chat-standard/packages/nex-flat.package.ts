@@ -23,8 +23,8 @@ export const NEX_FLAT_PACKAGE: ThemePackage = {
     // for backwards compatibility · only the user-facing name,
     // tagline, concept and colour palette flipped from orange to
     // NEX brand blue.
-    name: "NEX Blue Centre",
-    tagline: "Navy canvas · glowing blue centre · bubbles floating up",
+    name: "NEX Blue",
+    tagline: "Navy canvas · blue centre",
     conceptOneLine:
       "NEX Blue Centre · navy stage · blue centre · blue bubbles rising",
     categoryId: "explore",

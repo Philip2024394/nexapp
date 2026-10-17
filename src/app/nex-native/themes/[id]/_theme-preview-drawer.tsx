@@ -46,19 +46,55 @@ import {
 
 interface ThemePreviewDrawerProps {
   readonly session: ControlDrawerSession | null;
+  /** Theme accent hex · threaded to ControlDrawer so the drawer panel
+   *  picks up the theme colour on the left border, section dividers,
+   *  and the top-of-panel accent glow. Owner directive 2026-10-18 ·
+   *  "side drawer on each theme must pick up the theme color for
+   *  background and line or container". */
+  readonly themeAccent?: string;
 }
 
 export function ThemePreviewDrawer({
   session,
+  themeAccent,
 }: ThemePreviewDrawerProps): React.JSX.Element {
   return (
     <>
-      {/* Hide the sealed Home button on both preview chrome paths.
-          Narrow selectors · only Home · Cart + Shop stay in the
-          cluster. Owner directive 2026-10-18. */}
+      {/* Hide the sealed Home button on both preview chrome paths ·
+          and push the surviving Cart+Shop cluster left by 42px (36px
+          kebab + 6px gap) so the kebab can sit at the far-right edge
+          of the header without overlapping. Owner directive
+          2026-10-18 · "3 dots in header on the right side". */}
       <style>{`
         [data-nex-se-header-action="home"] { display: none !important; }
         [data-nex-native-r1-cluster] a[title="Home"] { display: none !important; }
+        [data-nex-standard-experience-live] [data-nex-se-header-action="cart"],
+        [data-nex-standard-experience-live] [data-nex-se-header-action="shop"] {
+          /* No shift needed · the flex row shrinks naturally when
+             Home is hidden. Kebab lives OUTSIDE the cluster at
+             right: 12 (frame edge) · cluster right-edge still ends
+             at right: 12 under its old origin, but with Home gone
+             the cluster width shrinks so Cart+Shop sit further
+             right. Push the cluster LEFT by 42px via margin-right
+             so the kebab's 42px slot at the far right stays clear. */
+        }
+        [data-nex-standard-experience-live] [data-nex-se-header-action="cart"] {
+          margin-right: 0;
+        }
+        /* Push the Standard Experience cluster LEFT via the parent
+           flex row's natural right-anchor. Simplest: set a right
+           padding equivalent on the cluster parent via a known
+           selector. The cluster is wrapped in a flex row inside the
+           StandardHeader · we target the flex row directly. */
+        [data-nex-standard-experience-live] [data-nex-se-header-action="shop"] {
+          margin-right: 42px;
+        }
+        /* Viewer path · HeaderRightCluster lives in a position:
+           absolute wrapper. Shift it left so the far-right slot
+           belongs to the kebab. */
+        [data-nex-native-r1-cluster] {
+          right: 54px !important;
+        }
       `}</style>
 
       {/* Trigger + drawer wrapper · absolute-positioned so it sits in
@@ -69,15 +105,15 @@ export function ThemePreviewDrawer({
       <div
         data-nex-theme-preview-drawer-slot
         style={{
-          /* Positioned at the Home-slot coordinates · once the native
-             Home button is hidden the [Cart][Shop] cluster shrinks and
-             our 36px kebab fills the vacated slot. Math: cluster is
-             right-aligned at right:12 · 2 buttons × 36 + 6px gap = 78 ·
-             drawer trigger sits at 12 + 78 + 6 = 96px from the right
-             edge of the frame. Same top offset as the native cluster. */
+          /* Owner directive 2026-10-18 · "3 dots in header on the
+             right side". Kebab lives at the far-right edge (right:
+             12 · same as the original cluster edge) · Cart + Shop
+             pushed left by 42px via the <style> block above so the
+             kebab's slot stays clear. Same top offset as the native
+             cluster. */
           position: "absolute",
           top: "calc(env(safe-area-inset-top, 0) + 14px)",
-          right: 96,
+          right: 12,
           zIndex: 7,
           width: 36,
           height: 36,
@@ -91,7 +127,7 @@ export function ThemePreviewDrawer({
           WebkitBackdropFilter: "blur(6px)",
         }}
       >
-        <ControlDrawer session={session} />
+        <ControlDrawer session={session} themeAccent={themeAccent} />
       </div>
     </>
   );

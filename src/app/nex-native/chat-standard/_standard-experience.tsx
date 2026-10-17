@@ -373,11 +373,11 @@ export function StandardExperience({
               }}
             />
           </div>
-          <ComposerSendButton
-            engine={engine}
-            disabled={composerText.trim().length === 0}
-            onSend={handleSend}
-          />
+          {/* Owner directive 2026-10-18 · send lives INSIDE the
+              composer pill now (StandardComposer renders it as a
+              right-side 32px trailing circle). The outer
+              ComposerSendButton is retired on preview surfaces to
+              avoid double-send-buttons. Plus (+) stays outside. */}
           <ComposerPlusButton
             engine={engine}
             plusOpen={plusMenuOpen}
@@ -534,12 +534,18 @@ function StandardHeader({
         displayName={peer.displayName}
         subtitle={peer.tagline}
         presenceKind={isOnline ? "online" : "offline"}
-        /* Owner directive 2026-10-18 · preview surfaces tint the
-           avatar heartbeat ring with the theme's own accent so the
-           chrome visibly reads as "this theme on your chat". The
-           master primitive still defaults to green on real chat
-           routes · scope is preview only. */
+        /* Owner directive 2026-10-18 · preview surfaces tint BOTH
+           the solid presence rim AND the heartbeat ring with the
+           theme's own accent so the chrome visibly reads as "this
+           theme on your chat". The master primitive still defaults
+           to green on real chat routes · scope is preview only. */
+        avatarRimColor={engine.package.colours.primary}
         heartbeatColor={engine.package.colours.primary}
+        /* Owner directive 2026-10-18 · preview surfaces cap name
+           to 1 line (ellipsis past ~14 chars · "Crispy Chicken"
+           reference). Real chat routes omit this and keep the
+           2-line wrap for user-chosen display names. */
+        maxNameLines={1}
         avatarHref={viewerHref}
         rightReserveWidth={0}
       />
@@ -992,6 +998,12 @@ function FloatingCallActions({
     <div
       data-nex-se-call-actions={open ? "open" : "closed"}
       style={{
+        /* Owner directive 2026-10-18 (clarified) · "move the 3-dot
+           button back OVER the plus button · inline vertical". The
+           3-dot stacks DIRECTLY ABOVE the + button at the same
+           horizontal X (right: 14 · matches + button's right edge
+           inside the composer row). bottom: 72 lifts the circle up
+           by ~1 button-height + gap so it reads as a stacked pair. */
         position: "absolute",
         right: 14,
         bottom: "calc(env(safe-area-inset-bottom, 0) + 72px)",

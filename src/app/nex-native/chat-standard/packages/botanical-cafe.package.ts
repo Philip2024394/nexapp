@@ -31,7 +31,7 @@ export const BOTANICAL_CAFE_PACKAGE: ThemePackage = {
     categoryId: "food",
     id: "botanical-cafe",
     name: "Botanical Café",
-    tagline: "Sunlit greenhouse · ceramic + living plants",
+    tagline: "Sunlit · ceramic · green",
     conceptOneLine:
       "Botanical Café · fresh · natural · beautiful",
   },

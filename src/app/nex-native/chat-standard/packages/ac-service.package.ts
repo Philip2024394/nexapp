@@ -27,7 +27,7 @@ export const AC_SERVICE_PACKAGE: ThemePackage = {
   identity: {
     id: "ac-service",
     name: "AC Service",
-    tagline: "Cool · fresh · on-site technicians",
+    tagline: "Cool · fresh · on-site",
     conceptOneLine: "AC Service · cool · fresh · install · repair",
     categoryId: "services",
   },

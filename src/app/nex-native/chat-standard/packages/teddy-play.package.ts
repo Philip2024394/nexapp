@@ -24,7 +24,7 @@ export const TEDDY_PLAY_PACKAGE: ThemePackage = {
   identity: {
     id: "teddy-play",
     name: "TeddyPlay",
-    tagline: "Plush · playful · walking + waving",
+    tagline: "Plush · playful · walk",
     conceptOneLine: "TeddyPlay · plush · play · hug",
     categoryId: "teddy",
   },

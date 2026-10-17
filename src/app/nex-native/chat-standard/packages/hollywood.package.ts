@@ -26,7 +26,7 @@ export const HOLLYWOOD_PACKAGE: ThemePackage = {
   identity: {
     id: "hollywood",
     name: "Hollywood",
-    tagline: "Red carpet · spotlights · premiere",
+    tagline: "Red carpet · spotlights",
     conceptOneLine: "Hollywood · star · premiere · spotlight",
     categoryId: "hollywood",
   },

@@ -123,7 +123,13 @@ export function StandardExperienceLiveClient({
         accountId: `theme-${pkg.identity.id}`,
         displayName: pkg.identity.name,
         tagline: pkg.identity.tagline?.trim() || null,
-        avatarUrl: null as string | null,
+        /* Owner directive 2026-10-18 · the theme profile avatar
+           renders a cropped section of the theme's wallpaper so the
+           circle visibly reads as "this theme". Falls back to null
+           (initials gradient) for packages that ship wallpaperUrl =
+           null (atmospheric themes · botanical/coffee/french/midnight
+           cafés). */
+        avatarUrl: (pkg.wallpaperUrl ?? null) as string | null,
         isOnline: true,
       };
 

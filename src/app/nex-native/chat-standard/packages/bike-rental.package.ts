@@ -27,7 +27,7 @@ export const BIKE_RENTAL_PACKAGE: ThemePackage = {
   identity: {
     id: "bike-rental",
     name: "Bike Rental",
-    tagline: "Coastal road · motorcycle · wind",
+    tagline: "Coastal road · wind",
     conceptOneLine: "Bike Rental · ride · coast · freedom",
     categoryId: "rentals",
   },

@@ -37,8 +37,8 @@ import type { ThemePackage } from "../_engine/types";
 export const WATCHES_ROLEX_PACKAGE: ThemePackage = {
   identity: {
     id: "watches-rolex",
-    name: "Watches · Rolex",
-    tagline: "Luxury timepieces · chronograph · dial · bezel",
+    name: "Rolex",
+    tagline: "Luxury · chronograph · dial",
     conceptOneLine: "Watches · Rolex · champagne gold · vitrine",
     categoryId: "watches",
   },

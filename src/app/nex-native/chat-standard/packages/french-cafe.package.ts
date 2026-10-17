@@ -36,7 +36,7 @@ export const FRENCH_CAFE_PACKAGE: ThemePackage = {
     categoryId: "food",
     id: "french-cafe",
     name: "French Café",
-    tagline: "Marbre · parchment · candlelight · elegance",
+    tagline: "Marbre · candlelight",
     conceptOneLine:
       "French Café · elegant · refined · timeless",
   },

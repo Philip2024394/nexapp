@@ -33,7 +33,7 @@ export const MIDNIGHT_CAFE_PACKAGE: ThemePackage = {
     categoryId: "food",
     id: "midnight-cafe",
     name: "Midnight Café",
-    tagline: "Rain on the glass · neon in the dark · vinyl spinning",
+    tagline: "Rain on glass · neon",
     conceptOneLine:
       "Midnight Café · dark · neon · late-night",
   },

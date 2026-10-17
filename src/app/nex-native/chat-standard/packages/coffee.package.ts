@@ -26,7 +26,7 @@ export const COFFEE_PACKAGE: ThemePackage = {
     categoryId: "food",
     id: "coffee",
     name: "Coffee",
-    tagline: "Slow mornings · warm aroma · amber light",
+    tagline: "Slow mornings · amber",
     conceptOneLine: "Coffee · slow mornings · warm aroma · cosy",
   },
   colours: {

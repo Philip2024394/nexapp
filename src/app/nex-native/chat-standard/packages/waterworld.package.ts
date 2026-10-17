@@ -34,7 +34,7 @@ export const WATERWORLD_PACKAGE: ThemePackage = {
   identity: {
     id: "waterworld",
     name: "Waterworld",
-    tagline: "Peaceful underwater · drift · shimmer",
+    tagline: "Underwater · shimmer",
     conceptOneLine: "Waterworld · underwater · peaceful · premium",
     categoryId: "waterworld",
   },

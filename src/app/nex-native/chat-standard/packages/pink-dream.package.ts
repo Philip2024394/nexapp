@@ -23,7 +23,7 @@ export const PINK_DREAM_PACKAGE: ThemePackage = {
   identity: {
     id: "pink-dream",
     name: "Pink Dream",
-    tagline: "Hot pink · plush soft-baby-pink · deep plum",
+    tagline: "Hot pink · plum",
     conceptOneLine: "Pink Dream · plush · neon pink glow · dream",
     // Founder-sealed 2026-10-11 · Pink Dream files into Teddy ·
     // soft-plush visual family · its palette is cuddle-coded.

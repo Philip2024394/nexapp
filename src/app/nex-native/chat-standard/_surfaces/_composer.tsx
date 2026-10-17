@@ -30,9 +30,12 @@ export interface StandardComposerProps {
 
 // Sealed R3 revision 2 (2026-10-05) · composer is a single input pill
 // with every secondary action inlined on the LEFT (emoji · divider ·
-// camera · attach). Text input flex-fills to the right. Send and + are
-// SEPARATE round buttons rendered OUTSIDE this component by the
-// Standard Experience shell.
+// camera · attach). Text input flex-fills to the right.
+//
+// Owner directive 2026-10-18 · send button also lives INSIDE the pill
+// now (right-side trailing action · theme-tinted · 32×32). The outer
+// ComposerSendButton is retired on previews. Plus (+) stays outside
+// as a separate round button rendered by the Standard Experience shell.
 export function StandardComposer({
   engine,
   value,
@@ -155,9 +158,56 @@ export function StandardComposer({
         style={{
           ...t.inputStyle,
           paddingLeft: 6,
+          paddingRight: 6,
         }}
       />
+      {/* Owner directive 2026-10-18 · send lives INSIDE the pill on
+          the right · 32×32 theme-tinted circle · arms when the input
+          has non-empty trimmed content. Replaces the external
+          ComposerSendButton that previously floated right of the
+          pill. */}
+      <button
+        type="button"
+        aria-label="Send message"
+        data-nex-se-composer-send-inline
+        disabled={disabled || value.trim().length === 0}
+        onClick={() => {
+          if (!disabled && value.trim().length > 0) onSend();
+        }}
+        style={{
+          flexShrink: 0,
+          width: 32,
+          height: 32,
+          borderRadius: "50%",
+          display: "grid",
+          placeItems: "center",
+          border: "none",
+          cursor:
+            disabled || value.trim().length === 0 ? "default" : "pointer",
+          background:
+            value.trim().length > 0 ? c.primary : `${c.primary}44`,
+          color: textColor,
+          opacity: value.trim().length > 0 ? 1 : 0.6,
+          transition: "background 160ms ease, opacity 160ms ease",
+        }}
+      >
+        <SendGlyph />
+      </button>
     </div>
+  );
+}
+
+function SendGlyph(): React.JSX.Element {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden
+    >
+      <path d="M3 11l16-7-7 16-2-7-7-2z" />
+    </svg>
   );
 }
 

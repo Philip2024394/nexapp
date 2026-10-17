@@ -33,7 +33,7 @@ export const LULU_PACKAGE: ThemePackage = {
     id: "lulu",
     name: "LuLu",
     // DEFAULT · tagline tuned to the "hush gesture" intro.
-    tagline: "Hush · plush · a quiet little moment",
+    tagline: "Hush · plush · quiet",
     // DEFAULT · one-line concept.
     conceptOneLine: "LuLu · hush · plush · tiny secret",
     categoryId: "teddy",
