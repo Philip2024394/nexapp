@@ -92,27 +92,33 @@ describe("landing · Get Started CTAs route to /welcome", () => {
   });
 });
 
-/* ─── B · Welcome preview mode (Settings escape hatch) ────────── */
+/* ─── B · Welcome is signed-in landing (updated 2026-10-17) ──────
+     The old ?preview=1 Settings escape hatch is retired · signed-in
+     viewers can always see Welcome directly (that's now the sealed
+     post-sign-in landing). The guest branch is unchanged. ──────── */
 
-describe("welcome · ?preview=1 lets Settings reopen the page for signed-in users", () => {
-  it("welcome page reads searchParams.preview", () => {
+describe("welcome · signed-in viewers always render welcome · owner-authorised 2026-10-17", () => {
+  it("welcome page distinguishes signed-in from guest in-page (no redirect-away)", () => {
     expect(WELCOME_SRC).toMatch(
-      /searchParams\?:\s*Promise<\{\s*preview\?:\s*string\s*\}>/,
-    );
-    expect(WELCOME_SRC).toMatch(/sp\.preview\s*===\s*["']1["']/);
-  });
-
-  it("signed-in redirect is gated on !previewMode", () => {
-    expect(WELCOME_SRC).toMatch(
-      /viewer\.kind\s*===\s*["']session["']\s*&&\s*!previewMode/,
+      /const\s+isSignedIn\s*=\s*viewer\.kind\s*===\s*["']session["']/,
     );
   });
 
-  it("preview mode does NOT short-circuit the guest flow (guests see welcome regardless of ?preview)", () => {
-    // The redirect-gate only fires when viewer.kind === "session".
-    // A guest (viewer.kind !== "session") never reaches that if-branch.
-    // This is enforced by the && operator above · covered.
-    expect(WELCOME_SRC).toMatch(/viewer\.kind\s*===\s*["']session["']/);
+  it("welcome page no longer calls redirect() to bounce signed-in users to /home", () => {
+    // Zero `redirect(` call sites in welcome/page.tsx · the old
+    // signed-in → /home short-circuit is retired. Guest-only content
+    // and signed-in content now coexist in one render path.
+    expect(WELCOME_SRC).not.toMatch(/\bredirect\(/);
+  });
+
+  it("guest flow is intact · guest branch still mounts /create-account href + /sign-in secondary", () => {
+    expect(WELCOME_SRC).toContain("createAccountHref");
+    expect(WELCOME_SRC).toMatch(/href="\/nex-native\/sign-in"/);
+  });
+
+  it("signed-in flow mounts /home CTA · never bounces to guest signup", () => {
+    expect(WELCOME_SRC).toMatch(/href="\/nex-native\/home"/);
+    expect(WELCOME_SRC).toMatch(/data-nex-welcome-primary-cta-shape="signed-in"/);
   });
 
   it("preview mode never mutates account / theme / contacts / settings · no persistence side-effects in page", () => {
@@ -203,16 +209,21 @@ describe("Settings · 'View the welcome page →' link", () => {
   });
 });
 
-/* ─── G · Contacts page preserved · auth-guarded ───────────── */
+/* ─── G · Contacts route is a redirect to the consolidated hub ─
+     Owner-authorised 2026-10-17 · the standalone /nex-native/contacts
+     route was retired · the Contacts experience lives on
+     /nex-native/chat?tab=friends. The route stays as a thin server
+     redirect so bookmarks + PWA start_url continue to work. */
 
-describe("contacts · canonical returning-user destination", () => {
-  it("contacts page is session-gated (redirect to /sign-in for guests)", () => {
+describe("contacts · redirect to the consolidated chat?tab=friends surface", () => {
+  it("contacts page is a server-side redirect to /chat?tab=friends", () => {
     expect(CONTACTS_SRC).toMatch(
-      /if\s*\(\s*!session\s*\)\s*redirect\(\s*["']\/nex-native\/sign-in["']/,
+      /redirect\(\s*["']\/nex-native\/chat\?tab=friends["']\s*\)/,
     );
   });
 
-  it("contacts page has a 'No friends yet' empty-state message for brand-new users", () => {
-    expect(CONTACTS_SRC).toContain("No friends yet");
+  it("contacts page no longer owns friends-list rendering (session resolve + 'No friends yet' moved to the hub)", () => {
+    expect(CONTACTS_SRC).not.toContain("No friends yet");
+    expect(CONTACTS_SRC).not.toMatch(/resolveNexAppSessionFromContext/);
   });
 });

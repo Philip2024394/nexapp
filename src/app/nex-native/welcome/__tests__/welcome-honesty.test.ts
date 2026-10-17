@@ -124,19 +124,34 @@ describe("welcome page · honesty guardrails", () => {
     }
   });
 
-  it("G3 · primary CTA → /create-account (base URL preserved · may carry ?intent) · secondary CTA → /sign-in", () => {
-    // Updated 2026-10-15 · owner-authorised intent persistence · the
-    // primary CTA href is now dynamic: `${PRIMARY_CTA_HREF}` or
-    // `${PRIMARY_CTA_HREF}?intent=<token>` based on the welcome-intent
-    // cookie. The invariant preserved is that the BASE URL is still
-    // the sealed /create-account route (so the signup chain is
-    // unchanged · intent only joins the URL as a query param).
+  it("G3 · primary CTA has two sealed shapes · guest → /create-account · signed-in → /home · secondary CTA → /sign-in (guest only)", () => {
+    // Updated 2026-10-17 · owner-authorised welcome-as-landing · the
+    // Welcome page now has TWO primary-CTA shapes selected at render:
+    //   · Guest (viewer.kind !== "session"): the sealed "Create free
+    //     account" link to PRIMARY_CTA_HREF (optionally carrying
+    //     ?intent=<token> from the welcome-intent cookie) · plus the
+    //     "Already have an account? Sign in" secondary.
+    //   · Signed-in (viewer.kind === "session"): a "Continue to NEX"
+    //     link to /nex-native/home · no secondary (user is already
+    //     authenticated).
+    // The invariants preserved from the earlier G3 are:
+    //   · The guest-flow BASE URL is still /create-account (so the
+    //     sealed signup chain is unchanged · intent is still a query
+    //     param only).
+    //   · The guest-flow secondary CTA is still the literal /sign-in
+    //     href on the welcome allowlist.
     expect(SOURCE).toContain(PRIMARY_CTA_HREF);
-    // The sign-in secondary CTA has not changed · still a literal href.
     expect(SOURCE).toContain(`href="${SECONDARY_CTA_HREF}"`);
-    // Explicit · the primary CTA Link reads from the dynamic
-    // createAccountHref variable, not a hardcoded href.
+    // Guest-shape primary CTA still reads from the dynamic
+    // createAccountHref variable (not hardcoded).
     expect(SOURCE).toMatch(/href=\{createAccountHref\}/);
+    // Signed-in-shape primary CTA points at /nex-native/home.
+    expect(SOURCE).toMatch(/href="\/nex-native\/home"/);
+    // Both shapes must carry the sealed data-nex-welcome-primary-cta
+    // identifier so Playwright and the welcome-intent instrumentation
+    // can address them identically.
+    expect(SOURCE).toMatch(/data-nex-welcome-primary-cta-shape="guest"/);
+    expect(SOURCE).toMatch(/data-nex-welcome-primary-cta-shape="signed-in"/);
   });
 
   it("G4 · no forbidden purchase/ownership/chat phrases appear in the welcome source", () => {
@@ -159,10 +174,14 @@ describe("welcome page · honesty guardrails", () => {
     ).toBe(true);
   });
 
-  it("G6 · signed-in visitors are redirected to /home · the welcome page is guest-only", () => {
-    // Keeps the ONE NEX IDENTITY doctrine intact: a signed-in viewer
-    // never gets dropped back into guest onboarding.
-    expect(SOURCE).toMatch(/redirect\(\s*["']\/nex-native\/home["']/);
+  it("G6 · signed-in branch is explicit · the welcome page distinguishes guest vs signed-in and never drops a signed-in viewer back into guest onboarding", () => {
+    // Updated 2026-10-17 · owner-authorised welcome-as-landing. The
+    // old invariant was "signed-in → redirect('/home')". The new
+    // invariant is weaker but keeps the doctrine intact: a signed-in
+    // viewer is routed through a signed-in branch (CTA → /home · no
+    // signup secondary) · never through the guest signup CTA.
+    expect(SOURCE).toMatch(/const\s+isSignedIn\s*=\s*viewer\.kind\s*===\s*["']session["']/);
+    expect(SOURCE).toMatch(/\{isSignedIn\s*\?/);
   });
 
   it("G7 · the themes card honestly signals premium themes are available inside the library", () => {

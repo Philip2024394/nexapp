@@ -251,19 +251,28 @@ describe("welcome · primary + secondary CTAs", () => {
 /* ─── E · routing + auth preservation ────────────────────────── */
 
 describe("welcome · routing + auth preservation", () => {
-  it("signed-in viewers are redirected to /home (sealed G6) · unless ?preview=1", () => {
-    // Updated 2026-10-15 · the signed-in redirect must now also be
-    // gated on !previewMode so the Settings "View the welcome page →"
-    // affordance can show the chat-NEX welcome to a signed-in viewer
-    // without a redirect loop.
+  it("signed-in viewers see the welcome page directly (sealed G6 · updated 2026-10-17)", () => {
+    // Updated 2026-10-17 · owner-authorised welcome-as-landing. The
+    // welcome page now distinguishes signed-in from guest in-render
+    // instead of redirecting signed-in users to /home. The invariant
+    // preserved is that the viewer kind is explicitly branched on
+    // (isSignedIn) · a signed-in viewer never falls through the
+    // guest signup CTA.
     expect(WELCOME_SRC).toMatch(
-      /if\s*\(\s*viewer\.kind\s*===\s*["']session["']\s*&&\s*!previewMode\s*\)\s*\{[\s\S]{0,500}?redirect\(\s*["']\/nex-native\/home["']/,
+      /const\s+isSignedIn\s*=\s*viewer\.kind\s*===\s*["']session["']/,
     );
+    expect(WELCOME_SRC).toMatch(/\{isSignedIn\s*\?/);
+    // No redirect() call site survives in the welcome page.
+    expect(WELCOME_SRC).not.toMatch(/\bredirect\(/);
   });
 
-  it("?preview=1 bypass is read from searchParams.preview", () => {
-    expect(WELCOME_SRC).toMatch(/sp\.preview\s*===\s*["']1["']/);
-    expect(WELCOME_SRC).toMatch(/const\s+previewMode\s*=/);
+  it("the retired ?preview=1 escape hatch is no longer referenced in welcome", () => {
+    // Updated 2026-10-17 · retired · signed-in viewers can always
+    // see the welcome page now so the Settings "View the welcome
+    // page →" affordance no longer needs a preview flag. Confirm
+    // the old plumbing is actually gone (not just inert).
+    expect(WELCOME_SRC).not.toMatch(/sp\.preview\s*===\s*["']1["']/);
+    expect(WELCOME_SRC).not.toMatch(/const\s+previewMode\s*=/);
   });
 
   it("resolveNexAppSessionOrGuest is imported from the sealed session module", () => {

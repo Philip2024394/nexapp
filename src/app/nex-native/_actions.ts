@@ -404,8 +404,13 @@ export async function signInAction(formData: FormData): Promise<ActionResult> {
       redirect(nextRaw);
     }
   }
-  revalidatePath("/nex-native/home");
-  redirect("/nex-native/home");
+  // Owner-authorised 2026-10-17 · post-sign-in landing is /welcome.
+  // The welcome page renders a signed-in branch (three-dots drawer in
+  // the header + "Continue to NEX" primary CTA to /home). The deep-
+  // link `next` branch above still takes precedence · only the
+  // default landing moves from /home to /welcome.
+  revalidatePath("/nex-native/welcome");
+  redirect("/nex-native/welcome");
 }
 
 // `signInAsDevAdminAction` removed · owner directive 2026-10-16. The

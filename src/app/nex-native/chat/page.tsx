@@ -35,11 +35,7 @@ import {
   acceptFriendInviteAction,
   declineFriendInviteAction,
 } from "../_actions";
-import {
-  NEX_OFFICIAL_CHAT_HREF,
-  NEX_OFFICIAL_DISPLAY_NAME,
-  NEX_OFFICIAL_HANDLE,
-} from "@/lib/nex-native/nex-official";
+import { NEX_OFFICIAL_CHAT_HREF } from "@/lib/nex-native/nex-official";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -795,11 +791,19 @@ export default async function ChatHubPage({ searchParams }: PageProps) {
           {/* Panel · landscape cards for the active tab */}
           <section style={{ marginTop: 22 }}>
             {activeTab === "friends" && (
-              <FriendsPanel
-                pendingCards={pendingCards}
-                friendCards={friendCards}
-                showPreview={showPreview}
-              />
+              <>
+                {/* NEX pinned cards · owner-authorised 2026-10-17 · the
+                    /nex-native/contacts route was retired and consolidated
+                    onto this surface. These two cards are the Contacts
+                    experience's permanent header · always rendered above
+                    the friends list for every signed-in NEX account. */}
+                <PinnedNexCards />
+                <FriendsPanel
+                  pendingCards={pendingCards}
+                  friendCards={friendCards}
+                  showPreview={showPreview}
+                />
+              </>
             )}
 
             {activeTab === "business" && (
@@ -1977,6 +1981,127 @@ type FriendCard = {
 
 type MockFriend = (typeof MOCK_FRIENDS)[number];
 
+/* ─── Pinned NEX cards ─────────────────────────────────────────
+   Rendered above the FriendsPanel on /chat?tab=friends. Owner-
+   authorised 2026-10-17 · ported from the retired
+   /nex-native/contacts route. Dark-navy NEX palette (cyan border
+   + white heading + muted subtitle) · matches the rest of the
+   Chat hub visual language, no Tailwind light-theme classes. */
+function PinnedNexCards(): React.ReactElement {
+  return (
+    <section
+      aria-label="NEX pinned destinations"
+      data-nex-chat-pinned-nex
+      style={{ display: "grid", gap: 10, marginBottom: 14 }}
+    >
+      <Link
+        href={NEX_OFFICIAL_CHAT_HREF}
+        data-nex-chat-pinned-card="customer-service"
+        style={pinnedCardLinkStyle(NEX.orange)}
+      >
+        <span
+          aria-hidden
+          style={pinnedCardIconStyle(NEX.orange)}
+        >
+          {/* Headset glyph */}
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M3 14v-2a9 9 0 0 1 18 0v2" />
+            <path d="M21 14a2 2 0 0 1-2 2h-1v-6h1a2 2 0 0 1 2 2z" />
+            <path d="M3 14a2 2 0 0 0 2 2h1v-6H5a2 2 0 0 0-2 2z" />
+            <path d="M12 20h3a2 2 0 0 0 2-2" />
+          </svg>
+        </span>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={pinnedCardTitleStyle()}>NEX customer service</div>
+          <div style={pinnedCardSubtitleStyle()}>
+            Help &amp; support · plans · account questions
+          </div>
+        </div>
+      </Link>
+      <Link
+        href="/nex-native/community"
+        data-nex-chat-pinned-card="community-noticeboard"
+        style={pinnedCardLinkStyle(NEX.cyan)}
+      >
+        <span
+          aria-hidden
+          style={pinnedCardIconStyle(NEX.cyan)}
+        >
+          {/* Noticeboard glyph */}
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M4 4h16v12H4z" />
+            <path d="M8 20h8" />
+            <path d="M12 16v4" />
+            <path d="M8 8h8" />
+            <path d="M8 12h5" />
+          </svg>
+        </span>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={pinnedCardTitleStyle()}>NEX Community Noticeboard</div>
+          <div style={pinnedCardSubtitleStyle()}>
+            Local outages · lost &amp; found · neighbourhood notices
+          </div>
+        </div>
+      </Link>
+    </section>
+  );
+}
+
+function pinnedCardLinkStyle(accent: string): React.CSSProperties {
+  return {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: "12px 14px",
+    borderRadius: 12,
+    border: `1px solid ${accent}55`,
+    background: NEX.panel,
+    color: NEX.textPrimary,
+    textDecoration: "none",
+    minHeight: 60,
+  };
+}
+
+function pinnedCardIconStyle(accent: string): React.CSSProperties {
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 36,
+    height: 36,
+    flex: "0 0 auto",
+    borderRadius: "50%",
+    background: `${accent}22`,
+    color: accent,
+  };
+}
+
+function pinnedCardTitleStyle(): React.CSSProperties {
+  return {
+    fontSize: 14,
+    fontWeight: 600,
+    color: NEX.textPrimary,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  };
+}
+
+function pinnedCardSubtitleStyle(): React.CSSProperties {
+  return {
+    fontSize: 12,
+    lineHeight: 1.35,
+    color: NEX.textSecondary,
+    // Wrap to a second line if the subtitle doesn't fit on 390px
+    // mobile · the previous nowrap+ellipsis combination clipped
+    // "neighbourhood notices" on the Community card. The pinned-
+    // card min-height is already generous (minHeight 60 → the card
+    // naturally grows when a second line of subtitle appears).
+    whiteSpace: "normal",
+    overflowWrap: "anywhere",
+  };
+}
+
 function FriendsPanel(props: {
   pendingCards: PendingCard[];
   friendCards: FriendCard[];
@@ -2004,19 +2129,10 @@ function FriendsPanel(props: {
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
-      {/* NEX support · pinned to the top of the Friends tab · always
-          visible so users don't need to remember the URL. Bridge 32a. */}
-      <div>
-        <SectionHeader
-          icon="🤝"
-          label="NEX support"
-          count={1}
-          accent={NEX.cyan}
-        />
-        <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
-          <NexOfficialCard />
-        </div>
-      </div>
+      {/* Legacy "NEX support" pinned row + NexOfficialCard retired
+          2026-10-17 · the new PinnedNexCards section mounted above
+          the FriendsPanel (customer-service + Community Noticeboard
+          cards) is the single consolidated Contacts surface. */}
       {props.pendingCards.length + props.friendCards.length === 0 && !props.showPreview && (
         <EmptyState
           icon="👥"
@@ -2188,114 +2304,6 @@ function SectionHeader(props: {
         · {props.count}
       </span>
     </div>
-  );
-}
-
-/** Pinned NEX support card · always visible at the top of the Friends
- *  tab. Wraps the seeded NEX1 account (nex-official.ts constants) with
- *  a cyan-forward treatment + verified tick so it reads as the one
- *  official support surface. Sealed 2026-09-28 · Bridge 32a. */
-function NexOfficialCard() {
-  return (
-    <Link
-      href={NEX_OFFICIAL_CHAT_HREF}
-      data-nex-chat-card
-      data-nex-chat-card-kind="nex-official"
-      style={{
-        position: "relative",
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        padding: "12px 12px",
-        background: NEX.panel,
-        border: `1px solid ${NEX.cyan}`,
-        borderRadius: 14,
-        textDecoration: "none",
-        color: NEX.textPrimary,
-        minHeight: 76,
-        transition: "border-color 200ms ease, box-shadow 200ms ease",
-        overflow: "hidden",
-        boxShadow: "0 0 0 1px rgba(0,175,255,0.10) inset, 0 0 20px rgba(0,175,255,0.10)",
-      }}
-    >
-      <div
-        aria-hidden
-        style={{
-          flexShrink: 0,
-          position: "relative",
-          width: 52,
-          height: 52,
-          borderRadius: "50%",
-          // Ring is white per Founder direction 2026-09-28 · matches
-          // the page header text colour so the card reads as neutral
-          // NEX identity rather than "another cyan chip".
-          border: `2px solid ${NEX.textPrimary}`,
-          boxShadow: `0 0 0 3px rgba(242,245,248,0.15), 0 2px 8px rgba(0,0,0,0.35)`,
-          background: NEX.cyanFaint,
-          // "NEX" label inside the avatar uses the same white header
-          // text colour, not the cyan accent.
-          color: NEX.textPrimary,
-          display: "grid",
-          placeItems: "center",
-          fontSize: 20,
-          fontWeight: 700,
-          letterSpacing: "0.05em",
-        }}
-      >
-        NEX
-      </div>
-      <div style={{ minWidth: 0, flex: 1 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            minWidth: 0,
-          }}
-        >
-          <span
-            style={{
-              fontSize: 15,
-              fontWeight: 500,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              minWidth: 0,
-              flexShrink: 1,
-            }}
-          >
-            {NEX_OFFICIAL_DISPLAY_NAME}
-          </span>
-          <VerifiedTick size={14} />
-        </div>
-        <div
-          style={{
-            marginTop: 2,
-            fontSize: 12,
-            color: NEX.textSecondary,
-            lineHeight: 1.3,
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          Ask about upgrades · features · account help
-        </div>
-        <div
-          style={{
-            marginTop: 2,
-            fontSize: 10,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-            color: NEX.cyan,
-            opacity: 0.75,
-            lineHeight: 1.2,
-          }}
-        >
-          {NEX_OFFICIAL_HANDLE}.nex · Official
-        </div>
-      </div>
-    </Link>
   );
 }
 

@@ -40,16 +40,35 @@
 //   · Sealed "does not show controls" rule preserved in header (G5)
 //   · Signed-in → /home redirect preserved (G6)
 //   · Themes blurb mentions "premium" (G7)
+//
+// Shared-header exception (sealed 2026-10-17):
+// -------------------------------------------
+// Welcome deliberately does NOT mount the shared `NexPageHeader`
+// from `src/app/nex-native/_page-header.tsx`. Welcome has its own
+// bespoke, taller header that renders:
+//   · a large `NexPingBadge size={56}` as the hero identity (left),
+//   · the owner-supplied cyan speech-bubble decoration (right-top),
+//   · the signed-in-only `WelcomeHeaderDrawerButtonClient` (right).
+//
+// The 2026-10-17 shared-header upgrade folded a smaller 36px ping
+// badge AND a shared three-dots drawer into `NexPageHeader` so every
+// surface that mounts it (59 pages at seal time) gets the same
+// identity + navigation drawer. Welcome stays on its bespoke header
+// because its visual language is a hero landing, not a dark-navy
+// surface header. If a future change migrates Welcome to the shared
+// header, remove the bespoke ping badge + drawer here first to avoid
+// double-rendering · see `_page-header.tsx` + the sibling drawer
+// client component `_page-header-drawer-button-client.tsx`.
 
 import type * as React from "react";
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { InstallHomeButtonClient } from "../_install-home-button-client";
 import { resolveNexAppSessionOrGuest } from "@/lib/nex-native/app/session-or-guest";
 import { ChatIdentityHeader } from "@/lib/nex-native/chat-chrome/chat-identity-header";
 import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
 import { rememberWelcomeIntentAction } from "./_remember-intent-action";
+import { WelcomeHeaderDrawerButtonClient } from "./_header-drawer-button-client";
 import {
   WELCOME_INTENT_COOKIE,
   isWelcomeIntent,
@@ -96,29 +115,15 @@ interface ChatNexCard {
   readonly visualSrc: string;
 }
 
-export default async function WelcomePage({
-  searchParams,
-}: {
-  searchParams?: Promise<{ preview?: string }>;
-}) {
-  // Owner-escape-hatch · ?preview=1 lets a signed-in user open the
-  // welcome page from Settings without being bounced to /home.
-  // The preview flag ONLY bypasses the home redirect · it does NOT
-  // mutate account state, selected theme, contacts, or settings ·
-  // and it has no effect for signed-out visitors (they always see
-  // the welcome page anyway). Added 2026-10-15 per the owner-
-  // authorised NEX landing/welcome/returning-user flow.
-  const sp = searchParams ? await searchParams : {};
-  const previewMode = sp.preview === "1";
-
+export default async function WelcomePage() {
+  // 2026-10-17 · owner-authorised change: Welcome is now the signed-in
+  // landing after sign-in (previously signed-in users bounced to /home).
+  // The entry router at /nex-native/page.tsx still sends direct
+  // signed-in entries to /home (unchanged · narrow scope). This change
+  // only affects post-sign-in landing via signInAction and the
+  // Settings "View the welcome page →" affordance.
   const viewer = await resolveNexAppSessionOrGuest();
-  if (viewer.kind === "session" && !previewMode) {
-    // Signed-in visitors always land in /home · the welcome page is
-    // guest-only. This mirrors the sealed router at /nex-native/page.tsx.
-    // Exception: signed-in viewers who arrive with ?preview=1 (via the
-    // Settings "View the welcome page →" affordance) stay on the page.
-    redirect("/nex-native/home");
-  }
+  const isSignedIn = viewer.kind === "session";
 
   // Owner-authorised intent persistence · 2026-10-15.
   // Read the welcome-intent cookie (if set by an earlier card tap).
@@ -326,6 +331,20 @@ export default async function WelcomePage({
               {headerSubtitle}
             </span>
           </div>
+          {isSignedIn ? (
+            <div
+              data-nex-welcome-header-drawer-slot
+              style={{
+                marginLeft: "auto",
+                display: "flex",
+                alignItems: "center",
+                position: "relative",
+                zIndex: 3,
+              }}
+            >
+              <WelcomeHeaderDrawerButtonClient />
+            </div>
+          ) : null}
         </header>
 
         {/* ─── Centre column ─── */}
@@ -450,56 +469,83 @@ export default async function WelcomePage({
               padding: "0 14px",
             }}
           >
-            <Link
-              href={createAccountHref}
-              data-nex-welcome-primary-cta
-              data-nex-welcome-primary-cta-intent={rememberedIntent ?? "none"}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                minHeight: 52,
-                borderRadius: 14,
-                background: NEX.orange,
-                color: "#0a0608",
-                fontSize: 16,
-                fontWeight: 700,
-                textDecoration: "none",
-                border: `1px solid ${NEX.orange}`,
-                boxShadow: `0 1px 0 rgba(255,255,255,0.18) inset, 0 14px 32px -16px ${NEX.orange}`,
-              }}
-            >
-              Create free account →
-            </Link>
-            <Link
-              href="/nex-native/sign-in"
-              data-nex-welcome-secondary-cta
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                minHeight: 48,
-                borderRadius: 12,
-                background: "transparent",
-                color: NEX.cyan,
-                fontSize: 14.5,
-                fontWeight: 600,
-                textDecoration: "none",
-                border: `1px solid ${NEX.cyanSoft}`,
-              }}
-            >
-              Already have an account? Sign in
-            </Link>
-            <div
-              style={{
-                textAlign: "center",
-                fontSize: 11.5,
-                color: NEX.textMuted,
-                marginTop: 2,
-              }}
-            >
-              15 seconds · no card needed
-            </div>
+            {isSignedIn ? (
+              <Link
+                href="/nex-native/home"
+                data-nex-welcome-primary-cta
+                data-nex-welcome-primary-cta-shape="signed-in"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  minHeight: 52,
+                  borderRadius: 14,
+                  background: NEX.orange,
+                  color: "#0a0608",
+                  fontSize: 16,
+                  fontWeight: 700,
+                  textDecoration: "none",
+                  border: `1px solid ${NEX.orange}`,
+                  boxShadow: `0 1px 0 rgba(255,255,255,0.18) inset, 0 14px 32px -16px ${NEX.orange}`,
+                }}
+              >
+                Continue to NEX →
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href={createAccountHref}
+                  data-nex-welcome-primary-cta
+                  data-nex-welcome-primary-cta-shape="guest"
+                  data-nex-welcome-primary-cta-intent={rememberedIntent ?? "none"}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minHeight: 52,
+                    borderRadius: 14,
+                    background: NEX.orange,
+                    color: "#0a0608",
+                    fontSize: 16,
+                    fontWeight: 700,
+                    textDecoration: "none",
+                    border: `1px solid ${NEX.orange}`,
+                    boxShadow: `0 1px 0 rgba(255,255,255,0.18) inset, 0 14px 32px -16px ${NEX.orange}`,
+                  }}
+                >
+                  Create free account →
+                </Link>
+                <Link
+                  href="/nex-native/sign-in"
+                  data-nex-welcome-secondary-cta
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minHeight: 48,
+                    borderRadius: 12,
+                    background: "transparent",
+                    color: NEX.cyan,
+                    fontSize: 14.5,
+                    fontWeight: 600,
+                    textDecoration: "none",
+                    border: `1px solid ${NEX.cyanSoft}`,
+                  }}
+                >
+                  Already have an account? Sign in
+                </Link>
+                <div
+                  style={{
+                    textAlign: "center",
+                    fontSize: 11.5,
+                    color: NEX.textMuted,
+                    marginTop: 2,
+                  }}
+                >
+                  15 seconds · no card needed
+                </div>
+              </>
+            )}
           </div>
 
           {/* Terms + privacy footer removed 2026-10-15 · owner directive
