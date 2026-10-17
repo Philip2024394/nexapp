@@ -55,7 +55,10 @@ export function MarketplaceThemeCard(
   const accent = isFree ? NEX.cyan : NEX.gold;
   const accentSoft = isFree ? NEX.cyanSoft : NEX.goldSoft;
   const accentFaint = isFree ? NEX.cyanFaint : NEX.goldFaint;
-  const heroHeight = isFree ? 160 : 110;
+  // Owner directive 2026-10-18 · Premium grid moved from 3-column to
+  // 2-column · hero scales up accordingly (110 → 150). Still shorter
+  // than the Free hero (160) so the Free pair reads as the hero slot.
+  const heroHeight = isFree ? 160 : 150;
 
   return (
     <Link
@@ -136,7 +139,10 @@ export function MarketplaceThemeCard(
         <div
           data-nex-themes-card-title
           style={{
-            fontSize: isFree ? 15 : 13,
+            // Premium cards now 2-column · can carry the same 15px
+            // title weight as Free · reads as peer products rather
+            // than secondary thumbnails.
+            fontSize: 15,
             fontWeight: 700,
             color: NEX.text,
             lineHeight: 1.15,
@@ -171,17 +177,19 @@ export function MarketplaceThemeCard(
         <div
           data-nex-themes-card-cta
           style={{
+            // Premium CTA promoted to the same 40px / 13px scale as
+            // Free · the 2-column premium grid gives us the width.
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
             gap: 6,
             width: "100%",
-            minHeight: isFree ? 40 : 34,
+            minHeight: 40,
             borderRadius: 999,
             background: accentFaint,
             border: `1px solid ${accentSoft}`,
             color: accent,
-            fontSize: isFree ? 13 : 12,
+            fontSize: 13,
             fontWeight: 700,
             boxSizing: "border-box",
           }}

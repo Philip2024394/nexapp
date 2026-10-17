@@ -240,8 +240,14 @@ export default async function ThemePickerPage({
             <div
               data-nex-themes-premium-grid
               style={{
+                // Owner directive 2026-10-18 · premium themes are a
+                // paid-conversion surface · bigger imagery sells
+                // better than tighter density. Moved from 3-column
+                // (design reference) to 2-column (matches the Free
+                // grid shape · consistent cross-page rhythm · each
+                // hero ~175px vs ~110px on a 390px viewport).
                 display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
+                gridTemplateColumns: "1fr 1fr",
                 gap: 10,
               }}
             >
