@@ -99,6 +99,21 @@ export function StandardExperience({
   const [lastReactId, setLastReactId] = React.useState<string | null>(null);
   const colours = engine.colours;
 
+  // Owner directive 2026-10-18 · stable per-mount reference for the
+  // bubble sent-at timestamps · ensures Date.now() is called ONCE so
+  // re-renders don't shuffle the preview times. Each message gets a
+  // monotonically increasing offset (older → newer) so the chat reads
+  // like a real conversation.
+  const mountNow = React.useMemo(() => Date.now(), []);
+  // Preview mock reactions keyed by message id so the shell can light
+  // up specific bubbles with a reaction row · visual-only, no actual
+  // reaction wiring in preview mode.
+  const PREVIEW_REACTIONS: Record<string, Record<string, number>> = {
+    s1: { "❤️": 2 },
+    s3: { "👍": 1, "🔥": 1 },
+    s4: { "😍": 1 },
+  };
+
   const handleSend = React.useCallback(() => {
     const trimmed = composerText.trim();
     if (!trimmed) return;
@@ -231,7 +246,7 @@ export function StandardExperience({
             justifyContent: "flex-end",
           }}
         >
-          {allMessages.map((m) => {
+          {allMessages.map((m, idx) => {
             if (m.body.startsWith("[sticker:")) {
               const slug = m.body.slice(9, -1);
               return (
@@ -246,6 +261,16 @@ export function StandardExperience({
                 </div>
               );
             }
+            /* Owner directive 2026-10-18 · bubble feature-match with
+               Joker · each bubble carries peer avatar (peer-side only)
+               + sent-at timestamp + delivery ticks (mine-side only ·
+               all preview mine messages are "read") + reaction row
+               (visual-only mock from PREVIEW_REACTIONS). Timestamps
+               walk back from mountNow in 90s increments so the oldest
+               seed message reads oldest · locally-sent messages (idx
+               past SEED_MESSAGES length) read as "just now". */
+            const minutesAgo = Math.max(0, allMessages.length - idx - 1) * 1.5;
+            const sentAtMs = mountNow - minutesAgo * 60_000;
             return (
               <StandardBubble
                 key={m.id}
@@ -253,6 +278,11 @@ export function StandardExperience({
                 mine={m.mine}
                 reacting={lastReactId === m.id}
                 idle={true}
+                peerAvatarUrl={peer.avatarUrl ?? null}
+                peerName={peer.displayName}
+                sentAtMs={sentAtMs}
+                delivery={m.mine ? "read" : undefined}
+                reactions={PREVIEW_REACTIONS[m.id]}
               >
                 {m.body}
               </StandardBubble>

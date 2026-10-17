@@ -7,9 +7,26 @@
 // Reads EVERY visual decision from engine.bubbleTreatment. Never reads
 // theme.id, wallpaper_config, or hex colours directly. Theme personality
 // drives entrance / idle / reaction animations.
+//
+// Owner directive 2026-10-18 · "all themes chat bubble from other user
+// must show their profile image in chat bubble same as joker chat
+// bubble - all themes and time of message and if delivered tick marks
+// - same as joker and emoji under each bubble chat same as joker".
+// Feature additions (all preview-visual-only · no real reaction wiring):
+//   · 24px peer avatar rendered to the LEFT of peer bubbles · falls
+//     back to displayName initials when peerAvatarUrl is null (same
+//     fallback the sealed ChatIdentityHeader uses).
+//   · Timestamp line INSIDE the bubble bottom-right · HH:MM 24h ·
+//     paired with delivery ticks on `mine` bubbles.
+//   · Delivery ticks on `mine` bubbles · "sent" = single ✓ ·
+//     "delivered" = ✓✓ grey · "read" = ✓✓ theme-accent.
+//   · Emoji reactions row under the bubble · theme-tinted chip row ·
+//     visual-only · taps are no-op in preview.
 
 import * as React from "react";
 import type { ResolvedEngine } from "../_engine/theme-engine";
+
+export type StandardBubbleDelivery = "sent" | "delivered" | "read";
 
 export interface StandardBubbleProps {
   engine: ResolvedEngine;
@@ -21,6 +38,24 @@ export interface StandardBubbleProps {
   /** Enable the per-personality idle animation (shimmer / wobble / etc).
    *  Off by default to keep the gallery calm; on in the live-feel preview. */
   idle?: boolean;
+  /** Owner directive 2026-10-18 · peer avatar shown to the LEFT of
+   *  peer (not-mine) bubbles · null falls back to initials from
+   *  peerName. Ignored for `mine` bubbles (user's own messages
+   *  don't need an avatar). */
+  peerAvatarUrl?: string | null;
+  /** Owner directive 2026-10-18 · peer display name · drives initials
+   *  fallback when peerAvatarUrl is null. Ignored for `mine` bubbles. */
+  peerName?: string;
+  /** Owner directive 2026-10-18 · epoch ms of send-time · rendered as
+   *  HH:MM 24h inside the bubble bottom-right. Omit to hide the row. */
+  sentAtMs?: number;
+  /** Owner directive 2026-10-18 · delivery state for `mine` bubbles ·
+   *  "sent" shows ✓ · "delivered" shows ✓✓ grey · "read" shows ✓✓
+   *  in the theme accent. Omit to hide ticks. */
+  delivery?: StandardBubbleDelivery;
+  /** Owner directive 2026-10-18 · emoji → count map for the reactions
+   *  row rendered under the bubble. Empty / omitted hides the row. */
+  reactions?: Record<string, number>;
 }
 
 export function StandardBubble({
@@ -29,15 +64,16 @@ export function StandardBubble({
   reacting,
   children,
   idle = true,
+  peerAvatarUrl,
+  peerName,
+  sentAtMs,
+  delivery,
+  reactions,
 }: StandardBubbleProps): React.JSX.Element {
   const t = engine.bubbleTreatment({ mine, isReacting: reacting });
   const [showTrail, setShowTrail] = React.useState(false);
+  const accent = engine.colours.primary;
 
-  // Fire the rising-bubble trail once on mount for `mine` bubbles when
-  // the effect is enabled. Six ascending bubbles at varied sizes +
-  // staggered delays make a convincing underwater send signal. The
-  // keyframe comes from the engine's stylesheet (nex-se-bubble-trail)
-  // so any theme that enables bubbleTrailOnSend inherits the behaviour.
   React.useEffect(() => {
     if (mine && t.effects.bubbleTrailOnSend) {
       setShowTrail(true);
@@ -53,43 +89,208 @@ export function StandardBubble({
   if (t.motion.reaction && reacting)
     animations.push(`${t.motion.reaction} 700ms ease-out`);
 
+  const timeLabel = sentAtMs ? formatHM24(sentAtMs) : null;
+  const reactionEntries = reactions
+    ? Object.entries(reactions).filter(([, n]) => n > 0)
+    : [];
+
+  // Peer bubbles get an avatar column on the left · mine bubbles don't.
+  // Flex-end alignment keeps the avatar aligned to the bubble's bottom
+  // so multi-line bubbles still read cleanly.
+  const row: React.CSSProperties = {
+    display: "flex",
+    gap: 6,
+    alignItems: "flex-end",
+    alignSelf: mine ? "flex-end" : "flex-start",
+    maxWidth: "82%",
+  };
+
+  const bubble: React.CSSProperties = {
+    position: "relative",
+    padding: t.geometry.padding,
+    borderRadius: t.geometry.borderRadius,
+    background: t.material.background,
+    backdropFilter: t.material.backdropFilter,
+    WebkitBackdropFilter: t.material.backdropFilter,
+    border: t.material.border,
+    boxShadow: t.material.boxShadow,
+    color: t.typography.color,
+    textShadow: t.typography.textShadow,
+    fontWeight: t.typography.fontWeight,
+    fontSize: 14,
+    animation: animations.join(", "),
+    wordBreak: "break-word",
+    overflowWrap: "anywhere",
+    whiteSpace: "pre-wrap",
+    minWidth: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: 2,
+  };
+
   return (
     <div
       data-nex-se-bubble={mine ? "mine" : "peer"}
       style={{
-        position: "relative",
+        display: "flex",
+        flexDirection: "column",
+        gap: 4,
         alignSelf: mine ? "flex-end" : "flex-start",
-        maxWidth: "72%",
-        padding: t.geometry.padding,
-        borderRadius: t.geometry.borderRadius,
-        background: t.material.background,
-        backdropFilter: t.material.backdropFilter,
-        WebkitBackdropFilter: t.material.backdropFilter,
-        border: t.material.border,
-        boxShadow: t.material.boxShadow,
-        color: t.typography.color,
-        textShadow: t.typography.textShadow,
-        fontWeight: t.typography.fontWeight,
-        fontSize: 14,
-        animation: animations.join(", "),
-        // UNIVERSAL RULE · sealed 2026-10-05 · chat text MUST fit
-        // inside its bubble on every theme. Long unbroken strings
-        // (URLs, product names) wrap at any point rather than
-        // extending the bubble past its max-width. preserve-newlines
-        // via pre-wrap so paragraph intent is kept.
-        wordBreak: "break-word",
-        overflowWrap: "anywhere",
-        whiteSpace: "pre-wrap",
-        minWidth: 0,
+        maxWidth: "82%",
       }}
     >
-      {t.innerLightOverlay && (
-        <span aria-hidden style={t.innerLightOverlay} />
+      <div style={row}>
+        {!mine && (
+          <PeerAvatar
+            url={peerAvatarUrl ?? null}
+            name={peerName ?? "?"}
+            accent={accent}
+          />
+        )}
+        <div style={bubble}>
+          {t.innerLightOverlay && (
+            <span aria-hidden style={t.innerLightOverlay} />
+          )}
+          <span style={{ position: "relative", zIndex: 1 }}>{children}</span>
+          {(timeLabel || (mine && delivery)) && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-end",
+                gap: 4,
+                marginTop: 2,
+                fontSize: 10,
+                opacity: 0.7,
+                color: t.typography.color,
+              }}
+            >
+              {timeLabel && <span>{timeLabel}</span>}
+              {mine && delivery && (
+                <DeliveryTicks state={delivery} accent={accent} />
+              )}
+            </div>
+          )}
+          {showTrail && <StandardBubbleTrail engine={engine} />}
+        </div>
+      </div>
+
+      {reactionEntries.length > 0 && (
+        <div
+          data-nex-se-bubble-reactions
+          style={{
+            display: "flex",
+            gap: 4,
+            flexWrap: "wrap",
+            alignSelf: mine ? "flex-end" : "flex-start",
+            marginLeft: mine ? 0 : 30, // clear the avatar column
+          }}
+        >
+          {reactionEntries.map(([emoji, count]) => (
+            <span
+              key={emoji}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 3,
+                padding: "2px 6px",
+                borderRadius: 999,
+                background: `${accent}22`,
+                border: `1px solid ${accent}55`,
+                fontSize: 11,
+                lineHeight: 1,
+                color: t.typography.color,
+              }}
+            >
+              <span style={{ fontSize: 11 }}>{emoji}</span>
+              {count > 1 && <span>{count}</span>}
+            </span>
+          ))}
+        </div>
       )}
-      <span style={{ position: "relative", zIndex: 1 }}>{children}</span>
-      {showTrail && <StandardBubbleTrail engine={engine} />}
     </div>
   );
+}
+
+// ─── Peer avatar · 24px · wallpaper-crop (shared with the identity
+//     header's avatar fallback pattern) ─────
+
+function PeerAvatar({
+  url,
+  name,
+  accent,
+}: {
+  url: string | null;
+  name: string;
+  accent: string;
+}): React.JSX.Element {
+  const initials = React.useMemo(() => {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 0 || parts[0].length === 0) return "?";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }, [name]);
+  return (
+    <span
+      aria-hidden
+      data-nex-se-bubble-avatar
+      style={{
+        flexShrink: 0,
+        width: 24,
+        height: 24,
+        borderRadius: "50%",
+        border: `1px solid ${accent}66`,
+        background: url
+          ? `center/cover url(${url})`
+          : `linear-gradient(135deg, ${accent}44, #05101f)`,
+        display: "grid",
+        placeItems: "center",
+        fontSize: 9,
+        fontWeight: 700,
+        color: "#F2F5F8",
+        marginBottom: 2,
+      }}
+    >
+      {!url && initials}
+    </span>
+  );
+}
+
+// ─── Delivery ticks · ✓ / ✓✓ / ✓✓-accent ─────
+
+function DeliveryTicks({
+  state,
+  accent,
+}: {
+  state: StandardBubbleDelivery;
+  accent: string;
+}): React.JSX.Element {
+  const colour = state === "read" ? accent : "currentColor";
+  return (
+    <svg
+      width="14"
+      height="10"
+      viewBox="0 0 18 12"
+      fill="none"
+      stroke={colour}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <polyline points="1 6 5 10 11 2" />
+      {state !== "sent" && <polyline points="6 6 10 10 16 2" />}
+    </svg>
+  );
+}
+
+// ─── Date → HH:MM 24h ─────
+
+function formatHM24(ms: number): string {
+  const d = new Date(ms);
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
 }
 
 function StandardBubbleTrail({
@@ -99,9 +300,6 @@ function StandardBubbleTrail({
 }): React.JSX.Element {
   const highlight = engine.colours.highlight;
   const primary = engine.colours.primary;
-  // Six bubbles, varied size + lateral drift, slightly transparent
-  // highlight gradient so each reads as a real droplet. Keyframe
-  // nex-se-bubble-trail is defined in the engine's shared stylesheet.
   const trail = [
     { right: 4, size: 11, dur: 1900, delay: 0 },
     { right: 12, size: 7, dur: 2100, delay: 120 },
