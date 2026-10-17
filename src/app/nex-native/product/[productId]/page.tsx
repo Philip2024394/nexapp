@@ -124,7 +124,7 @@ export default async function Page({
             {product.tags.map((t) => (
               <Link
                 key={t}
-                href={`/nex-native/search?q=${encodeURIComponent(t)}`}
+                href="/nex-native/directory/landing"
                 className="inline-block rounded border border-[var(--nex-neutral-300)] bg-white px-2 py-0.5 text-xs text-[var(--nex-neutral-700)] hover:border-[var(--nex-accent-500)]"
               >
                 {t}

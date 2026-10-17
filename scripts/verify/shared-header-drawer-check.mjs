@@ -131,11 +131,15 @@ async function main() {
       // Seven sealed destinations in order
       const expectLinks = [
         ["home", "/nex-native/home"],
-        // Contacts experience consolidated onto /chat?tab=friends · 2026-10-17.
-        ["contacts", "/nex-native/chat?tab=friends"],
+        // Phase 1 Contacts redesign restored /nex-native/contacts as a
+        // dedicated hub (2026-10-17). When NEX_CONTACTS_V2_ENABLED is
+        // off, the route redirects to /chat?tab=friends · same end state.
+        ["contacts", "/nex-native/contacts"],
         ["chat", "/nex-native/chat"],
         ["calls", "/nex-native/calls"],
-        ["search", "/nex-native/search"],
+        // Canonical-directory doctrine 2026-10-17 · drawer "Search"
+        // lands on the one canonical NEX Directory entry.
+        ["search", "/nex-native/directory/landing"],
         ["settings", "/nex-native/settings"],
       ];
       for (const [key, href] of expectLinks) {

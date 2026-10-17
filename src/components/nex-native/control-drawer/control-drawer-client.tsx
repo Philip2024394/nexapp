@@ -399,7 +399,15 @@ function IdentityBar({
     <div style={identityBarStyle} data-nex-control-drawer-identity>
       <div style={identityNameStyle}>{session.displayName}</div>
       {session.nexHandle ? (
-        <div style={identityHandleStyle}>{session.nexHandle}</div>
+        <div style={identityHandleStyle}>
+          {/* Owner directive 2026-10-17 · the "nex-" prefix is a
+              brand mark · always rendered uppercase as "NEX-" ·
+              the numeric part is preserved exactly. Storage stays
+              lowercase (canonical column shape · validated by
+              `normaliseHandle` in bio/[nex_handle]/_handle.ts) ·
+              this is purely a display transform. */}
+          {session.nexHandle.replace(/^nex-/i, "NEX-")}
+        </div>
       ) : null}
     </div>
   );
@@ -621,11 +629,18 @@ const identityNameStyle: React.CSSProperties = {
   fontWeight: 700,
 };
 const identityHandleStyle: React.CSSProperties = {
+  // Owner directive 2026-10-17 · the NEX handle is the hero
+  // identifier in the ControlDrawer identity bar · "header size
+  // bold" · bumped from 11px/regular to 20px/800 with tighter
+  // letter-spacing to read as a title. Monospace is kept so the
+  // digits align like an ID badge.
   color: CYAN,
-  fontSize: 11,
+  fontSize: 20,
+  fontWeight: 800,
+  lineHeight: 1.1,
   fontFamily:
     'ui-monospace, SFMono-Regular, Menlo, Monaco, "Courier New", monospace',
-  letterSpacing: 0.3,
+  letterSpacing: 0.5,
 };
 const identityBarAnonStyle: React.CSSProperties = {
   ...identityBarStyle,

@@ -39,6 +39,7 @@ import { NexPageHeader } from "../../_page-header";
 import { NexFaceCameraUploader } from "./_face-camera-uploader";
 import { DailyActivitySection } from "./_daily-activity-section";
 import { DisplayNameEditor } from "./_display-name-editor";
+import { ChosenHandleField } from "./_chosen-handle-field";
 import { NexIdShare } from "./_nex-id-share";
 import { CopyHandleButton } from "./_copy-handle-button";
 import {
@@ -334,6 +335,13 @@ function PersonalTab(props: {
           it saves independently without re-validating the rest of
           the profile fields. */}
       <DisplayNameEditor initialName={account.display_name} />
+
+      {/* v12 (2026-10-17) · user-chosen NEX display name
+          (chosen_handle, migration 204). Stricter Unicode policy than
+          Bridge-80's display_name: letters/numbers/marks + spaces and
+          four punctuation characters only; no emojis. Non-unique by
+          design. Permanent nex_handle (migration 013) is untouched. */}
+      <ChosenHandleField initialValue={account.chosen_handle ?? null} />
 
       <form
         action={updateProfileAction}

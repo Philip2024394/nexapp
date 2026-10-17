@@ -123,3 +123,39 @@ export function searchEnabledForRequest(
   if (Array.isArray(v)) return v.some((x) => x === "1" || x === "true");
   return false;
 }
+
+// ─────────────────────────────────────────────────────────────
+// NEX Contacts v2 · dedicated /nex-native/contacts dark-navy
+// "Earth" background redesign · owner-authorised 2026-10-17.
+// -----------------------------------------------------------
+// Phase 1 replaces the pure-redirect `/contacts` page with a
+// dedicated Contacts hub. The redesign is isolated and revert-
+// ready behind this flag (owner directive D7).
+//
+// Rollout posture (differs from COMMERCE / SEARCH):
+//   · DEV default = ON    · the iterating designer sees changes
+//                           immediately without env config
+//   · PROD default = OFF  · strict · must set
+//                           NEX_CONTACTS_V2_ENABLED=1 to enable
+//   · Explicit 0/false in env always wins (even in dev)
+// This mirrors the owner's "updates must show on app as we
+// build them" directive while preserving the production safety
+// net. When the flag is OFF, `/contacts` falls back to its
+// previous server-side redirect to /chat?tab=friends.
+export const NEX_CONTACTS_V2_ENABLED: boolean = (() => {
+  const raw =
+    typeof process !== "undefined" && process.env
+      ? process.env.NEX_CONTACTS_V2_ENABLED
+      : undefined;
+  if (typeof raw === "string" && raw.length > 0) {
+    const normalized = raw.trim().toLowerCase();
+    if (normalized === "0" || normalized === "false" || normalized === "no") {
+      return false;
+    }
+    if (normalized === "1" || normalized === "true" || normalized === "yes") {
+      return true;
+    }
+  }
+  // Unset env · dev-mode default-on · production default-off.
+  return process.env.NODE_ENV !== "production";
+})();

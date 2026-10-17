@@ -41,24 +41,26 @@
 //   · Signed-in → /home redirect preserved (G6)
 //   · Themes blurb mentions "premium" (G7)
 //
-// Shared-header exception (sealed 2026-10-17):
+// Shared-header exception (sealed 2026-10-17 · drawer unified later same day):
 // -------------------------------------------
 // Welcome deliberately does NOT mount the shared `NexPageHeader`
 // from `src/app/nex-native/_page-header.tsx`. Welcome has its own
 // bespoke, taller header that renders:
 //   · a large `NexPingBadge size={56}` as the hero identity (left),
 //   · the owner-supplied cyan speech-bubble decoration (right-top),
-//   · the signed-in-only `WelcomeHeaderDrawerButtonClient` (right).
+//   · the shared `ControlDrawer` three-dots button (right · for both
+//     signed-in and guest visitors · guests see a sign-in prompt).
 //
-// The 2026-10-17 shared-header upgrade folded a smaller 36px ping
-// badge AND a shared three-dots drawer into `NexPageHeader` so every
-// surface that mounts it (59 pages at seal time) gets the same
-// identity + navigation drawer. Welcome stays on its bespoke header
-// because its visual language is a hero landing, not a dark-navy
-// surface header. If a future change migrates Welcome to the shared
-// header, remove the bespoke ping badge + drawer here first to avoid
-// double-rendering · see `_page-header.tsx` + the sibling drawer
-// client component `_page-header-drawer-button-client.tsx`.
+// Owner directive 2026-10-17 (later): the bespoke
+// `WelcomeHeaderDrawerButtonClient` is retired and the file deleted ·
+// Welcome now mounts the SAME `ControlDrawer` used on
+// `/nex-native/directory/landing`, giving every NEX surface a single
+// drawer. Welcome keeps its hero-styled header shell; only the drawer
+// trigger has been swapped out. If a future change migrates Welcome
+// to the shared `NexPageHeader`, remove the bespoke ping badge AND
+// this ControlDrawer mount first to avoid double-rendering · see
+// `_page-header.tsx` + the sibling drawer client component
+// `_page-header-drawer-button-client.tsx`.
 
 import type * as React from "react";
 import Link from "next/link";
@@ -68,7 +70,15 @@ import { resolveNexAppSessionOrGuest } from "@/lib/nex-native/app/session-or-gue
 import { ChatIdentityHeader } from "@/lib/nex-native/chat-chrome/chat-identity-header";
 import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
 import { rememberWelcomeIntentAction } from "./_remember-intent-action";
-import { WelcomeHeaderDrawerButtonClient } from "./_header-drawer-button-client";
+// Owner directive 2026-10-17 · the bespoke Welcome drawer is retired ·
+// Welcome now mounts the SAME ControlDrawer used on
+// /nex-native/directory/landing · one drawer across the app.
+import {
+  ControlDrawer,
+  type ControlDrawerSession,
+} from "@/components/nex-native/control-drawer/control-drawer-client";
+import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { effectiveTier } from "@/lib/nex-native/account-service";
 import {
   WELCOME_INTENT_COOKIE,
   isWelcomeIntent,
@@ -124,6 +134,24 @@ export default async function WelcomePage() {
   // Settings "View the welcome page →" affordance.
   const viewer = await resolveNexAppSessionOrGuest();
   const isSignedIn = viewer.kind === "session";
+
+  // Owner directive 2026-10-17 · ControlDrawer session resolution ·
+  // mirrors the sealed /directory/landing pattern. Null session →
+  // drawer renders a Sign-In prompt. Welcome is a guest-safe
+  // surface so a session failure must never block first paint.
+  let drawerSession: ControlDrawerSession | null = null;
+  try {
+    const sess = await resolveNexAppSessionFromContext();
+    if (sess) {
+      drawerSession = {
+        displayName: sess.account.display_name,
+        nexHandle: sess.account.nex_handle,
+        isBisnis: effectiveTier(sess.account) === "bisnis",
+      };
+    }
+  } catch {
+    // guest · keep drawerSession = null
+  }
 
   // Owner-authorised intent persistence · 2026-10-15.
   // Read the welcome-intent cookie (if set by an earlier card tap).
@@ -202,17 +230,30 @@ export default async function WelcomePage() {
   return (
     <>
       <style>{`html, body { background: ${NEX.bg} !important; }`}</style>
+      {/* Owner directive 2026-10-17 · "app-size on desktop" ·
+          satisfied by the global `nex-native-frame` phone-column
+          CSS at src/app/nex-native/nex-native.css:177 (420 × 909
+          clamp on viewport ≥ 500px · full-width on mobile). This
+          page relies on that inherited frame · it does NOT add its
+          own app-size wrapper (would double-nest). The one visual
+          correction kept from the same directive is scoping the
+          Earth backdrop to `main` instead of `100vw / 100dvh` so
+          the hero no longer spills past the phone bezel on desktop
+          (position:fixed children escape the frame · per the
+          nex-native.css comment at line 148). */}
       <main
         data-nex-welcome-root
         data-nex-welcome-variant="chat-nex"
         style={{
           position: "relative",
           minHeight: "100dvh",
+          width: "100%",
           background: NEX.bg,
           color: NEX.textPrimary,
           fontFamily: SANS,
           display: "flex",
           flexDirection: "column",
+          overflow: "hidden",
           // 2026-10-15 · owner directive "cards increase width 20px".
           // No horizontal padding on main · section + cards extend
           // viewport-edge-to-edge. Hero text + CTAs re-add their
@@ -221,24 +262,22 @@ export default async function WelcomePage() {
           paddingRight: 0,
         }}
       >
-        {/* Full-viewport Cyber Assistant backdrop · owner-supplied
-         *  2026-10-15 · pinned to the viewport (position: fixed +
-         *  width/height 100dvw/100dvh) so the image ALWAYS fills the
-         *  user's screen regardless of scroll position (owner rule
-         *  2026-10-15: "the back ground image must fit height and
-         *  width"). All interactive content renders on top with
-         *  position: relative + zIndex. */}
+        {/* Owner directive 2026-10-17 · backdrop scoped to `main`
+            (position: absolute · 100% × 100% of parent) so on desktop
+            the image stays INSIDE the global phone frame bezel. On
+            mobile the frame is 100% wide so the backdrop still spans
+            the full screen. */}
         <img
           src="/nex-native/welcome-hero.png"
           alt=""
           aria-hidden
           data-nex-welcome-backdrop
           style={{
-            position: "fixed",
+            position: "absolute",
             top: 0,
             left: 0,
-            width: "100vw",
-            height: "100dvh",
+            width: "100%",
+            height: "100%",
             objectFit: "cover",
             objectPosition: "center center",
             zIndex: 0,
@@ -331,20 +370,21 @@ export default async function WelcomePage() {
               {headerSubtitle}
             </span>
           </div>
-          {isSignedIn ? (
-            <div
-              data-nex-welcome-header-drawer-slot
-              style={{
-                marginLeft: "auto",
-                display: "flex",
-                alignItems: "center",
-                position: "relative",
-                zIndex: 3,
-              }}
-            >
-              <WelcomeHeaderDrawerButtonClient />
-            </div>
-          ) : null}
+          <div
+            data-nex-welcome-header-drawer-slot
+            style={{
+              marginLeft: "auto",
+              display: "flex",
+              alignItems: "center",
+              position: "relative",
+              zIndex: 3,
+            }}
+          >
+            {/* Owner directive 2026-10-17 · ControlDrawer replaces the
+                bespoke Welcome drawer · one drawer across the app ·
+                guest-safe (null session → sign-in prompt). */}
+            <ControlDrawer session={drawerSession} />
+          </div>
         </header>
 
         {/* ─── Centre column ─── */}

@@ -1582,7 +1582,7 @@ function CategoryChip({ category }: { category: string }) {
     .join(" ");
   return (
     <Link
-      href={`/nex-native/search?category=${encodeURIComponent(category)}`}
+      href={`/nex-native/directory?category=${encodeURIComponent(category)}`}
       style={{
         display: "inline-flex",
         alignItems: "center",

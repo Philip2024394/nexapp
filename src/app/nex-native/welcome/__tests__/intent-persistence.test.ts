@@ -106,7 +106,10 @@ describe("_remember-intent-action.ts · structure", () => {
   it("Server Action whitelists redirect_to against the welcome-honesty allowlist", () => {
     // Negative: no open-redirect to arbitrary URLs.
     expect(ACTION_SRC).toContain('"/nex-native/chat-themes-library"');
-    expect(ACTION_SRC).toContain('"/nex-native/discover"');
+    // Canonical-directory doctrine 2026-10-17 · /discover slot
+    // replaced by the canonical /directory/landing entry.
+    expect(ACTION_SRC).toContain('"/nex-native/directory/landing"');
+    expect(ACTION_SRC).not.toContain('"/nex-native/discover"');
     expect(ACTION_SRC).toContain('"/nex-native/community/feed"');
     expect(ACTION_SRC).toMatch(/safeRedirects\.includes\(rawRedirect\)/);
   });

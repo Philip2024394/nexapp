@@ -110,6 +110,24 @@ export default async function CreateAccountPage({ searchParams }: PageProps) {
           color: ${NEX.textMuted};
           opacity: 0.78;
         }
+        [data-nex-create-account-root] input::selection,
+        [data-nex-create-account-root] textarea::selection,
+        [data-nex-create-account-root] input::-moz-selection,
+        [data-nex-create-account-root] textarea::-moz-selection {
+          background: ${NEX.cyanSoft};
+          color: ${NEX.textPrimary};
+          -webkit-text-fill-color: ${NEX.textPrimary};
+        }
+        [data-nex-create-account-root] input:-webkit-autofill,
+        [data-nex-create-account-root] input:-webkit-autofill:hover,
+        [data-nex-create-account-root] input:-webkit-autofill:focus,
+        [data-nex-create-account-root] input:-webkit-autofill:active {
+          -webkit-text-fill-color: ${NEX.textPrimary};
+          caret-color: ${NEX.textPrimary};
+          -webkit-box-shadow: 0 0 0 1000px ${NEX.fieldBg} inset;
+          box-shadow: 0 0 0 1000px ${NEX.fieldBg} inset;
+          transition: background-color 9999s ease-in-out 0s;
+        }
       `}</style>
       <main
         id="main"
@@ -276,18 +294,6 @@ export default async function CreateAccountPage({ searchParams }: PageProps) {
             >
               Chat. Discover. Connect.
             </div>
-            <p
-              style={{
-                margin: "10px 0 0",
-                fontSize: 12.5,
-                lineHeight: 1.5,
-                color: NEX.textPrimary,
-                textShadow: "0 1px 3px rgba(0,0,0,0.6)",
-              }}
-            >
-              The ultimate chat experience with stunning themes,
-              powerful features, and a world of possibilities.
-            </p>
           </section>
 
           {/* ── 4-capability icon tile ── */}

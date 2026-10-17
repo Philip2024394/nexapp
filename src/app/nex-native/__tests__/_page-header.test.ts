@@ -6,8 +6,9 @@
 // icon removal):
 //   · Left   · NEX ping badge (size 56 · hero scale matching
 //              /directory/landing) wrapped in a Link to /nex-native
-//   · Right  · Search icon (routes to /nex-native/search · the
-//              sealed HardLocationGate still gates downstream)
+//   · Right  · Search icon (routes to /nex-native/directory/landing ·
+//              the canonical NEX Directory entry per the 2026-10-17
+//              canonical-directory doctrine)
 //            · Three-dots drawer (shared PageHeaderDrawerButtonClient
 //              with Home · Contacts · Chat · Calls · Search · Settings
 //              · Sign out destinations)
@@ -41,9 +42,11 @@ describe("shared NEX page header · sealed data attributes", () => {
     expect(PAGE_HEADER).toMatch(/data-nex-page-header-brand\b/);
   });
 
-  it("search icon link still carries data-nex-page-header-search and routes to /nex-native/search", () => {
-    expect(PAGE_HEADER).toMatch(/href="\/nex-native\/search"/);
+  it("search icon link routes to the canonical NEX Directory landing (2026-10-17 doctrine)", () => {
+    // Owner-sealed canonical directory · /search retired as competing surface.
+    expect(PAGE_HEADER).toMatch(/href="\/nex-native\/directory\/landing"/);
     expect(PAGE_HEADER).toMatch(/data-nex-page-header-search\b/);
+    expect(PAGE_HEADER).not.toMatch(/href="\/nex-native\/search"/);
   });
 });
 

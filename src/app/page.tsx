@@ -1,23 +1,23 @@
 // src/app/page.tsx
 //
-// NEX root entry · session-aware · owner-approved 2026-10-16.
+// NEX root entry · session-aware · owner-approved 2026-10-17.
 // --------------------------------------------------------------------
 //   · signed-in  → /nex-native/home (preserves authenticated routing;
 //                  unchanged from previous behaviour)
-//   · signed-out → /nex-native/directory/landing (new public first-
-//                  visit destination · the Directory landing is now
-//                  the canonical public entry page per owner directive)
+//   · signed-out → /nex-native/welcome (owner directive 2026-10-17 ·
+//                  Welcome is the first-visit page for every visitor
+//                  without a NEX account · supersedes the earlier
+//                  2026-10-16 Directory-landing-as-public-entry rule)
 //
-// Previous behaviour unconditionally pushed every visitor to
-// /nex-native/home, which then cascaded (anon → /sign-in). That meant
-// a brand-new anonymous visitor typing the bare URL never saw the
-// public Directory landing. The owner's canonical URL map now treats
-// /nex-native/directory/landing as the public entry.
-//
-// Scope · this file is the ONLY place changed for the root pivot ·
-// /nex-native/page.tsx (the segment router) keeps its sealed
-// anon→/welcome · signed-in→/home behaviour so the Welcome →
-// Create-account chain is untouched.
+// Prior history:
+//   · pre-2026-10-16 · unconditional redirect to /nex-native/home ·
+//     anon users cascaded through /sign-in with no first-visit page
+//   · 2026-10-16 · signed-out routed to /nex-native/directory/landing
+//     (sealed as the public first-visit destination)
+//   · 2026-10-17 · owner directive · signed-out routes to
+//     /nex-native/welcome · the "no account" first-visit experience ·
+//     the Directory landing continues to exist as the canonical NEX
+//     Directory entry but is no longer the root-URL destination
 
 import { redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
@@ -30,5 +30,5 @@ export default async function RootPage(): Promise<never> {
   if (session) {
     redirect("/nex-native/home");
   }
-  redirect("/nex-native/directory/landing");
+  redirect("/nex-native/welcome");
 }

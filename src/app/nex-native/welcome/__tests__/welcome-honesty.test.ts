@@ -57,9 +57,13 @@ const SOURCE = readFileSync(WELCOME_PAGE_PATH, "utf8");
 // unless this allowlist is explicitly extended by a future authorised
 // commit (in which case the matching route must prove guest-accessible
 // with its own test).
+// Canonical-directory doctrine 2026-10-17 · /nex-native/discover
+// was a competing surface retired in favour of the one canonical
+// /nex-native/directory/landing. The allowlist mirrors the server
+// action's safeRedirects list.
 const ALLOWED_TILE_HREFS: readonly string[] = [
   "/nex-native/chat-themes-library",
-  "/nex-native/discover",
+  "/nex-native/directory/landing",
   "/nex-native/community/feed",
 ] as const;
 

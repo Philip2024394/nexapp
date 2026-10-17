@@ -44,6 +44,11 @@ export interface NexAccountRow {
   phone_country_code: string | null;
   /** Signup credential attribute · migration 024 · digits only · 5-15 chars · never a relationship key. */
   phone_national_number: string | null;
+  /** User-chosen NEX display name · migration 204 · nullable. Non-unique.
+   *  Stored in NFC form; validated by src/lib/nex-native/handle-normalise.ts.
+   *  Distinct from `display_name` (full name) and `nex_handle` (permanent
+   *  nex-XXXXX identity, migration 013). */
+  chosen_handle: string | null;
   /**
    * Package tier · migration 046 · Indonesia launch (2026-09-27).
    * `gratis` (default), `bisnis` (paid), `pro` (deferred phase 2).
@@ -158,6 +163,15 @@ export interface NexAccountInsert {
    *  default (see account-service.createAccount). Added 2026-10-03 to
    *  match the field createAccount has always read from input. */
   chat_theme?: string | null;
+  /** Optional user-chosen NEX display name · migration 204.
+   *  MUST be the NFC-normalised output of validateChosenHandle(...).
+   *  Non-unique (duplicates allowed). Semantic validation lives in
+   *  src/lib/nex-native/handle-normalise.ts · the PostgreSQL CHECK
+   *  on this column is structural only. Separate from the sealed
+   *  nex_handle (migration 013, system-allocated nex-XXXXX permanent
+   *  identity). Pass `ValidatedChosenHandle | null` for compile-time
+   *  guarantee; service layer re-asserts at runtime. */
+  chosen_handle?: string | null;
 }
 
 // ---------------------------------------------------------------------------

@@ -67,9 +67,16 @@ export async function rememberWelcomeIntentAction(
   // Whitelist · mirrors the sealed welcome-honesty allowlist. Any
   // other value is treated as "no persistence" and the user still
   // lands on the themes library (the overwhelming guest-safe default).
+  //
+  // Canonical-directory doctrine 2026-10-17 · the competing
+  // /nex-native/discover surface is retired · its intent persistence
+  // slot is replaced by /nex-native/directory/landing (the one
+  // canonical NEX Directory entry). The /discover URL continues to
+  // work via server-side redirect, but the welcome allowlist points
+  // directly at the canonical destination to avoid an unnecessary hop.
   const safeRedirects: readonly string[] = [
     "/nex-native/chat-themes-library",
-    "/nex-native/discover",
+    "/nex-native/directory/landing",
     "/nex-native/community/feed",
   ] as const;
   const redirectTo = safeRedirects.includes(rawRedirect)

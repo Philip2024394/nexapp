@@ -133,8 +133,8 @@ export default async function PromoManagerPage({
         >
           Promos expire automatically up to 14 days after creation. They appear as
           round circles on the right edge of your business card in{" "}
-          <Link href="/nex-native/search" style={{ color: NEX.cyan, textDecoration: "none" }}>
-            NEX Discover
+          <Link href="/nex-native/directory/landing" style={{ color: NEX.cyan, textDecoration: "none" }}>
+            NEX Directory
           </Link>
           .
         </p>

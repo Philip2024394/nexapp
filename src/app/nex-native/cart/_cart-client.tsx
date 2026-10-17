@@ -913,7 +913,7 @@ function CartEmpty() {
         here.
       </p>
       <Link
-        href="/nex-native/search"
+        href="/nex-native/directory/landing"
         style={{
           display: "inline-block",
           padding: "10px 16px",

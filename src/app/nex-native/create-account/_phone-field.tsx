@@ -134,7 +134,7 @@ export function NexPhoneField({ initialIso2 }: Props) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "132px 1fr",
+          gridTemplateColumns: "96px minmax(0, 1fr)",
           gap: 8,
         }}
       >
@@ -173,6 +173,8 @@ export function NexPhoneField({ initialIso2 }: Props) {
           autoComplete="tel-national"
           pattern="^[0-9]{5,15}$"
           style={{
+            minWidth: 0,
+            width: "100%",
             minHeight: 48,
             padding: "12px 14px",
             background: NEX.fieldBg,

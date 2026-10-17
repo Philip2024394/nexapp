@@ -806,7 +806,7 @@ export default async function Page({ searchParams }: PageProps) {
                       {p.tags.map((t) => (
                         <Link
                           key={t}
-                          href={`/nex-native/search?q=${encodeURIComponent(t)}`}
+                          href="/nex-native/directory/landing"
                           className="inline-block rounded border border-neutral-300 bg-white px-2 py-0.5 text-xs text-neutral-700 hover:border-neutral-500 hover:bg-neutral-50"
                           title={`See more products tagged '${t}'`}
                         >

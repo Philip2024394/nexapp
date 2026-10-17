@@ -406,8 +406,8 @@ function EmptyOrdersState() {
         Every order you place through a NEX shop will land here · you
         can Reorder in one tap from the row.
       </p>
-      <Link href="/nex-native/search" style={pillLink({ primary: true })}>
-        Browse shops →
+      <Link href="/nex-native/directory/landing" style={pillLink({ primary: true })}>
+        Browse NEX Directory →
       </Link>
     </div>
   );

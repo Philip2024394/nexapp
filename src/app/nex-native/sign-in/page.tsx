@@ -34,6 +34,7 @@ import { cookies } from "next/headers";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import { signInAction } from "../_actions";
 import { SignInFaceButton } from "./_face-button";
+import { SignInPasswordInput } from "./_password-input";
 import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
 
 export const runtime = "nodejs";
@@ -103,6 +104,24 @@ export default async function SignInPage({ searchParams }: PageProps) {
         [data-nex-sign-in-root] input::placeholder {
           color: ${NEX.textMuted};
           opacity: 0.78;
+        }
+        [data-nex-sign-in-root] input::selection,
+        [data-nex-sign-in-root] textarea::selection,
+        [data-nex-sign-in-root] input::-moz-selection,
+        [data-nex-sign-in-root] textarea::-moz-selection {
+          background: ${NEX.cyanSoft};
+          color: ${NEX.textPrimary};
+          -webkit-text-fill-color: ${NEX.textPrimary};
+        }
+        [data-nex-sign-in-root] input:-webkit-autofill,
+        [data-nex-sign-in-root] input:-webkit-autofill:hover,
+        [data-nex-sign-in-root] input:-webkit-autofill:focus,
+        [data-nex-sign-in-root] input:-webkit-autofill:active {
+          -webkit-text-fill-color: ${NEX.textPrimary};
+          caret-color: ${NEX.textPrimary};
+          -webkit-box-shadow: 0 0 0 1000px ${NEX.panelSolid} inset;
+          box-shadow: 0 0 0 1000px ${NEX.panelSolid} inset;
+          transition: background-color 9999s ease-in-out 0s;
         }
       `}</style>
       <main
@@ -249,7 +268,7 @@ export default async function SignInPage({ searchParams }: PageProps) {
                 data-nex-sign-in-wordmark
                 style={{
                   display: "block",
-                  height: 56,
+                  height: 96,
                   width: "auto",
                   marginTop: 4,
                   filter: "drop-shadow(0 6px 20px rgba(180,124,255,0.4))",
@@ -269,18 +288,6 @@ export default async function SignInPage({ searchParams }: PageProps) {
             >
               Chat. Discover. Connect.
             </div>
-            <p
-              style={{
-                margin: "10px 0 0",
-                fontSize: 12.5,
-                lineHeight: 1.5,
-                color: NEX.textPrimary,
-                textShadow: "0 1px 3px rgba(0,0,0,0.6)",
-              }}
-            >
-              The ultimate chat experience with stunning themes,
-              powerful features, and a world of possibilities.
-            </p>
           </section>
 
           {/* ── 4-capability icon tile · reuse landing icon set ── */}
@@ -404,18 +411,7 @@ export default async function SignInPage({ searchParams }: PageProps) {
               <IconInput
                 label="Password"
                 icon={<LockIcon color={NEX.cyan} />}
-                input={
-                  <input
-                    required
-                    type="password"
-                    name="password"
-                    minLength={6}
-                    placeholder="Password"
-                    autoComplete="current-password"
-                    aria-label="Password"
-                    style={inputStyle}
-                  />
-                }
+                input={<SignInPasswordInput />}
               />
               <div
                 style={{

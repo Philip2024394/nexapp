@@ -171,8 +171,8 @@ function TopHeader({
             opens the ControlDrawer. Both are now wired · neither is
             inert decoration. */}
         <Link
-          href="/nex-native/search"
-          aria-label="Search"
+          href="/nex-native/directory"
+          aria-label="Search NEX Directory"
           style={iconButtonStyle}
           data-nex-landing-search-link
         >

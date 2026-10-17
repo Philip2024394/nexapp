@@ -19,6 +19,8 @@ import type {
   NexUuid,
 } from "./types";
 import { NEX_CHAT_THEMES } from "./types";
+import { assertValidChosenHandle } from "./handle-normalise";
+import { isReservedHandle } from "./handle-reserved-names";
 
 /** Read one account by NEX UUID · null when not found. */
 export async function getAccountById(id: NexUuid): Promise<NexAccountRow | null> {
@@ -78,6 +80,13 @@ export async function createAccount(input: NexAccountInsert): Promise<NexAccount
       `account-service.createAccount: phone_national_number must match ^[0-9]{5,15}$ · got ${nn.slice(0, 16)}`
     );
   }
+  // Migration 204 · user-chosen NEX display name. Runtime guard against
+  // callers that pass an unvalidated string (bypassing the ValidatedChosenHandle
+  // compile-time brand via `as any` or untyped JS). Throws with a specific
+  // rejection reason on any invalid input. null is permitted (account
+  // has no chosen handle yet).
+  const ch = input.chosen_handle ?? null;
+  assertValidChosenHandle(ch, isReservedHandle);
   const { data, error } = await nexSupabaseAdmin
     .from("nex_account")
     .insert({
@@ -85,6 +94,7 @@ export async function createAccount(input: NexAccountInsert): Promise<NexAccount
       display_name: input.display_name,
       phone_country_code: cc,
       phone_national_number: nn,
+      chosen_handle: ch,
       // Sealed 2026-10-01 · every brand-new NEX account arrives in
       // the Joker theme (theme-0 · the sealed launch theme). Picker
       // at /nex-native/settings/theme can still change it later.
@@ -102,6 +112,38 @@ export async function createAccount(input: NexAccountInsert): Promise<NexAccount
     return await ensureNexHandle(row.id);
   }
   return row;
+}
+
+/**
+ * Update the account's user-chosen NEX display name · migration 204.
+ * Caller MUST pre-validate the handle via validateChosenHandle() from
+ * handle-normalise.ts. This function re-asserts at runtime via
+ * assertValidChosenHandle for defence-in-depth against untyped callers.
+ * null clears the chosen_handle (user wants no display name).
+ *
+ * Not a uniqueness operation. Multiple accounts may hold the same
+ * chosen_handle by design (per owner decision 2026-10-17). The permanent
+ * nex_handle (migration 013) is the unique identifier; chosen_handle
+ * is a human-readable display label only.
+ *
+ * Does NOT change nex_handle, display_name, or any other field.
+ * Does NOT re-run allocation. Does NOT touch the permanent identity.
+ */
+export async function updateChosenHandle(
+  accountId: NexUuid,
+  handle: string | null,
+): Promise<void> {
+  assertValidChosenHandle(handle, isReservedHandle);
+  const { error } = await nexSupabaseAdmin
+    .from("nex_account")
+    .update({ chosen_handle: handle })
+    .eq("id", accountId);
+  if (error) {
+    throw new Error(
+      `account-service.updateChosenHandle(${accountId}): ${error.message}` +
+        (error.code ? ` · code=${error.code}` : ""),
+    );
+  }
 }
 
 /**

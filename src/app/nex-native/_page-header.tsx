@@ -100,8 +100,8 @@ export function NexPageHeader({ dataScope }: NexPageHeaderProps) {
             src/components/nex-native/account-gate/SettingsHeaderSlot.tsx
             · still mountable from other surfaces if needed). */}
         <Link
-          href="/nex-native/search"
-          aria-label="NEX Discover · find shops & menus"
+          href="/nex-native/directory/landing"
+          aria-label="NEX Directory · shops · services · food · trades"
           data-nex-page-header-search
           style={iconLinkStyle}
         >

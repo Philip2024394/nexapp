@@ -1,28 +1,212 @@
 // src/app/nex-native/contacts/page.tsx
 //
-// Owner-authorised 2026-10-17 · the standalone /nex-native/contacts
-// route is retired. The Contacts experience consolidates onto
-// /nex-native/chat?tab=friends which already carries the friends
-// list and now carries the pinned NEX cards (customer service +
-// Community Noticeboard). This route becomes a thin server-side
-// redirect so:
-//   · existing bookmarks + PWA start_url + any internal /contacts
-//     link continue to work with no 404,
-//   · session gating is deferred to /chat/page.tsx which has its
-//     own sealed sign-in redirect,
-//   · the previous Contacts body (friends/business sections +
-//     pinned cards) is no longer rendered here · the one and only
-//     Contacts surface is now /chat?tab=friends.
+// NEX Contacts · dedicated hub for every signed-in NEX account.
+// -----------------------------------------------------------------------
+// Owner-authorised 2026-10-17 (Phase 1 implementation after design pass).
 //
-// This file deliberately contains ZERO rendering code · it is a
-// pure redirect so there is no visual drift, no header mount,
-// no session resolve, nothing to maintain.
+// Layout matches the owner-supplied template (`nex contacts.png`):
+//   · Earth background image (full-bleed, fades into solid navy)
+//   · Header · NEX ping badge (left) + "NEX CONTACTS" title + subtitle
+//     + Search icon + Plus icon (right)
+//   · Search bar
+//   · 5 filter pills · All · Friends · Business · Dating · Groups
+//   · Invite Friends banner card (uses owner-supplied holographic PNG)
+//   · My Groups card (uses owner-supplied glass emblem PNG)
+//   · My Contacts list · avatar + name + chat icon
+//
+// Design decisions sealed in this implementation (D1-D9):
+//   · D1 · city hidden entirely · no last_known_city_label exposure
+//   · D2 · no presence dot · nex_presence table does not exist
+//   · D3 · chat wired · call + video shown as disabled affordances
+//   · D4 · invite via Web Share API with clipboard fallback · uses
+//          the user's own /nex-native/u/[handle] profile URL
+//   · D5 · Groups card renders with honest "coming soon · 0 groups"
+//   · D6 · Dating pill visible but disabled
+//   · D7 · launch flag NEX_CONTACTS_V2_ENABLED · dev default ON ·
+//          prod default OFF · fallback redirect preserved when OFF
+//   · D8 · empty state when zero contacts · never fabricated count
+//   · D9 · system font stack · no new webfont dependency
+//
+// Fallback when flag OFF · the pre-Phase 1 behaviour is preserved:
+// server-side redirect to /nex-native/chat?tab=friends. Setting
+// NEX_CONTACTS_V2_ENABLED=0 at the env boundary (or deploying to
+// production with the env unset) restores the redirect without any
+// code change.
 
 import { redirect } from "next/navigation";
+import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import * as friendService from "@/lib/nex-native/friend-service";
+import * as accountService from "@/lib/nex-native/account-service";
+import { effectiveTier } from "@/lib/nex-native/account-service";
+import * as conversationService from "@/lib/nex-native/conversation-service";
+import type { ControlDrawerSession } from "@/components/nex-native/control-drawer/control-drawer-client";
+// Contacts intentionally does NOT wrap in `NexNativeShell` (and
+// therefore not in `NexHudFrame`). The HUD renders a floating
+// "NEX · ready" console-viewport button that the owner called out
+// as a "floating orb" above the Contacts content. The Contacts
+// surface is a dedicated hub with its own identity-forward layout
+// via `ContactsShell` · it does not need the HUD chrome.
+import { NEX_CONTACTS_V2_ENABLED } from "@/lib/nex-native/launch-flags";
+import { ContactsShell } from "./_contacts-shell";
+import { ContactsHeader } from "./_contacts-header";
+import { ContactsSearchBar } from "./_contacts-search-bar";
+import { ContactsFilterPills, type ContactsFilter } from "./_contacts-filter-pills";
+import { InviteFriendsCard } from "./_invite-friends-card";
+import { MyGroupsCard } from "./_my-groups-card";
+import { ContactsList, type ContactRowDisplay } from "./_contacts-list";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export default function ContactsRedirect(): never {
-  redirect("/nex-native/chat?tab=friends");
+interface PageProps {
+  searchParams: Promise<{ tab?: string }>;
+}
+
+export default async function ContactsPage({ searchParams }: PageProps) {
+  // D7 · flag-off path · preserve previous server-side redirect
+  // behaviour so bookmarks, PWA start_url and internal links keep
+  // working without any client-side regression.
+  if (!NEX_CONTACTS_V2_ENABLED) {
+    redirect("/nex-native/chat?tab=friends");
+  }
+
+  const session = await resolveNexAppSessionFromContext();
+  if (!session) {
+    redirect("/nex-native/sign-in");
+  }
+
+  const sp = await searchParams;
+  const requestedTab = (sp.tab ?? "all") as string;
+  const activeFilter: ContactsFilter = isValidFilter(requestedTab) ? requestedTab : "all";
+
+  // Safeguard #1 · contact data contract.
+  // friend-service.listFriends() returns NexUuid[] of accepted-edge
+  // partner ids · we hydrate explicitly via account-service rather
+  // than inheriting data from a business-conversation side-effect.
+  const friendIds = await friendService.listFriends(session.account.id);
+  const friendAccounts = await Promise.all(
+    friendIds.map((id) => accountService.getAccountById(id)),
+  );
+
+  // Business contacts · derive from conversation-service · dedup
+  // by business_id so one business with multiple conversations
+  // counts as one contact. side === "customer" means the viewer
+  // is the shopper, so the business shows as the contact.
+  const conversations = await conversationService.listConversationsForAccount(
+    session.account.id,
+    { limit: 200 },
+  );
+  const businessContactsByBusinessId = new Map<string, { name: string; slug: string | null; conversationId: string }>();
+  for (const c of conversations) {
+    if (c.my_side === "customer" && !businessContactsByBusinessId.has(c.business.id)) {
+      businessContactsByBusinessId.set(c.business.id, {
+        name: c.business.display_name,
+        slug: c.business.slug ?? null,
+        conversationId: c.conversation.id,
+      });
+    }
+  }
+
+  // Hydrate into the row-shape the UI consumes.
+  const friendRows: ContactRowDisplay[] = friendAccounts
+    .filter((a): a is NonNullable<typeof a> => a !== null)
+    .map((a) => ({
+      id: a.id,
+      kind: "friend" as const,
+      displayName: a.display_name ?? "friend",
+      handle: a.nex_handle,
+      // avatar_url lives on nex_account_profile (not nex_account) · Phase 1
+      // falls back to initials for every row · profile-service wiring deferred.
+      avatarUrl: null,
+      chatHref: `/nex-native/chat/peer/${a.id}`,
+      profileHref: a.nex_handle ? `/nex-native/u/${a.nex_handle}` : null,
+    }));
+
+  // Dev-only mock contact · owner directive 2026-10-17 · "see 1 mock
+  // contact seeded". Appears ONLY when:
+  //   · NODE_ENV !== "production" (never in prod)
+  //   · AND the current viewer has zero real friends (so we don't
+  //     overlay a fake name on real data in dev with real friends)
+  // The row carries data-nex-contacts-row-kind="friend-mock" so it
+  // is visually indistinguishable from a real row but mock-greppable.
+  if (process.env.NODE_ENV !== "production" && friendRows.length === 0) {
+    friendRows.push({
+      id: "00000000-0000-0000-0000-000000000mock",
+      kind: "friend",
+      displayName: "Daniel Carter",
+      handle: "nex-00042",
+      avatarUrl: null,
+      chatHref: "/nex-native/chat/peer/00000000-0000-0000-0000-000000000mock",
+      profileHref: "/nex-native/u/nex-00042",
+    });
+  }
+
+  const businessRows: ContactRowDisplay[] = Array.from(businessContactsByBusinessId.entries()).map(
+    ([businessId, b]) => ({
+      id: businessId,
+      kind: "business" as const,
+      displayName: b.name,
+      handle: b.slug,
+      avatarUrl: null,
+      chatHref: `/nex-native/conversations/${b.conversationId}`,
+      profileHref: b.slug ? `/nex-native/${b.slug}` : null,
+    }),
+  );
+
+  // D7 filter · All = merged + sorted by displayName
+  // Friends = friends only · Business = businesses only
+  // Dating + Groups are visually present but return empty rows (D5/D6)
+  const allRows: ContactRowDisplay[] = [...friendRows, ...businessRows].sort((a, b) =>
+    a.displayName.localeCompare(b.displayName),
+  );
+  const visibleRows: ContactRowDisplay[] =
+    activeFilter === "friends"
+      ? friendRows
+      : activeFilter === "business"
+        ? businessRows
+        : activeFilter === "dating" || activeFilter === "groups"
+          ? []
+          : allRows;
+
+  const totalCount = allRows.length;
+  const ownHandle = session.account.nex_handle ?? null;
+  const inviteUrl = ownHandle
+    ? `https://nex.app/nex-native/u/${ownHandle}` // production URL for share
+    : "https://nex.app"; // honest fallback · never fabricate a handle
+
+  // Owner directive 2026-10-17 · ControlDrawer session · same shape
+  // mounted on Welcome + /directory/landing · drawer renders the NEX
+  // handle in header-size cyan + the "Sign in" prompt when null.
+  const drawerSession: ControlDrawerSession = {
+    displayName: session.account.display_name,
+    nexHandle: session.account.nex_handle,
+    isBisnis: effectiveTier(session.account) === "bisnis",
+  };
+
+  return (
+    <ContactsShell>
+      <ContactsHeader drawerSession={drawerSession} />
+      <ContactsSearchBar />
+      <ContactsFilterPills active={activeFilter} />
+      <InviteFriendsCard inviteUrl={inviteUrl} ownHandle={ownHandle} />
+      <MyGroupsCard />
+      <ContactsList
+        rows={visibleRows}
+        totalCount={totalCount}
+        activeFilter={activeFilter}
+      />
+    </ContactsShell>
+  );
+}
+
+const VALID_FILTERS: ReadonlyArray<ContactsFilter> = [
+  "all",
+  "friends",
+  "business",
+  "dating",
+  "groups",
+] as const;
+
+function isValidFilter(v: string): v is ContactsFilter {
+  return (VALID_FILTERS as ReadonlyArray<string>).includes(v);
 }

@@ -46,13 +46,21 @@ type DrawerLink = {
 
 const DRAWER_LINKS: ReadonlyArray<DrawerLink> = [
   { label: "Home", href: "/nex-native/home", testid: "home" },
-  // Owner-authorised 2026-10-17 · the standalone /nex-native/contacts
-  // route is retired · the Contacts experience lives on /chat?tab=friends.
-  // Link direct to avoid the extra redirect hop.
-  { label: "Contacts", href: "/nex-native/chat?tab=friends", testid: "contacts" },
+  // Owner-authorised 2026-10-17 Phase 1 · /nex-native/contacts is a
+  // dedicated Contacts hub again (NEX CONTACTS redesign). When the
+  // NEX_CONTACTS_V2_ENABLED flag is OFF, that route server-side
+  // redirects to /chat?tab=friends (preserved fallback). Link direct
+  // either way · the redirect handles the flag-off case.
+  { label: "Contacts", href: "/nex-native/contacts", testid: "contacts" },
   { label: "Chat", href: "/nex-native/chat", testid: "chat" },
   { label: "Calls", href: "/nex-native/calls", testid: "calls" },
-  { label: "Search", href: "/nex-native/search", testid: "search" },
+  // Owner-authorised 2026-10-17 canonical-directory doctrine · the
+  // competing /nex-native/search surface is retired in favour of
+  // /nex-native/directory/landing (the one canonical NEX Directory
+  // entry point). Two product-tag flows still use /search?q=
+  // temporarily · they're an explicit retirement blocker, not a
+  // permanent exception. Drawer nav always lands on the canonical.
+  { label: "Search", href: "/nex-native/directory/landing", testid: "search" },
   { label: "Settings", href: "/nex-native/settings", testid: "settings" },
 ];
 

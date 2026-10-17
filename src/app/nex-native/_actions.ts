@@ -52,6 +52,11 @@ import {
   type NexDeliveryAddress,
 } from "@/lib/nex-native/cart-types";
 import * as accountService from "@/lib/nex-native/account-service";
+import {
+  validateChosenHandle,
+  describeValidationReason,
+} from "@/lib/nex-native/handle-normalise";
+import { isReservedHandle } from "@/lib/nex-native/handle-reserved-names";
 import * as accountProfileService from "@/lib/nex-native/account-profile-service";
 import * as friendService from "@/lib/nex-native/friend-service";
 import * as bannerService from "@/lib/nex-native/banner-service";
@@ -109,11 +114,28 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
   const password = String(formData.get("password") ?? "");
   const phoneCountryCodeRaw = String(formData.get("phone_country_code") ?? "").trim();
   const phoneNationalNumberRaw = String(formData.get("phone_national_number") ?? "").trim();
+  // Migration 204 · optional user-chosen NEX display name. Non-unique by
+  // design. Empty submission is permitted (chosen_handle stays null).
+  const nexNameRaw = String(formData.get("nex_name") ?? "");
 
   if (!fullName) redirectToCreateAccountWithError("missing_name", "Enter your full name");
   if (!email) redirectToCreateAccountWithError("missing_email", "Enter your email");
   if (!password || password.length < 6) {
     redirectToCreateAccountWithError("short_password", "Password must be 6+ characters");
+  }
+  // Server-side authoritative validation. Client-side feedback in
+  // _nex-name-field.tsx is UX only · never a security boundary.
+  let nexName: string | null = null;
+  if (nexNameRaw.length > 0) {
+    const v = validateChosenHandle(nexNameRaw, isReservedHandle);
+    if (!v.ok) {
+      redirectToCreateAccountWithError(
+        "invalid_nex_name",
+        describeValidationReason(v.reason),
+        { email },
+      );
+    }
+    nexName = v.normalised;
   }
   // 2026-10-15 · Phone optional (two-step signup step 2) · migration
   // 024 keeps both columns nullable at DB level. Validate shape only
@@ -192,7 +214,34 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
           display_name: fullName,
           phone_country_code: phoneCountryCode,
           phone_national_number: phoneNationalNumber,
+          chosen_handle: nexName,
         });
+      } else if (
+        nexName !== null &&
+        existing.chosen_handle === null
+      ) {
+        // Resumed signup · existing account exists from an earlier
+        // partial signup, but has no chosen_handle. Fill it in with
+        // the submitted value. Never overwrite a non-null existing
+        // chosen_handle · Settings is the authority for changes.
+        await accountService.updateChosenHandle(existing.id, nexName);
+        acc = { ...existing, chosen_handle: nexName };
+      } else if (
+        nexName !== null &&
+        existing.chosen_handle !== null &&
+        existing.chosen_handle !== nexName
+      ) {
+        // Resumed signup with a submitted chosen_handle that differs
+        // from the existing one. Preserve the existing value · the
+        // signup form is not an edit path. Log length only to avoid
+        // leaking the chosen_handle to logs.
+        console.warn(
+          "[createNexAccountAction] chosen_handle submitted for account that already has one · preserving existing value",
+          {
+            accountId: existing.id,
+            existingHandleLength: existing.chosen_handle.length,
+          },
+        );
       }
       // Bridge 82 · stamp the zero-knowledge acknowledgment so the
       // doctrine trail is legally clean · SQL-only column update
@@ -2880,6 +2929,58 @@ export async function updateDisplayNameAction(
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return { ok: false, error: msg };
+  }
+}
+
+/**
+ * Update the signed-in viewer's user-chosen NEX display name
+ * (chosen_handle · migration 204). Separate from Bridge-80's
+ * updateDisplayNameAction (above), which edits nex_account.display_name
+ * with emoji-friendly rules; this action edits nex_account.chosen_handle
+ * under the stricter v12 Unicode-letters-only policy.
+ *
+ * Scope:
+ *   · Open display names, non-unique. No availability check.
+ *   · No change limit. Unlimited edits.
+ *   · Permanent nex_handle (migration 013) is NOT touched.
+ *   · Empty submission clears chosen_handle to null (user-initiated).
+ *
+ * Returns JSON (consistent with updateDisplayNameAction) so client
+ * editors can render inline banners without a redirect.
+ */
+export async function updateChosenHandleAction(
+  formData: FormData,
+): Promise<{ ok: true; chosenHandle: string | null } | { ok: false; error: string }> {
+  const session = await resolveNexAppSessionFromContext();
+  if (!session) return { ok: false, error: "not_signed_in" };
+
+  const raw = String(formData.get("chosen_handle") ?? "");
+
+  // Empty submission · deliberate user action to clear the field.
+  if (raw.length === 0) {
+    try {
+      await accountService.updateChosenHandle(session.account.id, null);
+      revalidatePath("/nex-native/settings/profile");
+      revalidatePath("/nex-native/chat");
+      revalidatePath("/nex-native/friends");
+      return { ok: true, chosenHandle: null };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
+  }
+
+  const v = validateChosenHandle(raw, isReservedHandle);
+  if (!v.ok) {
+    return { ok: false, error: `invalid_handle:${v.reason}` };
+  }
+  try {
+    await accountService.updateChosenHandle(session.account.id, v.normalised);
+    revalidatePath("/nex-native/settings/profile");
+    revalidatePath("/nex-native/chat");
+    revalidatePath("/nex-native/friends");
+    return { ok: true, chosenHandle: v.normalised };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
 }
 

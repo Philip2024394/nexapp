@@ -204,9 +204,18 @@ export function ChatIdentityHeader(
               color: "#FFFFFF",
               textShadow: "0 1px 3px rgba(0,0,0,0.65)",
               minWidth: 0,
-              whiteSpace: "nowrap",
+              // 2026-10-17 · owner-authorised 2-line wrap for user-
+              // chosen display names (migration 204). All other sealed
+              // chat-identity properties unchanged. See memory
+              // feedback_nex_chat_master_layout_rule.md for the
+              // sealed primitive doctrine addendum.
+              whiteSpace: "normal",
+              display: "-webkit-box",
+              WebkitBoxOrient: "vertical",
+              WebkitLineClamp: 2,
               overflow: "hidden",
-              textOverflow: "ellipsis",
+              wordBreak: "break-word",
+              overflowWrap: "anywhere",
               flexShrink: 1,
             }}
           >

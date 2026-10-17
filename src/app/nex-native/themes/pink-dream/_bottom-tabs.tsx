@@ -43,9 +43,11 @@ export function PinkDreamBottomTabs({
       icon: <ChatsIcon />,
     },
     {
+      // Canonical-directory doctrine 2026-10-17 · retired /search
+      // in favour of /directory/landing.
       key: "discover",
       label: "Discover",
-      href: "/nex-native/search",
+      href: "/nex-native/directory/landing",
       icon: <DiscoverIcon />,
     },
     {

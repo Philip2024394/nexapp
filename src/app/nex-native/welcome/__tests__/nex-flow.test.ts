@@ -209,21 +209,31 @@ describe("Settings · 'View the welcome page →' link", () => {
   });
 });
 
-/* ─── G · Contacts route is a redirect to the consolidated hub ─
-     Owner-authorised 2026-10-17 · the standalone /nex-native/contacts
-     route was retired · the Contacts experience lives on
-     /nex-native/chat?tab=friends. The route stays as a thin server
-     redirect so bookmarks + PWA start_url continue to work. */
+/* ─── G · Contacts route Phase 1 · dedicated hub with flag-off
+     redirect preserved. Owner-authorised 2026-10-17 Phase 1 · the
+     standalone /nex-native/contacts route is now a dedicated
+     Contacts hub (NEX CONTACTS redesign) when NEX_CONTACTS_V2_ENABLED
+     is on. When the flag is OFF, the page server-side redirects to
+     /chat?tab=friends (preserved fallback) · bookmarks + PWA
+     start_url continue to work in either state. */
 
-describe("contacts · redirect to the consolidated chat?tab=friends surface", () => {
-  it("contacts page is a server-side redirect to /chat?tab=friends", () => {
+describe("contacts · dedicated hub with flag-off redirect fallback", () => {
+  it("flag-off path · still redirects to /chat?tab=friends (preserved fallback)", () => {
+    expect(CONTACTS_SRC).toMatch(
+      /!NEX_CONTACTS_V2_ENABLED/,
+    );
     expect(CONTACTS_SRC).toMatch(
       /redirect\(\s*["']\/nex-native\/chat\?tab=friends["']\s*\)/,
     );
   });
 
-  it("contacts page no longer owns friends-list rendering (session resolve + 'No friends yet' moved to the hub)", () => {
+  it("flag-on path · session-resolves + mounts the new Contacts hub component tree", () => {
+    expect(CONTACTS_SRC).toMatch(/resolveNexAppSessionFromContext/);
+    expect(CONTACTS_SRC).toMatch(/<ContactsShell\b/);
+    expect(CONTACTS_SRC).toMatch(/<ContactsList\b/);
+  });
+
+  it("friends-list rendering moved onto the Contacts hub (no 'No friends yet' copy here · uses honest empty states in list component)", () => {
     expect(CONTACTS_SRC).not.toContain("No friends yet");
-    expect(CONTACTS_SRC).not.toMatch(/resolveNexAppSessionFromContext/);
   });
 });

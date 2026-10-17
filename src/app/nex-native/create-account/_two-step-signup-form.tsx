@@ -55,6 +55,10 @@ export function TwoStepSignupForm({
   const [email, setEmail] = React.useState(initialEmail ?? "");
   const [password, setPassword] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
+  // Suppress pink validation errors until the user actually tries to
+  // advance · stops the "Enter your email address" error from screaming
+  // on first paint before any interaction has happened.
+  const [attemptedAdvance, setAttemptedAdvance] = React.useState(false);
 
   // Step-1 local validation · basic sanity before advancing. The
   // real server-side validation still runs on final submit.
@@ -80,10 +84,14 @@ export function TwoStepSignupForm({
           onPasswordChange={setPassword}
           onTogglePassword={() => setShowPassword((v) => !v)}
           onContinue={() => {
-            if (canAdvance) setStep(2);
+            if (canAdvance) {
+              setStep(2);
+              setAttemptedAdvance(false);
+            } else {
+              setAttemptedAdvance(true);
+            }
           }}
-          error={step1Error}
-          canAdvance={canAdvance}
+          error={attemptedAdvance ? step1Error : null}
         />
       ) : (
         <StepTwoPanel
@@ -166,7 +174,6 @@ function StepOnePanel({
   onTogglePassword,
   onContinue,
   error,
-  canAdvance,
 }: {
   email: string;
   password: string;
@@ -176,7 +183,6 @@ function StepOnePanel({
   onTogglePassword: () => void;
   onContinue: () => void;
   error: string | null;
-  canAdvance: boolean;
 }): React.ReactElement {
   return (
     <section
@@ -269,16 +275,13 @@ function StepOnePanel({
       <button
         type="button"
         onClick={onContinue}
-        disabled={!canAdvance}
         data-nex-signup-continue
         style={{
           ...primaryButtonStyle,
           marginTop: 8,
-          opacity: canAdvance ? 1 : 0.55,
-          cursor: canAdvance ? "pointer" : "not-allowed",
         }}
       >
-        Continue
+        Create Account
         <ArrowRight />
       </button>
     </section>
@@ -351,6 +354,7 @@ function StepTwoPanel({
               placeholder="Your name"
               autoComplete="name"
               aria-label="Full name"
+              maxLength={32}
               style={textInputStyle}
             />
           }
@@ -426,7 +430,7 @@ function StepTwoPanel({
             flex: "1 1 auto",
           }}
         >
-          Free Account
+          Create Account
           <ArrowRight />
         </button>
       </div>

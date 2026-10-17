@@ -65,13 +65,16 @@ describe("shared page-header drawer · seven sealed destinations", () => {
 
   it("every drawer destination routes to its sealed /nex-native path", () => {
     expect(DRAWER).toMatch(/href:\s*["']\/nex-native\/home["']/);
-    // Owner-authorised 2026-10-17 · /contacts route retired · drawer
-    // links direct to /chat?tab=friends (where the Contacts
-    // experience actually lives) to skip the redirect hop.
-    expect(DRAWER).toMatch(/href:\s*["']\/nex-native\/chat\?tab=friends["']/);
+    // Owner-authorised 2026-10-17 Phase 1 · /contacts is a dedicated
+    // Contacts hub when NEX_CONTACTS_V2_ENABLED is on; otherwise it
+    // server-side redirects to /chat?tab=friends. Drawer links direct
+    // to /contacts either way.
+    expect(DRAWER).toMatch(/href:\s*["']\/nex-native\/contacts["']/);
     expect(DRAWER).toMatch(/href:\s*["']\/nex-native\/chat["']/);
     expect(DRAWER).toMatch(/href:\s*["']\/nex-native\/calls["']/);
-    expect(DRAWER).toMatch(/href:\s*["']\/nex-native\/search["']/);
+    // Canonical-directory doctrine 2026-10-17 · /search retired as
+    // competing surface · drawer nav lands on /directory/landing.
+    expect(DRAWER).toMatch(/href:\s*["']\/nex-native\/directory\/landing["']/);
     expect(DRAWER).toMatch(/href:\s*["']\/nex-native\/settings["']/);
   });
 
