@@ -44,6 +44,7 @@ import {
 } from "@/lib/nex-native/account-service";
 import { pickPremiumBannerCopy } from "./_premium-banner-copy";
 import { ThemePreviewDrawer } from "./_theme-preview-drawer";
+import { ThemePreviewRail } from "./_theme-preview-rail";
 import type { ControlDrawerSession } from "@/components/nex-native/control-drawer/control-drawer-client";
 
 export const runtime = "nodejs";
@@ -102,6 +103,7 @@ export default async function ThemeViewerPage({
           session={drawerSession}
           themeAccent={pkg.colours.primary}
         />
+        <ThemePreviewRail accent={pkg.colours.primary} />
       </>
     );
   }
@@ -323,6 +325,7 @@ export default async function ThemeViewerPage({
         session={drawerSession}
         themeAccent={theme.accent_hex}
       />
+      <ThemePreviewRail accent={theme.accent_hex} />
     </>
   );
 }
