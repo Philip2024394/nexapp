@@ -5453,6 +5453,13 @@ export async function sendFriendInviteAction(formData: FormData): Promise<never>
   const rawHandle = String(formData.get("handle") ?? "").trim().toLowerCase();
   // Accept "36474" as a shortcut for "nex-36474"
   const handle = rawHandle.startsWith("nex-") ? rawHandle : `nex-${rawHandle}`;
+  // Owner directive 2026-10-17 · profile-page callers pass a
+  // whitelisted return_to so the user lands BACK on the target
+  // profile after send (Connect button flips to "Invite sent ·
+  // waiting" in place) instead of bouncing to the Friends banner.
+  // Any caller that omits return_to keeps the sealed Friends-banner
+  // behaviour.
+  const returnTo = sanitizeNexReturnTo(formData.get("return_to"));
 
   const session = await resolveNexAppSessionFromContext();
   if (!session) {
@@ -5475,6 +5482,13 @@ export async function sendFriendInviteAction(formData: FormData): Promise<never>
     redirectToFriendsWithBanner("invite_failed", msg);
   }
   revalidatePath("/nex-native/friends");
+  revalidatePath("/nex-native/contacts");
+  if (returnTo) {
+    // Revalidate the caller's path so the pending-outgoing state
+    // (Connect → "Invite sent · waiting") renders on first paint.
+    revalidatePath(returnTo);
+    redirect(returnTo);
+  }
   redirectToFriendsWithBanner("invite_sent", handle);
 }
 
@@ -6039,30 +6053,33 @@ function redirectToAdminTierWithBanner(code: string, message: string): never {
  *  customers before wallet/subscription infra exists.
  */
 export async function adminSetAccountTierAction(formData: FormData): Promise<never> {
-  if (process.env.NEX_ALLOW_DEV_ADMIN !== "1") {
-    redirectToAdminTierWithBanner(
-      "admin_disabled",
-      "dev-admin mode is disabled in this environment",
-    );
-  }
-
   const session = await resolveNexAppSessionFromContext();
   if (!session) redirectToInboxWithError("unauthenticated", "sign in first");
 
-  // Verify the caller's auth user matches the provisioned dev-admin
-  const auth = await accountService.getAccountBySupabaseUserId(session.account.supabase_user_id!);
-  if (!auth) redirectToAdminTierWithBanner("account_missing", "session has no account");
-  const supabaseUserId = auth.supabase_user_id;
-  if (!supabaseUserId) redirectToAdminTierWithBanner("no_auth_user", "session has no supabase user");
-  const authRow = await nexSupabaseAdmin.auth.admin.getUserById(supabaseUserId);
-  if (authRow.error || !authRow.data.user) {
-    redirectToAdminTierWithBanner("auth_lookup_failed", authRow.error?.message ?? "unknown");
-  }
-  if ((authRow.data.user.email ?? "").toLowerCase() !== "dev-admin@nex-native.local") {
-    redirectToAdminTierWithBanner(
-      "not_dev_admin",
-      "only the provisioned dev-admin account can promote tiers",
-    );
+  // Owner-sealed 2026-10-17 Phase 2.1 · INDEPENDENT server-action gate.
+  // Previously this action gated on the hardcoded
+  // `dev-admin@nex-native.local` email check. Now gated on
+  // nex_account.hq_role = 'admin' via the sealed server-only helper.
+  // CRITICAL: this gate runs INDEPENDENTLY of the /admin/tier page
+  // gate · a direct invocation of this action (e.g. forged form POST
+  // from outside the admin surface) must be rejected on its own
+  // merits · do NOT assume the page-level check protects us.
+  // The gate uses a non-revealing banner ("This action is not
+  // available") rather than leaking the specific role requirement.
+  const {
+    requireHqAdmin,
+    isHqAuthorizationError,
+  } = await import("@/lib/nex-native/hq-authorization");
+  try {
+    await requireHqAdmin(session.account.id);
+  } catch (e) {
+    if (isHqAuthorizationError(e)) {
+      redirectToAdminTierWithBanner(
+        "not_authorised",
+        "This action is not available.",
+      );
+    }
+    throw e;
   }
 
   const emailRaw = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -6224,31 +6241,33 @@ function redirectToAdminThemeWithBanner(code: string, message: string): never {
 export async function adminCreateChatThemeAction(
   formData: FormData,
 ): Promise<never> {
-  if (process.env.NEX_ALLOW_DEV_ADMIN !== "1") {
-    redirectToAdminThemeWithBanner(
-      "admin_disabled",
-      "dev-admin mode is disabled in this environment",
-    );
-  }
-
   const session = await resolveNexAppSessionFromContext();
   if (!session) redirectToInboxWithError("unauthenticated", "sign in first");
 
-  const auth = await accountService.getAccountBySupabaseUserId(
-    session.account.supabase_user_id!,
-  );
-  if (!auth) redirectToAdminThemeWithBanner("account_missing", "session has no account");
-  const supabaseUserId = auth.supabase_user_id;
-  if (!supabaseUserId) redirectToAdminThemeWithBanner("no_auth_user", "session has no supabase user");
-  const authRow = await nexSupabaseAdmin.auth.admin.getUserById(supabaseUserId);
-  if (authRow.error || !authRow.data.user) {
-    redirectToAdminThemeWithBanner("auth_lookup_failed", authRow.error?.message ?? "unknown");
-  }
-  if ((authRow.data.user.email ?? "").toLowerCase() !== "dev-admin@nex-native.local") {
-    redirectToAdminThemeWithBanner(
-      "not_dev_admin",
-      "only the provisioned dev-admin account can create themes",
-    );
+  // Owner-sealed 2026-10-18 Phase 2.1 completeness fix (audit Finding
+  // 2.1 · companion to adminSetAccountTierAction). INDEPENDENT server-
+  // action gate · the sealed `requireHqAdmin` reads nex_account.hq_role
+  // (migration 206 · authored, awaiting apply). Creating chat themes
+  // is an enforcement/catalog-write decision · admin-only · reviewer
+  // alone is INSUFFICIENT. Direct form POSTs from outside the admin
+  // surface must be rejected on their own merits · do NOT rely on
+  // page-level gates.
+  // Non-revealing banner ("This action is not available") rather than
+  // leaking the specific role requirement.
+  const {
+    requireHqAdmin,
+    isHqAuthorizationError,
+  } = await import("@/lib/nex-native/hq-authorization");
+  try {
+    await requireHqAdmin(session.account.id);
+  } catch (e) {
+    if (isHqAuthorizationError(e)) {
+      redirectToAdminThemeWithBanner(
+        "not_authorised",
+        "This action is not available.",
+      );
+    }
+    throw e;
   }
 
   const id = String(formData.get("id") ?? "").trim().toLowerCase();

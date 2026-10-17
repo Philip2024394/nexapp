@@ -15,9 +15,13 @@
 // based on configuration alone · the dashboard shows real counts
 // and leaves "operational" judgement to the viewer.
 
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import {
+  requireHqReviewer,
+  isHqAuthorizationError,
+} from "@/lib/nex-native/hq-authorization";
 import {
   loadHarvestDashboard,
   type HarvestDashboardSummary,
@@ -54,6 +58,20 @@ const NEX = {
 export default async function HarvestDashboardPage() {
   const session = await resolveNexAppSessionFromContext();
   if (!session) redirect("/nex-native/sign-in");
+
+  // Owner-sealed 2026-10-17 Phase 2.1 · HQ reviewer gate.
+  // Previously this page required ONLY a session · any signed-in
+  // NEX account could view the harvest ops dashboard. Now gated on
+  // nex_account.hq_role via the sealed server-only helper · reviewer
+  // or admin may read · everyone else gets notFound() (non-revealing
+  // · 404 indistinguishable from a missing URL · does not leak the
+  // existence of the HQ surface or the role requirement).
+  try {
+    await requireHqReviewer(session.account.id);
+  } catch (e) {
+    if (isHqAuthorizationError(e)) notFound();
+    throw e;
+  }
 
   // Load real dashboard data · all queries are honest-null fallbacks
   // so a missing table doesn't break the page.

@@ -39,6 +39,13 @@ import * as friendService from "@/lib/nex-native/friend-service";
 import * as accountService from "@/lib/nex-native/account-service";
 import { effectiveTier } from "@/lib/nex-native/account-service";
 import * as conversationService from "@/lib/nex-native/conversation-service";
+// Owner directive 2026-10-17 · the new NEX identity-card layout
+// surfaces the person's profession + headline underneath their NEX
+// ID. Data comes from nex_account_profile (migration 042 · profession
+// text ≤80, headline text ≤120 · NULL until supplied · never
+// fabricated). Each friend row triggers one profile lookup in
+// parallel · falls back silently to "no profession line" on error.
+import * as accountProfileService from "@/lib/nex-native/account-profile-service";
 import type { ControlDrawerSession } from "@/components/nex-native/control-drawer/control-drawer-client";
 // Contacts intentionally does NOT wrap in `NexNativeShell` (and
 // therefore not in `NexHudFrame`). The HUD renders a floating
@@ -51,8 +58,15 @@ import { ContactsShell } from "./_contacts-shell";
 import { ContactsHeader } from "./_contacts-header";
 import { ContactsSearchBar } from "./_contacts-search-bar";
 import { ContactsFilterPills, type ContactsFilter } from "./_contacts-filter-pills";
+// Owner directive 2026-10-17 (revised later same day) · the Invite
+// Friends banner card is restored to the top of /contacts. The NEX
+// Community card has been moved INSIDE the Groups filter tab (under
+// the Groups button) · see `_contacts-list.tsx` → GroupsPlaceholderGrid.
 import { InviteFriendsCard } from "./_invite-friends-card";
-import { MyGroupsCard } from "./_my-groups-card";
+// Owner directive 2026-10-17 · the stand-alone My Groups card is
+// retired · the Groups filter pill in the header is the sole entry
+// point for the Groups surface. `_my-groups-card.tsx` is kept on
+// disk for history but has no live consumer.
 import { ContactsList, type ContactRowDisplay } from "./_contacts-list";
 
 export const runtime = "nodejs";
@@ -107,10 +121,23 @@ export default async function ContactsPage({ searchParams }: PageProps) {
     }
   }
 
+  // Owner directive 2026-10-17 · identity-card layout · fetch
+  // profession + headline for each friend in parallel. getProfileByAccountId
+  // returns null when the account hasn't filled out a profile · we honour
+  // that by leaving professionLine null (card omits the line entirely).
+  const liveFriendAccounts = friendAccounts.filter(
+    (a): a is NonNullable<typeof a> => a !== null,
+  );
+  const friendProfiles = await Promise.all(
+    liveFriendAccounts.map((a) =>
+      accountProfileService.getProfileByAccountId(a.id).catch(() => null),
+    ),
+  );
+
   // Hydrate into the row-shape the UI consumes.
-  const friendRows: ContactRowDisplay[] = friendAccounts
-    .filter((a): a is NonNullable<typeof a> => a !== null)
-    .map((a) => ({
+  const friendRows: ContactRowDisplay[] = liveFriendAccounts.map((a, i) => {
+    const profile = friendProfiles[i];
+    return {
       id: a.id,
       kind: "friend" as const,
       displayName: a.display_name ?? "friend",
@@ -120,7 +147,13 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       avatarUrl: null,
       chatHref: `/nex-native/chat/peer/${a.id}`,
       profileHref: a.nex_handle ? `/nex-native/u/${a.nex_handle}` : null,
-    }));
+      // Owner directive 2026-10-17 · "profession · headline" with
+      // middle-dot · profession is required, headline optional ·
+      // if profession is NULL/empty, the line is omitted entirely
+      // (never fabricated).
+      professionLine: buildProfessionLine(profile?.profession, profile?.headline),
+    };
+  });
 
   // Dev-only mock contact · owner directive 2026-10-17 · "see 1 mock
   // contact seeded". Appears ONLY when:
@@ -138,6 +171,11 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       avatarUrl: null,
       chatHref: "/nex-native/chat/peer/00000000-0000-0000-0000-000000000mock",
       profileHref: "/nex-native/u/nex-00042",
+      // Dev mock · matches the owner's spec example verbatim so the
+      // identity-card layout can be visually verified in dev before
+      // a real friend fills in their profile. Dev-only · prod is
+      // gated by NODE_ENV !== "production" above.
+      professionLine: "Electrician · Electrical Services",
     });
   }
 
@@ -149,6 +187,10 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       handle: b.slug,
       avatarUrl: null,
       chatHref: `/nex-native/conversations/${b.conversationId}`,
+      // Business rows don't have a profession · the identity-card
+      // layout for businesses (category / city / etc.) is a future
+      // pass, not this commit's scope.
+      professionLine: null,
       profileHref: b.slug ? `/nex-native/${b.slug}` : null,
     }),
   );
@@ -189,7 +231,6 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       <ContactsSearchBar />
       <ContactsFilterPills active={activeFilter} />
       <InviteFriendsCard inviteUrl={inviteUrl} ownHandle={ownHandle} />
-      <MyGroupsCard />
       <ContactsList
         rows={visibleRows}
         totalCount={totalCount}
@@ -209,4 +250,26 @@ const VALID_FILTERS: ReadonlyArray<ContactsFilter> = [
 
 function isValidFilter(v: string): v is ContactsFilter {
   return (VALID_FILTERS as ReadonlyArray<string>).includes(v);
+}
+
+/**
+ * Compose the "profession · headline" line under the NEX ID per the
+ * owner's identity-card spec sealed 2026-10-17. Rules:
+ *   · If profession is NULL/blank → the line is omitted entirely
+ *     (callers get null · the row never shows an empty placeholder
+ *     or a fabricated profession).
+ *   · If profession is present and headline is NULL/blank → just
+ *     profession (no trailing middle-dot).
+ *   · If both are present → "profession · headline" with the NEX
+ *     middle-dot separator (same glyph used elsewhere in nex-native).
+ */
+function buildProfessionLine(
+  profession: string | null | undefined,
+  headline: string | null | undefined,
+): string | null {
+  const p = (profession ?? "").trim();
+  if (p.length === 0) return null;
+  const h = (headline ?? "").trim();
+  if (h.length === 0) return p;
+  return `${p} · ${h}`;
 }

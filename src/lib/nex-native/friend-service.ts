@@ -140,6 +140,46 @@ export async function getEdge(a: NexUuid, b: NexUuid): Promise<FriendEdgeRow | n
   return (data as FriendEdgeRow) ?? null;
 }
 
+/**
+ * Count mutual friends between `viewerId` and `otherId`. Sealed
+ * 2026-10-17 for the canonical NEX profile page's "Mutual Friends"
+ * row. Returns:
+ *   · count       · size of the intersection of accepted-edge
+ *                   partners for both accounts
+ *   · previewIds  · up to `preview` partner ids (avatars rendered
+ *                   top-row in the UI) · deterministic order
+ *                   (lex on the partner id so re-renders are stable)
+ *
+ * Zero-friend edge-case: either side having no accepted edges short-
+ * circuits to count=0 · no DB roundtrip for the second set. Self-
+ * query (viewerId === otherId) returns count=0 · a profile viewed by
+ * its own owner has no "mutual" friends to compute.
+ *
+ * Honest-null preserved · the UI omits the Mutual Friends row entirely
+ * when count === 0 · it never fabricates a count or an avatar.
+ */
+export async function countMutualFriends(
+  viewerId: NexUuid,
+  otherId: NexUuid,
+  preview: number = 3,
+): Promise<{ count: number; previewIds: NexUuid[] }> {
+  if (viewerId === otherId) return { count: 0, previewIds: [] };
+  const [viewerFriends, otherFriends] = await Promise.all([
+    listFriends(viewerId),
+    listFriends(otherId),
+  ]);
+  if (viewerFriends.length === 0 || otherFriends.length === 0) {
+    return { count: 0, previewIds: [] };
+  }
+  const otherSet = new Set(otherFriends);
+  const mutual = viewerFriends.filter((id) => otherSet.has(id));
+  mutual.sort();
+  return {
+    count: mutual.length,
+    previewIds: mutual.slice(0, Math.max(0, preview)),
+  };
+}
+
 /** Accepted friends of `accountId` · returns the OTHER participant's id. */
 export async function listFriends(accountId: NexUuid): Promise<NexUuid[]> {
   const { data, error } = await nexSupabaseAdmin

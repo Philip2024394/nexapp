@@ -168,7 +168,7 @@ function FrontFace({ onInvite }: { readonly onInvite: () => void }) {
               overflowWrap: "anywhere",
             }}
           >
-            Connect Their NEX - ID .
+            Connect NEX-ID
           </div>
         </div>
         <button
@@ -285,12 +285,11 @@ function BackFace({ onCancel }: { readonly onCancel: () => void }) {
         boxSizing: "border-box",
       }}
     >
-      {/* Owner directive 2026-10-17 · removed the ← back-arrow button
-          (sibling of the title) · removed the explicit Invite button
-          (right of the input). The card now auto-flips back after
-          60s of inactivity · submission happens by pressing Enter in
-          the input · the inactivity timer resets on every keystroke
-          and focus event. */}
+      {/* Owner directive 2026-10-17 · the ← back-arrow stays removed ·
+          the Invite button is restored (owner reversed the earlier
+          "Enter-to-send" idea · explicit button is clearer). The
+          60s inactivity auto-flip stays · it resets on every
+          keystroke and focus event + clears on submit. */}
       <div
         style={{
           fontSize: 13,
@@ -342,6 +341,36 @@ function BackFace({ onCancel }: { readonly onCancel: () => void }) {
             boxSizing: "border-box",
           }}
         />
+        {/* Owner directive 2026-10-17 (reversed from the earlier
+            "Enter-to-send" direction) · explicit Invite button is
+            restored · same visual language as the front-face CTA
+            (cyan pill, dark navy label). The form onSubmit still
+            runs on Enter too, so keyboard users keep that path. */}
+        <button
+          type="submit"
+          data-nex-contacts-invite-cta="back"
+          aria-label="Send invite"
+          disabled={status === "navigating"}
+          style={{
+            all: "unset",
+            cursor: status === "navigating" ? "wait" : "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: 38,
+            padding: "0 16px",
+            borderRadius: 999,
+            background: NEX.cyan,
+            color: NEX.bgDark,
+            fontSize: 13,
+            fontWeight: 700,
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+            opacity: status === "navigating" ? 0.7 : 1,
+          }}
+        >
+          {status === "navigating" ? "Sending…" : "Invite"}
+        </button>
       </div>
       <div
         aria-live="polite"
@@ -355,7 +384,7 @@ function BackFace({ onCancel }: { readonly onCancel: () => void }) {
         {status === "invalid"
           ? "Format is nex-12345 (lowercase, digits after the dash)."
           : handle.length === 0
-            ? "Enter the friend's NEX ID · press Enter to send."
+            ? "Enter the friend's NEX ID · tap Invite to send."
             : " "}
       </div>
     </form>

@@ -1,0 +1,86 @@
+-- scripts/seed/seed-hq-admin.sql · 2026-10-17 Phase 2.1
+-- --------------------------------------------------------------------------
+-- INITIAL NEX HQ ADMINISTRATOR GRANT
+--
+-- STATUS: AUTHORED · NOT YET EXECUTED. Owner authorisation covers
+-- preparation and content review only. Separate explicit execution
+-- authorisation is required · AND migration 206 must already be
+-- applied · AND the live-project identity + target-account identity
+-- must be reverified immediately before execution (not from this
+-- committed script alone · facts may drift between authoring and
+-- apply time).
+--
+-- WHAT THIS SCRIPT DOES ONCE AUTHORISED AND APPLIED:
+--
+--   Grants `hq_role = 'admin'` to exactly ONE NEX account, resolved
+--   by the Phase 2.1 audit as:
+--     nex_handle   · nex-10842
+--     display_name · philip ofarrell
+--     id           · 5c3e3d63-5c50-4f42-9e49-ba5f6fb4290b
+--     supabase_user_id · (auth-linked · verified during audit)
+--
+-- SAFETY (do NOT skip when executing):
+--
+--   1. Verify you are connected to the correct Supabase project:
+--        SELECT current_database();
+--        -- expect: postgres (on the ijvqdvsvwtwxzcqmoqit cluster)
+--
+--   2. Verify the target account identity BEFORE the UPDATE:
+--        SELECT id, nex_handle, display_name, supabase_user_id,
+--               hq_role
+--        FROM nex_account
+--        WHERE id = '5c3e3d63-5c50-4f42-9e49-ba5f6fb4290b';
+--        -- expect ONE row · nex_handle = 'nex-10842' ·
+--        -- display_name = 'philip ofarrell' · hq_role = NULL
+--        -- (before grant)
+--
+--      If the row's nex_handle has changed from 'nex-10842' or the
+--      id does not match, STOP. The UPDATE below checks both
+--      invariants with a WHERE clause · it will no-op (0 rows
+--      affected) rather than silently grant admin to the wrong
+--      account.
+--
+--   3. Verify migration 206 is applied:
+--        SELECT column_name FROM information_schema.columns
+--        WHERE table_name = 'nex_account' AND column_name = 'hq_role';
+--        -- expect ONE row · if zero · migration 206 is not applied yet
+--
+-- THE GRANT (belt-and-braces: id + handle both must match):
+--
+--   update nex_account
+--     set hq_role = 'admin'
+--     where id = '5c3e3d63-5c50-4f42-9e49-ba5f6fb4290b'
+--       and nex_handle = 'nex-10842'
+--       and hq_role is null;  -- do not overwrite an existing grant
+--
+-- VERIFICATION AFTER APPLY:
+--
+--   select id, nex_handle, display_name, hq_role
+--   from nex_account
+--   where id = '5c3e3d63-5c50-4f42-9e49-ba5f6fb4290b';
+--   -- expect ONE row · hq_role = 'admin' · identity fields unchanged
+--
+--   Confirm no OTHER account was accidentally granted:
+--     select count(*) from nex_account where hq_role is not null;
+--     -- expect: 1
+--
+-- ROLLBACK (if needed):
+--
+--   update nex_account
+--     set hq_role = null
+--     where id = '5c3e3d63-5c50-4f42-9e49-ba5f6fb4290b';
+--
+-- ─────────────────────────────────────────────────────────────────────
+-- COMMENTED-OUT by design · uncomment ONLY after:
+--   (a) migration 206 is applied,
+--   (b) live-project + target identity reverified immediately before,
+--   (c) owner reauthorises execution.
+-- ─────────────────────────────────────────────────────────────────────
+
+-- update nex_account
+--   set hq_role = 'admin'
+--   where id = '5c3e3d63-5c50-4f42-9e49-ba5f6fb4290b'
+--     and nex_handle = 'nex-10842'
+--     and hq_role is null;
+
+-- End of seed-hq-admin.sql · 2026-10-17 Phase 2.1 · AUTHORED NOT APPLIED

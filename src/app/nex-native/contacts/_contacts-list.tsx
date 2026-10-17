@@ -13,6 +13,7 @@
 
 import * as React from "react";
 import { ContactRow } from "./_contact-row";
+import { CommunityCard } from "./_community-card";
 import { CONTACTS_SEARCH_EVENT } from "./_contacts-search-bar";
 import type { ContactsFilter } from "./_contacts-filter-pills";
 
@@ -24,6 +25,14 @@ export interface ContactRowDisplay {
   readonly avatarUrl: string | null;
   readonly chatHref: string;
   readonly profileHref: string | null;
+  /**
+   * Owner-sealed 2026-10-17 identity-card line · composed from the
+   * person's nex_account_profile (profession · headline). NULL when
+   * the person hasn't filled in a profession yet · row omits the
+   * line entirely in that case · never fabricated. Businesses carry
+   * NULL today · a business-specific identity line is a future pass.
+   */
+  readonly professionLine: string | null;
 }
 
 const NEX = {
@@ -209,17 +218,19 @@ function EmptyState({ title, body, dataAttr, cta }: EmptyStateProps) {
 }
 
 /* ─── Groups placeholder grid ────────────────────────────────────
-   Owner directive 2026-10-17 · tapping the My Groups card routes
-   to /contacts?tab=groups which renders this placeholder grid of
-   group cards. The groups schema does NOT exist yet (confirmed in
-   the earlier audit · zero nex_group / nex_group_member tables),
-   so this view honestly shows:
-     · A "Create your first group" CTA card (primary · cyan)
-     · Three example "preview" cards illustrating what a NEX group
-       will look like once the feature ships · clearly labelled as
-       previews, not real groups the user can enter
-   This matches the owner directive ("show the groups cards")
-   without inventing data or implying creation works. */
+   Owner directive 2026-10-17 · tapping the Groups filter pill
+   routes to /contacts?tab=groups which renders this placeholder
+   grid. The group schema does NOT exist yet (zero nex_group /
+   nex_group_member tables), so this view shows:
+     · The NEX Community entry card (owner directive 2026-10-17 ·
+       "nex community is under the groups badge button") · links
+       to the active /nex-native/community surface
+     · The "Create your first group" CTA (groups schema pending)
+
+   The three illustrative "preview" cards (Neighbours Yogyakarta,
+   Weekend Coffee Club, Design Guild · NEX) were retired on
+   2026-10-17 · they looked too much like real groups the user could
+   enter, which was dishonest while the feature is not yet shipped. */
 
 function GroupsPlaceholderGrid() {
   return (
@@ -227,6 +238,11 @@ function GroupsPlaceholderGrid() {
       data-nex-contacts-groups-grid
       style={{ display: "grid", gap: 10 }}
     >
+      {/* NEX Community · live surface · lives under the Groups filter
+          per owner directive 2026-10-17. Mounted ABOVE the create-your-
+          first-group CTA so the active product (Community) outranks
+          the pending-schema CTA (groups). */}
+      <CommunityCard />
       <div
         data-nex-contacts-groups-create-cta
         style={{
@@ -265,85 +281,9 @@ function GroupsPlaceholderGrid() {
           </div>
         </div>
       </div>
-      {GROUPS_PREVIEW.map((g) => (
-        <div
-          key={g.id}
-          data-nex-contacts-groups-preview-card={g.id}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            padding: "10px 14px",
-            borderRadius: 12,
-            background: "rgba(3, 16, 29, 0.72)",
-            border: `1px solid rgba(0, 175, 255, 0.20)`,
-            opacity: 0.78,
-          }}
-        >
-          <div
-            aria-hidden
-            style={{
-              flexShrink: 0,
-              width: 40,
-              height: 40,
-              borderRadius: "50%",
-              display: "grid",
-              placeItems: "center",
-              background: `linear-gradient(135deg, ${g.a} 0%, ${g.b} 100%)`,
-              color: "#020914",
-              fontSize: 15,
-              fontWeight: 800,
-            }}
-          >
-            {g.initials}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: 14,
-                fontWeight: 600,
-                color: NEX.textPrimary,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {g.name}
-            </div>
-            <div style={{ marginTop: 1, fontSize: 11, color: NEX.textMuted }}>
-              {g.members} members · preview
-            </div>
-          </div>
-          <span
-            style={{
-              flexShrink: 0,
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: NEX.textMuted,
-            }}
-          >
-            Preview
-          </span>
-        </div>
-      ))}
     </div>
   );
 }
-
-const GROUPS_PREVIEW: ReadonlyArray<{
-  readonly id: string;
-  readonly name: string;
-  readonly members: number;
-  readonly initials: string;
-  readonly a: string;
-  readonly b: string;
-}> = [
-  { id: "preview-neighbours", name: "Neighbours · Yogyakarta Centre", members: 24, initials: "YC", a: "#00AFFF", b: "#9B6DFF" },
-  { id: "preview-coffee", name: "Weekend Coffee Club", members: 8, initials: "CC", a: "#FF7200", b: "#FFB466" },
-  { id: "preview-work", name: "Design Guild · NEX", members: 12, initials: "DG", a: "#16D66B", b: "#00AFFF" },
-];
 
 function PeopleIcon({ color }: { readonly color: string }) {
   return (

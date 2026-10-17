@@ -17,15 +17,19 @@
 //     "isAdmin": boolean
 //   }
 //
-// Admin detection matches the pattern used in
-// src/app/nex-native/admin/tier/page.tsx `isDevAdmin()`:
-//   · process.env.NEX_ALLOW_DEV_ADMIN === "1"
-//   · resolveNexAppSessionFromContext() yields a session with a
-//     supabase_user_id
-//   · nexSupabaseAdmin.auth.admin.getUserById(...).email ===
-//     "dev-admin@nex-native.local" (lowercase)
+// Owner-sealed 2026-10-18 Phase 2.1 completeness fix (audit Finding
+// 2.2) · admin detection now reads nex_account.hq_role via the sealed
+// `getHqRole` helper (migration 206 · authored, awaiting apply) ·
+// returns `isAdmin: true` when the caller's role === 'admin'. Reviewer
+// alone does NOT set `isAdmin: true` because this probe drives UI that
+// unlocks admin-only affordances (gear icon, etc.).
+//
+// Pre-apply (migration 206 not yet applied): the hq_role column is
+// absent · the sealed getHqRole helper returns null · this probe
+// returns isAdmin: false for everyone · fail-closed · safe default.
+//
 // Never trust client-sent admin claims. On ANY error the probe
-// returns isAdmin: false (safe default = locked).
+// returns isAdmin: false.
 
 import { NextResponse } from "next/server";
 import { readAccountExists } from "@/lib/nex-native/account-gate/account-exists-reader";
@@ -33,23 +37,16 @@ import { readAccountExists } from "@/lib/nex-native/account-gate/account-exists-
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const DEV_ADMIN_EMAIL = "dev-admin@nex-native.local";
-
 async function isAdminCaller(): Promise<boolean> {
-  if (process.env.NEX_ALLOW_DEV_ADMIN !== "1") return false;
   try {
     const { resolveNexAppSessionFromContext } = await import(
       "@/lib/nex-native/app/session"
     );
-    const { nexSupabaseAdmin } = await import(
-      "@/lib/nex-native/supabase-admin"
-    );
+    const { getHqRole } = await import("@/lib/nex-native/hq-authorization");
     const session = await resolveNexAppSessionFromContext();
-    const userId = session?.account?.supabase_user_id;
-    if (!userId) return false;
-    const auth = await nexSupabaseAdmin.auth.admin.getUserById(userId);
-    if (auth.error || !auth.data.user) return false;
-    return (auth.data.user.email ?? "").toLowerCase() === DEV_ADMIN_EMAIL;
+    if (!session) return false;
+    const role = await getHqRole(session.account.id);
+    return role === "admin";
   } catch {
     return false;
   }

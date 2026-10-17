@@ -13,9 +13,16 @@
 // Any other visitor is silently redirected to /home.
 
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
-import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
+// Owner-sealed 2026-10-17 Phase 2.1 · HQ admin gate replaces the
+// hardcoded dev-admin@nex-native.local email check. The sealed
+// helper reads nex_account.hq_role (migration 206 · authored,
+// awaiting apply) · server-only + fail-closed.
+import {
+  requireHqAdmin,
+  isHqAuthorizationError,
+} from "@/lib/nex-native/hq-authorization";
 import { adminSetAccountTierAction } from "../../_actions";
 import {
   NEX_ACCOUNT_TIERS,
@@ -56,20 +63,22 @@ const NEX = {
   orange: "#FF7200",
 };
 
-async function isDevAdmin(): Promise<boolean> {
-  if (process.env.NEX_ALLOW_DEV_ADMIN !== "1") return false;
-  const session = await resolveNexAppSessionFromContext();
-  if (!session?.account.supabase_user_id) return false;
-  const auth = await nexSupabaseAdmin.auth.admin.getUserById(
-    session.account.supabase_user_id,
-  );
-  if (auth.error || !auth.data.user) return false;
-  return (auth.data.user.email ?? "").toLowerCase() === "dev-admin@nex-native.local";
-}
+// isDevAdmin() retired 2026-10-17 Phase 2.1 · replaced by the sealed
+// `requireHqAdmin` helper that reads nex_account.hq_role.
 
 export default async function AdminTierPage({ searchParams }: PageProps) {
-  const ok = await isDevAdmin();
-  if (!ok) redirect("/nex-native/home");
+  // Owner-sealed 2026-10-17 Phase 2.1 · session + HQ admin role gate.
+  // Setting tiers is an enforcement decision · admin-only · reviewer
+  // alone is INSUFFICIENT. Unauthorised viewers receive notFound()
+  // · non-revealing · does not leak the surface's existence.
+  const session = await resolveNexAppSessionFromContext();
+  if (!session) notFound();
+  try {
+    await requireHqAdmin(session.account.id);
+  } catch (e) {
+    if (isHqAuthorizationError(e)) notFound();
+    throw e;
+  }
 
   const params = await searchParams;
   const banner = params.e && params.m ? { code: params.e, message: params.m } : null;

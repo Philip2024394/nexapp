@@ -79,7 +79,12 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
     key: "profile",
     label: "My profile",
     subtitle: "Identity and personal details",
-    href: "/nex-native/settings/profile",
+    // Owner directive 2026-10-17 · the canonical NEX user profile
+    // lives at /nex-native/profile/[handle] · /profile/me resolves
+    // the signed-in viewer and redirects to their own canonical
+    // profile. The retired /settings/profile route also now
+    // redirects to /profile/me?mode=edit for backward compat.
+    href: "/nex-native/profile/me",
   },
   {
     key: "chats-contacts",

@@ -16,10 +16,18 @@
 //   · env NEX_ALLOW_DEV_ADMIN=1
 //   · caller session is dev-admin@nex-native.local
 
-import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import { withClient } from "@/lib/nex/db";
+// Owner-sealed 2026-10-17 Phase 2.1 · HQ admin gate replaces the
+// hardcoded dev-admin@nex-native.local email check. The role is
+// stored in nex_account.hq_role (migration 206 · authored, awaiting
+// apply) · the sealed helper is server-only + fail-closed.
+import {
+  requireHqAdmin,
+  isHqAuthorizationError,
+} from "@/lib/nex-native/hq-authorization";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,16 +44,11 @@ const NEX = {
   red: "#F87171",
 };
 
-async function isDevAdmin(): Promise<boolean> {
-  if (process.env.NEX_ALLOW_DEV_ADMIN !== "1") return false;
-  const session = await resolveNexAppSessionFromContext();
-  if (!session?.account.supabase_user_id) return false;
-  const auth = await nexSupabaseAdmin.auth.admin.getUserById(
-    session.account.supabase_user_id,
-  );
-  if (auth.error || !auth.data.user) return false;
-  return (auth.data.user.email ?? "").toLowerCase() === "dev-admin@nex-native.local";
-}
+// isDevAdmin() retired 2026-10-17 Phase 2.1 · the hardcoded email
+// check was a dev-only identifier that would silently fail in prod
+// (no NEX account has that email). Replaced by the sealed
+// `requireHqAdmin` helper which reads nex_account.hq_role via the
+// server-only module.
 
 interface QueueCounts {
   readonly pending: number;
@@ -146,8 +149,21 @@ async function loadDashboard(): Promise<{
 }
 
 export default async function ImageReviewPage() {
-  const ok = await isDevAdmin();
-  if (!ok) redirect("/nex-native/home");
+  // Owner-sealed 2026-10-17 Phase 2.1 · session + HQ admin role gate.
+  // Previously gated on NEX_ALLOW_DEV_ADMIN env + hardcoded email ·
+  // now gated on nex_account.hq_role = 'admin' via the sealed
+  // server-only helper. Reviewer alone is INSUFFICIENT · image
+  // review decisions are enforcement decisions (admin-only).
+  // Unauthorised viewers receive notFound() (non-revealing) · does
+  // not reveal the existence of the admin surface or the role name.
+  const session = await resolveNexAppSessionFromContext();
+  if (!session) notFound();
+  try {
+    await requireHqAdmin(session.account.id);
+  } catch (e) {
+    if (isHqAuthorizationError(e)) notFound();
+    throw e;
+  }
 
   const data = await loadDashboard();
 

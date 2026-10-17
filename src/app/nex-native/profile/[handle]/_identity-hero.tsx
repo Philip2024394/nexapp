@@ -1,0 +1,362 @@
+// src/app/nex-native/profile/[handle]/_identity-hero.tsx
+//
+// NEX canonical profile · identity hero · sealed 2026-10-17.
+// -------------------------------------------------------------------
+// Owner-sealed Emma Wilson reference. Visual order:
+//   · Circular avatar · 120px · cyan ring · OPTIONAL blue verified
+//     checkmark badge overlay (bottom-right) when `isVerified=true`
+//   · Display name · bold · OPTIONAL blue checkmark glyph to the
+//     right when verified
+//   · NEX ID · prominent · uppercase prefix via display transform ·
+//     chat-bubble icon prefix per the owner-sealed reference
+//   · Profession · headline (middle-dot joiner · briefcase prefix)
+//   · Location (pin prefix)
+//   · Bio paragraph
+//
+// Verification source: `account-verification.isAccountVerified` ·
+// resolver returns true ONLY when the account owns at least one
+// nex_business with Safe Trade status === "VERIFIED". Never
+// fabricated · owner-sealed Option 1 2026-10-17.
+//
+// Owner mode: when the viewer IS the profile owner, the hero renders
+// a tap-to-edit affordance (pencil) in the identity block that lands
+// on /profile/me?mode=edit. For full inline tap-to-edit the owner
+// panel at `_owner-edit-panel.tsx` composes the edit widgets.
+//
+// Avatar overlap: when the parent mounts a <CoverPhoto /> above us,
+// the hero container uses a negative margin-top to overlap the
+// circular avatar onto the cover's lower edge (per the Emma Wilson
+// reference). The negative margin is applied unconditionally · when
+// no cover is above, the overlap still looks clean against the solid
+// navy page background.
+//
+// Server Component · pure presentation.
+
+import type * as React from "react";
+import Link from "next/link";
+import { AvatarCameraPicker } from "./_avatar-camera-picker";
+
+const NEX = {
+  bg: "#020914",
+  cyan: "#00AFFF",
+  cyanSoft: "rgba(0, 175, 255, 0.35)",
+  cyanFaint: "rgba(0, 175, 255, 0.14)",
+  verifiedBlue: "#1DA1F2",
+  text: "#F2F5F8",
+  textDim: "#B5C3D6",
+  textMuted: "#7D9BC0",
+};
+
+const SANS =
+  "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+
+export interface IdentityHeroProps {
+  readonly displayName: string;
+  readonly nexHandle: string | null;
+  readonly avatarUrl: string | null;
+  readonly profession: string | null;
+  readonly headline: string | null;
+  readonly locationLabel: string | null;
+  readonly bio: string | null;
+  readonly isOwner: boolean;
+  /** True when the account owns ≥1 Safe-Trade-VERIFIED business ·
+   *  resolved via `account-verification.isAccountVerified` server-side.
+   *  Never computed client-side · never fabricated. */
+  readonly isVerified: boolean;
+  /** When true, the avatar carries a camera-icon overlay in its
+   *  bottom-right · tapping it opens a file picker that posts to
+   *  the sealed `uploadAvatarAction` server action. Set by the
+   *  parent page when `mode=edit` is on AND the viewer is the owner. */
+  readonly showAvatarUploadAffordance?: boolean;
+}
+
+export function IdentityHero(props: IdentityHeroProps): React.JSX.Element {
+  // nexId display moved from "under name" to the top chrome bar
+  // (ProfileChrome). The viewer's own NEX ID appears in the top-left
+  // of every profile page. This profile's own NEX ID still appears
+  // elsewhere in the app (ControlDrawer, Contacts row) · it is
+  // deliberately NOT duplicated here.
+  const initials = initialsFromName(props.displayName);
+  const professionLine = buildProfessionLine(props.profession, props.headline);
+  return (
+    <header
+      data-nex-profile-hero
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 8,
+        padding: "0 14px 8px",
+        // Owner directive 2026-10-17 (revised again) · "move up more
+        // 0px" · interpreted as 0px hanging below · the full avatar
+        // sits ON the cover · −128px (full 128px avatar diameter)
+        // pulls it entirely inside the hero. If you meant something
+        // different (e.g. move up by an additional 10/20px), tell me
+        // the exact value and I'll adjust.
+        marginTop: -128,
+        textAlign: "center",
+        position: "relative",
+      }}
+    >
+      <div
+        style={{
+          position: "relative",
+          width: 128,
+          height: 128,
+        }}
+      >
+        {props.avatarUrl ? (
+          <img
+            src={props.avatarUrl}
+            alt=""
+            aria-hidden
+            data-nex-profile-avatar
+            style={{
+              width: 128,
+              height: 128,
+              borderRadius: "50%",
+              objectFit: "cover",
+              border: `4px solid ${NEX.cyan}`,
+              background: NEX.cyanFaint,
+              boxShadow: `0 6px 24px -8px rgba(0,0,0,0.8)`,
+            }}
+          />
+        ) : (
+          <div
+            aria-hidden
+            data-nex-profile-avatar-initials
+            style={{
+              width: 128,
+              height: 128,
+              borderRadius: "50%",
+              display: "grid",
+              placeItems: "center",
+              border: `4px solid ${NEX.cyan}`,
+              background: NEX.cyanFaint,
+              color: NEX.cyan,
+              fontSize: 38,
+              fontWeight: 800,
+              letterSpacing: "0.04em",
+              fontFamily: SANS,
+              boxShadow: `0 6px 24px -8px rgba(0,0,0,0.8)`,
+            }}
+          >
+            {initials}
+          </div>
+        )}
+        {props.isVerified ? (
+          <div
+            aria-label="Verified NEX seller"
+            data-nex-profile-avatar-verified
+            style={{
+              position: "absolute",
+              right: 6,
+              bottom: 6,
+              width: 28,
+              height: 28,
+              borderRadius: "50%",
+              background: NEX.verifiedBlue,
+              display: "grid",
+              placeItems: "center",
+              border: `3px solid ${NEX.bg}`,
+            }}
+          >
+            <CheckIcon color="#FFFFFF" size={14} />
+          </div>
+        ) : null}
+        {/* Owner directive 2026-10-17 · camera-icon overlay on the
+            avatar when edit mode is active · tap opens a native file
+            picker that submits to the sealed `uploadAvatarAction` ·
+            same upload path as the sealed face-camera-uploader so
+            there's one storage pipeline. The overlay replaces the
+            verified checkmark's corner when both are present (edit
+            mode is a transient state · verification stays visible
+            everywhere else). */}
+        {props.showAvatarUploadAffordance ? (
+          <AvatarCameraPicker />
+        ) : null}
+      </div>
+
+      <h1
+        data-nex-profile-name
+        style={{
+          margin: "10px 0 0",
+          fontSize: 22,
+          fontWeight: 700,
+          color: NEX.text,
+          fontFamily: SANS,
+          lineHeight: 1.15,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
+        {props.displayName}
+        {props.isVerified ? (
+          <span
+            aria-hidden
+            data-nex-profile-name-verified
+            style={{
+              display: "inline-grid",
+              placeItems: "center",
+              width: 20,
+              height: 20,
+              borderRadius: "50%",
+              background: NEX.verifiedBlue,
+            }}
+          >
+            <CheckIcon color="#FFFFFF" size={11} />
+          </span>
+        ) : null}
+      </h1>
+
+      {/* Owner directive 2026-10-17 · the NEX ID row directly under
+          the name has been retired · the viewer's own NEX ID is
+          already shown in the top chrome bar · the profile owner's
+          NEX ID still appears on contacts/ControlDrawer surfaces. */}
+
+      {/* Location moved up to sit directly under the name per owner
+          directive 2026-10-17 · uses a map icon (not pin) · auto-
+          updates from `nex_account_profile.location_label` whenever
+          the owner sets or changes their city/country in Settings.
+          Owner mode shows an "+ Add your location" prompt when the
+          field is NULL so the field is self-discoverable. */}
+      {props.locationLabel ? (
+        <div
+          data-nex-profile-location
+          style={{
+            fontSize: 14,
+            fontWeight: 600,
+            color: NEX.text,
+            fontFamily: SANS,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          <MapIcon color={NEX.cyan} />
+          <span>{props.locationLabel}</span>
+        </div>
+      ) : props.isOwner ? (
+        <Link
+          href={`/nex-native/profile/${(props.nexHandle ?? "").toLowerCase()}?mode=edit&focus=location`}
+          data-nex-profile-location-empty-cta
+          style={{
+            fontSize: 12,
+            color: NEX.textMuted,
+            fontFamily: SANS,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            textDecoration: "none",
+            padding: "4px 10px",
+            borderRadius: 999,
+            border: `1px dashed ${NEX.cyanSoft}`,
+          }}
+        >
+          <MapIcon color={NEX.textMuted} /> + Add your location
+        </Link>
+      ) : null}
+
+      {professionLine ? (
+        <div
+          data-nex-profile-profession
+          style={{
+            fontSize: 13,
+            color: NEX.textDim,
+            fontFamily: SANS,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          <BriefcaseIcon color={NEX.textMuted} />
+          <span>{professionLine}</span>
+        </div>
+      ) : null}
+
+      {props.bio ? (
+        <p
+          data-nex-profile-bio
+          style={{
+            margin: "6px 14px 0",
+            maxWidth: 320,
+            fontSize: 13,
+            lineHeight: 1.4,
+            color: NEX.textDim,
+            fontFamily: SANS,
+          }}
+        >
+          {props.bio}
+        </p>
+      ) : props.isOwner ? (
+        <OwnerEmptyHint hint="Tap Edit profile to add your bio." />
+      ) : null}
+
+      {/* The in-hero "Edit profile" link was retired 2026-10-17 ·
+          the OwnerEditShell wraps the whole page and renders exactly
+          one toggle button in the top-right of the cover (Edit → Save).
+          See _owner-edit-shell.tsx. */}
+    </header>
+  );
+}
+
+function OwnerEmptyHint({ hint }: { readonly hint: string }): React.JSX.Element {
+  return (
+    <div
+      data-nex-profile-owner-hint
+      style={{
+        marginTop: 6,
+        fontSize: 11,
+        color: NEX.textMuted,
+        fontFamily: SANS,
+      }}
+    >
+      {hint}
+    </div>
+  );
+}
+
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
+  return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
+}
+
+function buildProfessionLine(profession: string | null, headline: string | null): string | null {
+  const p = (profession ?? "").trim();
+  const h = (headline ?? "").trim();
+  if (p.length === 0 && h.length === 0) return null;
+  if (p.length === 0) return h;
+  if (h.length === 0) return p;
+  return `${p} · ${h}`;
+}
+
+function BriefcaseIcon({ color }: { readonly color: string }): React.JSX.Element {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+    </svg>
+  );
+}
+
+function MapIcon({ color }: { readonly color: string }): React.JSX.Element {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+      <circle cx="12" cy="10" r="3" />
+    </svg>
+  );
+}
+
+function CheckIcon({ color, size }: { readonly color: string; readonly size: number }): React.JSX.Element {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+// PencilIcon retired · the edit affordance moved to OwnerEditShell.
