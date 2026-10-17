@@ -48,6 +48,12 @@ const NEX_GUEST_PEER = {
 };
 
 const SEED_MESSAGES: StandardExperienceSeedMessage[] = [
+  /* Owner directive 2026-10-18 · "chat theme chat must be able
+     scrolling up or down". Expanded the preset conversation so the
+     message column overflows the chat area · the sealed overflow-y
+     auto on [data-nex-se-messages] then enables scroll. Previous
+     4-message seed exactly filled the clientHeight · no overflow ·
+     no scroll possible. */
   {
     id: "s1",
     mine: false,
@@ -60,6 +66,17 @@ const SEED_MESSAGES: StandardExperienceSeedMessage[] = [
     mine: true,
     body: "love the colour palette — very underwater",
   },
+  { id: "s5", mine: false, body: "the shell mule turned out exactly how I pictured it 🐚" },
+  { id: "s6", mine: true, body: "that pearl inlay is magic" },
+  { id: "s7", mine: false, body: "working on a limited pearl diver next · 20 pairs only" },
+  { id: "s8", mine: true, body: "put me down for a size 7!" },
+  { id: "s9", mine: false, body: "noted ✍️ · launch is next Tuesday" },
+  { id: "s10", mine: true, body: "cant wait" },
+  { id: "s11", mine: false, body: "also · the reef walker neoprene arrived · it's PERFECT" },
+  { id: "s12", mine: true, body: "colour tests at the weekend?" },
+  { id: "s13", mine: false, body: "yes please · bring the mood board 📒" },
+  { id: "s14", mine: true, body: "i'll grab coffees on the way" },
+  { id: "s15", mine: false, body: "ok see you Saturday 🌊" },
 ];
 
 const PRODUCTS = [

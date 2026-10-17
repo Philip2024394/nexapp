@@ -94,17 +94,6 @@ export function StandardBubble({
     ? Object.entries(reactions).filter(([, n]) => n > 0)
     : [];
 
-  // Peer bubbles get an avatar column on the left · mine bubbles don't.
-  // Flex-end alignment keeps the avatar aligned to the bubble's bottom
-  // so multi-line bubbles still read cleanly.
-  const row: React.CSSProperties = {
-    display: "flex",
-    gap: 6,
-    alignItems: "flex-end",
-    alignSelf: mine ? "flex-end" : "flex-start",
-    maxWidth: "82%",
-  };
-
   const bubble: React.CSSProperties = {
     position: "relative",
     padding: t.geometry.padding,
@@ -125,7 +114,7 @@ export function StandardBubble({
     minWidth: 0,
     display: "flex",
     flexDirection: "column",
-    gap: 2,
+    gap: 4,
   };
 
   return (
@@ -136,43 +125,76 @@ export function StandardBubble({
         flexDirection: "column",
         gap: 4,
         alignSelf: mine ? "flex-end" : "flex-start",
-        maxWidth: "82%",
+        maxWidth: "88%",
+        /* Owner directive 2026-10-18 · "chat theme chat must be able
+           scrolling up or down". The messages container is a flex
+           column · default flex-shrink:1 on children compresses
+           bubbles so content fits = no overflow = no scroll. Pin
+           bubble to its natural height so content overflows cleanly
+           and the sealed overflow-y:auto on the parent enables scroll. */
+        flexShrink: 0,
       }}
     >
-      <div style={row}>
-        {!mine && (
-          <PeerAvatar
-            url={peerAvatarUrl ?? null}
-            name={peerName ?? "?"}
-            accent={accent}
-          />
+      <div style={bubble}>
+        {t.innerLightOverlay && (
+          <span aria-hidden style={t.innerLightOverlay} />
         )}
-        <div style={bubble}>
-          {t.innerLightOverlay && (
-            <span aria-hidden style={t.innerLightOverlay} />
-          )}
-          <span style={{ position: "relative", zIndex: 1 }}>{children}</span>
-          {(timeLabel || (mine && delivery)) && (
-            <div
+        {/* Owner directive 2026-10-18 (refined) · peer avatar sits
+            INSIDE the bubble at the top-left · sender name on the
+            right of the avatar · timestamp pinned bottom-right on
+            the same line as any delivery ticks. */}
+        {!mine && (
+          <div
+            data-nex-se-bubble-header
+            style={{
+              position: "relative",
+              zIndex: 1,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              marginBottom: 2,
+            }}
+          >
+            <PeerAvatar
+              url={peerAvatarUrl ?? null}
+              name={peerName ?? "?"}
+              accent={accent}
+            />
+            <span
               style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "flex-end",
-                gap: 4,
-                marginTop: 2,
-                fontSize: 10,
-                opacity: 0.7,
-                color: t.typography.color,
+                fontSize: 11,
+                fontWeight: 700,
+                color: accent,
+                letterSpacing: "0.02em",
               }}
             >
-              {timeLabel && <span>{timeLabel}</span>}
-              {mine && delivery && (
-                <DeliveryTicks state={delivery} accent={accent} />
-              )}
-            </div>
-          )}
-          {showTrail && <StandardBubbleTrail engine={engine} />}
-        </div>
+              {peerName ?? "Peer"}
+            </span>
+          </div>
+        )}
+        <span style={{ position: "relative", zIndex: 1 }}>{children}</span>
+        {(timeLabel || (mine && delivery)) && (
+          <div
+            data-nex-se-bubble-meta
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              gap: 4,
+              marginTop: 2,
+              fontSize: 10,
+              opacity: 0.7,
+              color: t.typography.color,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {timeLabel && <span>{timeLabel}</span>}
+            {mine && delivery && (
+              <DeliveryTicks state={delivery} accent={accent} />
+            )}
+          </div>
+        )}
+        {showTrail && <StandardBubbleTrail engine={engine} />}
       </div>
 
       {reactionEntries.length > 0 && (
@@ -183,7 +205,6 @@ export function StandardBubble({
             gap: 4,
             flexWrap: "wrap",
             alignSelf: mine ? "flex-end" : "flex-start",
-            marginLeft: mine ? 0 : 30, // clear the avatar column
           }}
         >
           {reactionEntries.map(([emoji, count]) => (
@@ -193,22 +214,65 @@ export function StandardBubble({
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 3,
-                padding: "2px 6px",
+                padding: "2px 7px",
                 borderRadius: 999,
                 background: `${accent}22`,
                 border: `1px solid ${accent}55`,
-                fontSize: 11,
+                fontSize: 13,
                 lineHeight: 1,
                 color: t.typography.color,
               }}
             >
-              <span style={{ fontSize: 11 }}>{emoji}</span>
-              {count > 1 && <span>{count}</span>}
+              <span style={{ fontSize: 13 }}>{emoji}</span>
+              {count > 1 && (
+                <span style={{ fontSize: 10, fontWeight: 700 }}>{count}</span>
+              )}
             </span>
           ))}
+          {/* Owner directive 2026-10-18 · "+" react button at the end
+              of the row · preview no-op · lets the layout read as a
+              functional reaction surface not just display chrome. */}
+          <button
+            type="button"
+            aria-label="Add reaction"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 22,
+              height: 22,
+              padding: 0,
+              borderRadius: 999,
+              background: `${accent}11`,
+              border: `1px solid ${accent}44`,
+              color: accent,
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            <PlusGlyph />
+          </button>
         </div>
       )}
     </div>
+  );
+}
+
+function PlusGlyph(): React.JSX.Element {
+  return (
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.4}
+      strokeLinecap="round"
+      aria-hidden
+    >
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
   );
 }
 
@@ -236,8 +300,8 @@ function PeerAvatar({
       data-nex-se-bubble-avatar
       style={{
         flexShrink: 0,
-        width: 24,
-        height: 24,
+        width: 22,
+        height: 22,
         borderRadius: "50%",
         border: `1px solid ${accent}66`,
         background: url
@@ -245,10 +309,9 @@ function PeerAvatar({
           : `linear-gradient(135deg, ${accent}44, #05101f)`,
         display: "grid",
         placeItems: "center",
-        fontSize: 9,
+        fontSize: 8,
         fontWeight: 700,
         color: "#F2F5F8",
-        marginBottom: 2,
       }}
     >
       {!url && initials}

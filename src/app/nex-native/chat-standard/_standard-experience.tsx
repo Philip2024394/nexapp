@@ -105,6 +105,18 @@ export function StandardExperience({
   // monotonically increasing offset (older → newer) so the chat reads
   // like a real conversation.
   const mountNow = React.useMemo(() => Date.now(), []);
+
+  // Owner directive 2026-10-18 · "chat theme chat must be able
+  // scrolling up or down". Scroll the messages container to the
+  // bottom on mount + after each new message · gives the "sticks
+  // to bottom" affordance that `justify-content: flex-end` used to
+  // provide (that CSS pattern broke scroll on overflow).
+  const messagesRef = React.useRef<HTMLDivElement | null>(null);
+  const allMessagesLength = seedMessages.length + localMessages.length;
+  React.useEffect(() => {
+    const el = messagesRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [allMessagesLength]);
   // Preview mock reactions keyed by message id so the shell can light
   // up specific bubbles with a reaction row · visual-only, no actual
   // reaction wiring in preview mode.
@@ -224,28 +236,43 @@ export function StandardExperience({
           onToggleShop={() => setShopOpen((v) => !v)}
         />
 
-        {/* Messages */}
+        {/* Messages · scrollable region.
+            Owner directive 2026-10-18 · "chat theme chat must be able
+            scrolling up or down". Dropped `justify-content: flex-end`
+            at the overflow container level · that pattern pushes
+            overflowing content above the viewport where many browsers
+            don't allow scrolling. The flex-end behaviour is preserved
+            via an INNER wrapper that uses min-height: 100% + justify-
+            content: flex-end · so short conversations stick to the
+            bottom AND long conversations scroll naturally. */}
         <div
+          ref={messagesRef}
           data-nex-se-messages
           style={{
             position: "relative",
             zIndex: 5,
             flex: 1,
+            minHeight: 0,
             overflowY: "auto",
-            // Universal 2026-10-11 · bottom reserve so chat bubbles
-            // never hide beneath the floating 3-dot stack mounted by
-            // UniversalChromeOverlay (fixed at `bottom: safe + 76px`,
-            // 40×40 button + 8px gap + 14px edge). Also keeps the
-            // last bubble clear of the composer pill above the
-            // safe-area band.
             padding:
               "10px 14px calc(env(safe-area-inset-bottom, 0) + 128px)",
             display: "flex",
             flexDirection: "column",
-            gap: 8,
-            justifyContent: "flex-end",
           }}
         >
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              /* Owner directive 2026-10-18 · drop justify-content:
+                 flex-end so overflow stays positive · scroll works
+                 natively. Short conversations now sit top-down · the
+                 shell scrolls to bottom on mount via the useEffect
+                 below so visually it STILL reads as "newest at the
+                 bottom" without the broken-scroll quirk. */
+            }}
+          >
           {allMessages.map((m, idx) => {
             if (m.body.startsWith("[sticker:")) {
               const slug = m.body.slice(9, -1);
@@ -288,6 +315,7 @@ export function StandardExperience({
               </StandardBubble>
             );
           })}
+          </div>
         </div>
 
         {/* Shop sheet · UNIVERSAL RULE across every theme ·

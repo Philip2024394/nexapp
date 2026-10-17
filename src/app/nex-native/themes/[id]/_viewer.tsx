@@ -194,12 +194,35 @@ export default function ThemeViewerClient(
   // see the big-newest + small-older stack update live · no DB write.
   const [messages, setMessages] = React.useState<PortraitBloomMessage[]>(
     () => [
+      /* Owner directive 2026-10-18 · "chat theme chat must be able
+         scrolling up or down". Expanded preset conversation so the
+         message column overflows the chat area · PortraitBloomShell's
+         sealed [data-nex-message-scroll] overflow-y auto then enables
+         scroll on both touch + desktop wheel. */
+      {
+        id: "sample-1",
+        body: "Hey! Just got back from the shoot.",
+        sent_at: s.m1,
+        read_at: s.readEarly,
+        mine: false,
+        reactions: { "👋": ["preview-self"] },
+        reactions_order: ["👋"],
+      },
+      {
+        id: "sample-2",
+        body: "How'd it go?",
+        sent_at: s.m2,
+        read_at: s.readEarly,
+        mine: true,
+      },
       {
         id: "sample-3",
         body: "Sending the top 10 now.\nRoll #2 is my favourite.",
         sent_at: s.m3,
         read_at: s.readMid,
         mine: false,
+        reactions: { "❤️": ["preview-self"] },
+        reactions_order: ["❤️"],
       },
       {
         id: "sample-4",
@@ -207,6 +230,8 @@ export default function ThemeViewerClient(
         sent_at: s.m4,
         read_at: s.readLate,
         mine: true,
+        reactions: { "👍": ["preview-peer"], "🔥": ["preview-peer-2"] },
+        reactions_order: ["👍", "🔥"],
       },
       {
         id: "sample-5",
@@ -214,6 +239,29 @@ export default function ThemeViewerClient(
         sent_at: s.m5,
         read_at: null,
         mine: false,
+        reactions: { "😍": ["preview-self"] },
+        reactions_order: ["😍"],
+      },
+      {
+        id: "sample-6",
+        body: "Yes · the usual · flat white two sugars",
+        sent_at: s.m5,
+        read_at: null,
+        mine: true,
+      },
+      {
+        id: "sample-7",
+        body: "Got you. See you in 10.",
+        sent_at: s.m5,
+        read_at: null,
+        mine: false,
+      },
+      {
+        id: "sample-8",
+        body: "On my way 🚶",
+        sent_at: s.m5,
+        read_at: null,
+        mine: true,
       },
     ],
   );
