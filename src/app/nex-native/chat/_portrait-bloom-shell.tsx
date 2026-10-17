@@ -1066,6 +1066,16 @@ export function PortraitBloomShell({
                     ? "#8FFF6E"
                     : undefined
               }
+              /* Owner directive 2026-10-18 · header avatar tap on
+                 preview surfaces opens the viewer's own profile ·
+                 real chat avatars should route to the peer handle
+                 but preview has no real peer. ThemeAccent threaded
+                 via URL param for the profile page to honour. */
+              avatarHref={
+                scope === "theme-preview"
+                  ? `/nex-native/profile/me?themeAccent=${encodeURIComponent(rippleColor)}`
+                  : undefined
+              }
               /* Owner directive 2026-10-18 · preview surfaces cap
                  name to 1 line (ellipsis past ~14 chars). Real chat
                  keeps the 2-line default for user names. */

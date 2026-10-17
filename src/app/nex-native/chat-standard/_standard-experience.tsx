@@ -602,7 +602,12 @@ function StandardHeader({
   // Joker chat. Right-cluster (Home/Cart/Shop) stays as the Standard
   // Experience's own 3-button action set alongside the primitive.
   const isOnline = peer.isOnline !== false;
-  const viewerHref = `/nex-native/dev/status-viewer-v1?theme=${encodeURIComponent(engine.package.identity.id)}`;
+  /* Owner directive 2026-10-18 · header avatar tap opens the peer's
+     profile · preview routes to /profile/me (no real peer handle
+     exists for a theme preview) and threads the theme accent via
+     ?themeAccent so the profile page can tint its chrome to match
+     when its own theme-color support lands. */
+  const avatarHref = `/nex-native/profile/me?themeAccent=${encodeURIComponent(engine.package.colours.primary)}`;
   return (
     <div
       style={{
@@ -632,7 +637,7 @@ function StandardHeader({
            reference). Real chat routes omit this and keep the
            2-line wrap for user-chosen display names. */
         maxNameLines={1}
-        avatarHref={viewerHref}
+        avatarHref={avatarHref}
         rightReserveWidth={0}
       />
       <StandardHeaderActions
