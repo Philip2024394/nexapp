@@ -87,13 +87,15 @@ export function UniversalComposerFooter({
   const [value, setValue] = React.useState("");
   const [emojiActive, setEmojiActive] = React.useState(false);
   const [plusOpen, setPlusOpen] = React.useState(false);
-  // Sealed 2026-10-12 · Joker custom keypad · opens when the user
-  // taps the composer pill AND the active theme is Joker. The native
-  // OS keyboard is suppressed via `readOnly inputMode="none"` on the
-  // input (see ComposerPill) so this keypad becomes the ONLY way to
-  // type when Joker is on. Every other theme keeps the native
-  // keyboard · we are not building a keypad for every world.
-  const useJokerKeypad = themeId === JOKER_KEYPAD_THEME_ID;
+  // Owner directive 2026-10-18 · "all chat themes must have their
+  // own keypad in theme color". The Joker-pattern keypad now opens
+  // on EVERY viewer-path theme · each surface recolours via the
+  // accentColor prop (Joker green for theme-0 · theme accent for
+  // all others). The native OS keyboard is suppressed on all these
+  // surfaces via `readOnly inputMode="none"` on the input (see
+  // ChatComposerPill).
+  const useJokerKeypad = true;
+  void JOKER_KEYPAD_THEME_ID; // retained for the Joker emoji/sticker catalogue lookup only
   const [keypadOpen, setKeypadOpen] = React.useState(false);
   // Sealed 2026-10-11 · the picker tap now STAGES the picked emoji
   // in the composer alongside any text the user types · they can
@@ -268,6 +270,11 @@ export function UniversalComposerFooter({
           onClose={() => setKeypadOpen(false)}
           themeId={themeId}
           onPickEmoji={(e) => setPendingEmoji(e)}
+          /* Owner directive 2026-10-18 · pass the active theme's
+             primary colour so the keypad recolours · Joker still
+             falls back to its sealed acid green via the component's
+             default when accent is omitted. */
+          accentColor={accent}
         />
       )}
     </>

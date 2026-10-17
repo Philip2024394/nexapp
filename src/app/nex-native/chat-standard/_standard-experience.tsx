@@ -33,6 +33,7 @@ import {
 // twice-then-skip for every Standard Experience world without any
 // per-theme code.
 import { StandardIntroOverlay } from "./_standard-intro-overlay";
+import { JokerKeypad } from "./_joker-keypad";
 
 export interface StandardExperienceFixturePeer {
   accountId: string;
@@ -91,6 +92,10 @@ export function StandardExperience({
   // + button in the composer footer opens a centered floating menu
   // with Contacts / Add Product / Animations. Universal rule.
   const [plusMenuOpen, setPlusMenuOpen] = React.useState(false);
+  // Owner directive 2026-10-18 · themed keypad opens on tap of the
+  // composer input · same JokerKeypad as the viewer path · recolours
+  // via engine.colours.primary.
+  const [keypadOpen, setKeypadOpen] = React.useState(false);
   const [lastReactId, setLastReactId] = React.useState<string | null>(null);
   const colours = engine.colours;
 
@@ -371,6 +376,11 @@ export function StandardExperience({
               onAttachTap={() => {
                 /* preview no-op · wired later */
               }}
+              /* Owner directive 2026-10-18 · suppress native keyboard
+                 so the themed JokerKeypad opens instead · same
+                 behaviour as the viewer path. */
+              suppressNativeKeyboard
+              onFocusInput={() => setKeypadOpen(true)}
             />
           </div>
           {/* Owner directive 2026-10-18 · send lives INSIDE the
@@ -402,6 +412,24 @@ export function StandardExperience({
           engine={engine}
           open={plusMenuOpen}
           onClose={() => setPlusMenuOpen(false)}
+        />
+
+        {/* Owner directive 2026-10-18 · "all chat themes must have
+            their own keypad in theme color". The Joker-pattern
+            keypad opens on tap of the composer input · the theme's
+            primary colour drives the keypad recolour via the
+            accentColor prop. */}
+        <JokerKeypad
+          open={keypadOpen}
+          value={composerText}
+          onChange={setComposerText}
+          onSend={() => {
+            handleSend();
+            setKeypadOpen(false);
+          }}
+          onClose={() => setKeypadOpen(false)}
+          themeId={engine.package.identity.id}
+          accentColor={engine.package.colours.primary}
         />
       </div>
     </>
@@ -998,14 +1026,15 @@ function FloatingCallActions({
     <div
       data-nex-se-call-actions={open ? "open" : "closed"}
       style={{
-        /* Owner directive 2026-10-18 (clarified) · "move the 3-dot
-           button back OVER the plus button · inline vertical". The
-           3-dot stacks DIRECTLY ABOVE the + button at the same
-           horizontal X (right: 14 · matches + button's right edge
-           inside the composer row). bottom: 72 lifts the circle up
-           by ~1 button-height + gap so it reads as a stacked pair. */
+        /* Owner directive 2026-10-18 (further refined) · the 3-dot
+           sits DIRECTLY above the + button on the same vertical
+           line. The + button sits inside the composer row with
+           padding-right: 10 · its right edge is at `right: 10` from
+           the parent · so the 3-dot at `right: 10` lines up X-for-X.
+           bottom: 72 lifts the circle one button-height + gap above
+           the composer. */
         position: "absolute",
-        right: 14,
+        right: 10,
         bottom: "calc(env(safe-area-inset-bottom, 0) + 72px)",
         zIndex: 9,
         display: "flex",

@@ -40,15 +40,16 @@ import {
   type BuiltInThemeSticker,
 } from "@/lib/nex-native/theme-asset-fallback";
 
-const JOKER_GREEN = "#8FFF6E";
-const JOKER_GREEN_DIM = "rgba(143,255,110,0.22)";
-const JOKER_GREEN_GLOW = "rgba(143,255,110,0.55)";
+/* Owner directive 2026-10-18 · the Joker-green module constants
+   (JOKER_GREEN · JOKER_GREEN_DIM · JOKER_GREEN_GLOW · KEY_BG_PRESSED
+   · KEY_BORDER) were retired · every styled reference now reads
+   `var(--nex-kp-accent-*)` with the Joker-green rgba literals as
+   fallbacks. The deriveKeypadVars() helper computes the CSS vars
+   from the accentColor prop (defaults to Joker green). */
 const DEEP_1 = "#030308";
 const DEEP_2 = "#0A0F1A";
 const KEY_TEXT = "#F4F7FC";
 const KEY_BG_IDLE = "rgba(255,255,255,0.06)";
-const KEY_BG_PRESSED = "rgba(143,255,110,0.25)";
-const KEY_BORDER = "rgba(143,255,110,0.18)";
 const BACKSPACE_RED = "rgba(255,80,80,0.14)";
 const BACKSPACE_RED_BORDER = "rgba(255,80,80,0.35)";
 
@@ -90,6 +91,32 @@ export interface JokerKeypadProps {
    *  Send to deliver text + emoji together (identical path to the
    *  pre-keypad EmojiStickerGifPicker). */
   onPickEmoji?: (emoji: BuiltInThemeEmoji) => void;
+  /** Owner directive 2026-10-18 · "all chat themes must have their
+   *  own keypad in theme color". The keypad was Joker-only until
+   *  this seal · it now accepts any accent hex so every theme can
+   *  render the Joker-pattern layout in its own colour. Defaults to
+   *  Joker acid-green (#8FFF6E) so legacy callers stay byte-identical. */
+  accentColor?: string;
+}
+
+/** Convert a hex accent into the five rgba() tints the keypad needs
+ *  (accent · dim 0.22 · glow 0.55 · pressed 0.25 · border 0.18) and
+ *  return them as CSS custom properties for injection on the keypad
+ *  root. Every style inside the keypad reads `var(--nex-kp-accent-*)`
+ *  so the whole surface recolours from this one object. */
+function deriveKeypadVars(accent: string): Record<string, string> {
+  const hex = accent.replace("#", "").trim();
+  const safe = hex.length === 6 ? hex : "8FFF6E";
+  const r = parseInt(safe.slice(0, 2), 16);
+  const g = parseInt(safe.slice(2, 4), 16);
+  const b = parseInt(safe.slice(4, 6), 16);
+  return {
+    "--nex-kp-accent": `rgb(${r},${g},${b})`,
+    "--nex-kp-accent-dim": `rgba(${r},${g},${b},0.22)`,
+    "--nex-kp-accent-glow": `rgba(${r},${g},${b},0.55)`,
+    "--nex-kp-accent-pressed": `rgba(${r},${g},${b},0.25)`,
+    "--nex-kp-accent-border": `rgba(${r},${g},${b},0.18)`,
+  };
 }
 
 /** Row layouts · pure data so swapping languages later is one edit. */
@@ -113,7 +140,15 @@ export function JokerKeypad({
   onClose,
   themeId,
   onPickEmoji,
+  accentColor,
 }: JokerKeypadProps): React.JSX.Element | null {
+  /* Owner directive 2026-10-18 · derive the five CSS vars once per
+     render from accentColor · defaults to Joker acid-green so the
+     Joker theme stays visually identical to the sealed primitive. */
+  const paletteVars = React.useMemo(
+    () => deriveKeypadVars(accentColor ?? "#8FFF6E"),
+    [accentColor],
+  );
   const [shift, setShift] = React.useState<ShiftState>("upper"); // first letter capitalised
   const [plane, setPlane] = React.useState<Plane>("letters");
   const [pressed, setPressed] = React.useState<string | null>(null);
@@ -230,8 +265,8 @@ export function JokerKeypad({
           to   { transform: translateY(0); }
         }
         @keyframes nex-joker-key-flash {
-          0%   { box-shadow: 0 0 0 0 ${JOKER_GREEN_GLOW}, 0 2px 0 0 ${JOKER_GREEN_DIM}; }
-          100% { box-shadow: 0 0 12px 4px transparent, 0 2px 0 0 ${JOKER_GREEN_DIM}; }
+          0%   { box-shadow: 0 0 0 0 var(--nex-kp-accent-glow, rgba(143,255,110,0.55)), 0 2px 0 0 var(--nex-kp-accent-dim, rgba(143,255,110,0.22)); }
+          100% { box-shadow: 0 0 12px 4px transparent, 0 2px 0 0 var(--nex-kp-accent-dim, rgba(143,255,110,0.22)); }
         }
         /* CRT scanline texture · ultra-faint overlay for Joker vibe */
         @keyframes nex-joker-keypad-scan {
@@ -272,6 +307,11 @@ export function JokerKeypad({
         role="dialog"
         aria-label="Joker keypad"
         style={{
+          /* Owner directive 2026-10-18 · CSS custom properties for
+             the theme accent are injected here · every nested style
+             reads var(--nex-kp-accent-*) so the whole keypad recolours
+             from this one block. */
+          ...paletteVars,
           position: "fixed",
           left: 0,
           right: 0,
@@ -281,9 +321,9 @@ export function JokerKeypad({
             "10px 6px calc(env(safe-area-inset-bottom, 0px) + 10px)",
           background:
             `linear-gradient(180deg, ${DEEP_1} 0%, ${DEEP_2} 100%)`,
-          borderTop: `1px solid ${JOKER_GREEN_DIM}`,
+          borderTop: `1px solid var(--nex-kp-accent-dim, rgba(143,255,110,0.22))`,
           boxShadow:
-            `0 -8px 32px rgba(0,0,0,0.6), 0 -1px 0 ${JOKER_GREEN_DIM}`,
+            `0 -8px 32px rgba(0,0,0,0.6), 0 -1px 0 var(--nex-kp-accent-dim, rgba(143,255,110,0.22))`,
           animation:
             "nex-joker-keypad-rise 240ms cubic-bezier(0.22, 0.9, 0.3, 1.0) both",
           pointerEvents: "auto",
@@ -343,7 +383,7 @@ export function JokerKeypad({
               flexShrink: 0,
               appearance: "none",
               background: "rgba(255,255,255,0.04)",
-              border: `1px solid ${KEY_BORDER}`,
+              border: `1px solid var(--nex-kp-accent-border, rgba(143,255,110,0.18))`,
               color: KEY_TEXT,
               fontSize: 16,
               cursor: "pointer",
@@ -375,7 +415,7 @@ export function JokerKeypad({
               padding: "0 10px",
               borderRadius: 10,
               background: "rgba(0,0,0,0.45)",
-              border: `1px solid ${JOKER_GREEN_DIM}`,
+              border: `1px solid var(--nex-kp-accent-dim, rgba(143,255,110,0.22))`,
               boxShadow: `inset 0 1px 0 rgba(255,255,255,0.03), 0 0 0 1px rgba(0,0,0,0.4)`,
               fontFamily: "inherit",
               fontSize: 13,
@@ -416,8 +456,8 @@ export function JokerKeypad({
                     width: 2,
                     height: 14,
                     marginLeft: 2,
-                    background: JOKER_GREEN,
-                    boxShadow: `0 0 6px ${JOKER_GREEN_GLOW}`,
+                    background: "var(--nex-kp-accent, #8FFF6E)",
+                    boxShadow: `0 0 6px var(--nex-kp-accent-glow, rgba(143,255,110,0.55))`,
                     animation: "nex-joker-caret-blink 1s steps(2) infinite",
                   }}
                 />
@@ -443,13 +483,13 @@ export function JokerKeypad({
               padding: 0,
               display: "grid",
               placeItems: "center",
-              background: value.length === 0 ? "rgba(143,255,110,0.18)" : JOKER_GREEN,
+              background: value.length === 0 ? "var(--nex-kp-accent-border, rgba(143,255,110,0.18))" : "var(--nex-kp-accent, #8FFF6E)",
               color: value.length === 0 ? "rgba(1,4,1,0.55)" : "#010401",
-              border: `1px solid ${JOKER_GREEN}`,
+              border: `1px solid var(--nex-kp-accent, #8FFF6E)`,
               cursor: value.length === 0 ? "default" : "pointer",
               fontWeight: 800,
               fontSize: 14,
-              boxShadow: value.length === 0 ? "none" : `0 0 12px ${JOKER_GREEN_GLOW}`,
+              boxShadow: value.length === 0 ? "none" : `0 0 12px var(--nex-kp-accent-glow, rgba(143,255,110,0.55))`,
               transition: "background 120ms ease, box-shadow 160ms ease",
             }}
           >
@@ -646,11 +686,11 @@ function ModeTab({
         fontSize: 15,
         fontWeight: active ? 700 : 500,
         color: active ? "#010401" : KEY_TEXT,
-        background: active ? JOKER_GREEN : "rgba(255,255,255,0.04)",
-        border: `1px solid ${active ? JOKER_GREEN : KEY_BORDER}`,
+        background: active ? "var(--nex-kp-accent, #8FFF6E)" : "rgba(255,255,255,0.04)",
+        border: `1px solid ${active ? "var(--nex-kp-accent, #8FFF6E)" : "var(--nex-kp-accent-border, rgba(143,255,110,0.18))"}`,
         borderRadius: 10,
         boxShadow: active
-          ? `0 0 10px ${JOKER_GREEN_GLOW}`
+          ? `0 0 10px var(--nex-kp-accent-glow, rgba(143,255,110,0.55))`
           : "inset 0 1px 0 rgba(255,255,255,0.03)",
         transition:
           "background 140ms ease, color 140ms ease, box-shadow 160ms ease",
@@ -699,7 +739,7 @@ function InlineEmojiGrid({
           style={{
             appearance: "none",
             background: KEY_BG_IDLE,
-            border: `1px solid ${KEY_BORDER}`,
+            border: `1px solid var(--nex-kp-accent-border, rgba(143,255,110,0.18))`,
             borderRadius: 10,
             padding: 6,
             cursor: "pointer",
@@ -759,7 +799,7 @@ function InlineStickerGrid({
           style={{
             appearance: "none",
             background: KEY_BG_IDLE,
-            border: `1px solid ${KEY_BORDER}`,
+            border: `1px solid var(--nex-kp-accent-border, rgba(143,255,110,0.18))`,
             borderRadius: 12,
             padding: 4,
             cursor: "default",
@@ -852,26 +892,26 @@ function KeyCap({
   const isModifier = intent === "modifier";
 
   const baseBg = isEnter
-    ? JOKER_GREEN
+    ? "var(--nex-kp-accent, #8FFF6E)"
     : isBackspace
       ? BACKSPACE_RED
       : isModifier
-        ? (active ? JOKER_GREEN_DIM : KEY_BG_IDLE)
+        ? (active ? "var(--nex-kp-accent-dim, rgba(143,255,110,0.22))" : KEY_BG_IDLE)
         : KEY_BG_IDLE;
-  const flashBg = isEnter ? JOKER_GREEN : KEY_BG_PRESSED;
+  const flashBg = isEnter ? "var(--nex-kp-accent, #8FFF6E)" : "var(--nex-kp-accent-pressed, rgba(143,255,110,0.25))";
   const borderColor = isEnter
-    ? JOKER_GREEN
+    ? "var(--nex-kp-accent, #8FFF6E)"
     : isBackspace
       ? BACKSPACE_RED_BORDER
       : locked
-        ? JOKER_GREEN
+        ? "var(--nex-kp-accent, #8FFF6E)"
         : active
-          ? JOKER_GREEN_DIM
-          : KEY_BORDER;
+          ? "var(--nex-kp-accent-dim, rgba(143,255,110,0.22))"
+          : "var(--nex-kp-accent-border, rgba(143,255,110,0.18))";
   const textColor = isEnter
     ? "#010401"
     : locked
-      ? JOKER_GREEN
+      ? "var(--nex-kp-accent, #8FFF6E)"
       : KEY_TEXT;
 
   return (
@@ -916,7 +956,7 @@ function KeyCap({
         border: `1px solid ${borderColor}`,
         borderRadius: 10,
         boxShadow: flash
-          ? `0 0 14px ${JOKER_GREEN_GLOW}, inset 0 -2px 0 ${JOKER_GREEN_DIM}`
+          ? `0 0 14px var(--nex-kp-accent-glow, rgba(143,255,110,0.55)), inset 0 -2px 0 var(--nex-kp-accent-dim, rgba(143,255,110,0.22))`
           : `0 2px 0 0 rgba(0,0,0,0.35), inset 0 -2px 0 rgba(255,255,255,0.04)`,
         transform: flash ? "translateY(1px)" : "translateY(0)",
         transition:
