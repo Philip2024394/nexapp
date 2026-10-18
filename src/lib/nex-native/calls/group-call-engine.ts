@@ -165,6 +165,31 @@ export class GroupCallEngine {
   isMuted(): boolean { return this.muted; }
   isCameraOff(): boolean { return this.cameraOff; }
 
+  /** Owner-authorised Phase 2 wiring 2026-10-19 · additive read-only
+   *  accessor. Walks the private peers map and returns one entry per
+   *  LIVE RTCPeerConnection so the sealed
+   *  `measurement.collectStats()` can read stats per peer. Zero
+   *  change to signalling, SDP, media capture, or event flow · pure
+   *  read of state already managed by the engine.
+   *
+   *  Honest invariants:
+   *    · GroupPeer.getPeerConnection() returns null for torn-down /
+   *      pre-offer peers · those are filtered out here.
+   *    · Caller MUST still check pc.connectionState to distinguish
+   *      connecting / connected / disconnected / failed / closed
+   *      before deriving a quality label from stats. */
+  getAllPeerConnections(): ReadonlyArray<{
+    readonly peerAccountId: string;
+    readonly pc: RTCPeerConnection;
+  }> {
+    const out: Array<{ peerAccountId: string; pc: RTCPeerConnection }> = [];
+    for (const [peerAccountId, peer] of this.peers.entries()) {
+      const pc = peer.getPeerConnection();
+      if (pc !== null) out.push({ peerAccountId, pc });
+    }
+    return out;
+  }
+
   private handlePresenceChange(
     rawState: Record<string, Array<Record<string, unknown>>>,
   ): void {

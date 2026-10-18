@@ -13,6 +13,14 @@ import {
   leaveGroupCallAction,
   endGroupCallAction,
 } from "./_group-actions";
+// Phase 2 wiring 2026-10-19 · owner-authorised with 5 safeguards.
+// Imports the sealed master ConnectionFooter (Phase 1 chrome) and
+// the quality-polling hook that reads real WebRTC stats via the
+// ported `collectStats` module. Zero change to signalling / SDP /
+// media capture · the hook is a read-only observer that uses the
+// additive `getAllPeerConnections()` accessor on the engine.
+import { ConnectionFooter } from "@/lib/nex-native/calls-chrome/connection-footer";
+import { useConnectionQuality } from "./_use-connection-quality";
 
 interface Participant {
   accountId: string;
@@ -66,6 +74,26 @@ export function GroupCallClient(props: GroupCallClientProps): React.JSX.Element 
     for (const p of props.participantAccounts) map.set(p.accountId, p);
     return map;
   }, [props.participantAccounts]);
+
+  // Phase 2 wiring 2026-10-19 · stable callback that defers to the
+  // engine's additive getAllPeerConnections() accessor · returns an
+  // empty array before the engine is ready so the hook can safely
+  // mount early without erroring.
+  const getPeerConnections = React.useCallback(() => {
+    const e = engineRef.current;
+    if (!e) return [];
+    return e.getAllPeerConnections();
+  }, []);
+  // Honest · we only poll stats once we've actually joined the call
+  // (otherwise the engine has no peers and the hook churns on an
+  // empty array). Hook returns null (-> "Measuring…") until then.
+  const quality = useConnectionQuality({
+    enabled: joined,
+    getPeerConnections,
+    identity: props.selfAccountId,
+    callId: props.sessionId,
+    role: props.isHost ? "caller" : "callee",
+  });
 
   const nameOf = React.useCallback(
     (id: string): string => {
@@ -225,6 +253,11 @@ export function GroupCallClient(props: GroupCallClientProps): React.JSX.Element 
         onEndForAll={() => void onEndForAll()}
         joined={joined}
       />
+      {/* Phase 2 wiring 2026-10-19 · sealed Phase 1 ConnectionFooter
+          driven by real WebRTC stats via useConnectionQuality. Null
+          quality renders as the honest "Measuring…" per the owner-
+          sealed invariant · we never claim "Good" without data. */}
+      <ConnectionFooter quality={quality} />
     </main>
   );
 }

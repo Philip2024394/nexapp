@@ -98,6 +98,24 @@ export class GroupPeer {
     });
   }
 
+  /** Owner-authorised Phase 2 wiring 2026-10-19 · additive read-only
+   *  getter that exposes the underlying RTCPeerConnection so the sealed
+   *  `measurement.collectStats()` can read WebRTC stats WITHOUT
+   *  replacing or modifying the established call architecture.
+   *
+   *  Honest invariants:
+   *    · Returns null when the peer has been torn down (`closed === true`)
+   *      so a stale PC can never leak out and be mistaken for a live
+   *      connection.
+   *    · Returns null when no PC exists yet (pre-offer).
+   *    · Caller MUST additionally check `pc.connectionState` to
+   *      distinguish connecting / connected / disconnected / failed /
+   *      closed · the hook that consumes this does exactly that. */
+  getPeerConnection(): RTCPeerConnection | null {
+    if (this.closed) return null;
+    return this.pc;
+  }
+
   getState(): GroupPeerState {
     return this.state;
   }
