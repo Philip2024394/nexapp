@@ -52,9 +52,16 @@ const MOCK_SEEDS: ReadonlyArray<ListingCardViewModel> = Object.freeze([
   Object.freeze({
     id: "mock-seed-earbuds-1",
     slug: "sample-wireless-earbuds",
-    title: "Premium Wireless Earbuds",
+    // Owner directive 2026-10-18 (iteration) · `title` is the ONE
+    // name shown on the card in the muted uppercase treatment. CSS
+    // handles the uppercase · the mock stores the natural-case
+    // string so screen-readers get a readable name.
+    title: "Noise-Cancelling Pro",
     description: "Crystal clear sound. All day comfort.",
-    city: null,
+    featuredOffering: null,
+    // Owner directive 2026-10-18 · location row (city then country
+    // fallback) · mocks populate `city` so the row renders.
+    city: "Jakarta",
     categoryLabel: "Products",
     categoryId: "ecommerce",
     categoryAccent: "#FF8A2A",
@@ -66,15 +73,24 @@ const MOCK_SEEDS: ReadonlyArray<ListingCardViewModel> = Object.freeze([
     priceNow: "Rp 950,000",
     priceWas: null,
     discountLabel: null,
+    // Owner directive 2026-10-18 · Slice 2 · structured price so
+    // the FX pipeline can convert 950,000 IDR into the viewer's
+    // picked currency. 950,000 IDR × 100 minor-units-per-major =
+    // 95,000,000 minor units (per sealed currencies.ts scale).
+    priceAmountMinor: 95_000_000,
+    priceCurrency: "IDR",
     sellerCountryIso: "ID",
     buyerLocalPrice: null,
   }),
   Object.freeze({
     id: "mock-seed-resort-1",
     slug: "sample-luxury-beach-resort",
-    title: "Luxury Beach Resort (3 Nights)",
+    // Owner directive 2026-10-18 (iteration) · title is the room /
+    // offering name directly.
+    title: "Ocean-View Villa · King Bed",
     description: "Relax, unwind, enjoy.",
-    city: null,
+    featuredOffering: null,
+    city: "Seminyak, Bali",
     categoryLabel: "Accommodation",
     categoryId: "accommodation",
     categoryAccent: "#B566FF",
@@ -86,6 +102,10 @@ const MOCK_SEEDS: ReadonlyArray<ListingCardViewModel> = Object.freeze([
     priceNow: "Rp 4,750,000",
     priceWas: null,
     discountLabel: null,
+    // Owner directive 2026-10-18 · Slice 2 · 4,750,000 IDR × 100 =
+    // 475,000,000 minor units.
+    priceAmountMinor: 475_000_000,
+    priceCurrency: "IDR",
     sellerCountryIso: "ID",
     buyerLocalPrice: null,
   }),

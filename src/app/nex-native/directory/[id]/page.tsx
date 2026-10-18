@@ -48,13 +48,24 @@ import { getCanonicalBusinessById } from "@/lib/nex-native/directory/directory-s
 // without needing a nested /category/{slug} path.
 import {
   getLandingFeed,
-  pickOrMintSeed,
 } from "@/lib/nex-native/directory/landing-feed-service";
 import {
   isLandingCategorySlug,
   type LandingCategorySlug,
 } from "@/lib/nex-native/directory/landing-category-mapping";
 import { LandingDirectoryView } from "../_landing-directory-view";
+// Owner directive 2026-10-18 · the shared directory header now
+// carries ControlDrawer (3-dots) on the right; the drawer needs a
+// resolved session so signed-in users see their identity bar and
+// the Bisnis gate works. The /[id] route only reaches
+// LandingDirectoryView when the segment is a landing-category slug ·
+// we resolve the session on that branch so the drawer is honest.
+import { effectiveTier } from "@/lib/nex-native/account-service";
+import type { ControlDrawerSession } from "@/components/nex-native/control-drawer/control-drawer-client";
+// Owner directive 2026-10-18 · P1 · session cookie for the sort
+// seed so order stays stable during active browsing and shuffles
+// after a 15-minute absence.
+import { resolveDirectorySeed } from "@/lib/nex-native/directory/directory-seed-cookie";
 import { parseIsoAlpha2 } from "@/lib/nex-native/geo/iso-countries";
 import { fetchDirectoryThumbnailStripByCanonicalId } from "@/lib/nex-native/directory/media-resolver";
 import { ThumbnailStrip } from "./_thumbnail-strip";
@@ -174,7 +185,9 @@ export default async function DirectoryDetailPage(
   if (isLandingCategorySlug(id)) {
     const landingSlug = id as LandingCategorySlug;
     const sp = (await props.searchParams) ?? {};
-    const seed = pickOrMintSeed(typeof sp.s === "string" ? sp.s : null);
+    const seed = await resolveDirectorySeed(
+      typeof sp.s === "string" ? sp.s : null,
+    );
     const page = parseLandingPage(sp.page);
     const requestedCountry = parseIsoAlpha2(sp.country);
     const country = requestedCountry ?? LANDING_DEFAULT_COUNTRY;
@@ -182,6 +195,22 @@ export default async function DirectoryDetailPage(
     // Viewer location via sealed helper · null for anonymous visitors.
     const viewerLocation = await readUserLocationFromAccount();
     const hasViewerLocation = viewerLocation !== null;
+
+    // Resolve ControlDrawer session · guest-safe (null for anon).
+    let drawerSession: ControlDrawerSession | null = null;
+    try {
+      const sess = await resolveNexAppSessionFromContext();
+      if (sess) {
+        drawerSession = {
+          displayName: sess.account.display_name,
+          nexHandle: sess.account.nex_handle,
+          isBisnis: effectiveTier(sess.account) === "bisnis",
+        };
+      }
+    } catch {
+      // Guest · keep drawerSession = null
+    }
+
     const feed = await getLandingFeed({
       limit: LANDING_PAGE_SIZE,
       visitorSeed: seed,
@@ -203,6 +232,7 @@ export default async function DirectoryDetailPage(
         page={page}
         pageSize={LANDING_PAGE_SIZE}
         feed={feed}
+        drawerSession={drawerSession}
       />
     );
   }

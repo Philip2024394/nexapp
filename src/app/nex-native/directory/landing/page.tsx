@@ -166,17 +166,20 @@ function TopHeader({
         <div style={headerEyebrowStyle}>Shop · Book · Save</div>
       </div>
       <div style={headerRightStyle}>
-        {/* Owner directive 2026-10-16 · search icon routes to the
-            sealed `/nex-native/search` surface · the three-dot icon
-            opens the ControlDrawer. Both are now wired · neither is
-            inert decoration. */}
+        {/* Owner directive 2026-10-18 · the magnifying glass that
+            used to live here routed to /nex-native/directory · but
+            the viewer is already on the Directory landing, so a
+            self-referential search icon added no value. Replaced
+            with a Home icon that routes back to /nex-native/welcome
+            · the orientation / post-signup landing · so the user
+            always has a one-tap exit back to familiar territory. */}
         <Link
-          href="/nex-native/directory"
-          aria-label="Search NEX Directory"
+          href="/nex-native/welcome"
+          aria-label="Back to NEX welcome"
           style={iconButtonStyle}
-          data-nex-landing-search-link
+          data-nex-landing-home-link
         >
-          <SearchGlyph />
+          <HomeGlyph />
         </Link>
         <ControlDrawer session={drawerSession} />
       </div>
@@ -184,11 +187,26 @@ function TopHeader({
   );
 }
 
-function SearchGlyph() {
+function HomeGlyph() {
+  // Simple house silhouette · 24-unit viewBox so it visually matches
+  // the retired SearchGlyph's weight (circle + handle). Stroke
+  // colour inherits the shared header text palette.
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="11" cy="11" r="7" stroke={COLOR_TEXT} strokeWidth="2" />
-      <path d="m20 20-3.5-3.5" stroke={COLOR_TEXT} strokeWidth="2" strokeLinecap="round" />
+      <path
+        d="M3 11.5 12 4l9 7.5"
+        stroke={COLOR_TEXT}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M5 10.5V20h14V10.5"
+        stroke={COLOR_TEXT}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

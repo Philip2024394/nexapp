@@ -30,6 +30,10 @@ import type * as React from "react";
 import Link from "next/link";
 
 import { ListingCard } from "@/components/nex-native/directory/listing-card";
+// Owner directive 2026-10-18 · every card must display a location
+// row · we need the sealed ISO lookup to convert the directory's
+// active country code into a human label used as the fallback.
+import { findIsoCountry } from "@/lib/nex-native/geo/iso-countries";
 import {
   getLandingFeed,
   type ListingCardViewModel,
@@ -37,6 +41,33 @@ import {
 import type { LandingCategorySlug } from "@/lib/nex-native/directory/landing-category-mapping";
 import { getMockSeedListings } from "@/lib/nex-native/directory/mock-seed-listings";
 import { FilterSheet } from "./_filter-sheet-client";
+// Owner directive 2026-10-18 · directory results header no longer
+// carries a "Back" button · it was redundant with the sealed 3-dots
+// drawer. Left side gains a cart icon (quick route to /cart with a
+// live badge count) and a home icon (routes back to /welcome so the
+// viewer always has a one-tap exit). Right side becomes the shared
+// ControlDrawer.
+import {
+  ControlDrawer,
+  type ControlDrawerSession,
+} from "@/components/nex-native/control-drawer/control-drawer-client";
+// Owner directive 2026-10-18 · Slice 1 of the directory currency
+// picker. Reads the viewer's preferred-currency cookie server-side
+// and renders a chip beneath the category dropdown so the UI +
+// persistence layer exist while the Frankfurter / ECB FX pipeline
+// is still being authorised. Phase A behaviour: writing the cookie
+// does NOT yet re-price cards · they stay in seller's currency.
+import { readPreferredCurrency } from "@/lib/nex-native/directory/preferred-currency-cookie";
+import { CurrencyPickerClient } from "./_currency-picker-client";
+// Owner directive 2026-10-18 · Slice 2 · daily ECB-sourced FX
+// rates (via Frankfurter) light up the `buyerLocalPrice` slot on
+// each card when the viewer's picked currency differs from the
+// seller's. Honest failure: FX unavailable → seller currency only.
+import {
+  convertAmountMinor,
+  formatEstimate,
+  getDailyFxSnapshot,
+} from "@/lib/nex-native/directory/fx-rate-service";
 
 // NEX palette · aligned with the shared theme.
 const NEX = {
@@ -79,7 +110,7 @@ function hrefFor(slug: LandingCategorySlug | null): string {
   return slug ? `/nex-native/directory/${slug}` : "/nex-native/directory";
 }
 
-export function LandingDirectoryView({
+export async function LandingDirectoryView({
   seed,
   category,
   country,
@@ -89,6 +120,7 @@ export function LandingDirectoryView({
   page,
   pageSize,
   feed,
+  drawerSession,
 }: {
   readonly seed: string;
   readonly category: LandingCategorySlug | null;
@@ -107,6 +139,10 @@ export function LandingDirectoryView({
    *  itself) when the viewer is on the last / only page. */
   readonly pageSize: number;
   readonly feed: LandingFeedOutcomeShape;
+  /** Owner directive 2026-10-18 · ControlDrawer session resolved
+   *  server-side by the parent route. Null for guests · the drawer
+   *  renders the sealed anon identity bar + locked rows. */
+  readonly drawerSession: ControlDrawerSession | null;
 }) {
   // Merge: mock seeds FIRST so the preview surface always has
   // content, then the real feed. Mock ids never collide with real
@@ -121,6 +157,49 @@ export function LandingDirectoryView({
     ...mocks,
     ...feed.cards,
   ];
+
+  // Owner directive 2026-10-18 · Slice 1 · viewer's preferred display
+  // currency. Server-side cookie read · falls back to the sealed
+  // IDR default when no cookie or when the stored value is no longer
+  // in the NEX_CURRENCIES whitelist.
+  const preferredCurrency = await readPreferredCurrency();
+
+  // Owner directive 2026-10-18 · Slice 2 · for each listing that
+  // carries a structured amount + currency, compute an "approx"
+  // buyer-currency estimate using the sealed ECB-daily FX service.
+  // Null outcomes (no snapshot, currency mismatch, bounds-check
+  // failure) silently fall back to seller-currency-only display.
+  // Honest invariant: never fabricate · if conversion fails, the
+  // card simply doesn't show a buyer-currency line.
+  const fxSnapshot = await getDailyFxSnapshot();
+  const fxUpdatedAt = fxSnapshot?.date ?? "";
+  const augmentedCombined: readonly ListingCardViewModel[] = await Promise.all(
+    combined.map(async (card): Promise<ListingCardViewModel> => {
+      if (
+        card.priceAmountMinor === null ||
+        card.priceCurrency === null ||
+        card.priceCurrency === preferredCurrency.code
+      ) {
+        return card;
+      }
+      const convertedMinor = await convertAmountMinor(
+        card.priceAmountMinor,
+        card.priceCurrency,
+        preferredCurrency.code,
+      );
+      if (convertedMinor === null) return card;
+      const priceDisplay = formatEstimate(convertedMinor, preferredCurrency.code);
+      if (priceDisplay === null) return card;
+      return {
+        ...card,
+        buyerLocalPrice: {
+          priceDisplay,
+          countryIso: inferCountryIso(preferredCurrency.code),
+          fxUpdatedAt,
+        },
+      };
+    }),
+  );
 
   return (
     <main
@@ -139,7 +218,10 @@ export function LandingDirectoryView({
           one viewport · scrolls off the top as the viewer moves down. */}
       <div style={pageBgLayerStyle} aria-hidden="true" />
       <div style={shellStyle}>
-        <DirectoryHeaderBrand country={country} />
+        <DirectoryHeaderBrand
+          country={country}
+          drawerSession={drawerSession}
+        />
         <DirectorySearchBar
           seed={seed}
           category={category}
@@ -148,7 +230,19 @@ export function LandingDirectoryView({
           hasViewerLocation={hasViewerLocation}
         />
         <DirectoryCategoryDropdown activeSlug={category} />
-        <DirectoryResultsGrid listings={combined} feed={feed} />
+        {/* Owner directive 2026-10-18 · Slice 1 of the directory
+            currency picker. Lives directly under the "All" category
+            dropdown · writes a persistent cookie · does NOT yet
+            re-price cards (buyer-currency estimates land in Slice 2
+            when the Frankfurter / ECB FX pipeline is authorised). */}
+        <div data-nex-directory-currency-row style={currencyRowStyle}>
+          <CurrencyPickerClient currentCode={preferredCurrency.code} />
+        </div>
+        <DirectoryResultsGrid
+          listings={augmentedCombined}
+          feed={feed}
+          directoryCountry={country}
+        />
         {(() => {
           // Owner directive 2026-10-16 (second pass) · hide the
           // whole pagination when there is nothing to navigate.
@@ -181,9 +275,29 @@ export function LandingDirectoryView({
   );
 }
 
-// ─── Header · NEX wordmark + location + back button ────────────────
+// ─── Header · cart + home (left) · NEX + location + 3-dots (right) ──
+//
+// Owner directive 2026-10-18 · the previous Back button was removed
+// (redundant with the drawer's Home row). New layout:
+//
+//   Left column:
+//     Row 1 · [cart]  [home]  NEX           (icons left of wordmark)
+//     Row 2 · 📍 Country ⌄                   (unchanged location row)
+//   Right column:
+//     [⋮] shared ControlDrawer (session-aware · locked rows for guests)
+//
+// Cart icon is the sealed HeaderCartIcon in "inline" variant · it
+// reads the local cart count and routes to /nex-native/cart. Home
+// icon routes to /nex-native/welcome (one-tap exit back to
+// orientation).
 
-function DirectoryHeaderBrand({ country }: { readonly country: string }) {
+function DirectoryHeaderBrand({
+  country,
+  drawerSession,
+}: {
+  readonly country: string;
+  readonly drawerSession: ControlDrawerSession | null;
+}) {
   const COUNTRY_LABELS: Readonly<Record<string, string>> = {
     ID: "Bali, Indonesia",
     GB: "United Kingdom",
@@ -204,18 +318,55 @@ function DirectoryHeaderBrand({ country }: { readonly country: string }) {
           <ChevronDownGlyph />
         </div>
       </div>
-      {/* Blue back button · owner directive 2026-10-16 · right side.
-          Takes the viewer back to the landing (which minted the seed). */}
-      <Link
-        href="/nex-native/directory/landing"
-        style={backButtonStyle}
-        aria-label="Back to landing"
-        data-nex-directory-back
-      >
-        <BackArrowGlyph />
-        <span style={backButtonLabelStyle}>Back</span>
-      </Link>
+      {/* Owner directive 2026-10-18 (iteration) · cart + home moved
+          from the left side to the right · owner directive
+          2026-10-18 (iteration). CART ICON RETIRED from the
+          directory header · the user reaches a business's cart
+          from the owner's cover page where the sealed cart UI
+          already lives. One cart surface, no duplication.
+          Order: home · 3-dots. */}
+      <div style={headerRightClusterStyle}>
+        <Link
+          href="/nex-native/welcome"
+          aria-label="Back to NEX welcome"
+          style={headerIconLinkStyle}
+          data-nex-directory-home-link
+        >
+          <HomeGlyph />
+        </Link>
+        <ControlDrawer session={drawerSession} />
+      </div>
     </header>
+  );
+}
+
+function HomeGlyph() {
+  // Simple house silhouette · matches the home glyph on
+  // /nex-native/directory/landing (same shape, same stroke weight)
+  // so the two directory surfaces feel like a pair.
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M3 11.5 12 4l9 7.5"
+        stroke={NEX.text}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M5 10.5V20h14V10.5"
+        stroke={NEX.text}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
@@ -247,19 +398,9 @@ function ChevronDownGlyph() {
   );
 }
 
-function BackArrowGlyph() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M15 5l-7 7 7 7"
-        stroke={NEX.cyan}
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+// BackArrowGlyph removed 2026-10-18 · the Back button it belonged to
+// was retired alongside this swap. The ControlDrawer handles
+// backward navigation via its Home row.
 
 // ─── Search bar · search input + Filter button ─────────────────────
 
@@ -467,9 +608,17 @@ function pillIconSpriteStyleFor(
 function DirectoryResultsGrid({
   listings,
   feed,
+  directoryCountry,
 }: {
   readonly listings: readonly ListingCardViewModel[];
   readonly feed: LandingFeedOutcomeShape;
+  /** Owner directive 2026-10-18 · every card must display a
+   *  location row. When a listing has neither `city` nor
+   *  `sellerCountryIso`, the card falls back to the directory's
+   *  active country context (the same label shown in the header).
+   *  Honest default · not fabricated · the directory IS filtered
+   *  by this country, so attributing listings to it is accurate. */
+  readonly directoryCountry: string;
 }) {
   if (listings.length === 0) {
     if (feed.reducedState === "slug_unsupported") {
@@ -493,13 +642,75 @@ function DirectoryResultsGrid({
       </div>
     );
   }
+  // Owner directive 2026-10-18 · resolve the directory's active
+  // country into a human label ONCE per render · reused on every
+  // card as the final location fallback when the listing's own
+  // city + country are both null.
+  const fallbackLocationLabel =
+    findIsoCountry(directoryCountry)?.name ?? directoryCountry;
+  // Owner directive 2026-10-18 · "we must make sure that we don't
+  // show too many 'Chat for price' at once · buyers get annoyed".
+  // Stable sort · priced cards (any of buyerLocalPrice OR priceNow
+  // non-null) come FIRST within the current page. Unpriced cards
+  // keep their relative order and fill the tail. This is a page-
+  // local reorder · pagination still works · we're not hiding
+  // anything, just making the first-impression real estate land
+  // on cards that actually publish a number.
+  const orderedListings = [...listings].sort((a, b) => {
+    const aPriced =
+      a.buyerLocalPrice !== null || a.priceNow !== null ? 0 : 1;
+    const bPriced =
+      b.buyerLocalPrice !== null || b.priceNow !== null ? 0 : 1;
+    return aPriced - bPriced;
+  });
   return (
     <div style={resultsGridStyle}>
-      {listings.map((card) => (
-        <ListingCard key={card.id} listing={card} size="grid" />
+      {orderedListings.map((card) => (
+        <ListingCard
+          key={card.id}
+          listing={card}
+          size={pickCardVariant(card.id)}
+          fallbackLocationLabel={fallbackLocationLabel}
+          fallbackCountryIso={directoryCountry}
+        />
       ))}
     </div>
   );
+}
+
+/** Owner directive 2026-10-18 · stable hash of the listing id used
+ *  to pick between "grid" and "grid-tall" variants for the Pinterest
+ *  masonry rhythm. Pure · deterministic · fair · the same business
+ *  always gets the same variant across every page load. ~1-in-3
+ *  cards resolve to "grid-tall" via `(hash % 3 === 1)`. */
+/** Owner directive 2026-10-18 · Slice 2 · the buyer-currency flag on
+ *  each card wants a country code (ISO alpha-2) to render alongside
+ *  the converted price. Currency → country is 1-to-1 for the 10
+ *  sealed NEX currencies; this lookup is deliberately a static map
+ *  so a tampered or unknown code resolves to the EU flag (safe
+ *  fallback: EUR is Frankfurter's base currency). */
+function inferCountryIso(currency: string): string {
+  switch (currency) {
+    case "IDR": return "ID";
+    case "GBP": return "GB";
+    case "USD": return "US";
+    case "EUR": return "EU";
+    case "SGD": return "SG";
+    case "MYR": return "MY";
+    case "THB": return "TH";
+    case "PHP": return "PH";
+    case "VND": return "VN";
+    case "AUD": return "AU";
+    default:    return "EU";
+  }
+}
+
+function pickCardVariant(id: string): "grid" | "grid-tall" {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash) % 3 === 1 ? "grid-tall" : "grid";
 }
 
 // Owner directive 2026-10-16 · the "Next →" button-only pattern was
@@ -714,6 +925,30 @@ const headerLeftColStyle: React.CSSProperties = {
 const headerWordmarkRowStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
+  // Owner directive 2026-10-18 (iteration) · cart + home relocated
+  // to the right-side tool cluster. The wordmark row is now just
+  // the "NEX" brand mark on its own.
+};
+
+// Owner directive 2026-10-18 (iteration) · right-side tool cluster
+// containing cart · home · 3-dots. Flex-row, tight gap, aligned to
+// the top of the header so the icons align with the NEX wordmark
+// baseline (location row sits below on the left).
+const headerRightClusterStyle: React.CSSProperties = {
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 6,
+  flexShrink: 0,
+};
+
+// Owner directive 2026-10-18 · Slice 1 · currency picker row sits
+// directly under the "All" category dropdown. Flush-left to match
+// the search bar + category dropdown rhythm above.
+const currencyRowStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  margin: "6px 0 10px",
 };
 const headerWordmarkStyle: React.CSSProperties = {
   color: NEX.cyanBright,
@@ -736,29 +971,28 @@ const headerLocationLabelStyle: React.CSSProperties = {
   fontWeight: 600,
 };
 
-// Blue back button · right side · owner directive 2026-10-16.
-// Styling mirrors the search + filter pills so the three cyan-rimmed
-// controls read as one visual family.
-const backButtonStyle: React.CSSProperties = {
+// Owner directive 2026-10-18 · the back button + its label style
+// retired. Replaced by the shared ControlDrawer on the right of the
+// header and the cart + home icons on the left.
+//
+// Icon slot styles · 32×32 chrome-less containers so the inline
+// HeaderCartIcon and the home Link read as a matched pair sitting
+// to the left of the NEX wordmark. Deliberately no border or
+// background so neither icon ships a persistent "container line"
+// (same cleanup we applied to the welcome header's 3-dots).
+const headerIconSlotStyle: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
-  padding: "0 12px",
-  minHeight: 36,
-  borderRadius: 999,
-  background: "rgba(2,9,20,0.72)",
-  color: NEX.cyan,
-  border: "1.5px solid rgba(0,175,255,0.55)",
-  boxShadow: "0 0 12px rgba(0,175,255,0.3)",
-  textDecoration: "none",
-  flexShrink: 0,
-  alignSelf: "flex-start",
+  justifyContent: "center",
+  width: 32,
+  height: 32,
+  color: NEX.text,
+  WebkitTapHighlightColor: "transparent",
 };
-const backButtonLabelStyle: React.CSSProperties = {
-  color: NEX.cyan,
-  fontSize: 12,
-  fontWeight: 700,
-  letterSpacing: 0.3,
+const headerIconLinkStyle: React.CSSProperties = {
+  ...headerIconSlotStyle,
+  textDecoration: "none",
+  cursor: "pointer",
 };
 
 // Search bar
@@ -916,10 +1150,20 @@ const dropdownOptionActiveMarkStyle: React.CSSProperties = {
   flexShrink: 0,
 };
 
+// Owner directive 2026-10-18 · Pinterest-style masonry POC.
+// Switched from `display: grid; grid-template-columns: repeat(2, 1fr)`
+// to CSS columns · in a CSS-columns container, cards flow top-to-
+// bottom within each column at their natural height, which is what
+// delivers the "one card longer than the next" masonry rhythm when
+// combined with the new "grid-tall" variant on every 3rd card.
+// `breakInside: avoid` on each card (see listing-card.tsx) prevents
+// cards from splitting across column boundaries. Vertical gap
+// between cards comes from `marginBottom: 12` on cardShellStyle so
+// stacked cards within one column don't butt against each other.
 const resultsGridStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(2, 1fr)",
-  gap: 12,
+  columnCount: 2,
+  columnGap: 12,
+  columnFill: "balance",
   marginTop: 4,
 };
 

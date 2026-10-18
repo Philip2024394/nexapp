@@ -28,7 +28,6 @@ import type * as React from "react";
 
 import {
   getLandingFeed,
-  pickOrMintSeed,
 } from "@/lib/nex-native/directory/landing-feed-service";
 import {
   isLandingCategorySlug,
@@ -37,6 +36,21 @@ import {
 import { parseIsoAlpha2 } from "@/lib/nex-native/geo/iso-countries";
 import { readUserLocationFromAccount } from "@/lib/nex-native/user-location/actions";
 import { LandingDirectoryView } from "./_landing-directory-view";
+// Owner directive 2026-10-18 · directory header now carries the
+// shared ControlDrawer (3-dots) on the right · we resolve the
+// signed-in session here so the drawer shows the real identity bar
+// and gates the Business Vault row by the Bisnis tier. Null session
+// is handled gracefully (anon identity + locked rows per the sealed
+// 2026-10-18 drawer-locks directive).
+import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { effectiveTier } from "@/lib/nex-native/account-service";
+import type { ControlDrawerSession } from "@/components/nex-native/control-drawer/control-drawer-client";
+// Owner directive 2026-10-18 · P1 of the discovery system · the
+// directory sort seed now lives in a short-lived cookie so the
+// order stays stable while browsing but shuffles after a real
+// break. URL `?s=` still takes priority for share-link
+// reproducibility.
+import { resolveDirectorySeed } from "@/lib/nex-native/directory/directory-seed-cookie";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -89,7 +103,9 @@ export default async function DirectoryPage({
   const country = requestedCountry ?? DEFAULT_COUNTRY;
   const page = parsePage(sp.page);
   const seedParam = typeof sp.s === "string" ? sp.s : null;
-  const seed = pickOrMintSeed(seedParam);
+  // Owner directive 2026-10-18 · P1 · the seed now resolves via a
+  // 15-min cookie first · URL `?s=` only overrides for share links.
+  const seed = await resolveDirectorySeed(seedParam);
   const distanceKm = parseKm(sp.km);
 
   // Viewer location · null for anonymous visitors or signed-in users
@@ -99,6 +115,23 @@ export default async function DirectoryPage({
   // "Grant location access" hint instead of the km buttons.
   const viewerLocation = await readUserLocationFromAccount();
   const hasViewerLocation = viewerLocation !== null;
+
+  // Resolve ControlDrawer session · guest-safe. Falls through to null
+  // for anonymous visitors; the drawer renders the sealed 2026-10-18
+  // anon identity bar + locked rows in that case.
+  let drawerSession: ControlDrawerSession | null = null;
+  try {
+    const sess = await resolveNexAppSessionFromContext();
+    if (sess) {
+      drawerSession = {
+        displayName: sess.account.display_name,
+        nexHandle: sess.account.nex_handle,
+        isBisnis: effectiveTier(sess.account) === "bisnis",
+      };
+    }
+  } catch {
+    // Guest · keep drawerSession = null
+  }
 
   const feed = await getLandingFeed({
     limit: PAGE_SIZE,
@@ -122,6 +155,7 @@ export default async function DirectoryPage({
       page={page}
       pageSize={PAGE_SIZE}
       feed={feed}
+      drawerSession={drawerSession}
     />
   );
 }

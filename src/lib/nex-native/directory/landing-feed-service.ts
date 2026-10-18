@@ -92,6 +92,16 @@ export interface ListingCardViewModel {
   readonly imageUrl: string | null;
   /** Optional short description · null when none. */
   readonly description: string | null;
+  /** Owner directive 2026-10-18 · when present, the directory card
+   *  renders this as the bold HEADLINE (e.g. "Kings Room", "Nasi
+   *  Goreng Istimewa", "Massage · 60 min") and demotes the business
+   *  `title` to a small muted eyebrow above it. When null, the card
+   *  falls back to showing `title` as the headline with no eyebrow
+   *  (byte-identical to the pre-2026-10-18 render). Honest Phase A
+   *  default: ALWAYS null for real feed rows · no data source yet
+   *  carries featured-offering strings. Mock seeds populate this
+   *  slot so the preview surface shows the two-line layout. */
+  readonly featuredOffering: string | null;
   /** Optional city for the under-title line · null when none. */
   readonly city: string | null;
   /** Internal NEX route the card links to. For now: the per-shop
@@ -116,6 +126,19 @@ export interface ListingCardViewModel {
   // Phase A has NO data source that carries pricing today · the
   // adapter sets all three fields to `null` for every row. These
   // slots light up when a Phase 1.5+ data model wires them.
+  /** Owner directive 2026-10-18 · Slice 2 · structured price amount
+   *  for buyer-currency conversion. Minor units (e.g. 95,000,000
+   *  for Rp 950,000 at IDR's 100 minor-units-per-major scale from
+   *  the sealed currencies.ts). Null when no price data today. The
+   *  display string `priceNow` stays authoritative for the seller's
+   *  currency · this field exists ONLY so the FX pipeline can
+   *  convert the amount into the viewer's picked currency. */
+  readonly priceAmountMinor: number | null;
+  /** Owner directive 2026-10-18 · Slice 2 · ISO 4217 code of the
+   *  authoritative seller currency associated with `priceAmountMinor`.
+   *  Null when no price data. Validated against NEX_CURRENCIES at
+   *  consume-time; a code outside the whitelist is treated as null. */
+  readonly priceCurrency: string | null;
   /** Current price as a pre-formatted string (e.g. "$59.99").
    *  Null when the listing has no pricing data today. */
   readonly priceNow: string | null;
@@ -542,6 +565,14 @@ function adaptRowToCard(row: NexBusinessRow): ListingCardViewModel {
     categoryIconRow: visuals.iconRow,
     imageUrl: row.logo_url ?? null,
     description: row.description ?? null,
+    // Owner directive 2026-10-18 · featured-offering slot wired in
+    // the view model so the directory card can show "Kings Room" /
+    // "Nasi Goreng Istimewa" style headlines. Phase A has no data
+    // source for this yet · the adapter sets null and the card
+    // falls back to the business title as the headline. Mock seeds
+    // populate this slot so the two-line layout is visible in
+    // preview.
+    featuredOffering: null,
     city: readOptionalCity(row),
     href: `/nex-native/${slug}`,
     source,
@@ -550,6 +581,11 @@ function adaptRowToCard(row: NexBusinessRow): ListingCardViewModel {
     priceNow: null,
     priceWas: null,
     discountLabel: null,
+    // Owner directive 2026-10-18 · Slice 2 · structured price slot
+    // for buyer-currency conversion. Null today for production rows ·
+    // mocks populate both so the FX pipeline is demonstrable now.
+    priceAmountMinor: null,
+    priceCurrency: null,
     // Phase A · defensive pull · the sealed adapter in local-directory
     // service does not currently emit `country` on NexBusinessRow but
     // the raw canonical row has an ISO alpha-2 country column. If a
