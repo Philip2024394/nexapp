@@ -430,9 +430,23 @@ function IdentityBar({
         style={identityBarAnonStyle}
         data-nex-control-drawer-anon
       >
-        <span style={identityBarAnonLabelStyle}>Sign in to NEX</span>
-        <span style={identityBarAnonHintStyle}>
-          to access your account + business
+        <div style={identityBarAnonTextColumnStyle}>
+          <span style={identityBarAnonLabelStyle}>Sign in to NEX</span>
+          <span style={identityBarAnonHintStyle}>
+            to access your account + business
+          </span>
+        </div>
+        {/* Owner directive 2026-10-18 (iteration) · right-side blue
+            chip button matching the Close button style · small
+            height (26px) · small round corners (6px) · blue fill ·
+            arrow glyph. aria-hidden because the entire Link is
+            already labelled by its visible "Sign in to NEX" text. */}
+        <span
+          aria-hidden
+          data-nex-control-drawer-anon-chip
+          style={identityBarAnonChipStyle}
+        >
+          Sign in →
         </span>
       </Link>
     );
@@ -587,6 +601,14 @@ const triggerButtonStyle: React.CSSProperties = {
   justifyContent: "center",
   background: "transparent",
   border: "none",
+  // Owner directive 2026-10-18 · the 3-dots button in the welcome
+  // header was still rendering a visible "container line" — the
+  // browser's default focus-visible outline + the mobile tap-
+  // highlight square that persists after tap. Kill both at the
+  // style layer so no chrome lingers around the icon.
+  outline: "none",
+  boxShadow: "none",
+  WebkitTapHighlightColor: "transparent",
   cursor: "pointer",
   color: TEXT,
   padding: 0,
@@ -658,13 +680,18 @@ const drawerTitleStyle: React.CSSProperties = {
 // Owner directive 2026-10-18 · close is now the text word "Close"
 // styled in the drawer's theme accent (not an × glyph). Padding +
 // rounded border keep it tap-friendly without a filled badge.
+// Owner directive 2026-10-18 · drawer Close button is now a small
+// blue (NEX cyan) filled pill with small round corners (6px radius ·
+// not the previous full 999 pill-round). Smaller vertical height
+// (26px) so it reads as a chip, not a full button. Theme accent
+// variable kept so per-theme drawer tints still cascade.
 const closeButtonStyle: React.CSSProperties = {
-  minHeight: 32,
-  padding: "4px 12px",
-  background: "transparent",
+  minHeight: 26,
+  padding: "3px 10px",
+  background: `var(--nex-drawer-accent, ${CYAN})`,
   border: `1px solid var(--nex-drawer-accent, ${CYAN})`,
-  color: `var(--nex-drawer-accent, ${CYAN})`,
-  fontSize: 13,
+  color: "#0a0608",
+  fontSize: 12,
   fontWeight: 700,
   letterSpacing: 0.4,
   lineHeight: 1,
@@ -672,7 +699,7 @@ const closeButtonStyle: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  borderRadius: 999,
+  borderRadius: 6,
   fontFamily: "inherit",
 };
 
@@ -720,10 +747,25 @@ const identityHandleStyle: React.CSSProperties = {
     'ui-monospace, SFMono-Regular, Menlo, Monaco, "Courier New", monospace',
   letterSpacing: 0.5,
 };
+// Owner directive 2026-10-18 · the anon "Sign in to NEX" row now
+// splits into a left text-column + right round blue arrow button.
+// The row itself overrides the default identityBar vertical stack
+// so the arrow button can sit on the right.
 const identityBarAnonStyle: React.CSSProperties = {
   ...identityBarStyle,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 10,
   textDecoration: "none",
   cursor: "pointer",
+};
+const identityBarAnonTextColumnStyle: React.CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 2,
+  minWidth: 0,
+  flex: 1,
 };
 const identityBarAnonLabelStyle: React.CSSProperties = {
   color: CYAN,
@@ -733,6 +775,25 @@ const identityBarAnonLabelStyle: React.CSSProperties = {
 const identityBarAnonHintStyle: React.CSSProperties = {
   color: MUTED,
   fontSize: 11,
+};
+// Owner directive 2026-10-18 (iteration) · Sign-in CTA matches the
+// Close button style exactly · small blue chip with small round
+// corners · theme-accent aware (per-theme drawers tint via
+// `--nex-drawer-accent`).
+const identityBarAnonChipStyle: React.CSSProperties = {
+  flexShrink: 0,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minHeight: 26,
+  padding: "3px 10px",
+  borderRadius: 6,
+  background: `var(--nex-drawer-accent, ${CYAN})`,
+  color: "#0a0608",
+  fontSize: 12,
+  fontWeight: 700,
+  letterSpacing: 0.4,
+  lineHeight: 1,
 };
 
 const sectionStyle: React.CSSProperties = {

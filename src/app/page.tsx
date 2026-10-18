@@ -4,10 +4,11 @@
 // --------------------------------------------------------------------
 //   · signed-in  → /nex-native/home (preserves authenticated routing;
 //                  unchanged from previous behaviour)
-//   · signed-out → /nex-native/welcome (owner directive 2026-10-17 ·
-//                  Welcome is the first-visit page for every visitor
-//                  without a NEX account · supersedes the earlier
-//                  2026-10-16 Directory-landing-as-public-entry rule)
+//   · signed-out → /nex-native/create-account (owner directive
+//                  2026-10-18 · fresh visitors land directly on the
+//                  signup surface · /welcome becomes the celebratory
+//                  POST-signup landing, no longer the first-visit
+//                  page)
 //
 // Prior history:
 //   · pre-2026-10-16 · unconditional redirect to /nex-native/home ·
@@ -15,9 +16,11 @@
 //   · 2026-10-16 · signed-out routed to /nex-native/directory/landing
 //     (sealed as the public first-visit destination)
 //   · 2026-10-17 · owner directive · signed-out routes to
-//     /nex-native/welcome · the "no account" first-visit experience ·
-//     the Directory landing continues to exist as the canonical NEX
-//     Directory entry but is no longer the root-URL destination
+//     /nex-native/welcome · the "no account" first-visit experience
+//   · 2026-10-18 · owner directive · signed-out routes to
+//     /nex-native/create-account · the signup surface IS the first-
+//     visit page; /welcome is reserved for post-signup orientation
+//     and carries the install-home-screen slider
 
 import { redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
@@ -30,5 +33,5 @@ export default async function RootPage(): Promise<never> {
   if (session) {
     redirect("/nex-native/home");
   }
-  redirect("/nex-native/welcome");
+  redirect("/nex-native/create-account");
 }

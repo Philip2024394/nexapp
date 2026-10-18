@@ -65,7 +65,11 @@
 import type * as React from "react";
 import Link from "next/link";
 import { cookies } from "next/headers";
-import { InstallHomeButtonClient } from "../_install-home-button-client";
+// Owner directive 2026-10-18 · InstallHomeButtonClient import
+// retired from the Welcome page (the install prompt now lives on
+// the sealed post-signup landing as a discreet footer slider,
+// never on guest-visible surfaces). Directory Landing retains its
+// own import.
 import { resolveNexAppSessionOrGuest } from "@/lib/nex-native/app/session-or-guest";
 import { ChatIdentityHeader } from "@/lib/nex-native/chat-chrome/chat-identity-header";
 import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
@@ -83,6 +87,15 @@ import {
   WELCOME_INTENT_COOKIE,
   isWelcomeIntent,
 } from "./_welcome-intent";
+// Owner directive 2026-10-18 · /welcome is the new post-signup
+// orientation landing (previously /create-account/welcome). The
+// install-home-screen slider moves here from the retired Bridge-42
+// page. The slider is gated on signed-in viewers · fresh guests who
+// somehow reach this page (Settings "View the welcome page", direct
+// URL) still never see the install prompt, matching the earlier
+// owner directive "never show it to guests".
+import { InstallHomeSliderClient } from "../_install-home-slider-client";
+import { isInstallHomeSliderDismissed } from "@/lib/nex-native/install-home-slider-cookie";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -134,6 +147,12 @@ export default async function WelcomePage() {
   // Settings "View the welcome page →" affordance.
   const viewer = await resolveNexAppSessionOrGuest();
   const isSignedIn = viewer.kind === "session";
+
+  // Owner directive 2026-10-18 · /welcome is now the post-signup
+  // orientation landing. The install-home-screen slider is mounted
+  // at the bottom of the page, gated on both signed-in state AND
+  // the 365-day dismissal cookie.
+  const sliderDismissed = await isInstallHomeSliderDismissed();
 
   // Owner directive 2026-10-17 · ControlDrawer session resolution ·
   // mirrors the sealed /directory/landing pattern. Null session →
@@ -204,8 +223,19 @@ export default async function WelcomePage() {
     {
       key: "shop",
       title: "Chat Themes Shop",
+      // Owner-authorised 2026-10-18 (D4) · the old "7 days free when
+      // you join" implied the themes trial starts automatically at
+      // signup. In reality the trial is an explicit, one-shot,
+      // lifetime-per-account action gated by `startThemesTrial`
+      // (Bridge 56g, src/lib/nex-native/account-service.ts:353) ·
+      // during the 7-day window `effectiveTier` returns "bisnis" so
+      // the trial grants the Bisnis-tier premium-theme feature set.
+      // Signup, tapping this card, and selecting the Shop intent do
+      // NOT start, reserve, or consume trial time. New copy
+      // describes the trial truthfully: optional, 7 days, Bisnis
+      // tier, one per account.
       blurb:
-        "Browse premium themes · 7 days free when you join.",
+        "Browse premium themes · optional 7-day free Bisnis trial · one per account.",
       chip: "Preview inside",
       href: "/nex-native/chat-themes-library",
       publicStatus: "open",
@@ -246,7 +276,14 @@ export default async function WelcomePage() {
         data-nex-welcome-variant="chat-nex"
         style={{
           position: "relative",
-          minHeight: "100dvh",
+          // Owner directive 2026-10-18 · welcome page MUST fit one
+          // viewport · no scroll. Was `minHeight: 100dvh` which let
+          // content grow and scroll · now `height: 100dvh` with
+          // `overflow: hidden` guarantees one-screen fit. The three
+          // intent cards + hero + sign-in redistribute via flex
+          // below.
+          height: "100dvh",
+          maxHeight: "100dvh",
           width: "100%",
           background: NEX.bg,
           color: NEX.textPrimary,
@@ -296,8 +333,17 @@ export default async function WelcomePage() {
             position: "relative",
             zIndex: 1,
             flexShrink: 0,
+            // Owner directive 2026-10-18 · bump the top padding so
+            // the NexPingBadge + NEX title clear the phone earpiece
+            // / notch / dynamic island on real devices. The sealed
+            // `env(safe-area-inset-top)` already covers Apple
+            // notches, but older Androids and non-safe-area browsers
+            // need a hard-coded floor. 32px top padding gives
+            // enough earpiece clearance without pushing the hero
+            // too far down (owner follow-up 2026-10-18 · "move up
+            // the header little" from the earlier 56px floor).
             padding:
-              "calc(env(safe-area-inset-top, 0) + 14px) 12px 14px 18px",
+              "calc(env(safe-area-inset-top, 0) + 32px) 12px 14px 18px",
             display: "flex",
             alignItems: "center",
             gap: 12,
@@ -316,7 +362,9 @@ export default async function WelcomePage() {
             data-nex-welcome-hero-speech-bubble
             style={{
               position: "absolute",
-              top: "calc(env(safe-area-inset-top, 0) + 44px)",
+              // Match the header's new 32px top offset so the speech
+              // bubble floats next to the identity row, not above it.
+              top: "calc(env(safe-area-inset-top, 0) + 62px)",
               right: 6,
               width: 56,
               height: "auto",
@@ -333,13 +381,21 @@ export default async function WelcomePage() {
               flexDirection: "column",
               gap: 2,
               minWidth: 0,
+              flex: 1,
             }}
           >
+            {/* Owner directive 2026-10-18 (iteration) · drawer trigger
+                now sits INSIDE the same inline row as the "NEX" word,
+                so the 3-dots are literally on the NEX-text baseline
+                rather than center-aligned to the taller ping badge. */}
             <div
+              data-nex-welcome-header-drawer-slot
               style={{
                 display: "flex",
                 alignItems: "center",
                 gap: 8,
+                position: "relative",
+                zIndex: 3,
               }}
             >
               <span
@@ -357,6 +413,9 @@ export default async function WelcomePage() {
               {/* Green ✓ NEX verified pill removed 2026-10-15 per
                   owner directive "remove the green nex badge from
                   header". */}
+              <div style={{ marginLeft: "auto", display: "inline-flex" }}>
+                <ControlDrawer session={drawerSession} />
+              </div>
             </div>
             <span
               style={{
@@ -370,21 +429,6 @@ export default async function WelcomePage() {
               {headerSubtitle}
             </span>
           </div>
-          <div
-            data-nex-welcome-header-drawer-slot
-            style={{
-              marginLeft: "auto",
-              display: "flex",
-              alignItems: "center",
-              position: "relative",
-              zIndex: 3,
-            }}
-          >
-            {/* Owner directive 2026-10-17 · ControlDrawer replaces the
-                bespoke Welcome drawer · one drawer across the app ·
-                guest-safe (null session → sign-in prompt). */}
-            <ControlDrawer session={drawerSession} />
-          </div>
         </header>
 
         {/* ─── Centre column ─── */}
@@ -396,17 +440,23 @@ export default async function WelcomePage() {
             flex: 1,
             display: "flex",
             flexDirection: "column",
-            gap: 16,
+            // Owner directive 2026-10-18 · tightened vertical rhythm
+            // so the page fits a single phone viewport with no scroll
+            // (gap 16→8, bottom padding 24→10).
+            gap: 8,
             // Side padding dropped to 2px so the 3 banner cards get
             // the full width (owner directive 2026-10-15 · "wider
             // cards 20px" · final iteration). Hero text and CTA
             // buttons re-add their own 14px side padding below so
             // only the cards go edge-to-edge.
-            padding: "6px 2px 24px",
+            padding: "2px 2px 10px",
             maxWidth: 640,
             margin: "0 auto",
             width: "100%",
             boxSizing: "border-box",
+            // Hidden overflow at the section level too so no stray
+            // scroll affordance appears on sub-700px viewports.
+            overflow: "hidden",
           }}
         >
           {/* Hero copy · matches owner-supplied az.png template exactly.
@@ -422,7 +472,10 @@ export default async function WelcomePage() {
               // touch the viewport edge even though the section no
               // longer pads horizontally (section was dropped to 2px
               // L/R so banner cards get full viewport width).
-              padding: "6px 14px 4px",
+              // Owner directive 2026-10-18 · hero top padding
+              // tightened 6→2 so the headline sits closer to the
+              // identity row and the whole page fits one viewport.
+              padding: "2px 14px 2px",
               maxWidth: 254,
             }}
           >
@@ -460,19 +513,11 @@ export default async function WelcomePage() {
               <br />
               plus business features.
             </div>
-            <p
-              style={{
-                margin: "10px 0 0",
-                fontSize: 12.5,
-                lineHeight: 1.5,
-                color: NEX.textPrimary,
-                textShadow: "0 1px 3px rgba(0,0,0,0.6)",
-              }}
-            >
-              Pick a theme that feels like you · say it with emoji ·
-              browse local businesses · stay close to your neighbourhood.
-              Free to look. Free to join.
-            </p>
+            {/* Owner directive 2026-10-18 · retired the "Pick a
+                theme that feels like you · say it with emoji ·
+                browse local businesses · stay close to your
+                neighbourhood. Free to look. Free to join." sub-copy ·
+                the headline above is enough identity on this hero. */}
           </div>
 
           {/* 3 LANDSCAPE cards · vertically arranged on mobile */}
@@ -489,7 +534,13 @@ export default async function WelcomePage() {
               padding: 0,
               display: "flex",
               flexDirection: "column",
-              gap: 12,
+              // Owner directive 2026-10-18 · gap 12→8 so three cards
+              // + hero + sign-in fit a single phone viewport.
+              // flex-shrink:0 keeps each card at its natural height
+              // (112px tap-target floor) so the sign-in link below
+              // never gets pushed out of the viewport.
+              gap: 8,
+              flexShrink: 0,
             }}
           >
             {chatNexCards.map((card) => (
@@ -533,28 +584,15 @@ export default async function WelcomePage() {
               </Link>
             ) : (
               <>
-                <Link
-                  href={createAccountHref}
-                  data-nex-welcome-primary-cta
-                  data-nex-welcome-primary-cta-shape="guest"
-                  data-nex-welcome-primary-cta-intent={rememberedIntent ?? "none"}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    minHeight: 52,
-                    borderRadius: 14,
-                    background: NEX.orange,
-                    color: "#0a0608",
-                    fontSize: 16,
-                    fontWeight: 700,
-                    textDecoration: "none",
-                    border: `1px solid ${NEX.orange}`,
-                    boxShadow: `0 1px 0 rgba(255,255,255,0.18) inset, 0 14px 32px -16px ${NEX.orange}`,
-                  }}
-                >
-                  Create free account →
-                </Link>
+                {/* Owner directive 2026-10-18 · "Create free account"
+                    primary CTA retired · the three intent cards above
+                    (Chat Themes · Chat Themes Shop · Personalised
+                    Chat) are the sole entry points. Tapping any card
+                    takes guests through the sealed account-wall at
+                    the right moment · signup happens naturally when
+                    the user commits to a theme or cover. The sign-in
+                    link stays for returning users with an existing
+                    account. */}
                 <Link
                   href="/nex-native/sign-in"
                   data-nex-welcome-secondary-cta
@@ -574,16 +612,6 @@ export default async function WelcomePage() {
                 >
                   Already have an account? Sign in
                 </Link>
-                <div
-                  style={{
-                    textAlign: "center",
-                    fontSize: 11.5,
-                    color: NEX.textMuted,
-                    marginTop: 2,
-                  }}
-                >
-                  15 seconds · no card needed
-                </div>
               </>
             )}
           </div>
@@ -593,25 +621,24 @@ export default async function WelcomePage() {
               template ends at "15 seconds · no card needed" with no
               additional footer. */}
 
-          {/* Home-screen install prompt · owner directive 2026-10-16.
-              The button hides itself when NEX is already installed
-              (display-mode: standalone), falls back to an iOS Share
-              tooltip on Safari, and silently renders nothing on
-              browsers without the install API. No persistent banner
-              elsewhere in the app · this surface + Directory Landing
-              are the only two the owner authorised. */}
-          <div
-            style={{
-              marginTop: 20,
-              display: "flex",
-              justifyContent: "center",
-            }}
-            data-nex-welcome-install-slot
-          >
-            <InstallHomeButtonClient />
-          </div>
+          {/* Owner directive 2026-10-18 · home-screen install prompt
+              retired from the Welcome page. Guests browsing the
+              welcome landing haven't committed to NEX yet · inviting
+              them to install the PWA at that moment is premature.
+              Owner directive 2026-10-18 · /welcome is now the POST-
+              signup landing (reached from pick-theme / pick-cover),
+              so a discreet install-home-screen slider is mounted
+              below `</main>` · gated on signed-in viewers so any
+              remaining guest paths still never see it. */}
         </section>
       </main>
+      {/* Install-home-screen slider · signed-in viewers only ·
+          dismissal persists via the sealed 365-day cookie. The
+          /welcome page is reachable by guests through the sealed
+          Settings "View the welcome page" affordance; guests must
+          not see the install CTA (owner directive from the earlier
+          install-slider build). */}
+      {isSignedIn && !sliderDismissed ? <InstallHomeSliderClient /> : null}
     </>
   );
 }

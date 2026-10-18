@@ -94,14 +94,28 @@ export function WallModal({
         style={{
           position: "relative",
           width: "100%",
-          maxWidth: 420,
+          // Owner directive 2026-10-18 · compact centre-container
+          // popup · bound to the phone-frame width on desktop so
+          // the sheet matches the phone silhouette instead of
+          // spanning the full browser viewport. On mobile it still
+          // fills the available 20-px-padded width.
+          maxWidth: 360,
+          // Height-bounded + internally scrollable so the primary
+          // CTA + secondary CTA + dismiss link are ALWAYS reachable
+          // on short viewports. The container clamps at 85vh so
+          // there's visible overlay around the card making the
+          // "popup" nature obvious.
+          maxHeight: "min(560px, calc(100dvh - 40px))",
+          overflowX: "hidden",
+          overflowY: "auto",
+          WebkitOverflowScrolling: "touch",
           borderRadius: 20,
           background: `linear-gradient(180deg, ${NEX.panelHi} 0%, ${NEX.panel} 100%)`,
           border: `1px solid ${NEX.cyanSoft}`,
           boxShadow:
             "0 24px 60px -20px rgba(0,0,0,0.65), 0 0 60px -24px rgba(0,175,255,0.35)",
-          padding: "26px 24px 22px",
-          overflow: "hidden",
+          // Compact padding so content fits without excess chrome.
+          padding: "20px 18px 18px",
         }}
       >
         <span
@@ -116,32 +130,16 @@ export function WallModal({
         />
 
         <div style={{ position: "relative" }}>
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "4px 10px",
-              borderRadius: 999,
-              background: NEX.orangeFaint,
-              color: NEX.orange,
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.22em",
-              textTransform: "uppercase",
-              border: `1px solid ${NEX.orange}44`,
-              marginBottom: 14,
-            }}
-          >
-            <span aria-hidden>✦</span>
-            NEX
-          </div>
+          {/* Owner directive 2026-10-18 · "✦ NEX" badge removed from
+              the WallModal. The headline is enough identity on a
+              compact centre-container popup · the orange chip was
+              redundant chrome. */}
 
           <h2
             id="nex-wall-headline"
             style={{
-              margin: "0 0 10px",
-              fontSize: 22,
+              margin: "0 0 8px",
+              fontSize: 20,
               fontWeight: 700,
               letterSpacing: "-0.015em",
               lineHeight: 1.2,
@@ -153,9 +151,9 @@ export function WallModal({
 
           <p
             style={{
-              margin: "0 0 18px",
-              fontSize: 14,
-              lineHeight: 1.5,
+              margin: "0 0 14px",
+              fontSize: 13,
+              lineHeight: 1.45,
               color: NEX.textSecondary,
             }}
           >
@@ -165,11 +163,11 @@ export function WallModal({
           <ul
             style={{
               listStyle: "none",
-              margin: "0 0 22px",
+              margin: "0 0 16px",
               padding: 0,
               display: "flex",
               flexDirection: "column",
-              gap: 10,
+              gap: 6,
             }}
           >
             {copy.benefits.map((benefit, i) => (
@@ -178,10 +176,10 @@ export function WallModal({
                 style={{
                   display: "flex",
                   alignItems: "flex-start",
-                  gap: 10,
-                  fontSize: 13.5,
+                  gap: 8,
+                  fontSize: 12.5,
                   color: NEX.textSecondary,
-                  lineHeight: 1.45,
+                  lineHeight: 1.35,
                 }}
               >
                 <span
