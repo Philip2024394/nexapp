@@ -16,6 +16,16 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+// Owner directive 2026-10-18 · P1 of the discovery system · the
+// directory sort seed is a middleware-managed cookie so the order
+// stays stable while browsing and shuffles after a real break.
+// Server Components can't write cookies in Next 16+ · middleware
+// is the correct layer.
+import {
+  DIRECTORY_SEED_COOKIE,
+  DIRECTORY_SEED_MAX_AGE_SECONDS,
+  pickOrMintDirectorySeed,
+} from "@/lib/nex-native/directory/directory-seed";
 
 // ── CID injection ──────────────────────────────────────────────────
 // Edge runtime cannot resolve node:async_hooks even transitively, so
@@ -74,6 +84,29 @@ async function refreshNexAuthSession(
   return res;
 }
 
+/** Owner directive 2026-10-18 · P1 · ensure the directory sort seed
+ *  cookie exists and extend its TTL on every directory render. The
+ *  cookie is 15 minutes · active browsing keeps the same seed · a
+ *  user who leaves and comes back after a longer break gets a fresh
+ *  seed and therefore a fresh order (the "world-class discovery"
+ *  behaviour sealed in the recommendation). */
+function ensureDirectorySeedCookie(
+  req: NextRequest,
+  res: NextResponse,
+): void {
+  const existing = req.cookies.get(DIRECTORY_SEED_COOKIE)?.value ?? null;
+  const seed = pickOrMintDirectorySeed(existing);
+  res.cookies.set({
+    name: DIRECTORY_SEED_COOKIE,
+    value: seed,
+    httpOnly: true,
+    path: "/",
+    sameSite: "lax",
+    maxAge: DIRECTORY_SEED_MAX_AGE_SECONDS,
+    secure: process.env.NODE_ENV === "production",
+  });
+}
+
 export async function middleware(req: NextRequest): Promise<NextResponse> {
   const cid = resolveCorrelationId(req);
   const pathname = req.nextUrl.pathname;
@@ -91,6 +124,13 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   }
 
   const base = NextResponse.next();
+  // Owner directive 2026-10-18 · P1 · set/extend the directory seed
+  // cookie BEFORE auth refresh so both run against the same `base`
+  // response. Only touches `/nex-native/directory*` so other routes
+  // aren't paying for cookie writes they don't use.
+  if (pathname.startsWith("/nex-native/directory")) {
+    ensureDirectorySeedCookie(req, base);
+  }
   const refreshed = await refreshNexAuthSession(req, base);
   return attachCid(refreshed, cid);
 }
