@@ -446,64 +446,78 @@ export function JokerKeypad({
 
           {/* Owner directive 2026-10-20 · "the text container increase
               in height only · until it has 5 lines and then the user
-              can scroll the text container to see more of their lines"
-              · auto-expanding preview strip · grows from 1 → 5 lines
-              then scrolls internally. Standard iOS Messages / WhatsApp
-              / Signal pattern. `max-height` = 5 × line-height-at-13px
-              ≈ 5 × 18px = 90px (plus 2 × 6px vertical padding = ~102). */}
+              can scroll · the keypad container must NOT get taller ·
+              only the text container expands, floating ABOVE the
+              keypad into empty page space". The preview strip is
+              absolutely-positioned to the top of this header row so
+              its growth escapes the keypad's layout box · keys area
+              + keypad total height stay fixed. */}
           <div
-            data-nex-joker-keypad-preview
+            data-nex-joker-keypad-preview-anchor
             style={{
               flex: 1,
               minWidth: 0,
-              /* min-height matches the previous 32px single-line look ·
-                 max-height caps growth at 5 lines of 13px * 1.4 line-
-                 height + 12px vertical padding = ~103px. Beyond 5 lines
-                 the container scrolls so the keypad doesn't gobble the
-                 whole screen. */
-              minHeight: 32,
-              maxHeight: 103,
-              overflowY: "auto",
-              padding: "6px 10px",
-              borderRadius: 10,
-              background: "rgba(0,0,0,0.45)",
-              border: `1px solid var(--nex-kp-accent-dim, rgba(143,255,110,0.22))`,
-              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.03), 0 0 0 1px rgba(0,0,0,0.4)`,
-              fontFamily: "inherit",
-              fontSize: 13,
-              color: value.length === 0 ? "rgba(244,247,252,0.35)" : KEY_TEXT,
-              letterSpacing: 0,
-              lineHeight: 1.4,
-              /* whiteSpace:pre-wrap honours user newlines + wraps long
-                 lines · wordBreak keeps extreme glue strings in bounds. */
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-              overflowWrap: "anywhere",
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 2,
+              position: "relative",
+              /* Reserve the 32px baseline so the keypad layout math
+                 still thinks the preview row is single-line tall ·
+                 the absolute preview sits over + above this anchor. */
+              height: 32,
             }}
           >
-            {value.length === 0 ? (
-              <span>Say something…</span>
-            ) : (
-              <>
-                <span style={{ flex: 1, minWidth: 0 }}>{value}</span>
-                <span
-                  aria-hidden
-                  style={{
-                    display: "inline-block",
-                    width: 2,
-                    height: 14,
-                    marginTop: 2,
-                    background: "var(--nex-kp-accent, #8FFF6E)",
-                    boxShadow: `0 0 6px var(--nex-kp-accent-glow, rgba(143,255,110,0.55))`,
-                    animation: "nex-joker-caret-blink 1s steps(2) infinite",
-                    flexShrink: 0,
-                  }}
-                />
-              </>
-            )}
+            <div
+              data-nex-joker-keypad-preview
+              style={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                /* Pin the BOTTOM of the preview to the baseline the
+                   anchor reserved · growth expands UPWARD into the
+                   empty page space above the keypad · the keypad
+                   root height never changes. */
+                bottom: 0,
+                minHeight: 32,
+                maxHeight: 103,
+                overflowY: "auto",
+                padding: "6px 10px",
+                borderRadius: 10,
+                background: "rgba(0,0,0,0.75)",
+                border: `1px solid var(--nex-kp-accent-dim, rgba(143,255,110,0.22))`,
+                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.03), 0 -4px 14px rgba(0,0,0,0.5)`,
+                fontFamily: "inherit",
+                fontSize: 13,
+                color: value.length === 0 ? "rgba(244,247,252,0.35)" : KEY_TEXT,
+                letterSpacing: 0,
+                lineHeight: 1.4,
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                overflowWrap: "anywhere",
+              }}
+            >
+              {value.length === 0 ? (
+                <span>Say something…</span>
+              ) : (
+                <>
+                  {value}
+                  {/* Caret · pure inline element after the text so it
+                      lands at the END of the last character, on the
+                      line the last char lives on · no flex wrapper so
+                      wrapping doesn't put it on a new row. */}
+                  <span
+                    aria-hidden
+                    style={{
+                      display: "inline-block",
+                      width: 2,
+                      height: 14,
+                      verticalAlign: "text-bottom",
+                      marginLeft: 1,
+                      background: "var(--nex-kp-accent, #8FFF6E)",
+                      boxShadow: `0 0 6px var(--nex-kp-accent-glow, rgba(143,255,110,0.55))`,
+                      animation: "nex-joker-caret-blink 1s steps(2) infinite",
+                    }}
+                  />
+                </>
+              )}
+            </div>
           </div>
 
           <button
