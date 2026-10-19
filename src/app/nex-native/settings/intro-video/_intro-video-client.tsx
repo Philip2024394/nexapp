@@ -484,6 +484,25 @@ export function IntroVideoSettingsClient({
      of the native OS keyboard · the keypad's inline emoji/sticker/GIF
      drawers replace the dedicated EMOJI CENTER popup. */
   const [keypadOpen, setKeypadOpen] = React.useState(false);
+  /* Owner directive 2026-10-20 · "when the user is typing in the
+     keypad for the text on the overlay intro we move down the page
+     so user can see what they are typing in the preview". A ref on
+     the preview wrapper + scrollIntoView on keypad-open gets the
+     preview tile visible ABOVE the keypad instead of hidden behind it. */
+  const introPreviewRef = React.useRef<HTMLDivElement | null>(null);
+  React.useEffect(() => {
+    if (!keypadOpen) return;
+    const el = introPreviewRef.current;
+    if (!el) return;
+    /* Small delay so the keypad has started its slide-up animation
+       before we measure · scroll positions the preview near the top
+       of the visible area so the keypad's drawer below doesn't eat
+       its chrome. */
+    const t = window.setTimeout(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 150);
+    return () => window.clearTimeout(t);
+  }, [keypadOpen]);
   /* One-shot engine on NEX_BUBBLES_PACKAGE drives the keypad's accent
      colour (brand cyan) · same engine the EMOJI CENTER popup used. */
   /* Owner directive 2026-10-19 · same picker as the chat composer ·
@@ -977,6 +996,14 @@ export function IntroVideoSettingsClient({
           <IntroToggle enabled={introEnabled} onChange={setIntroEnabled} />
         }
       >
+        {/* Preview wrapper · ref anchors the keypad-open scroll · the
+            scroll-margin-top keeps the preview comfortably below the
+            page header when scrollIntoView fires. */}
+        <div
+          ref={introPreviewRef}
+          data-nex-intro-video-preview-anchor
+          style={{ scrollMarginTop: 20 }}
+        >
         <IntroPreview
           videoUrl={
             useThemeOriginal
@@ -1001,6 +1028,7 @@ export function IntroVideoSettingsClient({
           openingHoursPosition={openingHoursPosition}
           enabled={introEnabled}
         />
+        </div>
 
         {/* Owner directive 2026-10-20 · "add toggle for reset theme to
             original · user may think their theme will look better and
