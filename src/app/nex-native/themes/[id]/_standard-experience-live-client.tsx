@@ -127,6 +127,7 @@ export function StandardExperienceLiveClient({
   viewerNexHandle,
   themeEmojis,
   themeStickers,
+  userIntroOverlay = null,
 }: {
   pkg: ThemePackage;
   /** Owner directive 2026-10-19 · when the viewer is signed in, the
@@ -141,6 +142,15 @@ export function StandardExperienceLiveClient({
   themeEmojis?: readonly StandardExperienceLiveThemeEmoji[];
   /** Same model as themeEmojis for stickers. */
   themeStickers?: readonly StandardExperienceLiveThemeSticker[];
+  /** Owner directive 2026-10-20 · the signed-in viewer's own saved
+   *  intro settings · forwarded to StandardExperience →
+   *  StandardIntroOverlay so the viewer's personal title + typography
+   *  renders on top of the theme intro video. Null (or omitted) for
+   *  guest viewers · the overlay then plays the theme intro
+   *  unmodified. */
+  userIntroOverlay?:
+    | import("@/lib/nex-native/intro-settings-service").IntroSettings
+    | null;
 }): React.JSX.Element {
   const engine = React.useMemo(() => createEngine(pkg), [pkg]);
   const [localMessages, setLocalMessages] = React.useState<
@@ -255,6 +265,16 @@ export function StandardExperienceLiveClient({
         wallpaperFallback="theme-gradient"
         themeEmojis={themeEmojis}
         themeStickers={themeStickers}
+        /* Owner directive 2026-10-20 · theme-preview surface replays
+           the intro every visit · auditioning themes requires seeing
+           the intro each time · twice-then-skip is correct for real
+           chat sessions, wrong for preview. */
+        alwaysPlayIntro
+        /* Owner directive 2026-10-20 · personal title overlay · the
+           signed-in viewer's own saved intro renders on top of the
+           theme intro video so "View Theme" matches the real visitor
+           experience. Null when the viewer is a guest. */
+        userIntroOverlay={userIntroOverlay}
       />
       {/* Owner directive 2026-10-19 · "remove the back button from
           header" · the sealed 2026-10-11 back-arrow at top-left is

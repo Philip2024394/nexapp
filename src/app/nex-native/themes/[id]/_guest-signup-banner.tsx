@@ -42,44 +42,53 @@ export function GuestSignupBanner({
 }: {
   readonly signupHref?: string;
 }) {
+  // Owner directive 2026-10-20 · copy rewritten to world-class tight ·
+  // title drops the duplicated verb · body drops the redundant "create
+  // a free account" (title already carries it) and drops the three-
+  // benefit list ("chatting · theme · yours") in favour of one promise ·
+  // CTA uses "NEX" instead of generic "account" so the brand carries
+  // the action verb, matching WhatsApp / Signal onboarding patterns.
   return (
     <aside
-      aria-label="Create account to activate NEX Chat"
+      aria-label="Live preview · create your free NEX"
       data-nex-theme-guest-banner
       style={containerStyle}
     >
       <div style={titleRowStyle}>
         <span style={pingDotStyle} aria-hidden />
-        <span style={titleStyle}>
-          Create Account to activate your free NEX Chat
-        </span>
+        <span style={titleStyle}>Live preview</span>
       </div>
       <div style={dividerStyle} aria-hidden />
       <p style={bodyStyle}>
-        You're previewing the real chat experience. Create a free
-        account to start chatting with friends, pick a theme, and
-        make it yours.
+        Create your free NEX to keep this theme and start chatting.
       </p>
       <Link
         href={signupHref}
         data-nex-theme-guest-banner-cta
         style={ctaStyle}
       >
-        Create free account →
+        Create free NEX →
       </Link>
     </aside>
   );
 }
 
 const containerStyle: CSSProperties = {
-  position: "fixed",
+  /* Owner directive 2026-10-20 · banner must sit INSIDE the phone-
+     frame preview container, not float over the full desktop viewport.
+     `position: absolute` + symmetric left/right + auto side margins
+     anchors it to the nearest positioned ancestor and caps the width
+     at a slim toast size · on actual mobile the viewport IS the frame
+     so this reads identically to the old fixed-positioning. */
+  position: "absolute",
   top: "calc(env(safe-area-inset-top, 0px) + 70px)",
-  left: "50%",
-  transform: "translateX(-50%)",
-  width: "92%",
-  maxWidth: 380,
+  left: 10,
+  right: 10,
+  marginLeft: "auto",
+  marginRight: "auto",
+  maxWidth: 320,
   zIndex: 90,
-  padding: "12px 14px 14px",
+  padding: "10px 12px 12px",
   background: NEX.panelBg,
   border: `1px solid ${NEX.panelBorder}`,
   borderRadius: 14,
@@ -88,7 +97,7 @@ const containerStyle: CSSProperties = {
   WebkitBackdropFilter: "blur(14px)",
   display: "flex",
   flexDirection: "column",
-  gap: 10,
+  gap: 8,
 };
 
 const titleRowStyle: CSSProperties = {
@@ -99,8 +108,8 @@ const titleRowStyle: CSSProperties = {
 
 const pingDotStyle: CSSProperties = {
   display: "inline-block",
-  width: 8,
-  height: 8,
+  width: 7,
+  height: 7,
   borderRadius: 999,
   background: NEX.orange,
   boxShadow: `0 0 8px ${NEX.orange}`,
@@ -110,10 +119,11 @@ const pingDotStyle: CSSProperties = {
 const titleStyle: CSSProperties = {
   flex: 1,
   color: NEX.text,
-  fontSize: 13,
+  fontSize: 12.5,
   fontWeight: 800,
-  letterSpacing: "-0.005em",
-  lineHeight: 1.3,
+  letterSpacing: "0.04em",
+  textTransform: "uppercase",
+  lineHeight: 1.2,
 };
 
 const dividerStyle: CSSProperties = {
@@ -133,13 +143,13 @@ const ctaStyle: CSSProperties = {
   alignItems: "center",
   justifyContent: "center",
   marginTop: 2,
-  minHeight: 36,
+  minHeight: 34,
   padding: "0 14px",
   borderRadius: 10,
   background: NEX.orange,
   color: NEX.orangeInk,
   border: "none",
-  fontSize: 12,
+  fontSize: 11.5,
   fontWeight: 800,
   letterSpacing: "0.06em",
   textTransform: "uppercase",

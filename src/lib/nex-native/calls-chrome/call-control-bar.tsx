@@ -65,6 +65,14 @@ export interface CallControlBarProps {
   readonly onChat?: () => void;
   readonly onParticipants?: () => void;
   readonly onMore?: () => void;
+  /** Owner directive 2026-10-20 · voice-only call surfaces (/call/
+   *  voice-preview + future 1:1 voice sessions) hide the Camera
+   *  control because there is no video track to toggle. Defaults to
+   *  true so every existing caller (/call/preview + group call) is
+   *  unaffected. The sealed master-chrome discipline stays intact ·
+   *  voice surfaces compose the SAME primitive, they just omit one
+   *  button. */
+  readonly showCamera?: boolean;
 }
 
 export function CallControlBar({
@@ -77,6 +85,7 @@ export function CallControlBar({
   onChat,
   onParticipants,
   onMore,
+  showCamera = true,
 }: CallControlBarProps) {
   return (
     <nav
@@ -95,16 +104,18 @@ export function CallControlBar({
         <MicIcon muted={muted} />
       </ControlButton>
 
-      {/* 2 · Camera · WIRED */}
-      <ControlButton
-        label={cameraOff ? "Camera On" : "Camera Off"}
-        active={!cameraOff}
-        wired
-        onClick={onToggleCamera}
-        testid="camera"
-      >
-        <CameraIcon off={cameraOff} />
-      </ControlButton>
+      {/* 2 · Camera · WIRED · hidden on voice-only surfaces */}
+      {showCamera ? (
+        <ControlButton
+          label={cameraOff ? "Camera On" : "Camera Off"}
+          active={!cameraOff}
+          wired
+          onClick={onToggleCamera}
+          testid="camera"
+        >
+          <CameraIcon off={cameraOff} />
+        </ControlButton>
+      ) : null}
 
       {/* 3 · End Call · WIRED · prominent red */}
       <ControlButton

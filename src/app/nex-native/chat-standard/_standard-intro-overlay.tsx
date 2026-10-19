@@ -42,6 +42,19 @@
 
 import * as React from "react";
 import type { ResolvedEngine } from "./_engine/theme-engine";
+import {
+  TitleOverlay,
+  segmentsToAttrs,
+  type CharAttr,
+} from "@/app/nex-native/settings/intro-video/_intro-video-client";
+import type {
+  IntroOverlayFontId,
+  IntroOverlaySizeId,
+} from "@/app/nex-native/settings/intro-video/_overlay-fonts";
+import type {
+  IntroTitlePosition,
+  IntroSettings,
+} from "@/lib/nex-native/intro-settings-service";
 
 const STORAGE_PREFIX = "nex-standard-intro-count-";
 /** Sealed by founder 2026-10-05 · the StandardIntro `playPolicy`
@@ -51,10 +64,27 @@ const STANDARD_PLAY_LIMIT = 2;
 
 export interface StandardIntroOverlayProps {
   engine: ResolvedEngine;
+  /** Owner directive 2026-10-20 · when true, bypass the sealed
+   *  "twice-then-skip" play-count gate · intro plays on every mount
+   *  for the lifetime of this surface. Used by theme-preview surfaces
+   *  (/nex-native/themes/[id]) where the user is auditioning themes
+   *  and expects to see the intro on every visit. Real chat surfaces
+   *  omit this (defaults to false → counter policy applies). */
+  alwaysPlay?: boolean;
+  /** Owner directive 2026-10-20 · the signed-in viewer's PERSONAL
+   *  intro title gets rendered on top of the theme intro video so
+   *  "View Theme" shows exactly what visitors to this user will see
+   *  (theme-authored intro video + user-authored personal title /
+   *  typography / segments / highlight). Pass null (or omit) on
+   *  surfaces where the viewer has no personal intro to overlay (e.g.
+   *  guest viewers · signed-in viewers with intro_enabled = false). */
+  userIntroOverlay?: IntroSettings | null;
 }
 
 export function StandardIntroOverlay({
   engine,
+  alwaysPlay = false,
+  userIntroOverlay = null,
 }: StandardIntroOverlayProps): React.JSX.Element | null {
   const pkg = engine.package;
   const intro = pkg.intro ?? null;
@@ -115,11 +145,13 @@ export function StandardIntroOverlay({
     if (videoUrl) return;
     if (!scriptedAnimation) return;
     if (playCount === null) return;
-    if (!isBusinessIntro && playCount >= STANDARD_PLAY_LIMIT) return;
+    if (!alwaysPlay && !isBusinessIntro && playCount >= STANDARD_PLAY_LIMIT) return;
     if (dismissed) return;
     const id = window.setTimeout(() => {
       try {
-        if (!isBusinessIntro) {
+        // Owner directive 2026-10-20 · don't persist a play when
+        // alwaysPlay is on · see incrementCount for why.
+        if (!isBusinessIntro && !alwaysPlay) {
           const next = (playCount ?? 0) + 1;
           window.localStorage.setItem(storageKey, String(next));
         }
@@ -136,17 +168,24 @@ export function StandardIntroOverlay({
     dismissed,
     isBusinessIntro,
     storageKey,
+    alwaysPlay,
   ]);
 
   const incrementCount = React.useCallback(() => {
     if (isBusinessIntro) return; // BusinessIntro always plays · no cap
+    // Owner directive 2026-10-20 · theme-preview surfaces pass
+    // alwaysPlay=true so each visit replays the intro · we must NOT
+    // persist a play when we're bypassing the cap, otherwise once
+    // the user signs out of preview mode their real-chat intro has
+    // been consumed invisibly.
+    if (alwaysPlay) return;
     try {
       const next = (playCount ?? 0) + 1;
       window.localStorage.setItem(storageKey, String(next));
     } catch {
       /* storage unavailable · best effort */
     }
-  }, [storageKey, playCount, isBusinessIntro]);
+  }, [storageKey, playCount, isBusinessIntro, alwaysPlay]);
 
   const handleEnded = React.useCallback(() => {
     incrementCount();
@@ -162,7 +201,7 @@ export function StandardIntroOverlay({
   // Hooks · never conditionally skip a hook above this point.
   if (!hasAnyIntro) return null;
   if (playCount === null) return null;
-  if (!isBusinessIntro && playCount >= STANDARD_PLAY_LIMIT) return null;
+  if (!alwaysPlay && !isBusinessIntro && playCount >= STANDARD_PLAY_LIMIT) return null;
   if (dismissed) return null;
 
   // Universal Theme Colour Rule · every surface here is theme-derived.
@@ -209,7 +248,13 @@ export function StandardIntroOverlay({
         data-nex-intro-theme-id={themeId}
         data-nex-intro-scripted-animation={scriptedAnimation ?? ""}
         style={{
-          position: "fixed",
+          /* Owner directive 2026-10-20 · overlay must sit inside the
+             .nex-native-frame on desktop (420×909 phone-shape container)
+             rather than escaping to full-viewport. Theme preview's
+             StandardExperienceLiveClient already uses position:absolute
+             inside the frame for the same reason · we match. On mobile
+             viewport = frame so visual output is identical. */
+          position: "absolute",
           inset: 0,
           zIndex: 100,
           background: `radial-gradient(circle at 50% 35%, ${colours.primary}44 0%, transparent 55%), linear-gradient(180deg, #000 0%, ${colours.deep} 22%, ${colours.deep} 78%, #000 100%)`,
@@ -295,7 +340,10 @@ export function StandardIntroOverlay({
       data-nex-intro-kind={isBusinessIntro ? "business" : "standard"}
       data-nex-intro-theme-id={themeId}
       style={{
-        position: "fixed",
+        /* Owner directive 2026-10-20 · overlay respects the phone-
+           frame container on desktop. Matches the sealed scripted
+           branch above. */
+        position: "absolute",
         inset: 0,
         zIndex: 100,
         // Letterbox / backdrop behind the video pulls the theme's deep
@@ -322,7 +370,58 @@ export function StandardIntroOverlay({
           objectFit: "cover",
         }}
       />
+      {/* Owner directive 2026-10-20 · personal title overlay · signed-
+          in viewers see their own saved title + typography + segments
+          rendered on top of the theme intro video. Byte-identical
+          TitleOverlay primitive the /live route uses so the "View
+          Theme" preview matches the "View Live Now" preview. Null
+          overlay (no title text, or intro disabled, or guest viewer)
+          skips the layer entirely so the theme intro reads unchanged. */}
+      {userIntroOverlay &&
+        userIntroOverlay.enabled &&
+        (userIntroOverlay.title_text ?? "").trim().length > 0 && (
+          <UserTitleLayer intro={userIntroOverlay} />
+        )}
       {skipButton}
     </div>
+  );
+}
+
+/* Owner directive 2026-10-20 · bridges the user's saved IntroSettings
+ * (from Supabase · migration 209/211) into the sealed TitleOverlay
+ * primitive. Converts stored segments → per-char CharAttr array via
+ * the same `segmentsToAttrs` helper the /live route uses, so the
+ * theme-preview + /live surfaces render byte-identical title overlays
+ * for the same saved state. All field fall-backs match the /live
+ * client (classic / m / #FFFFFF / center / hero). */
+function UserTitleLayer({
+  intro,
+}: {
+  intro: IntroSettings;
+}): React.JSX.Element {
+  const titleText = (intro.title_text ?? "").trim();
+  const titleAttrs: CharAttr[] = React.useMemo(
+    () => segmentsToAttrs(intro.title_segments, titleText),
+    [intro.title_segments, titleText],
+  );
+  const fontId = (intro.title_font ?? "classic") as IntroOverlayFontId;
+  const sizeId = (intro.title_size ?? "m") as IntroOverlaySizeId;
+  const color = intro.title_color ?? "#FFFFFF";
+  const align = (intro.title_align ?? "center") as
+    | "left"
+    | "center"
+    | "right";
+  const position: IntroTitlePosition = intro.title_position ?? "hero";
+  return (
+    <TitleOverlay
+      text={titleText}
+      attrs={titleAttrs}
+      position={position}
+      fontId={fontId}
+      sizeId={sizeId}
+      color={color}
+      align={align}
+      highlight={intro.title_highlight}
+    />
   );
 }

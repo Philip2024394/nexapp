@@ -12,6 +12,7 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { NEX_FONT_SANS } from "@/lib/nex-native/design-tokens";
 /* Owner directive 2026-10-19 · "the emoji panel must be same emoji
    panel as chat theme emoji" · mount the sealed cross-theme picker
@@ -166,7 +167,7 @@ function probeImage(
  *  styling via a parallel per-character attribute array · one slot
  *  per character in titleText · colour/size are optional per char
  *  (fall back to the global titleColor/titleSizeId). */
-interface CharAttr {
+export interface CharAttr {
   color?: string;
   size?: IntroOverlaySizeId;
 }
@@ -243,7 +244,7 @@ function attrsToSegments(
 
 /** Rehydrate a per-char attr array from a saved segments payload ·
  *  called on page load when savedIntro.title_segments is non-null. */
-function segmentsToAttrs(
+export function segmentsToAttrs(
   segments: TitleSegment[] | null,
   text: string,
 ): CharAttr[] {
@@ -306,6 +307,10 @@ export function IntroVideoSettingsClient({
   activeThemeWallpaperUrl,
   savedIntro,
 }: Props): React.JSX.Element {
+  // Owner directive 2026-10-20 · the "View Live Now" footer button
+  // auto-saves then routes to /nex-native/settings/intro-video/live
+  // for a full-screen dry-run of the visitor-landing experience.
+  const router = useRouter();
   const [introEnabled, setIntroEnabled] = React.useState<boolean>(
     savedIntro.enabled,
   );
@@ -416,8 +421,12 @@ export function IntroVideoSettingsClient({
      user put text in footer then opening time could go to header
      center · balance" · sample opening-hours toggle so the user can
      feel the dynamic position swap. Real business accounts will
-     resolve this from their shop profile when the schema connects. */
-  const [showOpeningHours, setShowOpeningHours] = React.useState<boolean>(true);
+     resolve this from their shop profile when the schema connects.
+     Gated to Bisnis accounts only · personal accounts don't have
+     opening hours · the toggle UI + preview rendering are suppressed
+     entirely for non-Bisnis viewers (sealed 2026-10-20). */
+  const isBisnis = drawerSession.isBisnis;
+  const [showOpeningHours, setShowOpeningHours] = React.useState<boolean>(isBisnis);
   /* Owner directive 2026-10-20 · "add toggle for reset to original ·
      user may think their theme will look better and then see that our
      theme chat background and intro was better" · non-destructive
@@ -777,19 +786,23 @@ export function IntroVideoSettingsClient({
     titleText.trim().length > 0 ||
     !introEnabled;
 
-  const handleSave = React.useCallback(async () => {
+  const handleSave = React.useCallback(async (): Promise<boolean> => {
     /* Owner directive 2026-10-20 · "ship actions" · writes land in
        nex_account via the sealed updateIntroSettingsAction · if the
        "Use theme original" toggle is ON, the full reset action is
        called instead (clears video/wallpaper pointers + all typography
-       columns in one DB round-trip). */
+       columns in one DB round-trip).
+       Returns `true` when the save (or reset) committed successfully,
+       `false` on any error path · the View Live Now auto-save flow
+       uses this signal to gate the subsequent navigation so a user
+       isn't flung into the live preview with half-saved state. */
     setError(null);
     try {
       if (useThemeOriginal) {
         const r = await resetIntroToThemeDefaultsAction();
         if (!r.ok || !r.data) {
           setError(r.error || "Reset failed");
-          return;
+          return false;
         }
         clearStaged();
         clearStagedWallpaper();
@@ -806,7 +819,7 @@ export function IntroVideoSettingsClient({
         setSavedIntroVideoUrl(null);
         setSavedWallpaperUrl(null);
         setSavedAt(Date.now());
-        return;
+        return true;
       }
       const effectiveTitle =
         (isPlaceholder && !titleText.trim()
@@ -831,14 +844,16 @@ export function IntroVideoSettingsClient({
       const r = await updateIntroSettingsAction(fd);
       if (!r.ok) {
         setError(r.error || "Save failed");
-        return;
+        return false;
       }
       setSavedAt(Date.now());
       if (r.data?.video_url) setHasLiveIntro(true);
+      return true;
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "Could not save · try again.",
       );
+      return false;
     }
   }, [
     introEnabled,
@@ -855,6 +870,22 @@ export function IntroVideoSettingsClient({
     clearStaged,
     clearStagedWallpaper,
   ]);
+
+  // Owner directive 2026-10-20 · "View Live Now" footer action ·
+  // ALWAYS invokes handleSave (not gated on canSave) · reason: the
+  // user may have uploaded a video (which auto-saves video_url) +
+  // left the title field as placeholder · canSave reads false in
+  // that state because titleText.trim().length === 0, but we still
+  // need to persist the title. handleSave resolves the empty-title
+  // case to `defaultTitleText` (display name / theme name) via its
+  // internal `effectiveTitle` logic so /live reads back a non-empty
+  // title_text and the TitleOverlay renders. If save fails the error
+  // banner above the footer tells the user and navigation is aborted.
+  const handleViewLiveNow = React.useCallback(async () => {
+    const ok = await handleSave();
+    if (!ok) return;
+    router.push("/nex-native/settings/intro-video/live");
+  }, [handleSave, router]);
 
   return (
     <main
@@ -1024,7 +1055,7 @@ export function IntroVideoSettingsClient({
           titleColor={useThemeOriginal ? "#FFFFFF" : titleColor}
           titleAlign={useThemeOriginal ? "center" : titleAlign}
           titleHighlight={useThemeOriginal ? false : titleHighlight}
-          openingHours={showOpeningHours ? SAMPLE_OPENING_HOURS : null}
+          openingHours={isBisnis && showOpeningHours ? SAMPLE_OPENING_HOURS : null}
           openingHoursPosition={openingHoursPosition}
           enabled={introEnabled}
         />
@@ -1565,66 +1596,69 @@ export function IntroVideoSettingsClient({
           </button>
         </div>
 
-        {/* Owner directive 2026-10-20 · "open time in footer center ·
-            if the user put their text in footer the opening time could
-            go to header center" · sample toggle so the user can feel
-            the dynamic position balance before business shop-hours
-            schema connects in production. */}
-        <div
-          style={{
-            marginTop: 10,
-            padding: "10px 12px",
-            borderRadius: 10,
-            border: `1px solid ${NEX.panelBorder}`,
-            background: "rgba(255,255,255,0.03)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 10,
-          }}
-        >
-          <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-            <span style={{ fontSize: 12, fontWeight: 800, color: NEX.textPrimary }}>
-              Opening hours
-            </span>
-            <span style={{ fontSize: 10, color: NEX.textMute, lineHeight: 1.4 }}>
-              Sample · auto-swaps to the opposite end of your title · businesses only when live
-            </span>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={showOpeningHours}
-            onClick={() => setShowOpeningHours((v) => !v)}
-            data-nex-intro-video-opening-hours-toggle={showOpeningHours ? "true" : "false"}
+        {/* Owner directive 2026-10-20 · opening hours is a Bisnis-only
+            affordance · personal accounts don't have hours · the toggle
+            + preview rendering are suppressed entirely for non-Bisnis
+            viewers so a free user never sees a feature they can't use.
+            Business accounts see the toggle + sample preview until the
+            production shop-hours schema connects. */}
+        {isBisnis && (
+          <div
             style={{
-              width: 36,
-              height: 20,
-              borderRadius: 999,
-              border: "none",
-              background: showOpeningHours ? NEX.cyan : "rgba(255,255,255,0.2)",
-              position: "relative",
-              cursor: "pointer",
-              padding: 0,
-              flexShrink: 0,
+              marginTop: 10,
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: `1px solid ${NEX.panelBorder}`,
+              background: "rgba(255,255,255,0.03)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 10,
             }}
           >
-            <span
-              aria-hidden
+            <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+              <span style={{ fontSize: 12, fontWeight: 800, color: NEX.textPrimary }}>
+                Opening hours
+              </span>
+              <span style={{ fontSize: 10, color: NEX.textMute, lineHeight: 1.4 }}>
+                Sample · auto-swaps to the opposite end of your title · businesses only when live
+              </span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={showOpeningHours}
+              onClick={() => setShowOpeningHours((v) => !v)}
+              data-nex-intro-video-opening-hours-toggle={showOpeningHours ? "true" : "false"}
               style={{
-                position: "absolute",
-                top: 2,
-                left: showOpeningHours ? 18 : 2,
-                width: 16,
-                height: 16,
+                width: 36,
+                height: 20,
                 borderRadius: 999,
-                background: "#FFFFFF",
-                transition: "left 180ms ease",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
+                border: "none",
+                background: showOpeningHours ? NEX.cyan : "rgba(255,255,255,0.2)",
+                position: "relative",
+                cursor: "pointer",
+                padding: 0,
+                flexShrink: 0,
               }}
-            />
-          </button>
-        </div>
+            >
+              <span
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  top: 2,
+                  left: showOpeningHours ? 18 : 2,
+                  width: 16,
+                  height: 16,
+                  borderRadius: 999,
+                  background: "#FFFFFF",
+                  transition: "left 180ms ease",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
+                }}
+              />
+            </button>
+          </div>
+        )}
 
         {/* Owner directive 2026-10-20 · EMOJI CENTER popup retired ·
             JokerKeypad (mounted at the end of this component) owns
@@ -1870,35 +1904,89 @@ export function IntroVideoSettingsClient({
           zIndex: 1,
         }}
       >
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={!canSave}
-          data-nex-intro-video-save
+        {/* Owner directive 2026-10-20 · footer is now TWO buttons · Save
+            (primary cyan filled) + View Live Now (secondary cyan
+            outlined) · both at borderRadius 12 ("small corner rounds"
+            per the owner spec, replacing the earlier pill 999). The
+            View Live Now button auto-saves pending edits then routes
+            to the dedicated /live preview which plays the intro full-
+            screen and lands on /profile/me. The View Live Now button
+            is enabled as soon as there is EITHER a pending edit (so
+            auto-save covers it) OR an already-saved intro to preview
+            (so a user who just loaded the page can jump straight to
+            their live view without a redundant save). */}
+        <div
+          data-nex-intro-video-footer-actions
           style={{
-            width: "100%",
-            padding: "14px 16px",
-            borderRadius: 999,
-            border: "none",
-            background: canSave ? NEX.cyan : "rgba(255,255,255,0.08)",
-            color: canSave ? "#021424" : NEX.textMute,
-            fontSize: 15,
-            fontWeight: 800,
-            letterSpacing: "0.04em",
-            cursor: canSave ? "pointer" : "default",
-            fontFamily: NEX_FONT_SANS,
-            boxShadow: canSave
-              ? "0 10px 24px -8px rgba(0,175,255,0.6), 0 0 24px rgba(0,175,255,0.3)"
-              : "none",
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 10,
           }}
         >
-          <span aria-hidden style={{ fontSize: 16 }}>✓</span>
-          Save Changes
-        </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={!canSave}
+            data-nex-intro-video-save
+            style={{
+              padding: "14px 16px",
+              borderRadius: 12,
+              border: "none",
+              background: canSave ? NEX.cyan : "rgba(255,255,255,0.08)",
+              color: canSave ? "#021424" : NEX.textMute,
+              fontSize: 15,
+              fontWeight: 800,
+              letterSpacing: "0.04em",
+              cursor: canSave ? "pointer" : "default",
+              fontFamily: NEX_FONT_SANS,
+              boxShadow: canSave
+                ? "0 10px 24px -8px rgba(0,175,255,0.6), 0 0 24px rgba(0,175,255,0.3)"
+                : "none",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+            }}
+          >
+            <span aria-hidden style={{ fontSize: 16 }}>✓</span>
+            Save Changes
+          </button>
+          <button
+            type="button"
+            onClick={handleViewLiveNow}
+            disabled={!canSave && !hasLiveIntro}
+            data-nex-intro-video-view-live
+            style={{
+              padding: "14px 16px",
+              borderRadius: 12,
+              background: "transparent",
+              color:
+                !canSave && !hasLiveIntro ? NEX.textMute : NEX.cyan,
+              border: `1.5px solid ${
+                !canSave && !hasLiveIntro
+                  ? "rgba(255,255,255,0.12)"
+                  : NEX.cyan
+              }`,
+              fontSize: 15,
+              fontWeight: 800,
+              letterSpacing: "0.04em",
+              cursor:
+                !canSave && !hasLiveIntro ? "default" : "pointer",
+              fontFamily: NEX_FONT_SANS,
+              boxShadow:
+                !canSave && !hasLiveIntro
+                  ? "none"
+                  : "0 0 18px rgba(0,175,255,0.18)",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+            }}
+          >
+            <span aria-hidden style={{ fontSize: 14 }}>▶</span>
+            View Live Now
+          </button>
+        </div>
         {savedAt && (
           <div
             style={{
@@ -2662,7 +2750,7 @@ function IntroPreview({
   );
 }
 
-function TitleOverlay({
+export function TitleOverlay({
   text,
   attrs,
   position,
@@ -2784,7 +2872,7 @@ function TitleOverlay({
  * so the two bands never overlap. Rendered as a slim centred chip
  * (clock glyph + hours) with its own soft gradient scrim so it
  * reads cleanly over any video. */
-function OpeningHoursOverlay({
+export function OpeningHoursOverlay({
   text,
   position,
 }: {

@@ -18,7 +18,9 @@
 // the engine is stress-tested on Ocean.
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import type { ResolvedEngine } from "./_engine/theme-engine";
+import type { IntroSettings as UserIntroOverlay } from "@/lib/nex-native/intro-settings-service";
 import { ChatIdentityHeader } from "@/lib/nex-native/chat-chrome/chat-identity-header";
 import { StandardAmbientLayer } from "./_surfaces/_ambient-layer";
 import { StandardBubble } from "./_surfaces/_bubble";
@@ -91,6 +93,21 @@ export interface StandardExperienceProps {
    *  arrays preserve the sealed defaults. */
   themeEmojis?: readonly StandardExperienceThemeEmoji[];
   themeStickers?: readonly StandardExperienceThemeSticker[];
+  /** Owner directive 2026-10-20 · when the Standard Experience is
+   *  mounted on the theme-preview surface (/nex-native/themes/[id]),
+   *  the intro overlay must play every time · the sealed "twice-then-
+   *  skip" counter is correct for real chat sessions but wrong when
+   *  the user is auditioning themes. Preview surfaces pass true. Real
+   *  chat surfaces omit this (defaults to false → counter policy
+   *  applies). */
+  alwaysPlayIntro?: boolean;
+  /** Owner directive 2026-10-20 · the signed-in viewer's PERSONAL
+   *  saved IntroSettings · passed through to StandardIntroOverlay so
+   *  the viewer's title + typography + segments render on top of the
+   *  theme intro video. Null (or omitted) for guest viewers or
+   *  signed-in viewers with no intro saved · the overlay then plays
+   *  the theme intro unmodified. */
+  userIntroOverlay?: UserIntroOverlay | null;
 }
 
 export function StandardExperience({
@@ -103,6 +120,8 @@ export function StandardExperience({
   wallpaperFallback = "theme-gradient",
   themeEmojis,
   themeStickers,
+  alwaysPlayIntro = false,
+  userIntroOverlay = null,
 }: StandardExperienceProps): React.JSX.Element {
   const [composerText, setComposerText] = React.useState("");
   const [pickerOpen, setPickerOpen] = React.useState(false);
@@ -476,7 +495,11 @@ export function StandardExperience({
           `pkg.intro.videoUrl` twice-then-skip for any world that
           declares one · renders null for every world without a video.
           Sealed 2026-10-06. */}
-      <StandardIntroOverlay engine={engine} />
+      <StandardIntroOverlay
+        engine={engine}
+        alwaysPlay={alwaysPlayIntro}
+        userIntroOverlay={userIntroOverlay}
+      />
       <div
         data-nex-standard-experience
         data-theme-id={engine.package.identity.id}
@@ -1704,6 +1727,17 @@ function FloatingCallActions({
 }): React.JSX.Element {
   const cameraInputRef = React.useRef<HTMLInputElement | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  // Owner directive 2026-10-20 · the Call button opens the sealed
+  // Calls hub (/nex-native/calls) so the user picks voice / video +
+  // peer there · the hub routes voice/video via the sealed
+  // ContactPickerModal → chat/peer/{id}?start_call=voice|video path
+  // (real PeerCall engine). The Mic button stays unwired · it is a
+  // voice-note affordance semantically distinct from a call.
+  const router = useRouter();
+  const openCallsHub = React.useCallback(() => {
+    onToggle();
+    router.push("/nex-native/calls");
+  }, [onToggle, router]);
   // Universal Theme Controls Rule · sealed 2026-10-06 · lower-right
   // 3-dots stack uses the same solid-themed treatment as the header
   // R1 buttons so the chrome is visually coherent across every
@@ -1810,8 +1844,10 @@ function FloatingCallActions({
         </button>
         <button
           type="button"
-          aria-label="Call"
+          aria-label="Open Calls hub"
           data-nex-se-call-action="call"
+          data-nex-se-call-action-wired="true"
+          onClick={openCallsHub}
           style={circle}
         >
           <CallIcon />

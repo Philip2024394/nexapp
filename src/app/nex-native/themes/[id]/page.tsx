@@ -41,6 +41,7 @@ import { UniversalChromeOverlay } from "../../chat-standard/_universal-chrome-ov
 import { UniversalComposerFooter } from "../../chat-standard/_universal-composer-footer";
 import { UniversalHeaderIconsOverlay } from "../../chat-standard/_universal-header-icons-overlay";
 import { trackThemeView } from "@/lib/nex-native/theme-view-service";
+import { getIntroSettings } from "@/lib/nex-native/intro-settings-service";
 import { resolveNexAppSessionOrGuest } from "@/lib/nex-native/app/session-or-guest";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import {
@@ -123,6 +124,15 @@ export default async function ThemeViewerPage({
      Guest viewers keep activeChatTheme = null and always see the Use
      button (gated by the sealed account-wall). */
   let activeChatTheme: string | null = null;
+  /* Owner directive 2026-10-20 · load the signed-in viewer's own
+     saved intro settings so the StandardIntroOverlay can render the
+     viewer's personal title + typography on top of the theme intro
+     video. Guest viewers / errored loads stay null · the overlay
+     then plays the theme intro unmodified. Fail-soft via the service
+     layer's EMPTY_INTRO_SETTINGS default. */
+  let viewerIntroSettings:
+    | Awaited<ReturnType<typeof getIntroSettings>>
+    | null = null;
   try {
     const sess = await resolveNexAppSessionFromContext();
     if (sess) {
@@ -132,6 +142,9 @@ export default async function ThemeViewerPage({
         isBisnis: effectiveTier(sess.account) === "bisnis",
       };
       activeChatTheme = sess.account.chat_theme ?? null;
+      viewerIntroSettings = await getIntroSettings(sess.account.id).catch(
+        () => null,
+      );
     }
   } catch {
     // guest · keep drawerSession = null
@@ -177,6 +190,7 @@ export default async function ThemeViewerPage({
           viewerNexHandle={drawerSession?.nexHandle ?? null}
           themeEmojis={liveWorldEmojis}
           themeStickers={liveWorldStickers}
+          userIntroOverlay={viewerIntroSettings}
         />
         <ThemePreviewDrawer
           session={drawerSession}
