@@ -436,7 +436,7 @@ export function IntroVideoSettingsClient({
      load · falls back to the display name when no live-world theme is
      active. Cleared on first focus. */
   const defaultTitleText = React.useMemo(
-    () => `${activeThemeName ?? displayName}\nCreate The Wow`,
+    () => `${activeThemeName ?? displayName}\nFree Delivery`,
     [activeThemeName, displayName],
   );
   /* If savedIntro has title_text, the user committed something · don't
@@ -1432,6 +1432,13 @@ export function IntroVideoSettingsClient({
                   type="button"
                   aria-label={`Text color ${hex}`}
                   aria-pressed={active}
+                  /* Owner directive 2026-10-20 · preventDefault on
+                     mousedown stops the swatch from stealing focus
+                     from the textarea · the user's selection stays
+                     intact so the colour applies to it. Without this,
+                     clicking the swatch collapses the selection and
+                     the colour would hit the global instead. */
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => applyColorToSelection(hex)}
                   data-nex-intro-video-color-swatch={hex}
                   style={{
@@ -2187,6 +2194,10 @@ function FontDropdown({
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
+        /* preventDefault on mousedown keeps the textarea focus +
+           selection intact so a size pick applies to the user's
+           current selection rather than collapsing it. */
+        onMouseDown={(e) => e.preventDefault()}
         onClick={() => setOpen((v) => !v)}
         data-nex-intro-video-font-select
         style={{
@@ -2240,6 +2251,7 @@ function FontDropdown({
                     type="button"
                     role="option"
                     aria-selected={selected}
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => {
                       onChange(f.id);
                       setOpen(false);
@@ -2324,6 +2336,10 @@ function SizeDropdown({
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
+        /* preventDefault on mousedown keeps the textarea focus +
+           selection intact so a size pick applies to the user's
+           current selection rather than collapsing it. */
+        onMouseDown={(e) => e.preventDefault()}
         onClick={() => setOpen((v) => !v)}
         data-nex-intro-video-size-select
         style={{
@@ -2388,6 +2404,7 @@ function SizeDropdown({
                     type="button"
                     role="option"
                     aria-selected={selected}
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => {
                       onChange(s.id);
                       setOpen(false);
