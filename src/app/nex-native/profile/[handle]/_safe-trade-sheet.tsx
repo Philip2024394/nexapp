@@ -58,6 +58,12 @@ import {
   type TrustVerificationStatus,
 } from "./_trust-record-panel";
 import { ReportFlipCard } from "./_report-flip-card";
+// Owner-authorised 2026-10-20 · Phase 1 of the Verified-Directory
+// wedge · the EvidencePanel surfaces the user's TrustScoreResult
+// right below the TrustRecordPanel so Safe Trade is the one place
+// users see every trust signal we have.
+import { EvidencePanel } from "./_evidence-panel";
+import type { TrustScoreResult } from "@/lib/nex-native/trust/trust-score-shared";
 
 const NEX = {
   bg: "#020914",
@@ -113,6 +119,16 @@ export interface SafeTradeSheetProps {
      *  cannot report self per sealed CHECK constraint). */
     readonly viewerIsOwner: boolean;
   };
+  /** Owner-authorised 2026-10-20 · the computed Trust Score for the
+   *  business attached to this profile. When present AND tier !==
+   *  "unknown" the EvidencePanel renders inside the sheet with the
+   *  reasons the score was earned (sources agree · owner claimed on
+   *  date · last confirmed days). Null / undefined / unknown-tier
+   *  hides the panel entirely so the first impression stays clean. */
+  readonly trustScore?: TrustScoreResult | null;
+  /** ISO · when the business owner first claimed the listing · fed
+   *  into the EvidencePanel's "Owner claimed on <date>" line. */
+  readonly ownerClaimedAtIso?: string | null;
 }
 
 type ResolvedState = "A" | "B" | "C" | "D";
@@ -245,6 +261,12 @@ export function SafeTradeSheet(props: SafeTradeSheetProps): React.JSX.Element | 
               reportsOnFile={props.trust.reportsOnFile}
               tradingSince={props.trust.tradingSince}
             />
+            {props.trustScore && props.trustScore.tier !== "unknown" ? (
+              <EvidencePanel
+                result={props.trustScore}
+                ownerClaimedAtIso={props.ownerClaimedAtIso ?? null}
+              />
+            ) : null}
             {!props.trust.viewerIsOwner ? (
               <button
                 type="button"

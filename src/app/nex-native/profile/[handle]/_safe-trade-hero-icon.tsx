@@ -46,6 +46,10 @@ export interface SafeTradeHeroIconProps {
   readonly chatHref: string;
   /** Pass-through to the sheet · see SafeTradeSheetProps.trust. */
   readonly trust?: SafeTradeSheetProps["trust"];
+  /** Owner-authorised 2026-10-20 · Phase 1 Verified-Directory wedge ·
+   *  pass-through to the sheet's EvidencePanel. */
+  readonly trustScore?: SafeTradeSheetProps["trustScore"];
+  readonly ownerClaimedAtIso?: SafeTradeSheetProps["ownerClaimedAtIso"];
 }
 
 export function SafeTradeHeroIcon(props: SafeTradeHeroIconProps): React.JSX.Element {
@@ -99,6 +103,8 @@ export function SafeTradeHeroIcon(props: SafeTradeHeroIconProps): React.JSX.Elem
         profileDisplayName={props.profileDisplayName}
         chatHref={props.chatHref}
         trust={props.trust}
+        trustScore={props.trustScore}
+        ownerClaimedAtIso={props.ownerClaimedAtIso}
       />
     </>
   );

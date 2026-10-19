@@ -50,6 +50,7 @@ import * as friendService from "@/lib/nex-native/friend-service";
 import * as reportService from "@/lib/nex-native/report-service";
 import { resolveProfileVisibilityForViewer } from "@/lib/nex-native/privacy-preferences-service";
 import { resolveSafeTradeStatus, type SafeTradeSnapshot } from "@/lib/nex-native/safe-trade-status";
+import { resolveTrustScoreByCanonicalId } from "@/lib/nex-native/trust/trust-score-service";
 import { isAccountVerified } from "@/lib/nex-native/account-verification";
 import { NEX_COMMERCE_ENABLED } from "@/lib/nex-native/launch-flags";
 import type { ControlDrawerSession } from "@/components/nex-native/control-drawer/control-drawer-client";
@@ -314,6 +315,30 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
     ? resolveSafeTradeStatus(primaryBusiness)
     : null;
 
+  // Owner-authorised 2026-10-20 · Phase 1 Verified-Directory wedge ·
+  // resolve the Trust Score for the primary business. Fail-soft to
+  // unknown-tier when no business exists or when there's no canonical
+  // projection yet. The score reads from nex.business_evidence; empty
+  // table rows resolve to tier="unknown" and the shield / evidence
+  // panel both hide (sealed owner directive).
+  const primaryBusinessCanonicalId: string | null = primaryBusiness
+    ? ((primaryBusiness as unknown as { canonical_business_id?: string | null })
+        .canonical_business_id ?? null)
+    : null;
+  const businessOwnerClaimedAtIso: string | null =
+    (primaryBusiness as unknown as { created_at?: string | null } | null)
+      ?.created_at ?? null;
+  const trustScore = primaryBusiness
+    ? await resolveTrustScoreByCanonicalId(primaryBusinessCanonicalId, {
+        isClaimed: true,
+        claimedAt: businessOwnerClaimedAtIso,
+        /* Owner directive 2026-10-20 · display-name fallback bridges
+           claimed sellers to their canonical row while migration 999
+           (nex_business.canonical_business_id FK) is unapplied. */
+        displayNameFallback: primaryBusiness.display_name ?? null,
+      })
+    : null;
+
   // Hydrate mutual-friend preview accounts (small set · parallel-safe).
   let mutualPreview: MutualPreviewAccount[] =
     mutualResult.previewIds.length > 0
@@ -568,6 +593,8 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
             safeTradeSnapshot={safeTradeSnapshot}
             primaryBusiness={primaryBusiness}
             chatHref={chatHref}
+            trustScore={trustScore}
+            ownerClaimedAtIso={businessOwnerClaimedAtIso}
           />
         </OwnerEditShell>
       ) : (
@@ -594,6 +621,8 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
           safeTradeSnapshot={safeTradeSnapshot}
           primaryBusiness={primaryBusiness}
           chatHref={chatHref}
+          trustScore={trustScore}
+          ownerClaimedAtIso={businessOwnerClaimedAtIso}
           trustAccountTier={trustAccountTier}
           trustMemberSinceIso={trustMemberSinceIso}
           trustShopActiveSinceIso={trustShopActiveSinceIso}
@@ -648,6 +677,13 @@ function ProfileBody(props: {
   trustVerification: TrustVerificationStatus;
   trustReportsOnFile: number;
   viewerIsSignedIn: boolean;
+  /** Owner-authorised 2026-10-20 · Phase 1 Verified-Directory wedge ·
+   *  pre-resolved Trust Score for the primary business · null when
+   *  the viewer has no business attached. The sheet + hero icon both
+   *  receive this via props so Safe Trade displays the evidence
+   *  panel and the shield renders next to the business name. */
+  trustScore: import("@/lib/nex-native/trust/trust-score-shared").TrustScoreResult | null;
+  ownerClaimedAtIso: string | null;
 }) {
   // Avatar + cover camera overlays only when the owner is actively
   // editing · zero footprint for viewers or in view mode.
@@ -690,6 +726,8 @@ function ProfileBody(props: {
           viewerIsSignedIn: props.viewerIsSignedIn,
           viewerIsOwner: props.isOwner,
         }}
+        trustScore={props.trustScore ?? null}
+        ownerClaimedAtIso={props.ownerClaimedAtIso ?? null}
       />
       <IdentityHero
         displayName={props.displayName}
@@ -702,6 +740,7 @@ function ProfileBody(props: {
         isOwner={props.isOwner}
         isVerified={props.isVerified}
         showAvatarUploadAffordance={showUploadAffordances}
+        trustTier={props.trustScore?.tier ?? "unknown"}
       />
       <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 10 }}>
         <InterestsPills interests={props.interests} isOwner={props.isOwner} />

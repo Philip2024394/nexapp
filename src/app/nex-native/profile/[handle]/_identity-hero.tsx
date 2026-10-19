@@ -35,6 +35,12 @@
 import type * as React from "react";
 import Link from "next/link";
 import { AvatarCameraPicker } from "./_avatar-camera-picker";
+// Owner-authorised 2026-10-20 · Phase 1 Verified-Directory wedge ·
+// the TrustShield renders inline next to the display name when the
+// profile has an attached business with high / medium / low Trust
+// Score. Unknown-tier returns null (shield hidden) per owner directive.
+import { TrustShield } from "@/lib/nex-native/trust/trust-shield";
+import type { TrustTier } from "@/lib/nex-native/trust/trust-score-shared";
 
 const NEX = {
   bg: "#020914",
@@ -63,6 +69,11 @@ export interface IdentityHeroProps {
    *  resolved via `account-verification.isAccountVerified` server-side.
    *  Never computed client-side · never fabricated. */
   readonly isVerified: boolean;
+  /** Owner-authorised 2026-10-20 · Phase 1 Verified-Directory wedge ·
+   *  Trust tier for the attached business. "unknown" (default) hides
+   *  the shield entirely. "high"/"medium"/"low" renders a shield to
+   *  the right of the display name. */
+  readonly trustTier?: TrustTier;
   /** When true, the avatar carries a camera-icon overlay in its
    *  bottom-right · tapping it opens a file picker that posts to
    *  the sealed `uploadAvatarAction` server action. Set by the
@@ -207,6 +218,14 @@ export function IdentityHero(props: IdentityHeroProps): React.JSX.Element {
           >
             <CheckIcon color="#FFFFFF" size={11} />
           </span>
+        ) : null}
+        {props.trustTier && props.trustTier !== "unknown" ? (
+          <TrustShield
+            tier={props.trustTier}
+            size="sm"
+            showLabel={false}
+            titlePrefix={props.displayName}
+          />
         ) : null}
       </h1>
 
