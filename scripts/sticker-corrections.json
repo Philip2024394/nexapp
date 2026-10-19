@@ -1,0 +1,1584 @@
+{
+  "schema": 1,
+  "updatedAt": "2026-10-19T15:53:32.177Z",
+  "tiles": {
+    "promo3d-special-offer": {
+      "slug": "promo3d-special-offer",
+      "sheet": "promo3d",
+      "crop": {
+        "left": 0,
+        "top": 0,
+        "width": 296,
+        "height": 301
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker",
+        "emoji"
+      ]
+    },
+    "promo3d-limited-offer": {
+      "slug": "promo3d-limited-offer",
+      "sheet": "promo3d",
+      "crop": {
+        "left": 290,
+        "top": 0,
+        "width": 276,
+        "height": 301
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker",
+        "emoji"
+      ]
+    },
+    "promo3d-hot-deal": {
+      "slug": "promo3d-hot-deal",
+      "sheet": "promo3d",
+      "crop": {
+        "left": 564,
+        "top": 0,
+        "width": 233,
+        "height": 285
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker",
+        "emoji"
+      ]
+    },
+    "promo3d-new-item": {
+      "slug": "promo3d-new-item",
+      "sheet": "promo3d",
+      "crop": {
+        "left": 795,
+        "top": 0,
+        "width": 262,
+        "height": 292
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker",
+        "emoji"
+      ]
+    },
+    "promo3d-best-price": {
+      "slug": "promo3d-best-price",
+      "sheet": "promo3d",
+      "crop": {
+        "left": 1055,
+        "top": 4,
+        "width": 256,
+        "height": 303
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker",
+        "emoji"
+      ]
+    },
+    "promo3d-dont-miss-out": {
+      "slug": "promo3d-dont-miss-out",
+      "sheet": "promo3d",
+      "crop": {
+        "left": 1294,
+        "top": 2,
+        "width": 242,
+        "height": 283
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker",
+        "emoji"
+      ]
+    },
+    "promo3d-premium-quality": {
+      "slug": "promo3d-premium-quality",
+      "sheet": "promo3d",
+      "crop": {
+        "left": 0,
+        "top": 298,
+        "width": 240,
+        "height": 236
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker",
+        "emoji"
+      ]
+    },
+    "promo3d-fresh-ingredients": {
+      "slug": "promo3d-fresh-ingredients",
+      "sheet": "promo3d",
+      "crop": {
+        "left": 235,
+        "top": 296,
+        "width": 274,
+        "height": 239
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker",
+        "emoji"
+      ]
+    },
+    "promo3d-special-menu": {
+      "slug": "promo3d-special-menu",
+      "sheet": "promo3d",
+      "crop": {
+        "left": 512,
+        "top": 285,
+        "width": 256,
+        "height": 247
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker",
+        "emoji"
+      ]
+    },
+    "promo3d-combo-deal": {
+      "slug": "promo3d-combo-deal",
+      "sheet": "promo3d",
+      "crop": {
+        "left": 768,
+        "top": 289,
+        "width": 292,
+        "height": 259
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker",
+        "emoji"
+      ]
+    },
+    "promo3d-save-more": {
+      "slug": "promo3d-save-more",
+      "sheet": "promo3d",
+      "crop": {
+        "left": 1057,
+        "top": 299,
+        "width": 241,
+        "height": 235
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker",
+        "emoji"
+      ]
+    },
+    "promo3d-time-limited": {
+      "slug": "promo3d-time-limited",
+      "sheet": "promo3d",
+      "crop": {
+        "left": 1298,
+        "top": 282,
+        "width": 238,
+        "height": 250
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker",
+        "emoji"
+      ]
+    },
+    "promo3d-pizza-special": {
+      "slug": "promo3d-pizza-special",
+      "sheet": "promo3d",
+      "crop": {
+        "left": 0,
+        "top": 528,
+        "width": 256,
+        "height": 240
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker",
+        "emoji"
+      ]
+    },
+    "promo3d-hot-food": {
+      "slug": "promo3d-hot-food",
+      "sheet": "promo3d",
+      "crop": {
+        "left": 256,
+        "top": 532,
+        "width": 256,
+        "height": 236
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker",
+        "emoji"
+      ]
+    },
+    "promo3d-customer-favorite": {
+      "slug": "promo3d-customer-favorite",
+      "sheet": "promo3d",
+      "crop": {
+        "left": 512,
+        "top": 528,
+        "width": 256,
+        "height": 240
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker",
+        "emoji"
+      ]
+    },
+    "promo3d-freshly-made": {
+      "slug": "promo3d-freshly-made",
+      "sheet": "promo3d",
+      "crop": {
+        "left": 768,
+        "top": 546,
+        "width": 256,
+        "height": 233
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker",
+        "emoji"
+      ]
+    },
+    "promo3d-free-drink": {
+      "slug": "promo3d-free-drink",
+      "sheet": "promo3d",
+      "crop": {
+        "left": 1024,
+        "top": 535,
+        "width": 256,
+        "height": 256
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker",
+        "emoji"
+      ]
+    },
+    "promo3d-free-fries": {
+      "slug": "promo3d-free-fries",
+      "sheet": "promo3d",
+      "crop": {
+        "left": 1280,
+        "top": 532,
+        "width": 256,
+        "height": 236
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker",
+        "emoji"
+      ]
+    },
+    "promo3d-free-dessert": {
+      "slug": "promo3d-free-dessert",
+      "sheet": "promo3d",
+      "crop": {
+        "left": 0,
+        "top": 768,
+        "width": 256,
+        "height": 256
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker",
+        "emoji"
+      ]
+    },
+    "promo3d-free-water": {
+      "slug": "promo3d-free-water",
+      "sheet": "promo3d",
+      "crop": {
+        "left": 256,
+        "top": 768,
+        "width": 256,
+        "height": 256
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker",
+        "emoji"
+      ]
+    },
+    "promo3d-free-delivery": {
+      "slug": "promo3d-free-delivery",
+      "sheet": "promo3d",
+      "crop": {
+        "left": 512,
+        "top": 768,
+        "width": 256,
+        "height": 256
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker",
+        "emoji"
+      ]
+    },
+    "promo3d-free-rice": {
+      "slug": "promo3d-free-rice",
+      "sheet": "promo3d",
+      "crop": {
+        "left": 768,
+        "top": 775,
+        "width": 256,
+        "height": 249
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker",
+        "emoji"
+      ]
+    },
+    "promo3d-free-sauce": {
+      "slug": "promo3d-free-sauce",
+      "sheet": "promo3d",
+      "crop": {
+        "left": 1024,
+        "top": 788,
+        "width": 256,
+        "height": 236
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker",
+        "emoji"
+      ]
+    },
+    "promo3d-birthday-special": {
+      "slug": "promo3d-birthday-special",
+      "sheet": "promo3d",
+      "crop": {
+        "left": 1280,
+        "top": 766,
+        "width": 256,
+        "height": 258
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker",
+        "emoji"
+      ]
+    },
+    "promo-5-off": {
+      "slug": "promo-5-off",
+      "sheet": "promo",
+      "crop": {
+        "left": 0,
+        "top": 0,
+        "width": 256,
+        "height": 294
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "promo-10-off": {
+      "slug": "promo-10-off",
+      "sheet": "promo",
+      "crop": {
+        "left": 256,
+        "top": 0,
+        "width": 256,
+        "height": 292
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "promo-15-off": {
+      "slug": "promo-15-off",
+      "sheet": "promo",
+      "crop": {
+        "left": 512,
+        "top": 0,
+        "width": 283,
+        "height": 290
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "promo-20-off": {
+      "slug": "promo-20-off",
+      "sheet": "promo",
+      "crop": {
+        "left": 793,
+        "top": 0,
+        "width": 267,
+        "height": 289
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "promo-25-off": {
+      "slug": "promo-25-off",
+      "sheet": "promo",
+      "crop": {
+        "left": 1057,
+        "top": 0,
+        "width": 243,
+        "height": 292
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "promo-30-off": {
+      "slug": "promo-30-off",
+      "sheet": "promo",
+      "crop": {
+        "left": 1294,
+        "top": 0,
+        "width": 242,
+        "height": 290
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "promo-buy1-get1": {
+      "slug": "promo-buy1-get1",
+      "sheet": "promo",
+      "crop": {
+        "left": 0,
+        "top": 292,
+        "width": 308,
+        "height": 301
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "promo-free-drink": {
+      "slug": "promo-free-drink",
+      "sheet": "promo",
+      "crop": {
+        "left": 307,
+        "top": 289,
+        "width": 227,
+        "height": 283
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "promo-free-fries": {
+      "slug": "promo-free-fries",
+      "sheet": "promo",
+      "crop": {
+        "left": 532,
+        "top": 287,
+        "width": 258,
+        "height": 288
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "promo-free-dessert": {
+      "slug": "promo-free-dessert",
+      "sheet": "promo",
+      "crop": {
+        "left": 790,
+        "top": 283,
+        "width": 257,
+        "height": 292
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "promo-free-water": {
+      "slug": "promo-free-water",
+      "sheet": "promo",
+      "crop": {
+        "left": 1044,
+        "top": 287,
+        "width": 236,
+        "height": 295
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "promo-free-delivery": {
+      "slug": "promo-free-delivery",
+      "sheet": "promo",
+      "crop": {
+        "left": 1280,
+        "top": 287,
+        "width": 256,
+        "height": 297
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "promo-free-rice": {
+      "slug": "promo-free-rice",
+      "sheet": "promo",
+      "crop": {
+        "left": 0,
+        "top": 590,
+        "width": 256,
+        "height": 229
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "promo-free-sauce": {
+      "slug": "promo-free-sauce",
+      "sheet": "promo",
+      "crop": {
+        "left": 256,
+        "top": 570,
+        "width": 294,
+        "height": 247
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "promo-half-price": {
+      "slug": "promo-half-price",
+      "sheet": "promo",
+      "crop": {
+        "left": 552,
+        "top": 575,
+        "width": 247,
+        "height": 242
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "promo-special-offer": {
+      "slug": "promo-special-offer",
+      "sheet": "promo",
+      "crop": {
+        "left": 793,
+        "top": 573,
+        "width": 231,
+        "height": 251
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "promo-limited-time": {
+      "slug": "promo-limited-time",
+      "sheet": "promo",
+      "crop": {
+        "left": 1024,
+        "top": 579,
+        "width": 256,
+        "height": 250
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "promo-hot-deal": {
+      "slug": "promo-hot-deal",
+      "sheet": "promo",
+      "crop": {
+        "left": 1280,
+        "top": 579,
+        "width": 256,
+        "height": 238
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "promo-fresh-ingredients": {
+      "slug": "promo-fresh-ingredients",
+      "sheet": "promo",
+      "crop": {
+        "left": 0,
+        "top": 817,
+        "width": 281,
+        "height": 207
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "promo-chefs-special": {
+      "slug": "promo-chefs-special",
+      "sheet": "promo",
+      "crop": {
+        "left": 276,
+        "top": 815,
+        "width": 263,
+        "height": 209
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "promo-best-choice": {
+      "slug": "promo-best-choice",
+      "sheet": "promo",
+      "crop": {
+        "left": 534,
+        "top": 813,
+        "width": 234,
+        "height": 211
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "promo-tasty-food": {
+      "slug": "promo-tasty-food",
+      "sheet": "promo",
+      "crop": {
+        "left": 768,
+        "top": 819,
+        "width": 256,
+        "height": 205
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "promo-good-food": {
+      "slug": "promo-good-food",
+      "sheet": "promo",
+      "crop": {
+        "left": 1024,
+        "top": 826,
+        "width": 256,
+        "height": 198
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "promo-premium-quality": {
+      "slug": "promo-premium-quality",
+      "sheet": "promo",
+      "crop": {
+        "left": 1280,
+        "top": 815,
+        "width": 256,
+        "height": 209
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "glossy-cool": {
+      "slug": "glossy-cool",
+      "sheet": "glossy",
+      "crop": {
+        "left": 0,
+        "top": 0,
+        "width": 307,
+        "height": 345
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "glossy-thanks": {
+      "slug": "glossy-thanks",
+      "sheet": "glossy",
+      "crop": {
+        "left": 307,
+        "top": 0,
+        "width": 307,
+        "height": 341
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "glossy-great": {
+      "slug": "glossy-great",
+      "sheet": "glossy",
+      "crop": {
+        "left": 614,
+        "top": 0,
+        "width": 308,
+        "height": 341
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "glossy-preparing": {
+      "slug": "glossy-preparing",
+      "sheet": "glossy",
+      "crop": {
+        "left": 922,
+        "top": 0,
+        "width": 307,
+        "height": 368
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "glossy-packaged": {
+      "slug": "glossy-packaged",
+      "sheet": "glossy",
+      "crop": {
+        "left": 1229,
+        "top": 0,
+        "width": 307,
+        "height": 341
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "glossy-picked-up": {
+      "slug": "glossy-picked-up",
+      "sheet": "glossy",
+      "crop": {
+        "left": 0,
+        "top": 344,
+        "width": 307,
+        "height": 326
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "glossy-wait": {
+      "slug": "glossy-wait",
+      "sheet": "glossy",
+      "crop": {
+        "left": 309,
+        "top": 341,
+        "width": 307,
+        "height": 342
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "glossy-ok": {
+      "slug": "glossy-ok",
+      "sheet": "glossy",
+      "crop": {
+        "left": 614,
+        "top": 341,
+        "width": 308,
+        "height": 342
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "glossy-we-can": {
+      "slug": "glossy-we-can",
+      "sheet": "glossy",
+      "crop": {
+        "left": 922,
+        "top": 366,
+        "width": 307,
+        "height": 317
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "glossy-sure": {
+      "slug": "glossy-sure",
+      "sheet": "glossy",
+      "crop": {
+        "left": 1229,
+        "top": 341,
+        "width": 307,
+        "height": 342
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "glossy-sold-out": {
+      "slug": "glossy-sold-out",
+      "sheet": "glossy",
+      "crop": {
+        "left": 0,
+        "top": 661,
+        "width": 307,
+        "height": 307
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "glossy-new-try": {
+      "slug": "glossy-new-try",
+      "sheet": "glossy",
+      "crop": {
+        "left": 307,
+        "top": 683,
+        "width": 307,
+        "height": 287
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "glossy-delicious": {
+      "slug": "glossy-delicious",
+      "sheet": "glossy",
+      "crop": {
+        "left": 614,
+        "top": 683,
+        "width": 308,
+        "height": 290
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "glossy-fresh": {
+      "slug": "glossy-fresh",
+      "sheet": "glossy",
+      "crop": {
+        "left": 922,
+        "top": 683,
+        "width": 307,
+        "height": 301
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "glossy-enjoy": {
+      "slug": "glossy-enjoy",
+      "sheet": "glossy",
+      "crop": {
+        "left": 1229,
+        "top": 683,
+        "width": 307,
+        "height": 307
+      },
+      "skipped": false,
+      "destinations": [
+        "sticker"
+      ]
+    },
+    "cakegirl-01": {
+      "slug": "cakegirl-01",
+      "sheet": "cakegirl",
+      "crop": {
+        "left": 3,
+        "top": 0,
+        "width": 256,
+        "height": 239
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "cakegirl-02": {
+      "slug": "cakegirl-02",
+      "sheet": "cakegirl",
+      "crop": {
+        "left": 256,
+        "top": 0,
+        "width": 256,
+        "height": 229
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "cakegirl-03": {
+      "slug": "cakegirl-03",
+      "sheet": "cakegirl",
+      "crop": {
+        "left": 512,
+        "top": 0,
+        "width": 256,
+        "height": 233
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "cakegirl-04": {
+      "slug": "cakegirl-04",
+      "sheet": "cakegirl",
+      "crop": {
+        "left": 768,
+        "top": 0,
+        "width": 256,
+        "height": 256
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "cakegirl-05": {
+      "slug": "cakegirl-05",
+      "sheet": "cakegirl",
+      "crop": {
+        "left": 1024,
+        "top": 0,
+        "width": 224,
+        "height": 249
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "cakegirl-06": {
+      "slug": "cakegirl-06",
+      "sheet": "cakegirl",
+      "crop": {
+        "left": 1248,
+        "top": 0,
+        "width": 288,
+        "height": 239
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "cakegirl-07": {
+      "slug": "cakegirl-07",
+      "sheet": "cakegirl",
+      "crop": {
+        "left": 0,
+        "top": 233,
+        "width": 256,
+        "height": 215
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "cakegirl-08": {
+      "slug": "cakegirl-08",
+      "sheet": "cakegirl",
+      "crop": {
+        "left": 256,
+        "top": 220,
+        "width": 256,
+        "height": 235
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "cakegirl-09": {
+      "slug": "cakegirl-09",
+      "sheet": "cakegirl",
+      "crop": {
+        "left": 512,
+        "top": 230,
+        "width": 256,
+        "height": 233
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "cakegirl-10": {
+      "slug": "cakegirl-10",
+      "sheet": "cakegirl",
+      "crop": {
+        "left": 768,
+        "top": 256,
+        "width": 256,
+        "height": 200
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "cakegirl-11": {
+      "slug": "cakegirl-11",
+      "sheet": "cakegirl",
+      "crop": {
+        "left": 1024,
+        "top": 238,
+        "width": 256,
+        "height": 223
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "cakegirl-12": {
+      "slug": "cakegirl-12",
+      "sheet": "cakegirl",
+      "crop": {
+        "left": 1283,
+        "top": 234,
+        "width": 253,
+        "height": 223
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "cakegirl-13": {
+      "slug": "cakegirl-13",
+      "sheet": "cakegirl",
+      "crop": {
+        "left": 0,
+        "top": 443,
+        "width": 256,
+        "height": 212
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "cakegirl-14": {
+      "slug": "cakegirl-14",
+      "sheet": "cakegirl",
+      "crop": {
+        "left": 256,
+        "top": 448,
+        "width": 256,
+        "height": 213
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "cakegirl-15": {
+      "slug": "cakegirl-15",
+      "sheet": "cakegirl",
+      "crop": {
+        "left": 512,
+        "top": 453,
+        "width": 256,
+        "height": 208
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "cakegirl-16": {
+      "slug": "cakegirl-16",
+      "sheet": "cakegirl",
+      "crop": {
+        "left": 768,
+        "top": 451,
+        "width": 256,
+        "height": 204
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "cakegirl-17": {
+      "slug": "cakegirl-17",
+      "sheet": "cakegirl",
+      "crop": {
+        "left": 1024,
+        "top": 662,
+        "width": 256,
+        "height": 196
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "cakegirl-18": {
+      "slug": "cakegirl-18",
+      "sheet": "cakegirl",
+      "crop": {
+        "left": 1280,
+        "top": 449,
+        "width": 256,
+        "height": 213
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "cakegirl-19": {
+      "slug": "cakegirl-19",
+      "sheet": "cakegirl",
+      "crop": {
+        "left": 0,
+        "top": 847,
+        "width": 273,
+        "height": 177
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "cakegirl-20": {
+      "slug": "cakegirl-20",
+      "sheet": "cakegirl",
+      "crop": {
+        "left": 286,
+        "top": 852,
+        "width": 251,
+        "height": 172
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "cakegirl-21": {
+      "slug": "cakegirl-21",
+      "sheet": "cakegirl",
+      "crop": {
+        "left": 548,
+        "top": 850,
+        "width": 220,
+        "height": 174
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "cakegirl-22": {
+      "slug": "cakegirl-22",
+      "sheet": "cakegirl",
+      "crop": {
+        "left": 768,
+        "top": 855,
+        "width": 256,
+        "height": 169
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "cakegirl-23": {
+      "slug": "cakegirl-23",
+      "sheet": "cakegirl",
+      "crop": {
+        "left": 1024,
+        "top": 853,
+        "width": 256,
+        "height": 171
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "cakegirl-24": {
+      "slug": "cakegirl-24",
+      "sheet": "cakegirl",
+      "crop": {
+        "left": 1280,
+        "top": 660,
+        "width": 256,
+        "height": 191
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "glossy3d-01": {
+      "slug": "glossy3d-01",
+      "sheet": "glossy3d",
+      "crop": {
+        "left": 0,
+        "top": 1,
+        "width": 266,
+        "height": 227
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "glossy3d-02": {
+      "slug": "glossy3d-02",
+      "sheet": "glossy3d",
+      "crop": {
+        "left": 268,
+        "top": 0,
+        "width": 244,
+        "height": 239
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "glossy3d-03": {
+      "slug": "glossy3d-03",
+      "sheet": "glossy3d",
+      "crop": {
+        "left": 504,
+        "top": 0,
+        "width": 278,
+        "height": 227
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "glossy3d-04": {
+      "slug": "glossy3d-04",
+      "sheet": "glossy3d",
+      "crop": {
+        "left": 777,
+        "top": 0,
+        "width": 247,
+        "height": 233
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "glossy3d-05": {
+      "slug": "glossy3d-05",
+      "sheet": "glossy3d",
+      "crop": {
+        "left": 1024,
+        "top": 0,
+        "width": 256,
+        "height": 240
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "glossy3d-06": {
+      "slug": "glossy3d-06",
+      "sheet": "glossy3d",
+      "crop": {
+        "left": 1280,
+        "top": 0,
+        "width": 256,
+        "height": 229
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "glossy3d-07": {
+      "slug": "glossy3d-07",
+      "sheet": "glossy3d",
+      "crop": {
+        "left": 0,
+        "top": 224,
+        "width": 269,
+        "height": 223
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "glossy3d-08": {
+      "slug": "glossy3d-08",
+      "sheet": "glossy3d",
+      "crop": {
+        "left": 269,
+        "top": 233,
+        "width": 243,
+        "height": 218
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "glossy3d-09": {
+      "slug": "glossy3d-09",
+      "sheet": "glossy3d",
+      "crop": {
+        "left": 512,
+        "top": 221,
+        "width": 256,
+        "height": 220
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "glossy3d-10": {
+      "slug": "glossy3d-10",
+      "sheet": "glossy3d",
+      "crop": {
+        "left": 767,
+        "top": 230,
+        "width": 256,
+        "height": 233
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "glossy3d-11": {
+      "slug": "glossy3d-11",
+      "sheet": "glossy3d",
+      "crop": {
+        "left": 1024,
+        "top": 236,
+        "width": 256,
+        "height": 218
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "glossy3d-12": {
+      "slug": "glossy3d-12",
+      "sheet": "glossy3d",
+      "crop": {
+        "left": 1280,
+        "top": 224,
+        "width": 256,
+        "height": 239
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "glossy3d-13": {
+      "slug": "glossy3d-13",
+      "sheet": "glossy3d",
+      "crop": {
+        "left": 0,
+        "top": 435,
+        "width": 256,
+        "height": 210
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "glossy3d-14": {
+      "slug": "glossy3d-14",
+      "sheet": "glossy3d",
+      "crop": {
+        "left": 256,
+        "top": 651,
+        "width": 256,
+        "height": 175
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "glossy3d-15": {
+      "slug": "glossy3d-15",
+      "sheet": "glossy3d",
+      "crop": {
+        "left": 512,
+        "top": 643,
+        "width": 234,
+        "height": 177
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "glossy3d-16": {
+      "slug": "glossy3d-16",
+      "sheet": "glossy3d",
+      "crop": {
+        "left": 768,
+        "top": 457,
+        "width": 256,
+        "height": 190
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "glossy3d-17": {
+      "slug": "glossy3d-17",
+      "sheet": "glossy3d",
+      "crop": {
+        "left": 1024,
+        "top": 452,
+        "width": 231,
+        "height": 192
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "glossy3d-18": {
+      "slug": "glossy3d-18",
+      "sheet": "glossy3d",
+      "crop": {
+        "left": 1250,
+        "top": 454,
+        "width": 286,
+        "height": 209
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "glossy3d-19": {
+      "slug": "glossy3d-19",
+      "sheet": "glossy3d",
+      "crop": {
+        "left": 0,
+        "top": 824,
+        "width": 256,
+        "height": 175
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "glossy3d-20": {
+      "slug": "glossy3d-20",
+      "sheet": "glossy3d",
+      "crop": {
+        "left": 256,
+        "top": 823,
+        "width": 256,
+        "height": 201
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "glossy3d-21": {
+      "slug": "glossy3d-21",
+      "sheet": "glossy3d",
+      "crop": {
+        "left": 765,
+        "top": 827,
+        "width": 262,
+        "height": 184
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "glossy3d-22": {
+      "slug": "glossy3d-22",
+      "sheet": "glossy3d",
+      "crop": {
+        "left": 742,
+        "top": 641,
+        "width": 282,
+        "height": 188
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "glossy3d-23": {
+      "slug": "glossy3d-23",
+      "sheet": "glossy3d",
+      "crop": {
+        "left": 1024,
+        "top": 827,
+        "width": 243,
+        "height": 197
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    },
+    "glossy3d-24": {
+      "slug": "glossy3d-24",
+      "sheet": "glossy3d",
+      "crop": {
+        "left": 1263,
+        "top": 821,
+        "width": 261,
+        "height": 203
+      },
+      "skipped": false,
+      "destinations": [
+        "emoji"
+      ]
+    }
+  }
+}

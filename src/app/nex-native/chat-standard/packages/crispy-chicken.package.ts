@@ -40,6 +40,11 @@ export const CRISPY_CHICKEN_PACKAGE: ThemePackage = {
     highlight: "#FDF2DF", // buttermilk cream · light text on deep bg
     glow: "rgba(240,180,110,0.55)", // amber steam glow
     deep: "#2A170B", // dark hazelnut · page / stage anchor
+    // Owner directive 2026-10-19 · "delivery tick marks in crispy
+    // chicken theme should be dark red color" · overrides the sealed
+    // "read" ✓✓ accent so the ticks read cleanly against the warm
+    // gold wallpaper instead of blending into the primary.
+    deliveryTickColor: "#8B1A1A", // dark red
   },
   personality: "drift",
 

@@ -91,6 +91,12 @@ export interface JokerKeypadProps {
    *  Send to deliver text + emoji together (identical path to the
    *  pre-keypad EmojiStickerGifPicker). */
   onPickEmoji?: (emoji: BuiltInThemeEmoji) => void;
+  /** Owner directive 2026-10-19 · fires when the user taps a sticker
+   *  in the inline drawer. Same contract as `onPickEmoji` · composer
+   *  stages the pick in `pendingSticker` and Send ships it as its
+   *  own bubble. Before this seal the sticker drawer tiles had no
+   *  pick handler at all · taps silently no-op'd. */
+  onPickSticker?: (sticker: BuiltInThemeSticker) => void;
   /** Owner directive 2026-10-18 · "all chat themes must have their
    *  own keypad in theme color". The keypad was Joker-only until
    *  this seal · it now accepts any accent hex so every theme can
@@ -140,6 +146,7 @@ export function JokerKeypad({
   onClose,
   themeId,
   onPickEmoji,
+  onPickSticker,
   accentColor,
 }: JokerKeypadProps): React.JSX.Element | null {
   /* Owner directive 2026-10-18 · derive the five CSS vars once per
@@ -552,7 +559,16 @@ export function JokerKeypad({
           />
         )}
         {plane === "sticker" && (
-          <InlineStickerGrid items={inlineStickers} />
+          <InlineStickerGrid
+            items={inlineStickers}
+            onPick={(s) => {
+              onPickSticker?.(s);
+              // Owner directive 2026-10-19 · auto-return to letters
+              // after a sticker pick (matches the emoji drawer's
+              // iOS/GBoard muscle-memory pattern on line 549-551).
+              setPlane("letters");
+            }}
+          />
         )}
 
         {!isDrawerPlane && (
@@ -737,11 +753,17 @@ function InlineEmojiGrid({
           onMouseDown={(ev) => ev.preventDefault()}
           onClick={() => onPick(e)}
           style={{
+            /* Owner directive 2026-10-19 · naked emoji tile · same
+               strip as the picker's image branch · the uploaded
+               theme emojis ship with their own decorative
+               backgrounds and the keypad's accent-tinted chip
+               visibly chopped through that art. Image IS the
+               button · matches the WhatsApp / iMessage convention. */
             appearance: "none",
-            background: KEY_BG_IDLE,
-            border: `1px solid var(--nex-kp-accent-border, rgba(143,255,110,0.18))`,
-            borderRadius: 10,
-            padding: 6,
+            background: "transparent",
+            border: "none",
+            borderRadius: 6,
+            padding: 2,
             cursor: "pointer",
             display: "grid",
             placeItems: "center",
@@ -772,8 +794,14 @@ function InlineEmojiGrid({
 // the send path for stickers is a Phase 2 or later concern.
 function InlineStickerGrid({
   items,
+  onPick,
 }: {
   items: readonly BuiltInThemeSticker[] | null;
+  /** Owner directive 2026-10-19 · sticker tap handler · parent
+   *  (JokerKeypad) wires this up to the composer's pendingSticker
+   *  state. Prior to this seal the grid had no onPick prop so taps
+   *  silently no-op'd. */
+  onPick?: (sticker: BuiltInThemeSticker) => void;
 }): React.JSX.Element {
   if (!items || items.length === 0) {
     return <InlineDrawerEmpty text="No stickers available for this theme." />;
@@ -782,10 +810,14 @@ function InlineStickerGrid({
     <div
       data-nex-joker-keypad-inline-stickers
       style={{
+        /* Owner directive 2026-10-19 · 2-column grid matches the
+           picker's bigger-sticker layout · the keypad's inline
+           drawer stays visually consistent with the external
+           picker. */
         display: "grid",
-        gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-        gap: 8,
-        maxHeight: 220,
+        gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+        gap: 10,
+        maxHeight: 260,
         overflowY: "auto",
         padding: "2px",
       }}
@@ -796,13 +828,15 @@ function InlineStickerGrid({
           type="button"
           aria-label={s.label || s.slug}
           onMouseDown={(e) => e.preventDefault()}
+          onClick={() => onPick?.(s)}
+          data-nex-joker-keypad-sticker-slug={s.slug}
           style={{
             appearance: "none",
             background: KEY_BG_IDLE,
             border: `1px solid var(--nex-kp-accent-border, rgba(143,255,110,0.18))`,
             borderRadius: 12,
             padding: 4,
-            cursor: "default",
+            cursor: onPick ? "pointer" : "default",
             display: "grid",
             placeItems: "center",
           }}

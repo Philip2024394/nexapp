@@ -106,6 +106,89 @@ export function StandardExperience({
 }: StandardExperienceProps): React.JSX.Element {
   const [composerText, setComposerText] = React.useState("");
   const [pickerOpen, setPickerOpen] = React.useState(false);
+  // Owner directive 2026-10-19 · staged image emoji / sticker chips
+  // inside the composer pill · mirrors the sealed pendingEmoji
+  // pattern from _universal-composer-footer.tsx. Setters are wired
+  // from BOTH the StandardEmojiStickerPicker (over-composer sheet)
+  // AND the JokerKeypad's inline emoji/sticker drawers so the user
+  // can land a food emoji from either surface and see it stage in
+  // the input before pressing Send.
+  const [pendingEmoji, setPendingEmoji] = React.useState<
+    StandardExperienceThemeEmoji | null
+  >(null);
+  const [pendingSticker, setPendingSticker] = React.useState<
+    StandardExperienceThemeSticker | null
+  >(null);
+  /* Owner directive 2026-10-19 · attachments staged by the lower-
+     right 3-dot menu's Camera + File-Attach buttons · each entry
+     carries the raw File (for a real upload path later) plus a
+     browser-generated preview URL for images. Stored in composer
+     state so the chips sit INSIDE the composer pill alongside
+     emoji + sticker chips. */
+  type PendingAttachment = {
+    id: string;
+    file: File;
+    name: string;
+    mime: string;
+    sizeBytes: number;
+    previewUrl: string | null;
+  };
+  const [pendingAttachments, setPendingAttachments] = React.useState<
+    PendingAttachment[]
+  >([]);
+  /* Owner directive 2026-10-19 · recent-files list for the unified
+     picker's Files tab · tracks every file this session has sent so
+     the user can quickly re-send recent attachments. Capped at 20
+     per the picker-mru convention. */
+  const [recentFiles, setRecentFiles] = React.useState<
+    Array<{
+      id: string;
+      name: string;
+      mime: string;
+      previewUrl: string;
+      sentAtMs: number;
+    }>
+  >([]);
+  const handleFilesPicked = React.useCallback((files: FileList) => {
+    const next: PendingAttachment[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files.item(i);
+      if (!file) continue;
+      const isImage = (file.type || "").startsWith("image/");
+      const previewUrl = isImage ? URL.createObjectURL(file) : null;
+      next.push({
+        id: `att-${Date.now()}-${i}-${file.name}`,
+        file,
+        name: file.name,
+        mime: file.type || "application/octet-stream",
+        sizeBytes: file.size,
+        previewUrl,
+      });
+    }
+    if (next.length > 0) {
+      setPendingAttachments((prev) => [...prev, ...next]);
+    }
+  }, []);
+  const removePendingAttachment = React.useCallback((id: string) => {
+    setPendingAttachments((prev) => {
+      const target = prev.find((a) => a.id === id);
+      if (target?.previewUrl) {
+        /* Revoke the object URL so the preview blob can be GC'd. */
+        URL.revokeObjectURL(target.previewUrl);
+      }
+      return prev.filter((a) => a.id !== id);
+    });
+  }, []);
+  /* Clean up any dangling object URLs when the component unmounts. */
+  React.useEffect(
+    () => () => {
+      for (const a of pendingAttachments) {
+        if (a.previewUrl) URL.revokeObjectURL(a.previewUrl);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
   // Shop slider is hidden by default on every theme · tapping the Shop
   // icon in the header slides it up from below the composer. Universal
   // rule across all themes · the Standard Experience owns this
@@ -142,35 +225,198 @@ export function StandardExperience({
     const el = messagesRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [allMessagesLength]);
-  // Preview mock reactions keyed by message id so the shell can light
-  // up specific bubbles with a reaction row · visual-only, no actual
-  // reaction wiring in preview mode.
-  const PREVIEW_REACTIONS: Record<string, Record<string, number>> = {
+  // Preview seed reactions keyed by message id. Lifted to component
+  // state 2026-10-19 so the react-trigger on each bubble can route
+  // picks from the main emoji+sticker panel back as new reactions.
+  const [messageReactions, setMessageReactions] = React.useState<
+    Record<string, Record<string, number>>
+  >(() => ({
     s1: { "❤️": 2 },
     s3: { "👍": 1, "🔥": 1 },
     s4: { "😍": 1 },
-  };
-
-  const handleSend = React.useCallback(() => {
-    const trimmed = composerText.trim();
-    if (!trimmed) return;
-    onSendLocalMessage(trimmed);
-    setComposerText("");
-  }, [composerText, onSendLocalMessage]);
-
-  const handleEmojiPick = React.useCallback(
-    (g: string) => {
-      setComposerText((v) => v + g);
+  }));
+  /* Owner directive 2026-10-19 · when non-null, the next pick from
+     StandardEmojiStickerPicker is routed to this message as a new
+     reaction instead of being staged in the composer. Set when the
+     user taps the smiley icon on a bubble · cleared after one pick
+     or when the picker is dismissed. */
+  const [reactingToMessageId, setReactingToMessageId] = React.useState<
+    string | null
+  >(null);
+  const openReactionPickerFor = React.useCallback((messageId: string) => {
+    setReactingToMessageId(messageId);
+    setPickerOpen(true);
+  }, []);
+  const addReaction = React.useCallback(
+    (messageId: string, key: string) => {
+      setMessageReactions((prev) => {
+        const existing = prev[messageId] ?? {};
+        return {
+          ...prev,
+          [messageId]: {
+            ...existing,
+            [key]: (existing[key] ?? 0) + 1,
+          },
+        };
+      });
+    },
+    [],
+  );
+  /* Owner directive 2026-10-19 · long-press on a reaction chip opens
+     a Delete Emoji yes/no prompt · yes fires here and clears the key
+     entirely from the message's reaction map (chip disappears). */
+  const removeReaction = React.useCallback(
+    (messageId: string, key: string) => {
+      setMessageReactions((prev) => {
+        const existing = prev[messageId];
+        if (!existing || !(key in existing)) return prev;
+        const next = { ...existing };
+        delete next[key];
+        return { ...prev, [messageId]: next };
+      });
     },
     [],
   );
 
+  const handleSend = React.useCallback(() => {
+    const trimmed = composerText.trim();
+    // Owner directive 2026-10-19 · flush order · attachments first
+    // (each as its own bubble), then sticker (its own bubble), then
+    // text + optional trailing emoji together. Each staged asset
+    // lives in its own bubble so the message log reads the same way
+    // UniversalComposerFooter + the sealed peer chat render staged
+    // assets. Clears all state after.
+    for (const att of pendingAttachments) {
+      const safeName = att.name.replace(/\|/g, "_");
+      const safeMime = att.mime.replace(/\|/g, "_");
+      /* Encode as [file:name|mime|previewUrl] so the bubble renderer
+         can resolve the preview blob or render a type-chip. Preview
+         URL is a blob: URL in preview mode; a real upload path
+         would swap this for the final storage URL. */
+      onSendLocalMessage(
+        `[file:${safeName}|${safeMime}|${att.previewUrl ?? ""}]`,
+      );
+      /* Owner directive 2026-10-19 · surface the sent file in the
+         unified picker's Files tab Recent list. De-dupe by id so
+         re-sending the same file doesn't bloat the list · cap at
+         20 entries total. */
+      setRecentFiles((prev) => {
+        const filtered = prev.filter((p) => p.id !== att.id);
+        return [
+          {
+            id: att.id,
+            name: att.name,
+            mime: att.mime,
+            previewUrl: att.previewUrl ?? "",
+            sentAtMs: Date.now(),
+          },
+          ...filtered,
+        ].slice(0, 20);
+      });
+    }
+    if (pendingSticker) {
+      /* Owner directive 2026-10-19 · image-sticker encoding carries
+         slug + imageUrl + aspectRatio so the bubble renderer always
+         has what it needs to paint the image · no catalog-lookup
+         fallback → no "[sticker:slug]" text leaking to the chat. */
+      onSendLocalMessage(
+        `[sticker:${pendingSticker.slug}|${pendingSticker.imageUrl}|${pendingSticker.aspectRatio.toFixed(3)}]`,
+      );
+    }
+    if (trimmed || pendingEmoji) {
+      /* Owner directive 2026-10-19 · image-emoji encoding carries
+         slug + imageUrl so the bubble renderer never falls back to
+         raw "[emoji:slug]" text. */
+      const emojiToken = pendingEmoji
+        ? `[emoji:${pendingEmoji.slug}|${pendingEmoji.imageUrl}]`
+        : "";
+      const body = pendingEmoji
+        ? trimmed
+          ? `${trimmed} ${emojiToken}`
+          : emojiToken
+        : trimmed;
+      onSendLocalMessage(body);
+    }
+    setComposerText("");
+    setPendingEmoji(null);
+    setPendingSticker(null);
+    setPendingAttachments([]);
+  }, [
+    composerText,
+    pendingEmoji,
+    pendingSticker,
+    pendingAttachments,
+    onSendLocalMessage,
+  ]);
+
+  const handleEmojiPick = React.useCallback(
+    (g: string) => {
+      /* Owner directive 2026-10-19 · when a bubble's react-trigger
+         opened the picker, the next pick becomes a reaction on
+         that bubble instead of composer text. */
+      if (reactingToMessageId) {
+        addReaction(reactingToMessageId, g);
+        setReactingToMessageId(null);
+        setPickerOpen(false);
+        return;
+      }
+      setComposerText((v) => v + g);
+    },
+    [reactingToMessageId, addReaction],
+  );
+
+  // Owner directive 2026-10-19 · staged image emoji · tapping an
+  // image tile (picker OR keypad drawer) sets the pending chip
+  // instead of appending literal "[emoji:slug]" text to the input.
+  // In reaction mode, the pick is instead encoded as a ":slug:"
+  // reaction key on the targeted bubble.
+  const handleThemeEmojiPick = React.useCallback(
+    (e: StandardExperienceThemeEmoji) => {
+      if (reactingToMessageId) {
+        addReaction(reactingToMessageId, `:${e.slug}:`);
+        setReactingToMessageId(null);
+        setPickerOpen(false);
+        return;
+      }
+      setPendingEmoji(e);
+      setPickerOpen(false);
+    },
+    [reactingToMessageId, addReaction],
+  );
+
   const handleStickerPick = React.useCallback(
     (slug: string) => {
+      // Unicode-only picker path · stickers are URL-based elsewhere.
+      // Kept for the engine-SVG sticker set (Joker + any future
+      // package that ships procedural stickers).
+      if (reactingToMessageId) {
+        addReaction(reactingToMessageId, `:${slug}:`);
+        setReactingToMessageId(null);
+        setPickerOpen(false);
+        return;
+      }
       onSendLocalMessage(`[sticker:${slug}]`);
       setPickerOpen(false);
     },
-    [onSendLocalMessage],
+    [reactingToMessageId, addReaction, onSendLocalMessage],
+  );
+
+  // Owner directive 2026-10-19 · staged image sticker · same model
+  // as handleThemeEmojiPick · chip renders in composer, Send
+  // flushes it as its own bubble. In reaction mode, encoded as
+  // ":slug:" reaction key on the targeted bubble.
+  const handleThemeStickerPick = React.useCallback(
+    (s: StandardExperienceThemeSticker) => {
+      if (reactingToMessageId) {
+        addReaction(reactingToMessageId, `:${s.slug}:`);
+        setReactingToMessageId(null);
+        setPickerOpen(false);
+        return;
+      }
+      setPendingSticker(s);
+      setPickerOpen(false);
+    },
+    [reactingToMessageId, addReaction],
   );
 
   const stickers = engine.stickerTreatment();
@@ -299,19 +545,238 @@ export function StandardExperience({
             }}
           >
           {allMessages.map((m, idx) => {
+            if (m.body.startsWith("[giphy:")) {
+              /* Owner directive 2026-10-19 · GIPHY bubble ·
+                 encoded as [giphy:id|fullUrl|aspectRatio]. Rendered
+                 naked (same convention as stickers) with a soft
+                 drop-shadow for lift over the wallpaper. */
+              const inner = m.body.slice(7, -1);
+              const [id = "", fullUrl = "", arStr = "1"] = inner.split("|");
+              const ar = Number.parseFloat(arStr) || 1;
+              return (
+                <div
+                  key={m.id}
+                  data-nex-se-bubble-giphy={id}
+                  style={{
+                    alignSelf: m.mine ? "flex-end" : "flex-start",
+                    maxWidth: "60%",
+                    background: "transparent",
+                    border: "none",
+                    padding: 0,
+                  }}
+                >
+                  {fullUrl ? (
+                    <img
+                      src={fullUrl}
+                      alt="GIF"
+                      style={{
+                        maxWidth: "100%",
+                        height: "auto",
+                        display: "block",
+                        aspectRatio: `${ar}`,
+                        borderRadius: 12,
+                        filter: "drop-shadow(0 4px 10px rgba(0,0,0,0.35))",
+                      }}
+                    />
+                  ) : null}
+                </div>
+              );
+            }
+            if (m.body.startsWith("[file:")) {
+              /* Owner directive 2026-10-19 · file-attachment bubble ·
+                 body encoded as `[file:name|mime|previewUrl]`. Image
+                 types render the preview; other types show a type
+                 chip + filename. Each bubble is its own standalone
+                 asset, same convention as stickers. */
+              const inner = m.body.slice(6, -1); // strip "[file:" and "]"
+              const [name = "", mime = "", previewUrl = ""] = inner.split("|");
+              const isImage = mime.startsWith("image/");
+              return (
+                <div
+                  key={m.id}
+                  data-nex-se-bubble-file={name}
+                  data-nex-se-bubble-file-mime={mime}
+                  style={{
+                    alignSelf: m.mine ? "flex-end" : "flex-start",
+                    maxWidth: "70%",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                    padding: 8,
+                    borderRadius: 14,
+                    background: m.mine
+                      ? `${colours.primary}22`
+                      : "rgba(255,255,255,0.08)",
+                    border: `1px solid ${colours.primary}44`,
+                    color: colours.highlight,
+                  }}
+                >
+                  {isImage && previewUrl ? (
+                    <img
+                      src={previewUrl}
+                      alt={name}
+                      style={{
+                        maxWidth: "100%",
+                        height: "auto",
+                        display: "block",
+                        borderRadius: 10,
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                      }}
+                    >
+                      <span
+                        aria-hidden
+                        style={{
+                          width: 36,
+                          height: 36,
+                          display: "grid",
+                          placeItems: "center",
+                          background: "rgba(0,0,0,0.35)",
+                          borderRadius: 8,
+                          fontSize: 10,
+                          fontWeight: 800,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.08em",
+                        }}
+                      >
+                        {(name.split(".").pop() ?? "file").slice(0, 4)}
+                      </span>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 700,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {name}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 10,
+                            opacity: 0.65,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {mime || "file"}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            }
             if (m.body.startsWith("[sticker:")) {
-              const slug = m.body.slice(9, -1);
+              /* Owner directive 2026-10-19 · sticker tokens are
+                 "[sticker:slug]" (legacy) or "[sticker:slug|url|aspect]"
+                 (new · carries image URL + aspect directly so no
+                 catalog lookup can fail silently to raw text). */
+              const payload = m.body.slice(9, -1);
+              const parts = payload.split("|");
+              const slug = parts[0] ?? "";
+              const inlineUrl = parts[1] ?? "";
+              const inlineAspect = Number(parts[2]) || 1;
+              const uploaded = themeStickers?.find((s) => s.slug === slug);
+              const resolvedUrl = inlineUrl || uploaded?.imageUrl || "";
+              const resolvedAspect =
+                inlineAspect ||
+                uploaded?.aspectRatio ||
+                1;
               return (
                 <div
                   key={m.id}
                   style={{
                     alignSelf: m.mine ? "flex-end" : "flex-start",
-                    maxWidth: "40%",
+                    maxWidth: "60%",
+                    background: "transparent",
+                    border: "none",
+                    padding: 0,
                   }}
                 >
-                  {stickers.render(slug, 96)}
+                  {resolvedUrl ? (
+                    <img
+                      src={resolvedUrl}
+                      alt={uploaded?.label || slug}
+                      data-nex-se-bubble-sticker-slug={slug}
+                      style={{
+                        maxWidth: "100%",
+                        height: "auto",
+                        display: "block",
+                        aspectRatio: `${resolvedAspect}`,
+                        filter:
+                          "drop-shadow(0 4px 10px rgba(0,0,0,0.35))",
+                      }}
+                    />
+                  ) : (
+                    stickers.render(slug, 96)
+                  )}
                 </div>
               );
+            }
+            /* Owner directive 2026-10-19 · image-emoji bubble ·
+               body encoding is either "[emoji:slug]" (legacy) or
+               "[emoji:slug|url]" (new · carries image URL inline so
+               no catalog lookup can silently fall back to raw text).
+               Supports mixed body "text [emoji:slug|url]" so a bubble
+               can carry caption + trailing emoji together. */
+            const emojiMatch = m.body.match(/\[emoji:([^\]|]+)(?:\|([^\]]+))?\]/);
+            if (emojiMatch) {
+              const slug = emojiMatch[1];
+              const inlineUrl = emojiMatch[2] ?? "";
+              const captionBody = m.body
+                .replace(/\s*\[emoji:[^\]]+\]\s*/, "")
+                .trim();
+              const uploaded = themeEmojis?.find((e) => e.slug === slug);
+              const resolvedUrl = inlineUrl || uploaded?.imageUrl || "";
+              if (resolvedUrl) {
+                return (
+                  <div
+                    key={m.id}
+                    data-nex-se-bubble-emoji-slug={slug}
+                    style={{
+                      alignSelf: m.mine ? "flex-end" : "flex-start",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: captionBody ? "6px 10px" : 0,
+                      background: captionBody
+                        ? m.mine
+                          ? `${colours.primary}22`
+                          : "rgba(255,255,255,0.08)"
+                        : "transparent",
+                      borderRadius: captionBody ? 14 : 0,
+                      maxWidth: "70%",
+                    }}
+                  >
+                    {captionBody && (
+                      <span style={{ fontSize: 14, color: "inherit" }}>
+                        {captionBody}
+                      </span>
+                    )}
+                    <img
+                      src={resolvedUrl}
+                      alt={uploaded?.label || slug}
+                      style={{
+                        width: 80,
+                        height: 80,
+                        objectFit: "contain",
+                        display: "block",
+                        flexShrink: 0,
+                      }}
+                    />
+                  </div>
+                );
+              }
             }
             /* Owner directive 2026-10-18 · bubble feature-match with
                Joker · each bubble carries peer avatar (peer-side only)
@@ -334,7 +799,11 @@ export function StandardExperience({
                 peerName={peer.displayName}
                 sentAtMs={sentAtMs}
                 delivery={m.mine ? "read" : undefined}
-                reactions={PREVIEW_REACTIONS[m.id]}
+                reactions={messageReactions[m.id]}
+                onReactTrigger={() => openReactionPickerFor(m.id)}
+                onRemoveReaction={(key) => removeReaction(m.id, key)}
+                themeEmojis={themeEmojis}
+                themeStickers={themeStickers}
               >
                 {m.body}
               </StandardBubble>
@@ -417,21 +886,79 @@ export function StandardExperience({
           </div>
         </div>
 
-        {/* Emoji + Sticker picker (overlay above composer when open) */}
+        {/* Owner directive 2026-10-19 · emoji + sticker picker is now
+            a TRUE OVERLAY · zIndex 20 clears the FloatingCallActions
+            stack (zIndex 9) + the shop sheet (zIndex 7) + the +
+            menu + the drawer kebab, so the panel is never obscured
+            by the floating right-side buttons. Positioned absolute
+            above the composer with safe-area-aware offset so it
+            sits just above the input pill. onClose fires the picker-
+            dismiss path shared with the composer's 😊 toggle. */}
         {pickerOpen && (
           <div
+            data-nex-se-picker-overlay
             style={{
-              position: "relative",
-              zIndex: 6,
-              padding: "0 10px 8px",
+              position: "absolute",
+              left: 10,
+              right: 10,
+              bottom: "calc(env(safe-area-inset-bottom, 0) + 64px)",
+              zIndex: 20,
             }}
           >
             <StandardEmojiStickerPicker
               engine={engine}
               onPickEmoji={handleEmojiPick}
               onPickSticker={handleStickerPick}
+              onPickThemeEmoji={handleThemeEmojiPick}
+              onPickThemeSticker={handleThemeStickerPick}
+              onPickGiphy={(g) => {
+                if (reactingToMessageId) {
+                  addReaction(reactingToMessageId, `:giphy-${g.id}:`);
+                  setReactingToMessageId(null);
+                  setPickerOpen(false);
+                  return;
+                }
+                /* Owner directive 2026-10-19 · GIPHY picks encode as a
+                   `[giphy:<id>|<fullUrl>|<aspectRatio>]` message body
+                   · bubble renderer handles the inline <img> render. */
+                onSendLocalMessage(
+                  `[giphy:${g.id}|${g.fullUrl}|${g.aspectRatio.toFixed(3)}]`,
+                );
+                setPickerOpen(false);
+              }}
+              onPickFiles={(files) => {
+                handleFilesPicked(files);
+                setPickerOpen(false);
+              }}
+              onPickRecentFile={(f) => {
+                /* Re-stage the recent file into pendingAttachments
+                   via the same shape handleFilesPicked uses · the
+                   previewUrl + metadata are already resolved. */
+                setPendingAttachments((prev) => [
+                  ...prev,
+                  {
+                    id: `att-${Date.now()}-${f.id}`,
+                    /* Preview-honest · the recent-file entry doesn't
+                       carry the original File handle (that was GC'd)
+                       so we fabricate a lightweight File-like stub.
+                       In production this will carry a storage URL +
+                       size + mime from the sealed upload record. */
+                    file: new File([], f.name, { type: f.mime }),
+                    name: f.name,
+                    mime: f.mime,
+                    sizeBytes: 0,
+                    previewUrl: f.previewUrl,
+                  },
+                ]);
+                setPickerOpen(false);
+              }}
+              recentFiles={recentFiles}
               themeEmojis={themeEmojis}
               themeStickers={themeStickers}
+              onClose={() => {
+                setPickerOpen(false);
+                setReactingToMessageId(null);
+              }}
             />
           </div>
         )}
@@ -461,15 +988,34 @@ export function StandardExperience({
               value={composerText}
               onChange={setComposerText}
               onSend={handleSend}
-              placeholder={`Say something in ${engine.package.identity.name}…`}
-              onEmojiToggle={() => setPickerOpen((v) => !v)}
+              placeholder={
+                pendingEmoji ||
+                pendingSticker ||
+                pendingAttachments.length > 0
+                  ? "Add a caption…"
+                  : `Say something in ${engine.package.identity.name}…`
+              }
+              onEmojiToggle={() => {
+                setPickerOpen((v) => !v);
+                /* Owner directive 2026-10-19 · tapping the composer
+                   emoji toggle resets reaction-mode so a subsequent
+                   pick lands in the composer, not on whatever bubble
+                   was last tapped. */
+                setReactingToMessageId(null);
+              }}
               emojiToggleActive={pickerOpen}
-              onCameraTap={() => {
-                /* preview no-op · wired later */
-              }}
-              onAttachTap={() => {
-                /* preview no-op · wired later */
-              }}
+              pendingAttachments={pendingAttachments.map((a) => ({
+                id: a.id,
+                name: a.name,
+                mime: a.mime,
+                sizeBytes: a.sizeBytes,
+                previewUrl: a.previewUrl,
+              }))}
+              onRemoveAttachment={removePendingAttachment}
+              pendingEmoji={pendingEmoji}
+              onClearPendingEmoji={() => setPendingEmoji(null)}
+              pendingSticker={pendingSticker}
+              onClearPendingSticker={() => setPendingSticker(null)}
               /* Owner directive 2026-10-18 · suppress native keyboard
                  so the themed JokerKeypad opens instead · same
                  behaviour as the viewer path. */
@@ -496,6 +1042,12 @@ export function StandardExperience({
           engine={engine}
           open={callActionsOpen}
           onToggle={() => setCallActionsOpen((v) => !v)}
+          onFilesPicked={(files) => {
+            handleFilesPicked(files);
+            /* Collapse the 3-dot menu after a selection so the
+               composer chip is immediately visible to the user. */
+            setCallActionsOpen(false);
+          }}
         />
 
         {/* UNIVERSAL RULE · + button opens a centered floating menu
@@ -524,6 +1076,28 @@ export function StandardExperience({
           onClose={() => setKeypadOpen(false)}
           themeId={engine.package.identity.id}
           accentColor={engine.package.colours.primary}
+          /* Owner directive 2026-10-19 · the keypad's inline emoji
+             and sticker drawers now stage picks into the composer's
+             pendingEmoji / pendingSticker state (same chip-in-pill
+             pattern as the external picker) instead of silently
+             no-op'ing. Both callbacks accept the full BuiltIn*
+             shape so the chip can render the image URL. */
+          onPickEmoji={(e) =>
+            handleThemeEmojiPick({
+              slug: e.slug,
+              imageUrl: e.image_url,
+              label: e.label,
+            })
+          }
+          onPickSticker={(s) =>
+            handleThemeStickerPick({
+              slug: s.slug,
+              imageUrl: s.image_url,
+              label: s.label,
+              stickerType: s.sticker_type,
+              aspectRatio: s.aspect_ratio,
+            })
+          }
         />
       </div>
     </>
@@ -1105,11 +1679,22 @@ function FloatingCallActions({
   engine,
   open,
   onToggle,
+  onFilesPicked,
 }: {
   engine: ResolvedEngine;
   open: boolean;
   onToggle: () => void;
+  /** Owner directive 2026-10-19 · camera + file-attach actions moved
+   *  from the composer input footer into this 3-dot menu. Each
+   *  button triggers a hidden <input type="file"> · the Camera one
+   *  carries `capture="environment"` so mobile browsers open the
+   *  rear phone camera, the File-Attach one accepts any mime type
+   *  and multiple files. Both route picked files back through this
+   *  callback so the parent can stage them as composer chips. */
+  onFilesPicked: (files: FileList) => void;
 }): React.JSX.Element {
+  const cameraInputRef = React.useRef<HTMLInputElement | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   // Universal Theme Controls Rule · sealed 2026-10-06 · lower-right
   // 3-dots stack uses the same solid-themed treatment as the header
   // R1 buttons so the chrome is visually coherent across every
@@ -1157,14 +1742,55 @@ function FloatingCallActions({
       }}
     >
       <div style={actionWrap}>
-        <a
-          href="/nex-native/dev/status-viewer-v1"
-          aria-label="Open status"
-          data-nex-se-call-action="status"
-          style={{ ...circle, textDecoration: "none" }}
+        {/* Owner directive 2026-10-19 · Status + Video retired · new
+            Camera + File-Attach actions take their slots. Order
+            left-to-right: Camera · File · Mic · Call. */}
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          hidden
+          onChange={(ev) => {
+            const files = ev.target.files;
+            if (files && files.length > 0) onFilesPicked(files);
+            /* Reset so selecting the same file twice fires change
+               again · HTMLInputElement caches the last value. */
+            ev.currentTarget.value = "";
+          }}
+          data-nex-se-call-action-input="camera"
+        />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="*/*"
+          multiple
+          hidden
+          onChange={(ev) => {
+            const files = ev.target.files;
+            if (files && files.length > 0) onFilesPicked(files);
+            ev.currentTarget.value = "";
+          }}
+          data-nex-se-call-action-input="file"
+        />
+        <button
+          type="button"
+          aria-label="Take photo with camera"
+          data-nex-se-call-action="camera"
+          onClick={() => cameraInputRef.current?.click()}
+          style={circle}
         >
-          <StatusIcon />
-        </a>
+          <CameraCaptureIcon />
+        </button>
+        <button
+          type="button"
+          aria-label="Attach file from device"
+          data-nex-se-call-action="file"
+          onClick={() => fileInputRef.current?.click()}
+          style={circle}
+        >
+          <FileAttachIcon />
+        </button>
         <button
           type="button"
           aria-label="Mic"
@@ -1172,14 +1798,6 @@ function FloatingCallActions({
           style={circle}
         >
           <MicIcon />
-        </button>
-        <button
-          type="button"
-          aria-label="Video call"
-          data-nex-se-call-action="video"
-          style={circle}
-        >
-          <VideoCallIcon />
         </button>
         <button
           type="button"
@@ -1281,11 +1899,12 @@ function CallIcon(): React.JSX.Element {
   );
 }
 
-// R7 extension sealed 2026-10-05 (R12 entry point 1) · Status icon ·
-// opens the full-screen status viewer at /nex-native/dev/status-viewer-v1
-// · in production this will dispatch to the viewer with the current
-// chat's peer status feed.
-function StatusIcon(): React.JSX.Element {
+/* StatusIcon + VideoCallIcon retired 2026-10-19 · owner directive ·
+   "remove the video icon and status button" from the lower-right
+   3-dot menu · the two actions are replaced by Camera + File-Attach
+   (CameraCaptureIcon + FileAttachIcon below). */
+
+function CameraCaptureIcon(): React.JSX.Element {
   return (
     <svg
       width="18"
@@ -1298,13 +1917,13 @@ function StatusIcon(): React.JSX.Element {
       strokeLinejoin="round"
       aria-hidden
     >
-      <circle cx="12" cy="12" r="9" strokeDasharray="4 2.5" />
-      <circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none" />
+      <path d="M4 8h3l1.6-2.2h6.8L17 8h3v12H4V8z" />
+      <circle cx="12" cy="13.5" r="3.5" />
     </svg>
   );
 }
 
-function VideoCallIcon(): React.JSX.Element {
+function FileAttachIcon(): React.JSX.Element {
   return (
     <svg
       width="18"
@@ -1317,8 +1936,7 @@ function VideoCallIcon(): React.JSX.Element {
       strokeLinejoin="round"
       aria-hidden
     >
-      <rect x="2.5" y="6" width="13" height="12" rx="2" />
-      <path d="M22 7.5 15.5 12 22 16.5v-9z" />
+      <path d="M21.5 11.5 12 21a5 5 0 0 1-7-7l9.5-9.5a3.5 3.5 0 0 1 5 5L10.5 18a2 2 0 0 1-3-3L16 7" />
     </svg>
   );
 }

@@ -1,0 +1,2663 @@
+"use client";
+
+// src/app/nex-native/settings/intro-video/_intro-video-client.tsx
+//
+// NEX · My Intro Video client · owner-authorised 2026-10-19.
+// -----------------------------------------------------------------------------
+// Preview-honest UI for the sealed intro-video settings described in
+// the sibling page.tsx. Everything the user does here renders live via
+// local state + object URLs · the production upload path lands in a
+// separate owner-authorised commit.
+
+import * as React from "react";
+import { createPortal } from "react-dom";
+import Link from "next/link";
+import { NEX_FONT_SANS } from "@/lib/nex-native/design-tokens";
+/* Owner directive 2026-10-19 · "the emoji panel must be same emoji
+   panel as chat theme emoji" · mount the sealed cross-theme picker
+   so the settings surface uses byte-identical UI to the chat
+   composer. NEX_BUBBLES_PACKAGE is the sealed brand default · gives
+   the picker a stable engine without needing a per-theme context. */
+import { StandardEmojiStickerPicker } from "@/app/nex-native/chat-standard/_surfaces/_emoji-sticker-picker";
+import { createEngine } from "@/app/nex-native/chat-standard/_engine/theme-engine";
+import { NEX_BUBBLES_PACKAGE } from "@/app/nex-native/chat-standard/packages/nex-bubbles.package";
+import {
+  ControlDrawer,
+  type ControlDrawerSession,
+} from "@/components/nex-native/control-drawer/control-drawer-client";
+import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
+import {
+  INTRO_OVERLAY_FONTS,
+  INTRO_OVERLAY_FONTS_HREF,
+  INTRO_OVERLAY_SIZES,
+  fontById,
+  sizeById,
+  type IntroOverlayFontId,
+  type IntroOverlaySizeId,
+} from "./_overlay-fonts";
+
+export type IntroTitlePosition = "hero" | "center" | "footer";
+
+const NEX = {
+  bg: "#020914",
+  panel: "rgba(2, 9, 20, 0.72)",
+  panelBorder: "rgba(0, 175, 255, 0.28)",
+  textPrimary: "#F2F5F8",
+  textSecondary: "#B5C3D6",
+  textMute: "#7D9BC0",
+  cyan: "#00AFFF",
+  cyanDim: "rgba(0, 175, 255, 0.14)",
+  orange: "#FF7200",
+  green: "#16D66B",
+  red: "#FF3B30",
+};
+
+const MAX_SECONDS = 8;
+const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
+
+/* Wallpaper upload rules · owner-authorised 2026-10-19 · "image must
+ * be screen app size to accept and we state the size and file type we
+ * accept for sure error free upload". Portrait 9:16 only · min
+ * 720×1280 (720p) · target 1125×2436 (iPhone 14 Pro) · 5 MB cap · PNG
+ * / JPG / WebP mime set (same as the sealed nex-avatar bucket). */
+const WALLPAPER_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+const WALLPAPER_MIN_WIDTH = 720;
+const WALLPAPER_MIN_HEIGHT = 1280;
+const WALLPAPER_MIME_ALLOWED: Record<string, string> = {
+  "image/png": "PNG",
+  "image/jpeg": "JPG",
+  "image/webp": "WebP",
+};
+const WALLPAPER_RATIO_TARGET = 9 / 16;
+const WALLPAPER_RATIO_TOLERANCE = 0.08; // ±8 % off perfect 9:16
+
+/* TITLE_EMOJI_SET retired 2026-10-19 · owner directive · "the emoji
+ * panel must be same emoji panel as chat theme emoji" · the inline
+ * 24-glyph grid was replaced by a mount of the sealed
+ * StandardEmojiStickerPicker so the settings page uses the same
+ * 4-tab UI as the chat composer. */
+
+interface Props {
+  readonly displayName: string;
+  readonly nexHandle: string;
+  /** Owner directive 2026-10-19 · header gains the viewer's avatar on
+   *  the left. Null when the account has no profile photo yet · the
+   *  avatar falls back to a NEX monogram chip. */
+  readonly viewerAvatarUrl?: string | null;
+  /** Session for the ControlDrawer trigger (3-dot menu on the right).
+   *  Resolved server-side in page.tsx to the same shape every other
+   *  sealed drawer surface uses. */
+  readonly drawerSession: ControlDrawerSession;
+  /** Owner directive 2026-10-19 · the preview area shows the current
+   *  active theme's packaged intro video when the user hasn't uploaded
+   *  their own · null when the theme has no intro (DB-driven themes
+   *  without a packaged clip). */
+  readonly activeThemeIntroUrl?: string | null;
+  /** Theme display name · used in the empty-preview caption so the
+   *  user knows which theme's intro they're looking at. */
+  readonly activeThemeName?: string | null;
+  /** Owner directive 2026-10-19 · the Chat Screen Background preview
+   *  defaults to the active theme's packaged wallpaper when the user
+   *  hasn't uploaded a custom one · null when the theme ships without
+   *  a wallpaper (fully-painted bubbles with no bg image). */
+  readonly activeThemeWallpaperUrl?: string | null;
+}
+
+interface StagedIntro {
+  readonly file: File;
+  readonly previewUrl: string;
+  readonly durationSec: number;
+  readonly width: number;
+  readonly height: number;
+  readonly isPortrait: boolean;
+}
+
+interface StagedWallpaper {
+  readonly file: File;
+  readonly previewUrl: string;
+  readonly width: number;
+  readonly height: number;
+  readonly mimeLabel: string;
+}
+
+/** Resolve image metadata locally via a hidden <img> element · no
+ *  server round-trip. Rejects when the file isn't decodable (corrupted
+ *  / unsupported). */
+function probeImage(
+  file: File,
+): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Image failed to decode"));
+    };
+    img.src = url;
+  });
+}
+
+/** Resolve video metadata locally via a hidden <video> element · no
+ *  server round-trip. Rejects when the file isn't playable in the
+ *  browser (unsupported codec, corrupted). */
+function probeVideo(file: File): Promise<{
+  durationSec: number;
+  width: number;
+  height: number;
+}> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const v = document.createElement("video");
+    v.preload = "metadata";
+    v.muted = true;
+    v.src = url;
+    v.onloadedmetadata = () => {
+      const result = {
+        durationSec: v.duration,
+        width: v.videoWidth,
+        height: v.videoHeight,
+      };
+      URL.revokeObjectURL(url);
+      resolve(result);
+    };
+    v.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("This video can't be read · try a different file."));
+    };
+  });
+}
+
+export function IntroVideoSettingsClient({
+  displayName,
+  nexHandle,
+  viewerAvatarUrl,
+  drawerSession,
+  activeThemeIntroUrl,
+  activeThemeName,
+  activeThemeWallpaperUrl,
+}: Props): React.JSX.Element {
+  const [introEnabled, setIntroEnabled] = React.useState(true);
+  const [staged, setStaged] = React.useState<StagedIntro | null>(null);
+  /* Title text defaults to the sample "Welcome · <name>" via the
+     isPlaceholder flag below · stays empty until the sample has been
+     either kept (user hits Save) or replaced (user types). */
+  const [titleText, setTitleText] = React.useState("");
+  const [titlePosition, setTitlePosition] =
+    React.useState<IntroTitlePosition>("hero");
+  /* Owner directive 2026-10-19 · "font style as option / text size as
+     option / brainstorm world-class" · Phase 1 ships font + size
+     chip rows. Phase 2 (color, highlight pill, alignment) deferred. */
+  const [titleFontId, setTitleFontId] =
+    React.useState<IntroOverlayFontId>("classic");
+  const [titleSizeId, setTitleSizeId] =
+    React.useState<IntroOverlaySizeId>("m");
+  /* Owner directive 2026-10-20 · "ship all · deeper creative controls" ·
+     colour (8 presets · default white) · alignment (L/C/R) · background
+     highlight pill · all drive the TitleOverlay in real time + persist
+     with the save payload. */
+  const [titleColor, setTitleColor] = React.useState<string>("#FFFFFF");
+  const [titleAlign, setTitleAlign] =
+    React.useState<"left" | "center" | "right">("center");
+  const [titleHighlight, setTitleHighlight] = React.useState<boolean>(false);
+  /* Owner directive 2026-10-20 · "open time in footer center · if the
+     user put text in footer then opening time could go to header
+     center · balance" · sample opening-hours toggle so the user can
+     feel the dynamic position swap. Real business accounts will
+     resolve this from their shop profile when the schema connects. */
+  const [showOpeningHours, setShowOpeningHours] = React.useState<boolean>(true);
+  /* Owner directive 2026-10-20 · "add toggle for reset to original ·
+     user may think their theme will look better and then see that our
+     theme chat background and intro was better" · non-destructive
+     compare toggle · ON swaps the preview back to the sealed theme
+     intro + wallpaper + default typography · the user's customisations
+     stay in React state so flipping OFF restores them · Save in ON
+     mode commits the reset (clears custom intro + wallpaper). */
+  const [useThemeOriginal, setUseThemeOriginal] = React.useState<boolean>(false);
+  const SAMPLE_OPENING_HOURS = "Open · Mon–Sat · 10am–10pm";
+  /* Hours sit at the opposite end from the user's title to avoid
+     overlap · hero/center title → hours at footer · footer title →
+     hours at hero. */
+  const openingHoursPosition: IntroTitlePosition =
+    titlePosition === "footer" ? "hero" : "footer";
+  /* Owner directive 2026-10-20 · sample text format "<theme> - Create
+     The Wow" so the preview tile reads as a punchy hero line on first
+     load · falls back to the display name when no live-world theme is
+     active. Cleared on first focus. */
+  const defaultTitleText = React.useMemo(
+    () => `${activeThemeName ?? displayName}\nCreate The Wow`,
+    [activeThemeName, displayName],
+  );
+  const [isPlaceholder, setIsPlaceholder] = React.useState(true);
+  /* Owner directive 2026-10-19 · "upload their own chat wallpaper to
+     match · image must be screen app size · we state the size and
+     file type". Staged wallpaper is validated client-side first and
+     uploaded on Save via the sealed storage pipeline (not yet wired
+     to Supabase · lives in sessionStorage like the intro video). */
+  const [stagedWallpaper, setStagedWallpaper] =
+    React.useState<StagedWallpaper | null>(null);
+  const [wallpaperError, setWallpaperError] = React.useState<string | null>(
+    null,
+  );
+  const wallpaperInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  /* Owner directive 2026-10-19 · lazy-load the overlay font set via a
+     single Google Fonts <link> on client mount · idempotent · the
+     settings page is the only surface paying the download cost. */
+  React.useEffect(() => {
+    const id = "nex-intro-video-overlay-fonts";
+    if (document.getElementById(id)) return;
+    const link = document.createElement("link");
+    link.id = id;
+    link.rel = "stylesheet";
+    link.href = INTRO_OVERLAY_FONTS_HREF;
+    document.head.appendChild(link);
+  }, []);
+  const [error, setError] = React.useState<string | null>(null);
+  const [savedAt, setSavedAt] = React.useState<number | null>(null);
+
+  const recordInputRef = React.useRef<HTMLInputElement | null>(null);
+  const uploadInputRef = React.useRef<HTMLInputElement | null>(null);
+  const titleTextareaRef = React.useRef<HTMLTextAreaElement | null>(null);
+  const [emojiPickerOpen, setEmojiPickerOpen] = React.useState(false);
+  /* Owner directive 2026-10-19 · same picker as the chat composer ·
+     one-shot engine on NEX_BUBBLES_PACKAGE so the picker chrome
+     reads with the sealed NEX brand accent on this surface (settings
+     page has no active theme context of its own). */
+  const brandEngine = React.useMemo(
+    () => createEngine(NEX_BUBBLES_PACKAGE),
+    [],
+  );
+
+  /* Owner directive 2026-10-19 · insert the picked emoji at the
+     textarea's current cursor position so the user can mix emoji
+     into any part of the title. Falls back to append when the
+     textarea hasn't been focused yet. Respects the 140-char overall
+     cap + 3-line cap already enforced by the textarea's onChange. */
+  const insertEmojiIntoTitle = React.useCallback((glyph: string) => {
+    setTitleText((prev) => {
+      const el = titleTextareaRef.current;
+      let next: string;
+      if (el && typeof el.selectionStart === "number") {
+        const start = el.selectionStart;
+        const end = el.selectionEnd ?? start;
+        next = prev.slice(0, start) + glyph + prev.slice(end);
+        /* Push caret past the inserted glyph on the next tick (after
+           React commits the new value). */
+        window.setTimeout(() => {
+          if (!titleTextareaRef.current) return;
+          const pos = start + glyph.length;
+          titleTextareaRef.current.focus();
+          titleTextareaRef.current.setSelectionRange(pos, pos);
+        }, 0);
+      } else {
+        next = prev + glyph;
+      }
+      /* Re-run the same caps the textarea onChange enforces so the
+         insert path can't bypass them. */
+      const capped = next.split("\n").slice(0, 3).join("\n");
+      return capped.slice(0, 140);
+    });
+  }, []);
+
+  const clearStaged = React.useCallback(() => {
+    if (staged?.previewUrl) URL.revokeObjectURL(staged.previewUrl);
+    setStaged(null);
+  }, [staged]);
+
+  /* Owner directive 2026-10-19 · "when the user has set their video
+     and its live - button will appear in this container for reset
+     intro which will reset back to original intro with the chat
+     theme". Tracks whether a saved intro exists so the Reset button
+     shows / hides correctly. Preview-honest · reads from the same
+     sessionStorage key the Save button writes. Production path will
+     replace this check with `account.intro_video_url !== null`
+     resolved server-side. */
+  const [hasLiveIntro, setHasLiveIntro] = React.useState(false);
+  React.useEffect(() => {
+    try {
+      const raw = window.sessionStorage.getItem("nex:intro-video:preview");
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { videoUrl?: string | null };
+      if (parsed?.videoUrl && typeof parsed.videoUrl === "string") {
+        setHasLiveIntro(true);
+      }
+    } catch {
+      /* ignore · absence of saved intro is the default */
+    }
+  }, []);
+
+  const resetToThemeIntro = React.useCallback(() => {
+    /* Clear every piece of local + saved state that represents the
+       user's custom intro. The preview tile falls back to the active
+       theme's packaged intro via activeThemeIntroUrl. */
+    clearStaged();
+    setTitleText("");
+    setTitlePosition("hero");
+    setIntroEnabled(true);
+    setError(null);
+    setSavedAt(null);
+    try {
+      window.sessionStorage.removeItem("nex:intro-video:preview");
+    } catch {
+      /* ignore */
+    }
+    setHasLiveIntro(false);
+  }, [clearStaged]);
+
+  React.useEffect(() => {
+    return () => {
+      if (staged?.previewUrl) URL.revokeObjectURL(staged.previewUrl);
+    };
+    // Only cleanup on unmount; replacement is handled by clearStaged.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleFileChange = React.useCallback(
+    async (ev: React.ChangeEvent<HTMLInputElement>) => {
+      setError(null);
+      const file = ev.target.files?.[0];
+      ev.target.value = "";
+      if (!file) return;
+
+      // Client-side gates · the server action re-validates all of
+      // these before accepting the upload.
+      if (!file.type.startsWith("video/")) {
+        setError("Please select a video file.");
+        return;
+      }
+      if (file.size > MAX_BYTES) {
+        setError(
+          `Video is too large · max ${Math.round(MAX_BYTES / 1024 / 1024)}MB.`,
+        );
+        return;
+      }
+      let metadata;
+      try {
+        metadata = await probeVideo(file);
+      } catch (e) {
+        setError(
+          e instanceof Error ? e.message : "Could not read this video.",
+        );
+        return;
+      }
+      if (metadata.durationSec > MAX_SECONDS + 0.25) {
+        setError(
+          `Video is ${metadata.durationSec.toFixed(1)}s · max ${MAX_SECONDS} seconds · trim and try again.`,
+        );
+        return;
+      }
+      const isPortrait = metadata.height >= metadata.width;
+      if (!isPortrait) {
+        setError(
+          "Please re-record in portrait (vertical) · landscape videos don't fit the chat frame.",
+        );
+        return;
+      }
+      // All gates pass · stage.
+      clearStaged();
+      setStaged({
+        file,
+        previewUrl: URL.createObjectURL(file),
+        durationSec: metadata.durationSec,
+        width: metadata.width,
+        height: metadata.height,
+        isPortrait,
+      });
+    },
+    [clearStaged],
+  );
+
+  const clearStagedWallpaper = React.useCallback(() => {
+    if (stagedWallpaper?.previewUrl)
+      URL.revokeObjectURL(stagedWallpaper.previewUrl);
+    setStagedWallpaper(null);
+    setWallpaperError(null);
+  }, [stagedWallpaper]);
+
+  const handleWallpaperChange = React.useCallback(
+    async (ev: React.ChangeEvent<HTMLInputElement>) => {
+      const file = ev.target.files?.[0];
+      ev.target.value = ""; // allow re-selecting same file
+      if (!file) return;
+      setWallpaperError(null);
+      /* 1 · mime check · must be in the allow-list */
+      const mimeLabel = WALLPAPER_MIME_ALLOWED[file.type];
+      if (!mimeLabel) {
+        setWallpaperError(
+          `${file.type || "Unknown"} isn't accepted · use PNG, JPG, or WebP.`,
+        );
+        return;
+      }
+      /* 2 · size check · max 5 MB */
+      if (file.size > WALLPAPER_MAX_BYTES) {
+        setWallpaperError(
+          `${(file.size / 1024 / 1024).toFixed(2)} MB is over the 5 MB limit · compress and retry.`,
+        );
+        return;
+      }
+      /* 3 · dimension + ratio check · must be portrait 9:16 ±8 %, min 720×1280 */
+      let dims: { width: number; height: number };
+      try {
+        dims = await probeImage(file);
+      } catch {
+        setWallpaperError("Image failed to decode · try a different file.");
+        return;
+      }
+      if (dims.width < WALLPAPER_MIN_WIDTH || dims.height < WALLPAPER_MIN_HEIGHT) {
+        setWallpaperError(
+          `${dims.width}×${dims.height} is too small · minimum ${WALLPAPER_MIN_WIDTH}×${WALLPAPER_MIN_HEIGHT}.`,
+        );
+        return;
+      }
+      const ratio = dims.width / dims.height;
+      if (
+        Math.abs(ratio - WALLPAPER_RATIO_TARGET) >
+        WALLPAPER_RATIO_TOLERANCE
+      ) {
+        setWallpaperError(
+          `${dims.width}×${dims.height} isn't 9:16 portrait · use the full phone-screen size (e.g. 1125×2436).`,
+        );
+        return;
+      }
+      /* All checks passed · stage the wallpaper */
+      clearStagedWallpaper();
+      setStagedWallpaper({
+        file,
+        previewUrl: URL.createObjectURL(file),
+        width: dims.width,
+        height: dims.height,
+        mimeLabel,
+      });
+    },
+    [clearStagedWallpaper],
+  );
+
+  const canSave =
+    !!staged ||
+    !!stagedWallpaper ||
+    titleText.trim().length > 0 ||
+    !introEnabled;
+
+  const handleSave = React.useCallback(() => {
+    /* Preview-honest · persist the chosen settings to sessionStorage so
+       the owner can test the end-to-end UX on /nex-native/themes/<id>
+       immediately. The sealed server-action + Supabase bucket upload +
+       nex_account column migration land under a separate owner-
+       authorised commit per the Safety Constitution §5 deployment
+       gate (noted in page.tsx header). */
+    try {
+      /* Owner directive 2026-10-20 · when "Use theme original" is ON
+         at Save time, the payload reverts to the sealed theme defaults
+         (no custom video, no custom wallpaper, no custom title) · the
+         commit is the reset. */
+      const payload = useThemeOriginal
+        ? {
+            enabled: introEnabled,
+            videoUrl: null,
+            wallpaperUrl: null,
+            wallpaperDimensions: null,
+            title: null,
+            position: "hero" as IntroTitlePosition,
+            font: "classic" as IntroOverlayFontId,
+            size: "m" as IntroOverlaySizeId,
+            color: "#FFFFFF",
+            align: "center" as "left" | "center" | "right",
+            highlight: false,
+            resetToOriginal: true,
+            savedAt: Date.now(),
+          }
+        : {
+            enabled: introEnabled,
+            videoUrl: staged?.previewUrl ?? null,
+            wallpaperUrl: stagedWallpaper?.previewUrl ?? null,
+            wallpaperDimensions: stagedWallpaper
+              ? { width: stagedWallpaper.width, height: stagedWallpaper.height }
+              : null,
+            /* If the user never touched the sample text, persist the
+               sample so the saved intro still has a title. Otherwise
+               persist what they typed. */
+            title:
+              (isPlaceholder && !titleText.trim()
+                ? defaultTitleText
+                : titleText.trim()) || null,
+            position: titlePosition,
+            font: titleFontId,
+            size: titleSizeId,
+            color: titleColor,
+            align: titleAlign,
+            highlight: titleHighlight,
+            resetToOriginal: false,
+            savedAt: Date.now(),
+          };
+      window.sessionStorage.setItem(
+        "nex:intro-video:preview",
+        JSON.stringify(payload),
+      );
+      setSavedAt(Date.now());
+      setError(null);
+      /* Owner directive 2026-10-19 · a save with a non-null videoUrl
+         puts the intro in the "live" state · the Reset button must
+         now appear in the Your Intro Custom section. */
+      if (payload.videoUrl) {
+        setHasLiveIntro(true);
+      }
+      /* Owner directive 2026-10-20 · when the save was a "use theme
+         original" commit, drop every piece of custom state so the user
+         sees the theme original take over (and flipping the toggle OFF
+         doesn't resurrect ghost customisations). */
+      if (useThemeOriginal) {
+        clearStaged();
+        clearStagedWallpaper();
+        setTitleText("");
+        setIsPlaceholder(true);
+        setTitlePosition("hero");
+        setTitleFontId("classic");
+        setTitleSizeId("m");
+        setTitleColor("#FFFFFF");
+        setTitleAlign("center");
+        setTitleHighlight(false);
+        setHasLiveIntro(false);
+        setUseThemeOriginal(false);
+      }
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Could not save · try again.",
+      );
+    }
+  }, [
+    introEnabled,
+    staged,
+    stagedWallpaper,
+    titleText,
+    titlePosition,
+    titleFontId,
+    titleSizeId,
+    titleColor,
+    titleAlign,
+    titleHighlight,
+    isPlaceholder,
+    defaultTitleText,
+    useThemeOriginal,
+    clearStaged,
+    clearStagedWallpaper,
+  ]);
+
+  return (
+    <main
+      data-nex-settings-intro-video
+      style={{
+        minHeight: "100dvh",
+        /* Owner directive 2026-10-19 · "same background image as the
+           chat theme library page" · pinned-top neon-earth-bg scrolls
+           once (one viewport tall) then the rest sits on clean navy ·
+           matches the sealed Contacts + chat-themes-library pattern. */
+        position: "relative",
+        background: NEX.bg,
+        color: NEX.textPrimary,
+        fontFamily: NEX_FONT_SANS,
+        padding:
+          "calc(env(safe-area-inset-top, 0) + 14px) 16px calc(env(safe-area-inset-bottom, 0) + 24px)",
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+      }}
+    >
+      {/* Pinned starry hero · aria-hidden · behind every other control */}
+      { /* eslint-disable-next-line @next/next/no-img-element */ }
+      <img
+        src="/nex-native/contacts/neon-earth-bg.png"
+        alt=""
+        aria-hidden
+        data-nex-intro-video-bg-image
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100dvh",
+          objectFit: "cover",
+          objectPosition: "top center",
+          zIndex: 0,
+          pointerEvents: "none",
+          userSelect: "none",
+        }}
+      />
+      {/* Soft navy scrim for legibility · lets the stars peek through */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: "100dvh",
+          background:
+            "linear-gradient(180deg, rgba(2,9,20,0.35) 0%, rgba(2,9,20,0.78) 60%, rgba(2,9,20,0.92) 100%)",
+          zIndex: 0,
+          pointerEvents: "none",
+        }}
+      />
+      {/* Content wrapper lifted above the backdrop */}
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+        }}
+      >
+      {/* Owner directive 2026-10-19 · header matches the sealed
+          welcome-page identity row · NexPingBadge (56px cyan with
+          pulsing halo) on the left · "Intro Chat" wordmark at 26/900
+          with subtitle at 12/500 textSecondary · ControlDrawer trigger
+          on the right. Same sizing + colour tokens the welcome page
+          uses so the two surfaces read as one brand voice. */}
+      <header
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          marginBottom: 4,
+        }}
+        data-nex-settings-intro-video-header
+      >
+        <NexPingBadge size={56} accent={NEX.cyan} dataTestId="intro-video-nex" />
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+            minWidth: 0,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              position: "relative",
+              zIndex: 3,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 26,
+                fontWeight: 900,
+                letterSpacing: "-0.01em",
+                color: NEX.textPrimary,
+                lineHeight: 1,
+                textShadow: "0 2px 10px rgba(0,0,0,0.6)",
+              }}
+            >
+              Intro Chat
+            </span>
+            <div style={{ display: "inline-flex", marginLeft: "auto" }}>
+              <ControlDrawer session={drawerSession} />
+            </div>
+          </div>
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 500,
+              color: NEX.textSecondary,
+              lineHeight: 1.2,
+              textShadow: "0 1px 3px rgba(0,0,0,0.55)",
+            }}
+          >
+            First impressions always last
+          </span>
+        </div>
+      </header>
+
+      {/* ─── Section 1 · Add a Custom Video · owner directive
+          2026-10-19 · "Intro on should be part of the intro container
+          header" · the sealed "Chat Intro" standalone section merged
+          into this panel's headerExtra slot so the On/Off toggle lives
+          beside the title. */}
+      <Section
+        title="Edit Intro"
+        headerExtra={
+          <IntroToggle enabled={introEnabled} onChange={setIntroEnabled} />
+        }
+      >
+        <IntroPreview
+          videoUrl={
+            useThemeOriginal
+              ? activeThemeIntroUrl ?? null
+              : staged?.previewUrl ?? activeThemeIntroUrl ?? null
+          }
+          titleText={
+            useThemeOriginal
+              ? defaultTitleText
+              : isPlaceholder && !titleText
+                ? defaultTitleText
+                : titleText
+          }
+          titlePosition={useThemeOriginal ? "hero" : titlePosition}
+          titleFontId={useThemeOriginal ? "classic" : titleFontId}
+          titleSizeId={useThemeOriginal ? "m" : titleSizeId}
+          titleColor={useThemeOriginal ? "#FFFFFF" : titleColor}
+          titleAlign={useThemeOriginal ? "center" : titleAlign}
+          titleHighlight={useThemeOriginal ? false : titleHighlight}
+          openingHours={showOpeningHours ? SAMPLE_OPENING_HOURS : null}
+          openingHoursPosition={openingHoursPosition}
+          enabled={introEnabled}
+        />
+
+        {/* Owner directive 2026-10-20 · "add toggle for reset theme to
+            original · user may think their theme will look better and
+            then see that our theme chat background and intro was
+            better" · non-destructive compare toggle · ON swaps the
+            preview back to the sealed theme intro + wallpaper +
+            default typography · the user's customisations stay in
+            React state so flipping OFF restores them · pressing Save
+            in ON mode commits the reset. */}
+        <div
+          data-nex-intro-video-use-theme-original
+          style={{
+            marginTop: 10,
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: `1px solid ${
+              useThemeOriginal ? NEX.cyan : NEX.panelBorder
+            }`,
+            background: useThemeOriginal
+              ? `${NEX.cyan}18`
+              : "rgba(255,255,255,0.03)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 800,
+                color: useThemeOriginal ? NEX.cyan : NEX.textPrimary,
+              }}
+            >
+              Use theme original
+            </span>
+            <span
+              style={{
+                fontSize: 10,
+                color: NEX.textMute,
+                lineHeight: 1.4,
+              }}
+            >
+              Compare side-by-side · your custom is kept in memory · Save in this mode to reset.
+            </span>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={useThemeOriginal}
+            onClick={() => setUseThemeOriginal((v) => !v)}
+            data-nex-intro-video-use-theme-original-toggle={useThemeOriginal ? "true" : "false"}
+            style={{
+              width: 36,
+              height: 20,
+              borderRadius: 999,
+              border: "none",
+              background: useThemeOriginal
+                ? NEX.cyan
+                : "rgba(255,255,255,0.2)",
+              position: "relative",
+              cursor: "pointer",
+              padding: 0,
+              flexShrink: 0,
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                position: "absolute",
+                top: 2,
+                left: useThemeOriginal ? 18 : 2,
+                width: 16,
+                height: 16,
+                borderRadius: 999,
+                background: "#FFFFFF",
+                transition: "left 180ms ease",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
+              }}
+            />
+          </button>
+        </div>
+
+        {/* Owner directive 2026-10-19 · Reset Intro button · appears
+            only when the user has a live custom intro saved · tapping
+            clears everything and the preview reverts to the active
+            theme's packaged intro. */}
+        {hasLiveIntro && (
+          <button
+            type="button"
+            onClick={resetToThemeIntro}
+            data-nex-intro-video-reset
+            style={{
+              marginBottom: 10,
+              padding: "10px 14px",
+              borderRadius: 10,
+              border: `1px solid ${NEX.panelBorder}`,
+              background: "rgba(255,59,48,0.14)",
+              color: "#FFB4B0",
+              fontSize: 13,
+              fontWeight: 800,
+              letterSpacing: "0.04em",
+              cursor: "pointer",
+              fontFamily: NEX_FONT_SANS,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              width: "100%",
+            }}
+          >
+            <span aria-hidden style={{ fontSize: 14 }}>↺</span>
+            Reset intro · use theme intro again
+          </button>
+        )}
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <input
+            ref={recordInputRef}
+            type="file"
+            accept="video/*"
+            capture="user"
+            hidden
+            onChange={handleFileChange}
+            data-nex-intro-video-record-input
+          />
+          <input
+            ref={uploadInputRef}
+            type="file"
+            accept="video/*"
+            hidden
+            onChange={handleFileChange}
+            data-nex-intro-video-upload-input
+          />
+          <button
+            type="button"
+            onClick={() => recordInputRef.current?.click()}
+            data-nex-intro-video-choose
+            style={{
+              flex: 1,
+              minWidth: 140,
+              padding: "12px 16px",
+              borderRadius: 999,
+              border: `1.5px solid ${NEX.cyan}`,
+              background: "transparent",
+              color: NEX.cyan,
+              fontSize: 14,
+              fontWeight: 800,
+              letterSpacing: "0.04em",
+              cursor: "pointer",
+              fontFamily: NEX_FONT_SANS,
+            }}
+          >
+            Choose
+          </button>
+          <button
+            type="button"
+            onClick={() => uploadInputRef.current?.click()}
+            data-nex-intro-video-upload
+            style={{
+              flex: 1,
+              minWidth: 140,
+              padding: "12px 16px",
+              borderRadius: 999,
+              border: "none",
+              background: NEX.cyan,
+              color: "#021424",
+              fontSize: 14,
+              fontWeight: 800,
+              letterSpacing: "0.04em",
+              cursor: "pointer",
+              fontFamily: NEX_FONT_SANS,
+              boxShadow: `0 6px 14px -6px ${NEX.cyan}aa, 0 0 18px rgba(0,175,255,0.3)`,
+            }}
+          >
+            Upload
+          </button>
+        </div>
+        {staged && (
+          <div
+            style={{
+              marginTop: 10,
+              padding: "8px 12px",
+              borderRadius: 10,
+              background: NEX.cyanDim,
+              border: `1px solid ${NEX.panelBorder}`,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              fontSize: 12,
+            }}
+          >
+            <span style={{ flex: 1, color: NEX.textPrimary }}>
+              Staged · {staged.width}×{staged.height} ·{" "}
+              {staged.durationSec.toFixed(1)}s ·{" "}
+              {(staged.file.size / 1024 / 1024).toFixed(2)}MB
+            </span>
+            <button
+              type="button"
+              onClick={clearStaged}
+              style={{
+                padding: "4px 10px",
+                borderRadius: 8,
+                border: "1px solid rgba(255,255,255,0.2)",
+                background: "transparent",
+                color: NEX.textSecondary,
+                fontSize: 11,
+                fontWeight: 700,
+                cursor: "pointer",
+                fontFamily: NEX_FONT_SANS,
+              }}
+            >
+              Retake
+            </button>
+          </div>
+        )}
+        {error && (
+          <div
+            role="alert"
+            style={{
+              marginTop: 10,
+              padding: "8px 12px",
+              borderRadius: 10,
+              background: "rgba(255,59,48,0.14)",
+              border: "1px solid rgba(255,59,48,0.42)",
+              color: "#FFB4B0",
+              fontSize: 12,
+              fontWeight: 700,
+            }}
+          >
+            {error}
+          </div>
+        )}
+      </Section>
+
+      {/* ─── Section 4 · Title overlay ─────────────────────────────── */}
+      <Section
+        title="Title overlay"
+        description="Keep your contacts up to date · share a promo, flag a new menu item, or just drop a warm welcome."
+      >
+        {/* Owner directive 2026-10-19 · textarea instead of input so:
+            · spacebar / arrow keys behave natively (always did on
+              input too but owner called it out)
+            · Enter / Return starts a new line
+            · max 3 lines enforced on change (strip 4th+ line) */}
+        <div style={{ position: "relative" }}>
+          <textarea
+            ref={titleTextareaRef}
+            value={titleText}
+            placeholder={isPlaceholder ? defaultTitleText : "e.g. Welcome to\nHammerex Pizza"}
+            onFocus={() => setIsPlaceholder(false)}
+            onChange={(e) => {
+              const raw = e.target.value;
+              /* Enforce max 3 lines · when the user hits Enter past 3,
+                 keep only the first 3 lines so the overlay never grows
+                 past what the preview tile can hold. */
+              const lines = raw.split("\n");
+              const capped = lines.slice(0, 3).join("\n");
+              /* Cap total length too so a long paste doesn't bloat the
+                 overlay · ~140 chars across 3 lines reads cleanly. */
+              setTitleText(capped.slice(0, 140));
+              setIsPlaceholder(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                /* Block Enter when 3 lines already exist · prevents a
+                   silent discard a split-second later. */
+                if (titleText.split("\n").length >= 3) {
+                  e.preventDefault();
+                }
+              }
+            }}
+            rows={3}
+            data-nex-intro-video-title-input
+            style={{
+              width: "100%",
+              padding: "12px 44px 12px 14px",
+              borderRadius: 10,
+              background: "rgba(255,255,255,0.06)",
+              border: `1px solid ${NEX.panelBorder}`,
+              color: NEX.textPrimary,
+              fontSize: 14,
+              fontWeight: 700,
+              fontFamily: NEX_FONT_SANS,
+              outline: "none",
+              boxSizing: "border-box",
+              resize: "none",
+              lineHeight: 1.3,
+              minHeight: 72,
+            }}
+          />
+          {/* Owner directive 2026-10-19 · emoji picker toggle · sits
+              inside the textarea's right-edge padding (reserved 44px
+              above) so the icon reads as part of the input. Tap to
+              open the emoji grid below. */}
+          <button
+            type="button"
+            aria-label={
+              emojiPickerOpen ? "Close emoji picker" : "Add emoji to title"
+            }
+            aria-pressed={emojiPickerOpen}
+            onClick={() => setEmojiPickerOpen((v) => !v)}
+            data-nex-intro-video-title-emoji-toggle
+            style={{
+              position: "absolute",
+              top: 8,
+              right: 8,
+              width: 28,
+              height: 28,
+              padding: 0,
+              borderRadius: 999,
+              background: emojiPickerOpen
+                ? `${NEX.cyan}33`
+                : "rgba(255,255,255,0.08)",
+              border: `1px solid ${
+                emojiPickerOpen ? NEX.cyan : NEX.panelBorder
+              }`,
+              color: NEX.textPrimary,
+              cursor: "pointer",
+              fontSize: 16,
+              lineHeight: 1,
+              display: "grid",
+              placeItems: "center",
+              fontFamily: NEX_FONT_SANS,
+            }}
+          >
+            {emojiPickerOpen ? "×" : "😊"}
+          </button>
+          {/* Owner directive 2026-10-19 · character counter badge
+              bottom-right of the textarea (mirrors the mockup's
+              "140/180" chip). 140 is the hard cap enforced on change. */}
+          <div
+            data-nex-intro-video-char-count
+            aria-live="polite"
+            style={{
+              position: "absolute",
+              right: 10,
+              bottom: 8,
+              padding: "2px 8px",
+              borderRadius: 999,
+              background: "rgba(0,0,0,0.55)",
+              border: `1px solid ${NEX.panelBorder}`,
+              color: NEX.textSecondary,
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "0.04em",
+              pointerEvents: "none",
+            }}
+          >
+            {titleText.length}/140
+          </div>
+        </div>
+
+        {/* Owner directive 2026-10-19 · "font slider need dark
+            background · can't see the font styles · list all styles" ·
+            custom dropdown with each option rendered in its real
+            typeface on a dark panel. Native <select> can't style
+            option backgrounds / per-option font-family cross-browser,
+            so this pair of popovers replaces them. */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 8,
+            marginTop: 10,
+          }}
+        >
+          <FontDropdown
+            value={titleFontId}
+            onChange={setTitleFontId}
+          />
+          <SizeDropdown
+            value={titleSizeId}
+            onChange={setTitleSizeId}
+          />
+        </div>
+
+        {/* Owner directive 2026-10-20 · "deeper creative controls" ·
+            colour palette · 8 preset swatches (white, black, cyan,
+            orange, pink, green, red, gold) · click to apply · active
+            swatch gets a cyan rim. */}
+        <div style={{ marginTop: 10 }}>
+          <span
+            style={{
+              fontSize: 10,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: NEX.textMute,
+              fontWeight: 800,
+              display: "block",
+              marginBottom: 6,
+            }}
+          >
+            Colour
+          </span>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {[
+              "#FFFFFF",
+              "#000000",
+              "#00AFFF",
+              "#FF7200",
+              "#FF4FA0",
+              "#16D66B",
+              "#FF3B30",
+              "#FFD700",
+            ].map((hex) => {
+              const active = titleColor.toLowerCase() === hex.toLowerCase();
+              return (
+                <button
+                  key={hex}
+                  type="button"
+                  aria-label={`Text color ${hex}`}
+                  aria-pressed={active}
+                  onClick={() => setTitleColor(hex)}
+                  data-nex-intro-video-color-swatch={hex}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 999,
+                    border: `2px solid ${active ? NEX.cyan : "rgba(255,255,255,0.15)"}`,
+                    background: hex,
+                    cursor: "pointer",
+                    padding: 0,
+                    boxShadow: active
+                      ? `0 0 0 2px ${NEX.cyan}44, 0 2px 6px rgba(0,0,0,0.5)`
+                      : "0 2px 4px rgba(0,0,0,0.4)",
+                  }}
+                />
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Alignment · L / C / R · single-row chip group */}
+        <div style={{ marginTop: 10 }}>
+          <span
+            style={{
+              fontSize: 10,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: NEX.textMute,
+              fontWeight: 800,
+              display: "block",
+              marginBottom: 6,
+            }}
+          >
+            Alignment
+          </span>
+          <div
+            role="radiogroup"
+            aria-label="Title alignment"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: 6,
+            }}
+          >
+            {(["left", "center", "right"] as const).map((a) => {
+              const active = titleAlign === a;
+              const glyph = a === "left" ? "◧" : a === "center" ? "☰" : "◨";
+              return (
+                <button
+                  key={a}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => setTitleAlign(a)}
+                  data-nex-intro-video-align={a}
+                  style={{
+                    padding: "10px 12px",
+                    borderRadius: 10,
+                    border: `1.5px solid ${active ? NEX.cyan : NEX.panelBorder}`,
+                    background: active
+                      ? `${NEX.cyan}22`
+                      : "rgba(255,255,255,0.03)",
+                    color: active ? NEX.cyan : NEX.textPrimary,
+                    cursor: "pointer",
+                    fontSize: 16,
+                    fontFamily: NEX_FONT_SANS,
+                    textAlign: "center",
+                  }}
+                >
+                  {glyph}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Background highlight toggle · dark pill behind each line
+            for busy wallpapers. */}
+        <div
+          style={{
+            marginTop: 10,
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: `1px solid ${NEX.panelBorder}`,
+            background: "rgba(255,255,255,0.03)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+            <span style={{ fontSize: 12, fontWeight: 800, color: NEX.textPrimary }}>
+              Background highlight
+            </span>
+            <span style={{ fontSize: 10, color: NEX.textMute, lineHeight: 1.4 }}>
+              Dark pill behind text · boosts legibility on busy videos
+            </span>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={titleHighlight}
+            onClick={() => setTitleHighlight((v) => !v)}
+            data-nex-intro-video-highlight={titleHighlight ? "true" : "false"}
+            style={{
+              width: 36,
+              height: 20,
+              borderRadius: 999,
+              border: "none",
+              background: titleHighlight ? NEX.cyan : "rgba(255,255,255,0.2)",
+              position: "relative",
+              cursor: "pointer",
+              padding: 0,
+              flexShrink: 0,
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                position: "absolute",
+                top: 2,
+                left: titleHighlight ? 18 : 2,
+                width: 16,
+                height: 16,
+                borderRadius: 999,
+                background: "#FFFFFF",
+                transition: "left 180ms ease",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
+              }}
+            />
+          </button>
+        </div>
+
+        {/* Owner directive 2026-10-20 · "open time in footer center ·
+            if the user put their text in footer the opening time could
+            go to header center" · sample toggle so the user can feel
+            the dynamic position balance before business shop-hours
+            schema connects in production. */}
+        <div
+          style={{
+            marginTop: 10,
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: `1px solid ${NEX.panelBorder}`,
+            background: "rgba(255,255,255,0.03)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+            <span style={{ fontSize: 12, fontWeight: 800, color: NEX.textPrimary }}>
+              Opening hours
+            </span>
+            <span style={{ fontSize: 10, color: NEX.textMute, lineHeight: 1.4 }}>
+              Sample · auto-swaps to the opposite end of your title · businesses only when live
+            </span>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showOpeningHours}
+            onClick={() => setShowOpeningHours((v) => !v)}
+            data-nex-intro-video-opening-hours-toggle={showOpeningHours ? "true" : "false"}
+            style={{
+              width: 36,
+              height: 20,
+              borderRadius: 999,
+              border: "none",
+              background: showOpeningHours ? NEX.cyan : "rgba(255,255,255,0.2)",
+              position: "relative",
+              cursor: "pointer",
+              padding: 0,
+              flexShrink: 0,
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                position: "absolute",
+                top: 2,
+                left: showOpeningHours ? 18 : 2,
+                width: 16,
+                height: 16,
+                borderRadius: 999,
+                background: "#FFFFFF",
+                transition: "left 180ms ease",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
+              }}
+            />
+          </button>
+        </div>
+
+        {emojiPickerOpen && (
+          /* Owner directive 2026-10-19 · "the emoji panel must be
+             same emoji panel as chat theme emoji" · mounted the
+             sealed StandardEmojiStickerPicker · same 4-tab UI as the
+             chat composer (Emoji · Stickers · GIPHY · Files). For
+             title text, only Unicode emoji picks insert cleanly into
+             the textarea · image emoji picks insert as `:slug:`
+             tokens · sticker / GIPHY / File picks close the panel
+             (no-op) because title text is plain text, not rich
+             content. */
+          <div
+            data-nex-intro-video-title-emoji-panel
+            style={{ marginTop: 8 }}
+          >
+            <StandardEmojiStickerPicker
+              engine={brandEngine}
+              onPickEmoji={(glyph) => insertEmojiIntoTitle(glyph)}
+              onPickThemeEmoji={(e) =>
+                insertEmojiIntoTitle(`:${e.slug}:`)
+              }
+              onPickSticker={() => setEmojiPickerOpen(false)}
+              onPickThemeSticker={() => setEmojiPickerOpen(false)}
+              onPickGiphy={() => setEmojiPickerOpen(false)}
+              /* Owner directive 2026-10-19 · the intro-video title
+                 overlay is a plain-text ribbon · only Emoji is a
+                 meaningful insertion. Stickers / GIFS / Files hidden.
+                 Chat composer still gets the full picker (defaults). */
+              showFilesTab={false}
+              showStickersTab={false}
+              showGiphyTab={false}
+              onClose={() => setEmojiPickerOpen(false)}
+            />
+          </div>
+        )}
+        <div
+          role="radiogroup"
+          aria-label="Title position"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 8,
+            marginTop: 10,
+          }}
+        >
+          {(["hero", "center", "footer"] as const).map((pos) => (
+            <PositionChoice
+              key={pos}
+              position={pos}
+              active={titlePosition === pos}
+              onSelect={() => setTitlePosition(pos)}
+            />
+          ))}
+        </div>
+
+      </Section>
+
+      {/* ─── Section 4 · Upload Your Wallpaper ─────────────────────── */}
+      {/* Owner directive 2026-10-19 · "do we need section that if user
+          wants to upload their own intro that they can also change the
+          back ground image for their chat to match · image must be
+          screen app size to accept and we state the size and file
+          type we accept for sure error free upload". */}
+      <Section
+        title="Chat Screen image"
+        description="Match your intro with a custom chat image. The upload must be portrait phone-screen size."
+      >
+        {/* Owner directive 2026-10-20 · "red dark red on 1 row ·
+            NEX validates before accepting." · dedicated single-line
+            warning so the user reads the moderation promise before
+            tapping Choose. Dark red (#8B1A1A) matches the sealed
+            delete/warning accent used elsewhere in the app. */}
+        <div
+          data-nex-intro-video-wallpaper-validate-note
+          style={{
+            fontSize: 11,
+            fontWeight: 800,
+            letterSpacing: "0.04em",
+            color: "#8B1A1A",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          NEX validates before accepting.
+        </div>
+        <input
+          ref={wallpaperInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          hidden
+          onChange={handleWallpaperChange}
+          data-nex-intro-video-wallpaper-input
+        />
+        {/* Owner directive 2026-10-19 · vertical layout · preview on
+            top (shows the original chat theme wallpaper by default,
+            replaced by any staged upload), tiny requirements line
+            just above the Choose button at the bottom of the panel. */}
+        <div
+          data-nex-intro-video-wallpaper-preview
+          style={{
+            width: "100%",
+            maxWidth: 140,
+            margin: "0 auto",
+            aspectRatio: "9 / 16",
+            borderRadius: 12,
+            overflow: "hidden",
+            background: "rgba(0,0,0,0.45)",
+            border: `1px solid ${NEX.panelBorder}`,
+            position: "relative",
+          }}
+        >
+          {(() => {
+            const previewSrc =
+              stagedWallpaper?.previewUrl ?? activeThemeWallpaperUrl;
+            if (previewSrc) {
+              return (
+                <>
+                  { /* eslint-disable-next-line @next/next/no-img-element */ }
+                  <img
+                    src={previewSrc}
+                    alt=""
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      display: "block",
+                    }}
+                  />
+                  <div
+                    aria-hidden
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      background:
+                        "linear-gradient(180deg, rgba(0,0,0,0.0), rgba(0,0,0,0.55))",
+                    }}
+                  />
+                </>
+              );
+            }
+            return (
+              <div
+                style={{
+                  display: "grid",
+                  placeItems: "center",
+                  width: "100%",
+                  height: "100%",
+                  color: NEX.textMute,
+                  fontSize: 10,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  fontWeight: 800,
+                  textAlign: "center",
+                  padding: 8,
+                }}
+              >
+                No background · theme uses solid colour
+              </div>
+            );
+          })()}
+        </div>
+
+        {stagedWallpaper && (
+          <div
+            style={{
+              fontSize: 11,
+              color: NEX.textMute,
+              fontWeight: 600,
+              lineHeight: 1.4,
+              textAlign: "center",
+            }}
+          >
+            Staged · {stagedWallpaper.width}×{stagedWallpaper.height} ·{" "}
+            {stagedWallpaper.mimeLabel} ·{" "}
+            {(stagedWallpaper.file.size / 1024 / 1024).toFixed(2)} MB
+          </div>
+        )}
+
+        {/* Owner directive 2026-10-19 · "move down the choose button to
+            lower container and over add small text - size image and
+            file type required" · one-line hint sits directly above
+            the Choose button so the user reads the requirements
+            immediately before tapping. */}
+        <div
+          data-nex-intro-video-wallpaper-requirements
+          style={{
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: "0.04em",
+            color: NEX.textMute,
+            textAlign: "center",
+            lineHeight: 1.5,
+            marginTop: 4,
+          }}
+        >
+          Portrait 9:16 · min {WALLPAPER_MIN_WIDTH}×{WALLPAPER_MIN_HEIGHT} · PNG · JPG · WebP · max 5 MB
+        </div>
+
+        <button
+          type="button"
+          onClick={() => wallpaperInputRef.current?.click()}
+          data-nex-intro-video-wallpaper-choose
+          style={{
+            width: "100%",
+            padding: "12px 16px",
+            borderRadius: 999,
+            border: "none",
+            background: NEX.cyan,
+            color: "#021424",
+            fontSize: 14,
+            fontWeight: 800,
+            letterSpacing: "0.04em",
+            cursor: "pointer",
+            fontFamily: NEX_FONT_SANS,
+            boxShadow: `0 6px 14px -6px ${NEX.cyan}aa`,
+          }}
+        >
+          {stagedWallpaper ? "Replace" : "Choose"}
+        </button>
+
+        {stagedWallpaper && (
+          <button
+            type="button"
+            onClick={clearStagedWallpaper}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 999,
+              border: `1px solid ${NEX.panelBorder}`,
+              background: "transparent",
+              color: NEX.textSecondary,
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+              fontFamily: NEX_FONT_SANS,
+              alignSelf: "center",
+            }}
+          >
+            Remove · use theme default
+          </button>
+        )}
+
+        {wallpaperError && (
+          <div
+            role="alert"
+            style={{
+              padding: "8px 12px",
+              borderRadius: 10,
+              background: "rgba(255,59,48,0.14)",
+              border: "1px solid rgba(255,59,48,0.42)",
+              color: "#FFB4B0",
+              fontSize: 12,
+              fontWeight: 700,
+            }}
+          >
+            {wallpaperError}
+          </div>
+        )}
+      </Section>
+
+      {/* ─── Section 5 · Save ──────────────────────────────────────── */}
+      <div
+        style={{
+          position: "sticky",
+          bottom: 0,
+          marginTop: 10,
+          padding:
+            "10px 0 calc(env(safe-area-inset-bottom, 0) + 10px)",
+          background: `linear-gradient(180deg, transparent, ${NEX.bg} 30%)`,
+          /* Owner directive 2026-10-19 · dropdown popovers must open
+             IN FRONT of the Save bar · explicit low z-index here so
+             the Font/Size menus (zIndex: 2000) always win. */
+          zIndex: 1,
+        }}
+      >
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={!canSave}
+          data-nex-intro-video-save
+          style={{
+            width: "100%",
+            padding: "14px 16px",
+            borderRadius: 999,
+            border: "none",
+            background: canSave ? NEX.cyan : "rgba(255,255,255,0.08)",
+            color: canSave ? "#021424" : NEX.textMute,
+            fontSize: 15,
+            fontWeight: 800,
+            letterSpacing: "0.04em",
+            cursor: canSave ? "pointer" : "default",
+            fontFamily: NEX_FONT_SANS,
+            boxShadow: canSave
+              ? "0 10px 24px -8px rgba(0,175,255,0.6), 0 0 24px rgba(0,175,255,0.3)"
+              : "none",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+          }}
+        >
+          <span aria-hidden style={{ fontSize: 16 }}>✓</span>
+          Save Changes
+        </button>
+        {savedAt && (
+          <div
+            style={{
+              marginTop: 8,
+              textAlign: "center",
+              fontSize: 11,
+              color: NEX.green,
+              fontWeight: 700,
+            }}
+          >
+            Saved · preview will apply next time you open a chat theme
+          </div>
+        )}
+      </div>
+      </div>
+    </main>
+  );
+}
+
+// ───────────────────── Section wrapper ─────────────────────────────
+
+function Section({
+  title,
+  description,
+  headerExtra,
+  children,
+}: {
+  title: string;
+  description?: string;
+  /** Owner directive 2026-10-19 · optional slot aligned to the right
+   *  of the section title · lets a caller inline a toggle / badge /
+   *  control into the section header (e.g. the Intro On switch on the
+   *  Add a Custom Video panel). */
+  headerExtra?: React.ReactNode;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <section
+      style={{
+        padding: 14,
+        borderRadius: 16,
+        /* Owner directive 2026-10-19 · match the "edit chat intro"
+           mockup · translucent navy panel with a cyan rim + soft outer
+           glow so each section reads as its own card over the pinned
+           starry background. */
+        background: "rgba(5, 18, 32, 0.72)",
+        border: `1.5px solid rgba(0,175,255,0.55)`,
+        boxShadow:
+          "0 0 0 1px rgba(0,175,255,0.12), 0 0 18px rgba(0,175,255,0.18), inset 0 1px 0 rgba(255,255,255,0.04)",
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 10,
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h2
+            style={{
+              margin: 0,
+              fontSize: 13,
+              fontWeight: 800,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: NEX.cyan,
+            }}
+          >
+            {title}
+          </h2>
+          {description && (
+            <p
+              style={{
+                margin: "4px 0 0",
+                fontSize: 12,
+                color: NEX.textSecondary,
+                lineHeight: 1.5,
+              }}
+            >
+              {description}
+            </p>
+          )}
+        </div>
+        {headerExtra && (
+          <div style={{ flexShrink: 0, alignSelf: "center" }}>
+            {headerExtra}
+          </div>
+        )}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+// ───────────────────── Enable toggle ────────────────────────────────
+
+function RequirementChip({ label }: { label: string }): React.JSX.Element {
+  return (
+    <span
+      style={{
+        padding: "4px 8px",
+        borderRadius: 999,
+        background: `${NEX.cyan}15`,
+        border: `1px solid ${NEX.cyan}55`,
+        color: NEX.cyan,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
+// ─────────────── Font / Size dropdowns ────────────────────────────
+//
+// Owner directive 2026-10-19 · the native <select> element can't
+// render per-option background or font-family cross-browser, so these
+// custom popovers replace them. Each font option paints in its own
+// typeface over a dark panel · click outside closes · ESC closes.
+
+function useOutsideClick(
+  ref: React.RefObject<HTMLDivElement | null>,
+  onOutside: () => void,
+): void {
+  React.useEffect(() => {
+    const handler = (ev: MouseEvent): void => {
+      if (!ref.current) return;
+      if (ref.current.contains(ev.target as Node)) return;
+      onOutside();
+    };
+    window.addEventListener("mousedown", handler);
+    return () => window.removeEventListener("mousedown", handler);
+  }, [ref, onOutside]);
+}
+
+/* Owner directive 2026-10-19 · "sliders should show in front of the
+ * lower container" · the parent Section uses `backdrop-filter` which
+ * creates a new stacking context, trapping any z-index on children.
+ * Fix: portal the popover to document.body, position it with
+ * `fixed` coords computed from the trigger's getBoundingClientRect
+ * so it floats above every sibling panel + the sticky Save bar. */
+
+function usePortaledPopover(open: boolean): {
+  mounted: boolean;
+  portalTarget: HTMLElement | null;
+  rect: DOMRect | null;
+  setTriggerEl: (el: HTMLButtonElement | null) => void;
+  popoverRef: React.RefObject<HTMLUListElement | null>;
+} {
+  const [mounted, setMounted] = React.useState(false);
+  const [rect, setRect] = React.useState<DOMRect | null>(null);
+  const triggerRef = React.useRef<HTMLButtonElement | null>(null);
+  const popoverRef = React.useRef<HTMLUListElement | null>(null);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const measure = (): void => {
+      const el = triggerRef.current;
+      if (!el) return;
+      setRect(el.getBoundingClientRect());
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, true);
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure, true);
+    };
+  }, [open]);
+
+  const setTriggerEl = React.useCallback((el: HTMLButtonElement | null) => {
+    triggerRef.current = el;
+  }, []);
+
+  return {
+    mounted,
+    portalTarget: mounted ? document.body : null,
+    rect,
+    setTriggerEl,
+    popoverRef,
+  };
+}
+
+function usePopoverOutsideClick(
+  triggerFn: () => HTMLButtonElement | null,
+  popoverRef: React.RefObject<HTMLUListElement | null>,
+  open: boolean,
+  onClose: () => void,
+): void {
+  React.useEffect(() => {
+    if (!open) return;
+    const handler = (ev: MouseEvent): void => {
+      const target = ev.target as Node;
+      const trigger = triggerFn();
+      if (trigger && trigger.contains(target)) return;
+      if (popoverRef.current && popoverRef.current.contains(target)) return;
+      onClose();
+    };
+    window.addEventListener("mousedown", handler);
+    return () => window.removeEventListener("mousedown", handler);
+  }, [triggerFn, popoverRef, open, onClose]);
+}
+
+function FontDropdown({
+  value,
+  onChange,
+}: {
+  value: IntroOverlayFontId;
+  onChange: (next: IntroOverlayFontId) => void;
+}): React.JSX.Element {
+  const [open, setOpen] = React.useState(false);
+  const popover = usePortaledPopover(open);
+  const triggerRef = React.useRef<HTMLButtonElement | null>(null);
+  const setBothRefs = React.useCallback(
+    (el: HTMLButtonElement | null) => {
+      triggerRef.current = el;
+      popover.setTriggerEl(el);
+    },
+    [popover],
+  );
+  usePopoverOutsideClick(
+    React.useCallback(() => triggerRef.current, []),
+    popover.popoverRef,
+    open,
+    React.useCallback(() => setOpen(false), []),
+  );
+  const active = fontById(value);
+  return (
+    <div style={{ minWidth: 0 }}>
+      <span
+        style={{
+          fontSize: 10,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          color: NEX.textMute,
+          fontWeight: 800,
+          display: "block",
+          marginBottom: 4,
+        }}
+      >
+        Font
+      </span>
+      <button
+        ref={setBothRefs}
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        data-nex-intro-video-font-select
+        style={{
+          width: "100%",
+          padding: "10px 12px",
+          borderRadius: 10,
+          border: `1px solid ${NEX.panelBorder}`,
+          background: "rgba(5,18,32,0.9)",
+          color: NEX.textPrimary,
+          fontSize: 14,
+          fontWeight: 700,
+          fontFamily: active.fontFamily,
+          outline: "none",
+          cursor: "pointer",
+          textAlign: "left",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          ...active.previewStyle,
+        }}
+      >
+        <span>{active.label}</span>
+        <span aria-hidden style={{ fontSize: 10, color: NEX.textMute }}>▾</span>
+      </button>
+      {open && popover.portalTarget && popover.rect &&
+        createPortal(
+          <ul
+            ref={popover.popoverRef}
+            role="listbox"
+            style={{
+              position: "fixed",
+              top: popover.rect.bottom + 4,
+              left: popover.rect.left,
+              width: popover.rect.width,
+              zIndex: 9999,
+              margin: 0,
+              padding: 4,
+              listStyle: "none",
+              background: "rgba(2,9,20,0.98)",
+              border: `1px solid ${NEX.cyan}66`,
+              borderRadius: 10,
+              boxShadow:
+                "0 10px 28px -6px rgba(0,0,0,0.7), 0 0 24px rgba(0,175,255,0.25)",
+            }}
+          >
+            {INTRO_OVERLAY_FONTS.map((f) => {
+              const selected = f.id === value;
+              return (
+                <li key={f.id}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    onClick={() => {
+                      onChange(f.id);
+                      setOpen(false);
+                    }}
+                    data-nex-intro-video-font-option={f.id}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 8,
+                      border: "none",
+                      background: selected ? `${NEX.cyan}22` : "transparent",
+                      color: selected ? NEX.cyan : NEX.textPrimary,
+                      fontSize: 16,
+                      fontFamily: f.fontFamily,
+                      cursor: "pointer",
+                      textAlign: "left",
+                      ...f.previewStyle,
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>,
+          popover.portalTarget,
+        )}
+    </div>
+  );
+}
+
+function SizeDropdown({
+  value,
+  onChange,
+}: {
+  value: IntroOverlaySizeId;
+  onChange: (next: IntroOverlaySizeId) => void;
+}): React.JSX.Element {
+  const [open, setOpen] = React.useState(false);
+  const popover = usePortaledPopover(open);
+  const triggerRef = React.useRef<HTMLButtonElement | null>(null);
+  const setBothRefs = React.useCallback(
+    (el: HTMLButtonElement | null) => {
+      triggerRef.current = el;
+      popover.setTriggerEl(el);
+    },
+    [popover],
+  );
+  usePopoverOutsideClick(
+    React.useCallback(() => triggerRef.current, []),
+    popover.popoverRef,
+    open,
+    React.useCallback(() => setOpen(false), []),
+  );
+  const active = sizeById(value);
+  const prettyLabel = (id: IntroOverlaySizeId): string =>
+    id === "s" ? "Small" : id === "m" ? "Medium" : id === "l" ? "Large" : "Extra Large";
+  /* Owner directive 2026-10-20 · "can we add the text size on the right
+     like 12.s" · show the actual pt size each preset renders at on the
+     overlay. Hero position (24 pt base) is the reference the user sees
+     most · derived values: Small 18 · Medium 24 · Large 32 · XL 42. */
+  const HERO_BASE_PT = 24;
+  const ptForSize = (id: IntroOverlaySizeId): number =>
+    Math.round(HERO_BASE_PT * sizeById(id).multiplier);
+  return (
+    <div style={{ minWidth: 0 }}>
+      <span
+        style={{
+          fontSize: 10,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          color: NEX.textMute,
+          fontWeight: 800,
+          display: "block",
+          marginBottom: 4,
+        }}
+      >
+        Size
+      </span>
+      <button
+        ref={setBothRefs}
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        data-nex-intro-video-size-select
+        style={{
+          width: "100%",
+          padding: "10px 12px",
+          borderRadius: 10,
+          border: `1px solid ${NEX.panelBorder}`,
+          background: "rgba(5,18,32,0.9)",
+          color: NEX.textPrimary,
+          fontSize: 13,
+          fontWeight: 700,
+          fontFamily: NEX_FONT_SANS,
+          outline: "none",
+          cursor: "pointer",
+          textAlign: "left",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <span style={{ display: "inline-flex", alignItems: "baseline", gap: 6 }}>
+          <span>{prettyLabel(active.id)}</span>
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: NEX.textMute,
+              letterSpacing: "0.02em",
+            }}
+          >
+            {ptForSize(active.id)}pt
+          </span>
+        </span>
+        <span aria-hidden style={{ fontSize: 10, color: NEX.textMute }}>▾</span>
+      </button>
+      {open && popover.portalTarget && popover.rect &&
+        createPortal(
+          <ul
+            ref={popover.popoverRef}
+            role="listbox"
+            style={{
+              position: "fixed",
+              top: popover.rect.bottom + 4,
+              left: popover.rect.left,
+              width: popover.rect.width,
+              zIndex: 9999,
+              margin: 0,
+              padding: 4,
+              listStyle: "none",
+              background: "rgba(2,9,20,0.98)",
+              border: `1px solid ${NEX.cyan}66`,
+              borderRadius: 10,
+              boxShadow:
+                "0 10px 28px -6px rgba(0,0,0,0.7), 0 0 24px rgba(0,175,255,0.25)",
+            }}
+          >
+            {INTRO_OVERLAY_SIZES.map((s) => {
+              const selected = s.id === value;
+              return (
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    onClick={() => {
+                      onChange(s.id);
+                      setOpen(false);
+                    }}
+                    data-nex-intro-video-size-option={s.id}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 8,
+                      border: "none",
+                      background: selected ? `${NEX.cyan}22` : "transparent",
+                      color: selected ? NEX.cyan : NEX.textPrimary,
+                      fontSize: Math.round(13 * s.multiplier),
+                      fontWeight: 900,
+                      fontFamily: NEX_FONT_SANS,
+                      cursor: "pointer",
+                      textAlign: "left",
+                      display: "flex",
+                      alignItems: "baseline",
+                      justifyContent: "space-between",
+                      gap: 10,
+                    }}
+                  >
+                    <span>{prettyLabel(s.id)}</span>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: selected ? NEX.cyan : NEX.textMute,
+                        letterSpacing: "0.02em",
+                      }}
+                    >
+                      {ptForSize(s.id)}pt
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>,
+          popover.portalTarget,
+        )}
+    </div>
+  );
+}
+
+function IntroToggle({
+  enabled,
+  onChange,
+}: {
+  enabled: boolean;
+  onChange: (next: boolean) => void;
+}): React.JSX.Element {
+  /* Owner directive 2026-10-19 · "remove the container · just toggle
+     and text" · the sealed chip chrome was retired · now a bare pill
+     switch with "Intro on / Intro off" label beside it. */
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={enabled}
+      onClick={() => onChange(!enabled)}
+      data-nex-intro-video-enabled={enabled ? "true" : "false"}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        padding: 0,
+        background: "transparent",
+        border: "none",
+        color: NEX.textPrimary,
+        fontFamily: NEX_FONT_SANS,
+        cursor: "pointer",
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          width: 36,
+          height: 20,
+          borderRadius: 999,
+          background: enabled ? NEX.green : "rgba(255,255,255,0.2)",
+          position: "relative",
+          transition: "background 180ms ease",
+          flexShrink: 0,
+        }}
+      >
+        <span
+          style={{
+            position: "absolute",
+            top: 2,
+            left: enabled ? 18 : 2,
+            width: 16,
+            height: 16,
+            borderRadius: 999,
+            background: "#FFFFFF",
+            transition: "left 180ms ease",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
+          }}
+        />
+      </span>
+      <span style={{ fontSize: 12, fontWeight: 700 }}>
+        {enabled ? "Intro on" : "Intro off"}
+      </span>
+    </button>
+  );
+}
+
+// ───────────────────── Preview panel ────────────────────────────────
+
+function IntroPreview({
+  videoUrl,
+  titleText,
+  titlePosition,
+  titleFontId,
+  titleSizeId,
+  titleColor,
+  titleAlign,
+  titleHighlight,
+  openingHours,
+  openingHoursPosition,
+  enabled,
+}: {
+  videoUrl: string | null;
+  titleText: string;
+  titlePosition: IntroTitlePosition;
+  titleFontId: IntroOverlayFontId;
+  titleSizeId: IntroOverlaySizeId;
+  titleColor: string;
+  titleAlign: "left" | "center" | "right";
+  titleHighlight: boolean;
+  openingHours: string | null;
+  openingHoursPosition: IntroTitlePosition;
+  enabled: boolean;
+}): React.JSX.Element {
+  const text = titleText.trim();
+  return (
+    <div
+      data-nex-intro-video-preview
+      data-nex-intro-video-preview-position={titlePosition}
+      style={{
+        position: "relative",
+        width: "100%",
+        aspectRatio: "9 / 16",
+        maxWidth: 260,
+        margin: "0 auto",
+        borderRadius: 18,
+        overflow: "hidden",
+        background: "#000",
+        border: `1px solid ${NEX.panelBorder}`,
+        boxShadow: "0 10px 24px -8px rgba(0,0,0,0.7)",
+      }}
+    >
+      {videoUrl ? (
+        <video
+          src={videoUrl}
+          autoPlay
+          muted
+          loop
+          playsInline
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+          }}
+        />
+      ) : (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "grid",
+            placeItems: "center",
+            background:
+              "linear-gradient(135deg, rgba(0,175,255,0.18), rgba(2,9,20,0.95))",
+            color: NEX.textMute,
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            textAlign: "center",
+            padding: 20,
+          }}
+        >
+          No video yet
+          <br />
+          <span style={{ color: NEX.textSecondary, marginTop: 6 }}>
+            Record or upload below
+          </span>
+        </div>
+      )}
+      {text && enabled && (
+        <TitleOverlay
+          text={text}
+          position={titlePosition}
+          fontId={titleFontId}
+          sizeId={titleSizeId}
+          color={titleColor}
+          align={titleAlign}
+          highlight={titleHighlight}
+        />
+      )}
+      {openingHours && enabled && (
+        <OpeningHoursOverlay
+          text={openingHours}
+          position={openingHoursPosition}
+        />
+      )}
+      {/* Owner directive 2026-10-19 · the theme-name chip previously
+          rendered here as a position:absolute overlay was moved OUT
+          of the tile · caller renders it as a caption above the
+          preview so the video stage stays clean. */}
+      {!enabled && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "rgba(0,0,0,0.7)",
+            color: NEX.textMute,
+            display: "grid",
+            placeItems: "center",
+            fontSize: 11,
+            fontWeight: 800,
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+          }}
+        >
+          Intro is off
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TitleOverlay({
+  text,
+  position,
+  fontId,
+  sizeId,
+  color,
+  align,
+  highlight,
+}: {
+  text: string;
+  position: IntroTitlePosition;
+  fontId: IntroOverlayFontId;
+  sizeId: IntroOverlaySizeId;
+  color: string;
+  align: "left" | "center" | "right";
+  highlight: boolean;
+}): React.JSX.Element {
+  const font = fontById(fontId);
+  const sizeMul = sizeById(sizeId).multiplier;
+  /* Owner directive 2026-10-19 · "title overlay must have space at
+     left and right side that text does not run over" · bump the
+     horizontal safe-margin from 12 → 24 so multi-line titles have
+     breathing room from the preview tile's rounded corners.
+     Fix 2026-10-19 · the `center` branch previously used `inset: 0`
+     shorthand which React warned about re-renders because other
+     branches set `left/right` as separate values. Expanded to four
+     explicit edges so React can diff cleanly without removing a
+     shorthand that collides with a longhand. */
+  const base: React.CSSProperties = {
+    position: "absolute",
+    left: 24,
+    right: 24,
+    display: "flex",
+    pointerEvents: "none",
+  };
+  /* Owner directive 2026-10-19 · explicit per-position edge spacing:
+     · Hero   · 24 side margins (preserved)
+     · Center · 5 side margins (owner spec · "min 5px each side")
+     · Footer · 5 side margins (owner spec) + 40 up from bottom edge
+       (owner spec · "footer text must be 40px up from footer edge") */
+  const alignToJustify =
+    align === "left" ? "flex-start" : align === "right" ? "flex-end" : "center";
+  const outerStyle: React.CSSProperties =
+    position === "hero"
+      ? { ...base, top: 28, bottom: "auto", alignItems: "flex-start", justifyContent: alignToJustify }
+      : position === "footer"
+        ? { ...base, top: "auto", bottom: 40, left: 5, right: 5, alignItems: "flex-end", justifyContent: alignToJustify }
+        : { ...base, top: 0, bottom: 0, left: 5, right: 5, alignItems: "center", justifyContent: alignToJustify };
+  const basePt = position === "hero" ? 24 : position === "center" ? 20 : 15;
+  const fontSize = Math.round(basePt * sizeMul);
+  const bgGrad =
+    position === "hero"
+      ? "linear-gradient(180deg, rgba(0,0,0,0.65) 0%, transparent 100%)"
+      : position === "footer"
+        ? "linear-gradient(0deg, rgba(0,0,0,0.65) 0%, transparent 100%)"
+        : "radial-gradient(ellipse at center, rgba(0,0,0,0.55) 0%, transparent 70%)";
+  return (
+    <>
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: bgGrad,
+          pointerEvents: "none",
+        }}
+      />
+      <div style={outerStyle}>
+        <h3
+          data-nex-intro-video-title-overlay
+          data-nex-intro-video-title-font={fontId}
+          data-nex-intro-video-title-size={sizeId}
+          data-nex-intro-video-title-color={color}
+          data-nex-intro-video-title-align={align}
+          data-nex-intro-video-title-highlight={highlight ? "true" : "false"}
+          style={{
+            margin: 0,
+            fontSize,
+            lineHeight: 1.2,
+            color,
+            textShadow: highlight ? "none" : "0 2px 10px rgba(0,0,0,0.65)",
+            textAlign: align,
+            maxWidth: "100%",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+            overflowWrap: "anywhere",
+            fontFamily: font.fontFamily,
+            background: highlight ? "rgba(0,0,0,0.65)" : "transparent",
+            padding: highlight ? "4px 10px" : 0,
+            borderRadius: highlight ? 6 : 0,
+            boxDecorationBreak: "clone" as const,
+            WebkitBoxDecorationBreak: "clone" as const,
+            ...font.previewStyle,
+          }}
+        >
+          {renderTitleWithEmoji(text, fontSize)}
+        </h3>
+      </div>
+    </>
+  );
+}
+
+/* Owner directive 2026-10-20 · opening-hours overlay · lives at the
+ * END OPPOSITE the user's title (hero/center → footer; footer → hero)
+ * so the two bands never overlap. Rendered as a slim centred chip
+ * (clock glyph + hours) with its own soft gradient scrim so it
+ * reads cleanly over any video. */
+function OpeningHoursOverlay({
+  text,
+  position,
+}: {
+  text: string;
+  position: IntroTitlePosition;
+}): React.JSX.Element {
+  const base: React.CSSProperties = {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    display: "flex",
+    justifyContent: "center",
+    pointerEvents: "none",
+  };
+  const outer: React.CSSProperties =
+    position === "hero"
+      ? { ...base, top: 10, bottom: "auto", alignItems: "flex-start" }
+      : { ...base, top: "auto", bottom: 10, alignItems: "flex-end" };
+  const scrim: React.CSSProperties =
+    position === "hero"
+      ? {
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 56,
+          background:
+            "linear-gradient(180deg, rgba(0,0,0,0.65) 0%, transparent 100%)",
+          pointerEvents: "none",
+        }
+      : {
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 56,
+          background:
+            "linear-gradient(0deg, rgba(0,0,0,0.65) 0%, transparent 100%)",
+          pointerEvents: "none",
+        };
+  return (
+    <>
+      <div aria-hidden style={scrim} />
+      <div style={outer}>
+        <span
+          data-nex-intro-video-opening-hours
+          data-nex-intro-video-opening-hours-position={position}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "4px 10px",
+            borderRadius: 999,
+            background: "rgba(0,0,0,0.55)",
+            border: `1px solid rgba(0,175,255,0.45)`,
+            color: "#FFFFFF",
+            fontSize: 11,
+            fontWeight: 800,
+            letterSpacing: "0.03em",
+            whiteSpace: "nowrap",
+            textShadow: "0 1px 4px rgba(0,0,0,0.6)",
+            fontFamily: NEX_FONT_SANS,
+          }}
+        >
+          <span aria-hidden style={{ fontSize: 12, lineHeight: 1 }}>⏱</span>
+          {text}
+        </span>
+      </div>
+    </>
+  );
+}
+
+/* Owner directive 2026-10-19 · ":slug:" tokens inside the title text
+ * must render as inline <img> tags using the food emoji directory ·
+ * never as raw text. Each matched token (e.g. ":glossy3d-09:") maps
+ * to /nex-themes/food/emoji/<slug>.png. Non-matched text segments
+ * render as plain spans so punctuation, letters, and Unicode glyphs
+ * continue to display verbatim. */
+function renderTitleWithEmoji(
+  text: string,
+  fontSize: number,
+): React.JSX.Element[] {
+  const parts: React.JSX.Element[] = [];
+  const re = /:([a-z0-9][a-z0-9_-]*):/gi;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  let key = 0;
+  const imgSize = Math.round(fontSize * 2);
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) {
+      parts.push(
+        <span key={`t-${key++}`}>{text.slice(last, m.index)}</span>,
+      );
+    }
+    const slug = m[1];
+    parts.push(
+      <img
+        key={`e-${key++}`}
+        src={`/nex-themes/food/emoji/${slug}.png`}
+        alt={slug}
+        style={{
+          width: imgSize,
+          height: imgSize,
+          objectFit: "contain",
+          verticalAlign: "middle",
+          display: "inline-block",
+        }}
+      />,
+    );
+    last = re.lastIndex;
+  }
+  if (last < text.length) {
+    parts.push(<span key={`t-${key++}`}>{text.slice(last)}</span>);
+  }
+  return parts;
+}
+
+// ───────────────────── Position choice chip ─────────────────────────
+
+function PositionChoice({
+  position,
+  active,
+  onSelect,
+}: {
+  position: IntroTitlePosition;
+  active: boolean;
+  onSelect: () => void;
+}): React.JSX.Element {
+  const label =
+    position === "hero" ? "Hero" : position === "center" ? "Center" : "Footer";
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={active}
+      onClick={onSelect}
+      data-nex-intro-video-position={position}
+      data-nex-intro-video-position-active={active ? "true" : "false"}
+      style={{
+        padding: "10px 8px",
+        borderRadius: 10,
+        border: `1px solid ${active ? NEX.cyan : "rgba(255,255,255,0.14)"}`,
+        background: active ? NEX.cyanDim : "rgba(255,255,255,0.04)",
+        color: active ? NEX.textPrimary : NEX.textSecondary,
+        fontSize: 12,
+        fontWeight: 800,
+        letterSpacing: "0.06em",
+        textTransform: "uppercase",
+        cursor: "pointer",
+        fontFamily: NEX_FONT_SANS,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 6,
+      }}
+    >
+      <PositionGlyph position={position} active={active} />
+      {label}
+    </button>
+  );
+}
+
+function PositionGlyph({
+  position,
+  active,
+}: {
+  position: IntroTitlePosition;
+  active: boolean;
+}): React.JSX.Element {
+  const color = active ? NEX.cyan : NEX.textMute;
+  const barY =
+    position === "hero" ? 6 : position === "center" ? 15 : 24;
+  return (
+    <svg
+      width="24"
+      height="34"
+      viewBox="0 0 24 34"
+      fill="none"
+      aria-hidden
+    >
+      <rect
+        x="2"
+        y="2"
+        width="20"
+        height="30"
+        rx="4"
+        stroke={color}
+        strokeWidth="1.5"
+      />
+      <rect
+        x="5"
+        y={barY}
+        width="14"
+        height="4"
+        rx="1"
+        fill={color}
+      />
+    </svg>
+  );
+}

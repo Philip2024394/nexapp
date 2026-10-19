@@ -89,6 +89,11 @@ export interface ColourSystem {
   glow?: string;
   /** Deep · drives bubble material backgrounds, dim overlays. */
   deep?: string;
+  /** Owner directive 2026-10-19 · optional override for the "read"
+   *  state of the mine-side delivery ticks ✓✓. When omitted the ticks
+   *  tint with `primary` as sealed. Crispy Chicken sets this to a
+   *  dark red that reads cleanly against the warm gold accent. */
+  deliveryTickColor?: string;
 }
 
 // ─── Package vocabulary ─────────────────────────────────────────────

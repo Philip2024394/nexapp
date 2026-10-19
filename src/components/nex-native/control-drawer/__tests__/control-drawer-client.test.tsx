@@ -222,9 +222,16 @@ describe("ControlDrawer · architectural guards", () => {
 
   it("row list exports stay stable (regression guard against silent re-ordering)", () => {
     expect(__internal.YOUR_NEX_ROWS.map((r) => r.key)).toEqual([
+      // Owner directive 2026-10-19 · Home row inserted at the top of
+      // YOUR NEX · routes to /nex-native/contacts so the drawer is
+      // the one-tap escape from any consumer surface.
+      "home-contacts",
       "profile",
       "chats-contacts",
       "chat-appearance",
+      // Owner directive 2026-10-19 · Intro Video row · settings page
+      // for the user's own 8s intro + title overlay.
+      "intro-video",
     ]);
     expect(__internal.YOUR_BUSINESS_ROWS.map((r) => r.key)).toEqual([
       "my-businesses",

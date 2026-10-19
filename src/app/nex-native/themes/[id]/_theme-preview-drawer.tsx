@@ -52,11 +52,17 @@ interface ThemePreviewDrawerProps {
    *  "side drawer on each theme must pick up the theme color for
    *  background and line or container". */
   readonly themeAccent?: string;
+  /** Owner directive 2026-10-19 · "side menu should be the same name
+   *  in chat header as on the side drawer" · theme-preview surfaces
+   *  pass the theme name (e.g. "Crispy Chicken") so the drawer's
+   *  identity row matches the chat header's title line. */
+  readonly themeName?: string;
 }
 
 export function ThemePreviewDrawer({
   session,
   themeAccent,
+  themeName,
 }: ThemePreviewDrawerProps): React.JSX.Element {
   return (
     <>
@@ -127,7 +133,11 @@ export function ThemePreviewDrawer({
           WebkitBackdropFilter: "blur(6px)",
         }}
       >
-        <ControlDrawer session={session} themeAccent={themeAccent} />
+        <ControlDrawer
+          session={session}
+          themeAccent={themeAccent}
+          identityNameOverride={themeName}
+        />
       </div>
     </>
   );

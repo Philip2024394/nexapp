@@ -78,6 +78,14 @@ export interface ControlDrawerProps {
    *  (preview surfaces, custom chrome) can match the surrounding button
    *  cluster's size + colour. */
   readonly triggerStyle?: React.CSSProperties;
+  /** Owner directive 2026-10-19 · "side menu should be the same name
+   *  in chat header as on the side drawer". When present, the drawer's
+   *  identity-bar primary name renders this string INSTEAD of
+   *  `session.displayName` · the nexHandle below is unchanged. Theme
+   *  previews pass the theme name (e.g. "Crispy Chicken") so the
+   *  drawer identity matches the chat header's title line. Real chat
+   *  surfaces omit this and keep the sealed per-user displayName. */
+  readonly identityNameOverride?: string;
   /** Optional theme accent hex · when supplied the drawer panel picks
    *  it up on the left border, section divider borders, and a subtle
    *  top-of-panel accent-tinted glow so the drawer visibly belongs to
@@ -119,6 +127,18 @@ function signInWithReturn(destination: string): string {
 // (help docs) leave `locked` undefined.
 const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
   {
+    key: "home-contacts",
+    label: "Home",
+    subtitle: "Back to contacts",
+    /* Owner directive 2026-10-19 · "home icon in side drawer that
+       will bring user back to contacts page" · the Home row is the
+       primary escape from any chat-theme preview (or other consumer
+       surface) · routes to /nex-native/contacts. Shown at the top of
+       YOUR NEX so it reads as the first/primary action. */
+    href: "/nex-native/contacts",
+    locked: true,
+  },
+  {
     key: "profile",
     label: "My profile",
     subtitle: "Identity and personal details",
@@ -142,6 +162,18 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
     label: "Chat appearance",
     subtitle: "Themes and personalisation",
     href: "/nex-native/chat-themes-library",
+    locked: true,
+  },
+  {
+    key: "intro-video",
+    label: "Intro Video",
+    subtitle: "Record your own · 8 seconds max",
+    /* Owner directive 2026-10-19 · settings surface for the user's
+       own intro video + a title overlay (hero · center · footer
+       position). Full UI flow is preview-honest; the server upload
+       action + Supabase bucket + nex_account column migration land
+       separately per the Safety Constitution deployment gate. */
+    href: "/nex-native/settings/intro-video",
     locked: true,
   },
 ];
@@ -197,7 +229,7 @@ const PREFERENCES_ROWS: ReadonlyArray<MenuRow> = [
 
 // ─── Entry component · trigger + drawer + confirmation modal ────────
 
-export function ControlDrawer({ session, themeAccent }: ControlDrawerProps) {
+export function ControlDrawer({ session, themeAccent, identityNameOverride }: ControlDrawerProps) {
   const [open, setOpen] = React.useState(false);
   // `rendered` tracks whether the drawer+backdrop are in the DOM at
   // all. It stays true for ~200ms after close so the slide-out
@@ -333,6 +365,7 @@ export function ControlDrawer({ session, themeAccent }: ControlDrawerProps) {
         <DrawerBody
           session={session}
           onLogoutClick={() => setConfirmLogout(true)}
+          identityNameOverride={identityNameOverride}
         />
       </aside>
       {confirmLogout ? (
@@ -418,13 +451,15 @@ function DrawerHeader({
 function DrawerBody({
   session,
   onLogoutClick,
+  identityNameOverride,
 }: {
   readonly session: ControlDrawerSession | null;
   readonly onLogoutClick: () => void;
+  readonly identityNameOverride?: string;
 }) {
   return (
     <div style={drawerBodyStyle}>
-      <IdentityBar session={session} />
+      <IdentityBar session={session} identityNameOverride={identityNameOverride} />
 
       {/* Owner directive 2026-10-18 · guest viewers see a 3D lock
           on every account-gated row. The row stays tappable · tap
@@ -477,8 +512,10 @@ function DrawerBody({
 
 function IdentityBar({
   session,
+  identityNameOverride,
 }: {
   readonly session: ControlDrawerSession | null;
+  readonly identityNameOverride?: string;
 }) {
   if (!session) {
     return (
@@ -508,9 +545,13 @@ function IdentityBar({
       </Link>
     );
   }
+  const nameToRender =
+    identityNameOverride && identityNameOverride.trim().length > 0
+      ? identityNameOverride.trim()
+      : session.displayName;
   return (
     <div style={identityBarStyle} data-nex-control-drawer-identity>
-      <div style={identityNameStyle}>{session.displayName}</div>
+      <div style={identityNameStyle}>{nameToRender}</div>
       {session.nexHandle ? (
         <div style={identityHandleStyle}>
           {/* Owner directive 2026-10-17 · the "nex-" prefix is a

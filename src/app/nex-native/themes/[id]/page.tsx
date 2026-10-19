@@ -181,6 +181,7 @@ export default async function ThemeViewerPage({
         <ThemePreviewDrawer
           session={drawerSession}
           themeAccent={pkg.colours.primary}
+          themeName={pkg.identity.name}
         />
         <ThemePreviewRail
           accent={pkg.colours.primary}
@@ -435,6 +436,7 @@ export default async function ThemeViewerPage({
       <ThemePreviewDrawer
         session={drawerSession}
         themeAccent={theme.accent_hex}
+        themeName={theme.name}
       />
       <ThemePreviewRail
         accent={theme.accent_hex}

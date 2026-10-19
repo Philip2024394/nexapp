@@ -18,7 +18,6 @@
 // Real session wiring is Phase 2A.1 work.
 
 import * as React from "react";
-import Link from "next/link";
 import { createEngine } from "../../chat-standard/_engine/theme-engine";
 import type { ThemePackage } from "../../chat-standard/_engine/types";
 import {
@@ -163,14 +162,21 @@ export function StandardExperienceLiveClient({
     .toUpperCase()
     .startsWith("NEX ");
   // Owner directive 2026-10-19 · signed-in viewers see their own
-  // NEX handle below the theme name in the preview header (e.g.
-  // "Crispy Chicken" / "234234"), NOT the theme's tagline. Guests
-  // keep the sealed brand-guest copy for NEX-brand previews and
-  // fall back to the theme's own tagline for every other theme.
-  const previewSubtitle: string | null =
-    viewerNexHandle && viewerNexHandle.trim().length > 0
-      ? viewerNexHandle.trim()
-      : pkg.identity.tagline?.trim() || null;
+  // NEX handle below the theme name in the preview header, prefixed
+  // with a single capital "NEX - " (owner directive · "there is only
+  // 1 NEX"). Account handles persisted as `nex-10842` get the
+  // lowercase `nex-` prefix stripped so the final line reads
+  // "NEX - 10842" and not the duplicated "NEX - nex-10842". Guests
+  // keep the sealed brand-guest copy for NEX-brand previews and fall
+  // back to the theme's own tagline for every other theme.
+  const previewSubtitle: string | null = (() => {
+    const raw = viewerNexHandle?.trim() ?? "";
+    if (raw.length === 0) {
+      return pkg.identity.tagline?.trim() || null;
+    }
+    const stripped = raw.replace(/^nex[-_]?/i, "");
+    return `NEX - ${stripped}`;
+  })();
   const peer = isNexBrandTheme
     ? NEX_GUEST_PEER
     : {
@@ -250,32 +256,12 @@ export function StandardExperienceLiveClient({
         themeEmojis={themeEmojis}
         themeStickers={themeStickers}
       />
-      <Link
-        href="/nex-native/chat-themes-library"
-        data-nex-theme-preview-back
-        aria-label="Back to themes"
-        style={{
-          position: "fixed",
-          top: "calc(env(safe-area-inset-top, 0) + 10px)",
-          left: 10,
-          zIndex: 150,
-          width: 36,
-          height: 36,
-          borderRadius: 999,
-          background: "rgba(0,0,0,0.55)",
-          color: "#F4F7FC",
-          border: "1px solid rgba(255,255,255,0.22)",
-          display: "grid",
-          placeItems: "center",
-          fontSize: 18,
-          textDecoration: "none",
-          backdropFilter: "blur(10px)",
-          WebkitBackdropFilter: "blur(10px)",
-          boxShadow: "0 4px 14px -4px rgba(0,0,0,0.6)",
-        }}
-      >
-        <span aria-hidden>←</span>
-      </Link>
+      {/* Owner directive 2026-10-19 · "remove the back button from
+          header" · the sealed 2026-10-11 back-arrow at top-left is
+          retired · navigation out of the preview is now handled by
+          the Home icon in the side drawer (routes to the contacts
+          page) + the sealed ThemePreviewActionBar's "← Back to
+          themes" link at the bottom + the browser back button. */}
     </div>
   );
 }
