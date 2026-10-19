@@ -40,6 +40,16 @@ const NEX = {
   textMuted: "#7D9BC0",
 };
 
+/* Owner directive 2026-10-18 · profile chrome retinting · reads the
+ * --nex-profile-accent CSS custom property set by the profile root
+ * (sourced from ?themeAccent in the URL when the viewer arrived from
+ * a chat theme preview). Falls back to the sealed NEX cyan for every
+ * route that does NOT carry a themeAccent so direct profile visits
+ * stay byte-identical to the sealed canonical design. */
+const ACCENT = `var(--nex-profile-accent, ${NEX.cyan})`;
+const ACCENT_SOFT = `color-mix(in srgb, var(--nex-profile-accent, ${NEX.cyan}) 35%, transparent)`;
+const ACCENT_FAINT = `color-mix(in srgb, var(--nex-profile-accent, ${NEX.cyan}) 14%, transparent)`;
+
 const SANS =
   "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
@@ -72,7 +82,7 @@ export function ProfileChrome(props: ProfileChromeProps): React.JSX.Element {
         background: NEX.bgTint,
         backdropFilter: "blur(8px)",
         WebkitBackdropFilter: "blur(8px)",
-        borderBottom: `1px solid ${NEX.cyanSoft}`,
+        borderBottom: `1px solid ${ACCENT_SOFT}`,
         fontFamily: SANS,
       }}
     >
@@ -121,8 +131,8 @@ export function ProfileChrome(props: ProfileChromeProps): React.JSX.Element {
                 height: 32,
                 borderRadius: "50%",
                 objectFit: "cover",
-                border: `2px solid ${NEX.cyan}`,
-                background: NEX.cyanFaint,
+                border: `2px solid ${ACCENT}`,
+                background: ACCENT_FAINT,
               }}
             />
           ) : (
@@ -135,9 +145,9 @@ export function ProfileChrome(props: ProfileChromeProps): React.JSX.Element {
                 borderRadius: "50%",
                 display: "grid",
                 placeItems: "center",
-                border: `2px solid ${NEX.cyan}`,
-                background: NEX.cyanFaint,
-                color: NEX.cyan,
+                border: `2px solid ${ACCENT}`,
+                background: ACCENT_FAINT,
+                color: ACCENT,
                 fontSize: 11,
                 fontWeight: 700,
               }}
@@ -180,7 +190,7 @@ export function ProfileChrome(props: ProfileChromeProps): React.JSX.Element {
             style={{
               fontSize: 13,
               fontWeight: 700,
-              color: NEX.cyan,
+              color: ACCENT,
               fontFamily: SANS,
             }}
           >

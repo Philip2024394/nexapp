@@ -34,6 +34,10 @@ import { IncomingCallHub } from "./_incoming-call-hub";
 import { PushSubscribeHub } from "./_push-subscribe-hub";
 import { AppBadgeSyncClient } from "./_app-badge-sync-client";
 import { SwCacheRegister } from "./_sw-cache-register";
+// Owner directive 2026-10-18 · preload the Cover Themes Library +
+// each per-layout preview on idle so the library opens instantly
+// no matter which nex-native page the user enters from.
+import { PrefetchCoverThemes } from "./cover-themes-library/_prefetch-cover-themes";
 // NEX surface stylesheet · imported here (not only inside _shell) so
 // every /nex-native/* route receives the shared tokens and the global
 // scrollbar-hide rule, including pages that don't mount the client
@@ -178,6 +182,11 @@ export default async function NexNativeLayout({
           returning sign-in / create-account pages are instant too.
           Lives outside the frame · no visual surface. */}
       <SwCacheRegister />
+      {/* Owner directive 2026-10-18 · preload the Cover Themes Library
+          + each per-layout preview on idle so the library opens
+          instantly regardless of which page the user enters from.
+          Fires once per browser session on requestIdleCallback. */}
+      <PrefetchCoverThemes />
     </I18nProvider>
   );
 }

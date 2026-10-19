@@ -125,9 +125,22 @@ describe("D · universal overlays route surface colours through the shared resol
   const chrome = fs.readFileSync(CHROME_OVERLAY, "utf8");
   const composer = fs.readFileSync(COMPOSER_OVERLAY, "utf8");
 
-  test("header icons overlay imports + calls resolveControlsTreatment", () => {
-    expect(header).toContain('from "./_engine/control-resolver"');
-    expect(header).toContain("resolveControlsTreatment({");
+  test("header icons overlay is a sealed null-stub · does not need to call resolveControlsTreatment (sealed 2026-10-11)", () => {
+    // R1 ownership moved to the native clusters (PortraitBloomShell
+    // HeaderRightCluster + StandardExperience StandardHeaderActions)
+    // in the 2026-10-11 seal. The overlay returns null; it does NOT
+    // participate in the shared controls-treatment contract any
+    // more. The import symbol is retained for a possible future seal
+    // reversal · see _universal-header-icons-overlay.tsx comment at
+    // lines 98-110 for the architecture rationale.
+    expect(header).toMatch(/return null;/);
+    expect(header).not.toMatch(/resolveControlsTreatment\s*\(\s*\{/);
+    // Verified companion · R1 ownership lives in the native cluster.
+    const native = fs.readFileSync(
+      path.join(REPO_ROOT, "src/app/nex-native/chat/_header-right-cluster.tsx"),
+      "utf8",
+    );
+    expect(native).toContain("data-nex-native-r1-cluster");
   });
 
   test("chrome overlay imports + calls resolveControlsTreatment", () => {

@@ -62,12 +62,22 @@ export function TwoStepSignupForm({
 
   // Step-1 local validation · basic sanity before advancing. The
   // real server-side validation still runs on final submit.
+  //
+  // Owner directive 2026-10-18 · page is locked to one viewport
+  // (no scroll) · every step-1 error now shares the same short
+  // single-line copy "Incomplete · Try Again" so swapping the hint
+  // area for the error never changes the row height and never
+  // pushes the form off-screen. The input borders still go orange
+  // (see onInputStyle at the field level) so the user can see
+  // which field is wrong without the error text having to spell
+  // it out.
+  const INCOMPLETE_RETRY = "Incomplete · Try Again";
   const step1Error = (() => {
-    if (!email.trim()) return "Enter your email address";
+    if (!email.trim()) return INCOMPLETE_RETRY;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
-      return "Enter a valid email address";
-    if (!password) return "Choose a password";
-    if (password.length < 6) return "Password must be 6+ characters";
+      return INCOMPLETE_RETRY;
+    if (!password) return INCOMPLETE_RETRY;
+    if (password.length < 6) return INCOMPLETE_RETRY;
     return null;
   })();
 
@@ -137,10 +147,13 @@ export function TwoStepSignupForm({
       </div>
 
       {/* Alternate action link · "Already have an account? Sign in"
-          lives below the panel (visible on both steps). */}
+          lives below the panel (visible on both steps). Owner
+          directive 2026-10-18 · nudged up to sit closer to the
+          panel after the one-viewport lock. */}
       <p
         style={{
-          marginTop: 22,
+          marginTop: 10,
+          marginBottom: 0,
           textAlign: "center",
           fontSize: 13,
           color: NEX.textPrimary,
@@ -268,7 +281,7 @@ function StepOnePanel({
             lineHeight: 1.4,
           }}
         >
-          Used to sign in. We&apos;ll ask for your NEX chat name next.
+          Create Account
         </div>
       )}
 

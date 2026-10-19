@@ -32,6 +32,12 @@ import {
   isWelcomeIntent,
   pickThemeIntentCopy,
 } from "../../welcome/_welcome-intent";
+// Owner-authorised 2026-10-18 · S3 redirect chain · shop intent
+// routes to the Face Cover picker, every other intent (including
+// null, themes, personalised, tampered) keeps the sealed
+// Add-to-Home-Screen landing. Pure helper from
+// `_onboarding-destinations.ts`.
+import { postThemePickDestination } from "../_onboarding-destinations";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -72,6 +78,12 @@ export default async function PickThemePage() {
     cookieJar.delete(WELCOME_INTENT_COOKIE);
   }
   const intentCopy = intent ? pickThemeIntentCopy(intent) : null;
+  // Owner-authorised 2026-10-18 · S3 · derive the post-theme-pick
+  // destination from the intent that was JUST read above (before
+  // the cookie clear at line 72). Shop intent routes to the Face
+  // Cover picker; everything else preserves the sealed
+  // Add-to-Home-Screen landing byte-for-byte.
+  const nextStepHref = postThemePickDestination(intent);
 
   const liveRows = listLiveWorldsAsBrowserRows();
   const freeThemes = NEX_FREE_IDS.map((id) =>
@@ -202,7 +214,11 @@ export default async function PickThemePage() {
             }}
           >
             {freeThemes.map((theme) => (
-              <ThemeChoiceCard key={theme.id} theme={theme} />
+              <ThemeChoiceCard
+                key={theme.id}
+                theme={theme}
+                nextStepHref={nextStepHref}
+              />
             ))}
           </section>
 
@@ -260,8 +276,9 @@ export default async function PickThemePage() {
               Browse all themes →
             </Link>
             <Link
-              href="/nex-native/create-account/welcome"
+              href={nextStepHref}
               data-nex-pick-theme-skip
+              data-nex-pick-theme-skip-dest={nextStepHref}
               style={{
                 textAlign: "center",
                 padding: "10px 14px",
@@ -279,7 +296,13 @@ export default async function PickThemePage() {
   );
 }
 
-function ThemeChoiceCard({ theme }: { theme: BrowserThemeRow }) {
+function ThemeChoiceCard({
+  theme,
+  nextStepHref,
+}: {
+  theme: BrowserThemeRow;
+  nextStepHref: string;
+}) {
   const accent = theme.accent_hex;
   const rim = theme.bubble_rim_hex ?? accent;
   const composer = theme.composer_rim_hex ?? accent;
@@ -287,6 +310,7 @@ function ThemeChoiceCard({ theme }: { theme: BrowserThemeRow }) {
     <form
       action={updateChatThemeAction}
       data-nex-pick-theme-card={theme.id}
+      data-nex-pick-theme-card-dest={nextStepHref}
       style={{
         position: "relative",
         display: "flex",
@@ -300,11 +324,7 @@ function ThemeChoiceCard({ theme }: { theme: BrowserThemeRow }) {
       }}
     >
       <input type="hidden" name="chat_theme" value={theme.id} />
-      <input
-        type="hidden"
-        name="next"
-        value="/nex-native/create-account/welcome"
-      />
+      <input type="hidden" name="next" value={nextStepHref} />
       <span
         aria-hidden
         style={{

@@ -128,12 +128,17 @@ export default async function SignInPage({ searchParams }: PageProps) {
         id="main"
         data-nex-sign-in-root
         style={{
+          // Owner directive 2026-10-18 · lock to one viewport · no
+          // page scroll. Inner wrapper also sets height:100% +
+          // overflow:hidden so the form stays reachable without
+          // scrolling.
           position: "relative",
-          minHeight: "100dvh",
+          height: "100dvh",
+          maxHeight: "100dvh",
           background: NEX.bg,
           color: NEX.textPrimary,
           fontFamily: SANS,
-          overflowX: "hidden",
+          overflow: "hidden",
         }}
       >
         {/* Full-viewport Earth-explorer backdrop · owner-supplied PNG
@@ -173,12 +178,20 @@ export default async function SignInPage({ searchParams }: PageProps) {
 
         <div
           style={{
+            // Owner directive 2026-10-18 · wrapper fills the locked
+            // 100dvh main · flex-column so hero + icons settle above
+            // and the form occupies the bottom without page scroll.
             position: "relative",
             zIndex: 2,
+            height: "100%",
             maxWidth: 420,
             margin: "0 auto",
             padding:
-              "calc(env(safe-area-inset-top, 0px) + 14px) 20px calc(env(safe-area-inset-bottom, 0px) + 24px)",
+              "calc(env(safe-area-inset-top, 0px) + 10px) 20px calc(env(safe-area-inset-bottom, 0px) + 14px)",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            boxSizing: "border-box",
           }}
         >
           {/* ── Top brand header · badge + wordmark + taglines ── */}
@@ -188,7 +201,8 @@ export default async function SignInPage({ searchParams }: PageProps) {
               display: "flex",
               alignItems: "flex-start",
               gap: 12,
-              marginBottom: 10,
+              marginBottom: 4,
+              flexShrink: 0,
             }}
           >
             <NexPingBadge size={56} accent={NEX.cyan} dataTestId="sign-in-nex" />
@@ -246,14 +260,15 @@ export default async function SignInPage({ searchParams }: PageProps) {
             data-nex-sign-in-hero
             style={{
               maxWidth: 240,
-              marginTop: 18,
-              marginBottom: 16,
+              marginTop: 8,
+              marginBottom: 8,
+              flexShrink: 0,
             }}
           >
             <h1
               style={{
                 margin: 0,
-                fontSize: 32,
+                fontSize: 26,
                 fontWeight: 800,
                 lineHeight: 1.05,
                 letterSpacing: "-0.02em",
@@ -268,9 +283,9 @@ export default async function SignInPage({ searchParams }: PageProps) {
                 data-nex-sign-in-wordmark
                 style={{
                   display: "block",
-                  height: 96,
+                  height: 60,
                   width: "auto",
-                  marginTop: 4,
+                  marginTop: 2,
                   filter: "drop-shadow(0 6px 20px rgba(180,124,255,0.4))",
                   userSelect: "none",
                   pointerEvents: "none",
@@ -279,8 +294,8 @@ export default async function SignInPage({ searchParams }: PageProps) {
             </h1>
             <div
               style={{
-                marginTop: 10,
-                fontSize: 18,
+                marginTop: 6,
+                fontSize: 15,
                 fontWeight: 700,
                 color: NEX.textPrimary,
                 textShadow: "0 1px 4px rgba(0,0,0,0.6)",
@@ -293,7 +308,7 @@ export default async function SignInPage({ searchParams }: PageProps) {
           {/* ── 4-capability icon tile · reuse landing icon set ── */}
           <section
             data-nex-sign-in-icon-set
-            style={{ marginBottom: 16, width: "100%" }}
+            style={{ marginBottom: 10, width: "100%", flexShrink: 0 }}
           >
             <img
               src="/nex-native/landing-icon-set.png"

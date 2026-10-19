@@ -641,10 +641,42 @@ export async function sendPeerMessageAction(
     redirect(`/nex-native/chat`);
   }
 
-  const conversation = await peerConversationService.getOrCreatePeerConversation(
-    session.account.id,
-    peerAccountId,
-  );
+  // Slice 0.9 · Owner-approved 2026-10-18 · sender-aware conversation
+  // creation so a recipient's who_can_message = 'contacts' preference
+  // is enforced when the pair has no prior conversation. Existing
+  // conversations retain NEX gate-bypass policy.
+  //
+  // Fail-closed · recipient_contacts_only AND unexpected errors both
+  // skip the send. Honest copy via query param · the chat page may
+  // choose to surface a buyer-visible message.
+  let conversation: Awaited<
+    ReturnType<typeof peerConversationService.getOrCreatePeerConversationAsSender>
+  >;
+  try {
+    conversation = await peerConversationService.getOrCreatePeerConversationAsSender(
+      session.account.id,
+      peerAccountId,
+    );
+  } catch (e) {
+    if (
+      (e as { digest?: string } | undefined)?.digest === "NEXT_REDIRECT"
+    ) {
+      throw e;
+    }
+    const errMsg = e instanceof Error ? e.message : String(e);
+    if (errMsg.includes("recipient_contacts_only")) {
+      redirect(
+        `/nex-native/chat/peer/${peerAccountId}?message_error=contacts_only`,
+      );
+    }
+    console.warn(
+      "[peer-message] conversation creation failed",
+      e instanceof Error ? e.message : e,
+    );
+    redirect(
+      `/nex-native/chat/peer/${peerAccountId}?message_error=send_failed`,
+    );
+  }
 
   const insertedRow = await peerMessageService.sendPeerMessage({
     conversation_id: conversation.id,
@@ -904,10 +936,36 @@ export async function sendPeerStickerAction(
     redirect(`/nex-native/chat/peer/${peerAccountId}`);
   }
 
-  const conversation = await peerConversationService.getOrCreatePeerConversation(
-    session.account.id,
-    peerAccountId,
-  );
+  // Slice 0.9 · Owner-approved 2026-10-18 · sender-aware (see
+  // sendPeerMessageAction above for the sealed reasoning).
+  let conversation: Awaited<
+    ReturnType<typeof peerConversationService.getOrCreatePeerConversationAsSender>
+  >;
+  try {
+    conversation = await peerConversationService.getOrCreatePeerConversationAsSender(
+      session.account.id,
+      peerAccountId,
+    );
+  } catch (e) {
+    if (
+      (e as { digest?: string } | undefined)?.digest === "NEXT_REDIRECT"
+    ) {
+      throw e;
+    }
+    const errMsg = e instanceof Error ? e.message : String(e);
+    if (errMsg.includes("recipient_contacts_only")) {
+      redirect(
+        `/nex-native/chat/peer/${peerAccountId}?sticker_error=contacts_only`,
+      );
+    }
+    console.warn(
+      "[peer-sticker] conversation creation failed",
+      e instanceof Error ? e.message : e,
+    );
+    redirect(
+      `/nex-native/chat/peer/${peerAccountId}?sticker_error=send_failed`,
+    );
+  }
 
   // Snapshot built entirely from DB values · the browser never
   // participated in setting image_url, label, type, or aspect.
@@ -1777,11 +1835,46 @@ export async function sendProductInquiryAction(
       : `Is the ${product.name} still available?`;
   const body = customBody || defaultBody;
 
-  const conversation =
-    await peerConversationService.getOrCreatePeerConversation(
-      session.account.id,
-      peerAccountId,
+  // Slice 0.8 · Owner-approved 2026-10-18 · sender-aware conversation
+  // creation so a shop owner's who_can_message = 'contacts' preference
+  // is enforced when the buyer has no prior conversation. Existing
+  // conversations retain NEX policy (gate bypass) · a buyer who has
+  // already chatted with this shop can still send inquiries.
+  //
+  // Fail-closed · any error (recipient_contacts_only · unexpected
+  // service error) rejects the send without creating a message.
+  // Honest buyer-facing copy · adding a contact requires the shop
+  // owner to accept, which the buyer cannot force · we direct them
+  // to reach the shop another way.
+  let conversation: Awaited<
+    ReturnType<typeof peerConversationService.getOrCreatePeerConversationAsSender>
+  >;
+  try {
+    conversation =
+      await peerConversationService.getOrCreatePeerConversationAsSender(
+        session.account.id,
+        peerAccountId,
+      );
+  } catch (e) {
+    if (
+      (e as { digest?: string } | undefined)?.digest === "NEXT_REDIRECT"
+    ) {
+      throw e;
+    }
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes("recipient_contacts_only")) {
+      redirect(
+        `/nex-native/chat/peer/${peerAccountId}?product_error=contacts_only`,
+      );
+    }
+    console.warn(
+      "[product-inquiry] conversation creation failed",
+      e instanceof Error ? e.message : e,
     );
+    redirect(
+      `/nex-native/chat/peer/${peerAccountId}?product_error=send_failed`,
+    );
+  }
 
   // The DB pair-check + service both require url+type set together ·
   // when a product has no image we skip the attachment entirely and
@@ -1871,11 +1964,37 @@ export async function sendMenuItemInquiryAction(
       : `Is the ${item.name} available?`;
   const body = customBody || defaultBody;
 
-  const conversation =
-    await peerConversationService.getOrCreatePeerConversation(
-      session.account.id,
-      peerAccountId,
+  // Slice 0.8 · Owner-approved 2026-10-18 · sender-aware (see
+  // sendProductInquiryAction above for the sealed reasoning).
+  let conversation: Awaited<
+    ReturnType<typeof peerConversationService.getOrCreatePeerConversationAsSender>
+  >;
+  try {
+    conversation =
+      await peerConversationService.getOrCreatePeerConversationAsSender(
+        session.account.id,
+        peerAccountId,
+      );
+  } catch (e) {
+    if (
+      (e as { digest?: string } | undefined)?.digest === "NEXT_REDIRECT"
+    ) {
+      throw e;
+    }
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes("recipient_contacts_only")) {
+      redirect(
+        `/nex-native/chat/peer/${peerAccountId}?menu_error=contacts_only`,
+      );
+    }
+    console.warn(
+      "[menu-item-inquiry] conversation creation failed",
+      e instanceof Error ? e.message : e,
     );
+    redirect(
+      `/nex-native/chat/peer/${peerAccountId}?menu_error=send_failed`,
+    );
+  }
 
   const hasImage = !!item.image_url;
   await peerMessageService.sendPeerMessage({
@@ -1977,12 +2096,25 @@ export async function sendCartOrderAction(
       kindRaw === "free" || kindRaw === "estimate" ? kindRaw : "unknown";
     deliveryQuote = { kind };
     if (kind === "estimate") {
-      const d = Number(dq.distance_km);
-      const f = Number(dq.fare_pence);
-      const e = Number(dq.eta_minutes);
-      if (Number.isFinite(d) && d >= 0) deliveryQuote.distance_km = d;
-      if (Number.isFinite(f) && f >= 0) deliveryQuote.fare_pence = f;
-      if (Number.isFinite(e) && e >= 0) deliveryQuote.eta_minutes = e;
+      // Slice 0.6b Fix A · Owner-approved 2026-10-18 · strict typed
+      // validation per quote kind. Reject `null`, missing, string, and
+      // non-finite values · do NOT coerce. For `kind === "estimate"`,
+      // require positive distance / fare / ETA · zero values are
+      // nonsensical for an advertised estimate. (Zero fare is only
+      // meaningful under `kind === "free"`, which is handled below
+      // and never propagates `fare_pence`.)
+      const dRaw = dq.distance_km;
+      const fRaw = dq.fare_pence;
+      const eRaw = dq.eta_minutes;
+      if (typeof dRaw === "number" && Number.isFinite(dRaw) && dRaw > 0) {
+        deliveryQuote.distance_km = dRaw;
+      }
+      if (typeof fRaw === "number" && Number.isFinite(fRaw) && fRaw > 0) {
+        deliveryQuote.fare_pence = fRaw;
+      }
+      if (typeof eRaw === "number" && Number.isFinite(eRaw) && eRaw > 0) {
+        deliveryQuote.eta_minutes = eRaw;
+      }
       deliveryQuote.currency = "IDR";
     }
     if (kind === "free") {
@@ -1998,17 +2130,76 @@ export async function sendCartOrderAction(
     redirect("/nex-native/cart?send_error=" + encodeURIComponent("Cart is empty"));
   }
 
-  // Validate + normalise items server-side. Buyer-supplied prices are
-  // trusted for now (snapshot) · a stricter world could re-fetch from
-  // nex_product/nex_menu_item to prevent tampering. Doing that here
-  // for products (physical goods) so prices are authoritative; menu
-  // items keep the client-provided price to avoid an extra DB roundtrip
-  // per line.
+  // Slice 0 · Owner-approved 2026-10-18 · server-side ownership
+  // verification BEFORE any cart line is processed.
+  //
+  // Rules:
+  //  (a) peerAccountId must identify a real nex_account row · otherwise
+  //      peerConversationService would silently create a conversation
+  //      with a dangling peer
+  //  (b) shop_id must identify a real nex_business row AND that
+  //      business must be owned by peerAccountId · prevents a malicious
+  //      client from aiming a cart at a shop belonging to a different
+  //      owner (ownership mismatch is a hard reject · NOT a silent drop)
+  //
+  // Honesty · a single neutral buyer-facing message for all failure
+  // paths · we never disclose which identifier (peer or shop) failed
+  // verification. Detailed diagnostics stay in server-side console
+  // output for ops only.
+  const SHOP_VERIFY_ERROR = encodeURIComponent(
+    "This shop could not be verified. Please return to the shop and try again.",
+  );
+  let peerAccount: Awaited<ReturnType<typeof accountService.getAccountById>> | null = null;
+  let targetBusiness: Awaited<ReturnType<typeof businessService.getBusinessById>> | null = null;
+  try {
+    peerAccount = await accountService.getAccountById(peerAccountId);
+  } catch (e) {
+    console.warn(
+      "[cart-order] peer-account lookup failed",
+      e instanceof Error ? e.message : e,
+    );
+    redirect("/nex-native/cart?send_error=" + SHOP_VERIFY_ERROR);
+  }
+  if (!peerAccount) {
+    redirect("/nex-native/cart?send_error=" + SHOP_VERIFY_ERROR);
+  }
+  try {
+    targetBusiness = await businessService.getBusinessById(shopId);
+  } catch (e) {
+    console.warn(
+      "[cart-order] shop lookup failed",
+      e instanceof Error ? e.message : e,
+    );
+    redirect("/nex-native/cart?send_error=" + SHOP_VERIFY_ERROR);
+  }
+  if (!targetBusiness || targetBusiness.owner_account_id !== peerAccountId) {
+    redirect("/nex-native/cart?send_error=" + SHOP_VERIFY_ERROR);
+  }
+
+  // Slice 0 · Owner-approved 2026-10-18 · fail-closed server-side
+  // price + ownership verification for EVERY item line, both product
+  // AND menu_item kinds.
+  //
+  // Owner directive · if ANY line fails existence · ownership · or
+  // authoritative price refresh, the ENTIRE cart submission is
+  // rejected · never a partial-send with silent drops. The buyer sees
+  // a single neutral actionable message · diagnostics stay server-side.
+  //
+  // Previously, products re-fetched price but fell open to the
+  // client-supplied value on service error · menu_items trusted the
+  // client payload entirely with no DB check. Both paths are now
+  // fail-closed and reject the whole cart on failure.
+  const ITEM_VERIFY_ERROR = encodeURIComponent(
+    "Some items could not be verified. Please review your shop items and try again.",
+  );
   const items: import("@/lib/nex-native/peer-message-service").NexPeerCartOrderItem[] = [];
   let subtotal = 0;
   let firstImage: string | null = null;
   for (const raw of itemsRaw) {
-    if (!raw || typeof raw !== "object") continue;
+    if (!raw || typeof raw !== "object") {
+      // Malformed line in the client payload · not recoverable · reject.
+      redirect("/nex-native/cart?send_error=" + ITEM_VERIFY_ERROR);
+    }
     const it = raw as Record<string, unknown>;
     const kind = String(it.kind ?? "product");
     const id = String(it.id ?? "").trim();
@@ -2017,21 +2208,58 @@ export async function sendCartOrderAction(
       1,
       Math.min(999, Math.floor(Number(it.quantity ?? 1))),
     );
-    if (!id || !name) continue;
+    if (!id || !name) {
+      redirect("/nex-native/cart?send_error=" + ITEM_VERIFY_ERROR);
+    }
 
-    let price = Math.max(0, Math.floor(Number(it.price_pence ?? 0)));
-    // Refresh authoritative price for products (physical goods only).
+    // Price always starts at 0 · the authoritative lookup below sets
+    // it · we never read it.price_pence from the client payload.
+    let price = 0;
     if (kind === "product") {
+      let product;
       try {
-        const product = await productService.getProductById(id);
-        if (product) {
-          price = product.price_pence;
-          // Sanity: item's shop must be the target shop.
-          if (product.business_id !== shopId) continue;
-        }
-      } catch {
-        // Silently trust the client-provided price · fail-open.
+        product = await productService.getProductById(id);
+      } catch (e) {
+        console.warn(
+          "[cart-order] product lookup failed",
+          id.slice(0, 8),
+          e instanceof Error ? e.message : e,
+        );
+        redirect("/nex-native/cart?send_error=" + ITEM_VERIFY_ERROR);
       }
+      if (!product) {
+        // Product no longer exists · unverifiable · reject.
+        redirect("/nex-native/cart?send_error=" + ITEM_VERIFY_ERROR);
+      }
+      if (product.business_id !== shopId) {
+        // Cross-shop item · ownership mismatch · reject.
+        redirect("/nex-native/cart?send_error=" + ITEM_VERIFY_ERROR);
+      }
+      price = product.price_pence;
+    } else if (kind === "menu_item") {
+      let menuItem;
+      try {
+        menuItem = await menuService.getMenuItemById(id);
+      } catch (e) {
+        console.warn(
+          "[cart-order] menu_item lookup failed",
+          id.slice(0, 8),
+          e instanceof Error ? e.message : e,
+        );
+        redirect("/nex-native/cart?send_error=" + ITEM_VERIFY_ERROR);
+      }
+      if (!menuItem) {
+        redirect("/nex-native/cart?send_error=" + ITEM_VERIFY_ERROR);
+      }
+      if (menuItem.business_id !== shopId) {
+        redirect("/nex-native/cart?send_error=" + ITEM_VERIFY_ERROR);
+      }
+      price = menuItem.price_pence;
+    } else {
+      // Unknown kind · future cross-category kinds (service ·
+      // accommodation) land in Slice 6+ · for Slice 0 we reject any
+      // kind we don't yet authoritatively re-price.
+      redirect("/nex-native/cart?send_error=" + ITEM_VERIFY_ERROR);
     }
 
     const variantsRaw = Array.isArray(it.variants) ? it.variants : [];
@@ -2183,10 +2411,17 @@ export async function sendCartOrderAction(
   if (deliveryQuote) {
     bodyLines.push("");
     if (deliveryQuote.kind === "free") {
+      // Slice 0.6b Fix B · Owner-approved 2026-10-18 · honest copy ·
+      // the free-delivery claim is buyer-supplied and NOT verified
+      // against any shop-side offer record. Present it as a
+      // buyer-claim with "confirm in chat" guidance, never as a
+      // shop-verified FREE badge.
       bodyLines.push(
-        `🚚 Delivery · FREE${
-          deliveryQuote.free_reason ? ` (${deliveryQuote.free_reason})` : ""
-        }`,
+        `🚚 Buyer says delivery is free${
+          deliveryQuote.free_reason
+            ? ` (${deliveryQuote.free_reason})`
+            : ""
+        } · confirm in chat`,
       );
     } else if (
       deliveryQuote.kind === "estimate" &&
@@ -2237,11 +2472,56 @@ export async function sendCartOrderAction(
   }
   const body = bodyLines.join("\n");
 
-  const conversation =
-    await peerConversationService.getOrCreatePeerConversation(
-      session.account.id,
-      peerAccountId,
+  // Slice 0.75 · Owner-approved 2026-10-18 · sender-aware conversation
+  // creation so a recipient's `who_can_message = 'contacts'` preference
+  // is enforced when the pair has no prior conversation. Existing
+  // conversations bypass the gate · documented NEX policy sealed in
+  // peer-conversation-service.getOrCreatePeerConversationAsSender
+  // (lines 142-173) · users who have chatted before keep seeing each
+  // other even if preferences change later.
+  //
+  // Fail-closed · any error (recipient_contacts_only · unexpected
+  // service error) rejects the send without creating a cart message.
+  // Buyer-facing copy is deliberately neutral and does NOT instruct
+  // the buyer to "add the shop as a contact" · unlocking a
+  // contacts-only recipient requires the shop owner to accept a
+  // friend edge (chat-preferences-service.areContacts semantics) · a
+  // one-sided action the buyer cannot guarantee. Actionable guidance:
+  // reach the shop another way (phone · in-person · their published
+  // channels).
+  const CONTACTS_ONLY_ERROR = encodeURIComponent(
+    "This shop isn't accepting cart orders from new senders right now. Please reach the shop another way to place this order.",
+  );
+  const CONVERSATION_ERROR = encodeURIComponent(
+    "This order could not be sent. Please try again shortly.",
+  );
+  let conversation: Awaited<
+    ReturnType<typeof peerConversationService.getOrCreatePeerConversationAsSender>
+  >;
+  try {
+    conversation =
+      await peerConversationService.getOrCreatePeerConversationAsSender(
+        session.account.id,
+        peerAccountId,
+      );
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    // Re-throw NEXT_REDIRECT so nested redirects (none today, but safe)
+    // propagate instead of being swallowed as a conversation error.
+    if (
+      (e as { digest?: string } | undefined)?.digest === "NEXT_REDIRECT"
+    ) {
+      throw e;
+    }
+    if (msg.includes("recipient_contacts_only")) {
+      redirect("/nex-native/cart?send_error=" + CONTACTS_ONLY_ERROR);
+    }
+    console.warn(
+      "[cart-order] conversation creation failed",
+      e instanceof Error ? e.message : e,
     );
+    redirect("/nex-native/cart?send_error=" + CONVERSATION_ERROR);
+  }
 
   await peerMessageService.sendPeerMessage({
     conversation_id: conversation.id,
@@ -2803,11 +3083,43 @@ export async function shareProductToContactAction(
   const defaultBody = `Just seen and it looks keen 👀 · from ${originShop.display_name}`;
   const body = customBody || defaultBody;
 
-  const conversation =
-    await peerConversationService.getOrCreatePeerConversation(
-      session.account.id,
-      peerAccountId,
+  // Slice 0.9 · Owner-approved 2026-10-18 · sender-aware · a recipient
+  // with who_can_message = 'contacts' should not receive unsolicited
+  // product shares from strangers. Existing conversations keep the
+  // NEX gate-bypass policy. Error path uses the same safeBack the
+  // rest of this action uses so the user returns to where they
+  // triggered the share.
+  let conversation: Awaited<
+    ReturnType<typeof peerConversationService.getOrCreatePeerConversationAsSender>
+  >;
+  try {
+    conversation =
+      await peerConversationService.getOrCreatePeerConversationAsSender(
+        session.account.id,
+        peerAccountId,
+      );
+  } catch (e) {
+    if (
+      (e as { digest?: string } | undefined)?.digest === "NEXT_REDIRECT"
+    ) {
+      throw e;
+    }
+    const errMsg = e instanceof Error ? e.message : String(e);
+    const errorToken = errMsg.includes("recipient_contacts_only")
+      ? "contacts_only"
+      : "send_failed";
+    if (errorToken === "send_failed") {
+      console.warn(
+        "[share-product] conversation creation failed",
+        e instanceof Error ? e.message : e,
+      );
+    }
+    redirect(
+      safeBack +
+        (safeBack.includes("?") ? "&" : "?") +
+        `share_error=${errorToken}`,
     );
+  }
 
   const hasImage = !!product.image_url;
   await peerMessageService.sendPeerMessage({

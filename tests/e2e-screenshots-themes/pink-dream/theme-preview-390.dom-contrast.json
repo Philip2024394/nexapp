@@ -1,0 +1,36 @@
+{
+  "slug": "pink-dream",
+  "viewport": "theme-preview-390",
+  "results": [
+    {
+      "selector": "[data-nex-se-bubble=\"peer\"]",
+      "role": "bubble-text",
+      "fg": "#f4bca2",
+      "bg": "#63322e",
+      "bgWhere": "descendant:div",
+      "ratio": 6.2,
+      "threshold": 4.5,
+      "label": "pass"
+    },
+    {
+      "selector": "[data-nex-se-bubble=\"mine\"]",
+      "role": "bubble-text",
+      "fg": "#f4bca2",
+      "bg": "#63322e",
+      "bgWhere": "ancestor:div",
+      "ratio": 6.2,
+      "threshold": 4.5,
+      "label": "pass"
+    },
+    {
+      "selector": "[data-nex-se-composer-send-inline]",
+      "role": "cta-fill",
+      "fg": "#7596da",
+      "bg": "#63322e",
+      "bgWhere": "ancestor:div",
+      "ratio": 3.52,
+      "threshold": 3,
+      "label": "pass"
+    }
+  ]
+}

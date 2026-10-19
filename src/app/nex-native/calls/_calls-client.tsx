@@ -13,7 +13,15 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { NexPageHeader } from "../_page-header";
+// NexPageHeader import retired 2026-10-19 along with its mount ·
+// hub now uses the sealed CallsVideoHeader primitive below.
+// Owner directive 2026-10-19 · hub adopts the sealed Call Center
+// chrome · header rendered by the Phase 1 CallsVideoHeader
+// primitive. Status is passed as "ended" with no timer because
+// the hub is a landing page, not an active call · the primitive
+// handles that honestly (no infinite "connected" lie, no fake
+// elapsed time).
+import { CallsVideoHeader } from "@/lib/nex-native/calls-chrome/calls-video-header";
 import { useRouter } from "next/navigation";
 import {
   PresenceProvider,
@@ -52,23 +60,41 @@ interface CallsClientProps {
   recentCalls: RecentCallRow[];
 }
 
-// Palette tuned to the reference image · deep navy base, rich card
-// surfaces, orange brand accent, green voice, blue video, red missed.
+// Owner directive 2026-10-19 · UI containers aligned to the sealed
+// NEX theme palette used across /directory, /welcome, Phase 1 Call
+// Center chrome, and every other dark-navy surface. Earlier values
+// (purple-navy card bg, white-tinted borders, grey-muted text) are
+// retired · everything now reads from the same NEX visual system.
+//
+// Semantic status colours (green/blue/red) are KEPT because they
+// signal call state (voice-active / video-active / missed) · not
+// container theming · changing them would break the honest-signal
+// discipline on the Recent calls filter chips.
 const PAL = {
-  // Call Center + call surface share the Create Account page's deep
-  // navy canvas (#020914) + the same single cyan radial glow at the
-  // top. If you change these, update CALL_SURFACE in _call-launcher
-  // so the three surfaces stay aligned.
+  // Base canvas · unchanged · matches /welcome + /directory + Create
+  // Account + Phase 1 Call Center preview.
   bg: "#020914",
   bg2: "#020914",
-  card: "#121737",
-  cardBorder: "rgba(255,255,255,0.06)",
-  cardBorderStrong: "rgba(255,255,255,0.10)",
-  text: "#F2F5FA",
-  textDim: "#A6ADC2",
-  textMuted: "#6B7490",
-  orange: "#FF8A2A",
-  orangeSoft: "rgba(255,138,42,0.14)",
+  // Container surfaces · NEX panel navy + cyan-tinted border family.
+  // Replaces the earlier #121737 (purple-navy) + white-tinted
+  // borders that drifted from the rest of the app.
+  card: "#071525",
+  cardBorder: "rgba(0,175,255,0.18)",
+  cardBorderStrong: "rgba(0,175,255,0.28)",
+  // Text ladder · exact match to the sealed NEX text ladder used by
+  // directory + welcome + chrome primitives.
+  text: "#F2F5F8",
+  textDim: "#B5C3D6",
+  textMuted: "#7D9BC0",
+  // NEX brand orange · aligned to the standard #FF7200 used across
+  // the directory magnify button, welcome CTA, and the Call Center
+  // End Call indicator palette. Replaces the earlier brighter
+  // #FF8A2A.
+  orange: "#FF7200",
+  orangeSoft: "rgba(255,114,0,0.14)",
+  // Semantic status colours · voice (green) · video (blue) · missed
+  // (red) · unchanged · these are honest state signals, not theme
+  // chrome.
   green: "#22C55E",
   greenSoft: "rgba(34,197,94,0.18)",
   blue: "#3B82F6",
@@ -144,9 +170,36 @@ function CallsClientInner({
           overflow: "hidden",
         }}
       >
+        {/* Owner directive 2026-10-19 · sealed directory-bg layer ·
+            same image + translucent-navy gradient overlay the NEX
+            Directory search page uses (/nex-directory/directory-
+            bg.png). Byte-identical composite from
+            _landing-directory-view.tsx:886-898 so the Calls hub
+            reads with the same visual-layer discipline as the
+            Directory + the Phase 1 Call Center preview. */}
+        <div
+          aria-hidden
+          data-nex-calls-bg
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100svh",
+            backgroundImage:
+              `linear-gradient(180deg, rgba(2,9,20,0.35) 0%, rgba(2,9,20,0.55) 55%, rgba(2,9,20,0.82) 100%), url("/nex-directory/directory-bg.png")`,
+            backgroundSize: "100% 100%, 100% 100%",
+            backgroundRepeat: "no-repeat, no-repeat",
+            backgroundPosition: "center, center",
+            pointerEvents: "none",
+            zIndex: 0,
+          }}
+        />
         {/* Create Account page's cyan atmosphere · single faint
-            top-centre radial glow. Keeps the Calls hub and Create
-            Account in visual lockstep. */}
+            top-centre radial glow. Sits ABOVE the directory-bg
+            layer (same stacking context, later in DOM order) so
+            the hub keeps its signature glow sheen on top of the
+            new background image. */}
         <div
           aria-hidden
           style={{
@@ -167,7 +220,13 @@ function CallsClientInner({
               "calc(env(safe-area-inset-top, 0) + 16px) 18px 24px",
           }}
         >
-          <NexPageHeader dataScope="calls" />
+          {/* Owner directive 2026-10-19 (formal hub-landing auth) ·
+              Call Center chrome in LANDING MODE on the idle hub.
+              The sealed Phase 1 CallsVideoHeader hides the status
+              pill + timer when mode="landing" so this surface
+              never implies a call is active · an idle hub showing
+              "CONNECTED" or "04:32" would be a dishonest signal. */}
+          <CallsVideoHeader status="ended" elapsed={null} mode="landing" />
           <div
             style={{
               fontSize: 11,
@@ -180,10 +239,17 @@ function CallsClientInner({
           >
             Call Center
           </div>
-          <PrimaryCards onPick={(kind) => setPickerFor(kind)} />
+          <PrimaryCards
+            onPick={(kind) => setPickerFor(kind)}
+            onGroupCall={() => setGroupPickerOpen(true)}
+          />
+          {/* Owner directive 2026-10-19 · Group call is now a PRIMARY
+              tile above · QuickActions here only renders the two
+              distinct working secondary actions (Call link + Invite).
+              Call link remains honestly disabled with "coming later"
+              per the sealed audit · Invite is live. */}
           <QuickActions
             onCreateLink={() => setLinkModalOpen(true)}
-            onGroupCall={() => setGroupPickerOpen(true)}
             onInvite={() => setInviteOpen(true)}
           />
           <PeopleRow people={people.slice(0, 10)} />
@@ -298,38 +364,53 @@ function IconButton({
    modal still receives the full People list; search inside the
    picker can be re-added if the friend list grows large. */
 
-/* ─── Primary cards ─────────────────────────────────────────────── */
+/* ─── Primary cards · owner directive 2026-10-19 (hub-landing auth) ·
+    THREE tiles side-by-side · Voice (cyan) · Video (orange) · Group
+    (violet). Accents follow the reference image. Group Call subtitle
+    reads "Call link · Invite" to describe the feature cluster that
+    tapping Group opens (plus the standalone Call link + Invite
+    buttons in the QuickActions secondary row below). ─────────────── */
 
 function PrimaryCards({
   onPick,
+  onGroupCall,
 }: {
   onPick: (kind: CallKind) => void;
+  onGroupCall: () => void;
 }): React.JSX.Element {
   return (
     <section
       aria-label="Start a call"
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(2, 1fr)",
-        gap: 12,
+        gridTemplateColumns: "repeat(3, 1fr)",
+        gap: 10,
         marginBottom: 16,
       }}
     >
       <PrimaryCard
-        tint={PAL.orange}
-        tintSoft={PAL.orangeSoft}
-        icon={<PhoneIcon size={24} />}
-        title="Voice call"
+        tint="#00AFFF"
+        tintSoft="rgba(0,175,255,0.14)"
+        icon={<PhoneIcon size={22} />}
+        title="Voice Call"
         subtitle="Talk with someone"
         onClick={() => onPick("voice")}
       />
       <PrimaryCard
-        tint="#00AFFF"
-        tintSoft="rgba(0,175,255,0.14)"
-        icon={<VideoIcon size={24} />}
-        title="Video call"
+        tint={PAL.orange}
+        tintSoft={PAL.orangeSoft}
+        icon={<VideoIcon size={22} />}
+        title="Video Call"
         subtitle="See someone face to face"
         onClick={() => onPick("video")}
+      />
+      <PrimaryCard
+        tint="#B566FF"
+        tintSoft="rgba(181,102,255,0.14)"
+        icon={<GroupIcon />}
+        title="Group Call"
+        subtitle="Call link · Invite"
+        onClick={onGroupCall}
       />
     </section>
   );
@@ -423,32 +504,30 @@ function PrimaryCard({
   );
 }
 
-/* ─── Quick actions ─────────────────────────────────────────────── */
+/* ─── Quick actions · owner directive 2026-10-19 (hub-landing auth) ·
+    Group call tile RETIRED from this row (promoted to a primary
+    tile above). Row now carries only the two distinct working
+    secondary actions: Call link + Invite. Props kept for backward
+    compat (onGroupCall ignored today) so a future scope can
+    reintroduce group as a quick action if needed. ──────────────── */
 
 function QuickActions({
   onCreateLink,
-  onGroupCall,
   onInvite,
 }: {
-  onCreateLink: () => void;
-  onGroupCall: () => void;
-  onInvite: () => void;
+  readonly onCreateLink: () => void;
+  readonly onInvite: () => void;
 }): React.JSX.Element {
   return (
     <section
       aria-label="Quick actions"
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(3, 1fr)",
+        gridTemplateColumns: "repeat(2, 1fr)",
         gap: 10,
         marginBottom: 22,
       }}
     >
-      <QuickActionButton
-        icon={<GroupIcon />}
-        label="Group call"
-        onClick={onGroupCall}
-      />
       <QuickActionButton
         icon={<LinkIcon />}
         label="Call link"

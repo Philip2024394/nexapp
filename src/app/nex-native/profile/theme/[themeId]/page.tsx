@@ -53,6 +53,12 @@ import {
 } from "../../../chat-standard/_live-worlds";
 import * as chatThemeService from "@/lib/nex-native/chat-theme-service";
 import type { ControlDrawerSession } from "@/components/nex-native/control-drawer/control-drawer-client";
+/* Owner-approved 2026-10-18 · Food profile-type pilot · dispatched
+ * when the resolved theme carries identity.profileType === "food".
+ * Only Crispy Chicken declares this today · every other theme falls
+ * through to the generic composition below (byte-identical to the
+ * sealed route). */
+import { FoodProfileDemo } from "../_food-profile-demo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -79,6 +85,13 @@ interface ResolvedThemeIdentity {
   readonly tagline: string | null;
   readonly wallpaperUrl: string | null;
   readonly accentHex: string;
+  /* Owner-approved 2026-10-18 · optional · drives dispatcher to a
+   * profile-type renderer when present. Only Crispy Chicken declares
+   * this today (profileType="food") · all other themes resolve to
+   * undefined and fall through to the generic composition below.
+   * DB-backed themes (nex_chat_theme rows) do NOT yet carry a
+   * profile-type column · they always resolve to undefined here. */
+  readonly profileType?: "food" | "trades" | "shop" | "personal" | "bespoke";
 }
 
 /** Resolve a themeId against the two real theme sources · same split
@@ -102,6 +115,9 @@ async function resolveTheme(
       tagline: pkg.identity.tagline?.trim() || null,
       wallpaperUrl: pkg.wallpaperUrl ?? null,
       accentHex: pkg.colours.primary,
+      /* Owner-approved 2026-10-18 · optional · present when the
+       * package declares a profileType in its identity. */
+      profileType: pkg.identity.profileType,
     };
   }
 
@@ -141,6 +157,24 @@ export default async function ThemeProfilePage({ params }: PageProps) {
   if (!theme) notFound();
 
   const accent = sanitiseHex(theme.accentHex);
+
+  /* Owner-approved 2026-10-18 · profile-type dispatcher.
+     When the resolved theme declares a profileType, hand off to the
+     dedicated renderer for that type. Only Crispy Chicken declares
+     profileType="food" today (pilot) · every other theme (undefined
+     profileType) falls through to the generic composition below ·
+     byte-identical to the previously-committed route behaviour. */
+  if (theme.profileType === "food") {
+    return (
+      <FoodProfileDemo
+        themeId={theme.id}
+        themeName={theme.name}
+        tagline={theme.tagline}
+        wallpaperUrl={theme.wallpaperUrl}
+        accentHex={accent}
+      />
+    );
+  }
 
   // Session resolution for the top chrome bar · same pattern as
   // canonical profile. Failure resolves as anonymous · never blocks

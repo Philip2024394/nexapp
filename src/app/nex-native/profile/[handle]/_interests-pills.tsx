@@ -57,7 +57,13 @@ export function InterestsPills(props: InterestsPillsProps): React.JSX.Element | 
           margin: 0,
           fontSize: 14,
           fontWeight: 700,
-          color: NEX.text,
+          /* Owner directive 2026-10-18 · Shared Interests heading
+             picks up the profile accent via --nex-profile-accent CSS
+             var (set by profile root from ?themeAccent) · falls back
+             to NEX.text (white) when no theme param. Theme accent is
+             high-contrast enough on navy to replace white here · AA
+             text still reads clean on both pink and green bgs. */
+          color: `var(--nex-profile-accent, ${NEX.text})`,
         }}
       >
         Shared Interests

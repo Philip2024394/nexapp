@@ -1,0 +1,36 @@
+{
+  "slug": "crispy-chicken",
+  "viewport": "theme-preview-1280",
+  "results": [
+    {
+      "selector": "[data-nex-se-bubble=\"peer\"]",
+      "role": "bubble-text",
+      "fg": "#f2f5f8",
+      "bg": "#020201",
+      "bgWhere": "descendant:div",
+      "ratio": 18.97,
+      "threshold": 4.5,
+      "label": "pass"
+    },
+    {
+      "selector": "[data-nex-se-bubble=\"mine\"]",
+      "role": "bubble-text",
+      "fg": "#f2f5f8",
+      "bg": "#020201",
+      "bgWhere": "ancestor:div",
+      "ratio": 18.97,
+      "threshold": 4.5,
+      "label": "pass"
+    },
+    {
+      "selector": "[data-nex-se-composer-send-inline]",
+      "role": "cta-fill",
+      "fg": "#c10200",
+      "bg": "#020201",
+      "bgWhere": "ancestor:div",
+      "ratio": 3.24,
+      "threshold": 3,
+      "label": "pass"
+    }
+  ]
+}

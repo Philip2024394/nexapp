@@ -44,6 +44,13 @@ const NEX = {
   greenSoft: "rgba(22, 214, 107, 0.35)",
 };
 
+/* Owner directive 2026-10-18 · Connect + Message pills retint via
+ * --nex-profile-accent set by the profile root. Falls back to the
+ * sealed NEX cyan when no ?themeAccent in URL · direct profile
+ * visits stay byte-identical. */
+const ACCENT = `var(--nex-profile-accent, ${NEX.cyan})`;
+const ACCENT_SOFT = `color-mix(in srgb, var(--nex-profile-accent, ${NEX.cyan}) 35%, transparent)`;
+
 const SANS =
   "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
@@ -106,8 +113,10 @@ export function ActionButtons(props: ActionButtonsProps): React.JSX.Element | nu
           padding: "0 18px",
           borderRadius: 999,
           background: "transparent",
-          border: `1px solid ${NEX.cyanSoft}`,
-          color: NEX.cyan,
+          /* Owner directive 2026-10-18 · Message pill rim + text pick
+             up the profile accent via CSS var · falls back to cyan. */
+          border: `1px solid ${ACCENT_SOFT}`,
+          color: ACCENT,
           fontSize: 14,
           fontWeight: 700,
           textDecoration: "none",
@@ -235,7 +244,11 @@ function labelForState(state: ConnectState): string {
   }
 }
 
-function pillPrimary(bg: string = NEX.cyan): React.CSSProperties {
+/* Owner directive 2026-10-18 · default pill bg = theme accent via CSS
+ * var · falls back to NEX cyan. Callers passing an explicit colour
+ * (e.g. NEX.green for accepted-friends state) still win · text stays
+ * NEX.bg (navy) for AA contrast across all expected accent hues. */
+function pillPrimary(bg: string = `var(--nex-profile-accent, ${NEX.cyan})`): React.CSSProperties {
   return {
     flex: 1,
     minWidth: 0,

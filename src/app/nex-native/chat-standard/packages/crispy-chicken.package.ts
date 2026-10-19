@@ -27,6 +27,12 @@ export const CRISPY_CHICKEN_PACKAGE: ThemePackage = {
     tagline: "Golden-fried · steam",
     conceptOneLine: "Crispy Chicken · golden · steam · comfort",
     categoryId: "food",
+    /* Owner-approved 2026-10-18 · pilot theme for the Food profile
+     * type. The themed-profile route dispatches to the Food
+     * renderer (_food-profile-demo.tsx) in demo-only mode when
+     * this field is present. No other package touches
+     * profileType in this pilot. */
+    profileType: "food",
   },
   colours: {
     primary: "#D4A24C", // crispy gold

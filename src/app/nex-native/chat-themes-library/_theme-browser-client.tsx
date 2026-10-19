@@ -13,6 +13,7 @@ import {
   ImmersivePreviewShell,
   useInitialPreviewFromUrl,
 } from "./_preview-shell";
+import { ThemeActivationWrapper } from "./_theme-activation-wrapper";
 import type { MiniPhonePalette } from "../chat-standard/_engine/preview-mini-phone";
 
 const NEX = {
@@ -433,18 +434,10 @@ export function ThemeBrowserClient({
           const openFullScreenHref = themePreviewHref(preview.id);
           if (useImmersivePreview) {
             return createPortal(
-              <ImmersivePreviewShell
+              <ThemeActivationWrapper
                 theme={preview}
-                active={preview.id === currentThemeId}
-                locked={preview.tier === "bisnis" && !canUsePremium}
-                canUsePremium={canUsePremium}
                 activateAction={activateAction}
                 onClose={() => setPreviewId(null)}
-                onPrev={prevTheme ? () => setPreviewId(prevTheme.id) : null}
-                onNext={nextTheme ? () => setPreviewId(nextTheme.id) : null}
-                prevLabel={prevTheme?.name ?? null}
-                nextLabel={nextTheme?.name ?? null}
-                openFullScreenHref={openFullScreenHref}
               />,
               document.body,
             );

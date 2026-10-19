@@ -30,6 +30,12 @@ import {
   isPeerInCall,
 } from "@/lib/nex-native/realtime/people-presence";
 import { AddToCallModal } from "./_add-to-call-modal";
+// Phase 4 wiring 2026-10-19 (Phase 2 Slice 3) · 1:1 connection quality.
+// Reuses the sealed group-call measurement pipeline via the hook, and
+// mounts the sealed Phase 1 ConnectionFooter so the 1:1 UI matches
+// the group-call quality indicator terminology.
+import { usePeerCallQuality } from "./_use-peer-call-quality";
+import { ConnectionFooter } from "@/lib/nex-native/calls-chrome/connection-footer";
 
 export interface PeerCallLauncherProps {
   conversationId: string;
@@ -564,6 +570,23 @@ export function PeerCallLauncher(props: PeerCallLauncherProps): React.JSX.Elemen
   const showOverlay = state !== "idle";
   const peerName = incomingCaller || props.peerDisplayName;
 
+  // Phase 4 wiring 2026-10-19 · 1:1 connection quality. The hook
+  // polls callRef.current.getPeerConnection() every 3s when the call
+  // is actively connected or reconnecting. It returns null in every
+  // other state (idle, dialling, ringing, ended) and when stats are
+  // unavailable · the ConnectionFooter below renders "Measuring…"
+  // for null · we NEVER fabricate a quality label.
+  const qualityEnabled = state === "connected" || state === "reconnecting";
+  const getPC = React.useCallback(
+    () => callRef.current?.getPeerConnection() ?? null,
+    [],
+  );
+  const peerCallQuality = usePeerCallQuality({
+    getPeerConnection: getPC,
+    peerAccountId: props.peerAccountId,
+    enabled: qualityEnabled,
+  });
+
   return (
     <>
       {/* Compact call buttons · top-left, symmetric with the top-right
@@ -650,6 +673,26 @@ export function PeerCallLauncher(props: PeerCallLauncherProps): React.JSX.Elemen
           layoutSwapped={layoutSwapped}
           onToggleLayout={toggleLayout}
         />
+      )}
+
+      {/* Phase 4 wiring 2026-10-19 · 1:1 ConnectionFooter · mounted
+          above the overlay zIndex when a call is live. The sealed
+          footer renders "Measuring…" for null quality · no quality
+          label is fabricated. Only visible while a call is on-screen. */}
+      {showOverlay && (
+        <div
+          style={{
+            position: "fixed",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1001,
+            pointerEvents: "none",
+          }}
+          data-nex-peer-call-quality
+        >
+          <ConnectionFooter quality={peerCallQuality} />
+        </div>
       )}
 
       {/* Hidden audio sink for the remote stream. autoPlay + playsInline

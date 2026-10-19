@@ -180,13 +180,6 @@ export async function updateChatTheme(
     } catch {
       // fall through to static allow-list
     }
-    // Step 1G hotfix (2026-10-11) · live-world themes
-    // (nex-bubbles, nex-flat, waterworld, coffee, café family,
-    // food, pizza, bike-rental) are code-registered and never
-    // appear in nex_chat_theme · the DB lookup returns null for
-    // them. Accept any id that resolves to a LIVE_WORLD_PACKAGES
-    // key so a user picking "NEX New" (nex-flat) doesn't hit the
-    // unknown-theme throw.
     if (!allowed) {
       try {
         const { isLiveWorldId } = await import(
@@ -203,15 +196,49 @@ export async function updateChatTheme(
       );
     }
   }
+
+  // Onboarding logic: If user is currently at the 'chat_theme' step,
+  // move them to 'shop_theme' upon successful update.
+  const current = await getAccountById(accountId);
+  let onboardingPatch: Record<string, any> = {};
+  if (current?.onboarding_step === "chat_theme") {
+    onboardingPatch.onboarding_step = "shop_theme";
+  }
+
   const { data, error } = await nexSupabaseAdmin
     .from("nex_account")
-    .update({ chat_theme: theme })
+    .update({
+      chat_theme: theme,
+      ...onboardingPatch
+    })
     .eq("id", accountId)
     .select("*")
     .single();
   if (error || !data) {
     throw new Error(
       `account-service.updateChatTheme(${accountId}): ${error?.message ?? "no row returned"}`
+    );
+  }
+  return data as NexAccountRow;
+}
+
+/** Update the account's shop theme preference. Sets onboarding step to 'completed'. */
+export async function updateShopTheme(
+  accountId: NexUuid,
+  theme: string | null,
+): Promise<NexAccountRow> {
+  const { data, error } = await nexSupabaseAdmin
+    .from("nex_account")
+    .update({
+      shop_theme_id: theme,
+      onboarding_step: "completed"
+    })
+    .eq("id", accountId)
+    .select("*")
+    .single();
+  if (error || !data) {
+    throw new Error(
+      `account-service.updateShopTheme(${accountId}): ${error?.message ?? "no row returned"}`
     );
   }
   return data as NexAccountRow;

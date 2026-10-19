@@ -26,6 +26,11 @@ import { listThemeEmojis } from "@/lib/nex-native/theme-emoji-service";
 import { listThemeStickers } from "@/lib/nex-native/theme-sticker-service";
 import ThemeViewerClient from "./_viewer";
 import { parseJokerMotion } from "./_joker-motion-data";
+// Owner directive 2026-10-19 · guests who arrive at a theme
+// preview via the welcome page's "Continue NEX Free" primary CTA
+// see a floating container banner inviting them to create an
+// account. Signed-in viewers never see it.
+import { GuestSignupBanner } from "./_guest-signup-banner";
 import { HauntedHotelChrome } from "@/components/nex-native/HauntedHotelChrome";
 import {
   isLiveWorldId,
@@ -46,6 +51,31 @@ import { pickPremiumBannerCopy } from "./_premium-banner-copy";
 import { ThemePreviewDrawer } from "./_theme-preview-drawer";
 import { ThemePreviewRail } from "./_theme-preview-rail";
 import type { ControlDrawerSession } from "@/components/nex-native/control-drawer/control-drawer-client";
+// Owner-authorised 2026-10-18 · S6 · discreet bottom bar for Use /
+// Back · never a modal · respects the sealed 2026-10-11
+// "overlay too intrusive" decision.
+import { ThemePreviewActionBar } from "./_preview-action-bar";
+import { cookies } from "next/headers";
+import {
+  WELCOME_INTENT_COOKIE,
+  isWelcomeIntent,
+} from "../../welcome/_welcome-intent";
+
+/** Resolve the server-side `next` URL that the Use-this-theme button
+ *  will send users to after `updateChatThemeAction` writes the
+ *  theme. Shop-intent → cover-themes-library (the user picks a
+ *  cover next). Every other intent (themes · personalised · null ·
+ *  tampered) → chat/preview (the sealed live-chat landing). The
+ *  intent cookie is READ but NOT cleared here · the welcome page
+ *  owns the clear lifecycle. */
+async function resolveUseThemeNext(): Promise<string> {
+  const jar = await cookies();
+  const raw = jar.get(WELCOME_INTENT_COOKIE)?.value ?? null;
+  if (isWelcomeIntent(raw) && raw === "shop") {
+    return "/nex-native/cover-themes-library";
+  }
+  return "/nex-native/chat/preview";
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -96,6 +126,8 @@ export default async function ThemeViewerPage({
   // midnight-cafe · french-cafe.
   if (isLiveWorldId(id)) {
     const pkg = LIVE_WORLD_PACKAGES[id];
+    const isGuest = drawerSession === null;
+    const useNext = await resolveUseThemeNext();
     return (
       <>
         <StandardExperienceLiveClient pkg={pkg} />
@@ -107,6 +139,21 @@ export default async function ThemeViewerPage({
           accent={pkg.colours.primary}
           themeName={pkg.identity.name}
         />
+        {/* Owner-authorised 2026-10-18 · S6 · discreet bottom action
+            bar · never a modal · "Use this theme" is wrapped in the
+            sealed RequireAccount for guests. */}
+        <ThemePreviewActionBar
+          themeId={pkg.identity.id}
+          themeName={pkg.identity.name}
+          useThemeNextHref={useNext}
+          isGuest={isGuest}
+          accentHex={pkg.colours.primary}
+        />
+        {/* Owner directive 2026-10-19 · "Create Account to activate
+            your free NEX Chat" banner shown only to guest viewers.
+            Signed-in users already have an account · gating here
+            keeps the message honest. */}
+        {isGuest ? <GuestSignupBanner /> : null}
       </>
     );
   }
@@ -332,6 +379,17 @@ export default async function ThemeViewerPage({
         accent={theme.accent_hex}
         themeName={theme.name}
         isVenue={isVenueMode}
+      />
+      {/* Owner-authorised 2026-10-18 · S6 · discreet bottom action
+          bar · "Use this theme" wrapped in the sealed RequireAccount
+          for guests. Routed to cover-themes-library for shop intent
+          via the server-resolved useNext computed below. */}
+      <ThemePreviewActionBar
+        themeId={theme.id}
+        themeName={theme.name}
+        useThemeNextHref={await resolveUseThemeNext()}
+        isGuest={viewer.kind === "guest"}
+        accentHex={theme.accent_hex}
       />
     </>
   );

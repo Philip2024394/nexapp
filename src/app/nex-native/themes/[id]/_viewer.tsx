@@ -453,7 +453,7 @@ export default function ThemeViewerClient(
         wallpaperUrl={props.wallpaperUrl}
         wallpaperConfig={props.wallpaperConfig}
         layoutStyle={effectiveLayout}
-        backHref="/nex-native/themes/gallery"
+        backHref="/nex-native/chat-themes-library"
         messages={messages}
         composerAction={noopAction}
         composerPlaceholder="Preview mode · sending disabled"

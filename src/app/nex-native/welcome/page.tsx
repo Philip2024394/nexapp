@@ -387,7 +387,13 @@ export default async function WelcomePage() {
             {/* Owner directive 2026-10-18 (iteration) · drawer trigger
                 now sits INSIDE the same inline row as the "NEX" word,
                 so the 3-dots are literally on the NEX-text baseline
-                rather than center-aligned to the taller ping badge. */}
+                rather than center-aligned to the taller ping badge.
+                A magnifying glass link to the sealed NEX Directory
+                landing sits BETWEEN the wordmark and the 3-dots so
+                the welcome page carries the same discovery entry
+                every other NEX consumer surface has in its shared
+                header. Both icons share the same 36×36 chrome-less
+                shape so they read as a paired tool cluster. */}
             <div
               data-nex-welcome-header-drawer-slot
               style={{
@@ -413,7 +419,38 @@ export default async function WelcomePage() {
               {/* Green ✓ NEX verified pill removed 2026-10-15 per
                   owner directive "remove the green nex badge from
                   header". */}
-              <div style={{ marginLeft: "auto", display: "inline-flex" }}>
+              <Link
+                href="/nex-native/directory/landing"
+                aria-label="NEX Directory · shops · services · food · trades"
+                data-nex-welcome-header-search
+                style={{
+                  marginLeft: "auto",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 36,
+                  height: 36,
+                  color: NEX.cyan,
+                  textDecoration: "none",
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <circle cx="11" cy="11" r="7" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              </Link>
+              <div style={{ display: "inline-flex" }}>
                 <ControlDrawer session={drawerSession} />
               </div>
             </div>
@@ -561,38 +598,55 @@ export default async function WelcomePage() {
             }}
           >
             {isSignedIn ? (
-              <Link
-                href="/nex-native/home"
-                data-nex-welcome-primary-cta
-                data-nex-welcome-primary-cta-shape="signed-in"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  minHeight: 52,
-                  borderRadius: 14,
-                  background: NEX.orange,
-                  color: "#0a0608",
-                  fontSize: 16,
-                  fontWeight: 700,
-                  textDecoration: "none",
-                  border: `1px solid ${NEX.orange}`,
-                  boxShadow: `0 1px 0 rgba(255,255,255,0.18) inset, 0 14px 32px -16px ${NEX.orange}`,
-                }}
-              >
-                Continue to NEX →
-              </Link>
+              /* Owner directive 2026-10-19 · "Continue to NEX →"
+                 signed-in CTA retired. Signed-in users have the
+                 three intent cards above + the ControlDrawer
+                 3-dots menu + the sealed sign-in-success routing
+                 that already lands them here · a redundant
+                 primary CTA to the (now-redirected) /home surface
+                 added no navigation they didn't already have.
+                 Branch intentionally renders nothing so signed-in
+                 and guest layouts match symmetrically on the CTA
+                 row (guest keeps "Continue NEX Free" + sign-in). */
+              null
             ) : (
               <>
-                {/* Owner directive 2026-10-18 · "Create free account"
-                    primary CTA retired · the three intent cards above
-                    (Chat Themes · Chat Themes Shop · Personalised
-                    Chat) are the sole entry points. Tapping any card
-                    takes guests through the sealed account-wall at
-                    the right moment · signup happens naturally when
-                    the user commits to a theme or cover. The sign-in
-                    link stays for returning users with an existing
-                    account. */}
+                {/* Owner directive 2026-10-19 · "Continue NEX Free"
+                    primary CTA for GUESTS · routes to the sealed
+                    nex-bubbles live-world theme preview which
+                    renders the full standard chat experience as a
+                    try-before-you-signup surface. The preview
+                    overlays a sealed GuestSignupBanner that reads
+                    "Create Account to activate your free NEX Chat"
+                    so the user understands the account trade. */}
+                <Link
+                  href="/nex-native/themes/nex-bubbles"
+                  data-nex-welcome-primary-cta
+                  data-nex-welcome-primary-cta-shape="guest-free"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minHeight: 52,
+                    borderRadius: 14,
+                    background: NEX.orange,
+                    color: "#0a0608",
+                    fontSize: 16,
+                    fontWeight: 700,
+                    textDecoration: "none",
+                    border: `1px solid ${NEX.orange}`,
+                    boxShadow: `0 1px 0 rgba(255,255,255,0.18) inset, 0 14px 32px -16px ${NEX.orange}`,
+                  }}
+                >
+                  Continue NEX Free
+                </Link>
+                {/* Owner directive 2026-10-18 · the sign-in link
+                    stays for returning users with an existing
+                    account. The three intent cards above still
+                    cover theme-first exploration · signup happens
+                    naturally when the user commits via any of
+                    them OR via the sealed account-wall on the
+                    theme-preview "Use this theme" action. */}
                 <Link
                   href="/nex-native/sign-in"
                   data-nex-welcome-secondary-cta
@@ -616,10 +670,54 @@ export default async function WelcomePage() {
             )}
           </div>
 
-          {/* Terms + privacy footer removed 2026-10-15 · owner directive
+          {/* Owner directive 2026-10-19 · tiny agreement footer at
+              the bottom of the welcome page. Shown to both guest
+              and signed-in viewers · communicates that the primary
+              CTA (and signup via the three intent cards) implies
+              acceptance of NEX's Terms + Privacy Policy. Styled
+              muted + 10px so it fits in the one-viewport lock
+              without pushing the sign-in link off-screen. */}
+          <p
+            data-nex-welcome-legal-footer
+            style={{
+              margin: "6px 14px 0",
+              fontSize: 10,
+              lineHeight: 1.4,
+              color: NEX.textMuted,
+              textAlign: "center",
+              opacity: 0.75,
+              flexShrink: 0,
+            }}
+          >
+            By continuing you agree to NEX{" "}
+            <Link
+              href="/nex-native/terms"
+              style={{
+                color: NEX.cyan,
+                textDecoration: "underline",
+              }}
+            >
+              Terms
+            </Link>{" "}
+            and{" "}
+            <Link
+              href="/nex-native/privacy"
+              style={{
+                color: NEX.cyan,
+                textDecoration: "underline",
+              }}
+            >
+              Privacy
+            </Link>
+            .
+          </p>
+
+          {/* Legacy comment block kept for history:
+              Terms + privacy footer removed 2026-10-15 · owner directive
               "exact same text as template image · remove old text" ·
               template ends at "15 seconds · no card needed" with no
-              additional footer. */}
+              additional footer. The 2026-10-19 directive reinstated it
+              as the tiny muted agreement line above. */}
 
           {/* Owner directive 2026-10-18 · home-screen install prompt
               retired from the Welcome page. Guests browsing the

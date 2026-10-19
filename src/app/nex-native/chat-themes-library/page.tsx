@@ -49,10 +49,7 @@ import {
 } from "./_marketplace-filter-pills";
 import { MarketplaceCategoryRow } from "./_marketplace-category-row";
 import { MarketplaceThemeCard } from "./_marketplace-theme-card";
-// Owner-sealed 2026-10-18 · "we have only 2 free themes · all other
-// are paid themes". The DB `tier='gratis'` field is NOT reliable
-// (legacy rows) · the sealed allowlist in _sealed-free-themes.ts is
-// authoritative. Owner can swap which 2 IDs are free in one place.
+import { ThemeCinematicCarousel } from "./_theme-cinematic-carousel";
 import { isSealedFreeTheme } from "./_sealed-free-themes";
 import {
   hexToRgba,
@@ -245,26 +242,11 @@ export default async function ThemePickerPage({
               accent="#00AFFF"
               seeAllHref="/nex-native/chat-themes-library?filter=premium"
             />
-            <div
-              data-nex-themes-latest-grid
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 10,
-              }}
-            >
-              {latestThemes.map((t) => {
-                const isFreeTheme = isSealedFreeTheme(t.id);
-                return (
-                  <MarketplaceThemeCard
-                    key={t.id}
-                    theme={t}
-                    variant={isFreeTheme ? "free" : "premium"}
-                    priceLabel={isFreeTheme ? undefined : "£1.99"}
-                  />
-                );
-              })}
-            </div>
+            <ThemeCinematicCarousel
+              themes={latestThemes}
+              variant="premium"
+              priceLabel="£1.99"
+            />
           </section>
         ) : null}
 

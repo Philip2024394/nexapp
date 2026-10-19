@@ -323,6 +323,18 @@ export interface ThemeIdentity {
    *  change. "explore" is the uncategorised bucket, NOT a visual
    *  family. */
   categoryId?: string | null;
+  /** Owner-approved 2026-10-18 · profile-type declaration · drives
+   *  which profile-type renderer the themed-profile route dispatches
+   *  to (food | trades | shop | personal | bespoke). OPTIONAL for
+   *  the Crispy Chicken pilot so all 18 existing packages compile
+   *  unchanged · will be migrated to required in phased batches
+   *  (one profile-type family per authorised commit). Themes without
+   *  this field fall through to the current generic composition.
+   *
+   *  Appearance (wallpaper / accent / typography) and profile type
+   *  are separate decisions · an atmospheric theme can declare a
+   *  personal or business profile type independently of its skin. */
+  profileType?: "food" | "trades" | "shop" | "personal" | "bespoke";
 }
 
 /** 05 Typography · Extension Batch 001 (founder-authorised 2026-10-05).
@@ -343,6 +355,71 @@ export interface TypographyPackage {
   bodyWeight?: number;
   /** CSS letter-spacing · defaults to `"normal"`. */
   letterSpacing?: string;
+}
+
+/** 25 Derived semantic tokens · Phase A1 schema extension
+ *  (owner-authorised 2026-10-19 for the Theme Production System).
+ *
+ *  Optional, additive, backwards-compatible. Every existing theme
+ *  compiles unchanged · this field is populated by the forthcoming
+ *  theme-production CLI when it extracts a palette from an intro
+ *  asset + wallpaper. Hand-authored themes may omit it entirely.
+ *
+ *  The ladder is the full semantic surface a chat theme needs. The
+ *  simpler ColourSystem above (primary/secondary/highlight/glow/deep)
+ *  stays as the brand-level declaration · derivedTokens is the
+ *  rendering-level resolution that the forthcoming quality gate
+ *  (contrast tests + Playwright previews) will measure.
+ *
+ *  Provenance field:
+ *    "extracted"  · all tokens produced by the extraction pipeline
+ *    "overridden" · all tokens hand-set, no extraction ran
+ *    "mixed"      · extracted and then selectively overridden by owner
+ *
+ *  Honesty invariant · this field is NOT read by any runtime surface
+ *  in Phase A1. The shared chat chrome continues to resolve colours
+ *  from ColourSystem + bubble/composer packages exactly as before.
+ *  Readers will be added only after Phase A3 (quality gate) proves
+ *  the token values are reliable. Adding this type now gives the
+ *  forthcoming CLI a target shape to emit against. */
+export interface ThemeDerivedTokens {
+  /** Page / fullscreen chat background colour. */
+  background: string;
+  /** Card and panel surfaces that sit on the background. */
+  surface: string;
+  /** Raised surfaces (dialogs, popovers). */
+  surfaceElevated: string;
+  /** Primary accent · drives the send button fill and primary CTAs. */
+  accent: string;
+  /** Secondary accent · drives chips, inline links, secondary CTAs. */
+  accentSecondary: string;
+  /** Primary text colour on background / surface. */
+  textPrimary: string;
+  /** Dimmed body text, timestamps, metadata. */
+  textSecondary: string;
+  /** Text/icon colour that sits directly on an accent fill
+   *  (e.g. send glyph against the accent send button). */
+  textOnAccent: string;
+  /** Bubble fill for incoming messages. */
+  incomingBubble: string;
+  /** Bubble fill for outgoing messages. */
+  outgoingBubble: string;
+  /** Hairline border colour for both bubble variants. */
+  bubbleBorder: string;
+  /** Composer pill surface. */
+  composerSurface: string;
+  /** Composer pill border / rim. */
+  composerBorder: string;
+  /** Default icon colour for chrome glyphs. */
+  iconColor: string;
+  /** Focus ring / selection outline. */
+  focusColor: string;
+  /** Success state (sent, delivered, confirmed). */
+  successColor: string;
+  /** Danger state (destructive actions, errors). */
+  dangerColor: string;
+  /** Provenance so tooling can tell what produced these tokens. */
+  source: "extracted" | "overridden" | "mixed";
 }
 
 export interface ThemePackage {
@@ -384,4 +461,9 @@ export interface ThemePackage {
 
   // 23 Ambient animation
   ambient?: AmbientLayer;
+
+  // 25 Derived semantic tokens · Phase A1 (optional, additive)
+  // Not read by runtime surfaces yet · populated by the forthcoming
+  // theme-production CLI once Phase A2 lands.
+  derivedTokens?: ThemeDerivedTokens;
 }

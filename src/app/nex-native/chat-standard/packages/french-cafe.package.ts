@@ -9,8 +9,11 @@
 //                   bubbles that read like a handwritten note, the
 //                   faintest sparkle catching the glassware
 //   personality   : warm (slow gentle rise · warm pulse · warm halo)
-//   typography    : serif stack (Playfair / Didot / Bodoni / Georgia)
-//                   · the single strongest signature of this world
+//   typography    : RETIRED 2026-10-19 · the former serif stack was
+//                   the only per-theme fontFamily override across the
+//                   19 standard packages · owner directive "all themes
+//                   carry only standard font" is now enforced · identity
+//                   leans on palette + parchment bubbles + gold sparkle
 //   bubbles       : pill-shaped parchment · soft matte warm paper
 //   colours       : rose-wood primary / cream / porcelain highlight /
 //                   gold-leaf glow / deep espresso-brown
@@ -49,18 +52,13 @@ export const FRENCH_CAFE_PACKAGE: ThemePackage = {
   },
   personality: "warm",
 
-  // 05 Typography · the strongest single signature of this world.
-  // Serif stack with safe fallbacks · the engine renders this through
-  // CSS vars with `inherit` defaults, so if none of Playfair / Didot
-  // / Bodoni resolve in the client the browser falls through to
-  // Georgia / generic serif. No new font-loading infrastructure.
-  typography: {
-    fontFamily:
-      "'Playfair Display', 'Didot', 'Bodoni Moda', Georgia, serif",
-    headingWeight: 700,
-    bodyWeight: 500,
-    letterSpacing: "0.015em",
-  },
+  // 05 Typography · retired 2026-10-19 per owner directive "all themes
+  // carry only standard font". The former Playfair / Didot / Bodoni
+  // serif stack was the only per-theme fontFamily override across the
+  // 19 standard packages and violated the universal-font rule. French
+  // Café's "elegant / refined / timeless" identity now reads through
+  // its warm rose-wood + cream palette + parchment bubbles + gold-leaf
+  // sparkle · typography stays universal with every other theme.
 
   // 02 Intro · scripted-animation placeholder.
   intro: {

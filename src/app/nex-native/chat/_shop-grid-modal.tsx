@@ -18,22 +18,18 @@ import * as React from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { ProductDetailSheet } from "./_product-detail-sheet";
-
-// Sealed 2026-10-01 · the three first-user shop-type destinations.
-// `products` and `food` route into the existing /nex-native/onboarding
-// surface with a type hint so the merchant form pre-selects the right
-// category. `affiliate` goes to the dedicated join page (migration 120).
-//
-// `commerce=1` bypasses the Phase 1 launch gate on the onboarding
-// page (see onboarding/page.tsx · commerceEnabledForRequest). Users
-// tapping Sell Products / Sell Food from the chooser ARE the
-// authorised intent — otherwise the gate silently bounces them to
-// /nex-native/home. Affiliate has no such gate.
-const SHOP_TYPE_HREFS: Record<"products" | "food" | "affiliate", string> = {
-  products: "/nex-native/onboarding?type=product&commerce=1",
-  food: "/nex-native/onboarding?type=food&commerce=1",
-  affiliate: "/nex-native/affiliate/join",
-};
+// Owner-authorised 2026-10-18 · S5 · the chooser's card list is
+// read from the sealed catalogue so the sealed modal + trigger
+// architecture is unchanged while the Sell / Earn split and
+// Coming-soon chips land additively. The catalogue is a plain
+// data module · it also powers the S5 unit tests.
+import {
+  SHOP_CHOOSER_CATALOG,
+  sellCards,
+  earnCards,
+  type ShopChooserCard,
+  type ShopChooserCardId,
+} from "./_shop-chooser-catalog";
 
 const NEX = {
   panel: "rgba(3,16,29,0.96)",
@@ -222,8 +218,12 @@ export function ShopGridModal({
       <style>{`
         @keyframes nex-shop-fade { from { opacity: 0 } to { opacity: 1 } }
         @keyframes nex-shop-slide-up {
-          from { transform: translateY(100%); }
-          to   { transform: translateY(0); }
+          /* Owner directive 2026-10-18 · keep translateX(-50%)
+             during the slide so the sheet stays centred under the
+             phone frame on desktop · without this the sheet would
+             briefly jump from the viewport left edge to centre. */
+          from { transform: translateX(-50%) translateY(100%); }
+          to   { transform: translateX(-50%) translateY(0); }
         }
         [data-nex-shop-scroll] { scrollbar-width: none; }
         [data-nex-shop-scroll]::-webkit-scrollbar {
@@ -252,16 +252,24 @@ export function ShopGridModal({
       {/* Bottom sheet · slides up from the bottom of the chat page.
           Founder direction 2026-09-27 · "shop cards open on the chat
           page not container" · this is a chat-anchored panel, not a
-          floating modal. */}
+          floating modal.
+          Owner directive 2026-10-18 · bound the sheet to the phone-
+          frame width on desktop. The sealed nex-native.css note at
+          line 148-151 flags that `position: fixed` escapes the
+          frame · we clamp via maxWidth + horizontal centering so the
+          sheet matches the phone screen width exactly instead of
+          spanning the entire browser viewport. */}
       <section
         role="dialog"
         aria-modal="true"
         aria-label={`${shopName} products`}
         style={{
           position: "fixed",
-          left: 0,
-          right: 0,
+          left: "50%",
+          transform: "translateX(-50%)",
           bottom: 0,
+          width: "100%",
+          maxWidth: 420,
           maxHeight: "78vh",
           // Per-theme backdrop image (sealed 2026-10-01) · when a
           // theme supplies one, the image reads CLEARLY under a very
@@ -703,16 +711,39 @@ function ShopCategoryTabs({
 }
 
 // ---------------------------------------------------------------------------
-// Shop-type chooser · first-time setup slider · sealed 2026-10-01.
+// Shop-type chooser · first-time setup slider · sealed 2026-10-01
+// · S5 alignment 2026-10-18.
 // ---------------------------------------------------------------------------
-// Three side-by-side cards on a single row inside the shop slider.
-// The viewer picks their lane (Sell Products · Sell Food · Affiliate)
-// and the parent (viewer / peer-chat page / manage flow) routes to the
-// appropriate next step. Phase 1 ships the UI only; wiring Products
-// and Food to the sealed Profession picker (nex_profession · 25
-// verticals, Migrations 113-115) lives in a follow-up bridge, and
-// Affiliate is parked behind a "Coming Soon" chip until that business
-// model lands with its own schema.
+// Owner directive 2026-10-18 · the chooser now renders FOUR Sell
+// cards (Products, Services, Food, Accommodation) + a separate
+// "Earn with NEX" section (Affiliate). Services and Accommodation
+// are visibly marked "Coming soon" because their /onboarding
+// backends are not yet in place · tapping them does nothing (no
+// synthetic flow, no fabricated route). The sealed modal + trigger
+// architecture (and default-closed state) are unchanged · the only
+// edit here is additive to the chooser's card list.
+//
+// The viewer picks their lane and the parent (viewer / peer-chat
+// page / manage flow) routes to the appropriate next step. Products
+// / Food / Affiliate still fire `onSelect(type)` on tap so existing
+// callers that need the signal continue to work.
+
+/** Resolve the icon for a given shop-chooser card. Kept close to
+ *  the renderer so the SVG definitions stay colocated. */
+function iconForCard(id: ShopChooserCardId): React.JSX.Element {
+  switch (id) {
+    case "products":
+      return <ShopTypeProductsIcon />;
+    case "services":
+      return <ShopTypeServicesIcon />;
+    case "food":
+      return <ShopTypeFoodIcon />;
+    case "accommodation":
+      return <ShopTypeAccommodationIcon />;
+    case "affiliate":
+      return <ShopTypeAffiliateIcon />;
+  }
+}
 
 function ShopTypeChooser({
   onSelect,
@@ -725,6 +756,25 @@ function ShopTypeChooser({
   accentSoft: string;
   accentBorder: string;
 }): React.JSX.Element {
+  // Narrow onSelect's union · only the live Sell cards (products /
+  // food) and Affiliate fire the callback. Services / Accommodation
+  // are Coming-soon · their button renders disabled and never
+  // dispatches.
+  const dispatch = (card: ShopChooserCard): (() => void) | undefined => {
+    if (!card.available) return undefined;
+    if (card.id === "products")
+      return () => onSelect?.("products");
+    if (card.id === "food") return () => onSelect?.("food");
+    if (card.id === "affiliate")
+      return () => onSelect?.("affiliate");
+    // Services / Accommodation are not in the callback's narrow
+    // union · they stay silent (no onClick dispatch).
+    return undefined;
+  };
+
+  const sell = sellCards();
+  const earn = earnCards();
+
   return (
     <div
       style={{
@@ -757,10 +807,12 @@ function ShopTypeChooser({
         Pick a lane · you can change it later from Manage.
       </div>
 
-      {/* 3 landscape rows · founder direction 2026-10-01 · stacked
-          vertically · each row is a horizontal icon-left / text-right
-          card so the slider reads as a clear choose-your-lane list. */}
+      {/* Sell section · four cards per the owner-approved spec.
+          Services and Accommodation render with a Coming-soon chip
+          when `available === false` · unclickable, no synthetic
+          backend. */}
       <div
+        data-nex-shop-chooser-section="sell"
         style={{
           display: "flex",
           flexDirection: "column",
@@ -768,37 +820,76 @@ function ShopTypeChooser({
           marginTop: 4,
         }}
       >
-        <ShopTypeButton
-          icon={<ShopTypeProductsIcon />}
-          label="Sell Products"
-          caption="Physical goods · home-made, retail, trades, maker."
-          href={SHOP_TYPE_HREFS.products}
-          onClick={() => onSelect?.("products")}
-          accentSolid={accentSolid}
-          accentSoft={accentSoft}
-          accentBorder={accentBorder}
-        />
-        <ShopTypeButton
-          icon={<ShopTypeFoodIcon />}
-          label="Sell Food"
-          caption="Kitchen, cafe, bar, catering · menu driven."
-          href={SHOP_TYPE_HREFS.food}
-          onClick={() => onSelect?.("food")}
-          accentSolid={accentSolid}
-          accentSoft={accentSoft}
-          accentBorder={accentBorder}
-        />
-        <ShopTypeButton
-          icon={<ShopTypeAffiliateIcon />}
-          label="Affiliate"
-          caption="Promote others' products · earn commission."
-          href={SHOP_TYPE_HREFS.affiliate}
-          onClick={() => onSelect?.("affiliate")}
-          accentSolid={accentSolid}
-          accentSoft={accentSoft}
-          accentBorder={accentBorder}
-        />
+        {sell.map((card) => (
+          <ShopTypeButton
+            key={card.id}
+            icon={iconForCard(card.id)}
+            label={card.label}
+            caption={card.caption}
+            href={card.href}
+            comingSoon={!card.available}
+            onClick={dispatch(card)}
+            accentSolid={accentSolid}
+            accentSoft={accentSoft}
+            accentBorder={accentBorder}
+            dataLayout={card.id}
+          />
+        ))}
       </div>
+
+      {/* Earn with NEX · separate section · owner directive
+          2026-10-18 "separate 'Earn with NEX' section for
+          Affiliate". Only renders when the catalogue has at least
+          one earn card so the section header can't orphan. */}
+      {earn.length > 0 && (
+        <>
+          <div
+            data-nex-shop-chooser-section-divider
+            aria-hidden
+            style={{
+              marginTop: 4,
+              height: 1,
+              background: `linear-gradient(90deg, transparent, ${accentSoft}, transparent)`,
+            }}
+          />
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 800,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: NEX.textDim,
+              textAlign: "center",
+            }}
+          >
+            Earn with NEX
+          </div>
+          <div
+            data-nex-shop-chooser-section="earn"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+            }}
+          >
+            {earn.map((card) => (
+              <ShopTypeButton
+                key={card.id}
+                icon={iconForCard(card.id)}
+                label={card.label}
+                caption={card.caption}
+                href={card.href}
+                comingSoon={!card.available}
+                onClick={dispatch(card)}
+                accentSolid={accentSolid}
+                accentSoft={accentSoft}
+                accentBorder={accentBorder}
+                dataLayout={card.id}
+              />
+            ))}
+          </div>
+        </>
+      )}
 
       <div
         style={{
@@ -817,31 +908,142 @@ function ShopTypeChooser({
   );
 }
 
+// Keep SHOP_CHOOSER_CATALOG referenced so the module graph pins the
+// sealed data module even if the renderer is later refactored.
+void SHOP_CHOOSER_CATALOG;
+
 function ShopTypeButton({
   icon,
   label,
   caption,
   href,
-  comingSoon: _comingSoon,
+  comingSoon,
   onClick,
   accentSolid,
   accentSoft,
   accentBorder,
+  dataLayout,
 }: {
   icon: React.ReactNode;
   label: string;
   caption: string;
-  href: string;
+  href: string | null;
   comingSoon?: boolean;
   onClick?: () => void;
   accentSolid: string;
   accentSoft: string;
   accentBorder: string;
+  dataLayout?: string;
 }): React.JSX.Element {
+  // Owner directive 2026-10-18 · when `comingSoon` is true we
+  // render a disabled surface with a visible chip · no navigation,
+  // no synthetic flow. The sealed Link version is reserved for the
+  // live Products / Food / Affiliate paths.
+  if (comingSoon || href === null) {
+    return (
+      <div
+        role="button"
+        aria-disabled="true"
+        tabIndex={-1}
+        data-nex-shop-type-card={dataLayout ?? ""}
+        data-nex-shop-type-coming-soon="1"
+        style={{
+          textDecoration: "none",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "12px 12px",
+          borderRadius: 14,
+          background: `linear-gradient(180deg, ${accentSolid}14 0%, ${accentSolid}06 100%)`,
+          border: `1px dashed ${accentSoft}`,
+          color: NEX.text,
+          cursor: "not-allowed",
+          textAlign: "left",
+          position: "relative",
+          width: "100%",
+          boxSizing: "border-box",
+          minWidth: 0,
+          opacity: 0.65,
+        }}
+      >
+        {/* Icon · left · muted to match the disabled treatment */}
+        <div
+          style={{
+            flexShrink: 0,
+            width: 42,
+            height: 42,
+            borderRadius: 12,
+            background: "rgba(0,0,0,0.3)",
+            border: `1px solid ${accentBorder}`,
+            display: "grid",
+            placeItems: "center",
+            color: accentSolid,
+            opacity: 0.75,
+          }}
+        >
+          {icon}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              flexWrap: "wrap",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 14,
+                fontWeight: 700,
+                letterSpacing: "0.01em",
+                color: NEX.text,
+              }}
+            >
+              {label}
+            </div>
+            <span
+              data-nex-shop-type-coming-soon-chip
+              style={{
+                padding: "2px 8px",
+                borderRadius: 999,
+                background: "rgba(255,120,0,0.14)",
+                border: "1px solid rgba(255,120,0,0.55)",
+                color: NEX.orange,
+                fontSize: 9,
+                fontWeight: 800,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                lineHeight: 1,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Coming soon
+            </span>
+          </div>
+          <div
+            style={{
+              marginTop: 3,
+              fontSize: 12,
+              fontWeight: 500,
+              lineHeight: 1.35,
+              color: "#B4BAC3",
+              textShadow: "0 0 2px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,0.5)",
+              overflowWrap: "anywhere",
+            }}
+          >
+            {caption}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Link
       href={href}
       onClick={onClick}
+      data-nex-shop-type-card={dataLayout ?? ""}
       style={{
         textDecoration: "none",
         display: "flex",
@@ -1011,6 +1213,60 @@ function ShopTypeAffiliateIcon(): React.JSX.Element {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+// Owner-authorised 2026-10-18 · S5 · Services + Accommodation icons.
+// Both marked "Coming soon" in the chooser so these glyphs render
+// in a muted treatment · they still need distinct identities so the
+// row doesn't read as a placeholder.
+function ShopTypeServicesIcon(): React.JSX.Element {
+  // Wrench crossed with sparkle · reads as "work · bookable service"
+  return (
+    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M14 7a3 3 0 0 1 4 4l-7 7-4 1 1-4 7-7Z"
+        stroke="currentColor"
+        strokeWidth={1.6}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M4 20l1-1"
+        stroke="currentColor"
+        strokeWidth={1.6}
+        strokeLinecap="round"
+      />
+      <circle cx="18" cy="6" r="1" fill="currentColor" />
+    </svg>
+  );
+}
+
+function ShopTypeAccommodationIcon(): React.JSX.Element {
+  // Bed / room silhouette · reads as "stay-and-book"
+  return (
+    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M3 20V9"
+        stroke="currentColor"
+        strokeWidth={1.6}
+        strokeLinecap="round"
+      />
+      <path
+        d="M21 20v-6a2 2 0 0 0-2-2H3"
+        stroke="currentColor"
+        strokeWidth={1.6}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3 16h18"
+        stroke="currentColor"
+        strokeWidth={1.6}
+        strokeLinecap="round"
+      />
+      <circle cx="8" cy="10.5" r="1.6" stroke="currentColor" strokeWidth={1.4} />
     </svg>
   );
 }

@@ -84,7 +84,12 @@ export function OwnerEditShell(props: OwnerEditShellProps): React.JSX.Element {
           data-nex-profile-owner-edit-toggle
           data-nex-profile-owner-edit-mode="off"
           aria-label="Edit profile"
-          style={pillStyle(NEX.cyan, NEX.bg)}
+          /* Owner directive 2026-10-18 · Edit pill picks up the
+             profile accent (CSS var set by profile root from
+             ?themeAccent). Falls back to NEX cyan when no theme
+             param · fg stays NEX.bg (navy) for contrast across
+             both pink and green accents. */
+          style={pillStyle(`var(--nex-profile-accent, ${NEX.cyan})`, NEX.bg)}
         >
           <PencilIcon /> Edit
         </Link>

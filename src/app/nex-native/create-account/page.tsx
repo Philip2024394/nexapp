@@ -133,12 +133,17 @@ export default async function CreateAccountPage({ searchParams }: PageProps) {
         id="main"
         data-nex-create-account-root
         style={{
+          // Owner directive 2026-10-18 · lock to one viewport · no
+          // page scroll. Combined with the inner wrapper's own
+          // height:100% + overflow:hidden, this guarantees the hero
+          // + icon tiles + form all stay reachable without scrolling.
           position: "relative",
-          minHeight: "100dvh",
+          height: "100dvh",
+          maxHeight: "100dvh",
           background: NEX.bg,
           color: NEX.textPrimary,
           fontFamily: SANS,
-          overflowX: "hidden",
+          overflow: "hidden",
         }}
       >
         {/* Full-viewport owner-supplied Earth-explorer backdrop · code
@@ -175,12 +180,21 @@ export default async function CreateAccountPage({ searchParams }: PageProps) {
 
         <div
           style={{
+            // Owner directive 2026-10-18 · wrapper fills the locked
+            // 100dvh main · flex-column so the form settles at the
+            // bottom and the hero stacks naturally above with no
+            // page scroll.
             position: "relative",
             zIndex: 2,
+            height: "100%",
             maxWidth: 420,
             margin: "0 auto",
             padding:
-              "calc(env(safe-area-inset-top, 0px) + 14px) 20px calc(env(safe-area-inset-bottom, 0px) + 24px)",
+              "calc(env(safe-area-inset-top, 0px) + 10px) 20px calc(env(safe-area-inset-bottom, 0px) + 14px)",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            boxSizing: "border-box",
           }}
         >
           {/* ── Top brand header · badge + wordmark + taglines
@@ -191,7 +205,8 @@ export default async function CreateAccountPage({ searchParams }: PageProps) {
               display: "flex",
               alignItems: "flex-start",
               gap: 12,
-              marginBottom: 10,
+              marginBottom: 4,
+              flexShrink: 0,
             }}
           >
             <NexPingBadge size={56} accent={NEX.cyan} dataTestId="create-account-nex" />
@@ -252,14 +267,15 @@ export default async function CreateAccountPage({ searchParams }: PageProps) {
             data-nex-create-account-hero
             style={{
               maxWidth: 240,
-              marginTop: 18,
-              marginBottom: 16,
+              marginTop: 8,
+              marginBottom: 8,
+              flexShrink: 0,
             }}
           >
             <h1
               style={{
                 margin: 0,
-                fontSize: 32,
+                fontSize: 26,
                 fontWeight: 800,
                 lineHeight: 1.05,
                 letterSpacing: "-0.02em",
@@ -274,9 +290,9 @@ export default async function CreateAccountPage({ searchParams }: PageProps) {
                 data-nex-create-account-wordmark
                 style={{
                   display: "block",
-                  height: 56,
+                  height: 42,
                   width: "auto",
-                  marginTop: 4,
+                  marginTop: 2,
                   filter: "drop-shadow(0 6px 20px rgba(180,124,255,0.4))",
                   userSelect: "none",
                   pointerEvents: "none",
@@ -285,8 +301,8 @@ export default async function CreateAccountPage({ searchParams }: PageProps) {
             </h1>
             <div
               style={{
-                marginTop: 10,
-                fontSize: 18,
+                marginTop: 6,
+                fontSize: 15,
                 fontWeight: 700,
                 color: NEX.textPrimary,
                 textShadow: "0 1px 4px rgba(0,0,0,0.6)",
@@ -299,7 +315,7 @@ export default async function CreateAccountPage({ searchParams }: PageProps) {
           {/* ── 4-capability icon tile ── */}
           <section
             data-nex-create-account-icon-set
-            style={{ marginBottom: 16, width: "100%" }}
+            style={{ marginBottom: 10, width: "100%", flexShrink: 0 }}
           >
             <img
               src="/nex-native/landing-icon-set.png"

@@ -1,0 +1,45 @@
+{
+  "identity": {
+    "id": "pink-dream",
+    "name": "Pink Dream",
+    "tagline": "Pink Dream · generated preview",
+    "conceptOneLine": "Pink Dream · generated · pending A3 validation",
+    "categoryId": "teddy"
+  },
+  "colours": {
+    "primary": "#7596da",
+    "secondary": "#345aac",
+    "highlight": "#f4bca2",
+    "glow": "rgba(117, 150, 218, 0.45)",
+    "deep": "#63322e"
+  },
+  "personality": "drift",
+  "intro": {
+    "kind": "standard",
+    "videoUrl": "/nex-themes/pink-dream-intro.mp4",
+    "scriptedAnimation": null,
+    "playPolicy": "twice-then-skip"
+  },
+  "wallpaperUrl": "/nex-themes/pink-dream.png",
+  "wallpaperScrim": "default",
+  "derivedTokens": {
+    "background": "#63322e",
+    "surface": "#6d3c38",
+    "surfaceElevated": "#7a4945",
+    "accent": "#7596da",
+    "accentSecondary": "#345aac",
+    "textPrimary": "#f4bca2",
+    "textSecondary": "#B5C3D6",
+    "textOnAccent": "#0A0A0A",
+    "incomingBubble": "#542b27",
+    "outgoingBubble": "#263f72",
+    "bubbleBorder": "rgba(117, 150, 218, 0.28)",
+    "composerSurface": "#6b3a36",
+    "composerBorder": "rgba(117, 150, 218, 0.38)",
+    "iconColor": "#dba389",
+    "focusColor": "#7596da",
+    "successColor": "#2ED37A",
+    "dangerColor": "#E85D5D",
+    "source": "mixed"
+  }
+}

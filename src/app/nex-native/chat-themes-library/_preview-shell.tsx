@@ -1237,23 +1237,50 @@ function ActionFooter({
             {openFullScreenHref && (
               <input type="hidden" name="next" value={openFullScreenHref} />
             )}
-            <button
-              type="submit"
+            <div
               style={{
-                width: "100%",
-                padding: "12px",
-                borderRadius: 10,
-                background: theme.accent_hex,
-                color: "#0B0F1A",
-                border: `1px solid ${theme.accent_hex}`,
-                fontSize: 14,
-                fontWeight: 700,
-                cursor: "pointer",
-                boxShadow: `0 6px 18px -10px ${theme.accent_hex}`,
+                display: "flex",
+                flexDirection: "column",
+                gap: 10,
               }}
             >
-              This theme →
-            </button>
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  borderRadius: 10,
+                  background: "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,255,255,0.14)",
+                  color: NEX.textDim,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  textAlign: "center",
+                }}
+              >
+                ← Back to themes
+              </button>
+              <button
+                type="submit"
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  borderRadius: 10,
+                  background: theme.accent_hex,
+                  color: "#0B0F1A",
+                  border: `1px solid ${theme.accent_hex}`,
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  boxShadow: `0 6px 18px -10px ${theme.accent_hex}`,
+                  textAlign: "center",
+                }}
+              >
+                Use this theme →
+              </button>
+            </div>
           </form>
         </>
       )}

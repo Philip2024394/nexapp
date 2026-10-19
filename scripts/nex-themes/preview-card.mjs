@@ -1,0 +1,134 @@
+// scripts/nex-themes/preview-card.mjs
+//
+// NEX Theme Production · Phase A3 · static palette preview card.
+// --------------------------------------------------------------------------
+// Owner-authorised 2026-10-19. Isolated from production rendering.
+//
+// Honesty invariants:
+//   · This file writes a STATIC HTML "palette card" that visualises the
+//     derived tokens as swatches with contrast annotations. It is NOT
+//     the real NEX chat renderer. The HTML output is explicitly labelled
+//     "palette card · not the real NEX chat UI".
+//   · The real-chrome visual preview is delivered by the Playwright
+//     screenshots of the dev-only harness at
+//     /nex-native/dev/theme-preview-generated · see the top-level
+//     README of this folder.
+//   · The card is a convenience for owner-side review when the Playwright
+//     harness is unavailable (e.g. dev server not running). It is NOT a
+//     substitute for the real-chrome screenshots.
+//
+// Public API:
+//   writePreviewCard({ outputDir, name, slug, tokens, gates, introFramePath,
+//                       wallpaperPath })
+
+import { promises as fs } from "node:fs";
+import * as path from "node:path";
+
+export async function writePreviewCard({
+  outputDir,
+  name,
+  slug,
+  tokens,
+  gates,
+  introFramePath,
+  wallpaperPath,
+}) {
+  const html = renderCard({ name, slug, tokens, gates, introFramePath, wallpaperPath });
+  const outPath = path.join(outputDir, "preview-card.html");
+  await fs.writeFile(outPath, html, "utf8");
+  return outPath;
+}
+
+function renderCard({ name, slug, tokens, gates, introFramePath, wallpaperPath }) {
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+  const swatches = Object.entries(tokens)
+    .filter(([k]) => k !== "source")
+    .map(([k, v]) => swatchHtml(k, v))
+    .join("\n");
+
+  const contrast = gates?.contrastCheck?.measurements?.results ?? [];
+  const contrastRows = contrast.map((r) => `
+    <tr>
+      <td>${esc(r.pair)}</td>
+      <td style="font-family:monospace">${esc(r.fg)}</td>
+      <td style="font-family:monospace">${esc(r.bg)}</td>
+      <td style="text-align:right">${r.ratio.toFixed(2)}</td>
+      <td style="text-align:right;color:#8BA9D1">${r.threshold}</td>
+      <td class="label label-${r.label}">${r.label.toUpperCase()}</td>
+    </tr>
+  `).join("");
+
+  const summary = gates?.summary ?? { pass: 0, warn: 0, fail: 0 };
+  const introImg = introFramePath ? `<img src="${esc(path.relative(path.dirname(introFramePath), introFramePath))}" alt="intro frame" />` : "<div class=\"ph\">no intro frame</div>";
+  const wallpaperRel = wallpaperPath ? path.basename(wallpaperPath) : null;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>${esc(name)} · palette card · ${esc(slug)}</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 32px; background: #020914; color: #F2F5F8; font-family: Inter, system-ui, sans-serif; }
+  h1 { margin: 0 0 4px; font-size: 24px; font-weight: 800; }
+  .warn-banner { padding: 10px 14px; margin: 12px 0 24px; background: rgba(255,140,0,0.14); border: 1px solid rgba(255,140,0,0.5); border-radius: 10px; color: #FFB46A; font-size: 13px; }
+  h2 { margin: 32px 0 12px; font-size: 14px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #8BA9D1; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+  .swatch { padding: 12px; border-radius: 8px; border: 1px solid rgba(0,175,255,0.18); display: flex; flex-direction: column; gap: 6px; }
+  .swatch .name { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #8BA9D1; }
+  .swatch .value { font-family: monospace; font-size: 12px; }
+  .swatch .chip { width: 100%; height: 48px; border-radius: 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid rgba(0,175,255,0.1); }
+  th { color: #8BA9D1; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+  .label { font-size: 10px; font-weight: 800; letter-spacing: 0.1em; padding: 2px 6px; border-radius: 4px; display: inline-block; }
+  .label-pass { background: rgba(46,211,122,0.2); color: #58E59B; }
+  .label-warn { background: rgba(255,180,0,0.2); color: #FFC95C; }
+  .label-fail { background: rgba(232,93,93,0.2); color: #FF9191; }
+  .summary { display: inline-flex; gap: 14px; padding: 8px 14px; background: rgba(0,175,255,0.08); border-radius: 999px; font-size: 13px; }
+  .assets { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .assets img { max-width: 100%; border-radius: 8px; border: 1px solid rgba(0,175,255,0.3); }
+  .ph { padding: 40px; border-radius: 8px; border: 1px dashed rgba(0,175,255,0.3); text-align: center; color: #8BA9D1; }
+  code { font-family: monospace; background: rgba(0,175,255,0.08); padding: 2px 5px; border-radius: 3px; font-size: 12px; }
+</style>
+</head>
+<body>
+  <h1>${esc(name)} <span style="color:#8BA9D1">·</span> <code>${esc(slug)}</code></h1>
+  <div class="warn-banner">⚠ This is a STATIC palette card. It is NOT the real NEX chat renderer. The real-chrome visual preview is at <code>/nex-native/dev/theme-preview-generated?slug=${esc(slug)}</code> (served by the dev server) and captured via Playwright.</div>
+  <div class="summary">
+    <span>Gates summary ·</span>
+    <span class="label label-pass">${summary.pass} pass</span>
+    <span class="label label-warn">${summary.warn} warn</span>
+    <span class="label label-fail">${summary.fail} fail</span>
+    <span style="color:#8BA9D1">(human visual review still required)</span>
+  </div>
+  <h2>Derived semantic tokens</h2>
+  <div class="grid">${swatches}</div>
+  <h2>WCAG AA contrast measurements</h2>
+  <table>
+    <thead><tr><th>Pair</th><th>Foreground</th><th>Background</th><th style="text-align:right">Ratio</th><th style="text-align:right">Threshold</th><th>Label</th></tr></thead>
+    <tbody>${contrastRows}</tbody>
+  </table>
+  <h2>Source assets</h2>
+  <div class="assets">
+    <div>
+      <div style="font-size:11px;color:#8BA9D1;margin-bottom:6px">Intro frame (sampled)</div>
+      ${introImg}
+    </div>
+    <div>
+      <div style="font-size:11px;color:#8BA9D1;margin-bottom:6px">Wallpaper</div>
+      ${wallpaperRel ? `<div class="ph">wallpaper · <code>${esc(wallpaperRel)}</code></div>` : `<div class="ph">no wallpaper</div>`}
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+function swatchHtml(name, value) {
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+  return `<div class="swatch">
+    <div class="chip" style="background:${esc(value)}"></div>
+    <div class="name">${esc(name)}</div>
+    <div class="value">${esc(value)}</div>
+  </div>`;
+}

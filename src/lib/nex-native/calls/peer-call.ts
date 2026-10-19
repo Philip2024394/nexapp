@@ -126,6 +126,22 @@ export class PeerCall {
     return this.state;
   }
 
+  /** Phase 4 wiring 2026-10-19 · additive read-only getter so the
+   *  sealed measurement module can read WebRTC stats WITHOUT
+   *  modifying the established 1:1 call architecture.
+   *
+   *  Honest invariants (symmetric to GroupPeer.getPeerConnection):
+   *    · Returns null when the call is torn down (closed === true) ·
+   *      a stale PC can never leak out and be mistaken for live.
+   *    · Returns null when no PC exists yet (pre-offer).
+   *    · Caller MUST additionally check pc.connectionState to
+   *      distinguish connecting / connected / disconnected / failed /
+   *      closed · the peer-call quality hook does exactly that. */
+  getPeerConnection(): RTCPeerConnection | null {
+    if (this.closed) return null;
+    return this.pc;
+  }
+
   async close(): Promise<void> {
     this.closed = true;
     if (this.state !== "idle" && this.state !== "ended") {

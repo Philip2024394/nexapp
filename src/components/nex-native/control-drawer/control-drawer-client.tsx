@@ -46,6 +46,11 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { signOutAction } from "@/app/nex-native/_actions";
+// Owner directive 2026-10-18 · guest viewers see a sealed 3D lock
+// icon next to any row that requires an account. Reusing the
+// existing primitive rather than inventing a second lock shape
+// keeps the visual language consistent with SettingsHeaderSlot.
+import { LockedSettingsIcon } from "@/components/nex-native/account-gate/LockedSettingsIcon";
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -89,8 +94,29 @@ interface MenuRow {
   readonly label: string;
   readonly subtitle?: string;
   readonly href: string;
+  /** Owner directive 2026-10-18 · when true + the viewer is a guest,
+   *  the drawer renders a sealed 3D LockedSettingsIcon on the right
+   *  of the row and routes taps through /sign-in?next=<href> so the
+   *  user lands back on this exact feature after signing in. Rows
+   *  that are safe for guests (Help & feedback, etc.) leave this
+   *  undefined. */
+  readonly locked?: boolean;
 }
 
+/** Build a /sign-in URL that returns the visitor to the row's intended
+ *  destination after a successful auth. The sign-in page validates
+ *  the `next` param via its own `safeNext` whitelist, so we always
+ *  pass the raw internal path · it will be rejected server-side if
+ *  it ever becomes something unsafe. */
+function signInWithReturn(destination: string): string {
+  return `/nex-native/sign-in?next=${encodeURIComponent(destination)}`;
+}
+
+// Owner directive 2026-10-18 · guest viewers see a 3D lock on every
+// row that requires a NEX account. Each row below carries an
+// explicit `locked` flag so the gate decision is visible at the
+// source of truth. Rows that are legitimately public for guests
+// (help docs) leave `locked` undefined.
 const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
   {
     key: "profile",
@@ -102,18 +128,21 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
     // profile. The retired /settings/profile route also now
     // redirects to /profile/me?mode=edit for backward compat.
     href: "/nex-native/profile/me",
+    locked: true,
   },
   {
     key: "chats-contacts",
     label: "Chats and contacts",
     subtitle: "Return to your conversations",
     href: "/nex-native/chat",
+    locked: true,
   },
   {
     key: "chat-appearance",
     label: "Chat appearance",
     subtitle: "Themes and personalisation",
     href: "/nex-native/chat-themes-library",
+    locked: true,
   },
 ];
 
@@ -123,6 +152,7 @@ const YOUR_BUSINESS_ROWS: ReadonlyArray<MenuRow> = [
     label: "My businesses",
     subtitle: "Business profiles and management",
     href: "/nex-native/manage",
+    locked: true,
   },
   // Business Vault is CONDITIONAL · rendered only when isBisnis is true.
   // The row itself lives in a separate const below so the gate stays
@@ -132,6 +162,7 @@ const YOUR_BUSINESS_ROWS: ReadonlyArray<MenuRow> = [
     label: "Packages and billing",
     subtitle: "Your plan and entitlements",
     href: "/nex-native/settings/tier",
+    locked: true,
   },
 ];
 
@@ -140,6 +171,7 @@ const BUSINESS_VAULT_ROW: MenuRow = {
   label: "Business Vault",
   subtitle: "For eligible business accounts",
   href: "/nex-native/vault",
+  locked: true,
 };
 
 const PREFERENCES_ROWS: ReadonlyArray<MenuRow> = [
@@ -147,16 +179,19 @@ const PREFERENCES_ROWS: ReadonlyArray<MenuRow> = [
     key: "settings",
     label: "Settings and privacy",
     href: "/nex-native/settings",
+    locked: true,
   },
   {
     key: "security",
     label: "Security",
     href: "/nex-native/settings/security",
+    locked: true,
   },
   {
     key: "help",
     label: "Help and feedback",
     href: "/nex-native/settings/help",
+    // Not locked · help/support should be accessible without an account.
   },
 ];
 
@@ -219,11 +254,20 @@ export function ControlDrawer({ session, themeAccent }: ControlDrawerProps) {
 
   // Focus on close button when drawer opens; return focus to trigger
   // when drawer closes. Honours the slide-in by waiting for `visible`.
+  //
+  // Owner directive 2026-10-18 · `preventScroll: true` is REQUIRED ·
+  // without it the browser's default focus behaviour scrolls the
+  // ancestor `.nex-native-frame` (overflow-y: auto on desktop) to
+  // align the focused element in view, which caused the welcome page
+  // to visibly "jump" when the drawer opened and closed. The drawer
+  // and trigger are already positioned correctly (drawer slides in
+  // from translateX(100%); trigger stays in the header), so we never
+  // actually need a scroll to make them visible.
   React.useEffect(() => {
     if (visible) {
-      closeButtonRef.current?.focus();
+      closeButtonRef.current?.focus({ preventScroll: true });
     } else if (!open) {
-      triggerRef.current?.focus();
+      triggerRef.current?.focus({ preventScroll: true });
     }
   }, [visible, open]);
 
@@ -382,7 +426,15 @@ function DrawerBody({
     <div style={drawerBodyStyle}>
       <IdentityBar session={session} />
 
-      <SectionGroup title="YOUR NEX" rows={YOUR_NEX_ROWS} />
+      {/* Owner directive 2026-10-18 · guest viewers see a 3D lock
+          on every account-gated row. The row stays tappable · tap
+          routes through /sign-in with next=<destination> so the
+          user lands back on the exact feature after they sign in. */}
+      <SectionGroup
+        title="YOUR NEX"
+        rows={YOUR_NEX_ROWS}
+        isGuest={session === null}
+      />
 
       <SectionGroup
         title="YOUR BUSINESS"
@@ -395,9 +447,14 @@ function DrawerBody({
               ]
             : YOUR_BUSINESS_ROWS
         }
+        isGuest={session === null}
       />
 
-      <SectionGroup title="PREFERENCES & SUPPORT" rows={PREFERENCES_ROWS} />
+      <SectionGroup
+        title="PREFERENCES & SUPPORT"
+        rows={PREFERENCES_ROWS}
+        isGuest={session === null}
+      />
 
       {session !== null ? (
         <div style={logoutRowStyle}>
@@ -433,7 +490,7 @@ function IdentityBar({
         <div style={identityBarAnonTextColumnStyle}>
           <span style={identityBarAnonLabelStyle}>Sign in to NEX</span>
           <span style={identityBarAnonHintStyle}>
-            to access your account + business
+            to access your account
           </span>
         </div>
         {/* Owner directive 2026-10-18 (iteration) · right-side blue
@@ -474,28 +531,55 @@ function IdentityBar({
 function SectionGroup({
   title,
   rows,
+  isGuest,
 }: {
   readonly title: string;
   readonly rows: ReadonlyArray<MenuRow>;
+  /** Owner directive 2026-10-18 · when true, rows carrying `locked: true`
+   *  show the sealed 3D lock icon on the right and route through
+   *  /sign-in?next=<href> so the viewer lands back on the exact
+   *  feature after they create or sign in to an account. */
+  readonly isGuest: boolean;
 }) {
   return (
     <section style={sectionStyle}>
       <h3 style={sectionTitleStyle}>{title}</h3>
       <ul style={sectionListStyle}>
-        {rows.map((row) => (
-          <li key={row.key} style={sectionListItemStyle}>
-            <Link
-              href={row.href}
-              style={rowLinkStyle}
-              data-nex-control-drawer-row={row.key}
-            >
-              <span style={rowLabelStyle}>{row.label}</span>
-              {row.subtitle ? (
-                <span style={rowSubtitleStyle}>{row.subtitle}</span>
-              ) : null}
-            </Link>
-          </li>
-        ))}
+        {rows.map((row) => {
+          const showLock = isGuest && row.locked === true;
+          const href = showLock ? signInWithReturn(row.href) : row.href;
+          return (
+            <li key={row.key} style={sectionListItemStyle}>
+              <Link
+                href={href}
+                style={rowLinkStyle}
+                data-nex-control-drawer-row={row.key}
+                data-nex-control-drawer-row-locked={showLock ? "true" : "false"}
+                aria-label={
+                  showLock
+                    ? `${row.label} · requires NEX account · tap to sign in`
+                    : undefined
+                }
+              >
+                <div style={rowTextColumnStyle}>
+                  <span style={rowLabelStyle}>{row.label}</span>
+                  {row.subtitle ? (
+                    <span style={rowSubtitleStyle}>{row.subtitle}</span>
+                  ) : null}
+                </div>
+                {showLock ? (
+                  <span style={rowLockSlotStyle}>
+                    <LockedSettingsIcon
+                      size={18}
+                      idPrefix={`nex-drawer-lock-${row.key}`}
+                      ariaLabel="Account required"
+                    />
+                  </span>
+                ) : null}
+              </Link>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );
@@ -822,15 +906,37 @@ const sectionListItemStyle: React.CSSProperties = {
   margin: 0,
   padding: 0,
 };
+// Owner directive 2026-10-18 · the row is now a flex-row so the
+// optional 3D lock icon can sit on the right. The text column
+// (label + subtitle) takes `flex: 1` so the lock is right-pinned.
+// Rows that are not locked render the same label + subtitle column
+// with no icon on the right — layout is byte-identical to the pre-
+// 2026-10-18 version.
 const rowLinkStyle: React.CSSProperties = {
   display: "flex",
-  flexDirection: "column",
-  gap: 2,
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 10,
   padding: "10px 12px",
   borderRadius: 10,
   textDecoration: "none",
   background: "transparent",
   color: TEXT,
+};
+const rowTextColumnStyle: React.CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 2,
+  flex: 1,
+  minWidth: 0,
+};
+const rowLockSlotStyle: React.CSSProperties = {
+  flexShrink: 0,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 24,
+  height: 24,
 };
 const rowLabelStyle: React.CSSProperties = {
   color: TEXT,

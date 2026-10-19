@@ -1,0 +1,376 @@
+{
+  "version": "a3.0",
+  "generatedAt": "2026-10-19T07:03:31.704Z",
+  "inputs": {
+    "name": "Crispy Chicken",
+    "category": "food",
+    "introPath": "public/nex-themes/crispy-chicken-intro.mp4",
+    "wallpaperPath": "public/nex-themes/crispy-chicken-wallpaper.png",
+    "accentOverride": null
+  },
+  "extraction": {
+    "algorithm": "sharp-histogram-bucket",
+    "sampleSize": "64x64",
+    "introSampled": true,
+    "wallpaperSampled": true,
+    "introSampledFromFrame": "C:\\Users\\Victus\\nexapp\\scripts\\nex-themes\\generated\\crispy-chicken\\intro-frame.jpg",
+    "dominantColours": [
+      {
+        "hex": "#630302",
+        "rgb": {
+          "r": 99,
+          "g": 3,
+          "b": 2
+        },
+        "weight": 0.0091
+      },
+      {
+        "hex": "#6c0102",
+        "rgb": {
+          "r": 108,
+          "g": 1,
+          "b": 2
+        },
+        "weight": 0.0082
+      },
+      {
+        "hex": "#740202",
+        "rgb": {
+          "r": 116,
+          "g": 2,
+          "b": 2
+        },
+        "weight": 0.0078
+      },
+      {
+        "hex": "#0c0402",
+        "rgb": {
+          "r": 12,
+          "g": 4,
+          "b": 2
+        },
+        "weight": 0.0065
+      },
+      {
+        "hex": "#a44405",
+        "rgb": {
+          "r": 164,
+          "g": 68,
+          "b": 5
+        },
+        "weight": 0.0061
+      },
+      {
+        "hex": "#953403",
+        "rgb": {
+          "r": 149,
+          "g": 52,
+          "b": 3
+        },
+        "weight": 0.0043
+      },
+      {
+        "hex": "#b4530c",
+        "rgb": {
+          "r": 180,
+          "g": 83,
+          "b": 12
+        },
+        "weight": 0.0043
+      },
+      {
+        "hex": "#930202",
+        "rgb": {
+          "r": 147,
+          "g": 2,
+          "b": 2
+        },
+        "weight": 0.0043
+      },
+      {
+        "hex": "#6b0101",
+        "rgb": {
+          "r": 107,
+          "g": 1,
+          "b": 1
+        },
+        "weight": 0.0078
+      },
+      {
+        "hex": "#0b0301",
+        "rgb": {
+          "r": 11,
+          "g": 3,
+          "b": 1
+        },
+        "weight": 0.0065
+      }
+    ]
+  },
+  "derivedTokens": {
+    "background": "#020201",
+    "surface": "#0c0c0b",
+    "surfaceElevated": "#191918",
+    "accent": "#c10200",
+    "accentSecondary": "#6c0102",
+    "textPrimary": "#F2F5F8",
+    "textSecondary": "#B5C3D6",
+    "textOnAccent": "#FFFFFF",
+    "incomingBubble": "#14140a",
+    "outgoingBubble": "#3c1514",
+    "bubbleBorder": "rgba(193, 2, 0, 0.28)",
+    "composerSurface": "#0a0a09",
+    "composerBorder": "rgba(193, 2, 0, 0.38)",
+    "iconColor": "#F2F5F8",
+    "focusColor": "#c10200",
+    "successColor": "#2ED37A",
+    "dangerColor": "#E85D5D",
+    "source": "mixed"
+  },
+  "generation": {
+    "slug": "crispy-chicken",
+    "packagePath": "C:\\Users\\Victus\\nexapp\\scripts\\nex-themes\\generated\\crispy-chicken\\crispy-chicken.package.ts",
+    "jsonPath": "C:\\Users\\Victus\\nexapp\\scripts\\nex-themes\\generated\\crispy-chicken\\crispy-chicken.package.json",
+    "bytes": 2385,
+    "status": "generated"
+  },
+  "validation": {
+    "assetCheck": {
+      "status": "pass",
+      "phase": "A3",
+      "reason": "All assets readable",
+      "measurements": {
+        "intro": {
+          "path": "C:\\Users\\Victus\\nexapp\\public\\nex-themes\\crispy-chicken-intro.mp4",
+          "extension": ".mp4",
+          "isImage": false,
+          "isVideo": true
+        },
+        "wallpaper": {
+          "path": "C:\\Users\\Victus\\nexapp\\public\\nex-themes\\crispy-chicken-wallpaper.png",
+          "extension": ".png",
+          "isImage": true,
+          "isVideo": false,
+          "width": 940,
+          "height": 1672
+        }
+      }
+    },
+    "paletteCheck": {
+      "status": "pass",
+      "phase": "A3",
+      "reason": "All 17 colour tokens + provenance present and well-formed",
+      "measurements": {
+        "requiredTokenCount": 17,
+        "presentTokenCount": 17,
+        "provenance": "mixed"
+      }
+    },
+    "contrastCheck": {
+      "status": "pass",
+      "phase": "A3",
+      "reason": "All 9 WCAG AA pairs pass",
+      "measurements": {
+        "pairsChecked": 9,
+        "pass": 9,
+        "warn": 0,
+        "fail": 0,
+        "results": [
+          {
+            "pair": "textPrimary on background",
+            "fg": "#F2F5F8",
+            "bg": "#020201",
+            "ratio": 18.97,
+            "threshold": 4.5,
+            "largeText": false,
+            "label": "pass"
+          },
+          {
+            "pair": "textSecondary on background",
+            "fg": "#B5C3D6",
+            "bg": "#020201",
+            "ratio": 11.61,
+            "threshold": 4.5,
+            "largeText": false,
+            "label": "pass"
+          },
+          {
+            "pair": "textPrimary on surface",
+            "fg": "#F2F5F8",
+            "bg": "#0c0c0b",
+            "ratio": 17.89,
+            "threshold": 4.5,
+            "largeText": false,
+            "label": "pass"
+          },
+          {
+            "pair": "textPrimary on incomingBubble",
+            "fg": "#F2F5F8",
+            "bg": "#14140a",
+            "ratio": 16.92,
+            "threshold": 4.5,
+            "largeText": false,
+            "label": "pass"
+          },
+          {
+            "pair": "textPrimary on outgoingBubble",
+            "fg": "#F2F5F8",
+            "bg": "#3c1514",
+            "ratio": 14.66,
+            "threshold": 4.5,
+            "largeText": false,
+            "label": "pass"
+          },
+          {
+            "pair": "textOnAccent on accent",
+            "fg": "#FFFFFF",
+            "bg": "#c10200",
+            "ratio": 6.41,
+            "threshold": 4.5,
+            "largeText": false,
+            "label": "pass"
+          },
+          {
+            "pair": "textPrimary on composerSurface",
+            "fg": "#F2F5F8",
+            "bg": "#0a0a09",
+            "ratio": 18.1,
+            "threshold": 4.5,
+            "largeText": false,
+            "label": "pass"
+          },
+          {
+            "pair": "iconColor on background",
+            "fg": "#F2F5F8",
+            "bg": "#020201",
+            "ratio": 18.97,
+            "threshold": 3,
+            "largeText": true,
+            "label": "pass"
+          },
+          {
+            "pair": "accent on background (CTA fill visible)",
+            "fg": "#c10200",
+            "bg": "#020201",
+            "ratio": 3.24,
+            "threshold": 3,
+            "largeText": true,
+            "label": "pass"
+          }
+        ]
+      }
+    },
+    "bubbleWallpaperSeparation": {
+      "status": "fail",
+      "phase": "A3",
+      "reason": "1 region(s) fail bubble/wallpaper separation at WCAG 3:1 large-shape threshold · out:bottomRight",
+      "measurements": {
+        "regions": {
+          "topLeft": "#a77040",
+          "topRight": "#af7149",
+          "bottomLeft": "#9d6422",
+          "bottomRight": "#aa421d",
+          "centre": "#d77625"
+        },
+        "wallpaperVarianceSpan": 47.3,
+        "inconclusive": false,
+        "incomingBubbleVsWallpaper": {
+          "topLeft": {
+            "wallpaperAvg": "#a77040",
+            "bubble": "#14140a",
+            "ratio": 4.44,
+            "label": "pass"
+          },
+          "topRight": {
+            "wallpaperAvg": "#af7149",
+            "bubble": "#14140a",
+            "ratio": 4.66,
+            "label": "pass"
+          },
+          "bottomLeft": {
+            "wallpaperAvg": "#9d6422",
+            "bubble": "#14140a",
+            "ratio": 3.77,
+            "label": "pass"
+          },
+          "bottomRight": {
+            "wallpaperAvg": "#aa421d",
+            "bubble": "#14140a",
+            "ratio": 3.09,
+            "label": "pass"
+          },
+          "centre": {
+            "wallpaperAvg": "#d77625",
+            "bubble": "#14140a",
+            "ratio": 5.74,
+            "label": "pass"
+          }
+        },
+        "outgoingBubbleVsWallpaper": {
+          "topLeft": {
+            "wallpaperAvg": "#a77040",
+            "bubble": "#3c1514",
+            "ratio": 3.84,
+            "label": "pass"
+          },
+          "topRight": {
+            "wallpaperAvg": "#af7149",
+            "bubble": "#3c1514",
+            "ratio": 4.03,
+            "label": "pass"
+          },
+          "bottomLeft": {
+            "wallpaperAvg": "#9d6422",
+            "bubble": "#3c1514",
+            "ratio": 3.27,
+            "label": "pass"
+          },
+          "bottomRight": {
+            "wallpaperAvg": "#aa421d",
+            "bubble": "#3c1514",
+            "ratio": 2.68,
+            "label": "fail"
+          },
+          "centre": {
+            "wallpaperAvg": "#d77625",
+            "bubble": "#3c1514",
+            "ratio": 4.97,
+            "label": "pass"
+          }
+        }
+      }
+    },
+    "wallpaperQuality": {
+      "status": "fail",
+      "phase": "A3",
+      "reason": "wallpaper's dominant 50% of pixels spans 105 sRGB luma units (p25 55, p75 160) · high-variance wallpapers cannot support consistent bubble/wallpaper separation at ≥3:1 across all regions · recommend replacement or regeneration with a lower-variance image · generator does NOT re-derive bubbles to compensate (would damage theme identity)",
+      "measurements": {
+        "lumaMin": 0,
+        "lumaMax": 255,
+        "lumaSpan": 255,
+        "dominantSpanP25toP75": 105.2
+      }
+    },
+    "packageCheck": {
+      "status": "pass",
+      "phase": "A3",
+      "reason": "Package compiles cleanly and declares the expected ThemePackage shape",
+      "measurements": {
+        "bytes": 2377,
+        "typecheck": "ok"
+      }
+    },
+    "humanVisualReview": {
+      "status": "pending",
+      "phase": "human",
+      "reason": "Awaiting manual review of Playwright screenshots at tests/e2e-screenshots-themes/<slug>/*"
+    }
+  },
+  "summary": {
+    "pass": 4,
+    "warn": 0,
+    "fail": 2
+  },
+  "productionReady": false,
+  "productionReadyReason": "Automated gates run. Production readiness ALSO requires human visual review of the Playwright screenshots. Automated contrast/legibility math is necessary, not sufficient."
+}

@@ -19,6 +19,10 @@ import {
 import { MARIA_MOCK, PRODUCT_SELLER_MOCK } from "../../mock-data";
 import { listThemeEmojis } from "@/lib/nex-native/theme-emoji-service";
 import { PhoneFrame } from "../_phone-frame";
+// Owner-authorised 2026-10-18 · S7 · discreet bottom action bar
+// renders ONLY in full-page preview mode (never when ?embed=1 is on,
+// so mini-phone iframes inside /cover-themes-library stay clean).
+import { CoverActionBar } from "./_cover-action-bar";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,10 +53,17 @@ export default async function CoverLayoutPreview({
   searchParams,
 }: {
   params: Promise<{ layoutId: string }>;
-  searchParams?: Promise<{ theme?: string }>;
+  searchParams?: Promise<{ theme?: string; embed?: string }>;
 }) {
   const { layoutId } = await params;
   const sp = (await searchParams) ?? {};
+  // Owner directive 2026-10-18 · the `?embed=1` flag hides the sticky
+  // design header (back link, template number, APPLY) so this page
+  // can be mounted as a mini preview inside the Cover Themes Library.
+  // The PhoneFrame's mobile-collapse CSS kicks in at the iframe's
+  // native 390px width, so the cover fills the entire frame edge-to-
+  // edge with no bezel, notch, or home-indicator.
+  const isEmbedded = sp.embed === "1";
 
   if (!isValidCoverLayoutId(layoutId)) {
     return (
@@ -100,112 +111,117 @@ export default async function CoverLayoutPreview({
   return (
     <>
       {/* Design header · founder always knows which template + theme
-          they're working on, and can jump back to the gallery. */}
-      <header style={HEADER_STYLE}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            minWidth: 0,
-          }}
-        >
-          <Link
-            href="/nex-native/cover/preview"
-            style={{
-              padding: "6px 12px",
-              borderRadius: 999,
-              background: "transparent",
-              border: "1px solid rgba(0,175,255,0.35)",
-              color: "#00AFFF",
-              fontSize: 11,
-              fontWeight: 700,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              textDecoration: "none",
-              whiteSpace: "nowrap",
-            }}
-          >
-            ‹ All templates
-          </Link>
+          they're working on, and can jump back to the gallery.
+          Owner directive 2026-10-18 · header is HIDDEN when ?embed=1
+          so this page can be mounted as a mini preview inside the
+          Cover Themes Library without any chrome. */}
+      {!isEmbedded && (
+        <header style={HEADER_STYLE}>
           <div
             style={{
-              display: "inline-flex",
-              alignItems: "baseline",
-              gap: 10,
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
               minWidth: 0,
             }}
           >
-            <span
-              aria-hidden
+            <Link
+              href="/nex-native/cover/preview"
               style={{
-                fontSize: 18,
-                fontWeight: 800,
+                padding: "6px 12px",
+                borderRadius: 999,
+                background: "transparent",
+                border: "1px solid rgba(0,175,255,0.35)",
                 color: "#00AFFF",
-                fontVariantNumeric: "tabular-nums",
-              }}
-            >
-              {templateNumber}
-            </span>
-            <span
-              style={{
-                fontSize: 14,
+                fontSize: 11,
                 fontWeight: 700,
-                letterSpacing: "-0.005em",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                textDecoration: "none",
                 whiteSpace: "nowrap",
               }}
             >
-              {templateName}
-            </span>
+              ‹ All templates
+            </Link>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "baseline",
+                gap: 10,
+                minWidth: 0,
+              }}
+            >
+              <span
+                aria-hidden
+                style={{
+                  fontSize: 18,
+                  fontWeight: 800,
+                  color: "#00AFFF",
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {templateNumber}
+              </span>
+              <span
+                style={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  letterSpacing: "-0.005em",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {templateName}
+              </span>
+            </div>
           </div>
-        </div>
-        {/* Theme picker · switches which theme paints the preview. */}
-        {themes.length > 1 && (
-          <form
-            method="get"
-            style={{ display: "inline-flex", gap: 6, flexShrink: 0 }}
-          >
-            <select
-              name="theme"
-              defaultValue={themeId}
-              style={{
-                padding: "5px 8px",
-                borderRadius: 6,
-                background: "#03101D",
-                border: "1px solid rgba(0,175,255,0.35)",
-                color: "#F2F5F8",
-                fontSize: 11,
-                fontFamily: "inherit",
-              }}
+          {/* Theme picker · switches which theme paints the preview. */}
+          {themes.length > 1 && (
+            <form
+              method="get"
+              style={{ display: "inline-flex", gap: 6, flexShrink: 0 }}
             >
-              {themes.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.display_name}
-                </option>
-              ))}
-            </select>
-            <button
-              type="submit"
-              style={{
-                padding: "5px 10px",
-                borderRadius: 6,
-                border: "none",
-                background: "#00AFFF",
-                color: "#02070E",
-                fontSize: 10,
-                fontWeight: 800,
-                letterSpacing: "0.06em",
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              APPLY
-            </button>
-          </form>
-        )}
-      </header>
+              <select
+                name="theme"
+                defaultValue={themeId}
+                style={{
+                  padding: "5px 8px",
+                  borderRadius: 6,
+                  background: "#03101D",
+                  border: "1px solid rgba(0,175,255,0.35)",
+                  color: "#F2F5F8",
+                  fontSize: 11,
+                  fontFamily: "inherit",
+                }}
+              >
+                {themes.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.display_name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="submit"
+                style={{
+                  padding: "5px 10px",
+                  borderRadius: 6,
+                  border: "none",
+                  background: "#00AFFF",
+                  color: "#02070E",
+                  fontSize: 10,
+                  fontWeight: 800,
+                  letterSpacing: "0.06em",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                APPLY
+              </button>
+            </form>
+          )}
+        </header>
+      )}
 
       <PhoneFrame>
         <CoverThemeSkin
@@ -240,6 +256,13 @@ export default async function CoverLayoutPreview({
           />
         </CoverThemeSkin>
       </PhoneFrame>
+      {/* Owner-authorised 2026-10-18 · S7 · the action bar is a
+          sibling of the sealed PhoneFrame so the frame's mobile
+          collapse CSS (which hides chrome at max-width:767px) does
+          not swallow it. Embed mode (iframe inside the cover-themes-
+          library mini tiles) skips it entirely · the mini tiles
+          stay chrome-free. */}
+      {!isEmbedded && <CoverActionBar layoutId={layoutId} />}
     </>
   );
 }

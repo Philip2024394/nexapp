@@ -1,0 +1,376 @@
+{
+  "version": "a3.0",
+  "generatedAt": "2026-10-19T07:03:38.552Z",
+  "inputs": {
+    "name": "Pink Dream",
+    "category": "teddy",
+    "introPath": "public/nex-themes/pink-dream-intro.mp4",
+    "wallpaperPath": "public/nex-themes/pink-dream.png",
+    "accentOverride": null
+  },
+  "extraction": {
+    "algorithm": "sharp-histogram-bucket",
+    "sampleSize": "64x64",
+    "introSampled": true,
+    "wallpaperSampled": true,
+    "introSampledFromFrame": "C:\\Users\\Victus\\nexapp\\scripts\\nex-themes\\generated\\pink-dream\\intro-frame.jpg",
+    "dominantColours": [
+      {
+        "hex": "#723d3d",
+        "rgb": {
+          "r": 114,
+          "g": 61,
+          "b": 61
+        },
+        "weight": 0.0161
+      },
+      {
+        "hex": "#6d3a3b",
+        "rgb": {
+          "r": 109,
+          "g": 58,
+          "b": 59
+        },
+        "weight": 0.0152
+      },
+      {
+        "hex": "#ebab93",
+        "rgb": {
+          "r": 235,
+          "g": 171,
+          "b": 147
+        },
+        "weight": 0.0135
+      },
+      {
+        "hex": "#834b4c",
+        "rgb": {
+          "r": 131,
+          "g": 75,
+          "b": 76
+        },
+        "weight": 0.013
+      },
+      {
+        "hex": "#7b4445",
+        "rgb": {
+          "r": 123,
+          "g": 68,
+          "b": 69
+        },
+        "weight": 0.0126
+      },
+      {
+        "hex": "#754242",
+        "rgb": {
+          "r": 117,
+          "g": 66,
+          "b": 66
+        },
+        "weight": 0.0126
+      },
+      {
+        "hex": "#63322e",
+        "rgb": {
+          "r": 99,
+          "g": 50,
+          "b": 46
+        },
+        "weight": 0.0122
+      },
+      {
+        "hex": "#f4bca2",
+        "rgb": {
+          "r": 244,
+          "g": 188,
+          "b": 162
+        },
+        "weight": 0.0117
+      },
+      {
+        "hex": "#b34c66",
+        "rgb": {
+          "r": 179,
+          "g": 76,
+          "b": 102
+        },
+        "weight": 0.0073
+      },
+      {
+        "hex": "#3c5bab",
+        "rgb": {
+          "r": 60,
+          "g": 91,
+          "b": 171
+        },
+        "weight": 0.0057
+      }
+    ]
+  },
+  "derivedTokens": {
+    "background": "#63322e",
+    "surface": "#6d3c38",
+    "surfaceElevated": "#7a4945",
+    "accent": "#7596da",
+    "accentSecondary": "#345aac",
+    "textPrimary": "#f4bca2",
+    "textSecondary": "#B5C3D6",
+    "textOnAccent": "#0A0A0A",
+    "incomingBubble": "#542b27",
+    "outgoingBubble": "#263f72",
+    "bubbleBorder": "rgba(117, 150, 218, 0.28)",
+    "composerSurface": "#6b3a36",
+    "composerBorder": "rgba(117, 150, 218, 0.38)",
+    "iconColor": "#dba389",
+    "focusColor": "#7596da",
+    "successColor": "#2ED37A",
+    "dangerColor": "#E85D5D",
+    "source": "mixed"
+  },
+  "generation": {
+    "slug": "pink-dream",
+    "packagePath": "C:\\Users\\Victus\\nexapp\\scripts\\nex-themes\\generated\\pink-dream\\pink-dream.package.ts",
+    "jsonPath": "C:\\Users\\Victus\\nexapp\\scripts\\nex-themes\\generated\\pink-dream\\pink-dream.package.json",
+    "bytes": 2352,
+    "status": "generated"
+  },
+  "validation": {
+    "assetCheck": {
+      "status": "pass",
+      "phase": "A3",
+      "reason": "All assets readable",
+      "measurements": {
+        "intro": {
+          "path": "C:\\Users\\Victus\\nexapp\\public\\nex-themes\\pink-dream-intro.mp4",
+          "extension": ".mp4",
+          "isImage": false,
+          "isVideo": true
+        },
+        "wallpaper": {
+          "path": "C:\\Users\\Victus\\nexapp\\public\\nex-themes\\pink-dream.png",
+          "extension": ".png",
+          "isImage": true,
+          "isVideo": false,
+          "width": 852,
+          "height": 1839
+        }
+      }
+    },
+    "paletteCheck": {
+      "status": "pass",
+      "phase": "A3",
+      "reason": "All 17 colour tokens + provenance present and well-formed",
+      "measurements": {
+        "requiredTokenCount": 17,
+        "presentTokenCount": 17,
+        "provenance": "mixed"
+      }
+    },
+    "contrastCheck": {
+      "status": "pass",
+      "phase": "A3",
+      "reason": "All 9 WCAG AA pairs pass",
+      "measurements": {
+        "pairsChecked": 9,
+        "pass": 9,
+        "warn": 0,
+        "fail": 0,
+        "results": [
+          {
+            "pair": "textPrimary on background",
+            "fg": "#f4bca2",
+            "bg": "#63322e",
+            "ratio": 6.2,
+            "threshold": 4.5,
+            "largeText": false,
+            "label": "pass"
+          },
+          {
+            "pair": "textSecondary on background",
+            "fg": "#B5C3D6",
+            "bg": "#63322e",
+            "ratio": 5.79,
+            "threshold": 4.5,
+            "largeText": false,
+            "label": "pass"
+          },
+          {
+            "pair": "textPrimary on surface",
+            "fg": "#f4bca2",
+            "bg": "#6d3c38",
+            "ratio": 5.34,
+            "threshold": 4.5,
+            "largeText": false,
+            "label": "pass"
+          },
+          {
+            "pair": "textPrimary on incomingBubble",
+            "fg": "#f4bca2",
+            "bg": "#542b27",
+            "ratio": 7.17,
+            "threshold": 4.5,
+            "largeText": false,
+            "label": "pass"
+          },
+          {
+            "pair": "textPrimary on outgoingBubble",
+            "fg": "#f4bca2",
+            "bg": "#263f72",
+            "ratio": 6.17,
+            "threshold": 4.5,
+            "largeText": false,
+            "label": "pass"
+          },
+          {
+            "pair": "textOnAccent on accent",
+            "fg": "#0A0A0A",
+            "bg": "#7596da",
+            "ratio": 6.72,
+            "threshold": 4.5,
+            "largeText": false,
+            "label": "pass"
+          },
+          {
+            "pair": "textPrimary on composerSurface",
+            "fg": "#f4bca2",
+            "bg": "#6b3a36",
+            "ratio": 5.5,
+            "threshold": 4.5,
+            "largeText": false,
+            "label": "pass"
+          },
+          {
+            "pair": "iconColor on background",
+            "fg": "#dba389",
+            "bg": "#63322e",
+            "ratio": 4.74,
+            "threshold": 3,
+            "largeText": true,
+            "label": "pass"
+          },
+          {
+            "pair": "accent on background (CTA fill visible)",
+            "fg": "#7596da",
+            "bg": "#63322e",
+            "ratio": 3.52,
+            "threshold": 3,
+            "largeText": true,
+            "label": "pass"
+          }
+        ]
+      }
+    },
+    "bubbleWallpaperSeparation": {
+      "status": "fail",
+      "phase": "A3",
+      "reason": "5 region(s) fail bubble/wallpaper separation at WCAG 3:1 large-shape threshold · in:topLeft, out:topLeft, out:bottomLeft, out:bottomRight, out:centre",
+      "measurements": {
+        "regions": {
+          "topLeft": "#8f4b33",
+          "topRight": "#ef9767",
+          "bottomLeft": "#b86966",
+          "bottomRight": "#c0595b",
+          "centre": "#b3635b"
+        },
+        "wallpaperVarianceSpan": 78.5,
+        "inconclusive": false,
+        "incomingBubbleVsWallpaper": {
+          "topLeft": {
+            "wallpaperAvg": "#8f4b33",
+            "bubble": "#542b27",
+            "ratio": 1.84,
+            "label": "fail"
+          },
+          "topRight": {
+            "wallpaperAvg": "#ef9767",
+            "bubble": "#542b27",
+            "ratio": 5.3,
+            "label": "pass"
+          },
+          "bottomLeft": {
+            "wallpaperAvg": "#b86966",
+            "bubble": "#542b27",
+            "ratio": 3,
+            "label": "warn"
+          },
+          "bottomRight": {
+            "wallpaperAvg": "#c0595b",
+            "bubble": "#542b27",
+            "ratio": 2.75,
+            "label": "warn"
+          },
+          "centre": {
+            "wallpaperAvg": "#b3635b",
+            "bubble": "#542b27",
+            "ratio": 2.77,
+            "label": "warn"
+          }
+        },
+        "outgoingBubbleVsWallpaper": {
+          "topLeft": {
+            "wallpaperAvg": "#8f4b33",
+            "bubble": "#263f72",
+            "ratio": 1.58,
+            "label": "fail"
+          },
+          "topRight": {
+            "wallpaperAvg": "#ef9767",
+            "bubble": "#263f72",
+            "ratio": 4.56,
+            "label": "pass"
+          },
+          "bottomLeft": {
+            "wallpaperAvg": "#b86966",
+            "bubble": "#263f72",
+            "ratio": 2.58,
+            "label": "fail"
+          },
+          "bottomRight": {
+            "wallpaperAvg": "#c0595b",
+            "bubble": "#263f72",
+            "ratio": 2.37,
+            "label": "fail"
+          },
+          "centre": {
+            "wallpaperAvg": "#b3635b",
+            "bubble": "#263f72",
+            "ratio": 2.38,
+            "label": "fail"
+          }
+        }
+      }
+    },
+    "wallpaperQuality": {
+      "status": "warn",
+      "phase": "A3",
+      "reason": "wallpaper dominant-span 71 sRGB units · moderate variance · bubble separation may be weak in bright or dark regions · human review recommended",
+      "measurements": {
+        "lumaMin": 0,
+        "lumaMax": 254.6,
+        "lumaSpan": 254.6,
+        "dominantSpanP25toP75": 70.9
+      }
+    },
+    "packageCheck": {
+      "status": "pass",
+      "phase": "A3",
+      "reason": "Package compiles cleanly and declares the expected ThemePackage shape",
+      "measurements": {
+        "bytes": 2344,
+        "typecheck": "ok"
+      }
+    },
+    "humanVisualReview": {
+      "status": "pending",
+      "phase": "human",
+      "reason": "Awaiting manual review of Playwright screenshots at tests/e2e-screenshots-themes/<slug>/*"
+    }
+  },
+  "summary": {
+    "pass": 4,
+    "warn": 1,
+    "fail": 1
+  },
+  "productionReady": false,
+  "productionReadyReason": "Automated gates run. Production readiness ALSO requires human visual review of the Playwright screenshots. Automated contrast/legibility math is necessary, not sufficient."
+}

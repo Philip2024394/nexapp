@@ -139,6 +139,39 @@ export function HeaderRightCluster({
   const [cartCount, setCartCount] = React.useState(0);
   const [hydrated, setHydrated] = React.useState(false);
 
+  // Owner-authorised 2026-10-18 · S9 · one-shot "open the Shop
+  // slider on first chat landing" signal. The sealed `/chat/preview`
+  // route consumes the `nex_open_shop_on_chat` cookie server-side
+  // (one-shot · also cleared there) and forwards the signal via
+  // `?openShop=1` on the redirect to `/themes/[id]`. We read that
+  // param on mount and auto-open the slider for the Shop journey.
+  //
+  // Non-shop intents never set the cookie, never carry the param,
+  // never auto-open · the sealed default-closed behaviour holds.
+  //
+  // Idempotent · after opening we strip the param from the URL so a
+  // user who closes the slider and refreshes doesn't get it re-
+  // opened on them.
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("openShop") === "1") {
+        setShopOpen(true);
+        params.delete("openShop");
+        const next =
+          window.location.pathname +
+          (params.toString() ? `?${params.toString()}` : "") +
+          window.location.hash;
+        window.history.replaceState(window.history.state, "", next);
+      }
+    } catch {
+      // Non-fatal · if URL parsing or history replace fails the user
+      // simply doesn't get the auto-open; the sealed shop button still
+      // works manually.
+    }
+  }, []);
+
   React.useEffect(() => {
     setCartCount(readCartCount());
     setHydrated(true);

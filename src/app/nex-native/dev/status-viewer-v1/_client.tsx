@@ -116,10 +116,17 @@ export function StatusViewerClient({
       ref={containerRef}
       onWheel={onWheel}
       style={{
-        position: "fixed",
+        /* Owner directive 2026-10-18 · "status page must open on
+           desktop inside the phone screen frame". Dropped the
+           position:fixed; 100dvw × 100dvh escape · now position:
+           absolute inside .nex-native-frame so desktop clips the
+           viewer to the 420×909 phone shape (same mobile-first
+           rule the chat theme previews follow). Mobile unaffected
+           · the frame already fills the viewport. */
+        position: "absolute",
         inset: 0,
-        width: "100dvw",
-        height: "100dvh",
+        width: "100%",
+        height: "100%",
         overflow: "hidden",
         background: "#000",
         touchAction: "none",

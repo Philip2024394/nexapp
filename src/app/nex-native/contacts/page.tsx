@@ -68,6 +68,12 @@ import { InviteFriendsCard } from "./_invite-friends-card";
 // point for the Groups surface. `_my-groups-card.tsx` is kept on
 // disk for history but has no live consumer.
 import { ContactsList, type ContactRowDisplay } from "./_contacts-list";
+// Owner-authorised 2026-10-18 · S4 · minimal NEX1 welcome banner.
+// Rendered above the sealed InviteFriendsCard · uses the sealed
+// first-contact predicate, dismissible without touching the
+// underlying conversation. Zero changes to the sealed D9
+// friend/business contacts list.
+import { Nex1WelcomeBanner } from "./_nex1-welcome-banner";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -230,6 +236,19 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       <ContactsHeader drawerSession={drawerSession} />
       <ContactsSearchBar />
       <ContactsFilterPills active={activeFilter} />
+      {/* Owner-authorised 2026-10-18 · S4 · NEX1 welcome banner.
+          Server-rendered · returns null when the sealed first-contact
+          predicate says the user has already acted (replied), OR when
+          the user dismissed the banner. Lives above the sealed
+          InviteFriendsCard · never a synthetic contacts row. */}
+      <Nex1WelcomeBanner
+        accountId={session.account.id}
+        firstName={
+          session.account.display_name?.split(/\s+/)[0] ??
+          session.account.display_name ??
+          null
+        }
+      />
       <InviteFriendsCard inviteUrl={inviteUrl} ownHandle={ownHandle} />
       <ContactsList
         rows={visibleRows}

@@ -1,0 +1,45 @@
+{
+  "identity": {
+    "id": "crispy-chicken",
+    "name": "Crispy Chicken",
+    "tagline": "Crispy Chicken · generated preview",
+    "conceptOneLine": "Crispy Chicken · generated · pending A3 validation",
+    "categoryId": "food"
+  },
+  "colours": {
+    "primary": "#c10200",
+    "secondary": "#6c0102",
+    "highlight": "#F2F5F8",
+    "glow": "rgba(193, 2, 0, 0.45)",
+    "deep": "#020201"
+  },
+  "personality": "drift",
+  "intro": {
+    "kind": "standard",
+    "videoUrl": "/nex-themes/crispy-chicken-intro.mp4",
+    "scriptedAnimation": null,
+    "playPolicy": "twice-then-skip"
+  },
+  "wallpaperUrl": "/nex-themes/crispy-chicken-wallpaper.png",
+  "wallpaperScrim": "default",
+  "derivedTokens": {
+    "background": "#020201",
+    "surface": "#0c0c0b",
+    "surfaceElevated": "#191918",
+    "accent": "#c10200",
+    "accentSecondary": "#6c0102",
+    "textPrimary": "#F2F5F8",
+    "textSecondary": "#B5C3D6",
+    "textOnAccent": "#FFFFFF",
+    "incomingBubble": "#14140a",
+    "outgoingBubble": "#3c1514",
+    "bubbleBorder": "rgba(193, 2, 0, 0.28)",
+    "composerSurface": "#0a0a09",
+    "composerBorder": "rgba(193, 2, 0, 0.38)",
+    "iconColor": "#F2F5F8",
+    "focusColor": "#c10200",
+    "successColor": "#2ED37A",
+    "dangerColor": "#E85D5D",
+    "source": "mixed"
+  }
+}

@@ -85,7 +85,24 @@ interface PageProps {
      *  normally. Reaching this URL is honest proof of persistence ·
      *  no success is shown on the error path. */
     report?: string;
+    /** Owner directive 2026-10-18 · when the viewer arrives from a
+     *  chat theme preview, the chat header's avatar tap threads the
+     *  theme's primary colour here (URL-encoded hex) so the profile
+     *  opens tinted in the SAME colour as the chat they came from.
+     *  Sanitised with a strict #RRGGBB regex before use · bad values
+     *  silently drop. */
+    themeAccent?: string;
   }>;
+}
+
+/** Parse + sanitise the ?themeAccent query · returns null for any
+ *  value that isn't a plain `#RRGGBB` hex. Prevents style-injection
+ *  via the URL. Owner directive 2026-10-18. */
+function parseThemeAccent(raw: string | undefined): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!/^#[0-9A-Fa-f]{6}$/.test(trimmed)) return null;
+  return trimmed;
 }
 
 const HANDLE_REGEX = /^nex-[0-9]{5,}$/i;
@@ -403,22 +420,53 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
     profile?.bio ?? (philipMockActive ? PHILIP_MOCK.bio : null);
   const effectiveInterests = interests;
 
+  /* Owner directive 2026-10-18 · profile opens in the SAME theme
+     colour as the chat the viewer came from · ?themeAccent URL
+     param (sanitised) tints the chrome top-of-page gradient + sets
+     --nex-profile-accent CSS var so any theme-aware descendant can
+     pick it up. Null (no param, bad hex) renders the sealed navy. */
+  const themeAccent = parseThemeAccent(sp.themeAccent);
+  const mainStyle: React.CSSProperties = {
+    position: "relative",
+    minHeight: "100dvh",
+    background: themeAccent
+      ? `linear-gradient(180deg, ${themeAccent}44 0%, ${themeAccent}22 180px, ${NEX.bg} 400px, ${NEX.bg} 100%)`
+      : NEX.bg,
+    color: NEX.text,
+    fontFamily: SANS,
+    display: "flex",
+    flexDirection: "column",
+    paddingBottom: 32,
+    ["--nex-profile-accent" as unknown as string]:
+      themeAccent ?? "#00AFFF",
+  };
+
   return (
     <main
       data-nex-profile-root
       data-nex-profile-mode={isOwner ? "owner" : "viewer"}
       data-nex-profile-edit-mode={editMode ? "on" : "off"}
-      style={{
-        position: "relative",
-        minHeight: "100dvh",
-        background: NEX.bg,
-        color: NEX.text,
-        fontFamily: SANS,
-        display: "flex",
-        flexDirection: "column",
-        paddingBottom: 32,
-      }}
+      data-nex-profile-themed={themeAccent ? "true" : "false"}
+      style={mainStyle}
     >
+      {/* Owner directive 2026-10-18 · when the viewer arrives from a
+          chat theme preview (?themeAccent in URL) · show a theme-
+          coloured strip at the top of the page so the continuity
+          from chat → profile is visible. 4px tall · pure accent ·
+          sits above ProfileChrome. */}
+      {themeAccent && (
+        <div
+          data-nex-profile-theme-strip
+          aria-hidden
+          style={{
+            height: 4,
+            width: "100%",
+            background: `linear-gradient(90deg, ${themeAccent}, ${themeAccent}aa, ${themeAccent})`,
+            boxShadow: `0 2px 12px ${themeAccent}66`,
+            flexShrink: 0,
+          }}
+        />
+      )}
       <ProfileChrome
         viewerAvatarUrl={viewerProfile?.avatar_url ?? null}
         viewerDisplayName={session?.account.display_name ?? null}

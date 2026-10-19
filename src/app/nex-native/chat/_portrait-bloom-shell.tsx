@@ -3159,10 +3159,14 @@ function MessageCartOrderCard({
             🚚 Delivery
           </div>
           {cart.delivery_quote.kind === "free" ? (
+            // Slice 0.6b Fix B · Owner-approved 2026-10-18 · honest
+            // copy. The free claim is buyer-supplied and NOT verified
+            // against any shop-side offer record · do NOT display as
+            // a confirmed FREE badge.
             <div style={{ fontWeight: 700 }}>
-              FREE
+              Buyer says delivery is free
               {cart.delivery_quote.free_reason
-                ? ` · included with ${cart.delivery_quote.free_reason}`
+                ? ` · reason: ${cart.delivery_quote.free_reason}`
                 : ""}
             </div>
           ) : (
@@ -3204,7 +3208,7 @@ function MessageCartOrderCard({
             }}
           >
             {cart.delivery_quote.kind === "free"
-              ? "Seller pays the courier · book as usual."
+              ? "Confirm in chat whether a free-delivery promo applies · buyer-claimed."
               : "NEX standard bike rate (GoSend / GrabExpress / Maxim tier) · book your courier and confirm the final fare with the buyer if it differs."}
           </div>
         </div>
