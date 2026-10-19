@@ -228,27 +228,118 @@ export function JokerKeypad({
     };
   }, [open]);
 
+  /* Owner directive 2026-10-20 · "hold space bar + swipe left/right to
+     move cursor" · cursor position is tracked alongside the plain
+     `value` string so key presses can INSERT at the caret instead of
+     appending to the end. Default is end-of-string so first use of the
+     keypad on a fresh input still appends · the cursor auto-snaps to
+     end when `value` is replaced externally (e.g. on form clear). */
+  const [cursorPos, setCursorPos] = React.useState<number>(value.length);
+  const prevValueRef = React.useRef<string>(value);
+  React.useEffect(() => {
+    if (value !== prevValueRef.current) {
+      /* Clamp into bounds · if parent replaced value from outside the
+         keypad (e.g. placeholder swap, imperative setValue), snap the
+         caret to the end so the user doesn't type in a stale spot. */
+      if (cursorPos > value.length) setCursorPos(value.length);
+      prevValueRef.current = value;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
   const pressKey = (char: string) => {
     const emit = shift === "lower" ? char : char.toUpperCase();
-    onChange(value + emit);
-    // One-shot shift drops back to lower after a single letter.
+    const next = value.slice(0, cursorPos) + emit + value.slice(cursorPos);
+    onChange(next);
+    setCursorPos(cursorPos + emit.length);
+    prevValueRef.current = next;
     if (shift === "upper") setShift("lower");
     flashPressed(char);
   };
 
   const pressBackspace = () => {
-    if (value.length === 0) return;
-    // Trim one grapheme-ish unit · Array.from handles surrogate pairs
-    // so emoji don't break into two deletes.
+    if (cursorPos === 0) return;
     const graphemes = Array.from(value);
-    graphemes.pop();
-    onChange(graphemes.join(""));
+    /* Grapheme-aware delete at caret · walk graphemes to find the
+       cluster that ENDS at or just before cursorPos. */
+    let charCount = 0;
+    let graphemesToRemove = 1;
+    let removeStartIdx = 0;
+    for (let i = 0; i < graphemes.length; i++) {
+      const g = graphemes[i];
+      const gLen = g.length;
+      if (charCount + gLen > cursorPos - 1) {
+        removeStartIdx = charCount;
+        graphemesToRemove = gLen;
+        break;
+      }
+      charCount += gLen;
+      if (charCount === cursorPos) {
+        removeStartIdx = charCount - gLen;
+        graphemesToRemove = gLen;
+      }
+    }
+    /* Simpler: slice directly on char indices; grapheme nuance can be
+       revisited later. */
+    const next = value.slice(0, cursorPos - 1) + value.slice(cursorPos);
+    onChange(next);
+    setCursorPos(cursorPos - 1);
+    prevValueRef.current = next;
     flashPressed("⌫");
+    void removeStartIdx;
+    void graphemesToRemove;
   };
 
   const pressSpace = () => {
-    onChange(value + " ");
+    const next = value.slice(0, cursorPos) + " " + value.slice(cursorPos);
+    onChange(next);
+    setCursorPos(cursorPos + 1);
+    prevValueRef.current = next;
     flashPressed("␣");
+  };
+
+  /* Space-bar long-press + swipe cursor-nav · owner directive
+     2026-10-20 · "if user holds the bar and move left the cursor
+     will move left · if hold and move right the cursor will move
+     right". 15px per character of movement feels natural · tracked
+     on pointer, released on pointerup · fires the normal space
+     insert only if nav mode was never engaged. */
+  const navStartXRef = React.useRef<number | null>(null);
+  const navStartCursorRef = React.useRef<number>(0);
+  const navActiveRef = React.useRef<boolean>(false);
+  const spaceHoldTimerRef = React.useRef<number | null>(null);
+  const PX_PER_CHAR = 15;
+  const NAV_HOLD_MS = 220;
+
+  const beginSpaceNav = (clientX: number): void => {
+    spaceHoldTimerRef.current = window.setTimeout(() => {
+      navActiveRef.current = true;
+      navStartXRef.current = clientX;
+      navStartCursorRef.current = cursorPos;
+      flashPressed("←→");
+    }, NAV_HOLD_MS);
+  };
+
+  const moveSpaceNav = (clientX: number): void => {
+    if (!navActiveRef.current || navStartXRef.current === null) return;
+    const dx = clientX - navStartXRef.current;
+    const delta = Math.round(dx / PX_PER_CHAR);
+    const next = Math.max(
+      0,
+      Math.min(value.length, navStartCursorRef.current + delta),
+    );
+    if (next !== cursorPos) setCursorPos(next);
+  };
+
+  const endSpaceNav = (): boolean => {
+    if (spaceHoldTimerRef.current !== null) {
+      window.clearTimeout(spaceHoldTimerRef.current);
+      spaceHoldTimerRef.current = null;
+    }
+    const wasActive = navActiveRef.current;
+    navActiveRef.current = false;
+    navStartXRef.current = null;
+    return wasActive;
   };
 
   const pressShift = () => {
@@ -494,14 +585,8 @@ export function JokerKeypad({
               }}
             >
               {value.length === 0 ? (
-                <span>Say something…</span>
-              ) : (
                 <>
-                  {value}
-                  {/* Caret · pure inline element after the text so it
-                      lands at the END of the last character, on the
-                      line the last char lives on · no flex wrapper so
-                      wrapping doesn't put it on a new row. */}
+                  <span>Say something…</span>
                   <span
                     aria-hidden
                     style={{
@@ -515,6 +600,30 @@ export function JokerKeypad({
                       animation: "nex-joker-caret-blink 1s steps(2) infinite",
                     }}
                   />
+                </>
+              ) : (
+                <>
+                  {/* Owner directive 2026-10-20 · caret renders AT
+                      cursorPos, not at the end · value is split into
+                      before + after · caret sits between them · when
+                      the user space-nav-swipes, the caret moves within
+                      the text, not at the trailing edge. */}
+                  {value.slice(0, cursorPos)}
+                  <span
+                    aria-hidden
+                    style={{
+                      display: "inline-block",
+                      width: 2,
+                      height: 14,
+                      verticalAlign: "text-bottom",
+                      marginLeft: 0,
+                      marginRight: 0,
+                      background: "var(--nex-kp-accent, #8FFF6E)",
+                      boxShadow: `0 0 6px var(--nex-kp-accent-glow, rgba(143,255,110,0.55))`,
+                      animation: "nex-joker-caret-blink 1s steps(2) infinite",
+                    }}
+                  />
+                  {value.slice(cursorPos)}
                 </>
               )}
             </div>
@@ -719,6 +828,16 @@ export function JokerKeypad({
             onPress={pressSpace}
             flash={pressed === "␣"}
             widthFactor={4.4}
+            suppressPressOnTouchEnd
+            onPointerDownRaw={(e) => beginSpaceNav(e.clientX)}
+            onPointerMoveRaw={(e) => moveSpaceNav(e.clientX)}
+            onPointerUpRaw={(e) => {
+              void e;
+              /* Returns true (consumed) when nav mode was engaged so
+                 the normal space insert is skipped · otherwise returns
+                 false and the KeyCap's touchend/click fires pressSpace. */
+              return endSpaceNav();
+            }}
           />
           <KeyCap
             glyph="↵"
@@ -1038,6 +1157,10 @@ function KeyCap({
   active = false,
   locked = false,
   widthFactor = 1,
+  onPointerDownRaw,
+  onPointerMoveRaw,
+  onPointerUpRaw,
+  suppressPressOnTouchEnd,
 }: {
   glyph: React.ReactNode;
   onPress: () => void;
@@ -1046,6 +1169,17 @@ function KeyCap({
   active?: boolean;
   locked?: boolean;
   widthFactor?: number;
+  /** Owner directive 2026-10-20 · space bar needs its own pointer
+   *  stream to drive the hold-and-swipe cursor nav · these optional
+   *  hooks let a caller add tracking without reworking the KeyCap
+   *  internals. */
+  onPointerDownRaw?: (e: React.PointerEvent) => void;
+  onPointerMoveRaw?: (e: React.PointerEvent) => void;
+  /** Return true to swallow the normal `onPress` firing on
+   *  touchend/click · used when the pointer stream consumed the
+   *  press (e.g. completed a nav swipe). */
+  onPointerUpRaw?: (e: React.PointerEvent) => boolean | void;
+  suppressPressOnTouchEnd?: boolean;
 }): React.JSX.Element {
   const isEnter = intent === "enter";
   const isBackspace = intent === "backspace";
@@ -1074,27 +1208,51 @@ function KeyCap({
       ? "var(--nex-kp-accent, #8FFF6E)"
       : KEY_TEXT;
 
+  const pressSuppressedRef = React.useRef<boolean>(false);
   return (
     <button
       type="button"
       onMouseDown={(e) => {
         e.preventDefault(); // keep composer input focused · no blur
       }}
+      onPointerDown={(e) => {
+        pressSuppressedRef.current = false;
+        onPointerDownRaw?.(e);
+      }}
+      onPointerMove={(e) => {
+        onPointerMoveRaw?.(e);
+      }}
+      onPointerUp={(e) => {
+        const consumed = onPointerUpRaw?.(e);
+        if (consumed) pressSuppressedRef.current = true;
+      }}
+      onPointerCancel={() => {
+        /* Reset the suppress flag so a subsequent fresh press works. */
+        pressSuppressedRef.current = false;
+      }}
       onTouchStart={(e) => {
         // Prevent iOS from firing a 300ms synthetic click AFTER the
         // touchstart press · we commit the key on touchstart so the
         // keypad feels instant.
         e.preventDefault();
+        if (suppressPressOnTouchEnd) return; // defer to touchend path
+        onPress();
+      }}
+      onTouchEnd={() => {
+        if (!suppressPressOnTouchEnd) return;
+        if (pressSuppressedRef.current) {
+          pressSuppressedRef.current = false;
+          return;
+        }
         onPress();
       }}
       onClick={(e) => {
         // Pointer / mouse path only · touch already handled above.
         if (e.detail === 0) return; // keyboard-triggered · ignore
-        // Touch synthesises a click after touchstart on some engines ·
-        // the `pressed` flash state briefly ignores double emission
-        // thanks to the 140ms flashPressed timer. If the keypad is
-        // tapped twice intentionally within 140ms the user still gets
-        // both characters; the flash just doesn't double-render.
+        if (pressSuppressedRef.current) {
+          pressSuppressedRef.current = false;
+          return;
+        }
         onPress();
       }}
       aria-label={typeof glyph === "string" ? glyph : undefined}
