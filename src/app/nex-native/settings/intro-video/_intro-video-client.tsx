@@ -1677,8 +1677,68 @@ export function IntroVideoSettingsClient({
                   boxShadow:
                     "0 20px 48px -12px rgba(0,0,0,0.8), 0 0 36px rgba(0,175,255,0.25)",
                   padding: 10,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
                 }}
               >
+                {/* Owner directive 2026-10-20 · "emoji container pop
+                    up x button change to blue colour and emoji badge
+                    remove and add text - Emoji Center" · dedicated
+                    header with centred title + a prominent cyan X
+                    close button on the right. The sealed picker's own
+                    emoji-chip badge / internal close are removed by
+                    omitting the `onClose` prop. */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
+                    padding: "4px 6px 10px",
+                    borderBottom: `1px solid ${NEX.panelBorder}`,
+                  }}
+                >
+                  <span style={{ width: 36 }} aria-hidden />
+                  <h3
+                    data-nex-intro-video-title-emoji-popup-title
+                    style={{
+                      margin: 0,
+                      fontSize: 15,
+                      fontWeight: 900,
+                      letterSpacing: "0.04em",
+                      color: NEX.textPrimary,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Emoji Center
+                  </h3>
+                  <button
+                    type="button"
+                    aria-label="Close emoji picker"
+                    onClick={() => setEmojiPickerOpen(false)}
+                    data-nex-intro-video-title-emoji-popup-close
+                    style={{
+                      width: 36,
+                      height: 36,
+                      padding: 0,
+                      borderRadius: 999,
+                      background: NEX.cyan,
+                      color: "#021424",
+                      border: "none",
+                      fontSize: 18,
+                      fontWeight: 900,
+                      lineHeight: 1,
+                      cursor: "pointer",
+                      display: "grid",
+                      placeItems: "center",
+                      boxShadow: `0 6px 14px -6px ${NEX.cyan}aa, 0 0 16px rgba(0,175,255,0.35)`,
+                      fontFamily: NEX_FONT_SANS,
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
                 <StandardEmojiStickerPicker
                   engine={brandEngine}
                   onPickEmoji={(glyph) => insertEmojiIntoTitle(glyph)}
@@ -1695,7 +1755,9 @@ export function IntroVideoSettingsClient({
                   showFilesTab={false}
                   showStickersTab={false}
                   showGiphyTab={false}
-                  onClose={() => setEmojiPickerOpen(false)}
+                  /* onClose intentionally omitted · the popup header
+                     above owns the close affordance so the sealed
+                     picker's internal close button disappears. */
                 />
               </div>
             </div>,
