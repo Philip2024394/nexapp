@@ -50,11 +50,23 @@ export type IntroTitleFont =
 export type IntroTitleSize = "s" | "m" | "l" | "xl";
 export type IntroTitleAlign = "left" | "center" | "right";
 
+/** Per-selection text styling · one entry per contiguous character
+ *  run with uniform colour + size. Concatenating segment.text across
+ *  the array must equal title_text exactly. Both color + size are
+ *  optional per segment (fall back to the global title_color /
+ *  title_size when absent). */
+export interface TitleSegment {
+  text: string;
+  color?: string; // #RRGGBB
+  size?: IntroTitleSize;
+}
+
 export interface IntroSettings {
   enabled: boolean;
   video_url: string | null;
   video_duration_ms: number | null;
   title_text: string | null;
+  title_segments: TitleSegment[] | null;
   title_position: IntroTitlePosition | null;
   title_font: IntroTitleFont | null;
   title_size: IntroTitleSize | null;
@@ -69,6 +81,7 @@ const EMPTY_INTRO_SETTINGS: IntroSettings = {
   video_url: null,
   video_duration_ms: null,
   title_text: null,
+  title_segments: null,
   title_position: null,
   title_font: null,
   title_size: null,
@@ -77,6 +90,39 @@ const EMPTY_INTRO_SETTINGS: IntroSettings = {
   title_highlight: false,
   wallpaper_url: null,
 };
+
+function sanitiseSegments(
+  raw: unknown,
+  expectedText: string | null,
+): TitleSegment[] | null {
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  const out: TitleSegment[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") return null;
+    const e = entry as Record<string, unknown>;
+    if (typeof e.text !== "string") return null;
+    const seg: TitleSegment = { text: e.text };
+    if (typeof e.color === "string" && /^#[0-9A-Fa-f]{6}$/.test(e.color)) {
+      seg.color = e.color;
+    }
+    if (
+      typeof e.size === "string" &&
+      ["s", "m", "l", "xl"].includes(e.size)
+    ) {
+      seg.size = e.size as IntroTitleSize;
+    }
+    out.push(seg);
+  }
+  if (
+    typeof expectedText === "string" &&
+    out.map((s) => s.text).join("") !== expectedText
+  ) {
+    // Soft invariant · concat must equal title_text · otherwise drop
+    // segments and fall back to the global colour/size.
+    return null;
+  }
+  return out;
+}
 
 /** Fetch the saved intro + wallpaper settings for an account.
  *  Fail-soft · the composer always has to render something, so a DB
@@ -87,7 +133,7 @@ export async function getIntroSettings(
   const { data, error } = await nexSupabaseAdmin
     .from("nex_account")
     .select(
-      "intro_enabled, intro_video_url, intro_video_duration_ms, intro_title_text, intro_title_position, intro_title_font, intro_title_size, intro_title_color, intro_title_align, intro_title_highlight, intro_wallpaper_url",
+      "intro_enabled, intro_video_url, intro_video_duration_ms, intro_title_text, intro_title_segments, intro_title_position, intro_title_font, intro_title_size, intro_title_color, intro_title_align, intro_title_highlight, intro_wallpaper_url",
     )
     .eq("id", accountId)
     .maybeSingle();
@@ -104,6 +150,10 @@ export async function getIntroSettings(
     video_url: data.intro_video_url ?? null,
     video_duration_ms: data.intro_video_duration_ms ?? null,
     title_text: data.intro_title_text ?? null,
+    title_segments: sanitiseSegments(
+      data.intro_title_segments,
+      data.intro_title_text ?? null,
+    ),
     title_position:
       (data.intro_title_position as IntroTitlePosition | null) ?? null,
     title_font: (data.intro_title_font as IntroTitleFont | null) ?? null,
@@ -118,6 +168,9 @@ export async function getIntroSettings(
 export interface UpdateIntroSettingsInput {
   enabled?: boolean;
   title_text?: string | null;
+  /** Pass [] to clear segments (fall back to global colour/size).
+   *  Pass undefined to leave untouched. */
+  title_segments?: TitleSegment[] | null;
   title_position?: IntroTitlePosition | null;
   title_font?: IntroTitleFont | null;
   title_size?: IntroTitleSize | null;
@@ -140,6 +193,12 @@ export async function updateIntroSettings(
   const patch: Record<string, unknown> = {};
   if (input.enabled !== undefined) patch.intro_enabled = input.enabled;
   if (input.title_text !== undefined) patch.intro_title_text = input.title_text;
+  if (input.title_segments !== undefined) {
+    patch.intro_title_segments =
+      input.title_segments && input.title_segments.length > 0
+        ? input.title_segments
+        : null;
+  }
   if (input.title_position !== undefined)
     patch.intro_title_position = input.title_position;
   if (input.title_font !== undefined) patch.intro_title_font = input.title_font;

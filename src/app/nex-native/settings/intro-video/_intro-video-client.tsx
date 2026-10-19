@@ -32,6 +32,7 @@ import type {
   IntroTitleFont,
   IntroTitlePosition as IntroTitlePositionDB,
   IntroTitleSize,
+  TitleSegment,
 } from "@/lib/nex-native/intro-settings-service";
 import {
   clearIntroVideoAction,
@@ -160,6 +161,110 @@ function probeImage(
   });
 }
 
+/** Owner directive 2026-10-20 · "ship segments" · per-selection text
+ *  styling via a parallel per-character attribute array · one slot
+ *  per character in titleText · colour/size are optional per char
+ *  (fall back to the global titleColor/titleSizeId). */
+interface CharAttr {
+  color?: string;
+  size?: IntroOverlaySizeId;
+}
+
+/** Rebuild a per-char attr array when the text changes · tries to
+ *  preserve attrs by matching longest common prefix + suffix. When
+ *  the user types new characters in the middle, the inserted chars
+ *  inherit the previous char's attrs. */
+function reflowAttrs(
+  oldText: string,
+  oldAttrs: CharAttr[],
+  newText: string,
+): CharAttr[] {
+  if (oldText === newText) return oldAttrs;
+  if (newText.length === 0) return [];
+  if (oldAttrs.length === 0 || oldText.length === 0) {
+    return newText.split("").map(() => ({}));
+  }
+  // Common prefix
+  let p = 0;
+  const minLen = Math.min(oldText.length, newText.length);
+  while (p < minLen && oldText[p] === newText[p]) p++;
+  // Common suffix (bounded so suffix doesn't overlap with prefix)
+  let s = 0;
+  while (
+    s < oldText.length - p &&
+    s < newText.length - p &&
+    oldText[oldText.length - 1 - s] === newText[newText.length - 1 - s]
+  ) {
+    s++;
+  }
+  const prefix = oldAttrs.slice(0, p);
+  const suffix = oldAttrs.slice(oldAttrs.length - s);
+  const insertedCount = newText.length - prefix.length - suffix.length;
+  const inheritFrom =
+    prefix.length > 0
+      ? prefix[prefix.length - 1]
+      : suffix.length > 0
+        ? suffix[0]
+        : {};
+  const inserted: CharAttr[] = Array.from({ length: Math.max(0, insertedCount) }, () => ({
+    ...inheritFrom,
+  }));
+  return [...prefix, ...inserted, ...suffix];
+}
+
+/** Compress a per-char attr array to the serialised segment form the
+ *  DB stores · groups consecutive chars with identical attrs. Returns
+ *  null when every char has empty attrs (defer to global colour/size). */
+function attrsToSegments(
+  text: string,
+  attrs: CharAttr[],
+): TitleSegment[] | null {
+  if (text.length === 0) return null;
+  const safeAttrs =
+    attrs.length === text.length ? attrs : text.split("").map(() => ({} as CharAttr));
+  const anyStyled = safeAttrs.some((a) => a.color || a.size);
+  if (!anyStyled) return null;
+  const out: TitleSegment[] = [];
+  let runStart = 0;
+  const sameAttr = (a: CharAttr, b: CharAttr): boolean =>
+    a.color === b.color && a.size === b.size;
+  for (let i = 1; i <= text.length; i++) {
+    if (i === text.length || !sameAttr(safeAttrs[i], safeAttrs[runStart])) {
+      const seg: TitleSegment = { text: text.slice(runStart, i) };
+      if (safeAttrs[runStart].color) seg.color = safeAttrs[runStart].color;
+      if (safeAttrs[runStart].size) seg.size = safeAttrs[runStart].size;
+      out.push(seg);
+      runStart = i;
+    }
+  }
+  return out;
+}
+
+/** Rehydrate a per-char attr array from a saved segments payload ·
+ *  called on page load when savedIntro.title_segments is non-null. */
+function segmentsToAttrs(
+  segments: TitleSegment[] | null,
+  text: string,
+): CharAttr[] {
+  if (!segments || segments.length === 0) {
+    return text.split("").map(() => ({}));
+  }
+  const concat = segments.map((s) => s.text).join("");
+  if (concat !== text) {
+    return text.split("").map(() => ({}));
+  }
+  const out: CharAttr[] = [];
+  for (const seg of segments) {
+    for (let i = 0; i < seg.text.length; i++) {
+      const a: CharAttr = {};
+      if (seg.color) a.color = seg.color;
+      if (seg.size) a.size = seg.size;
+      out.push(a);
+    }
+  }
+  return out;
+}
+
 /** Resolve video metadata locally via a hidden <video> element · no
  *  server round-trip. Rejects when the file isn't playable in the
  *  browser (unsupported codec, corrupted). */
@@ -246,6 +351,65 @@ export function IntroVideoSettingsClient({
   >((savedIntro.title_align as IntroTitleAlign | null) ?? "center");
   const [titleHighlight, setTitleHighlight] = React.useState<boolean>(
     savedIntro.title_highlight,
+  );
+  /* Owner directive 2026-10-20 · "ship segments" · per-character
+     attribute array that tracks per-selection colour + size on top of
+     the plain titleText string. Serialises to title_segments JSONB on
+     Save · hydrates from savedIntro.title_segments on page load. */
+  const [titleAttrs, setTitleAttrs] = React.useState<CharAttr[]>(() =>
+    segmentsToAttrs(savedIntro.title_segments, savedIntro.title_text ?? ""),
+  );
+  /* Tracks the current textarea selection so Colour / Size dropdowns
+     can apply to that range. Updated on select / click / key events. */
+  const [titleSelection, setTitleSelection] = React.useState<{
+    start: number;
+    end: number;
+  }>({ start: 0, end: 0 });
+
+  /* Apply a colour (or size) to the current textarea selection · if
+     the selection is empty, the pick becomes the GLOBAL default
+     (sets titleColor / titleSizeId · attrs cleared across the whole
+     text so the global colour wins). */
+  const applyColorToSelection = React.useCallback(
+    (hex: string) => {
+      const { start, end } = titleSelection;
+      if (end > start) {
+        setTitleAttrs((prev) => {
+          const next = prev.length === titleText.length
+            ? [...prev]
+            : titleText.split("").map(() => ({} as CharAttr));
+          for (let i = start; i < end; i++) {
+            next[i] = { ...next[i], color: hex };
+          }
+          return next;
+        });
+      } else {
+        setTitleColor(hex);
+        setTitleAttrs((prev) => prev.map((a) => ({ ...a, color: undefined })));
+      }
+    },
+    [titleSelection, titleText],
+  );
+
+  const applySizeToSelection = React.useCallback(
+    (size: IntroOverlaySizeId) => {
+      const { start, end } = titleSelection;
+      if (end > start) {
+        setTitleAttrs((prev) => {
+          const next = prev.length === titleText.length
+            ? [...prev]
+            : titleText.split("").map(() => ({} as CharAttr));
+          for (let i = start; i < end; i++) {
+            next[i] = { ...next[i], size };
+          }
+          return next;
+        });
+      } else {
+        setTitleSizeId(size);
+        setTitleAttrs((prev) => prev.map((a) => ({ ...a, size: undefined })));
+      }
+    },
+    [titleSelection, titleText],
   );
   /* Owner directive 2026-10-20 · "open time in footer center · if the
      user put text in footer then opening time could go to header
@@ -614,14 +778,20 @@ export function IntroVideoSettingsClient({
         setSavedAt(Date.now());
         return;
       }
-      const fd = new FormData();
-      fd.append("enabled", String(introEnabled));
-      fd.append(
-        "title_text",
+      const effectiveTitle =
         (isPlaceholder && !titleText.trim()
           ? defaultTitleText
-          : titleText.trim()) || "",
-      );
+          : titleText.trim()) || "";
+      const fd = new FormData();
+      fd.append("enabled", String(introEnabled));
+      fd.append("title_text", effectiveTitle);
+      /* Owner directive 2026-10-20 · "ship segments" · serialise the
+         per-char attrs array to the compressed segments form the DB
+         stores · attrsToSegments returns null when every char uses
+         the global colour+size (saves bytes · the DB column goes
+         NULL and the renderer falls back to the global). */
+      const segs = attrsToSegments(effectiveTitle, titleAttrs);
+      fd.append("title_segments", JSON.stringify(segs ?? []));
       fd.append("title_position", titlePosition);
       fd.append("title_font", titleFontId);
       fd.append("title_size", titleSizeId);
@@ -809,6 +979,7 @@ export function IntroVideoSettingsClient({
                 ? defaultTitleText
                 : titleText
           }
+          titleAttrs={useThemeOriginal ? [] : titleAttrs}
           titlePosition={useThemeOriginal ? "hero" : titlePosition}
           titleFontId={useThemeOriginal ? "classic" : titleFontId}
           titleSizeId={useThemeOriginal ? "m" : titleSizeId}
@@ -863,7 +1034,7 @@ export function IntroVideoSettingsClient({
                 lineHeight: 1.4,
               }}
             >
-              Compare side-by-side · your custom is kept in memory · Save in this mode to reset.
+              Reset Back To Original Theme
             </span>
           </div>
           <button
@@ -1070,6 +1241,27 @@ export function IntroVideoSettingsClient({
             value={titleText}
             placeholder={isPlaceholder ? defaultTitleText : "e.g. Welcome to\nHammerex Pizza"}
             onFocus={() => setIsPlaceholder(false)}
+            onSelect={(e) => {
+              const el = e.currentTarget;
+              setTitleSelection({
+                start: el.selectionStart ?? 0,
+                end: el.selectionEnd ?? 0,
+              });
+            }}
+            onKeyUp={(e) => {
+              const el = e.currentTarget;
+              setTitleSelection({
+                start: el.selectionStart ?? 0,
+                end: el.selectionEnd ?? 0,
+              });
+            }}
+            onClick={(e) => {
+              const el = e.currentTarget;
+              setTitleSelection({
+                start: el.selectionStart ?? 0,
+                end: el.selectionEnd ?? 0,
+              });
+            }}
             onChange={(e) => {
               const raw = e.target.value;
               /* Enforce max 3 lines · when the user hits Enter past 3,
@@ -1079,7 +1271,13 @@ export function IntroVideoSettingsClient({
               const capped = lines.slice(0, 3).join("\n");
               /* Cap total length too so a long paste doesn't bloat the
                  overlay · ~140 chars across 3 lines reads cleanly. */
-              setTitleText(capped.slice(0, 140));
+              const next = capped.slice(0, 140);
+              /* Owner directive 2026-10-20 · "ship segments" · reflow
+                 per-char attrs to stay aligned with the new text (new
+                 chars inherit neighbouring styling · deletes drop
+                 their attrs). */
+              setTitleAttrs((prev) => reflowAttrs(titleText, prev, next));
+              setTitleText(next);
               setIsPlaceholder(false);
             }}
             onKeyDown={(e) => {
@@ -1192,7 +1390,7 @@ export function IntroVideoSettingsClient({
           />
           <SizeDropdown
             value={titleSizeId}
-            onChange={setTitleSizeId}
+            onChange={applySizeToSelection}
           />
         </div>
 
@@ -1212,7 +1410,9 @@ export function IntroVideoSettingsClient({
               marginBottom: 6,
             }}
           >
-            Colour
+            Colour{titleSelection.end > titleSelection.start
+              ? ` · applies to selection (${titleSelection.end - titleSelection.start} chars)`
+              : " · applies to all"}
           </span>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {[
@@ -1232,7 +1432,7 @@ export function IntroVideoSettingsClient({
                   type="button"
                   aria-label={`Text color ${hex}`}
                   aria-pressed={active}
-                  onClick={() => setTitleColor(hex)}
+                  onClick={() => applyColorToSelection(hex)}
                   data-nex-intro-video-color-swatch={hex}
                   style={{
                     width: 28,
@@ -2300,6 +2500,7 @@ function IntroToggle({
 function IntroPreview({
   videoUrl,
   titleText,
+  titleAttrs,
   titlePosition,
   titleFontId,
   titleSizeId,
@@ -2312,6 +2513,7 @@ function IntroPreview({
 }: {
   videoUrl: string | null;
   titleText: string;
+  titleAttrs: CharAttr[];
   titlePosition: IntroTitlePosition;
   titleFontId: IntroOverlayFontId;
   titleSizeId: IntroOverlaySizeId;
@@ -2383,6 +2585,7 @@ function IntroPreview({
       {text && enabled && (
         <TitleOverlay
           text={text}
+          attrs={titleAttrs}
           position={titlePosition}
           fontId={titleFontId}
           sizeId={titleSizeId}
@@ -2425,6 +2628,7 @@ function IntroPreview({
 
 function TitleOverlay({
   text,
+  attrs,
   position,
   fontId,
   sizeId,
@@ -2433,6 +2637,7 @@ function TitleOverlay({
   highlight,
 }: {
   text: string;
+  attrs: CharAttr[];
   position: IntroTitlePosition;
   fontId: IntroOverlayFontId;
   sizeId: IntroOverlaySizeId;
@@ -2518,7 +2723,13 @@ function TitleOverlay({
             ...font.previewStyle,
           }}
         >
-          {renderTitleWithEmoji(text, fontSize)}
+          {renderTitleWithEmojiAndAttrs(
+            text,
+            attrs,
+            fontSize,
+            color,
+            sizeId,
+          )}
         </h3>
       </div>
     </>
@@ -2609,6 +2820,99 @@ function OpeningHoursOverlay({
  * to /nex-themes/food/emoji/<slug>.png. Non-matched text segments
  * render as plain spans so punctuation, letters, and Unicode glyphs
  * continue to display verbatim. */
+/** Owner directive 2026-10-20 · "ship segments" · same :slug: emoji
+ *  interpolation as renderTitleWithEmoji below, BUT also walks the
+ *  per-character attrs array so each contiguous run of same-coloured /
+ *  same-sized chars renders in its own span with those overrides. The
+ *  global `color` + `sizeId` provide the fallback for chars without
+ *  explicit attrs. */
+function renderTitleWithEmojiAndAttrs(
+  text: string,
+  attrs: CharAttr[],
+  baseFontSize: number,
+  globalColor: string,
+  globalSizeId: IntroOverlaySizeId,
+): React.JSX.Element[] {
+  if (text.length === 0) return [];
+  const parts: React.JSX.Element[] = [];
+  const safeAttrs =
+    attrs.length === text.length
+      ? attrs
+      : text.split("").map(() => ({} as CharAttr));
+  let key = 0;
+  // Pre-compute pt per sizeId so each span can override independently.
+  const globalMul = sizeById(globalSizeId).multiplier;
+  const sizeForAttr = (a: CharAttr): number => {
+    if (!a.size) return baseFontSize;
+    const mul = sizeById(a.size).multiplier;
+    // baseFontSize already includes globalMul · divide it back out so
+    // the per-char size multiplier replaces the global one, not stacks.
+    return Math.round((baseFontSize / globalMul) * mul);
+  };
+  const colorForAttr = (a: CharAttr): string => a.color ?? globalColor;
+  // Walk char-by-char, breaking on emoji tokens or attr change.
+  let i = 0;
+  while (i < text.length) {
+    const emojiRe = /^:([a-z0-9][a-z0-9_-]*):/i;
+    const slice = text.slice(i);
+    const emojiMatch = emojiRe.exec(slice);
+    if (emojiMatch && emojiMatch.index === 0) {
+      // Emoji token · size derived from its FIRST char's attr
+      const slug = emojiMatch[1];
+      const a = safeAttrs[i] ?? {};
+      const imgSize = Math.round(sizeForAttr(a) * 1.4);
+      parts.push(
+        <img
+          key={`e-${key++}`}
+          src={`/nex-themes/food/emoji/${slug}.png`}
+          alt={slug}
+          style={{
+            width: imgSize,
+            height: imgSize,
+            objectFit: "contain",
+            verticalAlign: "middle",
+            display: "inline-block",
+          }}
+        />,
+      );
+      i += emojiMatch[0].length;
+      continue;
+    }
+    // Plain-text run · group until attrs change OR an emoji starts.
+    const runStart = i;
+    const runAttr = safeAttrs[i] ?? {};
+    while (i < text.length) {
+      const nextSlice = text.slice(i);
+      if (emojiRe.test(nextSlice)) break;
+      const nextAttr = safeAttrs[i] ?? {};
+      if (
+        nextAttr.color !== runAttr.color ||
+        nextAttr.size !== runAttr.size
+      ) {
+        break;
+      }
+      i++;
+    }
+    const runText = text.slice(runStart, i);
+    if (runText.length > 0) {
+      parts.push(
+        <span
+          key={`t-${key++}`}
+          style={{
+            color: colorForAttr(runAttr),
+            fontSize: sizeForAttr(runAttr),
+            lineHeight: "inherit",
+          }}
+        >
+          {runText}
+        </span>,
+      );
+    }
+    if (i === runStart) i++; // defensive · never infinite-loop
+  }
+  return parts;
+}
+
 function renderTitleWithEmoji(
   text: string,
   fontSize: number,

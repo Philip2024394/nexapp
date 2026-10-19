@@ -28,6 +28,7 @@ import {
   type IntroTitleFont,
   type IntroTitlePosition,
   type IntroTitleSize,
+  type TitleSegment,
 } from "@/lib/nex-native/intro-settings-service";
 
 export interface ActionResult<T> {
@@ -65,9 +66,26 @@ export async function updateIntroSettingsAction(formData: FormData): Promise<
       return allowed.includes(v as T) ? (v as T) : undefined;
     };
 
+    /* title_segments arrives as a JSON string under key "title_segments" ·
+       empty / missing / malformed → null (fall back to global colour). */
+    let titleSegments: TitleSegment[] | null | undefined = undefined;
+    const segRaw = read("title_segments");
+    if (segRaw !== null) {
+      try {
+        const parsed = JSON.parse(segRaw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          titleSegments = parsed as TitleSegment[];
+        } else {
+          titleSegments = null;
+        }
+      } catch {
+        titleSegments = null;
+      }
+    }
     const settings = await updateIntroSettings(accountId, {
       enabled: readBool("enabled"),
       title_text: read("title_text") === null ? undefined : (read("title_text") || null),
+      title_segments: titleSegments,
       title_position: readToken<IntroTitlePosition>("title_position", [
         "hero",
         "center",
