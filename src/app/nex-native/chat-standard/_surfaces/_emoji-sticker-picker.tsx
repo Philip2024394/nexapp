@@ -31,6 +31,8 @@ import type { ResolvedEngine } from "../_engine/theme-engine";
 import {
   getAllBuiltInEmoji,
   getAllBuiltInStickers,
+  emojiMatchesKeyword,
+  emojiIsYellow,
 } from "@/lib/nex-native/theme-asset-fallback";
 import {
   pushRecent,
@@ -462,17 +464,30 @@ function EmojiTab({
   onPickTheme: (e: StandardPickerThemeEmoji) => void;
 }): React.JSX.Element {
   const q = query.trim().toLowerCase();
-  const filteredImages = React.useMemo(
-    () =>
-      q
-        ? allEmoji.filter(
-            (e) =>
-              e.slug.toLowerCase().includes(q) ||
-              (e.label ?? "").toLowerCase().includes(q),
-          )
-        : allEmoji,
-    [allEmoji, q],
-  );
+  /* Owner directive 2026-10-20 · "emojis must be scanned for search bar
+   * search · maybe user wants happy / sad / crying etc · we must show
+   * results with yellow emoji showing first". Three-tier match: slug
+   * prefix, then label substring, then the shared keyword map (which
+   * carries emotion/concept tokens for glossy3d + cakegirl). Results
+   * are stable-sorted so yellow (glossy3d) tiles float to the top. */
+  const filteredImages = React.useMemo(() => {
+    if (!q) return allEmoji;
+    const matched = allEmoji.filter(
+      (e) =>
+        e.slug.toLowerCase().includes(q) ||
+        (e.label ?? "").toLowerCase().includes(q) ||
+        emojiMatchesKeyword(e.slug, q),
+    );
+    // Stable yellow-first sort · preserves original order within each
+    // bucket so repeat searches return the same list.
+    return matched
+      .map((e, i) => ({ e, i, yellow: emojiIsYellow(e.slug) }))
+      .sort((a, b) => {
+        if (a.yellow !== b.yellow) return a.yellow ? -1 : 1;
+        return a.i - b.i;
+      })
+      .map((x) => x.e);
+  }, [allEmoji, q]);
   /* Owner directive 2026-10-19 · Unicode BASE_EMOJI fallback retired
      from the Emoji tab · `filteredBase` + its render are gone · the
      Unicode glyph set is no longer surfaced for new picks. Existing

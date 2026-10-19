@@ -737,6 +737,92 @@ export function getAllBuiltInEmoji(): readonly BuiltInThemeEmoji[] {
   return [...JOKER_EMOJI, ...FOOD_EMOJI];
 }
 
+/* ─────────────── Emoji search keyword map ──────────────────────────
+ *
+ * Owner directive 2026-10-20 · "emojis must be scanned for search bar
+ * search · maybe user wants happy / sad / crying / joyful / thinking
+ * etc · we must show results with yellow emoji showing first on list
+ * scrolling". A parallel map by slug · each value is an array of
+ * lowercase search tokens the picker matches on. Yellow glossy3d
+ * entries are tagged with "yellow" so the picker can sort them to
+ * the top of any mood-based result list.
+ *
+ * Keyword source: visual inspection of each PNG (agent run 2026-10-20)
+ * · 48 slugs across glossy3d + cakegirl · joker + food family rely on
+ * their existing label-based search which already surfaces useful
+ * tokens (burger, pizza, chef, etc).
+ */
+
+export const EMOJI_SEARCH_KEYWORDS: Record<string, readonly string[]> = {
+  // ─── glossy3d (yellow) ────────────────────────────────────────────
+  "glossy3d-01": ["cool", "sunglasses", "thumbs up", "awesome", "swag", "yellow"],
+  "glossy3d-02": ["cool", "swag", "cap", "thumbs up", "hip hop", "yellow"],
+  "glossy3d-03": ["music", "headphones", "listening", "song", "vibe", "yellow"],
+  "glossy3d-04": ["love", "heart eyes", "in love", "adore", "crush", "yellow"],
+  "glossy3d-05": ["fire", "lit", "hot", "flames", "on fire", "yellow"],
+  "glossy3d-06": ["king", "crown", "winner", "boss", "wink", "yellow"],
+  "glossy3d-07": ["peace", "tongue", "playful", "silly", "cheeky", "yellow"],
+  "glossy3d-08": ["astronaut", "space", "thumbs up", "explore", "galaxy", "yellow"],
+  "glossy3d-09": ["laugh", "lol", "haha", "funny", "hilarious", "yellow"],
+  "glossy3d-10": ["cool", "party", "neon", "sunglasses", "fun", "yellow"],
+  "glossy3d-11": ["shocked", "mind blown", "wow", "explode", "omg", "yellow"],
+  "glossy3d-12": ["skate", "skateboard", "cool", "trick", "sport", "yellow"],
+  "glossy3d-13": ["love", "heart", "hug", "care", "affection", "yellow"],
+  "glossy3d-14": ["star", "amazing", "excited", "wow", "superstar", "yellow"],
+  "glossy3d-15": ["rock", "peace", "beanie", "cool", "wink", "yellow"],
+  "glossy3d-16": ["shh", "quiet", "secret", "silent", "hush", "yellow"],
+  "glossy3d-17": ["coffee", "chill", "morning", "relax", "cafe", "yellow"],
+  "glossy3d-18": ["car", "racing", "speed", "fast", "drive", "yellow"],
+  "glossy3d-19": ["kiss", "blow kiss", "love", "flirt", "muah", "yellow"],
+  "glossy3d-20": ["rocket", "launch", "fast", "boost", "space", "yellow"],
+  "glossy3d-21": ["thumbs up", "wink", "approve", "good", "cap", "yellow"],
+  "glossy3d-22": ["cry", "crying", "sad", "tears", "upset", "yellow"],
+  "glossy3d-23": ["cool", "electric", "tongue", "energy", "shock", "yellow"],
+  "glossy3d-24": ["angel", "halo", "pray", "innocent", "peace", "yellow"],
+  // ─── cakegirl ─────────────────────────────────────────────────────
+  "cakegirl-01": ["cute", "thumbs up", "wink", "happy", "sweet", "cakegirl"],
+  "cakegirl-02": ["love", "heart", "adore", "crush", "sweet", "cakegirl"],
+  "cakegirl-03": ["cool", "sunglasses", "awesome", "swag", "star", "cakegirl"],
+  "cakegirl-04": ["happy", "excited", "joy", "laugh", "jump", "cakegirl"],
+  "cakegirl-05": ["cry", "sad", "tears", "upset", "sorry", "cakegirl"],
+  "cakegirl-06": ["princess", "crown", "queen", "peace", "royal", "cakegirl"],
+  "cakegirl-07": ["music", "headphones", "listening", "song", "vibe", "cakegirl"],
+  "cakegirl-08": ["coffee", "tea", "drink", "sip", "cozy", "cakegirl"],
+  "cakegirl-09": ["angry", "mad", "annoyed", "furious", "grumpy", "cakegirl"],
+  "cakegirl-10": ["love", "heart eyes", "in love", "crush", "adore", "cakegirl"],
+  "cakegirl-11": ["hero", "superhero", "brave", "cape", "power", "cakegirl"],
+  "cakegirl-12": ["yummy", "eat", "cake", "delicious", "tasty", "cakegirl"],
+  "cakegirl-13": ["shocked", "surprised", "wow", "omg", "gasp", "cakegirl"],
+  "cakegirl-14": ["cool", "thumbs up", "cap", "wink", "approve", "cakegirl"],
+  "cakegirl-15": ["sleep", "sleepy", "tired", "zzz", "nap", "cakegirl"],
+  "cakegirl-16": ["cool", "sunglasses", "thumbs up", "awesome", "swag", "cakegirl"],
+  "cakegirl-17": ["think", "thinking", "hmm", "confused", "wonder", "cakegirl"],
+  "cakegirl-18": ["good vibes", "sign", "positive", "happy", "vibes", "cakegirl"],
+  "cakegirl-19": ["cake", "yummy", "dessert", "treat", "hungry", "cakegirl"],
+  "cakegirl-20": ["travel", "adventure", "hike", "explore", "backpack", "cakegirl"],
+  "cakegirl-21": ["love", "happy", "hearts", "blush", "joy", "cakegirl"],
+  "cakegirl-22": ["party", "birthday", "celebrate", "confetti", "hooray", "cakegirl"],
+  "cakegirl-23": ["love", "heart hands", "cute", "hoodie", "affection", "cakegirl"],
+  "cakegirl-24": ["rock", "cool", "sunglasses", "peace", "swag", "cakegirl"],
+};
+
+/** Keyword-match helper · case-insensitive substring on any token.
+ *  Returns false when the slug has no keywords mapped (caller falls
+ *  back to slug + label matching). */
+export function emojiMatchesKeyword(slug: string, query: string): boolean {
+  const kws = EMOJI_SEARCH_KEYWORDS[slug];
+  if (!kws) return false;
+  const q = query.trim().toLowerCase();
+  if (q.length === 0) return false;
+  return kws.some((k) => k.includes(q));
+}
+
+/** True when the slug belongs to the yellow glossy3d set · used by
+ *  the picker to float yellow emoji to the top of search results. */
+export function emojiIsYellow(slug: string): boolean {
+  return slug.toLowerCase().startsWith("glossy3d-");
+}
+
 /** Same model for stickers. */
 export function getAllBuiltInStickers(): readonly BuiltInThemeSticker[] {
   return [...JOKER_STICKERS, ...FOOD_STICKERS];
