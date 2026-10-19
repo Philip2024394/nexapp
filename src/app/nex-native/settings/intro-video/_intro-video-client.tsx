@@ -1924,6 +1924,10 @@ export function IntroVideoSettingsClient({
           (same emoji-image resolver renders it in the overlay). */}
       <JokerKeypad
         open={keypadOpen}
+        /* Owner directive 2026-10-20 · "load the keypad with emoji
+           library" · intro-video surface opens straight to the emoji
+           drawer · users scroll inside to find the mood they want. */
+        initialPlane="emoji"
         value={titleText}
         onChange={(next) => {
           /* Enforce the same 3-line + 140-char caps the textarea had.

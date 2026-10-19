@@ -50,8 +50,12 @@ const DEEP_1 = "#030308";
 const DEEP_2 = "#0A0F1A";
 const KEY_TEXT = "#F4F7FC";
 const KEY_BG_IDLE = "rgba(255,255,255,0.06)";
-const BACKSPACE_RED = "rgba(255,80,80,0.14)";
-const BACKSPACE_RED_BORDER = "rgba(255,80,80,0.35)";
+/* Owner directive 2026-10-20 · "red line button over the blue return
+ * button change to solid dark red colour" · bumped from faint tint to
+ * a solid NEX dark red fill + matching darker border so the backspace
+ * button reads clearly against the acid-green/cyan Return key. */
+const BACKSPACE_RED = "#8B1A1A";
+const BACKSPACE_RED_BORDER = "#631010";
 
 /** Shift state · three-state cycle · one-shot caps between lower and
  *  caps-lock to match iOS / Android convention. */
@@ -103,6 +107,11 @@ export interface JokerKeypadProps {
    *  render the Joker-pattern layout in its own colour. Defaults to
    *  Joker acid-green (#8FFF6E) so legacy callers stay byte-identical. */
   accentColor?: string;
+  /** Owner directive 2026-10-20 · "load the keypad with emoji library"
+   *  · lets a caller override the keypad's starting drawer. The intro-
+   *  video settings surface passes "emoji" so users land on the emoji
+   *  grid immediately · chat composers keep the default "letters". */
+  initialPlane?: "letters" | "emoji" | "sticker";
 }
 
 /** Convert a hex accent into the five rgba() tints the keypad needs
@@ -148,6 +157,7 @@ export function JokerKeypad({
   onPickEmoji,
   onPickSticker,
   accentColor,
+  initialPlane = "letters",
 }: JokerKeypadProps): React.JSX.Element | null {
   /* Owner directive 2026-10-18 · derive the five CSS vars once per
      render from accentColor · defaults to Joker acid-green so the
@@ -157,7 +167,13 @@ export function JokerKeypad({
     [accentColor],
   );
   const [shift, setShift] = React.useState<ShiftState>("upper"); // first letter capitalised
-  const [plane, setPlane] = React.useState<Plane>("letters");
+  const [plane, setPlane] = React.useState<Plane>(initialPlane);
+  /* Owner directive 2026-10-20 · when the caller changes initialPlane
+     between opens, honour the new default on the next open. */
+  React.useEffect(() => {
+    if (open) setPlane(initialPlane);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
   const [pressed, setPressed] = React.useState<string | null>(null);
 
   // Inline drawer sources · built-in catalog · Joker ships 23 emoji
@@ -389,9 +405,12 @@ export function JokerKeypad({
             style={{
               flexShrink: 0,
               appearance: "none",
-              background: "rgba(255,255,255,0.04)",
-              border: `1px solid var(--nex-kp-accent-border, rgba(143,255,110,0.18))`,
-              color: KEY_TEXT,
+              /* Owner directive 2026-10-20 · "close keypad button change
+                 to solid dark red colour" · explicit NEX dark red fill +
+                 opaque border so the chevron reads as a kill button. */
+              background: "#8B1A1A",
+              border: "1px solid #631010",
+              color: "#FFFFFF",
               fontSize: 16,
               cursor: "pointer",
               width: 32,
