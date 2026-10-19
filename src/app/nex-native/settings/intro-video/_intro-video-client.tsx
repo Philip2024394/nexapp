@@ -26,6 +26,21 @@ import {
   type ControlDrawerSession,
 } from "@/components/nex-native/control-drawer/control-drawer-client";
 import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
+import type {
+  IntroSettings,
+  IntroTitleAlign,
+  IntroTitleFont,
+  IntroTitlePosition as IntroTitlePositionDB,
+  IntroTitleSize,
+} from "@/lib/nex-native/intro-settings-service";
+import {
+  clearIntroVideoAction,
+  clearWallpaperAction,
+  resetIntroToThemeDefaultsAction,
+  updateIntroSettingsAction,
+  uploadIntroVideoAction,
+  uploadWallpaperAction,
+} from "./_actions";
 import {
   INTRO_OVERLAY_FONTS,
   INTRO_OVERLAY_FONTS_HREF,
@@ -101,6 +116,10 @@ interface Props {
    *  hasn't uploaded a custom one · null when the theme ships without
    *  a wallpaper (fully-painted bubbles with no bg image). */
   readonly activeThemeWallpaperUrl?: string | null;
+  /** Owner directive 2026-10-20 · server-hydrated saved intro
+   *  settings · the client initialises every stateful control from
+   *  this so a returning user sees their last-saved state. */
+  readonly savedIntro: IntroSettings;
 }
 
 interface StagedIntro {
@@ -179,30 +198,55 @@ export function IntroVideoSettingsClient({
   activeThemeIntroUrl,
   activeThemeName,
   activeThemeWallpaperUrl,
+  savedIntro,
 }: Props): React.JSX.Element {
-  const [introEnabled, setIntroEnabled] = React.useState(true);
+  const [introEnabled, setIntroEnabled] = React.useState<boolean>(
+    savedIntro.enabled,
+  );
   const [staged, setStaged] = React.useState<StagedIntro | null>(null);
+  /* Owner directive 2026-10-20 · server-persisted intro video URL ·
+     resolves on page load from Supabase · null when the user hasn't
+     uploaded one yet (preview falls back to activeThemeIntroUrl). */
+  const [savedIntroVideoUrl, setSavedIntroVideoUrl] = React.useState<
+    string | null
+  >(savedIntro.video_url);
+  const [savedWallpaperUrl, setSavedWallpaperUrl] = React.useState<
+    string | null
+  >(savedIntro.wallpaper_url);
+  const [uploadingVideo, setUploadingVideo] = React.useState(false);
+  const [uploadingWallpaper, setUploadingWallpaper] = React.useState(false);
   /* Title text defaults to the sample "Welcome · <name>" via the
      isPlaceholder flag below · stays empty until the sample has been
      either kept (user hits Save) or replaced (user types). */
-  const [titleText, setTitleText] = React.useState("");
+  const [titleText, setTitleText] = React.useState<string>(
+    savedIntro.title_text ?? "",
+  );
   const [titlePosition, setTitlePosition] =
-    React.useState<IntroTitlePosition>("hero");
+    React.useState<IntroTitlePosition>(
+      (savedIntro.title_position as IntroTitlePosition | null) ?? "hero",
+    );
   /* Owner directive 2026-10-19 · "font style as option / text size as
      option / brainstorm world-class" · Phase 1 ships font + size
      chip rows. Phase 2 (color, highlight pill, alignment) deferred. */
-  const [titleFontId, setTitleFontId] =
-    React.useState<IntroOverlayFontId>("classic");
-  const [titleSizeId, setTitleSizeId] =
-    React.useState<IntroOverlaySizeId>("m");
+  const [titleFontId, setTitleFontId] = React.useState<IntroOverlayFontId>(
+    (savedIntro.title_font as IntroOverlayFontId | null) ?? "classic",
+  );
+  const [titleSizeId, setTitleSizeId] = React.useState<IntroOverlaySizeId>(
+    (savedIntro.title_size as IntroOverlaySizeId | null) ?? "m",
+  );
   /* Owner directive 2026-10-20 · "ship all · deeper creative controls" ·
      colour (8 presets · default white) · alignment (L/C/R) · background
      highlight pill · all drive the TitleOverlay in real time + persist
      with the save payload. */
-  const [titleColor, setTitleColor] = React.useState<string>("#FFFFFF");
-  const [titleAlign, setTitleAlign] =
-    React.useState<"left" | "center" | "right">("center");
-  const [titleHighlight, setTitleHighlight] = React.useState<boolean>(false);
+  const [titleColor, setTitleColor] = React.useState<string>(
+    savedIntro.title_color ?? "#FFFFFF",
+  );
+  const [titleAlign, setTitleAlign] = React.useState<
+    "left" | "center" | "right"
+  >((savedIntro.title_align as IntroTitleAlign | null) ?? "center");
+  const [titleHighlight, setTitleHighlight] = React.useState<boolean>(
+    savedIntro.title_highlight,
+  );
   /* Owner directive 2026-10-20 · "open time in footer center · if the
      user put text in footer then opening time could go to header
      center · balance" · sample opening-hours toggle so the user can
@@ -231,7 +275,11 @@ export function IntroVideoSettingsClient({
     () => `${activeThemeName ?? displayName}\nCreate The Wow`,
     [activeThemeName, displayName],
   );
-  const [isPlaceholder, setIsPlaceholder] = React.useState(true);
+  /* If savedIntro has title_text, the user committed something · don't
+     treat the sample as placeholder. */
+  const [isPlaceholder, setIsPlaceholder] = React.useState<boolean>(
+    !savedIntro.title_text,
+  );
   /* Owner directive 2026-10-19 · "upload their own chat wallpaper to
      match · image must be screen app size · we state the size and
      file type". Staged wallpaper is validated client-side first and
@@ -316,23 +364,16 @@ export function IntroVideoSettingsClient({
      sessionStorage key the Save button writes. Production path will
      replace this check with `account.intro_video_url !== null`
      resolved server-side. */
-  const [hasLiveIntro, setHasLiveIntro] = React.useState(false);
-  React.useEffect(() => {
-    try {
-      const raw = window.sessionStorage.getItem("nex:intro-video:preview");
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as { videoUrl?: string | null };
-      if (parsed?.videoUrl && typeof parsed.videoUrl === "string") {
-        setHasLiveIntro(true);
-      }
-    } catch {
-      /* ignore · absence of saved intro is the default */
-    }
-  }, []);
+  /* Owner directive 2026-10-20 · "ship actions" · hasLiveIntro now
+     resolves from server-hydrated savedIntro.video_url · updated on
+     each successful save/upload/clear via the action responses. */
+  const [hasLiveIntro, setHasLiveIntro] = React.useState<boolean>(
+    savedIntro.video_url !== null,
+  );
 
-  const resetToThemeIntro = React.useCallback(() => {
-    /* Clear every piece of local + saved state that represents the
-       user's custom intro. The preview tile falls back to the active
+  const resetToThemeIntro = React.useCallback(async () => {
+    /* Server-side clear · the UI stops staged state locally + the DB
+       drops the pointer columns · the preview falls back to the active
        theme's packaged intro via activeThemeIntroUrl. */
     clearStaged();
     setTitleText("");
@@ -341,9 +382,13 @@ export function IntroVideoSettingsClient({
     setError(null);
     setSavedAt(null);
     try {
-      window.sessionStorage.removeItem("nex:intro-video:preview");
+      const r = await resetIntroToThemeDefaultsAction();
+      if (r.ok && r.data) {
+        setSavedIntroVideoUrl(r.data.video_url);
+        setSavedWallpaperUrl(r.data.wallpaper_url);
+      }
     } catch {
-      /* ignore */
+      /* ignore · best-effort reset */
     }
     setHasLiveIntro(false);
   }, [clearStaged]);
@@ -397,26 +442,59 @@ export function IntroVideoSettingsClient({
         );
         return;
       }
-      // All gates pass · stage.
+      // All gates pass · stage locally then upload to the server.
       clearStaged();
+      const previewUrl = URL.createObjectURL(file);
       setStaged({
         file,
-        previewUrl: URL.createObjectURL(file),
+        previewUrl,
         durationSec: metadata.durationSec,
         width: metadata.width,
         height: metadata.height,
         isPortrait,
       });
+      /* Owner directive 2026-10-20 · "ship actions" · upload to the
+         sealed nex-user-intros bucket + persist URL on nex_account.
+         The staged previewUrl stays until the server returns the
+         canonical public URL so the user sees instant feedback. */
+      setUploadingVideo(true);
+      try {
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("durationMs", String(Math.round(metadata.durationSec * 1000)));
+        const r = await uploadIntroVideoAction(fd);
+        if (!r.ok || !r.data) {
+          setError(r.error || "Video upload failed");
+          return;
+        }
+        setSavedIntroVideoUrl(r.data.video_url);
+        setHasLiveIntro(r.data.video_url !== null);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Video upload failed");
+      } finally {
+        setUploadingVideo(false);
+      }
     },
     [clearStaged],
   );
 
-  const clearStagedWallpaper = React.useCallback(() => {
+  const clearStagedWallpaper = React.useCallback(async () => {
     if (stagedWallpaper?.previewUrl)
       URL.revokeObjectURL(stagedWallpaper.previewUrl);
     setStagedWallpaper(null);
     setWallpaperError(null);
-  }, [stagedWallpaper]);
+    /* Owner directive 2026-10-20 · when a saved wallpaper exists on
+       the server, also clear it so the preview reverts to the theme
+       default on the next page load. */
+    if (savedWallpaperUrl) {
+      try {
+        const r = await clearWallpaperAction();
+        if (r.ok) setSavedWallpaperUrl(null);
+      } catch {
+        /* best-effort · the staged clear already succeeded locally */
+      }
+    }
+  }, [stagedWallpaper, savedWallpaperUrl]);
 
   const handleWallpaperChange = React.useCallback(
     async (ev: React.ChangeEvent<HTMLInputElement>) => {
@@ -463,15 +541,38 @@ export function IntroVideoSettingsClient({
         );
         return;
       }
-      /* All checks passed · stage the wallpaper */
+      /* All client checks passed · stage locally for instant preview,
+         then upload to the server. */
       clearStagedWallpaper();
+      const previewUrl = URL.createObjectURL(file);
       setStagedWallpaper({
         file,
-        previewUrl: URL.createObjectURL(file),
+        previewUrl,
         width: dims.width,
         height: dims.height,
         mimeLabel,
       });
+      /* Owner directive 2026-10-20 · "ship actions" · upload to the
+         nex-user-wallpapers bucket + persist URL on nex_account.
+         The staged previewUrl stays until the server returns the
+         canonical public URL. */
+      setUploadingWallpaper(true);
+      try {
+        const fd = new FormData();
+        fd.append("file", file);
+        const r = await uploadWallpaperAction(fd);
+        if (!r.ok || !r.data) {
+          setWallpaperError(r.error || "Wallpaper upload failed");
+          return;
+        }
+        setSavedWallpaperUrl(r.data.wallpaper_url);
+      } catch (e) {
+        setWallpaperError(
+          e instanceof Error ? e.message : "Wallpaper upload failed",
+        );
+      } finally {
+        setUploadingWallpaper(false);
+      }
     },
     [clearStagedWallpaper],
   );
@@ -482,74 +583,20 @@ export function IntroVideoSettingsClient({
     titleText.trim().length > 0 ||
     !introEnabled;
 
-  const handleSave = React.useCallback(() => {
-    /* Preview-honest · persist the chosen settings to sessionStorage so
-       the owner can test the end-to-end UX on /nex-native/themes/<id>
-       immediately. The sealed server-action + Supabase bucket upload +
-       nex_account column migration land under a separate owner-
-       authorised commit per the Safety Constitution §5 deployment
-       gate (noted in page.tsx header). */
+  const handleSave = React.useCallback(async () => {
+    /* Owner directive 2026-10-20 · "ship actions" · writes land in
+       nex_account via the sealed updateIntroSettingsAction · if the
+       "Use theme original" toggle is ON, the full reset action is
+       called instead (clears video/wallpaper pointers + all typography
+       columns in one DB round-trip). */
+    setError(null);
     try {
-      /* Owner directive 2026-10-20 · when "Use theme original" is ON
-         at Save time, the payload reverts to the sealed theme defaults
-         (no custom video, no custom wallpaper, no custom title) · the
-         commit is the reset. */
-      const payload = useThemeOriginal
-        ? {
-            enabled: introEnabled,
-            videoUrl: null,
-            wallpaperUrl: null,
-            wallpaperDimensions: null,
-            title: null,
-            position: "hero" as IntroTitlePosition,
-            font: "classic" as IntroOverlayFontId,
-            size: "m" as IntroOverlaySizeId,
-            color: "#FFFFFF",
-            align: "center" as "left" | "center" | "right",
-            highlight: false,
-            resetToOriginal: true,
-            savedAt: Date.now(),
-          }
-        : {
-            enabled: introEnabled,
-            videoUrl: staged?.previewUrl ?? null,
-            wallpaperUrl: stagedWallpaper?.previewUrl ?? null,
-            wallpaperDimensions: stagedWallpaper
-              ? { width: stagedWallpaper.width, height: stagedWallpaper.height }
-              : null,
-            /* If the user never touched the sample text, persist the
-               sample so the saved intro still has a title. Otherwise
-               persist what they typed. */
-            title:
-              (isPlaceholder && !titleText.trim()
-                ? defaultTitleText
-                : titleText.trim()) || null,
-            position: titlePosition,
-            font: titleFontId,
-            size: titleSizeId,
-            color: titleColor,
-            align: titleAlign,
-            highlight: titleHighlight,
-            resetToOriginal: false,
-            savedAt: Date.now(),
-          };
-      window.sessionStorage.setItem(
-        "nex:intro-video:preview",
-        JSON.stringify(payload),
-      );
-      setSavedAt(Date.now());
-      setError(null);
-      /* Owner directive 2026-10-19 · a save with a non-null videoUrl
-         puts the intro in the "live" state · the Reset button must
-         now appear in the Your Intro Custom section. */
-      if (payload.videoUrl) {
-        setHasLiveIntro(true);
-      }
-      /* Owner directive 2026-10-20 · when the save was a "use theme
-         original" commit, drop every piece of custom state so the user
-         sees the theme original take over (and flipping the toggle OFF
-         doesn't resurrect ghost customisations). */
       if (useThemeOriginal) {
+        const r = await resetIntroToThemeDefaultsAction();
+        if (!r.ok || !r.data) {
+          setError(r.error || "Reset failed");
+          return;
+        }
         clearStaged();
         clearStagedWallpaper();
         setTitleText("");
@@ -562,7 +609,32 @@ export function IntroVideoSettingsClient({
         setTitleHighlight(false);
         setHasLiveIntro(false);
         setUseThemeOriginal(false);
+        setSavedIntroVideoUrl(null);
+        setSavedWallpaperUrl(null);
+        setSavedAt(Date.now());
+        return;
       }
+      const fd = new FormData();
+      fd.append("enabled", String(introEnabled));
+      fd.append(
+        "title_text",
+        (isPlaceholder && !titleText.trim()
+          ? defaultTitleText
+          : titleText.trim()) || "",
+      );
+      fd.append("title_position", titlePosition);
+      fd.append("title_font", titleFontId);
+      fd.append("title_size", titleSizeId);
+      fd.append("title_color", titleColor);
+      fd.append("title_align", titleAlign);
+      fd.append("title_highlight", String(titleHighlight));
+      const r = await updateIntroSettingsAction(fd);
+      if (!r.ok) {
+        setError(r.error || "Save failed");
+        return;
+      }
+      setSavedAt(Date.now());
+      if (r.data?.video_url) setHasLiveIntro(true);
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "Could not save · try again.",
@@ -570,8 +642,6 @@ export function IntroVideoSettingsClient({
     }
   }, [
     introEnabled,
-    staged,
-    stagedWallpaper,
     titleText,
     titlePosition,
     titleFontId,
@@ -730,7 +800,7 @@ export function IntroVideoSettingsClient({
           videoUrl={
             useThemeOriginal
               ? activeThemeIntroUrl ?? null
-              : staged?.previewUrl ?? activeThemeIntroUrl ?? null
+              : staged?.previewUrl ?? savedIntroVideoUrl ?? activeThemeIntroUrl ?? null
           }
           titleText={
             useThemeOriginal
@@ -1470,7 +1540,7 @@ export function IntroVideoSettingsClient({
         >
           {(() => {
             const previewSrc =
-              stagedWallpaper?.previewUrl ?? activeThemeWallpaperUrl;
+              stagedWallpaper?.previewUrl ?? savedWallpaperUrl ?? activeThemeWallpaperUrl;
             if (previewSrc) {
               return (
                 <>

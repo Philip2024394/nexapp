@@ -40,6 +40,7 @@ import { notFound, redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import { effectiveTier } from "@/lib/nex-native/account-service";
 import { getProfileByAccountId } from "@/lib/nex-native/account-profile-service";
+import { getIntroSettings } from "@/lib/nex-native/intro-settings-service";
 import {
   isLiveWorldId,
   LIVE_WORLD_PACKAGES,
@@ -107,6 +108,13 @@ export default async function IntroVideoSettingsPage() {
     isBisnis: effectiveTier(session.account) === "bisnis",
   };
 
+  /* Owner directive 2026-10-20 · "ship actions" · hydrate the client
+     from Supabase so the user's last-saved intro + typography shows up
+     on page load instead of starting blank. getIntroSettings fails
+     soft (returns empty-defaults) so a DB hiccup still renders the
+     page. */
+  const savedIntro = await getIntroSettings(session.account.id);
+
   return (
     <IntroVideoSettingsClient
       displayName={session.account.display_name}
@@ -116,6 +124,7 @@ export default async function IntroVideoSettingsPage() {
       activeThemeIntroUrl={activeThemeIntroUrl}
       activeThemeName={activeThemeName}
       activeThemeWallpaperUrl={activeThemeWallpaperUrl}
+      savedIntro={savedIntro}
     />
   );
 }
