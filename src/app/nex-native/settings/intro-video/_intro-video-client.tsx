@@ -2790,8 +2790,15 @@ function TitleOverlay({
       : position === "footer"
         ? { ...base, top: "auto", bottom: 40, left: 5, right: 5, alignItems: "flex-end", justifyContent: alignToJustify }
         : { ...base, top: 0, bottom: 0, left: 5, right: 5, alignItems: "center", justifyContent: alignToJustify };
-  const basePt = position === "hero" ? 24 : position === "center" ? 20 : 15;
-  const fontSize = Math.round(basePt * sizeMul);
+  /* Owner directive 2026-10-20 · "font size does not change if user
+     moves from hero to center or footer · text size remains set until
+     user selects another text size · same for font and colour". The
+     earlier per-position base (hero 24 · center 20 · footer 15) made
+     the font visibly shrink when the user swapped Position radios,
+     which looked like a bug · now a single base pt means the user's
+     Size pick is the ONLY thing that changes font size. */
+  const BASE_PT = 24;
+  const fontSize = Math.round(BASE_PT * sizeMul);
   const bgGrad =
     position === "hero"
       ? "linear-gradient(180deg, rgba(0,0,0,0.65) 0%, transparent 100%)"
