@@ -2932,6 +2932,27 @@ function OpeningHoursOverlay({
  * to /nex-themes/food/emoji/<slug>.png. Non-matched text segments
  * render as plain spans so punctuation, letters, and Unicode glyphs
  * continue to display verbatim. */
+/** Owner directive 2026-10-20 · ":slug:" tokens MUST render as images,
+ *  never as text · the img URL is derived from the slug prefix so
+ *  joker-NN loads from /nex-themes/joker/emoji/ while every other
+ *  slug loads from /nex-themes/food/emoji/. onError falls back to
+ *  the opposite folder so a mis-prefixed slug still has one more
+ *  chance before the browser surfaces alt text. */
+function emojiUrlForSlug(slug: string): string {
+  const l = slug.toLowerCase();
+  if (l.startsWith("joker-")) return `/nex-themes/joker/emoji/${slug}.png`;
+  // Food emoji + cakegirl + glossy3d + promo3d + chef + fast-food
+  // all live under /nex-themes/food/emoji/.
+  return `/nex-themes/food/emoji/${slug}.png`;
+}
+
+function emojiFallbackUrlForSlug(slug: string): string {
+  const l = slug.toLowerCase();
+  // If primary resolved to joker, try food · and vice-versa.
+  if (l.startsWith("joker-")) return `/nex-themes/food/emoji/${slug}.png`;
+  return `/nex-themes/joker/emoji/${slug}.png`;
+}
+
 /** Owner directive 2026-10-20 · "ship segments" · same :slug: emoji
  *  interpolation as renderTitleWithEmoji below, BUT also walks the
  *  per-character attrs array so each contiguous run of same-coloured /
@@ -2976,8 +2997,20 @@ function renderTitleWithEmojiAndAttrs(
       parts.push(
         <img
           key={`e-${key++}`}
-          src={`/nex-themes/food/emoji/${slug}.png`}
-          alt={slug}
+          src={emojiUrlForSlug(slug)}
+          alt=""
+          onError={(ev) => {
+            /* Primary dir missed · try the sibling theme folder once ·
+               if that misses too the img just renders as a tiny blank
+               square · we never show the slug as text. */
+            const el = ev.currentTarget;
+            const fb = emojiFallbackUrlForSlug(slug);
+            if (!el.src.endsWith(fb)) {
+              el.src = fb;
+            } else {
+              el.style.visibility = "hidden";
+            }
+          }}
           style={{
             width: imgSize,
             height: imgSize,
@@ -3045,8 +3078,14 @@ function renderTitleWithEmoji(
     parts.push(
       <img
         key={`e-${key++}`}
-        src={`/nex-themes/food/emoji/${slug}.png`}
-        alt={slug}
+        src={emojiUrlForSlug(slug)}
+        alt=""
+        onError={(ev) => {
+          const el = ev.currentTarget;
+          const fb = emojiFallbackUrlForSlug(slug);
+          if (!el.src.endsWith(fb)) el.src = fb;
+          else el.style.visibility = "hidden";
+        }}
         style={{
           width: imgSize,
           height: imgSize,
