@@ -426,11 +426,13 @@ export function IntroVideoSettingsClient({
      mode commits the reset (clears custom intro + wallpaper). */
   const [useThemeOriginal, setUseThemeOriginal] = React.useState<boolean>(false);
   const SAMPLE_OPENING_HOURS = "Open · Mon–Sat · 10am–10pm";
-  /* Hours sit at the opposite end from the user's title to avoid
-     overlap · hero/center title → hours at footer · footer title →
-     hours at hero. */
-  const openingHoursPosition: IntroTitlePosition =
-    titlePosition === "footer" ? "hero" : "footer";
+  /* Owner directive 2026-10-20 · opening hours ALWAYS sit at the
+     footer regardless of where the user's title is · if the title is
+     also at footer the hours pill sits below it (bottom:10 vs
+     bottom:40) so both read cleanly on one line. Only renders when
+     the user has set opening hours on their shop profile · for now
+     controlled by the sample toggle. */
+  const openingHoursPosition: IntroTitlePosition = "footer";
   /* Owner directive 2026-10-20 · sample text format "<theme> - Create
      The Wow" so the preview tile reads as a punchy hero line on first
      load · falls back to the display name when no live-world theme is
