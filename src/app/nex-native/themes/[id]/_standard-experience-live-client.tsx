@@ -110,10 +110,38 @@ const PRODUCTS = [
   },
 ];
 
+export interface StandardExperienceLiveThemeEmoji {
+  slug: string;
+  imageUrl: string;
+  label: string;
+}
+export interface StandardExperienceLiveThemeSticker {
+  slug: string;
+  imageUrl: string;
+  label: string;
+  stickerType: string;
+  aspectRatio: number;
+}
+
 export function StandardExperienceLiveClient({
   pkg,
+  viewerNexHandle,
+  themeEmojis,
+  themeStickers,
 }: {
   pkg: ThemePackage;
+  /** Owner directive 2026-10-19 · when the viewer is signed in, the
+   *  header subtitle shows the viewer's own NEX handle (e.g. "234234")
+   *  instead of the theme's tagline. Guests pass null and fall back
+   *  to the sealed guest/theme-tagline behaviour. */
+  viewerNexHandle?: string | null;
+  /** Owner directive 2026-10-19 · DB-backed (or filesystem-fallback)
+   *  theme emoji rows resolved server-side in page.tsx. When non-
+   *  empty, the composer's emoji picker renders these image-based
+   *  tiles in place of the hardcoded Unicode base set. */
+  themeEmojis?: readonly StandardExperienceLiveThemeEmoji[];
+  /** Same model as themeEmojis for stickers. */
+  themeStickers?: readonly StandardExperienceLiveThemeSticker[];
 }): React.JSX.Element {
   const engine = React.useMemo(() => createEngine(pkg), [pkg]);
   const [localMessages, setLocalMessages] = React.useState<
@@ -134,12 +162,21 @@ export function StandardExperienceLiveClient({
     .trim()
     .toUpperCase()
     .startsWith("NEX ");
+  // Owner directive 2026-10-19 · signed-in viewers see their own
+  // NEX handle below the theme name in the preview header (e.g.
+  // "Crispy Chicken" / "234234"), NOT the theme's tagline. Guests
+  // keep the sealed brand-guest copy for NEX-brand previews and
+  // fall back to the theme's own tagline for every other theme.
+  const previewSubtitle: string | null =
+    viewerNexHandle && viewerNexHandle.trim().length > 0
+      ? viewerNexHandle.trim()
+      : pkg.identity.tagline?.trim() || null;
   const peer = isNexBrandTheme
     ? NEX_GUEST_PEER
     : {
         accountId: `theme-${pkg.identity.id}`,
         displayName: pkg.identity.name,
-        tagline: pkg.identity.tagline?.trim() || null,
+        tagline: previewSubtitle,
         /* Owner directive 2026-10-18 · the theme profile avatar
            renders a cropped section of the theme's wallpaper so the
            circle visibly reads as "this theme". Falls back to null
@@ -210,6 +247,8 @@ export function StandardExperienceLiveClient({
         onSendLocalMessage={handleSend}
         localMessages={localMessages}
         wallpaperFallback="theme-gradient"
+        themeEmojis={themeEmojis}
+        themeStickers={themeStickers}
       />
       <Link
         href="/nex-native/chat-themes-library"

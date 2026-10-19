@@ -65,16 +65,20 @@ import {
  *  will send users to after `updateChatThemeAction` writes the
  *  theme. Shop-intent → cover-themes-library (the user picks a
  *  cover next). Every other intent (themes · personalised · null ·
- *  tampered) → chat/preview (the sealed live-chat landing). The
- *  intent cookie is READ but NOT cleared here · the welcome page
- *  owns the clear lifecycle. */
-async function resolveUseThemeNext(): Promise<string> {
+ *  tampered) → back to the same theme preview with `?applied=1` so
+ *  the preview can render a "Theme applied" toast. Previously
+ *  returned `/nex-native/chat/preview` which looped back to this
+ *  same URL via the self-chat redirect · the user saw a page
+ *  refresh and no visible confirmation. Owner directive 2026-10-19
+ *  · break the loop + show a toast. The intent cookie is READ but
+ *  NOT cleared here · the welcome page owns the clear lifecycle. */
+async function resolveUseThemeNext(themeId: string): Promise<string> {
   const jar = await cookies();
   const raw = jar.get(WELCOME_INTENT_COOKIE)?.value ?? null;
   if (isWelcomeIntent(raw) && raw === "shop") {
     return "/nex-native/cover-themes-library";
   }
-  return "/nex-native/chat/preview";
+  return `/nex-native/themes/${encodeURIComponent(themeId)}?applied=1`;
 }
 
 export const runtime = "nodejs";
@@ -89,6 +93,10 @@ export default async function ThemeViewerPage({
     mode?: string;
     motion?: string;
     shop_setup?: string;
+    /** Owner directive 2026-10-19 · set by resolveUseThemeNext after
+     *  the Use-this-theme form writes the theme. Renders a floating
+     *  "Theme applied" toast on this page. */
+    applied?: string;
   }>;
 }) {
   const { id } = await params;
@@ -109,6 +117,12 @@ export default async function ThemeViewerPage({
      every preview path can mount the drawer as a sibling. Session
      null = guest = sign-in prompt rendered inside the drawer. */
   let drawerSession: ControlDrawerSession | null = null;
+  /* Owner directive 2026-10-19 · track the viewer's currently-applied
+     chat_theme so the ThemePreviewActionBar can hide the Use-this-
+     theme button when the previewed theme is already the active one.
+     Guest viewers keep activeChatTheme = null and always see the Use
+     button (gated by the sealed account-wall). */
+  let activeChatTheme: string | null = null;
   try {
     const sess = await resolveNexAppSessionFromContext();
     if (sess) {
@@ -117,6 +131,7 @@ export default async function ThemeViewerPage({
         nexHandle: sess.account.nex_handle,
         isBisnis: effectiveTier(sess.account) === "bisnis",
       };
+      activeChatTheme = sess.account.chat_theme ?? null;
     }
   } catch {
     // guest · keep drawerSession = null
@@ -127,10 +142,42 @@ export default async function ThemeViewerPage({
   if (isLiveWorldId(id)) {
     const pkg = LIVE_WORLD_PACKAGES[id];
     const isGuest = drawerSession === null;
-    const useNext = await resolveUseThemeNext();
+    const useNext = await resolveUseThemeNext(pkg.identity.id);
+    const showAppliedToast = sp.applied === "1";
+    /* Owner directive 2026-10-19 · live-world previews now fetch
+       themeEmojis + themeStickers for the current theme id · same
+       services the DB-driven viewer path already uses · so uploaded
+       (or filesystem-fallback) assets appear in the composer picker.
+       Catches both DB rows and the built-in catalog in
+       theme-asset-fallback.ts. Zero rows + no fallback → empty
+       arrays · picker falls back to BASE_EMOJI + engine SVG as
+       before. */
+    const liveWorldEmojiRows = await listThemeEmojis(pkg.identity.id).catch(
+      () => [],
+    );
+    const liveWorldEmojis = liveWorldEmojiRows.map((row) => ({
+      slug: row.slug,
+      imageUrl: row.image_url,
+      label: row.label,
+    }));
+    const liveWorldStickerRows = await listThemeStickers(
+      pkg.identity.id,
+    ).catch(() => []);
+    const liveWorldStickers = liveWorldStickerRows.map((row) => ({
+      slug: row.slug,
+      imageUrl: row.image_url,
+      label: row.label,
+      stickerType: row.sticker_type,
+      aspectRatio: row.aspect_ratio,
+    }));
     return (
       <>
-        <StandardExperienceLiveClient pkg={pkg} />
+        <StandardExperienceLiveClient
+          pkg={pkg}
+          viewerNexHandle={drawerSession?.nexHandle ?? null}
+          themeEmojis={liveWorldEmojis}
+          themeStickers={liveWorldStickers}
+        />
         <ThemePreviewDrawer
           session={drawerSession}
           themeAccent={pkg.colours.primary}
@@ -148,7 +195,21 @@ export default async function ThemeViewerPage({
           useThemeNextHref={useNext}
           isGuest={isGuest}
           accentHex={pkg.colours.primary}
+          isAlreadyApplied={activeChatTheme === pkg.identity.id}
         />
+        {/* Owner directive 2026-10-19 · post-apply success toast ·
+            shown only when ?applied=1 is in the URL (set by
+            resolveUseThemeNext after the Use-this-theme form writes
+            the theme). Breaks the old silent redirect loop so the
+            user sees that the action succeeded. Toast tints to the
+            theme accent so it reads as part of the applied theme
+            and not foreign chrome. */}
+        {showAppliedToast ? (
+          <ThemeAppliedToast
+            themeName={pkg.identity.name}
+            accentHex={pkg.colours.primary}
+          />
+        ) : null}
         {/* Owner directive 2026-10-19 · "Create Account to activate
             your free NEX Chat" banner shown only to guest viewers.
             Signed-in users already have an account · gating here
@@ -387,10 +448,87 @@ export default async function ThemeViewerPage({
       <ThemePreviewActionBar
         themeId={theme.id}
         themeName={theme.name}
-        useThemeNextHref={await resolveUseThemeNext()}
+        useThemeNextHref={await resolveUseThemeNext(theme.id)}
         isGuest={viewer.kind === "guest"}
         accentHex={theme.accent_hex}
+        isAlreadyApplied={
+          viewer.kind === "session" &&
+          viewer.session.account.chat_theme === theme.id
+        }
       />
+      {/* Owner directive 2026-10-19 · post-apply success toast on the
+          DB-driven viewer path, mirroring the live-world branch.
+          Tints to the theme accent so it visually belongs to the
+          applied theme. */}
+      {sp.applied === "1" ? (
+        <ThemeAppliedToast
+          themeName={theme.name}
+          accentHex={theme.accent_hex}
+        />
+      ) : null}
+    </>
+  );
+}
+
+/** Owner directive 2026-10-19 · floating "Theme applied" toast ·
+ *  rendered when ?applied=1 is on the URL. Server component ·
+ *  no interactivity · the toast fades out via a CSS animation and
+ *  the user clears it by navigating away. Positioned above the
+ *  sealed ThemePreviewActionBar at bottom so it reads as a
+ *  confirmation of the button they just pressed. Tints to the
+ *  theme's own accent colour so it visually belongs to the applied
+ *  theme (owner directive 2026-10-19 · "must be same color as
+ *  theme color"). */
+function ThemeAppliedToast({
+  themeName,
+  accentHex,
+}: {
+  themeName: string;
+  accentHex: string;
+}) {
+  return (
+    <>
+      <style>{`
+        @keyframes nex-theme-applied-toast-in {
+          0%   { opacity: 0; transform: translate(-50%, 12px); }
+          12%  { opacity: 1; transform: translate(-50%, 0); }
+          80%  { opacity: 1; transform: translate(-50%, 0); }
+          100% { opacity: 0; transform: translate(-50%, 6px); }
+        }
+      `}</style>
+      <div
+        data-nex-theme-applied-toast
+        data-nex-theme-applied-toast-accent={accentHex}
+        role="status"
+        aria-live="polite"
+        style={{
+          position: "fixed",
+          left: "50%",
+          bottom: "calc(env(safe-area-inset-bottom, 0px) + 148px)",
+          transform: "translate(-50%, 0)",
+          zIndex: 500,
+          maxWidth: 360,
+          width: "calc(100vw - 48px)",
+          padding: "10px 16px",
+          borderRadius: 999,
+          background: "rgba(2, 9, 20, 0.92)",
+          border: `1px solid ${accentHex}`,
+          color: accentHex,
+          fontFamily:
+            "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+          fontSize: 13,
+          fontWeight: 800,
+          letterSpacing: "0.02em",
+          textAlign: "center",
+          boxShadow: `0 10px 28px rgba(0, 0, 0, 0.55), 0 0 24px ${accentHex}55`,
+          backdropFilter: "blur(14px)",
+          WebkitBackdropFilter: "blur(14px)",
+          pointerEvents: "none",
+          animation: "nex-theme-applied-toast-in 4000ms ease forwards",
+        }}
+      >
+        {themeName} applied as your chat theme
+      </div>
     </>
   );
 }

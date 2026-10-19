@@ -24,10 +24,13 @@ import { StandardAmbientLayer } from "./_surfaces/_ambient-layer";
 import { StandardBubble } from "./_surfaces/_bubble";
 import { StandardComposer } from "./_surfaces/_composer";
 import { StandardEmojiStickerPicker } from "./_surfaces/_emoji-sticker-picker";
-import {
-  StandardShopSlider,
-  type StandardShopProduct,
-} from "./_surfaces/_shop-slider";
+import { type StandardShopProduct } from "./_surfaces/_shop-slider";
+// Owner-authorised 2026-10-19 · the Shop sheet on live-world theme
+// previews renders the 5-way category chooser (Products · Services ·
+// Food · Accommodation · Affiliate) in place of the mock-products
+// slider. Convergence with the DB-driven path's `?shop_setup=1`
+// behaviour (see src/app/nex-native/chat/_shop-grid-modal.tsx).
+import { StandardShopChooser } from "./_surfaces/_shop-chooser";
 // Step 2 (sealed 2026-10-06) · universal ThemePackage asset
 // consumption · the intro-video overlay plays `pkg.intro.videoUrl`
 // twice-then-skip for every Standard Experience world without any
@@ -55,6 +58,19 @@ export interface StandardExperienceSeedMessage {
   body: string;
 }
 
+export interface StandardExperienceThemeEmoji {
+  slug: string;
+  imageUrl: string;
+  label: string;
+}
+export interface StandardExperienceThemeSticker {
+  slug: string;
+  imageUrl: string;
+  label: string;
+  stickerType: string;
+  aspectRatio: number;
+}
+
 export interface StandardExperienceProps {
   engine: ResolvedEngine;
   peer: StandardExperienceFixturePeer;
@@ -68,6 +84,13 @@ export interface StandardExperienceProps {
    *  has no asset. The acceptance test says Ocean must feel Ocean
    *  WITHOUT the wallpaper, so this is deliberately low-weight. */
   wallpaperFallback?: "theme-gradient" | "none";
+  /** Owner directive 2026-10-19 · DB-backed (or filesystem-fallback)
+   *  theme emoji/sticker rows. Threaded through to the composer
+   *  picker so uploaded theme-specific assets replace the hardcoded
+   *  Unicode base emoji + the engine's SVG sticker generator. Empty
+   *  arrays preserve the sealed defaults. */
+  themeEmojis?: readonly StandardExperienceThemeEmoji[];
+  themeStickers?: readonly StandardExperienceThemeSticker[];
 }
 
 export function StandardExperience({
@@ -78,6 +101,8 @@ export function StandardExperience({
   onSendLocalMessage,
   localMessages,
   wallpaperFallback = "theme-gradient",
+  themeEmojis,
+  themeStickers,
 }: StandardExperienceProps): React.JSX.Element {
   const [composerText, setComposerText] = React.useState("");
   const [pickerOpen, setPickerOpen] = React.useState(false);
@@ -376,10 +401,19 @@ export function StandardExperience({
               flexShrink: 0,
             }}
           />
-          {/* Shop slider · fills the remaining sheet height (70% stage
-              minus the grab handle) and scrolls vertically within. */}
+          {/* Shop sheet body · fills the remaining sheet height (70%
+              stage minus the grab handle) and scrolls vertically
+              within. Owner directive 2026-10-19 · live-world
+              previews render the 5-way shop-category chooser
+              (Products · Services · Food · Accommodation ·
+              Affiliate) here instead of the mock-products slider,
+              matching the DB-driven preview path's default
+              `?shop_setup=1` behaviour. The `products` prop is
+              still accepted upstream so the API surface of this
+              component doesn't break for other callers · it just
+              isn't rendered here any more. */}
           <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
-            <StandardShopSlider engine={engine} products={products} />
+            <StandardShopChooser engine={engine} />
           </div>
         </div>
 
@@ -396,6 +430,8 @@ export function StandardExperience({
               engine={engine}
               onPickEmoji={handleEmojiPick}
               onPickSticker={handleStickerPick}
+              themeEmojis={themeEmojis}
+              themeStickers={themeStickers}
             />
           </div>
         )}
@@ -637,8 +673,22 @@ function StandardHeader({
            reference). Real chat routes omit this and keep the
            2-line wrap for user-chosen display names. */
         maxNameLines={1}
+        /* Owner directive 2026-10-19 · preview name shrinks from 26
+           to 20 so overlong theme names (Crispy Chicken, Botanical
+           Café, etc.) read cleanly without crowding the absolute
+           side-drawer kebab at right:12. Real chat routes omit this
+           and keep the sealed 26px. */
+        nameFontSize={20}
         avatarHref={avatarHref}
-        rightReserveWidth={0}
+        /* Owner directive 2026-10-19 · reserve enough right-padding
+           inside the identity column to prevent the ellipsised name
+           from visually running under the absolute kebab (36px btn +
+           12px frame margin at right:12 → ~48px slot). Previous
+           value 0 allowed the clamp to touch the cluster's left
+           edge · at frame widths where the Cart+Shop cluster
+           compressed, the kebab's slot could overlap the name
+           baseline. 56 keeps the title column safely clear. */
+        rightReserveWidth={56}
       />
       <StandardHeaderActions
         engine={engine}

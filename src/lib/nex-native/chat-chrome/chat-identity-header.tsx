@@ -15,6 +15,7 @@
 //               their surface needs.
 
 import * as React from "react";
+import { NEX_FONT_SANS } from "@/lib/nex-native/design-tokens";
 
 export type ChatIdentityPresenceKind = "online" | "away" | "offline" | "none";
 
@@ -60,6 +61,12 @@ export interface ChatIdentityHeaderProps {
    *  so overlong theme names ellipsis cleanly instead of wrapping to
    *  a second line. */
   maxNameLines?: 1 | 2;
+  /** Owner directive 2026-10-19 · optional override for the sealed
+   *  26px name size. Preview surfaces pass 20 so overlong theme
+   *  names (e.g. "Crispy Chicken") don't visually crowd the
+   *  absolute-positioned side-drawer dots at the top-right. Real
+   *  chat routes omit this prop and keep the sealed 26px. */
+  nameFontSize?: number;
 }
 
 const NEX = {
@@ -220,8 +227,15 @@ export function ChatIdentityHeader(
           <div
             data-nex-chat-identity-name
             style={{
-              fontSize: 26,
-              fontWeight: 700,
+              // Owner directive 2026-10-19 · explicitly apply the sealed
+              // NEX_FONT_SANS stack here. Without this the name inherited
+              // from <body> which has no fontFamily rule in layout.tsx ·
+              // Windows browsers fell back to a default serif that
+              // rendered fontWeight:700 as thin-looking. Pointing at
+              // Inter/system-ui restores the sealed "bold" appearance.
+              fontFamily: NEX_FONT_SANS,
+              fontSize: props.nameFontSize ?? 26,
+              fontWeight: 800,
               lineHeight: 1.1,
               letterSpacing: "-0.01em",
               color: "#FFFFFF",
@@ -255,6 +269,7 @@ export function ChatIdentityHeader(
           <div
             data-nex-chat-identity-subtitle
             style={{
+              fontFamily: NEX_FONT_SANS,
               marginTop: 2,
               fontSize: 13,
               fontWeight: 600,
