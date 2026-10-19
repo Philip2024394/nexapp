@@ -444,20 +444,27 @@ export function JokerKeypad({
             ⌄
           </button>
 
-          {/* Live preview · fills the available width · truncates
-              with an ellipsis if the user types past the strip.
-              A trailing caret ▍ shows where the next character
-              will land · blinks at 1Hz so the strip reads as a
-              real text field, not a static label. */}
+          {/* Owner directive 2026-10-20 · "the text container increase
+              in height only · until it has 5 lines and then the user
+              can scroll the text container to see more of their lines"
+              · auto-expanding preview strip · grows from 1 → 5 lines
+              then scrolls internally. Standard iOS Messages / WhatsApp
+              / Signal pattern. `max-height` = 5 × line-height-at-13px
+              ≈ 5 × 18px = 90px (plus 2 × 6px vertical padding = ~102). */}
           <div
             data-nex-joker-keypad-preview
             style={{
               flex: 1,
               minWidth: 0,
-              height: 32,
-              display: "flex",
-              alignItems: "center",
-              padding: "0 10px",
+              /* min-height matches the previous 32px single-line look ·
+                 max-height caps growth at 5 lines of 13px * 1.4 line-
+                 height + 12px vertical padding = ~103px. Beyond 5 lines
+                 the container scrolls so the keypad doesn't gobble the
+                 whole screen. */
+              minHeight: 32,
+              maxHeight: 103,
+              overflowY: "auto",
+              padding: "6px 10px",
               borderRadius: 10,
               background: "rgba(0,0,0,0.45)",
               border: `1px solid var(--nex-kp-accent-dim, rgba(143,255,110,0.22))`,
@@ -466,44 +473,33 @@ export function JokerKeypad({
               fontSize: 13,
               color: value.length === 0 ? "rgba(244,247,252,0.35)" : KEY_TEXT,
               letterSpacing: 0,
-              overflow: "hidden",
-              whiteSpace: "nowrap",
-              textOverflow: "ellipsis",
+              lineHeight: 1.4,
+              /* whiteSpace:pre-wrap honours user newlines + wraps long
+                 lines · wordBreak keeps extreme glue strings in bounds. */
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+              overflowWrap: "anywhere",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 2,
             }}
           >
             {value.length === 0 ? (
               <span>Say something…</span>
             ) : (
               <>
-                {/* `direction: rtl` scrolls the view to the end so
-                    the caret stays visible as the user types past
-                    the strip width · we flip the content back to
-                    `ltr` on the inner span so the text itself
-                    reads left-to-right. */}
-                <span
-                  style={{
-                    direction: "rtl",
-                    overflow: "hidden",
-                    whiteSpace: "nowrap",
-                    textOverflow: "ellipsis",
-                    display: "inline-block",
-                    maxWidth: "100%",
-                  }}
-                >
-                  <span style={{ direction: "ltr", unicodeBidi: "bidi-override" }}>
-                    {value}
-                  </span>
-                </span>
+                <span style={{ flex: 1, minWidth: 0 }}>{value}</span>
                 <span
                   aria-hidden
                   style={{
                     display: "inline-block",
                     width: 2,
                     height: 14,
-                    marginLeft: 2,
+                    marginTop: 2,
                     background: "var(--nex-kp-accent, #8FFF6E)",
                     boxShadow: `0 0 6px var(--nex-kp-accent-glow, rgba(143,255,110,0.55))`,
                     animation: "nex-joker-caret-blink 1s steps(2) infinite",
+                    flexShrink: 0,
                   }}
                 />
               </>
