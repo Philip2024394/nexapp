@@ -2489,7 +2489,11 @@ function IntroToggle({
         padding: 0,
         background: "transparent",
         border: "none",
-        color: NEX.textPrimary,
+        /* Owner directive 2026-10-20 · "intro off should be dark red"
+           · label flips from default white to NEX dark red when the
+           intro is off · the track swap below carries the same signal
+           at a glance. */
+        color: enabled ? NEX.textPrimary : "#8B1A1A",
         fontFamily: NEX_FONT_SANS,
         cursor: "pointer",
       }}
@@ -2500,7 +2504,7 @@ function IntroToggle({
           width: 36,
           height: 20,
           borderRadius: 999,
-          background: enabled ? NEX.green : "rgba(255,255,255,0.2)",
+          background: enabled ? NEX.green : "#8B1A1A",
           position: "relative",
           transition: "background 180ms ease",
           flexShrink: 0,
