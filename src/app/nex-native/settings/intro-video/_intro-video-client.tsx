@@ -1960,6 +1960,12 @@ export function IntroVideoSettingsClient({
              feedback in the preview. */
           insertEmojiIntoTitle(`:${s.slug}:`);
         }}
+        onPickGiphy={(g) => {
+          /* GIFs on the title overlay insert as `:slug:` tokens · same
+             image-resolver fallback renders them. GIFs are animated so
+             the preview tile shows the animation inline. */
+          insertEmojiIntoTitle(`:${g.slug}:`);
+        }}
       />
     </main>
   );
@@ -2859,8 +2865,48 @@ function OpeningHoursOverlay({
  *  slug loads from /nex-themes/food/emoji/. onError falls back to
  *  the opposite folder so a mis-prefixed slug still has one more
  *  chance before the browser surfaces alt text. */
+/* Owner directive 2026-10-20 · GIFs on the keypad insert as :slug:
+ * tokens too · resolve them to /nex-chat/gif/<slug>.gif · known slug
+ * set is small (BUILT_IN_GIFS) so a prefix-free match works. */
+const KNOWN_GIF_SLUGS = new Set<string>([
+  "steve-harvey-cracks-me-up",
+  "stoned-fox-no-way-wow",
+  "megan-lara-wave",
+  "emoji-expression",
+  "gymshark-bodybuilding",
+  "gymshark-gym-flex",
+  "work-out-dog",
+  "despicable-me-dj",
+  "minions-cartoons",
+  "minions-kiss",
+  "kisses-feel",
+  "peace-dont-talk-to-me",
+  "fight-ufc",
+  "sparring-paolo-costa-ufc",
+  "dog-no",
+  "suspicious",
+  "suspicious-tyler-james-williams",
+  "party-drink-bedlam-vodka",
+  "holiday-cheers-absolut",
+  "drinks-cocktails-absolut",
+  "vodka-love",
+  "misc-gif-1",
+  "misc-gif-2",
+  "whiskey-drinking-buzzfeed",
+  "stephen-king-halloween",
+  "night-out-drinking",
+  "e-girls-dance-1",
+  "e-girls-dance-2",
+  "girl-asian-dance",
+  "hungry-fun-zoo",
+  "giraffe",
+  "ice-cream-cats",
+  "ice-cream-cat",
+]);
+
 function emojiUrlForSlug(slug: string): string {
   const l = slug.toLowerCase();
+  if (KNOWN_GIF_SLUGS.has(l)) return `/nex-chat/gif/${slug}.gif`;
   if (l.startsWith("joker-")) return `/nex-themes/joker/emoji/${slug}.png`;
   // Food emoji + cakegirl + glossy3d + promo3d + chef + fast-food
   // all live under /nex-themes/food/emoji/.
@@ -2869,7 +2915,8 @@ function emojiUrlForSlug(slug: string): string {
 
 function emojiFallbackUrlForSlug(slug: string): string {
   const l = slug.toLowerCase();
-  // If primary resolved to joker, try food · and vice-versa.
+  // Second-chance resolver: try the opposite theme folder.
+  if (KNOWN_GIF_SLUGS.has(l)) return `/nex-themes/food/emoji/${slug}.png`;
   if (l.startsWith("joker-")) return `/nex-themes/food/emoji/${slug}.png`;
   return `/nex-themes/joker/emoji/${slug}.png`;
 }

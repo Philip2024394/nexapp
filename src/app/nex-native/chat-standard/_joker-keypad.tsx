@@ -34,8 +34,14 @@
 
 import * as React from "react";
 import {
+  BUILT_IN_GIFS,
+  type BuiltInGif,
+} from "@/lib/nex-native/built-in-gifs";
+import {
   getBuiltInEmoji,
   getBuiltInStickers,
+  getAllBuiltInEmoji,
+  getAllBuiltInStickers,
   type BuiltInThemeEmoji,
   type BuiltInThemeSticker,
 } from "@/lib/nex-native/theme-asset-fallback";
@@ -69,7 +75,7 @@ type ShiftState = "lower" | "upper" | "caps";
  *  stays visible (via the preview strip) and the typing position is
  *  preserved across every plane switch because `value` is owned by
  *  the composer, never duplicated here. */
-type Plane = "letters" | "numbers" | "symbols" | "emoji" | "sticker";
+type Plane = "letters" | "numbers" | "symbols" | "emoji" | "sticker" | "giphy";
 
 export interface JokerKeypadProps {
   /** Visible / hidden · parent toggles this from the composer pill. */
@@ -101,6 +107,11 @@ export interface JokerKeypadProps {
    *  own bubble. Before this seal the sticker drawer tiles had no
    *  pick handler at all · taps silently no-op'd. */
   onPickSticker?: (sticker: BuiltInThemeSticker) => void;
+  /** Owner directive 2026-10-20 · "all keypads have emoji + stickers +
+   *  giphy buttons and library" · fires when the user picks a NEX
+   *  built-in GIF from the keypad's giphy drawer. Caller treats it
+   *  like a sticker pick (slug carries image URL + aspect ratio). */
+  onPickGiphy?: (gif: BuiltInGif) => void;
   /** Owner directive 2026-10-18 · "all chat themes must have their
    *  own keypad in theme color". The keypad was Joker-only until
    *  this seal · it now accepts any accent hex so every theme can
@@ -156,6 +167,7 @@ export function JokerKeypad({
   themeId,
   onPickEmoji,
   onPickSticker,
+  onPickGiphy,
   accentColor,
   initialPlane = "letters",
 }: JokerKeypadProps): React.JSX.Element | null {
@@ -176,18 +188,25 @@ export function JokerKeypad({
   }, [open]);
   const [pressed, setPressed] = React.useState<string | null>(null);
 
-  // Inline drawer sources · built-in catalog · Joker ships 23 emoji
-  // + 9 stickers that match the theme's visual DNA. The service
-  // falls back to [] for themes without a built-in catalog · the
-  // drawer renders an honest empty state in that case.
-  const inlineEmoji = themeId ? getBuiltInEmoji(themeId) : null;
-  const inlineStickers = themeId ? getBuiltInStickers(themeId) : null;
+  /* Owner directive 2026-10-20 · "update the emoji library on the
+     keypad · all keypads have emoji + stickers + giphy libraries"
+     · drawers now read the UNIVERSAL built-in catalogs (every theme's
+     emoji + sticker set merged) so each keypad surfaces the full
+     library · the themeId prop remains for backward compat / future
+     theme-prioritisation but no longer gates the catalog. */
+  const inlineEmoji = React.useMemo(() => getAllBuiltInEmoji(), []);
+  const inlineStickers = React.useMemo(() => getAllBuiltInStickers(), []);
+  // Suppress unused-import warnings for the per-theme getters · kept
+  // for future theme-prioritisation inside the universal catalog.
+  void getBuiltInEmoji;
+  void getBuiltInStickers;
 
   // Is the current plane a text plane (letters/numbers/symbols) or
   // one of the inline drawers? Used to swap the key-rows area for
   // the drawer grid without duplicating the top preview strip or
   // the mode-switch tabs.
-  const isDrawerPlane = plane === "emoji" || plane === "sticker";
+  const isDrawerPlane =
+    plane === "emoji" || plane === "sticker" || plane === "giphy";
 
   // Reset shift to "upper" when the composer value is cleared · gives
   // the next sentence its sentence-case initial letter automatically.
@@ -558,6 +577,15 @@ export function JokerKeypad({
             active={plane === "sticker"}
             onPress={() => setPlane("sticker")}
           />
+          {/* Owner directive 2026-10-20 · "all keypads have emoji and
+              stickers and giphy buttons and library" · third drawer
+              tab opens the NEX GIFs library (fully offline · same
+              catalog the chat composer picker uses). */}
+          <ModeTab
+            label="GIF"
+            active={plane === "giphy"}
+            onPress={() => setPlane("giphy")}
+          />
         </div>
 
         {/* Inline drawer (emoji / sticker) · world-class standard.
@@ -585,6 +613,14 @@ export function JokerKeypad({
               // Owner directive 2026-10-19 · auto-return to letters
               // after a sticker pick (matches the emoji drawer's
               // iOS/GBoard muscle-memory pattern on line 549-551).
+              setPlane("letters");
+            }}
+          />
+        )}
+        {plane === "giphy" && (
+          <InlineGiphyGrid
+            onPick={(g) => {
+              onPickGiphy?.(g);
               setPlane("letters");
             }}
           />
@@ -868,6 +904,67 @@ function InlineStickerGrid({
               width: "100%",
               aspectRatio: `${s.aspect_ratio}`,
               objectFit: "contain",
+              pointerEvents: "none",
+            }}
+          />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* Owner directive 2026-10-20 · "all keypads have emoji + stickers +
+ * giphy buttons and library" · the NEX built-in GIF catalog rendered
+ * in the keypad's drawer area · same 2-column grid density as the
+ * sticker drawer · taps fire onPick with the full BuiltInGif. */
+function InlineGiphyGrid({
+  onPick,
+}: {
+  onPick?: (gif: BuiltInGif) => void;
+}): React.JSX.Element {
+  if (!BUILT_IN_GIFS || BUILT_IN_GIFS.length === 0) {
+    return <InlineDrawerEmpty text="No GIFs available." />;
+  }
+  return (
+    <div
+      data-nex-joker-keypad-inline-giphy
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+        gap: 10,
+        maxHeight: 260,
+        overflowY: "auto",
+        padding: "2px",
+      }}
+    >
+      {BUILT_IN_GIFS.map((g) => (
+        <button
+          key={g.id}
+          type="button"
+          aria-label={g.title || g.slug}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => onPick?.(g)}
+          data-nex-joker-keypad-giphy-slug={g.slug}
+          style={{
+            appearance: "none",
+            background: KEY_BG_IDLE,
+            border: `1px solid var(--nex-kp-accent-border, rgba(143,255,110,0.18))`,
+            borderRadius: 12,
+            padding: 0,
+            overflow: "hidden",
+            cursor: onPick ? "pointer" : "default",
+            display: "block",
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={g.url}
+            alt={g.title || g.slug}
+            style={{
+              width: "100%",
+              aspectRatio: `${g.aspectRatio}`,
+              objectFit: "cover",
+              display: "block",
               pointerEvents: "none",
             }}
           />

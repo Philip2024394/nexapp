@@ -1098,6 +1098,15 @@ export function StandardExperience({
               aspectRatio: s.aspect_ratio,
             })
           }
+          /* Owner directive 2026-10-20 · "all keypads have emoji +
+             stickers + giphy library" · GIFs picked from the keypad's
+             giphy drawer send as their own bubble (same encoding as
+             the chat composer's giphy picker). */
+          onPickGiphy={(g) =>
+            onSendLocalMessage(
+              `[giphy:${g.id}|${g.url}|${g.aspectRatio.toFixed(3)}]`,
+            )
+          }
         />
       </div>
     </>
