@@ -26,6 +26,7 @@ import {
   type ControlDrawerSession,
 } from "@/components/nex-native/control-drawer/control-drawer-client";
 import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
+import { JokerKeypad } from "@/app/nex-native/chat-standard/_joker-keypad";
 import type {
   IntroSettings,
   IntroTitleAlign,
@@ -477,6 +478,14 @@ export function IntroVideoSettingsClient({
   const uploadInputRef = React.useRef<HTMLInputElement | null>(null);
   const titleTextareaRef = React.useRef<HTMLTextAreaElement | null>(null);
   const [emojiPickerOpen, setEmojiPickerOpen] = React.useState(false);
+  /* Owner directive 2026-10-20 · "joker keypad with emoji + stickers +
+     giphy is the source of truth · we can still scroll to find". The
+     intro-video title textarea now opens JokerKeypad on tap instead
+     of the native OS keyboard · the keypad's inline emoji/sticker/GIF
+     drawers replace the dedicated EMOJI CENTER popup. */
+  const [keypadOpen, setKeypadOpen] = React.useState(false);
+  /* One-shot engine on NEX_BUBBLES_PACKAGE drives the keypad's accent
+     colour (brand cyan) · same engine the EMOJI CENTER popup used. */
   /* Owner directive 2026-10-19 · same picker as the chat composer ·
      one-shot engine on NEX_BUBBLES_PACKAGE so the picker chrome
      reads with the sealed NEX brand accent on this surface (settings
@@ -1238,11 +1247,30 @@ export function IntroVideoSettingsClient({
             · Enter / Return starts a new line
             · max 3 lines enforced on change (strip 4th+ line) */}
         <div style={{ position: "relative" }}>
+          {/* Owner directive 2026-10-20 · "joker keypad is the source
+              of truth" · tapping the textarea OPENS JokerKeypad in
+              place of the OS keyboard · readOnly + inputMode="none"
+              keep iOS/Android keyboards away · users can still long-
+              press to SELECT text so the per-selection colour + size
+              workflow stays intact. */}
           <textarea
             ref={titleTextareaRef}
             value={titleText}
             placeholder={isPlaceholder ? defaultTitleText : "e.g. Welcome to\nHammerex Pizza"}
-            onFocus={() => setIsPlaceholder(false)}
+            readOnly
+            inputMode="none"
+            onFocus={() => {
+              setIsPlaceholder(false);
+              setKeypadOpen(true);
+            }}
+            onClick={(e) => {
+              const el = e.currentTarget;
+              setTitleSelection({
+                start: el.selectionStart ?? 0,
+                end: el.selectionEnd ?? 0,
+              });
+              setKeypadOpen(true);
+            }}
             onSelect={(e) => {
               const el = e.currentTarget;
               setTitleSelection({
@@ -1256,40 +1284,6 @@ export function IntroVideoSettingsClient({
                 start: el.selectionStart ?? 0,
                 end: el.selectionEnd ?? 0,
               });
-            }}
-            onClick={(e) => {
-              const el = e.currentTarget;
-              setTitleSelection({
-                start: el.selectionStart ?? 0,
-                end: el.selectionEnd ?? 0,
-              });
-            }}
-            onChange={(e) => {
-              const raw = e.target.value;
-              /* Enforce max 3 lines · when the user hits Enter past 3,
-                 keep only the first 3 lines so the overlay never grows
-                 past what the preview tile can hold. */
-              const lines = raw.split("\n");
-              const capped = lines.slice(0, 3).join("\n");
-              /* Cap total length too so a long paste doesn't bloat the
-                 overlay · ~140 chars across 3 lines reads cleanly. */
-              const next = capped.slice(0, 140);
-              /* Owner directive 2026-10-20 · "ship segments" · reflow
-                 per-char attrs to stay aligned with the new text (new
-                 chars inherit neighbouring styling · deletes drop
-                 their attrs). */
-              setTitleAttrs((prev) => reflowAttrs(titleText, prev, next));
-              setTitleText(next);
-              setIsPlaceholder(false);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                /* Block Enter when 3 lines already exist · prevents a
-                   silent discard a split-second later. */
-                if (titleText.split("\n").length >= 3) {
-                  e.preventDefault();
-                }
-              }
             }}
             rows={3}
             data-nex-intro-video-title-input
@@ -1308,45 +1302,13 @@ export function IntroVideoSettingsClient({
               resize: "none",
               lineHeight: 1.3,
               minHeight: 72,
+              cursor: "text",
             }}
           />
-          {/* Owner directive 2026-10-19 · emoji picker toggle · sits
-              inside the textarea's right-edge padding (reserved 44px
-              above) so the icon reads as part of the input. Tap to
-              open the emoji grid below. */}
-          <button
-            type="button"
-            aria-label={
-              emojiPickerOpen ? "Close emoji picker" : "Add emoji to title"
-            }
-            aria-pressed={emojiPickerOpen}
-            onClick={() => setEmojiPickerOpen((v) => !v)}
-            data-nex-intro-video-title-emoji-toggle
-            style={{
-              position: "absolute",
-              top: 8,
-              right: 8,
-              width: 28,
-              height: 28,
-              padding: 0,
-              borderRadius: 999,
-              background: emojiPickerOpen
-                ? `${NEX.cyan}33`
-                : "rgba(255,255,255,0.08)",
-              border: `1px solid ${
-                emojiPickerOpen ? NEX.cyan : NEX.panelBorder
-              }`,
-              color: NEX.textPrimary,
-              cursor: "pointer",
-              fontSize: 16,
-              lineHeight: 1,
-              display: "grid",
-              placeItems: "center",
-              fontFamily: NEX_FONT_SANS,
-            }}
-          >
-            {emojiPickerOpen ? "×" : "😊"}
-          </button>
+          {/* Owner directive 2026-10-20 · the sealed JokerKeypad has
+              its own emoji drawer tab · the standalone 😊 button is
+              gone · users tap the textarea to open the keypad and
+              reach emoji / stickers / GIFs from inside it. */}
           {/* Owner directive 2026-10-19 · character counter badge
               bottom-right of the textarea (mirrors the mockup's
               "140/180" chip). 140 is the hard cap enforced on change. */}
@@ -1636,135 +1598,10 @@ export function IntroVideoSettingsClient({
           </button>
         </div>
 
-        {/* Owner directive 2026-10-20 · "emoji container should open
-            in pop up container so user don't have to scroll" · the
-            inline mount was pushing the Position / Save / Wallpaper
-            rows down and forcing a scroll. Portaled to document.body
-            as a full-viewport fixed overlay · tap scrim to close ·
-            emoji picks still insert into the title textarea exactly
-            as before (handlers unchanged · just the mount location
-            moved). */}
-        {emojiPickerOpen &&
-          typeof document !== "undefined" &&
-          createPortal(
-            <div
-              data-nex-intro-video-title-emoji-overlay
-              onClick={() => setEmojiPickerOpen(false)}
-              style={{
-                position: "fixed",
-                inset: 0,
-                zIndex: 10000,
-                background: "rgba(2,9,20,0.72)",
-                backdropFilter: "blur(6px)",
-                WebkitBackdropFilter: "blur(6px)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: 16,
-                paddingTop: "calc(env(safe-area-inset-top, 0) + 24px)",
-                paddingBottom: "calc(env(safe-area-inset-bottom, 0) + 24px)",
-              }}
-            >
-              <div
-                data-nex-intro-video-title-emoji-panel
-                onClick={(e) => e.stopPropagation()}
-                style={{
-                  width: "100%",
-                  maxWidth: 420,
-                  maxHeight: "100%",
-                  overflowY: "auto",
-                  borderRadius: 16,
-                  border: `1px solid ${NEX.cyan}55`,
-                  background: "rgba(5,18,32,0.98)",
-                  boxShadow:
-                    "0 20px 48px -12px rgba(0,0,0,0.8), 0 0 36px rgba(0,175,255,0.25)",
-                  padding: 10,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 10,
-                }}
-              >
-                {/* Owner directive 2026-10-20 · "emoji container pop
-                    up x button change to blue colour and emoji badge
-                    remove and add text - Emoji Center" · dedicated
-                    header with centred title + a prominent cyan X
-                    close button on the right. The sealed picker's own
-                    emoji-chip badge / internal close are removed by
-                    omitting the `onClose` prop. */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 10,
-                    padding: "4px 6px 10px",
-                    borderBottom: `1px solid ${NEX.panelBorder}`,
-                  }}
-                >
-                  <span style={{ width: 36 }} aria-hidden />
-                  <h3
-                    data-nex-intro-video-title-emoji-popup-title
-                    style={{
-                      margin: 0,
-                      fontSize: 15,
-                      fontWeight: 900,
-                      letterSpacing: "0.04em",
-                      color: NEX.textPrimary,
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    Emoji Center
-                  </h3>
-                  <button
-                    type="button"
-                    aria-label="Close emoji picker"
-                    onClick={() => setEmojiPickerOpen(false)}
-                    data-nex-intro-video-title-emoji-popup-close
-                    style={{
-                      width: 36,
-                      height: 36,
-                      padding: 0,
-                      borderRadius: 999,
-                      background: NEX.cyan,
-                      color: "#021424",
-                      border: "none",
-                      fontSize: 18,
-                      fontWeight: 900,
-                      lineHeight: 1,
-                      cursor: "pointer",
-                      display: "grid",
-                      placeItems: "center",
-                      boxShadow: `0 6px 14px -6px ${NEX.cyan}aa, 0 0 16px rgba(0,175,255,0.35)`,
-                      fontFamily: NEX_FONT_SANS,
-                    }}
-                  >
-                    ×
-                  </button>
-                </div>
-                <StandardEmojiStickerPicker
-                  engine={brandEngine}
-                  onPickEmoji={(glyph) => insertEmojiIntoTitle(glyph)}
-                  onPickThemeEmoji={(e) =>
-                    insertEmojiIntoTitle(`:${e.slug}:`)
-                  }
-                  onPickSticker={() => setEmojiPickerOpen(false)}
-                  onPickThemeSticker={() => setEmojiPickerOpen(false)}
-                  onPickGiphy={() => setEmojiPickerOpen(false)}
-                  /* Owner directive 2026-10-19 · the intro-video title
-                     overlay is plain-text · only Emoji inserts cleanly ·
-                     Stickers / GIFS / Files hidden here (chat composer
-                     keeps the full picker via defaults). */
-                  showFilesTab={false}
-                  showStickersTab={false}
-                  showGiphyTab={false}
-                  /* onClose intentionally omitted · the popup header
-                     above owns the close affordance so the sealed
-                     picker's internal close button disappears. */
-                />
-              </div>
-            </div>,
-            document.body,
-          )}
+        {/* Owner directive 2026-10-20 · EMOJI CENTER popup retired ·
+            JokerKeypad (mounted at the end of this component) owns
+            emoji + sticker + GIF insertion from inside the typing
+            surface itself. */}
         <div
           role="radiogroup"
           aria-label="Title position"
@@ -2049,6 +1886,49 @@ export function IntroVideoSettingsClient({
         )}
       </div>
       </div>
+
+      {/* Owner directive 2026-10-20 · "joker keypad with emoji +
+          stickers + giphy is the source of truth" · tapping the title
+          textarea opens this keypad in place of the OS keyboard · the
+          keypad's inline Emoji / Stickers / GIFS drawers deliver all
+          content types the title field accepts. onPickEmoji inserts
+          a unicode glyph · onPickSticker inserts a `:slug:` token
+          (same emoji-image resolver renders it in the overlay). */}
+      <JokerKeypad
+        open={keypadOpen}
+        value={titleText}
+        onChange={(next) => {
+          /* Enforce the same 3-line + 140-char caps the textarea had.
+             Reflow per-char attrs so per-selection colour + size
+             survive edits. */
+          const lines = next.split("\n");
+          const capped = lines.slice(0, 3).join("\n").slice(0, 140);
+          setTitleAttrs((prev) => reflowAttrs(titleText, prev, capped));
+          setTitleText(capped);
+          setIsPlaceholder(false);
+        }}
+        onSend={() => {
+          /* "Send" on this surface = Save intro · same canSave branch
+             as the explicit Save button. */
+          setKeypadOpen(false);
+          void handleSave();
+        }}
+        onClose={() => setKeypadOpen(false)}
+        /* Brand accent · same NEX cyan the rest of the page uses. */
+        accentColor={NEX.cyan}
+        onPickEmoji={(e) => {
+          /* Image emoji picks are inserted as `:slug:` tokens · the
+             TitleOverlay's emojiUrlForSlug resolver paints the image. */
+          insertEmojiIntoTitle(`:${e.slug}:`);
+        }}
+        onPickSticker={(s) => {
+          /* Stickers aren't native to the title overlay · but inserting
+             as a `:slug:` token still resolves to the sticker image via
+             the fallback URL resolver, so the user still gets visual
+             feedback in the preview. */
+          insertEmojiIntoTitle(`:${s.slug}:`);
+        }}
+      />
     </main>
   );
 }
