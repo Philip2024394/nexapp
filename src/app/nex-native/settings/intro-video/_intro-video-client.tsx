@@ -1634,40 +1634,73 @@ export function IntroVideoSettingsClient({
           </button>
         </div>
 
-        {emojiPickerOpen && (
-          /* Owner directive 2026-10-19 · "the emoji panel must be
-             same emoji panel as chat theme emoji" · mounted the
-             sealed StandardEmojiStickerPicker · same 4-tab UI as the
-             chat composer (Emoji · Stickers · GIPHY · Files). For
-             title text, only Unicode emoji picks insert cleanly into
-             the textarea · image emoji picks insert as `:slug:`
-             tokens · sticker / GIPHY / File picks close the panel
-             (no-op) because title text is plain text, not rich
-             content. */
-          <div
-            data-nex-intro-video-title-emoji-panel
-            style={{ marginTop: 8 }}
-          >
-            <StandardEmojiStickerPicker
-              engine={brandEngine}
-              onPickEmoji={(glyph) => insertEmojiIntoTitle(glyph)}
-              onPickThemeEmoji={(e) =>
-                insertEmojiIntoTitle(`:${e.slug}:`)
-              }
-              onPickSticker={() => setEmojiPickerOpen(false)}
-              onPickThemeSticker={() => setEmojiPickerOpen(false)}
-              onPickGiphy={() => setEmojiPickerOpen(false)}
-              /* Owner directive 2026-10-19 · the intro-video title
-                 overlay is a plain-text ribbon · only Emoji is a
-                 meaningful insertion. Stickers / GIFS / Files hidden.
-                 Chat composer still gets the full picker (defaults). */
-              showFilesTab={false}
-              showStickersTab={false}
-              showGiphyTab={false}
-              onClose={() => setEmojiPickerOpen(false)}
-            />
-          </div>
-        )}
+        {/* Owner directive 2026-10-20 · "emoji container should open
+            in pop up container so user don't have to scroll" · the
+            inline mount was pushing the Position / Save / Wallpaper
+            rows down and forcing a scroll. Portaled to document.body
+            as a full-viewport fixed overlay · tap scrim to close ·
+            emoji picks still insert into the title textarea exactly
+            as before (handlers unchanged · just the mount location
+            moved). */}
+        {emojiPickerOpen &&
+          typeof document !== "undefined" &&
+          createPortal(
+            <div
+              data-nex-intro-video-title-emoji-overlay
+              onClick={() => setEmojiPickerOpen(false)}
+              style={{
+                position: "fixed",
+                inset: 0,
+                zIndex: 10000,
+                background: "rgba(2,9,20,0.72)",
+                backdropFilter: "blur(6px)",
+                WebkitBackdropFilter: "blur(6px)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 16,
+                paddingTop: "calc(env(safe-area-inset-top, 0) + 24px)",
+                paddingBottom: "calc(env(safe-area-inset-bottom, 0) + 24px)",
+              }}
+            >
+              <div
+                data-nex-intro-video-title-emoji-panel
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  width: "100%",
+                  maxWidth: 420,
+                  maxHeight: "100%",
+                  overflowY: "auto",
+                  borderRadius: 16,
+                  border: `1px solid ${NEX.cyan}55`,
+                  background: "rgba(5,18,32,0.98)",
+                  boxShadow:
+                    "0 20px 48px -12px rgba(0,0,0,0.8), 0 0 36px rgba(0,175,255,0.25)",
+                  padding: 10,
+                }}
+              >
+                <StandardEmojiStickerPicker
+                  engine={brandEngine}
+                  onPickEmoji={(glyph) => insertEmojiIntoTitle(glyph)}
+                  onPickThemeEmoji={(e) =>
+                    insertEmojiIntoTitle(`:${e.slug}:`)
+                  }
+                  onPickSticker={() => setEmojiPickerOpen(false)}
+                  onPickThemeSticker={() => setEmojiPickerOpen(false)}
+                  onPickGiphy={() => setEmojiPickerOpen(false)}
+                  /* Owner directive 2026-10-19 · the intro-video title
+                     overlay is plain-text · only Emoji inserts cleanly ·
+                     Stickers / GIFS / Files hidden here (chat composer
+                     keeps the full picker via defaults). */
+                  showFilesTab={false}
+                  showStickersTab={false}
+                  showGiphyTab={false}
+                  onClose={() => setEmojiPickerOpen(false)}
+                />
+              </div>
+            </div>,
+            document.body,
+          )}
         <div
           role="radiogroup"
           aria-label="Title position"
