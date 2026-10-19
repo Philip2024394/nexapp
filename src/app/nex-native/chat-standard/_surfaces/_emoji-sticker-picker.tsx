@@ -264,7 +264,11 @@ export function StandardEmojiStickerPicker({
         gap: 8,
       }}
     >
-      {/* Tabs row + close */}
+      {/* Tabs row + close · owner directive 2026-10-20 · when only
+          the Emoji tab is visible (all sibling tabs hidden by the
+          surface) the "Emoji" chip above the search field is
+          redundant · hide the chip but keep the row so the close
+          button still renders on the right. */}
       <div
         style={{
           display: "flex",
@@ -272,7 +276,9 @@ export function StandardEmojiStickerPicker({
           gap: 6,
         }}
       >
-        <TabButton label="Emoji" active={tab === "emoji"} accent={colours.primary} onClick={() => setTab("emoji")} />
+        {(showStickersTab || showGiphyTab || showFilesTab) && (
+          <TabButton label="Emoji" active={tab === "emoji"} accent={colours.primary} onClick={() => setTab("emoji")} />
+        )}
         {showStickersTab && (
           <TabButton label="Stickers" active={tab === "sticker"} accent={colours.primary} onClick={() => setTab("sticker")} />
         )}
