@@ -427,12 +427,25 @@ export async function updateRoomStatus(
 }
 
 /** Toggle the daily availability flag · "available tonight" vs
- *  "temporarily unavailable." Separate from status · an archived room
- *  cannot be toggled back to available (archive is deliberate). */
+ *  "temporarily unavailable." Separate from status · an archived or
+ *  draft room cannot be toggled (archive is deliberate · draft is
+ *  not public yet). Defence-in-depth guard: fetches the row first,
+ *  rejects when status !== 'live'. */
 export async function toggleRoomAvailable(
   id: NexUuid,
   isAvailable: boolean,
 ): Promise<NexAccommodationUnitRow> {
+  const current = await getRoomById(id);
+  if (!current) {
+    throw new Error(
+      `accommodation-service.toggleRoomAvailable: room ${id} not found`,
+    );
+  }
+  if (current.status !== "live") {
+    throw new Error(
+      `accommodation-service.toggleRoomAvailable: only live rooms can be toggled (status=${current.status})`,
+    );
+  }
   const { data, error } = await nexSupabaseAdmin
     .from("nex_accommodation_unit")
     .update({ is_available: isAvailable })
@@ -455,9 +468,21 @@ export async function archiveRoom(
   return updateRoomStatus(id, "archived");
 }
 
-/** Reverse an archive · owner-initiated reactivation. */
+/** Reverse an archive · owner-initiated reactivation. Returns to
+ *  DRAFT · never direct-to-live · owner re-reviews before public
+ *  visibility (prevents accidental re-exposure of archived content). */
 export async function unarchiveRoom(
   id: NexUuid,
 ): Promise<NexAccommodationUnitRow> {
-  return updateRoomStatus(id, "live");
+  return updateRoomStatus(id, "draft");
+}
+
+/** Live → Draft · "take this offline without archiving." Preserves
+ *  the room for continued editing. Different from archive (which is
+ *  the retire-forever soft-delete) and from toggleRoomAvailable
+ *  (which is tonight-only). */
+export async function unpublishRoom(
+  id: NexUuid,
+): Promise<NexAccommodationUnitRow> {
+  return updateRoomStatus(id, "draft");
 }

@@ -328,30 +328,84 @@ describe("updateRoomStatus · archiveRoom · unarchiveRoom", () => {
     const updateArgs = updateMock.mock.calls[0]![0];
     expect(updateArgs.status).toBe("archived");
   });
-  test("unarchiveRoom sets status=live", async () => {
+  test("unarchiveRoom sends to DRAFT (safer default · owner re-reviews before public)", async () => {
+    // Doctrine 2026-10-21: archived → draft, never archived → live.
+    // Prevents accidental re-exposure of archived content without
+    // owner re-review step.
     singleMock.mockResolvedValue({
-      data: sampleRow({ status: "live" }),
+      data: sampleRow({ status: "draft" }),
       error: null,
     });
     const row = await unarchiveRoom(ROOM_ID);
-    expect(row.status).toBe("live");
+    expect(row.status).toBe("draft");
     const updateArgs = updateMock.mock.calls[0]![0];
-    expect(updateArgs.status).toBe("live");
+    expect(updateArgs.status).toBe("draft");
   });
 });
 
-// ─── toggleRoomAvailable ────────────────────────────────────────
+// ─── toggleRoomAvailable · defence-in-depth guard ───────────────
 
 describe("toggleRoomAvailable", () => {
-  test("sets is_available on the row", async () => {
+  test("sets is_available when room is live", async () => {
+    // getRoomById first (new guard), then the update.
+    maybeSingleMock.mockResolvedValue({
+      data: sampleRow({ status: "live", is_available: true }),
+      error: null,
+    });
     singleMock.mockResolvedValue({
-      data: sampleRow({ is_available: false }),
+      data: sampleRow({ status: "live", is_available: false }),
       error: null,
     });
     const row = await toggleRoomAvailable(ROOM_ID, false);
     expect(row.is_available).toBe(false);
     const updateArgs = updateMock.mock.calls[0]![0];
     expect(updateArgs.is_available).toBe(false);
+  });
+
+  test("rejects when room is draft (defence-in-depth · draft is not public)", async () => {
+    maybeSingleMock.mockResolvedValue({
+      data: sampleRow({ status: "draft" }),
+      error: null,
+    });
+    await expect(toggleRoomAvailable(ROOM_ID, false)).rejects.toThrow(
+      /only live rooms can be toggled/i,
+    );
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  test("rejects when room is archived (defence-in-depth · archive is deliberate)", async () => {
+    maybeSingleMock.mockResolvedValue({
+      data: sampleRow({ status: "archived" }),
+      error: null,
+    });
+    await expect(toggleRoomAvailable(ROOM_ID, true)).rejects.toThrow(
+      /only live rooms can be toggled/i,
+    );
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  test("rejects when room does not exist", async () => {
+    maybeSingleMock.mockResolvedValue({ data: null, error: null });
+    await expect(toggleRoomAvailable(ROOM_ID, true)).rejects.toThrow(
+      /not found/i,
+    );
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+});
+
+// ─── unpublishRoom · live → draft lifecycle completeness ─────────
+
+describe("unpublishRoom", () => {
+  test("sends room from live back to draft", async () => {
+    singleMock.mockResolvedValue({
+      data: sampleRow({ status: "draft" }),
+      error: null,
+    });
+    const { unpublishRoom } = await import("../accommodation-service");
+    const row = await unpublishRoom(ROOM_ID);
+    expect(row.status).toBe("draft");
+    const updateArgs = updateMock.mock.calls[0]![0];
+    expect(updateArgs.status).toBe("draft");
   });
 });
 

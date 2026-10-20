@@ -81,9 +81,17 @@ export default async function ManageAccommodationPage({
     subtype === "homestay" ||
     subtype === "kost";
 
-  const rooms = await accommodationService
-    .listRoomsByBusiness(business.id)
-    .catch(() => []);
+  // Honest error surface: distinguish "no rooms yet" from "the DB
+  // call failed." A silent empty array when the DB is down would
+  // falsely tell the owner they have no rooms, which is worse than
+  // a visible error banner.
+  let rooms: accommodationService.NexAccommodationUnitRow[] = [];
+  let listFetchError: string | null = null;
+  try {
+    rooms = await accommodationService.listRoomsByBusiness(business.id);
+  } catch (e) {
+    listFetchError = e instanceof Error ? e.message : "Could not load rooms";
+  }
 
   const sp = await searchParams;
 
@@ -197,6 +205,25 @@ export default async function ManageAccommodationPage({
             }}
           >
             {decodeURIComponent(sp.m)}
+          </div>
+        )}
+
+        {listFetchError && (
+          <div
+            data-nex-manage-accommodation-list-error
+            role="alert"
+            style={{
+              marginBottom: 16,
+              padding: "10px 14px",
+              background: "rgba(255,77,94,0.10)",
+              border: `1px solid rgba(255,77,94,0.35)`,
+              borderRadius: 10,
+              color: NEX.danger,
+              fontSize: 12,
+              fontWeight: 600,
+            }}
+          >
+            Could not load your rooms. {listFetchError}
           </div>
         )}
 
@@ -495,6 +522,26 @@ export default async function ManageAccommodationPage({
                     </form>
                   )}
 
+                  {r.status === "live" && (
+                    <form
+                      action={changeRoomStatusAction.bind(
+                        null,
+                        business.id,
+                        r.id,
+                        "draft",
+                      )}
+                      style={{ display: "contents" }}
+                    >
+                      <button
+                        type="submit"
+                        data-nex-manage-accommodation-unpublish={r.id}
+                        style={buttonStyle("amber")}
+                      >
+                        Unpublish
+                      </button>
+                    </form>
+                  )}
+
                   {r.status !== "archived" && (
                     <form
                       action={changeRoomStatusAction.bind(
@@ -521,7 +568,7 @@ export default async function ManageAccommodationPage({
                         null,
                         business.id,
                         r.id,
-                        "live",
+                        "draft",
                       )}
                       style={{ display: "contents" }}
                     >
@@ -530,7 +577,7 @@ export default async function ManageAccommodationPage({
                         data-nex-manage-accommodation-unarchive={r.id}
                         style={buttonStyle("green")}
                       >
-                        Restore
+                        Restore to draft
                       </button>
                     </form>
                   )}

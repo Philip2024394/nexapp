@@ -241,7 +241,8 @@ export async function changeRoomStatusAction(
 }
 
 /** Toggle the daily availability flag · the clean temporary-off
- *  mechanism · distinct from archive. */
+ *  mechanism · distinct from archive. Defence-in-depth: rejects
+ *  when room is not live (draft and archived rooms cannot be toggled). */
 export async function toggleRoomAvailableAction(
   businessId: string,
   roomId: string,
@@ -253,6 +254,12 @@ export async function toggleRoomAvailableAction(
     bannerRedirect(
       "accommodation_not_found",
       "Room not found for this shop",
+    );
+  }
+  if (room.status !== "live") {
+    bannerRedirect(
+      "accommodation_toggle_requires_live",
+      "Only live rooms can be marked unavailable",
     );
   }
   try {
