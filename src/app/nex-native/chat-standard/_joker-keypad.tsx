@@ -585,8 +585,17 @@ export function JokerKeypad({
               }}
             >
               {value.length === 0 ? (
+                /* Owner directive 2026-10-21 (iteration 51) · caret now
+                   renders at the LEFT (cursorPos 0) with the "Say
+                   something…" placeholder trailing behind it as a
+                   dimmed hint. Prior order (placeholder then caret)
+                   placed the blinking caret at the right end of the
+                   placeholder which read as "cursor at end" to users.
+                   New order matches every native text-field convention
+                   (caret at insertion point · placeholder is a hint
+                   behind it) · applies to every theme that uses this
+                   sealed keypad. */
                 <>
-                  <span>Say something…</span>
                   <span
                     aria-hidden
                     style={{
@@ -594,12 +603,13 @@ export function JokerKeypad({
                       width: 2,
                       height: 14,
                       verticalAlign: "text-bottom",
-                      marginLeft: 1,
+                      marginRight: 2,
                       background: "var(--nex-kp-accent, #8FFF6E)",
                       boxShadow: `0 0 6px var(--nex-kp-accent-glow, rgba(143,255,110,0.55))`,
                       animation: "nex-joker-caret-blink 1s steps(2) infinite",
                     }}
                   />
+                  <span>Say something…</span>
                 </>
               ) : (
                 <>

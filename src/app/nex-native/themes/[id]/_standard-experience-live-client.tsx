@@ -41,7 +41,7 @@ import { MarkSelectedThemeClient } from "./_mark-selected-theme-client";
 const NEX_GUEST_PEER = {
   accountId: "fx-nex-brand",
   displayName: "NEX",
-  tagline: "You are a guest · create an account to chat",
+  tagline: "Welcome Guest",
   avatarUrl: null as string | null,
   isOnline: true,
 };
@@ -128,6 +128,7 @@ export function StandardExperienceLiveClient({
   themeEmojis,
   themeStickers,
   userIntroOverlay = null,
+  initialShopOpen = false,
 }: {
   pkg: ThemePackage;
   /** Owner directive 2026-10-19 · when the viewer is signed in, the
@@ -151,6 +152,11 @@ export function StandardExperienceLiveClient({
   userIntroOverlay?:
     | import("@/lib/nex-native/intro-settings-service").IntroSettings
     | null;
+  /** Owner directive 2026-10-20 · auto-opens the sealed shop-chooser
+   *  sheet when the viewer lands with ?shop=open · completes the
+   *  Bisnis setup flow (chat theme → shop cover → chat theme live
+   *  with the 5-tile category chooser visible). */
+  initialShopOpen?: boolean;
 }): React.JSX.Element {
   const engine = React.useMemo(() => createEngine(pkg), [pkg]);
   const [localMessages, setLocalMessages] = React.useState<
@@ -226,6 +232,7 @@ export function StandardExperienceLiveClient({
   return (
     <div
       data-nex-standard-experience-live
+      data-nex-personal-chat-preview={isNexBrandTheme ? "true" : undefined}
       style={{
         /* Owner directive 2026-10-18 · "iPhone frame on desktop keeping
            screen size max size" · dropped `position: fixed` escape so
@@ -241,6 +248,34 @@ export function StandardExperienceLiveClient({
         background: "#000",
       }}
     >
+      {/* Owner directive 2026-10-21 (iteration 29) · for NEX-brand
+          personal-chat themes (nex-bubbles · the single free chat),
+          hide the business/shop widgets that the sealed
+          StandardExperience renders by default:
+            · the shop toggle button (Sell on NEX / Earn with NEX
+              bottom sheet trigger)
+            · the shop sheet itself (even translated off-screen it
+              can be interacted with via a11y tree)
+            · the + button that opens the plus menu (Add to this chat)
+            · the plus menu panel (Contacts · Product · Animation ·
+              Settings · Cancel)
+          Keep: composer input, emoji picker, send button, chat bubbles,
+          header, preview action bar (Back / Use). The sealed
+          StandardExperience is NOT forked · we scope `display: none`
+          to data-nex-personal-chat-preview so only this surface is
+          affected · every other theme preview + real chat continues
+          to render the full chrome. */}
+      {isNexBrandTheme && (
+        <style>{`
+          [data-nex-personal-chat-preview="true"] [data-nex-se-shop-toggle],
+          [data-nex-personal-chat-preview="true"] [data-nex-se-shop-sheet],
+          [data-nex-personal-chat-preview="true"] [data-nex-se-plus-menu],
+          [data-nex-personal-chat-preview="true"] button[aria-label="Add to this chat"],
+          [data-nex-personal-chat-preview="true"] button[aria-label="Close menu"] {
+            display: none !important;
+          }
+        `}</style>
+      )}
       {/* NEX planet-approach control + animation · 3-dots trigger in
           the bottom-right opens a vertical panel with one button that
           plays the "planet approaching the camera and flying by"
@@ -275,6 +310,9 @@ export function StandardExperienceLiveClient({
            theme intro video so "View Theme" matches the real visitor
            experience. Null when the viewer is a guest. */
         userIntroOverlay={userIntroOverlay}
+        /* Owner directive 2026-10-20 · Bisnis setup flow lands here
+           with ?shop=open · auto-opens the 5-tile category chooser. */
+        initialShopOpen={initialShopOpen}
       />
       {/* Owner directive 2026-10-19 · "remove the back button from
           header" · the sealed 2026-10-11 back-arrow at top-left is
