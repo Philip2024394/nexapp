@@ -67,6 +67,17 @@ export interface MarketplaceCatalogEntry {
    *  hero overlay (Welcome / Business / Location). Prototype
    *  mock value. */
   readonly location?: string;
+  /** Owner directive 2026-10-22 · optional live status post · when
+   *  present a green ring dot appears on the chat-header avatar and
+   *  tapping the avatar opens the status sheet. Prototype demo
+   *  content · real values flow from the seller editor once the
+   *  Supabase persistence doctrine locks. */
+  readonly liveStatus?: {
+    readonly text: string;
+    readonly imageUrl?: string;
+    /** Human-readable relative time (e.g. "2h ago"). */
+    readonly postedAt: string;
+  };
 }
 
 /** The 11 cover-theme layout IDs from `cover/layout-ids.ts`. Mirrored
@@ -112,8 +123,12 @@ export const MARKETPLACE_CATALOG: readonly MarketplaceCatalogEntry[] = [
     rimPx: 2,
     nexId: "-37123",
     online: true,
-    hours: "Open daily · 11:00 – 22:00 · Dine-in · Takeaway",
+    hours: "Open daily · 11:00 – 22:00",
     location: "New York",
+    liveStatus: {
+      text: "🌶️ Nashville Hot is back! Fiery · crispy · 24-hour buttermilk brined. Try it today — only until Sunday.",
+      postedAt: "2h ago",
+    },
   },
   // Owner directive 2026-10-21 (iteration · universal bubble pairing)
   // · every theme follows the same shape:
@@ -141,7 +156,7 @@ export const MARKETPLACE_CATALOG: readonly MarketplaceCatalogEntry[] = [
     rimPx: 2,
     nexId: "-48291",
     online: true,
-    hours: "Tue – Sun · 10:00 – 20:00 · Mon closed",
+    hours: "Tue – Sun · 10:00 – 20:00",
     location: "Paris",
   },
   {
@@ -160,7 +175,7 @@ export const MARKETPLACE_CATALOG: readonly MarketplaceCatalogEntry[] = [
     rimPx: 2,
     nexId: "-52904",
     online: true,
-    hours: "Thu – Sun · 19:00 – 02:00 · Ages 21+",
+    hours: "Thu – Sun · 19:00 – 02:00",
     location: "Los Angeles",
   },
   {
@@ -177,7 +192,7 @@ export const MARKETPLACE_CATALOG: readonly MarketplaceCatalogEntry[] = [
     rimPx: 2,
     nexId: "-61832",
     online: true,
-    hours: "Open daily · 11:00 – 23:00 · Delivery available",
+    hours: "Open daily · 11:00 – 23:00",
     location: "Rome",
   },
   {
@@ -194,7 +209,7 @@ export const MARKETPLACE_CATALOG: readonly MarketplaceCatalogEntry[] = [
     rimPx: 2,
     nexId: "-39475",
     online: false,
-    hours: "Closed now · opens today 17:00 – 23:00",
+    hours: "Closed now · opens today 17:00",
     location: "Chicago",
   },
   {
@@ -211,7 +226,7 @@ export const MARKETPLACE_CATALOG: readonly MarketplaceCatalogEntry[] = [
     rimPx: 2,
     nexId: "-72638",
     online: true,
-    hours: "Mon – Sat · 09:00 – 19:00 · Sun by request",
+    hours: "Mon – Sat · 09:00 – 19:00",
     location: "London",
   },
   {
@@ -228,7 +243,7 @@ export const MARKETPLACE_CATALOG: readonly MarketplaceCatalogEntry[] = [
     rimPx: 2,
     nexId: "-14093",
     online: true,
-    hours: "Mon – Fri · By appointment · Virtual tours available",
+    hours: "Mon – Fri · By appointment",
     location: "Jakarta",
   },
   {
@@ -245,7 +260,7 @@ export const MARKETPLACE_CATALOG: readonly MarketplaceCatalogEntry[] = [
     rimPx: 2,
     nexId: "-58731",
     online: false,
-    hours: "Closed now · opens Mon 08:00 – 18:00 · 24/7 emergency",
+    hours: "Closed now · opens Mon 08:00 – 18:00",
     location: "Singapore",
   },
   {
@@ -262,7 +277,7 @@ export const MARKETPLACE_CATALOG: readonly MarketplaceCatalogEntry[] = [
     rimPx: 2,
     nexId: "-29405",
     online: true,
-    hours: "Open daily · 08:00 – 20:00 · Half-day · Full-day · Weekly",
+    hours: "Open daily · 08:00 – 20:00",
     location: "Bali",
   },
   {
@@ -279,7 +294,7 @@ export const MARKETPLACE_CATALOG: readonly MarketplaceCatalogEntry[] = [
     rimPx: 2,
     nexId: "-83162",
     online: true,
-    hours: "Mon – Sat · 09:00 – 18:00 · Ages 2 – 8 · Drop-in",
+    hours: "Mon – Sat · 09:00 – 18:00",
     location: "Tokyo",
   },
 ];

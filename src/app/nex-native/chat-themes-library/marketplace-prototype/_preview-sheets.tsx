@@ -23,6 +23,8 @@ import { SHOP_LAYOUTS } from "./_catalog";
 import { cartKey } from "./_types";
 import { hexWithAlpha } from "@/app/nex-native/free-chat/_types";
 import { MenuItemSheet } from "./_menu-item-sheet";
+import { MenuDrawer } from "./_menu-drawer";
+import { JokerKeypad } from "@/app/nex-native/chat-standard/_joker-keypad";
 
 // Owner directive 2026-10-21 · shared Price badge · top-right of the
 // preview content area · small rounded corners · translucent navy
@@ -237,6 +239,92 @@ export function ThemePreviewSheet({
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
+  // Owner directive 2026-10-22 · "add the keypad to themes chat so
+  // user can type few words and see it live on the screen". Tap the
+  // composer input → sealed JokerKeypad opens in the theme accent →
+  // user types → the typed value shows live in the composer pill ·
+  // Send drops the typed message as a NEW self bubble so the user
+  // sees it alongside the two preset sample bubbles.
+  const themeAccent = entry.ownerAccentHex ?? entry.accentHex;
+  const [composerValue, setComposerValue] = React.useState("");
+  const [keypadOpen, setKeypadOpen] = React.useState(false);
+  const [userBubbles, setUserBubbles] = React.useState<
+    Array<{ id: string; text: string; time: string }>
+  >([]);
+
+  const nowHHmm = React.useCallback((): string => {
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    return `${hh}:${mm}`;
+  }, []);
+
+  const handleThemeSend = React.useCallback(() => {
+    const trimmed = composerValue.trim();
+    if (!trimmed) return;
+    setUserBubbles((prev) => [
+      ...prev,
+      {
+        id: `theme-preview-msg-${Date.now()}`,
+        text: trimmed,
+        time: nowHHmm(),
+      },
+    ]);
+    setComposerValue("");
+    setKeypadOpen(false);
+  }, [composerValue, nowHHmm]);
+
+  // Owner directive 2026-10-22 · Shop/Menu drawer · opens when the
+  // buyer taps the right-dock Shop button in the chat theme preview.
+  // Reads the sealed brand mock directly and reuses `MenuItemSheet`
+  // for item taps (same qty picker · Add to Cart · wallpaper hero).
+  const [menuDrawerOpen, setMenuDrawerOpen] = React.useState(false);
+  // Owner directive 2026-10-22 · live status viewer · when the brand
+  // has a published status (`entry.liveStatus`), a green rim dot
+  // sits on the chat-header avatar and tapping the avatar opens
+  // the StatusSheet · once viewed, the rim dims to grey (seen).
+  // Local-state only · no persistence · in production this would
+  // store `last_seen_status_at` per account.
+  const hasActiveStatus = Boolean(entry.liveStatus);
+  const [statusOpen, setStatusOpen] = React.useState(false);
+  const [statusSeen, setStatusSeen] = React.useState(false);
+  const openStatus = React.useCallback(() => {
+    if (!entry.liveStatus) return;
+    setStatusOpen(true);
+    setStatusSeen(true);
+  }, [entry.liveStatus]);
+
+  // Local menu-cart counter · when the buyer taps Add to Cart in the
+  // MenuItemSheet (inside the drawer), the right-dock Cart badge
+  // ticks up. This counter represents in-shop menu orders · it is
+  // distinct from the outer marketplace cart (which tracks themes /
+  // intros / shops as PURCHASED PRODUCTS, not food orders).
+  // Prototype only · no persistence · demo of the end-state buyer
+  // flow a published Crispy Chicken shop would show.
+  const [menuCartCount, setMenuCartCount] = React.useState(0);
+  const [menuCartToast, setMenuCartToast] = React.useState<string | null>(
+    null,
+  );
+
+  const handleMenuAdd = React.useCallback(
+    (_productId: string, qty: number) => {
+      setMenuCartCount((prev) => prev + qty);
+      setMenuCartToast(
+        qty > 1
+          ? `Added ${qty} to Cart · prototype`
+          : "Added to Cart · prototype",
+      );
+    },
+    [],
+  );
+
+  // Toast auto-dismiss.
+  React.useEffect(() => {
+    if (!menuCartToast) return;
+    const t = window.setTimeout(() => setMenuCartToast(null), 2400);
+    return () => window.clearTimeout(t);
+  }, [menuCartToast]);
+
   return (
     <div
       data-nex-marketplace-prototype-sheet
@@ -282,19 +370,45 @@ export function ThemePreviewSheet({
           zIndex: 2,
         }}
       >
-        {/* Profile avatar · 48×48 (matches sealed NexPingBadge) ·
-            themed accent fill + ping ring behind. */}
-        <div
+        {/* Profile avatar · 48×48 · themed accent fill + ping ring
+            behind · owner directive 2026-10-22 · now tappable to
+            open the live-status viewer when the brand has an active
+            status · green rim dot (unseen) → grey rim dot (seen)
+            → no dot (no status). */}
+        <button
+          type="button"
+          onClick={openStatus}
+          disabled={!hasActiveStatus}
+          aria-label={
+            hasActiveStatus
+              ? statusSeen
+                ? `${entry.displayName} · view status (seen)`
+                : `${entry.displayName} · view new status`
+              : entry.displayName
+          }
           data-nex-marketplace-prototype-theme-chat-header-avatar
           data-nex-marketplace-prototype-theme-chat-header-online={
             entry.online !== false ? "true" : "false"
           }
-          aria-hidden
+          data-nex-marketplace-prototype-theme-chat-header-status={
+            hasActiveStatus
+              ? statusSeen
+                ? "seen"
+                : "unseen"
+              : "none"
+          }
           style={{
             position: "relative",
             flexShrink: 0,
             width: 48,
             height: 48,
+            padding: 0,
+            borderRadius: "50%",
+            background: "transparent",
+            border: "none",
+            cursor: hasActiveStatus ? "pointer" : "default",
+            fontFamily: "inherit",
+            WebkitTapHighlightColor: "transparent",
           }}
         >
           {entry.online !== false && (
@@ -324,7 +438,8 @@ export function ThemePreviewSheet({
               />
             </>
           )}
-          <div
+          <span
+            aria-hidden
             style={{
               position: "absolute",
               inset: 0,
@@ -342,8 +457,30 @@ export function ThemePreviewSheet({
             }}
           >
             {entry.displayName.charAt(0)}
-          </div>
-        </div>
+          </span>
+          {hasActiveStatus && (
+            <span
+              aria-hidden
+              data-nex-marketplace-prototype-theme-chat-header-status-dot
+              style={{
+                position: "absolute",
+                top: -2,
+                right: -2,
+                width: 14,
+                height: 14,
+                borderRadius: "50%",
+                background: statusSeen
+                  ? "rgba(255, 255, 255, 0.35)"
+                  : "#16D66B",
+                border: "2px solid rgba(2, 9, 20, 0.95)",
+                boxShadow: statusSeen
+                  ? "none"
+                  : "0 0 10px -1px rgba(22, 214, 107, 0.9)",
+                pointerEvents: "none",
+              }}
+            />
+          )}
+        </button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
@@ -454,8 +591,13 @@ export function ThemePreviewSheet({
           display: "flex",
           flexDirection: "column",
           gap: 10,
+          // Owner directive 2026-10-22 · right-side action dock (shop ·
+          // cart · live) sits inside the chat area. Right padding
+          // bumped from 14 → 72 so chat bubbles stop short of the
+          // dock and the layout reads as a two-column chat + action
+          // rail.
           padding:
-            "calc(env(safe-area-inset-top, 0px) + 84px) 14px calc(env(safe-area-inset-bottom, 0px) + 240px)",
+            "calc(env(safe-area-inset-top, 0px) + 84px) 72px calc(env(safe-area-inset-bottom, 0px) + 240px) 14px",
         }}
       >
 
@@ -483,7 +625,125 @@ export function ThemePreviewSheet({
         >
           Do you Deliver
         </Bubble>
+        {/* Owner directive 2026-10-22 · live-typed bubbles · each time
+            the user hits Send in the keypad, a new self bubble lands
+            here with the themed glass + accent. Lets the buyer feel
+            exactly how their own messages will read inside this
+            theme. */}
+        {userBubbles.map((msg) => (
+          <Bubble
+            key={msg.id}
+            time={msg.time}
+            accent={entry.customerAccentHex ?? entry.accentHex}
+            rimPx={entry.rimPx}
+          >
+            {msg.text}
+          </Bubble>
+        ))}
       </section>
+
+      {/* Owner directive 2026-10-22 · right-side action dock · shown
+          as the layout a buyer sees once the business owner has
+          purchased + activated their shop inside this chat theme.
+          Three stacked themed buttons · Shop · Cart · Live status.
+          Pulse ring on the Live button broadcasts online presence
+          using the sealed ping pattern (same keyframe as the header
+          avatar). All three buttons use the theme accent so the
+          dock reads as part of the brand surface. */}
+      <style>{`
+        @keyframes nex-mp-theme-dock-live-pulse {
+          0%   { transform: scale(0.9); opacity: 0.85; }
+          70%  { transform: scale(1.9); opacity: 0;    }
+          100% { transform: scale(1.9); opacity: 0;    }
+        }
+      `}</style>
+      <aside
+        data-nex-marketplace-prototype-theme-chat-right-dock
+        aria-label="Shop · Cart · Live status"
+        style={{
+          // Owner directive 2026-10-22 · dock sits centred on the
+          // sheet height · translate up by half the dock's own
+          // height so the middle button (Cart) lines up with the
+          // vertical centre of the chat area.
+          position: "absolute",
+          right: 10,
+          top: "50%",
+          transform: "translateY(-50%)",
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+          zIndex: 2,
+        }}
+      >
+        {/* Shop · opens the shop menu (future · prototype just
+            toasts). Icon = restaurant-style fork+knife + spoon so a
+            food business reads as a menu, not a generic shop. */}
+        <DockButton
+          accent={themeAccent}
+          label="Shop · menu"
+          onClick={() => setMenuDrawerOpen(true)}
+          data-nex-marketplace-prototype-theme-dock-shop
+        >
+          <svg
+            width={22}
+            height={22}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            {/* fork · 3 tines + handle */}
+            <path d="M7 2v7a2 2 0 0 0 2 2v11" />
+            <path d="M11 2v9" />
+            <path d="M15 2v9" />
+            {/* spoon */}
+            <path d="M18 2a3 3 0 0 1 3 3v4a3 3 0 0 1-3 3v10" />
+          </svg>
+        </DockButton>
+
+        {/* Owner directive 2026-10-22 · Cart · counter now tracks
+            MENU items added from the Shop drawer (local-to-sheet,
+            represents in-shop ordering) · marketplace cart (themes /
+            intros / shops) stays accessible via the outer marketplace
+            header. Tap toasts a prototype-only confirmation. */}
+        <DockButton
+          accent={themeAccent}
+          label={`Cart · ${menuCartCount} menu item${menuCartCount === 1 ? "" : "s"}`}
+          onClick={() =>
+            setMenuCartToast(
+              menuCartCount === 0
+                ? "Cart is empty · prototype"
+                : `${menuCartCount} item${menuCartCount === 1 ? "" : "s"} in cart · prototype`,
+            )
+          }
+          badge={menuCartCount > 0 ? menuCartCount : null}
+          data-nex-marketplace-prototype-theme-dock-cart
+        >
+          <svg
+            width={22}
+            height={22}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <circle cx={9} cy={21} r={1.5} />
+            <circle cx={18} cy={21} r={1.5} />
+            <path d="M2.5 3h2l2.6 12.3a2 2 0 0 0 2 1.7h7.9a2 2 0 0 0 2-1.6L21 7H6" />
+          </svg>
+        </DockButton>
+
+        {/* Owner directive 2026-10-22 · Live status DockButton
+            retired · the status affordance moved to the chat-header
+            avatar (tap profile picture · green rim dot broadcasts
+            unseen content). Dock now holds only Shop + Cart. */}
+      </aside>
 
       {/* Owner directive 2026-10-21 · floating details card over the
           lower edge · theme name + Price TBD + Add Cart + Close ·
@@ -536,7 +796,7 @@ export function ThemePreviewSheet({
               overflow: "hidden",
             }}
           >
-            Theme Price idr 23.000
+            Theme Price idr 25.000 · once
           </h2>
         </div>
         <div
@@ -673,8 +933,14 @@ export function ThemePreviewSheet({
           >
             +
           </button>
-          <div
-            aria-hidden
+          {/* Owner directive 2026-10-22 · tappable composer input ·
+              opens the sealed JokerKeypad in the theme accent · the
+              typed value renders live here (replaces the "Message"
+              placeholder when non-empty). */}
+          <button
+            type="button"
+            onClick={() => setKeypadOpen(true)}
+            aria-label="Open keypad"
             data-nex-marketplace-prototype-theme-chat-input
             style={{
               flex: 1,
@@ -683,18 +949,28 @@ export function ThemePreviewSheet({
               alignItems: "center",
               padding: "0 4px",
               fontSize: 16,
-              color: "rgba(255, 255, 255, 0.52)",
+              color: composerValue
+                ? "#FFFFFF"
+                : "rgba(255, 255, 255, 0.52)",
+              background: "transparent",
+              border: "none",
               fontFamily: "inherit",
               lineHeight: 1.2,
-              userSelect: "none",
+              textAlign: "left",
+              cursor: "pointer",
+              WebkitTapHighlightColor: "transparent",
+              overflow: "hidden",
+              whiteSpace: "nowrap",
+              textOverflow: "ellipsis",
             }}
           >
-            Message
-          </div>
+            {composerValue || "Message"}
+          </button>
           <button
             type="button"
+            onClick={handleThemeSend}
+            disabled={!composerValue.trim()}
             aria-label="Send"
-            tabIndex={-1}
             data-nex-marketplace-prototype-theme-chat-send
             style={{
               width: 36,
@@ -703,7 +979,8 @@ export function ThemePreviewSheet({
               background: entry.ownerAccentHex ?? entry.accentHex,
               color: "#FFFFFF",
               border: "none",
-              cursor: "default",
+              cursor: composerValue.trim() ? "pointer" : "default",
+              opacity: composerValue.trim() ? 1 : 0.55,
               fontFamily: "inherit",
               flexShrink: 0,
               display: "inline-flex",
@@ -713,6 +990,7 @@ export function ThemePreviewSheet({
                 entry.ownerAccentHex ?? entry.accentHex
               }`,
               WebkitTapHighlightColor: "transparent",
+              transition: "opacity 150ms ease",
             }}
           >
             <svg
@@ -766,6 +1044,414 @@ export function ThemePreviewSheet({
           </svg>
         </button>
       </footer>
+
+      {/* Owner directive 2026-10-22 · sealed JokerKeypad mounted so
+          the buyer can type a few words and feel how the theme
+          colours the input, keys, and accents in real time. Accent
+          follows the theme's owner-colour · same primitive the
+          chat-standard + free-chat surfaces use. Preview-only · Send
+          creates a new self bubble above (no network / no DB). */}
+      <JokerKeypad
+        open={keypadOpen}
+        value={composerValue}
+        onChange={setComposerValue}
+        onSend={handleThemeSend}
+        onClose={() => setKeypadOpen(false)}
+        accentColor={themeAccent}
+      />
+      {/* Owner directive 2026-10-22 · mobile-first keypad width on
+          desktop · the sealed JokerKeypad is `position: fixed` and
+          by default spans the full browser viewport, which visibly
+          escapes the sealed 420×909 phone frame on desktop. This
+          scoped style block clamps the keypad to the frame width
+          (same breakpoint as the free-chat composer's iteration-50
+          clamp at `nex-native.css` line 214 / 420px frame). Mobile
+          viewports (<500px) stay untouched because the frame IS
+          the viewport there. Scoped to this preview surface so no
+          other keypad consumer is affected. */}
+      {keypadOpen && (
+        <style>{`
+          @media (min-width: 500px) {
+            [data-nex-joker-keypad] {
+              left: 0 !important;
+              right: 0 !important;
+              max-width: 420px !important;
+              margin: 0 auto !important;
+              border-bottom-left-radius: 44px !important;
+              border-bottom-right-radius: 44px !important;
+            }
+          }
+        `}</style>
+      )}
+
+      {/* Owner directive 2026-10-22 · menu drawer · rises from the
+          bottom when the buyer taps the right-dock Shop button.
+          Reads the sealed brand mock · reuses MenuItemSheet when a
+          card is tapped. */}
+      {menuDrawerOpen && (
+        <MenuDrawer
+          brand={entry.themeId}
+          accent={themeAccent}
+          wallpaperUrl={entry.wallpaperUrl}
+          onItemAdd={handleMenuAdd}
+          onClose={() => setMenuDrawerOpen(false)}
+        />
+      )}
+
+      {/* Owner directive 2026-10-22 · menu-cart toast · same shape as
+          the Shop preview's add-to-cart toast · lives in the Theme
+          preview so the user sees confirmation when they Add to Cart
+          from the menu drawer (which closes on add). */}
+      {menuCartToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          data-nex-marketplace-prototype-theme-cart-toast
+          style={{
+            position: "absolute",
+            left: "50%",
+            bottom: "calc(env(safe-area-inset-bottom, 0px) + 112px)",
+            transform: "translateX(-50%)",
+            padding: "10px 16px",
+            borderRadius: 999,
+            background: "rgba(2, 9, 20, 0.92)",
+            color: NEX.text,
+            fontSize: 12,
+            fontWeight: 700,
+            border: `1px solid ${hexWithAlpha(themeAccent, 0.5)}`,
+            boxShadow: `0 12px 28px -8px rgba(0,0,0,0.7), 0 0 14px -4px ${hexWithAlpha(themeAccent, 0.6)}`,
+            zIndex: 800,
+            maxWidth: "calc(100% - 28px)",
+            textAlign: "center",
+          }}
+        >
+          {menuCartToast}
+        </div>
+      )}
+
+      {/* Owner directive 2026-10-22 · live-status viewer · opens
+          when the buyer taps the chat-header avatar (gated on
+          `entry.liveStatus` being present). */}
+      {statusOpen && entry.liveStatus && (
+        <StatusSheet
+          brand={entry.displayName}
+          accent={themeAccent}
+          wallpaperUrl={entry.wallpaperUrl}
+          status={entry.liveStatus}
+          onClose={() => setStatusOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Owner directive 2026-10-22 · shared right-side dock button · 44×44
+// themed round chip · white glyph · optional red count badge · soft
+// themed glow matching the detail-card + composer treatment.
+function DockButton({
+  children,
+  accent,
+  label,
+  onClick,
+  badge,
+  livePulse,
+  ...rest
+}: {
+  readonly children: React.ReactNode;
+  readonly accent: string;
+  readonly label: string;
+  readonly onClick?: () => void;
+  readonly badge?: number | null;
+  /** Owner directive 2026-10-22 · when true, the button broadcasts
+   *  that the owner has posted a live status (text or image) · a
+   *  translucent green ring pulses behind the button + the icon
+   *  itself turns green with a soft green glow. When false, the
+   *  button stays themed-accent with a white icon. */
+  readonly livePulse?: boolean;
+} & Record<`data-${string}`, string | number | boolean | undefined>): React.JSX.Element {
+  return (
+    <span
+      style={{ position: "relative", display: "inline-flex" }}
+    >
+      {/* Green pulse ring · emanates from behind the button when the
+          owner has an active live status. */}
+      {livePulse && (
+        <span
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            borderRadius: "50%",
+            background: "#16D66B",
+            animation:
+              "nex-mp-theme-dock-live-pulse 1800ms ease-out infinite",
+            pointerEvents: "none",
+          }}
+        />
+      )}
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={label}
+        title={label}
+        {...rest}
+        style={{
+          position: "relative",
+          width: 44,
+          height: 44,
+          padding: 0,
+          borderRadius: "50%",
+          background: accent,
+          // Icon tints green when the owner has an active live
+          // status; stays white otherwise. The SVG inside inherits
+          // via `stroke="currentColor"` / `fill="currentColor"`.
+          color: livePulse ? "#16D66B" : "#FFFFFF",
+          border: "1px solid rgba(255, 255, 255, 0.22)",
+          cursor: onClick ? "pointer" : "default",
+          fontFamily: "inherit",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          WebkitTapHighlightColor: "transparent",
+          boxShadow: livePulse
+            ? `0 4px 12px -4px ${hexWithAlpha(accent, 0.7)}, 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 14px -2px rgba(22, 214, 107, 0.85)`
+            : `0 4px 12px -4px ${hexWithAlpha(accent, 0.7)}, 0 2px 4px rgba(0, 0, 0, 0.4)`,
+        }}
+      >
+        {children}
+        {badge && badge > 0 && (
+          <span
+            style={{
+              position: "absolute",
+              top: -5,
+              right: -5,
+              width: 20,
+              height: 20,
+              padding: 0,
+              borderRadius: "50%",
+              background: "#8B0000",
+              color: "#FFFFFF",
+              fontSize: 10,
+              fontWeight: 900,
+              lineHeight: "20px",
+              textAlign: "center",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow:
+                "0 0 0 2px rgba(2, 9, 20, 0.9), 0 2px 6px -2px rgba(139, 0, 0, 0.85)",
+              pointerEvents: "none",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {badge}
+          </span>
+        )}
+      </button>
+    </span>
+  );
+}
+
+// ─── Live-status viewer ──────────────────────────────────────────
+//
+// Owner directive 2026-10-22 · Instagram-stories / WhatsApp-status
+// style sheet · opens when the buyer taps the chat-header avatar
+// (gated on `entry.liveStatus` being present). Full-sheet backdrop
+// so the buyer's focus is on the owner's post; tap outside, tap the
+// × close, or press Esc to dismiss.
+
+function StatusSheet({
+  brand,
+  accent,
+  wallpaperUrl,
+  status,
+  onClose,
+}: {
+  readonly brand: string;
+  readonly accent: string;
+  readonly wallpaperUrl?: string | null;
+  readonly status: {
+    readonly text: string;
+    readonly imageUrl?: string;
+    readonly postedAt: string;
+  };
+  readonly onClose: () => void;
+}): React.JSX.Element {
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${brand} · live status`}
+      data-nex-marketplace-prototype-theme-status-sheet
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 750,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 18,
+      }}
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Close status"
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "rgba(2, 9, 20, 0.78)",
+          backdropFilter: "blur(8px) saturate(140%)",
+          WebkitBackdropFilter: "blur(8px) saturate(140%)",
+          border: "none",
+          cursor: "pointer",
+          padding: 0,
+          margin: 0,
+        }}
+      />
+      <section
+        data-nex-marketplace-prototype-theme-status-sheet-panel
+        style={{
+          position: "relative",
+          width: "100%",
+          maxWidth: 360,
+          maxHeight: "calc(100% - 36px)",
+          overflow: "hidden",
+          borderRadius: 20,
+          background: wallpaperUrl
+            ? `
+              linear-gradient(180deg, rgba(5, 13, 24, 0.72) 0%, rgba(5, 13, 24, 0.88) 60%, rgba(5, 13, 24, 0.95) 100%),
+              url("${wallpaperUrl}") center / cover no-repeat,
+              #07131F
+            `
+            : "#07131F",
+          border: `1px solid ${hexWithAlpha(accent, 0.55)}`,
+          boxShadow: `0 20px 48px -16px rgba(0, 0, 0, 0.75), 0 0 24px -8px ${hexWithAlpha(accent, 0.55)}`,
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <header
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "14px 14px 10px",
+            borderBottom: `1px solid rgba(255, 255, 255, 0.08)`,
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: 10,
+                letterSpacing: "0.16em",
+                textTransform: "uppercase",
+                color: accent,
+                fontWeight: 800,
+                lineHeight: 1,
+              }}
+            >
+              Live status
+            </div>
+            <div
+              style={{
+                marginTop: 3,
+                fontSize: 15,
+                fontWeight: 900,
+                color: NEX.text,
+                letterSpacing: "-0.01em",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                textShadow: "0 1px 3px rgba(0, 0, 0, 0.6)",
+              }}
+            >
+              {brand}
+            </div>
+          </div>
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: "rgba(255, 255, 255, 0.68)",
+              flexShrink: 0,
+              textShadow: "0 1px 3px rgba(0, 0, 0, 0.55)",
+            }}
+          >
+            {status.postedAt}
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              width: 30,
+              height: 30,
+              padding: 0,
+              borderRadius: "50%",
+              background: "#000000",
+              color: "#FFFFFF",
+              border: "1px solid rgba(255, 255, 255, 0.14)",
+              fontSize: 18,
+              fontWeight: 900,
+              lineHeight: 1,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              flexShrink: 0,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              WebkitTapHighlightColor: "transparent",
+              boxShadow: "0 4px 10px -4px rgba(0, 0, 0, 0.65)",
+            }}
+          >
+            ×
+          </button>
+        </header>
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto",
+            padding: 18,
+            display: "flex",
+            flexDirection: "column",
+            gap: 14,
+          }}
+        >
+          {status.imageUrl && (
+            <div
+              style={{
+                width: "100%",
+                aspectRatio: "4 / 3",
+                borderRadius: 14,
+                background: `url("${status.imageUrl}") center / cover no-repeat, ${NEX.bg}`,
+                border: `1px solid ${hexWithAlpha(accent, 0.4)}`,
+              }}
+              aria-hidden
+            />
+          )}
+          <p
+            style={{
+              margin: 0,
+              fontSize: 15,
+              lineHeight: 1.55,
+              color: NEX.text,
+              textShadow: "0 1px 3px rgba(0, 0, 0, 0.5)",
+            }}
+          >
+            {status.text}
+          </p>
+        </div>
+      </section>
     </div>
   );
 }
@@ -1312,7 +1998,7 @@ export function IntroPreviewSheet({
               overflow: "hidden",
             }}
           >
-            Intro Price idr 15.000
+            Intro Price idr 99.000 · once
           </h2>
         </div>
         <div
@@ -1566,9 +2252,10 @@ export function ShopPreviewSheet({
         }}
       />
 
-      {/* Owner directive 2026-10-22 · info button · top-right · small
-          translucent gray round button with soft under-glow · opens
-          the "What you can customise" center panel. */}
+      {/* Owner directive 2026-10-22 · info button · dropped below
+          the prev/next nav badge · tucked away from the screen edge ·
+          black round chip with a red italic ⓘ · opens the "What you
+          can customise" center panel. */}
       <button
         type="button"
         onClick={() => setInfoOpen(true)}
@@ -1576,16 +2263,16 @@ export function ShopPreviewSheet({
         data-nex-marketplace-prototype-shop-info-btn
         style={{
           position: "absolute",
-          top: "calc(env(safe-area-inset-top, 0px) + 14px)",
-          right: 12,
-          width: 26,
-          height: 26,
+          top: "calc(env(safe-area-inset-top, 0px) + 64px)",
+          right: 22,
+          width: 28,
+          height: 28,
           padding: 0,
           borderRadius: "50%",
-          background: "rgba(255, 255, 255, 0.14)",
-          color: "rgba(255, 255, 255, 0.88)",
-          border: `1px solid rgba(255, 255, 255, 0.22)`,
-          fontSize: 14,
+          background: "#000000",
+          color: "#DC2626",
+          border: "1px solid rgba(255, 255, 255, 0.14)",
+          fontSize: 16,
           fontWeight: 900,
           lineHeight: 1,
           fontStyle: "italic",
@@ -1596,14 +2283,11 @@ export function ShopPreviewSheet({
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
-          backdropFilter: "blur(10px) saturate(140%)",
-          WebkitBackdropFilter: "blur(10px) saturate(140%)",
-          // Under-glow · positive Y offset so the halo sits beneath
-          // the button instead of wrapping it. Soft cyan at low
-          // opacity keeps the chip feeling NEX-native without
-          // dominating the ping/wallpaper above.
+          // Under-glow · soft red halo sits beneath the chip so the
+          // info icon reads as hot but the chip body stays matte
+          // black on top of the shop wallpaper.
           boxShadow:
-            "0 5px 10px -2px rgba(0, 175, 255, 0.35), 0 2px 4px rgba(0, 0, 0, 0.4)",
+            "0 5px 10px -2px rgba(220, 38, 38, 0.4), 0 2px 4px rgba(0, 0, 0, 0.5)",
         }}
       >
         i
@@ -1818,7 +2502,7 @@ export function ShopPreviewSheet({
               textOverflow: "ellipsis",
             }}
           >
-            Shop Price idr 23.000
+            Shop Price idr 99.000 /mo
           </h2>
           <span
             data-nex-marketplace-prototype-shop-counter

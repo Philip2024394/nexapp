@@ -72,7 +72,11 @@ interface EditableContent {
     price: string;
     description: string;
     stockStatus: "in_stock" | "low_stock" | "sold_out";
-    imageDataUrl: string | null;
+    /** Owner directive 2026-10-22 · up to 4 photos per item ·
+     *  images[0] is the hero · images[1..3] appear as additional
+     *  slides in the menu-item sheet carousel. Max 4 cap matches
+     *  the editor's 4-slot UI. */
+    images: Array<string>;
   }>;
   services: Array<{
     id: string;
@@ -144,7 +148,7 @@ function baselineFromMock(): EditableContent {
         p.stock_status === "sold_out"
         ? p.stock_status
         : "in_stock") as "in_stock" | "low_stock" | "sold_out",
-      imageDataUrl: null,
+      images: [],
     })),
     services: CRISPY_CHICKEN_MOCK.services.map((s) => ({
       id: s.id,
@@ -162,30 +166,68 @@ function baselineFromMock(): EditableContent {
 }
 
 // ─── Image upload helper ─────────────────────────────────────────
-// Reads a File into a data URL. Warns the user if the image is >
-// 500KB because localStorage total budget is ~5MB per origin and
-// 25+ images × 500KB would saturate it quickly.
-function readFileAsDataUrl(
+// Owner directive 2026-10-22 · multi-image gallery · to keep
+// localStorage from blowing up (4 images × 24 items would exceed
+// the ~5MB per-origin quota at full-res), uploaded images are
+// auto-downscaled through a canvas: max 600px wide, JPEG quality
+// 0.78. Typical result · 60–120KB per photo · 24 × 4 ≈ 10MB worst-
+// case, well-handled by Chrome's 10MB quota and gracefully warned
+// before it saturates.
+async function readFileAsDataUrl(
   file: File,
 ): Promise<{ dataUrl: string; warning: string | null }> {
-  return new Promise((resolve, reject) => {
-    if (file.size > 2_000_000) {
-      reject(new Error("Image too large · please upload under 2MB."));
-      return;
-    }
+  if (file.size > 10_000_000) {
+    throw new Error("Image too large · please upload under 10MB.");
+  }
+
+  // Read into an <img>, then canvas-downscale to a bounded size.
+  const originalDataUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = String(reader.result);
-      const warning =
-        file.size > 500_000
-          ? "Image is large · localStorage may fill up with many images this size. Prototype only."
-          : null;
-      resolve({ dataUrl, warning });
-    };
+    reader.onload = () => resolve(String(reader.result));
     reader.onerror = () =>
       reject(new Error("Could not read file · try a different image."));
     reader.readAsDataURL(file);
   });
+
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () =>
+      reject(new Error("Image decode failed · try a different file."));
+    image.src = originalDataUrl;
+  });
+
+  const MAX_SIDE = 600;
+  const scale = Math.min(1, MAX_SIDE / Math.max(img.width, img.height));
+  const w = Math.round(img.width * scale);
+  const h = Math.round(img.height * scale);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    // Canvas unavailable (very old browser) · fall back to the raw
+    // data URL with a soft warning.
+    return {
+      dataUrl: originalDataUrl,
+      warning: file.size > 300_000
+        ? "Image large · browser downscale unavailable · may fill storage."
+        : null,
+    };
+  }
+  ctx.drawImage(img, 0, 0, w, h);
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.78);
+
+  // Rough byte estimate for data-URL (base64 payload only).
+  const base64 = dataUrl.split(",")[1] ?? "";
+  const bytes = Math.round(base64.length * 0.75);
+  const warning =
+    bytes > 250_000
+      ? "Still a big photo after downscale · 2+ large images per item may fill storage."
+      : null;
+
+  return { dataUrl, warning };
 }
 
 // ─── Client component ────────────────────────────────────────────
@@ -1485,6 +1527,248 @@ function ImageUpload({
   );
 }
 
+// ─── Multi-image upload · 4 slots + reorder ─────────────────────
+//
+// Owner directive 2026-10-22 · each menu item can carry up to 4
+// photos. images[0] renders as the hero in the menu-item sheet ·
+// images[1..3] appear as additional slides in the carousel. Buyers
+// only see arrows + count when images.length > 1.
+
+const MAX_IMAGES_PER_ITEM = 4;
+
+function MultiImageUpload({
+  images,
+  onChange,
+  onWarn,
+}: {
+  readonly images: Array<string>;
+  readonly onChange: (next: Array<string>) => void;
+  readonly onWarn: (msg: string) => void;
+}): React.JSX.Element {
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const handleFile = async (file: File) => {
+    setError(null);
+    try {
+      const { dataUrl, warning } = await readFileAsDataUrl(file);
+      const next = [...images, dataUrl].slice(0, MAX_IMAGES_PER_ITEM);
+      onChange(next);
+      if (warning) onWarn(warning);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Upload failed.");
+    }
+  };
+
+  const slotsFilled = images.length;
+  const canAddMore = slotsFilled < MAX_IMAGES_PER_ITEM;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 6,
+          overflowX: "auto",
+          paddingBottom: 2,
+        }}
+      >
+        {images.map((src, i) => (
+          <div
+            key={`${i}-${src.slice(-16)}`}
+            data-nex-mp-editor-item-image-slot={i}
+            style={{
+              position: "relative",
+              width: 76,
+              aspectRatio: "1 / 1",
+              borderRadius: 10,
+              background: `url("${src}") center / cover no-repeat`,
+              border: i === 0
+                ? `2px solid ${NEX.cyan}`
+                : `1px solid ${NEX.cyanSoft}`,
+              flexShrink: 0,
+              overflow: "hidden",
+            }}
+          >
+            {/* Hero marker on slot 0 */}
+            {i === 0 && (
+              <span
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  top: 4,
+                  left: 4,
+                  padding: "1px 5px",
+                  borderRadius: 4,
+                  background: NEX.cyan,
+                  color: "#021018",
+                  fontSize: 9,
+                  fontWeight: 900,
+                  letterSpacing: 0.3,
+                  textTransform: "uppercase",
+                  lineHeight: 1.3,
+                }}
+              >
+                Hero
+              </span>
+            )}
+            {/* Reorder + remove · bottom row of each slot */}
+            <div
+              style={{
+                position: "absolute",
+                bottom: 2,
+                left: 2,
+                right: 2,
+                display: "flex",
+                alignItems: "center",
+                gap: 2,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  if (i === 0) return;
+                  const next = [...images];
+                  [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                  onChange(next);
+                }}
+                disabled={i === 0}
+                aria-label="Move left"
+                style={{
+                  width: 20,
+                  height: 20,
+                  padding: 0,
+                  borderRadius: 4,
+                  background: "rgba(0, 0, 0, 0.6)",
+                  color: i === 0 ? "rgba(255,255,255,0.25)" : "#FFFFFF",
+                  border: "none",
+                  fontSize: 11,
+                  lineHeight: 1,
+                  cursor: i === 0 ? "default" : "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (i === images.length - 1) return;
+                  const next = [...images];
+                  [next[i], next[i + 1]] = [next[i + 1], next[i]];
+                  onChange(next);
+                }}
+                disabled={i === images.length - 1}
+                aria-label="Move right"
+                style={{
+                  width: 20,
+                  height: 20,
+                  padding: 0,
+                  borderRadius: 4,
+                  background: "rgba(0, 0, 0, 0.6)",
+                  color:
+                    i === images.length - 1
+                      ? "rgba(255,255,255,0.25)"
+                      : "#FFFFFF",
+                  border: "none",
+                  fontSize: 11,
+                  lineHeight: 1,
+                  cursor:
+                    i === images.length - 1 ? "default" : "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                ›
+              </button>
+              <div style={{ flex: 1 }} />
+              <button
+                type="button"
+                onClick={() => {
+                  const next = images.filter((_, idx) => idx !== i);
+                  onChange(next);
+                }}
+                aria-label="Remove photo"
+                style={{
+                  width: 20,
+                  height: 20,
+                  padding: 0,
+                  borderRadius: 4,
+                  background: "rgba(220, 38, 38, 0.8)",
+                  color: "#FFFFFF",
+                  border: "none",
+                  fontSize: 12,
+                  lineHeight: 1,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        ))}
+        {canAddMore && (
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            style={{
+              width: 76,
+              aspectRatio: "1 / 1",
+              borderRadius: 10,
+              background: hexWithAlpha(NEX.cyan, 0.08),
+              color: NEX.cyan,
+              border: `1px dashed ${NEX.cyanSoft}`,
+              fontSize: 11,
+              fontWeight: 700,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              flexShrink: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 3,
+              textAlign: "center",
+              lineHeight: 1.2,
+            }}
+          >
+            <span style={{ fontSize: 20 }}>+</span>
+            <span>
+              Photo
+              <br />
+              {slotsFilled}/{MAX_IMAGES_PER_ITEM}
+            </span>
+          </button>
+        )}
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void handleFile(f);
+          e.target.value = "";
+        }}
+        style={{ display: "none" }}
+      />
+      {error && <div style={{ fontSize: 11, color: NEX.red }}>{error}</div>}
+      {images.length === 0 && (
+        <div
+          style={{
+            fontSize: 10,
+            color: NEX.textMute,
+            lineHeight: 1.4,
+          }}
+        >
+          First photo = hero · drag left/right to reorder · up to{" "}
+          {MAX_IMAGES_PER_ITEM} photos per item.
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DayRow({
   label,
   value,
@@ -1587,9 +1871,9 @@ function ProductCard({
         gap: 8,
       }}
     >
-      <ImageUpload
-        value={product.imageDataUrl}
-        onChange={(v) => onChange({ imageDataUrl: v })}
+      <MultiImageUpload
+        images={product.images}
+        onChange={(next) => onChange({ images: next })}
         onWarn={onWarn}
       />
       <TextInput

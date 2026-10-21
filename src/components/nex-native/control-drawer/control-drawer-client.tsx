@@ -62,6 +62,14 @@ export interface ControlDrawerSession {
    *  client-supplied value for this flag · the Vault page enforces
    *  its own gate at the route level. */
   readonly isBisnis: boolean;
+  /** Owner directive 2026-10-20 · optional thumbnail of the account's
+   *  currently-active chat theme wallpaper. When present, the drawer
+   *  identity bar renders a tappable thumbnail on the right that
+   *  routes to /nex-native/chat-themes-library so the viewer can
+   *  change their chat theme in one tap. Null / omitted = no
+   *  thumbnail (preserves identity-bar layout for surfaces that
+   *  don't resolve it yet). */
+  readonly activeChatThemeImageUrl?: string | null;
 }
 
 export interface ControlDrawerProps {
@@ -165,6 +173,18 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
     locked: true,
   },
   {
+    /* Owner directive 2026-10-20 · shop face cover themes · browse
+       the NEX Face / Cover Library at /nex-native/cover-themes-library
+       and pick the layout + skin that renders on your public shop
+       page face cover. Companion to Chat appearance (which skins the
+       chat surface) · this skins the shop surface. */
+    key: "shop-appearance",
+    label: "Shop appearance",
+    subtitle: "Face cover and layouts",
+    href: "/nex-native/cover-themes-library",
+    locked: true,
+  },
+  {
     key: "intro-video",
     label: "Intro Video",
     subtitle: "Record your own · 8 seconds max",
@@ -179,6 +199,20 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
 ];
 
 const YOUR_BUSINESS_ROWS: ReadonlyArray<MenuRow> = [
+  // Owner directive 2026-10-22 · My Shop · primary owner-admin
+  // entry for the per-business product management surface
+  // (upload / edit / turn off / delete products). Sits at the
+  // top of the Business group because it's the most frequent
+  // owner action. Routes to the prototype My Shop surface today
+  // (Crispy Chicken brand); production will resolve the
+  // owner's actual brand id from the session.
+  {
+    key: "my-shop",
+    label: "My Shop",
+    subtitle: "Upload products · edit · turn off · delete",
+    href: "/nex-native/chat-themes-library/marketplace-prototype/my-shop/crispy-chicken",
+    locked: true,
+  },
   {
     key: "my-businesses",
     label: "My businesses",
@@ -461,6 +495,17 @@ function DrawerBody({
     <div style={drawerBodyStyle}>
       <IdentityBar session={session} identityNameOverride={identityNameOverride} />
 
+      {/* Owner directive 2026-10-20 · the Emergency Help row is a
+          dark-red CTA at the top of the drawer so safety help is
+          one tap away from any surface that mounts the drawer. The
+          Emergency flow is gated by `isEmergencyLiveMode()` at the
+          service layer (defaults OFF · deliveries are simulated),
+          so a guest can still land on the honest "simulated" surface
+          and discover trusted-contacts, help copy and the pilot
+          banner without first signing in. Routes to the sealed
+          /nex-native/emergency-help page.tsx. */}
+      <EmergencyHelpRow />
+
       {/* Owner directive 2026-10-18 · guest viewers see a 3D lock
           on every account-gated row. The row stays tappable · tap
           routes through /sign-in with next=<destination> so the
@@ -551,19 +596,94 @@ function IdentityBar({
       : session.displayName;
   return (
     <div style={identityBarStyle} data-nex-control-drawer-identity>
-      <div style={identityNameStyle}>{nameToRender}</div>
-      {session.nexHandle ? (
-        <div style={identityHandleStyle}>
-          {/* Owner directive 2026-10-17 · the "nex-" prefix is a
-              brand mark · always rendered uppercase as "NEX-" ·
-              the numeric part is preserved exactly. Storage stays
-              lowercase (canonical column shape · validated by
-              `normaliseHandle` in bio/[nex_handle]/_handle.ts) ·
-              this is purely a display transform. */}
-          {session.nexHandle.replace(/^nex-/i, "NEX-")}
-        </div>
+      <div style={identityBarTextColumnStyle}>
+        <div style={identityNameStyle}>{nameToRender}</div>
+        {session.nexHandle ? (
+          <div style={identityHandleStyle}>
+            {/* Owner directive 2026-10-17 · the "nex-" prefix is a
+                brand mark · always rendered uppercase as "NEX-" ·
+                the numeric part is preserved exactly. Storage stays
+                lowercase (canonical column shape · validated by
+                `normaliseHandle` in bio/[nex_handle]/_handle.ts) ·
+                this is purely a display transform. */}
+            {session.nexHandle.replace(/^nex-/i, "NEX-")}
+          </div>
+        ) : null}
+      </div>
+      {/* Owner directive 2026-10-20 · right-side thumbnail of the
+          account's currently-active chat theme wallpaper · tap to
+          jump to /nex-native/chat-themes-library and pick a new one.
+          Rendered only when the surface populated activeChatThemeImageUrl ·
+          preserves the two-line text layout for every other surface. */}
+      {session.activeChatThemeImageUrl ? (
+        <Link
+          href="/nex-native/chat-themes-library"
+          data-nex-control-drawer-identity-chat-theme
+          aria-label="Change chat theme"
+          style={identityBarThumbStyle}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={session.activeChatThemeImageUrl}
+            alt=""
+            aria-hidden
+            style={identityBarThumbImageStyle}
+          />
+        </Link>
       ) : null}
     </div>
+  );
+}
+
+// ─── Emergency Help row · dark-red CTA at top of drawer ─────────────
+//
+// Owner directive 2026-10-20 · a standalone row above every section
+// so safety help is one tap away from any surface that mounts the
+// drawer. Dark red (not NEX's bright danger) · reads as "serious"
+// not "accent". Routes to the sealed /nex-native/emergency-help
+// which carries its own simulated/pilot framing.
+
+function EmergencyHelpRow() {
+  return (
+    <Link
+      href="/nex-native/emergency-help"
+      data-nex-control-drawer-emergency
+      aria-label="Emergency Help · simulated delivery · opens the help surface"
+      style={emergencyRowStyle}
+    >
+      <span aria-hidden style={emergencyIconStyle}>
+        <EmergencyBellIcon />
+      </span>
+      <span style={emergencyTextColumnStyle}>
+        <span style={emergencyLabelStyle}>Emergency Help</span>
+        <span style={emergencySubtitleStyle}>
+          Simulated · pilot
+        </span>
+      </span>
+    </Link>
+  );
+}
+
+function EmergencyBellIcon() {
+  // Simple exclamation-triangle · universally reads as "warning / help".
+  // Monochrome so it inherits the row's text colour for high contrast
+  // against the dark-red background.
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 3 L22 20 L2 20 Z" />
+      <path d="M12 9 L12 14" />
+      <circle cx="12" cy="17.4" r="0.9" fill="currentColor" stroke="none" />
+    </svg>
   );
 }
 
@@ -717,6 +837,12 @@ const PANEL = "#0A1526";
 const PANEL_BORDER = "rgba(0,175,255,0.18)";
 const DANGER = "#FF4D4F";
 const DANGER_INK = "#1A0505";
+// Owner directive 2026-10-20 · the Emergency Help row inside the drawer
+// is a dark red (not bright) so it reads as "serious / use only when
+// needed" rather than a cosmetic accent. Border uses a brighter red
+// ring so the row still has visual presence against the drawer navy.
+const EMERGENCY_DARK_RED = "#8B0000";
+const EMERGENCY_DARK_RED_RING = "rgba(255, 77, 79, 0.65)";
 
 const triggerButtonStyle: React.CSSProperties = {
   width: 36,
@@ -835,6 +961,57 @@ const drawerBodyStyle: React.CSSProperties = {
   padding: "12px 12px 24px 12px",
 };
 
+// Owner directive 2026-10-20 · dark red Emergency Help CTA at the
+// top of the drawer. Dark red fill (not NEX's bright DANGER) so the
+// row visibly reads as "serious use" rather than cosmetic accent.
+// 44px min-height preserves the shared touch-target floor used by
+// every other drawer row.
+const emergencyRowStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  minHeight: 48,
+  padding: "10px 12px",
+  marginBottom: 6,
+  background: EMERGENCY_DARK_RED,
+  border: `1px solid ${EMERGENCY_DARK_RED_RING}`,
+  borderRadius: 12,
+  color: TEXT,
+  textDecoration: "none",
+  boxShadow: `0 1px 0 rgba(255,255,255,0.06) inset, 0 10px 24px -16px ${EMERGENCY_DARK_RED}`,
+};
+const emergencyIconStyle: React.CSSProperties = {
+  flexShrink: 0,
+  width: 32,
+  height: 32,
+  display: "grid",
+  placeItems: "center",
+  color: TEXT,
+  borderRadius: 8,
+  background: "rgba(0,0,0,0.25)",
+  border: "1px solid rgba(255,255,255,0.14)",
+};
+const emergencyTextColumnStyle: React.CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 2,
+  minWidth: 0,
+  flex: 1,
+};
+const emergencyLabelStyle: React.CSSProperties = {
+  color: TEXT,
+  fontSize: 14,
+  fontWeight: 700,
+  letterSpacing: 0.2,
+};
+const emergencySubtitleStyle: React.CSSProperties = {
+  color: "rgba(255,255,255,0.75)",
+  fontSize: 11,
+  fontWeight: 600,
+  letterSpacing: 0.3,
+  textTransform: "uppercase",
+};
+
 // Owner directive 2026-10-18 · the identity-bar container picks up
 // the drawer's theme color. Background drops from solid PANEL to
 // a semi-transparent dark navy so the drawer's accent-tinted panel
@@ -843,13 +1020,39 @@ const drawerBodyStyle: React.CSSProperties = {
 // so NEX-10842 reads in the active theme colour.
 const identityBarStyle: React.CSSProperties = {
   display: "flex",
-  flexDirection: "column",
-  gap: 2,
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 10,
   padding: "12px 12px",
   marginBottom: 6,
   background: "rgba(2, 9, 20, 0.55)",
   border: `1px solid var(--nex-drawer-accent, ${PANEL_BORDER})`,
   borderRadius: 12,
+};
+const identityBarTextColumnStyle: React.CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 2,
+  flex: 1,
+  minWidth: 0,
+};
+const identityBarThumbStyle: React.CSSProperties = {
+  display: "inline-grid",
+  placeItems: "center",
+  width: 44,
+  height: 44,
+  borderRadius: 10,
+  overflow: "hidden",
+  border: `1px solid var(--nex-drawer-accent, ${PANEL_BORDER})`,
+  background: "rgba(2, 9, 20, 0.85)",
+  textDecoration: "none",
+  flexShrink: 0,
+};
+const identityBarThumbImageStyle: React.CSSProperties = {
+  width: "100%",
+  height: "100%",
+  objectFit: "cover",
+  display: "block",
 };
 const identityNameStyle: React.CSSProperties = {
   color: TEXT,

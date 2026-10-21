@@ -15,11 +15,14 @@ export interface CartItem {
 }
 
 /** Human-readable product-type labels used across the cart drawer +
- *  the honest "Price TBD" chips on cards. */
+ *  the honest "Price TBD" chips on cards. Owner directive 2026-10-22
+ *  · renamed from "Theme / Intro / Shop" to the fuller product names
+ *  so buyers see what each package covers: a chat theme, a chat
+ *  intro, and the combined Chat Shop + App shop surface. */
 export const PRODUCT_TYPE_LABEL: Record<ProductType, string> = {
-  theme: "Theme",
-  intro: "Intro",
-  shop: "Shop",
+  theme: "Chat Theme",
+  intro: "Chat Intro",
+  shop: "Chat Shop + App shop",
 };
 
 /** Icon glyph used on the round buttons and in the cart list. Kept

@@ -26,8 +26,13 @@
 //     These are URL params only · no server-side filter logic yet.
 
 import * as React from "react";
-import Link from "next/link";
 import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
+// Owner directive 2026-10-22 · marketplace header now mounts the
+// sealed ControlDrawer in place of its own purpose-built filter
+// drawer. The custom drawer's filter rows were redundant with the
+// filter pills already visible in the header; My Shop + nav now
+// live in the sealed drawer where every NEX surface accesses them.
+import { ControlDrawer } from "@/components/nex-native/control-drawer/control-drawer-client";
 
 const NEX = {
   text: "#F2F5F8",
@@ -69,32 +74,11 @@ const FILTERS: ReadonlyArray<{
   { id: "premium", label: "Premium" },
 ];
 
-const MENU_ITEMS: ReadonlyArray<{
-  readonly label: string;
-  readonly hint: string;
-  readonly href: string;
-}> = [
-  {
-    label: "New",
-    hint: "The latest themes · freshest arrivals",
-    href: "/nex-native/chat-themes-library/marketplace-prototype?filter=new",
-  },
-  {
-    label: "Free Themes",
-    hint: "The 2 free-forever themes",
-    href: "/nex-native/chat-themes-library/marketplace-prototype?filter=free",
-  },
-  {
-    label: "Premium Themes",
-    hint: "The paid catalogue",
-    href: "/nex-native/chat-themes-library/marketplace-prototype?filter=premium",
-  },
-  {
-    label: "Back to Welcome",
-    hint: "Return to the NEX welcome surface",
-    href: "/nex-native/welcome",
-  },
-];
+// Owner directive 2026-10-22 · custom MENU_ITEMS retired · the
+// sealed ControlDrawer is the single source of truth for navigation
+// (contacts · chats · chat themes · My Shop · settings · etc.).
+// Filters remain available via the pill row at the bottom of the
+// header (New / Free / Premium).
 
 export function MarketplaceHeaderClient({
   activeFilter,
@@ -111,17 +95,9 @@ export function MarketplaceHeaderClient({
   readonly cartCount: number;
   readonly onCartClick: () => void;
 }): React.JSX.Element {
-  const [menuOpen, setMenuOpen] = React.useState(false);
-
-  // Esc closes menu
-  React.useEffect(() => {
-    if (!menuOpen) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMenuOpen(false);
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [menuOpen]);
+  // Owner directive 2026-10-22 · marketplace-prototype's own menu
+  // state retired · the sealed ControlDrawer manages its own open
+  // / close lifecycle.
 
   return (
     <>
@@ -239,33 +215,14 @@ export function MarketplaceHeaderClient({
                 </span>
               )}
             </button>
-            <button
-              type="button"
-              onClick={() => setMenuOpen(true)}
-              aria-label="Open menu"
-              aria-expanded={menuOpen}
-              data-nex-marketplace-prototype-menu-trigger
-              style={{
-                width: 36,
-                height: 36,
-                padding: 0,
-                background: "transparent",
-                color: NEX.text,
-                border: "none",
-                cursor: "pointer",
-                fontFamily: "inherit",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              <svg width={22} height={22} viewBox="0 0 24 24" aria-hidden>
-                <circle cx={12} cy={5} r={1.6} fill="currentColor" />
-                <circle cx={12} cy={12} r={1.6} fill="currentColor" />
-                <circle cx={12} cy={19} r={1.6} fill="currentColor" />
-              </svg>
-            </button>
+            {/* Sealed ControlDrawer · renders its own 3-dot trigger
+                + full right-side drawer. session={null} degrades to
+                the anonymous sign-in prompt + locked rows, which is
+                the correct state for a buyer browsing the
+                marketplace prototype without an account. "My Shop"
+                lives inside this drawer at the top of the Business
+                group. */}
+            <ControlDrawer session={null} />
           </div>
         </div>
 
@@ -398,131 +355,11 @@ export function MarketplaceHeaderClient({
         </div>
       </header>
 
-      {/* ─── Side drawer menu ─── */}
-      {menuOpen && (
-        <>
-          <div
-            onClick={() => setMenuOpen(false)}
-            aria-hidden
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: "rgba(0, 0, 0, 0.55)",
-              zIndex: 700,
-              cursor: "pointer",
-            }}
-          />
-          <aside
-            role="dialog"
-            aria-modal="true"
-            aria-label="Marketplace menu"
-            data-nex-marketplace-prototype-menu
-            style={{
-              position: "absolute",
-              top: 0,
-              right: 0,
-              bottom: 0,
-              width: "min(300px, 85%)",
-              background: NEX.bg,
-              borderLeft: `1px solid ${NEX.cyanSoft}`,
-              zIndex: 701,
-              display: "flex",
-              flexDirection: "column",
-              boxShadow: "-10px 0 32px rgba(0, 0, 0, 0.6)",
-              overflow: "hidden",
-            }}
-          >
-            <header
-              style={{
-                padding:
-                  "calc(env(safe-area-inset-top, 0px) + 14px) 14px 10px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                borderBottom: `1px solid ${NEX.cyanSoft}`,
-              }}
-            >
-              <h2
-                style={{
-                  margin: 0,
-                  fontSize: 16,
-                  fontWeight: 800,
-                  color: NEX.text,
-                  letterSpacing: 0.3,
-                }}
-              >
-                Menu
-              </h2>
-              <button
-                type="button"
-                onClick={() => setMenuOpen(false)}
-                aria-label="Close menu"
-                style={{
-                  padding: "4px 10px",
-                  background: NEX.cyan,
-                  color: "#0a0608",
-                  border: `1px solid ${NEX.cyan}`,
-                  borderRadius: 6,
-                  fontSize: 12,
-                  fontWeight: 800,
-                  letterSpacing: 0.4,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
-              >
-                Close
-              </button>
-            </header>
-            <nav
-              style={{
-                flex: 1,
-                padding: "12px 8px",
-                display: "flex",
-                flexDirection: "column",
-                gap: 2,
-                overflowY: "auto",
-              }}
-            >
-              {MENU_ITEMS.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMenuOpen(false)}
-                  data-nex-marketplace-prototype-menu-item={item.label}
-                  style={{
-                    padding: "12px 12px",
-                    borderRadius: 10,
-                    textDecoration: "none",
-                    color: NEX.text,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 2,
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: 14,
-                      fontWeight: 700,
-                      letterSpacing: "-0.005em",
-                    }}
-                  >
-                    {item.label}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 11,
-                      color: NEX.textMute,
-                      lineHeight: 1.35,
-                    }}
-                  >
-                    {item.hint}
-                  </span>
-                </Link>
-              ))}
-            </nav>
-          </aside>
-        </>
-      )}
+      {/* Owner directive 2026-10-22 · marketplace's purpose-built
+          filter/nav drawer was retired · navigation lives in the
+          sealed ControlDrawer mounted inline in the header (above),
+          and filter selection stays in the pill row (New / Free /
+          Premium). Removed to keep a single drawer source of truth. */}
     </>
   );
 }

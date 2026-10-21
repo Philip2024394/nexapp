@@ -81,14 +81,47 @@ export function MenuItemSheet({
 
   const [qty, setQty] = React.useState(1);
 
-  // Esc + body scroll lock while the sheet is open.
+  // Owner directive 2026-10-22 · pull multi-image gallery from the
+  // editor's localStorage (if the buyer previously ran the editor
+  // and uploaded photos). Falls back to [] when no editor data ·
+  // the sheet then shows the initials placeholder.
+  const editorImages = React.useMemo(() => {
+    if (typeof window === "undefined") return [] as string[];
+    try {
+      const raw = window.localStorage.getItem(`nex-mp-editor-${brand}`);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw) as {
+        products?: Array<{ id?: string; images?: string[] }>;
+      };
+      const match = parsed.products?.find((p) => p?.id === productId);
+      return Array.isArray(match?.images)
+        ? (match.images.filter((s) => typeof s === "string") as string[])
+        : [];
+    } catch {
+      return [];
+    }
+  }, [brand, productId]);
+
+  const [carouselIndex, setCarouselIndex] = React.useState(0);
+  const hasGallery = editorImages.length > 0;
+  const multiImages = editorImages.length > 1;
+
+  // Esc + arrow keys when a gallery is present.
   React.useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
+      if (multiImages && e.key === "ArrowLeft") {
+        setCarouselIndex((i) =>
+          i === 0 ? editorImages.length - 1 : i - 1,
+        );
+      }
+      if (multiImages && e.key === "ArrowRight") {
+        setCarouselIndex((i) => (i + 1) % editorImages.length);
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
+  }, [onClose, multiImages, editorImages.length]);
 
   if (!product) return null;
 
@@ -171,27 +204,31 @@ export function MenuItemSheet({
         }}
       >
         {/* Drag handle · visual-only, keyboard users have the ×
-            button. */}
+            button. Owner directive 2026-10-22 · tinted to the brand
+            accent (the same colour the Add-to-Cart button carries)
+            so the slider reads as part of the brand surface the
+            moment it rises. */}
         <div
           aria-hidden
           style={{
             display: "flex",
             justifyContent: "center",
-            paddingTop: 8,
-            paddingBottom: 2,
+            paddingTop: 10,
+            paddingBottom: 4,
           }}
         >
           <div
             style={{
-              width: 44,
-              height: 4,
-              borderRadius: 2,
-              background: "rgba(255, 255, 255, 0.22)",
+              width: 56,
+              height: 5,
+              borderRadius: 3,
+              background: accent,
+              boxShadow: `0 2px 8px -2px ${hexWithAlpha(accent, 0.7)}`,
             }}
           />
         </div>
 
-        {/* Close button · top-right. */}
+        {/* Close button · top-right · black fill with white × ink. */}
         <button
           type="button"
           onClick={onClose}
@@ -204,14 +241,20 @@ export function MenuItemSheet({
             height: 32,
             padding: 0,
             borderRadius: "50%",
-            background: "rgba(255, 255, 255, 0.08)",
-            color: NEX.text,
-            border: "none",
+            background: "#000000",
+            color: "#FFFFFF",
+            border: "1px solid rgba(255, 255, 255, 0.14)",
             fontSize: 18,
+            fontWeight: 900,
             lineHeight: 1,
             cursor: "pointer",
             fontFamily: "inherit",
             zIndex: 2,
+            boxShadow: "0 4px 10px -4px rgba(0, 0, 0, 0.65)",
+            WebkitTapHighlightColor: "transparent",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
           ×
@@ -229,37 +272,143 @@ export function MenuItemSheet({
             gap: 12,
           }}
         >
-          {/* Hero · placeholder tile with themed treatment because
-              the sealed mock doesn't carry real product photos. The
-              seller editor is where real photos get uploaded. */}
+          {/* Hero · gallery when the editor supplies photos ·
+              otherwise themed initials placeholder. Arrows + count
+              only render when there's more than one image. */}
           <div
             data-nex-marketplace-prototype-menu-item-hero
+            data-nex-marketplace-prototype-menu-item-hero-count={editorImages.length}
             style={{
+              position: "relative",
               width: "100%",
               aspectRatio: "16 / 10",
               borderRadius: 14,
-              background: `linear-gradient(135deg, ${hexWithAlpha(accent, 0.42)}, ${hexWithAlpha(accent, 0.14)}), ${NEX.bg}`,
+              background: hasGallery
+                ? `url("${editorImages[carouselIndex]}") center / cover no-repeat, ${NEX.bg}`
+                : `linear-gradient(135deg, ${hexWithAlpha(accent, 0.42)}, ${hexWithAlpha(accent, 0.14)}), ${NEX.bg}`,
               border: `1px solid ${hexWithAlpha(accent, 0.3)}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: hexWithAlpha(accent, 0.9),
-              fontSize: 42,
-              fontWeight: 900,
-              letterSpacing: "-0.02em",
-              lineHeight: 1,
-              textShadow: `0 2px 10px rgba(0, 0, 0, 0.5)`,
-              fontFamily:
-                "'Georgia', 'Times New Roman', serif",
+              overflow: "hidden",
+              transition: "background 220ms ease",
             }}
-            aria-hidden
+            aria-hidden={!hasGallery}
+            aria-roledescription={hasGallery ? "carousel" : undefined}
           >
-            {product.name
-              .split(" ")
-              .map((w) => w[0])
-              .filter(Boolean)
-              .slice(0, 2)
-              .join("")}
+            {!hasGallery && (
+              <span
+                style={{
+                  color: hexWithAlpha(accent, 0.9),
+                  fontSize: 42,
+                  fontWeight: 900,
+                  letterSpacing: "-0.02em",
+                  lineHeight: 1,
+                  textShadow: `0 2px 10px rgba(0, 0, 0, 0.5)`,
+                  fontFamily:
+                    "'Georgia', 'Times New Roman', serif",
+                }}
+              >
+                {product.name
+                  .split(" ")
+                  .map((w) => w[0])
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .join("")}
+              </span>
+            )}
+            {multiImages && (
+              <>
+                {/* Count · top-center */}
+                <div
+                  data-nex-marketplace-prototype-menu-item-hero-counter
+                  style={{
+                    position: "absolute",
+                    top: 10,
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    padding: "3px 10px",
+                    borderRadius: 999,
+                    background: "rgba(0, 0, 0, 0.6)",
+                    color: "#FFFFFF",
+                    fontSize: 11,
+                    fontWeight: 800,
+                    letterSpacing: 0.4,
+                    fontVariantNumeric: "tabular-nums",
+                    backdropFilter: "blur(8px)",
+                    WebkitBackdropFilter: "blur(8px)",
+                  }}
+                >
+                  {carouselIndex + 1} / {editorImages.length}
+                </div>
+                {/* Prev · left */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCarouselIndex((i) =>
+                      i === 0 ? editorImages.length - 1 : i - 1,
+                    )
+                  }
+                  aria-label="Previous photo"
+                  data-nex-marketplace-prototype-menu-item-hero-prev
+                  style={{
+                    position: "absolute",
+                    left: 8,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    width: 32,
+                    height: 32,
+                    padding: 0,
+                    borderRadius: "50%",
+                    background: "rgba(0, 0, 0, 0.6)",
+                    color: "#FFFFFF",
+                    border: "1px solid rgba(255, 255, 255, 0.14)",
+                    fontSize: 16,
+                    fontWeight: 900,
+                    lineHeight: 1,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    backdropFilter: "blur(8px)",
+                    WebkitBackdropFilter: "blur(8px)",
+                    boxShadow: "0 4px 10px -4px rgba(0, 0, 0, 0.6)",
+                  }}
+                >
+                  ‹
+                </button>
+                {/* Next · right */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCarouselIndex((i) => (i + 1) % editorImages.length)
+                  }
+                  aria-label="Next photo"
+                  data-nex-marketplace-prototype-menu-item-hero-next
+                  style={{
+                    position: "absolute",
+                    right: 8,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    width: 32,
+                    height: 32,
+                    padding: 0,
+                    borderRadius: "50%",
+                    background: "rgba(0, 0, 0, 0.6)",
+                    color: "#FFFFFF",
+                    border: "1px solid rgba(255, 255, 255, 0.14)",
+                    fontSize: 16,
+                    fontWeight: 900,
+                    lineHeight: 1,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    backdropFilter: "blur(8px)",
+                    WebkitBackdropFilter: "blur(8px)",
+                    boxShadow: "0 4px 10px -4px rgba(0, 0, 0, 0.6)",
+                  }}
+                >
+                  ›
+                </button>
+              </>
+            )}
           </div>
 
           {/* Section eyebrow + stock chip */}
@@ -384,13 +533,15 @@ export function MenuItemSheet({
                   gap: 6,
                   padding: "6px 12px",
                   borderRadius: 999,
-                  background: "rgba(220, 38, 38, 0.14)",
-                  border: `1px solid rgba(220, 38, 38, 0.42)`,
-                  color: "#FF8080",
+                  background: "#000000",
+                  border: "1px solid rgba(255, 255, 255, 0.14)",
+                  color: "#FFFFFF",
                   fontSize: 11,
                   fontWeight: 800,
                   letterSpacing: 0.3,
                   textTransform: "uppercase",
+                  boxShadow:
+                    "0 4px 10px -4px rgba(0, 0, 0, 0.65)",
                 }}
               >
                 <span aria-hidden>🌶️</span>
@@ -404,11 +555,7 @@ export function MenuItemSheet({
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 6,
-                padding: "4px 6px",
-                borderRadius: 999,
-                background: "rgba(255, 255, 255, 0.06)",
-                border: `1px solid ${hexWithAlpha(accent, 0.3)}`,
+                gap: 8,
                 flexShrink: 0,
               }}
             >
@@ -419,21 +566,31 @@ export function MenuItemSheet({
                 aria-label="Decrease quantity"
                 data-nex-marketplace-prototype-menu-item-qty-minus
                 style={{
-                  width: 32,
-                  height: 32,
+                  width: 34,
+                  height: 34,
                   padding: 0,
                   borderRadius: "50%",
-                  background: "transparent",
+                  background: "#000000",
                   color:
                     soldOut || qty <= 1
-                      ? "rgba(255, 255, 255, 0.25)"
-                      : NEX.text,
-                  border: "none",
+                      ? "rgba(255, 255, 255, 0.3)"
+                      : "#FFFFFF",
+                  border: "1px solid rgba(255, 255, 255, 0.14)",
                   fontSize: 20,
+                  fontWeight: 900,
                   lineHeight: 1,
                   cursor:
                     soldOut || qty <= 1 ? "default" : "pointer",
                   fontFamily: "inherit",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow:
+                    soldOut || qty <= 1
+                      ? "none"
+                      : "0 4px 10px -4px rgba(0, 0, 0, 0.65)",
+                  WebkitTapHighlightColor: "transparent",
+                  opacity: soldOut || qty <= 1 ? 0.55 : 1,
                 }}
               >
                 −
@@ -441,12 +598,13 @@ export function MenuItemSheet({
               <span
                 aria-live="polite"
                 style={{
-                  minWidth: 20,
+                  minWidth: 22,
                   textAlign: "center",
-                  fontSize: 15,
+                  fontSize: 16,
                   fontWeight: 900,
                   color: NEX.text,
                   fontVariantNumeric: "tabular-nums",
+                  textShadow: "0 1px 3px rgba(0, 0, 0, 0.55)",
                 }}
               >
                 {qty}
@@ -458,19 +616,28 @@ export function MenuItemSheet({
                 aria-label="Increase quantity"
                 data-nex-marketplace-prototype-menu-item-qty-plus
                 style={{
-                  width: 32,
-                  height: 32,
+                  width: 34,
+                  height: 34,
                   padding: 0,
                   borderRadius: "50%",
-                  background: hexWithAlpha(accent, 0.14),
+                  background: "#000000",
                   color: soldOut
-                    ? "rgba(255, 255, 255, 0.25)"
-                    : NEX.text,
-                  border: "none",
+                    ? "rgba(255, 255, 255, 0.3)"
+                    : "#FFFFFF",
+                  border: "1px solid rgba(255, 255, 255, 0.14)",
                   fontSize: 20,
+                  fontWeight: 900,
                   lineHeight: 1,
                   cursor: soldOut ? "default" : "pointer",
                   fontFamily: "inherit",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: soldOut
+                    ? "none"
+                    : "0 4px 10px -4px rgba(0, 0, 0, 0.65)",
+                  WebkitTapHighlightColor: "transparent",
+                  opacity: soldOut ? 0.55 : 1,
                 }}
               >
                 +

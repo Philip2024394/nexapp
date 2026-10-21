@@ -421,6 +421,11 @@ export const CRISPY_CHICKEN_MOCK: MockCoverContent = {
     { id: "cc-b04", slug: "bbq-honey-burger",        name: "BBQ Honey Burger",         price_pence: 5200000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-burgers",    description: "Smoked BBQ glaze · honey · crispy onions · brioche." },
     { id: "cc-b05", slug: "truffle-crispy-burger",   name: "Truffle Crispy Burger",    price_pence: 6500000, currency: "IDR", image_url: null, stock_status: "low_stock", section_id: "sec-burgers",    description: "Truffle aioli · aged cheddar · arugula · house pickles." },
     { id: "cc-b06", slug: "veggie-crisp-burger",     name: "Veggie Crisp Burger",      price_pence: 4200000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-burgers",    description: "Crispy breaded portobello · smoked paprika mayo · lettuce." },
+    // Owner directive 2026-10-22 · extra Burgers items to push the
+    // category past 6 so the drawer's pagination footer (prev / next
+    // + page counter) renders live. 8 total → 2 pages.
+    { id: "cc-b07", slug: "smash-burger",            name: "Smash Burger",             price_pence: 4900000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-burgers",    description: "Thin-smashed patty · caramelised onions · American cheese." },
+    { id: "cc-b08", slug: "buffalo-crisp-burger",    name: "Buffalo Crisp Burger",     price_pence: 5100000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-burgers",    description: "Buffalo-tossed fillet · blue-cheese slaw · brioche." },
     // ─── Chicken ─────────────────────────────────────────────────
     { id: "cc-c01", slug: "classic-tenders-5",       name: "5-Piece Tenders",          price_pence: 5500000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-chicken",    description: "Five hand-breaded tenders · your choice of dipping sauce." },
     { id: "cc-c02", slug: "classic-tenders-10",      name: "10-Piece Tenders",         price_pence: 9500000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-chicken",    description: "Ten hand-breaded tenders · two dipping sauces." },
