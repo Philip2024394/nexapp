@@ -160,7 +160,12 @@ export const MARIA_MOCK: MockCoverContent = {
   businessName: "Your Business Name",
   tagline: "Your slogan · what you do in a few words",
   handle: "@your-handle",
-  location: "Your street address · city · region · postcode",
+  // Owner directive 2026-10-22 · the identity rail's compact location
+  // line was a duplicate of the top Visit-Us panel's address block ·
+  // mock `location` is now empty so the rail skips its `{location &&
+  // …}` block · real businesses with a distinct short location can
+  // still populate this independently.
+  location: "",
   portraitUrl: "",
   ownerAccountId: "preview-account",
   presenceOnline: true,
@@ -172,7 +177,7 @@ export const MARIA_MOCK: MockCoverContent = {
     website: "https://yourbusiness.com",
   },
   atmosphereLine: "The feeling your customers walk into · one warm line",
-  hours: "Opening hours · every day of the week",
+  hours: "Opening Hours",
   address: "Your street address · city · region · postcode",
   locationLat: null,
   locationLng: null,

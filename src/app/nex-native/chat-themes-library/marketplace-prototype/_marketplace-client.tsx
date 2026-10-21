@@ -254,6 +254,11 @@ export function MarketplacePrototypeClient(): React.JSX.Element {
         <ShopPreviewSheet
           entry={preview.entry}
           inCartKeys={inCartKeys}
+          cartCount={cart.length}
+          onCartClick={() => {
+            setPreview(null);
+            setCartOpen(true);
+          }}
           onAddToCart={(layoutId) => {
             addToCart(preview.entry, "shop", layoutId);
           }}

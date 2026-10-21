@@ -1395,23 +1395,24 @@ export function IntroPreviewSheet({
 export function ShopPreviewSheet({
   entry,
   inCartKeys,
+  cartCount,
+  onCartClick,
   onAddToCart,
   onClose,
 }: {
   readonly entry: MarketplaceCatalogEntry;
   readonly inCartKeys: ReadonlySet<string>;
+  readonly cartCount: number;
+  readonly onCartClick: () => void;
   readonly onAddToCart: (layoutId: string) => void;
   readonly onClose: () => void;
 }): React.JSX.Element {
-  // Owner directive 2026-10-21 (prototype iteration) · Shop preview
-  // becomes a Tinder-style swipe deck · one layout card at a time,
-  // horizontal swipe (touch + mouse drag) between layouts, dots +
-  // arrow buttons for discoverability, snap-back on short drags.
+  // Owner directive 2026-10-21 · Shop preview rebuilt to the Theme +
+  // Intro full-bleed shape · chat-style business header at top ·
+  // iframe swipe deck fills the entire sheet · dots indicator + a
+  // themed detail card at the bottom (layout name + Shop Price +
+  // themed Close + themed Add to Cart).
   const [index, setIndex] = React.useState(0);
-  const [dragDx, setDragDx] = React.useState(0);
-  const dragStartXRef = React.useRef<number | null>(null);
-  const draggingRef = React.useRef(false);
-  const SWIPE_THRESHOLD = 60; // px to commit a direction
 
   const total = SHOP_LAYOUTS.length;
   const current = SHOP_LAYOUTS[index];
@@ -1421,74 +1422,333 @@ export function ShopPreviewSheet({
     shopLayoutId: current.layoutId,
   });
   const currentInCart = inCartKeys.has(currentKey);
+  const themeAccent = entry.ownerAccentHex ?? entry.accentHex;
 
   const goTo = React.useCallback(
     (next: number) => {
       setIndex(Math.max(0, Math.min(total - 1, next)));
-      setDragDx(0);
     },
     [total],
   );
   const goPrev = React.useCallback(() => goTo(index - 1), [goTo, index]);
   const goNext = React.useCallback(() => goTo(index + 1), [goTo, index]);
 
-  const onPointerDown = React.useCallback((e: React.PointerEvent) => {
-    draggingRef.current = true;
-    dragStartXRef.current = e.clientX;
-    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
-  }, []);
-  const onPointerMove = React.useCallback((e: React.PointerEvent) => {
-    if (!draggingRef.current || dragStartXRef.current === null) return;
-    setDragDx(e.clientX - dragStartXRef.current);
-  }, []);
-  const onPointerUp = React.useCallback(
-    (e: React.PointerEvent) => {
-      if (!draggingRef.current) return;
-      draggingRef.current = false;
-      (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
-      const dx = dragDx;
-      dragStartXRef.current = null;
-      if (dx <= -SWIPE_THRESHOLD && index < total - 1) {
-        goNext();
-      } else if (dx >= SWIPE_THRESHOLD && index > 0) {
-        goPrev();
-      } else {
-        setDragDx(0); // snap back
-      }
-    },
-    [dragDx, goNext, goPrev, index, total],
-  );
+  // Owner directive 2026-10-21 · each shop template must be fully
+  // interactive · users scroll vertically, tap category toggles,
+  // open sections, etc. inside the live sealed cover preview. That
+  // means the iframe captures its own pointer events · the whole-
+  // sheet horizontal swipe gesture is retired · layout navigation
+  // happens through the explicit prev / next arrow buttons (and the
+  // keyboard ←/→ arrows for desktop).
+  //
+  // Theme pass-through · the iframe loads the sealed cover-preview
+  // page with `theme`, `tint` + `bg` query params so each entry's
+  // shop renders with its own chat theme (Crispy Chicken wallpaper
+  // for Crispy Chicken, Pink Dream wallpaper for Pink Dream, etc).
+  const iframeSrc = React.useMemo(() => {
+    const params = new URLSearchParams({
+      embed: "1",
+      theme: entry.themeId,
+      tint: entry.ownerAccentHex ?? entry.accentHex,
+      bg: entry.wallpaperUrl,
+    });
+    return `/nex-native/cover/preview/${current.layoutId}?${params.toString()}`;
+  }, [
+    current.layoutId,
+    entry.themeId,
+    entry.ownerAccentHex,
+    entry.accentHex,
+    entry.wallpaperUrl,
+  ]);
 
-  // Arrow keys as a desktop a11y affordance.
+  // Keyboard · Esc closes · ← / → navigate the deck.
   React.useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
       if (e.key === "ArrowLeft") goPrev();
       if (e.key === "ArrowRight") goNext();
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [goPrev, goNext]);
+  }, [goPrev, goNext, onClose]);
 
   return (
-    <SheetShell
-      title={`${entry.displayName} Shop`}
-      onClose={onClose}
-      footer={
-        <>
+    <div
+      data-nex-marketplace-prototype-sheet
+      data-nex-marketplace-prototype-sheet-variant="shop-fullbleed"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${entry.displayName} Shop`}
+      style={{
+        // Owner directive 2026-10-22 · sheet background is flat NEX
+        // navy · the sealed CoverPage still applies its 20px side
+        // padding inside each shop template, so a wallpaper backdrop
+        // would show as a visible strip in those gutters. Navy blends
+        // the gutter into NEX chrome so the shop template reads as
+        // full width to the viewer.
+        position: "absolute",
+        inset: 0,
+        zIndex: 500,
+        background: NEX.bg,
+        overflow: "hidden",
+      }}
+    >
+      {/* Full-bleed interactive iframe · owner directive 2026-10-21
+          · pointer events pass through so users can scroll + tap
+          category toggles inside the live sealed cover preview.
+          Horizontal swipe navigation is retired · layouts change
+          via the dots indicator (and keyboard ←/→). */}
+      <iframe
+        key={current.layoutId}
+        src={iframeSrc}
+        title={`${current.label} shop cover preview`}
+        data-nex-marketplace-prototype-shop-iframe={current.layoutId}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          border: "none",
+          backgroundColor: "transparent",
+          zIndex: 0,
+        }}
+      />
+
+      {/* Owner directive 2026-10-22 · prev / next layout navigation ·
+          high-quality compact badge · chevron-left + center counter
+          + chevron-right · themed rim + glow matches the detail
+          card. Floats top-centre of the sheet. */}
+      <div
+        data-nex-marketplace-prototype-shop-nav
+        style={{
+          position: "absolute",
+          top: "calc(env(safe-area-inset-top, 0px) + 12px)",
+          left: "50%",
+          transform: "translateX(-50%)",
+          display: "inline-flex",
+          alignItems: "center",
+          padding: "3px 4px",
+          borderRadius: 999,
+          background: "rgba(2, 9, 20, 0.82)",
+          border: `1px solid ${hexWithAlpha(themeAccent, 0.5)}`,
+          backdropFilter: "blur(14px) saturate(160%)",
+          WebkitBackdropFilter: "blur(14px) saturate(160%)",
+          zIndex: 3,
+          pointerEvents: "auto",
+          boxShadow: `0 8px 20px -8px rgba(0, 0, 0, 0.7), 0 0 16px -4px ${hexWithAlpha(themeAccent, 0.55)}, inset 0 1px 0 rgba(255, 255, 255, 0.08)`,
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
+        <button
+          type="button"
+          onClick={goPrev}
+          disabled={index === 0}
+          aria-label="Previous layout"
+          data-nex-marketplace-prototype-shop-prev
+          style={{
+            width: 30,
+            height: 30,
+            padding: 0,
+            borderRadius: "50%",
+            background: index === 0 ? "transparent" : `${hexWithAlpha(themeAccent, 0.12)}`,
+            color:
+              index === 0 ? "rgba(255, 255, 255, 0.25)" : "#FFFFFF",
+            border: "none",
+            cursor: index === 0 ? "default" : "pointer",
+            fontFamily: "inherit",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            WebkitTapHighlightColor: "transparent",
+            transition: "background 150ms ease",
+          }}
+        >
+          <svg
+            width={16}
+            height={16}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.4}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "baseline",
+            gap: 3,
+            padding: "0 10px",
+            minWidth: 48,
+            justifyContent: "center",
+          }}
+        >
+          <span
+            style={{
+              fontSize: 13,
+              fontWeight: 900,
+              color: themeAccent,
+              letterSpacing: "-0.01em",
+              lineHeight: 1,
+            }}
+          >
+            {String(index + 1).padStart(2, "0")}
+          </span>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              color: "rgba(255, 255, 255, 0.4)",
+              lineHeight: 1,
+            }}
+          >
+            /
+          </span>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              color: "rgba(255, 255, 255, 0.65)",
+              lineHeight: 1,
+            }}
+          >
+            {String(total).padStart(2, "0")}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={goNext}
+          disabled={index === total - 1}
+          aria-label="Next layout"
+          data-nex-marketplace-prototype-shop-next
+          style={{
+            width: 30,
+            height: 30,
+            padding: 0,
+            borderRadius: "50%",
+            background:
+              index === total - 1
+                ? "transparent"
+                : `${hexWithAlpha(themeAccent, 0.12)}`,
+            color:
+              index === total - 1
+                ? "rgba(255, 255, 255, 0.25)"
+                : "#FFFFFF",
+            border: "none",
+            cursor: index === total - 1 ? "default" : "pointer",
+            fontFamily: "inherit",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            WebkitTapHighlightColor: "transparent",
+            transition: "background 150ms ease",
+          }}
+        >
+          <svg
+            width={16}
+            height={16}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.4}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Owner directive 2026-10-21 · floating details card restored
+          · same shape as Theme + Intro · themed rim + outer glow ·
+          layout name + Shop Price + themed Close + Add to Cart in
+          theme accent · red cart-count badge on the Add to Cart
+          button so the shopper always sees how many items are
+          already in the cart. */}
+      <aside
+        data-nex-marketplace-prototype-shop-detail-card
+        style={{
+          position: "absolute",
+          left: 14,
+          right: 14,
+          bottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)",
+          padding: "12px 14px",
+          background: "rgba(2, 9, 20, 0.88)",
+          border: `1px solid ${hexWithAlpha(themeAccent, 0.55)}`,
+          borderRadius: 14,
+          backdropFilter: "blur(14px) saturate(140%)",
+          WebkitBackdropFilter: "blur(14px) saturate(140%)",
+          boxShadow: `0 12px 32px -12px rgba(0, 0, 0, 0.7), 0 0 18px -6px ${hexWithAlpha(themeAccent, 0.55)}`,
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+          zIndex: 3,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+          }}
+        >
+          <h2
+            style={{
+              margin: 0,
+              fontSize: 15,
+              fontWeight: 800,
+              color: NEX.text,
+              letterSpacing: "-0.005em",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {current.label} · Marketplace Price
+          </h2>
+          <span
+            data-nex-marketplace-prototype-shop-counter
+            style={{
+              flexShrink: 0,
+              fontSize: 10,
+              fontWeight: 700,
+              color: NEX.textMute,
+              letterSpacing: 0.4,
+              textTransform: "uppercase",
+            }}
+          >
+            {index + 1} / {total}
+          </span>
+        </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "auto 1fr",
+            gap: 8,
+          }}
+        >
           <button
             type="button"
             onClick={onClose}
+            data-nex-marketplace-prototype-sheet-close
             style={{
               padding: "0 16px",
-              minHeight: 44,
+              minHeight: 40,
               borderRadius: 10,
               background: "transparent",
-              color: NEX.text,
-              border: `1px solid ${NEX.cyanSoft}`,
-              fontSize: 13,
+              color: themeAccent,
+              border: `1px solid ${hexWithAlpha(themeAccent, 0.6)}`,
+              fontSize: 12,
               fontWeight: 700,
               cursor: "pointer",
               fontFamily: "inherit",
+              WebkitTapHighlightColor: "transparent",
             }}
           >
             Close
@@ -1500,302 +1760,56 @@ export function ShopPreviewSheet({
             data-nex-marketplace-prototype-add-to-cart="shop"
             data-nex-marketplace-prototype-add-to-cart-layout={current.layoutId}
             style={{
-              flex: 1,
-              minHeight: 44,
+              position: "relative",
+              minHeight: 40,
+              padding: "0 14px",
               borderRadius: 10,
-              background: currentInCart ? NEX.green : NEX.orange,
-              color: currentInCart ? "#042416" : NEX.orangeInk,
+              background: currentInCart ? NEX.green : themeAccent,
+              color: currentInCart ? "#042416" : "#FFFFFF",
               border: "none",
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: 900,
               letterSpacing: 0.3,
+              textShadow: currentInCart
+                ? "none"
+                : "0 1px 3px rgba(0, 0, 0, 0.55)",
+              boxShadow: currentInCart
+                ? "none"
+                : `0 6px 16px -6px ${hexWithAlpha(themeAccent, 0.75)}`,
               cursor: currentInCart ? "default" : "pointer",
               fontFamily: "inherit",
               WebkitTapHighlightColor: "transparent",
             }}
           >
-            {currentInCart
-              ? "✓ Added to Cart"
-              : `Add ${current.label} to Cart · Price TBD`}
+            {currentInCart ? "✓ Added to Cart" : "Add to Cart"}
+            {cartCount > 0 && (
+              <span
+                data-nex-marketplace-prototype-shop-add-to-cart-badge
+                style={{
+                  position: "absolute",
+                  top: -6,
+                  right: -6,
+                  minWidth: 20,
+                  height: 20,
+                  padding: "0 5px",
+                  borderRadius: 999,
+                  background: "#DC2626",
+                  color: "#FFFFFF",
+                  fontSize: 11,
+                  fontWeight: 900,
+                  lineHeight: "20px",
+                  textAlign: "center",
+                  boxShadow:
+                    "0 0 0 2px rgba(2, 9, 20, 0.9), 0 0 10px -2px rgba(220, 38, 38, 0.8)",
+                  pointerEvents: "none",
+                }}
+              >
+                {cartCount}
+              </span>
+            )}
           </button>
-        </>
-      }
-    >
-      <div
-        style={{
-          marginBottom: 12,
-          padding: "8px 12px",
-          background: "rgba(22, 214, 107, 0.08)",
-          border: `1px solid rgba(22, 214, 107, 0.42)`,
-          borderRadius: 10,
-          color: NEX.textDim,
-          fontSize: 11,
-          lineHeight: 1.45,
-        }}
-      >
-        Shop covers today are <strong style={{ color: NEX.text }}>free for Bisnis owners</strong>{" "}
-        via /cover-themes-library. Catalog here uses the sealed layout
-        IDs · paid themed shop skins arrive after the Shop SKU model is
-        approved.
-      </div>
-
-      {/* ─── Swipe deck ─── */}
-      <div
-        data-nex-marketplace-prototype-shop-swipe
-        style={{
-          position: "relative",
-          borderRadius: 16,
-          overflow: "hidden",
-          minHeight: 400,
-          background: "rgba(5, 15, 28, 0.72)",
-          border: `1px solid ${NEX.cyanSoft}`,
-          touchAction: "pan-y",
-          userSelect: "none",
-          WebkitUserSelect: "none",
-        }}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-      >
-        <article
-          data-nex-marketplace-prototype-shop-card={current.layoutId}
-          style={{
-            position: "relative",
-            width: "100%",
-            minHeight: 520,
-            background: "#020914",
-            transform: `translateX(${dragDx}px) rotate(${dragDx * 0.03}deg)`,
-            transition: draggingRef.current ? "none" : "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)",
-            overflow: "hidden",
-          }}
-        >
-          {/* Owner directive 2026-10-21 (prototype iteration) · the
-              Shop swipe card now embeds the sealed cover-preview route
-              (/nex-native/cover/preview/[layoutId]) as the actual
-              visual · guarantees the user sees the real cover design,
-              not a mock. pointer-events: none on the iframe lets the
-              swipe gesture on the parent surface still fire · the
-              `key` prop forces React to swap iframes cleanly when the
-              layout changes rather than reusing the same one. */}
-          <iframe
-            key={current.layoutId}
-            src={`/nex-native/cover/preview/${current.layoutId}`}
-            title={`${current.label} shop cover preview`}
-            data-nex-marketplace-prototype-shop-iframe={current.layoutId}
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              border: "none",
-              pointerEvents: "none",
-              backgroundColor: "#020914",
-            }}
-          />
-
-          {/* Top overlay · counter + price chip over the live preview */}
-          <div
-            style={{
-              position: "absolute",
-              top: 12,
-              left: 12,
-              right: 12,
-              display: "flex",
-              alignItems: "flex-start",
-              justifyContent: "space-between",
-              gap: 10,
-              zIndex: 2,
-              pointerEvents: "none",
-            }}
-          >
-            <div
-              style={{
-                padding: "4px 10px",
-                background: "rgba(2, 9, 20, 0.75)",
-                border: `1px solid ${NEX.cyanSoft}`,
-                borderRadius: 999,
-                fontSize: 9,
-                fontWeight: 800,
-                letterSpacing: 0.6,
-                textTransform: "uppercase",
-                color: NEX.cyan,
-                backdropFilter: "blur(6px)",
-                WebkitBackdropFilter: "blur(6px)",
-              }}
-            >
-              Shop · {index + 1} of {total}
-            </div>
-            {/* Price TBD chip retired here · the sheet header now
-                carries the universal Price badge. */}
-          </div>
-
-          {/* Bottom overlay · label + blurb + swipe hint */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              padding: "40px 16px 16px",
-              background:
-                "linear-gradient(180deg, rgba(2, 9, 20, 0) 0%, rgba(2, 9, 20, 0.85) 60%, rgba(2, 9, 20, 0.95) 100%)",
-              display: "flex",
-              flexDirection: "column",
-              gap: 6,
-              zIndex: 2,
-              pointerEvents: "none",
-            }}
-          >
-            <h3
-              style={{
-                margin: 0,
-                fontSize: 20,
-                fontWeight: 900,
-                color: "#FFFFFF",
-                letterSpacing: "-0.01em",
-                textShadow: "0 2px 10px rgba(0, 0, 0, 0.7)",
-              }}
-            >
-              {current.label}
-            </h3>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 12,
-                lineHeight: 1.4,
-                color: "rgba(255, 255, 255, 0.82)",
-                textShadow: "0 1px 4px rgba(0, 0, 0, 0.6)",
-              }}
-            >
-              {current.blurb}
-            </p>
-            <div
-              style={{
-                marginTop: 4,
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                gap: 10,
-                fontSize: 10,
-                color: "rgba(255, 255, 255, 0.6)",
-                letterSpacing: 0.4,
-                textTransform: "uppercase",
-                fontWeight: 700,
-              }}
-            >
-              {index > 0 && <span>← Swipe</span>}
-              <span style={{ opacity: 0.5 }}>•</span>
-              {index < total - 1 && <span>Swipe →</span>}
-            </div>
-          </div>
-        </article>
-
-        {/* Prev / Next arrow buttons · click target for desktop */}
-        {index > 0 && (
-          <button
-            type="button"
-            onClick={goPrev}
-            aria-label="Previous layout"
-            data-nex-marketplace-prototype-shop-prev
-            style={{
-              position: "absolute",
-              left: 8,
-              top: "50%",
-              transform: "translateY(-50%)",
-              width: 36,
-              height: 36,
-              borderRadius: "50%",
-              background: "rgba(2, 9, 20, 0.75)",
-              color: NEX.text,
-              border: `1px solid ${NEX.cyanSoft}`,
-              fontSize: 18,
-              lineHeight: 1,
-              cursor: "pointer",
-              fontFamily: "inherit",
-              zIndex: 2,
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            ‹
-          </button>
-        )}
-        {index < total - 1 && (
-          <button
-            type="button"
-            onClick={goNext}
-            aria-label="Next layout"
-            data-nex-marketplace-prototype-shop-next
-            style={{
-              position: "absolute",
-              right: 8,
-              top: "50%",
-              transform: "translateY(-50%)",
-              width: 36,
-              height: 36,
-              borderRadius: "50%",
-              background: "rgba(2, 9, 20, 0.75)",
-              color: NEX.text,
-              border: `1px solid ${NEX.cyanSoft}`,
-              fontSize: 18,
-              lineHeight: 1,
-              cursor: "pointer",
-              fontFamily: "inherit",
-              zIndex: 2,
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            ›
-          </button>
-        )}
-      </div>
-
-      {/* Dots indicator */}
-      <div
-        data-nex-marketplace-prototype-shop-dots
-        style={{
-          marginTop: 12,
-          display: "flex",
-          justifyContent: "center",
-          gap: 6,
-          flexWrap: "wrap",
-        }}
-      >
-        {SHOP_LAYOUTS.map((layout, i) => {
-          const inThisCart = inCartKeys.has(
-            cartKey({
-              themeId: entry.themeId,
-              productType: "shop",
-              shopLayoutId: layout.layoutId,
-            }),
-          );
-          return (
-            <button
-              key={layout.layoutId}
-              type="button"
-              onClick={() => goTo(i)}
-              aria-label={`Go to ${layout.label}`}
-              data-nex-marketplace-prototype-shop-dot={i}
-              data-nex-marketplace-prototype-shop-dot-active={i === index ? "true" : "false"}
-              style={{
-                width: i === index ? 20 : 8,
-                height: 8,
-                padding: 0,
-                borderRadius: 4,
-                background: inThisCart
-                  ? NEX.green
-                  : i === index
-                  ? NEX.cyan
-                  : "rgba(0, 175, 255, 0.28)",
-                border: "none",
-                cursor: "pointer",
-                WebkitTapHighlightColor: "transparent",
-                transition: "width 180ms ease, background 180ms ease",
-              }}
-            />
-          );
-        })}
-      </div>
-    </SheetShell>
+        </div>
+      </aside>
+    </div>
   );
 }
