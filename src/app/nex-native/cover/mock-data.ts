@@ -345,3 +345,112 @@ export const PRODUCT_SELLER_MOCK: MockCoverContent = {
     { id: "prod-p13", slug: "product-13", name: "Product Name 13", price_pence: 725000000,  currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-cat3", description: "Short two-line description of what this product is · sellers author their own copy." },
   ],
 };
+
+/**
+ * Owner directive 2026-10-22 · brand-specific shop preview mock for
+ * the NEX Themes Marketplace. When a shop template loads with
+ * `?brand=crispy-chicken` the sealed cover-preview page swaps in this
+ * mock so all 11 shop layouts feel like a chicken restaurant · menu
+ * sections (Burgers / Chicken / Meal Deals) + 18 menu items replace
+ * the generic MARIA_MOCK placeholders. No hotel rooms, no generic
+ * products — just the kind of catalog Crispy Chicken would actually
+ * publish.
+ *
+ * Prototype only · prices are DEMO VALUES in IDR and are NOT the
+ * approved production pricing. The marketplace prototype carries the
+ * same discipline: price fields never commit to a sealed source of
+ * truth until the owner approves them in pricing-config.ts.
+ */
+export const CRISPY_CHICKEN_MOCK: MockCoverContent = {
+  ...MARIA_MOCK,
+  businessName: "Crispy Chicken",
+  tagline: "Hot. Crispy. Yours.",
+  handle: "@crispychicken",
+  atmosphereLine: "Fresh buttermilk brine · hand-breaded · 24-hour marinated chicken",
+  address: "245 W 45th St, New York, NY 10036",
+  countryCode: "US",
+  shippingScope: "local_delivery",
+  isVenue: true,
+  aboutUs:
+    "Crispy Chicken started in a tiny New York kitchen with one obsession · the perfect bite of fried chicken. We brine every piece in buttermilk for 24 hours, hand-bread it in our proprietary seasoning blend, and fry it to the exact second it reaches that golden crackle. Nothing frozen, nothing precooked, no shortcuts.\n\nWhether you're grabbing lunch between meetings or feeding the whole family, every box we hand you is the same chicken we'd serve our own kids. Dine in, grab-and-go, or get it delivered hot to your door — we built this place for people who care about what they eat.\n\nSame story, every store, every day.",
+  paymentMethodLabels: [
+    "💵 Cash on Delivery",
+    "💳 Card at Counter",
+    "📱 QRIS on Delivery",
+  ],
+  ownerName: "Marcus Chen",
+  ownerPosition: "Founder & Head Chef",
+  yearEstablished: 2019,
+  hoursByDay: {
+    mon: { open: "11:00", close: "22:00" },
+    tue: { open: "11:00", close: "22:00" },
+    wed: { open: "11:00", close: "22:00" },
+    thu: { open: "11:00", close: "22:00" },
+    fri: { open: "11:00", close: "23:00" },
+    sat: { open: "11:00", close: "23:00" },
+    sun: { open: "12:00", close: "21:00" },
+  },
+  // Owner directive 2026-10-22 · food-vertical terminology · every
+  // Crispy Chicken shop template now reads "Menu" instead of
+  // "Products" inside the frame · "Add to Order" instead of generic
+  // actions · marketplace chrome around the frame still uses the
+  // universal "Shop" verb.
+  terminology: {
+    catalog_heading: "Menu",
+    catalog_action_label: "Order",
+    primary_action_label: "Order now",
+    section_about_label: "Our story",
+    section_location_label: "Find us",
+    story_eyebrow: "The craft",
+  },
+  sections: [
+    { id: "sec-burgers",    name: "Burgers",    sort_order: 0 },
+    { id: "sec-chicken",    name: "Chicken",    sort_order: 1 },
+    { id: "sec-meal-deals", name: "Meal Deals", sort_order: 2 },
+    { id: "sec-drinks",     name: "Drinks",     sort_order: 3 },
+  ],
+  // Owner directive 2026-10-22 · 24 menu items across 4 sections
+  // (6 per category) so the round variant (3×2, 6 per page) fills
+  // its first page cleanly on every category. Prices in IDR cents.
+  // Rp 45,000 = price_pence 4500000.
+  products: [
+    // ─── Burgers ─────────────────────────────────────────────────
+    { id: "cc-b01", slug: "classic-crispy-burger",   name: "Classic Crispy Burger",    price_pence: 4500000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-burgers",    description: "Buttermilk-fried chicken · lettuce · mayo · toasted brioche." },
+    { id: "cc-b02", slug: "spicy-crispy-burger",     name: "Spicy Crispy Burger",      price_pence: 4800000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-burgers",    description: "Nashville-hot chicken · pickles · slaw · brioche bun." },
+    { id: "cc-b03", slug: "cheese-stack-burger",     name: "Cheese Stack Burger",      price_pence: 5500000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-burgers",    description: "Double crispy fillet · cheddar · onion · signature sauce." },
+    { id: "cc-b04", slug: "bbq-honey-burger",        name: "BBQ Honey Burger",         price_pence: 5200000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-burgers",    description: "Smoked BBQ glaze · honey · crispy onions · brioche." },
+    { id: "cc-b05", slug: "truffle-crispy-burger",   name: "Truffle Crispy Burger",    price_pence: 6500000, currency: "IDR", image_url: null, stock_status: "low_stock", section_id: "sec-burgers",    description: "Truffle aioli · aged cheddar · arugula · house pickles." },
+    { id: "cc-b06", slug: "veggie-crisp-burger",     name: "Veggie Crisp Burger",      price_pence: 4200000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-burgers",    description: "Crispy breaded portobello · smoked paprika mayo · lettuce." },
+    // ─── Chicken ─────────────────────────────────────────────────
+    { id: "cc-c01", slug: "classic-tenders-5",       name: "5-Piece Tenders",          price_pence: 5500000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-chicken",    description: "Five hand-breaded tenders · your choice of dipping sauce." },
+    { id: "cc-c02", slug: "classic-tenders-10",      name: "10-Piece Tenders",         price_pence: 9500000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-chicken",    description: "Ten hand-breaded tenders · two dipping sauces." },
+    { id: "cc-c03", slug: "bucket-6",                name: "6-Piece Bucket",           price_pence: 7500000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-chicken",    description: "Mixed bone-in · thighs, drums, wings · 24-hour brined." },
+    { id: "cc-c04", slug: "bucket-12",               name: "12-Piece Bucket",          price_pence: 12800000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-chicken",    description: "Mixed bone-in · feeds 3–4 · hand-breaded to order." },
+    { id: "cc-c05", slug: "spicy-wings-8",           name: "8-Piece Spicy Wings",      price_pence: 6800000, currency: "IDR", image_url: null, stock_status: "low_stock", section_id: "sec-chicken",    description: "Buffalo · Nashville hot · or honey-sriracha. Pick your heat." },
+    { id: "cc-c06", slug: "boneless-box",            name: "Boneless Box",             price_pence: 5900000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-chicken",    description: "Crispy boneless bites · tossed in your choice of glaze." },
+    // ─── Meal Deals ──────────────────────────────────────────────
+    { id: "cc-m01", slug: "solo-deal",               name: "Solo Deal",                price_pence: 6500000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-meal-deals", description: "3 tenders · fries · drink · dipping sauce." },
+    { id: "cc-m02", slug: "burger-combo",            name: "Burger Combo",             price_pence: 7500000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-meal-deals", description: "Any burger · fries · drink · one side." },
+    { id: "cc-m03", slug: "family-feast",            name: "Family Feast",             price_pence: 18500000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-meal-deals", description: "12-piece bucket · 2 large fries · 4 drinks · 2 sides." },
+    { id: "cc-m04", slug: "date-night-box",          name: "Date Night Box",           price_pence: 12500000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-meal-deals", description: "2 burgers · 2 fries · 2 drinks · shared side." },
+    { id: "cc-m05", slug: "wings-tenders-combo",     name: "Wings + Tenders Combo",    price_pence: 9500000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-meal-deals", description: "4 wings · 4 tenders · fries · 2 dipping sauces." },
+    { id: "cc-m06", slug: "lunch-express",           name: "Lunch Express",            price_pence: 5800000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-meal-deals", description: "Weekday 11am-2pm · 3 tenders · small fries · drink." },
+    // ─── Drinks ─────────────────────────────────────────────────
+    { id: "cc-d01", slug: "soft-drink-large",        name: "Soft Drink · Large",       price_pence: 1800000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-drinks",     description: "Coca-Cola · Sprite · Fanta · free refills in-store." },
+    { id: "cc-d02", slug: "iced-tea",                name: "Fresh Iced Tea",           price_pence: 2200000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-drinks",     description: "Brewed daily · lemon or peach · unsweetened on request." },
+    { id: "cc-d03", slug: "lemonade",                name: "House Lemonade",           price_pence: 2500000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-drinks",     description: "Fresh-squeezed · mint sprig · just the right amount of sweet." },
+    { id: "cc-d04", slug: "milkshake-vanilla",       name: "Vanilla Milkshake",        price_pence: 3800000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-drinks",     description: "Hand-spun · real vanilla · topped with whipped cream." },
+    { id: "cc-d05", slug: "milkshake-chocolate",     name: "Chocolate Milkshake",      price_pence: 3800000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-drinks",     description: "Thick · dark chocolate · topped with whipped cream." },
+    { id: "cc-d06", slug: "bottled-water",           name: "Bottled Water",            price_pence: 1200000, currency: "IDR", image_url: null, stock_status: "in_stock",  section_id: "sec-drinks",     description: "500ml · still or sparkling · locally sourced." },
+  ],
+  services: [
+    { id: "svc-dinein",   name: "Dine In",       fromPrice: "Full menu",      description: "Walk in anytime · counter order · comfy booths · fast turnaround." },
+    { id: "svc-delivery", name: "Local Delivery", fromPrice: "Rp 15k · 30 min", description: "Hot to your door within 30 min · 5km radius · tracker in-app." },
+    { id: "svc-catering", name: "Catering",      fromPrice: "from Rp 850k",   description: "Office lunches · parties · 48h notice · 10+ people." },
+  ],
+  reviews: [
+    { author: "Rachel K.",   body: "The best fried chicken I've had outside of the South. Crispy outside, actually juicy inside, and the Nashville hot has real heat.", stars: 5 },
+    { author: "David M.",    body: "Family of four · Family Feast fed all of us with leftovers. Chicken was still crispy 20 minutes after delivery. Impressive.", stars: 5 },
+    { author: "Priya S.",    body: "The truffle burger is my new regular order. Not greasy, not heavy, actually tastes like truffle. Service is quick too.", stars: 5 },
+  ],
+};

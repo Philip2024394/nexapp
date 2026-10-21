@@ -16,13 +16,33 @@ import {
   COVER_LAYOUT_LABELS,
   isValidCoverLayoutId,
 } from "../../layout-ids";
-import { MARIA_MOCK, PRODUCT_SELLER_MOCK } from "../../mock-data";
+import {
+  CRISPY_CHICKEN_MOCK,
+  MARIA_MOCK,
+  PRODUCT_SELLER_MOCK,
+  type MockCoverContent,
+} from "../../mock-data";
+
+/** Owner directive 2026-10-22 · brand-specific mock registry · the
+ *  NEX Themes Marketplace shop preview passes `?brand=<themeId>` so
+ *  each chat theme (Crispy Chicken, Pink Dream, etc.) renders its
+ *  11 shop templates with brand-fit content (menu items for Crispy
+ *  Chicken, products for Pink Dream, etc.) instead of generic
+ *  MARIA_MOCK. Unknown brand values fall back to MARIA_MOCK silently
+ *  so the sealed path for direct navigation is unaffected. */
+const BRAND_MOCKS: Readonly<Record<string, MockCoverContent>> = {
+  "crispy-chicken": CRISPY_CHICKEN_MOCK,
+};
 import { listThemeEmojis } from "@/lib/nex-native/theme-emoji-service";
 import { PhoneFrame } from "../_phone-frame";
 // Owner-authorised 2026-10-18 · S7 · discreet bottom action bar
 // renders ONLY in full-page preview mode (never when ?embed=1 is on,
 // so mini-phone iframes inside /cover-themes-library stay clean).
 import { CoverActionBar } from "./_cover-action-bar";
+// Owner directive 2026-10-22 · intercept product-card taps when
+// the preview is embedded with `?brand=` so the marketplace parent
+// can open its menu-item sheet instead of the sealed peer-chat flow.
+import { BrandTapBridge } from "./_brand-tap-bridge";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -53,7 +73,24 @@ export default async function CoverLayoutPreview({
   searchParams,
 }: {
   params: Promise<{ layoutId: string }>;
-  searchParams?: Promise<{ theme?: string; embed?: string }>;
+  searchParams?: Promise<{
+    theme?: string;
+    embed?: string;
+    /** Owner directive 2026-10-20 · ?tint=#RRGGBB overrides the theme
+     *  accent on this render only (the Edit Shop Cover editor passes
+     *  this so the preview iframe reflects the user's colour pick
+     *  before any save hits the database). */
+    tint?: string;
+    /** Owner directive 2026-10-20 · ?bg=<url> overrides the theme
+     *  hero wallpaper on this render only. */
+    bg?: string;
+    /** Owner directive 2026-10-22 · ?brand=<themeId> selects a
+     *  brand-specific preview mock from BRAND_MOCKS (e.g.
+     *  crispy-chicken → menu items instead of generic products).
+     *  Unknown values fall back to MARIA_MOCK · the sealed direct-
+     *  navigation path is unaffected. */
+    brand?: string;
+  }>;
 }) {
   const { layoutId } = await params;
   const sp = (await searchParams) ?? {};
@@ -224,11 +261,27 @@ export default async function CoverLayoutPreview({
       )}
 
       <PhoneFrame>
+        {/* Owner directive 2026-10-20 · ?tint= and ?bg= query params
+            override the chat_theme accent + hero image for this render
+            only · lets the Edit Shop Cover editor's preview iframe
+            show the owner's live colour / image pick instantly without
+            a database write. Validation: tint must match the standard
+            #RRGGBB pattern · bg must look like a relative or absolute
+            URL · untrusted / malformed values fall back to the sealed
+            chat_theme defaults. */}
         <CoverThemeSkin
-          accentHex={theme.accent_hex}
+          accentHex={
+            typeof sp.tint === "string" && /^#[0-9A-Fa-f]{6}$/.test(sp.tint)
+              ? sp.tint
+              : theme.accent_hex
+          }
           bubbleRimHex={theme.bubble_rim_hex}
           composerRimHex={theme.composer_rim_hex}
-          wallpaperUrl={theme.hero_image_url}
+          wallpaperUrl={
+            typeof sp.bg === "string" && /^https?:\/\/|^\//.test(sp.bg)
+              ? sp.bg
+              : theme.hero_image_url
+          }
           wallpaperConfig={theme.wallpaper_config}
           themeId={theme.id}
           layoutId={layoutId}
@@ -240,7 +293,17 @@ export default async function CoverLayoutPreview({
               // for Template 03 so the sections tabs read Electronics /
               // Mens Wear / Watches with matching products. Every
               // other template still gets MARIA_MOCK.
-              ...(layoutId === "product" ? PRODUCT_SELLER_MOCK : MARIA_MOCK),
+              //
+              // Owner directive 2026-10-22 · when ?brand=<themeId> is
+              // present AND the id is in BRAND_MOCKS, that brand mock
+              // wins over the layout fallback (so Crispy Chicken shows
+              // Burgers / Chicken / Meal Deals on every layout). Unknown
+              // brand values fall through to the layout fallback above.
+              ...(typeof sp.brand === "string" && BRAND_MOCKS[sp.brand]
+                ? BRAND_MOCKS[sp.brand]
+                : layoutId === "product"
+                ? PRODUCT_SELLER_MOCK
+                : MARIA_MOCK),
               // Bridge ThemeEmoji-B · load emojis for the currently-
               // previewed theme so the composer picker matches. Fails
               // soft to empty (composer falls back to default set).
@@ -263,6 +326,14 @@ export default async function CoverLayoutPreview({
           library mini tiles) skips it entirely · the mini tiles
           stay chrome-free. */}
       {!isEmbedded && <CoverActionBar layoutId={layoutId} />}
+      {/* Owner directive 2026-10-22 · when the preview is embedded
+          with a brand id, intercept product-card clicks and post
+          them to the parent window. The sealed CoverCatalog + its
+          peer-chat navigation are untouched · the bridge only
+          fires inside an iframe with cross-document parent. */}
+      {typeof sp.brand === "string" && sp.brand.length > 0 && (
+        <BrandTapBridge brand={sp.brand} />
+      )}
     </>
   );
 }

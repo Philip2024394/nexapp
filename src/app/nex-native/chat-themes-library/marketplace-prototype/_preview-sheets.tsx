@@ -22,6 +22,7 @@ import type { MarketplaceCatalogEntry } from "./_catalog";
 import { SHOP_LAYOUTS } from "./_catalog";
 import { cartKey } from "./_types";
 import { hexWithAlpha } from "@/app/nex-native/free-chat/_types";
+import { MenuItemSheet } from "./_menu-item-sheet";
 
 // Owner directive 2026-10-21 · shared Price badge · top-right of the
 // preview content area · small rounded corners · translucent navy
@@ -1413,6 +1414,19 @@ export function ShopPreviewSheet({
   // themed detail card at the bottom (layout name + Shop Price +
   // themed Close + themed Add to Cart).
   const [index, setIndex] = React.useState(0);
+  // Owner directive 2026-10-22 · info modal · when the ⓘ button is
+  // tapped a center panel explains what the shopper can customise
+  // after they purchase the template. Reduces pre-purchase
+  // uncertainty · same list across every brand because every shop
+  // template exposes the same editable fields.
+  const [infoOpen, setInfoOpen] = React.useState(false);
+  // Owner directive 2026-10-22 · menu-item sheet · opens when a
+  // product tap arrives via postMessage from the sealed cover-
+  // preview iframe (BrandTapBridge). State carries the tapped
+  // product id · the sheet pulls the full product record from the
+  // brand mock and renders qty picker + Add to Order.
+  const [tappedProductId, setTappedProductId] = React.useState<string | null>(null);
+  const [orderToast, setOrderToast] = React.useState<string | null>(null);
 
   const total = SHOP_LAYOUTS.length;
   const current = SHOP_LAYOUTS[index];
@@ -1451,6 +1465,12 @@ export function ShopPreviewSheet({
       theme: entry.themeId,
       tint: entry.ownerAccentHex ?? entry.accentHex,
       bg: entry.wallpaperUrl,
+      // Owner directive 2026-10-22 · pass the chat theme id as the
+      // brand key so the sealed cover-preview can swap in a brand-
+      // fit mock (Crispy Chicken → Burgers / Chicken / Meal Deals).
+      // Themes without a registered brand mock fall through to the
+      // sealed MARIA_MOCK silently.
+      brand: entry.themeId,
     });
     return `/nex-native/cover/preview/${current.layoutId}?${params.toString()}`;
   }, [
@@ -1471,6 +1491,38 @@ export function ShopPreviewSheet({
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [goPrev, goNext, onClose]);
+
+  // Owner directive 2026-10-22 · listen for product taps forwarded
+  // from the sealed cover-preview iframe (BrandTapBridge). Only
+  // react when the message's brand matches this entry · belt + braces
+  // against unrelated postMessage traffic.
+  React.useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      const data = event.data as unknown;
+      if (
+        data &&
+        typeof data === "object" &&
+        (data as { type?: unknown }).type ===
+          "nex-marketplace:product-tap" &&
+        (data as { brand?: unknown }).brand === entry.themeId &&
+        typeof (data as { productId?: unknown }).productId === "string"
+      ) {
+        setTappedProductId(
+          (data as { productId: string }).productId,
+        );
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [entry.themeId]);
+
+  // Auto-dismiss the honest Add-to-Order toast after 2.4s so it
+  // doesn't linger over the shop template.
+  React.useEffect(() => {
+    if (!orderToast) return;
+    const t = setTimeout(() => setOrderToast(null), 2400);
+    return () => clearTimeout(t);
+  }, [orderToast]);
 
   return (
     <div
@@ -1513,6 +1565,62 @@ export function ShopPreviewSheet({
           zIndex: 0,
         }}
       />
+
+      {/* Owner directive 2026-10-22 · info button · top-right · small
+          translucent gray round button with soft under-glow · opens
+          the "What you can customise" center panel. */}
+      <button
+        type="button"
+        onClick={() => setInfoOpen(true)}
+        aria-label="What you can customise with this template"
+        data-nex-marketplace-prototype-shop-info-btn
+        style={{
+          position: "absolute",
+          top: "calc(env(safe-area-inset-top, 0px) + 14px)",
+          right: 12,
+          width: 26,
+          height: 26,
+          padding: 0,
+          borderRadius: "50%",
+          background: "rgba(255, 255, 255, 0.14)",
+          color: "rgba(255, 255, 255, 0.88)",
+          border: `1px solid rgba(255, 255, 255, 0.22)`,
+          fontSize: 14,
+          fontWeight: 900,
+          lineHeight: 1,
+          fontStyle: "italic",
+          fontFamily: "'Times New Roman', Georgia, serif",
+          cursor: "pointer",
+          zIndex: 3,
+          WebkitTapHighlightColor: "transparent",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backdropFilter: "blur(10px) saturate(140%)",
+          WebkitBackdropFilter: "blur(10px) saturate(140%)",
+          // Under-glow · positive Y offset so the halo sits beneath
+          // the button instead of wrapping it. Soft cyan at low
+          // opacity keeps the chip feeling NEX-native without
+          // dominating the ping/wallpaper above.
+          boxShadow:
+            "0 5px 10px -2px rgba(0, 175, 255, 0.35), 0 2px 4px rgba(0, 0, 0, 0.4)",
+        }}
+      >
+        i
+      </button>
+
+      {/* Owner directive 2026-10-22 · info modal · center panel over
+          the shop preview · explains everything a buyer can edit
+          after purchase. Dismiss via Close button, backdrop tap, or
+          Esc. */}
+      {infoOpen && (
+        <ShopInfoModal
+          brand={entry.displayName}
+          brandId={entry.themeId}
+          accent={themeAccent}
+          onClose={() => setInfoOpen(false)}
+        />
+      )}
 
       {/* Owner directive 2026-10-22 · prev / next layout navigation ·
           high-quality compact badge · chevron-left + center counter
@@ -1710,7 +1818,7 @@ export function ShopPreviewSheet({
               textOverflow: "ellipsis",
             }}
           >
-            {current.label} · Marketplace Price
+            Shop Price idr 23.000
           </h2>
           <span
             data-nex-marketplace-prototype-shop-counter
@@ -1810,6 +1918,418 @@ export function ShopPreviewSheet({
           </button>
         </div>
       </aside>
+
+      {/* Owner directive 2026-10-22 · menu-item bottom sheet · opens
+          when a product tap arrives from the sealed iframe. Only
+          rendered when a tapped product id is set. */}
+      {tappedProductId && (
+        <MenuItemSheet
+          brand={entry.themeId}
+          productId={tappedProductId}
+          accent={themeAccent}
+          wallpaperUrl={entry.wallpaperUrl}
+          onClose={() => setTappedProductId(null)}
+          onAdd={(_productId, qty) => {
+            setTappedProductId(null);
+            setOrderToast(
+              qty > 1
+                ? `Added ${qty} to Cart · prototype`
+                : "Added to Cart · prototype",
+            );
+          }}
+        />
+      )}
+
+      {/* Honest add-to-order toast · the prototype does NOT track
+          menu-item orders · this is a UX preview. */}
+      {orderToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          data-nex-marketplace-prototype-shop-order-toast
+          style={{
+            position: "absolute",
+            left: "50%",
+            bottom: "calc(env(safe-area-inset-bottom, 0px) + 100px)",
+            transform: "translateX(-50%)",
+            padding: "10px 16px",
+            borderRadius: 999,
+            background: "rgba(2, 9, 20, 0.92)",
+            color: NEX.text,
+            fontSize: 12,
+            fontWeight: 700,
+            border: `1px solid ${hexWithAlpha(themeAccent, 0.5)}`,
+            boxShadow: `0 12px 28px -8px rgba(0,0,0,0.7), 0 0 14px -4px ${hexWithAlpha(themeAccent, 0.6)}`,
+            zIndex: 800,
+            maxWidth: "calc(100% - 28px)",
+            textAlign: "center",
+          }}
+        >
+          {orderToast}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Shop info modal ─────────────────────────────────────────────
+//
+// Owner directive 2026-10-22 · pre-purchase "what you can customise"
+// panel · surfaces every editable field the shop template exposes
+// so the buyer knows exactly what they can rewrite / upload once
+// they own the template. Mirrors the live edit surface planned for
+// Phase 2 (seller backend editor).
+
+function ShopInfoModal({
+  brand,
+  brandId,
+  accent,
+  onClose,
+}: {
+  readonly brand: string;
+  readonly brandId: string;
+  readonly accent: string;
+  readonly onClose: () => void;
+}): React.JSX.Element {
+  // Owner directive 2026-10-22 · prototype editor is built for
+  // Crispy Chicken only · other brands show a "coming soon" state
+  // so the panel never links to an unbuilt page.
+  const editorRoutes: Readonly<Record<string, string>> = {
+    "crispy-chicken":
+      "/nex-native/chat-themes-library/marketplace-prototype/editor/crispy-chicken",
+  };
+  const editorHref: string | null = editorRoutes[brandId] ?? null;
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  // Fields grouped by surface area so the buyer can skim and
+  // understand coverage at a glance. Every bullet maps 1:1 to a
+  // field on MockCoverContent (the sealed shop-template content
+  // shape), so the Phase 2 editor can be scaffolded directly from
+  // this list without copy drift.
+  const groups: ReadonlyArray<{
+    readonly title: string;
+    readonly items: ReadonlyArray<string>;
+  }> = [
+    {
+      title: "Identity",
+      items: [
+        "Business name + tagline",
+        "Handle (@yourname) + NEX ID",
+        "Logo portrait + hero wallpaper",
+        "Country flag + online presence",
+      ],
+    },
+    {
+      title: "Menu",
+      items: [
+        "Category toggles (Burgers · Chicken · Meal Deals · Drinks)",
+        "Add / rename / reorder categories",
+        "Menu item name · price · description",
+        "Upload a photo for every item",
+        "In-stock · low-stock · sold-out",
+      ],
+    },
+    {
+      title: "Store info",
+      items: [
+        "Opening Hours (per day of the week)",
+        "Address + Google Maps directions",
+        "Social links (Instagram · TikTok · Facebook · WhatsApp)",
+        "Accepted payment methods + QR code",
+      ],
+    },
+    {
+      title: "Story + extras",
+      items: [
+        "About us body · founder name · year established",
+        "Services (dine-in · delivery · catering)",
+        "Reviews from your customers",
+        "Return policy · events / catering · FAQ",
+        "Gallery photos",
+      ],
+    },
+  ];
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`What you can customise with the ${brand} template`}
+      data-nex-marketplace-prototype-shop-info-modal
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 600,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 18,
+      }}
+    >
+      {/* Backdrop · tap to dismiss. */}
+      <div
+        onClick={onClose}
+        aria-hidden
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "rgba(2, 9, 20, 0.72)",
+          backdropFilter: "blur(6px) saturate(140%)",
+          WebkitBackdropFilter: "blur(6px) saturate(140%)",
+          cursor: "pointer",
+        }}
+      />
+
+      {/* Panel */}
+      <div
+        data-nex-marketplace-prototype-shop-info-panel
+        style={{
+          position: "relative",
+          width: "100%",
+          maxWidth: 360,
+          maxHeight: "calc(100% - 36px)",
+          background: "#061222",
+          border: `1px solid ${hexWithAlpha(NEX.cyan, 0.5)}`,
+          borderRadius: 18,
+          boxShadow: `0 24px 60px -16px rgba(0, 0, 0, 0.8), 0 0 24px -8px ${hexWithAlpha(NEX.cyan, 0.55)}`,
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        {/* Header */}
+        <header
+          style={{
+            padding: "14px 16px 10px",
+            borderBottom: `1px solid rgba(255, 255, 255, 0.06)`,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <div
+            aria-hidden
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: "50%",
+              background: NEX.cyan,
+              color: "#021018",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 18,
+              fontWeight: 900,
+              fontStyle: "italic",
+              fontFamily: "'Times New Roman', Georgia, serif",
+              lineHeight: 1,
+              flexShrink: 0,
+              boxShadow: `0 0 14px -4px ${hexWithAlpha(NEX.cyan, 0.8)}`,
+            }}
+          >
+            i
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: 10,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: NEX.cyan,
+                fontWeight: 800,
+                lineHeight: 1,
+              }}
+            >
+              Your template · fully editable
+            </div>
+            <div
+              style={{
+                marginTop: 3,
+                fontSize: 14,
+                fontWeight: 800,
+                color: NEX.text,
+                letterSpacing: "-0.005em",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              What you can customise
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              width: 28,
+              height: 28,
+              padding: 0,
+              borderRadius: "50%",
+              background: "rgba(255, 255, 255, 0.06)",
+              color: NEX.text,
+              border: "none",
+              fontSize: 18,
+              lineHeight: 1,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              flexShrink: 0,
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            ×
+          </button>
+        </header>
+
+        {/* Body · scrollable list */}
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto",
+            padding: "14px 16px 16px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              fontSize: 12,
+              lineHeight: 1.5,
+              color: NEX.textDim,
+            }}
+          >
+            Once you purchase the <strong style={{ color: NEX.text }}>{brand}</strong> template,
+            every section becomes yours to rewrite · upload your own photos,
+            change the menu, update your hours — all from a single edit
+            screen. The design stays locked, the content is all you.
+          </p>
+
+          {groups.map((g) => (
+            <div
+              key={g.title}
+              data-nex-marketplace-prototype-shop-info-group={g.title}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 10,
+                  letterSpacing: "0.14em",
+                  textTransform: "uppercase",
+                  color: accent,
+                  fontWeight: 800,
+                }}
+              >
+                {g.title}
+              </div>
+              <ul
+                style={{
+                  margin: 0,
+                  padding: 0,
+                  listStyle: "none",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 4,
+                }}
+              >
+                {g.items.map((item) => (
+                  <li
+                    key={item}
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 8,
+                      fontSize: 12,
+                      lineHeight: 1.45,
+                      color: NEX.text,
+                    }}
+                  >
+                    <span
+                      aria-hidden
+                      style={{
+                        flex: "0 0 auto",
+                        width: 14,
+                        height: 14,
+                        marginTop: 1,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: NEX.cyan,
+                      }}
+                    >
+                      <svg
+                        width={12}
+                        height={12}
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={3}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+
+          {editorHref ? (
+            <a
+              href={editorHref}
+              data-nex-marketplace-prototype-shop-info-open-editor
+              style={{
+                marginTop: 4,
+                padding: "12px 14px",
+                borderRadius: 10,
+                background: NEX.cyan,
+                color: "#021018",
+                fontSize: 12,
+                fontWeight: 900,
+                letterSpacing: 0.3,
+                textAlign: "center",
+                textDecoration: "none",
+                boxShadow: `0 6px 16px -6px ${hexWithAlpha(NEX.cyan, 0.75)}`,
+              }}
+            >
+              Open the editor →
+            </a>
+          ) : (
+            <div
+              style={{
+                marginTop: 4,
+                padding: "10px 12px",
+                borderRadius: 10,
+                background: hexWithAlpha(NEX.cyan, 0.08),
+                border: `1px solid ${hexWithAlpha(NEX.cyan, 0.28)}`,
+                fontSize: 11,
+                lineHeight: 1.5,
+                color: NEX.textDim,
+              }}
+            >
+              Edit screen for <strong style={{ color: NEX.text }}>{brand}</strong> ·
+              coming soon. The Crispy Chicken template is the first with a
+              working prototype editor · more brands follow once their mock
+              content is sealed.
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
