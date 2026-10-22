@@ -784,21 +784,14 @@ export function FreeChatComposerClient({
             bottom: "calc(100% + 10px)",
             left: "50%",
             transform: "translateX(-50%)",
-            // Owner directive 2026-10-22 (evening · pass 6) · widened
-            // 300 → 380 so three 100px chrome icons + 2×10 gaps +
-            // 2×12 panel padding (= 344px) all fit inside the panel
-            // instead of being squeezed by the grid. 380 leaves ~18px
-            // of breathing room and still fits inside the sealed
-            // 420px phone frame.
-            width: "min(380px, calc(100% - 20px))",
+            // Owner directive 2026-10-22 (evening · pass 7) · panel
+            // returned to its original 300px cap · icons sized to the
+            // cell + gap tightened so the 6 buttons sit compact.
+            //   cell width = (300 - 2×12 padding - 2×4 gaps) / 3 ≈ 89px
+            //   icon = 84 (comfortably inside the 89px cell)
+            width: "min(300px, calc(100% - 32px))",
             padding: 12,
-            // Owner directive 2026-10-22 (afternoon · follow-up pass 3)
-            // · match the welcome chat bubble treatment:
-            //   bg  = active theme accent @ 12% alpha
-            //   rim = active theme accent @ 42% alpha
-            // Same as peerFill / peerRim derived in _canvas-client.tsx.
-            // Hex alpha short-hand: 1F ≈ 12%, 6B ≈ 42% (both are 2-digit
-            // suffixes appended to a 6-digit hex colour string).
+            // Welcome-bubble chrome: accent @ 12% bg, @ 42% rim.
             background: `${accentHex}1F`,
             border: `1px solid ${accentHex}6B`,
             borderRadius: 14,
@@ -807,7 +800,9 @@ export function FreeChatComposerClient({
             boxShadow: "0 6px 14px -8px rgba(0,0,0,0.6)",
             display: "grid",
             gridTemplateColumns: "repeat(3, 1fr)",
-            gap: 10,
+            // Owner directive 2026-10-22 (evening · pass 7) · tighter
+            // 4px gap pulls the 6 buttons visually closer together.
+            gap: 4,
             zIndex: 20,
           }}
         >
@@ -849,14 +844,13 @@ export function FreeChatComposerClient({
                 aria-hidden
                 draggable={false}
                 style={{
-                  // Owner directive 2026-10-22 (evening · pass 5) · size
-                  // progression: 36 → 56 → 72 → 100 (+40% on the last
-                  // bump). The transparent-background chrome PNGs
-                  // scale cleanly up to this size on retina displays.
-                  // Panel widens naturally in the 3-col grid; label
-                  // stays tucked beneath via negative marginTop.
-                  width: 100,
-                  height: 100,
+                  // Owner directive 2026-10-22 (evening · pass 7) ·
+                  // panel restored to original 300px cap, so the icon
+                  // dropped from 100 → 84 to fit the ~89px grid cell
+                  // comfortably. Still ~2.3× the original 36px first
+                  // pass · reads large and tappable.
+                  width: 84,
+                  height: 84,
                   objectFit: "contain",
                   userSelect: "none",
                   pointerEvents: "none",
