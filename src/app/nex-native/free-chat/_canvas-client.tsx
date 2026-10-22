@@ -501,14 +501,13 @@ function HeroPlanetPassBy({
         draggable={false}
         style={{
           position: "absolute",
-          // Owner directive 2026-10-23 · "keep the same animation but
-          // move up near header area". Start position lifted from the
-          // viewport centre (50%) up near the header (15%) · same
-          // trajectory keyframe, just origin moved. The planet
-          // speck appears just below the header, grows + sweeps
-          // diagonally to the lower-left exactly as before.
-          top: "15%",
-          left: "50%",
+          // Owner directive 2026-10-23 · "move up 30px and move to the
+          // right 30px". Mount origin lifted a further 30px (top: 15%
+          // − 30) and shifted right a further 30px (left: 50% + 30)
+          // from the previous near-header start. Keyframe trajectory
+          // unchanged · same diagonal sweep from the new anchor.
+          top: "calc(15% - 30px)",
+          left: "calc(50% + 30px)",
           width: 240,
           height: 240,
           objectFit: "contain",
