@@ -461,30 +461,38 @@ function HeroPlanetPassBy({
   return (
     <>
       <style>{`
-        /* Dot-to-huge trajectory · starts tiny on the right edge of
-           the hero area, grows + travels diagonally down-left,
-           exits off-screen to the lower-left as a huge sphere
-           (feels like it just flew past the viewer's face). */
+        /* Owner directive 2026-10-23 · "use the same angle as on the
+           planet movement as them [prototype theme-3 page] but on our
+           theme now". Keyframe values copied verbatim from the sealed
+           NexPlanetApproachClient (src/lib/nex-native/nex-planet-
+           approach-client.tsx) · starts as a 0.04 speck at the
+           viewport centre, scales + translates diagonally toward the
+           lower-left, exits off-screen at scale 2.4. The outer
+           translate(-50%, -50%) anchors the planet by its own centre
+           so the scale expands around the sphere instead of its
+           top-left corner. */
         @keyframes nex-hero-planet-pass {
-          0%   { transform: translate3d(85vw,  0vh, 0) scale(0.05) rotate(0deg); opacity: 0; }
-          6%   { opacity: 1; }
-          25%  { transform: translate3d(65vw,  3vh, 0) scale(0.15) rotate(-4deg); opacity: 1; }
-          50%  { transform: translate3d(35vw,  9vh, 0) scale(0.45) rotate(-8deg); opacity: 1; }
-          75%  { transform: translate3d(  0vw, 18vh, 0) scale(1.10) rotate(-14deg); opacity: 1; }
-          90%  { transform: translate3d(-30vw, 28vh, 0) scale(2.20) rotate(-20deg); opacity: 1; }
-          100% { transform: translate3d(-80vw, 40vh, 0) scale(4.00) rotate(-26deg); opacity: 0; }
+          0%   { transform: translate(-50%, -50%) translate3d(   0,   0, 0) scale(0.04); opacity: 0; }
+          8%   { opacity: 0.8; }
+          35%  { transform: translate(-50%, -50%) translate3d( -6vw,  4vh, 0) scale(0.22); opacity: 1; }
+          65%  { transform: translate(-50%, -50%) translate3d(-22vw, 14vh, 0) scale(0.65); opacity: 1; }
+          82%  { transform: translate(-50%, -50%) translate3d(-55vw, 28vh, 0) scale(1.20); opacity: 1; }
+          100% { transform: translate(-50%, -50%) translate3d(-120vw, 60vh, 0) scale(2.40); opacity: 0; }
         }
         @media (prefers-reduced-motion: reduce) {
           [data-nex-hero-planet-ambient],
           [data-nex-hero-planet-oneshot] {
             animation: none !important;
             opacity: 0.5 !important;
-            transform: translate3d(50vw, 8vh, 0) scale(0.6) !important;
+            transform: translate(-50%, -50%) scale(1) !important;
           }
         }
       `}</style>
 
-      {/* Ambient loop · auto-plays while mounted · 22s cycle */}
+      {/* Ambient loop · auto-plays while mounted · 10s cycle so the
+          sealed 6s one-shot trajectory shape stays faithful (we add
+          a 4s gap-opacity-0 tail that lets the planet "disappear"
+          before the next loop starts). */}
       <img
         src={HERO_PLANET_SRC}
         alt=""
@@ -493,27 +501,27 @@ function HeroPlanetPassBy({
         draggable={false}
         style={{
           position: "absolute",
-          top: "6%",
-          left: 0,
-          width: 80,
-          height: 80,
+          top: "50%",
+          left: "50%",
+          width: 240,
+          height: 240,
           objectFit: "contain",
           pointerEvents: "none",
           userSelect: "none",
-          // zIndex 90 · OVER chat bubbles (default) + welcome card +
-          // composer · doctrine "flies through any card past the
-          // camera guy".
+          // zIndex 90 · OVER chat bubbles + welcome card + composer ·
+          // doctrine "flies through any card past the camera guy".
           zIndex: 90,
           willChange: "transform, opacity",
-          transformOrigin: "center center",
+          transformOrigin: "50% 50%",
           animation:
-            "nex-hero-planet-pass 22s cubic-bezier(0.4, 0, 0.3, 1) 1s infinite",
-          filter: `drop-shadow(0 0 24px ${accentHex}66)`,
+            "nex-hero-planet-pass 10s cubic-bezier(0.4, 0, 0.3, 1) 1s infinite",
+          filter: `drop-shadow(0 0 32px ${accentHex}66)`,
         }}
       />
 
-      {/* One-shot · re-mounts via the fireCount key so each tap
-          restarts the keyframe cleanly over the ambient loop. */}
+      {/* One-shot · 6s matches the sealed NexPlanetApproachClient
+          APPROACH_SEC constant · each 🚀 Fire tap re-mounts via the
+          fireCount key so the keyframe restarts cleanly. */}
       {fireCount > 0 && (
         <img
           key={`oneshot-${fireCount}`}
@@ -524,18 +532,18 @@ function HeroPlanetPassBy({
           draggable={false}
           style={{
             position: "absolute",
-            top: "6%",
-            left: 0,
-            width: 100,
-            height: 100,
+            top: "50%",
+            left: "50%",
+            width: 240,
+            height: 240,
             objectFit: "contain",
             pointerEvents: "none",
             userSelect: "none",
             zIndex: 91,
             willChange: "transform, opacity",
-            transformOrigin: "center center",
+            transformOrigin: "50% 50%",
             animation:
-              "nex-hero-planet-pass 7s cubic-bezier(0.4, 0, 0.3, 1) forwards",
+              "nex-hero-planet-pass 6s cubic-bezier(0.4, 0, 0.3, 1) forwards",
             filter: `drop-shadow(0 0 36px ${accentHex}aa)`,
           }}
         />
