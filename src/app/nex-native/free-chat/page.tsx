@@ -368,44 +368,15 @@ export default async function FreeChatPage({
             visual placeholders · no call-engine wiring. */}
         <FreeChatCallCenterDrawerClient />
 
-        {/* ── Guest-only sticky CTA ──
-            Owner directive 2026-10-21 (iteration 32 follow-up) ·
-            footer container (border + panel background) removed · CTA
-            now sits directly on the chat background. */}
-        {isGuest && (
-          <aside
-            data-nex-free-chat-guest-cta
-            style={{
-              padding:
-                "10px 14px calc(env(safe-area-inset-bottom, 0px) + 12px)",
-              flexShrink: 0,
-            }}
-          >
-            <Link
-              href="/nex-native/create-account"
-              data-nex-free-chat-guest-cta-link
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "100%",
-                minHeight: 44,
-                padding: "0 14px",
-                borderRadius: 12,
-                background: NEX.orange,
-                color: NEX.orangeInk,
-                fontSize: 13,
-                fontWeight: 800,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                textDecoration: "none",
-                boxShadow: `0 10px 24px -12px ${NEX.orange}`,
-              }}
-            >
-              Create free NEX
-            </Link>
-          </aside>
-        )}
+        {/* ── Guest-only sticky "Create free NEX" CTA · retired
+            2026-10-22 (afternoon) · owner directive · the create-
+            account URL is now the signed-out root destination, so
+            the sticky CTA on /free-chat is redundant. Any guest
+            that reaches /free-chat (e.g. by direct URL in a share
+            link) can still open the side drawer and tap "Sign in
+            to NEX" there. The isGuest flag is now unused on this
+            page but kept resolved above in case a later surface
+            needs it. */}
       </main>
     </>
   );

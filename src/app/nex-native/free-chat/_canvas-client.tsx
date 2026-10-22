@@ -1638,7 +1638,16 @@ function FirstVisitThemeGrid({
         <ThemeTile
           key={t.id}
           theme={t}
-          isActive={activeThemeId === t.id}
+          // Owner directive 2026-10-22 (afternoon) · when no theme has
+          // been picked yet (activeThemeId null · first-visit state),
+          // the tile flagged isDefault:true glows via the heartbeat
+          // keyframe so the NEX brand tile reads as "already chosen"
+          // without the user having to tap it first.
+          isActive={
+            activeThemeId === null
+              ? t.isDefault === true
+              : activeThemeId === t.id
+          }
           onPress={() => onPick(t)}
         />
       ))}
