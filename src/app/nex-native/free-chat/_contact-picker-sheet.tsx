@@ -16,6 +16,12 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import { MOCK_CONTACTS, type MockContact } from "./_contact-picker-data";
 
+// Owner directive 2026-10-23 (wiring pass) · the sheet now accepts
+// a `contacts` prop so a signed-in surface can inject real rows
+// returned by fetchContactPickerRowsAction. When the prop is omitted
+// the sheet falls back to MOCK_CONTACTS for its original demo
+// behaviour inside /free-chat.
+
 const NEX = {
   bgNavy: "#050F1E",
   bgDeep: "#020914",
@@ -48,6 +54,10 @@ export interface ContactPickerSheetProps {
   // action · forwards the contact's SHOP (not their identity).
   readonly onInvite: (contact: MockContact) => void;
   readonly onShopShare: (contact: MockContact) => void;
+  /** Optional override of the contact list. When omitted the sheet
+   *  renders MOCK_CONTACTS (the sealed /free-chat demo). Signed-in
+   *  surfaces pass real rows loaded via fetchContactPickerRowsAction. */
+  readonly contacts?: ReadonlyArray<MockContact>;
 }
 
 // Owner directive 2026-10-22 (evening · pass 18) · hold-to-send
@@ -62,7 +72,12 @@ export function ContactPickerSheet({
   onClose,
   onInvite,
   onShopShare,
+  contacts,
 }: ContactPickerSheetProps): React.JSX.Element | null {
+  // Resolve the source of truth for which rows this instance renders.
+  // Free-chat composer (default · contacts omitted) → MOCK_CONTACTS.
+  // Signed-in wrapper → real rows loaded from the server.
+  const source: ReadonlyArray<MockContact> = contacts ?? MOCK_CONTACTS;
   const [search, setSearch] = React.useState("");
   // Which card is being held + how far through the 5s the hold has
   // progressed. Only one card at a time (press-and-hold is naturally
@@ -95,7 +110,7 @@ export function ContactPickerSheet({
       setHoldProgress(p);
       if (p >= 1 && !holdCommittedRef.current) {
         holdCommittedRef.current = true;
-        const c = MOCK_CONTACTS.find((x) => x.id === holding.contactId);
+        const c = source.find((x) => x.id === holding.contactId);
         if (c) {
           // Owner directive 2026-10-22 (evening · pass 20) · hold now
           // commits an INVITE (not a share). Keeps the hold ritual +
@@ -148,8 +163,8 @@ export function ContactPickerSheet({
     };
     const pool =
       q.length === 0
-        ? MOCK_CONTACTS
-        : MOCK_CONTACTS.filter((c) => {
+        ? source
+        : source.filter((c) => {
             return (
               c.displayName.toLowerCase().includes(q) ||
               c.nexHandle.toLowerCase().includes(q) ||
@@ -167,7 +182,7 @@ export function ContactPickerSheet({
         return d !== 0 ? d : a.i - b.i;
       })
       .map((entry) => entry.c);
-  }, [search]);
+  }, [search, source]);
 
   // Portal target · the sealed .nex-native-frame element. Resolved
   // on mount so position: absolute children anchor to the phone

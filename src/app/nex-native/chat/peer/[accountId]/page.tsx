@@ -55,6 +55,7 @@ import { E2eDecryptor } from "./_e2e-decryptor";
 import { E2eComposerIntercept } from "./_e2e-composer-intercept";
 import { ArchivePanel } from "./_archive-panel";
 import { FocusedShopSheet } from "./_focused-shop-sheet";
+import { ContactPickerLauncher } from "./_contact-picker-launcher";
 import type {
   SideNavContact,
   PendingInvite,
@@ -971,6 +972,16 @@ export default async function PeerChatPage({
         selfAccountId={session.account.id}
         disabled={isNexOfficialAccount(peer.id)}
       />
+      {/* Owner directive 2026-10-23 (wiring pass · slice 1) · the
+          Contact-picker launcher mounts as a floating button inside
+          the peer-chat shell. Opens the sealed ContactPickerSheet
+          with REAL rows (friend-service + account-service +
+          account-profile-service) and wires the Invite CTA to
+          getOrCreatePeerConversationAsSender so a tap routes to the
+          invitee's /chat/peer/[id] without any mock data. Picked
+          accent matches the peer's chat-theme accent so the button
+          belongs to "their space". */}
+      <ContactPickerLauncher accentHex={themeColours.accent} />
       {/* Phase 3 · auto-opening shop sheet triggered by
           `?focus_product=<id>`. Mounts only when the peer owns a
           business AND the business has live products · otherwise the
