@@ -188,26 +188,31 @@ export function ContactPickerSheet({
         position: "fixed",
         inset: 0,
         zIndex: 1000,
-        // Owner directive 2026-10-22 (evening · pass 22) · full-page
-        // takeover · no backdrop, no center modal · the picker IS the
-        // page. Fills the sealed .nex-native-frame edge-to-edge on
-        // desktop, 100vh on mobile. Reads like a real route change.
+        // Owner directive 2026-10-22 (evening · pass 23) · mobile-
+        // first page constrained to the sealed .nex-native-frame
+        // dimensions. On real phones the panel fills the screen edge
+        // to edge · on desktop the panel sizes to the 420×909 phone
+        // frame + centres horizontally against the NEX stage.
         display: "flex",
         alignItems: "stretch",
         justifyContent: "center",
         padding: 0,
+        // Dark NEX-navy backing fills the gutters on desktop so the
+        // phone-sized panel reads clearly against the stage.
+        background: NEX.bgDeep,
         fontFamily: "Inter, system-ui, sans-serif",
       }}
     >
       <div
         style={{
-          // Owner directive 2026-10-22 (evening · pass 22) · panel is
-          // the whole viewport. No rounded corners, no border shadow,
-          // no drag handle · it's a page, not a sheet. Still slides
-          // up on mount so the transition reads as "navigate forward"
-          // rather than "modal pop".
-          width: "100%",
-          height: "100%",
+          // Owner directive 2026-10-22 (evening · pass 23) · mobile-
+          // first panel · width mirrors the sealed .nex-native-frame
+          // (420 cap on desktop, 100% on mobile phones < 420px).
+          // Height is viewport-driven · caps at the frame's 909px so
+          // tall desktop windows don't stretch the panel beyond the
+          // phone silhouette.
+          width: "min(100%, 420px)",
+          height: "min(100vh, 909px)",
           display: "flex",
           flexDirection: "column",
           background: `linear-gradient(180deg, ${NEX.bgNavy} 0%, ${NEX.bgDeep} 100%)`,
