@@ -18,6 +18,7 @@
 import * as React from "react";
 import { CRISPY_CHICKEN_MOCK } from "@/app/nex-native/cover/mock-data";
 import { MenuItemSheet } from "./_menu-item-sheet";
+import { formatDispatchLabel, type DispatchKind } from "./_types";
 
 const NEX = {
   bg: "#020914",
@@ -99,6 +100,12 @@ export function MenuDrawer({
       (p) => p.section_id === activeSectionId,
     );
   }, [brandMock, activeSectionId]);
+
+  // Owner directive 2026-10-22 · dispatch overlay · read the My Shop
+  // editor's localStorage so cards show "Ready in 15 min" labels when
+  // the owner has set them. Prototype parity · the drawer never writes
+  // · fail-soft to an empty map when storage is missing or unparseable.
+  const dispatchByProductId = useDispatchOverlay(brand);
 
   // Owner directive 2026-10-22 · pagination · 6 cards per page ·
   // prev / next controls + page counter live in the drawer footer.
@@ -465,6 +472,12 @@ export function MenuDrawer({
                   key={product.id}
                   product={product}
                   accent={accent}
+                  dispatchLabel={
+                    formatDispatchLabel(
+                      dispatchByProductId.get(product.id)?.kind ?? null,
+                      dispatchByProductId.get(product.id)?.value ?? null,
+                    )
+                  }
                   onClick={() => setTappedProductId(product.id)}
                 />
               ))}
@@ -638,13 +651,71 @@ export function MenuDrawer({
 
 // ─── Single menu-item card ───────────────────────────────────────
 
+// Owner directive 2026-10-22 · dispatch overlay hook · reads the My
+// Shop editor's localStorage once on mount + whenever focus returns
+// to the drawer. Returns a Map<productId, {kind, value}> that the
+// drawer uses to paint "Ready in 15 min" chips on each card.
+function useDispatchOverlay(
+  brand: string,
+): Map<string, { kind: DispatchKind | null; value: number | null }> {
+  const [overlay, setOverlay] = React.useState<
+    Map<string, { kind: DispatchKind | null; value: number | null }>
+  >(() => new Map());
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const read = () => {
+      try {
+        const raw = window.localStorage.getItem(`nex-mp-editor-${brand}`);
+        if (!raw) {
+          setOverlay(new Map());
+          return;
+        }
+        const parsed = JSON.parse(raw) as {
+          products?: Array<{
+            id?: string;
+            dispatchKind?: string | null;
+            dispatchValue?: number | null;
+          }>;
+        };
+        const next = new Map<
+          string,
+          { kind: DispatchKind | null; value: number | null }
+        >();
+        for (const p of parsed.products ?? []) {
+          if (typeof p?.id !== "string") continue;
+          const kind =
+            p.dispatchKind === "minutes" || p.dispatchKind === "days"
+              ? (p.dispatchKind as DispatchKind)
+              : null;
+          const value =
+            typeof p.dispatchValue === "number" && p.dispatchValue > 0
+              ? p.dispatchValue
+              : null;
+          next.set(p.id, { kind, value });
+        }
+        setOverlay(next);
+      } catch {
+        setOverlay(new Map());
+      }
+    };
+    read();
+    // Re-read when the user navigates back from the editor.
+    const onFocus = () => read();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [brand]);
+  return overlay;
+}
+
 function MenuCard({
   product,
   accent,
+  dispatchLabel,
   onClick,
 }: {
   readonly product: typeof CRISPY_CHICKEN_MOCK.products[number];
   readonly accent: string;
+  readonly dispatchLabel: string | null;
   readonly onClick: () => void;
 }): React.JSX.Element {
   const soldOut = product.stock_status === "sold_out";
@@ -791,6 +862,32 @@ function MenuCard({
       >
         {product.name}
       </div>
+      {/* Owner directive 2026-10-22 · dispatch chip · "Ready in 15 min"
+          or "Dispatch 2 days" · hidden when the owner hasn't set a
+          dispatch time for this item. Honest-null · no placeholder. */}
+      {dispatchLabel && !soldOut && (
+        <div
+          data-nex-marketplace-prototype-menu-drawer-card-dispatch
+          style={{
+            display: "inline-flex",
+            alignSelf: "flex-start",
+            alignItems: "center",
+            gap: 4,
+            padding: "3px 7px",
+            borderRadius: 8,
+            background: hexWithAlpha(accent, 0.14),
+            border: `1px solid ${hexWithAlpha(accent, 0.35)}`,
+            color: accent,
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: 0.3,
+            lineHeight: 1,
+          }}
+        >
+          <span aria-hidden>⏱</span>
+          <span>{dispatchLabel}</span>
+        </div>
+      )}
       {/* Owner directive 2026-10-22 · price row · price on the left,
           round themed magnifier chip on the right (visual-only · the
           parent card owns the tap). Signals "tap to view" without

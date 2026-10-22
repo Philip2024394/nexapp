@@ -1406,6 +1406,722 @@ function WhoWeAreCollapsible({
   );
 }
 
+// Owner directive 2026-10-22 · universal cart icon on every shop
+// template. Reads NEX_CART_STORAGE_KEY from localStorage. Tap opens a
+// theme-tinted slide-in drawer that lists cart items or shows the
+// empty state. Checkout CTA routes to the sealed /nex-native/cart
+// page where sendCartOrderAction posts the order into the owner's
+// chat. Updated 2026-10-22 · in-place drawer replaces direct nav so
+// the buyer stays in the shop while reviewing their cart.
+
+interface CoverCartLineItem {
+  key: string;
+  name: string;
+  image_url: string | null;
+  price_pence: number;
+  currency: string;
+  quantity: number;
+  shop_display_name: string;
+}
+
+function readCartItems(): CoverCartLineItem[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem("nex_cart_v1");
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as {
+      items?: Array<Partial<CoverCartLineItem>>;
+    };
+    return (parsed.items ?? []).flatMap((item): CoverCartLineItem[] => {
+      if (
+        typeof item?.key !== "string" ||
+        typeof item?.name !== "string" ||
+        typeof item?.price_pence !== "number" ||
+        typeof item?.currency !== "string" ||
+        typeof item?.quantity !== "number"
+      ) {
+        return [];
+      }
+      return [
+        {
+          key: item.key,
+          name: item.name,
+          image_url: typeof item.image_url === "string" ? item.image_url : null,
+          price_pence: item.price_pence,
+          currency: item.currency,
+          quantity: item.quantity,
+          shop_display_name:
+            typeof item.shop_display_name === "string"
+              ? item.shop_display_name
+              : "Shop",
+        },
+      ];
+    });
+  } catch {
+    return [];
+  }
+}
+
+function formatCoverPrice(pence: number, currency: string): string {
+  try {
+    const major = pence / 100;
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: currency === "IDR" || currency === "VND" ? 0 : 2,
+    }).format(major);
+  } catch {
+    return `${currency} ${(pence / 100).toFixed(0)}`;
+  }
+}
+
+// Owner directive 2026-10-22 · delivery-aware cart footer. Reads the
+// delivery prototype's localStorage so the drawer footer can show
+// an honest line ("Pickup only", "Confirmed at checkout",
+// "Delivery confirmed at order") based on whether the owner has set
+// their policy. The precise per-zone price is resolved on the sealed
+// /nex-native/cart page where the buyer enters their destination.
+type DeliverySummary =
+  | { kind: "unset"; label: "Delivery confirmed at order" }
+  | { kind: "pickup"; label: "Pickup only" }
+  | { kind: "will-quote"; label: "Confirmed at checkout" };
+
+function readDeliverySummary(): DeliverySummary {
+  if (typeof window === "undefined") {
+    return { kind: "unset", label: "Delivery confirmed at order" };
+  }
+  try {
+    const raw = window.localStorage.getItem(
+      "nex-delivery-prototype-policy-v1",
+    );
+    if (!raw) return { kind: "unset", label: "Delivery confirmed at order" };
+    const parsed = JSON.parse(raw) as {
+      pickupOnly?: boolean;
+      offersBike?: boolean;
+      offersCargo?: boolean;
+      cargoZones?: Array<{ priceIdr?: number }>;
+    };
+    if (parsed.pickupOnly) return { kind: "pickup", label: "Pickup only" };
+    const hasBike = Boolean(parsed.offersBike);
+    const hasCargo =
+      Boolean(parsed.offersCargo) &&
+      Array.isArray(parsed.cargoZones) &&
+      parsed.cargoZones.length > 0;
+    if (hasBike || hasCargo) {
+      return { kind: "will-quote", label: "Confirmed at checkout" };
+    }
+    return { kind: "unset", label: "Delivery confirmed at order" };
+  } catch {
+    return { kind: "unset", label: "Delivery confirmed at order" };
+  }
+}
+
+function CoverCartButton(): React.JSX.Element {
+  const [items, setItems] = React.useState<CoverCartLineItem[]>([]);
+  const [open, setOpen] = React.useState<boolean>(false);
+
+  const refresh = React.useCallback(() => {
+    setItems(readCartItems());
+  }, []);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    refresh();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "nex_cart_v1") refresh();
+    };
+    const onFocus = () => refresh();
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [refresh]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    refresh();
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open, refresh]);
+
+  // Owner directive 2026-10-22 · when the shop template renders inside
+  // the marketplace prototype iframe, the ⓘ info button + layout nav
+  // + detail card live on the OUTER ShopPreviewSheet (parent window)
+  // and would otherwise overlay the cart drawer. PostMessage to the
+  // parent so it can hide those overlays while the drawer is open.
+  // No-op when not in an iframe · production shop pages have no
+  // outer overlay to collide with.
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.parent === window) return;
+    try {
+      window.parent.postMessage(
+        { type: "nex-cover:cart-drawer-visibility", open },
+        "*",
+      );
+    } catch {
+      /* cross-origin block · silent · prototype-side only */
+    }
+  }, [open]);
+
+  const count = items.reduce((acc, i) => acc + i.quantity, 0);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label={count > 0 ? `Cart · ${count} items` : "Cart · empty"}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        data-nex-cover-cart-button
+        style={{
+          position: "absolute",
+          top: "max(env(safe-area-inset-top, 44px), 44px)",
+          right: 20,
+          width: 44,
+          height: 44,
+          borderRadius: 999,
+          background: "rgba(2, 9, 20, 0.72)",
+          border: "1px solid var(--nex-accent-soft)",
+          color: "var(--nex-text)",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
+          boxShadow: "0 6px 16px rgba(0,0,0,0.4)",
+          zIndex: 20,
+          cursor: "pointer",
+          touchAction: "manipulation",
+          WebkitTapHighlightColor: "transparent",
+          fontFamily: "inherit",
+        }}
+      >
+        <svg
+          width={20}
+          height={20}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden
+        >
+          <circle cx={9} cy={20} r={1.2} />
+          <circle cx={18} cy={20} r={1.2} />
+          <path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.5L21 8H6" />
+        </svg>
+        {count > 0 && (
+          <span
+            aria-hidden
+            style={{
+              position: "absolute",
+              top: -4,
+              right: -4,
+              minWidth: 20,
+              height: 20,
+              padding: "0 5px",
+              borderRadius: 999,
+              background: "var(--nex-accent)",
+              color: "#031018",
+              fontSize: 10,
+              fontWeight: 900,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              lineHeight: 1,
+              boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+            }}
+          >
+            {count > 99 ? "99+" : count}
+          </span>
+        )}
+      </button>
+      {open && (
+        <CoverCartDrawer
+          items={items}
+          onClose={() => setOpen(false)}
+          onRefresh={refresh}
+        />
+      )}
+    </>
+  );
+}
+
+function CoverCartDrawer({
+  items,
+  onClose,
+  onRefresh,
+}: {
+  readonly items: readonly CoverCartLineItem[];
+  readonly onClose: () => void;
+  readonly onRefresh: () => void;
+}): React.JSX.Element {
+  // Resolve the delivery summary from the delivery-prototype policy
+  // every time the drawer opens · if the owner updates their policy
+  // mid-session the drawer picks up the change on next open.
+  const [delivery, setDelivery] = React.useState<DeliverySummary>(() =>
+    readDeliverySummary(),
+  );
+  React.useEffect(() => {
+    setDelivery(readDeliverySummary());
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "nex-delivery-prototype-policy-v1") {
+        setDelivery(readDeliverySummary());
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+  const subtotalByCurrency = React.useMemo(() => {
+    const map = new Map<string, number>();
+    for (const it of items) {
+      map.set(
+        it.currency,
+        (map.get(it.currency) ?? 0) + it.price_pence * it.quantity,
+      );
+    }
+    return Array.from(map.entries());
+  }, [items]);
+
+  const removeItem = React.useCallback(
+    (key: string) => {
+      if (typeof window === "undefined") return;
+      try {
+        const raw = window.localStorage.getItem("nex_cart_v1");
+        if (!raw) return;
+        const parsed = JSON.parse(raw) as {
+          items?: Array<{ key?: string }>;
+        } & Record<string, unknown>;
+        const next = {
+          ...parsed,
+          items: (parsed.items ?? []).filter((i) => i?.key !== key),
+        };
+        window.localStorage.setItem("nex_cart_v1", JSON.stringify(next));
+        onRefresh();
+      } catch {
+        /* storage denied · silent */
+      }
+    },
+    [onRefresh],
+  );
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Shopping cart"
+      data-nex-cover-cart-drawer
+      style={{
+        position: "fixed",
+        inset: 0,
+        // Owner directive 2026-10-22 · explicit dvh so the drawer
+        // panel's children (header + scrollable body + footer) can
+        // size against a known viewport height. 100dvh collapses
+        // with the mobile browser chrome correctly so the footer
+        // never hides below the fold.
+        height: "100dvh",
+        zIndex: 100,
+        display: "flex",
+        justifyContent: "flex-end",
+      }}
+    >
+      {/* Backdrop · tap to close */}
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Close cart"
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "rgba(2, 9, 20, 0.65)",
+          border: "none",
+          padding: 0,
+          cursor: "pointer",
+          backdropFilter: "blur(2px)",
+          WebkitBackdropFilter: "blur(2px)",
+        }}
+      />
+      {/* Panel · slides in from the right · theme-tinted · full dvh
+          so the sticky footer (subtotal + delivery + total +
+          Checkout) is always visible without scrolling. */}
+      <aside
+        style={{
+          position: "relative",
+          width: "min(420px, 90vw)",
+          maxWidth: "100%",
+          height: "100dvh",
+          maxHeight: "100dvh",
+          background: "var(--nex-bg, #050F1E)",
+          borderLeft: "1px solid var(--nex-accent-soft)",
+          boxShadow: "-20px 0 50px rgba(0, 0, 0, 0.5)",
+          display: "flex",
+          flexDirection: "column",
+          color: "var(--nex-text, #F2F5F8)",
+          fontFamily: "inherit",
+          boxSizing: "border-box",
+          // Belt-and-braces so flex children can't overflow and push
+          // the footer out of view.
+          overflow: "hidden",
+        }}
+      >
+        {/* Header · theme eyebrow + close */}
+        <header
+          style={{
+            padding:
+              "calc(env(safe-area-inset-top, 0px) + 16px) 16px 12px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+            borderBottom: "1px solid var(--nex-accent-soft)",
+            background:
+              "linear-gradient(180deg, var(--nex-accent-faint, rgba(0,175,255,0.08)) 0%, transparent 100%)",
+            flexShrink: 0,
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 800,
+                letterSpacing: 0.5,
+                textTransform: "uppercase",
+                color: "var(--nex-accent)",
+              }}
+            >
+              Your cart
+            </div>
+            <div
+              style={{
+                fontSize: 18,
+                fontWeight: 800,
+                letterSpacing: -0.2,
+                marginTop: 2,
+                color: "var(--nex-text, #F2F5F8)",
+              }}
+            >
+              {items.length === 0
+                ? "No items yet"
+                : `${items.length} ${items.length === 1 ? "item" : "items"}`}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close cart"
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 999,
+              background: "transparent",
+              border: "1px solid var(--nex-accent-soft)",
+              color: "var(--nex-text, #F2F5F8)",
+              fontSize: 18,
+              lineHeight: 1,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: "inherit",
+              flexShrink: 0,
+            }}
+          >
+            ×
+          </button>
+        </header>
+
+        {/* Body · items list OR empty state. flex:1 min:0 lets the
+            internal list scroll while the sticky footer stays pinned.
+            Without minHeight:0, a tall items list would push the
+            footer below the viewport. */}
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: "auto",
+            padding: items.length === 0 ? "40px 20px" : "12px 14px",
+            boxSizing: "border-box",
+          }}
+        >
+          {items.length === 0 ? (
+            <div
+              style={{
+                textAlign: "center",
+                color: "var(--nex-text, #F2F5F8)",
+                opacity: 0.75,
+              }}
+            >
+              <div style={{ fontSize: 48, marginBottom: 10 }} aria-hidden>
+                🛒
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>
+                Your cart is empty
+              </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  opacity: 0.7,
+                  lineHeight: 1.5,
+                  maxWidth: 240,
+                  margin: "0 auto",
+                }}
+              >
+                Tap any item in this shop to add it · it'll show up here.
+              </div>
+            </div>
+          ) : (
+            <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 10 }}>
+              {items.map((it) => (
+                <li
+                  key={it.key}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: 10,
+                    borderRadius: 12,
+                    background: "rgba(2, 9, 20, 0.5)",
+                    border: "1px solid var(--nex-accent-soft)",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <div
+                    aria-hidden
+                    style={{
+                      width: 52,
+                      height: 52,
+                      borderRadius: 10,
+                      flexShrink: 0,
+                      background: it.image_url
+                        ? `url(${it.image_url}) center / cover no-repeat, #0A1526`
+                        : "linear-gradient(135deg, var(--nex-accent-faint, rgba(0,175,255,0.14)), #0A1526)",
+                      border: "1px solid var(--nex-accent-soft)",
+                    }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 800,
+                        color: "var(--nex-text, #F2F5F8)",
+                        lineHeight: 1.3,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {it.name}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "var(--nex-accent)",
+                        marginTop: 2,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {it.quantity} × {formatCoverPrice(it.price_pence, it.currency)}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeItem(it.key)}
+                    aria-label={`Remove ${it.name}`}
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: 999,
+                      background: "transparent",
+                      border: "1px solid rgba(255, 51, 85, 0.4)",
+                      color: "#FF3355",
+                      fontSize: 16,
+                      cursor: "pointer",
+                      flexShrink: 0,
+                      lineHeight: 1,
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Footer · subtotal · delivery · total · checkout. Delivery
+            row is honest · if the owner has set a policy the drawer
+            says "Pickup only" or "Confirmed at checkout"; if nothing
+            is set yet it says "Delivery confirmed at order" so the
+            buyer knows the owner will reach out to confirm. */}
+        <footer
+          style={{
+            padding:
+              "14px 16px calc(env(safe-area-inset-bottom, 0px) + 14px)",
+            borderTop: "1px solid var(--nex-accent-soft)",
+            background:
+              "linear-gradient(0deg, var(--nex-accent-faint, rgba(0,175,255,0.08)) 0%, transparent 100%)",
+            display: "grid",
+            gap: 10,
+            flexShrink: 0,
+            boxSizing: "border-box",
+          }}
+        >
+          {/* Owner directive 2026-10-22 · footer summary always renders
+              (even when cart is empty) so the owner can review the
+              buyer's checkout layout while deciding on the shop template
+              flow. Subtotal shows "—" when empty; delivery row reflects
+              the owner's declared policy so they can see what the buyer
+              will read before paying. */}
+          <div style={{ display: "grid", gap: 6 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "baseline",
+                fontSize: 13,
+                color: "var(--nex-text, #F2F5F8)",
+                opacity: 0.8,
+              }}
+            >
+              <span>Subtotal</span>
+              <span
+                style={{
+                  fontSize: 14,
+                  fontWeight: 800,
+                  color: "var(--nex-text, #F2F5F8)",
+                  letterSpacing: -0.2,
+                }}
+              >
+                {subtotalByCurrency.length === 0
+                  ? "—"
+                  : subtotalByCurrency
+                      .map(([currency, cents]) =>
+                        formatCoverPrice(cents, currency),
+                      )
+                      .join(" · ")}
+              </span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "baseline",
+                fontSize: 13,
+                color: "var(--nex-text, #F2F5F8)",
+                opacity: 0.8,
+              }}
+            >
+              <span>Delivery</span>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color:
+                    delivery.kind === "pickup"
+                      ? "var(--nex-accent)"
+                      : "var(--nex-text, #F2F5F8)",
+                  opacity: delivery.kind === "pickup" ? 1 : 0.75,
+                }}
+              >
+                {delivery.label}
+              </span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "baseline",
+                fontSize: 13,
+                color: "var(--nex-text, #F2F5F8)",
+                paddingTop: 6,
+                borderTop: "1px dashed var(--nex-accent-soft)",
+              }}
+            >
+              <span style={{ fontWeight: 800 }}>Total</span>
+              <span
+                style={{
+                  fontSize: 16,
+                  fontWeight: 900,
+                  color: "var(--nex-accent)",
+                  letterSpacing: -0.2,
+                }}
+              >
+                {subtotalByCurrency.length === 0
+                  ? "—"
+                  : subtotalByCurrency
+                      .map(([currency, cents]) =>
+                        formatCoverPrice(cents, currency),
+                      )
+                      .join(" · ")}
+                {items.length > 0 &&
+                (delivery.kind === "will-quote" ||
+                  delivery.kind === "unset")
+                  ? " + delivery"
+                  : ""}
+              </span>
+            </div>
+          </div>
+          <a
+            href="/nex-native/cart"
+            aria-disabled={items.length === 0}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: 48,
+              padding: "0 16px",
+              borderRadius: 12,
+              background:
+                items.length === 0
+                  ? "rgba(255, 255, 255, 0.08)"
+                  : "var(--nex-accent, #00AFFF)",
+              color: items.length === 0 ? "rgba(255,255,255,0.5)" : "#031018",
+              textDecoration: "none",
+              fontSize: 14,
+              fontWeight: 900,
+              letterSpacing: 0.3,
+              boxShadow:
+                items.length === 0
+                  ? "none"
+                  : "0 8px 20px -8px var(--nex-accent-glow, rgba(0,175,255,0.6))",
+              pointerEvents: items.length === 0 ? "none" : "auto",
+              fontFamily: "inherit",
+            }}
+          >
+            {items.length === 0 ? "Add items to checkout" : "Checkout →"}
+          </a>
+          <div
+            style={{
+              fontSize: 10,
+              color: "var(--nex-text, #F2F5F8)",
+              opacity: 0.55,
+              lineHeight: 1.5,
+              textAlign: "center",
+            }}
+          >
+            Your order posts to the shop's chat · owner confirms stock
+            and dispatch before you pay.
+          </div>
+        </footer>
+      </aside>
+    </div>
+  );
+}
+
 function CoverPage({ children }: { children: React.ReactNode }): React.JSX.Element {
   return (
     <div
@@ -1426,6 +2142,13 @@ function CoverPage({ children }: { children: React.ReactNode }): React.JSX.Eleme
         paddingBottom: "calc(env(safe-area-inset-bottom, 0) + 96px)",
       }}
     >
+      {/* Owner directive 2026-10-22 · cart icon on every shop template
+          header · reads live cart count from localStorage · routes to
+          the sealed /nex-native/cart checkout page where
+          sendCartOrderAction posts the order into the owner's chat.
+          Floating top-right so it sits above the identity badge
+          without disturbing any sealed layout spacing. */}
+      <CoverCartButton />
       {children}
     </div>
   );

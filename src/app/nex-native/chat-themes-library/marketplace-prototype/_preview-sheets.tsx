@@ -25,6 +25,80 @@ import { hexWithAlpha } from "@/app/nex-native/free-chat/_types";
 import { MenuItemSheet } from "./_menu-item-sheet";
 import { MenuDrawer } from "./_menu-drawer";
 import { JokerKeypad } from "@/app/nex-native/chat-standard/_joker-keypad";
+import { CRISPY_CHICKEN_MOCK } from "@/app/nex-native/cover/mock-data";
+
+// Owner directive 2026-10-22 · persist menu-item adds into the
+// production cart key (nex_cart_v1) so the CoverCartButton in every
+// shop template cover (src/app/nex-native/cover/layouts.tsx) picks
+// them up on its next refresh. Prototype → prod bridge: writes the
+// same NexCartItem shape the real cart-service expects, scoped to
+// the current brand so each shop keeps its own line items.
+function persistMenuItemToCart(
+  entry: MarketplaceCatalogEntry,
+  productId: string,
+  qty: number,
+): void {
+  if (typeof window === "undefined") return;
+  const brandMock =
+    entry.themeId === "crispy-chicken" ? CRISPY_CHICKEN_MOCK : null;
+  if (!brandMock) return;
+  const product = brandMock.products.find((p) => p.id === productId);
+  if (!product) return;
+  try {
+    const raw = window.localStorage.getItem("nex_cart_v1");
+    const parsed = raw
+      ? (JSON.parse(raw) as {
+          items?: Array<{ key?: string; quantity?: number; shop_id?: string }>;
+          [key: string]: unknown;
+        })
+      : { items: [] };
+    const items = Array.isArray(parsed.items) ? [...parsed.items] : [];
+    const key = `${entry.themeId}:${product.id}`;
+    const existingIdx = items.findIndex((i) => i?.key === key);
+    if (existingIdx >= 0) {
+      const existing = items[existingIdx];
+      items[existingIdx] = {
+        ...existing,
+        quantity: (existing?.quantity ?? 1) + qty,
+      };
+    } else {
+      items.push({
+        key,
+        kind: "menu_item",
+        id: product.id,
+        shop_id: entry.themeId,
+        shop_slug: entry.themeId,
+        shop_owner_account_id: `prototype-owner-${entry.themeId}`,
+        shop_display_name: entry.displayName,
+        name: product.name,
+        price_pence: product.price_pence,
+        currency: product.currency,
+        image_url: product.image_url ?? null,
+        quantity: qty,
+        variants: [],
+        added_at: Date.now(),
+      } as Record<string, unknown>);
+    }
+    const next = { ...parsed, items };
+    window.localStorage.setItem("nex_cart_v1", JSON.stringify(next));
+    // Nudge same-window listeners (storage event only fires across
+    // tabs). CoverCartButton listens for storage AND focus · we
+    // dispatch a synthetic storage event here so iframe + parent
+    // consumers refresh immediately.
+    try {
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: "nex_cart_v1",
+          newValue: JSON.stringify(next),
+        }),
+      );
+    } catch {
+      /* StorageEvent constructor missing · older webviews · fall through */
+    }
+  } catch {
+    /* storage denied · prototype cart stays session-only */
+  }
+}
 
 // Owner directive 2026-10-22 · diamond-standard preload pass · while
 // a viewer sits on the Theme or Intro sheet, warm the browser cache
@@ -350,15 +424,19 @@ export function ThemePreviewSheet({
   );
 
   const handleMenuAdd = React.useCallback(
-    (_productId: string, qty: number) => {
+    (productId: string, qty: number) => {
+      // Owner directive 2026-10-22 · persist to nex_cart_v1 so the
+      // cover template's CoverCartButton + drawer show the counter.
+      // In-component menuCartCount stays as a local right-dock badge.
+      persistMenuItemToCart(entry, productId, qty);
       setMenuCartCount((prev) => prev + qty);
       setMenuCartToast(
         qty > 1
-          ? `Added ${qty} to Cart · prototype`
-          : "Added to Cart · prototype",
+          ? `Added ${qty} to Cart`
+          : "Added to Cart",
       );
     },
-    [],
+    [entry],
   );
 
   // Toast auto-dismiss.
@@ -2255,6 +2333,30 @@ export function ShopPreviewSheet({
     return () => window.removeEventListener("message", handler);
   }, [entry.themeId]);
 
+  // Owner directive 2026-10-22 · when the cart drawer opens inside
+  // the iframe (CoverCartDrawer in cover/layouts.tsx) it posts
+  // "nex-cover:cart-drawer-visibility". We hide the info button +
+  // detail card + layout nav so the buyer sees a clean theme behind
+  // the drawer instead of these outer overlays bleeding through.
+  const [coverCartDrawerOpen, setCoverCartDrawerOpen] =
+    React.useState<boolean>(false);
+  React.useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      const data = event.data as unknown;
+      if (
+        data &&
+        typeof data === "object" &&
+        (data as { type?: unknown }).type ===
+          "nex-cover:cart-drawer-visibility" &&
+        typeof (data as { open?: unknown }).open === "boolean"
+      ) {
+        setCoverCartDrawerOpen(Boolean((data as { open: boolean }).open));
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []);
+
   // Auto-dismiss the honest Add-to-Order toast after 2.4s so it
   // doesn't linger over the shop template.
   React.useEffect(() => {
@@ -2305,46 +2407,52 @@ export function ShopPreviewSheet({
         }}
       />
 
-      {/* Owner directive 2026-10-22 · info button · dropped below
-          the prev/next nav badge · tucked away from the screen edge ·
-          black round chip with a red italic ⓘ · opens the "What you
-          can customise" center panel. */}
-      <button
-        type="button"
-        onClick={() => setInfoOpen(true)}
-        aria-label="What you can customise with this template"
-        data-nex-marketplace-prototype-shop-info-btn
-        style={{
-          position: "absolute",
-          top: "calc(env(safe-area-inset-top, 0px) + 64px)",
-          right: 22,
-          width: 28,
-          height: 28,
-          padding: 0,
-          borderRadius: "50%",
-          background: "#000000",
-          color: "#DC2626",
-          border: "1px solid rgba(255, 255, 255, 0.14)",
-          fontSize: 16,
-          fontWeight: 900,
-          lineHeight: 1,
-          fontStyle: "italic",
-          fontFamily: "'Times New Roman', Georgia, serif",
-          cursor: "pointer",
-          zIndex: 3,
-          WebkitTapHighlightColor: "transparent",
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          // Under-glow · soft red halo sits beneath the chip so the
-          // info icon reads as hot but the chip body stays matte
-          // black on top of the shop wallpaper.
-          boxShadow:
-            "0 5px 10px -2px rgba(220, 38, 38, 0.4), 0 2px 4px rgba(0, 0, 0, 0.5)",
-        }}
-      >
-        i
-      </button>
+      {/* Owner directive 2026-10-22 · info button · owner-facing hint
+          for first-time shop setup ("What you can customise"). Moved
+          down from the top-right header so the universal cart icon
+          (CoverCartButton in cover/layouts.tsx) owns the top-right
+          slot across every shop template. Sits below the shop's
+          identity badge so it doesn't overlap the cart or compete
+          with the header actions. Future gating: hide for returning
+          owners / non-owners once we wire shop-setup state. */}
+      {!coverCartDrawerOpen && (
+        <button
+          type="button"
+          onClick={() => setInfoOpen(true)}
+          aria-label="What you can customise with this template"
+          data-nex-marketplace-prototype-shop-info-btn
+          style={{
+            position: "absolute",
+            top: "calc(env(safe-area-inset-top, 0px) + 170px)",
+            right: 22,
+            width: 28,
+            height: 28,
+            padding: 0,
+            borderRadius: "50%",
+            background: "#000000",
+            color: "#DC2626",
+            border: "1px solid rgba(255, 255, 255, 0.14)",
+            fontSize: 16,
+            fontWeight: 900,
+            lineHeight: 1,
+            fontStyle: "italic",
+            fontFamily: "'Times New Roman', Georgia, serif",
+            cursor: "pointer",
+            zIndex: 3,
+            WebkitTapHighlightColor: "transparent",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            // Under-glow · soft red halo sits beneath the chip so the
+            // info icon reads as hot but the chip body stays matte
+            // black on top of the shop wallpaper.
+            boxShadow:
+              "0 5px 10px -2px rgba(220, 38, 38, 0.4), 0 2px 4px rgba(0, 0, 0, 0.5)",
+          }}
+        >
+          i
+        </button>
+      )}
 
       {/* Owner directive 2026-10-22 · info modal · center panel over
           the shop preview · explains everything a buyer can edit
@@ -2362,7 +2470,10 @@ export function ShopPreviewSheet({
       {/* Owner directive 2026-10-22 · prev / next layout navigation ·
           high-quality compact badge · chevron-left + center counter
           + chevron-right · themed rim + glow matches the detail
-          card. Floats top-centre of the sheet. */}
+          card. Floats top-centre of the sheet. Hidden while the cart
+          drawer is open so the buyer sees a clean shop template behind
+          the drawer. */}
+      {!coverCartDrawerOpen && (
       <div
         data-nex-marketplace-prototype-shop-nav
         style={{
@@ -2508,13 +2619,16 @@ export function ShopPreviewSheet({
           </svg>
         </button>
       </div>
+      )}
 
       {/* Owner directive 2026-10-21 · floating details card restored
           · same shape as Theme + Intro · themed rim + outer glow ·
           layout name + Shop Price + themed Close + Add to Cart in
           theme accent · red cart-count badge on the Add to Cart
           button so the shopper always sees how many items are
-          already in the cart. */}
+          already in the cart. Hidden while cart drawer is open so
+          the buyer sees a clean theme behind the drawer. */}
+      {!coverCartDrawerOpen && (
       <aside
         data-nex-marketplace-prototype-shop-detail-card
         style={{
@@ -2655,6 +2769,7 @@ export function ShopPreviewSheet({
           </button>
         </div>
       </aside>
+      )}
 
       {/* Owner directive 2026-10-22 · menu-item bottom sheet · opens
           when a product tap arrives from the sealed iframe. Only
@@ -2669,12 +2784,17 @@ export function ShopPreviewSheet({
           accent={themeAccent}
           wallpaperUrl={entry.wallpaperUrl}
           onClose={() => setTappedProductId(null)}
-          onAdd={(_productId, qty) => {
+          onAdd={(productId, qty) => {
+            // Owner directive 2026-10-22 · persist to nex_cart_v1
+            // so the shop template's CoverCartButton + drawer show
+            // the count. Writes a NexCartItem-shape row scoped to
+            // this brand.
+            persistMenuItemToCart(entry, productId, qty);
             setTappedProductId(null);
             setOrderToast(
               qty > 1
-                ? `Added ${qty} to Cart · prototype`
-                : "Added to Cart · prototype",
+                ? `Added ${qty} to Cart`
+                : "Added to Cart",
             );
           }}
           onAskSeller={(_productId) => {

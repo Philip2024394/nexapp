@@ -10,6 +10,7 @@ import * as React from "react";
 import Link from "next/link";
 import { CRISPY_CHICKEN_MOCK } from "@/app/nex-native/cover/mock-data";
 import { MARKETPLACE_CATALOG } from "../../_catalog";
+import { formatDispatchLabel } from "../../_types";
 
 const NEX = {
   bg: "#020914",
@@ -194,6 +195,13 @@ function computeDiscountedAmount(amount: number, pct: number): number {
 
 type StockStatus = "in_stock" | "low_stock" | "sold_out";
 
+/** Owner directive 2026-10-22 · dispatch time per product. Food
+ *  defaults to minutes · physical products to days. Shared formatter
+ *  `formatDispatchLabel` lives in _types.ts so all display sites
+ *  (menu drawer card · menu-item sheet · future shop template) stay
+ *  consistent. Honest-null when seller leaves it unset. */
+type DispatchKind = "minutes" | "days";
+
 interface EditableProduct {
   id: string;
   sectionId: string;
@@ -207,6 +215,8 @@ interface EditableProduct {
   discountPercent: number; // 0-50 (0 = no discount)
   delivers: boolean;
   images: string[];
+  dispatchKind: DispatchKind | null;
+  dispatchValue: number | null;
 }
 
 interface EditableSection {
@@ -329,6 +339,11 @@ function baselineFromBrand(brandId: string): EditableContent | null {
       discountPercent: 0,
       delivers: true,
       images: [],
+      // Owner directive 2026-10-22 · Crispy Chicken is a restaurant ·
+      // every item defaults to a 15-minute prep window. Owner can edit
+      // per-item in the form below.
+      dispatchKind: "minutes" as DispatchKind,
+      dispatchValue: 15,
     })),
   };
 }
@@ -350,6 +365,8 @@ function hydrateProduct(p: Partial<EditableProduct>): EditableProduct {
     discountPercent: p.discountPercent ?? 0,
     delivers: p.delivers ?? true,
     images: p.images ?? [],
+    dispatchKind: p.dispatchKind ?? null,
+    dispatchValue: p.dispatchValue ?? null,
   };
 }
 
@@ -369,6 +386,35 @@ export function MyShopClient({
   const [toast, setToast] = React.useState<string | null>(null);
   const [filterSectionId, setFilterSectionId] =
     React.useState<string | null>(null);
+  // Owner directive 2026-10-22 · delivery/pickup toggle at the top of
+  // My Shop · captures the policy intent in one tap per the Delivery
+  // Pricing Doctrine 2026-10-22 Surface 1. When true, a secondary CTA
+  // routes the owner to /nex-native/delivery-prototype to set prices.
+  // Prototype persists under its own localStorage key so this toggle
+  // can graduate to a real `nex_business.offers_delivery` column
+  // without colliding with the shop content.
+  const deliveryToggleKey = `nex-mp-delivery-toggle-${brandId}`;
+  const [offersDelivery, setOffersDelivery] = React.useState<boolean>(true);
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(deliveryToggleKey);
+      if (raw !== null) setOffersDelivery(raw === "true");
+    } catch {
+      /* corrupt · keep default */
+    }
+  }, [deliveryToggleKey]);
+  const updateOffersDelivery = React.useCallback(
+    (next: boolean) => {
+      setOffersDelivery(next);
+      try {
+        window.localStorage.setItem(deliveryToggleKey, String(next));
+      } catch {
+        /* storage denied · session-only */
+      }
+    },
+    [deliveryToggleKey],
+  );
 
   // Hydrate on mount.
   React.useEffect(() => {
@@ -532,6 +578,7 @@ export function MyShopClient({
             {content.products.length === 1 ? "" : "s"}
           </h1>
         </div>
+        <MyShopCartPreview accent={accent} />
         <Link
           href="/nex-native/chat-themes-library"
           aria-label="Back to marketplace"
@@ -585,6 +632,132 @@ export function MyShopClient({
             setEditingId(null);
           }}
         />
+      </div>
+
+      {/* ─── Delivery setup toggle · Phase A of Delivery Pricing Doctrine
+             2026-10-22 · captures the policy intent in one tap. "I deliver"
+             → secondary CTA routes to /nex-native/delivery-prototype to set
+             prices. "Pickup only" → status badge, no CTA. ─── */}
+      <div
+        data-nex-mp-my-shop-delivery-toggle
+        style={{
+          margin: "12px 14px 0",
+          padding: 12,
+          borderRadius: 12,
+          background: offersDelivery
+            ? "rgba(0, 175, 255, 0.08)"
+            : "rgba(255, 114, 0, 0.08)",
+          border: offersDelivery
+            ? `1px solid rgba(0, 175, 255, 0.3)`
+            : `1px solid rgba(255, 114, 0, 0.3)`,
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: 0.4,
+            textTransform: "uppercase",
+            color: offersDelivery ? NEX.cyan : NEX.orange,
+            marginBottom: 8,
+          }}
+        >
+          How do customers get their orders?
+        </div>
+        <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+          <button
+            type="button"
+            onClick={() => updateOffersDelivery(true)}
+            data-nex-mp-my-shop-delivery-choice="deliver"
+            style={{
+              flex: 1,
+              minHeight: 42,
+              padding: "0 10px",
+              borderRadius: 10,
+              background: offersDelivery
+                ? NEX.cyan
+                : "rgba(2, 9, 20, 0.5)",
+              border: offersDelivery
+                ? "none"
+                : "1px solid rgba(139, 169, 209, 0.24)",
+              color: offersDelivery ? "#031018" : NEX.textDim,
+              fontSize: 12,
+              fontWeight: 800,
+              letterSpacing: 0.3,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              WebkitTapHighlightColor: "transparent",
+              touchAction: "manipulation",
+            }}
+          >
+            I deliver (bike or cargo)
+          </button>
+          <button
+            type="button"
+            onClick={() => updateOffersDelivery(false)}
+            data-nex-mp-my-shop-delivery-choice="pickup"
+            style={{
+              flex: 1,
+              minHeight: 42,
+              padding: "0 10px",
+              borderRadius: 10,
+              background: !offersDelivery
+                ? NEX.orange
+                : "rgba(2, 9, 20, 0.5)",
+              border: !offersDelivery
+                ? "none"
+                : "1px solid rgba(139, 169, 209, 0.24)",
+              color: !offersDelivery ? "#1A0808" : NEX.textDim,
+              fontSize: 12,
+              fontWeight: 800,
+              letterSpacing: 0.3,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              WebkitTapHighlightColor: "transparent",
+              touchAction: "manipulation",
+            }}
+          >
+            Pickup only
+          </button>
+        </div>
+        {offersDelivery ? (
+          <Link
+            href="/nex-native/delivery-prototype"
+            data-nex-mp-my-shop-delivery-cta
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
+              padding: "10px 12px",
+              borderRadius: 10,
+              background: "rgba(0, 175, 255, 0.14)",
+              border: `1px dashed rgba(0, 175, 255, 0.5)`,
+              color: NEX.cyan,
+              fontSize: 12,
+              fontWeight: 800,
+              letterSpacing: 0.3,
+              textDecoration: "none",
+              fontFamily: "inherit",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            <span>⚡ Set up delivery pricing · 2 min</span>
+            <span aria-hidden style={{ fontSize: 16 }}>→</span>
+          </Link>
+        ) : (
+          <div
+            style={{
+              fontSize: 11,
+              color: NEX.textMute,
+              lineHeight: 1.5,
+            }}
+          >
+            Buyers will see "Pickup only" at checkout · they'll collect
+            from your pickup address.
+          </div>
+        )}
       </div>
 
       {/* ─── Honest banner ─── */}
@@ -652,6 +825,8 @@ export function MyShopClient({
                     promo: patch.promo ?? null,
                     discountPercent: patch.discountPercent ?? 0,
                     delivers: patch.delivers ?? true,
+                    dispatchKind: patch.dispatchKind ?? null,
+                    dispatchValue: patch.dispatchValue ?? null,
                     images: patch.images ?? [],
                   }),
                 ],
@@ -1281,6 +1456,12 @@ function ProductForm({
   const [delivers, setDelivers] = React.useState<boolean>(
     product?.delivers ?? true,
   );
+  const [dispatchKind, setDispatchKind] = React.useState<DispatchKind | null>(
+    product?.dispatchKind ?? "minutes",
+  );
+  const [dispatchValue, setDispatchValue] = React.useState<number | null>(
+    product?.dispatchValue ?? 15,
+  );
   const [images, setImages] = React.useState<string[]>(
     product?.images ?? [],
   );
@@ -1584,6 +1765,21 @@ function ProductForm({
         <DeliveryToggle value={delivers} onChange={setDelivers} accent={accent} />
       </Field>
 
+      {/* Owner directive 2026-10-22 · dispatch time per product · lets
+          buyers see "Ready in 15 min" (food) or "Dispatch 2 days"
+          (physical). Three-way picker: minutes · days · not set. */}
+      <Field label="Dispatch time · when the buyer sees it as ready">
+        <DispatchPicker
+          kind={dispatchKind}
+          value={dispatchValue}
+          onChange={(nextKind, nextValue) => {
+            setDispatchKind(nextKind);
+            setDispatchValue(nextValue);
+          }}
+          accent={accent}
+        />
+      </Field>
+
       <Field label="Promo badge · one per item · appears top-left of the card">
         <select
           value={promo ?? ""}
@@ -1786,6 +1982,8 @@ function ProductForm({
               promo,
               discountPercent,
               delivers,
+              dispatchKind,
+              dispatchValue,
               images,
             })
           }
@@ -1887,6 +2085,145 @@ function DeliveryToggle({
       <span style={{ flex: 1 }}>
         {value ? "Yes · this item delivers" : "Pickup only · no delivery"}
       </span>
+    </div>
+  );
+}
+
+// ─── Dispatch picker · minutes / days / not set ───────────────────
+// Owner directive 2026-10-22 · three-way choice chip + number input ·
+// shows a live preview label so the owner sees exactly what the buyer
+// will read on the card. Honest-null when "Not set" is chosen · the
+// menu drawer and item sheet then render nothing instead of a
+// placeholder.
+
+function DispatchPicker({
+  kind,
+  value,
+  onChange,
+  accent,
+}: {
+  readonly kind: DispatchKind | null;
+  readonly value: number | null;
+  readonly onChange: (nextKind: DispatchKind | null, nextValue: number | null) => void;
+  readonly accent: string;
+}): React.JSX.Element {
+  // Default suggestion when switching kinds · minutes → 15, days → 2.
+  const suggestFor = (k: DispatchKind | null): number | null => {
+    if (k === "minutes") return 15;
+    if (k === "days") return 2;
+    return null;
+  };
+  const previewLabel = formatDispatchLabel(kind, value);
+  const chipStyle = (active: boolean): React.CSSProperties => ({
+    flex: 1,
+    minHeight: 40,
+    padding: "0 10px",
+    borderRadius: 10,
+    background: active ? hexWithAlpha(accent, 0.18) : "rgba(2, 9, 20, 0.5)",
+    border: active ? `1px solid ${accent}` : "1px solid rgba(139, 169, 209, 0.24)",
+    color: active ? accent : NEX.textDim,
+    fontSize: 12,
+    fontWeight: 800,
+    letterSpacing: 0.2,
+    cursor: "pointer",
+    fontFamily: "inherit",
+    WebkitTapHighlightColor: "transparent",
+    touchAction: "manipulation",
+  });
+  return (
+    <div style={{ display: "grid", gap: 10 }}>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button
+          type="button"
+          onClick={() => onChange("minutes", value ?? suggestFor("minutes"))}
+          style={chipStyle(kind === "minutes")}
+          data-nex-mp-my-shop-dispatch-kind="minutes"
+        >
+          Minutes
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange("days", value ?? suggestFor("days"))}
+          style={chipStyle(kind === "days")}
+          data-nex-mp-my-shop-dispatch-kind="days"
+        >
+          Days
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange(null, null)}
+          style={chipStyle(kind === null)}
+          data-nex-mp-my-shop-dispatch-kind="none"
+        >
+          Not set
+        </button>
+      </div>
+      {kind !== null && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "4px 12px",
+            borderRadius: 10,
+            background: "rgba(2, 9, 20, 0.5)",
+            border: "1px solid rgba(139, 169, 209, 0.24)",
+          }}
+        >
+          <input
+            type="number"
+            min={1}
+            max={kind === "minutes" ? 240 : 90}
+            value={value ?? ""}
+            onChange={(e) => {
+              const next = Number(e.currentTarget.value);
+              onChange(kind, Number.isFinite(next) && next > 0 ? next : null);
+            }}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              padding: "8px 0",
+              background: "transparent",
+              border: "none",
+              color: NEX.text,
+              fontSize: 13,
+              fontWeight: 700,
+              outline: "none",
+              fontFamily: "inherit",
+            }}
+          />
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: NEX.textDim,
+              letterSpacing: 0.3,
+              textTransform: "uppercase",
+            }}
+          >
+            {kind === "minutes" ? "min" : value === 1 ? "day" : "days"}
+          </span>
+        </div>
+      )}
+      <div
+        style={{
+          padding: "8px 10px",
+          borderRadius: 8,
+          background: previewLabel
+            ? hexWithAlpha(accent, 0.12)
+            : "rgba(139, 169, 209, 0.08)",
+          border: previewLabel
+            ? `1px dashed ${hexWithAlpha(accent, 0.5)}`
+            : "1px dashed rgba(139, 169, 209, 0.24)",
+          fontSize: 11,
+          color: previewLabel ? accent : NEX.textMute,
+          fontWeight: 700,
+          letterSpacing: 0.3,
+        }}
+      >
+        Buyer sees:{" "}
+        <strong>{previewLabel ?? "(nothing · dispatch not set)"}</strong>
+      </div>
     </div>
   );
 }
@@ -2258,5 +2595,113 @@ function Field({
       </div>
       {children}
     </div>
+  );
+}
+
+// ─── My Shop cart preview · Owner directive 2026-10-22 ──────────────
+// Compact cart affordance in the My Shop header so the owner sees the
+// buyer's cart state as they build their menu. Reads the same nex_cart_v1
+// localStorage the shop-template CoverCartButton reads · stays in sync
+// via storage events. Tap routes to /nex-native/cart (the sealed
+// checkout) so the owner can preview the full flow their customers see.
+function MyShopCartPreview({ accent }: { readonly accent: string }): React.JSX.Element {
+  const [count, setCount] = React.useState<number>(0);
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const read = () => {
+      try {
+        const raw = window.localStorage.getItem("nex_cart_v1");
+        if (!raw) {
+          setCount(0);
+          return;
+        }
+        const parsed = JSON.parse(raw) as {
+          items?: Array<{ quantity?: number }>;
+        };
+        setCount(
+          (parsed.items ?? []).reduce(
+            (acc, i) => acc + (typeof i?.quantity === "number" ? i.quantity : 1),
+            0,
+          ),
+        );
+      } catch {
+        setCount(0);
+      }
+    };
+    read();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "nex_cart_v1") read();
+    };
+    const onFocus = () => read();
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
+  return (
+    <Link
+      href="/nex-native/cart"
+      aria-label={count > 0 ? `Preview cart · ${count} items` : "Preview cart · empty"}
+      title="Preview the buyer cart"
+      data-nex-mp-my-shop-cart-preview
+      style={{
+        position: "relative",
+        width: 36,
+        height: 36,
+        borderRadius: "50%",
+        background: "transparent",
+        color: NEX.text,
+        border: `1px solid ${NEX.cyanSoft}`,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        textDecoration: "none",
+        flexShrink: 0,
+        marginRight: 8,
+      }}
+    >
+      <svg
+        width={18}
+        height={18}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+      >
+        <circle cx={9} cy={20} r={1.2} />
+        <circle cx={18} cy={20} r={1.2} />
+        <path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.5L21 8H6" />
+      </svg>
+      {count > 0 && (
+        <span
+          aria-hidden
+          style={{
+            position: "absolute",
+            top: -4,
+            right: -4,
+            minWidth: 18,
+            height: 18,
+            padding: "0 5px",
+            borderRadius: 999,
+            background: accent,
+            color: "#031018",
+            fontSize: 10,
+            fontWeight: 900,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            lineHeight: 1,
+            boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+          }}
+        >
+          {count > 99 ? "99+" : count}
+        </span>
+      )}
+    </Link>
   );
 }

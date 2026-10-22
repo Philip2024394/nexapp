@@ -15,6 +15,7 @@
 
 import * as React from "react";
 import { CRISPY_CHICKEN_MOCK } from "@/app/nex-native/cover/mock-data";
+import { formatDispatchLabel, type DispatchKind } from "./_types";
 
 const NEX = {
   bg: "#020914",
@@ -107,6 +108,38 @@ export function MenuItemSheet({
         : [];
     } catch {
       return [];
+    }
+  }, [brand, productId]);
+
+  // Owner directive 2026-10-22 · dispatch overlay · reads the same
+  // editor localStorage so the sheet shows "Ready in 15 min" / "Dispatch
+  // 2 days" alongside the price. Honest-null when the owner hasn't set
+  // one · no chip renders.
+  const dispatchLabel = React.useMemo((): string | null => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = window.localStorage.getItem(`nex-mp-editor-${brand}`);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as {
+        products?: Array<{
+          id?: string;
+          dispatchKind?: string | null;
+          dispatchValue?: number | null;
+        }>;
+      };
+      const match = parsed.products?.find((p) => p?.id === productId);
+      if (!match) return null;
+      const kind =
+        match.dispatchKind === "minutes" || match.dispatchKind === "days"
+          ? (match.dispatchKind as DispatchKind)
+          : null;
+      const value =
+        typeof match.dispatchValue === "number" && match.dispatchValue > 0
+          ? match.dispatchValue
+          : null;
+      return formatDispatchLabel(kind, value);
+    } catch {
+      return null;
     }
   }, [brand, productId]);
 
@@ -495,6 +528,33 @@ export function MenuItemSheet({
               {formatIdr(unitCents)}
             </div>
           </div>
+
+          {/* Owner directive 2026-10-22 · dispatch chip · "Ready in
+              15 min" / "Dispatch 2 days" · pulled from editor
+              localStorage · hidden when the owner hasn't set one. */}
+          {dispatchLabel && (
+            <div
+              data-nex-marketplace-prototype-menu-item-dispatch
+              style={{
+                display: "inline-flex",
+                alignSelf: "flex-start",
+                alignItems: "center",
+                gap: 6,
+                padding: "5px 10px",
+                borderRadius: 999,
+                background: hexWithAlpha(accent, 0.14),
+                border: `1px solid ${hexWithAlpha(accent, 0.4)}`,
+                color: accent,
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: 0.3,
+                lineHeight: 1,
+              }}
+            >
+              <span aria-hidden>⏱</span>
+              <span>{dispatchLabel}</span>
+            </div>
+          )}
 
           {/* Description · owner directive 2026-10-22 · hard-clamped
               to 5 lines so the sheet height stays predictable. The

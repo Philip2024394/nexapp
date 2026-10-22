@@ -38,3 +38,24 @@ export function cartKey(item: Pick<CartItem, "themeId" | "productType" | "shopLa
     ? `${item.themeId}::shop::${item.shopLayoutId ?? "default"}`
     : `${item.themeId}::${item.productType}`;
 }
+
+/** Owner directive 2026-10-22 · dispatch time · lets each product
+ *  carry its own prep window so the buyer sees "Ready in 15 min"
+ *  for food or "Dispatch 2 days" for physical goods. Honest-null:
+ *  omit when the seller hasn't declared one · the display sites
+ *  render nothing instead of a placeholder. */
+export type DispatchKind = "minutes" | "days";
+
+export function formatDispatchLabel(
+  kind: DispatchKind | null | undefined,
+  value: number | null | undefined,
+): string | null {
+  if (!kind) return null;
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 1) {
+    return null;
+  }
+  const whole = Math.round(value);
+  if (kind === "minutes") return `Ready in ${whole} min`;
+  if (kind === "days") return whole === 1 ? "Dispatch in 1 day" : `Dispatch ${whole} days`;
+  return null;
+}
