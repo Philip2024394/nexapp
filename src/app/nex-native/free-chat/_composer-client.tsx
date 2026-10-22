@@ -38,33 +38,32 @@ const NEX = {
   orangeInk: "#1A0808",
 };
 
-// Owner directive 2026-10-22 (afternoon · follow-up) · 6-item
+// Owner directive 2026-10-22 (afternoon · follow-up pass 2) · 6-item
 // attachment panel options · all stubs for now. Rename/replace each
 // as the backing feature lands. The `key` is stable so test selectors
 // won't drift when the labels evolve.
 //
-// `requiresShop: true` entries are locked until the signed-in user
-// has a nex_business · a 3D lock badge paints over the glyph and
-// tap fires a "Add a Shop to share products" toast instead of the
-// normal "Coming soon" one.
+// "Product" was dropped from this list on owner directive · business
+// owners already share products via the dedicated bottom shop slider
+// mounted on peer chat, so a redundant Product entry here would be
+// dead for everyone. "Contact" replaces it · universal (every user
+// has contacts) + lines up with the standard chat-app share-user flow.
 const ATTACH_ITEMS: ReadonlyArray<{
   readonly key: string;
   readonly label: string;
   readonly glyph: string;
-  readonly requiresShop?: boolean;
 }> = [
   { key: "camera", label: "Camera", glyph: "📷" },
   { key: "gallery", label: "Gallery", glyph: "🖼️" },
   { key: "document", label: "Document", glyph: "📄" },
   { key: "voice", label: "Voice note", glyph: "🎤" },
   { key: "location", label: "Location", glyph: "📍" },
-  { key: "product", label: "Product", glyph: "🛒", requiresShop: true },
+  { key: "contact", label: "Contact", glyph: "👤" },
 ];
 
 export function FreeChatComposerClient({
   isGuest,
   initialThemeId = null,
-  hasShop = false,
 }: {
   readonly isGuest: boolean;
   /** Owner directive 2026-10-22 · the sealed JokerKeypad recolours
@@ -73,15 +72,6 @@ export function FreeChatComposerClient({
    *  the `nex-free-chat-theme` custom event dispatched by the
    *  sibling canvas client when the user picks a new tile. */
   readonly initialThemeId?: string | null;
-  /** Owner directive 2026-10-22 (afternoon · follow-up) · when
-   *  the signed-in user owns a nex_business row, the "Product"
-   *  attach-panel button unlocks and opens the shop slider. Guests
-   *  + non-business users see the button in a locked state (3D
-   *  lock badge over the glyph) and tapping it fires the "Add a
-   *  Shop to share products" toast. Resolved server-side in
-   *  page.tsx via `effectiveTier(session.account) === "bisnis"`
-   *  OR a direct nex_business existence check. */
-  readonly hasShop?: boolean;
 }): React.JSX.Element {
   const [value, setValue] = React.useState("");
   const [toast, setToast] = React.useState<string | null>(null);
@@ -355,83 +345,42 @@ export function FreeChatComposerClient({
             zIndex: 20,
           }}
         >
-          {ATTACH_ITEMS.map((item) => {
-            const locked = item.requiresShop === true && !hasShop;
-            return (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => {
-                  setAttachOpen(false);
-                  const msg = locked
-                    ? "Add a Shop to share products"
-                    : `${item.label} · coming soon`;
-                  setToast(msg);
-                  window.setTimeout(() => setToast(null), 1800);
-                }}
-                aria-label={locked ? `${item.label} · locked` : item.label}
-                aria-disabled={locked}
-                data-nex-free-chat-composer-attach-item={item.key}
-                data-nex-free-chat-composer-attach-locked={
-                  locked ? "true" : "false"
-                }
-                style={{
-                  position: "relative",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 4,
-                  padding: "10px 4px",
-                  background: locked
-                    ? "rgba(139,169,209,0.06)"
-                    : "rgba(0,175,255,0.08)",
-                  border: `1px solid ${
-                    locked
-                      ? "rgba(139,169,209,0.18)"
-                      : "rgba(0,175,255,0.22)"
-                  }`,
-                  borderRadius: 10,
-                  color: locked ? NEX.textMute : NEX.text,
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: 0.2,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  textAlign: "center",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 20,
-                    lineHeight: 1,
-                    opacity: locked ? 0.45 : 1,
-                  }}
-                  aria-hidden
-                >
-                  {item.glyph}
-                </span>
-                <span>{item.label}</span>
-                {locked && (
-                  <span
-                    aria-hidden
-                    data-nex-free-chat-composer-attach-lock-badge
-                    style={{
-                      position: "absolute",
-                      top: 4,
-                      right: 4,
-                      fontSize: 11,
-                      lineHeight: 1,
-                      filter:
-                        "drop-shadow(0 1px 1px rgba(0,0,0,0.6))",
-                    }}
-                  >
-                    🔒
-                  </span>
-                )}
-              </button>
-            );
-          })}
+          {ATTACH_ITEMS.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => {
+                setAttachOpen(false);
+                setToast(`${item.label} · coming soon`);
+                window.setTimeout(() => setToast(null), 1800);
+              }}
+              aria-label={item.label}
+              data-nex-free-chat-composer-attach-item={item.key}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 4,
+                padding: "10px 4px",
+                background: "rgba(0,175,255,0.08)",
+                border: `1px solid rgba(0,175,255,0.22)`,
+                borderRadius: 10,
+                color: NEX.text,
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: 0.2,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                textAlign: "center",
+              }}
+            >
+              <span style={{ fontSize: 20, lineHeight: 1 }} aria-hidden>
+                {item.glyph}
+              </span>
+              <span>{item.label}</span>
+            </button>
+          ))}
         </div>
       )}
       {toast && (
