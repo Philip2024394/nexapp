@@ -157,6 +157,42 @@ export default function Theme3AnimatedPrototypePage(): React.JSX.Element {
         >
           Prototype · Theme 3 · Animation review
         </div>
+        {/* Owner directive 2026-10-23 · small direct-fire button for
+            the planet-approach cinematic · taps the sealed component's
+            own trigger via DOM selector so the planet fires in one tap
+            (no need to open the ⋮ panel first). Prototype-only
+            convenience · the ⋮ panel + replay path still works for
+            reviewing the full interaction. */}
+        <button
+          type="button"
+          onClick={() => {
+            const el = document.querySelector<HTMLButtonElement>(
+              "[data-nex-planet-approach-trigger]",
+            );
+            el?.click();
+          }}
+          aria-label="Fire planet approach animation"
+          data-nex-animated-theme-3-fire
+          style={{
+            minHeight: 32,
+            padding: "0 12px",
+            borderRadius: 999,
+            background: THEME_3.accentHex,
+            color: "#002813",
+            border: `1.5px solid ${THEME_3.accentHex}`,
+            fontSize: 12,
+            fontWeight: 800,
+            letterSpacing: 0.3,
+            cursor: "pointer",
+            fontFamily: "inherit",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            boxShadow: `0 2px 10px ${THEME_3.accentHex}66`,
+          }}
+        >
+          🚀 Fire
+        </button>
         <button
           type="button"
           onClick={() => setAnimated((v) => !v)}
