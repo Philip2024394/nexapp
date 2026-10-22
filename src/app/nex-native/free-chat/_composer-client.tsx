@@ -1297,13 +1297,12 @@ export function FreeChatComposerClient({
             bottom: "calc(100% + 10px)",
             left: "50%",
             transform: "translateX(-50%)",
-            // Owner directive 2026-10-22 (evening · pass 11) ·
-            // asymmetric vertical padding shifts the 6 icons + labels
-            // slightly UP from the vertical centre of the panel. Top
-            // tight at 2px · bottom relaxed at 12px gives the content
-            // visual lift without changing icon size or row count.
+            // Owner directive 2026-10-23 · symmetric vertical padding
+            // so the two-row grid of chrome balls + labels centers
+            // vertically in the panel (previous asymmetric 2px/12px
+            // pushed the content up and off-centre).
             width: "min(300px, calc(100% - 32px))",
-            padding: "2px 4px 12px",
+            padding: "10px 4px",
             // Welcome-bubble chrome: accent @ 12% bg, @ 42% rim.
             background: `${accentHex}1F`,
             border: `1px solid ${accentHex}6B`,
@@ -1319,9 +1318,12 @@ export function FreeChatComposerClient({
             // transparent · no visible seam.
             gap: 0,
             // Owner directive 2026-10-23 · center each button inside
-            // its grid cell · without this the button hugs its own
-            // content width and sits left-aligned in the 1fr column.
+            // its grid cell · horizontally via justifyItems, vertically
+            // via alignItems. Without alignItems the cells only size
+            // to their content and the button sits at the top of
+            // the cell row-box.
             justifyItems: "center",
+            alignItems: "center",
             zIndex: 20,
           }}
         >
