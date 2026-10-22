@@ -157,42 +157,6 @@ export default function Theme3AnimatedPrototypePage(): React.JSX.Element {
         >
           Prototype · Theme 3 · Animation review
         </div>
-        {/* Owner directive 2026-10-23 · small direct-fire button for
-            the planet-approach cinematic · taps the sealed component's
-            own trigger via DOM selector so the planet fires in one tap
-            (no need to open the ⋮ panel first). Prototype-only
-            convenience · the ⋮ panel + replay path still works for
-            reviewing the full interaction. */}
-        <button
-          type="button"
-          onClick={() => {
-            const el = document.querySelector<HTMLButtonElement>(
-              "[data-nex-planet-approach-trigger]",
-            );
-            el?.click();
-          }}
-          aria-label="Fire planet approach animation"
-          data-nex-animated-theme-3-fire
-          style={{
-            minHeight: 32,
-            padding: "0 12px",
-            borderRadius: 999,
-            background: THEME_3.accentHex,
-            color: "#002813",
-            border: `1.5px solid ${THEME_3.accentHex}`,
-            fontSize: 12,
-            fontWeight: 800,
-            letterSpacing: 0.3,
-            cursor: "pointer",
-            fontFamily: "inherit",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            boxShadow: `0 2px 10px ${THEME_3.accentHex}66`,
-          }}
-        >
-          🚀 Fire
-        </button>
         <button
           type="button"
           onClick={() => setAnimated((v) => !v)}
@@ -315,6 +279,49 @@ export default function Theme3AnimatedPrototypePage(): React.JSX.Element {
           }
         }
       `}</style>
+
+      {/* Owner directive 2026-10-23 · dedicated floating 🚀 Fire pill ·
+          lifted OUT of the header flex row (which could clip on a
+          420px frame when 3 items competed for width). Pinned to the
+          top-right of the phone frame at zIndex 70 so it always sits
+          above the wallpaper, shimmer, dark fade, chat bubble, and
+          the sealed ⋮ panel (zIndex 60). Taps the sealed component's
+          internal trigger via DOM selector · single-tap fire. */}
+      <button
+        type="button"
+        onClick={() => {
+          const el = document.querySelector<HTMLButtonElement>(
+            "[data-nex-planet-approach-trigger]",
+          );
+          el?.click();
+        }}
+        aria-label="Fire planet approach animation"
+        data-nex-animated-theme-3-fire
+        style={{
+          position: "absolute",
+          top: 68,
+          right: 12,
+          zIndex: 70,
+          minHeight: 36,
+          padding: "0 14px",
+          borderRadius: 999,
+          background: THEME_3.accentHex,
+          color: "#002813",
+          border: "2px solid #FFFFFF",
+          fontSize: 13,
+          fontWeight: 900,
+          letterSpacing: 0.4,
+          cursor: "pointer",
+          fontFamily: NEX_FONT_SANS,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          boxShadow: `0 4px 14px ${THEME_3.accentHex}cc, 0 0 0 2px #00281355`,
+          lineHeight: 1,
+        }}
+      >
+        🚀 Fire
+      </button>
 
       {/* Sealed planet-approach cinematic · ⋮ panel bottom-right.
           Owner-recovered 2026-10-23 for the theme-3 space wallpaper.
