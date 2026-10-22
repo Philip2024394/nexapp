@@ -26,6 +26,11 @@ import { MenuItemSheet } from "./_menu-item-sheet";
 import { MenuDrawer } from "./_menu-drawer";
 import { JokerKeypad } from "@/app/nex-native/chat-standard/_joker-keypad";
 import { CRISPY_CHICKEN_MOCK } from "@/app/nex-native/cover/mock-data";
+import {
+  CoverCartDrawer,
+  readCartItems,
+  type CoverCartLineItem,
+} from "@/app/nex-native/cover/layouts";
 
 // Owner directive 2026-10-22 · persist menu-item adds into the
 // production cart key (nex_cart_v1) so the CoverCartButton in every
@@ -422,6 +427,32 @@ export function ThemePreviewSheet({
   const [menuCartToast, setMenuCartToast] = React.useState<string | null>(
     null,
   );
+  // Owner directive 2026-10-22 · right-dock Cart button now opens the
+  // SAME shared drawer the shop template cart icon uses · one cart
+  // system, one slider across both surfaces. Items + delivery footer
+  // read from nex_cart_v1 so additions from the menu drawer and the
+  // shop iframe appear in the same place.
+  const [chatCartOpen, setChatCartOpen] = React.useState(false);
+  const [chatCartItems, setChatCartItems] = React.useState<
+    CoverCartLineItem[]
+  >([]);
+  const refreshChatCart = React.useCallback(() => {
+    setChatCartItems(readCartItems());
+  }, []);
+  React.useEffect(() => {
+    refreshChatCart();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "nex_cart_v1") refreshChatCart();
+    };
+    const onFocus = () => refreshChatCart();
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [refreshChatCart]);
+  const chatCartQty = chatCartItems.reduce((acc, i) => acc + i.quantity, 0);
 
   const handleMenuAdd = React.useCallback(
     (productId: string, qty: number) => {
@@ -825,22 +856,16 @@ export function ThemePreviewSheet({
           </svg>
         </DockButton>
 
-        {/* Owner directive 2026-10-22 · Cart · counter now tracks
-            MENU items added from the Shop drawer (local-to-sheet,
-            represents in-shop ordering) · marketplace cart (themes /
-            intros / shops) stays accessible via the outer marketplace
-            header. Tap toasts a prototype-only confirmation. */}
+        {/* Owner directive 2026-10-22 · Cart · opens the SAME shared
+            CoverCartDrawer the shop template cart icon uses · one
+            cart system, one slider. Count reads from nex_cart_v1 so
+            adds from the menu drawer and from the shop iframe show
+            up in the same place. */}
         <DockButton
           accent={themeAccent}
-          label={`Cart · ${menuCartCount} menu item${menuCartCount === 1 ? "" : "s"}`}
-          onClick={() =>
-            setMenuCartToast(
-              menuCartCount === 0
-                ? "Cart is empty · prototype"
-                : `${menuCartCount} item${menuCartCount === 1 ? "" : "s"} in cart · prototype`,
-            )
-          }
-          badge={menuCartCount > 0 ? menuCartCount : null}
+          label={`Cart · ${chatCartQty} item${chatCartQty === 1 ? "" : "s"}`}
+          onClick={() => setChatCartOpen(true)}
+          badge={chatCartQty > 0 ? chatCartQty : null}
           data-nex-marketplace-prototype-theme-dock-cart
         >
           <svg
@@ -1203,6 +1228,21 @@ export function ThemePreviewSheet({
             }
           }
         `}</style>
+      )}
+
+      {/* Owner directive 2026-10-22 · shared cart drawer · opens
+          when the right-dock Cart button is tapped. Same drawer the
+          shop template uses · one cart system, one slider across
+          both surfaces. themeAccent passed through so the drawer
+          renders in the current brand accent even outside a
+          theme-skin wrapper. */}
+      {chatCartOpen && (
+        <CoverCartDrawer
+          items={chatCartItems}
+          onClose={() => setChatCartOpen(false)}
+          onRefresh={refreshChatCart}
+          themeAccent={themeAccent}
+        />
       )}
 
       {/* Owner directive 2026-10-22 · menu drawer · rises from the

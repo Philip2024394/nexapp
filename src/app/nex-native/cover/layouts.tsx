@@ -1414,7 +1414,7 @@ function WhoWeAreCollapsible({
 // chat. Updated 2026-10-22 · in-place drawer replaces direct nav so
 // the buyer stays in the shop while reviewing their cart.
 
-interface CoverCartLineItem {
+export interface CoverCartLineItem {
   key: string;
   name: string;
   image_url: string | null;
@@ -1424,7 +1424,7 @@ interface CoverCartLineItem {
   shop_display_name: string;
 }
 
-function readCartItems(): CoverCartLineItem[] {
+export function readCartItems(): CoverCartLineItem[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem("nex_cart_v1");
@@ -1660,14 +1660,23 @@ function CoverCartButton(): React.JSX.Element {
   );
 }
 
-function CoverCartDrawer({
+export function CoverCartDrawer({
   items,
   onClose,
   onRefresh,
+  themeAccent,
 }: {
   readonly items: readonly CoverCartLineItem[];
   readonly onClose: () => void;
   readonly onRefresh: () => void;
+  /** Owner directive 2026-10-22 · when rendered OUTSIDE a theme-skin
+   *  wrapper (e.g. the chat ThemePreviewSheet right-dock Cart
+   *  button) the drawer wraps its content in an inline style that
+   *  sets the --nex-* CSS vars from this prop so the drawer still
+   *  reads as part of the current theme. When omitted, the drawer
+   *  inherits CSS vars from the surrounding theme-skin (the normal
+   *  shop-template usage). */
+  readonly themeAccent?: string;
 }): React.JSX.Element {
   // Resolve the delivery summary from the delivery-prototype policy
   // every time the drawer opens · if the owner updates their policy
@@ -1725,8 +1734,24 @@ function CoverCartDrawer({
       aria-label="Shopping cart"
       data-nex-cover-cart-drawer
       style={{
+        // Owner directive 2026-10-22 (afternoon) · constrain the
+        // drawer to the sealed .nex-native-frame phone column on
+        // desktop (420px wide, centered). Previously `inset: 0`
+        // made position:fixed anchor to the viewport, so on desktop
+        // the drawer flew out to the right edge of the browser
+        // window instead of staying inside the phone screen.
+        //
+        // left:50% + translateX(-50%) + width:100% + max-width:420
+        // reproduces the frame's column: on real phones (<500px)
+        // the viewport IS the frame and max-width is a no-op · on
+        // desktop the drawer is pinned to the phone column.
         position: "fixed",
-        inset: 0,
+        top: 0,
+        bottom: 0,
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: "100%",
+        maxWidth: 420,
         // Owner directive 2026-10-22 · explicit dvh so the drawer
         // panel's children (header + scrollable body + footer) can
         // size against a known viewport height. 100dvh collapses
@@ -1736,6 +1761,21 @@ function CoverCartDrawer({
         zIndex: 100,
         display: "flex",
         justifyContent: "flex-end",
+        // Inline CSS var injection · lets the drawer render in the
+        // right theme accent when mounted OUTSIDE a theme-skin
+        // wrapper (e.g. from ThemePreviewSheet's right-dock Cart
+        // button). Omitted when themeAccent is undefined so the
+        // normal shop-template path inherits from theme-skin.
+        ...(themeAccent
+          ? ({
+              "--nex-accent": themeAccent,
+              "--nex-accent-soft": `${themeAccent}5A`,
+              "--nex-accent-faint": `${themeAccent}24`,
+              "--nex-accent-glow": `${themeAccent}99`,
+              "--nex-bg": "#050F1E",
+              "--nex-text": "#F2F5F8",
+            } as React.CSSProperties)
+          : {}),
       }}
     >
       {/* Backdrop · tap to close */}

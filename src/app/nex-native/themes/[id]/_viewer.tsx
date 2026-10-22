@@ -23,6 +23,7 @@ import {
   type JokerMotionVariant,
 } from "./_joker-motion";
 import { JokerController } from "./_joker-controller";
+import { ThemeOverflowMenu } from "./_theme-overflow-menu";
 import { getThemeAssets } from "@/lib/nex-native/theme-assets";
 import { UniversalComposerFooter } from "../../chat-standard/_universal-composer-footer";
 import { PlanetFlyThroughOverlay } from "@/lib/nex-native/planet-fly-through-client";
@@ -511,6 +512,16 @@ export default function ThemeViewerClient(
            alley wallpaper; themes without a slot fall through to the
            modal's default gradient. */
         shopBackgroundImageUrl={getThemeAssets(props.themeId).shopBackgroundUrl}
+      />
+      {/* Theme preview overflow menu · 3-dot button sitting to the
+          left of the sealed R1 cluster. Opens a bottom sheet with
+          standard chat options (view profile · search · mute ·
+          wallpaper · clear · block · report). Items are stubs that
+          log on tap · wiring to real actions lands separately.
+          Scope: theme preview only · sealed primitives untouched. */}
+      <ThemeOverflowMenu
+        themeAccent={props.accent}
+        themeName={props.themeName}
       />
       {/* Joker motion prototype overlay · query-string driven via
           ?motion=<variant> · see _joker-motion.tsx for the ten
