@@ -21,11 +21,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import {
-  MOCK_CONTACTS,
-  formatContactPresenceLabel,
-  type MockContact,
-} from "./_contact-picker-data";
+import { MOCK_CONTACTS, type MockContact } from "./_contact-picker-data";
 
 const NEX = {
   bgNavy: "#050F1E",
@@ -33,9 +29,14 @@ const NEX = {
   text: "#F2F5F8",
   textMute: "#7D9BC0",
   cyan: "#00AFFF",
-  green: "#16D66B",
-  amber: "#F59E0B",
-  dim: "rgba(139,169,209,0.5)",
+  // Owner directive 2026-10-22 (evening · pass 19) · presence
+  // vocabulary · green=online · orange=busy · dark-red=offline.
+  // Colour is the only presence signal · the "Online now / Away Xm /
+  // Offline Yh" text label is removed. Sort order follows the
+  // same priority: online first, busy next, offline last.
+  presenceOnline: "#16D66B",
+  presenceBusy: "#FF7200",
+  presenceOffline: "#A60000",
 };
 
 export interface ContactPickerSheetProps {
@@ -128,17 +129,38 @@ export function ContactPickerSheet({
 
   // Compute filtered contacts BEFORE the early return so the hook
   // order stays stable across renders (React rules-of-hooks).
+  //
+  // Owner directive 2026-10-22 (evening · pass 19) · sort by
+  // presence priority · online → busy → offline. Within each bucket
+  // keep the source order so returning viewers see the same shape.
   const filtered = React.useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (q.length === 0) return MOCK_CONTACTS;
-    return MOCK_CONTACTS.filter((c) => {
-      return (
-        c.displayName.toLowerCase().includes(q) ||
-        c.nexHandle.toLowerCase().includes(q) ||
-        c.profession.toLowerCase().includes(q) ||
-        (c.city ?? "").toLowerCase().includes(q)
-      );
-    });
+    const presenceRank = (p: "online" | "away" | "offline"): number => {
+      if (p === "online") return 0;
+      if (p === "away") return 1;
+      return 2;
+    };
+    const pool =
+      q.length === 0
+        ? MOCK_CONTACTS
+        : MOCK_CONTACTS.filter((c) => {
+            return (
+              c.displayName.toLowerCase().includes(q) ||
+              c.nexHandle.toLowerCase().includes(q) ||
+              c.profession.toLowerCase().includes(q) ||
+              (c.city ?? "").toLowerCase().includes(q)
+            );
+          });
+    // Stable sort via index preservation (older engines keep insertion
+    // order on equal keys, modern V8 is stable). Still include an
+    // index tiebreaker to be safe across runtimes.
+    return pool
+      .map((c, i) => ({ c, i }))
+      .sort((a, b) => {
+        const d = presenceRank(a.c.presence) - presenceRank(b.c.presence);
+        return d !== 0 ? d : a.i - b.i;
+      })
+      .map((entry) => entry.c);
   }, [search]);
 
   if (!open) return null;
@@ -168,13 +190,17 @@ export function ContactPickerSheet({
     >
       <div
         style={{
-          // Owner directive 2026-10-22 (evening · pass 17) · sheet
-          // was 480px cap · overflowed the sealed 420px .nex-native-
-          // frame on desktop. Capped to 400 (+10px safety on each
-          // side of the phone frame). Mobile viewport < 400 the
-          // sheet grows to 100% minus side padding.
-          width: "min(calc(100% - 16px), 400px)",
-          maxHeight: "80vh",
+          // Owner directive 2026-10-22 (evening · pass 19b) · 400px
+          // was leaving the landscape cards cramped once we padded
+          // internal columns + the Invite CTA. Bumped to 404px (still
+          // inside the sealed 420px .nex-native-frame · 16px safety
+          // margin). Mobile viewport < 404 the sheet grows to 100%
+          // minus 8px per side.
+          width: "min(calc(100% - 16px), 404px)",
+          // Allow the panel to grow with content up to ~80% of
+          // viewport height · prevents cards being compressed into
+          // thin strips when the content list is longer than it fits.
+          maxHeight: "min(80vh, 640px)",
           display: "flex",
           flexDirection: "column",
           background: `linear-gradient(180deg, ${NEX.bgNavy} 0%, ${NEX.bgDeep} 100%)`,
@@ -356,10 +382,10 @@ function ContactCard({
 }): React.JSX.Element {
   const ringColor =
     contact.presence === "online"
-      ? NEX.green
+      ? NEX.presenceOnline
       : contact.presence === "away"
-        ? NEX.amber
-        : NEX.dim;
+        ? NEX.presenceBusy
+        : NEX.presenceOffline;
   const isHolding = holdProgress > 0;
   const countdownSeconds = Math.max(0, Math.ceil(5 - holdProgress * 5));
 
@@ -384,11 +410,17 @@ function ContactCard({
       onPointerCancel={onHoldEnd}
       style={{
         position: "relative",
+        // Owner directive 2026-10-22 (evening · pass 19b) · lock card
+        // height so vertical flex-shrink can't collapse the rows into
+        // thin strips. 80px gives the 56px avatar + 12px padding (6
+        // top / 6 bottom via the 10px padding + line-height slack).
+        minHeight: 80,
+        flexShrink: 0,
         display: "flex",
         flexDirection: "row",
         alignItems: "center",
         gap: 12,
-        padding: 10,
+        padding: "10px 12px",
         background: NEX.bgNavy,
         border: `1px solid ${isHolding ? accentHex : `${accentHex}3D`}`,
         borderRadius: 14,
@@ -500,7 +532,7 @@ function ContactCard({
               position: "absolute",
               inset: -2,
               borderRadius: "50%",
-              border: `2px solid ${NEX.green}`,
+              border: `2px solid ${NEX.presenceOnline}`,
               animation:
                 "nex-contact-card-heartbeat 1200ms cubic-bezier(0.4,0,0.2,1) infinite",
               pointerEvents: "none",
@@ -608,7 +640,11 @@ function ContactCard({
         >
           {contact.nexHandle}
         </div>
-        {/* Profession · city · presence · one line each, muted meta */}
+        {/* Profession · city · one line, muted meta. Presence is
+            communicated purely by the avatar ring colour (green =
+            online, orange = busy, dark red = offline) per owner
+            directive 2026-10-22 (evening · pass 19) · no text
+            "Online now / Away Xm / Offline Yh" line. */}
         <div
           style={{
             fontSize: 10,
@@ -620,8 +656,7 @@ function ContactCard({
           }}
         >
           {contact.profession}
-          {contact.city ? ` · ${contact.city}` : ""} ·{" "}
-          {formatContactPresenceLabel(contact)}
+          {contact.city ? ` · ${contact.city}` : ""}
         </div>
       </div>
 
