@@ -38,16 +38,11 @@ const NEX = {
   orangeInk: "#1A0808",
 };
 
-// Owner directive 2026-10-22 (afternoon · follow-up pass 2) · 6-item
-// attachment panel options · all stubs for now. Rename/replace each
-// as the backing feature lands. The `key` is stable so test selectors
-// won't drift when the labels evolve.
-//
-// "Product" was dropped from this list on owner directive · business
-// owners already share products via the dedicated bottom shop slider
-// mounted on peer chat, so a redundant Product entry here would be
-// dead for everyone. "Contact" replaces it · universal (every user
-// has contacts) + lines up with the standard chat-app share-user flow.
+// Owner directive 2026-10-22 (afternoon · follow-up pass 3) · 6-item
+// attachment panel options. Grid order: Contact at top-right corner
+// (row 0, col 2), remaining five flow in reading order. All stubs
+// for now · rename/replace each as the backing feature lands. The
+// `key` is stable so test selectors don't drift when labels evolve.
 const ATTACH_ITEMS: ReadonlyArray<{
   readonly key: string;
   readonly label: string;
@@ -55,10 +50,11 @@ const ATTACH_ITEMS: ReadonlyArray<{
 }> = [
   { key: "camera", label: "Camera", glyph: "📷" },
   { key: "gallery", label: "Gallery", glyph: "🖼️" },
+  // ⇡ Contact lives in the top-right corner per owner directive.
+  { key: "contact", label: "Contact", glyph: "👤" },
   { key: "document", label: "Document", glyph: "📄" },
   { key: "voice", label: "Voice note", glyph: "🎤" },
   { key: "location", label: "Location", glyph: "📍" },
-  { key: "contact", label: "Contact", glyph: "👤" },
 ];
 
 export function FreeChatComposerClient({
@@ -333,12 +329,19 @@ export function FreeChatComposerClient({
             transform: "translateX(-50%)",
             width: "min(300px, calc(100% - 32px))",
             padding: 12,
-            background: "rgba(2,9,20,0.95)",
-            border: `1px solid ${NEX.border}`,
+            // Owner directive 2026-10-22 (afternoon · follow-up pass 3)
+            // · match the welcome chat bubble treatment:
+            //   bg  = active theme accent @ 12% alpha
+            //   rim = active theme accent @ 42% alpha
+            // Same as peerFill / peerRim derived in _canvas-client.tsx.
+            // Hex alpha short-hand: 1F ≈ 12%, 6B ≈ 42% (both are 2-digit
+            // suffixes appended to a 6-digit hex colour string).
+            background: `${accentHex}1F`,
+            border: `1px solid ${accentHex}6B`,
             borderRadius: 14,
-            backdropFilter: "blur(12px)",
-            WebkitBackdropFilter: "blur(12px)",
-            boxShadow: "0 20px 50px -14px rgba(0,0,0,0.75)",
+            backdropFilter: "blur(10px) saturate(140%)",
+            WebkitBackdropFilter: "blur(10px) saturate(140%)",
+            boxShadow: "0 6px 14px -8px rgba(0,0,0,0.6)",
             display: "grid",
             gridTemplateColumns: "repeat(3, 1fr)",
             gap: 10,
