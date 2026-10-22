@@ -1959,7 +1959,10 @@ function ButterflyFlyby(): React.JSX.Element {
     <>
       <style>{`
         /* Wing-flap · 3 frames at ~10fps · each frame visible for
-           ~1/3 of the 300ms cycle. */
+           ~1/3 of the 300ms cycle. Runs continuously through every
+           flight phase AND the perch · butterflies at rest DO flap
+           their wings occasionally so this reads as "settled, still
+           alive". */
         @keyframes nex-butterfly-flap-1 {
           0%, 33.33%  { opacity: 1; }
           33.34%, 100% { opacity: 0; }
@@ -1973,41 +1976,58 @@ function ButterflyFlyby(): React.JSX.Element {
           66.67%, 99.99%   { opacity: 1; }
         }
 
-        /* Flight path A · left → right across the top, drifts down
-           slightly, exits top-right. 18s cycle · 6s delay before
-           first appearance. */
-        @keyframes nex-butterfly-path-a {
-          0%   { transform: translate3d(-20vw, 6vh, 0) rotate(-6deg); opacity: 0; }
-          8%   { opacity: 1; }
-          25%  { transform: translate3d(15vw, 2vh, 0) rotate(3deg); }
-          50%  { transform: translate3d(45vw, 10vh, 0) rotate(-4deg); }
-          75%  { transform: translate3d(75vw, 4vh, 0) rotate(5deg); }
-          92%  { opacity: 1; }
-          100% { transform: translate3d(115vw, 8vh, 0) rotate(-3deg); opacity: 0; }
-        }
+        /* Owner-choreographed journey 2026-10-23 · one butterfly ·
+           total duration 50s · five phases.
 
-        /* Flight path B · right → left higher up, more pronounced
-           bob. 22s cycle · 2s delay. */
-        @keyframes nex-butterfly-path-b {
-          0%   { transform: translate3d(110vw, 14vh, 0) rotate(4deg); opacity: 0; }
-          8%   { opacity: 1; }
-          30%  { transform: translate3d(70vw, 8vh, 0) rotate(-7deg); }
-          55%  { transform: translate3d(40vw, 16vh, 0) rotate(5deg); }
-          80%  { transform: translate3d(10vw, 10vh, 0) rotate(-3deg); }
-          92%  { opacity: 1; }
-          100% { transform: translate3d(-25vw, 14vh, 0) rotate(6deg); opacity: 0; }
-        }
+           Phase 1 (0-32%, ~16s) · fly in SLOWLY from bottom-right ·
+           random meandering path across the screen · exit on the left
+           Phase 2 (32-42%, 5s) · off-screen reset ·
+             butterfly invisible while repositioning top-left
+           Phase 3 (42-60%, 9s) · fly back IN from top-left (hero
+             position) · random path rising up to the magnifying
+             glass in the header (top-right)
+           Phase 4 (60-85%, ~13s) · PERCH on the magnifying glass
+             (85vw, 5vh in frame-relative coordinates) · wings keep
+             flapping occasionally
+           Phase 5 (85-100%, ~7s) · fly OFF upward out of the screen
 
-        /* Flight path C · diagonal down-right, lower middle area,
-           longer stroll. 26s cycle · 12s delay. */
-        @keyframes nex-butterfly-path-c {
-          0%   { transform: translate3d(-20vw, 20vh, 0) rotate(2deg); opacity: 0; }
-          8%   { opacity: 1; }
-          35%  { transform: translate3d(25vw, 14vh, 0) rotate(-5deg); }
-          60%  { transform: translate3d(55vw, 22vh, 0) rotate(4deg); }
-          85%  { transform: translate3d(90vw, 16vh, 0) rotate(-2deg); }
-          92%  { opacity: 1; }
-          100% { transform: translate3d(120vw, 20vh, 0) rotate(3deg); opacity: 0; }
+           Magnifying-glass perch coordinates verified against the
+           sealed free-chat header: 420×909 frame · search button
+           sits at ~top: 42px, right: 62px · translates to roughly
+           85vw / 5vh in the butterfly's translate3d space. */
+        @keyframes nex-butterfly-journey {
+          /* Phase 1 · bottom-right fly-in → cross → exit left */
+          0%   { transform: translate3d(110vw, 52vh, 0) rotate(2deg);  opacity: 0; }
+          3%   { opacity: 1; }
+          6%   { transform: translate3d(88vw,  45vh, 0) rotate(-4deg); }
+          10%  { transform: translate3d(72vw,  52vh, 0) rotate(5deg);  }
+          15%  { transform: translate3d(55vw,  38vh, 0) rotate(-6deg); }
+          20%  { transform: translate3d(38vw,  47vh, 0) rotate(4deg);  }
+          25%  { transform: translate3d(20vw,  35vh, 0) rotate(-5deg); }
+          29%  { opacity: 1; }
+          32%  { transform: translate3d(-18vw, 42vh, 0) rotate(3deg);  opacity: 0; }
+
+          /* Phase 2 · off-screen reset (invisible teleport) */
+          37%  { transform: translate3d(-18vw, 10vh, 0); opacity: 0; }
+          41%  { transform: translate3d(-10vw, 8vh,  0); opacity: 0; }
+
+          /* Phase 3 · top-left re-entry · random meander up to the
+             magnifying-glass area */
+          44%  { transform: translate3d(-2vw,  7vh,  0) rotate(-3deg); opacity: 1; }
+          48%  { transform: translate3d(15vw,  12vh, 0) rotate(4deg);  }
+          52%  { transform: translate3d(32vw,  6vh,  0) rotate(-5deg); }
+          56%  { transform: translate3d(52vw,  10vh, 0) rotate(3deg);  }
+          60%  { transform: translate3d(70vw,  6vh,  0) rotate(-2deg); }
+
+          /* Phase 4 · arrive + PERCH on magnifying glass (85vw, 5vh) */
+          63%  { transform: translate3d(82vw,  5.5vh, 0) rotate(0deg); }
+          66%  { transform: translate3d(85vw,  5vh,  0) rotate(0deg);  }
+          85%  { transform: translate3d(85vw,  5vh,  0) rotate(0deg);  opacity: 1; }
+
+          /* Phase 5 · fly off upward · out of frame */
+          90%  { transform: translate3d(88vw,  -2vh, 0) rotate(6deg);  opacity: 1; }
+          95%  { transform: translate3d(96vw,  -14vh, 0) rotate(12deg); opacity: 0.6; }
+          100% { transform: translate3d(110vw, -28vh, 0) rotate(18deg); opacity: 0; }
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -2016,28 +2036,29 @@ function ButterflyFlyby(): React.JSX.Element {
             animation: none !important;
           }
           [data-nex-butterfly] {
-            transform: translate3d(50vw, 10vh, 0) !important;
-            opacity: 0.7 !important;
+            /* Park at the magnifying-glass perch · wings on frame 1 */
+            transform: translate3d(85vw, 5vh, 0) !important;
+            opacity: 0.8 !important;
           }
           [data-nex-butterfly-frame="1"] { opacity: 1 !important; }
           [data-nex-butterfly-frame="2"],
           [data-nex-butterfly-frame="3"] { opacity: 0 !important; }
         }
       `}</style>
-      <Butterfly path="a" size={44} delay={6} duration={18} />
-      <Butterfly path="b" size={38} delay={2} duration={22} />
-      <Butterfly path="c" size={48} delay={12} duration={26} />
+      {/* Owner directive 2026-10-23 · one choreographed butterfly ·
+          replaces the earlier 3-butterfly staggered fleet. Full 50s
+          journey · bottom-right in → exit left → top-left re-enter →
+          perch on magnifying glass → fly off upward. Repeats infinite. */}
+      <Butterfly size={38} delay={1} duration={50} />
     </>
   );
 }
 
 function Butterfly({
-  path,
   size,
   delay,
   duration,
 }: {
-  readonly path: "a" | "b" | "c";
   readonly size: number;
   readonly delay: number;
   readonly duration: number;
@@ -2045,7 +2066,7 @@ function Butterfly({
   return (
     <div
       aria-hidden
-      data-nex-butterfly={path}
+      data-nex-butterfly="journey"
       style={{
         position: "absolute",
         top: 0,
@@ -2056,7 +2077,7 @@ function Butterfly({
         userSelect: "none",
         zIndex: 3,
         willChange: "transform, opacity",
-        animation: `nex-butterfly-path-${path} ${duration}s linear ${delay}s infinite`,
+        animation: `nex-butterfly-journey ${duration}s cubic-bezier(0.4, 0, 0.4, 1) ${delay}s infinite`,
       }}
     >
       {BUTTERFLY_POSES.map((src, i) => (
