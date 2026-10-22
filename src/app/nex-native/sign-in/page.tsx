@@ -95,6 +95,25 @@ export default async function SignInPage({ searchParams }: PageProps) {
   const banner = params.e && params.m ? { code: params.e, message: params.m } : null;
   const nextParam = safeNext(params.next);
 
+  // Owner directive 2026-10-22 (afternoon) · one-click Dev Pass
+  // button renders only when NODE_ENV !== "production" AND both
+  // NEX_ADMIN_EMAILS + NEX_ADMIN_DEV_PASSWORD are configured. The
+  // button posts a form straight into signInAction with those
+  // credentials · identical path as a normal sign-in, no backdoor
+  // bypass. Production builds never reach this branch · env read
+  // short-circuits to null and the JSX below renders nothing.
+  const devPassEmail = (() => {
+    if (process.env.NODE_ENV === "production") return null;
+    const list = (process.env.NEX_ADMIN_EMAILS ?? "")
+      .split(",")
+      .map((e) => e.trim())
+      .filter((e) => e.length > 0);
+    if (list.length === 0) return null;
+    const pw = process.env.NEX_ADMIN_DEV_PASSWORD;
+    if (!pw) return null;
+    return { email: list[0]!, password: pw };
+  })();
+
   const jar = await cookies();
   const hasFaceOnDevice = jar.get("nex-has-face")?.value === "1";
 
@@ -526,6 +545,62 @@ export default async function SignInPage({ searchParams }: PageProps) {
               </span>
             </button>
           </form>
+
+          {/* ── Dev Pass · one-click admin sign-in (localhost only) ──
+                Renders only when NODE_ENV !== "production" AND both
+                NEX_ADMIN_EMAILS + NEX_ADMIN_DEV_PASSWORD are set in
+                .env.local. Production builds never see this button
+                because the server-side `devPassEmail` resolves to
+                null. The form posts into the sealed signInAction
+                exactly like the main form · identical server path. */}
+          {devPassEmail && (
+            <form action={signInAction} data-nex-dev-pass-form>
+              <input type="hidden" name="email" value={devPassEmail.email} />
+              <input
+                type="hidden"
+                name="password"
+                value={devPassEmail.password}
+              />
+              <button
+                type="submit"
+                data-nex-dev-pass-button
+                aria-label={`Dev pass sign-in as ${devPassEmail.email}`}
+                style={{
+                  marginTop: 10,
+                  width: "100%",
+                  minHeight: 44,
+                  background: "rgba(255, 114, 0, 0.14)",
+                  color: "#FF7200",
+                  border: "1px dashed rgba(255, 114, 0, 0.55)",
+                  borderRadius: 999,
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  fontFamily: SANS,
+                }}
+              >
+                ⚡ Dev Pass · {devPassEmail.email}
+              </button>
+              <p
+                aria-hidden
+                style={{
+                  margin: "4px 2px 0",
+                  textAlign: "center",
+                  fontSize: 10,
+                  color: NEX.textMuted,
+                  letterSpacing: "0.03em",
+                }}
+              >
+                Localhost only · hidden in production
+              </p>
+            </form>
+          )}
 
           {/* ── Face sign-in · only if device previously enrolled ── */}
           {hasFaceOnDevice && (
