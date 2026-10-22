@@ -117,6 +117,28 @@ const ATTACH_ITEMS: ReadonlyArray<{
   { key: "location", label: "Location", iconUrl: "/nex-free-chat/attach-icons/location.png" },
 ];
 
+// Owner directive 2026-10-23 · short captions baked into the
+// chrome-ball attach buttons (variant-10 CTA style ported from
+// the Contact picker). The ball is 56px · fontSize 10 · letter-
+// spacing 0.3 · longest caption needs to fit in ~48px of inner
+// width (56 ball − 2×2px rim − 2px safe margin each side).
+//   CAMERA (6)  → "CAM"
+//   GALLERY (7) → "GALLERY" (fits at 10px/0.3)
+//   CONTACT (7) → "CONTACT" (fits)
+//   DOCUMENT(8) → "DOC"      (shorter is clearer at this size)
+//   VOICE (5)   → "VOICE"
+//   LOCATION(8) → "MAP"      (location → the map people understand)
+// aria-label + title stay the original long form so the full name
+// is announced to screen readers and shown on hover.
+const ATTACH_BALL_CAPTIONS: Record<string, string> = {
+  camera: "CAM",
+  gallery: "GALLERY",
+  contact: "CONTACT",
+  document: "DOC",
+  voice: "VOICE",
+  location: "MAP",
+};
+
 export function FreeChatComposerClient({
   isGuest,
   initialThemeId = null,
@@ -1249,82 +1271,57 @@ export function FreeChatComposerClient({
             zIndex: 20,
           }}
         >
-          {ATTACH_ITEMS.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              onClick={() => handleAttachClick(item.key)}
-              aria-label={item.label}
-              data-nex-free-chat-composer-attach-item={item.key}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                // Owner directive 2026-10-22 (evening · pass 4) · pull
-                // the label tight under the icon. gap:0 + negative
-                // marginTop on the label (see <span> below) tucks it
-                // right under the icon's visible circle while leaving
-                // the icon's transparent padding undisturbed.
-                gap: 0,
-                // Owner directive 2026-10-22 (evening · pass 10) · zero
-                // vertical padding so icons hug the row edges · more
-                // height trim with no icon shrink. Horizontal padding
-                // kept at 4 so grid columns breathe.
-                padding: "0 4px",
-                background: "transparent",
-                border: "none",
-                borderRadius: 0,
-                color: NEX.text,
-                // Owner directive 2026-10-22 (evening · pass 10b) ·
-                // label 9 → 11 for better readability now that the
-                // tile chrome is gone.
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: 0.2,
-                cursor: "pointer",
-                fontFamily: "inherit",
-                textAlign: "center",
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={item.iconUrl}
-                alt=""
-                aria-hidden
-                draggable={false}
-                style={{
-                  // Owner directive 2026-10-22 (evening · pass 12) ·
-                  // visual-only enlargement via transform:scale. Layout
-                  // box stays at 60×60 (grid cells + label position +
-                  // panel height all untouched) · image renders at
-                  // ~72×72 (scale 1.2). Since button is transparent
-                  // and grid gap is 0, neighbouring icons never clash
-                  // visually.
-                  width: 60,
-                  height: 60,
-                  objectFit: "contain",
-                  userSelect: "none",
-                  pointerEvents: "none",
-                  filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))",
-                  transform: "scale(1.2)",
-                  transformOrigin: "center center",
-                }}
-              />
-              <span
-                style={{
-                  // Owner directive 2026-10-22 (evening · pass 4) ·
-                  // negative marginTop tucks the label under the
-                  // icon's visible circle (its PNG carries ~15% of
-                  // its height as transparent padding on the bottom).
-                  marginTop: -10,
-                  lineHeight: 1.1,
-                }}
+          {/* Owner directive 2026-10-23 · "exact same design buttons
+              on the plus container for the 6 buttons · remove the
+              images". Chrome-ball design mirrored from the picker
+              card's variant-10 CTAs · each button is a 56×56 round
+              accent-gradient chrome ball with the baked-in white
+              text label (CAMERA / GALLERY / CONTACT / DOCUMENT /
+              VOICE / MAP). PNG icon images retired · their files
+              in public/nex-free-chat/attach-icons/ stay on disk. */}
+          {ATTACH_ITEMS.map((item) => {
+            // Short, screen-friendly caption fits inside a 56px ball
+            // at fontSize 10 without overflow. Mapped per key so the
+            // original `label` (long form) stays as the aria/title
+            // for accessibility.
+            const ballCaption = ATTACH_BALL_CAPTIONS[item.key] ?? item.label.toUpperCase();
+            return (
+              <div
+                key={item.key}
+                style={{ display: "grid", placeItems: "center", padding: "4px 0" }}
               >
-                {item.label}
-              </span>
-            </button>
-          ))}
+                <button
+                  type="button"
+                  onClick={() => handleAttachClick(item.key)}
+                  aria-label={item.label}
+                  title={item.label}
+                  data-nex-free-chat-composer-attach-item={item.key}
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: "50%",
+                    padding: 0,
+                    background: `radial-gradient(circle at 30% 30%, ${accentHex}, #000a1a)`,
+                    color: "#FFFFFF",
+                    border: `2px solid ${accentHex}`,
+                    fontSize: 10,
+                    fontWeight: 900,
+                    letterSpacing: 0.3,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    lineHeight: 1,
+                    textShadow: "0 1px 2px rgba(0,0,0,0.8)",
+                    boxShadow: `0 2px 10px ${accentHex}66, inset 0 1px 2px #FFFFFF55`,
+                  }}
+                >
+                  {ballCaption}
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
       {toast && (
