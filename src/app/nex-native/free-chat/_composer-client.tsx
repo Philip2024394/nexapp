@@ -529,6 +529,14 @@ export function FreeChatComposerClient({
         [data-nex-free-chat-call-center-trigger] {
           display: none !important;
         }
+        /* Owner directive 2026-10-22 (evening · pass 14) · live-
+           location chip pin pulses. Mirrors the ChatIdentityHeader
+           heartbeat language · steady 1400ms outward ping. */
+        @keyframes nex-free-chat-location-ping {
+          0%   { transform: scale(1);   opacity: 0.9; }
+          80%  { transform: scale(1.6); opacity: 0;   }
+          100% { transform: scale(1.6); opacity: 0;   }
+        }
       `}</style>
     {/* Owner directive 2026-10-22 (afternoon · follow-up pass 5) ·
         hidden file input · reused by Camera / Gallery / Document
@@ -660,7 +668,36 @@ export function FreeChatComposerClient({
           zIndex: 15,
         }}
       >
-        <span style={{ fontSize: 18 }} aria-hidden>
+        {/* Owner directive 2026-10-22 (evening · pass 14) · live-
+            location chip renders a pulsing ping ring around the pin
+            glyph (same heartbeat vocabulary as the chat identity
+            avatar). Other kinds render the glyph flat. */}
+        <span
+          style={{
+            position: "relative",
+            fontSize: 18,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 24,
+            height: 24,
+          }}
+          aria-hidden
+        >
+          {attachment.kind === "location" && (
+            <span
+              aria-hidden
+              style={{
+                position: "absolute",
+                inset: -2,
+                borderRadius: "50%",
+                border: `2px solid ${accentHex}`,
+                animation:
+                  "nex-free-chat-location-ping 1400ms ease-out infinite",
+                pointerEvents: "none",
+              }}
+            />
+          )}
           {attachmentGlyph(attachment)}
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -686,6 +723,38 @@ export function FreeChatComposerClient({
             {attachmentSecondary(attachment)}
           </div>
         </div>
+        {/* Live-location chips get an "Open in Maps" link in addition
+            to the Remove X · lets the sender verify the pinned
+            location opens correctly before hitting send. The link
+            uses target _blank + rel noopener so it never nukes the
+            composer tab. Recipient will see the same URL in the
+            posted chat bubble (next slice: real send on peer chat). */}
+        {attachment.kind === "location" && (
+          <a
+            href={buildLocationMapsUrl(attachment.lat, attachment.lon)}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Preview this location in Maps"
+            data-nex-free-chat-composer-attachment-maps-link
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              padding: "4px 10px",
+              minHeight: 24,
+              background: accentHex,
+              color: NEX.bgNavy,
+              borderRadius: 999,
+              fontSize: 10,
+              fontWeight: 800,
+              letterSpacing: 0.4,
+              textTransform: "uppercase",
+              textDecoration: "none",
+              fontFamily: "inherit",
+            }}
+          >
+            Open in Maps
+          </a>
+        )}
         <button
           type="button"
           onClick={clearAttachment}
@@ -1223,7 +1292,7 @@ function attachmentPrimary(a: LiveAttachment): string {
     case "voice":
       return `Voice note · ${formatSeconds(Math.round(a.durationMs / 1000))}`;
     case "location":
-      return `${a.lat.toFixed(5)}, ${a.lon.toFixed(5)}`;
+      return "Live location";
   }
 }
 
@@ -1236,8 +1305,18 @@ function attachmentSecondary(a: LiveAttachment): string {
     case "voice":
       return a.mime || "audio/webm";
     case "location":
-      return `±${Math.round(a.accuracy)}m`;
+      return `${a.lat.toFixed(5)}, ${a.lon.toFixed(5)} · ±${Math.round(a.accuracy)}m`;
   }
+}
+
+/** Build the Google Maps directions URL for a given lat/lon.
+ *  Owner directive 2026-10-22 (evening · pass 14) · opens the user's
+ *  default Maps app on mobile · opens maps.google.com in a new tab on
+ *  desktop. Uses the universal `?q=` query so it works even for
+ *  places without a known business/landmark. */
+export function buildLocationMapsUrl(lat: number, lon: number): string {
+  const q = `${lat.toFixed(6)},${lon.toFixed(6)}`;
+  return `https://www.google.com/maps?q=${encodeURIComponent(q)}`;
 }
 
 function formatSeconds(total: number): string {
