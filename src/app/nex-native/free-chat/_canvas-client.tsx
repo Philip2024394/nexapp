@@ -407,12 +407,11 @@ export function FreeChatCanvasClient({
     {/* Owner directive 2026-10-23 (Step D rollout per doctrine
         nex-free-chat-showcase-themes-free-forever-2026-10-23 §6 ·
         animation polish is NOT blocked). ONLY mounts when the ACTIVE
-        theme is theme-3 (space wallpaper · free-chat-theme-3.png).
+        theme is theme-2 (the space wallpaper · free-chat-theme-2.png
+        · verified by viewing the asset · the top-row 3rd tile right).
         Other themes continue to render exactly as sealed · zero
-        regression. The planet drifts through the hero area and
-        exits to the left · a floating 🚀 Fire pill at top-right
-        triggers an additional on-demand pass. */}
-    {themeId === "theme-3" && (
+        regression. */}
+    {themeId === "theme-2" && (
       <HeroPlanetPassBy accentHex={activeAccentHex} />
     )}
     </>
@@ -420,26 +419,34 @@ export function FreeChatCanvasClient({
 }
 
 /* ─── HeroPlanetPassBy ───────────────────────────────────────────
-   Owner directive 2026-10-23 · "planet in hero area passing by to
-   the left". Horizontal pass-by (NOT the sealed diagonal fly-past)
-   staged in the top ~18% of the phone frame so the planet drifts
-   across the hero area and exits off-screen to the left.
+   Owner directive 2026-10-23 · "planet should start dot and ask it
+   travels from right hero area towards left its getting bigger and
+   flies through any card past the camera guy".
+
+   Mounted ONLY when active theme is theme-2 (the space wallpaper).
+
+   Trajectory:
+   · Starts as a 4px dot on the right edge of the hero area
+   · Travels diagonally down-and-left across the frame
+   · Scales 0.05 → 4.0 as it moves · at the end the planet is
+     larger than the frame, flying "past the camera" and off-screen
+     to the lower-left
+   · Super-high zIndex (90 ambient / 91 one-shot) so the planet
+     paints OVER every chat card, bubble, and composer chrome
+     ("flies through any card past the camera guy")
 
    Dual-mode:
-   · Ambient loop · a slow 18s drift that auto-plays while the
-     component is mounted (owner-chosen marketing-ambient vibe)
-   · One-shot Fire · the 🚀 pill at the top-right re-mounts a
-     one-off planet on top of the ambient loop · faster travel
-     (6s) so taps feel responsive
+   · Ambient loop · 22s cycle auto-plays while mounted so returning
+     visitors always see motion
+   · One-shot Fire · the 🚀 pill triggers a faster 7s pass that
+     stacks over the ambient loop · each tap is a fresh dot-to-huge
 
-   Both passes share the same keyframes · just different durations.
-   Respects @media (prefers-reduced-motion: reduce) · pauses the
-   ambient loop + fades the one-shot in place without translating.
+   Reduced-motion fallback · pauses translate + scale, keeps the
+   planet static at mid-hero as a quiet focal point.
 
    Asset: /nex-native/planets/planet-approach-1.png (owner-supplied
-   2026-10-15 · already on disk · same PNG used by the sealed
-   NexPlanetApproachClient so visual language is consistent across
-   surfaces).
+   2026-10-15 · same PNG used by the sealed NexPlanetApproachClient
+   so visual language stays consistent across surfaces).
 */
 const HERO_PLANET_SRC = "/nex-native/planets/planet-approach-1.png";
 
@@ -454,24 +461,30 @@ function HeroPlanetPassBy({
   return (
     <>
       <style>{`
+        /* Dot-to-huge trajectory · starts tiny on the right edge of
+           the hero area, grows + travels diagonally down-left,
+           exits off-screen to the lower-left as a huge sphere
+           (feels like it just flew past the viewer's face). */
         @keyframes nex-hero-planet-pass {
-          0%   { transform: translate3d(100vw, 0, 0) rotate(0deg); opacity: 0; }
-          8%   { opacity: 1; }
-          50%  { transform: translate3d(50vw, 8px, 0) rotate(-6deg); opacity: 1; }
-          92%  { opacity: 1; }
-          100% { transform: translate3d(-30vw, 0, 0) rotate(-12deg); opacity: 0; }
+          0%   { transform: translate3d(85vw,  0vh, 0) scale(0.05) rotate(0deg); opacity: 0; }
+          6%   { opacity: 1; }
+          25%  { transform: translate3d(65vw,  3vh, 0) scale(0.15) rotate(-4deg); opacity: 1; }
+          50%  { transform: translate3d(35vw,  9vh, 0) scale(0.45) rotate(-8deg); opacity: 1; }
+          75%  { transform: translate3d(  0vw, 18vh, 0) scale(1.10) rotate(-14deg); opacity: 1; }
+          90%  { transform: translate3d(-30vw, 28vh, 0) scale(2.20) rotate(-20deg); opacity: 1; }
+          100% { transform: translate3d(-80vw, 40vh, 0) scale(4.00) rotate(-26deg); opacity: 0; }
         }
         @media (prefers-reduced-motion: reduce) {
           [data-nex-hero-planet-ambient],
           [data-nex-hero-planet-oneshot] {
             animation: none !important;
-            opacity: 0.4 !important;
-            transform: translate3d(50vw, 0, 0) !important;
+            opacity: 0.5 !important;
+            transform: translate3d(50vw, 8vh, 0) scale(0.6) !important;
           }
         }
       `}</style>
 
-      {/* Ambient loop · auto-plays while mounted · 18s cycle */}
+      {/* Ambient loop · auto-plays while mounted · 22s cycle */}
       <img
         src={HERO_PLANET_SRC}
         alt=""
@@ -480,18 +493,22 @@ function HeroPlanetPassBy({
         draggable={false}
         style={{
           position: "absolute",
-          top: "15%",
+          top: "6%",
           left: 0,
-          width: 130,
-          height: 130,
+          width: 80,
+          height: 80,
           objectFit: "contain",
           pointerEvents: "none",
           userSelect: "none",
-          zIndex: 40,
+          // zIndex 90 · OVER chat bubbles (default) + welcome card +
+          // composer · doctrine "flies through any card past the
+          // camera guy".
+          zIndex: 90,
           willChange: "transform, opacity",
+          transformOrigin: "center center",
           animation:
-            "nex-hero-planet-pass 18s cubic-bezier(0.4, 0, 0.3, 1) 1s infinite",
-          filter: `drop-shadow(0 0 24px ${accentHex}55)`,
+            "nex-hero-planet-pass 22s cubic-bezier(0.4, 0, 0.3, 1) 1s infinite",
+          filter: `drop-shadow(0 0 24px ${accentHex}66)`,
         }}
       />
 
@@ -507,17 +524,18 @@ function HeroPlanetPassBy({
           draggable={false}
           style={{
             position: "absolute",
-            top: "18%",
+            top: "6%",
             left: 0,
-            width: 170,
-            height: 170,
+            width: 100,
+            height: 100,
             objectFit: "contain",
             pointerEvents: "none",
             userSelect: "none",
-            zIndex: 41,
+            zIndex: 91,
             willChange: "transform, opacity",
+            transformOrigin: "center center",
             animation:
-              "nex-hero-planet-pass 6s cubic-bezier(0.4, 0, 0.3, 1) forwards",
+              "nex-hero-planet-pass 7s cubic-bezier(0.4, 0, 0.3, 1) forwards",
             filter: `drop-shadow(0 0 36px ${accentHex}aa)`,
           }}
         />
