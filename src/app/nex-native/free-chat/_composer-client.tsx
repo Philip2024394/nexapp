@@ -86,6 +86,16 @@ type LiveAttachment =
       readonly initials: string;
       readonly hasShop: boolean;
       readonly isVerified: boolean;
+    }
+  | {
+      // Owner directive 2026-10-22 (evening · pass 20) · share a
+      // contact's SHOP (not their identity). Public commerce surface
+      // · doesn't leak the contact's personal details.
+      readonly kind: "shop_share";
+      readonly contactId: string;
+      readonly displayName: string;
+      readonly shopName: string;
+      readonly initials: string;
     };
 
 // Owner directive 2026-10-22 (afternoon · follow-up pass 6) · each
@@ -528,27 +538,36 @@ export function FreeChatComposerClient({
     }
   }, [cameraStream]);
 
-  const handleContactShare = React.useCallback(
-    (c: MockContact) => {
-      setContactPickerOpen(false);
-      setAttachment({
-        kind: "contact",
-        contactId: c.id,
-        nexHandle: c.nexHandle,
-        displayName: c.displayName,
-        profession: c.profession,
-        initials: c.initials,
-        hasShop: c.hasShop,
-        isVerified: c.isVerified,
-      });
-    },
-    [],
-  );
-
+  // Owner directive 2026-10-22 (evening · pass 20) · invite-only
+  // doctrine. The hold-the-card ritual AND the Invite button both
+  // fire this handler. On the pilot /free-chat surface it toasts ·
+  // real wiring to peer_conversation_participant lands later.
   const handleContactInvite = React.useCallback(
     (c: MockContact) => {
       setContactPickerOpen(false);
-      flashToast(`Invite to ${c.displayName} · coming soon`);
+      flashToast(`Invite sent to ${c.displayName}`);
+    },
+    [flashToast],
+  );
+
+  // Owner directive 2026-10-22 (evening · pass 20) · share a
+  // contact's SHOP into the current chat. Lands as a shop_share chip
+  // in the composer · when peer chat gets wired this will post as a
+  // shop bubble the recipient can tap to open the ShopGridModal.
+  const handleContactShopShare = React.useCallback(
+    (c: MockContact) => {
+      setContactPickerOpen(false);
+      if (!c.hasShop || !c.shopName) {
+        flashToast(`${c.displayName} doesn't have a shop`);
+        return;
+      }
+      setAttachment({
+        kind: "shop_share",
+        contactId: c.id,
+        displayName: c.displayName,
+        shopName: c.shopName,
+        initials: c.initials,
+      });
     },
     [flashToast],
   );
@@ -1428,8 +1447,8 @@ export function FreeChatComposerClient({
       open={contactPickerOpen}
       accentHex={accentHex}
       onClose={() => setContactPickerOpen(false)}
-      onShare={handleContactShare}
       onInvite={handleContactInvite}
+      onShopShare={handleContactShopShare}
     />
 
     {cameraStream && (
@@ -1533,6 +1552,8 @@ function attachmentGlyph(a: LiveAttachment): string {
       return "📍";
     case "contact":
       return "👤";
+    case "shop_share":
+      return "🛒";
   }
 }
 
@@ -1548,6 +1569,8 @@ function attachmentPrimary(a: LiveAttachment): string {
       return "Live location";
     case "contact":
       return `${a.displayName}${a.isVerified ? " ✓" : ""}`;
+    case "shop_share":
+      return a.shopName;
   }
 }
 
@@ -1563,6 +1586,8 @@ function attachmentSecondary(a: LiveAttachment): string {
       return `${a.lat.toFixed(5)}, ${a.lon.toFixed(5)} · ±${Math.round(a.accuracy)}m`;
     case "contact":
       return `${a.nexHandle} · ${a.profession}${a.hasShop ? " · 🛒" : ""}`;
+    case "shop_share":
+      return `${a.displayName}'s shop · tap to open`;
   }
 }
 

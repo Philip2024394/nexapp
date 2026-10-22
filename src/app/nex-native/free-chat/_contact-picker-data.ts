@@ -19,8 +19,15 @@ export interface MockContact {
   readonly presence: ContactPresence;
   readonly lastSeenMinsAgo: number | null;  // null if online
   readonly hasShop: boolean;
+  readonly shopName: string | null;         // display name when sharing
   readonly isVerified: boolean;             // NEX cyan tick
   readonly hasActiveStatus: boolean;        // 24h status ring
+  // Owner directive 2026-10-22 (evening · pass 20) · live unread
+  // count from the viewer's conversation with this contact. The
+  // avatar badge paints this number (hidden when 0). Replace with a
+  // real peer_message read-receipt query when the backing service
+  // lands.
+  readonly unreadCount: number;
   // Avatar fallback · 1-2 character initials shown when the real
   // profile image hasn't loaded. Mock set uses initials only (no
   // image URLs) so the carousel renders without external asset
@@ -38,8 +45,10 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
     presence: "online",
     lastSeenMinsAgo: null,
     hasShop: true,
+    shopName: "NEX Store",
     isVerified: true,
     hasActiveStatus: true,
+    unreadCount: 2,
     initials: "PO",
   },
   {
@@ -51,8 +60,10 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
     presence: "online",
     lastSeenMinsAgo: null,
     hasShop: false,
+    shopName: null,
     isVerified: true,
     hasActiveStatus: false,
+    unreadCount: 1,
     initials: "N1",
   },
   {
@@ -64,8 +75,10 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
     presence: "online",
     lastSeenMinsAgo: null,
     hasShop: true,
+    shopName: "Maria Portraits",
     isVerified: false,
     hasActiveStatus: true,
+    unreadCount: 5,
     initials: "MS",
   },
   {
@@ -77,8 +90,10 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
     presence: "online",
     lastSeenMinsAgo: null,
     hasShop: true,
+    shopName: "Crispy Chicken Jakarta",
     isVerified: true,
     hasActiveStatus: false,
+    unreadCount: 0,
     initials: "CC",
   },
   {
@@ -90,8 +105,10 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
     presence: "away",
     lastSeenMinsAgo: 15,
     hasShop: true,
+    shopName: "Hammer Ex",
     isVerified: true,
     hasActiveStatus: false,
+    unreadCount: 24,
     initials: "HE",
   },
   {
@@ -103,8 +120,10 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
     presence: "online",
     lastSeenMinsAgo: null,
     hasShop: true,
+    shopName: "Lisa Fit Club",
     isVerified: false,
     hasActiveStatus: true,
+    unreadCount: 0,
     initials: "LR",
   },
   {
@@ -116,8 +135,10 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
     presence: "away",
     lastSeenMinsAgo: 32,
     hasShop: false,
+    shopName: null,
     isVerified: true,
     hasActiveStatus: false,
+    unreadCount: 1,
     initials: "JO",
   },
   {
@@ -129,8 +150,10 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
     presence: "online",
     lastSeenMinsAgo: null,
     hasShop: true,
+    shopName: "Priya Flow",
     isVerified: false,
     hasActiveStatus: true,
+    unreadCount: 3,
     initials: "PP",
   },
   {
@@ -142,8 +165,10 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
     presence: "offline",
     lastSeenMinsAgo: 240,
     hasShop: false,
+    shopName: null,
     isVerified: false,
     hasActiveStatus: false,
+    unreadCount: 0,
     initials: "SC",
   },
   {
@@ -155,8 +180,10 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
     presence: "away",
     lastSeenMinsAgo: 8,
     hasShop: false,
+    shopName: null,
     isVerified: false,
     hasActiveStatus: false,
+    unreadCount: 0,
     initials: "AH",
   },
   {
@@ -168,8 +195,10 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
     presence: "online",
     lastSeenMinsAgo: null,
     hasShop: true,
+    shopName: "Mike Delivery Jkt",
     isVerified: false,
     hasActiveStatus: false,
+    unreadCount: 112,
     initials: "MD",
   },
   {
@@ -181,8 +210,10 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
     presence: "offline",
     lastSeenMinsAgo: 1440,
     hasShop: false,
+    shopName: null,
     isVerified: false,
     hasActiveStatus: true,
+    unreadCount: 0,
     initials: "EV",
   },
 ];

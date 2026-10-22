@@ -43,8 +43,14 @@ export interface ContactPickerSheetProps {
   readonly open: boolean;
   readonly accentHex: string;
   readonly onClose: () => void;
-  readonly onShare: (contact: MockContact) => void;
+  // Owner directive 2026-10-22 (evening · pass 20) · invite-only
+  // doctrine. Contact-share action is retired to match the sealed
+  // social-intents consent model (no connection without consent).
+  // Hold-the-card now fires onInvite (same semantics as the Invite
+  // button, just via the hold ritual). Shop share is a separate
+  // action · forwards the contact's SHOP (not their identity).
   readonly onInvite: (contact: MockContact) => void;
+  readonly onShopShare: (contact: MockContact) => void;
 }
 
 // Owner directive 2026-10-22 (evening · pass 18) · hold-to-send
@@ -57,8 +63,8 @@ export function ContactPickerSheet({
   open,
   accentHex,
   onClose,
-  onShare,
   onInvite,
+  onShopShare,
 }: ContactPickerSheetProps): React.JSX.Element | null {
   const [search, setSearch] = React.useState("");
   // Which card is being held + how far through the 5s the hold has
@@ -94,7 +100,10 @@ export function ContactPickerSheet({
         holdCommittedRef.current = true;
         const c = MOCK_CONTACTS.find((x) => x.id === holding.contactId);
         if (c) {
-          onShare(c);
+          // Owner directive 2026-10-22 (evening · pass 20) · hold now
+          // commits an INVITE (not a share). Keeps the hold ritual +
+          // 5s safety but matches the invite-only doctrine.
+          onInvite(c);
         }
         setHolding(null);
         return;
@@ -108,7 +117,7 @@ export function ContactPickerSheet({
         holdTickRef.current = null;
       }
     };
-  }, [holding, onShare]);
+  }, [holding, onInvite]);
 
   const startHold = React.useCallback((contactId: string) => {
     setHolding({ contactId, startMs: Date.now() });
@@ -175,13 +184,18 @@ export function ContactPickerSheet({
         position: "fixed",
         inset: 0,
         zIndex: 1000,
-        background: "rgba(2, 9, 20, 0.72)",
-        backdropFilter: "blur(8px)",
-        WebkitBackdropFilter: "blur(8px)",
+        background: "rgba(2, 9, 20, 0.55)",
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
+        // Owner directive 2026-10-22 (evening · pass 20) · bottom-up
+        // page-feel slide-up. Panel pins to the bottom edge of the
+        // viewport and climbs to 90% of screen height. Chat visible
+        // behind the semi-transparent backdrop (reduced from 0.72 →
+        // 0.55 opacity so context reads through).
         display: "flex",
-        alignItems: "center",
+        alignItems: "flex-end",
         justifyContent: "center",
-        padding: 16,
+        padding: 0,
         fontFamily: "Inter, system-ui, sans-serif",
       }}
       onClick={(e) => {
@@ -190,26 +204,43 @@ export function ContactPickerSheet({
     >
       <div
         style={{
-          // Owner directive 2026-10-22 (evening · pass 19b) · 400px
-          // was leaving the landscape cards cramped once we padded
-          // internal columns + the Invite CTA. Bumped to 404px (still
-          // inside the sealed 420px .nex-native-frame · 16px safety
-          // margin). Mobile viewport < 404 the sheet grows to 100%
-          // minus 8px per side.
-          width: "min(calc(100% - 16px), 404px)",
-          // Allow the panel to grow with content up to ~80% of
-          // viewport height · prevents cards being compressed into
-          // thin strips when the content list is longer than it fits.
-          maxHeight: "min(80vh, 640px)",
+          // Owner directive 2026-10-22 (evening · pass 20) · bottom-
+          // up page-feel panel. Full phone-frame width (minus small
+          // side margin), ~90% of viewport height. Reads as a page
+          // slid up from the composer rather than a center modal.
+          width: "min(calc(100% - 8px), 420px)",
+          height: "min(90vh, 720px)",
           display: "flex",
           flexDirection: "column",
           background: `linear-gradient(180deg, ${NEX.bgNavy} 0%, ${NEX.bgDeep} 100%)`,
           border: `1px solid ${accentHex}6B`,
-          borderRadius: 18,
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          borderBottomLeftRadius: 0,
+          borderBottomRightRadius: 0,
           overflow: "hidden",
-          boxShadow: `0 24px 60px -12px rgba(0,0,0,0.8), 0 0 0 2px ${accentHex}1F`,
+          boxShadow: `0 -24px 60px -12px rgba(0,0,0,0.8), 0 0 0 2px ${accentHex}1F`,
+          animation:
+            "nex-contact-picker-slide-up 240ms cubic-bezier(0.2, 0.8, 0.2, 1)",
         }}
       >
+        {/* Drag-handle grabber · tactile cue the panel is a sheet · */}
+        <div
+          aria-hidden
+          style={{
+            width: 40,
+            height: 4,
+            borderRadius: 999,
+            background: "rgba(255,255,255,0.3)",
+            margin: "8px auto 2px",
+          }}
+        />
+        <style>{`
+          @keyframes nex-contact-picker-slide-up {
+            from { transform: translateY(100%); }
+            to   { transform: translateY(0); }
+          }
+        `}</style>
         {/* Header */}
         <header
           style={{
@@ -240,7 +271,7 @@ export function ContactPickerSheet({
                 marginTop: 2,
               }}
             >
-              Share a contact
+              Invite someone to the chat
             </div>
           </div>
           <Link
@@ -350,6 +381,7 @@ export function ContactPickerSheet({
               contact={c}
               accentHex={accentHex}
               onInvite={() => onInvite(c)}
+              onShopShare={() => onShopShare(c)}
               onHoldStart={() => startHold(c.id)}
               onHoldEnd={cancelHold}
               holdProgress={
@@ -369,6 +401,7 @@ function ContactCard({
   contact,
   accentHex,
   onInvite,
+  onShopShare,
   onHoldStart,
   onHoldEnd,
   holdProgress,
@@ -376,6 +409,7 @@ function ContactCard({
   readonly contact: MockContact;
   readonly accentHex: string;
   readonly onInvite: () => void;
+  readonly onShopShare: () => void;
   readonly onHoldStart: () => void;
   readonly onHoldEnd: () => void;
   readonly holdProgress: number;
@@ -389,11 +423,12 @@ function ContactCard({
   const isHolding = holdProgress > 0;
   const countdownSeconds = Math.max(0, Math.ceil(5 - holdProgress * 5));
 
-  // Press-and-hold handlers · ignore the Invite button so tapping it
-  // doesn't start a hold on the card body underneath.
-  const stopIfInvite = (e: React.PointerEvent) => {
+  // Press-and-hold handlers · ignore the Invite + Shop buttons so
+  // tapping them doesn't start a hold on the card body underneath.
+  const stopIfCta = (e: React.PointerEvent) => {
     const target = e.target as HTMLElement;
     if (target.closest("[data-nex-contact-card-invite]")) return true;
+    if (target.closest("[data-nex-contact-card-shop]")) return true;
     return false;
   };
 
@@ -402,7 +437,7 @@ function ContactCard({
       data-nex-free-chat-contact-card={contact.id}
       data-nex-free-chat-contact-card-holding={isHolding ? "true" : "false"}
       onPointerDown={(e) => {
-        if (stopIfInvite(e)) return;
+        if (stopIfCta(e)) return;
         onHoldStart();
       }}
       onPointerUp={onHoldEnd}
@@ -468,7 +503,7 @@ function ContactCard({
             pointerEvents: "none",
           }}
         >
-          Sending in {countdownSeconds}…
+          Inviting in {countdownSeconds}…
         </div>
       )}
       {/* Avatar · presence ring · 24h status halo · shop badge. z-
@@ -539,32 +574,38 @@ function ContactCard({
             }}
           />
         )}
-        {/* Shop badge · bottom-right rim · only if hasShop · shrunk
-            for the landscape 56px avatar. */}
-        {contact.hasShop && (
+        {/* Owner directive 2026-10-22 (evening · pass 20) · unread-
+            count badge on bottom-right rim · replaces the previous
+            🛒 badge. Shows the number of unread messages from this
+            contact in the viewer's peer conversation with them.
+            Hidden when 0. Numbers > 99 collapse to "99+". The shop
+            indicator is now carried by the presence of the Shop CTA
+            button on the right instead. */}
+        {contact.unreadCount > 0 && (
           <div
-            aria-hidden
-            data-nex-contact-card-shop-badge
-            title="Has a NEX Shop"
+            aria-label={`${contact.unreadCount} unread`}
+            data-nex-contact-card-unread-badge
             style={{
               position: "absolute",
               bottom: -2,
               right: -2,
-              width: 18,
-              height: 18,
-              borderRadius: "50%",
+              minWidth: 20,
+              height: 20,
+              padding: "0 5px",
+              borderRadius: 999,
               background: accentHex,
               border: `2px solid ${NEX.bgNavy}`,
-              display: "grid",
-              placeItems: "center",
-              fontSize: 9,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 10,
               color: NEX.bgNavy,
               fontWeight: 900,
               lineHeight: 1,
               boxShadow: `0 2px 6px ${accentHex}99`,
             }}
           >
-            🛒
+            {contact.unreadCount > 99 ? "99+" : contact.unreadCount}
           </div>
         )}
       </div>
@@ -660,11 +701,13 @@ function ContactCard({
         </div>
       </div>
 
-      {/* Right CTA column · Invite only (tap-fire). Share is NOT a
-          button · the user press-and-holds the card body itself for
-          5s to send (owner directive 2026-10-22 evening pass 18).
-          Invite stays as a tap-fire button and sits above the hold-
-          fill paint layer. */}
+      {/* Right CTA column · Shop (if hasShop) + Invite · plus a
+          "Hold to invite" hint. Owner directive 2026-10-22 (evening
+          · pass 20) · Share CTA retired per the invite-only
+          doctrine. Hold-the-card = Invite (same semantics as the
+          Invite button, just via the 5s ritual). Shop = share THAT
+          contact's shop into the chat (public commerce, no identity
+          leak). */}
       <div
         style={{
           display: "flex",
@@ -675,6 +718,35 @@ function ContactCard({
           zIndex: 2,
         }}
       >
+        {contact.hasShop && (
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={onShopShare}
+            data-nex-contact-card-shop
+            aria-label={`Share ${contact.shopName ?? contact.displayName} shop`}
+            style={{
+              minWidth: 76,
+              minHeight: 30,
+              padding: "0 12px",
+              background: accentHex,
+              color: NEX.bgNavy,
+              border: "none",
+              borderRadius: 8,
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: 0.3,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 4,
+            }}
+          >
+            🛒 Shop
+          </button>
+        )}
         <button
           type="button"
           onPointerDown={(e) => e.stopPropagation()}
@@ -708,7 +780,7 @@ function ContactCard({
             transition: "opacity 120ms ease",
           }}
         >
-          Hold to send
+          Hold to invite
         </div>
       </div>
 
