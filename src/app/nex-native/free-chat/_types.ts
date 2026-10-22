@@ -42,8 +42,11 @@ export interface FreeChatTheme {
 
 export const FREE_CHAT_THEMES: readonly FreeChatTheme[] = [
   { id: "nex-default", label: "NEX", wallpaperUrl: null, placeholderLabel: null, isDefault: true, accentHex: "#00AFFF" },
-  { id: "theme-1", label: "Theme 1", wallpaperUrl: "/nex-themes/free-chat-theme-1.png", placeholderLabel: null, accentHex: "#D4A24C" },
-  { id: "theme-2", label: "Theme 2", wallpaperUrl: "/nex-themes/free-chat-theme-2.png", placeholderLabel: null, accentHex: "#FF4FD7" },
+  // Owner directive 2026-10-23 · swap accentHex between the top-row
+  // 2nd (theme-1) and 3rd (theme-2) tiles. Wallpaper assignments
+  // stay the same · only the UI chrome tint moves left → right.
+  { id: "theme-1", label: "Theme 1", wallpaperUrl: "/nex-themes/free-chat-theme-1.png", placeholderLabel: null, accentHex: "#FF4FD7" },
+  { id: "theme-2", label: "Theme 2", wallpaperUrl: "/nex-themes/free-chat-theme-2.png", placeholderLabel: null, accentHex: "#D4A24C" },
   { id: "theme-3", label: "Theme 3", wallpaperUrl: "/nex-themes/free-chat-theme-3.png", placeholderLabel: null, accentHex: "#16D66B" },
   { id: "theme-5", label: "Theme 5", wallpaperUrl: "/nex-themes/free-chat-theme-5.png", placeholderLabel: null, accentHex: "#FF7200" },
 ];
