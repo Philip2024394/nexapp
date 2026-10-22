@@ -2,24 +2,18 @@
 
 // src/app/nex-native/free-chat/_contact-picker-sheet.tsx
 //
-// Owner directive 2026-10-22 (evening · pass 16) · center-overlay
-// contact picker. Opened by the Contact button in the composer attach
-// panel · lives above the current chat (semi-transparent navy
-// backdrop) so the user keeps context on who they're talking to.
+// Contact-picker sheet mounted via React portal into the sealed
+// .nex-native-frame so it fits inside the phone silhouette on
+// desktop (420×909). On real phones the frame IS the viewport so
+// the sheet fills the screen edge-to-edge.
 //
-// Shape:
-//   · Header · "Share a contact" + "See all →" link + close ×
-//   · Search bar (filters mock contacts by name / NEX-ID / profession)
-//   · Horizontal carousel · CSS scroll-snap, 220px cards
-//   · Each card · avatar + ping + verified pill + status-ring overlay
-//                 + shop badge on rim (if hasShop) + display name
-//                 + NEX-ID + profession + city + presence line
-//                 + [Share] + [Invite] CTAs
-//
-// Handlers hoisted · parent composer decides what Share and Invite
-// do (stage attachment chip vs toast until participant service lands).
+// Owner directive 2026-10-22 (evening · pass 24):
+//   · Portal into .nex-native-frame (position: absolute inside it)
+//   · 70% of frame height, pinned to bottom, slides up on mount
+//   · Mobile-first · dimensions mirror the frame, not the viewport
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { MOCK_CONTACTS, type MockContact } from "./_contact-picker-data";
 
@@ -176,53 +170,63 @@ export function ContactPickerSheet({
       .map((entry) => entry.c);
   }, [search]);
 
-  if (!open) return null;
+  // Portal target · the sealed .nex-native-frame element. Resolved
+  // on mount so position: absolute children anchor to the phone
+  // silhouette (420×909 on desktop · 100% on real phones). Falls
+  // back to document.body if the frame isn't found (shouldn't happen
+  // in /free-chat but keeps the component resilient).
+  const [portalTarget, setPortalTarget] = React.useState<HTMLElement | null>(
+    null,
+  );
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    const frame = document.querySelector<HTMLElement>(".nex-native-frame");
+    setPortalTarget(frame ?? document.body);
+  }, []);
 
-  return (
+  if (!open) return null;
+  if (!portalTarget) return null;
+
+  const sheet = (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Share a contact"
       data-nex-free-chat-contact-picker
       style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 1000,
-        // Owner directive 2026-10-22 (evening · pass 23) · mobile-
-        // first page constrained to the sealed .nex-native-frame
-        // dimensions. On real phones the panel fills the screen edge
-        // to edge · on desktop the panel sizes to the 420×909 phone
-        // frame + centres horizontally against the NEX stage.
+        // Owner directive 2026-10-22 (evening · pass 24) · absolute
+        // inside the sealed .nex-native-frame (phone silhouette).
+        // Pinned to the bottom at 70% of the frame height so the top
+        // 30% of the chat remains visible behind the sheet.
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: "70%",
+        zIndex: 100,
         display: "flex",
-        alignItems: "stretch",
-        justifyContent: "center",
-        padding: 0,
-        // Dark NEX-navy backing fills the gutters on desktop so the
-        // phone-sized panel reads clearly against the stage.
-        background: NEX.bgDeep,
+        flexDirection: "column",
+        background: `linear-gradient(180deg, ${NEX.bgNavy} 0%, ${NEX.bgDeep} 100%)`,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        boxShadow: `0 -20px 50px -14px rgba(0,0,0,0.75), 0 0 0 1px ${accentHex}6B`,
+        overflow: "hidden",
+        animation:
+          "nex-contact-picker-slide-up 240ms cubic-bezier(0.2, 0.8, 0.2, 1)",
         fontFamily: "Inter, system-ui, sans-serif",
       }}
     >
+      {/* Drag handle · tactile cue the panel is a sheet */}
       <div
+        aria-hidden
         style={{
-          // Owner directive 2026-10-22 (evening · pass 23) · mobile-
-          // first panel · width mirrors the sealed .nex-native-frame
-          // (420 cap on desktop, 100% on mobile phones < 420px).
-          // Height is viewport-driven · caps at the frame's 909px so
-          // tall desktop windows don't stretch the panel beyond the
-          // phone silhouette.
-          width: "min(100%, 420px)",
-          height: "min(100vh, 909px)",
-          display: "flex",
-          flexDirection: "column",
-          background: `linear-gradient(180deg, ${NEX.bgNavy} 0%, ${NEX.bgDeep} 100%)`,
-          border: "none",
-          borderRadius: 0,
-          overflow: "hidden",
-          animation:
-            "nex-contact-picker-slide-up 240ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+          width: 40,
+          height: 4,
+          borderRadius: 999,
+          background: "rgba(255,255,255,0.3)",
+          margin: "8px auto 2px",
         }}
-      >
+      />
         <style>{`
           @keyframes nex-contact-picker-slide-up {
             from { transform: translateY(100%); }
@@ -378,9 +382,10 @@ export function ContactPickerSheet({
             />
           ))}
         </div>
-      </div>
     </div>
   );
+
+  return createPortal(sheet, portalTarget);
 }
 
 /* ─── Single card ─────────────────────────────────────────────── */
@@ -433,16 +438,15 @@ function ContactCard({
       onPointerCancel={onHoldEnd}
       style={{
         position: "relative",
-        // Owner directive 2026-10-22 (evening · pass 19b) · lock card
-        // height so vertical flex-shrink can't collapse the rows into
-        // thin strips. 80px gives the 56px avatar + 12px padding (6
-        // top / 6 bottom via the 10px padding + line-height slack).
-        minHeight: 80,
+        // Owner directive 2026-10-22 (evening · pass 24) · card is a
+        // flex column now · identity row on top (avatar + text) · CTA
+        // row (Shop + Invite) stacked below the profession line
+        // instead of in a right column. Reads cleaner for landscape
+        // cards and gives the CTAs full card width.
         flexShrink: 0,
         display: "flex",
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
+        flexDirection: "column",
+        gap: 8,
         padding: "10px 12px",
         background: NEX.bgNavy,
         border: `1px solid ${isHolding ? accentHex : `${accentHex}3D`}`,
@@ -455,6 +459,17 @@ function ContactCard({
         transform: isHolding ? "scale(0.99)" : "scale(1)",
       }}
     >
+      {/* Top row · avatar + text column (unchanged, horizontally
+          aligned centre) */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 12,
+          minWidth: 0,
+        }}
+      >
       {/* Owner directive 2026-10-22 (evening · pass 18) · hold-to-send
           progress fill. Grows left-to-right as the 5s elapses. Sits
           BEHIND the card content via zIndex:0 + content zIndex:1. */}
@@ -694,19 +709,16 @@ function ContactCard({
         </div>
       </div>
 
-      {/* Right CTA column · Shop (if hasShop) + Invite · plus a
-          "Hold to invite" hint. Owner directive 2026-10-22 (evening
-          · pass 20) · Share CTA retired per the invite-only
-          doctrine. Hold-the-card = Invite (same semantics as the
-          Invite button, just via the 5s ritual). Shop = share THAT
-          contact's shop into the chat (public commerce, no identity
-          leak). */}
+      </div>
+      {/* Bottom row · Shop + Invite CTAs stacked under the profession
+          line per owner directive 2026-10-22 (evening · pass 24).
+          Full card width · Invite expands to fill, Shop is a fixed
+          chip on the left when hasShop. */}
       <div
         style={{
           display: "flex",
-          flexDirection: "column",
-          gap: 6,
-          flexShrink: 0,
+          flexDirection: "row",
+          gap: 8,
           position: "relative",
           zIndex: 2,
         }}
@@ -751,14 +763,14 @@ function ContactCard({
           onClick={onInvite}
           data-nex-contact-card-invite
           style={{
-            minWidth: 76,
-            minHeight: 30,
+            flex: 1,
+            minHeight: 32,
             padding: "0 12px",
             background: "transparent",
             color: accentHex,
             border: `1px solid ${accentHex}`,
             borderRadius: 8,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 800,
             letterSpacing: 0.3,
             cursor: "pointer",
