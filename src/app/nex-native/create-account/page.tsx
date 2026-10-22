@@ -22,6 +22,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import { devPreviewOn } from "@/lib/nex-native/app/dev-preview";
+import { isAdminSession } from "@/lib/nex-native/app/admin";
 import { TwoStepSignupForm } from "./_two-step-signup-form";
 import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
 
@@ -85,12 +86,14 @@ const ICON_TILES: ReadonlyArray<{ title: string; subtitle: string }> = [
 export default async function CreateAccountPage({ searchParams }: PageProps) {
   const session = await resolveNexAppSessionFromContext();
   const params = await searchParams;
-  // Owner directive 2026-10-22 (afternoon) · signed-in users still
-  // bounce to /contacts (matches the sealed mapping tree · supersedes
-  // the stale /home target), BUT the owner can inspect this page in
-  // a signed-in dev browser via ?preview=1 on localhost. Prod ignores
-  // the param. See src/lib/nex-native/app/dev-preview.ts.
-  if (session && !devPreviewOn(params)) redirect("/nex-native/contacts");
+  // Owner directive 2026-10-22 (afternoon) · signed-in users bounce
+  // to /contacts (matches the sealed mapping tree). Two bypasses:
+  //   · ?preview=1 (localhost dev · one-shot inspection)
+  //   · admin email (NEX_ADMIN_EMAILS env var · bypass always, no param)
+  // See src/lib/nex-native/app/admin.ts + dev-preview.ts.
+  if (session && !devPreviewOn(params) && !isAdminSession(session)) {
+    redirect("/nex-native/contacts");
+  }
   const authError = params.e && params.m ? { code: params.e, message: params.m } : null;
   const initialIso2 = readCountryHint(await headers());
   // 2026-10-15 · preserve_email echoes the user's step-1 email across

@@ -41,6 +41,7 @@ import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
 import { resolveNexAppSessionOrGuest } from "@/lib/nex-native/app/session-or-guest";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import { devPreviewOn } from "@/lib/nex-native/app/dev-preview";
+import { isAdminSession } from "@/lib/nex-native/app/admin";
 import { effectiveTier } from "@/lib/nex-native/account-service";
 import {
   ControlDrawer,
@@ -122,7 +123,7 @@ export default async function FreeChatPage({
   const signedInSession = await resolveNexAppSessionFromContext().catch(
     () => null,
   );
-  if (signedInSession && !devPreviewOn(sp)) {
+  if (signedInSession && !devPreviewOn(sp) && !isAdminSession(signedInSession)) {
     redirect("/nex-native/contacts");
   }
 
