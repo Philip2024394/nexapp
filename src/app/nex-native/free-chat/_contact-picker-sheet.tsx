@@ -775,6 +775,13 @@ function ContactCard({
           zIndex: 2,
         }}
       >
+        {/* Owner directive 2026-10-23 · variant-10 PlaceholderIconButton
+            style · both buttons are cyan-accent chrome balls with
+            white SHOP / INVITE text labels baked in · 48×48 round ·
+            radial gradient fill from accent → deep navy · 2px solid
+            accent rim · outer accent glow + inset white highlight.
+            Same visual treatment on both buttons · consistent with
+            card number 10 from the prototype page. */}
         {contact.hasShop && (
           <button
             type="button"
@@ -788,21 +795,23 @@ function ContactCard({
               height: 48,
               borderRadius: "50%",
               padding: 0,
-              background: NEX.shopOrange,
-              color: NEX.shopOrangeInk,
-              border: "none",
-              fontSize: 20,
-              fontWeight: 800,
+              background: `radial-gradient(circle at 30% 30%, ${accentHex}, #000a1a)`,
+              color: "#FFFFFF",
+              border: `2px solid ${accentHex}`,
+              fontSize: 9,
+              fontWeight: 900,
+              letterSpacing: 0.5,
               cursor: "pointer",
               fontFamily: "inherit",
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
               lineHeight: 1,
-              boxShadow: `0 2px 10px ${NEX.shopOrange}66`,
+              textShadow: "0 1px 2px rgba(0,0,0,0.8)",
+              boxShadow: `0 2px 10px ${accentHex}66, inset 0 1px 2px #FFFFFF55`,
             }}
           >
-            🛒
+            SHOP
           </button>
         )}
         <button
@@ -817,21 +826,23 @@ function ContactCard({
             height: 48,
             borderRadius: "50%",
             padding: 0,
-            background: "transparent",
-            color: accentHex,
-            border: `1.5px solid ${accentHex}`,
-            fontSize: 22,
-            fontWeight: 800,
+            background: `radial-gradient(circle at 30% 30%, ${accentHex}, #000a1a)`,
+            color: "#FFFFFF",
+            border: `2px solid ${accentHex}`,
+            fontSize: 9,
+            fontWeight: 900,
+            letterSpacing: 0.5,
             cursor: "pointer",
             fontFamily: "inherit",
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
             lineHeight: 1,
-            boxShadow: `0 0 10px ${accentHex}44`,
+            textShadow: "0 1px 2px rgba(0,0,0,0.8)",
+            boxShadow: `0 2px 10px ${accentHex}66, inset 0 1px 2px #FFFFFF55`,
           }}
         >
-          +
+          INVITE
         </button>
       </div>
 
