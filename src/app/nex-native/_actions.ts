@@ -342,14 +342,15 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
       redirect(dest);
     }
   }
-  // Owner directive 2026-10-22 (afternoon) · fresh signup completion
-  // lands on /nex-native/contacts · the user is now logged in and the
-  // contacts page is the authenticated home. The theme picker lived
-  // on /free-chat as a pre-signup guest surface · it never fired post-
-  // signup. Prior 2026-10-21 directive routed here to /free-chat?show-
-  // themes=1 · superseded by this mapping-tree seal.
-  revalidatePath("/nex-native/contacts");
-  redirect("/nex-native/contacts");
+  // Owner directive 2026-10-22 (afternoon · final) · fresh signup
+  // completion lands on /nex-native/free-chat?show-themes=1 · the
+  // user is now authenticated and the free-chat 5-theme picker +
+  // ChatSetupContainer is where they complete theme + avatar + name
+  // + location in one surface. From there they continue into chat.
+  // Prior same-day directive routed here to /contacts · superseded
+  // by the final landing-page mapping tree.
+  revalidatePath("/nex-native/free-chat");
+  redirect("/nex-native/free-chat?show-themes=1");
 }
 
 function redirectToOnboardingWithError(code: string, message: string): never {

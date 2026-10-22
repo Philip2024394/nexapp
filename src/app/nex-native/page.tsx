@@ -1,13 +1,11 @@
 // src/app/nex-native/page.tsx
 //
-// NEX first-entry router · updated 2026-10-22 (picker-first flow).
-//   · signed-in  → /nex-native/contacts (owner directive 2026-10-22
-//                  afternoon · signed-in app lands on contacts, not
-//                  the three-doorway hub)
-//   · signed-out → /nex-native/free-chat?show-themes=1 (owner directive
-//                  2026-10-22 · guests-with-no-account see the 5-theme
-//                  picker + chat FIRST · signup triggers only when they
-//                  try a gated action)
+// NEX first-entry router · updated 2026-10-22 (final).
+//   · signed-in  → /nex-native/contacts
+//   · signed-out → /nex-native/create-account (owner directive
+//                  2026-10-22 afternoon · landing page for every
+//                  account-less visitor is email+password. On submit
+//                  fresh signups divert to free-chat theme picker.)
 //
 // Prior behaviour history:
 //   · 2026-10-11 · signed-out → /nex-native/welcome
@@ -30,5 +28,5 @@ export default async function Page() {
   if (session) {
     redirect("/nex-native/contacts");
   }
-  redirect("/nex-native/free-chat?show-themes=1");
+  redirect("/nex-native/create-account");
 }

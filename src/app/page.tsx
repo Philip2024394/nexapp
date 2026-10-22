@@ -1,15 +1,14 @@
 // src/app/page.tsx
 //
-// NEX root entry · session-aware · owner-approved 2026-10-22.
+// NEX root entry · session-aware · owner-approved 2026-10-22 (final).
 // --------------------------------------------------------------------
-//   · signed-in  → /nex-native/contacts (owner directive 2026-10-22
-//                  (afternoon) · signed-in app opens straight on the
-//                  contacts page · survives app close/reopen · only an
-//                  explicit log-out invalidates the session cookie)
-//   · signed-out → /nex-native/free-chat?show-themes=1 (owner
-//                  directive 2026-10-22 · guests-with-no-account land
-//                  on the 5-theme free-chat picker FIRST · signup is
-//                  only triggered when they try a gated action)
+//   · signed-in  → /nex-native/contacts (session cookie survives app
+//                  close/reopen · only explicit log-out invalidates)
+//   · signed-out → /nex-native/create-account (owner directive
+//                  2026-10-22 afternoon · the landing page for every
+//                  account-less visitor is the email+password form.
+//                  On submit, fresh signups divert to the free-chat
+//                  5-theme picker · see _actions.ts post-signup redirect)
 //
 // Prior history:
 //   · pre-2026-10-16 · unconditional redirect to /nex-native/home ·
@@ -32,5 +31,5 @@ export default async function RootPage(): Promise<never> {
   if (session) {
     redirect("/nex-native/contacts");
   }
-  redirect("/nex-native/free-chat?show-themes=1");
+  redirect("/nex-native/create-account");
 }
