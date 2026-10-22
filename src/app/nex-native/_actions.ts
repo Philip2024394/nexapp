@@ -342,13 +342,14 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
       redirect(dest);
     }
   }
-  // Owner directive 2026-10-21 (Stage A · release-hold revoked) ·
-  // fresh signup now lands directly on /nex-native/free-chat with the
-  // first-visit theme picker forced open via ?show-themes=1. The
-  // sealed /create-account/pick-theme chain is bypassed; the free-chat
-  // picker handles theme selection + account setup + invite inline.
-  revalidatePath("/nex-native/free-chat");
-  redirect("/nex-native/free-chat?show-themes=1");
+  // Owner directive 2026-10-22 (afternoon) · fresh signup completion
+  // lands on /nex-native/contacts · the user is now logged in and the
+  // contacts page is the authenticated home. The theme picker lived
+  // on /free-chat as a pre-signup guest surface · it never fired post-
+  // signup. Prior 2026-10-21 directive routed here to /free-chat?show-
+  // themes=1 · superseded by this mapping-tree seal.
+  revalidatePath("/nex-native/contacts");
+  redirect("/nex-native/contacts");
 }
 
 function redirectToOnboardingWithError(code: string, message: string): never {
@@ -453,11 +454,12 @@ export async function signInAction(formData: FormData): Promise<ActionResult> {
       redirect(nextRaw);
     }
   }
-  // Owner directive 2026-10-21 (Stage A · release-hold revoked) ·
-  // post-sign-in default landing moves from /welcome to the free-chat
-  // picker. Deep-link `next` branch above still takes precedence.
-  revalidatePath("/nex-native/free-chat");
-  redirect("/nex-native/free-chat");
+  // Owner directive 2026-10-22 (afternoon) · post-sign-in default
+  // landing is /nex-native/contacts · the signed-in user re-entering
+  // the app arrives on the authenticated contacts page. Deep-link
+  // `next` branch above still takes precedence for returnable intents.
+  revalidatePath("/nex-native/contacts");
+  redirect("/nex-native/contacts");
 }
 
 // `signInAsDevAdminAction` removed · owner directive 2026-10-16. The

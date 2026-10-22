@@ -117,7 +117,15 @@ export default async function FreeChatPage({
 
   // Resolve ControlDrawer session · null for guests · drawer shows a
   // Sign-In prompt when no session (same pattern as the welcome page).
+  //
+  // Owner directive 2026-10-22 (afternoon) · when the viewer is a
+  // real NEX account their display_name + nex_handle (nex-NNNNNN)
+  // flow through both the chat header AND the drawer identity bar
+  // in sync. Guests see the "NEX" / "NEX - Guest" brand strings in
+  // both places (see headerDisplayName / headerSubtitle below).
   let drawerSession: ControlDrawerSession | null = null;
+  let headerDisplayName = "NEX";
+  let headerSubtitle = "NEX - Guest";
   try {
     const sess = await resolveNexAppSessionFromContext();
     if (sess) {
@@ -126,9 +134,13 @@ export default async function FreeChatPage({
         nexHandle: sess.account.nex_handle,
         isBisnis: effectiveTier(sess.account) === "bisnis",
       };
+      headerDisplayName = sess.account.display_name;
+      headerSubtitle = sess.account.nex_handle
+        ? sess.account.nex_handle.replace(/^nex-/i, "NEX-")
+        : "NEX - Guest";
     }
   } catch {
-    // guest · drawerSession stays null
+    // guest · drawerSession stays null · header strings keep defaults
   }
 
   // Owner directive 2026-10-21 (iteration 53) · read the first-visit
@@ -251,7 +263,7 @@ export default async function FreeChatPage({
                 display: "block",
               }}
             >
-              NEX
+              {headerDisplayName}
             </span>
             <span
               data-nex-free-chat-header-subtitle
@@ -266,7 +278,7 @@ export default async function FreeChatPage({
                 display: "block",
               }}
             >
-              NEX - Guest
+              {headerSubtitle}
             </span>
           </div>
           {/* Right-side header cluster · owner directive 2026-10-21
