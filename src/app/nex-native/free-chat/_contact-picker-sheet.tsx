@@ -15,6 +15,10 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { MOCK_CONTACTS, type MockContact } from "./_contact-picker-data";
+// Owner directive 2026-10-23 · consume the single sealed sans stack
+// from the design-tokens module (sealed 2026-10-17) · no per-page
+// fontFamily redeclaration.
+import { NEX_FONT_SANS } from "@/lib/nex-native/design-tokens";
 
 // Owner directive 2026-10-23 (wiring pass) · the sheet now accepts
 // a `contacts` prop so a signed-in surface can inject real rows
@@ -245,7 +249,7 @@ export function ContactPickerSheet({
         overflow: "hidden",
         animation:
           "nex-contact-picker-slide-up 240ms cubic-bezier(0.2, 0.8, 0.2, 1)",
-        fontFamily: "Inter, system-ui, sans-serif",
+        fontFamily: NEX_FONT_SANS,
       }}
     >
       {/* Owner directive 2026-10-22 (evening · pass 26) · tappable
@@ -640,7 +644,10 @@ function ContactCard({
         >
           <div
             style={{
-              fontSize: 14,
+              // Owner directive 2026-10-23 · mobile legibility bump
+              // 14 → 15 for the display name. Still fits two names
+              // on the 420-wide phone frame without truncation.
+              fontSize: 15,
               fontWeight: 800,
               color: NEX.text,
               whiteSpace: "nowrap",
@@ -672,10 +679,13 @@ function ContactCard({
             </span>
           )}
         </div>
-        {/* NEX ID */}
+        {/* NEX ID · mobile-size bump 10 → 11 (owner directive
+            2026-10-23). Keeps the sealed monospace stack intact
+            per design-tokens doc · monospace is an intentional
+            type-system contrast and not subject to the sans rule. */}
         <div
           style={{
-            fontSize: 10,
+            fontSize: 11,
             fontWeight: 700,
             color: accentHex,
             letterSpacing: 0.5,
@@ -689,10 +699,12 @@ function ContactCard({
             communicated purely by the avatar ring colour (green =
             online, orange = busy, dark red = offline) per owner
             directive 2026-10-22 (evening · pass 19) · no text
-            "Online now / Away Xm / Offline Yh" line. */}
+            "Online now / Away Xm / Offline Yh" line. Mobile-size
+            bump 10 → 11 (owner directive 2026-10-23) · same floor
+            as the NEX ID row so the meta pair reads as one tier. */}
         <div
           style={{
-            fontSize: 10,
+            fontSize: 11,
             color: NEX.textMute,
             lineHeight: 1.4,
             whiteSpace: "nowrap",
