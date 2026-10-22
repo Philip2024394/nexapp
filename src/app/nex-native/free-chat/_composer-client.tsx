@@ -784,7 +784,13 @@ export function FreeChatComposerClient({
             bottom: "calc(100% + 10px)",
             left: "50%",
             transform: "translateX(-50%)",
-            width: "min(300px, calc(100% - 32px))",
+            // Owner directive 2026-10-22 (evening · pass 6) · widened
+            // 300 → 380 so three 100px chrome icons + 2×10 gaps +
+            // 2×12 panel padding (= 344px) all fit inside the panel
+            // instead of being squeezed by the grid. 380 leaves ~18px
+            // of breathing room and still fits inside the sealed
+            // 420px phone frame.
+            width: "min(380px, calc(100% - 20px))",
             padding: 12,
             // Owner directive 2026-10-22 (afternoon · follow-up pass 3)
             // · match the welcome chat bubble treatment:
