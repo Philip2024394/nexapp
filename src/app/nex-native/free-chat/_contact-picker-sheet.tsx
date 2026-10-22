@@ -437,15 +437,17 @@ function ContactCard({
         // the right. The earlier "under the images" bottom-row
         // layout is retired in this pass.
         // minHeight · right CTA column stacks 48 + 6 + 48 = 102 ·
-        // + 10px top-pad + 10px bot-pad = 122 → set to 122 so the
-        // CTA stack never compresses.
-        minHeight: 122,
+        // + 6px top-pad + 6px bot-pad = 114 (owner directive
+        // 2026-10-23 · "reduce the container height little, do not
+        // reduce inner text or buttons" · trimmed only the vertical
+        // padding, buttons + text sizes untouched).
+        minHeight: 114,
         flexShrink: 0,
         display: "flex",
         flexDirection: "row",
         alignItems: "center",
         gap: 10,
-        padding: "10px 12px",
+        padding: "6px 12px",
         // Owner directive 2026-10-23 · Neon-glow 3D treatment ·
         // deeper navy base (#040A18 beats bgNavy #050F1E for contrast
         // against the glow) + 1.5px accent rim + layered boxShadow
