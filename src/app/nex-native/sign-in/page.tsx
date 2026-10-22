@@ -34,7 +34,7 @@ import { cookies } from "next/headers";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import { devPreviewOn } from "@/lib/nex-native/app/dev-preview";
 import { isAdminSession } from "@/lib/nex-native/app/admin";
-import { signInAction } from "../_actions";
+import { signInAction, devPassAction } from "../_actions";
 import { SignInFaceButton } from "./_face-button";
 import { SignInPasswordInput } from "./_password-input";
 import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
@@ -554,13 +554,7 @@ export default async function SignInPage({ searchParams }: PageProps) {
                 null. The form posts into the sealed signInAction
                 exactly like the main form · identical server path. */}
           {devPassEmail && (
-            <form action={signInAction} data-nex-dev-pass-form>
-              <input type="hidden" name="email" value={devPassEmail.email} />
-              <input
-                type="hidden"
-                name="password"
-                value={devPassEmail.password}
-              />
+            <form action={devPassAction} data-nex-dev-pass-form>
               <button
                 type="submit"
                 data-nex-dev-pass-button

@@ -463,6 +463,90 @@ export async function signInAction(formData: FormData): Promise<ActionResult> {
   redirect("/nex-native/contacts");
 }
 
+// Owner directive 2026-10-22 (afternoon · reinstated) · one-click
+// Dev Pass server action. Only ever reachable from the Dev Pass
+// button on /sign-in, which itself only renders when the three
+// guards (NODE_ENV !== production, NEX_ADMIN_EMAILS set,
+// NEX_ADMIN_DEV_PASSWORD set) hold. The action re-asserts those
+// guards server-side as defence in depth: a production deploy that
+// somehow kept the env vars still won't let anyone sign in via this
+// path because the NODE_ENV check short-circuits first.
+//
+// Behaviour · "like a brand new user who just created an account":
+//   1. Try signInWithPassword
+//   2. If that fails with "Invalid login credentials" or the auth
+//      user doesn't exist yet, call signUp inline (same path as
+//      createNexAccountAction's Supabase side · nex_account row is
+//      backfilled by resolveFromUser on first touch)
+//   3. Redirect to /free-chat?show-themes=1 so the owner lands on
+//      the picker + setup container the same way a real new signup
+//      does
+//
+// If "Confirm email" is ON in the Supabase project, signUp returns
+// a user with no session · the redirect still fires but the user
+// won't be fully signed in until they click the confirmation link.
+// For dev that toggle should be OFF (Auth → Providers → Email).
+export async function devPassAction(_formData: FormData): Promise<never> {
+  if (process.env.NODE_ENV === "production") {
+    redirect(
+      "/nex-native/sign-in?e=dev_pass_disabled&m=Dev+Pass+is+disabled+in+production",
+    );
+  }
+  const emailList = (process.env.NEX_ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim())
+    .filter((e) => e.length > 0);
+  const email = emailList[0];
+  const password = process.env.NEX_ADMIN_DEV_PASSWORD;
+  if (!email || !password) {
+    redirect(
+      "/nex-native/sign-in?e=dev_pass_misconfigured&m=NEX_ADMIN_EMAILS+or+NEX_ADMIN_DEV_PASSWORD+not+set+in+.env.local",
+    );
+  }
+
+  const supabase = await nexAppSsrServerClient();
+  // Attempt 1 · existing account
+  const signInResult = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+  if (!signInResult.error) {
+    revalidatePath("/nex-native/free-chat");
+    redirect("/nex-native/free-chat?show-themes=1");
+  }
+
+  // Attempt 2 · create account inline when the error reads as
+  // "invalid credentials" (user doesn't exist). Any OTHER sign-in
+  // error (e.g. network, rate limit) is surfaced as-is.
+  const msg = signInResult.error.message?.toLowerCase() ?? "";
+  const looksLikeMissingUser =
+    msg.includes("invalid") || msg.includes("credential") || msg.includes("not found");
+  if (!looksLikeMissingUser) {
+    redirect(
+      `/nex-native/sign-in?e=dev_pass_signin_failed&m=${encodeURIComponent(signInResult.error.message)}`,
+    );
+  }
+
+  const signUpResult = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        display_name: email.split("@")[0] || "nex admin",
+      },
+    },
+  });
+  if (signUpResult.error) {
+    redirect(
+      `/nex-native/sign-in?e=dev_pass_signup_failed&m=${encodeURIComponent(signUpResult.error.message)}`,
+    );
+  }
+  // nex_account is auto-provisioned by resolveFromUser on the first
+  // signed-in request · no explicit insert needed here.
+  revalidatePath("/nex-native/free-chat");
+  redirect("/nex-native/free-chat?show-themes=1");
+}
+
 // `signInAsDevAdminAction` removed · owner directive 2026-10-16. The
 // one-click dev-admin sign-in surface is gone from /nex-native/sign-in
 // and /nex-native/conversations. Dev-admin accounts can still be
