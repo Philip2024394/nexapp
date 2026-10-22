@@ -427,20 +427,18 @@ function ContactCard({
       onPointerCancel={onHoldEnd}
       style={{
         position: "relative",
-        // Owner directive 2026-10-22 (evening · pass 26) · single row
-        // layout · avatar on left, text column centre (flex:1), round
-        // Shop + Invite buttons on the right. Circular CTAs match
-        // the compact per-card chrome. Owner directive 2026-10-23 ·
-        // CTA buttons enlarged from 36→48 so the chrome-neon round
-        // artwork + baked-in INVITE / SHOP lettering read clearly ·
-        // minHeight grows from 76→112 so the stacked CTA column
-        // (48 + 6 gap + 48 = 102) fits without compressing the
-        // card's text column.
-        minHeight: 112,
+        // Owner directive 2026-10-23 · two-row card layout now ·
+        // top row holds avatar + identity text, bottom row holds the
+        // chrome-neon INVITE + SHOP buttons centred under them. The
+        // former right-column CTA slot is retired · "under the
+        // images" directive 2026-10-23. minHeight recomputed:
+        //   10 top-pad + 56 avatar + 10 inter-row + 48 CTA + 10 bot-pad
+        //   = 134 → set to 134 so neither row compresses.
+        minHeight: 134,
         flexShrink: 0,
         display: "flex",
-        flexDirection: "row",
-        alignItems: "center",
+        flexDirection: "column",
+        alignItems: "stretch",
         gap: 10,
         padding: "10px 12px",
         background: NEX.bgNavy,
@@ -493,6 +491,20 @@ function ContactCard({
           Inviting in {countdownSeconds}…
         </div>
       )}
+      {/* Owner directive 2026-10-23 · top row wraps the avatar + the
+          identity text column so the chrome-neon CTAs can sit as a
+          dedicated bottom row ("under the images"). */}
+      <div
+        data-nex-free-chat-contact-card-top-row
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 10,
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
       {/* Avatar · presence ring · 24h status halo · shop badge. z-
           indexed above the hold-fill so the pulsing heartbeat +
           shop badge stay visible as the fill grows. */}
@@ -692,19 +704,21 @@ function ContactCard({
           {contact.city ? ` · ${contact.city}` : ""}
         </div>
       </div>
-
-      {/* Right CTA column · Shop + Invite · round buttons per owner
-          directive 2026-10-22 (evening · pass 26). 36px circles ·
-          Shop stays orange (hasShop gated), Invite stays accent
-          outlined. Vertically centred alongside the identity row. */}
+      </div>
+      {/* Owner directive 2026-10-23 · bottom-row CTA band · chrome-
+          neon INVITE + SHOP buttons side-by-side under the top row
+          ("under the images"). Centred so the pair reads as a
+          deliberate action band rather than a corner afterthought. */}
       <div
         style={{
           display: "flex",
-          flexDirection: "column",
-          gap: 6,
+          flexDirection: "row",
+          gap: 14,
           flexShrink: 0,
           position: "relative",
           zIndex: 2,
+          justifyContent: "center",
+          alignItems: "center",
         }}
       >
         {contact.hasShop && (
