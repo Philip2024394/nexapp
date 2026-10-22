@@ -817,18 +817,18 @@ export function FreeChatComposerClient({
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 4,
-                padding: "10px 4px",
-                // Owner directive 2026-10-22 (afternoon · follow-up pass 4)
-                // · 6 attach buttons sit on solid NEX navy so they stand
-                // out against the welcome-bubble-tinted panel background.
-                // Subtle accent-tinted border keeps them visually in the
-                // same theme family as the panel chrome.
+                // Owner directive 2026-10-22 (evening · pass 2) · icons
+                // enlarged (56 → 72) without growing the button tile.
+                // Shrunk the chrome (padding 10 → 4 top/bottom, gap 4
+                // → 2, label 10 → 9) so the 72px icon lives inside the
+                // original ~91px button bounds.
+                gap: 2,
+                padding: "4px 4px",
                 background: NEX.bgNavy,
                 border: `1px solid ${accentHex}3D`,
                 borderRadius: 10,
                 color: NEX.text,
-                fontSize: 10,
+                fontSize: 9,
                 fontWeight: 700,
                 letterSpacing: 0.2,
                 cursor: "pointer",
@@ -844,12 +844,13 @@ export function FreeChatComposerClient({
                 draggable={false}
                 style={{
                   // Owner directive 2026-10-22 (evening) · bumped from
-                  // 36 → 56 so the gold detail on each icon reads at
-                  // tap distance. The button tile stays the same
-                  // bounded size · the label text shifts a hair closer
-                  // to the icon which is fine for the compact 2×3 grid.
-                  width: 56,
-                  height: 56,
+                  // 36 → 56 → 72 so the chrome detail on each icon
+                  // reads at tap distance. 72 is the ceiling before
+                  // the icon starts crowding the "Voice note" label
+                  // below it (2-line label at 10px font-size needs
+                  // ~24px vertical breathing room).
+                  width: 72,
+                  height: 72,
                   objectFit: "contain",
                   userSelect: "none",
                   pointerEvents: "none",
