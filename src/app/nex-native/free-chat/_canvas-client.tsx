@@ -128,7 +128,17 @@ export function FreeChatCanvasClient({
   initialThemeId,
   initialRowDismissed,
 }: FreeChatCanvasClientProps): React.JSX.Element {
-  const [themeId, setThemeId] = React.useState<string | null>(initialThemeId);
+  // Owner directive 2026-10-22 (afternoon) · when the server resolver
+  // couldn't find a saved wallpaper cookie, pre-seed the picker to the
+  // NEX default tile ("nex-default", isDefault:true) so the user lands
+  // with ONE theme already selected · the heartbeat glow fires on
+  // that tile AND the "Keep theme" + "View Themes" action bar shows
+  // immediately below the picker (gated on themeId !== null). Prior
+  // behaviour left themeId null until the user tapped a tile · the
+  // action bar was invisible on first paint.
+  const [themeId, setThemeId] = React.useState<string | null>(
+    initialThemeId ?? "nex-default",
+  );
   const [stage, setStage] = React.useState<FreeChatStage>(
     initialRowDismissed ? "done" : "picker",
   );
