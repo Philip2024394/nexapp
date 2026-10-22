@@ -27,6 +27,8 @@
 import * as React from "react";
 import { JokerKeypad } from "@/app/nex-native/chat-standard/_joker-keypad";
 import { resolveFreeChatAccentHex } from "./_types";
+import { ContactPickerSheet } from "./_contact-picker-sheet";
+import type { MockContact } from "./_contact-picker-data";
 
 const NEX = {
   panel: "rgba(7, 21, 37, 0.9)",
@@ -74,6 +76,16 @@ type LiveAttachment =
       readonly lat: number;
       readonly lon: number;
       readonly accuracy: number;
+    }
+  | {
+      readonly kind: "contact";
+      readonly contactId: string;
+      readonly nexHandle: string;
+      readonly displayName: string;
+      readonly profession: string;
+      readonly initials: string;
+      readonly hasShop: boolean;
+      readonly isVerified: boolean;
     };
 
 // Owner directive 2026-10-22 (afternoon · follow-up pass 6) · each
@@ -143,6 +155,12 @@ export function FreeChatComposerClient({
   const voicePlaybackAudioRef = React.useRef<HTMLAudioElement | null>(null);
   const [voicePlaying, setVoicePlaying] = React.useState(false);
   const [voicePlaybackMs, setVoicePlaybackMs] = React.useState(0);
+  // Owner directive 2026-10-22 (evening · pass 16) · Contact picker
+  // sheet · opens from the Contact attach button, center overlay with
+  // horizontal card carousel. Share = stage contact as a composer
+  // attachment chip. Invite = toast until peer-chat participant
+  // service lands.
+  const [contactPickerOpen, setContactPickerOpen] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const pendingFileKindRef = React.useRef<FileAttachmentKind | null>(null);
   const voiceTimerRef = React.useRef<ReturnType<typeof setInterval> | null>(
@@ -465,6 +483,31 @@ export function FreeChatComposerClient({
     }
   }, [cameraStream]);
 
+  const handleContactShare = React.useCallback(
+    (c: MockContact) => {
+      setContactPickerOpen(false);
+      setAttachment({
+        kind: "contact",
+        contactId: c.id,
+        nexHandle: c.nexHandle,
+        displayName: c.displayName,
+        profession: c.profession,
+        initials: c.initials,
+        hasShop: c.hasShop,
+        isVerified: c.isVerified,
+      });
+    },
+    [],
+  );
+
+  const handleContactInvite = React.useCallback(
+    (c: MockContact) => {
+      setContactPickerOpen(false);
+      flashToast(`Invite to ${c.displayName} · coming soon`);
+    },
+    [flashToast],
+  );
+
   const handleAttachClick = React.useCallback(
     (itemKey: string) => {
       setAttachOpen(false);
@@ -485,7 +528,7 @@ export function FreeChatComposerClient({
           void startVoiceRecording();
           return;
         case "contact":
-          flashToast("Contact share available in peer chat");
+          setContactPickerOpen(true);
           return;
         default:
           flashToast("Unknown attachment");
@@ -1272,6 +1315,18 @@ export function FreeChatComposerClient({
         stops the stream and closes. Only mounts when cameraStream
         is non-null (desktop/laptop path · mobile goes through
         <input capture="environment"> instead). */}
+    {/* Owner directive 2026-10-22 (evening · pass 16) · contact
+        picker · opens from the Contact attach button. Shares into
+        the composer as a chip (Share CTA) · Invite CTA toasts until
+        peer-chat participant service lands. */}
+    <ContactPickerSheet
+      open={contactPickerOpen}
+      accentHex={accentHex}
+      onClose={() => setContactPickerOpen(false)}
+      onShare={handleContactShare}
+      onInvite={handleContactInvite}
+    />
+
     {cameraStream && (
       <div
         role="dialog"
@@ -1371,6 +1426,8 @@ function attachmentGlyph(a: LiveAttachment): string {
       return "🎤";
     case "location":
       return "📍";
+    case "contact":
+      return "👤";
   }
 }
 
@@ -1384,6 +1441,8 @@ function attachmentPrimary(a: LiveAttachment): string {
       return `Voice note · ${formatSeconds(Math.round(a.durationMs / 1000))}`;
     case "location":
       return "Live location";
+    case "contact":
+      return `${a.displayName}${a.isVerified ? " ✓" : ""}`;
   }
 }
 
@@ -1397,6 +1456,8 @@ function attachmentSecondary(a: LiveAttachment): string {
       return a.mime || "audio/webm";
     case "location":
       return `${a.lat.toFixed(5)}, ${a.lon.toFixed(5)} · ±${Math.round(a.accuracy)}m`;
+    case "contact":
+      return `${a.nexHandle} · ${a.profession}${a.hasShop ? " · 🛒" : ""}`;
   }
 }
 
