@@ -96,7 +96,7 @@ const SEED_MESSAGES: readonly SeedMessage[] = [
     id: "s1",
     fromPeer: true,
     text:
-      "Welcome to NEX Chat 🌎\nwhere the world is at your finger tips.\n\nTo get started, choose a chat theme and wait for your friend's reaction.",
+      "Welcome to NEX Chat 🌎\n\nTo get started, choose a chat theme and wait for your friend's reaction.",
     time: "15:03",
     senderName: "Nex",
   },
