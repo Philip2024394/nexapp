@@ -117,19 +117,77 @@ const ATTACH_ITEMS: ReadonlyArray<{
   { key: "location", label: "Location", iconUrl: "/nex-free-chat/attach-icons/location.png" },
 ];
 
-// Owner directive 2026-10-23 (revised) · chrome ball holds an ICON
-// inside (not a text caption) · the full-word label sits UNDER the
-// ball (matches the original image+label layout, now with chrome-
-// ball buttons instead of PNG images). Icons are emoji so no SVG
-// asset dependency.
-const ATTACH_BALL_ICONS: Record<string, string> = {
-  camera: "📷",
-  gallery: "🖼️",
-  contact: "👤",
-  document: "📄",
-  voice: "🎤",
-  location: "📍",
-};
+// Owner directive 2026-10-23 (revised) · inline SVG line icons (not
+// emoji images) so the glyph colour is driven by stroke=currentColor
+// and sits crisply inside the chrome ball at any density. Each
+// returns a 22×22 white-stroke icon · the ball colour (accentHex)
+// still dominates via the gradient fill behind the icon.
+function AttachBallIcon({ k }: { readonly k: string }): React.JSX.Element {
+  const common = {
+    width: 22,
+    height: 22,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "#FFFFFF",
+    strokeWidth: 2,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+    style: { display: "block", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.6))" },
+  };
+  switch (k) {
+    case "camera":
+      return (
+        <svg {...common}>
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+          <circle cx="12" cy="13" r="4" />
+        </svg>
+      );
+    case "gallery":
+      return (
+        <svg {...common}>
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+          <circle cx="8.5" cy="8.5" r="1.5" />
+          <polyline points="21 15 16 10 5 21" />
+        </svg>
+      );
+    case "contact":
+      return (
+        <svg {...common}>
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+      );
+    case "document":
+      return (
+        <svg {...common}>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="16" y1="13" x2="8" y2="13" />
+          <line x1="16" y1="17" x2="8" y2="17" />
+          <polyline points="10 9 9 9 8 9" />
+        </svg>
+      );
+    case "voice":
+      return (
+        <svg {...common}>
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+          <line x1="12" y1="19" x2="12" y2="23" />
+          <line x1="8" y1="23" x2="16" y2="23" />
+        </svg>
+      );
+    case "location":
+      return (
+        <svg {...common}>
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+          <circle cx="12" cy="10" r="3" />
+        </svg>
+      );
+    default:
+      return <svg {...common} />;
+  }
+}
 
 export function FreeChatComposerClient({
   isGuest,
@@ -1270,57 +1328,57 @@ export function FreeChatComposerClient({
               inset highlight, outer glow). The 6 attach icons stay
               identifiable at a glance while gaining the glowing
               chrome vocabulary the owner picked for the picker. */}
-          {ATTACH_ITEMS.map((item) => {
-            const icon = ATTACH_BALL_ICONS[item.key] ?? "•";
-            return (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => handleAttachClick(item.key)}
-                aria-label={item.label}
-                title={item.label}
-                data-nex-free-chat-composer-attach-item={item.key}
+          {/* Owner directive 2026-10-23 (revised) · "icon not image
+              icon · reduce size back to size like image circle". SVG
+              line icons (not emoji) sit inside a 48×48 chrome ball ·
+              matches the visible-circle size of the original PNG
+              image. Label stays under the ball. */}
+          {ATTACH_ITEMS.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => handleAttachClick(item.key)}
+              aria-label={item.label}
+              title={item.label}
+              data-nex-free-chat-composer-attach-item={item.key}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 4,
+                padding: "4px 2px",
+                background: "transparent",
+                border: "none",
+                color: NEX.text,
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: 0.2,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                textAlign: "center",
+              }}
+            >
+              <span
+                aria-hidden
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
+                  width: 48,
+                  height: 48,
+                  borderRadius: "50%",
+                  display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: 4,
-                  padding: "4px 2px",
-                  background: "transparent",
-                  border: "none",
-                  color: NEX.text,
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: 0.2,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  textAlign: "center",
+                  lineHeight: 1,
+                  background: `radial-gradient(circle at 30% 30%, ${accentHex}, #000a1a)`,
+                  border: `2px solid ${accentHex}`,
+                  boxShadow: `0 2px 10px ${accentHex}66, inset 0 1px 2px #FFFFFF55`,
                 }}
               >
-                <span
-                  aria-hidden
-                  style={{
-                    width: 60,
-                    height: 60,
-                    borderRadius: "50%",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 26,
-                    lineHeight: 1,
-                    background: `radial-gradient(circle at 30% 30%, ${accentHex}, #000a1a)`,
-                    border: `2px solid ${accentHex}`,
-                    boxShadow: `0 2px 10px ${accentHex}66, inset 0 1px 2px #FFFFFF55`,
-                    textShadow: "0 1px 2px rgba(0,0,0,0.8)",
-                  }}
-                >
-                  {icon}
-                </span>
-                <span style={{ lineHeight: 1.1 }}>{item.label}</span>
-              </button>
-            );
-          })}
+                <AttachBallIcon k={item.key} />
+              </span>
+              <span style={{ lineHeight: 1.1 }}>{item.label}</span>
+            </button>
+          ))}
         </div>
       )}
       {toast && (
