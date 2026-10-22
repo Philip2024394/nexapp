@@ -592,9 +592,15 @@ function DrawerBody({
   );
 }
 
-// ─── Copy-ID chip rendered next to the NEX handle ──────────────
+// ─── Copy-identity button · solid blue chip, right-centre of bar ──
 
-function CopyHandleButton({ handle }: { readonly handle: string }): React.JSX.Element {
+function CopyIdentityButton({
+  displayName,
+  handle,
+}: {
+  readonly displayName: string;
+  readonly handle: string;
+}): React.JSX.Element {
   const [copied, setCopied] = React.useState(false);
   const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   React.useEffect(() => {
@@ -604,32 +610,38 @@ function CopyHandleButton({ handle }: { readonly handle: string }): React.JSX.El
   }, []);
   const handleClick = React.useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
-      // Prevent the identity bar's Link from firing when the chip is
-      // tapped (bar is wrapped in a Link on some surfaces).
       event.preventDefault();
       event.stopPropagation();
       if (typeof navigator === "undefined" || !navigator.clipboard) return;
+      // Owner directive 2026-10-22 (afternoon) · one tap copies both
+      // the display name AND the NEX ID. Two-line format reads cleanly
+      // when pasted (vCard-style) and keeps the pair atomic.
+      const payload = `${displayName}\n${handle}`;
       void navigator.clipboard
-        .writeText(handle)
+        .writeText(payload)
         .then(() => {
           setCopied(true);
           if (timeoutRef.current) clearTimeout(timeoutRef.current);
-          timeoutRef.current = setTimeout(() => setCopied(false), 1200);
+          timeoutRef.current = setTimeout(() => setCopied(false), 1400);
         })
         .catch(() => {
           /* best-effort · older browsers / permissions denied */
         });
     },
-    [handle],
+    [displayName, handle],
   );
   return (
     <button
       type="button"
       onClick={handleClick}
-      aria-label={copied ? "ID copied" : `Copy NEX ID ${handle}`}
-      title={copied ? "Copied" : "Copy ID"}
-      data-nex-control-drawer-copy-id
-      style={identityHandleCopyBtnStyle}
+      aria-label={
+        copied
+          ? "Name and NEX ID copied"
+          : `Copy ${displayName} and ${handle}`
+      }
+      title={copied ? "Copied" : "Copy name + ID"}
+      data-nex-control-drawer-copy-identity
+      style={identityCopyBtnStyle}
     >
       {copied ? "Copied" : "Copy"}
     </button>
@@ -682,26 +694,29 @@ function IdentityBar({
       <div style={identityBarTextColumnStyle}>
         <div style={identityNameStyle}>{nameToRender}</div>
         {session.nexHandle ? (
-          <div style={identityHandleRowStyle}>
-            <div style={identityHandleStyle}>
-              {/* Owner directive 2026-10-17 · the "nex-" prefix is a
-                  brand mark · always rendered uppercase as "NEX-" ·
-                  the numeric part is preserved exactly. Storage stays
-                  lowercase (canonical column shape · validated by
-                  `normaliseHandle` in bio/[nex_handle]/_handle.ts) ·
-                  this is purely a display transform. */}
-              {session.nexHandle.replace(/^nex-/i, "NEX-")}
-            </div>
-            {/* Owner directive 2026-10-22 (afternoon) · tiny
-                copy-ID chip. Writes the display form (NEX-NNNNNN)
-                to the clipboard · best-effort · silently fails if
-                the Clipboard API is unavailable. */}
-            <CopyHandleButton
-              handle={session.nexHandle.replace(/^nex-/i, "NEX-")}
-            />
+          <div style={identityHandleStyle}>
+            {/* Owner directive 2026-10-17 · the "nex-" prefix is a
+                brand mark · always rendered uppercase as "NEX-" ·
+                the numeric part is preserved exactly. Storage stays
+                lowercase (canonical column shape · validated by
+                `normaliseHandle` in bio/[nex_handle]/_handle.ts) ·
+                this is purely a display transform. */}
+            {session.nexHandle.replace(/^nex-/i, "NEX-")}
           </div>
         ) : null}
       </div>
+      {/* Owner directive 2026-10-22 (afternoon) · solid blue Copy
+          button pinned to the right-centre of the identity bar.
+          One tap copies BOTH the display name AND the NEX ID in a
+          two-line clipboard payload. When the account has an active
+          chat theme thumbnail, the Copy button sits to the LEFT of
+          it so both affordances fit without crowding. */}
+      {session.nexHandle ? (
+        <CopyIdentityButton
+          displayName={nameToRender}
+          handle={session.nexHandle.replace(/^nex-/i, "NEX-")}
+        />
+      ) : null}
       {/* Owner directive 2026-10-20 · right-side thumbnail of the
           account's currently-active chat theme wallpaper · tap to
           jump to /nex-native/chat-themes-library and pick a new one.
@@ -1169,28 +1184,30 @@ const identityHandleStyle: React.CSSProperties = {
     'ui-monospace, SFMono-Regular, Menlo, Monaco, "Courier New", monospace',
   letterSpacing: 0.5,
 };
-const identityHandleRowStyle: React.CSSProperties = {
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 8,
-};
-const identityHandleCopyBtnStyle: React.CSSProperties = {
+// Owner directive 2026-10-22 (afternoon) · solid blue chip pinned to
+// the right-centre of the identity bar. One tap copies name + NEX ID
+// together. Alignment: the parent identityBarStyle is a flex row with
+// align-items:center · flexShrink:0 keeps the chip's width stable
+// while the text column flex-grows to fill the remaining space.
+const identityCopyBtnStyle: React.CSSProperties = {
+  flexShrink: 0,
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  padding: "4px 8px",
-  minHeight: 24,
-  background: "rgba(139,169,209,0.14)",
-  border: "1px solid rgba(139,169,209,0.32)",
-  borderRadius: 6,
-  color: "#8BA9D1",
-  fontSize: 10,
-  fontWeight: 700,
-  letterSpacing: 0.4,
+  minWidth: 60,
+  minHeight: 32,
+  padding: "0 12px",
+  background: "#00AFFF",
+  border: "1px solid #00AFFF",
+  borderRadius: 8,
+  color: "#001223",
+  fontSize: 11,
+  fontWeight: 800,
+  letterSpacing: 0.6,
   textTransform: "uppercase",
   cursor: "pointer",
   fontFamily: "inherit",
+  boxShadow: "0 2px 8px rgba(0, 175, 255, 0.35)",
 };
 // Owner directive 2026-10-18 · the anon "Sign in to NEX" row now
 // splits into a left text-column + right round blue arrow button.
