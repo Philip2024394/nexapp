@@ -267,12 +267,15 @@ export function ContactPickerSheet({
           width: 44,
           height: 6,
           borderRadius: 999,
-          background: NEX.cyan,
+          // Owner directive 2026-10-23 · close bar switches from
+          // cyan to NEX.unreadRed · reads as a "close / dismiss"
+          // affordance (same sealed red used for urgency / attention).
+          background: NEX.unreadRed,
           border: "none",
           margin: "10px auto 6px",
           cursor: "pointer",
           padding: 0,
-          boxShadow: `0 2px 6px ${NEX.cyan}66`,
+          boxShadow: `0 2px 6px ${NEX.unreadRed}66`,
         }}
       />
         <style>{`
