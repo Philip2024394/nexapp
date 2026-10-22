@@ -784,13 +784,11 @@ export function FreeChatComposerClient({
             bottom: "calc(100% + 10px)",
             left: "50%",
             transform: "translateX(-50%)",
-            // Owner directive 2026-10-22 (evening · pass 7) · panel
-            // returned to its original 300px cap · icons sized to the
-            // cell + gap tightened so the 6 buttons sit compact.
-            //   cell width = (300 - 2×12 padding - 2×4 gaps) / 3 ≈ 89px
-            //   icon = 84 (comfortably inside the 89px cell)
+            // Owner directive 2026-10-22 (evening · pass 8) · trim
+            // panel height ~30%: icons 84 → 60, panel padding 12 → 8.
+            // Width unchanged at 300 (owner locked that in pass 7).
             width: "min(300px, calc(100% - 32px))",
-            padding: 12,
+            padding: 8,
             // Welcome-bubble chrome: accent @ 12% bg, @ 42% rim.
             background: `${accentHex}1F`,
             border: `1px solid ${accentHex}6B`,
@@ -844,13 +842,12 @@ export function FreeChatComposerClient({
                 aria-hidden
                 draggable={false}
                 style={{
-                  // Owner directive 2026-10-22 (evening · pass 7) ·
-                  // panel restored to original 300px cap, so the icon
-                  // dropped from 100 → 84 to fit the ~89px grid cell
-                  // comfortably. Still ~2.3× the original 36px first
-                  // pass · reads large and tappable.
-                  width: 84,
-                  height: 84,
+                  // Owner directive 2026-10-22 (evening · pass 8) ·
+                  // icon 84 → 60 as part of the ~30% panel-height
+                  // trim. Still ~1.7× the original 36px first pass ·
+                  // reads tappable at thumb distance.
+                  width: 60,
+                  height: 60,
                   objectFit: "contain",
                   userSelect: "none",
                   pointerEvents: "none",
