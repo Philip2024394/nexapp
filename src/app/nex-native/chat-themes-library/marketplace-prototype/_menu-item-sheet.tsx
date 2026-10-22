@@ -52,6 +52,13 @@ export interface MenuItemSheetProps {
   /** Called when the buyer taps Add to Order with the final qty.
    *  Prototype only · the parent toasts a honest confirmation. */
   readonly onAdd?: (productId: string, quantity: number) => void;
+  /** Owner directive 2026-10-22 · Ask-Seller slice 1 · when provided,
+   *  renders an "Ask Seller" button alongside Add to Cart. Tapping it
+   *  posts the product card into the owner's chat (production) or
+   *  surfaces a toast (prototype). When omitted, the button is hidden
+   *  so this prop is additive · no footer regression on surfaces that
+   *  haven't wired a handler yet. */
+  readonly onAskSeller?: (productId: string) => void;
 }
 
 export function MenuItemSheet({
@@ -61,6 +68,7 @@ export function MenuItemSheet({
   wallpaperUrl,
   onClose,
   onAdd,
+  onAskSeller,
 }: MenuItemSheetProps): React.JSX.Element | null {
   // Only Crispy Chicken is wired to a brand mock today · others fall
   // back to null so the sheet never opens with placeholder content.
@@ -646,9 +654,11 @@ export function MenuItemSheet({
           </div>
         </div>
 
-        {/* Owner directive 2026-10-22 · footer · single full-width
-            Add to Cart action (qty picker now lives inline above
-            the description with the spicy chip). */}
+        {/* Owner directive 2026-10-22 · footer · Ask-Seller slice 1 ·
+            optional "Ask Seller" secondary action renders when the
+            parent passes onAskSeller. Add to Cart stays the primary
+            CTA (filled accent) · Ask Seller is secondary (outline).
+            Both min 48px tall for touch-target spec. */}
         <footer
           style={{
             padding: "12px 14px calc(env(safe-area-inset-bottom, 0px) + 14px)",
@@ -656,9 +666,36 @@ export function MenuItemSheet({
             background: "rgba(2, 9, 20, 0.6)",
             display: "flex",
             alignItems: "center",
+            gap: 10,
             flexShrink: 0,
           }}
         >
+          {onAskSeller && (
+            <button
+              type="button"
+              onClick={() => onAskSeller(product.id)}
+              data-nex-marketplace-prototype-menu-item-ask-seller
+              style={{
+                flex: "0 0 auto",
+                minHeight: 48,
+                padding: "0 16px",
+                borderRadius: 14,
+                background: "transparent",
+                color: accent,
+                border: `1.5px solid ${hexWithAlpha(accent, 0.75)}`,
+                fontSize: 13,
+                fontWeight: 800,
+                letterSpacing: 0.3,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                WebkitTapHighlightColor: "transparent",
+                touchAction: "manipulation",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Ask Seller
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {
@@ -689,6 +726,7 @@ export function MenuItemSheet({
               cursor: soldOut ? "default" : "pointer",
               fontFamily: "inherit",
               WebkitTapHighlightColor: "transparent",
+              touchAction: "manipulation",
             }}
           >
             {addLabel}

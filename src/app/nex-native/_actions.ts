@@ -866,6 +866,29 @@ export async function cancelPromotionAction(
   redirect("/nex-native/affiliate/marketplace?e=cancelled&m=1");
 }
 
+/** Owner directive 2026-10-22 · Ask-Seller slice 3 · composer-send
+ *  dispatcher. When the peer composer submits a form that carries a
+ *  non-empty product_id (i.e. the pending-product chip was still
+ *  attached at send time) the message routes through the sealed
+ *  shareProductToContactAction so the owner receives a rich product
+ *  snapshot in their inbox · the buyer's typed text is carried as the
+ *  custom body. When no product_id is present the dispatcher
+ *  delegates to the existing sendPeerMessageAction verbatim · zero
+ *  behaviour change for any send that doesn't go through the chip.
+ *
+ *  Signature matches sendPeerMessageAction so peer page.tsx can swap
+ *  the bound action in-place without any other composer changes. */
+export async function sendPeerMessageOrShareProductAction(
+  peerAccountId: string,
+  formData: FormData,
+): Promise<never> {
+  const productId = String(formData.get("product_id") ?? "").trim();
+  if (productId) {
+    return shareProductToContactAction(peerAccountId, formData);
+  }
+  return sendPeerMessageAction(peerAccountId, formData);
+}
+
 /** Bridge ThemeSticker · sealed 2026-10-01 · live peer-chat sticker
  *  send. SECURITY-SENSITIVE boundary · the browser is NOT trusted for
  *  any sticker metadata.

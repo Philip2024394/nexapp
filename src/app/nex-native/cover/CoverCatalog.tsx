@@ -21,6 +21,7 @@
 //   · Changing the active tab resets to page 1
 
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import {
   ALL_TAB_ID,
   CoverCategoryTabs,
@@ -64,7 +65,30 @@ export function CoverCatalog({
     );
     return ordered[0].id;
   }, [sections]);
-  const [activeId, setActiveId] = React.useState<string>(firstSectionId);
+
+  // Owner directive 2026-10-22 · Ask-Seller slice 4 · deep-link return
+  // from a shared product message. When ?product=<id> is present on
+  // the shop URL AND the product exists in this catalog, auto-select
+  // the section tab + page so the buyer lands with that product in
+  // view. Honest-null: unknown id falls through to the normal first-
+  // tab default · no error. Buyer can still change tabs after arrival.
+  const searchParams = useSearchParams();
+  const highlightProductId = searchParams?.get("product") ?? null;
+
+  const highlightProduct = React.useMemo(() => {
+    if (!highlightProductId) return null;
+    return products.find((p) => p.id === highlightProductId) ?? null;
+  }, [highlightProductId, products]);
+
+  // When a highlight product is found, start on its section tab.
+  // Section id may be null (uncategorised) · falls back to firstSectionId
+  // so the catalog never opens filter-less with uncategorised hidden.
+  const initialActiveId = React.useMemo(() => {
+    if (highlightProduct?.section_id) return highlightProduct.section_id;
+    return firstSectionId;
+  }, [highlightProduct, firstSectionId]);
+
+  const [activeId, setActiveId] = React.useState<string>(initialActiveId);
   const [page, setPage] = React.useState(0);
 
   // Reset to page 1 whenever the filter changes.
@@ -76,6 +100,19 @@ export function CoverCatalog({
     if (activeId === "" || activeId === ALL_TAB_ID) return products;
     return products.filter((p) => p.section_id === activeId);
   }, [activeId, products]);
+
+  // Owner directive 2026-10-22 · Ask-Seller slice 4 · after the filter
+  // resolves, advance the page to the one containing the highlighted
+  // product so the buyer doesn't land on page 1 of a long catalog.
+  // Guarded: only fires once per highlight id change · depends on the
+  // filtered list stabilising first (hence running after filter memo).
+  React.useEffect(() => {
+    if (!highlightProductId) return;
+    const idx = filtered.findIndex((p) => p.id === highlightProductId);
+    if (idx < 0) return;
+    const targetPage = Math.floor(idx / effectivePageSize);
+    setPage(targetPage);
+  }, [highlightProductId, filtered, effectivePageSize]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / effectivePageSize));
   const safePage = Math.min(page, totalPages - 1);

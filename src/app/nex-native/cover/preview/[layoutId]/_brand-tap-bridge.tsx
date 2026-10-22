@@ -11,7 +11,8 @@
 // parent (iframe context). Direct navigation to
 // `/nex-native/cover/preview/[layoutId]` has no parent, so the
 // listener never fires and the sealed commerce path
-// (tap product → `/nex-native/chat/peer/{seller}?product=…`)
+// (tap product → `/nex-native/chat/peer/{seller}?pending_product=…`
+// updated 2026-10-22 to match the new chip-based Ask-Seller flow)
 // stays intact.
 //
 // Interception strategy · a document-level capturing click listener
@@ -27,7 +28,12 @@
 
 import * as React from "react";
 
-const CHAT_PEER_PATTERN = /\/nex-native\/chat\/peer\/[^/?]+\?product=([^&]+)/;
+// Owner directive 2026-10-22 · updated to the Ask-Seller slice 5 href
+// shape `?pending_product=<id>` emitted by the sealed CoverProductCard.
+// The marketplace prototype parent still extracts the same product id
+// so the MenuItemSheet opens identically.
+const CHAT_PEER_PATTERN =
+  /\/nex-native\/chat\/peer\/[^/?]+\?pending_product=([^&]+)/;
 
 export function BrandTapBridge({
   brand,

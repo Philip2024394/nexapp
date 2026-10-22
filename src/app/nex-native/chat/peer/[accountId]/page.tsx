@@ -28,6 +28,7 @@ import { getThemeAssets } from "@/lib/nex-native/theme-assets";
 import { ThemeAtmosphereLayer } from "../../_theme-atmosphere-layer";
 import {
   sendPeerMessageAction,
+  sendPeerMessageOrShareProductAction,
   sendPeerStickerAction,
   deletePeerMessageAction,
   uploadPeerAttachmentAction,
@@ -112,6 +113,14 @@ export default async function PeerChatPage({
      *  card into view with a 2px accent border. Honest-null · an
      *  unknown id still mounts the sheet but no card is highlighted. */
     focus_product?: string;
+    /** Owner directive 2026-10-22 · Ask-Seller slice 2 · product id
+     *  the buyer wants to ask the owner about. When present AND the
+     *  product resolves to a valid snapshot, the composer renders a
+     *  product-card chip above the pill (buyer can type an optional
+     *  question or send the card alone). Slice 3 will route send
+     *  through shareProductToContactAction. Unknown id falls through
+     *  silently · no chip appears · no error. */
+    pending_product?: string;
   }>;
 }) {
   const { accountId: peerAccountId } = await params;
@@ -192,7 +201,16 @@ export default async function PeerChatPage({
     peerMessageService.markPeerMessagesRead(conversation.id, session.account.id),
   ]);
 
-  const bind = sendPeerMessageAction.bind(null, peer.id);
+  // Owner directive 2026-10-22 · Ask-Seller slice 3 · composer-send
+  // uses the dispatcher so a form carrying `product_id` (the pending-
+  // product chip from Slice 2) routes through shareProductToContactAction.
+  // Normal text/attachment sends pass through unchanged · the dispatcher
+  // delegates to sendPeerMessageAction when product_id is absent.
+  const bind = sendPeerMessageOrShareProductAction.bind(null, peer.id);
+  // Keep a direct reference to the normal action available for callers
+  // that bypass the dispatcher (e.g. sticker, reaction, or any future
+  // code path that doesn't flow through the composer form).
+  void sendPeerMessageAction;
   const bindDelete = deletePeerMessageAction.bind(null, peer.id);
   const bindUpload = uploadPeerAttachmentAction.bind(null, peer.id);
   const bindProductInquiry = sendProductInquiryAction.bind(null, peer.id);
@@ -355,6 +373,42 @@ export default async function PeerChatPage({
           encrypted: sp.attachment_encrypted === "1",
         }
       : null;
+
+  // Owner directive 2026-10-22 · Ask-Seller slice 2 · resolve the
+  // pending product snapshot from ?pending_product=<id>. Honest-null
+  // on any failure (unknown id, product deleted, missing business) ·
+  // the composer silently omits the chip. The product must belong to
+  // the peer's business so viewers can't inject arbitrary product
+  // ids into another person's chat (belt-and-braces · the next slice
+  // adds the server-side authorisation on send too).
+  const pendingProductIdRaw = sp.pending_product?.trim() ?? "";
+  const pendingProduct = await (async () => {
+    if (!pendingProductIdRaw || !peerBusiness) return null;
+    const product = await productService
+      .getProductById(pendingProductIdRaw)
+      .catch(() => null);
+    if (!product) return null;
+    if (product.business_id !== peerBusiness.id) return null;
+    const priceLabel = (() => {
+      try {
+        return new Intl.NumberFormat(undefined, {
+          style: "currency",
+          currency: product.currency,
+          maximumFractionDigits: 0,
+        }).format(product.price_pence / 100);
+      } catch {
+        return `${product.currency} ${(product.price_pence / 100).toFixed(0)}`;
+      }
+    })();
+    return {
+      productId: product.id,
+      name: product.name,
+      priceLabel,
+      imageUrl: product.image_url ?? null,
+      shopName: peerBusiness.display_name,
+      clearHref: `/nex-native/chat/peer/${peer.id}`,
+    };
+  })();
 
   // See-My-Theme gate (sealed 2026-10-16) · AND-rule mutual visibility.
   // When either participant has disabled theme visibility for this
@@ -755,6 +809,7 @@ export default async function PeerChatPage({
       deleteAction={bindDelete}
       uploadAction={bindUpload}
       pendingAttachment={pendingAttachment}
+      pendingProduct={pendingProduct}
       encryptedUploadEnabled={!isNexOfficialAccount(peer.id)}
       themeEmojis={peerThemeEmojis}
       themeStickers={peerThemeStickers}

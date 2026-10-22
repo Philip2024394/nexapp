@@ -97,6 +97,54 @@ export function MarketplacePrototypeClient(): React.JSX.Element {
     }
   }, [cart]);
 
+  // Owner directive 2026-10-22 · diamond-standard preload pass · idle-time
+  // image preload for the top-of-grid wallpapers. Each marketplace card
+  // paints its catalog wallpaper as the card background · when the viewer
+  // later opens a preview sheet the SAME wallpaper fills the sheet full-
+  // bleed. Preloading the top 8 entries ahead of scroll eliminates the
+  // pop-in without blocking initial paint. requestIdleCallback keeps the
+  // work off the critical path · setTimeout fallback covers Safari.
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const PRELOAD_COUNT = 8;
+    const targets = MARKETPLACE_CATALOG.slice(0, PRELOAD_COUNT);
+    const inserted: HTMLLinkElement[] = [];
+    const schedule: (cb: () => void) => number =
+      typeof window.requestIdleCallback === "function"
+        ? (cb) =>
+            window.requestIdleCallback(cb, { timeout: 2000 }) as unknown as number
+        : (cb) => window.setTimeout(cb, 300);
+    const cancel: (id: number) => void =
+      typeof window.cancelIdleCallback === "function"
+        ? (id) => window.cancelIdleCallback(id as unknown as number)
+        : (id) => window.clearTimeout(id);
+    const idleId = schedule(() => {
+      for (const entry of targets) {
+        if (!entry.wallpaperUrl) continue;
+        const link = document.createElement("link");
+        link.rel = "preload";
+        link.as = "image";
+        link.href = entry.wallpaperUrl;
+        link.setAttribute(
+          "data-nex-marketplace-wallpaper-preload",
+          entry.themeId,
+        );
+        document.head.appendChild(link);
+        inserted.push(link);
+      }
+    });
+    return () => {
+      cancel(idleId);
+      for (const link of inserted) {
+        try {
+          document.head.removeChild(link);
+        } catch {
+          /* link already removed · idempotent cleanup */
+        }
+      }
+    };
+  }, []);
+
   const inCartKeys = React.useMemo(
     () => new Set(cart.map((item) => cartKey(item))),
     [cart],

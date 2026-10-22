@@ -26,6 +26,45 @@ import { MenuItemSheet } from "./_menu-item-sheet";
 import { MenuDrawer } from "./_menu-drawer";
 import { JokerKeypad } from "@/app/nex-native/chat-standard/_joker-keypad";
 
+// Owner directive 2026-10-22 · diamond-standard preload pass · while
+// a viewer sits on the Theme or Intro sheet, warm the browser cache
+// for the first Shop iframe URL so tapping into the Shop preview
+// paints instantly instead of blank-then-fill. Hidden <link rel=
+// "prefetch"> is additive · if the browser ignores it (older iOS)
+// nothing breaks · the sheet behaves exactly as before.
+function useShopIframePrefetch(entry: MarketplaceCatalogEntry): void {
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    const firstLayout = SHOP_LAYOUTS[0];
+    if (!firstLayout) return;
+    const params = new URLSearchParams({
+      embed: "1",
+      theme: entry.themeId,
+      tint: entry.ownerAccentHex ?? entry.accentHex,
+      bg: entry.wallpaperUrl,
+      brand: entry.themeId,
+    });
+    const href = `/nex-native/cover/preview/${firstLayout.layoutId}?${params.toString()}`;
+    const link = document.createElement("link");
+    link.rel = "prefetch";
+    link.href = href;
+    link.setAttribute("data-nex-marketplace-shop-prefetch", entry.themeId);
+    document.head.appendChild(link);
+    return () => {
+      try {
+        document.head.removeChild(link);
+      } catch {
+        /* link already removed · idempotent cleanup */
+      }
+    };
+  }, [
+    entry.themeId,
+    entry.ownerAccentHex,
+    entry.accentHex,
+    entry.wallpaperUrl,
+  ]);
+}
+
 // Owner directive 2026-10-21 · shared Price badge · top-right of the
 // preview content area · small rounded corners · translucent navy
 // over cyan rim · reads as a price tag. Used by Theme + Intro preview
@@ -238,6 +277,10 @@ export function ThemePreviewSheet({
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
+
+  // Diamond preload · prefetch the first Shop layout iframe so Shop tab
+  // paints instantly if the viewer taps across from Theme preview.
+  useShopIframePrefetch(entry);
 
   // Owner directive 2026-10-22 · "add the keypad to themes chat so
   // user can type few words and see it live on the screen". Tap the
@@ -1094,6 +1137,12 @@ export function ThemePreviewSheet({
           accent={themeAccent}
           wallpaperUrl={entry.wallpaperUrl}
           onItemAdd={handleMenuAdd}
+          onItemAskSeller={(_productId) => {
+            setMenuDrawerOpen(false);
+            setMenuCartToast(
+              "Ask Seller · prototype · product card will post into owner chat",
+            );
+          }}
           onClose={() => setMenuDrawerOpen(false)}
         />
       )}
@@ -1589,6 +1638,10 @@ export function IntroPreviewSheet({
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
+
+  // Diamond preload · prefetch the first Shop layout iframe so Shop tab
+  // paints instantly if the viewer taps across from Intro preview.
+  useShopIframePrefetch(entry);
 
   return (
     <div
@@ -2605,7 +2658,10 @@ export function ShopPreviewSheet({
 
       {/* Owner directive 2026-10-22 · menu-item bottom sheet · opens
           when a product tap arrives from the sealed iframe. Only
-          rendered when a tapped product id is set. */}
+          rendered when a tapped product id is set. Ask-Seller slice
+          1 · onAskSeller surfaces an honest prototype toast · wires
+          to shareProductToContactAction + ?pending_product=<id> in
+          the production ShopPreviewSheet mount. */}
       {tappedProductId && (
         <MenuItemSheet
           brand={entry.themeId}
@@ -2619,6 +2675,12 @@ export function ShopPreviewSheet({
               qty > 1
                 ? `Added ${qty} to Cart · prototype`
                 : "Added to Cart · prototype",
+            );
+          }}
+          onAskSeller={(_productId) => {
+            setTappedProductId(null);
+            setOrderToast(
+              "Ask Seller · prototype · product card will post into owner chat",
             );
           }}
         />

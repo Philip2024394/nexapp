@@ -309,7 +309,7 @@ export function CoverThemeSkin(props: CoverThemeSkinProps): React.JSX.Element {
             inset: 0,
             zIndex: 0,
             background:
-              "linear-gradient(180deg, rgba(3,8,20,0.72) 0%, rgba(3,8,20,0.32) 22%, rgba(3,8,20,0.32) 78%, rgba(3,8,20,0.82) 100%)",
+              "linear-gradient(180deg, rgba(3,8,20,0.50) 0%, rgba(3,8,20,0.18) 22%, rgba(3,8,20,0.18) 78%, rgba(3,8,20,0.58) 100%)",
             pointerEvents: "none",
           }}
         />

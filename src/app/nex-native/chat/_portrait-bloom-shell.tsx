@@ -398,6 +398,17 @@ export interface PortraitBloomShellProps {
      *  send form so E2eComposerIntercept picks up the stashed key. */
     encrypted?: boolean;
   } | null;
+  /** Owner directive 2026-10-22 · Ask-Seller slice 2 · pending product
+   *  attachment resolved server-side from ?pending_product=<id>. When
+   *  set, PeerComposer renders a product card chip above the pill. */
+  pendingProduct?: {
+    productId: string;
+    name: string;
+    priceLabel: string | null;
+    imageUrl: string | null;
+    shopName: string | null;
+    clearHref: string;
+  } | null;
   /** Bridge 88 · when true, media-capture routes files through the
    *  client-side encrypted upload path. Skip for NEX1 (support). */
   encryptedUploadEnabled?: boolean;
@@ -604,6 +615,7 @@ export function PortraitBloomShell({
   composerRimColor,
   messages,
   composerAction,
+  pendingProduct,
   composerPlaceholder,
   scope,
   contacts,
@@ -1954,6 +1966,7 @@ export function PortraitBloomShell({
               replyTarget={replyTarget ?? null}
               uploadAction={uploadAction}
               pendingAttachment={pendingAttachment ?? null}
+              pendingProduct={pendingProduct ?? null}
               encryptedUploadEnabled={encryptedUploadEnabled}
               themeEmojis={themeEmojis}
               themeSendButtonUrl={themeSendButtonUrl}

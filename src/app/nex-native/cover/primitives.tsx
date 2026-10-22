@@ -679,7 +679,17 @@ export function CoverProductCard({
 }): React.JSX.Element {
   const soldOut = product.stock_status === "sold_out";
   const priceLabel = formatMoney(product.currency, product.price_pence);
-  const chatHref = `/nex-native/chat/peer/${peerAccountId}?product=${encodeURIComponent(product.id)}&auto=1`;
+  // Owner directive 2026-10-22 · Ask-Seller slice 5 · product tap
+  // routes to the chat page with ?pending_product=<id> so the composer
+  // mounts the product-card chip above the pill (slice 2 UI + slice 3
+  // send dispatcher). Earlier `?product=<id>&auto=1` wiring did not
+  // match any searchParam the chat page actually read · tapping a
+  // product landed the buyer in a plain chat with no context attached.
+  // The chip now carries name · price · thumbnail · shop name server-
+  // side and the Send submits via shareProductToContactAction, so the
+  // owner receives a rich product-snapshot message instead of a bare
+  // text line.
+  const chatHref = `/nex-native/chat/peer/${peerAccountId}?pending_product=${encodeURIComponent(product.id)}`;
   const isLandscape = variant === "landscape";
   const isRound = variant === "round";
   if (isRound) {

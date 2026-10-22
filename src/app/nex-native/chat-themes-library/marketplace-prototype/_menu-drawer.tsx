@@ -48,6 +48,12 @@ export interface MenuDrawerProps {
    *  Cart inside the MenuItemSheet · parent (ThemePreviewSheet)
    *  increments the right-dock Cart badge and shows a toast. */
   readonly onItemAdd?: (productId: string, qty: number) => void;
+  /** Owner directive 2026-10-22 · Ask-Seller slice 1 · fired when
+   *  the buyer taps "Ask Seller" inside the MenuItemSheet. Parent
+   *  surfaces a toast in prototype · will route to the owner's chat
+   *  via shareProductToContactAction in production. Optional · when
+   *  omitted, the Ask Seller button hides and only Add to Cart shows. */
+  readonly onItemAskSeller?: (productId: string) => void;
   readonly onClose: () => void;
 }
 
@@ -56,6 +62,7 @@ export function MenuDrawer({
   accent,
   wallpaperUrl,
   onItemAdd,
+  onItemAskSeller,
   onClose,
 }: MenuDrawerProps): React.JSX.Element {
   // Brand mock lookup · only Crispy Chicken is wired today. When
@@ -615,6 +622,14 @@ export function MenuDrawer({
             onItemAdd?.(productId, qty);
             setTappedProductId(null);
           }}
+          onAskSeller={
+            onItemAskSeller
+              ? (productId) => {
+                  onItemAskSeller(productId);
+                  setTappedProductId(null);
+                }
+              : undefined
+          }
         />
       )}
     </div>

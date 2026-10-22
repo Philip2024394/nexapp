@@ -69,6 +69,7 @@ export function MarketplaceThemeCard(
       href={themePreviewHref(props.theme.id)}
       data-nex-themes-marketplace-card={props.theme.id}
       data-variant={props.variant}
+      className="nex-themes-marketplace-card-tap"
       style={{
         position: "relative",
         display: "flex",
@@ -80,8 +81,17 @@ export function MarketplaceThemeCard(
         textDecoration: "none",
         color: NEX.text,
         fontFamily: NEX_FONT_SANS,
+        touchAction: "manipulation",
+        WebkitTapHighlightColor: "transparent",
+        transition: "transform 150ms ease, box-shadow 150ms ease",
       }}
     >
+      <style>{`
+        .nex-themes-marketplace-card-tap:active {
+          transform: scale(0.98);
+          box-shadow: 0 0 0 1px ${accent}, 0 6px 18px -8px rgba(0,0,0,0.6);
+        }
+      `}</style>
       {/* Hero image · cover-fit · fallback to accent-tinted gradient
           when hero_image_url is null (never a fabricated stock photo). */}
       <div
