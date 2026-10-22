@@ -338,9 +338,13 @@ export default async function FreeChatPage({
             >
               <SearchIcon />
             </Link>
-            <div style={{ display: "inline-flex" }}>
-              <ControlDrawer session={drawerSession} />
-            </div>
+            {/* Owner directive 2026-10-22 (afternoon) · 3-dots
+                ControlDrawer trigger retired from the header right-
+                cluster · moved into the composer row to sit beside
+                the input pill. Header now carries ONLY the Search
+                icon on the right. The drawer still mounts via the
+                sealed ControlDrawer primitive · just rendered from
+                FreeChatComposerClient instead. */}
           </nav>
         </header>
 
@@ -355,10 +359,15 @@ export default async function FreeChatPage({
           initialRowDismissed={initialRowDismissed}
         />
 
-        {/* ── Composer · text + emoji glyph + send ── */}
+        {/* ── Composer · text + emoji glyph + send + 3-dots drawer ──
+            Owner directive 2026-10-22 (afternoon) · the 3-dots sealed
+            ControlDrawer trigger is now mounted inside the composer
+            row (not the header) · drawerSession passed through so
+            the drawer resolves identity + sign-in state. */}
         <FreeChatComposerClient
           isGuest={isGuest}
           initialThemeId={initialThemeId}
+          drawerSession={drawerSession}
         />
 
         {/* ── Call-Center floating 3-dots trigger + left-slide panel ──

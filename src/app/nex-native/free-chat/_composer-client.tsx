@@ -27,6 +27,10 @@
 import * as React from "react";
 import { JokerKeypad } from "@/app/nex-native/chat-standard/_joker-keypad";
 import { resolveFreeChatAccentHex } from "./_types";
+import {
+  ControlDrawer,
+  type ControlDrawerSession,
+} from "@/components/nex-native/control-drawer/control-drawer-client";
 
 const NEX = {
   panel: "rgba(7, 21, 37, 0.9)",
@@ -41,6 +45,7 @@ const NEX = {
 export function FreeChatComposerClient({
   isGuest,
   initialThemeId = null,
+  drawerSession = null,
 }: {
   readonly isGuest: boolean;
   /** Owner directive 2026-10-22 · the sealed JokerKeypad recolours
@@ -49,6 +54,12 @@ export function FreeChatComposerClient({
    *  the `nex-free-chat-theme` custom event dispatched by the
    *  sibling canvas client when the user picks a new tile. */
   readonly initialThemeId?: string | null;
+  /** Owner directive 2026-10-22 (afternoon) · the sealed
+   *  ControlDrawer trigger moved from the header right-cluster into
+   *  the composer row, sitting as the 3-dots button to the right of
+   *  the text input. Server resolves the session + builds this
+   *  payload (null for guests → drawer renders sign-in prompt). */
+  readonly drawerSession?: ControlDrawerSession | null;
 }): React.JSX.Element {
   const [value, setValue] = React.useState("");
   const [toast, setToast] = React.useState<string | null>(null);
@@ -120,71 +131,101 @@ export function FreeChatComposerClient({
       >
         😊
       </span>
-      {/* Owner directive 2026-10-21 (iteration 49) · native keyboard
-          suppressed · `readOnly` + `inputMode="none"` prevents iOS /
-          Android / desktop keyboards from opening · tap on the field
-          opens the sealed JokerKeypad instead (mounted below). Click
-          is caught both via onFocus and onClick so a second tap on an
-          already-focused field still re-opens the keypad if the user
-          closed it via the chevron. */}
-      <input
-        type="text"
-        value={value}
-        readOnly
-        inputMode="none"
-        onFocus={() => setKeypadOpen(true)}
-        onClick={() => setKeypadOpen(true)}
-        maxLength={500}
-        placeholder="Say something…"
-        aria-label="Message"
-        data-nex-free-chat-composer-input
+      {/* Owner directive 2026-10-22 (afternoon) · the send button
+          now lives INSIDE the input pill on the right, absolutely
+          positioned so the pill reads as one tappable surface. The
+          input gains right padding so typed text never slides under
+          the send button. Native keyboard still suppressed (readOnly
+          + inputMode none) · tap opens the sealed JokerKeypad. */}
+      <div
+        data-nex-free-chat-composer-pill
         style={{
+          position: "relative",
           flex: 1,
           minWidth: 0,
-          padding: "10px 14px",
-          background: "rgba(2,9,20,0.6)",
-          color: NEX.text,
-          fontSize: 14,
-          border: `1px solid ${NEX.border}`,
-          borderRadius: 999,
-          outline: "none",
-          fontFamily: "inherit",
-          cursor: "text",
-        }}
-      />
-      {/* Owner directive 2026-10-21 (iteration 48) · send button is now
-          a SOLID orange circle at all times (no translucent-when-
-          disabled fade) and renders a proper paper-plane SVG arrow
-          instead of the → text glyph. When the input is empty the
-          button fades to 40% opacity so it still reads as the send
-          affordance, just inactive. */}
-      <button
-        type="button"
-        onClick={handleSend}
-        disabled={!canSend}
-        aria-label="Send message"
-        data-nex-free-chat-composer-send
-        data-nex-free-chat-composer-send-active={canSend ? "true" : "false"}
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 36,
-          height: 36,
-          borderRadius: "50%",
-          background: NEX.orange,
-          color: NEX.orangeInk,
-          border: "none",
-          cursor: canSend ? "pointer" : "not-allowed",
-          flexShrink: 0,
-          opacity: canSend ? 1 : 0.4,
-          boxShadow: canSend ? `0 6px 14px -8px ${NEX.orange}` : "none",
-          transition: "opacity 150ms ease, box-shadow 150ms ease",
-          padding: 0,
         }}
       >
-        <SendArrowIcon />
-      </button>
+        <input
+          type="text"
+          value={value}
+          readOnly
+          inputMode="none"
+          onFocus={() => setKeypadOpen(true)}
+          onClick={() => setKeypadOpen(true)}
+          maxLength={500}
+          placeholder="Say something…"
+          aria-label="Message"
+          data-nex-free-chat-composer-input
+          style={{
+            width: "100%",
+            // Right padding reserved for the embedded send button
+            // (36px wide + 4px right offset + 4px breathing room).
+            padding: "10px 50px 10px 14px",
+            background: "rgba(2,9,20,0.6)",
+            color: NEX.text,
+            fontSize: 14,
+            border: `1px solid ${NEX.border}`,
+            borderRadius: 999,
+            outline: "none",
+            fontFamily: "inherit",
+            cursor: "text",
+            boxSizing: "border-box",
+          }}
+        />
+        {/* Owner directive 2026-10-22 (afternoon) · send button is a
+            SOLID orange circle at full opacity ALWAYS (even on empty
+            input · the user asked for persistent solid colour so the
+            button never reads as disabled). When the input has
+            content it picks up a subtle cyan-tinged glow via the
+            boxShadow so the user sees "this is ready to fire" without
+            the button changing its base colour. */}
+        <button
+          type="button"
+          onClick={handleSend}
+          aria-label="Send message"
+          aria-disabled={!canSend}
+          data-nex-free-chat-composer-send
+          data-nex-free-chat-composer-send-active={canSend ? "true" : "false"}
+          style={{
+            position: "absolute",
+            right: 4,
+            top: "50%",
+            transform: "translateY(-50%)",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            background: NEX.orange,
+            color: NEX.orangeInk,
+            border: "none",
+            cursor: canSend ? "pointer" : "default",
+            opacity: 1,
+            // Base shadow: subtle lift so the circle reads as elevated
+            // even when inactive. Active state adds a theme-accent
+            // outer glow to signal "ready to send" without recolouring.
+            boxShadow: canSend
+              ? `0 0 0 2px ${accentHex}55, 0 6px 18px -6px ${accentHex}, 0 2px 6px -2px ${NEX.orange}`
+              : `0 2px 6px -2px ${NEX.orange}`,
+            transition: "box-shadow 180ms ease",
+            padding: 0,
+          }}
+        >
+          <SendArrowIcon />
+        </button>
+      </div>
+      {/* Owner directive 2026-10-22 (afternoon) · the 3-dots sealed
+          ControlDrawer trigger moved from the header right-cluster
+          down into the composer row · sits to the RIGHT of the input
+          pill. Signed-in users see the full menu; guests see the
+          sign-in prompt bar at the top of the drawer. */}
+      <div
+        data-nex-free-chat-composer-drawer
+        style={{ flexShrink: 0, display: "inline-flex" }}
+      >
+        <ControlDrawer session={drawerSession} />
+      </div>
       {toast && (
         <div
           role="status"
