@@ -46,6 +46,12 @@ export interface ContactPickerSheetProps {
   readonly onInvite: (contact: MockContact) => void;
 }
 
+// Owner directive 2026-10-22 (evening · pass 18) · hold-to-send
+// commits after this many ms. 5-second window matches the sender's
+// "I didn't mean to send that" grace. Release before this time
+// cancels silently · nothing posted, no recipient notification.
+const HOLD_TO_SEND_MS = 5000;
+
 export function ContactPickerSheet({
   open,
   accentHex,
@@ -54,6 +60,62 @@ export function ContactPickerSheet({
   onInvite,
 }: ContactPickerSheetProps): React.JSX.Element | null {
   const [search, setSearch] = React.useState("");
+  // Which card is being held + how far through the 5s the hold has
+  // progressed. Only one card at a time (press-and-hold is naturally
+  // single-touch for a mouse; multi-touch would need a Map).
+  const [holding, setHolding] = React.useState<{
+    contactId: string;
+    startMs: number;
+  } | null>(null);
+  const [holdProgress, setHoldProgress] = React.useState(0);
+  const holdTickRef = React.useRef<number | null>(null);
+  const holdCommittedRef = React.useRef(false);
+
+  // Drive the countdown via rAF for smooth visual feedback. On commit
+  // (progress >= 1), fire the Share path and close the sheet. On
+  // release before commit, the handlers below null out `holding` and
+  // this effect tears down cleanly.
+  React.useEffect(() => {
+    if (!holding) {
+      setHoldProgress(0);
+      holdCommittedRef.current = false;
+      if (holdTickRef.current !== null) {
+        cancelAnimationFrame(holdTickRef.current);
+        holdTickRef.current = null;
+      }
+      return;
+    }
+    const tick = () => {
+      const elapsed = Date.now() - holding.startMs;
+      const p = Math.min(1, elapsed / HOLD_TO_SEND_MS);
+      setHoldProgress(p);
+      if (p >= 1 && !holdCommittedRef.current) {
+        holdCommittedRef.current = true;
+        const c = MOCK_CONTACTS.find((x) => x.id === holding.contactId);
+        if (c) {
+          onShare(c);
+        }
+        setHolding(null);
+        return;
+      }
+      holdTickRef.current = requestAnimationFrame(tick);
+    };
+    holdTickRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (holdTickRef.current !== null) {
+        cancelAnimationFrame(holdTickRef.current);
+        holdTickRef.current = null;
+      }
+    };
+  }, [holding, onShare]);
+
+  const startHold = React.useCallback((contactId: string) => {
+    setHolding({ contactId, startMs: Date.now() });
+  }, []);
+  const cancelHold = React.useCallback(() => {
+    if (holdCommittedRef.current) return;
+    setHolding(null);
+  }, []);
 
   React.useEffect(() => {
     if (!open) return;
@@ -261,8 +323,12 @@ export function ContactPickerSheet({
               key={c.id}
               contact={c}
               accentHex={accentHex}
-              onShare={() => onShare(c)}
               onInvite={() => onInvite(c)}
+              onHoldStart={() => startHold(c.id)}
+              onHoldEnd={cancelHold}
+              holdProgress={
+                holding && holding.contactId === c.id ? holdProgress : 0
+              }
             />
           ))}
         </div>
@@ -276,13 +342,17 @@ export function ContactPickerSheet({
 function ContactCard({
   contact,
   accentHex,
-  onShare,
   onInvite,
+  onHoldStart,
+  onHoldEnd,
+  holdProgress,
 }: {
   readonly contact: MockContact;
   readonly accentHex: string;
-  readonly onShare: () => void;
   readonly onInvite: () => void;
+  readonly onHoldStart: () => void;
+  readonly onHoldEnd: () => void;
+  readonly holdProgress: number;
 }): React.JSX.Element {
   const ringColor =
     contact.presence === "online"
@@ -290,28 +360,95 @@ function ContactCard({
       : contact.presence === "away"
         ? NEX.amber
         : NEX.dim;
+  const isHolding = holdProgress > 0;
+  const countdownSeconds = Math.max(0, Math.ceil(5 - holdProgress * 5));
+
+  // Press-and-hold handlers · ignore the Invite button so tapping it
+  // doesn't start a hold on the card body underneath.
+  const stopIfInvite = (e: React.PointerEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest("[data-nex-contact-card-invite]")) return true;
+    return false;
+  };
 
   return (
     <article
       data-nex-free-chat-contact-card={contact.id}
+      data-nex-free-chat-contact-card-holding={isHolding ? "true" : "false"}
+      onPointerDown={(e) => {
+        if (stopIfInvite(e)) return;
+        onHoldStart();
+      }}
+      onPointerUp={onHoldEnd}
+      onPointerLeave={onHoldEnd}
+      onPointerCancel={onHoldEnd}
       style={{
+        position: "relative",
         display: "flex",
         flexDirection: "row",
         alignItems: "center",
         gap: 12,
         padding: 10,
         background: NEX.bgNavy,
-        border: `1px solid ${accentHex}3D`,
+        border: `1px solid ${isHolding ? accentHex : `${accentHex}3D`}`,
         borderRadius: 14,
+        overflow: "hidden",
+        cursor: "pointer",
+        userSelect: "none",
+        WebkitUserSelect: "none",
+        transition: "border-color 120ms ease, transform 120ms ease",
+        transform: isHolding ? "scale(0.99)" : "scale(1)",
       }}
     >
-      {/* Avatar · presence ring · 24h status halo · shop badge */}
+      {/* Owner directive 2026-10-22 (evening · pass 18) · hold-to-send
+          progress fill. Grows left-to-right as the 5s elapses. Sits
+          BEHIND the card content via zIndex:0 + content zIndex:1. */}
+      {isHolding && (
+        <div
+          aria-hidden
+          data-nex-free-chat-contact-card-hold-fill
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            bottom: 0,
+            width: `${holdProgress * 100}%`,
+            background: `linear-gradient(90deg, ${accentHex}22 0%, ${accentHex}44 100%)`,
+            pointerEvents: "none",
+            zIndex: 0,
+            transition: "width 60ms linear",
+          }}
+        />
+      )}
+      {isHolding && (
+        <div
+          aria-live="polite"
+          data-nex-free-chat-contact-card-hold-countdown
+          style={{
+            position: "absolute",
+            top: 6,
+            right: 10,
+            fontSize: 10,
+            fontWeight: 800,
+            color: accentHex,
+            letterSpacing: 0.6,
+            zIndex: 2,
+            pointerEvents: "none",
+          }}
+        >
+          Sending in {countdownSeconds}…
+        </div>
+      )}
+      {/* Avatar · presence ring · 24h status halo · shop badge. z-
+          indexed above the hold-fill so the pulsing heartbeat +
+          shop badge stay visible as the fill grows. */}
       <div
         style={{
           position: "relative",
           width: 56,
           height: 56,
           flexShrink: 0,
+          zIndex: 1,
         }}
       >
         {/* 24h status halo (if active) · thicker outer ring in accent */}
@@ -402,7 +539,8 @@ function ContactCard({
 
       {/* Centre column · name + verified · nex handle · profession ·
           city + presence stacked tightly. flex:1 so it absorbs the
-          remaining width between avatar and CTA column. */}
+          remaining width between avatar and CTA column. zIndex above
+          the hold-fill paint layer. */}
       <div
         style={{
           flex: 1,
@@ -410,6 +548,8 @@ function ContactCard({
           display: "flex",
           flexDirection: "column",
           gap: 2,
+          position: "relative",
+          zIndex: 1,
         }}
       >
         {/* Name + verified pill */}
@@ -485,39 +625,24 @@ function ContactCard({
         </div>
       </div>
 
-      {/* Right CTA column · Share (accent fill) stacked on top of
-          Invite (ghost outline). Compact 32px high each. */}
+      {/* Right CTA column · Invite only (tap-fire). Share is NOT a
+          button · the user press-and-holds the card body itself for
+          5s to send (owner directive 2026-10-22 evening pass 18).
+          Invite stays as a tap-fire button and sits above the hold-
+          fill paint layer. */}
       <div
         style={{
           display: "flex",
           flexDirection: "column",
           gap: 6,
           flexShrink: 0,
+          position: "relative",
+          zIndex: 2,
         }}
       >
         <button
           type="button"
-          onClick={onShare}
-          data-nex-contact-card-share
-          style={{
-            minWidth: 76,
-            minHeight: 30,
-            padding: "0 12px",
-            background: accentHex,
-            color: NEX.bgNavy,
-            border: "none",
-            borderRadius: 8,
-            fontSize: 11,
-            fontWeight: 800,
-            letterSpacing: 0.3,
-            cursor: "pointer",
-            fontFamily: "inherit",
-          }}
-        >
-          Share
-        </button>
-        <button
-          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={onInvite}
           data-nex-contact-card-invite
           style={{
@@ -537,6 +662,19 @@ function ContactCard({
         >
           Invite
         </button>
+        <div
+          aria-hidden
+          style={{
+            fontSize: 9,
+            color: NEX.textMute,
+            textAlign: "center",
+            lineHeight: 1.3,
+            opacity: isHolding ? 0 : 0.8,
+            transition: "opacity 120ms ease",
+          }}
+        >
+          Hold to send
+        </div>
       </div>
 
       <style>{`

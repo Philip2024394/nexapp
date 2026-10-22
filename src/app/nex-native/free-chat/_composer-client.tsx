@@ -132,6 +132,15 @@ export function FreeChatComposerClient({
   // label per kind.
   const [attachment, setAttachment] =
     React.useState<LiveAttachment | null>(null);
+  // Owner directive 2026-10-22 (evening · pass 18) · hold-to-recall
+  // the staged attachment chip. 5-second window mirrors the hold-to-
+  // send on the contact card. Release before 5s → cancel · no
+  // change. Hit 5s → clearAttachment. Visual: accent fill grows
+  // left-to-right as hold progresses, countdown label visible.
+  const [chipHoldProgress, setChipHoldProgress] = React.useState(0);
+  const chipHoldStartRef = React.useRef<number | null>(null);
+  const chipHoldTickRef = React.useRef<number | null>(null);
+  const chipHoldCommittedRef = React.useRef(false);
   const [voiceRecording, setVoiceRecording] = React.useState<{
     recorder: MediaRecorder;
     stream: MediaStream;
@@ -357,6 +366,42 @@ export function FreeChatComposerClient({
       a.pause();
       a.currentTime = 0;
     }
+  }, []);
+
+  // Owner directive 2026-10-22 (evening · pass 18) · chip hold-to-
+  // recall. 5-second countdown identical to the contact card hold-
+  // to-send: hold the chip → fill grows → 5s → clearAttachment()
+  // fires. Release before 5s → cancel silently.
+  const CHIP_HOLD_MS = 5000;
+  const startChipHold = React.useCallback(() => {
+    chipHoldStartRef.current = Date.now();
+    chipHoldCommittedRef.current = false;
+    const tick = () => {
+      const start = chipHoldStartRef.current;
+      if (start === null) return;
+      const elapsed = Date.now() - start;
+      const p = Math.min(1, elapsed / CHIP_HOLD_MS);
+      setChipHoldProgress(p);
+      if (p >= 1 && !chipHoldCommittedRef.current) {
+        chipHoldCommittedRef.current = true;
+        clearAttachment();
+        chipHoldStartRef.current = null;
+        setChipHoldProgress(0);
+        chipHoldTickRef.current = null;
+        return;
+      }
+      chipHoldTickRef.current = requestAnimationFrame(tick);
+    };
+    chipHoldTickRef.current = requestAnimationFrame(tick);
+  }, [clearAttachment]);
+  const cancelChipHold = React.useCallback(() => {
+    if (chipHoldCommittedRef.current) return;
+    chipHoldStartRef.current = null;
+    if (chipHoldTickRef.current !== null) {
+      cancelAnimationFrame(chipHoldTickRef.current);
+      chipHoldTickRef.current = null;
+    }
+    setChipHoldProgress(0);
   }, []);
 
   const toggleVoicePlayback = React.useCallback(() => {
@@ -726,6 +771,25 @@ export function FreeChatComposerClient({
       <div
         data-nex-free-chat-composer-attachment-chip
         data-nex-free-chat-composer-attachment-kind={attachment.kind}
+        data-nex-free-chat-composer-attachment-recalling={
+          chipHoldProgress > 0 ? "true" : "false"
+        }
+        onPointerDown={(e) => {
+          // Ignore holds that start on an interactive child (play
+          // button, Open-in-Maps link, × remove button). Only the
+          // chip body itself is the hold target.
+          const t = e.target as HTMLElement;
+          if (
+            t.closest("button") ||
+            t.closest("a") ||
+            t.closest("input")
+          )
+            return;
+          startChipHold();
+        }}
+        onPointerUp={cancelChipHold}
+        onPointerLeave={cancelChipHold}
+        onPointerCancel={cancelChipHold}
         style={{
           position: "absolute",
           bottom: "calc(100% - 4px)",
@@ -736,14 +800,55 @@ export function FreeChatComposerClient({
           gap: 10,
           padding: "8px 10px 8px 10px",
           background: `${accentHex}1F`,
-          border: `1px solid ${accentHex}6B`,
+          border: `1px solid ${
+            chipHoldProgress > 0 ? "#FF3355" : `${accentHex}6B`
+          }`,
           borderRadius: 12,
           color: NEX.text,
           fontSize: 12,
           lineHeight: 1.3,
           zIndex: 15,
+          overflow: "hidden",
+          userSelect: "none",
+          WebkitUserSelect: "none",
+          transition: "border-color 120ms ease",
         }}
       >
+        {chipHoldProgress > 0 && (
+          <>
+            <div
+              aria-hidden
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                bottom: 0,
+                width: `${chipHoldProgress * 100}%`,
+                background:
+                  "linear-gradient(90deg, rgba(255,51,85,0.18) 0%, rgba(255,51,85,0.42) 100%)",
+                pointerEvents: "none",
+                zIndex: 0,
+                transition: "width 60ms linear",
+              }}
+            />
+            <div
+              aria-live="polite"
+              style={{
+                position: "absolute",
+                top: 4,
+                right: 10,
+                fontSize: 10,
+                fontWeight: 800,
+                color: "#FF3355",
+                letterSpacing: 0.5,
+                zIndex: 3,
+                pointerEvents: "none",
+              }}
+            >
+              Deleting in {Math.max(0, Math.ceil(5 - chipHoldProgress * 5))}…
+            </div>
+          </>
+        )}
         {/* Owner directive 2026-10-22 (evening · pass 14) · live-
             location chip renders a pulsing ping ring around the pin
             glyph (same heartbeat vocabulary as the chat identity
