@@ -44,6 +44,15 @@
 
 import * as React from "react";
 import { NEX_FONT_SANS } from "@/lib/nex-native/design-tokens";
+// Owner directive 2026-10-23 · reinstate the sealed planet-approach
+// animation (NEX · Planet Approach ambient animation + vertical control
+// panel · sealed 2026-10-15) on this prototype. The component is
+// identical to what shipped on the two free NEX chat themes · the
+// planet starts as a distant speck at viewport centre, grows larger as
+// it approaches the "camera", then rushes past toward the lower-left
+// corner. Trigger via the floating ⋮ panel bottom-right. Reduced-motion
+// path (fade only) is already built in.
+import { NexPlanetApproachClient } from "@/lib/nex-native/nex-planet-approach-client";
 
 const THEME_3 = {
   id: "theme-3",
@@ -270,6 +279,14 @@ export default function Theme3AnimatedPrototypePage(): React.JSX.Element {
           }
         }
       `}</style>
+
+      {/* Sealed planet-approach cinematic · ⋮ panel bottom-right.
+          Owner-recovered 2026-10-23 for the theme-3 space wallpaper.
+          accent prop drives the ⋮ panel's planet-trigger button
+          colour · matched to theme-3 green. deep + highlight stay
+          at NEX defaults so the floating button chrome sits over
+          the wallpaper without visual drift. */}
+      <NexPlanetApproachClient accent={THEME_3.accentHex} />
     </div>
   );
 }
