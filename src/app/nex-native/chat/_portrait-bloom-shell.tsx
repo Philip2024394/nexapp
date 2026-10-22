@@ -153,6 +153,14 @@ export interface PortraitBloomMessage {
     image_url: string | null;
     short_description: string | null;
   } | null;
+  /** Owner directive 2026-10-22 · Live Commerce · when the product
+   *  enquiry originated from a live stream, the broadcaster-side live
+   *  session id is projected here from attachment_meta so the bubble
+   *  can render a "📺 From Live" badge above the product card. Honest
+   *  null when the enquiry came from organic shop browsing · no badge
+   *  shown. Server-side persistence into attachment_meta.live_session_id
+   *  is a follow-up slice on shareProductToContactAction. */
+  attachment_live_session_id?: string | null;
   /** Bridge 15c · when attachment_type='menu_item' this carries the
    *  frozen dish snapshot so the card renders correctly even if the
    *  underlying dish is later edited, marked sold-out, or deleted. */
@@ -400,7 +408,9 @@ export interface PortraitBloomShellProps {
   } | null;
   /** Owner directive 2026-10-22 · Ask-Seller slice 2 · pending product
    *  attachment resolved server-side from ?pending_product=<id>. When
-   *  set, PeerComposer renders a product card chip above the pill. */
+   *  set, PeerComposer renders a product card chip above the pill.
+   *  Live Commerce extension 2026-10-22 · optional liveSessionId
+   *  carried through from a live-stream Order-now tap. */
   pendingProduct?: {
     productId: string;
     name: string;
@@ -408,6 +418,7 @@ export interface PortraitBloomShellProps {
     imageUrl: string | null;
     shopName: string | null;
     clearHref: string;
+    liveSessionId?: string | null;
   } | null;
   /** Bridge 88 · when true, media-capture routes files through the
    *  client-side encrypted upload path. Skip for NEX1 (support). */
@@ -1576,19 +1587,48 @@ export function PortraitBloomShell({
                           via MessageProductCard so the price + name
                           + shop context reads as commerce not media. */}
                       {m.attachment_type === "product" && m.attachment_product ? (
-                        <MessageProductCard
-                          product={m.attachment_product}
-                          hasBody={!!m.body}
-                          accent={bubbleRim}
-                          likeAction={
-                            likeProductAction
-                              ? likeProductAction.bind(
-                                  null,
-                                  m.attachment_product.product_id,
-                                )
-                              : undefined
-                          }
-                        />
+                        <>
+                          {m.attachment_live_session_id && (
+                            <div
+                              data-nex-chat-live-enquiry-badge={
+                                m.attachment_live_session_id
+                              }
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 4,
+                                padding: "3px 8px",
+                                marginBottom: 6,
+                                borderRadius: 999,
+                                background: "rgba(255, 51, 85, 0.14)",
+                                border:
+                                  "1px solid rgba(255, 51, 85, 0.42)",
+                                color: "#FF3355",
+                                fontSize: 10,
+                                fontWeight: 900,
+                                letterSpacing: 0.3,
+                                textTransform: "uppercase",
+                                lineHeight: 1,
+                              }}
+                            >
+                              <span aria-hidden>📺</span>
+                              <span>From Live</span>
+                            </div>
+                          )}
+                          <MessageProductCard
+                            product={m.attachment_product}
+                            hasBody={!!m.body}
+                            accent={bubbleRim}
+                            likeAction={
+                              likeProductAction
+                                ? likeProductAction.bind(
+                                    null,
+                                    m.attachment_product.product_id,
+                                  )
+                                : undefined
+                            }
+                          />
+                        </>
                       ) : m.attachment_type === "menu_item" &&
                         m.attachment_menu_item ? (
                         <MessageMenuItemCard

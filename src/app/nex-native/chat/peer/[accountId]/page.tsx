@@ -121,6 +121,14 @@ export default async function PeerChatPage({
      *  through shareProductToContactAction. Unknown id falls through
      *  silently · no chip appears · no error. */
     pending_product?: string;
+    /** Owner directive 2026-10-22 · Live Commerce · when the viewer
+     *  taps "Order now" on a product overlay during a live stream,
+     *  the live_session_id is carried into chat as context. The
+     *  composer renders a small "📺 From Live" badge next to the
+     *  product chip so the owner knows the enquiry originated from
+     *  a live stream (vs organic shop browsing). Session id is a
+     *  client-generated uuid · no server lookup needed. */
+    live_session_id?: string;
   }>;
 }) {
   const { accountId: peerAccountId } = await params;
@@ -382,6 +390,15 @@ export default async function PeerChatPage({
   // ids into another person's chat (belt-and-braces · the next slice
   // adds the server-side authorisation on send too).
   const pendingProductIdRaw = sp.pending_product?.trim() ?? "";
+  // Owner directive 2026-10-22 · Live Commerce · optional
+  // live-session context carried through from the live viewer's
+  // "Order now" tap. Validated as plain UUID-shape · stored on the
+  // chip + sent as attachment_meta on the enquiry message.
+  const liveSessionIdRaw = sp.live_session_id?.trim() ?? "";
+  const liveSessionIdValid =
+    liveSessionIdRaw.length > 0 && liveSessionIdRaw.length <= 64
+      ? liveSessionIdRaw
+      : null;
   const pendingProduct = await (async () => {
     if (!pendingProductIdRaw || !peerBusiness) return null;
     const product = await productService
@@ -400,13 +417,17 @@ export default async function PeerChatPage({
         return `${product.currency} ${(product.price_pence / 100).toFixed(0)}`;
       }
     })();
+    const clearParams = liveSessionIdValid
+      ? `?live_session_id=${encodeURIComponent(liveSessionIdValid)}`
+      : "";
     return {
       productId: product.id,
       name: product.name,
       priceLabel,
       imageUrl: product.image_url ?? null,
       shopName: peerBusiness.display_name,
-      clearHref: `/nex-native/chat/peer/${peer.id}`,
+      clearHref: `/nex-native/chat/peer/${peer.id}${clearParams}`,
+      liveSessionId: liveSessionIdValid,
     };
   })();
 

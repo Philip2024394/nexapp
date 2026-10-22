@@ -107,6 +107,12 @@ interface PeerComposerProps {
     imageUrl: string | null;
     shopName: string | null;
     clearHref: string;
+    /** Owner directive 2026-10-22 · Live Commerce · when the enquiry
+     *  originated from a live stream, carries the client-generated
+     *  live session id so the composer can render a "📺 From Live"
+     *  badge and the eventual send-action can embed it in the
+     *  attachment_meta for owner-side analytics / context. */
+    liveSessionId?: string | null;
   } | null;
   /** Bridge ThemeEmoji-B · sealed 2026-10-01 · per-theme emoji set
    *  loaded from nex_theme_emoji (Migration 116). When non-empty,
@@ -638,8 +644,18 @@ export function PeerComposer({
               name="product_id"
               value={pendingProduct.productId}
             />
+            {pendingProduct.liveSessionId && (
+              <input
+                type="hidden"
+                name="live_session_id"
+                value={pendingProduct.liveSessionId}
+              />
+            )}
             <div
               data-nex-composer-pending-product={pendingProduct.productId}
+              data-nex-composer-live-session-id={
+                pendingProduct.liveSessionId ?? undefined
+              }
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -680,11 +696,36 @@ export function PeerComposer({
                     letterSpacing: "0.08em",
                     textTransform: "uppercase",
                     color: themeAccent ?? NEX.cyan,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
                   }}
                 >
-                  {pendingProduct.shopName
-                    ? `From ${pendingProduct.shopName}`
-                    : "Product"}
+                  <span>
+                    {pendingProduct.shopName
+                      ? `From ${pendingProduct.shopName}`
+                      : "Product"}
+                  </span>
+                  {pendingProduct.liveSessionId && (
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 3,
+                        padding: "1px 6px",
+                        borderRadius: 999,
+                        background: "rgba(255, 51, 85, 0.14)",
+                        border: "1px solid rgba(255, 51, 85, 0.42)",
+                        color: "#FF3355",
+                        fontSize: 9,
+                        fontWeight: 900,
+                        letterSpacing: 0.3,
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      📺 From Live
+                    </span>
+                  )}
                 </div>
                 <div
                   style={{

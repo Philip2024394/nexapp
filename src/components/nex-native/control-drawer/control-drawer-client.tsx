@@ -196,6 +196,19 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
     href: "/nex-native/settings/intro-video",
     locked: true,
   },
+  // Status + Go Live now require sign-in · owner directive 2026-10-22
+  // identity-sealing · the Status surface persists owner id into
+  // IndexedDB and the P2P presence/fetch layer uses the signed-in
+  // account id so viewers see a stable, real identity. Device-local
+  // storage still applies to the media itself; the id is what we
+  // sealed to the real NEX account.
+  {
+    key: "status",
+    label: "Status",
+    subtitle: "Share for 24h · stays on your device",
+    href: "/nex-native/status",
+    locked: true,
+  },
 ];
 
 const YOUR_BUSINESS_ROWS: ReadonlyArray<MenuRow> = [
@@ -211,6 +224,17 @@ const YOUR_BUSINESS_ROWS: ReadonlyArray<MenuRow> = [
     label: "My Shop",
     subtitle: "Upload products · edit · turn off · delete",
     href: "/nex-native/chat-themes-library/marketplace-prototype/my-shop/crispy-chicken",
+    locked: true,
+  },
+  // Status + Go Live now require sign-in · owner directive 2026-10-22
+  // identity-sealing · the broadcaster id is now the signed-in NEX
+  // account id (not a `prototype-broadcaster` literal) so viewers see
+  // the broadcaster's real NEX identity on the live-commerce overlay.
+  {
+    key: "go-live",
+    label: "Go Live",
+    subtitle: "Broadcast from your device · 10 viewer pilot",
+    href: "/nex-native/live-commerce/go-live",
     locked: true,
   },
   {
@@ -568,6 +592,50 @@ function DrawerBody({
   );
 }
 
+// ─── Copy-ID chip rendered next to the NEX handle ──────────────
+
+function CopyHandleButton({ handle }: { readonly handle: string }): React.JSX.Element {
+  const [copied, setCopied] = React.useState(false);
+  const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  React.useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+  const handleClick = React.useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      // Prevent the identity bar's Link from firing when the chip is
+      // tapped (bar is wrapped in a Link on some surfaces).
+      event.preventDefault();
+      event.stopPropagation();
+      if (typeof navigator === "undefined" || !navigator.clipboard) return;
+      void navigator.clipboard
+        .writeText(handle)
+        .then(() => {
+          setCopied(true);
+          if (timeoutRef.current) clearTimeout(timeoutRef.current);
+          timeoutRef.current = setTimeout(() => setCopied(false), 1200);
+        })
+        .catch(() => {
+          /* best-effort · older browsers / permissions denied */
+        });
+    },
+    [handle],
+  );
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      aria-label={copied ? "ID copied" : `Copy NEX ID ${handle}`}
+      title={copied ? "Copied" : "Copy ID"}
+      data-nex-control-drawer-copy-id
+      style={identityHandleCopyBtnStyle}
+    >
+      {copied ? "Copied" : "Copy"}
+    </button>
+  );
+}
+
 // ─── Identity bar · name + NEX ID (or sign-in prompt) ──────────────
 
 function IdentityBar({
@@ -614,14 +682,23 @@ function IdentityBar({
       <div style={identityBarTextColumnStyle}>
         <div style={identityNameStyle}>{nameToRender}</div>
         {session.nexHandle ? (
-          <div style={identityHandleStyle}>
-            {/* Owner directive 2026-10-17 · the "nex-" prefix is a
-                brand mark · always rendered uppercase as "NEX-" ·
-                the numeric part is preserved exactly. Storage stays
-                lowercase (canonical column shape · validated by
-                `normaliseHandle` in bio/[nex_handle]/_handle.ts) ·
-                this is purely a display transform. */}
-            {session.nexHandle.replace(/^nex-/i, "NEX-")}
+          <div style={identityHandleRowStyle}>
+            <div style={identityHandleStyle}>
+              {/* Owner directive 2026-10-17 · the "nex-" prefix is a
+                  brand mark · always rendered uppercase as "NEX-" ·
+                  the numeric part is preserved exactly. Storage stays
+                  lowercase (canonical column shape · validated by
+                  `normaliseHandle` in bio/[nex_handle]/_handle.ts) ·
+                  this is purely a display transform. */}
+              {session.nexHandle.replace(/^nex-/i, "NEX-")}
+            </div>
+            {/* Owner directive 2026-10-22 (afternoon) · tiny
+                copy-ID chip. Writes the display form (NEX-NNNNNN)
+                to the clipboard · best-effort · silently fails if
+                the Clipboard API is unavailable. */}
+            <CopyHandleButton
+              handle={session.nexHandle.replace(/^nex-/i, "NEX-")}
+            />
           </div>
         ) : null}
       </div>
@@ -1077,18 +1154,43 @@ const identityNameStyle: React.CSSProperties = {
 const identityHandleStyle: React.CSSProperties = {
   // Owner directive 2026-10-17 · the NEX handle is the hero
   // identifier in the ControlDrawer identity bar · "header size
-  // bold" · bumped from 11px/regular to 20px/800 with tighter
-  // letter-spacing to read as a title. Monospace is kept so the
-  // digits align like an ID badge.
-  // Owner directive 2026-10-18 · colour is now the drawer's theme
-  // accent (CSS var) so NEX-10842 reads in the active theme colour.
-  color: `var(--nex-drawer-accent, ${CYAN})`,
+  // bold" · 20px/800 with tighter letter-spacing to read as a
+  // title. Monospace keeps the digits aligned like an ID badge.
+  //
+  // Owner directive 2026-10-22 (afternoon) · colour reverts to a
+  // neutral grey (#8BA9D1 · same textDim token used elsewhere) so
+  // the ID reads as metadata, not as the hero accent. Paired with
+  // the small "Copy" button on the right-hand side of the row.
+  color: "#8BA9D1",
   fontSize: 20,
   fontWeight: 800,
   lineHeight: 1.1,
   fontFamily:
     'ui-monospace, SFMono-Regular, Menlo, Monaco, "Courier New", monospace',
   letterSpacing: 0.5,
+};
+const identityHandleRowStyle: React.CSSProperties = {
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 8,
+};
+const identityHandleCopyBtnStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "4px 8px",
+  minHeight: 24,
+  background: "rgba(139,169,209,0.14)",
+  border: "1px solid rgba(139,169,209,0.32)",
+  borderRadius: 6,
+  color: "#8BA9D1",
+  fontSize: 10,
+  fontWeight: 700,
+  letterSpacing: 0.4,
+  textTransform: "uppercase",
+  cursor: "pointer",
+  fontFamily: "inherit",
 };
 // Owner directive 2026-10-18 · the anon "Sign in to NEX" row now
 // splits into a left text-column + right round blue arrow button.
