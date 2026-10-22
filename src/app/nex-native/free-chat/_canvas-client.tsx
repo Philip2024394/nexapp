@@ -457,6 +457,13 @@ const HERO_PLANET_SRC = "/nex-native/planets/planet-approach-1.png";
 // remain visible between chat cards.
 const HERO_SHUTTLE_SRC = "/nex-native/planets/space-shuttle.png";
 const HERO_SATELLITE_SRC = "/nex-native/planets/satellite.png";
+// Owner-supplied Moon + Jupiter · split via Pillow + alpha extracted
+// from luminance (owner image shipped on black canvas despite the
+// filename · threshold removes the bg, soft falloff keeps the orb
+// edge glow). Celestial bodies hang quietly at corners · very slow
+// drift so they feel like distant planets, not kinetic objects.
+const HERO_MOON_SRC = "/nex-native/planets/moon.png";
+const HERO_JUPITER_SRC = "/nex-native/planets/jupiter.png";
 
 function HeroPlanetPassBy({
   accentHex,
@@ -510,6 +517,20 @@ function HeroPlanetPassBy({
           92%  { opacity: 0.85; }
           100% { transform: translate3d(-40vw, 0, 0) rotate(-6deg); opacity: 0; }
         }
+        /* Owner directive 2026-10-23 · Moon + Jupiter · ambient
+           distant-planet drift. Very subtle motion (barely-visible
+           parallax + slow rotation) so they feel like celestial
+           bodies hanging in space rather than kinetic objects.
+           ~100s cycle for Moon · ~140s for Jupiter so they never
+           synchronise. */
+        @keyframes nex-hero-moon-float {
+          0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+          50%      { transform: translate3d(5vw, 2vh, 0) rotate(4deg); }
+        }
+        @keyframes nex-hero-jupiter-float {
+          0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+          50%      { transform: translate3d(-4vw, -3vh, 0) rotate(-3deg); }
+        }
         @media (prefers-reduced-motion: reduce) {
           [data-nex-hero-planet-ambient],
           [data-nex-hero-planet-oneshot] {
@@ -518,12 +539,66 @@ function HeroPlanetPassBy({
             transform: translate(-50%, -50%) scale(1) !important;
           }
           [data-nex-hero-shuttle],
-          [data-nex-hero-satellite] {
+          [data-nex-hero-satellite],
+          [data-nex-hero-moon],
+          [data-nex-hero-jupiter] {
             animation: none !important;
-            opacity: 0.5 !important;
           }
         }
       `}</style>
+
+      {/* Moon · top-left corner · partially off-screen so it reads as
+          "a moon on the horizon" rather than dominating the frame.
+          zIndex 1 · behind shuttle/satellite (zIndex 2) and behind
+          chat bubbles · depth cue for "we are in deep space". */}
+      <img
+        src={HERO_MOON_SRC}
+        alt=""
+        aria-hidden
+        data-nex-hero-moon
+        draggable={false}
+        style={{
+          position: "absolute",
+          top: "4%",
+          left: "-6%",
+          width: 110,
+          height: 110,
+          objectFit: "contain",
+          pointerEvents: "none",
+          userSelect: "none",
+          zIndex: 1,
+          willChange: "transform",
+          animation: "nex-hero-moon-float 100s ease-in-out infinite",
+          opacity: 0.9,
+          filter: "drop-shadow(0 0 18px rgba(180,195,220,0.35))",
+        }}
+      />
+
+      {/* Jupiter · bottom-right corner · same partially-off-screen
+          treatment · bigger than the Moon (gas giant · nearer sun).
+          Opposite drift direction so the pair feels organic. */}
+      <img
+        src={HERO_JUPITER_SRC}
+        alt=""
+        aria-hidden
+        data-nex-hero-jupiter
+        draggable={false}
+        style={{
+          position: "absolute",
+          top: "70%",
+          right: "-8%",
+          width: 150,
+          height: 150,
+          objectFit: "contain",
+          pointerEvents: "none",
+          userSelect: "none",
+          zIndex: 1,
+          willChange: "transform",
+          animation: "nex-hero-jupiter-float 140s ease-in-out infinite",
+          opacity: 0.92,
+          filter: "drop-shadow(0 0 22px rgba(205,140,80,0.35))",
+        }}
+      />
 
       {/* Owner directive 2026-10-23 · space shuttle drifts across the
           upper third · "view between the overlay cards now" = sits in
