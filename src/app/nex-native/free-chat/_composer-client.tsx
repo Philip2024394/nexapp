@@ -124,8 +124,8 @@ const ATTACH_ITEMS: ReadonlyArray<{
 // still dominates via the gradient fill behind the icon.
 function AttachBallIcon({ k }: { readonly k: string }): React.JSX.Element {
   const common = {
-    width: 22,
-    height: 22,
+    width: 18,
+    height: 18,
     viewBox: "0 0 24 24",
     fill: "none",
     stroke: "#FFFFFF",
@@ -1318,6 +1318,10 @@ export function FreeChatComposerClient({
             // row's icon tops. Column gap also 0 since the buttons are
             // transparent · no visible seam.
             gap: 0,
+            // Owner directive 2026-10-23 · center each button inside
+            // its grid cell · without this the button hugs its own
+            // content width and sits left-aligned in the 1fr column.
+            justifyItems: "center",
             zIndex: 20,
           }}
         >
@@ -1362,8 +1366,12 @@ export function FreeChatComposerClient({
               <span
                 aria-hidden
                 style={{
-                  width: 48,
-                  height: 48,
+                  // Owner directive 2026-10-23 · ball shrunk a touch
+                  // more · 48 → 42 (−12.5%). Icon follows in
+                  // AttachBallIcon · 22 → 18 (−18%) for proportional
+                  // breathing room inside the smaller ball.
+                  width: 42,
+                  height: 42,
                   borderRadius: "50%",
                   display: "inline-flex",
                   alignItems: "center",
