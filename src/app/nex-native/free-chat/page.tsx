@@ -359,15 +359,17 @@ export default async function FreeChatPage({
           initialRowDismissed={initialRowDismissed}
         />
 
-        {/* ── Composer · text + emoji glyph + send + 3-dots drawer ──
-            Owner directive 2026-10-22 (afternoon) · the 3-dots sealed
-            ControlDrawer trigger is now mounted inside the composer
-            row (not the header) · drawerSession passed through so
-            the drawer resolves identity + sign-in state. */}
+        {/* ── Composer · emoji (inside left) + text + send (inside right) ──
+            Owner directive 2026-10-22 (afternoon · follow-up) · the
+            3-dots ControlDrawer trigger has been retired from both
+            the header AND the composer on /free-chat · the composer
+            row is now a single pill with the glossy 3D emoji on the
+            left, text in the middle, and the compact send disc on
+            the right. drawerSession is still resolved above for
+            other surfaces (currently unused on this page). */}
         <FreeChatComposerClient
           isGuest={isGuest}
           initialThemeId={initialThemeId}
-          drawerSession={drawerSession}
         />
 
         {/* ── Call-Center floating 3-dots trigger + left-slide panel ──

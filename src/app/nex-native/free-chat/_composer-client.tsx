@@ -27,10 +27,6 @@
 import * as React from "react";
 import { JokerKeypad } from "@/app/nex-native/chat-standard/_joker-keypad";
 import { resolveFreeChatAccentHex } from "./_types";
-import {
-  ControlDrawer,
-  type ControlDrawerSession,
-} from "@/components/nex-native/control-drawer/control-drawer-client";
 
 const NEX = {
   panel: "rgba(7, 21, 37, 0.9)",
@@ -42,10 +38,26 @@ const NEX = {
   orangeInk: "#1A0808",
 };
 
+// Owner directive 2026-10-22 (afternoon · follow-up) · 6-item
+// attachment panel options · all stubs for now. Rename/replace each
+// as the backing feature lands. The `key` is stable so test selectors
+// won't drift when the labels evolve.
+const ATTACH_ITEMS: ReadonlyArray<{
+  readonly key: string;
+  readonly label: string;
+  readonly glyph: string;
+}> = [
+  { key: "camera", label: "Camera", glyph: "📷" },
+  { key: "gallery", label: "Gallery", glyph: "🖼️" },
+  { key: "document", label: "Document", glyph: "📄" },
+  { key: "audio", label: "Audio", glyph: "🎵" },
+  { key: "location", label: "Location", glyph: "📍" },
+  { key: "product", label: "Product", glyph: "🛒" },
+];
+
 export function FreeChatComposerClient({
   isGuest,
   initialThemeId = null,
-  drawerSession = null,
 }: {
   readonly isGuest: boolean;
   /** Owner directive 2026-10-22 · the sealed JokerKeypad recolours
@@ -54,16 +66,11 @@ export function FreeChatComposerClient({
    *  the `nex-free-chat-theme` custom event dispatched by the
    *  sibling canvas client when the user picks a new tile. */
   readonly initialThemeId?: string | null;
-  /** Owner directive 2026-10-22 (afternoon) · the sealed
-   *  ControlDrawer trigger moved from the header right-cluster into
-   *  the composer row, sitting as the 3-dots button to the right of
-   *  the text input. Server resolves the session + builds this
-   *  payload (null for guests → drawer renders sign-in prompt). */
-  readonly drawerSession?: ControlDrawerSession | null;
 }): React.JSX.Element {
   const [value, setValue] = React.useState("");
   const [toast, setToast] = React.useState<string | null>(null);
   const [keypadOpen, setKeypadOpen] = React.useState(false);
+  const [attachOpen, setAttachOpen] = React.useState(false);
   const [themeId, setThemeId] =
     React.useState<string | null>(initialThemeId);
   const canSend = value.trim().length > 0;
@@ -115,28 +122,51 @@ export function FreeChatComposerClient({
         position: "relative",
       }}
     >
-      <span
-        aria-hidden
-        data-nex-free-chat-composer-emoji
+      {/* Owner directive 2026-10-22 (afternoon · follow-up) · "+"
+          attach button sits OUTSIDE the pill on the LEFT. Tap opens
+          a centred 2×3 attachment panel floating above the composer
+          with 6 options (camera, gallery, document, audio, location,
+          share product). All are stubs for now · each closes the
+          panel + shows a toast "Coming soon". */}
+      <button
+        type="button"
+        onClick={() => setAttachOpen((v) => !v)}
+        aria-label={attachOpen ? "Close attachments" : "Open attachments"}
+        aria-expanded={attachOpen}
+        data-nex-free-chat-composer-attach
         style={{
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
           width: 32,
           height: 32,
-          fontSize: 18,
-          flexShrink: 0,
+          borderRadius: "50%",
+          background: "rgba(2,9,20,0.6)",
+          border: `1px solid ${NEX.border}`,
           color: accentHex,
+          fontSize: 20,
+          fontWeight: 300,
+          cursor: "pointer",
+          flexShrink: 0,
+          padding: 0,
+          lineHeight: 1,
+          fontFamily: "inherit",
+          transition: "transform 180ms ease, background 180ms ease",
+          transform: attachOpen ? "rotate(45deg)" : "rotate(0deg)",
         }}
       >
-        😊
-      </span>
-      {/* Owner directive 2026-10-22 (afternoon) · the send button
-          now lives INSIDE the input pill on the right, absolutely
-          positioned so the pill reads as one tappable surface. The
-          input gains right padding so typed text never slides under
-          the send button. Native keyboard still suppressed (readOnly
-          + inputMode none) · tap opens the sealed JokerKeypad. */}
+        +
+      </button>
+
+      {/* Owner directive 2026-10-22 (afternoon · follow-up) · the
+          emoji glyph is now a glossy 3D PNG (public/nex-free-chat/
+          composer-emoji.png) and lives INSIDE the input pill on the
+          LEFT · absolutely positioned so the pill reads as one
+          tappable surface with the emoji and send glyphs bracketing
+          the message text. The input gains both left + right padding
+          so typed text + placeholder sit cleanly between the two
+          icons. Native keyboard still suppressed (readOnly +
+          inputMode none) · tap opens the sealed JokerKeypad. */}
       <div
         data-nex-free-chat-composer-pill
         style={{
@@ -145,6 +175,24 @@ export function FreeChatComposerClient({
           minWidth: 0,
         }}
       >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/nex-free-chat/composer-emoji.png"
+          alt=""
+          aria-hidden
+          data-nex-free-chat-composer-emoji
+          style={{
+            position: "absolute",
+            left: 6,
+            top: "50%",
+            transform: "translateY(-50%)",
+            width: 32,
+            height: 32,
+            objectFit: "contain",
+            pointerEvents: "none",
+            userSelect: "none",
+          }}
+        />
         <input
           type="text"
           value={value}
@@ -158,9 +206,11 @@ export function FreeChatComposerClient({
           data-nex-free-chat-composer-input
           style={{
             width: "100%",
+            // Left padding reserved for the embedded 3D emoji icon
+            // (32px wide + 6px left offset + 6px breathing room).
             // Right padding reserved for the embedded send button
             // (36px wide + 4px right offset + 4px breathing room).
-            padding: "10px 50px 10px 14px",
+            padding: "10px 50px 10px 48px",
             background: "rgba(2,9,20,0.6)",
             color: NEX.text,
             fontSize: 14,
@@ -194,8 +244,12 @@ export function FreeChatComposerClient({
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            width: 36,
-            height: 36,
+            // Owner directive 2026-10-22 (afternoon · follow-up) ·
+            // disc shrunk from 36 → 30 so it reads as a compact
+            // send chip rather than a bold CTA. Icon viewBox stays
+            // at 24 so the paper-plane visually scales proportionally.
+            width: 30,
+            height: 30,
             borderRadius: "50%",
             background: NEX.orange,
             color: NEX.orangeInk,
@@ -215,17 +269,83 @@ export function FreeChatComposerClient({
           <SendArrowIcon />
         </button>
       </div>
-      {/* Owner directive 2026-10-22 (afternoon) · the 3-dots sealed
-          ControlDrawer trigger moved from the header right-cluster
-          down into the composer row · sits to the RIGHT of the input
-          pill. Signed-in users see the full menu; guests see the
-          sign-in prompt bar at the top of the drawer. */}
-      <div
-        data-nex-free-chat-composer-drawer
-        style={{ flexShrink: 0, display: "inline-flex" }}
-      >
-        <ControlDrawer session={drawerSession} />
-      </div>
+      {/* Owner directive 2026-10-22 (afternoon · follow-up) · the
+          3-dots ControlDrawer trigger has been RETIRED from this
+          composer row. The drawer still exists in the ControlDrawer
+          primitive and mounts on every other NEX surface (/home,
+          /contacts, /chat/peer, etc.) · it just doesn't surface on
+          /free-chat. The composer now reads as a two-glyph pill
+          (emoji left, send right) with nothing to the right of it. */}
+
+      {/* ─── Attachment panel · 2×3 grid of 6 buttons · owner directive
+            2026-10-22 (afternoon · follow-up). Floats above the composer,
+            centred horizontally, dark navy with cyan rim. Tapping any
+            button closes the panel and shows the "Coming soon" toast.
+            All six are visual stubs for now · wire each up when the
+            backing feature is ready. */}
+      {attachOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Attach to message"
+          data-nex-free-chat-composer-attach-panel
+          style={{
+            position: "absolute",
+            bottom: "calc(100% + 10px)",
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "min(300px, calc(100% - 32px))",
+            padding: 12,
+            background: "rgba(2,9,20,0.95)",
+            border: `1px solid ${NEX.border}`,
+            borderRadius: 14,
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            boxShadow: "0 20px 50px -14px rgba(0,0,0,0.75)",
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 10,
+            zIndex: 20,
+          }}
+        >
+          {ATTACH_ITEMS.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => {
+                setAttachOpen(false);
+                setToast(`${item.label} · coming soon`);
+                window.setTimeout(() => setToast(null), 1800);
+              }}
+              aria-label={item.label}
+              data-nex-free-chat-composer-attach-item={item.key}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 4,
+                padding: "10px 4px",
+                background: "rgba(0,175,255,0.08)",
+                border: `1px solid rgba(0,175,255,0.22)`,
+                borderRadius: 10,
+                color: NEX.text,
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: 0.2,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                textAlign: "center",
+              }}
+            >
+              <span style={{ fontSize: 20, lineHeight: 1 }} aria-hidden>
+                {item.glyph}
+              </span>
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
       {toast && (
         <div
           role="status"
