@@ -117,26 +117,18 @@ const ATTACH_ITEMS: ReadonlyArray<{
   { key: "location", label: "Location", iconUrl: "/nex-free-chat/attach-icons/location.png" },
 ];
 
-// Owner directive 2026-10-23 · short captions baked into the
-// chrome-ball attach buttons (variant-10 CTA style ported from
-// the Contact picker). The ball is 56px · fontSize 10 · letter-
-// spacing 0.3 · longest caption needs to fit in ~48px of inner
-// width (56 ball − 2×2px rim − 2px safe margin each side).
-//   CAMERA (6)  → "CAM"
-//   GALLERY (7) → "GALLERY" (fits at 10px/0.3)
-//   CONTACT (7) → "CONTACT" (fits)
-//   DOCUMENT(8) → "DOC"      (shorter is clearer at this size)
-//   VOICE (5)   → "VOICE"
-//   LOCATION(8) → "MAP"      (location → the map people understand)
-// aria-label + title stay the original long form so the full name
-// is announced to screen readers and shown on hover.
-const ATTACH_BALL_CAPTIONS: Record<string, string> = {
-  camera: "CAM",
-  gallery: "GALLERY",
-  contact: "CONTACT",
-  document: "DOC",
-  voice: "VOICE",
-  location: "MAP",
+// Owner directive 2026-10-23 (revised) · chrome ball holds an ICON
+// inside (not a text caption) · the full-word label sits UNDER the
+// ball (matches the original image+label layout, now with chrome-
+// ball buttons instead of PNG images). Icons are emoji so no SVG
+// asset dependency.
+const ATTACH_BALL_ICONS: Record<string, string> = {
+  camera: "📷",
+  gallery: "🖼️",
+  contact: "👤",
+  document: "📄",
+  voice: "🎤",
+  location: "📍",
 };
 
 export function FreeChatComposerClient({
@@ -1271,55 +1263,62 @@ export function FreeChatComposerClient({
             zIndex: 20,
           }}
         >
-          {/* Owner directive 2026-10-23 · "exact same design buttons
-              on the plus container for the 6 buttons · remove the
-              images". Chrome-ball design mirrored from the picker
-              card's variant-10 CTAs · each button is a 56×56 round
-              accent-gradient chrome ball with the baked-in white
-              text label (CAMERA / GALLERY / CONTACT / DOCUMENT /
-              VOICE / MAP). PNG icon images retired · their files
-              in public/nex-free-chat/attach-icons/ stay on disk. */}
+          {/* Owner directive 2026-10-23 (revised) · chrome ball =
+              SAME SIZE as the former PNG icon (60×60), ICON inside
+              the ball, LONG-FORM text label UNDER the ball. Same
+              variant-10 chrome treatment (radial gradient, 2px rim,
+              inset highlight, outer glow). The 6 attach icons stay
+              identifiable at a glance while gaining the glowing
+              chrome vocabulary the owner picked for the picker. */}
           {ATTACH_ITEMS.map((item) => {
-            // Short, screen-friendly caption fits inside a 56px ball
-            // at fontSize 10 without overflow. Mapped per key so the
-            // original `label` (long form) stays as the aria/title
-            // for accessibility.
-            const ballCaption = ATTACH_BALL_CAPTIONS[item.key] ?? item.label.toUpperCase();
+            const icon = ATTACH_BALL_ICONS[item.key] ?? "•";
             return (
-              <div
+              <button
                 key={item.key}
-                style={{ display: "grid", placeItems: "center", padding: "4px 0" }}
+                type="button"
+                onClick={() => handleAttachClick(item.key)}
+                aria-label={item.label}
+                title={item.label}
+                data-nex-free-chat-composer-attach-item={item.key}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 4,
+                  padding: "4px 2px",
+                  background: "transparent",
+                  border: "none",
+                  color: NEX.text,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: 0.2,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  textAlign: "center",
+                }}
               >
-                <button
-                  type="button"
-                  onClick={() => handleAttachClick(item.key)}
-                  aria-label={item.label}
-                  title={item.label}
-                  data-nex-free-chat-composer-attach-item={item.key}
+                <span
+                  aria-hidden
                   style={{
-                    width: 56,
-                    height: 56,
+                    width: 60,
+                    height: 60,
                     borderRadius: "50%",
-                    padding: 0,
-                    background: `radial-gradient(circle at 30% 30%, ${accentHex}, #000a1a)`,
-                    color: "#FFFFFF",
-                    border: `2px solid ${accentHex}`,
-                    fontSize: 10,
-                    fontWeight: 900,
-                    letterSpacing: 0.3,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
                     display: "inline-flex",
                     alignItems: "center",
                     justifyContent: "center",
+                    fontSize: 26,
                     lineHeight: 1,
-                    textShadow: "0 1px 2px rgba(0,0,0,0.8)",
+                    background: `radial-gradient(circle at 30% 30%, ${accentHex}, #000a1a)`,
+                    border: `2px solid ${accentHex}`,
                     boxShadow: `0 2px 10px ${accentHex}66, inset 0 1px 2px #FFFFFF55`,
+                    textShadow: "0 1px 2px rgba(0,0,0,0.8)",
                   }}
                 >
-                  {ballCaption}
-                </button>
-              </div>
+                  {icon}
+                </span>
+                <span style={{ lineHeight: 1.1 }}>{item.label}</span>
+              </button>
             );
           })}
         </div>
