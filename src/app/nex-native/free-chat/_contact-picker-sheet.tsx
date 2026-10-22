@@ -713,23 +713,33 @@ function ContactCard({
             style={{
               width: 36,
               height: 36,
-              borderRadius: "50%",
               padding: 0,
-              background: NEX.shopOrange,
-              color: NEX.shopOrangeInk,
+              background: "transparent",
               border: "none",
-              fontSize: 15,
-              fontWeight: 800,
               cursor: "pointer",
-              fontFamily: "inherit",
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
-              lineHeight: 1,
-              boxShadow: `0 2px 6px ${NEX.shopOrange}66`,
+              lineHeight: 0,
             }}
           >
-            🛒
+            {/* Owner directive 2026-10-23 · chrome-neon round SHOP
+                icon (public/nex-contact-picker/shop.png). The image
+                carries its own rim + "SHOP" lettering · the button
+                chrome is transparent so only the round artwork shows. */}
+            <img
+              src="/nex-contact-picker/shop.png"
+              alt=""
+              width={36}
+              height={36}
+              draggable={false}
+              style={{
+                width: 36,
+                height: 36,
+                display: "block",
+                pointerEvents: "none",
+              }}
+            />
           </button>
         )}
         <button
@@ -742,22 +752,32 @@ function ContactCard({
           style={{
             width: 36,
             height: 36,
-            borderRadius: "50%",
             padding: 0,
             background: "transparent",
-            color: accentHex,
-            border: `1.5px solid ${accentHex}`,
-            fontSize: 15,
-            fontWeight: 800,
+            border: "none",
             cursor: "pointer",
-            fontFamily: "inherit",
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            lineHeight: 1,
+            lineHeight: 0,
           }}
         >
-          +
+          {/* Owner directive 2026-10-23 · chrome-neon round INVITE
+              icon (public/nex-contact-picker/invite.png). Image is
+              self-contained · rim + "INVITE" lettering baked in. */}
+          <img
+            src="/nex-contact-picker/invite.png"
+            alt=""
+            width={36}
+            height={36}
+            draggable={false}
+            style={{
+              width: 36,
+              height: 36,
+              display: "block",
+              pointerEvents: "none",
+            }}
+          />
         </button>
       </div>
 
