@@ -183,6 +183,24 @@ export function ContactPickerSheet({
     setPortalTarget(frame ?? document.body);
   }, []);
 
+  // Owner directive 2026-10-22 (evening · pass 26) · blur the chat
+  // behind the sheet while it's open. Toggles a data attribute on
+  // the body so a scoped CSS rule (injected via the sheet's <style>
+  // below) applies filter:blur to the composer + canvas siblings
+  // inside the frame. Removes on close + unmount so the chat
+  // snaps back sharp.
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (open) {
+      document.body.setAttribute("data-nex-free-chat-contact-picker-open", "true");
+    } else {
+      document.body.removeAttribute("data-nex-free-chat-contact-picker-open");
+    }
+    return () => {
+      document.body.removeAttribute("data-nex-free-chat-contact-picker-open");
+    };
+  }, [open]);
+
   if (!open) return null;
   if (!portalTarget) return null;
 
@@ -215,15 +233,27 @@ export function ContactPickerSheet({
         fontFamily: "Inter, system-ui, sans-serif",
       }}
     >
-      {/* Drag handle · tactile cue the panel is a sheet */}
-      <div
-        aria-hidden
+      {/* Owner directive 2026-10-22 (evening · pass 26) · tappable
+          close-bar at the top centre of the sheet. Replaces the
+          passive drag-handle · now a blue chip that closes the sheet
+          on click (keyboard Escape + outside-click still work too).
+          Larger tap target (24×44) so thumbs can hit it easily. */}
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Close contacts"
+        data-nex-free-chat-contact-picker-close
         style={{
-          width: 40,
-          height: 4,
+          display: "block",
+          width: 44,
+          height: 6,
           borderRadius: 999,
-          background: "rgba(255,255,255,0.3)",
-          margin: "8px auto 2px",
+          background: NEX.cyan,
+          border: "none",
+          margin: "10px auto 6px",
+          cursor: "pointer",
+          padding: 0,
+          boxShadow: `0 2px 6px ${NEX.cyan}66`,
         }}
       />
         <style>{`
@@ -231,19 +261,32 @@ export function ContactPickerSheet({
             from { transform: translateY(100%); }
             to   { transform: translateY(0); }
           }
+          /* Blur the chat page behind the sheet. The sheet itself
+             is portalled INTO .nex-native-frame as a child, so we
+             target every direct child of .nex-native-frame that
+             ISN'T the picker. filter: blur applied to the chat +
+             composer siblings · the picker stays sharp. */
+          body[data-nex-free-chat-contact-picker-open="true"]
+          .nex-native-frame > *:not([data-nex-free-chat-contact-picker]) {
+            filter: blur(6px);
+            transition: filter 180ms ease;
+          }
         `}</style>
         {/* Header · minimal "Contacts" eyebrow only, per owner
             directive 2026-10-22 (evening · pass 25) · the former
             title line + "See all →" link + round × close button were
             retired. The drag handle at top + tapping outside the
             sheet remain the dismissal affordances. */}
+        {/* Owner directive 2026-10-22 (evening · pass 26) · header's
+            "Contacts" eyebrow sits with no bottom border now (border
+            retired with the search bar). Minimal padding keeps the
+            carousel pushed to the top of the sheet. */}
         <header
           style={{
             display: "flex",
             alignItems: "center",
             gap: 10,
-            padding: "10px 16px 8px",
-            borderBottom: `1px solid ${accentHex}3D`,
+            padding: "8px 16px 4px",
           }}
         >
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -261,40 +304,11 @@ export function ContactPickerSheet({
           </div>
         </header>
 
-        {/* Search */}
-        <div style={{ padding: "10px 16px 8px" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "8px 12px",
-              background: "rgba(2,9,20,0.6)",
-              border: `1px solid ${accentHex}3D`,
-              borderRadius: 999,
-            }}
-          >
-            <span aria-hidden style={{ fontSize: 14, color: NEX.textMute }}>
-              🔍
-            </span>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search name, NEX-ID, profession…"
-              style={{
-                flex: 1,
-                background: "transparent",
-                border: "none",
-                outline: "none",
-                color: NEX.text,
-                fontSize: 13,
-                fontFamily: "inherit",
-                minWidth: 0,
-              }}
-            />
-          </div>
-        </div>
+        {/* Search bar + its divider line retired per owner directive
+            2026-10-22 (evening · pass 26). The 12 mock contacts fit
+            without filtering on a mobile phone frame · when the real
+            contacts service lands + lists get long, bring the search
+            back then. */}
 
         {/* Owner directive 2026-10-22 (evening · pass 17) · vertical
             stack of landscape cards instead of horizontal carousel.
@@ -398,15 +412,16 @@ function ContactCard({
       onPointerCancel={onHoldEnd}
       style={{
         position: "relative",
-        // Owner directive 2026-10-22 (evening · pass 24) · card is a
-        // flex column now · identity row on top (avatar + text) · CTA
-        // row (Shop + Invite) stacked below the profession line
-        // instead of in a right column. Reads cleaner for landscape
-        // cards and gives the CTAs full card width.
+        // Owner directive 2026-10-22 (evening · pass 26) · single row
+        // layout · avatar on left, text column centre (flex:1), round
+        // Shop + Invite buttons on the right. Circular CTAs match
+        // the compact per-card chrome.
+        minHeight: 76,
         flexShrink: 0,
         display: "flex",
-        flexDirection: "column",
-        gap: 8,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
         padding: "10px 12px",
         background: NEX.bgNavy,
         border: `1px solid ${isHolding ? accentHex : `${accentHex}3D`}`,
@@ -419,17 +434,6 @@ function ContactCard({
         transform: isHolding ? "scale(0.99)" : "scale(1)",
       }}
     >
-      {/* Top row · avatar + text column (unchanged, horizontally
-          aligned centre) */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 12,
-          minWidth: 0,
-        }}
-      >
       {/* Owner directive 2026-10-22 (evening · pass 18) · hold-to-send
           progress fill. Grows left-to-right as the 5s elapses. Sits
           BEHIND the card content via zIndex:0 + content zIndex:1. */}
@@ -669,16 +673,16 @@ function ContactCard({
         </div>
       </div>
 
-      </div>
-      {/* Bottom row · Shop + Invite CTAs stacked under the profession
-          line per owner directive 2026-10-22 (evening · pass 24).
-          Full card width · Invite expands to fill, Shop is a fixed
-          chip on the left when hasShop. */}
+      {/* Right CTA column · Shop + Invite · round buttons per owner
+          directive 2026-10-22 (evening · pass 26). 36px circles ·
+          Shop stays orange (hasShop gated), Invite stays accent
+          outlined. Vertically centred alongside the identity row. */}
       <div
         style={{
           display: "flex",
-          flexDirection: "row",
-          gap: 8,
+          flexDirection: "column",
+          gap: 6,
+          flexShrink: 0,
           position: "relative",
           zIndex: 2,
         }}
@@ -690,31 +694,27 @@ function ContactCard({
             onClick={onShopShare}
             data-nex-contact-card-shop
             aria-label={`Share ${contact.shopName ?? contact.displayName} shop`}
+            title={`Share ${contact.shopName ?? contact.displayName} shop`}
             style={{
-              minWidth: 76,
-              minHeight: 30,
-              padding: "0 12px",
-              // Owner directive 2026-10-22 (evening · pass 21) ·
-              // Shop CTA is always NEX orange across every theme ·
-              // reads as the commerce surface regardless of chat
-              // accent (cyan / gold / pink / etc).
+              width: 36,
+              height: 36,
+              borderRadius: "50%",
+              padding: 0,
               background: NEX.shopOrange,
               color: NEX.shopOrangeInk,
               border: "none",
-              borderRadius: 8,
-              fontSize: 11,
+              fontSize: 15,
               fontWeight: 800,
-              letterSpacing: 0.3,
               cursor: "pointer",
               fontFamily: "inherit",
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: 4,
+              lineHeight: 1,
               boxShadow: `0 2px 6px ${NEX.shopOrange}66`,
             }}
           >
-            🛒 Shop
+            🛒
           </button>
         )}
         <button
@@ -722,22 +722,27 @@ function ContactCard({
           onPointerDown={(e) => e.stopPropagation()}
           onClick={onInvite}
           data-nex-contact-card-invite
+          aria-label={`Invite ${contact.displayName} to the chat`}
+          title={`Invite ${contact.displayName} to the chat`}
           style={{
-            flex: 1,
-            minHeight: 32,
-            padding: "0 12px",
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            padding: 0,
             background: "transparent",
             color: accentHex,
-            border: `1px solid ${accentHex}`,
-            borderRadius: 8,
-            fontSize: 12,
+            border: `1.5px solid ${accentHex}`,
+            fontSize: 15,
             fontWeight: 800,
-            letterSpacing: 0.3,
             cursor: "pointer",
             fontFamily: "inherit",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            lineHeight: 1,
           }}
         >
-          Invite
+          +
         </button>
       </div>
 
