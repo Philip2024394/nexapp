@@ -311,9 +311,13 @@ export function ContactPickerSheet({
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
-                fontSize: 10,
+                // Owner directive 2026-10-23 · enlarge header text ·
+                // 10 → 18 so "Contacts" reads as a proper section
+                // title, not a tiny eyebrow. Letter-spacing eased
+                // slightly so the bigger glyphs don't look stretched.
+                fontSize: 18,
                 fontWeight: 800,
-                letterSpacing: 0.6,
+                letterSpacing: 0.4,
                 color: accentHex,
                 textTransform: "uppercase",
               }}
