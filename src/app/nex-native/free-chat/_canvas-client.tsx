@@ -256,6 +256,7 @@ export function FreeChatCanvasClient({
   }, []);
 
   return (
+    <>
     <section
       ref={canvasRef as React.RefObject<HTMLElement>}
       data-nex-free-chat-canvas
@@ -403,6 +404,159 @@ export function FreeChatCanvasClient({
           container was retired · its content (share buttons + Done)
           now lives INSIDE the congrats bubble above as inline actions. */}
     </section>
+    {/* Owner directive 2026-10-23 (Step D rollout per doctrine
+        nex-free-chat-showcase-themes-free-forever-2026-10-23 §6 ·
+        animation polish is NOT blocked). ONLY mounts when the ACTIVE
+        theme is theme-3 (space wallpaper · free-chat-theme-3.png).
+        Other themes continue to render exactly as sealed · zero
+        regression. The planet drifts through the hero area and
+        exits to the left · a floating 🚀 Fire pill at top-right
+        triggers an additional on-demand pass. */}
+    {themeId === "theme-3" && (
+      <HeroPlanetPassBy accentHex={activeAccentHex} />
+    )}
+    </>
+  );
+}
+
+/* ─── HeroPlanetPassBy ───────────────────────────────────────────
+   Owner directive 2026-10-23 · "planet in hero area passing by to
+   the left". Horizontal pass-by (NOT the sealed diagonal fly-past)
+   staged in the top ~18% of the phone frame so the planet drifts
+   across the hero area and exits off-screen to the left.
+
+   Dual-mode:
+   · Ambient loop · a slow 18s drift that auto-plays while the
+     component is mounted (owner-chosen marketing-ambient vibe)
+   · One-shot Fire · the 🚀 pill at the top-right re-mounts a
+     one-off planet on top of the ambient loop · faster travel
+     (6s) so taps feel responsive
+
+   Both passes share the same keyframes · just different durations.
+   Respects @media (prefers-reduced-motion: reduce) · pauses the
+   ambient loop + fades the one-shot in place without translating.
+
+   Asset: /nex-native/planets/planet-approach-1.png (owner-supplied
+   2026-10-15 · already on disk · same PNG used by the sealed
+   NexPlanetApproachClient so visual language is consistent across
+   surfaces).
+*/
+const HERO_PLANET_SRC = "/nex-native/planets/planet-approach-1.png";
+
+function HeroPlanetPassBy({
+  accentHex,
+}: {
+  readonly accentHex: string;
+}): React.JSX.Element {
+  const [fireCount, setFireCount] = React.useState(0);
+  const fire = React.useCallback(() => setFireCount((n) => n + 1), []);
+
+  return (
+    <>
+      <style>{`
+        @keyframes nex-hero-planet-pass {
+          0%   { transform: translate3d(100vw, 0, 0) rotate(0deg); opacity: 0; }
+          8%   { opacity: 1; }
+          50%  { transform: translate3d(50vw, 8px, 0) rotate(-6deg); opacity: 1; }
+          92%  { opacity: 1; }
+          100% { transform: translate3d(-30vw, 0, 0) rotate(-12deg); opacity: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          [data-nex-hero-planet-ambient],
+          [data-nex-hero-planet-oneshot] {
+            animation: none !important;
+            opacity: 0.4 !important;
+            transform: translate3d(50vw, 0, 0) !important;
+          }
+        }
+      `}</style>
+
+      {/* Ambient loop · auto-plays while mounted · 18s cycle */}
+      <img
+        src={HERO_PLANET_SRC}
+        alt=""
+        aria-hidden
+        data-nex-hero-planet-ambient
+        draggable={false}
+        style={{
+          position: "absolute",
+          top: "15%",
+          left: 0,
+          width: 130,
+          height: 130,
+          objectFit: "contain",
+          pointerEvents: "none",
+          userSelect: "none",
+          zIndex: 40,
+          willChange: "transform, opacity",
+          animation:
+            "nex-hero-planet-pass 18s cubic-bezier(0.4, 0, 0.3, 1) 1s infinite",
+          filter: `drop-shadow(0 0 24px ${accentHex}55)`,
+        }}
+      />
+
+      {/* One-shot · re-mounts via the fireCount key so each tap
+          restarts the keyframe cleanly over the ambient loop. */}
+      {fireCount > 0 && (
+        <img
+          key={`oneshot-${fireCount}`}
+          src={HERO_PLANET_SRC}
+          alt=""
+          aria-hidden
+          data-nex-hero-planet-oneshot
+          draggable={false}
+          style={{
+            position: "absolute",
+            top: "18%",
+            left: 0,
+            width: 170,
+            height: 170,
+            objectFit: "contain",
+            pointerEvents: "none",
+            userSelect: "none",
+            zIndex: 41,
+            willChange: "transform, opacity",
+            animation:
+              "nex-hero-planet-pass 6s cubic-bezier(0.4, 0, 0.3, 1) forwards",
+            filter: `drop-shadow(0 0 36px ${accentHex}aa)`,
+          }}
+        />
+      )}
+
+      {/* 🚀 Fire pill · floating top-right · high zIndex so nothing
+          can cover it. Pure prototype convenience · the ambient
+          planet runs regardless. */}
+      <button
+        type="button"
+        onClick={fire}
+        aria-label="Fire planet pass-by"
+        data-nex-hero-planet-fire
+        style={{
+          position: "absolute",
+          top: 68,
+          right: 12,
+          zIndex: 70,
+          minHeight: 36,
+          padding: "0 14px",
+          borderRadius: 999,
+          background: accentHex,
+          color: "#002813",
+          border: "2px solid #FFFFFF",
+          fontSize: 13,
+          fontWeight: 900,
+          letterSpacing: 0.4,
+          cursor: "pointer",
+          fontFamily: "inherit",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          boxShadow: `0 4px 14px ${accentHex}cc, 0 0 0 2px #00281355`,
+          lineHeight: 1,
+        }}
+      >
+        🚀 Fire
+      </button>
+    </>
   );
 }
 
