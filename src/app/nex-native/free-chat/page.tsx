@@ -338,13 +338,16 @@ export default async function FreeChatPage({
             >
               <SearchIcon />
             </Link>
-            {/* Owner directive 2026-10-22 (afternoon) · 3-dots
-                ControlDrawer trigger retired from the header right-
-                cluster · moved into the composer row to sit beside
-                the input pill. Header now carries ONLY the Search
-                icon on the right. The drawer still mounts via the
-                sealed ControlDrawer primitive · just rendered from
-                FreeChatComposerClient instead. */}
+            {/* Owner directive 2026-10-22 (evening) · 3-dots sealed
+                ControlDrawer trigger reinstated in the header right-
+                cluster. The attach panel's "+" button is the sole
+                composer-level trigger · the header 3-dots gives
+                access to the full sealed drawer (identity, Status,
+                Vault, log-out, etc) without affecting the composer
+                attach flow. */}
+            <div style={{ display: "inline-flex" }}>
+              <ControlDrawer session={drawerSession} />
+            </div>
           </nav>
         </header>
 

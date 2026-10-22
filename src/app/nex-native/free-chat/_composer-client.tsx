@@ -76,18 +76,23 @@ type LiveAttachment =
       readonly accuracy: number;
     };
 
+// Owner directive 2026-10-22 (afternoon · follow-up pass 6) · each
+// button now carries a dedicated gold-on-navy PNG icon, split from
+// the owner-supplied "Futuristic Gold App Icon Collection" strip
+// and served from public/nex-free-chat/attach-icons/{key}.png. The
+// `key` is stable so test selectors don't drift when icons evolve.
 const ATTACH_ITEMS: ReadonlyArray<{
   readonly key: string;
   readonly label: string;
-  readonly glyph: string;
+  readonly iconUrl: string;
 }> = [
-  { key: "camera", label: "Camera", glyph: "📷" },
-  { key: "gallery", label: "Gallery", glyph: "🖼️" },
+  { key: "camera", label: "Camera", iconUrl: "/nex-free-chat/attach-icons/camera.png" },
+  { key: "gallery", label: "Gallery", iconUrl: "/nex-free-chat/attach-icons/gallery.png" },
   // ⇡ Contact lives in the top-right corner per owner directive.
-  { key: "contact", label: "Contact", glyph: "👤" },
-  { key: "document", label: "Document", glyph: "📄" },
-  { key: "voice", label: "Voice note", glyph: "🎤" },
-  { key: "location", label: "Location", glyph: "📍" },
+  { key: "contact", label: "Contact", iconUrl: "/nex-free-chat/attach-icons/contact.png" },
+  { key: "document", label: "Document", iconUrl: "/nex-free-chat/attach-icons/document.png" },
+  { key: "voice", label: "Voice note", iconUrl: "/nex-free-chat/attach-icons/voice.png" },
+  { key: "location", label: "Location", iconUrl: "/nex-free-chat/attach-icons/location.png" },
 ];
 
 export function FreeChatComposerClient({
@@ -831,9 +836,26 @@ export function FreeChatComposerClient({
                 textAlign: "center",
               }}
             >
-              <span style={{ fontSize: 20, lineHeight: 1 }} aria-hidden>
-                {item.glyph}
-              </span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={item.iconUrl}
+                alt=""
+                aria-hidden
+                draggable={false}
+                style={{
+                  // Owner directive 2026-10-22 (evening) · bumped from
+                  // 36 → 56 so the gold detail on each icon reads at
+                  // tap distance. The button tile stays the same
+                  // bounded size · the label text shifts a hair closer
+                  // to the icon which is fine for the compact 2×3 grid.
+                  width: 56,
+                  height: 56,
+                  objectFit: "contain",
+                  userSelect: "none",
+                  pointerEvents: "none",
+                  filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))",
+                }}
+              />
               <span>{item.label}</span>
             </button>
           ))}
