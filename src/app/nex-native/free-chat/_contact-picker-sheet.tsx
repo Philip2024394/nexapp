@@ -431,11 +431,12 @@ function ContactCard({
       onPointerCancel={onHoldEnd}
       style={{
         position: "relative",
-        // Owner directive 2026-10-23 · two-row card layout now ·
-        // top row holds avatar + identity text, bottom row holds the
-        // chrome-neon INVITE + SHOP buttons centred under them. The
-        // former right-column CTA slot is retired · "under the
-        // images" directive 2026-10-23. minHeight recomputed:
+        // Owner directive 2026-10-23 · two-row card layout + the
+        // owner-selected "Neon-glow 3D" treatment from the prototype
+        // page (variant 10 of 20). Top row holds avatar + identity
+        // text, bottom row holds the chrome-neon INVITE + SHOP
+        // buttons centred under them · "under the images". minHeight
+        // recomputed:
         //   10 top-pad + 56 avatar + 10 inter-row + 48 CTA + 10 bot-pad
         //   = 134 → set to 134 so neither row compresses.
         minHeight: 134,
@@ -445,17 +446,45 @@ function ContactCard({
         alignItems: "stretch",
         gap: 10,
         padding: "10px 12px",
-        background: NEX.bgNavy,
-        border: `1px solid ${isHolding ? accentHex : `${accentHex}3D`}`,
-        borderRadius: 14,
+        // Owner directive 2026-10-23 · Neon-glow 3D treatment ·
+        // deeper navy base (#040A18 beats bgNavy #050F1E for contrast
+        // against the glow) + 1.5px accent rim + layered boxShadow
+        // (outer glow + inset glow) + a radial sheen overlay
+        // (painted as a sibling div below). The glow intensifies
+        // when the card is being held so the hold ritual reads as
+        // the card "charging".
+        background: "#040A18",
+        border: `1.5px solid ${accentHex}`,
+        borderRadius: 16,
         overflow: "hidden",
         cursor: "pointer",
         userSelect: "none",
         WebkitUserSelect: "none",
-        transition: "border-color 120ms ease, transform 120ms ease",
+        transition:
+          "border-color 120ms ease, transform 120ms ease, box-shadow 180ms ease",
         transform: isHolding ? "scale(0.99)" : "scale(1)",
+        boxShadow: isHolding
+          ? `0 0 32px ${accentHex}99, inset 0 0 32px ${accentHex}33`
+          : `0 0 24px ${accentHex}66, inset 0 0 24px ${accentHex}22`,
       }}
     >
+      {/* Owner directive 2026-10-23 · Neon-glow 3D sheen overlay ·
+          radial gradient positioned at the top-left so the card reads
+          as "lit from above". Behind every other layer (zIndex 0,
+          pointerEvents off) so it never blocks a hold-start on the
+          card body or a click on the CTAs. */}
+      <div
+        aria-hidden
+        data-nex-free-chat-contact-card-sheen
+        style={{
+          position: "absolute",
+          inset: 0,
+          borderRadius: 16,
+          background: `radial-gradient(circle at 30% 20%, ${accentHex}22, transparent 60%)`,
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
       {/* Owner directive 2026-10-22 (evening · pass 18) · hold-to-send
           progress fill. Grows left-to-right as the 5s elapses. Sits
           BEHIND the card content via zIndex:0 + content zIndex:1. */}
@@ -653,6 +682,10 @@ function ContactCard({
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
+              // Neon-glow 3D treatment · the display name gets an
+              // accent-coloured text-shadow so it lifts off the dark
+              // card and reads as "lit".
+              textShadow: `0 0 8px ${accentHex}99`,
             }}
           >
             {contact.displayName}
@@ -691,6 +724,9 @@ function ContactCard({
             letterSpacing: 0.5,
             fontFamily:
               "ui-monospace, SFMono-Regular, Menlo, Monaco, 'Courier New', monospace",
+            // Neon-glow 3D · subtler accent-glow on the handle so
+            // the mono row has the same lit quality as the name.
+            textShadow: `0 0 6px ${accentHex}66`,
           }}
         >
           {contact.nexHandle}
@@ -710,10 +746,23 @@ function ContactCard({
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
           }}
         >
-          {contact.profession}
-          {contact.city ? ` · ${contact.city}` : ""}
+          <span>{contact.profession}</span>
+          {contact.city && (
+            <>
+              <span aria-hidden style={{ color: NEX.textMute }}>·</span>
+              {/* Owner directive 2026-10-23 · red map pin before the
+                  city name. Inline SVG keeps crispness at any density
+                  + lets us drive the fill via NEX.unreadRed (the sealed
+                  dark-red used elsewhere for urgency / attention). */}
+              <MapPinIcon color={NEX.unreadRed} />
+              <span>{contact.city}</span>
+            </>
+          )}
         </div>
       </div>
       </div>
@@ -820,5 +869,26 @@ function ContactCard({
         }
       `}</style>
     </article>
+  );
+}
+
+/* ─── Red map pin ───────────────────────────────────────────────
+   Owner directive 2026-10-23 · tiny inline SVG pin, red fill,
+   rendered immediately before the city text in the profession
+   row. 10×10 keeps the row height unchanged. */
+function MapPinIcon({ color }: { readonly color: string }): React.JSX.Element {
+  return (
+    <svg
+      aria-hidden
+      width={10}
+      height={10}
+      viewBox="0 0 24 24"
+      style={{ flexShrink: 0, display: "block" }}
+    >
+      <path
+        fill={color}
+        d="M12 2c-4.418 0-8 3.582-8 8 0 5.25 7 12 7.4 12.3a1 1 0 0 0 1.2 0C13 22 20 15.25 20 10c0-4.418-3.582-8-8-8zm0 10.75a2.75 2.75 0 1 1 0-5.5 2.75 2.75 0 0 1 0 5.5z"
+      />
+    </svg>
   );
 }
