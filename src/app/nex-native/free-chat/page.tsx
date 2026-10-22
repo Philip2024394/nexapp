@@ -35,6 +35,7 @@
 
 import type * as React from "react";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
 import { resolveNexAppSessionOrGuest } from "@/lib/nex-native/app/session-or-guest";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
@@ -45,6 +46,12 @@ import {
 } from "@/components/nex-native/control-drawer/control-drawer-client";
 import { FreeChatComposerClient } from "./_composer-client";
 import { FreeChatCallCenterDrawerClient } from "./_call-center-drawer-client";
+import { FreeChatCanvasClient, type SeedMessage } from "./_canvas-client";
+import {
+  freeChatBackgroundCss,
+  resolveFreeChatWallpaperUrl,
+  type OutgoingDeliveryStatus,
+} from "./_types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -76,57 +83,37 @@ const NEX = {
 const SANS =
   "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
-/** Owner directive 2026-10-21 (iteration 37) · outgoing bubble
- *  delivery indicator REPLACED tick checkmarks with a single
- *  colour-coded DOT:
- *    delivered · orange dot · reached the recipient's device, not read yet
- *    read      · green dot  · recipient opened the chat
- *  Simpler semantics · no sent/delivered/viewed trichotomy ·
- *  colour alone communicates state. Peer bubbles never render a dot
- *  (dots only confirm YOUR sends). */
-type OutgoingDeliveryStatus = "delivered" | "read";
-
-interface SeedMessage {
-  readonly id: string;
-  readonly text: string;
-  readonly fromPeer: boolean;
-  readonly time: string;
-  /** Owner directive 2026-10-21 (iteration 46) · peer bubbles now
-   *  render the sender name at the top-right of the bubble, followed
-   *  by the time. Only meaningful when fromPeer === true · self
-   *  bubbles never show a sender name (it's always "you"). */
-  readonly senderName?: string;
-  /** Only meaningful when fromPeer === false. */
-  readonly deliveryStatus?: OutgoingDeliveryStatus;
-}
+// `OutgoingDeliveryStatus` + `SeedMessage` moved to `_types.ts` and
+// `_canvas-client.tsx` respectively (iteration 53) so the client
+// canvas can own bubble rendering while the server page stays a thin
+// shell that resolves session + cookies.
 
 const SEED_MESSAGES: readonly SeedMessage[] = [
   {
     id: "s1",
     fromPeer: true,
-    text: "Welcome to NEX · the chat that's yours",
+    text:
+      "Welcome to NEX! 🌎\nThe world is at your fingertips.\nChat. Sell. Explore.\nDiscover newest  places and  businesses\nInvite Friends to hangout",
     time: "15:03",
     senderName: "Nex",
-  },
-  {
-    id: "s2",
-    fromPeer: true,
-    text: "Pick a theme, invite your friends, make it feel like home.",
-    time: "15:03",
-    senderName: "Nex",
-  },
-  {
-    id: "s3",
-    fromPeer: false,
-    text: "Looks clean.",
-    time: "15:04",
-    deliveryStatus: "read",
   },
 ];
 
-export default async function FreeChatPage(): Promise<React.ReactElement> {
+export default async function FreeChatPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}): Promise<React.ReactElement> {
   const viewer = await resolveNexAppSessionOrGuest();
   const isGuest = viewer.kind !== "session";
+
+  // Owner directive 2026-10-21 (iteration 58) · `?show-themes=1` on the
+  // URL forces the first-visit theme row + Keep/View action bar to
+  // render regardless of the dismiss cookie · useful when the owner
+  // previously committed and now wants to see the picker again without
+  // clearing cookies manually in DevTools.
+  const sp = (await searchParams) ?? {};
+  const forceShowThemes = sp["show-themes"] === "1";
 
   // Resolve ControlDrawer session · null for guests · drawer shows a
   // Sign-In prompt when no session (same pattern as the welcome page).
@@ -143,6 +130,33 @@ export default async function FreeChatPage(): Promise<React.ReactElement> {
   } catch {
     // guest · drawerSession stays null
   }
+
+  // Owner directive 2026-10-21 (iteration 53) · read the first-visit
+  // theme row cookies server-side so returning visitors see no flash
+  // of the row. Both cookies are JS-writable (set from the client when
+  // the user picks a theme or taps View all) · reading them here on
+  // every request avoids the hydration-mismatch risk of defaulting to
+  // "show" on the server and "hidden" on the client.
+  const cookieJar = await cookies();
+  // Owner directive 2026-10-21 (iteration 61) · when the owner opens
+  // the picker via `?show-themes=1`, the chat background must start
+  // as the standard NEX navy regardless of any previously-saved
+  // wallpaper · so the picker tiles show against the plain default
+  // and the chosen theme only paints once the user taps a tile.
+  // Clearing both server-side cookies here achieves that cleanly ·
+  // the client canvas still owns the applied-wallpaper state and
+  // writes new cookies when the user engages a tile.
+  const initialThemeId = forceShowThemes
+    ? null
+    : (cookieJar.get("nex-free-chat-wallpaper")?.value ?? null);
+  const initialRowDismissed =
+    !forceShowThemes &&
+    cookieJar.get("nex-free-chat-row-dismissed")?.value === "1";
+  // Owner directive 2026-10-21 (iteration 54) · resolve the wallpaper
+  // URL server-side so the <main> background can be painted BEFORE
+  // hydration · no flash of navy on return visitors who had previously
+  // picked a wallpaper.
+  const initialWallpaperUrl = resolveFreeChatWallpaperUrl(initialThemeId);
 
   return (
     <>
@@ -166,7 +180,12 @@ export default async function FreeChatPage(): Promise<React.ReactElement> {
           // no scroll on the main itself · only the inner chat canvas
           // scrolls bubble-by-bubble.
           inset: 0,
-          background: NEX.bg,
+          // Owner directive 2026-10-21 (iteration 54) · wallpaper
+          // paints the ENTIRE phone frame (header + canvas + composer).
+          // Server resolves the URL from the cookie so the first paint
+          // is correct · client takes over post-hydration (see
+          // `_canvas-client.tsx` useEffect).
+          background: freeChatBackgroundCss(initialWallpaperUrl, NEX.bg),
           color: NEX.text,
           fontFamily: SANS,
           display: "flex",
@@ -192,7 +211,17 @@ export default async function FreeChatPage(): Promise<React.ReactElement> {
             flexShrink: 0,
           }}
         >
-          <NexPingBadge size={48} accent={NEX.cyan} dataTestId="free-chat-nex" />
+          {/* Owner directive 2026-10-21 (iteration 75) · wrapped so the
+              client setup container can inject a round avatar overlay
+              on top of the sealed NEX ping badge when the user uploads
+              a profile image. position: relative gives the overlay its
+              coordinate space. */}
+          <div
+            data-nex-free-chat-header-avatar-slot
+            style={{ position: "relative", width: 48, height: 48, flexShrink: 0 }}
+          >
+            <NexPingBadge size={48} accent={NEX.cyan} dataTestId="free-chat-nex" />
+          </div>
           <div
             style={{
               display: "flex",
@@ -202,28 +231,42 @@ export default async function FreeChatPage(): Promise<React.ReactElement> {
               flex: 1,
             }}
           >
+            {/* Owner directive 2026-10-21 (iteration 71→72) · wordmark
+                sized to WhatsApp header convention (17px / 600 weight).
+                Overflow uses clip (not ellipsis) · owner doesn't want
+                the "…" character. Chat name maxLength=20 + available
+                width ~260px at 17px semi-bold means 20 typical chars
+                comfortably fits, so clipping is a safety net only. */}
             <span
+              data-nex-free-chat-header-wordmark
               style={{
-                fontSize: 22,
-                fontWeight: 900,
-                letterSpacing: "-0.01em",
+                fontSize: 17,
+                fontWeight: 600,
+                letterSpacing: "-0.005em",
                 color: NEX.text,
-                lineHeight: 1,
+                lineHeight: 1.1,
                 textShadow: "0 1px 3px rgba(0,0,0,0.5)",
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                display: "block",
               }}
             >
               NEX
             </span>
             <span
+              data-nex-free-chat-header-subtitle
               style={{
                 fontSize: 12,
                 fontWeight: 500,
                 color: NEX.textDim,
                 lineHeight: 1.2,
                 textShadow: "0 1px 2px rgba(0,0,0,0.45)",
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+                display: "block",
               }}
             >
-              {isGuest ? "Welcome · you're previewing NEX" : "Your free NEX chat"}
+              NEX - Guest
             </span>
           </div>
           {/* Right-side header cluster · owner directive 2026-10-21
@@ -267,112 +310,22 @@ export default async function FreeChatPage(): Promise<React.ReactElement> {
           </nav>
         </header>
 
-        {/* ── Chat canvas · bubbles ── */}
-        <section
-          data-nex-free-chat-canvas
-          aria-label="Chat messages"
-          style={{
-            flex: 1,
-            minHeight: 0,
-            overflowY: "auto",
-            padding: "20px 14px 16px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 10,
-          }}
-        >
-          {SEED_MESSAGES.map((m) => {
-            // Owner directive 2026-10-21 (iteration 44) · self bubble
-            // now matches the peer bubble's glass + rim aesthetic:
-            //   peer · cyan glass bg + cyan rim + white text
-            //   self · orange glass bg + orange rim + white text
-            // Text colour on the self bubble shifts from dark-ink to
-            // NEX.text so it reads cleanly against the translucent
-            // fill. Meta row colour also shifts to a muted light tone
-            // for the same reason.
-            const metaColor = m.fromPeer
-              ? NEX.textMute
-              : "rgba(242, 245, 248, 0.72)";
-            return (
-              <article
-                key={m.id}
-                data-nex-free-chat-bubble={m.id}
-                data-nex-free-chat-bubble-from={m.fromPeer ? "peer" : "self"}
-                data-nex-free-chat-bubble-delivery={m.deliveryStatus ?? undefined}
-                style={{
-                  maxWidth: "80%",
-                  alignSelf: m.fromPeer ? "flex-start" : "flex-end",
-                  padding: "8px 14px 10px",
-                  borderRadius: 18,
-                  borderBottomLeftRadius: m.fromPeer ? 6 : 18,
-                  borderBottomRightRadius: m.fromPeer ? 18 : 6,
-                  background: m.fromPeer ? NEX.cyanBubble : NEX.selfGrayGlass,
-                  color: NEX.text,
-                  border: `1px solid ${m.fromPeer ? NEX.cyanSoft : NEX.selfCyanHairline}`,
-                  // Glass pass · backdrop-filter blurs whatever sits
-                  // behind the bubble (chat wallpaper / other bubbles)
-                  // so the transparent fill reads as frosted glass
-                  // rather than a flat tint. WebkitBackdropFilter kept
-                  // for Safari parity.
-                  backdropFilter: "blur(10px) saturate(140%)",
-                  WebkitBackdropFilter: "blur(10px) saturate(140%)",
-                  fontSize: 14,
-                  lineHeight: 1.4,
-                  boxShadow: "0 6px 14px -8px rgba(0,0,0,0.6)",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 2,
-                }}
-              >
-                {/* Meta row · top-right of the bubble.
-                    Owner directive 2026-10-21 (iteration 37) · tick
-                    checkmarks replaced with a colour-coded DOT:
-                      orange = delivered-not-read, green = read.
-                    Owner directive 2026-10-21 (iteration 46) · peer
-                    bubbles now render the sender name (e.g. "Nex")
-                    BEFORE the time so the viewer sees who's talking
-                    without scanning up. Rendered slightly brighter +
-                    bolder than the time so the hierarchy reads
-                    name > time at a glance. Self bubbles stay
-                    name-less (sender is always "you"). */}
-                <div
-                  data-nex-free-chat-bubble-meta
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "baseline",
-                    gap: 6,
-                    alignSelf: "flex-end",
-                    fontSize: 10,
-                    color: metaColor,
-                    lineHeight: 1,
-                  }}
-                >
-                  {m.fromPeer && m.senderName && (
-                    <span
-                      data-nex-free-chat-bubble-sender
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: NEX.cyan,
-                        letterSpacing: 0.2,
-                      }}
-                    >
-                      {m.senderName}
-                    </span>
-                  )}
-                  <span>{m.time}</span>
-                  {!m.fromPeer && m.deliveryStatus && (
-                    <DeliveryDot status={m.deliveryStatus} />
-                  )}
-                </div>
-                <div>{m.text}</div>
-              </article>
-            );
-          })}
-        </section>
+        {/* ── Chat canvas · bubbles + first-visit theme row ──
+            Owner directive 2026-10-21 (iteration 53) · bubble rendering
+            + wallpaper state + first-visit row extracted to the client
+            canvas. Server passes seed messages + the two cookies so no
+            flash-of-row on returning visitors. */}
+        <FreeChatCanvasClient
+          seedMessages={SEED_MESSAGES}
+          initialThemeId={initialThemeId}
+          initialRowDismissed={initialRowDismissed}
+        />
 
         {/* ── Composer · text + emoji glyph + send ── */}
-        <FreeChatComposerClient isGuest={isGuest} />
+        <FreeChatComposerClient
+          isGuest={isGuest}
+          initialThemeId={initialThemeId}
+        />
 
         {/* ── Call-Center floating 3-dots trigger + left-slide panel ──
             Owner directive 2026-10-21 (iteration 38) · bottom-right
@@ -447,41 +400,6 @@ function SearchIcon(): React.ReactElement {
   );
 }
 
-// ─── Bubble delivery-dot indicator ────────────────────────────────
-//
-// Owner directive 2026-10-21 (iteration 37) · retired WhatsApp-style
-// tick checkmarks in favour of a single colour-coded dot:
-//   delivered · orange (#FF7200) · reached recipient, not read yet
-//   read      · green  (#16D66B) · recipient opened the chat
-//
-// Rendered as a filled SVG circle · stays visually tight next to the
-// timestamp in the bubble's top-right meta row.
 
-const DELIVERY_DOT = {
-  delivered: "#FF7200",
-  read: "#16D66B",
-} as const;
-
-function DeliveryDot({
-  status,
-}: {
-  status: "delivered" | "read";
-}): React.ReactElement {
-  const fill = DELIVERY_DOT[status];
-  return (
-    <svg
-      width={9}
-      height={9}
-      viewBox="0 0 9 9"
-      aria-label={`Message ${status}`}
-      data-nex-free-chat-bubble-delivery-dot={status}
-    >
-      <circle
-        cx={4.5}
-        cy={4.5}
-        r={4}
-        fill={fill}
-      />
-    </svg>
-  );
-}
+// `DeliveryDot` + `DELIVERY_DOT` moved to `_canvas-client.tsx` with
+// the bubble rendering (iteration 53).

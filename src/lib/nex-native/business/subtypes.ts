@@ -40,6 +40,9 @@ export const ACCOMMODATION_SUBTYPES: readonly AccommodationSubtype[] = [
   "homestay",
   "resort",
   "short_rental",
+  // Phase A1 addition · owner-authorised 2026-10-20 · see AccommodationSubtype
+  // in types.ts for the rationale (additive extension of the 2026-10-02 freeze).
+  "kost",
 ] as const;
 
 export const PROPERTY_SUBTYPES: readonly PropertySubtype[] = [
@@ -93,6 +96,7 @@ export const BUSINESS_SUBTYPE_CATEGORY: Record<BusinessSubtype, BusinessCategory
   homestay:           "accommodation",
   resort:             "accommodation",
   short_rental:       "accommodation",
+  kost:               "accommodation",
   // Property
   for_sale:           "property",
   for_rent:           "property",
@@ -130,6 +134,7 @@ export const BUSINESS_SUBTYPE_LABEL: Record<BusinessSubtype, string> = {
   homestay:           "Homestay",
   resort:             "Resort",
   short_rental:       "Short rental",
+  kost:               "Kost (Boarding)",
   for_sale:           "Property for sale",
   for_rent:           "Property for rent",
   developer:          "Property developer",

@@ -80,10 +80,16 @@ export interface MarketplaceCatalogEntry {
   };
 }
 
-/** The 11 cover-theme layout IDs from `cover/layout-ids.ts`. Mirrored
- *  here so the Shop preview sheet can render options without
- *  importing from a server-side module. The sealed layout-ids are
- *  the authoritative source · this is for prototype display only. */
+/** Shop-layout entries mirrored from `cover/layout-ids.ts` for the
+ *  Shop preview sheet. The sealed layout-ids are the authoritative
+ *  source · this is for prototype display only.
+ *
+ *  Owner directive 2026-10-22 · Accommodation (the 11th layout) was
+ *  removed from this prototype list · it doesn't fit the Crispy
+ *  Chicken food surface and the other food/retail brands in the
+ *  marketplace. Accommodation stays sealed in `cover/layout-ids.ts`
+ *  for Phase A1 and will be reintroduced here when the layout list
+ *  becomes vertical-aware. */
 export interface ShopLayoutEntry {
   readonly layoutId: string;
   readonly label: string;
@@ -101,7 +107,6 @@ export const SHOP_LAYOUTS: readonly ShopLayoutEntry[] = [
   { layoutId: "personal_brand", label: "Personal Brand", blurb: "Hero portrait · about · signature line" },
   { layoutId: "personal_brand_landscape", label: "Personal Brand · Landscape", blurb: "Wide portrait layout" },
   { layoutId: "personal_brand_round", label: "Personal Brand · Round", blurb: "Portrait with round offer tiles" },
-  { layoutId: "accommodation", label: "Accommodation", blurb: "Room gallery · amenities · booking" },
 ];
 
 export const MARKETPLACE_CATALOG: readonly MarketplaceCatalogEntry[] = [

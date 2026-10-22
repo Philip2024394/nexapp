@@ -40,6 +40,10 @@ import {
 } from "@/components/nex-native/control-drawer/control-drawer-client";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import { effectiveTier } from "@/lib/nex-native/account-service";
+import {
+  isLiveWorldId,
+  LIVE_WORLD_PACKAGES,
+} from "@/app/nex-native/chat-standard/_live-worlds";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -92,9 +96,67 @@ export default async function CoverThemesLibraryPage({
   searchParams?: Promise<{ theme?: string }>;
 }) {
   const sp = searchParams ? await searchParams : {};
-  const themeId = sp.theme ?? DEFAULT_THEME;
+
+  // Owner directive 2026-10-20 · drawer session resolved early so the
+  // viewer's own chat_theme can be used as the default preview theme
+  // inside every mini-phone tile (the ?theme= query still wins when
+  // present). The PAGE background itself stays on the sealed Neon
+  // Earth asset shared with the Chat Themes Library · only the
+  // per-tile preview inherits the chat theme.
+  let drawerSession: ControlDrawerSession | null = null;
+  let viewerChatThemeId: string | null = null;
+  // Owner directive 2026-10-20 · the NexPingBadge in the shop-themes
+  // library header paints the viewer's chat-theme image (e.g. Crispy
+  // Chicken wallpaper) · same image used on the chat preview surface
+  // so the shop-themes library reads as a continuation of the chat
+  // world. Null (no live-world theme / guest) falls back to the
+  // sealed "NEX" wordmark.
+  let viewerChatThemeImageUrl: string | null = null;
+  try {
+    const sess = await resolveNexAppSessionFromContext();
+    if (sess) {
+      viewerChatThemeId = sess.account.chat_theme ?? null;
+      // Owner directive 2026-10-20 · resolve the live-world chat
+      // theme wallpaper once · reused by (a) the drawer identity-bar
+      // thumbnail and (b) the header NexPingBadge (both show the
+      // same chat theme image · one visual thread across both
+      // identity surfaces). Guest / DB-driven theme / unset all
+      // fall through to null.
+      const chatThemeId = viewerChatThemeId ?? undefined;
+      if (isLiveWorldId(chatThemeId)) {
+        const pkg = LIVE_WORLD_PACKAGES[chatThemeId] as unknown as {
+          wallpaperUrl?: string | null;
+        };
+        viewerChatThemeImageUrl = pkg.wallpaperUrl ?? null;
+      }
+      drawerSession = {
+        displayName: sess.account.display_name,
+        nexHandle: sess.account.nex_handle,
+        isBisnis: effectiveTier(sess.account) === "bisnis",
+        activeChatThemeImageUrl: viewerChatThemeImageUrl,
+      };
+    }
+  } catch {
+    // guest · keep drawerSession = null
+  }
 
   const themes = await chatThemeService.listActiveThemes().catch(() => []);
+  // Owner directive 2026-10-20 · Resolution order:
+  //   ?theme= query → viewer's chat_theme → sealed DEFAULT_THEME.
+  // The viewer's chat_theme is honoured when it is EITHER an active
+  // DB-driven chat_theme row OR a live-world package id (code-based
+  // themes like "crispy-chicken" aren't rows in nex_chat_theme ·
+  // the iframe target `/nex-native/cover/preview/{layoutId}?theme=X`
+  // reads the same union). Guards against stale / deleted ids.
+  const viewerThemeIsHonourable =
+    viewerChatThemeId !== null &&
+    (themes.some((t) => t.id === viewerChatThemeId) ||
+      isLiveWorldId(viewerChatThemeId));
+  const themeId =
+    sp.theme ??
+    (viewerThemeIsHonourable && viewerChatThemeId
+      ? viewerChatThemeId
+      : DEFAULT_THEME);
   const currentTheme = themes.find((t) => t.id === themeId) ?? null;
 
   // Owner directive 2026-10-18 · attach a per-render cache-bust to
@@ -104,22 +166,6 @@ export default async function CoverThemesLibraryPage({
   // changes every visit.
   const renderCacheBust = Date.now().toString(36);
 
-  // Owner directive 2026-10-18 · drawer session mirrors the sealed
-  // Welcome page pattern. Guest-safe · a null session renders the
-  // drawer's sign-in prompt rather than hiding it.
-  let drawerSession: ControlDrawerSession | null = null;
-  try {
-    const sess = await resolveNexAppSessionFromContext();
-    if (sess) {
-      drawerSession = {
-        displayName: sess.account.display_name,
-        nexHandle: sess.account.nex_handle,
-        isBisnis: effectiveTier(sess.account) === "bisnis",
-      };
-    }
-  } catch {
-    // guest · keep drawerSession = null
-  }
 
   return (
     <>
@@ -131,24 +177,27 @@ export default async function CoverThemesLibraryPage({
         [data-nex-cover-themes-library] { scrollbar-width: none; -ms-overflow-style: none; }
         [data-nex-cover-themes-library]::-webkit-scrollbar { width: 0; height: 0; display: none; }
       `}</style>
-      {/* Owner directive 2026-10-18 · background is viewport-pinned
-          via position:fixed so it covers the full screen regardless
-          of how far the pager scrolls, AND does not scroll/bounce
-          when the user swipes to the next theme. Sibling of <main>
-          (not a child) so the main's `overflow: auto` scroll context
-          cannot capture or clip it. */}
+      {/* Owner directive 2026-10-20 · background matches the Chat
+          Themes Library ("Neon Earth on a Starry Horizon") so the
+          two theme-library surfaces read as one world. Position
+          switched from `fixed` + `100vw/100dvh` → `absolute` +
+          `100%/100dvh` so the image stays INSIDE the sealed
+          .nex-native-frame on desktop (420×909 phone frame) instead
+          of escaping to the full desktop viewport.
+          Previous asset `electric-blue-bg.png` retired. */}
       <img
-        src="/nex-native/cover-themes-library/electric-blue-bg.png"
+        src="/nex-native/contacts/neon-earth-bg.png"
         alt=""
         aria-hidden
         data-nex-cover-themes-bg-image
         style={{
-          position: "fixed",
-          inset: 0,
-          width: "100vw",
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
           height: "100dvh",
           objectFit: "cover",
-          objectPosition: "center center",
+          objectPosition: "top center",
           zIndex: 0,
           pointerEvents: "none",
           userSelect: "none",
@@ -213,6 +262,7 @@ export default async function CoverThemesLibraryPage({
               size={56}
               accent={NEX.cyan}
               dataTestId="cover-themes-nex"
+              avatarUrl={viewerChatThemeImageUrl}
             />
             {/* Right side of top row · drawer only. Title block
                 moves below so it can run full-width across the hero. */}
@@ -371,6 +421,67 @@ export default async function CoverThemesLibraryPage({
                       label={`${label} cover preview`}
                     />
                   </Link>
+                  {/* Owner directive 2026-10-20 · each tile carries
+                      TWO buttons · View (full-screen preview · same
+                      target as the tile tap) + Edit (opens the
+                      /edit/[layoutId] route where the Bisnis owner
+                      can replace the shop background image and set
+                      the theme colour · persists to nex_business
+                      shop_cover_image_url + shop_cover_tint_hex). */}
+                  <div
+                    data-nex-cover-theme-card-actions
+                    style={{
+                      marginTop: 8,
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: 6,
+                    }}
+                  >
+                    <Link
+                      href={`/nex-native/cover/preview/${id}?theme=${encodeURIComponent(themeId)}`}
+                      data-nex-cover-theme-view
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "9px 10px",
+                        borderRadius: 10,
+                        background: "transparent",
+                        border: `1.5px solid ${NEX.cyan}`,
+                        color: NEX.cyan,
+                        fontSize: 11.5,
+                        fontWeight: 800,
+                        letterSpacing: "0.04em",
+                        textTransform: "uppercase",
+                        textDecoration: "none",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      View theme
+                    </Link>
+                    <Link
+                      href={`/nex-native/cover-themes-library/edit/${id}`}
+                      data-nex-cover-theme-edit
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "9px 10px",
+                        borderRadius: 10,
+                        background: NEX.cyan,
+                        color: "#021424",
+                        border: "none",
+                        fontSize: 11.5,
+                        fontWeight: 800,
+                        letterSpacing: "0.04em",
+                        textTransform: "uppercase",
+                        textDecoration: "none",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      Edit theme
+                    </Link>
+                  </div>
                 </article>
               );
             })}

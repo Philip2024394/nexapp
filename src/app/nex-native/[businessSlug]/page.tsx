@@ -25,6 +25,16 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import * as businessService from "@/lib/nex-native/business-service";
 import * as productService from "@/lib/nex-native/product-service";
+// Phase A1 · accommodation listings (owner-authorised 2026-10-21).
+// Rooms persist via migration 213 · `listLiveAvailableRoomsByBusiness`
+// is the customer-safe filter (status='live' AND is_available=true).
+// Owner-only management lives under /nex-native/manage/accommodation.
+import * as accommodationService from "@/lib/nex-native/accommodation-service";
+import * as accountService from "@/lib/nex-native/account-service";
+import {
+  isLiveWorldId,
+  LIVE_WORLD_PACKAGES,
+} from "@/app/nex-native/chat-standard/_live-worlds";
 import { BusinessThumbnailRow } from "./_business-thumbnail-row";
 import * as menuService from "@/lib/nex-native/menu-service";
 import * as sellerResponsivenessService from "@/lib/nex-native/seller-responsiveness-service";
@@ -35,6 +45,21 @@ import { FloatingChatButton } from "./_floating-chat-button";
 import { toggleLikeProductAction } from "../_actions";
 import { AddToCartButton } from "../_add-to-cart-button";
 import { HeaderCartIcon } from "../_header-cart-icon";
+// Phase A1 (owner-authorised 2026-10-20) · Accommodation demo-room
+// designs panel. Server-side gated to the owner · never rendered to
+// a guest or non-owner viewer · never carries booking / availability
+// language. See _demo-room-designs.tsx for the honesty doctrine.
+import {
+  DemoRoomDesigns,
+  hasDemoRoomDesignsForSubtype,
+} from "./_demo-room-designs";
+import type { BusinessSubtype } from "@/lib/nex-native/business/types";
+// Owner directive 2026-10-20 · the subtype-aware "Add listing" button
+// for the owner's own shop view. Routes to the correct existing
+// `/manage/*` creation surface or shows an honest "Phase B" chip for
+// blocked subtypes (accommodation · property). Guests never see
+// either state · the entire block is gated on `isOwnerViewing`.
+import { listingAddRouteFor } from "@/lib/nex-native/business/listing-add-route";
 
 // Bridge 22 · food + drink verticals are menu-first · we skip the
 // product-grid section for these entirely and render the full menu
@@ -151,18 +176,50 @@ export default async function Page({
       const chatThemeService = await import(
         "@/lib/nex-native/chat-theme-service"
       );
+      // Owner directive 2026-10-20 · the shop face cover inherits
+      // the OWNER's currently-selected chat theme (one continuous
+      // world across chat + shop). The bundle.themeId is the
+      // per-cover stored default (often pink-dream) · we prefer the
+      // owner's nex_account.chat_theme when that theme row exists +
+      // is active. Falls back to bundle.themeId on any lookup miss.
+      const ownerAccountForTheme = await accountService
+        .getAccountById(business.owner_account_id)
+        .catch(() => null);
+      const ownerChatThemeId = ownerAccountForTheme?.chat_theme ?? null;
+      let resolvedThemeId = bundle.themeId;
+      if (ownerChatThemeId && ownerChatThemeId !== bundle.themeId) {
+        const ownerTheme = await chatThemeService
+          .getThemeById(ownerChatThemeId)
+          .catch(() => null);
+        if (ownerTheme && ownerTheme.is_active) {
+          resolvedThemeId = ownerChatThemeId;
+        }
+      }
       const theme = await chatThemeService
-        .getThemeById(bundle.themeId)
+        .getThemeById(resolvedThemeId)
         .catch(() => null);
       if (theme && theme.is_active) {
+        /* Owner directive 2026-10-20 · shop face cover overrides ·
+           when the Bisnis owner has saved shop_cover_image_url and/
+           or shop_cover_tint_hex via /cover-themes-library/edit/[id],
+           those values layer on top of the sealed chat_theme defaults.
+           Precedence (sealed): owner override → chat_theme default. */
+        const businessOverrides = business as unknown as {
+          shop_cover_image_url?: string | null;
+          shop_cover_tint_hex?: string | null;
+        };
+        const effectiveWallpaperUrl =
+          businessOverrides.shop_cover_image_url ?? theme.hero_image_url;
+        const effectiveAccentHex =
+          businessOverrides.shop_cover_tint_hex ?? theme.accent_hex;
         return (
           <>
             {setupBanner}
             <CoverThemeSkin
-              accentHex={theme.accent_hex}
+              accentHex={effectiveAccentHex}
               bubbleRimHex={theme.bubble_rim_hex}
               composerRimHex={theme.composer_rim_hex}
-              wallpaperUrl={theme.hero_image_url}
+              wallpaperUrl={effectiveWallpaperUrl}
               wallpaperConfig={theme.wallpaper_config}
               themeId={theme.id}
               layoutId={bundle.layoutId}
@@ -196,6 +253,16 @@ export default async function Page({
     "live",
   );
 
+  // Phase A1 accommodation listings · owner-authorised 2026-10-21.
+  // Fetches the business's live+available rooms (migration 213).
+  // Safe-fail: if the migration hasn't been applied yet (local DB
+  // without 213) the service throws · we catch to an empty array so
+  // the page keeps rendering · the sealed R8 demo-room gate takes
+  // over when `accommodationRooms.length === 0`.
+  const accommodationRooms = await accommodationService
+    .listLiveAvailableRoomsByBusiness(business.id)
+    .catch(() => [] as accommodationService.NexAccommodationUnitRow[]);
+
   // Phase 3 · thin thumbnail-shape slice for the row that renders
   // directly under the business name. Reuses the live-product pool so
   // the row and the full feed stay honest — no synthesised items. The
@@ -228,6 +295,31 @@ export default async function Page({
     away_message: business.away_message ?? null,
     archived_at: business.archived_at ?? null,
   });
+
+  // Owner directive 2026-10-20 · when the seller has selected a
+  // live-world chat theme (e.g. "crispy-chicken") and HASN'T uploaded
+  // a logo/cover photo, the shop face cover background inherits the
+  // theme's wallpaper (same image as the chat background) · one
+  // continuous world across chat + shop. Honest fallback chain:
+  //   1. business.logo_url (owner-uploaded cover photo)   ← wins
+  //   2. owner's live-world chat_theme wallpaperUrl        ← NEW
+  //   3. moody-gradient fallback                           ← existing
+  let heroThemeWallpaperUrl: string | null = null;
+  let heroThemeAccentHex: string | null = null;
+  if (!business.logo_url) {
+    const ownerAccount = await accountService
+      .getAccountById(business.owner_account_id)
+      .catch(() => null);
+    const themeId = ownerAccount?.chat_theme ?? undefined;
+    if (isLiveWorldId(themeId)) {
+      const pkg = LIVE_WORLD_PACKAGES[themeId] as unknown as {
+        wallpaperUrl?: string | null;
+        colours?: { primary?: string };
+      };
+      heroThemeWallpaperUrl = pkg.wallpaperUrl ?? null;
+      heroThemeAccentHex = pkg.colours?.primary ?? null;
+    }
+  }
 
   return (
     <div
@@ -312,8 +404,11 @@ export default async function Page({
           marginTop: -64, // header floats over the hero
         }}
       >
-        {/* Cover photograph · falls back to a moody gradient when the
-            seller hasn't uploaded a logo/cover yet. */}
+        {/* Cover photograph · falls back to the owner's live-world
+            chat-theme wallpaper (owner directive 2026-10-20 · one
+            continuous world across chat + shop · same image as the
+            chat background) · then to a moody gradient when neither
+            is set. */}
         <div
           aria-hidden
           style={{
@@ -321,7 +416,9 @@ export default async function Page({
             inset: 0,
             backgroundImage: business.logo_url
               ? `url(${business.logo_url})`
-              : `linear-gradient(135deg, #063B67 0%, #05101f 60%, #020914 100%)`,
+              : heroThemeWallpaperUrl
+                ? `url(${heroThemeWallpaperUrl})`
+                : `linear-gradient(135deg, #063B67 0%, #05101f 60%, #020914 100%)`,
             backgroundSize: "cover",
             backgroundPosition: "center",
             filter: "saturate(1.05)",
@@ -575,8 +672,8 @@ export default async function Page({
           />
           <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
             {products.map((p) => (
+              <div key={p.id}>
               <ProductSpread
-                key={p.id}
                 name={p.name}
                 description={p.description ?? null}
                 price={formatPrice(p.price_pence, p.currency)}
@@ -611,6 +708,46 @@ export default async function Page({
                   />
                 }
               />
+              {/* Owner-authorised 2026-10-20 · Track A · owner-only
+                  "Manage listing" link appended under each product
+                  card. Routes to the existing /manage/products/<id>
+                  edit page. `changeProductStatusAction` already
+                  calls `revalidatePath("/nex-native/<slug>")` on
+                  save, so the shop refreshes automatically on
+                  archive / unarchive. Guests never see this. */}
+              {isOwnerViewing && (
+                <div
+                  data-nex-owner-manage-listing={p.id}
+                  style={{
+                    marginTop: 8,
+                    display: "flex",
+                    justifyContent: "flex-end",
+                  }}
+                >
+                  <Link
+                    href={`/nex-native/manage/products/${p.id}`}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      minHeight: 32,
+                      padding: "6px 12px",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      letterSpacing: "0.04em",
+                      textTransform: "uppercase",
+                      color: NEX.cyan,
+                      textDecoration: "none",
+                      border: `1px solid ${NEX.cyanSoft ?? "rgba(0,175,255,0.5)"}`,
+                      borderRadius: 8,
+                      background: "transparent",
+                    }}
+                  >
+                    Manage listing →
+                  </Link>
+                </div>
+              )}
+              </div>
             ))}
           </div>
         </section>
@@ -631,6 +768,329 @@ export default async function Page({
           still open · say hi above.
         </section>
       )}
+
+      {/* Phase A1 real accommodation rooms (owner-authorised 2026-10-21).
+          Rendered to BOTH owners and guests when the business has
+          live+available rooms. Status filter `status='live' AND
+          is_available=true` is applied at the service layer AND by
+          RLS (migration 213:85-96 public_read_live policy). Owner
+          management lives at /nex-native/manage/accommodation. The
+          sealed R8 demo-room gate below suppresses when real rooms
+          exist (fifth-condition suffix `accommodationRooms.length === 0`). */}
+      {accommodationRooms.length > 0 && (
+        <section
+          data-nex-accommodation-rooms-section="true"
+          style={{
+            maxWidth: 720,
+            margin: "0 auto",
+            padding: "32px 20px 8px",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 10,
+              letterSpacing: "0.28em",
+              textTransform: "uppercase",
+              color: NEX.cyan,
+              fontWeight: 700,
+              marginBottom: 10,
+            }}
+          >
+            Rooms
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {accommodationRooms.map((room) => (
+              <article
+                key={room.id}
+                data-nex-accommodation-room-card={room.id}
+                style={{
+                  padding: 16,
+                  background: NEX.panelSoft,
+                  border: `1px solid ${NEX.border}`,
+                  borderRadius: 16,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                }}
+              >
+                {room.image_url && (
+                  <div
+                    style={{
+                      width: "100%",
+                      aspectRatio: "16 / 9",
+                      borderRadius: 12,
+                      overflow: "hidden",
+                      background: `center/cover url(${room.image_url})`,
+                      border: `1px solid ${NEX.border}`,
+                    }}
+                  />
+                )}
+                <header
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
+                  }}
+                >
+                  <h3
+                    style={{
+                      margin: 0,
+                      fontSize: 18,
+                      fontWeight: 600,
+                      color: NEX.text,
+                    }}
+                  >
+                    {room.name}
+                  </h3>
+                  {room.price_per_night_pence !== null && (
+                    <div
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 700,
+                        color: NEX.cyan,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {room.currency}{" "}
+                      {room.price_per_night_pence.toLocaleString()}
+                      <span
+                        style={{
+                          fontSize: 10,
+                          color: NEX.textDim,
+                          marginLeft: 4,
+                        }}
+                      >
+                        /night
+                      </span>
+                    </div>
+                  )}
+                </header>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: NEX.textDim,
+                  }}
+                >
+                  {room.capacity} guest{room.capacity !== 1 ? "s" : ""} ·{" "}
+                  {room.bedrooms} bed{room.bedrooms !== 1 ? "s" : ""} ·{" "}
+                  {room.bathrooms} bath
+                  {room.bathrooms !== 1 ? "s" : ""}
+                </div>
+                {room.description && (
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 13,
+                      color: NEX.textDim,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {room.description}
+                  </p>
+                )}
+                {room.amenities.length > 0 && (
+                  <div
+                    style={{ display: "flex", flexWrap: "wrap", gap: 6 }}
+                  >
+                    {room.amenities.map((a) => (
+                      <span
+                        key={a}
+                        style={{
+                          fontSize: 10,
+                          padding: "2px 8px",
+                          borderRadius: 999,
+                          background: "rgba(0,175,255,0.08)",
+                          color: NEX.textDim,
+                          border: `1px solid ${NEX.border}`,
+                        }}
+                      >
+                        {a}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {/* Honest enquiry link · routes to chat with the
+                    owner. "NEX never handles payments" · no booking
+                    confirmation claim here. */}
+                <Link
+                  data-nex-accommodation-room-enquire={room.id}
+                  href={chatHref}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginTop: 4,
+                    padding: "10px 16px",
+                    background: NEX.orange,
+                    color: "#1A0808",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    textDecoration: "none",
+                    borderRadius: 10,
+                    border: `1px solid ${NEX.orangeSoft}`,
+                  }}
+                >
+                  Enquire about {room.name}
+                </Link>
+                {isOwnerViewing && (
+                  <Link
+                    href={`/nex-native/manage/accommodation/${room.id}`}
+                    data-nex-accommodation-room-manage={room.id}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "flex-end",
+                      marginTop: 2,
+                      fontSize: 11,
+                      color: NEX.cyan,
+                      textDecoration: "none",
+                      letterSpacing: "0.04em",
+                      textTransform: "uppercase",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Manage listing →
+                  </Link>
+                )}
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Phase A1 (owner-authorised 2026-10-20) · Accommodation
+          demo-room designs. ONLY rendered when the viewer IS the
+          business owner AND the business has zero live products AND
+          the business profile declares a Phase A1 accommodation
+          subtype (villa / homestay / kost). This is non-interactive
+          visual guidance, never seen by guests. See the file-level
+          doctrine in `_demo-room-designs.tsx`.
+          Fifth-condition suffix (2026-10-21): `accommodationRooms.length === 0`
+          suppresses the demo when real rooms exist. The sealed
+          four-condition regex anchor (`!isMenuVertical && isOwnerViewing
+          && products.length === 0 && hasDemoRoomDesignsForSubtype`) stays
+          intact · the fifth AND clause lives AFTER the sealed anchor so
+          the regex continues to match. */}
+      {!isMenuVertical &&
+        isOwnerViewing &&
+        products.length === 0 &&
+        hasDemoRoomDesignsForSubtype(
+          (business.profile as { primary?: { subtype?: BusinessSubtype } } | null)
+            ?.primary?.subtype ?? null,
+        ) &&
+        accommodationRooms.length === 0 && (
+          <DemoRoomDesigns
+            subtype={
+              (
+                business.profile as {
+                  primary: { subtype: BusinessSubtype };
+                }
+              ).primary.subtype
+            }
+          />
+        )}
+
+      {/* Owner directive 2026-10-20 · Add Listing CTA · owner-only.
+          Reads the business subtype, resolves the correct existing
+          creation surface via `listingAddRouteFor`, and renders either
+          a Link (ready subtypes · food/services/products) or a dimmed
+          honest "coming in Phase B" chip (accommodation · property).
+          Guests never see this section. The sealed DemoRoomDesigns
+          gate above is unchanged. */}
+      {isOwnerViewing &&
+        (() => {
+          const subtype =
+            (business.profile as { primary?: { subtype?: BusinessSubtype } } | null)
+              ?.primary?.subtype ?? null;
+          const addRoute = listingAddRouteFor(subtype);
+          if (!addRoute) return null;
+          return (
+            <section
+              data-nex-owner-add-listing={addRoute.state}
+              style={{
+                maxWidth: 720,
+                margin: "0 auto",
+                padding: "28px 20px 8px",
+                textAlign: "center",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 10,
+                  letterSpacing: "0.28em",
+                  textTransform: "uppercase",
+                  color: NEX.cyan,
+                  fontWeight: 700,
+                  marginBottom: 10,
+                }}
+              >
+                Owner-only
+              </div>
+              {addRoute.state === "ready" ? (
+                <Link
+                  href={addRoute.href}
+                  data-nex-owner-add-listing-link={addRoute.href}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    minHeight: 44,
+                    padding: "10px 18px",
+                    background: NEX.orange,
+                    color: "#1A0808",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    letterSpacing: "0.02em",
+                    textDecoration: "none",
+                    borderRadius: 10,
+                    border: `1px solid ${NEX.orangeSoft}`,
+                  }}
+                >
+                  <span
+                    aria-hidden
+                    style={{ fontSize: 18, lineHeight: 1, fontWeight: 300 }}
+                  >
+                    +
+                  </span>
+                  {addRoute.label}
+                </Link>
+              ) : (
+                <div
+                  data-nex-owner-add-listing-blocked
+                  role="status"
+                  aria-label={addRoute.reason}
+                  title={addRoute.reason}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    minHeight: 44,
+                    padding: "10px 18px",
+                    background: "rgba(255,255,255,0.06)",
+                    color: NEX.textDim,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    letterSpacing: "0.02em",
+                    borderRadius: 10,
+                    border: `1px dashed ${NEX.border}`,
+                    cursor: "default",
+                  }}
+                >
+                  <span
+                    aria-hidden
+                    style={{ fontSize: 14, lineHeight: 1 }}
+                  >
+                    ⏳
+                  </span>
+                  {addRoute.label}
+                </div>
+              )}
+            </section>
+          );
+        })()}
 
       {/* --- CONTACT + SOCIALS --------------------------------------- */}
       {(business.address ||

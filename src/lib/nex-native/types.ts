@@ -71,6 +71,25 @@ export interface NexAccountRow {
   /** Bridge 56g · which package the buyer picked as the on-ramp
    *  (buy | ringan | bisnis) · migration 089 · informational only. */
   themes_trial_package_id: string | null;
+  /** G1 Business Trial · migration 214 · one-shot per account lifetime
+   *  (K1). NULL = never used. 'active' | 'converted' | 'expired' are
+   *  the terminal/active states. Primary enforcement is service-layer
+   *  `SELECT ... FOR UPDATE` row lock (see src/lib/nex-native/business-trial/service.ts).
+   *  DOES NOT elevate effectiveTier() (K14 Option β). Shop entitlement
+   *  is read via effectiveTrialEntitlements() helper only. */
+  business_trial_status: NexBusinessTrialStatus | null;
+  /** G1 Business Trial · migration 214 · UTC timestamp when the trial
+   *  activated. Written exactly once by /trial/start. */
+  business_trial_start_at: NexTimestamp | null;
+  /** G1 Business Trial · migration 214 · UTC expiry = start + exactly
+   *  168 hours (K9 · enforced by DB CHECK). */
+  business_trial_end_at: NexTimestamp | null;
+  /** G1 Business Trial · migration 214 · D2 Action 1 flag · set true by
+   *  /trial/opt-out-conversion · cleared by /trial/resume-conversion-interest
+   *  (D2-a · reversible until 24h before end_at). When true, future G3 payment
+   *  code MUST NOT attempt a charge (S3 contract). Does NOT end the trial
+   *  early. */
+  business_trial_conversion_opt_out: boolean;
   /** Bridge 57 · which paid package the buyer holds · migration
    *  090. NULL = gratis default. Distinct from `tier` (which is
    *  the effective feature gate). Set by admin when payment is
@@ -111,6 +130,17 @@ export interface NexAccountRow {
   world_intro_enabled: boolean;
   created_at: NexTimestamp;
 }
+
+/** G1 Business Trial status · matches CHECK constraint on
+ *  nex_account.business_trial_status (migration 214).
+ *  NULL (never used) is a valid value distinct from this union. */
+export type NexBusinessTrialStatus = "active" | "converted" | "expired";
+
+export const NEX_BUSINESS_TRIAL_STATUSES: readonly NexBusinessTrialStatus[] = [
+  "active",
+  "converted",
+  "expired",
+] as const;
 
 /** Package tier · matches CHECK constraint on nex_account.tier
  *  (migration 046). See CLAUDE.md "NEX PACKAGE DOCTRINE" for the
@@ -514,6 +544,19 @@ export interface NexBusinessRow {
    *  When set, /[businessSlug]/page.tsx renders <CoverThemeSkin> +
    *  <CoverLayoutSwitch> instead of the legacy HeroSidePanel. */
   cover_layout_id?: string | null;
+  /** Owner directive 2026-10-20 · migration 212 · owner-uploaded
+   *  background image for the public /{slug} shop face cover. When
+   *  non-null the Cover-A hero paints this image INSTEAD of the
+   *  chat_theme.hero_image_url. Stored in bucket nex-user-wallpapers
+   *  under `shop/{business_id}/cover.{ext}`. Nullable · falls back
+   *  to the theme default. */
+  shop_cover_image_url?: string | null;
+  /** Owner directive 2026-10-20 · migration 212 · owner-selected
+   *  accent hex (`#RRGGBB`) applied to the shop face cover chrome
+   *  (CoverThemeSkin accentHex). Overrides theme.accent_hex for THIS
+   *  business's shop page only. Nullable · falls back to the theme
+   *  default. CHECK-constrained to the standard hex pattern. */
+  shop_cover_tint_hex?: string | null;
   /** Bridge 16e · single-line city / neighbourhood · migration 072.
    *  Shown on the About panel with a 📍 pin. Free-text 1-80 chars
    *  when set. Directory facet reads this via lower(city) index. */

@@ -2675,12 +2675,15 @@ function ShopInfoModal({
   readonly accent: string;
   readonly onClose: () => void;
 }): React.JSX.Element {
-  // Owner directive 2026-10-22 · prototype editor is built for
-  // Crispy Chicken only · other brands show a "coming soon" state
-  // so the panel never links to an unbuilt page.
+  // Owner directive 2026-10-22 · the Phase 2 editor was replaced
+  // by the focused "My Shop" surface which handles products end-to-
+  // end (name · price · photo · spice · promo · discount · delivery).
+  // Only Crispy Chicken is wired for the prototype · other brands
+  // show a "coming soon" state so the panel never links to an
+  // unbuilt page.
   const editorRoutes: Readonly<Record<string, string>> = {
     "crispy-chicken":
-      "/nex-native/chat-themes-library/marketplace-prototype/editor/crispy-chicken",
+      "/nex-native/chat-themes-library/marketplace-prototype/my-shop/crispy-chicken",
   };
   const editorHref: string | null = editorRoutes[brandId] ?? null;
   React.useEffect(() => {
@@ -2976,7 +2979,7 @@ function ShopInfoModal({
           {editorHref ? (
             <a
               href={editorHref}
-              data-nex-marketplace-prototype-shop-info-open-editor
+              data-nex-marketplace-prototype-shop-info-open-my-shop
               style={{
                 marginTop: 4,
                 padding: "12px 14px",
@@ -2991,7 +2994,7 @@ function ShopInfoModal({
                 boxShadow: `0 6px 16px -6px ${hexWithAlpha(NEX.cyan, 0.75)}`,
               }}
             >
-              Open the editor →
+              Open My Shop →
             </a>
           ) : (
             <div
@@ -3006,10 +3009,9 @@ function ShopInfoModal({
                 color: NEX.textDim,
               }}
             >
-              Edit screen for <strong style={{ color: NEX.text }}>{brand}</strong> ·
-              coming soon. The Crispy Chicken template is the first with a
-              working prototype editor · more brands follow once their mock
-              content is sealed.
+              My Shop for <strong style={{ color: NEX.text }}>{brand}</strong> ·
+              coming soon. Crispy Chicken is the first wired brand ·
+              others follow once their mock content is sealed.
             </div>
           )}
         </div>

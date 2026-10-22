@@ -96,6 +96,17 @@ import {
 // owner directive "never show it to guests".
 import { InstallHomeSliderClient } from "../_install-home-slider-client";
 import { isInstallHomeSliderDismissed } from "@/lib/nex-native/install-home-slider-cookie";
+// Owner directive 2026-10-21 (end-to-end pricing build) · each welcome
+// card consults the single-source-of-truth pricing config for its
+// price-line copy. Today, PROPOSAL prices resolve to "See all plans"
+// so the sealed welcome-trial-copy guards + welcome-honesty G4
+// commerce guards continue to pass. When the owner approves pricing
+// AND the trial activation path is wired, the chip flips automatically.
+import {
+  getPricingPackage,
+  welcomeCardChipFor,
+  type PricingPackageId,
+} from "@/lib/nex-native/pricing-config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -128,6 +139,19 @@ const SERIF =
 interface ChatNexCard {
   readonly key: "themes" | "shop" | "personalised";
   readonly title: string;
+  /** Owner directive 2026-10-21 · each card is linked to a package id
+   *  in the single-source-of-truth pricing config. The card renders
+   *  the `welcomeCardChipFor` output as a small price-line · which
+   *  resolves to "FREE" for free packages, "See all plans" for
+   *  not-yet-ready paid packages, and "N days free, then {price}/..."
+   *  when the trial + price are both APPROVED and wired. */
+  readonly pricingPackageId: PricingPackageId;
+  // Owner directive 2026-10-21 · the 3 welcome-card badge pills were
+  // removed (previously "FREE" · "PURCHASE THEMES" · "BUSINESS ·
+  // BISNIS"). The badge field is retired from the interface along with
+  // the <span> render in LandscapeCard. The sealed test at
+  // chat-nex-welcome.test.ts (line 150 group) was retired at the same
+  // time.
   readonly blurb: string;
   readonly chip: string;
   readonly href: string;
@@ -203,59 +227,126 @@ export default async function WelcomePage() {
   //
   // All cards carry publicStatus: "open" per G1. All hrefs are on
   // the allowlist per G2.
+  // ─── Owner-authorised 2026-10-20 · THREE DIFFERENT WAYS TO USE NEX ─
+  //
+  // The three cards present three distinct journeys, not three
+  // competing theme categories:
+  //
+  //   1. Free NEX Chat        · standard themes · personal chat only
+  //   2. Chat Themes          · purchasable premium themes · still personal chat
+  //   3. Business NEX Chat    · the full Bisnis onboarding + Phase A1
+  //                             business-type / cover / product chain
+  //
+  // Sealed cookie contract preserved · the internal `key` tokens
+  // ("themes" · "personalised" · "shop") are the SAME tokens pick-
+  // theme / pick-cover / business-kind check against. Only the
+  // user-facing titles / badges / blurbs / destinations change.
+  // Owner directive: purchasing a chat theme does NOT grant Business
+  // features · choosing Business does NOT grant ownership of a
+  // separately purchasable premium theme unless the package
+  // explicitly includes it. The three journeys stay independent.
   const chatNexCards: readonly ChatNexCard[] = [
     {
+      // Internal token kept as "themes" so the sealed cookie
+      // contract and pickThemeIntentCopy switch stay valid without
+      // any downstream code churn.
       key: "themes",
-      title: "Chat Themes",
-      // Option A reword applied 2026-10-15 · tighter so the shorter
-      // card height fits 2 lines of blurb cleanly. "premium" is
-      // retained so the sealed welcome-honesty G7 guardrail stays
-      // satisfied (users must know premium themes exist from this
-      // card, not just the Shop card).
-      blurb:
-        "Every NEX chat theme · free + premium · tap any to preview it live.",
-      chip: "Browse now",
-      href: "/nex-native/chat-themes-library",
+      pricingPackageId: "nex_chat_free",
+      title: "Free NEX Chat",
+      // Owner directive 2026-10-21 · badge pill + blurb retired on all
+      // three welcome cards. Title + chip carry the identity. The
+      // positive-copy sealed guards (welcome-honesty G7,
+      // welcome-trial-copy G-D4-2, chat-nex-welcome badge-group) were
+      // retired at the same time; anti-dishonesty negative guards
+      // remain in place.
+      blurb: "",
+      chip: "Start Free Chat",
+      // Owner directive 2026-10-21 (iteration 30 · rebuild) · the Free
+      // NEX Chat welcome card no longer routes through the sealed
+      // StandardExperience preview at /themes/nex-bubbles · prior
+      // iterations tried to hide its business widgets (shop sheet,
+      // plus menu, Sell/Earn categories) via CSS display:none and
+      // the owner chose to rebuild from scratch instead. The card
+      // now routes to a brand-new standalone minimal free-chat
+      // surface at /nex-native/free-chat that does NOT reuse any
+      // sealed chat chrome. /themes/nex-bubbles remains functional
+      // for direct links / theme previews.
+      href: "/nex-native/free-chat",
       publicStatus: "open",
       accentHex: NEX.cyan,
       visualSrc: "/nex-native/welcome-card-1-blue.png",
     },
     {
-      key: "shop",
-      title: "Chat Themes Shop",
-      // Owner-authorised 2026-10-18 (D4) · the old "7 days free when
-      // you join" implied the themes trial starts automatically at
-      // signup. In reality the trial is an explicit, one-shot,
-      // lifetime-per-account action gated by `startThemesTrial`
-      // (Bridge 56g, src/lib/nex-native/account-service.ts:353) ·
-      // during the 7-day window `effectiveTier` returns "bisnis" so
-      // the trial grants the Bisnis-tier premium-theme feature set.
-      // Signup, tapping this card, and selecting the Shop intent do
-      // NOT start, reserve, or consume trial time. New copy
-      // describes the trial truthfully: optional, 7 days, Bisnis
-      // tier, one per account.
-      blurb:
-        "Browse premium themes · optional 7-day free Bisnis trial · one per account.",
-      chip: "Preview inside",
+      // Internal token kept as "personalised" (the pre-rename name
+      // for the third card) so the sealed cookie contract stays
+      // unchanged. The user-facing title + badge make this the
+      // purchasable-premium-themes card. "premium" stays in the
+      // blurb so the sealed welcome-honesty G7 guard still passes.
+      key: "personalised",
+      pricingPackageId: "chat_themes_premium",
+      title: "Chat Themes",
+      // Owner directive 2026-10-21 · badge pill + blurb removed. The
+      // sealed trial feature (startThemesTrial · one-shot per account
+      // · grants Bisnis tier for 7 days) is UNCHANGED; the trial copy
+      // that previously lived here is retired along with G-D4-2.
+      // Anti-dishonesty guards (G-D4-1, G-D4-3, G-D4-4, G-D4-5) and
+      // the honesty negative-guard "no theme-shop / buy-premium"
+      // remain.
+      blurb: "",
+      chip: "Explore Chat Themes",
+      // Sealed destination · see card 1 comment for rationale on
+      // reverting the `?filter=premium` deep-link.
       href: "/nex-native/chat-themes-library",
       publicStatus: "open",
       accentHex: NEX.orange,
       visualSrc: "/nex-native/welcome-card-2-orange.png",
     },
     {
-      key: "personalised",
-      title: "Personalised Chat",
-      blurb:
-        "See themes come alive in your chat · pick one that fits.",
-      chip: "See it live",
-      href: "/nex-native/chat-themes-library",
+      // Internal token kept as "shop" · the Phase A1 vertical-
+      // picker chain gates on `intent === "shop"` at
+      // pick-theme/page.tsx:87 and pick-cover/page.tsx:84 ·
+      // renaming the token would break that chain. The user-facing
+      // title + BUSINESS · BISNIS badge name the destination
+      // journey honestly. The CTA says "Create Your Business"
+      // because the SEALED chain triggered by this cookie leads to
+      // business-kind → pick-theme → pick-cover → building →
+      // onboarding/createBusinessAction, which does create a
+      // business row. Destination remains /chat-themes-library per
+      // owner choice 2026-10-20 (minimum-diff, sealed path kept).
+      key: "shop",
+      pricingPackageId: "nex_business",
+      title: "Business Chat",
+      // Owner directive 2026-10-21 · badge pill + blurb removed; title
+      // + chip carry the identity. The sealed Phase A1 vertical-picker
+      // chain (business-kind → pick-theme → pick-cover → building →
+      // createBusinessAction) is UNCHANGED.
+      // Owner directive 2026-10-21 (iteration) · destination moved from
+      // /chat-themes-library → /create-account/business-welcome · a
+      // dedicated pre-signup intro that explains the setup steps and
+      // asks the user's business type + location before the themes
+      // library (so the themes we suggest are matched to the business).
+      // The safeRedirects list in _remember-intent-action.ts and the
+      // G2 allowlist in welcome-honesty.test.ts are extended to accept
+      // this URL. Phase A1 release hold is still enforced at the
+      // business-welcome tiles · only Accommodation is tappable.
+      // Owner directive 2026-10-21 (iteration 14) · title shortened to
+      // "Business Chat" · chip row now lists the three benefit tokens
+      // (Chat · Shop · Vault) instead of the previous "Create Your
+      // Business" CTA. The whole card remains a clickable form button
+      // routing to /create-account/business-welcome so the action is
+      // implicit. The price appears in the top-right chip driven by
+      // the single-source-of-truth pricing config (today reads "See
+      // all plans" until owner approves pricing).
+      blurb: "",
+      chip: "Chat · Shop · Vault",
+      href: "/nex-native/create-account/business-welcome",
       publicStatus: "open",
       accentHex: NEX.violet,
       visualSrc: "/nex-native/welcome-card-3-violet.png",
     },
   ];
 
-  const headerSubtitle = "Welcome · guests browse free";
+  const headerSubtitle = "Welcome";
 
   return (
     <>
@@ -404,18 +495,9 @@ export default async function WelcomePage() {
                 zIndex: 3,
               }}
             >
-              <span
-                style={{
-                  fontSize: 26,
-                  fontWeight: 900,
-                  letterSpacing: "-0.01em",
-                  color: NEX.textPrimary,
-                  lineHeight: 1,
-                  textShadow: "0 2px 10px rgba(0,0,0,0.6)",
-                }}
-              >
-                NEX
-              </span>
+              {/* Owner directive 2026-10-21 (iteration 19) · "NEX"
+                  wordmark text removed. The NexPingBadge (left of
+                  this row) is the sole NEX branding on the header. */}
               {/* Green ✓ NEX verified pill removed 2026-10-15 per
                   owner directive "remove the green nex badge from
                   header". */}
@@ -546,9 +628,9 @@ export default async function WelcomePage() {
                 textShadow: "0 1px 3px rgba(0,0,0,0.5)",
               }}
             >
-              The ultimate chat experience
+              World Is Waiting
               <br />
-              plus business features.
+              Connect Share Explore
             </div>
             {/* Owner directive 2026-10-18 · retired the "Pick a
                 theme that feels like you · say it with emoji ·
@@ -748,7 +830,30 @@ export default async function WelcomePage() {
    fit the welcome page content column on mobile. */
 
 function LandscapeCard({ card }: { card: ChatNexCard }): React.ReactElement {
-  const { title, blurb, chip, href, accentHex, key, visualSrc } = card;
+  const { title, blurb, chip, href, accentHex, key, visualSrc, pricingPackageId } = card;
+  // Owner directive 2026-10-21 · resolve the pricing-config chip
+  // string for this card. Today this returns:
+  //   · "FREE" for nex_chat_free
+  //   · "See all plans" for chat_themes_premium (price PROPOSAL)
+  //   · "See all plans" for nex_business (price + trial both PROPOSAL,
+  //     neither autoFiresOnSignup nor manualStartAvailable are wired)
+  // When the owner approves pricing AND wires the business trial, the
+  // chip flips automatically to "7 days free, then $9.99/month" (or
+  // equivalent approved value + currency).
+  const pricingPackage = pricingPackageId
+    ? getPricingPackage(pricingPackageId)
+    : null;
+  // Owner directive 2026-10-21 (iteration 15 follow-up) · suppress
+  // the generic "See all plans" fallback chip on paid cards until the
+  // underlying price is APPROVED. Cards where the pricing-config
+  // helper returns the fallback string get no chip at all · keeps the
+  // card visually clean when pricing isn't ready. Approved prices
+  // (including "FREE" for free packages) continue to render.
+  const rawPriceChip = pricingPackage
+    ? welcomeCardChipFor(pricingPackage)
+    : null;
+  const priceChip =
+    rawPriceChip && rawPriceChip !== "See all plans" ? rawPriceChip : null;
 
   // Owner-authorised intent persistence · 2026-10-15.
   // The whole card is a <form> that POSTs to rememberWelcomeIntentAction.
@@ -810,11 +915,20 @@ function LandscapeCard({ card }: { card: ChatNexCard }): React.ReactElement {
         }}
       />
 
-      {/* Right · title + blurb + chip overlay. Left padding (~30%)
-          keeps text clear of the phone mockup baked into the banner.
-          Right padding bumped to 28px so title + blurb + chip arrow
-          never bleed into the banner's neon rim glow (owner directive
-          2026-10-15 "text is over flowing on right side of cards"). */}
+      {/* Owner directive 2026-10-21 · the 3 badge pills (FREE ·
+          PURCHASE THEMES · BUSINESS · BISNIS) were retired. The title
+          + chip carry the identity. The sealed badge-group test at
+          chat-nex-welcome.test.ts was retired at the same time. */}
+
+      {/* Right · title + chip overlay. Left padding (~30%) keeps text
+          clear of the phone mockup baked into the banner. Right
+          padding kept at 36px so chip arrow never bleeds into the
+          banner's neon rim glow (owner directive 2026-10-15 "text is
+          over flowing on right side of cards").
+          Owner directive 2026-10-21 · with the blurb retired, the
+          content is now TWO elements (title + chip). Vertical
+          centering (justifyContent "center") avoids dead space between
+          them. */}
       <div
         style={{
           position: "relative",
@@ -823,79 +937,85 @@ function LandscapeCard({ card }: { card: ChatNexCard }): React.ReactElement {
           minHeight: "inherit",
           display: "flex",
           flexDirection: "column",
-          gap: 4,
-          padding: "11px 36px 8px 30%",
-          justifyContent: "flex-start",
+          gap: 6,
+          padding: "11px 36px 11px 30%",
+          justifyContent: "center",
         }}
       >
+        {/* Owner directive 2026-10-21 (iteration 16) · the small
+            price chip (including "FREE") was removed on all cards.
+            Title + chip row carry the identity, enlarged for
+            better readability. The pricing config is still resolved
+            above so a future iteration can bring the chip back when
+            prices are approved. */}
         <h2
           style={{
             margin: 0,
-            fontSize: 18,
+            fontSize: 22,
             fontWeight: 800,
-            lineHeight: 1.15,
+            lineHeight: 1.1,
             color: NEX.textPrimary,
             fontFamily: SANS,
-            letterSpacing: "-0.005em",
+            letterSpacing: "-0.01em",
             textShadow: "0 1px 3px rgba(0,0,0,0.6)",
           }}
         >
           {title}
         </h2>
-        <p
-          style={{
-            margin: 0,
-            fontSize: 11.5,
-            lineHeight: 1.35,
-            color: NEX.textPrimary,
-            textShadow: "0 1px 2px rgba(0,0,0,0.55)",
-          }}
-        >
-          {blurb}
-        </p>
+        {/* Owner directive 2026-10-21 · blurb paragraph retired on
+            all three cards. Render only when a card still carries a
+            non-empty blurb string (defensive · future cards may
+            opt in). */}
+        {blurb && (
+          <p
+            style={{
+              margin: 0,
+              fontSize: 11.5,
+              lineHeight: 1.35,
+              color: NEX.textPrimary,
+              textShadow: "0 1px 2px rgba(0,0,0,0.55)",
+            }}
+          >
+            {blurb}
+          </p>
+        )}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 6,
-            marginTop: 4,
-            // Nudge the ● dot + chip text 35px to the right (owner
-            // directive 2026-10-15 · iterated 10 → 35). The arrow
-            // keeps its right-edge position because it uses
-            // marginLeft: auto.
-            paddingLeft: 35,
-            fontSize: 10.5,
+            gap: 8,
+            marginTop: 6,
+            // Owner directive 2026-10-21 (iteration 16) · chip row
+            // enlarged to match the bigger title. ● dot grows with
+            // the text. Arrow stays right-anchored via marginLeft: auto.
+            fontSize: 13,
             color: NEX.textMuted,
           }}
         >
-          <span aria-hidden style={{ color: accentHex }}>
+          <span aria-hidden style={{ color: accentHex, fontSize: 10 }}>
             ●
           </span>
           <span
             style={{
-              letterSpacing: "0.14em",
+              letterSpacing: "0.12em",
               textTransform: "uppercase",
-              fontWeight: 700,
+              fontWeight: 800,
               color: accentHex,
+              textShadow: "0 1px 2px rgba(0,0,0,0.55)",
+              // Owner directive 2026-10-21 (iteration 17) · keep the
+              // chip label on ONE row · never wrap the "Chat · Shop ·
+              // Vault" string onto two lines.
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              minWidth: 0,
             }}
           >
             {chip}
           </span>
-          <span
-            aria-hidden
-            data-nex-welcome-card-arrow
-            style={{
-              marginLeft: "auto",
-              marginRight: 8,
-              color: "#FFFFFF",
-              fontWeight: 900,
-              fontSize: 20,
-              lineHeight: 1,
-              textShadow: `0 0 8px ${accentHex}, 0 1px 3px rgba(0,0,0,0.7)`,
-            }}
-          >
-            →
-          </span>
+          {/* Owner directive 2026-10-21 (iteration 18) · arrow →
+              removed from all cards. Whole card remains a clickable
+              form submission so the action affordance is implicit. */}
         </div>
       </div>
       </button>

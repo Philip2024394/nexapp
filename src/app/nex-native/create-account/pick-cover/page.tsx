@@ -39,9 +39,11 @@ import { MiniPhoneFrame } from "../../cover-themes-library/_mini-phone-frame";
 import {
   WELCOME_INTENT_COOKIE,
   isWelcomeIntent,
+  readVerticalIntent,
 } from "../../welcome/_welcome-intent";
 import { readPendingCoverLayoutId } from "@/lib/nex-native/pending-cover-cookie";
 import { pickCoverAction } from "./_actions";
+import { getPreset } from "@/lib/nex-native/vertical-presets";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -87,6 +89,22 @@ export default async function PickCoverPage({
   // user's current selection · pre-selection prevents a lost pick
   // from forcing the user to re-choose if they came back here.
   const existingPick = await readPendingCoverLayoutId();
+
+  // Phase A1 (owner-authorised 2026-10-20) · if the user declared a
+  // vertical on /business-kind, surface the preset's recommended
+  // cover layout as a VISUAL highlight when they have no pending
+  // pick yet. The user still has to tap to persist. The authoritative
+  // write to nex_business.cover_layout_id happens in create-
+  // BusinessAction which reads the SAME vertical cookie · see
+  // acceptance criterion 6 (cover persistence verification).
+  // The `nex_welcome_vertical` cookie is intentionally NOT cleared
+  // here · it must survive through business creation.
+  const vertical = await readVerticalIntent();
+  const verticalPreset = vertical
+    ? getPreset(vertical.category, vertical.subtype)
+    : null;
+  const presetLayout = verticalPreset?.suggestedCoverLayout ?? null;
+  const highlightLayout = existingPick ?? presetLayout;
 
   const sp = (await searchParams) ?? {};
   const errorCode = sp.e ?? null;
@@ -183,7 +201,9 @@ export default async function PickCoverPage({
             {COVER_LAYOUT_IDS.map((id, i) => {
               const num = String(i + 1).padStart(2, "0");
               const label = COVER_LAYOUT_LABELS[id];
-              const isCurrent = existingPick === id;
+              const isCurrent = highlightLayout === id;
+              const isPresetRecommendation =
+                !existingPick && presetLayout === id;
               const previewHref = `/nex-native/cover/preview/${id}?embed=1`;
               return (
                 <form
@@ -192,6 +212,9 @@ export default async function PickCoverPage({
                   data-nex-pick-cover-card
                   data-nex-pick-cover-layout={id}
                   data-nex-pick-cover-current={isCurrent ? "1" : "0"}
+                  data-nex-pick-cover-preset={
+                    isPresetRecommendation ? "1" : "0"
+                  }
                   style={{ margin: 0, padding: 0 }}
                 >
                   <input type="hidden" name="layout_id" value={id} />

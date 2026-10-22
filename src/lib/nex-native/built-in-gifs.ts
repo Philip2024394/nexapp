@@ -275,6 +275,67 @@ export const BUILT_IN_GIFS: readonly BuiltInGif[] = [
     "Ice cream · cat",
     ["cat", "ice cream", "cute", "food", "pet", "kitten"],
   ),
+  // ─── Added 2026-10-20 · owner-authorised ice-cream + flirty-reaction
+  //     batch. Slugs + labels confirmed; two oversized files
+  //     (ice-cream-lick-1 at 40 MB, ice-cream-lick-2 at 14 MB) shipped
+  //     as-is per owner directive. Dimensions probed from each file's
+  //     GIF header (bytes 6-9).
+  entry(
+    "ice-cream-lick-1",
+    266,
+    480,
+    "Ice cream · lick (1)",
+    ["ice cream", "lick", "dessert", "cone", "sweet", "treat"],
+  ),
+  entry(
+    "ice-cream-cone-model",
+    480,
+    270,
+    "Ice cream · cone · model",
+    ["ice cream", "cone", "lick", "dessert", "flirty", "summer"],
+  ),
+  entry(
+    "ice-cream-lick-2",
+    480,
+    264,
+    "Ice cream · lick (2)",
+    ["ice cream", "lick", "dessert", "sweet", "cone"],
+  ),
+  entry(
+    "girl-lollipop",
+    300,
+    352,
+    "Girl · lollipop",
+    ["lollipop", "candy", "flirty", "sweet", "cheeky", "lick"],
+  ),
+  entry(
+    "tongue-out-jaecabrera",
+    270,
+    480,
+    "Tongue out · jaecabrera",
+    ["tongue out", "wink", "playful", "cheeky", "flirty"],
+  ),
+  entry(
+    "tongue-cheek",
+    400,
+    400,
+    "Tongue · cheek",
+    ["tongue", "cheek", "sultry", "cheeky", "playful", "flirty"],
+  ),
+  entry(
+    "funny-face-tongue-out",
+    480,
+    480,
+    "Funny face · tongue out",
+    ["tongue out", "funny", "silly", "cheeky", "playful", "snow"],
+  ),
+  entry(
+    "shiba-laptop-typing",
+    500,
+    362,
+    "Shiba · laptop · typing",
+    ["shiba", "dog", "laptop", "typing", "work", "meme", "reaction"],
+  ),
 ];
 
 /** Case-insensitive substring match against labels + title. Returns a

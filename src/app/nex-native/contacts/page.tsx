@@ -95,6 +95,51 @@ export default async function ContactsPage({ searchParams }: PageProps) {
     redirect("/nex-native/sign-in");
   }
 
+  // Track B · owner-authorised 2026-10-20 · one-shot shop auto-open.
+  // Read the short-lived `nex_shop_auto_open_eligible` cookie that
+  // `saveBusinessActivationAction` writes on successful activation
+  // (300s TTL). If present AND valid, redirect ONCE to the owner's
+  // newly-activated shop at /nex-native/<slug>. The clear MUST run
+  // BEFORE the redirect call because `redirect()` throws · the two
+  // operations live in independent try/catch blocks so a clear
+  // failure cannot block the redirect intent.
+  //
+  // This block does NOT touch nex_welcome_intent / nex_welcome_vertical
+  // or their sealed Phase A1 clearing discipline. Does NOT auto-open
+  // the FocusedShopSheet (that is a customer-chat primitive). The
+  // owner lands on their own public shop page where the owner-only
+  // Add Listing CTA (Track A · same cycle) is already visible.
+  {
+    let autoOpenSlug: string | null = null;
+    try {
+      const { readShopAutoOpenEligible } = await import(
+        "@/app/nex-native/_shop-auto-open-cookie"
+      );
+      autoOpenSlug = await readShopAutoOpenEligible();
+    } catch (readErr) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "contacts · nex_shop_auto_open_eligible read soft-fail:",
+        readErr,
+      );
+    }
+    if (autoOpenSlug !== null) {
+      try {
+        const { clearShopAutoOpenEligible } = await import(
+          "@/app/nex-native/_shop-auto-open-cookie"
+        );
+        await clearShopAutoOpenEligible();
+      } catch (clearErr) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          "contacts · nex_shop_auto_open_eligible clear soft-fail:",
+          clearErr,
+        );
+      }
+      redirect(`/nex-native/${autoOpenSlug}`);
+    }
+  }
+
   const sp = await searchParams;
   const requestedTab = (sp.tab ?? "all") as string;
   const activeFilter: ContactsFilter = isValidFilter(requestedTab) ? requestedTab : "all";

@@ -71,6 +71,8 @@ export const ID_PACK: Record<I18nKey, string> = {
   "settings.hero.ariaLabel":                        "Pintasan keamanan & komunitas",
   "settings.hero.emergencyHelp":                    "Bantuan Darurat",
   "settings.hero.familySafe":                       "Keluarga Aman",
+  "settings.hero.familySafePilot.label":            "PILOT",
+  "settings.hero.familySafePilot.aria":             "pilot · alur tautan orangtua-anak belum sepenuhnya aktif",
   "settings.hero.community":                        "Komunitas",
   "settings.chip.new.label":                        "Baru",
   "settings.chip.new.aria":                         "direkomendasikan",

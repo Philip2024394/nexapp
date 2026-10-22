@@ -9,12 +9,20 @@ interface DynamicAmbientBackgroundProps {
 }
 
 export function DynamicAmbientBackground({ accentColor }: DynamicAmbientBackgroundProps) {
+  // Owner directive 2026-10-21 · position changed from fixed→absolute
+  // so this background anchors to the carousel's position:relative
+  // parent instead of the viewport. The sealed nex-native.css phone
+  // frame (420 × 909 on viewport ≥ 500px, see nex-native.css:183)
+  // uses `position: fixed` escape clauses; a fixed-position child
+  // visually covers the whole desktop viewport and makes the frame
+  // bezel disappear. Keeping the ambient effect behind the carousel
+  // cards within the frame on desktop.
   return (
     <div
       style={{
-        position: "fixed",
+        position: "absolute",
         inset: 0,
-        zIndex: -1,
+        zIndex: 0,
         overflow: "hidden",
         pointerEvents: "none",
         background: "#020914",

@@ -390,8 +390,12 @@ export function StandardBubble({
                          28→38 · count badge 12→14. Gives the chat
                          reactions a comfortable glance size on the
                          420px phone column without crowding the
-                         timestamp above. */
-                      fontSize: 30,
+                         timestamp above.
+                         Owner directive 2026-10-21 (iteration 24) ·
+                         reduce emoji-in-bubble sizes by 30% · unicode
+                         30→21 · image 38→27 · count badge unchanged
+                         (text, not emoji). */
+                      fontSize: 21,
                       lineHeight: 1,
                       color: t.typography.color,
                       animation: "nex-se-reaction-pop 3000ms ease-out",
@@ -408,15 +412,15 @@ export function StandardBubble({
                         alt={image.label || slug || key}
                         draggable={false}
                         style={{
-                          width: 38,
-                          height: 38,
+                          width: 27,
+                          height: 27,
                           objectFit: "contain",
                           display: "block",
                           pointerEvents: "none",
                         }}
                       />
                     ) : (
-                      <span style={{ fontSize: 30, lineHeight: 1 }}>
+                      <span style={{ fontSize: 21, lineHeight: 1 }}>
                         {key}
                       </span>
                     )}

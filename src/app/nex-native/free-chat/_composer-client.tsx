@@ -26,6 +26,7 @@
 
 import * as React from "react";
 import { JokerKeypad } from "@/app/nex-native/chat-standard/_joker-keypad";
+import { resolveFreeChatAccentHex } from "./_types";
 
 const NEX = {
   panel: "rgba(7, 21, 37, 0.9)",
@@ -39,13 +40,40 @@ const NEX = {
 
 export function FreeChatComposerClient({
   isGuest,
+  initialThemeId = null,
 }: {
   readonly isGuest: boolean;
+  /** Owner directive 2026-10-22 · the sealed JokerKeypad recolours
+   *  to the active free-chat theme's accent · initial value from
+   *  the server-side cookie read in page.tsx · live updates via
+   *  the `nex-free-chat-theme` custom event dispatched by the
+   *  sibling canvas client when the user picks a new tile. */
+  readonly initialThemeId?: string | null;
 }): React.JSX.Element {
   const [value, setValue] = React.useState("");
   const [toast, setToast] = React.useState<string | null>(null);
   const [keypadOpen, setKeypadOpen] = React.useState(false);
+  const [themeId, setThemeId] =
+    React.useState<string | null>(initialThemeId);
   const canSend = value.trim().length > 0;
+
+  // Listen for theme-change broadcasts from the canvas client so the
+  // keypad accent follows the user's tile tap in real time.
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ themeId?: string | null }>)
+        .detail;
+      if (detail && typeof detail.themeId !== "undefined") {
+        setThemeId(detail.themeId ?? null);
+      }
+    };
+    window.addEventListener("nex-free-chat-theme", handler);
+    return () =>
+      window.removeEventListener("nex-free-chat-theme", handler);
+  }, []);
+
+  const accentHex = resolveFreeChatAccentHex(themeId);
 
   const handleSend = React.useCallback(() => {
     if (!canSend) return;
@@ -87,7 +115,7 @@ export function FreeChatComposerClient({
           height: 32,
           fontSize: 18,
           flexShrink: 0,
-          color: NEX.cyan,
+          color: accentHex,
         }}
       >
         😊
@@ -183,16 +211,18 @@ export function FreeChatComposerClient({
 
       {/* Owner directive 2026-10-21 (iteration 49) · sealed JokerKeypad
           mounted here · same primitive Crispy Chicken + Joker + every
-          other NEX theme uses · accent recolours to NEX cyan on this
-          free-chat surface. Composer owns `value` + handlers · keypad
-          is a presentation surface. */}
+          other NEX theme uses · owner directive 2026-10-22 · accent
+          now follows the ACTIVE free-chat theme (initial from the
+          server-side cookie read in page.tsx · live updates via the
+          `nex-free-chat-theme` custom event). Composer owns `value`
+          + handlers · keypad is a presentation surface. */}
       <JokerKeypad
         open={keypadOpen}
         value={value}
         onChange={setValue}
         onSend={handleSend}
         onClose={() => setKeypadOpen(false)}
-        accentColor={NEX.cyan}
+        accentColor={accentHex}
       />
 
       {/* Owner directive 2026-10-21 (iteration 50) · the sealed
@@ -229,10 +259,33 @@ export function FreeChatComposerClient({
            the FAB from an ancestor so this works regardless of where
            the keypad portals to. Also hide the Call Center panel and
            backdrop if the user had them open when the keypad opens,
-           so there is never a stacked-dialog state. */
+           so there is never a stacked-dialog state.
+
+           Iteration 77 - same hide applied when the Chat Setup
+           container is open (stage === "setup"). The setup form owns
+           the user's attention until they Save; the FAB has no useful
+           role during that moment. Once Save fires, the container
+           unmounts and the FAB reappears automatically. */
+        /* Iteration 89 - extended the hide list to every post-setup
+           stage so the FAB stays out of the way across the full
+           first-visit flow:
+             · Congrats overlay (full-canvas confetti burst)
+             · Invite Friends container (3 share buttons + Done)
+           Once the Done button fires and advances to the done stage,
+           the invite container unmounts, :has() no longer matches,
+           and the FAB reappears automatically. */
         body:has([data-nex-joker-keypad]) [data-nex-free-chat-call-center-trigger],
         body:has([data-nex-joker-keypad]) [data-nex-free-chat-call-center-panel],
-        body:has([data-nex-joker-keypad]) [data-nex-free-chat-call-center-backdrop] {
+        body:has([data-nex-joker-keypad]) [data-nex-free-chat-call-center-backdrop],
+        body:has([data-nex-free-chat-chat-setup]) [data-nex-free-chat-call-center-trigger],
+        body:has([data-nex-free-chat-chat-setup]) [data-nex-free-chat-call-center-panel],
+        body:has([data-nex-free-chat-chat-setup]) [data-nex-free-chat-call-center-backdrop],
+        body:has([data-nex-free-chat-congrats]) [data-nex-free-chat-call-center-trigger],
+        body:has([data-nex-free-chat-congrats]) [data-nex-free-chat-call-center-panel],
+        body:has([data-nex-free-chat-congrats]) [data-nex-free-chat-call-center-backdrop],
+        body:has([data-nex-free-chat-invite-friends]) [data-nex-free-chat-call-center-trigger],
+        body:has([data-nex-free-chat-invite-friends]) [data-nex-free-chat-call-center-panel],
+        body:has([data-nex-free-chat-invite-friends]) [data-nex-free-chat-call-center-backdrop] {
           display: none !important;
         }
       `}</style>

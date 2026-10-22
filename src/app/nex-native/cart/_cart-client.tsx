@@ -270,6 +270,37 @@ export function CartClient({
     });
   }
 
+  // Track C · owner-authorised 2026-10-20 · per-shop idempotency key.
+  // One UUID per shop in the current cart snapshot. The map rebuilds
+  // whenever `byShop` identity changes (which happens on any item
+  // add/remove/qty-change via its own useMemo chain), so:
+  //   · Double-tap on a stable cart → same UUID → server-side
+  //     idempotency catches the second insert as a 23505 unique
+  //     violation and returns the already-sent message instead of
+  //     creating a duplicate.
+  //   · Cart modification → new UUID → treated as a new intentional
+  //     submission (identical items can be re-ordered intentionally
+  //     per the owner's sealed clarification on 2026-10-20).
+  //   · Cart cleared and re-populated → `byShop` becomes a new object
+  //     → fresh UUIDs for the next submission.
+  //
+  // `crypto.randomUUID()` is browser-only (this is a `"use client"`
+  // module). If `crypto` is somehow absent (very old browser) the
+  // map entry is undefined and the hidden input renders empty · the
+  // server-side action then skips the idempotency path and uses
+  // the pre-existing non-idempotent insert (previous behaviour).
+  const sendIntentByShop = useMemo(() => {
+    const map = new Map<string, string>();
+    const hasCrypto =
+      typeof crypto !== "undefined" &&
+      typeof crypto.randomUUID === "function";
+    if (!hasCrypto) return map;
+    for (const [shopId] of byShop) {
+      map.set(shopId, crypto.randomUUID());
+    }
+    return map;
+  }, [byShop]);
+
   if (!hydrated) return <CartSkeleton />;
   if (items.length === 0) return <CartEmpty />;
 
@@ -593,6 +624,19 @@ export function CartClient({
                   type="hidden"
                   name="cart_payload"
                   value={JSON.stringify(payload)}
+                />
+                {/* Track C · owner-authorised 2026-10-20 · per-cart
+                    idempotency key. The server extracts this on
+                    sendCartOrderAction and threads it through
+                    sendPeerMessage as `send_intent_id`, protected
+                    by the UNIQUE (sender_account_id, send_intent_id)
+                    partial index on nex_peer_message (Migration 102
+                    Part C · already applied). Double-tap, retries,
+                    and concurrent requests converge on ONE message. */}
+                <input
+                  type="hidden"
+                  name="send_intent_id"
+                  value={sendIntentByShop.get(shopId) ?? ""}
                 />
                 <button
                   type="submit"

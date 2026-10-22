@@ -12,6 +12,7 @@ import * as React from "react";
 import { redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import { ActiveIncidentView } from "@/components/nex-native/emergency/ActiveIncidentView";
+import { isEmergencyLiveMode } from "@/lib/nex-native/emergency/feature-flag";
 import {
   loadActiveIncidentServerAction,
   cancelServerAction,
@@ -24,8 +25,14 @@ export default async function ActiveIncidentPage(): Promise<React.JSX.Element> {
   const session = await resolveNexAppSessionFromContext();
   if (!session) redirect("/nex-native/sign-in");
 
+  // Owner directive 2026-10-20 · see /emergency-help/page.tsx for the
+  // shared doctrine · the server resolves live-mode and passes
+  // `simulated` so UI state tracks the server's actual mode.
+  const simulated = !isEmergencyLiveMode();
+
   return (
     <ActiveIncidentView
+      simulated={simulated}
       services={{
         load: loadActiveIncidentServerAction,
         cancel: cancelServerAction,

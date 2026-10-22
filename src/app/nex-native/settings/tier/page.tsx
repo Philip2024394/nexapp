@@ -483,16 +483,16 @@ export default async function TierPage() {
           }}
         >
           <TrustBlock
-            title="Cancel any time"
-            body="Every subscription can be paused or cancelled from this page. You keep access to what you paid for through the end of the current period."
+            title="How to cancel"
+            body="To cancel a Bisnis subscription, message NEX via the NEX1 support chat. Cancellation is processed manually by NEX while the self-service flow is being built. Gratis is free — nothing to cancel."
           />
           <TrustBlock
             title="No hidden fees"
             body="What you see is what you pay. NEX never charges card surcharges, processing fees, or auto-upgrade you to a higher tier."
           />
           <TrustBlock
-            title="Refund within 7 days"
-            body="Not happy in the first 7 days? Message NEX1 support for a full refund. No questions asked, no waiting."
+            title="How refunds work"
+            body="Bisnis payments cover ongoing access to the NEX service. NEX does not offer a voluntary money-back period. If NEX has not delivered the service as agreed, your consumer rights under applicable law still apply — message NEX1 support to raise the issue."
           />
         </section>
       </main>

@@ -426,6 +426,40 @@ export async function sendPeerMessage(
     })
     .select("*")
     .single();
+  // Track C · owner-authorised 2026-10-20 · server-side idempotency.
+  // If this insert loses the partial-unique race against an earlier
+  // request carrying the same (sender_account_id, send_intent_id),
+  // Postgres returns 23505 (unique_violation). Treat that as an
+  // idempotent cache hit · SELECT the existing row + return it.
+  // This matches the Bridge 99 doctrine on send_intent_id and makes
+  // double-tapped cart sends (and any other caller supplying
+  // send_intent_id) safe without a schema change.
+  if (error && input.send_intent_id) {
+    const code = (error as { code?: string }).code ?? "";
+    const msg = (error.message ?? "").toLowerCase();
+    const isUniqueViolation =
+      code === "23505" ||
+      msg.includes("duplicate key") ||
+      msg.includes("already exists");
+    if (isUniqueViolation) {
+      const existing = await nexSupabaseAdmin
+        .from("nex_peer_message")
+        .select("*")
+        .eq("sender_account_id", input.sender_account_id)
+        .eq("send_intent_id", input.send_intent_id)
+        .maybeSingle();
+      if (existing.data) {
+        const row = existing.data as NexPeerMessageRow;
+        // Still bump last_message_at for the conversation · best-effort.
+        await touchPeerConversation(row.conversation_id, row.sent_at).catch(
+          () => undefined,
+        );
+        return row;
+      }
+      // If the SELECT lost a race too (race-of-races · extremely rare)
+      // fall through to the generic error below.
+    }
+  }
   if (error || !data) {
     throw new Error(
       `peer-message-service.sendPeerMessage: ${error?.message ?? "no row returned"}`,

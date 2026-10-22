@@ -173,6 +173,13 @@ const R: Record<BusinessSubtype, readonly CapabilityKey[]> = {
     "room_booking", "availability_calendar", "deposit_booking_fee",
     "enquiry_contact",
   ],
+  // Phase A1 addition · owner-authorised 2026-10-20 · kost (Indonesian
+  // boarding house). Weekly/monthly nature favours enquiry + simple
+  // availability over paid booking deposits.
+  kost: [
+    "room_booking", "availability_calendar", "physical_venue",
+    "enquiry_contact",
+  ],
   // Property
   for_sale: [
     "enquiry_only", "enquiry_contact", "site_visit", "virtual_consultation",

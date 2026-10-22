@@ -523,7 +523,7 @@ function AccountHelp() {
         />
         <HelpCard
           title="How do I upgrade to Bisnis?"
-          body="Full details at /nex-native/packages. Bisnis is Rp 99k/month or Rp 990k/year · unlocks international export, verified badge, featured chip, unlimited caps. Payment via bank transfer or e-wallet directly to the NEX operating account (not through a NEX rail)."
+          body="Full details at /nex-native/packages. Bisnis is Rp 99k/month or Rp 990k/year · unlocks international export, featured chip, and unlimited caps. Payment via bank transfer or e-wallet directly to the NEX operating account (not through a NEX rail)."
         />
         <HelpCard
           title="I want to delete my account"

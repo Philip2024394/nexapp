@@ -342,13 +342,13 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
       redirect(dest);
     }
   }
-  // Task #32 · 2026-10-11 · a fresh signup with no pending wall lands
-  // on the post-signup theme choice surface so the first visible
-  // decision is "make NEX yours". The pick-theme page redirects to
-  // the sealed add-to-home-screen welcome after a selection OR skip,
-  // keeping Bridge 42's end-of-signup flow intact.
-  revalidatePath("/nex-native/create-account/pick-theme");
-  redirect("/nex-native/create-account/pick-theme");
+  // Owner directive 2026-10-21 (Stage A · release-hold revoked) ·
+  // fresh signup now lands directly on /nex-native/free-chat with the
+  // first-visit theme picker forced open via ?show-themes=1. The
+  // sealed /create-account/pick-theme chain is bypassed; the free-chat
+  // picker handles theme selection + account setup + invite inline.
+  revalidatePath("/nex-native/free-chat");
+  redirect("/nex-native/free-chat?show-themes=1");
 }
 
 function redirectToOnboardingWithError(code: string, message: string): never {
@@ -453,13 +453,11 @@ export async function signInAction(formData: FormData): Promise<ActionResult> {
       redirect(nextRaw);
     }
   }
-  // Owner-authorised 2026-10-17 · post-sign-in landing is /welcome.
-  // The welcome page renders a signed-in branch (three-dots drawer in
-  // the header + "Continue to NEX" primary CTA to /home). The deep-
-  // link `next` branch above still takes precedence · only the
-  // default landing moves from /home to /welcome.
-  revalidatePath("/nex-native/welcome");
-  redirect("/nex-native/welcome");
+  // Owner directive 2026-10-21 (Stage A · release-hold revoked) ·
+  // post-sign-in default landing moves from /welcome to the free-chat
+  // picker. Deep-link `next` branch above still takes precedence.
+  revalidatePath("/nex-native/free-chat");
+  redirect("/nex-native/free-chat");
 }
 
 // `signInAsDevAdminAction` removed · owner directive 2026-10-16. The
@@ -2022,6 +2020,27 @@ export async function sendCartOrderAction(
   const session = await resolveNexAppSessionFromContext();
   if (!session) redirect("/nex-native/sign-in?next=/nex-native/cart");
 
+  // Track C · owner-authorised 2026-10-20 · server-side cart-order
+  // idempotency. The client cart generates one UUID per cart render
+  // and submits it as `send_intent_id`. The sendPeerMessage service
+  // layer uses it as the Bridge-99 idempotency key, enforced by the
+  // partial-unique index UNIQUE (sender_account_id, send_intent_id)
+  // WHERE send_intent_id IS NOT NULL on nex_peer_message (Migration
+  // 102 Part C · already applied). Double-tap, back-button re-send,
+  // and concurrent-request retries all converge on the SAME inserted
+  // message instead of creating duplicates.
+  //
+  // Shape validation: a stable per-submission UUID is accepted; any
+  // malformed value is dropped (undefined) so the current behaviour
+  // (no idempotency) remains the fallback instead of throwing.
+  const sendIntentRaw = String(formData.get("send_intent_id") ?? "").trim();
+  const UUID_SHAPE =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const sendIntentId =
+    sendIntentRaw.length > 0 && UUID_SHAPE.test(sendIntentRaw)
+      ? sendIntentRaw
+      : undefined;
+
   const payloadRaw = String(formData.get("cart_payload") ?? "").trim();
   if (!payloadRaw) redirect("/nex-native/cart");
 
@@ -2530,6 +2549,11 @@ export async function sendCartOrderAction(
     attachment_url: firstImage,
     attachment_type: firstImage ? "cart_order" : null,
     attachment_meta: firstImage ? { cart: snapshot } : { cart: snapshot },
+    // Track C · owner-authorised 2026-10-20 · idempotency key.
+    // Undefined when the client did not supply a valid UUID · the
+    // service layer treats absent send_intent_id as "no idempotency
+    // requested" and uses the original insert path.
+    send_intent_id: sendIntentId,
   });
   // Note · attachment_url + attachment_type must be set together per
   // the DB CHECK · when no image, we fall back to text-only body.
@@ -3714,6 +3738,12 @@ export async function createBusinessAction(formData: FormData): Promise<never> {
     );
   }
 
+  // I1 fix (owner-authorised 2026-10-20) · hoisted outside the outer
+  // try/catch so it survives the business-create block and can be
+  // read on the success path (after the outer catch would otherwise
+  // have redirected out). Flipped to true only once the Supabase
+  // profile update returns a null error.
+  let verticalSubtypePersisted = false;
   let business;
   try {
     business = await businessService.createBusiness({
@@ -3784,14 +3814,63 @@ export async function createBusinessAction(formData: FormData): Promise<never> {
       }
     }
 
-    // Layout-A · sealed 2026-09-30 · auto-suggest cover_layout_id.
-    // Priority · profession-derived suggestion (when the seller picked
-    // one) beats category-derived (Layout-A). Seller can override on
-    // /manage/shop at any time. This is the INITIAL creation moment ·
-    // no existing template to preserve · the invariant "profession
-    // change does not alter template" applies to later CHANGES only.
+    // Phase A1 (owner-authorised 2026-10-20) · if the user came from
+    // /create-account/business-kind with a declared vertical, read it
+    // here to drive BOTH the cover layout AND the profile subtype on
+    // the newly-created business. Soft-fail on everything so a
+    // malformed cookie never blocks the business create. The cookie
+    // is NOT cleared here · clearing is the responsibility of
+    // saveBusinessActivationAction after it successfully persists the
+    // subtype a second time via the activation wizard · see the
+    // Phase A1 cookie-ownership condition.
+    // I1 fix (owner-authorised 2026-10-20) · `verticalSubtypePersisted`
+    // (hoisted above the outer try/catch) is set to true ONLY after
+    // the Supabase profile update returns a null error. Checked
+    // AFTER the outer try/catch exits · we clear vertical cookies
+    // only on a confirmed write.
+    let verticalPresetLayoutId: string | null = null;
+    let verticalPresetSubtype: string | null = null;
+    let verticalPresetCategory: string | null = null;
     try {
-      let suggested: string | null = professionSuggestedLayoutId;
+      const { readVerticalIntent } = await import(
+        "@/app/nex-native/welcome/_welcome-intent"
+      );
+      const { getPreset } = await import(
+        "@/lib/nex-native/vertical-presets"
+      );
+      const vertical = await readVerticalIntent();
+      if (vertical) {
+        const preset = getPreset(vertical.category, vertical.subtype);
+        if (preset) {
+          verticalPresetLayoutId = preset.suggestedCoverLayout;
+          verticalPresetSubtype = preset.subtype;
+          verticalPresetCategory = preset.category;
+        }
+      }
+    } catch (vErr) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "createBusinessAction · vertical preset soft-fail:",
+        vErr,
+      );
+    }
+
+    // Layout-A · sealed 2026-09-30 · auto-suggest cover_layout_id.
+    // Priority (highest to lowest):
+    //   1. Phase A1 vertical preset (owner-authorised 2026-10-20) ·
+    //      the user explicitly declared Villa/Homestay/Kost · we honour
+    //      that over any inferred category/profession suggestion.
+    //      Satisfies the owner's acceptance criterion 6 for the
+    //      cover persistence verification.
+    //   2. Profession-derived suggestion (when the seller picked one).
+    //   3. Category-derived (Layout-A auto-suggest).
+    // Seller can override on /manage/shop at any time. This is the
+    // INITIAL creation moment · no existing template to preserve · the
+    // invariant "profession change does not alter template" applies
+    // to later CHANGES only.
+    try {
+      let suggested: string | null = verticalPresetLayoutId;
+      if (!suggested) suggested = professionSuggestedLayoutId;
       if (!suggested) {
         const { suggestCoverLayoutId } = await import(
           "@/lib/nex-native/cover-layout-suggest"
@@ -3809,6 +3888,80 @@ export async function createBusinessAction(formData: FormData): Promise<never> {
         layoutErr,
       );
     }
+
+    // Phase A1 · persist profile.primary = { category, subtype } from
+    // the vertical preset into nex_business.profile JSONB. The column
+    // already exists (migration 126) so no schema change is needed.
+    // Soft-fail · if the JSONB write errors the business still exists
+    // and the user can set the subtype from /business-setup.
+    //
+    // I1 fix (owner-authorised 2026-10-20) · `verticalSubtypePersisted`
+    // is set to true ONLY after the Supabase update returns a null
+    // error. The flag is consulted AFTER the outer try/catch below
+    // · we only clear the vertical cookies on a confirmed write.
+    // A failed write leaves `verticalSubtypePersisted = false` and
+    // the cookie survives (24h max-age) so the user's intent is
+    // preserved for a retry.
+    if (verticalPresetSubtype && verticalPresetCategory) {
+      try {
+        const { nexSupabaseAdmin } = await import(
+          "@/lib/nex-native/supabase-admin"
+        );
+        const { data: current } = await nexSupabaseAdmin
+          .from("nex_business")
+          .select("profile")
+          .eq("id", business.id)
+          .maybeSingle();
+        const existing =
+          current &&
+          typeof current.profile === "object" &&
+          current.profile !== null
+            ? (current.profile as Record<string, unknown>)
+            : {};
+        const nextProfile = {
+          ...existing,
+          primary: {
+            category: verticalPresetCategory,
+            subtype: verticalPresetSubtype,
+          },
+          secondary: Array.isArray(
+            (existing as Record<string, unknown>).secondary,
+          )
+            ? (existing as Record<string, unknown>).secondary
+            : [],
+        };
+        // I1 Check B (owner-authorised 2026-10-20) · Supabase returns
+        // no error for an `.update().eq()` call that matches zero
+        // rows · a null error alone does NOT prove the write landed.
+        // Chaining `.select("id").single()` returns the affected row
+        // (or an error if zero rows match), matching the sealed
+        // repo convention in business-service.ts:249-260
+        // (`updateBusinessProfile`). The success flag flips only
+        // when BOTH the error is null AND an id is returned.
+        const { data: profileUpdateRow, error: profileUpdateErr } =
+          await nexSupabaseAdmin
+            .from("nex_business")
+            .update({ profile: nextProfile })
+            .eq("id", business.id)
+            .select("id")
+            .single();
+        if (profileUpdateErr) {
+          throw new Error(profileUpdateErr.message);
+        }
+        if (!profileUpdateRow || profileUpdateRow.id !== business.id) {
+          throw new Error(
+            `profile update affected zero rows for business ${business.id}`,
+          );
+        }
+        verticalSubtypePersisted = true;
+      } catch (profileErr) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          "createBusinessAction · vertical profile soft-fail:",
+          profileErr,
+        );
+      }
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     const looksLikeSlugCollision =
@@ -3817,6 +3970,57 @@ export async function createBusinessAction(formData: FormData): Promise<never> {
       looksLikeSlugCollision ? "slug_taken" : "business_create_failed",
       looksLikeSlugCollision ? "that slug is already taken · choose another" : msg
     );
+  }
+
+  // I1 fix (owner-authorised 2026-10-20) · clear the vertical-intent
+  // and decline-sentinel cookies ONLY on a confirmed subtype write.
+  //
+  // Reaching this line means the outer try/catch did NOT redirect out
+  // (business was created) · and `verticalSubtypePersisted` is true
+  // only when the Supabase profile update inside the try returned a
+  // null error. Any failure (business create itself failed · subtype
+  // JSONB write failed · no vertical cookie was present) leaves the
+  // cookie intact so the user's intent survives for a retry within
+  // the 24h max-age window.
+  //
+  // This closes the "stale cookie leaks into business #2" window the
+  // audit flagged · a NEW account could previously inherit the
+  // vertical from an abandoned first business within 24h. With this
+  // clear, each confirmed creation retires its own vertical cookie.
+  // Soft-fail · never block the success path on a cookie-clear
+  // failure · saveBusinessActivationAction's own clear serves as a
+  // belt-and-braces no-op on the manual activation path.
+  if (verticalSubtypePersisted) {
+    // I1 Check C (owner-authorised 2026-10-20) · the two cookie
+    // clears are INDEPENDENT · a failure in one must not stop the
+    // other. Previously both lived under the same try/catch, so a
+    // throw in `clearVerticalIntent()` would leave the decline
+    // sentinel behind. Each clear now has its own try/catch and
+    // soft-fails on its own.
+    try {
+      const { clearVerticalIntent } = await import(
+        "@/app/nex-native/welcome/_welcome-intent"
+      );
+      await clearVerticalIntent();
+    } catch (clearErr) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "createBusinessAction · nex_welcome_vertical clear soft-fail:",
+        clearErr,
+      );
+    }
+    try {
+      const { clearVerticalDeclined } = await import(
+        "@/app/nex-native/welcome/_welcome-intent"
+      );
+      await clearVerticalDeclined();
+    } catch (clearErr) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "createBusinessAction · nex_welcome_vertical_declined clear soft-fail:",
+        clearErr,
+      );
+    }
   }
 
   // Persist the onboarding logo URL (if the wizard uploaded one in

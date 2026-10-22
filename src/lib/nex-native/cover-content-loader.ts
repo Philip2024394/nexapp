@@ -12,6 +12,11 @@
 import "server-only";
 import { nexSupabaseAdmin } from "./supabase-admin";
 import * as accountService from "./account-service";
+import { getProfileByAccountId } from "./account-profile-service";
+import {
+  isLiveWorldId,
+  LIVE_WORLD_PACKAGES,
+} from "@/app/nex-native/chat-standard/_live-worlds";
 import * as productService from "./product-service";
 import * as menuService from "./menu-service";
 import * as productSectionService from "./product-section-service";
@@ -65,10 +70,14 @@ export async function loadCoverContent(
 
   const isVenue = isVenueCategory(business.business_category);
 
-  // Parallel fetch: owner + products + menu items + sections +
-  // gallery + services.
+  // Parallel fetch: owner + ownerProfile + products + menu items +
+  // sections + gallery + services. Owner directive 2026-10-20 ·
+  // ownerProfile.avatar_url is used as the shop face cover portrait
+  // when the business owner hasn't uploaded a logo · one continuous
+  // identity across the chat profile image and the shop portrait.
   const [
     owner,
+    ownerProfile,
     products,
     menuItems,
     productSectionsRaw,
@@ -77,6 +86,7 @@ export async function loadCoverContent(
     servicesRaw,
   ] = await Promise.all([
     accountService.getAccountById(business.owner_account_id).catch(() => null),
+    getProfileByAccountId(business.owner_account_id).catch(() => null),
     productService
       .listProductsByBusiness(business.id, "live")
       .catch(() => []),
@@ -204,7 +214,25 @@ export async function loadCoverContent(
       "",
     handle: business.slug ? `${business.slug}.nex` : owner?.nex_handle ?? "",
     location: business.city ?? "",
-    portraitUrl: business.logo_url ?? "",
+    /* Owner directive 2026-10-20 · shop face cover portrait inherits
+       the owner's live-world chat theme wallpaper (same "chat page
+       profile image" shown on the drawer thumbnail + the cover-
+       themes-library NexPingBadge). One continuous visual identity
+       across chat + shop. Resolution order:
+         1. live-world chat theme wallpaper (e.g. Crispy Chicken)
+         2. account profile avatar
+         3. business.logo_url
+         4. "" (empty · hero falls back to initials or a chip) */
+    portraitUrl: (() => {
+      const chatThemeId = owner?.chat_theme ?? undefined;
+      if (isLiveWorldId(chatThemeId)) {
+        const pkg = LIVE_WORLD_PACKAGES[chatThemeId] as unknown as {
+          wallpaperUrl?: string | null;
+        };
+        if (pkg.wallpaperUrl) return pkg.wallpaperUrl;
+      }
+      return ownerProfile?.avatar_url ?? business.logo_url ?? "";
+    })(),
     ownerAccountId: business.owner_account_id,
     presenceOnline: false,
     social,

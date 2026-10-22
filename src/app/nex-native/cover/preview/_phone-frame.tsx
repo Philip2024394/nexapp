@@ -41,31 +41,31 @@ export function PhoneFrame({ children }: { children: React.ReactNode }): React.J
            still works (touch + wheel + keyboard), just no visible rail. */
         [data-nex-phone-scroll] { scrollbar-width: none; -ms-overflow-style: none; }
         [data-nex-phone-scroll]::-webkit-scrollbar { width: 0; height: 0; display: none; }
-        @media (min-width: 768px) {
-          [data-nex-phone-frame] [data-nex-phone-device] {
-            transform: translateZ(0);
-          }
+        /* Owner directive 2026-10-20 · the preview surface lives
+           INSIDE the sealed .nex-native-frame (420×909 phone-shape
+           on desktop, viewport on mobile). The inner silhouette +
+           dim stage that this component used to paint on desktop
+           made a redundant phone-inside-a-phone. Collapsed always:
+           cover fills the whole available phone screen edge-to-edge,
+           bezel + notch + home-indicator all hidden. */
+        [data-nex-phone-frame] {
+          padding: 0 !important;
+          min-height: 100dvh !important;
+          background: transparent !important;
         }
-        /* Mobile · frame collapses entirely, cover fills viewport */
-        @media (max-width: 767px) {
-          [data-nex-phone-frame] {
-            padding: 0 !important;
-            min-height: 100dvh !important;
-            background: transparent !important;
-          }
-          [data-nex-phone-frame] [data-nex-phone-device] {
-            width: 100% !important;
-            height: auto !important;
-            min-height: 100dvh !important;
-            max-width: none !important;
-            border-radius: 0 !important;
-            border: none !important;
-            box-shadow: none !important;
-            animation: none !important;
-          }
-          [data-nex-phone-frame] [data-nex-phone-notch] { display: none !important; }
-          [data-nex-phone-frame] [data-nex-phone-home]  { display: none !important; }
+        [data-nex-phone-frame] [data-nex-phone-device] {
+          width: 100% !important;
+          height: auto !important;
+          min-height: 100dvh !important;
+          max-width: none !important;
+          border-radius: 0 !important;
+          border: none !important;
+          box-shadow: none !important;
+          animation: none !important;
+          transform: translateZ(0);
         }
+        [data-nex-phone-frame] [data-nex-phone-notch] { display: none !important; }
+        [data-nex-phone-frame] [data-nex-phone-home]  { display: none !important; }
       `}</style>
 
       <div

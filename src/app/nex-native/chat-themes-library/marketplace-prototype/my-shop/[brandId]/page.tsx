@@ -6,8 +6,8 @@
 // (identity · hours · address · story live in the full editor).
 //
 // Honest discipline:
-//   · Prototype only · reads + writes localStorage (same key the
-//     editor at /marketplace-prototype/editor/crispy-chicken uses)
+//   · Prototype only · reads + writes localStorage under
+//     `nex-mp-editor-{brandId}` · owner-authored product state only
 //   · Zero DB writes · zero Supabase storage uploads
 //   · Deletion propagates to menu drawer + NEX search directory
 //     on next read (storage event dispatches automatically)

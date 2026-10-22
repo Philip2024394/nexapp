@@ -1150,14 +1150,25 @@ describe("sendCartOrderAction · Slice 0.6 · buyer_notes DoS guard", () => {
   });
 });
 
-// ─── IDEMPOTENCY · DOCUMENTATION ANCHOR (does NOT fix) ──────────────
+// ─── IDEMPOTENCY · opt-in design (Track C sealed 2026-10-20) ────────
+//
+// Track C ships server-side idempotency as an OPT-IN mechanism:
+//   · If the client submits NO `send_intent_id`, behaviour is
+//     unchanged · two consecutive invocations create two messages.
+//     (The fallback preserves the pre-Track-C behaviour so legacy
+//     callers that never supplied an intent don't regress.)
+//   · If the client supplies a valid UUID `send_intent_id`, the
+//     service layer uses it as the Bridge-99 idempotency key
+//     (UNIQUE partial index on nex_peer_message · migration 102
+//     Part C · already applied). The second insert raises Postgres
+//     23505, the service catches it and returns the existing row ·
+//     exactly one message exists for one logical submission.
+//
+// The two tests below pin both halves of the contract.
 
-describe("sendCartOrderAction · idempotency behaviour (DOCUMENTATION ONLY)", () => {
-  test("DOC · two consecutive invocations create TWO messages · existing behaviour · owner-flagged for a future hardening slice", async () => {
+describe("sendCartOrderAction · idempotency fallback (NO send_intent_id supplied)", () => {
+  test("two consecutive invocations with NO idempotency key create TWO messages (fallback behaviour preserved)", async () => {
     installHappyPath();
-    // Simulate the user double-tapping Send with the SAME payload ·
-    // mocks persist (all mockResolvedValue · no Once queues) so the
-    // second invocation sees the exact same world as the first.
     const err1 = await runSendCart(makeFormData());
     expectSuccess(err1);
 
@@ -1167,11 +1178,81 @@ describe("sendCartOrderAction · idempotency behaviour (DOCUMENTATION ONLY)", ()
     const err2 = await runSendCart(makeFormData());
     expectSuccess(err2);
 
-    // CURRENT BEHAVIOUR · no idempotency guard · the send pipeline fires
-    // again. Any future idempotency fix MUST update this test to assert
-    // sendPeerMessage was called EXACTLY ONCE across both invocations.
-    // Deliberately failing this expectation would signal a silent
-    // behaviour flip in sendCartOrderAction's send pipeline.
+    // When the client does NOT supply send_intent_id, the server
+    // treats this as "no idempotency requested" and uses the
+    // original non-idempotent insert path. Both invocations create
+    // a message. This preserves the legacy behaviour for callers
+    // who have not yet adopted the opt-in idempotency contract.
     expect(sendPeerMessageMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("sendCartOrderAction · idempotency ON (send_intent_id supplied + valid UUID)", () => {
+  test("sendPeerMessage receives the UUID when the client supplies send_intent_id in FormData", async () => {
+    installHappyPath();
+    const fd = makeFormData();
+    fd.set("send_intent_id", "11111111-2222-3333-4444-555555555555");
+
+    const err = await runSendCart(fd);
+    expectSuccess(err);
+
+    expect(sendPeerMessageMock).toHaveBeenCalledTimes(1);
+    const firstCall = sendPeerMessageMock.mock.calls[0]![0];
+    expect(firstCall.send_intent_id).toBe(
+      "11111111-2222-3333-4444-555555555555",
+    );
+  });
+
+  test("malformed send_intent_id (not a UUID) is dropped · the service receives undefined (safe fallback)", async () => {
+    installHappyPath();
+    const fd = makeFormData();
+    fd.set("send_intent_id", "<script>alert(1)</script>");
+
+    const err = await runSendCart(fd);
+    expectSuccess(err);
+
+    expect(sendPeerMessageMock).toHaveBeenCalledTimes(1);
+    const firstCall = sendPeerMessageMock.mock.calls[0]![0];
+    expect(firstCall.send_intent_id).toBeUndefined();
+  });
+
+  test("empty send_intent_id is dropped · the service receives undefined", async () => {
+    installHappyPath();
+    const fd = makeFormData();
+    fd.set("send_intent_id", "");
+
+    const err = await runSendCart(fd);
+    expectSuccess(err);
+
+    const firstCall = sendPeerMessageMock.mock.calls[0]![0];
+    expect(firstCall.send_intent_id).toBeUndefined();
+  });
+
+  test("same send_intent_id across two consecutive invocations · service receives the same key twice (idempotency enforcement is the service layer's job)", async () => {
+    installHappyPath();
+    const sharedUuid = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+
+    const fd1 = makeFormData();
+    fd1.set("send_intent_id", sharedUuid);
+    const err1 = await runSendCart(fd1);
+    expectSuccess(err1);
+
+    const fd2 = makeFormData();
+    fd2.set("send_intent_id", sharedUuid);
+    const err2 = await runSendCart(fd2);
+    expectSuccess(err2);
+
+    // The ACTION layer passes the same UUID through both times. The
+    // de-duplication itself happens at the service layer (which
+    // catches 23505 from the UNIQUE partial index on
+    // nex_peer_message). This test anchors that the action does
+    // NOT drop or regenerate the UUID between calls.
+    expect(sendPeerMessageMock).toHaveBeenCalledTimes(2);
+    expect(sendPeerMessageMock.mock.calls[0]![0].send_intent_id).toBe(
+      sharedUuid,
+    );
+    expect(sendPeerMessageMock.mock.calls[1]![0].send_intent_id).toBe(
+      sharedUuid,
+    );
   });
 });

@@ -79,6 +79,8 @@ export const I18N_KEYS = [
   "settings.hero.ariaLabel",
   "settings.hero.emergencyHelp",
   "settings.hero.familySafe",
+  "settings.hero.familySafePilot.label",
+  "settings.hero.familySafePilot.aria",
   "settings.hero.community",
   "settings.chip.new.label",
   "settings.chip.new.aria",

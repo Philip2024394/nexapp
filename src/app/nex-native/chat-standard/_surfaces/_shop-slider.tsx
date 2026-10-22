@@ -32,6 +32,17 @@ export interface StandardShopSliderProps {
    *  and rendered with a 2px accent border. When null (default) the
    *  slider renders exactly as before · prop is additive. */
   focusProductId?: string | null;
+  /** Owner directive 2026-10-20 · top-right "Add listing" CTA shown
+   *  only to the owner viewing their own shop. The caller resolves
+   *  the route via `listingAddRouteFor(subtype)` and passes the
+   *  concrete href + label here. When undefined the slider renders
+   *  exactly as before · prop is additive · guest viewers never
+   *  receive it. For blocked subtypes (accommodation Phase A1 ·
+   *  property) the caller passes `blocked: true` + a reason chip
+   *  instead of a Link, so the slider stays honest about Phase B. */
+  ownerAddListing?:
+    | { readonly state: "ready"; readonly href: string; readonly label: string }
+    | { readonly state: "blocked"; readonly label: string; readonly reason: string };
 }
 
 export function StandardShopSlider({
@@ -39,6 +50,7 @@ export function StandardShopSlider({
   products,
   onProductTap,
   focusProductId = null,
+  ownerAddListing,
 }: StandardShopSliderProps): React.JSX.Element {
   const t = engine.shopTreatment();
   const focusedCardRef = React.useRef<HTMLButtonElement | null>(null);
@@ -60,6 +72,12 @@ export function StandardShopSlider({
       data-nex-se-shop-slider-focus-id={focusProductId ?? ""}
       style={t.containerStyle}
     >
+      {ownerAddListing ? (
+        <StandardShopSliderOwnerAddCTA
+          engine={engine}
+          addListing={ownerAddListing}
+        />
+      ) : null}
       {products.map((p) => {
         const isFocused = focusProductId !== null && p.id === focusProductId;
         return (
@@ -135,6 +153,110 @@ export function StandardShopSlider({
         </button>
         );
       })}
+    </div>
+  );
+}
+
+// Owner-only "Add listing" tile · rendered as the first slide of the
+// slider so the owner's eye lands on it immediately. For blocked
+// subtypes (accommodation Phase A1 · property) renders a dimmed
+// honest "coming in Phase B" chip instead of a Link, preserving the
+// doctrine that the slider never implies functionality that doesn't
+// exist.
+function StandardShopSliderOwnerAddCTA(props: {
+  readonly engine: ResolvedEngine;
+  readonly addListing:
+    | { readonly state: "ready"; readonly href: string; readonly label: string }
+    | {
+        readonly state: "blocked";
+        readonly label: string;
+        readonly reason: string;
+      };
+}): React.JSX.Element {
+  const { engine, addListing } = props;
+  const t = engine.shopTreatment();
+  const commonStyle: React.CSSProperties = {
+    ...t.cardStyle,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    textAlign: "center",
+    gap: 8,
+    outline: `2px dashed ${engine.colours.primary}88`,
+    outlineOffset: -2,
+  };
+
+  if (addListing.state === "ready") {
+    return (
+      <a
+        href={addListing.href}
+        data-nex-se-shop-slider-owner-add-listing="ready"
+        aria-label={addListing.label}
+        style={{
+          ...commonStyle,
+          cursor: "pointer",
+          textDecoration: "none",
+          color: "inherit",
+        }}
+      >
+        <span
+          aria-hidden
+          style={{
+            fontSize: 28,
+            lineHeight: 1,
+            color: engine.colours.primary,
+            fontWeight: 300,
+          }}
+        >
+          +
+        </span>
+        <span
+          style={{
+            fontSize: 12,
+            fontWeight: 700,
+            color: "inherit",
+          }}
+        >
+          {addListing.label}
+        </span>
+      </a>
+    );
+  }
+
+  // blocked
+  return (
+    <div
+      data-nex-se-shop-slider-owner-add-listing="blocked"
+      role="status"
+      aria-label={addListing.reason}
+      title={addListing.reason}
+      style={{
+        ...commonStyle,
+        opacity: 0.65,
+        cursor: "default",
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          fontSize: 20,
+          lineHeight: 1,
+          color: "rgba(255,255,255,0.6)",
+        }}
+      >
+        ⏳
+      </span>
+      <span
+        style={{
+          fontSize: 11,
+          fontWeight: 600,
+          color: "rgba(255,255,255,0.75)",
+          lineHeight: 1.3,
+        }}
+      >
+        {addListing.label}
+      </span>
     </div>
   );
 }

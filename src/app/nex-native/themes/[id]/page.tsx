@@ -31,6 +31,11 @@ import { parseJokerMotion } from "./_joker-motion-data";
 // see a floating container banner inviting them to create an
 // account. Signed-in viewers never see it.
 import { GuestSignupBanner } from "./_guest-signup-banner";
+// Owner directive 2026-10-21 (iteration 23) · guest-only overlay ·
+// renders the NEX blue-rim ping badge at the top-left avatar area
+// so the free chat header reads as "NEX" until the user creates
+// an account. Signed-in viewers never mount this overlay.
+import { GuestNexAvatarOverlay } from "./_guest-nex-avatar-overlay";
 import { HauntedHotelChrome } from "@/components/nex-native/HauntedHotelChrome";
 import {
   isLiveWorldId,
@@ -98,6 +103,11 @@ export default async function ThemeViewerPage({
      *  the Use-this-theme form writes the theme. Renders a floating
      *  "Theme applied" toast on this page. */
     applied?: string;
+    /** Owner directive 2026-10-20 · Bisnis setup flow lands here from
+     *  the Edit Shop Cover page with ?shop=open · auto-opens the
+     *  sealed 5-tile category chooser (Products / Services / Food /
+     *  Accommodation / Affiliate). */
+    shop?: string;
   }>;
 }) {
   const { id } = await params;
@@ -191,6 +201,7 @@ export default async function ThemeViewerPage({
           themeEmojis={liveWorldEmojis}
           themeStickers={liveWorldStickers}
           userIntroOverlay={viewerIntroSettings}
+          initialShopOpen={sp.shop === "open"}
         />
         <ThemePreviewDrawer
           session={drawerSession}
@@ -230,6 +241,7 @@ export default async function ThemeViewerPage({
             Signed-in users already have an account · gating here
             keeps the message honest. */}
         {isGuest ? <GuestSignupBanner /> : null}
+        {isGuest ? <GuestNexAvatarOverlay /> : null}
       </>
     );
   }

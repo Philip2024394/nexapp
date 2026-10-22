@@ -67,14 +67,26 @@ describe("Welcome · Chat Themes Shop · trial copy honesty · D4", () => {
     expect(code).not.toMatch(/free\s+when\s+you\s+join/i);
   });
 
-  test("G-D4-2 · new copy describes the trial as OPTIONAL · 7-DAY · BISNIS · ONE-PER-ACCOUNT", () => {
-    const code = stripComments(readWelcomeSource());
-    // Owner directive 2026-10-18 · the trial unlocks the Bisnis
-    // tier via `effectiveTier` returning "bisnis" during the
-    // window · the welcome copy must disclose that explicitly so
-    // "free trial" cannot be read as a generic always-on freebie.
-    expect(code).toMatch(/optional\s+7-day\s+free\s+bisnis\s+trial/i);
-    expect(code).toMatch(/one\s+per\s+account/i);
+  test("G-D4-2 · RETIRED 2026-10-21 · the positive trial-copy guard no longer applies because the welcome card blurbs were deleted", () => {
+    // Owner directive 2026-10-21 · the three welcome card blurbs were
+    // removed, including the "Chat Themes" blurb that previously
+    // carried the honest "optional 7-day free Bisnis trial · one per
+    // account" disclosure. The POSITIVE assertion requiring those
+    // phrases is therefore retired.
+    //
+    // The anti-dishonesty NEGATIVE guards (G-D4-1 forbids "N days
+    // free when you join", G-D4-3 forbids auto-start phrasing,
+    // G-D4-4 forbids universal eligibility, G-D4-5 forbids
+    // startThemesTrial import) REMAIN IN FORCE. Those still protect
+    // against future dishonest trial copy regardless of whether a
+    // blurb exists.
+    //
+    // The sealed trial feature itself (startThemesTrial · Bridge 56g ·
+    // one-shot per account · grants Bisnis for 7 days) is UNCHANGED.
+    // Any future UI surface that re-advertises the trial must either
+    // satisfy the SAME positive-copy contract or restore the guard
+    // here under separate owner authorisation.
+    expect(true).toBe(true);
   });
 
   test("G-D4-3 · no phrase promises auto-start on signup / Shop intent", () => {

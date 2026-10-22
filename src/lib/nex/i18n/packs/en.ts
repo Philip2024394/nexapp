@@ -63,6 +63,8 @@ export const EN_PACK: Record<I18nKey, string> = {
   "settings.hero.ariaLabel":                        "Safety & community shortcuts",
   "settings.hero.emergencyHelp":                    "Emergency Help",
   "settings.hero.familySafe":                       "Family Safe",
+  "settings.hero.familySafePilot.label":            "PILOT",
+  "settings.hero.familySafePilot.aria":             "pilot · parent-child link flow is not yet fully active",
   "settings.hero.community":                        "Community",
   "settings.chip.new.label":                        "New",
   "settings.chip.new.aria":                         "recommended",

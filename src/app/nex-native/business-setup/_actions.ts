@@ -237,6 +237,81 @@ export async function saveBusinessActivationAction(
     revalidatePath("/nex-native/home");
     revalidatePath("/nex-native/settings");
 
+    // Phase A1 (owner-authorised 2026-10-20) · the vertical-intent
+    // cookie survived from /welcome Shop → /business-kind picker →
+    // signup → pick-theme → pick-cover → createBusinessAction →
+    // here. Now that the profile.primary.subtype has been written
+    // atomically on the owner's business row, the cookie has done
+    // its job · clear it. Clearing ONLY on this success path (never
+    // during browsing, never during business creation alone) means
+    // a user who abandons mid-flow still has the cookie available
+    // for their next attempt (24h max-age). Soft-fail · if the
+    // cookie delete throws we still return ok · the business was
+    // persisted · a stale cookie merely means the next signup might
+    // pre-select the same vertical, which is harmless.
+    // Phase A1 Check-C extension (owner-authorised 2026-10-20) ·
+    // the two cookie clears are INDEPENDENT · a failure in one
+    // must not stop the other. Previously both lived under the
+    // same try/catch, so a throw in `clearVerticalIntent()` left
+    // the decline sentinel behind. Each clear now has its own
+    // try/catch and soft-fails on its own · mirrors the pattern
+    // sealed in createBusinessAction (`src/app/nex-native/_actions.ts`)
+    // under Phase A1 Check-C.
+    try {
+      const { clearVerticalIntent } = await import(
+        "@/app/nex-native/welcome/_welcome-intent"
+      );
+      await clearVerticalIntent();
+    } catch (clearErr) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "saveBusinessActivationAction · nex_welcome_vertical clear soft-fail:",
+        clearErr,
+      );
+    }
+    try {
+      // R1 fix (owner-authorised 2026-10-20) · the decline sentinel
+      // is cleared alongside the vertical cookie on manual activation
+      // so a successful activation leaves no stale cookie trail.
+      const { clearVerticalDeclined } = await import(
+        "@/app/nex-native/welcome/_welcome-intent"
+      );
+      await clearVerticalDeclined();
+    } catch (clearErr) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "saveBusinessActivationAction · nex_welcome_vertical_declined clear soft-fail:",
+        clearErr,
+      );
+    }
+
+    // Track B · owner-authorised 2026-10-20 · one-shot shop auto-open
+    // signal. INDEPENDENT try/catch · a write failure here must NOT
+    // block the sealed Phase A1 clears above or the ok-return below.
+    // The cookie is a short-lived (300s) marker telling /contacts to
+    // redirect the owner once to their newly-activated shop. See
+    // `src/app/nex-native/_shop-auto-open-cookie.ts` for the lifecycle.
+    try {
+      const { data: slugRow } = await nexSupabaseAdmin
+        .from("nex_business")
+        .select("slug")
+        .eq("id", business_id)
+        .maybeSingle();
+      const slug = slugRow?.slug;
+      if (slug && typeof slug === "string") {
+        const { writeShopAutoOpenEligible } = await import(
+          "@/app/nex-native/_shop-auto-open-cookie"
+        );
+        await writeShopAutoOpenEligible(slug);
+      }
+    } catch (writeErr) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "saveBusinessActivationAction · nex_shop_auto_open_eligible write soft-fail:",
+        writeErr,
+      );
+    }
+
     return {
       ok: true,
       business_id,

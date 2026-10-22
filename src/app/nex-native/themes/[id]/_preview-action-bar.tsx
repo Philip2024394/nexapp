@@ -98,7 +98,17 @@ export function ThemePreviewActionBar(
       data-nex-theme-action-bar
       data-nex-theme-action-bar-id={props.themeId}
       style={{
-        position: "fixed",
+        // Owner directive 2026-10-21 (iteration 28) · changed from
+        // `position: fixed` to `position: absolute` so the action
+        // bar stays INSIDE the global phone frame on desktop
+        // (nex-native.css:148 warns that fixed-position children
+        // escape the frame). On mobile the frame IS the viewport so
+        // the visual position is identical. The bar now anchors to
+        // the nearest positioned ancestor (`.nex-native-frame` is
+        // position:relative), so Back / Use are always visible at
+        // the bottom of the preview area · not stranded outside the
+        // bezel.
+        position: "absolute",
         left: 0,
         right: 0,
         bottom: 0,

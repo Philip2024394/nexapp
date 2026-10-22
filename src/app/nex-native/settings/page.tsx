@@ -68,6 +68,14 @@ interface HeroTile {
   icon: string;
   titleKey: I18nKey;
   tone: "danger" | "cyan" | "orange";
+  // Owner directive 2026-10-20 · surface a visible PILOT chip on the
+  // tile BEFORE the user taps in. Family Safety already renders a
+  // pilot banner on its destination page; this makes the pilot status
+  // visible on the Settings hero itself so users are not misled into
+  // treating it as a fully-active feature. When undefined, no chip
+  // renders (preserves the sealed Emergency / Community layouts).
+  pilotLabelKey?: I18nKey;
+  pilotAriaKey?: I18nKey;
 }
 
 // Resolved presentational row · the registry (SETTINGS_GROUPS) is the
@@ -124,6 +132,8 @@ export default async function SettingsIndex({
             icon: "🛡",
             titleKey: "settings.hero.familySafe" as const,
             tone: "cyan" as const,
+            pilotLabelKey: "settings.hero.familySafePilot.label" as const,
+            pilotAriaKey: "settings.hero.familySafePilot.aria" as const,
           },
         ]
       : []),
@@ -614,6 +624,31 @@ function HeroTileCard({ tile, t }: { tile: HeroTile; t: T }) {
       >
         {t(tile.titleKey)}
       </span>
+      {tile.pilotLabelKey && tile.pilotAriaKey ? (
+        <span
+          data-nex-settings-hero-tile-pilot={tile.tone}
+          aria-label={tile.pilotAriaKey ? t(tile.pilotAriaKey) : undefined}
+          style={{
+            position: "absolute",
+            top: 6,
+            right: 6,
+            display: "inline-flex",
+            alignItems: "center",
+            padding: "1px 5px",
+            fontSize: 8,
+            fontWeight: 700,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            color: toneColor,
+            border: `1px solid ${toneColor}`,
+            borderRadius: 4,
+            lineHeight: 1.3,
+            background: `${NEX.panel}cc`,
+          }}
+        >
+          {t(tile.pilotLabelKey)}
+        </span>
+      ) : null}
     </Link>
   );
 }

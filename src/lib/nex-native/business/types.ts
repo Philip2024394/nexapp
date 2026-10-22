@@ -48,7 +48,12 @@ export type AccommodationSubtype =
   | "guesthouse"
   | "homestay"
   | "resort"
-  | "short_rental";
+  | "short_rental"
+  // Phase A1 addition · owner-authorised 2026-10-20 · "kost" is the
+  // Indonesian boarding-house concept · the preset ships alongside
+  // Villa + Homestay. The 2026-10-02 freeze is additive-only · new
+  // subtypes may be appended at the end, never removed or reordered.
+  | "kost";
 
 export type PropertySubtype =
   | "for_sale"

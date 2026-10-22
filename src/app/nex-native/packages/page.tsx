@@ -251,18 +251,6 @@ export default function PackagesPage() {
             body="Optional inspection service for buyers who want their order physically checked at NEX Center in Yogyakarta before payment is released to the supplier. Supplier receives the full quoted price · buyer pays the fee only if they opt in."
             accent={NEX.orange}
           />
-          <AddonCard
-            title="NEX Verified"
-            fee="One-time · seller-paid"
-            body="Business registration + address + ownership verification. Unlocks the ✓ badge on your shop and Directory listing. Buyers can also purchase a detailed Verification Report for a small fee if they want the specifics."
-            accent={NEX.cyan}
-          />
-          <AddonCard
-            title="Background Report"
-            fee="$20–$50 · paid by the buyer"
-            body="Deep verification report for buyers about to place a high-value order. Includes registration number, ownership, prior dispute count, and sanctions screen. Downloadable PDF."
-            accent={NEX.green}
-          />
         </div>
       </section>
 
@@ -278,11 +266,11 @@ export default function PackagesPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <FaqCard
             q="Will you ever take a cut of my sales?"
-            a="No. Not on Gratis, not on Bisnis, not ever. That's the sealed doctrine. NEX only makes money from the flat Bisnis subscription and optional buyer-paid services (SafeTrade, verification). The percentage-of-sale model is what every marketplace does — NEX is deliberately not that."
+            a="No. Not on Gratis, not on Bisnis, not ever. That's the sealed doctrine. NEX only makes money from the flat Bisnis subscription and optional buyer-paid services (SafeTrade). The percentage-of-sale model is what every marketplace does — NEX is deliberately not that."
           />
           <FaqCard
-            q="What happens if I cancel Bisnis?"
-            a="Your account drops to Gratis on the next billing cycle. Your shop stays live, your products stay listed (subject to the 10-product cap), your chat history stays intact, and your NEX address (yourshop.nex) stays yours. Your reach automatically snaps back to local — international buyers won't see you in Directory search until you resubscribe."
+            q="How do I cancel Bisnis?"
+            a="Message NEX via the NEX1 support chat. Cancellation is processed manually by NEX while the self-service flow is being built. Once cancelled, your account returns to Gratis: your shop stays live, your products stay listed (subject to the 10-product cap), your chat history stays intact, and your NEX address (yourshop.nex) stays yours. Your reach returns to local — international buyers won't see you in Directory search until you resubscribe."
           />
           <FaqCard
             q="Why is export locked to Bisnis?"
@@ -427,13 +415,6 @@ const GRATIS_FEATURES: FeatureRow[] = [
       "Your shop appears above free listings in NEX Directory search results.",
   },
   {
-    label: "Verified ✓ badge",
-    on: false,
-    hint: "Bisnis unlock",
-    explain:
-      "Visible verified checkmark · NEX confirms your registration + identity so buyers see the trust signal at a glance.",
-  },
-  {
     label: "International (export) visibility",
     on: false,
     hint: "Bisnis unlock",
@@ -479,12 +460,6 @@ const BISNIS_FEATURES: FeatureRow[] = [
       "Priority placement in every Directory search result · you're seen first.",
   },
   {
-    label: "Verified ✓ badge on shop + directory",
-    on: true,
-    explain:
-      "Trust signal from NEX verification of your registration and business identity.",
-  },
-  {
     label: "International (export) reach unlocked",
     on: true,
     explain:
@@ -501,12 +476,6 @@ const BISNIS_FEATURES: FeatureRow[] = [
     on: true,
     explain:
       "Run separate shops for different product lines under one login (e.g. cameras + lenses + prints).",
-  },
-  {
-    label: "20 boosted messages per month",
-    on: true,
-    explain:
-      "Highlighted messages that stand out in a buyer's inbox · use them for closing important orders.",
   },
   {
     label: "Priority customer service",

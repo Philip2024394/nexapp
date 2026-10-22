@@ -74,6 +74,8 @@ const R: Record<BusinessSubtype, readonly ContentTypeKey[]> = {
   homestay:           ["accommodation_unit", "offer", "testimonial", "portfolio_item"],
   resort:             ["accommodation_unit", "offer", "testimonial", "portfolio_item"],
   short_rental:       ["accommodation_unit", "offer", "testimonial", "portfolio_item"],
+  // Phase A1 addition · owner-authorised 2026-10-20 · kost.
+  kost:               ["accommodation_unit", "offer", "testimonial", "portfolio_item"],
   // Property
   for_sale:           ["property_listing", "portfolio_item", "testimonial", "offer"],
   for_rent:           ["property_listing", "portfolio_item", "testimonial", "offer"],

@@ -267,12 +267,21 @@ export function CoverThemeSkin(props: CoverThemeSkinProps): React.JSX.Element {
           position: "relative",
           minHeight: "100dvh",
           overflow: "hidden",
+          /* Owner directive 2026-10-20 · creates a containing block
+             for every descendant `position: fixed` layer below ·
+             scopes wallpaper + scrim + glow + motion overlays to
+             the phone-frame container on desktop (420×909 inside
+             .nex-native-frame) instead of escaping to the full
+             browser viewport. On actual mobile the viewport IS the
+             frame so this is a visual no-op. */
+          transform: "translateZ(0)",
+          willChange: "transform",
         }}
       >
         {/* Wallpaper composition · fixed to the phone-screen containing
-            block (phone-device applies transform:translateZ(0) in preview
-            so fixed descendants scope to it; in production fixed pins to
-            the browser viewport = the full phone screen). Low opacity so
+            block (this root sets transform:translateZ(0) so fixed
+            descendants scope to it on BOTH preview and production ·
+            was previously only true inside preview iframes). Low opacity so
             copy stays legible but the image is part of the visual
             language, not a stock backdrop. Ken Burns slow drift adds
             life without stealing attention. */}

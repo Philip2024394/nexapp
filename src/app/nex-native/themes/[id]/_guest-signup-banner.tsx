@@ -79,7 +79,14 @@ const containerStyle: CSSProperties = {
      `position: absolute` + symmetric left/right + auto side margins
      anchors it to the nearest positioned ancestor and caps the width
      at a slim toast size · on actual mobile the viewport IS the frame
-     so this reads identically to the old fixed-positioning. */
+     so this reads identically to the old fixed-positioning.
+     Owner directive 2026-10-21 (iteration 26) · banner RETURNED to
+     the TOP (70px below the identity header). The iteration-22
+     bottom-position was hiding the sealed ThemePreviewActionBar's
+     "← Back to themes" and "Use this theme →" buttons · bottom
+     real-estate belongs to the action bar. Top placement keeps the
+     banner persistent and visible without blocking the sealed
+     action affordance. */
   position: "absolute",
   top: "calc(env(safe-area-inset-top, 0px) + 70px)",
   left: 10,

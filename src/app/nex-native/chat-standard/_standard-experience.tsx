@@ -108,6 +108,12 @@ export interface StandardExperienceProps {
    *  signed-in viewers with no intro saved · the overlay then plays
    *  the theme intro unmodified. */
   userIntroOverlay?: UserIntroOverlay | null;
+  /** Owner directive 2026-10-20 · when true, the sealed shop-chooser
+   *  sheet auto-opens on mount so the Bisnis setup flow (chat theme →
+   *  shop cover → chat theme live) lands with the 5-tile category
+   *  chooser already visible. Theme preview page passes this when
+   *  `?shop=open` is in the URL. Defaults to false. */
+  initialShopOpen?: boolean;
 }
 
 export function StandardExperience({
@@ -122,6 +128,7 @@ export function StandardExperience({
   themeStickers,
   alwaysPlayIntro = false,
   userIntroOverlay = null,
+  initialShopOpen = false,
 }: StandardExperienceProps): React.JSX.Element {
   const [composerText, setComposerText] = React.useState("");
   const [pickerOpen, setPickerOpen] = React.useState(false);
@@ -212,7 +219,7 @@ export function StandardExperience({
   // icon in the header slides it up from below the composer. Universal
   // rule across all themes · the Standard Experience owns this
   // behaviour so no world package has to opt in.
-  const [shopOpen, setShopOpen] = React.useState(false);
+  const [shopOpen, setShopOpen] = React.useState(initialShopOpen);
   // Floating 3-dots at bottom-right · tap to reveal Call / Video /
   // Mic icons sliding in to the LEFT. Universal rule across themes.
   const [callActionsOpen, setCallActionsOpen] = React.useState(false);

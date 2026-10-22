@@ -26,6 +26,12 @@ export const COVER_LAYOUT_IDS = [
   "personal_brand",
   "personal_brand_landscape",
   "personal_brand_round",
+  // Owner directive 2026-10-20 · Phase 1 Accommodation · the first
+  // of three sealed hospitality layouts (default/landscape/round) ·
+  // closes the "Accommodation" chooser-card gap for the Indonesian
+  // homestay / villa / hotel market. Landscape + round variants
+  // follow in a subsequent build.
+  "accommodation",
 ] as const;
 
 export type CoverLayoutId = (typeof COVER_LAYOUT_IDS)[number];
@@ -41,6 +47,7 @@ export const COVER_LAYOUT_LABELS: Record<CoverLayoutId, string> = {
   personal_brand: "Personal Brand",
   personal_brand_landscape: "Personal Brand · Landscape",
   personal_brand_round: "Personal Brand · Round Products",
+  accommodation: "Accommodation",
 };
 
 export function isValidCoverLayoutId(id: string | undefined): id is CoverLayoutId {

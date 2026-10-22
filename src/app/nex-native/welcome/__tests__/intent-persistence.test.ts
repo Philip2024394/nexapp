@@ -142,18 +142,57 @@ describe("welcome page · intent-persistence wiring", () => {
     expect(WELCOME_SRC).toContain("isWelcomeIntent(rememberedIntentRaw)");
   });
 
-  it("primary CTA uses the dynamic createAccountHref (base URL preserved · ?intent appended)", () => {
-    expect(WELCOME_SRC).toMatch(/const\s+createAccountHref\s*=/);
-    expect(WELCOME_SRC).toContain(
-      "`/nex-native/create-account?intent=${encodeURIComponent(rememberedIntent)}`",
+  // Owner directive 2026-10-19 (retirement) · the dynamic
+  // `createAccountHref` + `data-nex-welcome-primary-cta-intent`
+  // CTA was retired. The welcome page now renders the sealed
+  // "Continue NEX Free" guest CTA pointing at the sealed
+  // nex-bubbles live-world preview, and the signed-in branch
+  // deliberately renders nothing (null) because the three intent
+  // cards + ControlDrawer already cover navigation. The tests
+  // below pin the CURRENT shape AND the retirement rationale so a
+  // regression that resurrects the old CTA fails loudly.
+  //
+  // The retired `createAccountHref` constant must NOT be revived
+  // · the retirement comment must stay in place to document why
+  // the previous CTA is gone (preserves the owner-directive audit
+  // trail for future contributors).
+  it("retired · the createAccountHref CTA usage is gone AND the retirement rationale is documented", () => {
+    // The `createAccountHref` LOCAL CONSTANT is still declared (dead
+    // code the owner left in place for potential future use · see
+    // welcome/page.tsx around line 186) but it is NO LONGER consumed
+    // by any CTA. The retirement is about the USAGE, not the
+    // declaration. If a future hand resurrects the href OR the
+    // data-attribute marker on the primary CTA, this test fails.
+    expect(WELCOME_SRC).not.toMatch(/href=\{createAccountHref\}/);
+    expect(WELCOME_SRC).not.toContain(
+      'data-nex-welcome-primary-cta-intent={rememberedIntent ?? "none"}',
     );
-    expect(WELCOME_SRC).toContain('"/nex-native/create-account"');
-    expect(WELCOME_SRC).toMatch(/href=\{createAccountHref\}/);
+    expect(WELCOME_SRC).toContain('Owner directive 2026-10-19');
+    expect(WELCOME_SRC).toMatch(/"Continue to NEX[^"]*"[^"]*retired/);
   });
 
-  it("primary CTA emits a data-attribute recording which intent is applied (debug + e2e)", () => {
+  it("current guest primary CTA is 'Continue NEX Free' routing to the sealed nex-bubbles preview", () => {
+    // The guest branch renders a <Link> with the sealed data
+    // attributes and the "guest-free" shape marker. The signed-in
+    // branch renders null (deliberately empty) · the regex
+    // tolerates whitespace between branches.
+    expect(WELCOME_SRC).toMatch(
+      /href="\/nex-native\/themes\/nex-bubbles"/,
+    );
+    expect(WELCOME_SRC).toContain("data-nex-welcome-primary-cta");
     expect(WELCOME_SRC).toContain(
-      'data-nex-welcome-primary-cta-intent={rememberedIntent ?? "none"}',
+      'data-nex-welcome-primary-cta-shape="guest-free"',
+    );
+    expect(WELCOME_SRC).toContain("Continue NEX Free");
+  });
+
+  it("signed-in primary CTA branch deliberately renders nothing (null)", () => {
+    // The signed-in branch is `isSignedIn ? ( /* comment */ null )
+    // : ( ... guest branch )`. The parenthesis after `?` tolerates
+    // JSX wrapping; the retirement comment precedes the bare `null`
+    // literal.
+    expect(WELCOME_SRC).toMatch(
+      /isSignedIn\s*\?\s*\(?\s*\/\*[\s\S]*?Owner directive 2026-10-19[\s\S]*?\*\/\s*null/,
     );
   });
 
@@ -217,9 +256,15 @@ describe("pick-theme page · consumes the welcome-intent cookie", () => {
     expect(themesCopy).not.toBe(personalisedCopy);
     expect(shopCopy).not.toBe(personalisedCopy);
     // Honest copy per token · each references its concept.
-    expect(themesCopy.toLowerCase()).toMatch(/chat themes/);
-    expect(shopCopy.toLowerCase()).toMatch(/shop/);
-    expect(personalisedCopy.toLowerCase()).toMatch(/personalised/);
+    //
+    // Owner directive 2026-10-20 renamed the three welcome cards to
+    // (Free NEX Chat · Chat Themes · Business NEX Chat) while keeping
+    // the sealed internal token names. The banner copy on
+    // /create-account/pick-theme now surfaces the NEW card names, so
+    // the regex guards below pin the NEW canonical phrases per token.
+    expect(themesCopy.toLowerCase()).toMatch(/free nex chat/);
+    expect(shopCopy.toLowerCase()).toMatch(/business nex chat/);
+    expect(personalisedCopy.toLowerCase()).toMatch(/chat themes purchase/);
   });
 
   it("the theme-pick behaviour below is UNCHANGED · banner is additive", () => {

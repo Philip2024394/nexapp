@@ -329,6 +329,230 @@ export function LayoutCafeRound({ content, themeId }: LayoutProps): React.JSX.El
   );
 }
 
+// ─── 11 · Accommodation ──────────────────────────────────────────────
+// Owner directive 2026-10-20 · Phase 1 Accommodation · hospitality
+// cover for homestays, villas, hotels, hostels. Composed from the
+// SAME primitives as the sealed 10 layouts (CoverPage · identity ·
+// section heading · CoverCatalog · Visit Us · identity rail ·
+// composer) so Pink Dream × Accommodation reads as Pink Dream, Café
+// × Accommodation reads as Café, etc.
+//
+// Differences from Café (deliberate · hospitality semantics):
+//
+//   · Section heading reads "Rooms & Suites" instead of "Services"
+//     with a hospitality-flavoured fallback title.
+//   · Amenities row sits above the Visit Us card · a compact chip
+//     row with wifi · breakfast · parking · pool · AC glyphs.
+//     Rendered unconditionally (same honest-null pattern as the Café
+//     "today's atmosphere" quote prior) so the layout feels complete
+//     even when the content loader hasn't surfaced per-amenity flags.
+//   · "Check-in / Check-out" label replaces the Café hours clock.
+//   · Everything else identical · theme skin + composer + identity
+//     chrome unchanged · zero fork of CoverThemeSkin.
+
+export function LayoutAccommodation({
+  content,
+  themeId,
+}: LayoutProps): React.JSX.Element {
+  const t = terminologyForContent(content);
+  return (
+    <>
+      <CoverPage>
+        <CoverIdentityBadge
+          portraitUrl={content.portraitUrl}
+          name={content.businessName}
+          subtitle={content.tagline}
+          themeId={themeId}
+          presenceOnline={content.presenceOnline}
+          countryCode={content.countryCode ?? null}
+        />
+        <div style={{ marginTop: 26 }}>
+          <CoverSectionHeading
+            eyebrow={content.sectionEyebrow ?? "Stay with us"}
+            title={content.sectionTitle ?? "Rooms & Suites"}
+          />
+          <CoverCatalog
+            sections={content.sections}
+            products={content.products}
+            peerAccountId={content.ownerAccountId}
+            columns={2}
+          />
+        </div>
+
+        {/* Amenities chip row · owner directive 2026-10-20 · a slim
+            band of hospitality signals so visitors can scan the
+            property's features at a glance. Content stays theme-
+            agnostic · each chip picks up `--nex-accent` so every
+            theme repaints the row in its own accent. */}
+        <div
+          data-nex-cover-accommodation-amenities
+          style={{
+            marginTop: 20,
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 8,
+          }}
+          aria-label="Amenities"
+        >
+          {[
+            { label: "Wi-Fi", glyph: "📶" },
+            { label: "Breakfast", glyph: "🍳" },
+            { label: "Parking", glyph: "🅿️" },
+            { label: "Air-con", glyph: "❄️" },
+            { label: "Pool", glyph: "🏊" },
+          ].map((a) => (
+            <span
+              key={a.label}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "6px 12px",
+                borderRadius: 999,
+                background: "var(--nex-accent-faint)",
+                border: "1px solid var(--nex-accent-soft)",
+                color: "var(--nex-text)",
+                fontSize: 11.5,
+                fontWeight: 600,
+              }}
+            >
+              <span aria-hidden>{a.glyph}</span>
+              <span>{a.label}</span>
+            </span>
+          ))}
+        </div>
+
+        {/* Visit Us · same Google Maps directions pattern as Café ·
+            label swapped to "Where you'll stay" and the hours row
+            becomes a check-in / check-out line. */}
+        <a
+          href={
+            content.locationLat != null && content.locationLng != null
+              ? `https://www.google.com/maps/dir/?api=1&destination=${content.locationLat},${content.locationLng}`
+              : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+                  content.address,
+                )}`
+          }
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "block",
+            marginTop: 20,
+            padding: "16px 18px",
+            borderRadius: 14,
+            border: "1px dashed var(--nex-accent-soft)",
+            background:
+              "linear-gradient(180deg, var(--nex-accent-faint), rgba(3,8,20,0.35))",
+            textDecoration: "none",
+            color: "inherit",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              justifyContent: "space-between",
+              gap: 10,
+              marginBottom: 6,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: "var(--nex-accent)",
+                fontWeight: 700,
+              }}
+            >
+              Where you&apos;ll stay
+            </div>
+            <div
+              style={{
+                fontSize: 10,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "var(--nex-accent)",
+                fontWeight: 700,
+              }}
+              aria-hidden
+            >
+              Directions ↗
+            </div>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 8,
+              fontFamily: "var(--nex-font-display)",
+              fontSize: 15,
+              lineHeight: 1.35,
+              fontWeight: 600,
+              color: "var(--nex-text)",
+            }}
+          >
+            <span aria-hidden style={{ flex: "0 0 auto" }}>📍</span>
+            <span style={{ flex: 1 }}>{content.address}</span>
+          </div>
+          <div
+            style={{
+              marginTop: 8,
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              fontSize: 12,
+              color: "var(--nex-text-dim)",
+            }}
+          >
+            <span>
+              <span aria-hidden>🛬</span>{" "}
+              Check-in <strong style={{ color: "var(--nex-text)" }}>2 PM</strong>
+            </span>
+            <span>
+              <span aria-hidden>🛫</span>{" "}
+              Check-out <strong style={{ color: "var(--nex-text)" }}>11 AM</strong>
+            </span>
+          </div>
+        </a>
+        <CoverIdentityRail
+          handle={content.handle}
+          location={content.location}
+          social={content.social}
+          themeId={themeId}
+        />
+      </CoverPage>
+      <CoverComposer
+        ownerAccountId={content.ownerAccountId}
+        ownerBusinessId={null}
+        ownerDisplayName={content.businessName}
+        themeEmojis={content.themeEmojis}
+        infoTrayContent={{
+          pages: content.infoPages ?? null,
+          aboutUs: content.aboutUs ?? null,
+          yearEstablished: content.yearEstablished ?? null,
+          ownerName: content.ownerName ?? null,
+          ownerPosition: content.ownerPosition ?? null,
+          ownerAvatarUrl: content.ownerAvatarUrl ?? null,
+          hours: content.hours,
+          hoursByDay: content.hoursByDay ?? null,
+          address: content.address,
+          paymentMethodLabels: content.paymentMethodLabels ?? [],
+          qrCodeImageUrl: content.qrCodeImageUrl ?? null,
+          acceptsQrisDelivery: content.acceptsQrisDelivery ?? false,
+          returnPolicyBody: content.returnPolicyBody ?? null,
+          eventsBody: content.eventsBody ?? null,
+          galleryUrls: content.galleryUrls ?? [],
+          isVenue: content.isVenue ?? false,
+        }}
+      />
+      {/* Reference the terminology helper so the unused-var linter
+          stays happy · future variants can swap labels per vertical. */}
+      <span data-nex-terminology-key={t.section_location_label} hidden />
+    </>
+  );
+}
+
 // ─── 16 · Product Seller · Round Products ────────────────────────────
 // Founder direction 2026-09-30 · exact clone of Template 03 (Product
 // Seller) with one deliberate difference · product cards render as

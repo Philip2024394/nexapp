@@ -31,7 +31,10 @@ import {
   WELCOME_INTENT_COOKIE,
   isWelcomeIntent,
   pickThemeIntentCopy,
+  readVerticalIntent,
+  readVerticalDeclined,
 } from "../../welcome/_welcome-intent";
+import { getPreset } from "@/lib/nex-native/vertical-presets";
 // Owner-authorised 2026-10-18 · S3 redirect chain · shop intent
 // routes to the Face Cover picker, every other intent (including
 // null, themes, personalised, tampered) keeps the sealed
@@ -72,12 +75,50 @@ export default async function PickThemePage() {
   const cookieJar = await cookies();
   const rawIntent = cookieJar.get(WELCOME_INTENT_COOKIE)?.value ?? null;
   const intent = isWelcomeIntent(rawIntent) ? rawIntent : null;
+
+  // Phase A1 (owner-authorised 2026-10-20) · Vertical pre-step gate.
+  // Shop-intent users who have not yet declared a vertical sub-type
+  // are routed to /create-account/business-kind FIRST so we can
+  // tune the theme recommendations before showing them.
+  //
+  // R1 fix (owner-authorised 2026-10-20) · the SHORT-LIVED decline
+  // sentinel breaks the former infinite-loop trap: a user who
+  // explicitly tapped "Skip for now · pick a theme" on /business-kind
+  // writes `nex_welcome_vertical_declined=1` (1h max-age) and MUST
+  // NOT be bounced back · the condition is now (intent==="shop" AND
+  // no vertical AND NOT declined). The decline sentinel is cleared
+  // whenever the user later picks a vertical, when the business is
+  // successfully created, or when manual activation completes.
+  //
+  // The welcome-intent cookie is intentionally NOT cleared on the
+  // business-kind redirect branch · the vertical-picker page
+  // re-reads it to confirm the user is in the shop flow. The cookie
+  // is still cleared below in the regular render path.
+  const vertical = await readVerticalIntent();
+  const declined = await readVerticalDeclined();
+  if (intent === "shop" && !vertical && !declined) {
+    redirect("/nex-native/create-account/business-kind");
+  }
+
   if (intent) {
     // Clear immediately so a user who revisits pick-theme via the
     // "Decide later · skip" path doesn't see the banner twice.
     cookieJar.delete(WELCOME_INTENT_COOKIE);
   }
+  // Phase A1 note (2026-10-20) · the ADDITIVE `nex_welcome_vertical`
+  // cookie is intentionally NOT cleared here · it must survive
+  // through pick-cover + createBusinessAction so the preset's cover
+  // + subtype can persist. Clearing happens inside
+  // saveBusinessActivationAction after a successful subtype write.
   const intentCopy = intent ? pickThemeIntentCopy(intent) : null;
+
+  // Phase A1 · when a vertical is declared, surface the preset's
+  // suggested chat themes FIRST. The free-theme catalogue (nex-
+  // bubbles + nex-flat) still ships · we only re-order so a Villa
+  // owner sees Waterworld + Botanical Café + Coffee cues on arrival.
+  const verticalPreset = vertical
+    ? getPreset(vertical.category, vertical.subtype)
+    : null;
   // Owner-authorised 2026-10-18 · S3 · derive the post-theme-pick
   // destination from the intent that was JUST read above (before
   // the cookie clear at line 72). Shop intent routes to the Face
@@ -89,6 +130,26 @@ export default async function PickThemePage() {
   const freeThemes = NEX_FREE_IDS.map((id) =>
     liveRows.find((r) => r.id === id),
   ).filter((r): r is BrowserThemeRow => !!r);
+
+  // Phase A1 · if the vertical preset lists a free theme first (e.g.
+  // Kost → nex-flat), rotate it to the front of the picker. The free
+  // catalogue remains the SAME two themes · we're only re-ordering,
+  // never adding/removing. Non-free preset recommendations (e.g.
+  // Villa's "waterworld") are surfaced as a hint banner below rather
+  // than silently added here · all pick-theme behaviour stays honest.
+  if (verticalPreset) {
+    const freeIdSet = new Set(freeThemes.map((t) => t.id));
+    const firstFreePreset = verticalPreset.suggestedChatThemes.find((id) =>
+      freeIdSet.has(id),
+    );
+    if (firstFreePreset) {
+      freeThemes.sort((a, b) => {
+        if (a.id === firstFreePreset) return -1;
+        if (b.id === firstFreePreset) return 1;
+        return 0;
+      });
+    }
+  }
 
   const firstName =
     session.account.display_name?.split(/\s+/)[0] ??

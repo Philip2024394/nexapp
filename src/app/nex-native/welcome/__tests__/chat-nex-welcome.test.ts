@@ -132,10 +132,32 @@ describe("welcome · three landscape cards (chat-NEX concepts)", () => {
     expect(WELCOME_SRC).toContain("data-nex-welcome-card={key}");
   });
 
-  it("card titles match owner spec (Chat Themes · Chat Themes Shop · Personalised Chat)", () => {
+  it("card titles match the owner-authorised 2026-10-21 spec (Free NEX Chat · Chat Themes · Business Chat)", () => {
+    // Owner directive 2026-10-20 renamed the three welcome cards to
+    // reflect three DIFFERENT WAYS TO USE NEX (not three competing
+    // theme categories). Internal `key` tokens stay sealed.
+    // Owner directive 2026-10-21 (iteration 14) shortened "Business
+    // NEX Chat" → "Business Chat". Internal key `shop` stays sealed.
+    expect(WELCOME_SRC).toContain('title: "Free NEX Chat"');
     expect(WELCOME_SRC).toContain('title: "Chat Themes"');
-    expect(WELCOME_SRC).toContain('title: "Chat Themes Shop"');
-    expect(WELCOME_SRC).toContain('title: "Personalised Chat"');
+    expect(WELCOME_SRC).toContain('title: "Business Chat"');
+    // Retirement guard · the previous title "Personalised Chat" and
+    // the previous "Chat Themes Shop" names must not appear in the
+    // card array. The regex scopes to `title: "..."` so comments
+    // mentioning the retired names stay allowed.
+    expect(WELCOME_SRC).not.toMatch(/title:\s*"Personalised Chat"/);
+    expect(WELCOME_SRC).not.toMatch(/title:\s*"Chat Themes Shop"/);
+  });
+
+  it("RETIRED 2026-10-21 · the top-right status badge pills (FREE · PURCHASE THEMES · BUSINESS · BISNIS) were removed from the welcome cards", () => {
+    // Owner directive 2026-10-21 · the 3 welcome-card badge pills
+    // were deleted along with the card blurbs. The sealed badge-group
+    // positive assertion is retired. The negative guards
+    // (welcome-honesty G4 "no theme shop / buy premium", G7 negative
+    // phrase guard, and welcome-trial-copy G-D4-1/3/4/5) remain in
+    // force. If a future directive reintroduces tier badges, restore
+    // the positive assertions here under separate authorisation.
+    expect(true).toBe(true);
   });
 
   it("every card has a minHeight ≥ 112 for a usable mobile tap target (not a tiny tile)", () => {
@@ -162,13 +184,45 @@ describe("welcome · three landscape cards (chat-NEX concepts)", () => {
 /* ─── C · card destinations · verified guest-safe ────────────── */
 
 describe("welcome · card destinations are real + guest-safe", () => {
-  it("all three cards point at /nex-native/chat-themes-library (the only guest-safe destination that covers all three concepts today)", () => {
+  it("the three welcome cards all point at guest-safe destinations on the welcome allowlist", () => {
+    // Owner directive 2026-10-21 · the "Business NEX Chat" card
+    // (card 3) now routes to /create-account/business-welcome instead
+    // of /chat-themes-library · a pre-signup intro that collects
+    // business type + location before the themes library. The two
+    // other cards (Free NEX Chat · Chat Themes) still route to
+    // /chat-themes-library. The server-side safeRedirects list in
+    // _remember-intent-action.ts and the G2 allowlist in
+    // welcome-honesty.test.ts both authorise the new destination.
+    //
+    // This test used to pin "all three → chat-themes-library." That
+    // invariant no longer holds. Instead we assert that each card's
+    // href is on the shared allowlist, which the sealed welcome-
+    // honesty G2 test already enforces more thoroughly. This test
+    // keeps a lightweight count-based regression guard.
     const hrefs = Array.from(
-      WELCOME_SRC.matchAll(
-        /href:\s*"(\/nex-native\/chat-themes-library)"/g,
-      ),
-    );
+      WELCOME_SRC.matchAll(/href:\s*"(\/nex-native\/[^"]+)"/g),
+    ).map((m) => m[1]);
     expect(hrefs.length).toBeGreaterThanOrEqual(3);
+    const allowed = new Set([
+      "/nex-native/chat-themes-library",
+      "/nex-native/directory/landing",
+      "/nex-native/community/feed",
+      "/nex-native/create-account/business-welcome",
+      // Owner directive 2026-10-21 (iteration 15) · Free NEX Chat
+      // card routes to the standard chat preview surface.
+      "/nex-native/themes/nex-bubbles",
+      // Owner directive 2026-10-21 (iteration 21) · splash intermediary.
+      "/nex-native/welcome/entering-free-chat",
+      // Owner directive 2026-10-21 (iteration 30 · rebuild) · new
+      // standalone minimal free chat.
+      "/nex-native/free-chat",
+    ]);
+    for (const href of hrefs) {
+      expect(
+        allowed.has(href!),
+        `href "${href}" is not on the welcome card allowlist`,
+      ).toBe(true);
+    }
   });
 
   it("no card links to the signed-in /chat/first-visit/shop sub-page (it bounces guests)", () => {

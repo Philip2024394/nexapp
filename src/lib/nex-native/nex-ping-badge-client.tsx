@@ -23,6 +23,12 @@ export interface NexPingBadgeProps {
   readonly disablePing?: boolean;
   /** Optional data-attribute hook for tests/e2e. */
   readonly dataTestId?: string;
+  /** Owner directive 2026-10-20 · when supplied, the badge renders
+   *  the viewer's profile photo INSIDE the ring instead of the "NEX"
+   *  letters. The pulsing halo + ring + glow are preserved so every
+   *  NEX identity surface still reads as the same primitive. Null /
+   *  undefined falls back to the sealed "NEX" wordmark. */
+  readonly avatarUrl?: string | null;
 }
 
 export function NexPingBadge({
@@ -30,6 +36,7 @@ export function NexPingBadge({
   accent = "#00AFFF",
   disablePing = false,
   dataTestId,
+  avatarUrl,
 }: NexPingBadgeProps): React.ReactElement {
   // Core measurements · derived once per render so a bigger badge
   // scales ring thickness, inner text, and ping diameter together.
@@ -111,9 +118,30 @@ export function NexPingBadge({
               "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
             textShadow: `0 0 ${Math.round(size * 0.1)}px ${accent}aa`,
             lineHeight: 1,
+            overflow: "hidden",
           }}
         >
-          NEX
+          {/* Owner directive 2026-10-20 · when a profile avatar URL
+              is passed in, the badge paints the user's photo inside
+              the sealed ring instead of the "NEX" wordmark. Ring +
+              halo + glow are preserved so every identity surface
+              reads as the same NEX primitive. */}
+          {avatarUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={avatarUrl}
+              alt=""
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                borderRadius: "50%",
+                display: "block",
+              }}
+            />
+          ) : (
+            "NEX"
+          )}
         </div>
       </div>
     </>

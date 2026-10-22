@@ -78,6 +78,24 @@ export async function rememberWelcomeIntentAction(
     "/nex-native/chat-themes-library",
     "/nex-native/directory/landing",
     "/nex-native/community/feed",
+    // Owner directive 2026-10-21 · the "Business NEX Chat" welcome
+    // card now routes to a dedicated pre-signup intro that collects
+    // business type + location before the themes library.
+    "/nex-native/create-account/business-welcome",
+    // Owner directive 2026-10-21 (iteration 15) · the "Free NEX Chat"
+    // welcome card routes to the sealed standard chat preview
+    // (nex-bubbles) · the same destination the "Continue NEX Free"
+    // guest primary CTA uses. Fixes card 1 opening the themes library
+    // when the user expected the standard free chat interface.
+    "/nex-native/themes/nex-bubbles",
+    // Owner directive 2026-10-21 (iteration 21) · the "Free NEX Chat"
+    // welcome card now routes to a 2-second splash intermediary that
+    // paints a cover image, then forwards to /themes/nex-bubbles.
+    "/nex-native/welcome/entering-free-chat",
+    // Owner directive 2026-10-21 (iteration 30 · rebuild) · the Free
+    // NEX Chat welcome card now routes to a standalone minimal free
+    // chat page that does NOT reuse any sealed chat chrome.
+    "/nex-native/free-chat",
   ] as const;
   const redirectTo = safeRedirects.includes(rawRedirect)
     ? rawRedirect

@@ -92,10 +92,13 @@ export const SHOP_CHOOSER_CATALOG: readonly ShopChooserCard[] = [
     section: "sell",
     label: "Sell Accommodation",
     caption: "Rooms, villas, homestay · stay-and-book listings.",
-    // Owner directive 2026-10-18 · Accommodation visibly marked
-    // Coming-soon until its real backend is ready. No fake flow.
-    href: null,
-    available: false,
+    // Owner directive 2026-10-20 · Accommodation unblocked · the
+    // sealed LayoutAccommodation cover (Phase 1 of 3 variants) is
+    // live · owner-onboarding reuses the existing onboarding flow
+    // with ?type=accommodation&commerce=1, same shape Products +
+    // Food already route to.
+    href: "/nex-native/onboarding?type=accommodation&commerce=1",
+    available: true,
   },
   // ─── Earn with NEX · separate section · one card today ──────────
   {

@@ -561,9 +561,9 @@ export function SearchClient(): React.JSX.Element {
                 disabled={query.length === 0}
               />
               <DrawerItem
-                label="Open Crispy Chicken editor"
-                hint="Upload photos · edit menu · save to localStorage"
-                href="/nex-native/chat-themes-library/marketplace-prototype/editor/crispy-chicken"
+                label="Open Crispy Chicken · My Shop"
+                hint="Add · edit · turn off · delete products"
+                href="/nex-native/chat-themes-library/marketplace-prototype/my-shop/crispy-chicken"
               />
               <DrawerItem
                 label="Back to marketplace"
