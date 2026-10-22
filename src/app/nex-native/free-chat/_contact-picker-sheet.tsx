@@ -29,14 +29,18 @@ const NEX = {
   text: "#F2F5F8",
   textMute: "#7D9BC0",
   cyan: "#00AFFF",
-  // Owner directive 2026-10-22 (evening · pass 19) · presence
-  // vocabulary · green=online · orange=busy · dark-red=offline.
-  // Colour is the only presence signal · the "Online now / Away Xm /
-  // Offline Yh" text label is removed. Sort order follows the
-  // same priority: online first, busy next, offline last.
+  // Presence vocabulary (owner directive pass 19).
   presenceOnline: "#16D66B",
   presenceBusy: "#FF7200",
   presenceOffline: "#A60000",
+  // Owner directive 2026-10-22 (evening · pass 21) · two fixed
+  // chrome colours that stay the same across every theme accent:
+  //   shopOrange  · Shop CTA button fill (brand-neutral commerce)
+  //   unreadRed   · Unread-count badge on avatar (urgency / attention)
+  // Deep enough to read clearly against the sealed NEX bgNavy.
+  shopOrange: "#FF7200",
+  shopOrangeInk: "#1A0808",
+  unreadRed: "#B30000",
 };
 
 export interface ContactPickerSheetProps {
@@ -184,57 +188,36 @@ export function ContactPickerSheet({
         position: "fixed",
         inset: 0,
         zIndex: 1000,
-        background: "rgba(2, 9, 20, 0.55)",
-        backdropFilter: "blur(6px)",
-        WebkitBackdropFilter: "blur(6px)",
-        // Owner directive 2026-10-22 (evening · pass 20) · bottom-up
-        // page-feel slide-up. Panel pins to the bottom edge of the
-        // viewport and climbs to 90% of screen height. Chat visible
-        // behind the semi-transparent backdrop (reduced from 0.72 →
-        // 0.55 opacity so context reads through).
+        // Owner directive 2026-10-22 (evening · pass 22) · full-page
+        // takeover · no backdrop, no center modal · the picker IS the
+        // page. Fills the sealed .nex-native-frame edge-to-edge on
+        // desktop, 100vh on mobile. Reads like a real route change.
         display: "flex",
-        alignItems: "flex-end",
+        alignItems: "stretch",
         justifyContent: "center",
         padding: 0,
         fontFamily: "Inter, system-ui, sans-serif",
       }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
     >
       <div
         style={{
-          // Owner directive 2026-10-22 (evening · pass 20) · bottom-
-          // up page-feel panel. Full phone-frame width (minus small
-          // side margin), ~90% of viewport height. Reads as a page
-          // slid up from the composer rather than a center modal.
-          width: "min(calc(100% - 8px), 420px)",
-          height: "min(90vh, 720px)",
+          // Owner directive 2026-10-22 (evening · pass 22) · panel is
+          // the whole viewport. No rounded corners, no border shadow,
+          // no drag handle · it's a page, not a sheet. Still slides
+          // up on mount so the transition reads as "navigate forward"
+          // rather than "modal pop".
+          width: "100%",
+          height: "100%",
           display: "flex",
           flexDirection: "column",
           background: `linear-gradient(180deg, ${NEX.bgNavy} 0%, ${NEX.bgDeep} 100%)`,
-          border: `1px solid ${accentHex}6B`,
-          borderTopLeftRadius: 20,
-          borderTopRightRadius: 20,
-          borderBottomLeftRadius: 0,
-          borderBottomRightRadius: 0,
+          border: "none",
+          borderRadius: 0,
           overflow: "hidden",
-          boxShadow: `0 -24px 60px -12px rgba(0,0,0,0.8), 0 0 0 2px ${accentHex}1F`,
           animation:
             "nex-contact-picker-slide-up 240ms cubic-bezier(0.2, 0.8, 0.2, 1)",
         }}
       >
-        {/* Drag-handle grabber · tactile cue the panel is a sheet · */}
-        <div
-          aria-hidden
-          style={{
-            width: 40,
-            height: 4,
-            borderRadius: 999,
-            background: "rgba(255,255,255,0.3)",
-            margin: "8px auto 2px",
-          }}
-        />
         <style>{`
           @keyframes nex-contact-picker-slide-up {
             from { transform: translateY(100%); }
@@ -593,16 +576,21 @@ function ContactCard({
               height: 20,
               padding: "0 5px",
               borderRadius: 999,
-              background: accentHex,
+              // Owner directive 2026-10-22 (evening · pass 21) ·
+              // unread badge is always dark red across every theme
+              // accent · reads as urgency / needs-attention. White
+              // numerals · navy pill border so it lifts off the
+              // avatar's chrome rim.
+              background: NEX.unreadRed,
               border: `2px solid ${NEX.bgNavy}`,
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
               fontSize: 10,
-              color: NEX.bgNavy,
+              color: "#FFFFFF",
               fontWeight: 900,
               lineHeight: 1,
-              boxShadow: `0 2px 6px ${accentHex}99`,
+              boxShadow: `0 2px 6px ${NEX.unreadRed}99`,
             }}
           >
             {contact.unreadCount > 99 ? "99+" : contact.unreadCount}
@@ -729,8 +717,12 @@ function ContactCard({
               minWidth: 76,
               minHeight: 30,
               padding: "0 12px",
-              background: accentHex,
-              color: NEX.bgNavy,
+              // Owner directive 2026-10-22 (evening · pass 21) ·
+              // Shop CTA is always NEX orange across every theme ·
+              // reads as the commerce surface regardless of chat
+              // accent (cyan / gold / pink / etc).
+              background: NEX.shopOrange,
+              color: NEX.shopOrangeInk,
               border: "none",
               borderRadius: 8,
               fontSize: 11,
@@ -742,6 +734,7 @@ function ContactCard({
               alignItems: "center",
               justifyContent: "center",
               gap: 4,
+              boxShadow: `0 2px 6px ${NEX.shopOrange}66`,
             }}
           >
             🛒 Shop
@@ -769,19 +762,6 @@ function ContactCard({
         >
           Invite
         </button>
-        <div
-          aria-hidden
-          style={{
-            fontSize: 9,
-            color: NEX.textMute,
-            textAlign: "center",
-            lineHeight: 1.3,
-            opacity: isHolding ? 0 : 0.8,
-            transition: "opacity 120ms ease",
-          }}
-        >
-          Hold to invite
-        </div>
       </div>
 
       <style>{`
