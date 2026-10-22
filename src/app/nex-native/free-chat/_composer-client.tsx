@@ -817,16 +817,17 @@ export function FreeChatComposerClient({
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                // Owner directive 2026-10-22 (evening · pass 2) · icons
-                // enlarged (56 → 72) without growing the button tile.
-                // Shrunk the chrome (padding 10 → 4 top/bottom, gap 4
-                // → 2, label 10 → 9) so the 72px icon lives inside the
-                // original ~91px button bounds.
+                // Owner directive 2026-10-22 (evening · pass 3) · frame
+                // removed. The PNG icons already carry their own
+                // circular chrome border + black backdrop, so wrapping
+                // them in a second navy tile + accent rim was double
+                // chrome. Button is now transparent · the icon stands
+                // on its own + the label sits below it.
                 gap: 2,
                 padding: "4px 4px",
-                background: NEX.bgNavy,
-                border: `1px solid ${accentHex}3D`,
-                borderRadius: 10,
+                background: "transparent",
+                border: "none",
+                borderRadius: 0,
                 color: NEX.text,
                 fontSize: 9,
                 fontWeight: 700,
