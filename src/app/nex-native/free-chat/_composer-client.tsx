@@ -817,13 +817,12 @@ export function FreeChatComposerClient({
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                // Owner directive 2026-10-22 (evening · pass 3) · frame
-                // removed. The PNG icons already carry their own
-                // circular chrome border + black backdrop, so wrapping
-                // them in a second navy tile + accent rim was double
-                // chrome. Button is now transparent · the icon stands
-                // on its own + the label sits below it.
-                gap: 2,
+                // Owner directive 2026-10-22 (evening · pass 4) · pull
+                // the label tight under the icon. gap:0 + negative
+                // marginTop on the label (see <span> below) tucks it
+                // right under the icon's visible circle while leaving
+                // the icon's transparent padding undisturbed.
+                gap: 0,
                 padding: "4px 4px",
                 background: "transparent",
                 border: "none",
@@ -844,21 +843,32 @@ export function FreeChatComposerClient({
                 aria-hidden
                 draggable={false}
                 style={{
-                  // Owner directive 2026-10-22 (evening) · bumped from
-                  // 36 → 56 → 72 so the chrome detail on each icon
-                  // reads at tap distance. 72 is the ceiling before
-                  // the icon starts crowding the "Voice note" label
-                  // below it (2-line label at 10px font-size needs
-                  // ~24px vertical breathing room).
-                  width: 72,
-                  height: 72,
+                  // Owner directive 2026-10-22 (evening · pass 5) · size
+                  // progression: 36 → 56 → 72 → 100 (+40% on the last
+                  // bump). The transparent-background chrome PNGs
+                  // scale cleanly up to this size on retina displays.
+                  // Panel widens naturally in the 3-col grid; label
+                  // stays tucked beneath via negative marginTop.
+                  width: 100,
+                  height: 100,
                   objectFit: "contain",
                   userSelect: "none",
                   pointerEvents: "none",
                   filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))",
                 }}
               />
-              <span>{item.label}</span>
+              <span
+                style={{
+                  // Owner directive 2026-10-22 (evening · pass 4) ·
+                  // negative marginTop tucks the label under the
+                  // icon's visible circle (its PNG carries ~15% of
+                  // its height as transparent padding on the bottom).
+                  marginTop: -10,
+                  lineHeight: 1.1,
+                }}
+              >
+                {item.label}
+              </span>
             </button>
           ))}
         </div>
