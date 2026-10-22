@@ -414,6 +414,12 @@ export function FreeChatCanvasClient({
     {themeId === "theme-2" && (
       <HeroPlanetPassBy accentHex={activeAccentHex} />
     )}
+    {/* Owner directive 2026-10-23 · theme-1 (pink moonlit cherry-
+        blossom lake wallpaper) · butterflies flying around the top
+        area. Scoped STRICTLY to theme-1 · every other theme untouched. */}
+    {themeId === "theme-1" && (
+      <ButterflyFlyby />
+    )}
     </>
   );
 }
@@ -1915,6 +1921,165 @@ function PickedThemeActionBar({
       >
         View Themes
       </Link>
+    </div>
+  );
+}
+
+/* ─── ButterflyFlyby ──────────────────────────────────────────────
+   Owner directive 2026-10-23 · "add butterfly flying in randomly on
+   the screen up around the top and flying off the screen · create
+   realistic butterfly wing movements and flying path".
+
+   Mounted ONLY when active theme is theme-1 (pink moonlit cherry-
+   blossom lake · the middle tile of the top row).
+
+   Design:
+   · Three butterflies, each a <Butterfly> instance with its own
+     flight path keyframe + delay + duration (so they feel random,
+     not synchronised).
+   · Each butterfly cycles through 3 wing poses (open · angled · up)
+     via opacity-swapping · ~300ms per cycle = ~10 flaps per second,
+     which matches real-world butterfly wing-flap rate.
+   · Flight paths stay in the top third of the frame · gentle sine-
+     wave bob · enter from one edge, exit the opposite edge.
+   · Pure CSS keyframes · zero JS runtime cost after mount.
+   · Respects prefers-reduced-motion · pauses the wing flap +
+     parks the butterfly mid-flight.
+
+   Asset: 3 PNGs under /nex-native/butterflies/ · split + rembg-
+   extracted from the owner-supplied pose reference sheet. */
+const BUTTERFLY_POSES = [
+  "/nex-native/butterflies/pose-1.png",
+  "/nex-native/butterflies/pose-2.png",
+  "/nex-native/butterflies/pose-3.png",
+] as const;
+
+function ButterflyFlyby(): React.JSX.Element {
+  return (
+    <>
+      <style>{`
+        /* Wing-flap · 3 frames at ~10fps · each frame visible for
+           ~1/3 of the 300ms cycle. */
+        @keyframes nex-butterfly-flap-1 {
+          0%, 33.33%  { opacity: 1; }
+          33.34%, 100% { opacity: 0; }
+        }
+        @keyframes nex-butterfly-flap-2 {
+          0%, 33.33%, 66.67%, 100% { opacity: 0; }
+          33.34%, 66.66%            { opacity: 1; }
+        }
+        @keyframes nex-butterfly-flap-3 {
+          0%, 66.66%, 100% { opacity: 0; }
+          66.67%, 99.99%   { opacity: 1; }
+        }
+
+        /* Flight path A · left → right across the top, drifts down
+           slightly, exits top-right. 18s cycle · 6s delay before
+           first appearance. */
+        @keyframes nex-butterfly-path-a {
+          0%   { transform: translate3d(-20vw, 6vh, 0) rotate(-6deg); opacity: 0; }
+          8%   { opacity: 1; }
+          25%  { transform: translate3d(15vw, 2vh, 0) rotate(3deg); }
+          50%  { transform: translate3d(45vw, 10vh, 0) rotate(-4deg); }
+          75%  { transform: translate3d(75vw, 4vh, 0) rotate(5deg); }
+          92%  { opacity: 1; }
+          100% { transform: translate3d(115vw, 8vh, 0) rotate(-3deg); opacity: 0; }
+        }
+
+        /* Flight path B · right → left higher up, more pronounced
+           bob. 22s cycle · 2s delay. */
+        @keyframes nex-butterfly-path-b {
+          0%   { transform: translate3d(110vw, 14vh, 0) rotate(4deg); opacity: 0; }
+          8%   { opacity: 1; }
+          30%  { transform: translate3d(70vw, 8vh, 0) rotate(-7deg); }
+          55%  { transform: translate3d(40vw, 16vh, 0) rotate(5deg); }
+          80%  { transform: translate3d(10vw, 10vh, 0) rotate(-3deg); }
+          92%  { opacity: 1; }
+          100% { transform: translate3d(-25vw, 14vh, 0) rotate(6deg); opacity: 0; }
+        }
+
+        /* Flight path C · diagonal down-right, lower middle area,
+           longer stroll. 26s cycle · 12s delay. */
+        @keyframes nex-butterfly-path-c {
+          0%   { transform: translate3d(-20vw, 20vh, 0) rotate(2deg); opacity: 0; }
+          8%   { opacity: 1; }
+          35%  { transform: translate3d(25vw, 14vh, 0) rotate(-5deg); }
+          60%  { transform: translate3d(55vw, 22vh, 0) rotate(4deg); }
+          85%  { transform: translate3d(90vw, 16vh, 0) rotate(-2deg); }
+          92%  { opacity: 1; }
+          100% { transform: translate3d(120vw, 20vh, 0) rotate(3deg); opacity: 0; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          [data-nex-butterfly],
+          [data-nex-butterfly-frame] {
+            animation: none !important;
+          }
+          [data-nex-butterfly] {
+            transform: translate3d(50vw, 10vh, 0) !important;
+            opacity: 0.7 !important;
+          }
+          [data-nex-butterfly-frame="1"] { opacity: 1 !important; }
+          [data-nex-butterfly-frame="2"],
+          [data-nex-butterfly-frame="3"] { opacity: 0 !important; }
+        }
+      `}</style>
+      <Butterfly path="a" size={44} delay={6} duration={18} />
+      <Butterfly path="b" size={38} delay={2} duration={22} />
+      <Butterfly path="c" size={48} delay={12} duration={26} />
+    </>
+  );
+}
+
+function Butterfly({
+  path,
+  size,
+  delay,
+  duration,
+}: {
+  readonly path: "a" | "b" | "c";
+  readonly size: number;
+  readonly delay: number;
+  readonly duration: number;
+}): React.JSX.Element {
+  return (
+    <div
+      aria-hidden
+      data-nex-butterfly={path}
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: size,
+        height: size,
+        pointerEvents: "none",
+        userSelect: "none",
+        zIndex: 3,
+        willChange: "transform, opacity",
+        animation: `nex-butterfly-path-${path} ${duration}s linear ${delay}s infinite`,
+      }}
+    >
+      {BUTTERFLY_POSES.map((src, i) => (
+        <img
+          key={i}
+          src={src}
+          alt=""
+          aria-hidden
+          data-nex-butterfly-frame={i + 1}
+          draggable={false}
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+            opacity: i === 0 ? 1 : 0,
+            willChange: "opacity",
+            animation: `nex-butterfly-flap-${i + 1} 300ms steps(1, end) infinite`,
+            filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.35))",
+          }}
+        />
+      ))}
     </div>
   );
 }
