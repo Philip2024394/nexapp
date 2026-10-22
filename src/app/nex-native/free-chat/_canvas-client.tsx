@@ -449,6 +449,14 @@ export function FreeChatCanvasClient({
    so visual language stays consistent across surfaces).
 */
 const HERO_PLANET_SRC = "/nex-native/planets/planet-approach-1.png";
+// Owner directive 2026-10-23 · "2 images 1 of space shuttle and
+// other satellite · separated and reduced to realistic size · floating
+// movement · view between the overlay cards". Split + tight-cropped
+// via Pillow from the owner-supplied PNG · zIndex sits ABOVE the
+// wallpaper + BELOW the planet so they drift behind the planet but
+// remain visible between chat cards.
+const HERO_SHUTTLE_SRC = "/nex-native/planets/space-shuttle.png";
+const HERO_SATELLITE_SRC = "/nex-native/planets/satellite.png";
 
 function HeroPlanetPassBy({
   accentHex,
@@ -479,6 +487,29 @@ function HeroPlanetPassBy({
           82%  { transform: translate(-50%, -50%) translate3d(-55vw, 28vh, 0) scale(1.20); opacity: 1; }
           100% { transform: translate(-50%, -50%) translate3d(-120vw, 60vh, 0) scale(2.40); opacity: 0; }
         }
+        /* Owner directive 2026-10-23 · shuttle drifts slowly across
+           the upper-middle of the frame left → right over 48s · subtle
+           bob + micro-rotation give it a realistic "coasting through
+           orbit" feel. Keeps the shuttle readable without stealing
+           focus from the chat. */
+        @keyframes nex-hero-shuttle-drift {
+          0%   { transform: translate3d(-40vw, 0, 0) rotate(-2deg); opacity: 0; }
+          8%   { opacity: 0.85; }
+          50%  { transform: translate3d(40vw, 2vh, 0) rotate(2deg); opacity: 0.85; }
+          92%  { opacity: 0.85; }
+          100% { transform: translate3d(140vw, 0, 0) rotate(-2deg); opacity: 0; }
+        }
+        /* Satellite drifts opposite direction (right → left) across
+           the lower-middle · 58s loop · slower cadence pairs with the
+           shuttle so the pair never stacks on screen simultaneously
+           in the same place. */
+        @keyframes nex-hero-satellite-drift {
+          0%   { transform: translate3d(140vw, 0, 0) rotate(2deg); opacity: 0; }
+          8%   { opacity: 0.85; }
+          50%  { transform: translate3d(40vw, -2vh, 0) rotate(-2deg); opacity: 0.85; }
+          92%  { opacity: 0.85; }
+          100% { transform: translate3d(-40vw, 0, 0) rotate(-6deg); opacity: 0; }
+        }
         @media (prefers-reduced-motion: reduce) {
           [data-nex-hero-planet-ambient],
           [data-nex-hero-planet-oneshot] {
@@ -486,8 +517,68 @@ function HeroPlanetPassBy({
             opacity: 0.5 !important;
             transform: translate(-50%, -50%) scale(1) !important;
           }
+          [data-nex-hero-shuttle],
+          [data-nex-hero-satellite] {
+            animation: none !important;
+            opacity: 0.5 !important;
+          }
         }
       `}</style>
+
+      {/* Owner directive 2026-10-23 · space shuttle drifts across the
+          upper third · "view between the overlay cards now" = sits in
+          the wallpaper layer so chat bubbles with glass backdrop
+          paint over it. Realistic size (120×40 · 3:1 aspect from
+          source). 48s loop · zIndex 2 (above wallpaper, below the
+          planet at 90). */}
+      <img
+        src={HERO_SHUTTLE_SRC}
+        alt=""
+        aria-hidden
+        data-nex-hero-shuttle
+        draggable={false}
+        style={{
+          position: "absolute",
+          top: "32%",
+          left: 0,
+          width: 120,
+          height: 40,
+          objectFit: "contain",
+          pointerEvents: "none",
+          userSelect: "none",
+          zIndex: 2,
+          willChange: "transform, opacity",
+          animation:
+            "nex-hero-shuttle-drift 48s cubic-bezier(0.4, 0, 0.6, 1) 3s infinite",
+          filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.55))",
+        }}
+      />
+
+      {/* Satellite drifts the opposite direction across the lower
+          third · 58s cycle. Same wallpaper-layer treatment. Realistic
+          size (110×40 · ~2.75:1 aspect from source). */}
+      <img
+        src={HERO_SATELLITE_SRC}
+        alt=""
+        aria-hidden
+        data-nex-hero-satellite
+        draggable={false}
+        style={{
+          position: "absolute",
+          top: "62%",
+          left: 0,
+          width: 110,
+          height: 40,
+          objectFit: "contain",
+          pointerEvents: "none",
+          userSelect: "none",
+          zIndex: 2,
+          willChange: "transform, opacity",
+          animation:
+            "nex-hero-satellite-drift 58s cubic-bezier(0.4, 0, 0.6, 1) 12s infinite",
+          filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.55))",
+        }}
+      />
 
       {/* Ambient loop · auto-plays while mounted · 10s cycle so the
           sealed 6s one-shot trajectory shape stays faithful (we add
