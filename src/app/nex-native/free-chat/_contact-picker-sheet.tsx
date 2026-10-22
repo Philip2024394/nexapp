@@ -430,8 +430,13 @@ function ContactCard({
         // Owner directive 2026-10-22 (evening · pass 26) · single row
         // layout · avatar on left, text column centre (flex:1), round
         // Shop + Invite buttons on the right. Circular CTAs match
-        // the compact per-card chrome.
-        minHeight: 76,
+        // the compact per-card chrome. Owner directive 2026-10-23 ·
+        // CTA buttons enlarged from 36→48 so the chrome-neon round
+        // artwork + baked-in INVITE / SHOP lettering read clearly ·
+        // minHeight grows from 76→112 so the stacked CTA column
+        // (48 + 6 gap + 48 = 102) fits without compressing the
+        // card's text column.
+        minHeight: 112,
         flexShrink: 0,
         display: "flex",
         flexDirection: "row",
@@ -711,8 +716,8 @@ function ContactCard({
             aria-label={`Share ${contact.shopName ?? contact.displayName} shop`}
             title={`Share ${contact.shopName ?? contact.displayName} shop`}
             style={{
-              width: 36,
-              height: 36,
+              width: 48,
+              height: 48,
               padding: 0,
               background: "transparent",
               border: "none",
@@ -730,12 +735,12 @@ function ContactCard({
             <img
               src="/nex-contact-picker/shop.png"
               alt=""
-              width={36}
-              height={36}
+              width={48}
+              height={48}
               draggable={false}
               style={{
-                width: 36,
-                height: 36,
+                width: 48,
+                height: 48,
                 display: "block",
                 pointerEvents: "none",
               }}
@@ -768,8 +773,8 @@ function ContactCard({
           <img
             src="/nex-contact-picker/invite.png"
             alt=""
-            width={36}
-            height={36}
+            width={48}
+            height={48}
             draggable={false}
             style={{
               width: 36,
