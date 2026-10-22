@@ -1936,10 +1936,6 @@ function ThemeTile({
         fontWeight: 800,
         letterSpacing: isDefault ? 2 : 0.5,
         WebkitTapHighlightColor: "transparent",
-        // Owner directive 2026-10-23 · position:relative so the
-        // theme-2 planet preview overlay (see ThemeTilePlanet below)
-        // anchors inside the tile.
-        position: "relative",
       }}
     >
       {isDefault && (
@@ -1950,66 +1946,7 @@ function ThemeTile({
           {theme.placeholderLabel}
         </span>
       )}
-      {/* Owner directive 2026-10-23 · "needs to be showing on the
-          theme that user will select on the theme container". Theme-2
-          (space wallpaper) gets a mini looping planet preview inside
-          its tile so the user sees that the theme has motion BEFORE
-          picking it. Scoped to this one theme id · every other tile
-          stays silent. */}
-      {theme.id === "theme-2" && <ThemeTilePlanet />}
     </button>
-  );
-}
-
-/* ─── ThemeTilePlanet · mini looping planet inside the theme-2
-   picker tile. Same visual language as the hero planet pass-by
-   (same PNG · same scale-up curve · same diagonal lower-left
-   trajectory) but downsized for the ~100px tile. Pure CSS loop ·
-   infinite · zero JS. Reduced-motion pauses the animation at a
-   mid-pass pose so the tile still reads as "the one with the
-   planet". */
-function ThemeTilePlanet(): React.JSX.Element {
-  return (
-    <>
-      <style>{`
-        @keyframes nex-free-chat-tile-planet-drift {
-          0%   { transform: translate(-50%, -50%) translate(40%, -40%) scale(0.08); opacity: 0; }
-          10%  { opacity: 1; }
-          50%  { transform: translate(-50%, -50%) translate(0%, 0%) scale(0.5); opacity: 1; }
-          90%  { opacity: 1; }
-          100% { transform: translate(-50%, -50%) translate(-80%, 70%) scale(1.6); opacity: 0; }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          [data-nex-free-chat-tile-planet] {
-            animation: none !important;
-            transform: translate(-50%, -50%) scale(0.6) !important;
-            opacity: 0.7 !important;
-          }
-        }
-      `}</style>
-      <img
-        src="/nex-native/planets/planet-approach-1.png"
-        alt=""
-        aria-hidden
-        data-nex-free-chat-tile-planet
-        draggable={false}
-        style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          width: 36,
-          height: 36,
-          objectFit: "contain",
-          pointerEvents: "none",
-          userSelect: "none",
-          willChange: "transform, opacity",
-          transformOrigin: "50% 50%",
-          animation:
-            "nex-free-chat-tile-planet-drift 8s cubic-bezier(0.4, 0, 0.3, 1) 0.5s infinite",
-          filter: "drop-shadow(0 0 6px rgba(0,175,255,0.5))",
-        }}
-      />
-    </>
   );
 }
 
