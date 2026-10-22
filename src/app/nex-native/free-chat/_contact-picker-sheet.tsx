@@ -14,7 +14,6 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
-import Link from "next/link";
 import { MOCK_CONTACTS, type MockContact } from "./_contact-picker-data";
 
 const NEX = {
@@ -233,13 +232,17 @@ export function ContactPickerSheet({
             to   { transform: translateY(0); }
           }
         `}</style>
-        {/* Header */}
+        {/* Header · minimal "Contacts" eyebrow only, per owner
+            directive 2026-10-22 (evening · pass 25) · the former
+            title line + "See all →" link + round × close button were
+            retired. The drag handle at top + tapping outside the
+            sheet remain the dismissal affordances. */}
         <header
           style={{
             display: "flex",
             alignItems: "center",
             gap: 10,
-            padding: "14px 16px 12px",
+            padding: "10px 16px 8px",
             borderBottom: `1px solid ${accentHex}3D`,
           }}
         >
@@ -253,52 +256,9 @@ export function ContactPickerSheet({
                 textTransform: "uppercase",
               }}
             >
-              NEX Contacts
-            </div>
-            <div
-              style={{
-                fontSize: 15,
-                fontWeight: 800,
-                color: NEX.text,
-                marginTop: 2,
-              }}
-            >
-              Invite someone to the chat
+              Contacts
             </div>
           </div>
-          <Link
-            href="/nex-native/contacts"
-            onClick={onClose}
-            style={{
-              fontSize: 11,
-              fontWeight: 700,
-              color: accentHex,
-              textDecoration: "none",
-              padding: "4px 8px",
-            }}
-          >
-            See all →
-          </Link>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: "50%",
-              background: "transparent",
-              color: NEX.textMute,
-              border: `1px solid ${NEX.textMute}`,
-              fontSize: 14,
-              cursor: "pointer",
-              lineHeight: 1,
-              padding: 0,
-              fontFamily: "inherit",
-            }}
-          >
-            ×
-          </button>
         </header>
 
         {/* Search */}
