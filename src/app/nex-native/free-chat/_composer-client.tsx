@@ -127,6 +127,16 @@ export function FreeChatComposerClient({
     startedAt: number;
     tick: number;
   } | null>(null);
+  // Owner directive 2026-10-22 (evening · pass 13) · live camera
+  // modal state. On desktop/laptop the `<input capture>` fallback
+  // doesn't open the webcam, so we spin up a getUserMedia stream and
+  // show a video preview + Snap/Cancel. On mobile the sealed
+  // `<input capture="environment">` path still fires (native camera
+  // app is a better UX than an in-browser preview).
+  const [cameraStream, setCameraStream] = React.useState<MediaStream | null>(
+    null,
+  );
+  const cameraVideoRef = React.useRef<HTMLVideoElement | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const pendingFileKindRef = React.useRef<FileAttachmentKind | null>(null);
   const voiceTimerRef = React.useRef<ReturnType<typeof setInterval> | null>(
@@ -318,12 +328,116 @@ export function FreeChatComposerClient({
     };
   }, []);
 
+  // Owner directive 2026-10-22 (evening · pass 13) · open the live
+  // webcam on desktop via getUserMedia. On mobile we fall through to
+  // the `<input capture="environment">` path which uses the native
+  // camera app · better UX than our in-browser preview.
+  const openLiveCamera = React.useCallback(async () => {
+    const touchCapable =
+      typeof navigator !== "undefined" &&
+      (navigator.maxTouchPoints ?? 0) > 0;
+    const narrowViewport =
+      typeof window !== "undefined" && window.innerWidth < 820;
+    const mobile = touchCapable && narrowViewport;
+    if (mobile) {
+      openFilePicker("camera");
+      return;
+    }
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.mediaDevices?.getUserMedia
+    ) {
+      // No getUserMedia at all · fall back to file picker.
+      openFilePicker("camera");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+        audio: false,
+      });
+      setCameraStream(stream);
+    } catch {
+      flashToast("Camera permission denied");
+    }
+  }, [openFilePicker, flashToast]);
+
+  // Snap-to-photo: paint the current video frame into a canvas, pull
+  // a Blob, park it as a camera attachment, close the modal.
+  const snapCameraFrame = React.useCallback(() => {
+    const video = cameraVideoRef.current;
+    const stream = cameraStream;
+    if (!video || !stream) return;
+    const w = video.videoWidth;
+    const h = video.videoHeight;
+    if (w === 0 || h === 0) {
+      flashToast("Camera not ready");
+      return;
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      flashToast("Could not capture frame");
+      return;
+    }
+    ctx.drawImage(video, 0, 0, w, h);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          flashToast("Could not encode photo");
+          return;
+        }
+        const file = new File([blob], `camera-${Date.now()}.jpg`, {
+          type: "image/jpeg",
+        });
+        const previewUrl = URL.createObjectURL(file);
+        setAttachment({
+          kind: "camera",
+          file,
+          previewUrl,
+          name: file.name,
+          sizeBytes: file.size,
+          mime: file.type,
+        });
+        // Stop stream + close modal.
+        stream.getTracks().forEach((t) => t.stop());
+        setCameraStream(null);
+      },
+      "image/jpeg",
+      0.92,
+    );
+  }, [cameraStream, flashToast]);
+
+  const closeLiveCamera = React.useCallback(() => {
+    const stream = cameraStream;
+    if (stream) {
+      stream.getTracks().forEach((t) => t.stop());
+    }
+    setCameraStream(null);
+  }, [cameraStream]);
+
+  // Attach the live stream to the <video> element once it mounts.
+  React.useEffect(() => {
+    const video = cameraVideoRef.current;
+    if (!video) return;
+    if (cameraStream) {
+      video.srcObject = cameraStream;
+      void video.play().catch(() => {
+        /* autoplay denied · user can tap to play */
+      });
+    } else {
+      video.srcObject = null;
+    }
+  }, [cameraStream]);
+
   const handleAttachClick = React.useCallback(
     (itemKey: string) => {
       setAttachOpen(false);
       switch (itemKey) {
         case "camera":
-          openFilePicker("camera");
+          void openLiveCamera();
           return;
         case "gallery":
           openFilePicker("gallery");
@@ -991,6 +1105,94 @@ export function FreeChatComposerClient({
         }
       `}</style>
     </div>
+    {/* Owner directive 2026-10-22 (evening · pass 13) · live camera
+        modal · full-screen fixed overlay, dark navy, with the
+        getUserMedia video stream playing in the centre. Snap button
+        captures the current frame as a JPEG attachment · Cancel
+        stops the stream and closes. Only mounts when cameraStream
+        is non-null (desktop/laptop path · mobile goes through
+        <input capture="environment"> instead). */}
+    {cameraStream && (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Camera"
+        data-nex-free-chat-camera-modal
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(2, 9, 20, 0.95)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 16,
+          padding: 20,
+          zIndex: 1000,
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
+        }}
+      >
+        <video
+          ref={cameraVideoRef}
+          autoPlay
+          playsInline
+          muted
+          style={{
+            width: "min(100%, 480px)",
+            maxHeight: "70vh",
+            borderRadius: 14,
+            border: `1px solid ${accentHex}6B`,
+            background: "#000",
+            objectFit: "cover",
+          }}
+        />
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <button
+            type="button"
+            onClick={closeLiveCamera}
+            aria-label="Cancel camera"
+            style={{
+              minWidth: 90,
+              minHeight: 44,
+              padding: "0 18px",
+              background: "transparent",
+              color: NEX.textMute,
+              border: `1px solid ${NEX.textMute}`,
+              borderRadius: 999,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={snapCameraFrame}
+            aria-label="Take photo"
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: "50%",
+              background: accentHex,
+              border: `4px solid ${NEX.text}`,
+              cursor: "pointer",
+              padding: 0,
+              fontFamily: "inherit",
+              fontSize: 24,
+              color: NEX.bgNavy,
+              fontWeight: 900,
+              boxShadow: `0 10px 30px -8px ${accentHex}`,
+            }}
+          >
+            ●
+          </button>
+          <div style={{ minWidth: 90 }} aria-hidden />
+        </div>
+      </div>
+    )}
     </>
   );
 }
