@@ -106,7 +106,12 @@ export function ContactPickerSheet({
     >
       <div
         style={{
-          width: "min(100%, 480px)",
+          // Owner directive 2026-10-22 (evening · pass 17) · sheet
+          // was 480px cap · overflowed the sealed 420px .nex-native-
+          // frame on desktop. Capped to 400 (+10px safety on each
+          // side of the phone frame). Mobile viewport < 400 the
+          // sheet grows to 100% minus side padding.
+          width: "min(calc(100% - 16px), 400px)",
           maxHeight: "80vh",
           display: "flex",
           flexDirection: "column",
@@ -220,16 +225,21 @@ export function ContactPickerSheet({
           </div>
         </div>
 
-        {/* Carousel · horizontal scroll with snap */}
+        {/* Owner directive 2026-10-22 (evening · pass 17) · vertical
+            stack of landscape cards instead of horizontal carousel.
+            Horizontal was awkward for 12+ contacts · a vertical scroll
+            of landscape rows reads like a familiar contacts list but
+            keeps the richer per-row data (avatar + presence + status
+            halo + shop badge + two CTAs). */}
         <div
           data-nex-free-chat-contact-carousel
           style={{
             display: "flex",
-            gap: 10,
+            flexDirection: "column",
+            gap: 8,
             padding: "10px 16px 16px",
-            overflowX: "auto",
-            overflowY: "hidden",
-            scrollSnapType: "x mandatory",
+            overflowY: "auto",
+            overflowX: "hidden",
             WebkitOverflowScrolling: "touch",
           }}
         >
@@ -285,13 +295,11 @@ function ContactCard({
     <article
       data-nex-free-chat-contact-card={contact.id}
       style={{
-        flex: "0 0 220px",
-        scrollSnapAlign: "center",
         display: "flex",
-        flexDirection: "column",
+        flexDirection: "row",
         alignItems: "center",
-        gap: 8,
-        padding: "14px 10px 12px",
+        gap: 12,
+        padding: 10,
         background: NEX.bgNavy,
         border: `1px solid ${accentHex}3D`,
         borderRadius: 14,
@@ -301,8 +309,8 @@ function ContactCard({
       <div
         style={{
           position: "relative",
-          width: 72,
-          height: 72,
+          width: 56,
+          height: 56,
           flexShrink: 0,
         }}
       >
@@ -338,9 +346,9 @@ function ContactCard({
             aria-hidden
             style={{
               color: accentHex,
-              fontSize: 20,
+              fontSize: 16,
               fontWeight: 800,
-              letterSpacing: "0.08em",
+              letterSpacing: "0.06em",
               opacity: 0.9,
             }}
           >
@@ -362,7 +370,8 @@ function ContactCard({
             }}
           />
         )}
-        {/* Shop badge · bottom-right rim · only if hasShop */}
+        {/* Shop badge · bottom-right rim · only if hasShop · shrunk
+            for the landscape 56px avatar. */}
         {contact.hasShop && (
           <div
             aria-hidden
@@ -372,14 +381,14 @@ function ContactCard({
               position: "absolute",
               bottom: -2,
               right: -2,
-              width: 22,
-              height: 22,
+              width: 18,
+              height: 18,
               borderRadius: "50%",
               background: accentHex,
               border: `2px solid ${NEX.bgNavy}`,
               display: "grid",
               placeItems: "center",
-              fontSize: 11,
+              fontSize: 9,
               color: NEX.bgNavy,
               fontWeight: 900,
               lineHeight: 1,
@@ -391,96 +400,99 @@ function ContactCard({
         )}
       </div>
 
-      {/* Name + verified pill */}
+      {/* Centre column · name + verified · nex handle · profession ·
+          city + presence stacked tightly. flex:1 so it absorbs the
+          remaining width between avatar and CTA column. */}
       <div
         style={{
+          flex: 1,
+          minWidth: 0,
           display: "flex",
-          alignItems: "center",
-          gap: 4,
-          maxWidth: "100%",
+          flexDirection: "column",
+          gap: 2,
         }}
       >
+        {/* Name + verified pill */}
         <div
           style={{
-            fontSize: 14,
-            fontWeight: 800,
-            color: NEX.text,
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            minWidth: 0,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 800,
+              color: NEX.text,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {contact.displayName}
+          </div>
+          {contact.isVerified && (
+            <span
+              aria-label="Verified"
+              title="Verified NEX account"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 14,
+                height: 14,
+                borderRadius: "50%",
+                background: NEX.cyan,
+                color: NEX.bgNavy,
+                fontSize: 9,
+                fontWeight: 900,
+                flexShrink: 0,
+              }}
+            >
+              ✓
+            </span>
+          )}
+        </div>
+        {/* NEX ID */}
+        <div
+          style={{
+            fontSize: 10,
+            fontWeight: 700,
+            color: accentHex,
+            letterSpacing: 0.5,
+            fontFamily:
+              "ui-monospace, SFMono-Regular, Menlo, Monaco, 'Courier New', monospace",
+          }}
+        >
+          {contact.nexHandle}
+        </div>
+        {/* Profession · city · presence · one line each, muted meta */}
+        <div
+          style={{
+            fontSize: 10,
+            color: NEX.textMute,
+            lineHeight: 1.4,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
           }}
         >
-          {contact.displayName}
+          {contact.profession}
+          {contact.city ? ` · ${contact.city}` : ""} ·{" "}
+          {formatContactPresenceLabel(contact)}
         </div>
-        {contact.isVerified && (
-          <span
-            aria-label="Verified"
-            title="Verified NEX account"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 14,
-              height: 14,
-              borderRadius: "50%",
-              background: NEX.cyan,
-              color: NEX.bgNavy,
-              fontSize: 9,
-              fontWeight: 900,
-              flexShrink: 0,
-            }}
-          >
-            ✓
-          </span>
-        )}
       </div>
 
-      {/* NEX ID */}
-      <div
-        style={{
-          fontSize: 10,
-          fontWeight: 700,
-          color: accentHex,
-          letterSpacing: 0.5,
-          fontFamily:
-            "ui-monospace, SFMono-Regular, Menlo, Monaco, 'Courier New', monospace",
-        }}
-      >
-        {contact.nexHandle}
-      </div>
-
-      {/* Profession */}
-      <div
-        style={{
-          fontSize: 11,
-          fontWeight: 600,
-          color: NEX.text,
-          opacity: 0.9,
-        }}
-      >
-        {contact.profession}
-      </div>
-
-      {/* City + presence */}
-      <div
-        style={{
-          fontSize: 10,
-          color: NEX.textMute,
-          textAlign: "center",
-          lineHeight: 1.3,
-        }}
-      >
-        {contact.city && <div>{contact.city}</div>}
-        <div>{formatContactPresenceLabel(contact)}</div>
-      </div>
-
-      {/* CTAs */}
+      {/* Right CTA column · Share (accent fill) stacked on top of
+          Invite (ghost outline). Compact 32px high each. */}
       <div
         style={{
           display: "flex",
+          flexDirection: "column",
           gap: 6,
-          marginTop: 4,
-          width: "100%",
+          flexShrink: 0,
         }}
       >
         <button
@@ -488,8 +500,9 @@ function ContactCard({
           onClick={onShare}
           data-nex-contact-card-share
           style={{
-            flex: 1,
-            minHeight: 32,
+            minWidth: 76,
+            minHeight: 30,
+            padding: "0 12px",
             background: accentHex,
             color: NEX.bgNavy,
             border: "none",
@@ -508,8 +521,9 @@ function ContactCard({
           onClick={onInvite}
           data-nex-contact-card-invite
           style={{
-            flex: 1,
-            minHeight: 32,
+            minWidth: 76,
+            minHeight: 30,
+            padding: "0 12px",
             background: "transparent",
             color: accentHex,
             border: `1px solid ${accentHex}`,
