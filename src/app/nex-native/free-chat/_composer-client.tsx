@@ -75,6 +75,24 @@ export function FreeChatComposerClient({
     React.useState<string | null>(initialThemeId);
   const canSend = value.trim().length > 0;
 
+  // Owner directive 2026-10-22 (afternoon · follow-up) · when the
+  // "+" attach panel is open, hide the floating Call-Center 3-dots
+  // trigger on the bottom-right. We toggle a data attribute on
+  // document.body so a scoped CSS rule (below) can hide the
+  // sealed FAB without the two components having to share state.
+  // Clean up on unmount so the attribute never gets stuck.
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (attachOpen) {
+      document.body.setAttribute("data-nex-free-chat-attach-open", "true");
+    } else {
+      document.body.removeAttribute("data-nex-free-chat-attach-open");
+    }
+    return () => {
+      document.body.removeAttribute("data-nex-free-chat-attach-open");
+    };
+  }, [attachOpen]);
+
   // Listen for theme-change broadcasts from the canvas client so the
   // keypad accent follows the user's tile tap in real time.
   React.useEffect(() => {
@@ -106,6 +124,19 @@ export function FreeChatComposerClient({
   }, [canSend, isGuest]);
 
   return (
+    <>
+      {/* Owner directive 2026-10-22 (afternoon · follow-up) · scoped
+          CSS that hides the sibling Call-Center floating FAB
+          (bottom-right 3-dots) whenever this composer's attach
+          panel is open. Keeps the two components decoupled · they
+          only agree on the body-level data attribute written by
+          the useEffect above. */}
+      <style>{`
+        body[data-nex-free-chat-attach-open="true"]
+        [data-nex-free-chat-call-center-trigger] {
+          display: none !important;
+        }
+      `}</style>
     <div
       data-nex-free-chat-composer
       style={{
@@ -451,6 +482,7 @@ export function FreeChatComposerClient({
         }
       `}</style>
     </div>
+    </>
   );
 }
 
