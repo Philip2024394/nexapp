@@ -853,16 +853,21 @@ export function FreeChatComposerClient({
                 aria-hidden
                 draggable={false}
                 style={{
-                  // Owner directive 2026-10-22 (evening · pass 8) ·
-                  // icon 84 → 60 as part of the ~30% panel-height
-                  // trim. Still ~1.7× the original 36px first pass ·
-                  // reads tappable at thumb distance.
+                  // Owner directive 2026-10-22 (evening · pass 12) ·
+                  // visual-only enlargement via transform:scale. Layout
+                  // box stays at 60×60 (grid cells + label position +
+                  // panel height all untouched) · image renders at
+                  // ~72×72 (scale 1.2). Since button is transparent
+                  // and grid gap is 0, neighbouring icons never clash
+                  // visually.
                   width: 60,
                   height: 60,
                   objectFit: "contain",
                   userSelect: "none",
                   pointerEvents: "none",
                   filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))",
+                  transform: "scale(1.2)",
+                  transformOrigin: "center center",
                 }}
               />
               <span
