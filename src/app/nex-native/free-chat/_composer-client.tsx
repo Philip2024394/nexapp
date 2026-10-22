@@ -36,6 +36,10 @@ const NEX = {
   textMute: "#7D9BC0",
   orange: "#FF7200",
   orangeInk: "#1A0808",
+  // Owner directive 2026-10-22 (afternoon · follow-up pass 4) · solid
+  // NEX navy used by the attach-panel action buttons so they read as
+  // dark chips against the accent-tinted panel background.
+  bgNavy: "#050F1E",
 };
 
 // Owner directive 2026-10-22 (afternoon · follow-up pass 3) · 6-item
@@ -366,8 +370,13 @@ export function FreeChatComposerClient({
                 justifyContent: "center",
                 gap: 4,
                 padding: "10px 4px",
-                background: "rgba(0,175,255,0.08)",
-                border: `1px solid rgba(0,175,255,0.22)`,
+                // Owner directive 2026-10-22 (afternoon · follow-up pass 4)
+                // · 6 attach buttons sit on solid NEX navy so they stand
+                // out against the welcome-bubble-tinted panel background.
+                // Subtle accent-tinted border keeps them visually in the
+                // same theme family as the panel chrome.
+                background: NEX.bgNavy,
+                border: `1px solid ${accentHex}3D`,
                 borderRadius: 10,
                 color: NEX.text,
                 fontSize: 10,
