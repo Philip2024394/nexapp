@@ -784,13 +784,13 @@ export function FreeChatComposerClient({
             bottom: "calc(100% + 10px)",
             left: "50%",
             transform: "translateX(-50%)",
-            // Owner directive 2026-10-22 (evening · pass 9) · pull the
-            // two rows tight + trim panel height further WITHOUT
-            // shrinking the icons. Row gap drops to 0 so bottom-row
-            // icon tops almost touch the top-row labels. Panel padding
-            // 8 → 4. Width stays locked at 300.
+            // Owner directive 2026-10-22 (evening · pass 11) ·
+            // asymmetric vertical padding shifts the 6 icons + labels
+            // slightly UP from the vertical centre of the panel. Top
+            // tight at 2px · bottom relaxed at 12px gives the content
+            // visual lift without changing icon size or row count.
             width: "min(300px, calc(100% - 32px))",
-            padding: 4,
+            padding: "2px 4px 12px",
             // Welcome-bubble chrome: accent @ 12% bg, @ 42% rim.
             background: `${accentHex}1F`,
             border: `1px solid ${accentHex}6B`,
@@ -826,12 +826,19 @@ export function FreeChatComposerClient({
                 // right under the icon's visible circle while leaving
                 // the icon's transparent padding undisturbed.
                 gap: 0,
-                padding: "4px 4px",
+                // Owner directive 2026-10-22 (evening · pass 10) · zero
+                // vertical padding so icons hug the row edges · more
+                // height trim with no icon shrink. Horizontal padding
+                // kept at 4 so grid columns breathe.
+                padding: "0 4px",
                 background: "transparent",
                 border: "none",
                 borderRadius: 0,
                 color: NEX.text,
-                fontSize: 9,
+                // Owner directive 2026-10-22 (evening · pass 10b) ·
+                // label 9 → 11 for better readability now that the
+                // tile chrome is gone.
+                fontSize: 11,
                 fontWeight: 700,
                 letterSpacing: 0.2,
                 cursor: "pointer",
