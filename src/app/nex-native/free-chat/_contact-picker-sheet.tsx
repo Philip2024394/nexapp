@@ -431,19 +431,19 @@ function ContactCard({
       onPointerCancel={onHoldEnd}
       style={{
         position: "relative",
-        // Owner directive 2026-10-23 · two-row card layout + the
-        // owner-selected "Neon-glow 3D" treatment from the prototype
-        // page (variant 10 of 20). Top row holds avatar + identity
-        // text, bottom row holds the chrome-neon INVITE + SHOP
-        // buttons centred under them · "under the images". minHeight
-        // recomputed:
-        //   10 top-pad + 56 avatar + 10 inter-row + 48 CTA + 10 bot-pad
-        //   = 134 → set to 134 so neither row compresses.
-        minHeight: 134,
+        // Owner directive 2026-10-23 (revised) · match variant-10
+        // layout exactly · avatar left, identity text column middle
+        // (flex:1), chrome-neon INVITE + SHOP buttons STACKED on
+        // the right. The earlier "under the images" bottom-row
+        // layout is retired in this pass.
+        // minHeight · right CTA column stacks 48 + 6 + 48 = 102 ·
+        // + 10px top-pad + 10px bot-pad = 122 → set to 122 so the
+        // CTA stack never compresses.
+        minHeight: 122,
         flexShrink: 0,
         display: "flex",
-        flexDirection: "column",
-        alignItems: "stretch",
+        flexDirection: "row",
+        alignItems: "center",
         gap: 10,
         padding: "10px 12px",
         // Owner directive 2026-10-23 · Neon-glow 3D treatment ·
@@ -524,20 +524,6 @@ function ContactCard({
           Inviting in {countdownSeconds}…
         </div>
       )}
-      {/* Owner directive 2026-10-23 · top row wraps the avatar + the
-          identity text column so the chrome-neon CTAs can sit as a
-          dedicated bottom row ("under the images"). */}
-      <div
-        data-nex-free-chat-contact-card-top-row
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 10,
-          position: "relative",
-          zIndex: 1,
-        }}
-      >
       {/* Avatar · presence ring · 24h status halo · shop badge. z-
           indexed above the hold-fill so the pulsing heartbeat +
           shop badge stay visible as the fill grows. */}
@@ -738,6 +724,10 @@ function ContactCard({
             "Online now / Away Xm / Offline Yh" line. Mobile-size
             bump 10 → 11 (owner directive 2026-10-23) · same floor
             as the NEX ID row so the meta pair reads as one tier. */}
+        {/* Profession on its own line · city breaks to a second line
+            below with the red map pin before it. Owner directive
+            2026-10-23 (revised) · "the map pin and location should be
+            under profession". */}
         <div
           style={{
             fontSize: 11,
@@ -746,40 +736,43 @@ function ContactCard({
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
           }}
         >
-          <span>{contact.profession}</span>
-          {contact.city && (
-            <>
-              <span aria-hidden style={{ color: NEX.textMute }}>·</span>
-              {/* Owner directive 2026-10-23 · red map pin before the
-                  city name. Inline SVG keeps crispness at any density
-                  + lets us drive the fill via NEX.unreadRed (the sealed
-                  dark-red used elsewhere for urgency / attention). */}
-              <MapPinIcon color={NEX.unreadRed} />
-              <span>{contact.city}</span>
-            </>
-          )}
+          {contact.profession}
         </div>
+        {contact.city && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              fontSize: 11,
+              color: NEX.textMute,
+              lineHeight: 1.4,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            <MapPinIcon color={NEX.unreadRed} />
+            <span>{contact.city}</span>
+          </div>
+        )}
       </div>
-      </div>
-      {/* Owner directive 2026-10-23 · bottom-row CTA band · chrome-
-          neon INVITE + SHOP buttons side-by-side under the top row
-          ("under the images"). Centred so the pair reads as a
-          deliberate action band rather than a corner afterthought. */}
+
+      {/* Owner directive 2026-10-23 (revised) · right-side CTA column ·
+          stacked Shop + Invite (variant-10 layout). PNG button images
+          retired this pass · plain accent-coloured round chips carry
+          the actions · the card's neon-glow treatment already does
+          the chrome work. */}
       <div
         style={{
           display: "flex",
-          flexDirection: "row",
-          gap: 14,
+          flexDirection: "column",
+          gap: 6,
           flexShrink: 0,
           position: "relative",
           zIndex: 2,
-          justifyContent: "center",
-          alignItems: "center",
         }}
       >
         {contact.hasShop && (
@@ -793,33 +786,23 @@ function ContactCard({
             style={{
               width: 48,
               height: 48,
+              borderRadius: "50%",
               padding: 0,
-              background: "transparent",
+              background: NEX.shopOrange,
+              color: NEX.shopOrangeInk,
               border: "none",
+              fontSize: 20,
+              fontWeight: 800,
               cursor: "pointer",
+              fontFamily: "inherit",
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
-              lineHeight: 0,
+              lineHeight: 1,
+              boxShadow: `0 2px 10px ${NEX.shopOrange}66`,
             }}
           >
-            {/* Owner directive 2026-10-23 · chrome-neon round SHOP
-                icon (public/nex-contact-picker/shop.png). The image
-                carries its own rim + "SHOP" lettering · the button
-                chrome is transparent so only the round artwork shows. */}
-            <img
-              src="/nex-contact-picker/shop.png"
-              alt=""
-              width={48}
-              height={48}
-              draggable={false}
-              style={{
-                width: 48,
-                height: 48,
-                display: "block",
-                pointerEvents: "none",
-              }}
-            />
+            🛒
           </button>
         )}
         <button
@@ -830,34 +813,25 @@ function ContactCard({
           aria-label={`Invite ${contact.displayName} to the chat`}
           title={`Invite ${contact.displayName} to the chat`}
           style={{
-            width: 36,
-            height: 36,
+            width: 48,
+            height: 48,
+            borderRadius: "50%",
             padding: 0,
             background: "transparent",
-            border: "none",
+            color: accentHex,
+            border: `1.5px solid ${accentHex}`,
+            fontSize: 22,
+            fontWeight: 800,
             cursor: "pointer",
+            fontFamily: "inherit",
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            lineHeight: 0,
+            lineHeight: 1,
+            boxShadow: `0 0 10px ${accentHex}44`,
           }}
         >
-          {/* Owner directive 2026-10-23 · chrome-neon round INVITE
-              icon (public/nex-contact-picker/invite.png). Image is
-              self-contained · rim + "INVITE" lettering baked in. */}
-          <img
-            src="/nex-contact-picker/invite.png"
-            alt=""
-            width={48}
-            height={48}
-            draggable={false}
-            style={{
-              width: 36,
-              height: 36,
-              display: "block",
-              pointerEvents: "none",
-            }}
-          />
+          +
         </button>
       </div>
 
