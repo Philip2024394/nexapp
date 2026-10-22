@@ -137,6 +137,12 @@ export function FreeChatComposerClient({
     null,
   );
   const cameraVideoRef = React.useRef<HTMLVideoElement | null>(null);
+  // Owner directive 2026-10-22 (evening · pass 15) · voice-chip
+  // playback state. One slot (we only ever have one voice note staged
+  // at a time). `tick` drives the waveform progress fill.
+  const voicePlaybackAudioRef = React.useRef<HTMLAudioElement | null>(null);
+  const [voicePlaying, setVoicePlaying] = React.useState(false);
+  const [voicePlaybackMs, setVoicePlaybackMs] = React.useState(0);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const pendingFileKindRef = React.useRef<FileAttachmentKind | null>(null);
   const voiceTimerRef = React.useRef<ReturnType<typeof setInterval> | null>(
@@ -169,8 +175,15 @@ export function FreeChatComposerClient({
         input.setAttribute("accept", "image/*,video/*");
         input.removeAttribute("capture");
       } else {
-        // document
-        input.setAttribute("accept", "*/*");
+        // document · owner directive 2026-10-22 (evening · pass 15) ·
+        // accept any file, with a bias toward common office formats
+        // in the native picker's "recommended" list. Keeps `*/*`
+        // behaviour (nothing filtered out) while hinting at the
+        // intended usage on OSes that honour the hint list.
+        input.setAttribute(
+          "accept",
+          "*/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/csv",
+        );
         input.removeAttribute("capture");
       }
       input.click();
@@ -318,6 +331,26 @@ export function FreeChatComposerClient({
       }
       return null;
     });
+    // Reset voice playback state when any attachment clears.
+    setVoicePlaying(false);
+    setVoicePlaybackMs(0);
+    const a = voicePlaybackAudioRef.current;
+    if (a) {
+      a.pause();
+      a.currentTime = 0;
+    }
+  }, []);
+
+  const toggleVoicePlayback = React.useCallback(() => {
+    const a = voicePlaybackAudioRef.current;
+    if (!a) return;
+    if (a.paused) {
+      void a.play().catch(() => {
+        /* autoplay/permission issue · ignore */
+      });
+    } else {
+      a.pause();
+    }
   }, []);
 
   // Clean up on unmount: revoke any blob URLs + stop any live stream.
@@ -723,6 +756,64 @@ export function FreeChatComposerClient({
             {attachmentSecondary(attachment)}
           </div>
         </div>
+        {/* Voice chips get an inline playback control + bar-graphics
+            waveform. The hidden <audio> element owns the actual
+            playback · the bars animate via a progress fill derived
+            from `voicePlaybackMs / durationMs`. */}
+        {attachment.kind === "voice" && (
+          <>
+            <audio
+              ref={voicePlaybackAudioRef}
+              src={attachment.previewUrl}
+              preload="metadata"
+              onPlay={() => setVoicePlaying(true)}
+              onPause={() => setVoicePlaying(false)}
+              onEnded={() => {
+                setVoicePlaying(false);
+                setVoicePlaybackMs(0);
+                const el = voicePlaybackAudioRef.current;
+                if (el) el.currentTime = 0;
+              }}
+              onTimeUpdate={() => {
+                const el = voicePlaybackAudioRef.current;
+                if (el) setVoicePlaybackMs(el.currentTime * 1000);
+              }}
+            />
+            <button
+              type="button"
+              onClick={toggleVoicePlayback}
+              aria-label={voicePlaying ? "Pause voice note" : "Play voice note"}
+              style={{
+                width: 32,
+                height: 32,
+                minWidth: 32,
+                borderRadius: "50%",
+                background: accentHex,
+                color: NEX.bgNavy,
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+                fontSize: 14,
+                fontWeight: 900,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontFamily: "inherit",
+              }}
+            >
+              {voicePlaying ? "❙❙" : "▶"}
+            </button>
+            <VoiceWaveformBars
+              accentHex={accentHex}
+              mutedHex="rgba(139,169,209,0.45)"
+              progress={
+                attachment.durationMs > 0
+                  ? Math.min(1, voicePlaybackMs / attachment.durationMs)
+                  : 0
+              }
+            />
+          </>
+        )}
         {/* Live-location chips get an "Open in Maps" link in addition
             to the Remove X · lets the sender verify the pinned
             location opens correctly before hitting send. The link
@@ -1330,6 +1421,70 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// Owner directive 2026-10-22 (evening · pass 15) · voice-chip bar
+// graphics. 24 vertical bars with pseudo-random heights derived from
+// a fixed seed so the shape is stable across renders. Bars left of
+// the playback-progress cursor paint in the active theme accent;
+// bars to the right paint in a muted grey. No real waveform
+// extraction (no AudioContext decoding) · just a visual stand-in
+// that looks like a scrubbing waveform, which is the standard
+// WhatsApp / Telegram voice-note pattern.
+function VoiceWaveformBars({
+  accentHex,
+  mutedHex,
+  progress,
+}: {
+  readonly accentHex: string;
+  readonly mutedHex: string;
+  readonly progress: number;
+}): React.JSX.Element {
+  const BAR_COUNT = 24;
+  // Seeded pseudo-random bar heights · fixed across the component's
+  // lifetime so the "waveform" looks consistent as it plays through.
+  const heights = React.useMemo(() => {
+    const out: number[] = [];
+    for (let i = 0; i < BAR_COUNT; i += 1) {
+      // Deterministic sin-based heights · range ~0.3 → 1.0.
+      const h = 0.35 + 0.65 * Math.abs(Math.sin((i + 1) * 1.73));
+      out.push(h);
+    }
+    return out;
+  }, []);
+  return (
+    <div
+      aria-hidden
+      data-nex-free-chat-composer-voice-waveform
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 2,
+        height: 20,
+        flex: 1,
+        minWidth: 0,
+        padding: "0 2px",
+      }}
+    >
+      {heights.map((h, i) => {
+        const barProgress = (i + 0.5) / BAR_COUNT;
+        const played = barProgress <= progress;
+        return (
+          <span
+            key={i}
+            style={{
+              display: "block",
+              flex: 1,
+              height: `${Math.round(h * 100)}%`,
+              background: played ? accentHex : mutedHex,
+              borderRadius: 1,
+              transition: "background 100ms ease",
+            }}
+          />
+        );
+      })}
+    </div>
+  );
 }
 
 // Owner directive 2026-10-21 (iteration 48) · paper-plane send icon.
