@@ -32,6 +32,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { devPreviewOn } from "@/lib/nex-native/app/dev-preview";
 import { signInAction } from "../_actions";
 import { SignInFaceButton } from "./_face-button";
 import { SignInPasswordInput } from "./_password-input";
@@ -81,9 +82,13 @@ const ICON_TILES: ReadonlyArray<{ title: string; subtitle: string }> = [
 
 export default async function SignInPage({ searchParams }: PageProps) {
   const session = await resolveNexAppSessionFromContext();
-  if (session) redirect("/nex-native/home");
-
   const params = await searchParams;
+  // Owner directive 2026-10-22 (afternoon) · signed-in users bounce
+  // to /contacts to match the sealed mapping tree (was /home · stale).
+  // Owner can inspect this page in a signed-in dev browser via
+  // ?preview=1 on localhost (prod ignores the param).
+  if (session && !devPreviewOn(params)) redirect("/nex-native/contacts");
+
   const banner = params.e && params.m ? { code: params.e, message: params.m } : null;
   const nextParam = safeNext(params.next);
 

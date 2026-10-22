@@ -40,6 +40,7 @@ import { redirect } from "next/navigation";
 import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
 import { resolveNexAppSessionOrGuest } from "@/lib/nex-native/app/session-or-guest";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { devPreviewOn } from "@/lib/nex-native/app/dev-preview";
 import { effectiveTier } from "@/lib/nex-native/account-service";
 import {
   ControlDrawer,
@@ -113,10 +114,15 @@ export default async function FreeChatPage({
   // picker is forced" contradiction when a residual Supabase refresh
   // token auto-resolves a session that the viewer didn't explicitly
   // sign into in this browser tab.
+  //
+  // DEV ESCAPE HATCH · ?preview=1 on localhost bypasses the bounce so
+  // the owner can inspect this page while signed in. Production
+  // ignores the param. See src/lib/nex-native/app/dev-preview.ts.
+  const sp = (await searchParams) ?? {};
   const signedInSession = await resolveNexAppSessionFromContext().catch(
     () => null,
   );
-  if (signedInSession) {
+  if (signedInSession && !devPreviewOn(sp)) {
     redirect("/nex-native/contacts");
   }
 
@@ -128,7 +134,6 @@ export default async function FreeChatPage({
   // render regardless of the dismiss cookie · useful when the owner
   // previously committed and now wants to see the picker again without
   // clearing cookies manually in DevTools.
-  const sp = (await searchParams) ?? {};
   const forceShowThemes = sp["show-themes"] === "1";
 
   // Resolve ControlDrawer session · null for guests · drawer shows a
