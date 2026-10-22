@@ -784,11 +784,13 @@ export function FreeChatComposerClient({
             bottom: "calc(100% + 10px)",
             left: "50%",
             transform: "translateX(-50%)",
-            // Owner directive 2026-10-22 (evening · pass 8) · trim
-            // panel height ~30%: icons 84 → 60, panel padding 12 → 8.
-            // Width unchanged at 300 (owner locked that in pass 7).
+            // Owner directive 2026-10-22 (evening · pass 9) · pull the
+            // two rows tight + trim panel height further WITHOUT
+            // shrinking the icons. Row gap drops to 0 so bottom-row
+            // icon tops almost touch the top-row labels. Panel padding
+            // 8 → 4. Width stays locked at 300.
             width: "min(300px, calc(100% - 32px))",
-            padding: 8,
+            padding: 4,
             // Welcome-bubble chrome: accent @ 12% bg, @ 42% rim.
             background: `${accentHex}1F`,
             border: `1px solid ${accentHex}6B`,
@@ -798,9 +800,11 @@ export function FreeChatComposerClient({
             boxShadow: "0 6px 14px -8px rgba(0,0,0,0.6)",
             display: "grid",
             gridTemplateColumns: "repeat(3, 1fr)",
-            // Owner directive 2026-10-22 (evening · pass 7) · tighter
-            // 4px gap pulls the 6 buttons visually closer together.
-            gap: 4,
+            // Owner directive 2026-10-22 (evening · pass 9) · gap 4 →
+            // 0 so the top row's labels sit flush against the bottom
+            // row's icon tops. Column gap also 0 since the buttons are
+            // transparent · no visible seam.
+            gap: 0,
             zIndex: 20,
           }}
         >
