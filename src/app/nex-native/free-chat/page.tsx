@@ -36,6 +36,7 @@
 import type * as React from "react";
 import Link from "next/link";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
 import { resolveNexAppSessionOrGuest } from "@/lib/nex-native/app/session-or-guest";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
@@ -104,6 +105,21 @@ export default async function FreeChatPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }): Promise<React.ReactElement> {
+  // Owner directive 2026-10-22 (afternoon) · hard rule from the sealed
+  // mapping tree · /free-chat is the GUEST surface. Signed-in users
+  // never see the picker or the "NEX - Guest" header here · they
+  // belong on /nex-native/contacts (post-auth landing). Bouncing them
+  // out at the page boundary prevents the "my name shows but theme
+  // picker is forced" contradiction when a residual Supabase refresh
+  // token auto-resolves a session that the viewer didn't explicitly
+  // sign into in this browser tab.
+  const signedInSession = await resolveNexAppSessionFromContext().catch(
+    () => null,
+  );
+  if (signedInSession) {
+    redirect("/nex-native/contacts");
+  }
+
   const viewer = await resolveNexAppSessionOrGuest();
   const isGuest = viewer.kind !== "session";
 
