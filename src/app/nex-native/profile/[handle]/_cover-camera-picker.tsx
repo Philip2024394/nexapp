@@ -18,6 +18,14 @@
 // cover uploads light up end-to-end with zero further code change.
 //
 // Client Component · needs `useRef` + `onChange` auto-submit.
+//
+// Owner directive 2026-10-22 (afternoon) · the camera picker lives
+// INSIDE the OwnerEditShell <form> that wraps the whole profile body
+// (action={savePersonalProfileAction}). HTML forbids nested forms,
+// so we invoke the sealed uploadCoverPhotoAction server action
+// directly with a manually-built FormData instead of wrapping the
+// input in a second <form>. Behaviour is identical from the user's
+// perspective · the server action still redirects on success.
 
 "use client";
 
@@ -32,13 +40,24 @@ const NEX = {
 
 export function CoverCameraPicker(): React.JSX.Element {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
-  const formRef = React.useRef<HTMLFormElement | null>(null);
+  const [pending, startTransition] = React.useTransition();
+  const handleFileChange = React.useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      // Reset the input value so re-picking the same file re-fires change.
+      event.target.value = "";
+      if (!file) return;
+      const fd = new FormData();
+      fd.append("cover", file);
+      startTransition(() => {
+        void uploadCoverPhotoAction(fd);
+      });
+    },
+    [],
+  );
   return (
-    <form
-      ref={formRef}
-      action={uploadCoverPhotoAction}
-      encType="multipart/form-data"
-      data-nex-profile-cover-upload-form
+    <div
+      data-nex-profile-cover-upload-wrap
       style={{
         position: "absolute",
         top: 12,
@@ -52,7 +71,7 @@ export function CoverCameraPicker(): React.JSX.Element {
         type="file"
         name="cover"
         accept="image/jpeg,image/png,image/webp"
-        onChange={() => formRef.current?.requestSubmit()}
+        onChange={handleFileChange}
         style={{
           position: "absolute",
           width: 1,
@@ -65,11 +84,13 @@ export function CoverCameraPicker(): React.JSX.Element {
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        aria-label="Change cover photo"
+        disabled={pending}
+        aria-label={pending ? "Uploading cover photo" : "Change cover photo"}
+        aria-busy={pending}
         data-nex-profile-cover-camera
         style={{
           all: "unset",
-          cursor: "pointer",
+          cursor: pending ? "progress" : "pointer",
           display: "grid",
           placeItems: "center",
           width: 36,
@@ -78,11 +99,12 @@ export function CoverCameraPicker(): React.JSX.Element {
           background: "rgba(2, 9, 20, 0.72)",
           color: NEX.cyan,
           border: `1px solid ${NEX.cyanRim}`,
+          opacity: pending ? 0.5 : 1,
         }}
       >
         <CameraIcon />
       </button>
-    </form>
+    </div>
   );
 }
 
