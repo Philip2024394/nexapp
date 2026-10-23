@@ -483,17 +483,14 @@ function ContactCard({
         // (painted as a sibling div below). The glow intensifies
         // when the card is being held so the hold ritual reads as
         // the card "charging".
-        // Owner directive 2026-10-23 · "container must be exact same
-        // size as number 7 prototype". Dimensions pulled verbatim
-        // from the V07AvatarChip prototype:
-        //   · maxWidth 296px · margin:0 auto (centred in sheet)
-        //   · padding "16px 14px 10px 70px" (70px left pads the
-        //     overlapping chip)
-        //   · borderRadius 10 (was 12 · matches #7)
-        //   · background rgba(2,9,20,0.92) (was #040A18 · matches #7)
-        //   · 1.5px solid accentHex rim (unchanged · theme-tinted)
-        maxWidth: 296,
-        margin: "0 auto",
+        // Owner directive 2026-10-23 · "container full width with
+        // small padding left and right side of phone edge screen" ·
+        // the earlier 296px maxWidth clamp is retired · the card
+        // now spans the full sheet width, inheriting the carousel's
+        // 16px horizontal padding as the gutter from the phone frame
+        // edge. Variant-7 proportions (padding + borderRadius + chip
+        // overlap) stay intact · only width changes.
+        width: "100%",
         background: "rgba(2,9,20,0.92)",
         border: `1.5px solid ${accentHex}`,
         borderRadius: 10,
@@ -663,10 +660,11 @@ function ContactCard({
         )}
       </div>
 
-      {/* Centre column · name + verified · nex handle · profession ·
-          city + presence stacked tightly. flex:1 so it absorbs the
-          remaining width between avatar and CTA column. zIndex above
-          the hold-fill paint layer. */}
+      {/* Centre column · name + profession·city. flex:1 absorbs the
+          width beside the overlapping chip. Owner directive 2026-10-23
+          · "move text up 20px" · transform:translateY(-20px) lifts
+          the whole text column up 20px (visually overlaps the
+          container's top edge · chip stays in place at top:-24). */}
       <div
         style={{
           flex: 1,
@@ -676,6 +674,7 @@ function ContactCard({
           gap: 2,
           position: "relative",
           zIndex: 1,
+          transform: "translateY(-20px)",
         }}
       >
         {/* Name + verified pill */}
@@ -769,20 +768,17 @@ function ContactCard({
       `}</style>
     </article>
 
-    {/* Owner directive 2026-10-23 · "move the 2 buttons outside the
-        container under the container long style". Shop + Invite are
-        now long pill-shaped buttons sitting UNDER the card as a
-        dedicated row. Width constrained to 296 + centred so the
-        pill row aligns with the variant-7-sized card above it. */}
+    {/* Owner directive 2026-10-23 · "container full width ..." · the
+        pill row no longer clamps to 296 either · spans the same
+        full-width as the card above with the carousel's 16px
+        horizontal gutter from the phone edge. */}
     <div
       style={{
         display: "flex",
         flexDirection: "row",
         gap: 8,
         padding: "0 2px",
-        maxWidth: 296,
         width: "100%",
-        margin: "0 auto",
       }}
     >
       {contact.hasShop && (
