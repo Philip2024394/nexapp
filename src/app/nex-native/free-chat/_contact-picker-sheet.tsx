@@ -474,10 +474,12 @@ function ContactCard({
         flexDirection: "row",
         alignItems: "center",
         gap: 10,
-        // Owner directive 2026-10-23 · "we need make the container
-        // height smaller" · vertical padding trimmed 6/6 → 2/2 ·
-        // horizontal stays 70 left (chip overhang) + 14 right.
-        padding: "2px 14px 2px 70px",
+        // Owner directive 2026-10-23 · "move cart to the right side"
+        // · right padding bumped 14 → 56 so the identity text column
+        // doesn't underlap the 40px shop 🛒 marker that now lives
+        // at right:10 on the card. Left stays 70 for the chip
+        // overhang.
+        padding: "2px 56px 2px 70px",
         // Owner directive 2026-10-23 · Neon-glow 3D treatment ·
         // deeper navy base (#040A18 beats bgNavy #050F1E for contrast
         // against the glow) + 1.5px accent rim + layered boxShadow
@@ -657,17 +659,20 @@ function ContactCard({
         )}
       </div>
 
-      {/* Owner directive 2026-10-23 · "move cart icon up" · shop
-          icon lifts another 7px (top 39 → 32) to stay in sync with
-          the identity text column's new translateY(-12). */}
+      {/* Owner directive 2026-10-23 · "move the cart to the right
+          side of the container" · shop 🛒 marker moves from the
+          left (under the chip) to the right side of the card ·
+          position: absolute · right:10 · vertically centred so it
+          sits beside the identity text, clear of the last-online
+          text in the bottom-right corner. */}
       {contact.hasShop && (
         <div
           aria-label={`${contact.shopName ?? contact.displayName} has a shop`}
           data-nex-contact-card-shop-marker
           style={{
             position: "absolute",
-            top: 32,
-            left: 16,
+            top: 4,
+            right: 10,
             width: 40,
             height: 40,
             display: "grid",
