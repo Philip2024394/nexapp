@@ -695,8 +695,12 @@ function ContactCard({
           text below, so centring fills the right-side column
           cleanly). Uses a per-card conditional on contact.presence. */}
       {contact.hasShop && (
-        <div
-          aria-label={`${contact.shopName ?? contact.displayName} has a shop`}
+        <a
+          href={`/nex-native/shop-share-demo/${contact.id}`}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`Open ${contact.shopName ?? contact.displayName} shop`}
+          title={`Open ${contact.shopName ?? contact.displayName} shop`}
           data-nex-contact-card-shop-marker
           data-nex-contact-card-shop-position={
             contact.presence === "online" ? "centre" : "top"
@@ -715,7 +719,10 @@ function ContactCard({
                   fontSize: 26,
                   lineHeight: 1,
                   zIndex: 2,
-                  pointerEvents: "none",
+                  cursor: "pointer",
+                  color: "inherit",
+                  textDecoration: "none",
+                  WebkitTapHighlightColor: "transparent",
                   filter: `drop-shadow(0 2px 4px rgba(0,0,0,0.6))`,
                 }
               : {
@@ -729,13 +736,16 @@ function ContactCard({
                   fontSize: 26,
                   lineHeight: 1,
                   zIndex: 2,
-                  pointerEvents: "none",
+                  cursor: "pointer",
+                  color: "inherit",
+                  textDecoration: "none",
+                  WebkitTapHighlightColor: "transparent",
                   filter: `drop-shadow(0 2px 4px rgba(0,0,0,0.6))`,
                 }
           }
         >
           🛒
-        </div>
+        </a>
       )}
 
       {/* Centre column · name + profession·city. flex:1 absorbs the
