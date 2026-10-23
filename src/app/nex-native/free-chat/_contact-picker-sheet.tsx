@@ -725,12 +725,14 @@ function ContactCard({
           <div
             style={{
               // Owner directive 2026-10-23 · "reduce height 30px" ·
-              // name shrunk 15 → 14 + lineHeight set to 1.1 to cut
-              // vertical bulk without hurting readability.
-              fontSize: 14,
+              // name shrunk 15 → 14 → 13 (owner directive 2026-10-23
+              // · "reduce container height 40px") · lineHeight 1.0 ·
+              // 4-line content has a physical minimum without
+              // collapsing lines.
+              fontSize: 13,
               fontWeight: 800,
               color: NEX.text,
-              lineHeight: 1.1,
+              lineHeight: 1.0,
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -772,17 +774,18 @@ function ContactCard({
             handles / IDs). */}
         {/* Owner directive 2026-10-23 · "nex id text bold and size
             12" · explicit fontWeight 800 (strong bold) at fontSize
-            12 · same accent-coloured monospace. */}
+            11 (shrunk from 12 for the height-reduction pass · still
+            visibly bold and reads as the handle). */}
         <div
           data-nex-contact-card-handle
           style={{
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: 800,
             color: accentHex,
             letterSpacing: 0.3,
             fontFamily:
               "ui-monospace, SFMono-Regular, Menlo, Monaco, 'Courier New', monospace",
-            lineHeight: 1.1,
+            lineHeight: 1.0,
           }}
         >
           {contact.nexHandle}
@@ -790,9 +793,9 @@ function ContactCard({
         {/* Profession on its own line. */}
         <div
           style={{
-            fontSize: 11,
+            fontSize: 10,
             color: NEX.textMute,
-            lineHeight: 1.1,
+            lineHeight: 1.0,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -812,7 +815,7 @@ function ContactCard({
               gap: 4,
               fontSize: 11,
               color: NEX.textMute,
-              lineHeight: 1.1,
+              lineHeight: 1.0,
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
