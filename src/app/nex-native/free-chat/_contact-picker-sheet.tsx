@@ -354,11 +354,14 @@ export function ContactPickerSheet({
           style={{
             display: "flex",
             flexDirection: "column",
-            // Owner directive 2026-10-23 (variant-7 adoption) · gap
-            // bumped so the overlapping chip of each card doesn't
-            // collide with the previous card's border.
-            gap: 20,
-            padding: "20px 16px 16px",
+            // Owner directive 2026-10-23 · "move down little cards
+            // from header and leave space little from each card
+            // touching" · gap bumped 20 → 28 so overlapping chips
+            // don't touch the previous card's rim · paddingTop
+            // bumped 20 → 36 so the first card sits well below the
+            // sheet header strip.
+            gap: 28,
+            padding: "36px 16px 20px",
             overflowY: "auto",
             overflowX: "hidden",
             WebkitOverflowScrolling: "touch",
@@ -477,12 +480,11 @@ function ContactCard({
         flexDirection: "row",
         alignItems: "center",
         gap: 10,
-        // Owner directives 2026-10-23 · "add round message counter
-        // button" · right padding bumped 14 → 60 so the identity
-        // text column doesn't underlap the new 40px round message
-        // button that lives at right:10 inside the container. Left
-        // stays 70 for the overlapping chip.
-        padding: "2px 60px 2px 70px",
+        // Owner directive 2026-10-23 · "reduce container height to
+        // min" · vertical padding dropped to 0 · the chip overlap
+        // on the left + the chat button on the right still have
+        // their horizontal padding reserved (70 left + 60 right).
+        padding: "0 60px 0 70px",
         // Owner directive 2026-10-23 · Neon-glow 3D treatment ·
         // deeper navy base (#040A18 beats bgNavy #050F1E for contrast
         // against the glow) + 1.5px accent rim + layered boxShadow
@@ -768,11 +770,14 @@ function ContactCard({
             Sealed monospace stack retained (design-tokens doctrine
             keeps mono as the intentional type-system contrast for
             handles / IDs). */}
+        {/* Owner directive 2026-10-23 · "nex id text bold and size
+            12" · explicit fontWeight 800 (strong bold) at fontSize
+            12 · same accent-coloured monospace. */}
         <div
           data-nex-contact-card-handle
           style={{
             fontSize: 12,
-            fontWeight: 700,
+            fontWeight: 800,
             color: accentHex,
             letterSpacing: 0.3,
             fontFamily:
@@ -782,6 +787,7 @@ function ContactCard({
         >
           {contact.nexHandle}
         </div>
+        {/* Profession on its own line. */}
         <div
           style={{
             fontSize: 11,
@@ -790,20 +796,32 @@ function ContactCard({
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
           }}
         >
-          <span>{contact.profession}</span>
-          {contact.city && (
-            <>
-              <span aria-hidden style={{ color: NEX.textMute }}>·</span>
-              <MapPinIcon color={NEX.unreadRed} />
-              <span>{contact.city}</span>
-            </>
-          )}
+          {contact.profession}
         </div>
+        {/* Owner directive 2026-10-23 · "the location and icon should
+            be under the profession" · city row stacks UNDER the
+            profession with the red map-pin icon leading. */}
+        {contact.city && (
+          <div
+            data-nex-contact-card-location
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              fontSize: 11,
+              color: NEX.textMute,
+              lineHeight: 1.1,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            <MapPinIcon color={NEX.unreadRed} />
+            <span>{contact.city}</span>
+          </div>
+        )}
       </div>
 
       {/* Owner directive 2026-10-23 · "lower right side container must
@@ -846,8 +864,11 @@ function ContactCard({
         style={{
           position: "absolute",
           right: 10,
-          top: "50%",
-          transform: "translateY(-50%)",
+          // Owner directive 2026-10-23 · "move chat button up" ·
+          // button lifted from vertical-centre (top: 50% + translate
+          // -50%) to pin at the top of the card (top: 4) so the
+          // container can collapse to its absolute minimum height.
+          top: 4,
           width: 40,
           height: 40,
           borderRadius: "50%",
