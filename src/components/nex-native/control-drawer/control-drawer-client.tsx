@@ -162,7 +162,11 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
     key: "chats-contacts",
     label: "Chats and contacts",
     subtitle: "Return to your conversations",
-    href: "/nex-native/chat",
+    // Owner directive 2026-10-23 · "chat and contacts link in side
+    // drawer does not divert to contacts page" · fix · the row was
+    // pointing at /nex-native/chat (not a live route) · corrected
+    // to the sealed /nex-native/contacts hub.
+    href: "/nex-native/contacts",
     locked: true,
   },
   {
