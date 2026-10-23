@@ -347,8 +347,11 @@ export function ContactPickerSheet({
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: 8,
-            padding: "10px 16px 16px",
+            // Owner directive 2026-10-23 (variant-7 adoption) · gap
+            // bumped so the overlapping chip of each card doesn't
+            // collide with the previous card's border.
+            gap: 20,
+            padding: "20px 16px 16px",
             overflowY: "auto",
             overflowX: "hidden",
             WebkitOverflowScrolling: "touch",
@@ -367,42 +370,24 @@ export function ContactPickerSheet({
               No contacts match your search
             </div>
           )}
-          {/* Owner directive 2026-10-23 · "remove the container frame
-              and add line small between broken style line". Each
-              card now paints without its own border · a dashed
-              divider sits between adjacent cards (not after the
-              last) so the list reads as a continuous roll rather
-              than isolated panels. */}
-          {filtered.map((c, i) => (
-            <React.Fragment key={c.id}>
-              <ContactCard
-                contact={c}
-                accentHex={accentHex}
-                onInvite={() => onInvite(c)}
-                onShopShare={() => onShopShare(c)}
-                onHoldStart={() => startHold(c.id)}
-                onHoldEnd={cancelHold}
-                holdProgress={
-                  holding && holding.contactId === c.id ? holdProgress : 0
-                }
-              />
-              {i < filtered.length - 1 && (
-                <div
-                  aria-hidden
-                  data-nex-free-chat-contact-divider
-                  style={{
-                    height: 0,
-                    // Owner directive 2026-10-23 · "dotted line is
-                    // pink theme color" · divider now tints with the
-                    // active chat-theme accent so it reads as pink on
-                    // theme-1, gold on theme-2, etc. · instead of
-                    // the earlier fixed cyan.
-                    borderTop: `1px dashed ${accentHex}66`,
-                    margin: "0 8px",
-                  }}
-                />
-              )}
-            </React.Fragment>
+          {/* Owner directive 2026-10-23 (variant-7 adoption) ·
+              dashed divider retired · each card now has its own
+              accent-rimmed container (per variant 7) · the gap
+              between cards gives the overlapping chips breathing
+              room without needing a hairline between. */}
+          {filtered.map((c) => (
+            <ContactCard
+              key={c.id}
+              contact={c}
+              accentHex={accentHex}
+              onInvite={() => onInvite(c)}
+              onShopShare={() => onShopShare(c)}
+              onHoldStart={() => startHold(c.id)}
+              onHoldEnd={cancelHold}
+              holdProgress={
+                holding && holding.contactId === c.id ? holdProgress : 0
+              }
+            />
           ))}
         </div>
     </div>
@@ -477,7 +462,10 @@ function ContactCard({
         flexDirection: "row",
         alignItems: "center",
         gap: 10,
-        padding: "6px 12px",
+        // Left padding bumped so the identity text column sits BESIDE
+        // the overlapping chip (chip is left:12 + width:48 = extends
+        // to 60 · plus 10px breathing gap · text starts at 72).
+        padding: "10px 12px 10px 72px",
         // Owner directive 2026-10-23 · Neon-glow 3D treatment ·
         // deeper navy base (#040A18 beats bgNavy #050F1E for contrast
         // against the glow) + 1.5px accent rim + layered boxShadow
@@ -485,27 +473,30 @@ function ContactCard({
         // (painted as a sibling div below). The glow intensifies
         // when the card is being held so the hold ritual reads as
         // the card "charging".
-        // Owner directive 2026-10-23 · "remove the container frame" ·
-        // retire the per-card 1.5px accent border + the deep #040A18
-        // panel · cards now sit directly on the sheet background with
-        // only the dashed divider in between (added at the carousel
-        // level). The neon-glow treatment (boxShadow + sheen overlay)
-        // is retired for the same "no container" directive.
-        background: "transparent",
-        border: "none",
-        borderRadius: 10,
-        overflow: "hidden",
+        // Owner directive 2026-10-23 (variant-7 adoption) · "small
+        // container with square sitting on it design 7". Container
+        // returns · dark navy panel with an accent-tinted rim (pink
+        // on theme-1, gold on theme-2, etc.). overflow is EXPLICITLY
+        // allowed · the avatar chip overlaps the top edge of the
+        // card.
+        background: "#040A18",
+        border: `1.5px solid ${accentHex}`,
+        borderRadius: 12,
+        overflow: "visible",
         cursor: "pointer",
         userSelect: "none",
         WebkitUserSelect: "none",
         transition:
           "border-color 120ms ease, transform 120ms ease, box-shadow 180ms ease",
         transform: isHolding ? "scale(0.99)" : "scale(1)",
-        // Owner directive 2026-10-23 · "remove the container frame" ·
-        // the neon-glow outer + inset boxShadow is retired · cards
-        // sit flush on the sheet background with only the dashed
-        // divider between them.
-        boxShadow: "none",
+        boxShadow: isHolding
+          ? `0 0 20px ${accentHex}88`
+          : `0 2px 10px rgba(0,0,0,0.4)`,
+        // Owner directive 2026-10-23 · leave vertical room at the top
+        // so the avatar chip can overlap into negative space without
+        // the card clipping it. Extra 12px top padding keeps the
+        // identity text sitting beneath the chip.
+        marginTop: 14,
       }}
     >
       {/* Owner directive 2026-10-22 (evening · pass 18) · hold-to-send
@@ -547,93 +538,95 @@ function ContactCard({
           Inviting in {countdownSeconds}…
         </div>
       )}
-      {/* Avatar · presence ring · 24h status halo · shop badge. z-
-          indexed above the hold-fill so the pulsing heartbeat +
-          shop badge stay visible as the fill grows. */}
+      {/* Owner directive 2026-10-23 (variant-7 adoption) · SQUARE
+          avatar chip overlapping the TOP edge of the card. Sized
+          48×48 · borderRadius 10 (gentle rounded square · not a
+          circle) · 2px solid accentHex rim · gradient fill ·
+          initials inside. Presence dot sits in the bottom-right
+          corner of the chip (standard social-app pattern). */}
       <div
         style={{
-          position: "relative",
-          width: 56,
-          height: 56,
+          position: "absolute",
+          top: -14,
+          left: 12,
+          width: 48,
+          height: 48,
           flexShrink: 0,
-          zIndex: 1,
+          zIndex: 2,
         }}
       >
-        {/* 24h status halo (if active) · thicker outer ring in accent */}
-        {contact.hasActiveStatus && (
-          <div
-            aria-hidden
-            data-nex-contact-card-status-halo
-            style={{
-              position: "absolute",
-              inset: -4,
-              borderRadius: "50%",
-              border: `2px solid ${accentHex}`,
-              boxShadow: `0 0 8px ${accentHex}99`,
-              pointerEvents: "none",
-            }}
-          />
-        )}
-        {/* Owner directive 2026-10-23 (revised) · the SOLID rim is
-            presence-coloured: online → green · busy → orange ·
-            offline → dark red. The PULSING heartbeat below stays
-            always-blue (the "status live" marker). */}
+        {/* Chip surface · square with gradient fill + accent rim ·
+            initials text centred. */}
         <div
           style={{
             position: "absolute",
             inset: 0,
-            borderRadius: "50%",
-            border: `2px solid ${ringColor}`,
+            borderRadius: 10,
+            border: `2px solid ${accentHex}`,
             overflow: "hidden",
-            background: `linear-gradient(135deg, ${accentHex}44 0%, #05101f 100%)`,
+            background: `linear-gradient(135deg, ${accentHex}cc 0%, #180012 65%, #050F1E 100%)`,
             display: "grid",
             placeItems: "center",
+            boxShadow: `0 2px 8px rgba(0,0,0,0.5)`,
           }}
         >
           <span
             aria-hidden
             style={{
-              color: accentHex,
-              fontSize: 16,
-              fontWeight: 800,
-              letterSpacing: "0.06em",
-              opacity: 0.9,
+              color: "#FFF",
+              fontSize: 15,
+              fontWeight: 900,
+              letterSpacing: "0.04em",
+              textShadow: "0 1px 3px rgba(0,0,0,0.6)",
             }}
           >
             {contact.initials}
           </span>
         </div>
-        {/* Status heartbeat · owner directive 2026-10-23 · "status
-            ping rim is always blue color". Formerly only rendered
-            for online contacts in green · now ALWAYS mounted in NEX
-            cyan so every card carries the pulsing blue ping. */}
+        {/* Presence dot · small square-ish pill in bottom-right of
+            the chip · green/orange/dark-red based on presence state. */}
+        <div
+          aria-label={`presence · ${contact.presence}`}
+          data-nex-contact-card-presence-dot={contact.presence}
+          style={{
+            position: "absolute",
+            right: -3,
+            bottom: -3,
+            width: 12,
+            height: 12,
+            borderRadius: 4,
+            background: ringColor,
+            border: `2px solid #040A18`,
+            zIndex: 3,
+          }}
+        />
+        {/* Status heartbeat · always-blue pulsing rim around the chip
+            · signals "status live". */}
         <div
           aria-hidden
           style={{
             position: "absolute",
-            inset: -2,
-            borderRadius: "50%",
+            inset: -3,
+            borderRadius: 12,
             border: `2px solid ${NEX.cyan}`,
             animation:
               "nex-contact-card-heartbeat 1200ms cubic-bezier(0.4,0,0.2,1) infinite",
             pointerEvents: "none",
           }}
         />
-        {/* Owner directive 2026-10-22 (evening · pass 20) · unread-
-            count badge on bottom-right rim · replaces the previous
-            🛒 badge. Shows the number of unread messages from this
-            contact in the viewer's peer conversation with them.
-            Hidden when 0. Numbers > 99 collapse to "99+". The shop
-            indicator is now carried by the presence of the Shop CTA
-            button on the right instead. */}
+        {/* Unread badge · owner directive 2026-10-23 · lifted to the
+            TOP-RIGHT corner of the chip (presence dot is at bottom-
+            right · the pair balances) so it stays legible against
+            the chip's accent gradient without colliding with the
+            card's text column. */}
         {contact.unreadCount > 0 && (
           <div
             aria-label={`${contact.unreadCount} unread`}
             data-nex-contact-card-unread-badge
             style={{
               position: "absolute",
-              bottom: -2,
-              right: -2,
+              top: -6,
+              right: -6,
               minWidth: 20,
               height: 20,
               padding: "0 5px",
