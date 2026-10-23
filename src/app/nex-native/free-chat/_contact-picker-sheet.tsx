@@ -33,8 +33,11 @@ const NEX = {
   textMute: "#7D9BC0",
   cyan: "#00AFFF",
   // Presence vocabulary (owner directive pass 19).
+  // Owner directive 2026-10-23 · "green ping for online and rim ·
+  // offline red dark rim · busy yellow rim with ping". Busy switches
+  // from orange (#FF7200) to yellow (#FFD700).
   presenceOnline: "#16D66B",
-  presenceBusy: "#FF7200",
+  presenceBusy: "#FFD700",
   presenceOffline: "#A60000",
   // Owner directive 2026-10-22 (evening · pass 21) · two fixed
   // chrome colours that stay the same across every theme accent:
@@ -606,21 +609,26 @@ function ContactCard({
             zIndex: 3,
           }}
         />
-        {/* Status heartbeat · always-blue pulsing rim around the chip
-            · signals "status live" · ROUND to match the new circular
-            chip. */}
-        <div
-          aria-hidden
-          style={{
-            position: "absolute",
-            inset: -3,
-            borderRadius: "50%",
-            border: `2px solid ${NEX.cyan}`,
-            animation:
-              "nex-contact-card-heartbeat 1200ms cubic-bezier(0.4,0,0.2,1) infinite",
-            pointerEvents: "none",
-          }}
-        />
+        {/* Status heartbeat · owner directive 2026-10-23 · "green ping
+            for online · busy yellow rim WITH ping · offline red dark
+            rim no ping". Pulsing ring shows only for online + busy ·
+            offline contacts render a static dark-red rim with no
+            ping. Ping colour matches the presence rim colour so the
+            pulse reads as the same vocabulary. */}
+        {contact.presence !== "offline" && (
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              inset: -3,
+              borderRadius: "50%",
+              border: `2px solid ${ringColor}`,
+              animation:
+                "nex-contact-card-heartbeat 1200ms cubic-bezier(0.4,0,0.2,1) infinite",
+              pointerEvents: "none",
+            }}
+          />
+        )}
         {/* Unread badge · owner directive 2026-10-23 · lifted to the
             TOP-RIGHT corner of the chip (presence dot is at bottom-
             right · the pair balances) so it stays legible against
@@ -660,13 +668,10 @@ function ContactCard({
         )}
       </div>
 
-      {/* Owner directive 2026-10-23 · "add shop icon under the profile
-          image" · hasShop-gated small round shop marker sitting
-          directly BELOW the chip (chip ends at top:24 · marker sits
-          at top:30 · same left:12 so it stacks under the chip
-          vertically). Reads as "this contact has a shop" at a
-          glance · the long SHOP pill in the CTA row below is still
-          the action trigger. */}
+      {/* Owner directive 2026-10-23 · "shop icon no button enlarge
+          the icon" · retired the orange-pill button chrome · the
+          🛒 glyph now sits bare and larger directly below the chip.
+          hasShop-gated. */}
       {contact.hasShop && (
         <div
           aria-label={`${contact.shopName ?? contact.displayName} has a shop`}
@@ -674,20 +679,16 @@ function ContactCard({
           style={{
             position: "absolute",
             top: 30,
-            left: 24,
-            width: 20,
-            height: 20,
-            borderRadius: "50%",
-            background: NEX.shopOrange,
-            color: NEX.shopOrangeInk,
-            border: `2px solid #040A18`,
+            left: 20,
+            width: 32,
+            height: 32,
             display: "grid",
             placeItems: "center",
-            fontSize: 10,
-            fontWeight: 800,
+            fontSize: 24,
             lineHeight: 1,
             zIndex: 2,
-            boxShadow: `0 2px 6px ${NEX.shopOrange}66`,
+            pointerEvents: "none",
+            filter: `drop-shadow(0 2px 4px rgba(0,0,0,0.6))`,
           }}
         >
           🛒
