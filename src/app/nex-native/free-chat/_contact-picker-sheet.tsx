@@ -657,32 +657,52 @@ function ContactCard({
         )}
       </div>
 
-      {/* Owner directive 2026-10-23 · "move the cart to the right
-          side of the container" · shop 🛒 marker moves from the
-          left (under the chip) to the right side of the card ·
-          position: absolute · right:10 · vertically centred so it
-          sits beside the identity text, clear of the last-online
-          text in the bottom-right corner. */}
+      {/* Owner directive 2026-10-23 · "center the cart icon for cards
+          that is not displaying last online time" · the shop marker
+          is pinned at top:4 for NON-online contacts (last-online
+          text occupies the bottom-right · shop stays at the top) ·
+          and vertically CENTRED for online contacts (no last-online
+          text below, so centring fills the right-side column
+          cleanly). Uses a per-card conditional on contact.presence. */}
       {contact.hasShop && (
         <div
           aria-label={`${contact.shopName ?? contact.displayName} has a shop`}
           data-nex-contact-card-shop-marker
-          style={{
-            position: "absolute",
-            top: 4,
-            right: 10,
-            // Owner directive 2026-10-23 · "reduce the cart 20%" ·
-            // box 40 → 32 (−20%) · emoji 32 → 26 (−19%).
-            width: 32,
-            height: 32,
-            display: "grid",
-            placeItems: "center",
-            fontSize: 26,
-            lineHeight: 1,
-            zIndex: 2,
-            pointerEvents: "none",
-            filter: `drop-shadow(0 2px 4px rgba(0,0,0,0.6))`,
-          }}
+          data-nex-contact-card-shop-position={
+            contact.presence === "online" ? "centre" : "top"
+          }
+          style={
+            contact.presence === "online"
+              ? {
+                  position: "absolute",
+                  top: "50%",
+                  right: 10,
+                  transform: "translateY(-50%)",
+                  width: 32,
+                  height: 32,
+                  display: "grid",
+                  placeItems: "center",
+                  fontSize: 26,
+                  lineHeight: 1,
+                  zIndex: 2,
+                  pointerEvents: "none",
+                  filter: `drop-shadow(0 2px 4px rgba(0,0,0,0.6))`,
+                }
+              : {
+                  position: "absolute",
+                  top: 4,
+                  right: 10,
+                  width: 32,
+                  height: 32,
+                  display: "grid",
+                  placeItems: "center",
+                  fontSize: 26,
+                  lineHeight: 1,
+                  zIndex: 2,
+                  pointerEvents: "none",
+                  filter: `drop-shadow(0 2px 4px rgba(0,0,0,0.6))`,
+                }
+          }
         >
           🛒
         </div>
