@@ -474,12 +474,10 @@ function ContactCard({
         flexDirection: "row",
         alignItems: "center",
         gap: 10,
-        // Owner directive 2026-10-23 · "move cart to the right side"
-        // · right padding bumped 14 → 56 so the identity text column
-        // doesn't underlap the 40px shop 🛒 marker that now lives
-        // at right:10 on the card. Left stays 70 for the chip
-        // overhang.
-        padding: "2px 56px 2px 70px",
+        // Owner directive 2026-10-23 · shop marker shrunk to 32×32
+        // (−20%) · right padding reduced to match · 56 → 48 (32
+        // marker + 16 safety).
+        padding: "2px 48px 2px 70px",
         // Owner directive 2026-10-23 · Neon-glow 3D treatment ·
         // deeper navy base (#040A18 beats bgNavy #050F1E for contrast
         // against the glow) + 1.5px accent rim + layered boxShadow
@@ -673,11 +671,13 @@ function ContactCard({
             position: "absolute",
             top: 4,
             right: 10,
-            width: 40,
-            height: 40,
+            // Owner directive 2026-10-23 · "reduce the cart 20%" ·
+            // box 40 → 32 (−20%) · emoji 32 → 26 (−19%).
+            width: 32,
+            height: 32,
             display: "grid",
             placeItems: "center",
-            fontSize: 32,
+            fontSize: 26,
             lineHeight: 1,
             zIndex: 2,
             pointerEvents: "none",
