@@ -316,21 +316,6 @@ export function ControlDrawer({ session, themeAccent, identityNameOverride }: Co
   const [visible, setVisible] = React.useState(false);
   const [confirmLogout, setConfirmLogout] = React.useState(false);
   const [frameNode, setFrameNode] = React.useState<HTMLElement | null>(null);
-  // Owner directive 2026-10-23 · "unlock them for admin dev entry".
-  // Non-production builds · if the URL carries `?dev=1` the drawer
-  // treats the viewer as not-guest and skips the account-required
-  // lock on every row. Production ignores the flag entirely so the
-  // bypass can never leak to real users.
-  const [devUnlock, setDevUnlock] = React.useState(false);
-  React.useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (process.env.NODE_ENV === "production") return;
-    const params = new URLSearchParams(window.location.search);
-    setDevUnlock(params.get("dev") === "1");
-  }, []);
-  // Effective-guest treats the viewer as signed in when devUnlock
-  // is on · drives the lock gate on every SectionGroup below.
-  const effectiveIsGuest = session === null && !devUnlock;
   const triggerRef = React.useRef<HTMLButtonElement | null>(null);
   const closeButtonRef = React.useRef<HTMLButtonElement | null>(null);
   const panelRef = React.useRef<HTMLDivElement | null>(null);
@@ -549,6 +534,20 @@ function DrawerBody({
   readonly onLogoutClick: () => void;
   readonly identityNameOverride?: string;
 }) {
+  // Owner directive 2026-10-23 · "unlock them for admin dev entry".
+  // Non-production builds · if the URL carries `?dev=1` the drawer
+  // treats the viewer as not-guest and skips the account-required
+  // lock on every row. Production ignores the flag entirely so the
+  // bypass can never leak to real users.
+  const [devUnlock, setDevUnlock] = React.useState(false);
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (process.env.NODE_ENV === "production") return;
+    const params = new URLSearchParams(window.location.search);
+    setDevUnlock(params.get("dev") === "1");
+  }, []);
+  const effectiveIsGuest = session === null && !devUnlock;
+
   return (
     <div style={drawerBodyStyle}>
       <IdentityBar session={session} identityNameOverride={identityNameOverride} />
