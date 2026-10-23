@@ -162,12 +162,15 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
     key: "chats-contacts",
     label: "Chats and contacts",
     subtitle: "Return to your conversations",
-    // Owner directive 2026-10-23 · "chat and contacts link in side
-    // drawer does not divert to contacts page" · fix · the row was
-    // pointing at /nex-native/chat (not a live route) · corrected
-    // to the sealed /nex-native/contacts hub.
+    // Owner directive 2026-10-23 · "chat and contacts link side
+    // drawer unlock and link without contacts page [gate]" ·
+    // row UNLOCKED (locked: false) so the drawer always navigates
+    // direct to /nex-native/contacts · no 3D lock, no /sign-in
+    // redirect from the drawer side. The contacts page itself still
+    // enforces its own auth gate for guests · that's its concern,
+    // not the drawer's.
     href: "/nex-native/contacts",
-    locked: true,
+    locked: false,
   },
   {
     key: "chat-appearance",
