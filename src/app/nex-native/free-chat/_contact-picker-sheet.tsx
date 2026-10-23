@@ -367,19 +367,37 @@ export function ContactPickerSheet({
               No contacts match your search
             </div>
           )}
-          {filtered.map((c) => (
-            <ContactCard
-              key={c.id}
-              contact={c}
-              accentHex={accentHex}
-              onInvite={() => onInvite(c)}
-              onShopShare={() => onShopShare(c)}
-              onHoldStart={() => startHold(c.id)}
-              onHoldEnd={cancelHold}
-              holdProgress={
-                holding && holding.contactId === c.id ? holdProgress : 0
-              }
-            />
+          {/* Owner directive 2026-10-23 · "remove the container frame
+              and add line small between broken style line". Each
+              card now paints without its own border · a dashed
+              divider sits between adjacent cards (not after the
+              last) so the list reads as a continuous roll rather
+              than isolated panels. */}
+          {filtered.map((c, i) => (
+            <React.Fragment key={c.id}>
+              <ContactCard
+                contact={c}
+                accentHex={accentHex}
+                onInvite={() => onInvite(c)}
+                onShopShare={() => onShopShare(c)}
+                onHoldStart={() => startHold(c.id)}
+                onHoldEnd={cancelHold}
+                holdProgress={
+                  holding && holding.contactId === c.id ? holdProgress : 0
+                }
+              />
+              {i < filtered.length - 1 && (
+                <div
+                  aria-hidden
+                  data-nex-free-chat-contact-divider
+                  style={{
+                    height: 0,
+                    borderTop: `1px dashed ${NEX.cyan}55`,
+                    margin: "0 8px",
+                  }}
+                />
+              )}
+            </React.Fragment>
           ))}
         </div>
     </div>
@@ -462,9 +480,15 @@ function ContactCard({
         // (painted as a sibling div below). The glow intensifies
         // when the card is being held so the hold ritual reads as
         // the card "charging".
-        background: "#040A18",
-        border: `1.5px solid ${accentHex}`,
-        borderRadius: 16,
+        // Owner directive 2026-10-23 · "remove the container frame" ·
+        // retire the per-card 1.5px accent border + the deep #040A18
+        // panel · cards now sit directly on the sheet background with
+        // only the dashed divider in between (added at the carousel
+        // level). The neon-glow treatment (boxShadow + sheen overlay)
+        // is retired for the same "no container" directive.
+        background: "transparent",
+        border: "none",
+        borderRadius: 10,
         overflow: "hidden",
         cursor: "pointer",
         userSelect: "none",
@@ -472,28 +496,13 @@ function ContactCard({
         transition:
           "border-color 120ms ease, transform 120ms ease, box-shadow 180ms ease",
         transform: isHolding ? "scale(0.99)" : "scale(1)",
-        boxShadow: isHolding
-          ? `0 0 32px ${accentHex}99, inset 0 0 32px ${accentHex}33`
-          : `0 0 24px ${accentHex}66, inset 0 0 24px ${accentHex}22`,
+        // Owner directive 2026-10-23 · "remove the container frame" ·
+        // the neon-glow outer + inset boxShadow is retired · cards
+        // sit flush on the sheet background with only the dashed
+        // divider between them.
+        boxShadow: "none",
       }}
     >
-      {/* Owner directive 2026-10-23 · Neon-glow 3D sheen overlay ·
-          radial gradient positioned at the top-left so the card reads
-          as "lit from above". Behind every other layer (zIndex 0,
-          pointerEvents off) so it never blocks a hold-start on the
-          card body or a click on the CTAs. */}
-      <div
-        aria-hidden
-        data-nex-free-chat-contact-card-sheen
-        style={{
-          position: "absolute",
-          inset: 0,
-          borderRadius: 16,
-          background: `radial-gradient(circle at 30% 20%, ${accentHex}22, transparent 60%)`,
-          pointerEvents: "none",
-          zIndex: 0,
-        }}
-      />
       {/* Owner directive 2026-10-22 (evening · pass 18) · hold-to-send
           progress fill. Grows left-to-right as the 5s elapses. Sits
           BEHIND the card content via zIndex:0 + content zIndex:1. */}
@@ -560,17 +569,16 @@ function ContactCard({
             }}
           />
         )}
-        {/* Status ping rim · owner directive 2026-10-23 · "status
-            ping rim is always blue color". Solid 2px NEX cyan border
-            replaces the earlier presence-based green/amber/dark-red
-            ring · reads as a stable identity-anchor regardless of
-            the contact's presence state. */}
+        {/* Owner directive 2026-10-23 (revised) · the SOLID rim is
+            presence-coloured: online → green · busy → orange ·
+            offline → dark red. The PULSING heartbeat below stays
+            always-blue (the "status live" marker). */}
         <div
           style={{
             position: "absolute",
             inset: 0,
             borderRadius: "50%",
-            border: `2px solid ${NEX.cyan}`,
+            border: `2px solid ${ringColor}`,
             overflow: "hidden",
             background: `linear-gradient(135deg, ${accentHex}44 0%, #05101f 100%)`,
             display: "grid",
