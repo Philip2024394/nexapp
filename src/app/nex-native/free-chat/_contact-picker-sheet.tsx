@@ -866,11 +866,12 @@ function ContactCard({
         style={{
           position: "absolute",
           right: 10,
-          // Owner directive 2026-10-23 · "move chat button up" ·
-          // button lifted from vertical-centre (top: 50% + translate
-          // -50%) to pin at the top of the card (top: 4) so the
-          // container can collapse to its absolute minimum height.
-          top: 4,
+          // Owner directive 2026-10-23 · "move down the chat button
+          // with image little" · top 4 → 18 · nudges the button down
+          // a touch so it sits a little lower from the container's
+          // top edge · still visually anchored at the upper third
+          // of the card.
+          top: 18,
           width: 40,
           height: 40,
           borderRadius: "50%",
