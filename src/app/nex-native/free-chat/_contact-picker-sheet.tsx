@@ -480,11 +480,11 @@ function ContactCard({
         flexDirection: "row",
         alignItems: "center",
         gap: 10,
-        // Owner directive 2026-10-23 · "reduce container height to
-        // min" · vertical padding dropped to 0 · the chip overlap
-        // on the left + the chat button on the right still have
-        // their horizontal padding reserved (70 left + 60 right).
-        padding: "0 60px 0 70px",
+        // Owner chose Option 1 2026-10-23 · "keep 4 lines + good
+        // spacing" · vertical padding restored to 8/8 so content
+        // doesn't hug the rims. Horizontal padding keeps 70 left
+        // (chip overhang) + 60 right (round chat button).
+        padding: "8px 60px 8px 70px",
         // Owner directive 2026-10-23 · Neon-glow 3D treatment ·
         // deeper navy base (#040A18 beats bgNavy #050F1E for contrast
         // against the glow) + 1.5px accent rim + layered boxShadow
@@ -703,14 +703,15 @@ function ContactCard({
           minWidth: 0,
           display: "flex",
           flexDirection: "column",
-          // Owner directive 2026-10-23 · "reduce the height of the
-          // container 30px" · gap trimmed 2 → 0 so the 3 identity
-          // rows stack flush · each line relies on its own line-
-          // height for breathing room.
-          gap: 0,
+          // Owner chose Option 1 2026-10-23 · "keep 4 lines + good
+          // spacing" · gap restored to 4 so each row (name · NEX ID
+          // · profession · city) has visible breathing room.
+          gap: 4,
           position: "relative",
           zIndex: 1,
-          transform: "translateY(-20px)",
+          // translateY(-20) hack retired · the taller container now
+          // holds the text naturally without needing to pull it up
+          // visually.
         }}
       >
         {/* Name + verified pill */}
@@ -725,14 +726,13 @@ function ContactCard({
           <div
             style={{
               // Owner directive 2026-10-23 · "reduce height 30px" ·
-              // name shrunk 15 → 14 → 13 (owner directive 2026-10-23
-              // · "reduce container height 40px") · lineHeight 1.0 ·
-              // 4-line content has a physical minimum without
-              // collapsing lines.
-              fontSize: 13,
+              // Owner chose Option 1 2026-10-23 · "keep 4 lines + good
+              // spacing" · name restored to 15 at lineHeight 1.2 ·
+              // text breathes, container settles ~70px tall.
+              fontSize: 15,
               fontWeight: 800,
               color: NEX.text,
-              lineHeight: 1.0,
+              lineHeight: 1.2,
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -772,20 +772,19 @@ function ContactCard({
             Sealed monospace stack retained (design-tokens doctrine
             keeps mono as the intentional type-system contrast for
             handles / IDs). */}
-        {/* Owner directive 2026-10-23 · "nex id text bold and size
-            12" · explicit fontWeight 800 (strong bold) at fontSize
-            11 (shrunk from 12 for the height-reduction pass · still
-            visibly bold and reads as the handle). */}
+        {/* NEX ID · bold 800 · fontSize 12 (per the original owner
+            spec · restored from the 11px height-reduction pass now
+            that Option 1 "keep 4 lines + good spacing" is chosen). */}
         <div
           data-nex-contact-card-handle
           style={{
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 800,
             color: accentHex,
             letterSpacing: 0.3,
             fontFamily:
               "ui-monospace, SFMono-Regular, Menlo, Monaco, 'Courier New', monospace",
-            lineHeight: 1.0,
+            lineHeight: 1.2,
           }}
         >
           {contact.nexHandle}
@@ -793,9 +792,9 @@ function ContactCard({
         {/* Profession on its own line. */}
         <div
           style={{
-            fontSize: 10,
+            fontSize: 11,
             color: NEX.textMute,
-            lineHeight: 1.0,
+            lineHeight: 1.2,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -815,7 +814,7 @@ function ContactCard({
               gap: 4,
               fontSize: 11,
               color: NEX.textMute,
-              lineHeight: 1.0,
+              lineHeight: 1.2,
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
