@@ -1996,16 +1996,20 @@ function ButterflyFlyby(): React.JSX.Element {
            sits at ~top: 42px, right: 62px · translates to roughly
            85vw / 5vh in the butterfly's translate3d space. */
         @keyframes nex-butterfly-journey {
-          /* Phase 1 · bottom-right fly-in → cross → exit left */
-          0%   { transform: translate3d(110vw, 52vh, 0) rotate(2deg);  opacity: 0; }
+          /* Phase 1 · owner directive 2026-10-23 · entry from the
+             LOWER-RIGHT FOOTER SIDE (not mid-right). Starts at
+             78vh · just above the composer dock · then climbs
+             diagonally as it meanders across the screen and exits
+             upper-left. */
+          0%   { transform: translate3d(110vw, 78vh, 0) rotate(2deg);  opacity: 0; }
           3%   { opacity: 1; }
-          6%   { transform: translate3d(88vw,  45vh, 0) rotate(-4deg); }
-          10%  { transform: translate3d(72vw,  52vh, 0) rotate(5deg);  }
-          15%  { transform: translate3d(55vw,  38vh, 0) rotate(-6deg); }
-          20%  { transform: translate3d(38vw,  47vh, 0) rotate(4deg);  }
-          25%  { transform: translate3d(20vw,  35vh, 0) rotate(-5deg); }
+          6%   { transform: translate3d(88vw,  72vh, 0) rotate(-4deg); }
+          10%  { transform: translate3d(72vw,  65vh, 0) rotate(5deg);  }
+          15%  { transform: translate3d(55vw,  55vh, 0) rotate(-6deg); }
+          20%  { transform: translate3d(38vw,  48vh, 0) rotate(4deg);  }
+          25%  { transform: translate3d(20vw,  40vh, 0) rotate(-5deg); }
           29%  { opacity: 1; }
-          32%  { transform: translate3d(-18vw, 42vh, 0) rotate(3deg);  opacity: 0; }
+          32%  { transform: translate3d(-18vw, 35vh, 0) rotate(3deg);  opacity: 0; }
 
           /* Phase 2 · off-screen reset (invisible teleport) */
           37%  { transform: translate3d(-18vw, 10vh, 0); opacity: 0; }
@@ -2096,7 +2100,11 @@ function Butterfly({
             objectFit: "contain",
             opacity: i === 0 ? 1 : 0,
             willChange: "opacity",
-            animation: `nex-butterfly-flap-${i + 1} 300ms steps(1, end) infinite`,
+            // Owner directive 2026-10-23 · "flapping wings slower" ·
+            // 300ms → 700ms per cycle (3 frames at ~230ms each · ~4
+            // frames per second = ~1.4 full flap cycles per second ·
+            // leisurely fluttering vs frantic flapping).
+            animation: `nex-butterfly-flap-${i + 1} 700ms steps(1, end) infinite`,
             filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.35))",
           }}
         />
