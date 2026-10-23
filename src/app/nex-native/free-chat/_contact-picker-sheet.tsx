@@ -665,23 +665,24 @@ function ContactCard({
         )}
       </div>
 
-      {/* Owner directive 2026-10-23 · "shop icon no button enlarge
-          the icon" · retired the orange-pill button chrome · the
-          🛒 glyph now sits bare and larger directly below the chip.
-          hasShop-gated. */}
+      {/* Owner directive 2026-10-23 · "move down the shop cart icon
+          and enlarge little" · top 30 → 44 (nudges below the chip
+          + into the container's content zone) · size 32 → 40 ·
+          emoji 24 → 32 (larger glyph · reads clearly against the
+          card's deep-navy background). */}
       {contact.hasShop && (
         <div
           aria-label={`${contact.shopName ?? contact.displayName} has a shop`}
           data-nex-contact-card-shop-marker
           style={{
             position: "absolute",
-            top: 30,
-            left: 20,
-            width: 32,
-            height: 32,
+            top: 44,
+            left: 16,
+            width: 40,
+            height: 40,
             display: "grid",
             placeItems: "center",
-            fontSize: 24,
+            fontSize: 32,
             lineHeight: 1,
             zIndex: 2,
             pointerEvents: "none",
