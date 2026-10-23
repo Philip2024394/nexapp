@@ -511,7 +511,12 @@ function ContactCard({
         boxShadow: isHolding
           ? `0 0 20px ${accentHex}88`
           : `0 2px 10px rgba(0,0,0,0.4)`,
-        marginTop: 14,
+        // Owner directive 2026-10-23 · "reduce the height of the
+        // container 30px" · marginTop trimmed 14 → 4 so the card
+        // starts higher · combined with the text-column translateY
+        // (-20) + line-height tightening below the overall card
+        // visual height drops noticeably.
+        marginTop: 4,
       }}
     >
       {/* Owner directive 2026-10-22 (evening · pass 18) · hold-to-send
@@ -696,7 +701,11 @@ function ContactCard({
           minWidth: 0,
           display: "flex",
           flexDirection: "column",
-          gap: 2,
+          // Owner directive 2026-10-23 · "reduce the height of the
+          // container 30px" · gap trimmed 2 → 0 so the 3 identity
+          // rows stack flush · each line relies on its own line-
+          // height for breathing room.
+          gap: 0,
           position: "relative",
           zIndex: 1,
           transform: "translateY(-20px)",
@@ -713,18 +722,16 @@ function ContactCard({
         >
           <div
             style={{
-              // Owner directive 2026-10-23 · mobile legibility bump
-              // 14 → 15 for the display name. Still fits two names
-              // on the 420-wide phone frame without truncation.
-              fontSize: 15,
+              // Owner directive 2026-10-23 · "reduce height 30px" ·
+              // name shrunk 15 → 14 + lineHeight set to 1.1 to cut
+              // vertical bulk without hurting readability.
+              fontSize: 14,
               fontWeight: 800,
               color: NEX.text,
+              lineHeight: 1.1,
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
-              // Neon-glow 3D treatment · the display name gets an
-              // accent-coloured text-shadow so it lifts off the dark
-              // card and reads as "lit".
               textShadow: `0 0 8px ${accentHex}99`,
             }}
           >
@@ -770,7 +777,7 @@ function ContactCard({
             letterSpacing: 0.3,
             fontFamily:
               "ui-monospace, SFMono-Regular, Menlo, Monaco, 'Courier New', monospace",
-            lineHeight: 1.2,
+            lineHeight: 1.1,
           }}
         >
           {contact.nexHandle}
@@ -779,7 +786,7 @@ function ContactCard({
           style={{
             fontSize: 11,
             color: NEX.textMute,
-            lineHeight: 1.2,
+            lineHeight: 1.1,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
