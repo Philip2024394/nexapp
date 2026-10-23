@@ -480,13 +480,10 @@ function ContactCard({
         flexDirection: "row",
         alignItems: "center",
         gap: 10,
-        // Owner directive 2026-10-23 · chat button retired · right
-        // padding reclaims the 60px that was reserved for the 40px
-        // round button + 20px safety. Dropped to 14px (same as the
-        // sealed variant-7 right padding) · text column has more
-        // breathing room before colliding with the last-online text
-        // in the lower-right corner.
-        padding: "6px 14px 6px 70px",
+        // Owner directive 2026-10-23 · "we need make the container
+        // height smaller" · vertical padding trimmed 6/6 → 2/2 ·
+        // horizontal stays 70 left (chip overhang) + 14 right.
+        padding: "2px 14px 2px 70px",
         // Owner directive 2026-10-23 · Neon-glow 3D treatment ·
         // deeper navy base (#040A18 beats bgNavy #050F1E for contrast
         // against the glow) + 1.5px accent rim + layered boxShadow
@@ -515,12 +512,11 @@ function ContactCard({
         boxShadow: isHolding
           ? `0 0 20px ${accentHex}88`
           : `0 2px 10px rgba(0,0,0,0.4)`,
-        // Owner directive 2026-10-23 · "reduce the height of the
-        // container 30px" · marginTop trimmed 14 → 4 so the card
-        // starts higher · combined with the text-column translateY
-        // (-20) + line-height tightening below the overall card
-        // visual height drops noticeably.
-        marginTop: 4,
+        // Owner directive 2026-10-23 · "we need make the container
+        // height smaller" · marginTop trimmed 4 → 0 · card starts
+        // flush with the carousel's row-gap boundary (28px gap
+        // between cards already gives the chip overhang room).
+        marginTop: 0,
       }}
     >
       {/* Owner directive 2026-10-22 (evening · pass 18) · hold-to-send
@@ -667,16 +663,16 @@ function ContactCard({
         )}
       </div>
 
-      {/* Owner directive 2026-10-23 · "move up the text 5px and
-          cart icon for shop" · shop icon lifts 5px (top 44 → 39)
-          in sync with the identity text column. */}
+      {/* Owner directive 2026-10-23 · "move cart icon up" · shop
+          icon lifts another 7px (top 39 → 32) to stay in sync with
+          the identity text column's new translateY(-12). */}
       {contact.hasShop && (
         <div
           aria-label={`${contact.shopName ?? contact.displayName} has a shop`}
           data-nex-contact-card-shop-marker
           style={{
             position: "absolute",
-            top: 39,
+            top: 32,
             left: 16,
             width: 40,
             height: 40,
@@ -707,10 +703,10 @@ function ContactCard({
           gap: 4,
           position: "relative",
           zIndex: 1,
-          // Owner directive 2026-10-23 · "move up the text 5px" ·
-          // translateY(-5px) lifts the whole identity text block up
-          // 5px without disturbing layout flow.
-          transform: "translateY(-5px)",
+          // Owner directive 2026-10-23 (updated) · "move text up 7px"
+          // · translateY −5 → −12 · lifts the identity text block
+          // another 7px without disturbing layout flow.
+          transform: "translateY(-12px)",
         }}
       >
         {/* Name + verified pill */}
