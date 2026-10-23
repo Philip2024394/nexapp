@@ -464,17 +464,11 @@ function ContactCard({
       onPointerCancel={onHoldEnd}
       style={{
         position: "relative",
-        // Owner directive 2026-10-23 (revised) · match variant-10
-        // layout exactly · avatar left, identity text column middle
-        // (flex:1), chrome-neon INVITE + SHOP buttons STACKED on
-        // the right. The earlier "under the images" bottom-row
-        // layout is retired in this pass.
-        // minHeight · right CTA column stacks 48 + 6 + 48 = 102 ·
-        // + 6px top-pad + 6px bot-pad = 114 (owner directive
-        // 2026-10-23 · "reduce the container height little, do not
-        // reduce inner text or buttons" · trimmed only the vertical
-        // padding, buttons + text sizes untouched).
-        minHeight: 114,
+        // Owner directive 2026-10-23 · the stale minHeight 114 (left
+        // over from the sealed-chrome-ball-CTA-column layout which
+        // needed room for 48 + 6 + 48 stacked buttons) was still
+        // forcing a 114px floor · retired. The card now sizes
+        // naturally to its content (text column + padding + border).
         flexShrink: 0,
         display: "flex",
         flexDirection: "row",
