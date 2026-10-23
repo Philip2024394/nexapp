@@ -838,14 +838,16 @@ function ContactCard({
           data-nex-contact-card-last-online
           style={{
             position: "absolute",
-            // Owner directive 2026-10-23 · "move back the away time"
-            // · lifts back to its earlier bottom:6 position (not
-            // stacked above the chat button) · right offset bumped
-            // to 56 so the text sits BESIDE the 40px chat button
-            // (chat button at right:10 width:40 ends at right:50 ·
-            // 6px gap · text starts at right:56).
+            // Owner directive 2026-10-23 · "the away text is under
+            // the chat button" fix · the text was at bottom:6 (lower
+            // than the button's bottom:10) so it visually sat below
+            // the button edge. Raised to bottom:22 so the text's
+            // VERTICAL CENTRE aligns with the button's centre
+            // (button height 40, bottom:10 → centre at bottom:30 ·
+            // text ~9px tall → bottom:22 puts its centre at ~bottom:
+            // 26 which lines up visually with the button mid-line).
             right: 56,
-            bottom: 6,
+            bottom: 22,
             fontSize: 9,
             fontWeight: 600,
             color: NEX.textMute,
