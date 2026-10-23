@@ -807,15 +807,17 @@ function ContactCard({
     {/* Owner directive 2026-10-23 · "move the 2 buttons outside the
         container under the container long style". Shop + Invite are
         now long pill-shaped buttons sitting UNDER the card as a
-        dedicated row · the right-side chrome-ball column is retired.
-        Buttons flex-share the row width · when hasShop is false the
-        Invite button stretches to full width. */}
+        dedicated row. Width constrained to 296 + centred so the
+        pill row aligns with the variant-7-sized card above it. */}
     <div
       style={{
         display: "flex",
         flexDirection: "row",
         gap: 8,
         padding: "0 2px",
+        maxWidth: 296,
+        width: "100%",
+        margin: "0 auto",
       }}
     >
       {contact.hasShop && (
