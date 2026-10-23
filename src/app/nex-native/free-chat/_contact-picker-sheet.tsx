@@ -480,11 +480,13 @@ function ContactCard({
         flexDirection: "row",
         alignItems: "center",
         gap: 10,
-        // Owner directive 2026-10-23 · NEX ID row retired · with 3
-        // lines (name · profession · city) the container can tighten
-        // vertically. Padding 8/8 → 6/6 (small further trim) ·
-        // horizontal stays 70 left (chip) + 60 right (chat button).
-        padding: "6px 60px 6px 70px",
+        // Owner directive 2026-10-23 · chat button retired · right
+        // padding reclaims the 60px that was reserved for the 40px
+        // round button + 20px safety. Dropped to 14px (same as the
+        // sealed variant-7 right padding) · text column has more
+        // breathing room before colliding with the last-online text
+        // in the lower-right corner.
+        padding: "6px 14px 6px 70px",
         // Owner directive 2026-10-23 · Neon-glow 3D treatment ·
         // deeper navy base (#040A18 beats bgNavy #050F1E for contrast
         // against the glow) + 1.5px accent rim + layered boxShadow
@@ -822,18 +824,14 @@ function ContactCard({
           data-nex-contact-card-last-online
           style={{
             position: "absolute",
-            // Owner directive 2026-10-23 · "the away text is under
-            // the chat button" fix · the text was at bottom:6 (lower
-            // than the button's bottom:10) so it visually sat below
-            // the button edge. Raised to bottom:22 so the text's
-            // VERTICAL CENTRE aligns with the button's centre
-            // (button height 40, bottom:10 → centre at bottom:30 ·
-            // text ~9px tall → bottom:22 puts its centre at ~bottom:
-            // 26 which lines up visually with the button mid-line).
-            right: 56,
-            bottom: 22,
-            fontSize: 9,
-            fontWeight: 600,
+            // Owner directive 2026-10-23 · "add time last online in
+            // that corner lower right" · now owns the lower-right
+            // corner (chat button retired) · larger fontSize +
+            // slightly stronger weight so the time reads clearly.
+            right: 10,
+            bottom: 8,
+            fontSize: 10,
+            fontWeight: 700,
             color: NEX.textMute,
             letterSpacing: 0.2,
             pointerEvents: "none",
@@ -845,54 +843,13 @@ function ContactCard({
         </div>
       )}
 
-      {/* Owner directive 2026-10-23 · "the blue button with chat
-          image on it keep · the blue buttons with numbers on them
-          remove". Button now ALWAYS shows the 💬 chat glyph · the
-          unread-count variant is retired. Tap opens / starts chat
-          with this contact via onInvite. */}
-      <button
-        type="button"
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={onInvite}
-        data-nex-contact-card-message
-        aria-label={`Message ${contact.displayName}`}
-        title={`Message ${contact.displayName}`}
-        style={{
-          position: "absolute",
-          right: 10,
-          // Owner directive 2026-10-23 · "move the chat button over
-          // the last online area position" · chat button lifted from
-          // top:18 to bottom:10 so it sits in the lower-right corner
-          // where the last-online text is pinned. The last-online
-          // text keeps its position (right:10 bottom:6) · the button
-          // overlays it (zIndex 2 > 1). To avoid the overlap, the
-          // last-online text now also shifts to live ABOVE the
-          // button zone when the button is present. See the
-          // last-online block below · its bottom offset accounts
-          // for the 40px button + a 4px gap.
-          bottom: 10,
-          width: 40,
-          height: 40,
-          borderRadius: "50%",
-          padding: 0,
-          background: `radial-gradient(circle at 30% 30%, ${accentHex}, #000a1a)`,
-          color: "#FFFFFF",
-          border: `2px solid ${accentHex}`,
-          fontSize: 18,
-          fontWeight: 900,
-          cursor: "pointer",
-          fontFamily: "inherit",
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          lineHeight: 1,
-          textShadow: "0 1px 2px rgba(0,0,0,0.8)",
-          boxShadow: `0 2px 10px ${accentHex}66, inset 0 1px 2px #FFFFFF55`,
-          zIndex: 2,
-        }}
-      >
-        💬
-      </button>
+      {/* Owner directive 2026-10-23 · "remove the chat button and
+          add time last online in that corner lower right" · the
+          round 💬 chat button is retired · the hold-to-send ritual
+          on the card body is still the primary action trigger (5s
+          hold anywhere on the card fires onInvite · starts the
+          chat). The last-online text (block below) now owns the
+          lower-right corner. */}
 
       <style>{`
         @keyframes nex-contact-card-heartbeat {
