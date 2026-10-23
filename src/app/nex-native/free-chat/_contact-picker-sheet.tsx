@@ -838,19 +838,21 @@ function ContactCard({
           data-nex-contact-card-last-online
           style={{
             position: "absolute",
-            right: 10,
-            // Owner directive 2026-10-23 · "move the chat button
-            // over the last online area position" · the chat button
-            // now owns bottom:10 of the right side (40px tall) · the
-            // last-online text shifts to sit ABOVE the button (bottom
-            // = 10 + 40 + 4 = 54) so both are legible, not stacked.
-            bottom: 54,
+            // Owner directive 2026-10-23 · "move back the away time"
+            // · lifts back to its earlier bottom:6 position (not
+            // stacked above the chat button) · right offset bumped
+            // to 56 so the text sits BESIDE the 40px chat button
+            // (chat button at right:10 width:40 ends at right:50 ·
+            // 6px gap · text starts at right:56).
+            right: 56,
+            bottom: 6,
             fontSize: 9,
             fontWeight: 600,
             color: NEX.textMute,
             letterSpacing: 0.2,
             pointerEvents: "none",
             zIndex: 1,
+            whiteSpace: "nowrap",
           }}
         >
           {formatContactPresenceLabel(contact)}
