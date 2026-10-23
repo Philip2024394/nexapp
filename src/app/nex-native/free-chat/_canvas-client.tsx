@@ -1977,61 +1977,44 @@ function ButterflyFlyby(): React.JSX.Element {
         }
 
         /* Owner-choreographed journey 2026-10-23 · one butterfly ·
-           total duration 50s · five phases.
+           total duration 40s · THREE phases (perch retired per owner
+           directive · the butterfly now does two symmetric cross-
+           screen passes and loops).
 
-           Phase 1 (0-32%, ~16s) · fly in SLOWLY from bottom-right ·
-           random meandering path across the screen · exit on the left
-           Phase 2 (32-42%, 5s) · off-screen reset ·
-             butterfly invisible while repositioning top-left
-           Phase 3 (42-60%, 9s) · fly back IN from top-left (hero
-             position) · random path rising up to the magnifying
-             glass in the header (top-right)
-           Phase 4 (60-85%, ~13s) · PERCH on the magnifying glass
-             (85vw, 5vh in frame-relative coordinates) · wings keep
-             flapping occasionally
-           Phase 5 (85-100%, ~7s) · fly OFF upward out of the screen
-
-           Magnifying-glass perch coordinates verified against the
-           sealed free-chat header: 420×909 frame · search button
-           sits at ~top: 42px, right: 62px · translates to roughly
-           85vw / 5vh in the butterfly's translate3d space. */
+           Phase 1 (0-40%, ~16s) · fly in from LOWER-RIGHT FOOTER ·
+             random meander climbing diagonally · exit off LEFT edge
+           Phase 2 (40-50%, 4s) · off-screen reset (invisible
+             teleport from left-exit over to top-left re-entry point)
+           Phase 3 (50-100%, 20s) · fly back IN from TOP-LEFT ·
+             meander path across the frame · exit off RIGHT edge
+        */
         @keyframes nex-butterfly-journey {
-          /* Phase 1 · owner directive 2026-10-23 · entry from the
-             LOWER-RIGHT FOOTER SIDE (not mid-right). Starts at
-             78vh · just above the composer dock · then climbs
-             diagonally as it meanders across the screen and exits
-             upper-left. */
+          /* Phase 1 · lower-right footer entry → climb diagonally →
+             exit left. */
           0%   { transform: translate3d(110vw, 78vh, 0) rotate(2deg);  opacity: 0; }
           3%   { opacity: 1; }
-          6%   { transform: translate3d(88vw,  72vh, 0) rotate(-4deg); }
-          10%  { transform: translate3d(72vw,  65vh, 0) rotate(5deg);  }
-          15%  { transform: translate3d(55vw,  55vh, 0) rotate(-6deg); }
-          20%  { transform: translate3d(38vw,  48vh, 0) rotate(4deg);  }
-          25%  { transform: translate3d(20vw,  40vh, 0) rotate(-5deg); }
-          29%  { opacity: 1; }
-          32%  { transform: translate3d(-18vw, 35vh, 0) rotate(3deg);  opacity: 0; }
+          8%   { transform: translate3d(88vw,  72vh, 0) rotate(-4deg); }
+          14%  { transform: translate3d(72vw,  62vh, 0) rotate(5deg);  }
+          20%  { transform: translate3d(55vw,  52vh, 0) rotate(-6deg); }
+          26%  { transform: translate3d(38vw,  44vh, 0) rotate(4deg);  }
+          32%  { transform: translate3d(20vw,  38vh, 0) rotate(-5deg); }
+          37%  { opacity: 1; }
+          40%  { transform: translate3d(-18vw, 32vh, 0) rotate(3deg);  opacity: 0; }
 
-          /* Phase 2 · off-screen reset (invisible teleport) */
-          37%  { transform: translate3d(-18vw, 10vh, 0); opacity: 0; }
-          41%  { transform: translate3d(-10vw, 8vh,  0); opacity: 0; }
+          /* Phase 2 · invisible reset · teleport to top-left re-entry */
+          45%  { transform: translate3d(-18vw, 8vh,  0); opacity: 0; }
+          50%  { transform: translate3d(-10vw, 6vh,  0); opacity: 0; }
 
-          /* Phase 3 · top-left re-entry · random meander up to the
-             magnifying-glass area */
-          44%  { transform: translate3d(-2vw,  7vh,  0) rotate(-3deg); opacity: 1; }
-          48%  { transform: translate3d(15vw,  12vh, 0) rotate(4deg);  }
-          52%  { transform: translate3d(32vw,  6vh,  0) rotate(-5deg); }
-          56%  { transform: translate3d(52vw,  10vh, 0) rotate(3deg);  }
-          60%  { transform: translate3d(70vw,  6vh,  0) rotate(-2deg); }
-
-          /* Phase 4 · arrive + PERCH on magnifying glass (85vw, 5vh) */
-          63%  { transform: translate3d(82vw,  5.5vh, 0) rotate(0deg); }
-          66%  { transform: translate3d(85vw,  5vh,  0) rotate(0deg);  }
-          85%  { transform: translate3d(85vw,  5vh,  0) rotate(0deg);  opacity: 1; }
-
-          /* Phase 5 · fly off upward · out of frame */
-          90%  { transform: translate3d(88vw,  -2vh, 0) rotate(6deg);  opacity: 1; }
-          95%  { transform: translate3d(96vw,  -14vh, 0) rotate(12deg); opacity: 0.6; }
-          100% { transform: translate3d(110vw, -28vh, 0) rotate(18deg); opacity: 0; }
+          /* Phase 3 · top-left re-entry → fly around → exit RIGHT.
+             Six meander stops crossing the frame left → right. */
+          53%  { transform: translate3d(-2vw,  7vh,  0) rotate(-3deg); opacity: 1; }
+          60%  { transform: translate3d(15vw,  14vh, 0) rotate(4deg);  }
+          67%  { transform: translate3d(32vw,  8vh,  0) rotate(-5deg); }
+          74%  { transform: translate3d(50vw,  18vh, 0) rotate(3deg);  }
+          81%  { transform: translate3d(68vw,  12vh, 0) rotate(-4deg); }
+          88%  { transform: translate3d(85vw,  22vh, 0) rotate(5deg);  }
+          95%  { opacity: 1; }
+          100% { transform: translate3d(118vw, 16vh, 0) rotate(-3deg); opacity: 0; }
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -2040,8 +2023,8 @@ function ButterflyFlyby(): React.JSX.Element {
             animation: none !important;
           }
           [data-nex-butterfly] {
-            /* Park at the magnifying-glass perch · wings on frame 1 */
-            transform: translate3d(85vw, 5vh, 0) !important;
+            /* Perch retired · park mid-upper for reduced-motion */
+            transform: translate3d(50vw, 15vh, 0) !important;
             opacity: 0.8 !important;
           }
           [data-nex-butterfly-frame="1"] { opacity: 1 !important; }
@@ -2049,11 +2032,12 @@ function ButterflyFlyby(): React.JSX.Element {
           [data-nex-butterfly-frame="3"] { opacity: 0 !important; }
         }
       `}</style>
-      {/* Owner directive 2026-10-23 · one choreographed butterfly ·
-          replaces the earlier 3-butterfly staggered fleet. Full 50s
-          journey · bottom-right in → exit left → top-left re-enter →
-          perch on magnifying glass → fly off upward. Repeats infinite. */}
-      <Butterfly size={38} delay={1} duration={50} />
+      {/* Owner directive 2026-10-23 (revised) · one choreographed
+          butterfly · 40s loop · two cross-screen passes:
+          Phase 1 bottom-right footer → exit left
+          Phase 3 top-left re-entry → exit right
+          (Phase 2 is the invisible reset between the two.) */}
+      <Butterfly size={38} delay={1} duration={40} />
     </>
   );
 }
