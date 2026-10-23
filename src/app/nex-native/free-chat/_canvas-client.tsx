@@ -1989,17 +1989,21 @@ function ButterflyFlyby(): React.JSX.Element {
              meander path across the frame · exit off RIGHT edge
         */
         @keyframes nex-butterfly-journey {
-          /* Phase 1 · lower-right footer entry → climb diagonally →
-             exit left. */
-          0%   { transform: translate3d(110vw, 78vh, 0) rotate(2deg);  opacity: 0; }
+          /* Phase 1 · owner directive 2026-10-23 · "the butterfly
+             path is footer right side entry". Entry pinned at the
+             right side of the FOOTER (92vh · just above the composer
+             dock). The butterfly flutters up from the composer-right
+             corner, climbs diagonally across the frame, exits off
+             the upper-left edge. */
+          0%   { transform: translate3d(110vw, 92vh, 0) rotate(2deg);  opacity: 0; }
           3%   { opacity: 1; }
-          8%   { transform: translate3d(88vw,  72vh, 0) rotate(-4deg); }
-          14%  { transform: translate3d(72vw,  62vh, 0) rotate(5deg);  }
-          20%  { transform: translate3d(55vw,  52vh, 0) rotate(-6deg); }
-          26%  { transform: translate3d(38vw,  44vh, 0) rotate(4deg);  }
-          32%  { transform: translate3d(20vw,  38vh, 0) rotate(-5deg); }
+          8%   { transform: translate3d(88vw,  86vh, 0) rotate(-4deg); }
+          14%  { transform: translate3d(72vw,  76vh, 0) rotate(5deg);  }
+          20%  { transform: translate3d(55vw,  64vh, 0) rotate(-6deg); }
+          26%  { transform: translate3d(38vw,  52vh, 0) rotate(4deg);  }
+          32%  { transform: translate3d(20vw,  42vh, 0) rotate(-5deg); }
           37%  { opacity: 1; }
-          40%  { transform: translate3d(-18vw, 32vh, 0) rotate(3deg);  opacity: 0; }
+          40%  { transform: translate3d(-18vw, 34vh, 0) rotate(3deg);  opacity: 0; }
 
           /* Phase 2 · invisible reset · teleport to top-left re-entry */
           45%  { transform: translate3d(-18vw, 8vh,  0); opacity: 0; }
