@@ -470,10 +470,11 @@ function ContactCard({
         flexDirection: "row",
         alignItems: "center",
         gap: 10,
-        // Left padding bumped so the identity text column sits BESIDE
-        // the overlapping chip (chip is left:12 + width:48 = extends
-        // to 60 · plus 10px breathing gap · text starts at 72).
-        padding: "10px 12px 10px 72px",
+        // Padding matches variant-7 prototype exactly ·
+        // "16px 14px 10px 70px" so the identity text sits beside
+        // the overlapping chip (chip at left:12 + width:48 = 60,
+        // text column begins at 70).
+        padding: "16px 14px 10px 70px",
         // Owner directive 2026-10-23 · Neon-glow 3D treatment ·
         // deeper navy base (#040A18 beats bgNavy #050F1E for contrast
         // against the glow) + 1.5px accent rim + layered boxShadow
@@ -481,15 +482,20 @@ function ContactCard({
         // (painted as a sibling div below). The glow intensifies
         // when the card is being held so the hold ritual reads as
         // the card "charging".
-        // Owner directive 2026-10-23 (variant-7 adoption) · "small
-        // container with square sitting on it design 7". Container
-        // returns · dark navy panel with an accent-tinted rim (pink
-        // on theme-1, gold on theme-2, etc.). overflow is EXPLICITLY
-        // allowed · the avatar chip overlaps the top edge of the
-        // card.
-        background: "#040A18",
+        // Owner directive 2026-10-23 · "container must be exact same
+        // size as number 7 prototype". Dimensions pulled verbatim
+        // from the V07AvatarChip prototype:
+        //   · maxWidth 296px · margin:0 auto (centred in sheet)
+        //   · padding "16px 14px 10px 70px" (70px left pads the
+        //     overlapping chip)
+        //   · borderRadius 10 (was 12 · matches #7)
+        //   · background rgba(2,9,20,0.92) (was #040A18 · matches #7)
+        //   · 1.5px solid accentHex rim (unchanged · theme-tinted)
+        maxWidth: 296,
+        margin: "0 auto",
+        background: "rgba(2,9,20,0.92)",
         border: `1.5px solid ${accentHex}`,
-        borderRadius: 12,
+        borderRadius: 10,
         overflow: "visible",
         cursor: "pointer",
         userSelect: "none",
@@ -500,10 +506,6 @@ function ContactCard({
         boxShadow: isHolding
           ? `0 0 20px ${accentHex}88`
           : `0 2px 10px rgba(0,0,0,0.4)`,
-        // Owner directive 2026-10-23 · leave vertical room at the top
-        // so the avatar chip can overlap into negative space without
-        // the card clipping it. Extra 12px top padding keeps the
-        // identity text sitting beneath the chip.
         marginTop: 14,
       }}
     >
@@ -555,7 +557,9 @@ function ContactCard({
       <div
         style={{
           position: "absolute",
-          top: -14,
+          // Matches variant-7 prototype · chip overlaps the top edge
+          // by half its height (24px) · at left:12.
+          top: -24,
           left: 12,
           width: 48,
           height: 48,
