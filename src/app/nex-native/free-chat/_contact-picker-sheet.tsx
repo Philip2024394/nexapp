@@ -335,6 +335,40 @@ export function ContactPickerSheet({
               Contacts
             </div>
           </div>
+          {/* Owner directive 2026-10-23 · "count chip add" · small
+              online-count chip on the right side of the header ·
+              green dot + "N online" text · tells the user at a glance
+              how many of their contacts are available right now. */}
+          <div
+            data-nex-contact-picker-online-count
+            aria-label={`${filtered.filter((c) => c.presence === "online").length} contacts online`}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "4px 10px",
+              borderRadius: 999,
+              background: `${NEX.presenceOnline}1F`,
+              border: `1px solid ${NEX.presenceOnline}66`,
+              fontSize: 11,
+              fontWeight: 700,
+              color: NEX.presenceOnline,
+              letterSpacing: 0.2,
+              flexShrink: 0,
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                background: NEX.presenceOnline,
+                boxShadow: `0 0 6px ${NEX.presenceOnline}`,
+              }}
+            />
+            {filtered.filter((c) => c.presence === "online").length} online
+          </div>
         </header>
 
         {/* Search bar + its divider line retired per owner directive
