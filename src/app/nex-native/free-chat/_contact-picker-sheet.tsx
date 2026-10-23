@@ -831,11 +831,11 @@ function ContactCard({
         </div>
       )}
 
-      {/* Owner directive 2026-10-23 · "add round message counter
-          button" · replaces the earlier long Shop + Invite pills ·
-          round 40×40 accent button on the right side of the card ·
-          shows the unread count as the number · tap fires onInvite
-          (start/open chat with this contact). */}
+      {/* Owner directive 2026-10-23 · "the blue button with chat
+          image on it keep · the blue buttons with numbers on them
+          remove". Button now ALWAYS shows the 💬 chat glyph · the
+          unread-count variant is retired. Tap opens / starts chat
+          with this contact via onInvite. */}
       <button
         type="button"
         onPointerDown={(e) => e.stopPropagation()}
@@ -855,7 +855,7 @@ function ContactCard({
           background: `radial-gradient(circle at 30% 30%, ${accentHex}, #000a1a)`,
           color: "#FFFFFF",
           border: `2px solid ${accentHex}`,
-          fontSize: contact.unreadCount > 0 ? 14 : 18,
+          fontSize: 18,
           fontWeight: 900,
           cursor: "pointer",
           fontFamily: "inherit",
@@ -868,9 +868,7 @@ function ContactCard({
           zIndex: 2,
         }}
       >
-        {contact.unreadCount > 0
-          ? (contact.unreadCount > 99 ? "99+" : contact.unreadCount)
-          : "💬"}
+        💬
       </button>
 
       <style>{`
