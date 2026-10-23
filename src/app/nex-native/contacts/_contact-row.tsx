@@ -1,55 +1,39 @@
 // src/app/nex-native/contacts/_contact-row.tsx
 //
-// NEX contact-card identity layout · owner-sealed 2026-10-17.
-// ----------------------------------------------------------------
-// Standard identity-card structure for every contact row:
+// Owner directive 2026-10-23 · "update the contacts page with exactly
+// same design style cards as contacts slider". Rewrites the per-row
+// card to mirror the free-chat ContactPickerSheet visual language:
 //
-//   [avatar]  Contact Name                [Call] [Video] [Message]
-//             NEX-324234
-//             Electrician · Electrical Services
+//   · Round accent-gradient chip overlapping the TOP of the container
+//   · Container with pink/accent rim · navy fill
+//   · Name sits on the top rim (translateY lifts it visually)
+//   · Profession · city on the next line
+//   · Message action icon on the right (replaces the sealed
+//     Call+Video+Message cluster for a cleaner single-tap flow)
 //
-// Rules (owner-sealed verbatim):
-//   · Name: the person's chosen display_name.
-//   · NEX ID: prominent, uppercase "NEX-NNNNN" format · uses the
-//     real nex_handle · uppercase prefix is a display transform
-//     (storage stays lowercase per the sealed normaliseHandle
-//     contract) · same transform used in ControlDrawer identity bar.
-//   · Skill / employment: directly under the NEX ID · composed as
-//     "profession · headline" with the NEX middle-dot · data comes
-//     from nex_account_profile · NEVER fabricated · omitted entirely
-//     when the person hasn't supplied a profession.
-//   · Call + Video call: wired to the sealed peer-chat call stack
-//     (/chat/peer/[accountId]?start_call=voice|video · _call-launcher
-//     honours the query param · RTCPeerConnection + Supabase
-//     Realtime signalling).
-//   · Message: wired to the chat destination (chatHref). The
-//     earlier "whole-card tap opens chat" behaviour is retired ·
-//     owner directive 2026-10-17 (reversed) · the dedicated Message
-//     button is the sole chat trigger now · one dedicated target per
-//     action · no ambiguous click zones.
+// The call + video actions are intentionally dropped here to match
+// the picker's single-action-per-row discipline · owner can request
+// their return as a separate directive if the WebRTC entry point is
+// needed from Contacts.
 //
-// Business rows carry professionLine=null today · a business-specific
-// identity line (category · city) is a future pass. Call + Video
-// icons stay disabled for business rows (business conversations don't
-// carry a peer account the WebRTC stack can address). The Message
-// button stays enabled for business rows (goes to the business
-// conversation surface).
+// Data model stays the sealed ContactRowDisplay from _contacts-list.
+// Fields consumed:
+//   · displayName · kind · chatHref · professionLine (nullable) · handle
+//   · avatarUrl (not shown yet · chip uses initials when null)
 //
-// Server Component.
+// Server Component · no hooks.
 
 import type * as React from "react";
 import Link from "next/link";
 import type { ContactRowDisplay } from "./_contacts-list";
 
 const NEX = {
+  bgPanel: "rgba(2,9,20,0.92)",
+  pink: "#FF4FD7",
   cyan: "#00AFFF",
-  cyanSoft: "rgba(0, 175, 255, 0.30)",
-  cyanFaint: "rgba(0, 175, 255, 0.12)",
-  textPrimary: "#F2F5F8",
-  textMuted: "#7D9BC0",
-  panel: "rgba(3, 16, 29, 0.72)",
-  disabledFg: "rgba(125, 155, 192, 0.45)",
-  disabledBorder: "rgba(125, 155, 192, 0.20)",
+  text: "#F2F5F8",
+  textMute: "#7D9BC0",
+  shopOrange: "#FF7200",
 };
 
 interface ContactRowProps {
@@ -58,238 +42,151 @@ interface ContactRowProps {
 
 export function ContactRow({ row }: ContactRowProps) {
   const initials = initialsFromName(row.displayName);
-  // Owner-sealed uppercase NEX ID transform · "nex-00042" → "NEX-00042".
-  // Same transform as ControlDrawer identity bar. Storage stays
-  // lowercase per the normaliseHandle contract.
-  const nexId = row.handle ? row.handle.replace(/^nex-/i, "NEX-") : null;
+  const accent = row.kind === "business" ? NEX.cyan : NEX.pink;
 
   return (
-    <div
+    <Link
+      href={row.chatHref}
+      aria-label={`Open chat with ${row.displayName}`}
       data-nex-contacts-row
       data-nex-contacts-row-kind={row.kind}
       style={{
-        // Owner directive 2026-10-17 · "cards must fit mobile
-        // screen width" · the 3 inline action buttons on the right
-        // were squeezing the identity block to ~144px, truncating
-        // the profession line with ellipsis. New structure stacks
-        // the identity ROW (avatar + name/NEX-ID/profession) on
-        // top of the actions ROW (Call · Video · Message) so each
-        // row gets the full card width. Matches the owner's mock
-        // from the identity-card spec.
-        display: "flex",
-        flexDirection: "column",
-        gap: 10,
-        padding: "10px 12px",
-        borderRadius: 12,
-        background: NEX.panel,
-        border: `1px solid ${NEX.cyanSoft}`,
+        position: "relative",
+        display: "block",
+        padding: "6px 60px 6px 70px",
+        borderRadius: 10,
+        background: NEX.bgPanel,
+        border: `1.5px solid ${accent}`,
+        boxShadow: "0 2px 10px rgba(0,0,0,0.4)",
+        textDecoration: "none",
+        color: NEX.text,
+        overflow: "visible",
+        WebkitTapHighlightColor: "transparent",
+        marginTop: 14,
       }}
     >
-      {/* Row 1 · avatar + identity stack · full card width. */}
+      {/* Chip · overlapping top-left · circular · accent gradient */}
       <div
-        data-nex-contacts-row-identity-row
+        aria-hidden
+        data-nex-contacts-row-chip
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          minWidth: 0,
+          position: "absolute",
+          top: -24,
+          left: 12,
+          width: 48,
+          height: 48,
+          zIndex: 2,
         }}
       >
-        <Avatar avatarUrl={row.avatarUrl} initials={initials} />
         <div
-          data-nex-contacts-row-identity
           style={{
-            flex: 1,
-            minWidth: 0,
-            display: "flex",
-            flexDirection: "column",
-            gap: 1,
+            position: "absolute",
+            inset: 0,
+            borderRadius: "50%",
+            border: `2px solid ${accent}`,
+            overflow: "hidden",
+            background: `linear-gradient(135deg, ${accent}cc 0%, #180012 65%, #050F1E 100%)`,
+            display: "grid",
+            placeItems: "center",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
           }}
         >
+          {row.avatarUrl ? (
+            <img
+              src={row.avatarUrl}
+              alt=""
+              aria-hidden
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            <span
+              style={{
+                color: "#FFF",
+                fontSize: 15,
+                fontWeight: 900,
+                letterSpacing: "0.04em",
+                textShadow: "0 1px 3px rgba(0,0,0,0.6)",
+              }}
+            >
+              {initials}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Identity text · translateY lifts the whole block up so the
+          name sits visually on the container's rim · matches the
+          sealed picker-sheet treatment. */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 4,
+          transform: "translateY(-12px)",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        <div
+          data-nex-contacts-row-name
+          style={{
+            fontSize: 15,
+            fontWeight: 800,
+            color: NEX.text,
+            lineHeight: 1.2,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            textShadow: `0 0 8px ${accent}99`,
+          }}
+        >
+          {row.displayName}
+        </div>
+        {row.professionLine ? (
           <div
-            data-nex-contacts-row-name
+            data-nex-contacts-row-profession
             style={{
-              fontSize: 14,
-              fontWeight: 600,
-              color: NEX.textPrimary,
+              fontSize: 11,
+              color: NEX.textMute,
+              lineHeight: 1.2,
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
             }}
           >
-            {row.displayName}
+            {row.professionLine}
           </div>
-          {nexId ? (
-            <div
-              data-nex-contacts-row-nex-id
-              style={{
-                // Owner directive 2026-10-17 · "NEX-00042 must be
-                // bigger size" · 16px so the NEX ID is the hero
-                // identifier (dominates the 14px name above).
-                fontSize: 16,
-                fontWeight: 700,
-                lineHeight: 1.15,
-                color: NEX.cyan,
-                letterSpacing: 0.3,
-                fontFamily:
-                  'ui-monospace, SFMono-Regular, Menlo, Monaco, "Courier New", monospace',
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {nexId}
-            </div>
-          ) : null}
-          {row.professionLine ? (
-            <div
-              data-nex-contacts-row-profession
-              style={{
-                fontSize: 11,
-                color: NEX.textMuted,
-                lineHeight: 1.3,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {row.professionLine}
-            </div>
-          ) : null}
-        </div>
+        ) : null}
       </div>
 
-      {/* Row 2 · action icons · right-aligned on their own line so the
-          identity block above gets the full card width. Call + Video
-          wired to the sealed WebRTC stack for friend rows (business
-          rows disable both · no peer account the stack can address).
-          Message always wired to chatHref. */}
+      {/* Message action · round accent chrome ball · vertically centred
+          in the right column · tapping the card already navigates to
+          the chat so this is a visual action anchor. */}
       <div
-        data-nex-contacts-row-actions-row
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "flex-end",
-          gap: 8,
-        }}
-      >
-        <ActionIcon
-          href={row.kind === "friend" ? `/nex-native/chat/peer/${row.id}?start_call=voice` : undefined}
-          ariaLabel={row.kind === "friend" ? `Voice call ${row.displayName}` : "Voice call not available on business contacts"}
-          dataAttr="call"
-          icon={<PhoneIcon />}
-          enabled={row.kind === "friend"}
-        />
-        <ActionIcon
-          href={row.kind === "friend" ? `/nex-native/chat/peer/${row.id}?start_call=video` : undefined}
-          ariaLabel={row.kind === "friend" ? `Video call ${row.displayName}` : "Video call not available on business contacts"}
-          dataAttr="video"
-          icon={<VideoIcon />}
-          enabled={row.kind === "friend"}
-        />
-        <ActionIcon
-          href={row.chatHref}
-          ariaLabel={`Message ${row.displayName}`}
-          dataAttr="message"
-          icon={<MessageIcon />}
-          enabled
-        />
-      </div>
-    </div>
-  );
-}
-
-function Avatar({ avatarUrl, initials }: { readonly avatarUrl: string | null; readonly initials: string }) {
-  if (avatarUrl) {
-    return (
-      <img
-        src={avatarUrl}
-        alt=""
         aria-hidden
-        data-nex-contacts-row-avatar
         style={{
-          flexShrink: 0,
-          width: 40,
-          height: 40,
+          position: "absolute",
+          top: "50%",
+          right: 10,
+          transform: "translateY(-50%)",
+          width: 36,
+          height: 36,
           borderRadius: "50%",
-          objectFit: "cover",
-          border: `1px solid ${NEX.cyanSoft}`,
-          background: NEX.cyanFaint,
+          background: `radial-gradient(circle at 30% 30%, ${accent}, #000a1a)`,
+          border: `2px solid ${accent}`,
+          display: "grid",
+          placeItems: "center",
+          color: "#FFF",
+          fontSize: 16,
+          fontWeight: 900,
+          lineHeight: 1,
+          boxShadow: `0 2px 10px ${accent}55, inset 0 1px 2px #FFFFFF55`,
+          zIndex: 2,
         }}
-      />
-    );
-  }
-  return (
-    <div
-      aria-hidden
-      data-nex-contacts-row-avatar-initials
-      style={{
-        flexShrink: 0,
-        width: 40,
-        height: 40,
-        borderRadius: "50%",
-        display: "grid",
-        placeItems: "center",
-        border: `1px solid ${NEX.cyanSoft}`,
-        background: NEX.cyanFaint,
-        color: NEX.cyan,
-        fontSize: 13,
-        fontWeight: 700,
-        letterSpacing: "0.04em",
-      }}
-    >
-      {initials}
-    </div>
-  );
-}
-
-interface ActionIconProps {
-  readonly href?: string;
-  readonly ariaLabel: string;
-  readonly dataAttr: string;
-  readonly icon: React.ReactElement;
-  readonly enabled: boolean;
-}
-
-function ActionIcon({ href, ariaLabel, dataAttr, icon, enabled }: ActionIconProps) {
-  const style: React.CSSProperties = {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: 36,
-    height: 36,
-    borderRadius: "50%",
-    textDecoration: "none",
-    border: `1px solid ${enabled ? NEX.cyanSoft : NEX.disabledBorder}`,
-    background: enabled ? NEX.cyanFaint : "transparent",
-    color: enabled ? NEX.cyan : NEX.disabledFg,
-    cursor: enabled ? "pointer" : "not-allowed",
-  };
-  if (enabled && href) {
-    return (
-      <Link
-        href={href}
-        aria-label={ariaLabel}
-        data-nex-contacts-row-action={dataAttr}
-        data-nex-contacts-row-action-state="enabled"
-        style={style}
       >
-        {icon}
-      </Link>
-    );
-  }
-  return (
-    <span
-      aria-label={ariaLabel}
-      aria-disabled="true"
-      role="button"
-      title={ariaLabel}
-      data-nex-contacts-row-action={dataAttr}
-      data-nex-contacts-row-action-state="disabled"
-      style={style}
-    >
-      {icon}
-    </span>
+        <MessageIcon />
+      </div>
+    </Link>
   );
 }
 
@@ -300,26 +197,19 @@ function initialsFromName(name: string): string {
   return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
 }
 
-function PhoneIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-    </svg>
-  );
-}
-
-function VideoIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <polygon points="23 7 16 12 23 17 23 7" />
-      <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-    </svg>
-  );
-}
-
 function MessageIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
     </svg>
   );

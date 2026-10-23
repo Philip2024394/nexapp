@@ -14,6 +14,8 @@
 import * as React from "react";
 import { ContactRow } from "./_contact-row";
 import { CommunityCard } from "./_community-card";
+import { GroupCard } from "./_group-card";
+import { MOCK_GROUPS } from "./_mock-groups";
 import { CONTACTS_SEARCH_EVENT } from "./_contacts-search-bar";
 import type { ContactsFilter } from "./_contacts-filter-pills";
 
@@ -238,49 +240,19 @@ function GroupsPlaceholderGrid() {
       data-nex-contacts-groups-grid
       style={{ display: "grid", gap: 10 }}
     >
-      {/* NEX Community · live surface · lives under the Groups filter
-          per owner directive 2026-10-17. Mounted ABOVE the create-your-
-          first-group CTA so the active product (Community) outranks
-          the pending-schema CTA (groups). */}
+      {/* Owner directive 2026-10-23 · "same for community group" ·
+          NEX Community now renders via the shared GroupCard chrome
+          with orange accent · uses the live /community route. */}
       <CommunityCard />
-      <div
-        data-nex-contacts-groups-create-cta
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          padding: "14px 14px",
-          borderRadius: 14,
-          background: "rgba(0, 175, 255, 0.14)",
-          border: `1px solid rgba(0, 175, 255, 0.40)`,
-        }}
-      >
-        <div
-          aria-hidden
-          style={{
-            flexShrink: 0,
-            width: 44,
-            height: 44,
-            borderRadius: "50%",
-            display: "grid",
-            placeItems: "center",
-            background: NEX.cyan,
-            color: "#020914",
-            fontSize: 22,
-            fontWeight: 800,
-          }}
-        >
-          +
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: NEX.textPrimary }}>
-            Create your first group
-          </div>
-          <div style={{ marginTop: 2, fontSize: 12, color: NEX.textMuted, lineHeight: 1.3 }}>
-            Group creation is launching soon · name · avatar · members.
-          </div>
-        </div>
-      </div>
+      {/* Owner directive 2026-10-23 · "same card design for groups
+          but for groups the card will show small profile images
+          round and total members in group last circle with count ·
+          under the group location". MOCK_GROUPS (4 mock entries ·
+          swap for a real group-service call when nex_group schema
+          lands). */}
+      {MOCK_GROUPS.map((group) => (
+        <GroupCard key={group.id} group={group} />
+      ))}
     </div>
   );
 }
