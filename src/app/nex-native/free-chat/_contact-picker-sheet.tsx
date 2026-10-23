@@ -755,11 +755,26 @@ function ContactCard({
             </span>
           )}
         </div>
-        {/* Owner directive 2026-10-23 · "container must be exact same
-            size as number 7 prototype". Variant-7 panel content was
-            TWO lines only (name+verified, then "profession · city").
-            NEX ID monospace row + separate map-pin city row retired
-            to match #7 exactly. */}
+        {/* Owner directive 2026-10-23 · "user nex id must be under
+            their name bold and size 12 text" · NEX ID restored on
+            its own line between the name row and the profession row.
+            Sealed monospace stack retained (design-tokens doctrine
+            keeps mono as the intentional type-system contrast for
+            handles / IDs). */}
+        <div
+          data-nex-contact-card-handle
+          style={{
+            fontSize: 12,
+            fontWeight: 700,
+            color: accentHex,
+            letterSpacing: 0.3,
+            fontFamily:
+              "ui-monospace, SFMono-Regular, Menlo, Monaco, 'Courier New', monospace",
+            lineHeight: 1.2,
+          }}
+        >
+          {contact.nexHandle}
+        </div>
         <div
           style={{
             fontSize: 11,
