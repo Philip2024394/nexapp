@@ -434,6 +434,14 @@ function ContactCard({
   };
 
   return (
+    <div
+      data-nex-free-chat-contact-card-wrapper={contact.id}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+      }}
+    >
     <article
       data-nex-free-chat-contact-card={contact.id}
       data-nex-free-chat-contact-card-holding={isHolding ? "true" : "false"}
@@ -783,92 +791,6 @@ function ContactCard({
         )}
       </div>
 
-      {/* Owner directive 2026-10-23 (revised) · right-side CTA column ·
-          stacked Shop + Invite (variant-10 layout). PNG button images
-          retired this pass · plain accent-coloured round chips carry
-          the actions · the card's neon-glow treatment already does
-          the chrome work. */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 6,
-          flexShrink: 0,
-          position: "relative",
-          zIndex: 2,
-        }}
-      >
-        {/* Owner directive 2026-10-23 · variant-10 PlaceholderIconButton
-            style · both buttons are cyan-accent chrome balls with
-            white SHOP / INVITE text labels baked in · 48×48 round ·
-            radial gradient fill from accent → deep navy · 2px solid
-            accent rim · outer accent glow + inset white highlight.
-            Same visual treatment on both buttons · consistent with
-            card number 10 from the prototype page. */}
-        {contact.hasShop && (
-          <button
-            type="button"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={onShopShare}
-            data-nex-contact-card-shop
-            aria-label={`Share ${contact.shopName ?? contact.displayName} shop`}
-            title={`Share ${contact.shopName ?? contact.displayName} shop`}
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: "50%",
-              padding: 0,
-              background: `radial-gradient(circle at 30% 30%, ${accentHex}, #000a1a)`,
-              color: "#FFFFFF",
-              border: `2px solid ${accentHex}`,
-              fontSize: 9,
-              fontWeight: 900,
-              letterSpacing: 0.5,
-              cursor: "pointer",
-              fontFamily: "inherit",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              lineHeight: 1,
-              textShadow: "0 1px 2px rgba(0,0,0,0.8)",
-              boxShadow: `0 2px 10px ${accentHex}66, inset 0 1px 2px #FFFFFF55`,
-            }}
-          >
-            SHOP
-          </button>
-        )}
-        <button
-          type="button"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={onInvite}
-          data-nex-contact-card-invite
-          aria-label={`Invite ${contact.displayName} to the chat`}
-          title={`Invite ${contact.displayName} to the chat`}
-          style={{
-            width: 48,
-            height: 48,
-            borderRadius: "50%",
-            padding: 0,
-            background: `radial-gradient(circle at 30% 30%, ${accentHex}, #000a1a)`,
-            color: "#FFFFFF",
-            border: `2px solid ${accentHex}`,
-            fontSize: 9,
-            fontWeight: 900,
-            letterSpacing: 0.5,
-            cursor: "pointer",
-            fontFamily: "inherit",
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            lineHeight: 1,
-            textShadow: "0 1px 2px rgba(0,0,0,0.8)",
-            boxShadow: `0 2px 10px ${accentHex}66, inset 0 1px 2px #FFFFFF55`,
-          }}
-        >
-          INVITE
-        </button>
-      </div>
-
       <style>{`
         @keyframes nex-contact-card-heartbeat {
           0% { transform: scale(1); opacity: 0.9; }
@@ -877,6 +799,84 @@ function ContactCard({
         }
       `}</style>
     </article>
+
+    {/* Owner directive 2026-10-23 · "move the 2 buttons outside the
+        container under the container long style". Shop + Invite are
+        now long pill-shaped buttons sitting UNDER the card as a
+        dedicated row · the right-side chrome-ball column is retired.
+        Buttons flex-share the row width · when hasShop is false the
+        Invite button stretches to full width. */}
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "row",
+        gap: 8,
+        padding: "0 2px",
+      }}
+    >
+      {contact.hasShop && (
+        <button
+          type="button"
+          onClick={onShopShare}
+          data-nex-contact-card-shop
+          aria-label={`Share ${contact.shopName ?? contact.displayName} shop`}
+          title={`Share ${contact.shopName ?? contact.displayName} shop`}
+          style={{
+            flex: 1,
+            minHeight: 36,
+            padding: "0 14px",
+            borderRadius: 999,
+            background: `linear-gradient(180deg, ${accentHex}, ${accentHex}cc)`,
+            color: "#FFFFFF",
+            border: `1.5px solid ${accentHex}`,
+            fontSize: 11,
+            fontWeight: 900,
+            letterSpacing: 0.6,
+            cursor: "pointer",
+            fontFamily: "inherit",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            lineHeight: 1,
+            textShadow: "0 1px 2px rgba(0,0,0,0.5)",
+            boxShadow: `0 2px 10px ${accentHex}55`,
+          }}
+        >
+          🛒 SHOP
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={onInvite}
+        data-nex-contact-card-invite
+        aria-label={`Invite ${contact.displayName} to the chat`}
+        title={`Invite ${contact.displayName} to the chat`}
+        style={{
+          flex: 1,
+          minHeight: 36,
+          padding: "0 14px",
+          borderRadius: 999,
+          background: "transparent",
+          color: accentHex,
+          border: `1.5px solid ${accentHex}`,
+          fontSize: 11,
+          fontWeight: 900,
+          letterSpacing: 0.6,
+          cursor: "pointer",
+          fontFamily: "inherit",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 6,
+          lineHeight: 1,
+          boxShadow: `0 0 10px ${accentHex}22`,
+        }}
+      >
+        + INVITE
+      </button>
+    </div>
+    </div>
   );
 }
 
