@@ -839,9 +839,12 @@ function ContactCard({
           style={{
             position: "absolute",
             right: 10,
-            // Owner directive 2026-10-23 · "move up little 2px the
-            // last online time" · bottom 4 → 6 (2px higher).
-            bottom: 6,
+            // Owner directive 2026-10-23 · "move the chat button
+            // over the last online area position" · the chat button
+            // now owns bottom:10 of the right side (40px tall) · the
+            // last-online text shifts to sit ABOVE the button (bottom
+            // = 10 + 40 + 4 = 54) so both are legible, not stacked.
+            bottom: 54,
             fontSize: 9,
             fontWeight: 600,
             color: NEX.textMute,
@@ -869,12 +872,17 @@ function ContactCard({
         style={{
           position: "absolute",
           right: 10,
-          // Owner directive 2026-10-23 · "move down the chat button
-          // with image little" · top 4 → 18 · nudges the button down
-          // a touch so it sits a little lower from the container's
-          // top edge · still visually anchored at the upper third
-          // of the card.
-          top: 18,
+          // Owner directive 2026-10-23 · "move the chat button over
+          // the last online area position" · chat button lifted from
+          // top:18 to bottom:10 so it sits in the lower-right corner
+          // where the last-online text is pinned. The last-online
+          // text keeps its position (right:10 bottom:6) · the button
+          // overlays it (zIndex 2 > 1). To avoid the overlap, the
+          // last-online text now also shifts to live ABOVE the
+          // button zone when the button is present. See the
+          // last-online block below · its bottom offset accounts
+          // for the 40px button + a 4px gap.
+          bottom: 10,
           width: 40,
           height: 40,
           borderRadius: "50%",
