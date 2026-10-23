@@ -220,10 +220,14 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
 
 export function formatContactPresenceLabel(c: MockContact): string {
   if (c.presence === "online") return "Online now";
+  // Owner directive 2026-10-23 · "remove the word away" · the "Away ·"
+  // prefix is retired · the yellow rim + yellow ping already signal
+  // "away" so the duplicated word was noise. Away contacts now show
+  // just the time ("15m ago", "2h ago") in the card's bottom-right.
   if (c.presence === "away" && c.lastSeenMinsAgo !== null) {
-    if (c.lastSeenMinsAgo < 60) return `Away · ${c.lastSeenMinsAgo}m ago`;
+    if (c.lastSeenMinsAgo < 60) return `${c.lastSeenMinsAgo}m ago`;
     const h = Math.round(c.lastSeenMinsAgo / 60);
-    return `Away · ${h}h ago`;
+    return `${h}h ago`;
   }
   if (c.lastSeenMinsAgo !== null) {
     if (c.lastSeenMinsAgo < 60) return `Offline · ${c.lastSeenMinsAgo}m ago`;
