@@ -314,14 +314,14 @@ export function ContactPickerSheet({
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
-                // Owner directive 2026-10-23 · enlarge header text ·
-                // 10 → 18 so "Contacts" reads as a proper section
-                // title, not a tiny eyebrow. Letter-spacing eased
-                // slightly so the bigger glyphs don't look stretched.
+                // Owner directive 2026-10-23 · "Contacts text to white
+                // color" · was accentHex (per-theme tint) · now pure
+                // white so it reads as a stable section title
+                // regardless of the active chat theme.
                 fontSize: 18,
                 fontWeight: 800,
                 letterSpacing: 0.4,
-                color: accentHex,
+                color: "#FFFFFF",
                 textTransform: "uppercase",
               }}
             >
@@ -560,13 +560,17 @@ function ContactCard({
             }}
           />
         )}
-        {/* Presence rim · green/amber/dim */}
+        {/* Status ping rim · owner directive 2026-10-23 · "status
+            ping rim is always blue color". Solid 2px NEX cyan border
+            replaces the earlier presence-based green/amber/dark-red
+            ring · reads as a stable identity-anchor regardless of
+            the contact's presence state. */}
         <div
           style={{
             position: "absolute",
             inset: 0,
             borderRadius: "50%",
-            border: `2px solid ${ringColor}`,
+            border: `2px solid ${NEX.cyan}`,
             overflow: "hidden",
             background: `linear-gradient(135deg, ${accentHex}44 0%, #05101f 100%)`,
             display: "grid",
@@ -586,21 +590,22 @@ function ContactCard({
             {contact.initials}
           </span>
         </div>
-        {/* Online heartbeat · same vocabulary as sealed ChatIdentityHeader */}
-        {contact.presence === "online" && (
-          <div
-            aria-hidden
-            style={{
-              position: "absolute",
-              inset: -2,
-              borderRadius: "50%",
-              border: `2px solid ${NEX.presenceOnline}`,
-              animation:
-                "nex-contact-card-heartbeat 1200ms cubic-bezier(0.4,0,0.2,1) infinite",
-              pointerEvents: "none",
-            }}
-          />
-        )}
+        {/* Status heartbeat · owner directive 2026-10-23 · "status
+            ping rim is always blue color". Formerly only rendered
+            for online contacts in green · now ALWAYS mounted in NEX
+            cyan so every card carries the pulsing blue ping. */}
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: -2,
+            borderRadius: "50%",
+            border: `2px solid ${NEX.cyan}`,
+            animation:
+              "nex-contact-card-heartbeat 1200ms cubic-bezier(0.4,0,0.2,1) infinite",
+            pointerEvents: "none",
+          }}
+        />
         {/* Owner directive 2026-10-22 (evening · pass 20) · unread-
             count badge on bottom-right rim · replaces the previous
             🛒 badge. Shows the number of unread messages from this
@@ -696,7 +701,10 @@ function ContactCard({
                 width: 14,
                 height: 14,
                 borderRadius: "50%",
-                background: NEX.cyan,
+                // Owner directive 2026-10-23 · tick badge · cyan →
+                // yellow so it reads as a distinct verified marker
+                // regardless of the chat-theme accent.
+                background: "#FFD700",
                 color: NEX.bgNavy,
                 fontSize: 9,
                 fontWeight: 900,
