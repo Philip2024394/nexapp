@@ -470,12 +470,12 @@ function ContactCard({
         flexDirection: "row",
         alignItems: "center",
         gap: 10,
-        // Owner directives 2026-10-23 · "move text up top of
-        // container" + "reduce the height of container". Top
-        // padding trimmed 16 → 6 (text now hugs the container's
-        // top edge) · bottom padding trimmed 10 → 6 · left stays
-        // 70 for the overlapping chip · right stays 14.
-        padding: "6px 14px 6px 70px",
+        // Owner directives 2026-10-23 · "reduce the height of
+        // container 40px". Padding trimmed to the floor (2/2) ·
+        // combined with text-column translateY(-20px) the overall
+        // card height drops noticeably from the earlier 6/6 state.
+        // Left stays 70 for the overlapping chip · right stays 14.
+        padding: "2px 14px 2px 70px",
         // Owner directive 2026-10-23 · Neon-glow 3D treatment ·
         // deeper navy base (#040A18 beats bgNavy #050F1E for contrast
         // against the glow) + 1.5px accent rim + layered boxShadow
@@ -483,14 +483,14 @@ function ContactCard({
         // (painted as a sibling div below). The glow intensifies
         // when the card is being held so the hold ritual reads as
         // the card "charging".
-        // Owner directive 2026-10-23 · "container full width with
-        // small padding left and right side of phone edge screen" ·
-        // the earlier 296px maxWidth clamp is retired · the card
-        // now spans the full sheet width, inheriting the carousel's
-        // 16px horizontal padding as the gutter from the phone frame
-        // edge. Variant-7 proportions (padding + borderRadius + chip
-        // overlap) stay intact · only width changes.
+        // Owner directive 2026-10-23 · "container full width ..." +
+        // "container is running outside right side screen" fix ·
+        // width: 100% + boxSizing: border-box so the 70px left
+        // padding + 14px right padding stay WITHIN the 100% width
+        // rather than adding on top of it. Prevents horizontal
+        // overflow out of the sheet frame.
         width: "100%",
+        boxSizing: "border-box",
         background: "rgba(2,9,20,0.92)",
         border: `1.5px solid ${accentHex}`,
         borderRadius: 10,
@@ -659,6 +659,40 @@ function ContactCard({
           </div>
         )}
       </div>
+
+      {/* Owner directive 2026-10-23 · "add shop icon under the profile
+          image" · hasShop-gated small round shop marker sitting
+          directly BELOW the chip (chip ends at top:24 · marker sits
+          at top:30 · same left:12 so it stacks under the chip
+          vertically). Reads as "this contact has a shop" at a
+          glance · the long SHOP pill in the CTA row below is still
+          the action trigger. */}
+      {contact.hasShop && (
+        <div
+          aria-label={`${contact.shopName ?? contact.displayName} has a shop`}
+          data-nex-contact-card-shop-marker
+          style={{
+            position: "absolute",
+            top: 30,
+            left: 24,
+            width: 20,
+            height: 20,
+            borderRadius: "50%",
+            background: NEX.shopOrange,
+            color: NEX.shopOrangeInk,
+            border: `2px solid #040A18`,
+            display: "grid",
+            placeItems: "center",
+            fontSize: 10,
+            fontWeight: 800,
+            lineHeight: 1,
+            zIndex: 2,
+            boxShadow: `0 2px 6px ${NEX.shopOrange}66`,
+          }}
+        >
+          🛒
+        </div>
+      )}
 
       {/* Centre column · name + profession·city. flex:1 absorbs the
           width beside the overlapping chip. Owner directive 2026-10-23
