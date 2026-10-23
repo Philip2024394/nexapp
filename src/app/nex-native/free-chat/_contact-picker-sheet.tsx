@@ -37,11 +37,11 @@ const NEX = {
   textMute: "#7D9BC0",
   cyan: "#00AFFF",
   // Presence vocabulary (owner directive pass 19).
-  // Owner directive 2026-10-23 · "green ping for online and rim ·
-  // offline red dark rim · busy yellow rim with ping". Busy switches
-  // from orange (#FF7200) to yellow (#FFD700).
+  // Owner directive 2026-10-23 (revised) · online green · busy
+  // ORANGE (not yellow) · offline dark red. Busy reverts from the
+  // earlier yellow (#FFD700) back to the sealed orange (#FF7200).
   presenceOnline: "#16D66B",
-  presenceBusy: "#FFD700",
+  presenceBusy: "#FF7200",
   presenceOffline: "#A60000",
   // Owner directive 2026-10-22 (evening · pass 21) · two fixed
   // chrome colours that stay the same across every theme accent:
