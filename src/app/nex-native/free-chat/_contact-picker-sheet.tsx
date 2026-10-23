@@ -839,7 +839,9 @@ function ContactCard({
           style={{
             position: "absolute",
             right: 10,
-            bottom: 4,
+            // Owner directive 2026-10-23 · "move up little 2px the
+            // last online time" · bottom 4 → 6 (2px higher).
+            bottom: 6,
             fontSize: 9,
             fontWeight: 600,
             color: NEX.textMute,
