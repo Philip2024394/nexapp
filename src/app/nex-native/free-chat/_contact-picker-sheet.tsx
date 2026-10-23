@@ -480,11 +480,11 @@ function ContactCard({
         flexDirection: "row",
         alignItems: "center",
         gap: 10,
-        // Owner chose Option 1 2026-10-23 · "keep 4 lines + good
-        // spacing" · vertical padding restored to 8/8 so content
-        // doesn't hug the rims. Horizontal padding keeps 70 left
-        // (chip overhang) + 60 right (round chat button).
-        padding: "8px 60px 8px 70px",
+        // Owner directive 2026-10-23 · NEX ID row retired · with 3
+        // lines (name · profession · city) the container can tighten
+        // vertically. Padding 8/8 → 6/6 (small further trim) ·
+        // horizontal stays 70 left (chip) + 60 right (chat button).
+        padding: "6px 60px 6px 70px",
         // Owner directive 2026-10-23 · Neon-glow 3D treatment ·
         // deeper navy base (#040A18 beats bgNavy #050F1E for contrast
         // against the glow) + 1.5px accent rim + layered boxShadow
@@ -773,23 +773,11 @@ function ContactCard({
             Sealed monospace stack retained (design-tokens doctrine
             keeps mono as the intentional type-system contrast for
             handles / IDs). */}
-        {/* NEX ID · bold 800 · fontSize 12 (per the original owner
-            spec · restored from the 11px height-reduction pass now
-            that Option 1 "keep 4 lines + good spacing" is chosen). */}
-        <div
-          data-nex-contact-card-handle
-          style={{
-            fontSize: 12,
-            fontWeight: 800,
-            color: accentHex,
-            letterSpacing: 0.3,
-            fontFamily:
-              "ui-monospace, SFMono-Regular, Menlo, Monaco, 'Courier New', monospace",
-            lineHeight: 1.2,
-          }}
-        >
-          {contact.nexHandle}
-        </div>
+        {/* Owner directive 2026-10-23 · NEX ID row retired · for the
+            contact picker (contacts you've already added) the handle
+            is noise · users can tap through to see it in the chat
+            header. Height saved · ~16px (fontSize 12 + lineHeight
+            1.2 + 4px gap). */}
         {/* Profession on its own line. */}
         <div
           style={{
