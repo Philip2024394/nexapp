@@ -392,7 +392,12 @@ export function ContactPickerSheet({
                   data-nex-free-chat-contact-divider
                   style={{
                     height: 0,
-                    borderTop: `1px dashed ${NEX.cyan}55`,
+                    // Owner directive 2026-10-23 · "dotted line is
+                    // pink theme color" · divider now tints with the
+                    // active chat-theme accent so it reads as pink on
+                    // theme-1, gold on theme-2, etc. · instead of
+                    // the earlier fixed cyan.
+                    borderTop: `1px dashed ${accentHex}66`,
                     margin: "0 8px",
                   }}
                 />
