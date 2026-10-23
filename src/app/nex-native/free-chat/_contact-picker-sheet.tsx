@@ -733,66 +733,33 @@ function ContactCard({
             </span>
           )}
         </div>
-        {/* NEX ID · mobile-size bump 10 → 11 (owner directive
-            2026-10-23). Keeps the sealed monospace stack intact
-            per design-tokens doc · monospace is an intentional
-            type-system contrast and not subject to the sans rule. */}
-        <div
-          style={{
-            fontSize: 11,
-            fontWeight: 700,
-            color: accentHex,
-            letterSpacing: 0.5,
-            fontFamily:
-              "ui-monospace, SFMono-Regular, Menlo, Monaco, 'Courier New', monospace",
-            // Neon-glow 3D · subtler accent-glow on the handle so
-            // the mono row has the same lit quality as the name.
-            textShadow: `0 0 6px ${accentHex}66`,
-          }}
-        >
-          {contact.nexHandle}
-        </div>
-        {/* Profession · city · one line, muted meta. Presence is
-            communicated purely by the avatar ring colour (green =
-            online, orange = busy, dark red = offline) per owner
-            directive 2026-10-22 (evening · pass 19) · no text
-            "Online now / Away Xm / Offline Yh" line. Mobile-size
-            bump 10 → 11 (owner directive 2026-10-23) · same floor
-            as the NEX ID row so the meta pair reads as one tier. */}
-        {/* Profession on its own line · city breaks to a second line
-            below with the red map pin before it. Owner directive
-            2026-10-23 (revised) · "the map pin and location should be
-            under profession". */}
+        {/* Owner directive 2026-10-23 · "container must be exact same
+            size as number 7 prototype". Variant-7 panel content was
+            TWO lines only (name+verified, then "profession · city").
+            NEX ID monospace row + separate map-pin city row retired
+            to match #7 exactly. */}
         <div
           style={{
             fontSize: 11,
             color: NEX.textMute,
-            lineHeight: 1.4,
+            lineHeight: 1.2,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
           }}
         >
-          {contact.profession}
+          <span>{contact.profession}</span>
+          {contact.city && (
+            <>
+              <span aria-hidden style={{ color: NEX.textMute }}>·</span>
+              <MapPinIcon color={NEX.unreadRed} />
+              <span>{contact.city}</span>
+            </>
+          )}
         </div>
-        {contact.city && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-              fontSize: 11,
-              color: NEX.textMute,
-              lineHeight: 1.4,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            <MapPinIcon color={NEX.unreadRed} />
-            <span>{contact.city}</span>
-          </div>
-        )}
       </div>
 
       <style>{`
