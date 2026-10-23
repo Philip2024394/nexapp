@@ -14,7 +14,11 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { MOCK_CONTACTS, type MockContact } from "./_contact-picker-data";
+import {
+  MOCK_CONTACTS,
+  formatContactPresenceLabel,
+  type MockContact,
+} from "./_contact-picker-data";
 // Owner directive 2026-10-23 · consume the single sealed sans stack
 // from the design-tokens module (sealed 2026-10-17) · no per-page
 // fontFamily redeclaration.
@@ -473,12 +477,12 @@ function ContactCard({
         flexDirection: "row",
         alignItems: "center",
         gap: 10,
-        // Owner directives 2026-10-23 · "reduce the height of
-        // container 40px". Padding trimmed to the floor (2/2) ·
-        // combined with text-column translateY(-20px) the overall
-        // card height drops noticeably from the earlier 6/6 state.
-        // Left stays 70 for the overlapping chip · right stays 14.
-        padding: "2px 14px 2px 70px",
+        // Owner directives 2026-10-23 · "add round message counter
+        // button" · right padding bumped 14 → 60 so the identity
+        // text column doesn't underlap the new 40px round message
+        // button that lives at right:10 inside the container. Left
+        // stays 70 for the overlapping chip.
+        padding: "2px 60px 2px 70px",
         // Owner directive 2026-10-23 · Neon-glow 3D treatment ·
         // deeper navy base (#040A18 beats bgNavy #050F1E for contrast
         // against the glow) + 1.5px accent rim + layered boxShadow
@@ -592,23 +596,9 @@ function ContactCard({
             {contact.initials}
           </span>
         </div>
-        {/* Presence dot · small square-ish pill in bottom-right of
-            the chip · green/orange/dark-red based on presence state. */}
-        <div
-          aria-label={`presence · ${contact.presence}`}
-          data-nex-contact-card-presence-dot={contact.presence}
-          style={{
-            position: "absolute",
-            right: -3,
-            bottom: -3,
-            width: 12,
-            height: 12,
-            borderRadius: 4,
-            background: ringColor,
-            border: `2px solid #040A18`,
-            zIndex: 3,
-          }}
-        />
+        {/* Owner directive 2026-10-23 · "remove the green dot on
+            profile image" · presence dot retired · the solid rim +
+            pulsing ping already communicate presence. */}
         {/* Status heartbeat · owner directive 2026-10-23 · "green ping
             for online · busy yellow rim WITH ping · offline red dark
             rim no ping". Pulsing ring shows only for online + busy ·
@@ -794,6 +784,73 @@ function ContactCard({
         </div>
       </div>
 
+      {/* Owner directive 2026-10-23 · "lower right side container must
+          show last online time for user that is not online" · the
+          formatContactPresenceLabel helper renders "Away · 15m ago",
+          "Offline · 4h ago", etc. · only shown for non-online
+          contacts (online contacts carry the pulsing green ping
+          which already says "live right now"). */}
+      {contact.presence !== "online" && (
+        <div
+          data-nex-contact-card-last-online
+          style={{
+            position: "absolute",
+            right: 10,
+            bottom: 4,
+            fontSize: 9,
+            fontWeight: 600,
+            color: NEX.textMute,
+            letterSpacing: 0.2,
+            pointerEvents: "none",
+            zIndex: 1,
+          }}
+        >
+          {formatContactPresenceLabel(contact)}
+        </div>
+      )}
+
+      {/* Owner directive 2026-10-23 · "add round message counter
+          button" · replaces the earlier long Shop + Invite pills ·
+          round 40×40 accent button on the right side of the card ·
+          shows the unread count as the number · tap fires onInvite
+          (start/open chat with this contact). */}
+      <button
+        type="button"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={onInvite}
+        data-nex-contact-card-message
+        aria-label={`Message ${contact.displayName}`}
+        title={`Message ${contact.displayName}`}
+        style={{
+          position: "absolute",
+          right: 10,
+          top: "50%",
+          transform: "translateY(-50%)",
+          width: 40,
+          height: 40,
+          borderRadius: "50%",
+          padding: 0,
+          background: `radial-gradient(circle at 30% 30%, ${accentHex}, #000a1a)`,
+          color: "#FFFFFF",
+          border: `2px solid ${accentHex}`,
+          fontSize: contact.unreadCount > 0 ? 14 : 18,
+          fontWeight: 900,
+          cursor: "pointer",
+          fontFamily: "inherit",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          lineHeight: 1,
+          textShadow: "0 1px 2px rgba(0,0,0,0.8)",
+          boxShadow: `0 2px 10px ${accentHex}66, inset 0 1px 2px #FFFFFF55`,
+          zIndex: 2,
+        }}
+      >
+        {contact.unreadCount > 0
+          ? (contact.unreadCount > 99 ? "99+" : contact.unreadCount)
+          : "💬"}
+      </button>
+
       <style>{`
         @keyframes nex-contact-card-heartbeat {
           0% { transform: scale(1); opacity: 0.9; }
@@ -803,81 +860,11 @@ function ContactCard({
       `}</style>
     </article>
 
-    {/* Owner directive 2026-10-23 · "container full width ..." · the
-        pill row no longer clamps to 296 either · spans the same
-        full-width as the card above with the carousel's 16px
-        horizontal gutter from the phone edge. */}
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "row",
-        gap: 8,
-        padding: "0 2px",
-        width: "100%",
-      }}
-    >
-      {contact.hasShop && (
-        <button
-          type="button"
-          onClick={onShopShare}
-          data-nex-contact-card-shop
-          aria-label={`Share ${contact.shopName ?? contact.displayName} shop`}
-          title={`Share ${contact.shopName ?? contact.displayName} shop`}
-          style={{
-            flex: 1,
-            minHeight: 36,
-            padding: "0 14px",
-            borderRadius: 999,
-            background: `linear-gradient(180deg, ${accentHex}, ${accentHex}cc)`,
-            color: "#FFFFFF",
-            border: `1.5px solid ${accentHex}`,
-            fontSize: 11,
-            fontWeight: 900,
-            letterSpacing: 0.6,
-            cursor: "pointer",
-            fontFamily: "inherit",
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 6,
-            lineHeight: 1,
-            textShadow: "0 1px 2px rgba(0,0,0,0.5)",
-            boxShadow: `0 2px 10px ${accentHex}55`,
-          }}
-        >
-          🛒 SHOP
-        </button>
-      )}
-      <button
-        type="button"
-        onClick={onInvite}
-        data-nex-contact-card-invite
-        aria-label={`Invite ${contact.displayName} to the chat`}
-        title={`Invite ${contact.displayName} to the chat`}
-        style={{
-          flex: 1,
-          minHeight: 36,
-          padding: "0 14px",
-          borderRadius: 999,
-          background: "transparent",
-          color: accentHex,
-          border: `1.5px solid ${accentHex}`,
-          fontSize: 11,
-          fontWeight: 900,
-          letterSpacing: 0.6,
-          cursor: "pointer",
-          fontFamily: "inherit",
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 6,
-          lineHeight: 1,
-          boxShadow: `0 0 10px ${accentHex}22`,
-        }}
-      >
-        + INVITE
-      </button>
-    </div>
+    {/* Owner directive 2026-10-23 · "remove the invite button and
+        shop button long" · the long-pill CTA row is retired. The
+        round message-counter button in the card's right side is now
+        the primary action (fires onInvite · opens / starts chat).
+        The 🛒 marker under the chip signals "has shop" ambiently. */}
     </div>
   );
 }
