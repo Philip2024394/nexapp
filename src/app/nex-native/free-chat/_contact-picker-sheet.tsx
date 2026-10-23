@@ -665,18 +665,16 @@ function ContactCard({
         )}
       </div>
 
-      {/* Owner directive 2026-10-23 · "move down the shop cart icon
-          and enlarge little" · top 30 → 44 (nudges below the chip
-          + into the container's content zone) · size 32 → 40 ·
-          emoji 24 → 32 (larger glyph · reads clearly against the
-          card's deep-navy background). */}
+      {/* Owner directive 2026-10-23 · "move up the text 5px and
+          cart icon for shop" · shop icon lifts 5px (top 44 → 39)
+          in sync with the identity text column. */}
       {contact.hasShop && (
         <div
           aria-label={`${contact.shopName ?? contact.displayName} has a shop`}
           data-nex-contact-card-shop-marker
           style={{
             position: "absolute",
-            top: 44,
+            top: 39,
             left: 16,
             width: 40,
             height: 40,
@@ -704,15 +702,13 @@ function ContactCard({
           minWidth: 0,
           display: "flex",
           flexDirection: "column",
-          // Owner chose Option 1 2026-10-23 · "keep 4 lines + good
-          // spacing" · gap restored to 4 so each row (name · NEX ID
-          // · profession · city) has visible breathing room.
           gap: 4,
           position: "relative",
           zIndex: 1,
-          // translateY(-20) hack retired · the taller container now
-          // holds the text naturally without needing to pull it up
-          // visually.
+          // Owner directive 2026-10-23 · "move up the text 5px" ·
+          // translateY(-5px) lifts the whole identity text block up
+          // 5px without disturbing layout flow.
+          transform: "translateY(-5px)",
         }}
       >
         {/* Name + verified pill */}
