@@ -51,21 +51,11 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
     unreadCount: 2,
     initials: "PO",
   },
-  {
-    id: "nex-00001",
-    nexHandle: "NEX-00001",
-    displayName: "NEX1 Official",
-    profession: "NEX Support",
-    city: null,
-    presence: "online",
-    lastSeenMinsAgo: null,
-    hasShop: false,
-    shopName: null,
-    isVerified: true,
-    hasActiveStatus: false,
-    unreadCount: 1,
-    initials: "N1",
-  },
+  // Owner directive 2026-10-23 · NEX Support (NEX1 Official) entry
+  // retired from the contact-picker mock list · "we do not need it
+  // here". NEX1 may still appear in the real signed-in experience
+  // via the friend-service (if the viewer has NEX1 as a friend) ·
+  // this only removes it from the guest/preview mock set.
   {
     id: "nex-23451",
     nexHandle: "NEX-23451",
