@@ -470,11 +470,12 @@ function ContactCard({
         flexDirection: "row",
         alignItems: "center",
         gap: 10,
-        // Padding matches variant-7 prototype exactly ·
-        // "16px 14px 10px 70px" so the identity text sits beside
-        // the overlapping chip (chip at left:12 + width:48 = 60,
-        // text column begins at 70).
-        padding: "16px 14px 10px 70px",
+        // Owner directives 2026-10-23 · "move text up top of
+        // container" + "reduce the height of container". Top
+        // padding trimmed 16 → 6 (text now hugs the container's
+        // top edge) · bottom padding trimmed 10 → 6 · left stays
+        // 70 for the overlapping chip · right stays 14.
+        padding: "6px 14px 6px 70px",
         // Owner directive 2026-10-23 · Neon-glow 3D treatment ·
         // deeper navy base (#040A18 beats bgNavy #050F1E for contrast
         // against the glow) + 1.5px accent rim + layered boxShadow
@@ -548,17 +549,13 @@ function ContactCard({
           Inviting in {countdownSeconds}…
         </div>
       )}
-      {/* Owner directive 2026-10-23 (variant-7 adoption) · SQUARE
-          avatar chip overlapping the TOP edge of the card. Sized
-          48×48 · borderRadius 10 (gentle rounded square · not a
-          circle) · 2px solid accentHex rim · gradient fill ·
-          initials inside. Presence dot sits in the bottom-right
-          corner of the chip (standard social-app pattern). */}
+      {/* Owner directive 2026-10-23 · "profile image on the container
+          same position but change to round shape". Chip stays
+          48×48 · same top:-24 left:12 overlap · now a perfect circle
+          (borderRadius 50%) instead of the earlier rounded-square. */}
       <div
         style={{
           position: "absolute",
-          // Matches variant-7 prototype · chip overlaps the top edge
-          // by half its height (24px) · at left:12.
           top: -24,
           left: 12,
           width: 48,
@@ -567,13 +564,13 @@ function ContactCard({
           zIndex: 2,
         }}
       >
-        {/* Chip surface · square with gradient fill + accent rim ·
-            initials text centred. */}
+        {/* Chip surface · ROUND circle with gradient fill + accent
+            rim · initials text centred. */}
         <div
           style={{
             position: "absolute",
             inset: 0,
-            borderRadius: 10,
+            borderRadius: "50%",
             border: `2px solid ${accentHex}`,
             overflow: "hidden",
             background: `linear-gradient(135deg, ${accentHex}cc 0%, #180012 65%, #050F1E 100%)`,
@@ -613,13 +610,14 @@ function ContactCard({
           }}
         />
         {/* Status heartbeat · always-blue pulsing rim around the chip
-            · signals "status live". */}
+            · signals "status live" · ROUND to match the new circular
+            chip. */}
         <div
           aria-hidden
           style={{
             position: "absolute",
             inset: -3,
-            borderRadius: 12,
+            borderRadius: "50%",
             border: `2px solid ${NEX.cyan}`,
             animation:
               "nex-contact-card-heartbeat 1200ms cubic-bezier(0.4,0,0.2,1) infinite",
