@@ -128,6 +128,29 @@ function signInWithReturn(destination: string): string {
   return `/nex-native/sign-in?next=${encodeURIComponent(destination)}`;
 }
 
+/** Owner directive 2026-10-23 · forward `?dev=1` to drawer destinations
+ *  so account-gated routes (e.g. /nex-native/contacts) can run their
+ *  own matching dev bypass. Handles existing query strings and fragments
+ *  without stomping them. External URLs are returned untouched. */
+function appendDevFlag(href: string): string {
+  if (!href.startsWith("/")) return href;
+  const [path, hash] = href.split("#");
+  if (path === undefined) return href;
+  const sep = path.includes("?") ? "&" : "?";
+  const withFlag = `${path}${sep}dev=1`;
+  return hash === undefined ? withFlag : `${withFlag}#${hash}`;
+}
+
+// Owner directive 2026-10-23 · in non-production builds the drawer
+// routes directly to the contacts dev-bypass URL (?dev=1) so an
+// unauthenticated viewer lands on the real contacts page in its honest
+// empty state rather than being bounced to /sign-in. Production always
+// routes to the clean path and the auth gate takes over.
+const CONTACTS_HREF: string =
+  process.env.NODE_ENV !== "production"
+    ? "/nex-native/contacts?dev=1"
+    : "/nex-native/contacts";
+
 // Owner directive 2026-10-18 · guest viewers see a 3D lock on every
 // row that requires a NEX account. Each row below carries an
 // explicit `locked` flag so the gate decision is visible at the
@@ -143,7 +166,7 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
        primary escape from any chat-theme preview (or other consumer
        surface) · routes to /nex-native/contacts. Shown at the top of
        YOUR NEX so it reads as the first/primary action. */
-    href: "/nex-native/contacts",
+    href: CONTACTS_HREF,
     locked: true,
   },
   {
@@ -169,7 +192,7 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
     // redirect from the drawer side. The contacts page itself still
     // enforces its own auth gate for guests · that's its concern,
     // not the drawer's.
-    href: "/nex-native/contacts",
+    href: CONTACTS_HREF,
     locked: false,
   },
   {
@@ -239,10 +262,31 @@ const YOUR_BUSINESS_ROWS: ReadonlyArray<MenuRow> = [
   // the broadcaster's real NEX identity on the live-commerce overlay.
   {
     key: "go-live",
-    label: "Go Live",
-    subtitle: "Broadcast from your device · 10 viewer pilot",
-    href: "/nex-native/live-commerce/go-live",
-    locked: true,
+    label: "Nex Live",
+    subtitle: "Watch live · tap for full-screen video with controls",
+    /* Owner directive 2026-10-24 (R3) · the drawer entry now routes
+       to the LANDING page at /nex-native/live-commerce which picks
+       the first candidate and redirects to a full-bleed playing
+       video with the footer buttons. Routing order (see landing
+       page.tsx):
+         1 · open Live session → /live-commerce/[sessionId]
+         2 · uploaded video → /videos/[videoId]
+         3 · empty state → /live-commerce/feed
+       Keeps the drawer entry opening the Live SCREEN with chrome,
+       not a list. Direct routes still work:
+         /live-commerce/go-live  → broadcaster surface
+         /live-commerce/feed     → discovery list fallback
+         /videos/[videoId]       → uploaded-video viewer */
+    href: "/nex-native/live-commerce",
+    /* Owner directive 2026-10-24 · "unlock go live in side drawer".
+       The drawer no longer renders a lock icon on this row. The
+       underlying page at /nex-native/live-commerce/go-live keeps its
+       OWN sealed sign-in gate (sealed 2026-10-22 identity-sealing · the
+       broadcaster id is the signed-in NEX account id · guests still
+       land on sign-in before the broadcaster surface renders). The
+       feed route is public · guests see the empty-state / list but
+       the Go Live CTA only renders for signed-in users. */
+    locked: false,
   },
   {
     key: "my-businesses",
@@ -553,6 +597,19 @@ function DrawerBody({
 
   return (
     <div style={drawerBodyStyle}>
+      {/* Owner directive 2026-10-24 · "over the container in side
+          drawer sign into nex - i want 3 buttons - first is live
+          which opens the live page - Vault opens the vault page -
+          Socials opens the socials page". The three quick-access
+          buttons sit ABOVE the IdentityBar so they are the first
+          thing a guest or signed-in viewer sees when the drawer
+          opens. The equivalent rows further down (`go-live` in
+          YOUR_BUSINESS_ROWS · `business-vault` conditional row ·
+          and the Socials entry) are kept intact until the owner
+          confirms the quick-access buttons work and asks for them
+          to be removed. */}
+      <QuickAccessRow />
+
       <IdentityBar session={session} identityNameOverride={identityNameOverride} />
 
       {/* Owner directive 2026-10-20 · the Emergency Help row is a
@@ -574,6 +631,7 @@ function DrawerBody({
         title="YOUR NEX"
         rows={YOUR_NEX_ROWS}
         isGuest={effectiveIsGuest}
+        devUnlockMode={devUnlock}
       />
 
       <SectionGroup
@@ -588,12 +646,14 @@ function DrawerBody({
             : YOUR_BUSINESS_ROWS
         }
         isGuest={effectiveIsGuest}
+        devUnlockMode={devUnlock}
       />
 
       <SectionGroup
         title="PREFERENCES & SUPPORT"
         rows={PREFERENCES_ROWS}
         isGuest={effectiveIsGuest}
+        devUnlockMode={devUnlock}
       />
 
       {session !== null ? (
@@ -666,6 +726,48 @@ function CopyIdentityButton({
     >
       {copied ? "Copied" : "Copy"}
     </button>
+  );
+}
+
+// ─── Quick-access row · Live · Vault · Socials ────────────────────
+//
+// Owner directive 2026-10-24 · three cyan-rimmed buttons rendered at
+// the very top of the drawer body (above the sign-in / identity bar).
+// Each routes directly to the sealed destination page. The downstream
+// section rows (`go-live` in YOUR_BUSINESS_ROWS · `business-vault` ·
+// Socials entry) are intentionally left intact until the owner
+// confirms the quick-access row is working as intended · at which
+// point they will be removed in a follow-up pass.
+
+const QUICK_ACCESS_ROWS: ReadonlyArray<{
+  readonly key: "live" | "vault" | "socials";
+  readonly label: string;
+  readonly href: string;
+  readonly glyph: string;
+}> = [
+  { key: "live",    label: "Live",    href: "/nex-native/live-commerce", glyph: "●" },
+  { key: "vault",   label: "Vault",   href: "/nex-native/vault",         glyph: "🔒" },
+  { key: "socials", label: "Socials", href: "/nex-native/nex-socials",   glyph: "👥" },
+];
+
+function QuickAccessRow(): React.JSX.Element {
+  return (
+    <div style={quickAccessRowStyle} data-nex-control-drawer-quick-access>
+      {QUICK_ACCESS_ROWS.map((row) => (
+        <Link
+          key={row.key}
+          href={row.href}
+          data-nex-control-drawer-quick-access-button={row.key}
+          aria-label={`Open ${row.label}`}
+          style={quickAccessButtonStyle}
+        >
+          <span aria-hidden style={quickAccessGlyphStyle}>
+            {row.glyph}
+          </span>
+          <span style={quickAccessLabelStyle}>{row.label}</span>
+        </Link>
+      ))}
+    </div>
   );
 }
 
@@ -821,6 +923,7 @@ function SectionGroup({
   title,
   rows,
   isGuest,
+  devUnlockMode = false,
 }: {
   readonly title: string;
   readonly rows: ReadonlyArray<MenuRow>;
@@ -829,6 +932,12 @@ function SectionGroup({
    *  /sign-in?next=<href> so the viewer lands back on the exact
    *  feature after they create or sign in to an account. */
   readonly isGuest: boolean;
+  /** Owner directive 2026-10-23 · when the drawer is in dev-unlock
+   *  mode (non-production `?dev=1`), rows forward the `?dev=1` flag
+   *  so account-gated destinations can run their own matching bypass
+   *  (e.g. /nex-native/contacts synthesizes a stub session when
+   *  ?dev=1 arrives). Production ignores this flag entirely. */
+  readonly devUnlockMode?: boolean;
 }) {
   return (
     <section style={sectionStyle}>
@@ -836,7 +945,8 @@ function SectionGroup({
       <ul style={sectionListStyle}>
         {rows.map((row) => {
           const showLock = isGuest && row.locked === true;
-          const href = showLock ? signInWithReturn(row.href) : row.href;
+          const rawHref = showLock ? signInWithReturn(row.href) : row.href;
+          const href = devUnlockMode && !showLock ? appendDevFlag(rawHref) : rawHref;
           return (
             <li key={row.key} style={sectionListItemStyle}>
               <Link
@@ -1087,6 +1197,48 @@ const drawerBodyStyle: React.CSSProperties = {
   flexDirection: "column",
   gap: 8,
   padding: "12px 12px 24px 12px",
+};
+
+// Owner directive 2026-10-24 · 3-column quick-access row (Live · Vault
+// · Socials) · each button is a frosted cyan tile matching the Live
+// category-sheet aesthetic so the three nav primitives read as one
+// unified cluster above the sign-in / identity bar.
+const quickAccessRowStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(3, 1fr)",
+  gap: 8,
+  marginBottom: 2,
+};
+const quickAccessButtonStyle: React.CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 4,
+  minHeight: 60,
+  padding: "8px 6px",
+  borderRadius: 12,
+  background:
+    "linear-gradient(135deg, rgba(0, 175, 255, 0.22) 0%, rgba(0, 116, 255, 0.08) 100%)",
+  border: `1.5px solid ${CYAN}`,
+  color: TEXT,
+  textDecoration: "none",
+  boxShadow:
+    "inset 0 0 0 1px rgba(0, 175, 255, 0.28), 0 4px 10px -6px rgba(0, 20, 50, 0.45)",
+  textAlign: "center",
+  cursor: "pointer",
+  WebkitTapHighlightColor: "transparent",
+  touchAction: "manipulation",
+};
+const quickAccessGlyphStyle: React.CSSProperties = {
+  fontSize: 20,
+  lineHeight: 1,
+};
+const quickAccessLabelStyle: React.CSSProperties = {
+  fontSize: 12,
+  fontWeight: 800,
+  letterSpacing: 0.2,
+  color: TEXT,
 };
 
 // Owner directive 2026-10-20 · dark red Emergency Help CTA at the

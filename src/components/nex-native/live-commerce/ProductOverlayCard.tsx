@@ -52,6 +52,10 @@ export function ProductOverlayCard(props: ProductOverlayCardProps): React.JSX.El
       role="group"
       aria-label={`Live product · ${product.name}`}
       style={{
+        // Owner directive 2026-10-24 · "landscape cards the same
+        // design style cards as category live round buttons".
+        // Mirrors CategoryGridSheet tile: translucent cyan gradient
+        // fill behind frosted blur + bright NEX cyan rim.
         position: "absolute",
         bottom: "calc(env(safe-area-inset-bottom, 0px) + 90px)",
         left: position === "bottom-left" ? 14 : "auto",
@@ -63,13 +67,16 @@ export function ProductOverlayCard(props: ProductOverlayCardProps): React.JSX.El
         alignItems: "center",
         padding: 10,
         borderRadius: 14,
-        background: "rgba(2, 9, 20, 0.78)",
-        border: "1px solid var(--nex-accent-soft, rgba(0, 175, 255, 0.42))",
-        boxShadow: "0 12px 28px -10px rgba(0, 0, 0, 0.65), 0 0 20px -8px var(--nex-accent-glow, rgba(0, 175, 255, 0.55))",
-        backdropFilter: "blur(14px) saturate(140%)",
-        WebkitBackdropFilter: "blur(14px) saturate(140%)",
+        background:
+          "linear-gradient(135deg, rgba(0, 175, 255, 0.42) 0%, rgba(0, 116, 255, 0.18) 100%)",
+        border: "2px solid rgba(0, 175, 255, 0.9)",
+        boxShadow:
+          "inset 0 0 0 1px rgba(0, 175, 255, 0.5), 0 0 14px -4px rgba(0, 175, 255, 0.6), 0 4px 10px -6px rgba(0, 20, 50, 0.45)",
+        backdropFilter: "blur(18px) saturate(140%)",
+        WebkitBackdropFilter: "blur(18px) saturate(140%)",
         color: "var(--nex-text, #F2F5F8)",
         fontFamily: "inherit",
+        textShadow: "0 1px 3px rgba(0,0,0,0.55)",
         zIndex: 20,
       }}
     >
@@ -85,14 +92,16 @@ export function ProductOverlayCard(props: ProductOverlayCardProps): React.JSX.El
           borderRadius: 12,
           background: product.imageUrl
             ? `url(${product.imageUrl}) center / cover no-repeat, #0A1526`
-            : "linear-gradient(135deg, var(--nex-accent-faint, rgba(0, 175, 255, 0.18)), #0A1526)",
-          border: "1px solid var(--nex-accent-soft, rgba(0, 175, 255, 0.32))",
+            : "linear-gradient(135deg, rgba(0, 175, 255, 0.28), rgba(10, 21, 38, 0.9))",
+          border: "1.5px solid rgba(0, 175, 255, 0.9)",
+          boxShadow: "inset 0 0 0 1px rgba(0, 175, 255, 0.35)",
           display: "grid",
           placeItems: "center",
-          color: "var(--nex-accent, #00AFFF)",
+          color: "#F2F5F8",
           fontSize: 24,
           fontWeight: 900,
           letterSpacing: "-0.02em",
+          textShadow: "0 1px 3px rgba(0,0,0,0.6)",
         }}
       >
         {!product.imageUrl
@@ -113,10 +122,11 @@ export function ProductOverlayCard(props: ProductOverlayCardProps): React.JSX.El
             fontWeight: 800,
             letterSpacing: 0.4,
             textTransform: "uppercase",
-            color: "var(--nex-accent, #00AFFF)",
+            color: "#F2F5F8",
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
+            textShadow: "0 1px 3px rgba(0,0,0,0.65)",
           }}
         >
           {product.shopName}
@@ -125,12 +135,13 @@ export function ProductOverlayCard(props: ProductOverlayCardProps): React.JSX.El
           style={{
             fontSize: 13,
             fontWeight: 800,
-            color: "var(--nex-text, #F2F5F8)",
+            color: "#F2F5F8",
             lineHeight: 1.25,
             display: "-webkit-box",
             WebkitLineClamp: 2,
             WebkitBoxOrient: "vertical",
             overflow: "hidden",
+            textShadow: "0 1px 3px rgba(0,0,0,0.65)",
           }}
         >
           {product.name}
@@ -143,7 +154,8 @@ export function ProductOverlayCard(props: ProductOverlayCardProps): React.JSX.El
             gap: 6,
             fontSize: 13,
             fontWeight: 900,
-            color: "var(--nex-accent, #00AFFF)",
+            color: "#F2F5F8",
+            textShadow: "0 1px 3px rgba(0,0,0,0.65)",
           }}
         >
           <span>{product.priceLabel}</span>
