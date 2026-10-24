@@ -556,7 +556,7 @@ function DrawerHeader({
 }) {
   return (
     <div style={drawerHeaderStyle}>
-      <h2 style={drawerTitleStyle}>Menu</h2>
+      <h2 style={drawerTitleStyle}>NEX Center</h2>
       <button
         ref={closeRef}
         type="button"
