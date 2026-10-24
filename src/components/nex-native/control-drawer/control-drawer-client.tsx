@@ -51,6 +51,7 @@ import { signOutAction } from "@/app/nex-native/_actions";
 // existing primitive rather than inventing a second lock shape
 // keeps the visual language consistent with SettingsHeaderSlot.
 import { LockedSettingsIcon } from "@/components/nex-native/account-gate/LockedSettingsIcon";
+import { hasActivatedEmergency } from "@/lib/nex-native/emergency/emergency-activation";
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -874,11 +875,47 @@ function IdentityBar({
 // which carries its own simulated/pilot framing.
 
 function EmergencyHelpRow() {
+  // Owner directive 2026-10-24 (Phase 0) · first-time consent gate.
+  //   · Not yet activated on this device → redirect to the activation
+  //     page with `?returnTo=/nex-native/emergency-help` so the user
+  //     lands on the countdown surface after consenting.
+  //   · Already activated → the Link navigates straight to
+  //     `/nex-native/emergency-help` (the existing countdown surface
+  //     is unchanged).
+  //   · Modifier-click (new tab / middle-click) bypasses the gate so
+  //     developers can still open the countdown surface directly.
+  //   · The activation flag is device-local prototype only (per
+  //     `src/lib/nex-native/emergency/emergency-activation.ts`) · do
+  //     NOT replace with server-side consent without separate
+  //     authorisation.
+  // Owner directive 2026-10-24 · the href on the <Link> MUST stay a
+  // literal string so the sealed regression anchor at
+  // `__tests__/emergency-row.test.ts` ("row routes to
+  // /nex-native/emergency-help") keeps matching the source. The
+  // activate-redirect target is kept as a local const only because
+  // it is used solely inside the click handler.
+  const ACTIVATE_HREF = "/nex-native/emergency-help/activate";
+
+  const handleClick = React.useCallback(
+    (e: React.MouseEvent<HTMLAnchorElement>) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      if (e.button !== 0) return;
+      if (hasActivatedEmergency()) return;
+      e.preventDefault();
+      const target = `${ACTIVATE_HREF}?returnTo=${encodeURIComponent("/nex-native/emergency-help")}`;
+      if (typeof window !== "undefined") {
+        window.location.assign(target);
+      }
+    },
+    [],
+  );
+
   return (
     <Link
       href="/nex-native/emergency-help"
       data-nex-control-drawer-emergency
       aria-label="Emergency Help · simulated delivery · opens the help surface"
+      onClick={handleClick}
       style={emergencyRowStyle}
     >
       <span aria-hidden style={emergencyIconStyle}>
