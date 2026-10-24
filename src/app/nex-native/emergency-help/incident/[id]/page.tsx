@@ -27,8 +27,11 @@ export const dynamic = "force-dynamic";
 export default async function ResponderIncidentPage(props: {
   params: Promise<{ id: string }>;
 }): Promise<React.JSX.Element> {
+  // Owner directive 2026-10-25 · dev pass for emergency flow pages.
   const session = await resolveNexAppSessionFromContext();
-  if (!session) redirect("/nex-native/sign-in");
+  if (!session && process.env.NODE_ENV === "production") {
+    redirect("/nex-native/sign-in");
+  }
 
   const { id } = await props.params;
   if (!id) notFound();

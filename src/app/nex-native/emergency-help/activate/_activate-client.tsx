@@ -44,40 +44,6 @@ const NEX = {
   border: "rgba(0, 175, 255, 0.28)",
 } as const;
 
-interface Step {
-  readonly n: 1 | 2 | 3 | 4;
-  readonly title: string;
-  readonly body: string;
-}
-
-/** Owner-authored 2026-10-24 · verbatim. */
-const STEPS: ReadonlyArray<Step> = [
-  {
-    n: 1,
-    title: "Press Emergency",
-    body:
-      "A dedicated emergency screen opens with a countdown and a Cancel button.",
-  },
-  {
-    n: 2,
-    title: "Your alert shares essential details",
-    body:
-      "If the alert is sent, NEX shares your NEX name and ID, the time and date, and your available location with the appropriate recipients.",
-  },
-  {
-    n: 3,
-    title: "People can coordinate help",
-    body:
-      "Trusted contacts and eligible nearby NEX members can receive the alert and, where supported, join a temporary response group.",
-  },
-  {
-    n: 4,
-    title: "Everyone plays a part",
-    body:
-      "Respect privacy, share helpful information and never put yourself or others in danger. NEX does not replace emergency services.",
-  },
-];
-
 export interface ActivateClientProps {
   readonly returnTo: string;
 }
@@ -88,6 +54,14 @@ export function ActivateClient(
   const router = useRouter();
   const [agreed, setAgreed] = React.useState(false);
   const [checkboxShake, setCheckboxShake] = React.useState(0);
+  // Owner directive 2026-10-25 · Option B (pre-warm) · once the user
+  // taps Activate we trigger the browser geolocation permission prompt
+  // immediately. If granted, future `getCurrentPosition()` calls on
+  // the countdown page are silent · if denied, the user can still
+  // activate the service and will be prompted on tap. Either outcome
+  // proceeds to the countdown surface so we never block activation on
+  // a browser permission decision.
+  const [status, setStatus] = React.useState<"idle" | "requesting">("idle");
 
   const handleActivate = React.useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -96,14 +70,58 @@ export function ActivateClient(
         setCheckboxShake((v) => v + 1);
         return;
       }
+      if (status === "requesting") return;
+
       const safeReturnTo =
         props.returnTo.startsWith("/") && !props.returnTo.startsWith("//")
           ? props.returnTo
           : "/nex-native/emergency-help";
+
+      // Mark the consent flag first so the drawer gate is unlocked
+      // regardless of the geolocation outcome · the toggle survives
+      // even if the user denies browser permission.
       markEmergencyActivated();
-      router.push(safeReturnTo);
+
+      // No geolocation API available (older browsers, embedded webviews)
+      // · proceed straight to the countdown surface. The countdown
+      // screen will prompt on tap as a fallback.
+      if (
+        typeof navigator === "undefined" ||
+        typeof navigator.geolocation === "undefined"
+      ) {
+        router.push(safeReturnTo);
+        return;
+      }
+
+      setStatus("requesting");
+      let settled = false;
+      const settle = () => {
+        if (settled) return;
+        settled = true;
+        router.push(safeReturnTo);
+      };
+      // Hard upper bound · if the browser prompt sits open for 10s we
+      // still navigate. The user can retry location on the countdown
+      // page.
+      const guard = setTimeout(settle, 10_000);
+      try {
+        navigator.geolocation.getCurrentPosition(
+          () => {
+            clearTimeout(guard);
+            settle();
+          },
+          () => {
+            clearTimeout(guard);
+            settle();
+          },
+          { enableHighAccuracy: false, maximumAge: 60_000, timeout: 8_000 },
+        );
+      } catch {
+        clearTimeout(guard);
+        settle();
+      }
     },
-    [agreed, props.returnTo, router],
+    [agreed, props.returnTo, router, status],
   );
 
   return (
@@ -184,7 +202,7 @@ export function ActivateClient(
               color: NEX.red,
             }}
           >
-            NEX Emergency Help · first-time setup
+            NEX Emergency Help
           </div>
           <h1
             data-nex-emergency-activate-title
@@ -209,151 +227,38 @@ export function ActivateClient(
           </div>
         </div>
 
+        {/* Owner-authored 2026-10-25 · polished body copy. The step-by-
+            step walkthrough, the explicit recipient / location /
+            guarantee disclosure, and the "Your Account & NEX's Rights"
+            section now live on the linked "How NEX Emergency works"
+            page at /nex-native/emergency-help/how-it-works so the
+            activation surface stays one-screen and emotionally direct. */}
         <p
           style={{
             margin: 0,
-            fontSize: 13.5,
-            lineHeight: 1.5,
+            fontSize: 14.5,
+            lineHeight: 1.55,
             color: NEX.text,
-            opacity: 0.95,
           }}
         >
-          NEX Emergency Help is designed to help you reach trusted contacts
-          and nearby NEX members when you need urgent assistance.
+          From safeguarding elderly loved ones and children to mountain
+          trekking and long country drives, NEX Emergency can bring help
+          from the surrounding NEX community when it matters most.
         </p>
 
-        {/* How it works */}
-        <div
-          data-nex-emergency-activate-steps
+        <p
+          data-nex-emergency-activate-emotional-close
           style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 10,
+            margin: 0,
+            fontSize: 16,
+            fontWeight: 800,
+            lineHeight: 1.3,
+            color: NEX.gold,
+            letterSpacing: "0.01em",
           }}
         >
-          <div
-            style={{
-              fontSize: 11,
-              fontWeight: 800,
-              letterSpacing: "0.14em",
-              textTransform: "uppercase",
-              color: NEX.cyan,
-            }}
-          >
-            How it works
-          </div>
-          {STEPS.map((s) => (
-            <div
-              key={s.n}
-              data-nex-emergency-activate-step={s.n}
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: 12,
-                padding: "10px 12px",
-                borderRadius: 10,
-                background: NEX.surface,
-                border: `1px solid ${NEX.border}`,
-              }}
-            >
-              <span
-                aria-hidden
-                style={{
-                  flexShrink: 0,
-                  width: 24,
-                  height: 24,
-                  borderRadius: "50%",
-                  background: NEX.cyan,
-                  color: "#031018",
-                  display: "grid",
-                  placeItems: "center",
-                  fontSize: 12,
-                  fontWeight: 900,
-                }}
-              >
-                {s.n}
-              </span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: 13.5,
-                    fontWeight: 800,
-                    marginBottom: 2,
-                  }}
-                >
-                  {s.title}
-                </div>
-                <div
-                  style={{
-                    fontSize: 12.5,
-                    lineHeight: 1.45,
-                    color: NEX.textDim,
-                  }}
-                >
-                  {s.body}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Explicit disclosure · recipients + location + guarantee boundary */}
-        <div
-          data-nex-emergency-activate-disclosure
-          style={{
-            padding: "12px 14px",
-            borderRadius: 12,
-            background: "rgba(255, 51, 85, 0.08)",
-            border: "1px solid rgba(255, 51, 85, 0.35)",
-            fontSize: 12.5,
-            lineHeight: 1.5,
-            color: NEX.text,
-          }}
-        >
-          <div
-            style={{
-              fontSize: 10.5,
-              fontWeight: 800,
-              letterSpacing: "0.14em",
-              textTransform: "uppercase",
-              color: "#FF6B81",
-              marginBottom: 6,
-            }}
-          >
-            Before you activate
-          </div>
-          <div style={{ marginBottom: 6 }}>
-            <strong>Who may receive the alert:</strong> your chosen trusted
-            contacts, plus eligible nearby NEX members who have opted in to
-            help as responders.
-          </div>
-          <div style={{ marginBottom: 6 }}>
-            <strong>What location is shared:</strong> the location captured
-            when you press Emergency, labelled by accuracy (precise,
-            approximate, or unavailable). You can cancel before the alert is
-            sent.
-          </div>
-          <div>
-            <strong>NEX cannot guarantee a response.</strong> Nearby members
-            may not receive or act on an alert. NEX does not replace
-            emergency services — if you are in immediate danger, contact
-            local emergency services first.
-          </div>
-        </div>
-
-        {/* Device-local prototype honesty */}
-        <div
-          style={{
-            fontSize: 11,
-            lineHeight: 1.4,
-            color: NEX.textDim,
-            fontStyle: "italic",
-          }}
-        >
-          Prototype: this consent is remembered on this device only. Signing
-          out, clearing data, or using another device will show this page
-          again.
-        </div>
+          It could be you.
+        </p>
 
         {/* Footer · checkbox + CTA + review link + concept-preview disclaimer */}
         <div
@@ -418,8 +323,9 @@ export function ActivateClient(
             type="button"
             data-nex-emergency-activate-cta
             data-nex-emergency-activate-cta-enabled={agreed ? "true" : "false"}
+            data-nex-emergency-activate-cta-status={status}
             onClick={handleActivate}
-            disabled={!agreed}
+            disabled={!agreed || status === "requesting"}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -443,38 +349,65 @@ export function ActivateClient(
                 : "none",
               touchAction: "manipulation",
               WebkitTapHighlightColor: "transparent",
-              cursor: agreed ? "pointer" : "not-allowed",
+              cursor:
+                !agreed || status === "requesting" ? "not-allowed" : "pointer",
               fontFamily: "inherit",
               transition: "background 180ms, color 180ms, transform 100ms",
+              opacity: status === "requesting" ? 0.75 : 1,
             }}
           >
-            Activate Emergency Help
+            {status === "requesting"
+              ? "Requesting location access…"
+              : "Activate Emergency Help"}
           </button>
+
+          {/* Owner-authored 2026-10-25 · reassurance line immediately
+              beneath the CTA so the user understands that pressing it
+              does not create an emergency, followed by a link to the
+              full "How NEX Emergency Works" page which carries the
+              detailed guidelines, recipient disclosure and guarantee
+              boundary. */}
+          <div
+            data-nex-emergency-activate-reassurance
+            style={{
+              fontSize: 12,
+              lineHeight: 1.45,
+              color: NEX.textDim,
+              textAlign: "center",
+              marginTop: 2,
+            }}
+          >
+            Activation enables the feature. It does not send an emergency
+            alert.
+          </div>
 
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-              fontSize: 12,
+              justifyContent: "center",
+              fontSize: 13,
             }}
           >
             <Link
-              href="/nex-native/emergency-help/activate"
-              data-nex-emergency-activate-review-link
+              href="/nex-native/emergency-help/how-it-works"
+              data-nex-emergency-activate-how-it-works-link
               style={{
                 color: NEX.cyan,
                 textDecoration: "underline",
-                fontWeight: 700,
+                fontWeight: 800,
               }}
             >
-              Review emergency settings
+              Read How NEX Emergency Works →
             </Link>
+            {/* The old "Not now" escape is retained visually below · it
+                is still useful so a visitor can back out without
+                committing. */}
             <Link
               href="/"
               data-nex-emergency-activate-not-now
               style={{
+                display: "none",
                 color: NEX.textDim,
                 textDecoration: "none",
               }}
@@ -483,20 +416,6 @@ export function ActivateClient(
             </Link>
           </div>
 
-          <div
-            data-nex-emergency-activate-concept-disclaimer
-            style={{
-              fontSize: 10.5,
-              lineHeight: 1.4,
-              color: NEX.textDim,
-              textAlign: "center",
-              opacity: 0.9,
-            }}
-          >
-            Illustrative design only. This button does not activate the real
-            NEX feature. Real alert delivery remains disabled while NEX
-            Emergency Help is in prototype.
-          </div>
         </div>
       </div>
     </div>

@@ -22,8 +22,13 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export default async function ActiveIncidentPage(): Promise<React.JSX.Element> {
+  // Owner directive 2026-10-25 · "dev pass for the emercey flow pages" ·
+  // dev-only bypass matching the sealed go-live pattern. Production
+  // keeps the sign-in redirect sealed.
   const session = await resolveNexAppSessionFromContext();
-  if (!session) redirect("/nex-native/sign-in");
+  if (!session && process.env.NODE_ENV === "production") {
+    redirect("/nex-native/sign-in");
+  }
 
   // Owner directive 2026-10-20 · see /emergency-help/page.tsx for the
   // shared doctrine · the server resolves live-mode and passes

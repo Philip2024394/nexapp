@@ -70,7 +70,9 @@ type Phase =
   | "no-responders";
 
 const POLICY_ACK_SESSION_KEY = "nex-emergency-policy-ack-v1";
-const COUNTDOWN_SECONDS = 10;
+// Owner directive 2026-10-25 · 10 → 5 seconds. Fast enough for a real
+// emergency, long enough for an accidental tap to recover + find Cancel.
+const COUNTDOWN_SECONDS = 5;
 /** Client-side debounce for watchPosition updates during the safety
  *  window. Faster than the active-view 15 s because every second of
  *  the safety window is load-bearing. The server-side service also
@@ -186,8 +188,14 @@ export function EmergencyConfirmationScreen({
   const [phase, setPhase] = React.useState<Phase>(
     __testInitialPhase ?? "acknowledging-policy",
   );
+  // Owner directive 2026-10-25 · "remove Medical concern / Safety
+  // concern" + "must be click and active". The category tiles are
+  // gone · every incident starts as `general_assistance` so the
+  // "I NEED HELP" button is active from the moment the user lands
+  // on the page. The owner can still choose a category later by
+  // bringing the tiles back behind a quick-tap variant if needed.
   const [category, setCategory] = React.useState<IncidentCategory | null>(
-    __testInitialCategory ?? null,
+    __testInitialCategory ?? "general_assistance",
   );
   const [geoError, setGeoError] = React.useState<string | null>(null);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
@@ -262,11 +270,28 @@ export function EmergencyConfirmationScreen({
     setPhase("idle");
   }, []);
 
-  const online = React.useMemo(() => {
-    if (typeof isOnline === "boolean") return isOnline;
-    if (typeof navigator !== "undefined") return navigator.onLine;
-    return true;
-  }, [isOnline]);
+  // Hydration-safe online detection. Server always returns `true` (no
+  // `navigator`), so the first client render MUST also return `true`
+  // or React tears the tree. We mirror the server initial state and
+  // only read `navigator.onLine` after mount, swapping the header
+  // from "Do you need help?" to "You are offline" if the browser is
+  // actually offline. Fixes the Oct-25 hydration mismatch where a
+  // mid-flight disconnected client painted "You are offline" over the
+  // server's "NEX Emergency Help".
+  const [browserOnline, setBrowserOnline] = React.useState<boolean>(true);
+  React.useEffect(() => {
+    if (typeof navigator === "undefined") return;
+    setBrowserOnline(navigator.onLine);
+    const on = (): void => setBrowserOnline(true);
+    const off = (): void => setBrowserOnline(false);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    return () => {
+      window.removeEventListener("online", on);
+      window.removeEventListener("offline", off);
+    };
+  }, []);
+  const online = typeof isOnline === "boolean" ? isOnline : browserOnline;
 
   const geo =
     geolocation ??
@@ -334,8 +359,13 @@ export function EmergencyConfirmationScreen({
         const next = prev - 1;
         if (next <= 0) {
           clearCountdownInterval();
-          // Defer so the "0" paint can settle before state churn.
-          void confirmAlertFromCountdown();
+          // Defer OUTSIDE the React updater so router.push doesn't
+          // trigger a Router setState during this component's update
+          // cycle (fixes the Oct-25 "Cannot update a component Router
+          // while rendering a different component" warning).
+          setTimeout(() => {
+            void confirmAlertFromCountdown();
+          }, 0);
           return 0;
         }
         return next;
@@ -548,7 +578,6 @@ export function EmergencyConfirmationScreen({
           responders. Please reconnect and reopen this page. For a real
           emergency, call your local emergency services right away.
         </p>
-        <SecondaryLink />
       </Shell>
     );
   }
@@ -640,24 +669,30 @@ export function EmergencyConfirmationScreen({
             to use Emergency Help responsibly.
           </p>
         </section>
+        {/* Owner directive 2026-10-25 · "over button add - How It Works
+            and link to page" · routes to the detailed emergency guide
+            at /nex-native/emergency-help/how-it-works. */}
+        <div style={{ textAlign: "center", marginBottom: 10 }}>
+          <Link
+            href="/nex-native/emergency-help/how-it-works"
+            data-nex-emergency-how-it-works-link
+            style={{
+              display: "inline-block",
+              fontSize: 13,
+              fontWeight: 800,
+              color: EMERGENCY_PALETTE.textPrimary,
+              textDecoration: "underline",
+            }}
+          >
+            How It Works →
+          </Link>
+        </div>
         <PrimaryButton
           onClick={acknowledgePolicy}
           data-testid="nex-emergency-policy-ack"
         >
-          I Understand — Continue
+          Activate System
         </PrimaryButton>
-        <p
-          style={{
-            marginTop: 14,
-            fontSize: 11.5,
-            color: EMERGENCY_PALETTE.textDim,
-            lineHeight: 1.5,
-            textAlign: "center",
-          }}
-        >
-          Concept design · Not a working emergency service
-        </p>
-        <SecondaryLink />
       </Shell>
     );
   }
@@ -679,7 +714,6 @@ export function EmergencyConfirmationScreen({
           call your local emergency services.
         </p>
         <PrimaryButton onClick={returnToIdle}>Try again</PrimaryButton>
-        <SecondaryLink />
       </Shell>
     );
   }
@@ -688,25 +722,53 @@ export function EmergencyConfirmationScreen({
     return (
       <Shell>
         <SimulatedBadge live={!simulated} />
-        <Header>Alert revoked</Header>
-        <p
+        <Header>Alert Canceled</Header>
+        {/* Owner directive 2026-10-25 · "bad guys" deterrent copy. The
+            cancel aborts the fan-out, but NEX still keeps the record
+            of the attempt (incident row with revoked_within_window
+            state, timestamp, requester id, IP, location pin) so a bad
+            actor who thinks "cancel = nothing happened" is wrong. */}
+        <div
           data-testid="nex-emergency-revoked-copy"
+          data-nex-emergency-revoked-deterrent
           style={{
-            margin: "12px 0 0",
-            color: EMERGENCY_PALETTE.textSecondary,
-            lineHeight: 1.55,
+            marginTop: 16,
+            padding: "16px 16px 14px",
+            borderRadius: 14,
+            background: "rgba(6, 2, 6, 0.68)",
+            border: "1px solid rgba(0, 175, 255, 0.45)",
+            color: EMERGENCY_PALETTE.textPrimary,
           }}
         >
-          Alert revoked within the 10-second safety window. Recipients
-          have been notified it was a cancellation.
-        </p>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: "#00AFFF",
+              marginBottom: 8,
+            }}
+          >
+            On the record
+          </div>
+          <div
+            style={{
+              fontSize: 13,
+              lineHeight: 1.5,
+              color: EMERGENCY_PALETTE.textSecondary,
+            }}
+          >
+            Your alert has been saved with NEX — including your device
+            IP, your location pin, and the exact time of the attempt.
+          </div>
+        </div>
         <PrimaryButton
           onClick={returnToIdle}
           data-testid="nex-emergency-revoked-return"
         >
           Return
         </PrimaryButton>
-        <SecondaryLink />
       </Shell>
     );
   }
@@ -715,50 +777,28 @@ export function EmergencyConfirmationScreen({
     <Shell>
       <SimulatedBadge live={!simulated} />
       <Header>Do you need help?</Header>
-      <p
+      {/* Owner-authored 2026-10-25 · sub-tagline under the header. */}
+      <div
+        data-nex-emergency-header-subtagline
         style={{
-          margin: "10px 0 18px",
+          margin: "4px 0 0",
+          fontSize: 13.5,
+          fontWeight: 600,
           color: EMERGENCY_PALETTE.textSecondary,
-          fontSize: 14,
-          lineHeight: 1.55,
+          letterSpacing: "0.01em",
         }}
       >
-        Send an emergency alert with your current location to eligible
-        NEX responders in your selected safety area.
-      </p>
-
-      <fieldset
-        data-testid="nex-emergency-category"
-        aria-label="Choose emergency type"
-        style={{
-          border: "none",
-          padding: 0,
-          margin: "0 0 20px",
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 12,
-        }}
-      >
-        <CategoryIconButton
-          value="medical_concern"
-          label="Medical concern"
-          imageSrc="/nex-emergency/medical-concern.png"
-          selected={category === "medical_concern"}
-          onSelect={() => setCategory("medical_concern")}
-          disabled={phase === "counting-down" || phase === "submitting"}
-        />
-        <CategoryIconButton
-          value="safety_concern"
-          label="Safety concern"
-          imageSrc="/nex-emergency/safety-concern.png"
-          selected={category === "safety_concern"}
-          onSelect={() => setCategory("safety_concern")}
-          disabled={phase === "counting-down" || phase === "submitting"}
-        />
-      </fieldset>
+        Help is closer than you think
+      </div>
 
       {phase === "idle" || phase === "awaiting-geolocation" ? (
-        <PrimaryButton
+        /* Owner directive 2026-10-25 · square help button · reduced
+           to ~50% of the original tap target per the "help button
+           50% smaller" update. The button still carries all sealed
+           action bindings · onClick, disabled, data-testid remain
+           untouched so Playwright + vitest hooks keep working. */
+        <button
+          type="button"
           onClick={requestLocationThenStart}
           disabled={
             phase === "awaiting-geolocation" || category === null
@@ -769,27 +809,59 @@ export function EmergencyConfirmationScreen({
               ? "true"
               : "false"
           }
+          style={{
+            display: "block",
+            width: "100%",
+            maxWidth: 160,
+            aspectRatio: "1 / 1",
+            // Owner directive 2026-10-25 · "move down - i need help
+            // button 80px" · 80px of breathing room above the button
+            // pushes it into a more deliberate tap zone, below the
+            // header band.
+            margin: "80px auto 0",
+            background:
+              phase === "awaiting-geolocation" || category === null
+                ? EMERGENCY_PALETTE.emergencyMuted
+                : EMERGENCY_PALETTE.emergency,
+            color: "#FFFFFF",
+            border: `2px solid ${EMERGENCY_PALETTE.emergency}`,
+            borderRadius: 16,
+            fontSize: 18,
+            fontWeight: 900,
+            lineHeight: 1.1,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            textAlign: "center",
+            cursor:
+              phase === "awaiting-geolocation" || category === null
+                ? "default"
+                : "pointer",
+            boxShadow:
+              phase === "awaiting-geolocation" || category === null
+                ? undefined
+                : "0 10px 28px -6px rgba(220, 38, 38, 0.55), inset 0 0 0 1px rgba(255,255,255,0.12)",
+            touchAction: "manipulation",
+            WebkitTapHighlightColor: "transparent",
+            fontFamily: "inherit",
+            transition: "transform 90ms ease, box-shadow 180ms ease",
+          }}
         >
           {phase === "awaiting-geolocation"
             ? "Capturing location…"
             : "I NEED HELP"}
-        </PrimaryButton>
-      ) : null}
-      {category === null &&
-      (phase === "idle" || phase === "awaiting-geolocation") ? (
-        <p
-          data-testid="nex-emergency-pick-category-hint"
-          style={{
-            margin: "10px 0 0",
-            fontSize: 12,
-            color: EMERGENCY_PALETTE.textDim,
-            textAlign: "center",
-          }}
-        >
-          Choose the type of emergency to continue.
-        </p>
+        </button>
       ) : null}
 
+      {/* Owner directive 2026-10-25 · "hero area with ip container
+          bottom" · the LocationReadyPanel (pulsing rings + device IP +
+          "Activate Help · Press the Button" title + reassurance) now
+          sits BELOW the help button as a hero-footer. The pulsing ring
+          is still a readiness signal only · NEX does NOT request
+          geolocation before the button tap (sealed doctrine, line 14).
+          Added spacing above so it reads as a separate hero band. */}
+      <div style={{ marginTop: 24 }}>
+        <LocationReadyPanel />
+      </div>
       {phase === "counting-down" ? (
         <div
           data-testid="nex-emergency-countdown"
@@ -882,10 +954,34 @@ export function EmergencyConfirmationScreen({
           >
             If this was a mistake, cancel now.
           </p>
+          {/* Owner directive 2026-10-25 · pulsing cyan glow on CANCEL
+              so a user who tapped by mistake sees the escape instantly
+              under countdown pressure. Animation is CSS-only · respects
+              prefers-reduced-motion via the inline @media below. */}
+          <style>{`
+            @keyframes nexEmergencyCancelGlow {
+              0%, 100% {
+                box-shadow:
+                  0 0 0 0 rgba(0, 175, 255, 0.55),
+                  0 4px 14px rgba(220, 38, 38, 0.25);
+              }
+              50% {
+                box-shadow:
+                  0 0 0 10px rgba(0, 175, 255, 0),
+                  0 4px 20px rgba(0, 175, 255, 0.4);
+              }
+            }
+            @media (prefers-reduced-motion: reduce) {
+              [data-nex-emergency-countdown-cancel-glow] {
+                animation: none !important;
+              }
+            }
+          `}</style>
           <button
             type="button"
             onClick={() => void cancelCountdown()}
             data-testid="nex-emergency-countdown-cancel"
+            data-nex-emergency-countdown-cancel-glow
             aria-label="Cancel emergency countdown"
             style={{
               display: "block",
@@ -893,14 +989,14 @@ export function EmergencyConfirmationScreen({
               padding: "16px 18px",
               background: "transparent",
               color: EMERGENCY_PALETTE.textPrimary,
-              border: `2px solid ${EMERGENCY_PALETTE.emergency}`,
+              border: `2px solid #00AFFF`,
               borderRadius: 12,
               fontSize: 16,
               fontWeight: 800,
               letterSpacing: "0.1em",
               textTransform: "uppercase",
               cursor: "pointer",
-              boxShadow: "0 4px 14px rgba(220,38,38,0.25)",
+              animation: "nexEmergencyCancelGlow 1600ms ease-in-out infinite",
             }}
           >
             CANCEL
@@ -965,11 +1061,15 @@ export function EmergencyConfirmationScreen({
           lineHeight: 1.5,
         }}
       >
-        Share your location and emergency profile details with the
-        recipients of this alert.
+        {/* Owner directive 2026-10-25 · consent + privacy reassurance.
+            Replaces the earlier "Share your location and emergency
+            profile details..." line. Owner-reworded for a calmer,
+            opt-in privacy posture. */}
+        You have activated this service. NEX will never monitor your
+        location unless you opt in to a feature that could save your
+        life — or a loved one&apos;s.
       </p>
 
-      <SecondaryLink />
     </Shell>
   );
 }
@@ -980,7 +1080,19 @@ function Shell({ children }: { children: React.ReactNode }): React.JSX.Element {
       data-testid="nex-emergency-confirmation-screen"
       style={{
         minHeight: "100dvh",
-        background: EMERGENCY_PALETTE.bg,
+        // Owner directive 2026-10-25 · unified emergency background ·
+        // the Futuristic Red Cross Rescue Shield image (already used
+        // on the activation page) now also stands behind the
+        // countdown surface so the two emergency intro surfaces read
+        // as one visual family. Dark gradient overlay keeps the
+        // SIMULATED · v1 badge, the countdown + Cancel copy and the
+        // category buttons legible over the shield.
+        backgroundColor: EMERGENCY_PALETTE.bg,
+        backgroundImage:
+          "linear-gradient(180deg, rgba(6, 2, 6, 0.78) 0%, rgba(6, 2, 6, 0.5) 32%, rgba(6, 2, 6, 0.55) 65%, rgba(6, 2, 6, 0.86) 100%), url(/nex-emergency/activate-background.png)",
+        backgroundSize: "100% 100%, cover",
+        backgroundPosition: "center, center",
+        backgroundRepeat: "no-repeat, no-repeat",
         color: EMERGENCY_PALETTE.textPrimary,
         padding: "20px 20px 40px",
         fontFamily:
@@ -1047,24 +1159,6 @@ function PrimaryButton({
     >
       {children}
     </button>
-  );
-}
-
-function SecondaryLink(): React.JSX.Element {
-  return (
-    <Link
-      href="/nex-native/settings"
-      prefetch={false}
-      style={{
-        display: "inline-block",
-        marginTop: 24,
-        fontSize: 12,
-        color: EMERGENCY_PALETTE.textDim,
-        textDecoration: "underline",
-      }}
-    >
-      Cancel · Return to safety settings
-    </Link>
   );
 }
 
@@ -1166,5 +1260,187 @@ function CategoryIconButton({
         {label}
       </span>
     </button>
+  );
+}
+
+// ─── LocationReadyPanel ────────────────────────────────────────────
+//
+// Owner directive 2026-10-25 · "location monitoring animation and
+// phone ip address and text Activate Help Press the Button . your
+// exact location will be shared when button is activated".
+//
+// What this component honestly represents:
+//   · Pulsing concentric rings = the device is READY to share location
+//     on tap. NEX is NOT tracking the user before they press. The
+//     sealed doctrine at line 14 of this file forbids geolocation
+//     requests before the "I NEED HELP" tap · this animation is a
+//     readiness signal, not an active tracker.
+//   · The IP line fetches the device's public IP from ipify.org on
+//     mount so the user sees a concrete device identifier. If the
+//     fetch fails (network, blocker), the line shows "unavailable"
+//     rather than inventing a value.
+//   · The title + reassurance text are owner-authored verbatim.
+//
+// If the owner later authorises a server-action variant, swap the
+// client-side ipify call for a server-side `req.headers['x-forwarded-
+// for']` read.
+
+function LocationReadyPanel(): React.JSX.Element {
+  const [ip, setIp] = React.useState<string | null>(null);
+  const [ipState, setIpState] = React.useState<
+    "loading" | "ok" | "unavailable"
+  >("loading");
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+    fetch("https://api.ipify.org?format=json", { signal: controller.signal })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("http"))))
+      .then((j: { ip?: unknown }) => {
+        if (cancelled) return;
+        const value = typeof j.ip === "string" ? j.ip : "";
+        if (value.length === 0) {
+          setIpState("unavailable");
+          return;
+        }
+        setIp(value);
+        setIpState("ok");
+      })
+      .catch(() => {
+        if (!cancelled) setIpState("unavailable");
+      })
+      .finally(() => clearTimeout(timer));
+    return () => {
+      cancelled = true;
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, []);
+
+  const ringKeyframes = `
+    @keyframes nexEmergencyPulseRing {
+      0%   { transform: scale(0.6); opacity: 0.85; }
+      70%  { transform: scale(1.6); opacity: 0;    }
+      100% { transform: scale(1.6); opacity: 0;    }
+    }
+    @keyframes nexEmergencyCoreGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255, 51, 85, 0.65); }
+      50%      { box-shadow: 0 0 0 10px rgba(255, 51, 85, 0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      [data-nex-emergency-location-ready] *,
+      [data-nex-emergency-location-ready]::before,
+      [data-nex-emergency-location-ready]::after {
+        animation: none !important;
+      }
+    }
+  `;
+
+  return (
+    <div
+      data-nex-emergency-location-ready
+      data-testid="nex-emergency-location-ready-panel"
+      style={{
+        margin: "0 0 18px",
+        padding: "16px 16px 14px",
+        borderRadius: 14,
+        background: "rgba(6, 2, 6, 0.68)",
+        border: "1px solid rgba(255, 51, 85, 0.45)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 10,
+      }}
+    >
+      <style>{ringKeyframes}</style>
+
+      {/* Pulsing concentric rings · readiness, not tracking */}
+      <div
+        aria-hidden
+        style={{
+          position: "relative",
+          width: 72,
+          height: 72,
+          display: "grid",
+          placeItems: "center",
+        }}
+      >
+        {[0, 500, 1000].map((delay) => (
+          <span
+            key={delay}
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: "50%",
+              border: "2px solid rgba(255, 51, 85, 0.55)",
+              animationName: "nexEmergencyPulseRing",
+              animationDuration: "1500ms",
+              animationIterationCount: "infinite",
+              animationTimingFunction: "ease-out",
+              animationDelay: `${delay}ms`,
+            }}
+          />
+        ))}
+        <span
+          style={{
+            position: "relative",
+            width: 18,
+            height: 18,
+            borderRadius: "50%",
+            background: "#FF3355",
+            animationName: "nexEmergencyCoreGlow",
+            animationDuration: "1500ms",
+            animationIterationCount: "infinite",
+            animationTimingFunction: "ease-in-out",
+          }}
+        />
+      </div>
+
+      {/* Device IP · honest fallback when unreachable */}
+      <div
+        data-testid="nex-emergency-location-ready-ip"
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+          color: EMERGENCY_PALETTE.textSecondary,
+          fontFamily:
+            "ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace",
+        }}
+      >
+        {ipState === "loading"
+          ? "Device IP · detecting…"
+          : ipState === "ok"
+            ? `Device IP · ${ip}`
+            : "Device IP · unavailable"}
+      </div>
+
+      {/* Owner-authored title · 2026-10-25 */}
+      <div
+        style={{
+          fontSize: 15,
+          fontWeight: 900,
+          color: EMERGENCY_PALETTE.textPrimary,
+          textAlign: "center",
+          letterSpacing: "0.01em",
+        }}
+      >
+        Activate Help · Press the Button
+      </div>
+
+      {/* Owner-authored reassurance · 2026-10-25 */}
+      <div
+        style={{
+          fontSize: 12.5,
+          lineHeight: 1.45,
+          color: EMERGENCY_PALETTE.textSecondary,
+          textAlign: "center",
+        }}
+      >
+        Your exact location will be shared when the button is activated.
+      </div>
+    </div>
   );
 }

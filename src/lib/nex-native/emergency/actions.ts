@@ -67,6 +67,11 @@ import type {
 } from "./types";
 import { isIncidentCategory } from "./types";
 import { resolveActorAccountId } from "./_session";
+import {
+  DEV_MOCK_INCIDENT_ID,
+  DEV_MOCK_LOCATION_UPDATE_ID,
+  isEmergencyDevMockActive,
+} from "./_dev-mock";
 
 // =====================================================================
 // Common framing
@@ -92,6 +97,13 @@ function mapServiceErrorToReason(err: unknown): EmergencyActionReason {
   if (/simulated_only/.test(msg)) return "simulated_only";
   if (/invalid_/.test(msg)) return "invalid_input";
   return "invalid_input";
+}
+
+// Owner directive 2026-10-25 · dev-only mock bypass helpers live in
+// a sibling plain module because "use server" only allows async
+// function exports. See _dev-mock.ts for the full rationale.
+function mockFanOut(): FanOutResult {
+  return { attempted: 0, succeeded: 0, failed: [], simulated: true };
 }
 
 async function requireActor<T>(
@@ -220,6 +232,20 @@ export interface CreatePendingAlertActionValue {
 export async function createPendingAlertAction(
   args: CreatePendingAlertActionArgs,
 ): Promise<EmergencyActionResult<CreatePendingAlertActionValue>> {
+  // Dev-only mock bypass · unblocks the countdown UI when no session
+  // exists AND the real DB tables haven't been applied yet. Owner-
+  // authorised 2026-10-25.
+  if (isEmergencyDevMockActive()) {
+    const existing = await resolveActorAccountId();
+    if (existing === null) {
+      return ok({
+        incidentId: DEV_MOCK_INCIDENT_ID,
+        state: "pending_confirmation",
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        fanOut: mockFanOut(),
+      });
+    }
+  }
   return requireActor(async (requesterAccountId) => {
     if (!isIncidentCategory(args.category)) return fail("invalid_input");
     const underBudget = await svcRateLimit(requesterAccountId);
@@ -261,6 +287,12 @@ export interface ConfirmPendingAlertActionValue {
 export async function confirmPendingAlertAction(args: {
   readonly incidentId: string;
 }): Promise<EmergencyActionResult<ConfirmPendingAlertActionValue>> {
+  if (isEmergencyDevMockActive()) {
+    const existing = await resolveActorAccountId();
+    if (existing === null) {
+      return ok({ state: "active", fanOut: mockFanOut() });
+    }
+  }
   return requireActor(async (requesterAccountId) => {
     const confirmed = await svcConfirmPending({
       incidentId: args.incidentId,
@@ -287,6 +319,12 @@ export async function revokePendingAlertAction(args: {
   readonly incidentId: string;
   readonly reason?: string;
 }): Promise<EmergencyActionResult<RevokePendingAlertActionValue>> {
+  if (isEmergencyDevMockActive()) {
+    const existing = await resolveActorAccountId();
+    if (existing === null) {
+      return ok({ state: "revoked_within_window", fanOut: mockFanOut() });
+    }
+  }
   return requireActor(async (requesterAccountId) => {
     const revoked = await svcRevokePending({
       incidentId: args.incidentId,
@@ -341,6 +379,15 @@ export interface UpdateIncidentLocationActionArgs {
 export async function updateIncidentLocationAction(
   args: UpdateIncidentLocationActionArgs,
 ): Promise<EmergencyActionResult<{ updateId: string; appliedAt: string }>> {
+  if (isEmergencyDevMockActive()) {
+    const existing = await resolveActorAccountId();
+    if (existing === null) {
+      return ok({
+        updateId: DEV_MOCK_LOCATION_UPDATE_ID,
+        appliedAt: new Date().toISOString(),
+      });
+    }
+  }
   return requireActor(async (requesterAccountId) => {
     const result = await svcUpdateLocation({
       incidentId: args.incidentId,

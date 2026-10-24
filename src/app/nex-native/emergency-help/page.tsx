@@ -26,8 +26,15 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export default async function EmergencyHelpConfirmationPage(): Promise<React.JSX.Element> {
+  // Owner directive 2026-10-25 · "dev pass for the emercey flow pages
+  // and see" · dev-only bypass matching the sealed go-live pattern.
+  // In NODE_ENV !== "production" a guest visitor can preview the
+  // countdown surface end-to-end without signing in. In production
+  // the sealed 2026-10-10 redirect is preserved.
   const session = await resolveNexAppSessionFromContext();
-  if (!session) redirect("/nex-native/sign-in");
+  if (!session && process.env.NODE_ENV === "production") {
+    redirect("/nex-native/sign-in");
+  }
 
   // Owner directive 2026-10-20 · the server resolves live-mode and
   // passes an explicit `simulated` prop so UI state honestly tracks
