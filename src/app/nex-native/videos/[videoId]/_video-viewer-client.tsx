@@ -19,6 +19,9 @@ import {
   LiveViewerFooter,
   type ShareEvidence,
 } from "@/components/nex-native/live-commerce/LiveViewerFooter";
+import { MessagePanel } from "@/components/nex-native/live-commerce/MessagePanel";
+import { getLiveInviteTargetAction } from "@/app/nex-native/live-commerce/_invite-target-action";
+import type { InviteTarget } from "@/lib/nex-native/live-broadcast/invite-target";
 import { VideoShareSheet } from "@/components/nex-native/live-commerce/VideoShareSheet";
 import { CategoryGridSheet } from "@/components/nex-native/live-commerce/CategoryGridSheet";
 import { ControlDrawer } from "@/components/nex-native/control-drawer/control-drawer-client";
@@ -173,6 +176,42 @@ export function VideoViewerClient({
     setPostedLabel(formatPostedDate(video.published_at ?? video.created_at));
   }, [video.published_at, video.created_at]);
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  // Owner directive 2026-10-25 · playback-progress 0..100 for the
+  // thin cyan progress bar under the composer. Updated on
+  // loadedmetadata + timeupdate · 0 until duration is known.
+  const [videoProgress, setVideoProgress] = React.useState<number>(0);
+  React.useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    const tick = () => {
+      const d = el.duration;
+      if (!Number.isFinite(d) || d <= 0) {
+        setVideoProgress(0);
+        return;
+      }
+      setVideoProgress(Math.max(0, Math.min(100, (el.currentTime / d) * 100)));
+    };
+    el.addEventListener("loadedmetadata", tick);
+    el.addEventListener("timeupdate", tick);
+    el.addEventListener("ended", tick);
+    tick();
+    return () => {
+      el.removeEventListener("loadedmetadata", tick);
+      el.removeEventListener("timeupdate", tick);
+      el.removeEventListener("ended", tick);
+    };
+  }, [video.id]);
+  // Owner directive 2026-10-25 (Phase B · recorded viewer wiring) ·
+  // Message panel state + lazy InviteTarget resolution for the
+  // video's owner_account_id. Dev-manifest videos use fake owner
+  // UUIDs so the resolver returns null · the panel honestly renders
+  // "This broadcaster has no public NEX handle · a connection
+  // invitation cannot be sent yet" instead of a wiring-missing alert.
+  const [messagePanelOpen, setMessagePanelOpen] = React.useState(false);
+  const [inviteTarget, setInviteTarget] = React.useState<InviteTarget | null>(
+    null,
+  );
+  const inviteTargetFetchedRef = React.useRef<string | null>(null);
 
   // Owner directive 2026-10-24 · "sound is auto playing with each
   // video live and always playing for live unless user will mute".
@@ -881,6 +920,32 @@ export function VideoViewerClient({
         onShareEvidence={handleShareEvidence}
         isLiked={isLiked}
         disabled={false}
+        /* Owner directive 2026-10-25 (Phase B) · Message pill opens
+           the sealed connection-invitation flow (reuses
+           createFriendRequestAction). We lazily resolve the video
+           owner's InviteTarget on first open · dev-manifest videos
+           use fake UUIDs so the resolver returns null and the panel
+           shows the honest "not invitable" state. */
+        onMessagePressed={() => {
+          setMessagePanelOpen(true);
+          const ownerId = video.owner_account_id;
+          if (
+            typeof ownerId === "string"
+            && ownerId.length > 0
+            && inviteTargetFetchedRef.current !== ownerId
+          ) {
+            inviteTargetFetchedRef.current = ownerId;
+            void getLiveInviteTargetAction(ownerId).then((result) => {
+              if (result.kind === "ok") setInviteTarget(result.target);
+              else setInviteTarget(null);
+            });
+          }
+        }}
+        /* Owner directive 2026-10-25 · playback progress for the
+           recorded video. The parent updates `videoProgress` from
+           the <video> element's timeupdate so the footer bar fills
+           as the video plays. */
+        videoProgressPercent={videoProgress}
         /* Owner directive 2026-10-25 · composer-header author
            identity. Uploaded video → use the video's title as the
            display name until a real author join (owner_account_id →
@@ -889,6 +954,21 @@ export function VideoViewerClient({
         authorDisplayName={video.title}
         authorIsLive={false}
       />
+      {messagePanelOpen && (
+        <MessagePanel
+          open={messagePanelOpen}
+          onClose={() => setMessagePanelOpen(false)}
+          target={inviteTarget}
+          isGuest={false}
+          signInHref={
+            typeof window !== "undefined"
+              ? `/nex-native/sign-in?returnTo=${encodeURIComponent(
+                  window.location.pathname + window.location.search,
+                )}`
+              : "/nex-native/sign-in"
+          }
+        />
+      )}
       {/* Owner spec 2026-10-24 · 3-option share bottom sheet. Owned
           by the viewer parent so it overlays the WHOLE viewer, not
           just the footer. See VideoShareSheet.tsx. */}

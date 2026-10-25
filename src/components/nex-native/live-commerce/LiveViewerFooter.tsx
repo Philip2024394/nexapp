@@ -113,6 +113,12 @@ export interface LiveViewerFooterProps {
    *  development-only alert. The parent is expected to mount a
    *  `<MessagePanel>` and toggle its `open` state in response. */
   readonly onMessagePressed?: () => void;
+  /** Owner directive 2026-10-25 · optional 0..100 playback progress
+   *  for RECORDED videos. When a number is passed, a thin progress
+   *  bar renders below the composer row (white track, cyan fill).
+   *  Omit for live sessions · a progress bar has no meaning for an
+   *  open-ended live stream. */
+  readonly videoProgressPercent?: number;
   /** Owner directive 2026-10-25 · composer-header author identity.
    *  When `authorDisplayName` is provided the composer placeholder
    *  rotates every 2 seconds between the author name and the gray
@@ -1271,6 +1277,51 @@ export function LiveViewerFooter(
             {props.isLiked ? "❤" : "♡"}
           </span>
         </button>
+        </div>
+      )}
+
+      {/* Owner directive 2026-10-25 · thin playback-progress bar
+          under the composer. Only renders for recorded videos
+          (parent passes `videoProgressPercent` 0..100). Live
+          streams omit the prop · no bar renders. White translucent
+          track + cyan fill that grows as the video plays. */}
+      {typeof props.videoProgressPercent === "number" && (
+        <div
+          data-nex-live-footer-video-progress
+          data-nex-live-footer-video-progress-value={Math.max(
+            0,
+            Math.min(100, Math.round(props.videoProgressPercent)),
+          )}
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.max(
+            0,
+            Math.min(100, Math.round(props.videoProgressPercent)),
+          )}
+          aria-label="Video playback position"
+          style={{
+            position: "relative",
+            height: 2,
+            margin: "4px 8px 0",
+            background: "rgba(255, 255, 255, 0.18)",
+            borderRadius: 999,
+            overflow: "hidden",
+            pointerEvents: "none",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: `${Math.max(0, Math.min(100, props.videoProgressPercent))}%`,
+              background: CYAN,
+              borderRadius: 999,
+              transition: "width 160ms linear",
+            }}
+          />
         </div>
       )}
 
