@@ -371,6 +371,30 @@ export function LiveViewerFooter(
   // · Live · Message. UI chrome only in this slice; the per-action
   // handlers below are honest stubs pending backend authorisation.
   const [extraActionsOpen, setExtraActionsOpen] = React.useState(false);
+  // Owner directive 2026-10-25 · "any tap outside that container will
+  // close it". The toggle button + panel each hold a ref so the
+  // document-level pointerdown listener below can discriminate
+  // "inside" from "outside" without a visual scrim. We don't absorb
+  // the outside tap — the user may be intending to pause/resume the
+  // underlying video with the same gesture.
+  const extraActionsToggleRef = React.useRef<HTMLButtonElement | null>(null);
+  const extraActionsPanelRef = React.useRef<HTMLDivElement | null>(null);
+  React.useEffect(() => {
+    if (!extraActionsOpen) return;
+    const handler = (ev: PointerEvent) => {
+      const target = ev.target as Node | null;
+      if (!target) return;
+      const panel = extraActionsPanelRef.current;
+      const toggle = extraActionsToggleRef.current;
+      if (panel && panel.contains(target)) return;
+      if (toggle && toggle.contains(target)) return;
+      setExtraActionsOpen(false);
+    };
+    document.addEventListener("pointerdown", handler, true);
+    return () => {
+      document.removeEventListener("pointerdown", handler, true);
+    };
+  }, [extraActionsOpen]);
 
   // Owner directive 2026-10-25 · composer placeholder rotates every
   // 2 seconds between the author name and "Type Message…" when an
@@ -763,6 +787,7 @@ export function LiveViewerFooter(
             honest stubs pending backend authorisation. */}
         <button
           type="button"
+          ref={extraActionsToggleRef}
           data-nex-live-footer-more
           data-nex-live-footer-more-open={extraActionsOpen ? "true" : "false"}
           aria-label={extraActionsOpen ? "Close extra actions" : "Open extra actions"}
@@ -821,10 +846,19 @@ export function LiveViewerFooter(
             out to the right and `pointer-events: none` so the
             underlying Live/Market/Share remain tappable. */}
         <div
+          ref={extraActionsPanelRef}
           data-nex-live-footer-extra-actions
           data-nex-live-footer-extra-actions-open={extraActionsOpen ? "true" : "false"}
           aria-hidden={!extraActionsOpen}
           style={{
+            // Owner directive 2026-10-25 · "the 3 dots open up
+            // container panel same design color style as category
+            // buttons" · the panel now carries the CategoryGridSheet
+            // tile palette: frosted-cyan gradient + 2px cyan rim +
+            // inner cyan outline + cyan glow + navy drop shadow. The
+            // outside-tap listener installed at the top of this
+            // component closes the panel when the user taps anywhere
+            // that is not the panel or the ⋮ toggle.
             position: "absolute",
             top: 0,
             bottom: 0,
@@ -833,10 +867,16 @@ export function LiveViewerFooter(
             flexDirection: "row",
             alignItems: "center",
             gap: 6,
-            paddingRight: 4,
+            padding: "4px 10px",
             background: extraActionsOpen
-              ? "linear-gradient(90deg, rgba(2,9,20,0) 0%, rgba(2,9,20,0.85) 24%, rgba(2,9,20,0.95) 100%)"
+              ? "linear-gradient(135deg, rgba(0, 175, 255, 0.42) 0%, rgba(0, 116, 255, 0.18) 100%)"
               : "transparent",
+            backdropFilter: extraActionsOpen ? "blur(18px) saturate(140%)" : undefined,
+            WebkitBackdropFilter: extraActionsOpen ? "blur(18px) saturate(140%)" : undefined,
+            border: extraActionsOpen ? "2px solid rgba(0, 175, 255, 0.9)" : "none",
+            boxShadow: extraActionsOpen
+              ? "inset 0 0 0 1px rgba(0, 175, 255, 0.5), 0 0 14px -4px rgba(0, 175, 255, 0.6), 0 4px 10px -6px rgba(0, 20, 50, 0.45)"
+              : "none",
             borderRadius: 999,
             transition: "transform 240ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease-out",
             transform: extraActionsOpen ? "translateX(0)" : "translateX(14px)",

@@ -84,5 +84,15 @@ export default defineConfig({
       },
       testMatch: /mobile-authenticated-journey\.spec\.ts/,
     },
+    {
+      // Phase 2 · G2 · Live Commerce public surfaces (no auth,
+      // no applied migrations). Verifies the fail-open contract on
+      // the public routes: central feed renders, viewer gates to
+      // sign-in for guests, directory landing renders with zero
+      // live chips when Migration 219 is unapplied.
+      name: "mobile-chromium-pixel7-live-public",
+      use: { ...devices["Pixel 7"] },
+      testMatch: /live-commerce-public-surfaces\.spec\.ts|live-commerce-viewer-footer\.spec\.ts|live-commerce-visual-verify\.spec\.ts|live-commerce-video-journey\.spec\.ts|live-footer-3-dots-container\.spec\.ts/,
+    },
   ],
 });
