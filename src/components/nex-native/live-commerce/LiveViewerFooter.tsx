@@ -141,6 +141,13 @@ export interface LiveViewerFooterProps {
   readonly authorAvatarUrl?: string | null;
   readonly authorDisplayName?: string | null;
   readonly authorIsLive?: boolean;
+  /** Owner directive 2026-10-26 · "the square pings with green
+   *  for online". Separate from `authorIsLive` (red ping) · green
+   *  dot shows when the broadcaster is simply ONLINE (not actively
+   *  broadcasting). If both flags are true, LIVE wins (red
+   *  dominates · live is more informative than merely online).
+   *  Omit or set false to show no presence dot. */
+  readonly authorIsOnline?: boolean;
   /** Owner directive 2026-10-25 · "the container will also have
    *  button if seller has shop and this button will be called
    *  products". When true the broadcaster-only "Products" pill
@@ -1620,11 +1627,12 @@ export function LiveViewerFooter(
               ) : (
                 <span>{avatarInitial}</span>
               )}
-              {props.authorIsLive === true && (
+              {props.authorIsLive === true ? (
                 <>
-                  {/* Static red dot */}
+                  {/* Static red dot · LIVE */}
                   <span
                     data-nex-live-footer-author-dot
+                    data-nex-live-footer-author-presence="live"
                     style={{
                       position: "absolute",
                       right: -1,
@@ -1654,6 +1662,48 @@ export function LiveViewerFooter(
                       transformOrigin: "center",
                       animation:
                         "nex-live-footer-author-ping 1.6s ease-out infinite",
+                    }}
+                  />
+                </>
+              ) : props.authorIsOnline === true && (
+                /* Owner directive 2026-10-26 · "the square pings
+                   with green for online". When the author is online
+                   but not actively live, render a softer green dot
+                   + a slower ping ring (1 cycle every 2.2 s vs the
+                   live 1.6 s · less attention-grabbing but still a
+                   clear "available" cue). */
+                <>
+                  <span
+                    data-nex-live-footer-author-dot
+                    data-nex-live-footer-author-presence="online"
+                    style={{
+                      position: "absolute",
+                      right: -1,
+                      top: -1,
+                      width: 7,
+                      height: 7,
+                      borderRadius: 999,
+                      background: "#22C55E",
+                      boxShadow:
+                        "0 0 0 1.5px rgba(2, 9, 20, 0.9), 0 0 6px rgba(34, 197, 94, 0.7)",
+                      animation:
+                        "nex-live-footer-author-dot 1.6s ease-in-out infinite",
+                    }}
+                  />
+                  <span
+                    data-nex-live-footer-author-ping
+                    style={{
+                      position: "absolute",
+                      right: -1,
+                      top: -1,
+                      width: 7,
+                      height: 7,
+                      borderRadius: 999,
+                      background: "transparent",
+                      border: "1.5px solid #22C55E",
+                      transformOrigin: "center",
+                      animation:
+                        "nex-live-footer-author-ping 2.2s ease-out infinite",
                     }}
                   />
                 </>
@@ -1700,8 +1750,14 @@ export function LiveViewerFooter(
               padding: hasAuthorIdentity
                 ? "6px 40px 6px 45px"
                 : "6px 40px 6px 10px",
-              fontSize: 13,
-              lineHeight: 1.3,
+              // Owner directive 2026-10-26 · "the user or business
+              // name in text field is 16 size". The rotating
+              // placeholder in this field now renders at 16 px so
+              // the broadcaster name is more legible against the
+              // composer background. Line-height tightened to keep
+              // the composer's visual height roughly the same.
+              fontSize: 16,
+              lineHeight: 1.2,
               outline: "none",
               fontFamily: "inherit",
             }}

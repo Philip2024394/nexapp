@@ -101,7 +101,12 @@ export default async function DevLivePersonaPage(props: {
          fires the sealed red ping dot on the avatar. */
       authorDisplayNameOverride={persona.displayName}
       authorAvatarUrlOverride={avatarUrl}
-      authorIsLiveOverride={true}
+      authorIsLiveOverride={false}
+      /* Owner directive 2026-10-26 · green "online" ping · the
+         persona isn't actively broadcasting live for this preview ·
+         they're just online. Slice B (deterministic schedule) will
+         compute this flag dynamically; for now hardcoded true. */
+      authorIsOnlineOverride={true}
     />
   );
 }

@@ -75,6 +75,7 @@ export function VideoViewerClient({
   authorDisplayNameOverride,
   authorAvatarUrlOverride,
   authorIsLiveOverride,
+  authorIsOnlineOverride,
 }: {
   readonly video: UploadedVideoRow;
   readonly publicUrl: string;
@@ -112,6 +113,11 @@ export function VideoViewerClient({
   readonly authorDisplayNameOverride?: string;
   readonly authorAvatarUrlOverride?: string;
   readonly authorIsLiveOverride?: boolean;
+  /** Owner directive 2026-10-26 · green "online" ping on the
+   *  composer avatar (separate from the red live ping). Dev
+   *  routes pass this to indicate the persona is online but
+   *  not actively broadcasting. */
+  readonly authorIsOnlineOverride?: boolean;
 }): React.JSX.Element {
   const router = useRouter();
   const [isLiked, setIsLiked] = React.useState(false);
@@ -1108,6 +1114,7 @@ export function VideoViewerClient({
         authorDisplayName={authorDisplayNameOverride ?? video.title}
         authorAvatarUrl={authorAvatarUrlOverride ?? null}
         authorIsLive={authorIsLiveOverride ?? false}
+        authorIsOnline={authorIsOnlineOverride ?? false}
         isBroadcaster={isBroadcasterPreview}
         broadcasterProducts={mockBroadcasterProducts}
         likeCount={likeCount}
