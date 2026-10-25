@@ -191,6 +191,7 @@ export const DEV_VIDEO_MANIFEST: readonly DevVideoManifestEntry[] = [
     durationSeconds: null,
     byteSize: 1_914_721,
     publishedAtIso: "2026-10-24T17:58:00Z",
+    isAiGenerated: true,
   },
   {
     id: "dev-video-13",
@@ -213,6 +214,7 @@ export const DEV_VIDEO_MANIFEST: readonly DevVideoManifestEntry[] = [
     durationSeconds: null,
     byteSize: 1_190_155,
     publishedAtIso: "2026-10-24T18:00:00Z",
+    isAiGenerated: true,
   },
   // Owner directive 2026-10-25 · three additional videos. Shown in
   // the central Live feed's RecordedVideosSection with sessionStorage-
@@ -228,6 +230,7 @@ export const DEV_VIDEO_MANIFEST: readonly DevVideoManifestEntry[] = [
     durationSeconds: null,
     byteSize: 2_836_836,
     publishedAtIso: "2026-10-25T16:32:00Z",
+    isAiGenerated: true,
   },
   {
     id: "dev-video-16",
@@ -250,6 +253,7 @@ export const DEV_VIDEO_MANIFEST: readonly DevVideoManifestEntry[] = [
     durationSeconds: null,
     byteSize: 2_335_490,
     publishedAtIso: "2026-10-25T16:36:00Z",
+    isAiGenerated: true,
   },
   // Owner directive 2026-10-25 · four additional videos. Shuffle-
   // no-repeat applies automatically (reconciliation in
@@ -265,6 +269,7 @@ export const DEV_VIDEO_MANIFEST: readonly DevVideoManifestEntry[] = [
     durationSeconds: null,
     byteSize: 4_844_922,
     publishedAtIso: "2026-10-25T16:45:00Z",
+    isAiGenerated: true,
   },
   {
     id: "dev-video-19",
@@ -276,6 +281,7 @@ export const DEV_VIDEO_MANIFEST: readonly DevVideoManifestEntry[] = [
     durationSeconds: null,
     byteSize: 4_799_148,
     publishedAtIso: "2026-10-25T16:48:00Z",
+    isAiGenerated: true,
   },
   {
     id: "dev-video-20",
@@ -310,6 +316,7 @@ export const DEV_VIDEO_MANIFEST: readonly DevVideoManifestEntry[] = [
     durationSeconds: null,
     byteSize: 5_685_361,
     publishedAtIso: "2026-10-25T16:52:00Z",
+    isAiGenerated: true,
   },
   {
     id: "dev-video-23",
