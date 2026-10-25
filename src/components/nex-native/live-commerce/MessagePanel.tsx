@@ -434,14 +434,11 @@ export function MessagePanel(props: MessagePanelProps): React.JSX.Element | null
                 fontFamily: "inherit",
               }}
             />
-            {/* Explicit disclosure · the invitation itself IS delivered
-                via createFriendRequestAction, but Migration 220 (the
-                intro_note column) is draft-not-applied in the live
-                Supabase project. Until the owner authorises the
-                migration, the recipient sees the invitation + sender
-                card but the message body is silently dropped by
-                PostgREST. We never claim the message was delivered
-                when the schema cannot carry it. */}
+            {/* Owner directive 2026-10-25 · post Migration 220 apply ·
+                the intro_note column is live in the sealed Supabase
+                project, so the message body is now persisted + shown
+                to the recipient alongside the sender's NEX user card.
+                Honest short line only. */}
             <div
               style={{
                 fontSize: 10,
@@ -449,9 +446,8 @@ export function MessagePanel(props: MessagePanelProps): React.JSX.Element | null
                 lineHeight: 1.35,
               }}
             >
-              Invitation reaches {props.target?.displayName ?? "the broadcaster"} with your NEX user card.
-              The written message body persists only after Migration 220 is applied · until then the
-              recipient receives the invitation without the typed text.
+              Your message + NEX user card are sent to {props.target?.displayName ?? "the broadcaster"} as one invitation.
+              They have 24 hours to confirm.
             </div>
             <button
               type="button"
