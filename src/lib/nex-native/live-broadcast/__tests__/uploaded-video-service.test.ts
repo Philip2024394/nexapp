@@ -350,3 +350,156 @@ describe("Migration 223 · source-shape invariants", () => {
     expect(sql).toMatch(/NOT YET APPLIED/);
   });
 });
+
+// ─── Owner directive 2026-10-25 · Migration 221 · AI-generated flag ──
+
+describe("publishUploadedVideo · is_ai_generated · Migration 221", () => {
+  test("isAiGenerated=true · insert payload carries the flag · row returns it", async () => {
+    setResolver(async () => ({
+      data: {
+        id: "v-ai",
+        owner_account_id: OWNER,
+        business_id: null,
+        title: "AI video",
+        caption: null,
+        storage_bucket: "nex-live-uploaded",
+        storage_object_path: "owner/ai.mp4",
+        duration_seconds: null,
+        width: null,
+        height: null,
+        byte_size: null,
+        mime_type: "video/mp4",
+        rights_declaration: "owner_content",
+        source: "owner_upload",
+        visibility: "public",
+        created_at: "2026-10-25T00:00:00Z",
+        published_at: "2026-10-25T00:00:00Z",
+        country_of_origin: "ID",
+        topic_tags: [],
+        is_ai_generated: true,
+      },
+      error: null,
+    }));
+    const { publishUploadedVideo } = await import("../uploaded-video-service");
+    const r = await publishUploadedVideo({
+      ownerAccountId: OWNER,
+      title: "AI video",
+      storageObjectPath: "owner/ai.mp4",
+      rightsDeclaration: "owner_content",
+      countryOfOrigin: "ID",
+      visibility: "public",
+      isAiGenerated: true,
+    });
+    expect(r.is_ai_generated).toBe(true);
+    const payload = lastInsertPayload() as Record<string, unknown>;
+    expect(payload.is_ai_generated).toBe(true);
+  });
+
+  test("isAiGenerated omitted · insert payload defaults to false", async () => {
+    setResolver(async () => ({
+      data: {
+        id: "v-human",
+        owner_account_id: OWNER,
+        business_id: null,
+        title: "Human video",
+        caption: null,
+        storage_bucket: "nex-live-uploaded",
+        storage_object_path: "owner/h.mp4",
+        duration_seconds: null,
+        width: null,
+        height: null,
+        byte_size: null,
+        mime_type: "video/mp4",
+        rights_declaration: "owner_content",
+        source: "owner_upload",
+        visibility: "public",
+        created_at: "2026-10-25T00:00:00Z",
+        published_at: "2026-10-25T00:00:00Z",
+        country_of_origin: "ID",
+        topic_tags: [],
+        is_ai_generated: false,
+      },
+      error: null,
+    }));
+    const { publishUploadedVideo } = await import("../uploaded-video-service");
+    await publishUploadedVideo({
+      ownerAccountId: OWNER,
+      title: "Human video",
+      storageObjectPath: "owner/h.mp4",
+      rightsDeclaration: "owner_content",
+      countryOfOrigin: "ID",
+      visibility: "public",
+    });
+    const payload = lastInsertPayload() as Record<string, unknown>;
+    expect(payload.is_ai_generated).toBe(false);
+  });
+
+  test("isAiGenerated=truthy-non-boolean · normalises to false (defence)", async () => {
+    setResolver(async () => ({
+      data: {
+        id: "v-defence",
+        owner_account_id: OWNER,
+        business_id: null,
+        title: "Defence",
+        caption: null,
+        storage_bucket: "nex-live-uploaded",
+        storage_object_path: "owner/d.mp4",
+        duration_seconds: null,
+        width: null,
+        height: null,
+        byte_size: null,
+        mime_type: "video/mp4",
+        rights_declaration: "owner_content",
+        source: "owner_upload",
+        visibility: "draft",
+        created_at: "2026-10-25T00:00:00Z",
+        published_at: null,
+        country_of_origin: "ID",
+        topic_tags: [],
+        is_ai_generated: false,
+      },
+      error: null,
+    }));
+    const { publishUploadedVideo } = await import("../uploaded-video-service");
+    await publishUploadedVideo({
+      ownerAccountId: OWNER,
+      title: "Defence",
+      storageObjectPath: "owner/d.mp4",
+      rightsDeclaration: "owner_content",
+      countryOfOrigin: "ID",
+      // Simulate a misbehaving client: cast a non-boolean through
+      // the typed interface. The service's `=== true` guard turns
+      // every non-exactly-true value into false.
+      isAiGenerated: 1 as unknown as boolean,
+    });
+    const payload = lastInsertPayload() as Record<string, unknown>;
+    expect(payload.is_ai_generated).toBe(false);
+  });
+
+  test("Migration 221 SQL · schema shape sanity · additive, idempotent, no backfill", async () => {
+    const { readFileSync } = await import("node:fs");
+    const path = await import("node:path");
+    const sql = readFileSync(
+      path.resolve(
+        process.cwd(),
+        "nex-supabase/migrations/221_nex_uploaded_video_is_ai_generated.sql",
+      ),
+      "utf8",
+    );
+    // Additive column with NOT NULL + DEFAULT false.
+    expect(sql).toMatch(
+      /ADD COLUMN IF NOT EXISTS is_ai_generated boolean NOT NULL DEFAULT false/,
+    );
+    // No backfill UPDATE statements (the DEFAULT handles pre-existing rows).
+    expect(sql).not.toMatch(/^UPDATE\s+public\.nex_uploaded_video/m);
+    // Comment is sealed with the owner's wording.
+    expect(sql).toMatch(/COMMENT ON COLUMN public\.nex_uploaded_video\.is_ai_generated/);
+    // Migration history insert · idempotent.
+    expect(sql).toMatch(/INSERT INTO nex_migration_history/);
+    expect(sql).toMatch(/ON CONFLICT \(version\) DO NOTHING/);
+    // Explicit NEX NO-CLAIM wording for unlabelled videos.
+    expect(sql).toMatch(/no claim about unlabelled videos being human-authored/i);
+    // Status: unapplied.
+    expect(sql).toMatch(/NOT YET APPLIED/);
+  });
+});

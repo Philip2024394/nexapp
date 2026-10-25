@@ -41,6 +41,13 @@ export interface DevVideoManifestEntry {
   readonly durationSeconds: number | null;
   readonly byteSize: number;
   readonly publishedAtIso: string;
+  /** Owner directive 2026-10-25 · Migration 221 · when true the
+   *  viewer header renders a red "(AI)" label after the broadcast
+   *  date. Omit for ordinary human-authored content · absence of
+   *  the flag does NOT imply human origin (there is no "100% human"
+   *  badge). Dev-manifest · 2–3 entries carry `true` so the chip is
+   *  visible in dev screenshots; the rest default to false. */
+  readonly isAiGenerated?: boolean;
 }
 
 /* ─── Manifest · owner-authored · 14 entries so far · scales to 100 ─── */
@@ -83,6 +90,7 @@ export const DEV_VIDEO_MANIFEST: readonly DevVideoManifestEntry[] = [
     durationSeconds: null,
     byteSize: 3_595_036,
     publishedAtIso: "2026-10-24T17:05:00Z",
+    isAiGenerated: true,
   },
   {
     id: "dev-video-4",
@@ -171,6 +179,7 @@ export const DEV_VIDEO_MANIFEST: readonly DevVideoManifestEntry[] = [
     durationSeconds: null,
     byteSize: 1_413_327,
     publishedAtIso: "2026-10-24T17:57:00Z",
+    isAiGenerated: true,
   },
   {
     id: "dev-video-12",
@@ -278,6 +287,7 @@ export const DEV_VIDEO_MANIFEST: readonly DevVideoManifestEntry[] = [
     durationSeconds: null,
     byteSize: 10_818_741,
     publishedAtIso: "2026-10-25T16:50:00Z",
+    isAiGenerated: true,
   },
   {
     id: "dev-video-21",
@@ -401,6 +411,9 @@ export function devManifestToRow(
     visibility: "public",
     created_at: entry.publishedAtIso,
     published_at: entry.publishedAtIso,
+    // Owner directive 2026-10-25 · Migration 221 · dev-only flag ·
+    // defaults to false when the manifest entry omits it.
+    is_ai_generated: entry.isAiGenerated === true,
   };
 }
 

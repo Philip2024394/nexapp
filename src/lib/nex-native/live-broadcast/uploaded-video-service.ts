@@ -79,6 +79,14 @@ export interface UploadedVideoRow {
   readonly visibility: UploadedVideoVisibility;
   readonly created_at: string;
   readonly published_at: string | null;
+  /** Owner directive 2026-10-25 · Migration 221 · when true the
+   *  viewer header renders a visible red "(AI)" label immediately
+   *  after the "Broadcasted {date}" text. NEX makes NO claim about
+   *  unlabelled videos being human-authored · absence of the label
+   *  does NOT imply human origin. Pre-migration rows read this as
+   *  `undefined` from PostgREST; call-sites that render the chip
+   *  MUST default to false (`is_ai_generated ?? false`). */
+  readonly is_ai_generated: boolean;
 }
 
 export interface PublishUploadedVideoInput {
@@ -102,6 +110,12 @@ export interface PublishUploadedVideoInput {
    *  to 10. */
   readonly topicTags?: readonly string[];
   readonly visibility?: Exclude<UploadedVideoVisibility, "removed">;
+  /** Owner directive 2026-10-25 · Migration 221 · when true the
+   *  viewer header renders a red "(AI)" label after the broadcast
+   *  date. The service normalises `=== true` so a misbehaving
+   *  client cannot persist truthy-but-not-boolean values. Default
+   *  false when omitted. */
+  readonly isAiGenerated?: boolean;
 }
 
 /** Insert a new uploaded-video row. Fail-closed. The caller MUST
@@ -175,6 +189,10 @@ export async function publishUploadedVideo(
       source: "owner_upload",
       visibility,
       published_at: publishedAt,
+      // Owner directive 2026-10-25 · Migration 221 · explicit boolean
+      // normalisation guards against truthy-but-not-boolean values
+      // from a misbehaving client. Default false when omitted.
+      is_ai_generated: input.isAiGenerated === true,
     })
     .select("*")
     .single<UploadedVideoRow>();

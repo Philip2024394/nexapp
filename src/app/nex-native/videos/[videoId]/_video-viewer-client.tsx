@@ -621,6 +621,36 @@ export function VideoViewerClient({
               }}
             >
               {postedLabel ? `Broadcasted ${postedLabel}` : ""}
+              {/* Owner directive 2026-10-25 · Migration 221 · when the
+                  video's authoritative record carries `is_ai_generated
+                  === true` the header appends a compact red "(AI)"
+                  chip IMMEDIATELY after the broadcast date. Absence
+                  of the chip does NOT imply human origin (NEX makes
+                  no claim about unlabelled videos). The `?? false`
+                  normalisation protects pre-migration rows where the
+                  column is missing from the PostgREST read. */}
+              {(video.is_ai_generated ?? false) && (
+                <span
+                  data-nex-video-viewer-ai-chip
+                  aria-label="AI-generated video"
+                  style={{
+                    display: "inline-block",
+                    marginLeft: 6,
+                    padding: "0 5px",
+                    borderRadius: 4,
+                    background: "rgba(255, 51, 85, 0.14)",
+                    border: `1px solid ${NEX.red}`,
+                    color: NEX.red,
+                    fontSize: 10,
+                    fontWeight: 800,
+                    letterSpacing: "0.03em",
+                    lineHeight: 1.4,
+                    verticalAlign: "baseline",
+                  }}
+                >
+                  (AI)
+                </span>
+              )}
             </div>
             {/* Owner directive 2026-10-24 · chain-context chip ·
                 visible when the viewer arrived via a category tile.
