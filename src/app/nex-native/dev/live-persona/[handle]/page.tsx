@@ -32,6 +32,7 @@ import {
   listDevUploadedVideos,
 } from "@/lib/nex-native/live-broadcast/dev-video-manifest";
 import { VideoViewerClient } from "@/app/nex-native/videos/[videoId]/_video-viewer-client";
+import { computePresence } from "@/lib/nex-native/mock-persona-presence";
 import { PERSONAS } from "../../../../../../scripts/mock-personas/persona-manifest.mjs";
 
 export const dynamic = "force-dynamic";
@@ -102,11 +103,14 @@ export default async function DevLivePersonaPage(props: {
       authorDisplayNameOverride={persona.displayName}
       authorAvatarUrlOverride={avatarUrl}
       authorIsLiveOverride={false}
-      /* Owner directive 2026-10-26 · green "online" ping · the
-         persona isn't actively broadcasting live for this preview ·
-         they're just online. Slice B (deterministic schedule) will
-         compute this flag dynamically; for now hardcoded true. */
-      authorIsOnlineOverride={true}
+      /* Owner directive 2026-10-26 Slice B · persona presence is
+         now computed by the deterministic schedule generator
+         (pure function of handle + current server time · 16 h
+         online window · ~1 in 3 personas take Sunday off · ~50%
+         take a 1-hour afternoon nap). The green dot flips to
+         off (and the composer avatar shows no ping) when the
+         persona is "asleep" per the schedule. */
+      authorIsOnlineOverride={computePresence(persona.handle).isOnline}
     />
   );
 }
