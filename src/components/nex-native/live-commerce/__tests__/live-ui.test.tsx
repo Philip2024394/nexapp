@@ -202,13 +202,17 @@ describe("LiveViewerFooter · rendered", () => {
     expect(viewShopIdx).toBeGreaterThan(-1);
     // Actions row order: View Shop before Share.
     expect(shareIdx).toBeGreaterThan(viewShopIdx);
-    // Composer order: Like (now inline) comes AFTER both actions-row
-    // items and BEFORE Send.
-    expect(likeIdx).toBeGreaterThan(shareIdx);
-    expect(sendIdx).toBeGreaterThan(likeIdx);
-    // Explicit assertion: the inline marker is set on the composer
+    // Owner directive 2026-10-25 (revised again) · the Like heart
+    // moved OUTSIDE the composer wrapper and now sits as a flex
+    // sibling in the composer row, AFTER the composer (which still
+    // contains the Send button inside). DOM order is therefore:
+    //   actions-row  : View Shop → Share → ⋮
+    //   composer-row : textarea → Send → Like
+    expect(sendIdx).toBeGreaterThan(shareIdx);
+    expect(likeIdx).toBeGreaterThan(sendIdx);
+    // Explicit assertion: the inline marker is still set on the
     // Like button so test selectors can distinguish it from any
-    // future placement.
+    // future placement in a different row.
     expect(html).toMatch(
       /<button[^>]*data-nex-live-footer-like[^>]*data-nex-live-footer-like-inline="true"/,
     );

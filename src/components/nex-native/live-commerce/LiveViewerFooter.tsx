@@ -618,29 +618,37 @@ export function LiveViewerFooter(
           aria-expanded={extraActionsOpen ? "true" : "false"}
           onClick={() => setExtraActionsOpen((v) => !v)}
           style={{
-            background: extraActionsOpen
-              ? "rgba(0, 175, 255, 0.22)"
-              : "rgba(255,255,255,0.06)",
-            border: `1px solid ${extraActionsOpen ? CYAN : BORDER}`,
+            // Owner directive 2026-10-25 (revised) · 3-dot moves to
+            // the right screen edge · background chip removed · icon
+            // doubled from 18 → 32. The button sits in a wider
+            // auto-sized column with a negative right margin that
+            // reclaims 6 px of the row's padding so the dots sit
+            // visually closer to the viewport edge.
+            background: "transparent",
+            border: "none",
             color: TEXT,
             width: 44,
             minHeight: 48,
-            borderRadius: 12,
+            borderRadius: 999,
             cursor: "pointer",
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
             padding: 0,
+            marginRight: -6,
             fontSize: 20,
             lineHeight: 1,
-            transition: "background 160ms ease-out, border-color 160ms ease-out, transform 180ms ease-out",
+            opacity: extraActionsOpen ? 0.85 : 1,
+            transition: "opacity 160ms ease-out, transform 180ms ease-out",
             transform: extraActionsOpen ? "rotate(90deg)" : "rotate(0deg)",
+            filter:
+              "drop-shadow(0 1px 2px rgba(0,0,0,0.55)) drop-shadow(0 0 3px rgba(0,0,0,0.35))",
           }}
         >
           <svg
             aria-hidden
-            width="18"
-            height="18"
+            width="32"
+            height="32"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -648,9 +656,9 @@ export function LiveViewerFooter(
             strokeLinecap="round"
             strokeLinejoin="round"
           >
-            <circle cx="12" cy="5" r="1.3" />
-            <circle cx="12" cy="12" r="1.3" />
-            <circle cx="12" cy="19" r="1.3" />
+            <circle cx="12" cy="5" r="1.5" />
+            <circle cx="12" cy="12" r="1.5" />
+            <circle cx="12" cy="19" r="1.5" />
           </svg>
         </button>
 
@@ -937,6 +945,22 @@ export function LiveViewerFooter(
         />
       ) : (
         <div
+          data-nex-live-viewer-footer-composer-row
+          style={{
+            // Owner directive 2026-10-25 (revised) · Row 2 is a flex
+            // container so the Like heart can sit OUTSIDE the composer
+            // text field on its right side (owner "heart icon must be
+            // outside the text field container on the right side").
+            // The composer itself still fits the screen width with a
+            // small inset · the heart takes a fixed width to its right.
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            margin: "0 8px",
+          }}
+        >
+        <div
           data-nex-live-viewer-footer-composer
           style={{
             // Owner directive 2026-10-24 · "send button square inside
@@ -944,14 +968,16 @@ export function LiveViewerFooter(
             // wrapper so the Send button can anchor at the right
             // edge of the text field instead of sitting beside it.
             position: "relative",
+            // Owner directive 2026-10-25 (revised) · the composer is
+            // the FLEX ITEM that stretches to fill the remaining width
+            // · the heart (sibling after this div) is a fixed 40 px
+            // button + 6 px gap. `min-width: 0` is critical · without
+            // it the textarea's intrinsic width wins and the row
+            // overflows the viewport on narrow phones (the overflow
+            // bug the owner reported this slice).
+            flex: "1 1 auto",
+            minWidth: 0,
             display: "block",
-            // Owner directive 2026-10-25 (revised) · give the composer
-            // slim horizontal breathing room so it doesn't butt against
-            // the screen edges on narrow phones (320–360 px). The row
-            // still reads as "fit the width" because the inset is
-            // minimal and the field is noticeably wider than the
-            // 3-button actions row above.
-            margin: "0 8px",
             // Owner directive 2026-10-24 (keypad audit) · "turn off
             // that text is selecting blue". Suppress the native blue
             // selection highlight + the tap-flash on iOS/Android for
@@ -1013,21 +1039,21 @@ export function LiveViewerFooter(
                 left: 3,
                 top: "50%",
                 transform: "translateY(-50%)",
-                // Owner directive 2026-10-25 · enlarge the author
-                // bubble a little · 26 → 30 so it fills the composer's
-                // minHeight cleanly. The borderRadius bumps 5 → 6 to
-                // keep the gentle rounded-square silhouette at the new
-                // size, and the initial-letter grows 12 → 14 to
-                // match.
-                width: 30,
-                height: 30,
-                borderRadius: 6,
+                // Owner directive 2026-10-25 (revised again) · the
+                // author bubble enlarges by +3 px · 30 → 33 so it
+                // reads as more prominent beside the enlarged inline
+                // initial. borderRadius 6 → 7 keeps the gentle
+                // rounded-square silhouette and fontSize 14 → 15
+                // matches the bigger box.
+                width: 33,
+                height: 33,
+                borderRadius: 7,
                 background: "linear-gradient(135deg, #152646 0%, #1E3A6E 100%)",
                 color: "#FFFFFF",
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: 800,
                 letterSpacing: "0.02em",
                 border: "1px solid rgba(255,255,255,0.14)",
@@ -1122,14 +1148,15 @@ export function LiveViewerFooter(
               border: `1px solid ${BORDER}`,
               color: TEXT,
               borderRadius: 10,
-              // Owner directive 2026-10-25 (revised) · leave room on
-              // the LEFT for the 30px square author bubble + 3px inset
-              // + 6px gap = 39px, and leave room on the RIGHT for
-              // BOTH the inline Like heart (28px @ right:36) AND the
-              // inline Send (28px @ right:4) + 6px gap = 74px.
+              // Owner directive 2026-10-25 (revised again) · leave
+              // room on the LEFT for the enlarged 33 px author bubble
+              // + 3 px inset + 6 px gap = 42, rounded to 45. The
+              // RIGHT side only needs room for the inline Send button
+              // (28 + 4 + a 6 gap = 38, rounded to 40) because the
+              // Like heart moved OUTSIDE the composer on 2026-10-25.
               padding: hasAuthorIdentity
-                ? "6px 74px 6px 42px"
-                : "6px 74px 6px 10px",
+                ? "6px 40px 6px 45px"
+                : "6px 40px 6px 10px",
               fontSize: 13,
               lineHeight: 1.3,
               outline: "none",
@@ -1140,62 +1167,11 @@ export function LiveViewerFooter(
               the composer on the right side (previously in the actions
               row above). Idle state: a subtle "alive" pulse. On tap:
               fires the existing spawnFloatingHeart flow (big heart
-              rises → shower). The heart sits to the LEFT of the Send
-              button; both are absolute inside the composer wrapper. */}
-          <button
-            type="button"
-            onClick={() => {
-              props.onLike();
-              setLikePulse((p) => p + 1);
-              spawnFloatingHeart();
-            }}
-            disabled={props.disabled}
-            data-nex-live-footer-like
-            data-nex-live-footer-like-inline="true"
-            aria-pressed={props.isLiked ? "true" : "false"}
-            aria-label={props.isLiked ? "Unlike this live stream" : "Like this live stream"}
-            style={{
-              position: "absolute",
-              right: 36,
-              top: "50%",
-              transform: "translateY(-50%)",
-              width: 28,
-              height: 28,
-              background: "transparent",
-              color: props.isLiked ? RED : "#FFFFFF",
-              fontSize: 18,
-              fontWeight: 900,
-              borderRadius: 999,
-              padding: 0,
-              border: "none",
-              cursor: props.disabled ? "not-allowed" : "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              lineHeight: 1,
-              filter:
-                "drop-shadow(0 1px 2px rgba(0,0,0,0.5)) drop-shadow(0 0 4px rgba(0,0,0,0.3))",
-            }}
-          >
-            <span
-              key={likePulse}
-              data-nex-live-footer-like-inline-icon
-              aria-hidden
-              style={{
-                display: "inline-block",
-                // Owner directive 2026-10-25 · chain the idle "alive"
-                // beat with the one-shot pulse on tap. The pulse key
-                // changes per tap so the animation restarts.
-                animation:
-                  likePulse > 0
-                    ? "nexLikePulse 320ms ease-out, nex-live-footer-like-idle 1.3s ease-in-out 320ms infinite"
-                    : "nex-live-footer-like-idle 1.3s ease-in-out infinite",
-                transformOrigin: "center",
-              }}
-            >
-              {props.isLiked ? "❤" : "♡"}
-            </span>
-          </button>
+              rises → shower). Owner directive 2026-10-25 (revised
+              again) · the heart moved OUTSIDE the composer wrapper
+              and now sits as a flex sibling in the composer row ·
+              see the <button data-nex-live-footer-like …> block
+              rendered AFTER the composer </div>. */}
           <button
             type="button"
             onClick={handleSend}
@@ -1240,6 +1216,61 @@ export function LiveViewerFooter(
               <path d="M4 20 L21 12 L4 4 L6 12 Z" />
             </svg>
           </button>
+        </div>
+        {/* Owner directive 2026-10-25 (revised again) · the Like
+            heart lives OUTSIDE the composer text field now, on its
+            right side as a flex sibling in the composer row. No
+            background chip · just the heart icon with the sealed
+            "alive" idle beat + the one-shot pulse on tap + the
+            existing spawnFloatingHeart rise/shower cascade. */}
+        <button
+          type="button"
+          onClick={() => {
+            props.onLike();
+            setLikePulse((p) => p + 1);
+            spawnFloatingHeart();
+          }}
+          disabled={props.disabled}
+          data-nex-live-footer-like
+          data-nex-live-footer-like-inline="true"
+          aria-pressed={props.isLiked ? "true" : "false"}
+          aria-label={props.isLiked ? "Unlike this live stream" : "Like this live stream"}
+          style={{
+            flex: "0 0 auto",
+            width: 36,
+            height: 36,
+            background: "transparent",
+            color: props.isLiked ? RED : "#FFFFFF",
+            fontSize: 22,
+            fontWeight: 900,
+            borderRadius: 999,
+            padding: 0,
+            border: "none",
+            cursor: props.disabled ? "not-allowed" : "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            lineHeight: 1,
+            filter:
+              "drop-shadow(0 1px 2px rgba(0,0,0,0.5)) drop-shadow(0 0 4px rgba(0,0,0,0.3))",
+          }}
+        >
+          <span
+            key={likePulse}
+            data-nex-live-footer-like-inline-icon
+            aria-hidden
+            style={{
+              display: "inline-block",
+              animation:
+                likePulse > 0
+                  ? "nexLikePulse 320ms ease-out, nex-live-footer-like-idle 1.3s ease-in-out 320ms infinite"
+                  : "nex-live-footer-like-idle 1.3s ease-in-out infinite",
+              transformOrigin: "center",
+            }}
+          >
+            {props.isLiked ? "❤" : "♡"}
+          </span>
+        </button>
         </div>
       )}
 
