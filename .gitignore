@@ -22,6 +22,13 @@ dev.log
 # screenshots. Processed outputs live in /public/ and are tracked.
 tmp/
 
+# Mock-persona avatar crop staging · the script
+# `scripts/mock-personas/crop-persona-grids.mjs` is reproducible
+# source of truth; the ~60 cropped PNGs under tests/_persona-crops/
+# are intermediate artifacts that get uploaded to the Supabase
+# `nex-mock-personas` bucket. Not tracked in git.
+tests/_persona-crops/
+
 # Brain-authoring staging JSONs — session state for import scripts,
 # regenerated on demand, not source of truth.
 scripts/.staging-*.json
@@ -379,3 +386,6 @@ data/nex-page-fetcher-allowlist.applied-*.json
 data/nex-page-fetcher-allowlist.backup-*.json
 data/nex-brain/*.tmp
 build.log
+
+# Dev-only live videos — not committed · see docs/doctrine/nex-live-uploaded-video-contract-2026-10-24.md
+public/dev/live-videos/
