@@ -108,6 +108,11 @@ export interface LiveViewerFooterProps {
    *  show the gate to everyone until the parent has an authoritative
    *  signal). */
   readonly isShopOwner?: boolean;
+  /** Owner directive 2026-10-25 · when provided, the 3-dot slide-out's
+   *  Message pill delegates to this callback instead of showing the
+   *  development-only alert. The parent is expected to mount a
+   *  `<MessagePanel>` and toggle its `open` state in response. */
+  readonly onMessagePressed?: () => void;
   /** Owner directive 2026-10-25 · composer-header author identity.
    *  When `authorDisplayName` is provided the composer placeholder
    *  rotates every 2 seconds between the author name and the gray
@@ -737,19 +742,26 @@ export function LiveViewerFooter(
               </svg>
             }
           />
-          {/* Message · honest stub · the full flow (open panel with
-              owner profile → send message + user card → 24 h expiry →
-              mutual-accept chat creation) overlaps the existing
-              peer-invite + chat-creation plumbing. Needs separate
-              owner authorisation to pick the integration path. */}
+          {/* Message · owner directive 2026-10-25 (Phase B) · opens
+              the MessagePanel which reuses the EXISTING
+              `createFriendRequestAction` from the Contacts page.
+              Delegation via `onMessagePressed` prop · the parent
+              viewer mounts the panel. When the parent does not pass
+              the prop (e.g. the recorded-video viewer with no public
+              broadcaster handle) the pill falls back to an honest
+              development-only alert. */}
           <ExtraActionPill
             label="Message"
             data-nex-live-footer-extra-message="true"
             onClick={() => {
               setExtraActionsOpen(false);
+              if (props.onMessagePressed) {
+                props.onMessagePressed();
+                return;
+              }
               if (typeof window !== "undefined") {
                 window.alert(
-                  "Message · UI only · the 24 h invitation + chat-creation flow requires owner authorisation to pick the integration path with the existing peer-invite plumbing.",
+                  "Message · this viewer surface does not yet wire the Message panel · the parent must pass onMessagePressed.",
                 );
               }
             }}

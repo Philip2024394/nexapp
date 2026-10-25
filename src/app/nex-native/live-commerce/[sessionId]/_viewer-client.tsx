@@ -49,6 +49,9 @@ import {
   type LiveReplyContext,
   type ShareEvidence,
 } from "@/components/nex-native/live-commerce/LiveViewerFooter";
+import { MessagePanel } from "@/components/nex-native/live-commerce/MessagePanel";
+import { getLiveInviteTargetAction } from "@/app/nex-native/live-commerce/_invite-target-action";
+import type { InviteTarget } from "@/lib/nex-native/live-broadcast/invite-target";
 
 const NEX = {
   bg: "#020914",
@@ -89,6 +92,18 @@ export function LiveViewerPage({
   const [state, setState] = React.useState<LiveViewerState>("idle");
   const [error, setError] = React.useState<string | null>(null);
   const [broadcasterAccountId, setBroadcasterAccountId] = React.useState<string | null>(null);
+  // Owner directive 2026-10-25 (Phase B) · Message panel state. The
+  // broadcaster InviteTarget is resolved on-demand when the viewer
+  // taps Message in the 3-dot slide-out · we do NOT prefetch to avoid
+  // an extra DB roundtrip on every viewer mount. Cached once resolved
+  // so subsequent opens are instant. `isSignedIn` toggled from the
+  // existing `isGuest` sentinel so the panel can route guests through
+  // sign-in rather than attempt an unauthenticated invite.
+  const [messagePanelOpen, setMessagePanelOpen] = React.useState(false);
+  const [inviteTarget, setInviteTarget] = React.useState<InviteTarget | null>(
+    null,
+  );
+  const inviteTargetFetchedRef = React.useRef<string | null>(null);
   const [featuredProduct, setFeaturedProduct] =
     React.useState<LiveProductSnapshot | null>(null);
   const [comments, setComments] = React.useState<readonly LiveCommentPayload[]>([]);
@@ -961,15 +976,56 @@ export function LiveViewerPage({
           isGuest={isGuest}
           replyContext={replyContext}
           onReplyCancel={() => setReplyContext(null)}
+          /* Owner directive 2026-10-25 (Phase B) · the Message pill
+             opens the sealed NEX connection-invitation flow via the
+             existing createFriendRequestAction (NOT a new system).
+             Resolves the broadcaster InviteTarget lazily on first
+             open · caches so re-opens are instant. */
+          onMessagePressed={() => {
+            setMessagePanelOpen(true);
+            if (
+              broadcasterAccountId
+              && inviteTargetFetchedRef.current !== broadcasterAccountId
+            ) {
+              inviteTargetFetchedRef.current = broadcasterAccountId;
+              void getLiveInviteTargetAction(broadcasterAccountId).then(
+                (result) => {
+                  if (result.kind === "ok") setInviteTarget(result.target);
+                  else setInviteTarget(null);
+                },
+              );
+            }
+          }}
           /* Owner directive 2026-10-25 · composer-header author
-             identity. Live viewer passes the broadcaster display
-             name once an account→profile resolver lands; until then
-             a non-identifying placeholder keeps the UI mechanic
-             working. authorIsLive mirrors the real session state so
-             the red ping is honest: it only shows while state ===
-             "live". */
-          authorDisplayName="Broadcaster"
+             identity. Live viewer uses the resolved broadcaster
+             display name when available · otherwise falls back to
+             "Broadcaster" so the placeholder-rotation UX still works.
+             authorIsLive mirrors the real session state so the red
+             ping is honest: it only shows while state === "live". */
+          authorDisplayName={inviteTarget?.displayName ?? "Broadcaster"}
+          authorAvatarUrl={inviteTarget?.avatarUrl ?? undefined}
           authorIsLive={state === "live"}
+        />
+      )}
+      {/* Owner directive 2026-10-25 (Phase B) · MessagePanel reuses the
+          sealed NEX connection-invitation system. It opens when the
+          viewer taps Message in the footer's 3-dot slide-out. When
+          `inviteTarget` is still resolving we pass null · the panel
+          renders a graceful "not invitable yet" state until the
+          server action responds. */}
+      {messagePanelOpen && (
+        <MessagePanel
+          open={messagePanelOpen}
+          onClose={() => setMessagePanelOpen(false)}
+          target={inviteTarget}
+          isGuest={isGuest}
+          signInHref={
+            typeof window !== "undefined"
+              ? `/nex-native/sign-in?returnTo=${encodeURIComponent(
+                  window.location.pathname + window.location.search,
+                )}`
+              : "/nex-native/sign-in"
+          }
         />
       )}
       {isSelf && state === "live" && !isImmersive && (
