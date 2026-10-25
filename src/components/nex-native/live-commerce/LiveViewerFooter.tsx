@@ -820,84 +820,20 @@ export function LiveViewerFooter(
           // overlays the actions when open.
           position: "relative",
           display: "grid",
-          // Owner directive 2026-10-25 · Like heart moves back INTO the
-          // action row at the left · counts render underneath Like /
-          // Share / (Save in panel). Grid columns:
-          //   with goLive: Like  Live  Market  Share  ⋮
-          //   no goLive:   Like         Market  Share  ⋮
-          // Market gets the wider share so it stays the hero CTA.
+          // Owner directive 2026-10-25 (revised again) · Like heart
+          // moved OUT of the action row back to the composer-row right
+          // side (bigger · with count beneath). Action row returns to
+          // its original shape:
+          //   with goLive: Live  Market  Share  ⋮
+          //   no goLive:         Market  Share  ⋮
           gridTemplateColumns: showGoLive
-            ? "1fr 1fr 1.4fr 1fr auto"
-            : "1fr 1.6fr 1fr auto",
+            ? "1fr 1.6fr 1fr auto"
+            : "2fr 1fr auto",
           gap: 6,
           alignItems: "stretch",
           padding: "0 12px",
         }}
       >
-        {/* Owner directive 2026-10-25 · "like heart must have how
-            many likes under and heart correct size". Returned to the
-            action row at the same ~48 px height as the other tiles ·
-            optional count label beneath the heart · hidden at 0 for
-            viewers · visible at 0 for the broadcaster.
-            The spawnFloatingHeart cascade still fires from the tap
-            so the cinematic rise + full-screen shower animation is
-            preserved; only the anchor moved from composer to this
-            tile. */}
-        <button
-          type="button"
-          onClick={() => {
-            props.onLike();
-            setLikePulse((p) => p + 1);
-            spawnFloatingHeart();
-          }}
-          disabled={props.disabled}
-          data-nex-live-footer-like
-          data-nex-live-footer-like-row="true"
-          aria-pressed={props.isLiked ? "true" : "false"}
-          aria-label={props.isLiked ? "Unlike this live stream" : "Like this live stream"}
-          style={{
-            background: "rgba(255,255,255,0.06)",
-            border: `1px solid ${BORDER}`,
-            color: props.isLiked ? RED : TEXT,
-            borderRadius: 12,
-            padding: "6px 6px",
-            cursor: props.disabled ? "not-allowed" : "pointer",
-            display: "inline-flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 2,
-            minHeight: 48,
-            boxSizing: "border-box",
-            fontFamily: "inherit",
-          }}
-        >
-          <span
-            key={likePulse}
-            data-nex-live-footer-like-row-icon
-            aria-hidden
-            style={{
-              fontSize: 20,
-              lineHeight: 1,
-              display: "inline-block",
-              transformOrigin: "center",
-              animation:
-                likePulse > 0
-                  ? "nexLikePulse 320ms ease-out, nex-live-footer-like-idle 1.3s ease-in-out 320ms infinite"
-                  : "nex-live-footer-like-idle 1.3s ease-in-out infinite",
-            }}
-          >
-            {props.isLiked ? "❤" : "♡"}
-          </span>
-          {formatCount(props.likeCount, props.isBroadcaster === true) !== null && (
-            <span
-              data-nex-live-footer-like-count
-              style={{ fontSize: 11, fontWeight: 700, color: TEXT, lineHeight: 1.1 }}
-            >
-              {formatCount(props.likeCount, props.isBroadcaster === true)}
-            </span>
-          )}
-        </button>
         {showGoLive && (
           <a
             href={goLiveHref}
@@ -1102,14 +1038,14 @@ export function LiveViewerFooter(
             flexDirection: "column",
             gap: 8,
             padding: "10px",
-            // Owner directive 2026-10-25 · "container background change
-            // to our navy frosted color". Replace the cyan gradient
-            // with NEX navy frosted (same deep-navy family used by
-            // BAR_BG and the FooterFeaturedCard). Keep the cyan rim +
-            // soft cyan glow because they're what give the panel its
-            // "lifted off the video" silhouette.
+            // Owner directive 2026-10-25 · navy frosted + comments
+            // must stack BEHIND the panel. Panel zIndex 20 beats the
+            // VideoCommentsOverlay (zIndex 2) and any other viewer
+            // chrome; alpha raised to 0.96/0.94 so chat bubbles do
+            // not visually bleed through the translucency. The
+            // backdrop blur still softens whatever shows at the rim.
             background: extraActionsOpen
-              ? "linear-gradient(135deg, rgba(21, 38, 70, 0.82) 0%, rgba(10, 15, 30, 0.78) 100%)"
+              ? "linear-gradient(135deg, rgba(21, 38, 70, 0.96) 0%, rgba(10, 15, 30, 0.94) 100%)"
               : "transparent",
             backdropFilter: extraActionsOpen ? "blur(18px) saturate(140%)" : undefined,
             WebkitBackdropFilter: extraActionsOpen ? "blur(18px) saturate(140%)" : undefined,
@@ -1126,7 +1062,7 @@ export function LiveViewerFooter(
               : "scaleY(0.6) translateY(10px)",
             opacity: extraActionsOpen ? 1 : 0,
             pointerEvents: extraActionsOpen ? "auto" : "none",
-            zIndex: 3,
+            zIndex: 20,
             // Owner directive 2026-10-25 · the panel now hosts a
             // Live Feed Preferences section · may exceed the viewer
             // height when all 15 toggles are expanded. Cap at a safe
@@ -1832,11 +1768,88 @@ export function LiveViewerFooter(
             </svg>
           </button>
         </div>
-        {/* Owner directive 2026-10-25 (revised) · the inline composer
-            Like heart was removed · the Like tile moved back to the
-            action row with a count beneath. The spawnFloatingHeart
-            cascade still fires from the action-row tile, so the
-            cinematic rise + shower is preserved. */}
+        {/* Owner directive 2026-10-25 (revised again) · "move heart
+            back to the footer right side · enlarge 1x the heart".
+            Flex sibling of the composer wrapper · occupies a fixed
+            column on the composer row's right edge · bigger button
+            (48×48) + bigger glyph (34 px) + count label beneath.
+            The spawnFloatingHeart cinematic cascade still fires from
+            here · idle beat animation preserved. Count follows the
+            same broadcaster-aware hide-at-zero rule as before. */}
+        <div
+          data-nex-live-footer-like-column
+          style={{
+            flex: "0 0 auto",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 2,
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              props.onLike();
+              setLikePulse((p) => p + 1);
+              spawnFloatingHeart();
+            }}
+            disabled={props.disabled}
+            data-nex-live-footer-like
+            data-nex-live-footer-like-inline="true"
+            aria-pressed={props.isLiked ? "true" : "false"}
+            aria-label={props.isLiked ? "Unlike this live stream" : "Like this live stream"}
+            style={{
+              width: 48,
+              height: 48,
+              background: "transparent",
+              color: props.isLiked ? RED : "#FFFFFF",
+              fontSize: 34,
+              fontWeight: 900,
+              borderRadius: 999,
+              padding: 0,
+              border: "none",
+              cursor: props.disabled ? "not-allowed" : "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              lineHeight: 1,
+              filter:
+                "drop-shadow(0 1px 2px rgba(0,0,0,0.5)) drop-shadow(0 0 4px rgba(0,0,0,0.3))",
+              fontFamily: "inherit",
+            }}
+          >
+            <span
+              key={likePulse}
+              data-nex-live-footer-like-inline-icon
+              aria-hidden
+              style={{
+                display: "inline-block",
+                transformOrigin: "center",
+                animation:
+                  likePulse > 0
+                    ? "nexLikePulse 320ms ease-out, nex-live-footer-like-idle 1.3s ease-in-out 320ms infinite"
+                    : "nex-live-footer-like-idle 1.3s ease-in-out infinite",
+              }}
+            >
+              {props.isLiked ? "❤" : "♡"}
+            </span>
+          </button>
+          {formatCount(props.likeCount, props.isBroadcaster === true) !== null && (
+            <span
+              data-nex-live-footer-like-count
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: TEXT,
+                lineHeight: 1.1,
+                textShadow: "0 1px 2px rgba(0,0,0,0.55)",
+              }}
+            >
+              {formatCount(props.likeCount, props.isBroadcaster === true)}
+            </span>
+          )}
+        </div>
         </div>
       )}
 

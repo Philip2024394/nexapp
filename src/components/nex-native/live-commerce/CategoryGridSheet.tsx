@@ -246,8 +246,14 @@ export function CategoryGridSheet(
                   position: "relative",
                   aspectRatio: "1 / 1",
                   borderRadius: "50%",
+                  // Owner directive 2026-10-25 · "the category buttons
+                  // same background color as 3 dots container". Match
+                  // the panel's navy frosted gradient (see
+                  // LiveViewerFooter.tsx) · cyan rim preserved as the
+                  // shared accent so tiles still read as a NEX chrome
+                  // family.
                   background:
-                    "linear-gradient(135deg, rgba(0, 175, 255, 0.42) 0%, rgba(0, 116, 255, 0.18) 100%)",
+                    "linear-gradient(135deg, rgba(21, 38, 70, 0.96) 0%, rgba(10, 15, 30, 0.94) 100%)",
                   backdropFilter: "blur(18px) saturate(140%)",
                   WebkitBackdropFilter: "blur(18px) saturate(140%)",
                   border: "2px solid rgba(0, 175, 255, 0.9)",
