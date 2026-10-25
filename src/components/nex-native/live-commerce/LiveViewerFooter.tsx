@@ -347,7 +347,13 @@ export function LiveViewerFooter(
         left: 0,
         right: 0,
         bottom: 0,
-        padding: "10px 12px calc(env(safe-area-inset-bottom, 0px) + 10px)",
+        // Owner directive 2026-10-25 · composer must fit screen width.
+        // The container keeps vertical safe-area + breathing padding
+        // but drops horizontal padding so the inner composer stretches
+        // edge-to-edge. The action-buttons grid re-adds its own
+        // horizontal inset below so Like/Live/Market/Share don't
+        // touch the screen edges.
+        padding: "10px 0 calc(env(safe-area-inset-bottom, 0px) + 10px)",
         // Owner directive 2026-10-24 · "remove the container from
         // footer background". Transparent · the action buttons stand
         // alone over the video. textShadow preserved on individual
@@ -390,6 +396,12 @@ export function LiveViewerFooter(
           gridTemplateColumns: showGoLive ? "1fr 1fr 1.5fr 1fr" : "1fr 2fr 1fr",
           gap: 6,
           alignItems: "stretch",
+          // Owner directive 2026-10-25 · the parent footer no longer
+          // carries horizontal padding (so the composer can stretch
+          // edge-to-edge). Re-add the standard 12px inset here so the
+          // action buttons keep their original spacing from the screen
+          // edges.
+          padding: "0 12px",
         }}
       >
         <button
@@ -758,18 +770,24 @@ export function LiveViewerFooter(
               aria-hidden
               style={{
                 position: "absolute",
-                left: 4,
+                left: 3,
                 top: "50%",
                 transform: "translateY(-50%)",
-                width: 26,
-                height: 26,
-                borderRadius: 5,
+                // Owner directive 2026-10-25 · enlarge the author
+                // bubble a little · 26 → 30 so it fills the composer's
+                // minHeight cleanly. The borderRadius bumps 5 → 6 to
+                // keep the gentle rounded-square silhouette at the new
+                // size, and the initial-letter grows 12 → 14 to
+                // match.
+                width: 30,
+                height: 30,
+                borderRadius: 6,
                 background: "linear-gradient(135deg, #152646 0%, #1E3A6E 100%)",
                 color: "#FFFFFF",
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: 800,
                 letterSpacing: "0.02em",
                 border: "1px solid rgba(255,255,255,0.14)",
@@ -865,11 +883,11 @@ export function LiveViewerFooter(
               color: TEXT,
               borderRadius: 10,
               // Owner directive 2026-10-25 (revised) · leave room on
-              // the LEFT for the 26px square author bubble + 4px inset
-              // + 6px gap. Right-side room for the inline Send button
-              // is unchanged.
+              // the LEFT for the 30px square author bubble + 3px inset
+              // + 6px gap = 39px. Right-side room for the inline Send
+              // button is unchanged.
               padding: hasAuthorIdentity
-                ? "6px 40px 6px 38px"
+                ? "6px 40px 6px 42px"
                 : "6px 40px 6px 10px",
               fontSize: 13,
               lineHeight: 1.3,
