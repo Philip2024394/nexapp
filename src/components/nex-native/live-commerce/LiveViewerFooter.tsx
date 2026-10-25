@@ -393,59 +393,15 @@ export function LiveViewerFooter(
         data-nex-live-viewer-footer-actions
         style={{
           display: "grid",
-          gridTemplateColumns: showGoLive ? "1fr 1fr 1.5fr 1fr" : "1fr 2fr 1fr",
+          // Owner directive 2026-10-25 · the Like button moves to the
+          // composer, so this row carries only Live / Market / Share
+          // (3-col) or Market / Share (2-col when goLive is hidden).
+          gridTemplateColumns: showGoLive ? "1fr 1.6fr 1fr" : "2fr 1fr",
           gap: 6,
           alignItems: "stretch",
-          // Owner directive 2026-10-25 · the parent footer no longer
-          // carries horizontal padding (so the composer can stretch
-          // edge-to-edge). Re-add the standard 12px inset here so the
-          // action buttons keep their original spacing from the screen
-          // edges.
           padding: "0 12px",
         }}
       >
-        <button
-          type="button"
-          onClick={() => {
-            props.onLike();
-            setLikePulse((p) => p + 1);
-            spawnFloatingHeart();
-          }}
-          disabled={props.disabled}
-          data-nex-live-footer-like
-          aria-pressed={props.isLiked ? "true" : "false"}
-          aria-label={props.isLiked ? "Unlike this live stream" : "Like this live stream"}
-          style={{
-            background: props.isLiked ? "rgba(255, 51, 85, 0.18)" : "rgba(255,255,255,0.06)",
-            border: `1px solid ${props.isLiked ? RED : BORDER}`,
-            color: props.isLiked ? RED : TEXT,
-            fontSize: 15,
-            fontWeight: 700,
-            borderRadius: 12,
-            padding: "10px 6px",
-            cursor: props.disabled ? "not-allowed" : "pointer",
-            display: "inline-flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 2,
-            minHeight: 48,
-          }}
-        >
-          <span
-            key={likePulse}
-            aria-hidden
-            style={{
-              fontSize: 18,
-              animation: likePulse > 0 ? "nexLikePulse 320ms ease-out" : undefined,
-              display: "inline-block",
-            }}
-          >
-            {props.isLiked ? "❤" : "♡"}
-          </span>
-          <span style={{ fontSize: 11, fontWeight: 700 }}>Like</span>
-        </button>
-
         {showGoLive && (
           <a
             href={goLiveHref}
@@ -726,6 +682,13 @@ export function LiveViewerFooter(
             // edge of the text field instead of sitting beside it.
             position: "relative",
             display: "block",
+            // Owner directive 2026-10-25 (revised) · give the composer
+            // slim horizontal breathing room so it doesn't butt against
+            // the screen edges on narrow phones (320–360 px). The row
+            // still reads as "fit the width" because the inset is
+            // minimal and the field is noticeably wider than the
+            // 3-button actions row above.
+            margin: "0 8px",
             // Owner directive 2026-10-24 (keypad audit) · "turn off
             // that text is selecting blue". Suppress the native blue
             // selection highlight + the tap-flash on iOS/Android for
@@ -754,6 +717,20 @@ export function LiveViewerFooter(
             @keyframes nex-live-footer-author-dot {
               0%, 100% { opacity: 1;    }
               50%      { opacity: 0.55; }
+            }
+            /* Owner directive 2026-10-25 · subtle "alive" idle beat
+               on the inline Like heart · small scale-up every 1.3 s
+               so the heart looks alive while idle. Respects
+               prefers-reduced-motion. */
+            @keyframes nex-live-footer-like-idle {
+              0%, 100% { transform: translateY(0)      scale(1); }
+              40%      { transform: translateY(-1.2px) scale(1.08); }
+              70%      { transform: translateY(0)      scale(0.98); }
+            }
+            @media (prefers-reduced-motion: reduce) {
+              [data-nex-live-footer-like-inline-icon] {
+                animation: none !important;
+              }
             }
           `}</style>
           {hasAuthorIdentity && (
@@ -884,17 +861,78 @@ export function LiveViewerFooter(
               borderRadius: 10,
               // Owner directive 2026-10-25 (revised) · leave room on
               // the LEFT for the 30px square author bubble + 3px inset
-              // + 6px gap = 39px. Right-side room for the inline Send
-              // button is unchanged.
+              // + 6px gap = 39px, and leave room on the RIGHT for
+              // BOTH the inline Like heart (28px @ right:36) AND the
+              // inline Send (28px @ right:4) + 6px gap = 74px.
               padding: hasAuthorIdentity
-                ? "6px 40px 6px 42px"
-                : "6px 40px 6px 10px",
+                ? "6px 74px 6px 42px"
+                : "6px 74px 6px 10px",
               fontSize: 13,
               lineHeight: 1.3,
               outline: "none",
               fontFamily: "inherit",
             }}
           />
+          {/* Owner directive 2026-10-25 · the Like heart lives inside
+              the composer on the right side (previously in the actions
+              row above). Idle state: a subtle "alive" pulse. On tap:
+              fires the existing spawnFloatingHeart flow (big heart
+              rises → shower). The heart sits to the LEFT of the Send
+              button; both are absolute inside the composer wrapper. */}
+          <button
+            type="button"
+            onClick={() => {
+              props.onLike();
+              setLikePulse((p) => p + 1);
+              spawnFloatingHeart();
+            }}
+            disabled={props.disabled}
+            data-nex-live-footer-like
+            data-nex-live-footer-like-inline="true"
+            aria-pressed={props.isLiked ? "true" : "false"}
+            aria-label={props.isLiked ? "Unlike this live stream" : "Like this live stream"}
+            style={{
+              position: "absolute",
+              right: 36,
+              top: "50%",
+              transform: "translateY(-50%)",
+              width: 28,
+              height: 28,
+              background: "transparent",
+              color: props.isLiked ? RED : "#FFFFFF",
+              fontSize: 18,
+              fontWeight: 900,
+              borderRadius: 999,
+              padding: 0,
+              border: "none",
+              cursor: props.disabled ? "not-allowed" : "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              lineHeight: 1,
+              filter:
+                "drop-shadow(0 1px 2px rgba(0,0,0,0.5)) drop-shadow(0 0 4px rgba(0,0,0,0.3))",
+            }}
+          >
+            <span
+              key={likePulse}
+              data-nex-live-footer-like-inline-icon
+              aria-hidden
+              style={{
+                display: "inline-block",
+                // Owner directive 2026-10-25 · chain the idle "alive"
+                // beat with the one-shot pulse on tap. The pulse key
+                // changes per tap so the animation restarts.
+                animation:
+                  likePulse > 0
+                    ? "nexLikePulse 320ms ease-out, nex-live-footer-like-idle 1.3s ease-in-out 320ms infinite"
+                    : "nex-live-footer-like-idle 1.3s ease-in-out infinite",
+                transformOrigin: "center",
+              }}
+            >
+              {props.isLiked ? "❤" : "♡"}
+            </span>
+          </button>
           <button
             type="button"
             onClick={handleSend}

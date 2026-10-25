@@ -177,29 +177,41 @@ describe("LiveViewerFooter · rendered", () => {
     expect(html).toContain("data-nex-mock-nex-textarea");
   });
 
-  test("layout order · Like · View Shop · Share (left · center · right)", () => {
-    // Owner directive 2026-10-25 (F2) · the previous `indexOf` on
-    // raw HTML matched the data-attribute names inside the <style>
-    // blocks (which list `like,share,go-live,view-shop` in CSS
-    // selector order) · not the actual rendered buttons. Fix: locate
-    // the opening <button or <a tag that carries each attribute so
-    // we're measuring real DOM order.
+  test("layout order · actions row = View Shop · Share · Like now inline in composer (right of text input)", () => {
+    // Owner directive 2026-10-25 · the Like heart moved OUT of the
+    // actions row and INTO the composer, sitting to the LEFT of the
+    // Send button (right side of the text field). The actions row
+    // now carries only Live / View Shop / Share (3-col when goLive
+    // is shown · default) or View Shop / Share (2-col when hidden).
+    //
+    // Observable DOM order post-change: View Shop → Share (actions
+    // row) → Like → Send (composer). The old left/center/right
+    // Like/ViewShop/Share arrangement no longer applies.
     const html = renderToStaticMarkup(
       React.createElement(LiveViewerFooter, base),
     );
     const findTagIdx = (attr: string): number => {
-      // Match the first `<button ... data-nex-...` or
-      // `<a ... data-nex-...` opening tag that contains the attr.
       const re = new RegExp(`<(?:button|a)\\b[^>]*${attr}\\b`, "");
       const m = re.exec(html);
       return m ? m.index : -1;
     };
-    const likeIdx = findTagIdx("data-nex-live-footer-like");
     const viewShopIdx = findTagIdx("data-nex-live-footer-view-shop");
     const shareIdx = findTagIdx("data-nex-live-footer-share");
-    expect(likeIdx).toBeGreaterThan(-1);
-    expect(viewShopIdx).toBeGreaterThan(likeIdx);
+    const likeIdx = findTagIdx("data-nex-live-footer-like");
+    const sendIdx = findTagIdx("data-nex-live-footer-send");
+    expect(viewShopIdx).toBeGreaterThan(-1);
+    // Actions row order: View Shop before Share.
     expect(shareIdx).toBeGreaterThan(viewShopIdx);
+    // Composer order: Like (now inline) comes AFTER both actions-row
+    // items and BEFORE Send.
+    expect(likeIdx).toBeGreaterThan(shareIdx);
+    expect(sendIdx).toBeGreaterThan(likeIdx);
+    // Explicit assertion: the inline marker is set on the composer
+    // Like button so test selectors can distinguish it from any
+    // future placement.
+    expect(html).toMatch(
+      /<button[^>]*data-nex-live-footer-like[^>]*data-nex-live-footer-like-inline="true"/,
+    );
   });
 
   test("View Shop button is an anchor to the provided href", () => {
