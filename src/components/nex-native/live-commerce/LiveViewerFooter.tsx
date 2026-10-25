@@ -551,23 +551,13 @@ export function LiveViewerFooter(
     };
   }, [extraActionsOpen, panelView]);
 
-  // Owner directive 2026-10-26 (revised) · composer placeholder
-  // rotates every 3 SECONDS between the author/business name and
-  // "Type message here" when an author display name is provided.
-  // The rotation only drives the placeholder attribute · as soon
-  // as the viewer types a character the native placeholder is
-  // hidden, so the user never sees the rotation interfere with
-  // their own draft.
-  const [rotateToName, setRotateToName] = React.useState(true);
-  React.useEffect(() => {
-    if (!props.authorDisplayName) return;
-    const id = window.setInterval(() => {
-      setRotateToName((v) => !v);
-    }, 3000);
-    return () => {
-      window.clearInterval(id);
-    };
-  }, [props.authorDisplayName]);
+  // Owner directive 2026-10-26 (revised) · "name should be white
+  // color and position top · no change static always · but under
+  // should be Lets Connect Type A Message · this is slowly heart
+  // beat". The composer no longer rotates placeholder strings · it
+  // overlays a two-line label (name + CTA) on top of the textarea
+  // when the user has not typed anything. The CTA line pulses
+  // slowly for a professional, inviting feel.
   const hasAuthorIdentity =
     typeof props.authorDisplayName === "string" &&
     props.authorDisplayName.length > 0;
@@ -577,10 +567,13 @@ export function LiveViewerFooter(
   const dynamicComposerPlaceholder: string = (() => {
     if (props.replyContext)
       return `Reply to ${props.replyContext.replyToAuthorDisplayName}…`;
+    // When we have an author identity we suppress the NATIVE
+    // placeholder (returned empty) because the overlay below
+    // handles the two-line visual. Preserves the "Type message
+    // here" copy as the ARIA label so screen readers still get a
+    // description.
     if (!hasAuthorIdentity) return "Type message here";
-    return rotateToName
-      ? (props.authorDisplayName as string)
-      : "Type message here";
+    return "";
   })();
   const goLiveHref = props.goLiveHref ?? "/nex-native/live-commerce/go-live";
   const showGoLive = goLiveHref !== "";
@@ -1606,9 +1599,15 @@ export function LiveViewerFooter(
                 fontSize: 15,
                 fontWeight: 800,
                 letterSpacing: "0.02em",
-                border: "1px solid rgba(255,255,255,0.14)",
-                boxShadow: "0 0 0 1px rgba(2,9,20,0.6)",
-                overflow: "visible",
+                // Owner directive 2026-10-26 · "profile image should
+                // be full size in profile container no white at top
+                // of bottom". Removed the 1px border + the inset
+                // boxShadow · the img now fills the square edge-to-
+                // edge. Border-radius on img matches the container
+                // (7 → 7) so corners align perfectly.
+                border: "none",
+                boxShadow: "none",
+                overflow: "hidden",
                 zIndex: 1,
                 pointerEvents: "none",
               }}
@@ -1621,7 +1620,8 @@ export function LiveViewerFooter(
                     width: "100%",
                     height: "100%",
                     objectFit: "cover",
-                    borderRadius: 4,
+                    borderRadius: 7,
+                    display: "block",
                   }}
                 />
               ) : (
@@ -1710,6 +1710,80 @@ export function LiveViewerFooter(
               )}
             </div>
           )}
+          {/* Owner directive 2026-10-26 · composer two-line overlay ·
+              static white name on top + slowly-pulsing CTA
+              underneath. Replaces the earlier rotating placeholder.
+              Overlay is pointer-events: none so taps still fall
+              through to the textarea. Hides automatically when the
+              user starts typing (draft.length > 0). Only renders
+              when we have an author identity · falls back to the
+              native textarea placeholder otherwise. */}
+          {hasAuthorIdentity && draft.length === 0 && !props.replyContext && (
+            <div
+              data-nex-live-footer-composer-overlay
+              aria-hidden
+              style={{
+                position: "absolute",
+                left: 48,
+                right: 44,
+                top: "50%",
+                transform: "translateY(-50%)",
+                pointerEvents: "none",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                gap: 1,
+                minWidth: 0,
+                overflow: "hidden",
+              }}
+            >
+              <span
+                data-nex-live-footer-composer-overlay-name
+                style={{
+                  fontSize: 16,
+                  fontWeight: 800,
+                  color: "#FFFFFF",
+                  lineHeight: 1.1,
+                  letterSpacing: "0.01em",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  textShadow: "0 1px 2px rgba(0,0,0,0.55)",
+                }}
+              >
+                {props.authorDisplayName}
+              </span>
+              <span
+                data-nex-live-footer-composer-overlay-cta
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: "rgba(217, 230, 245, 0.9)",
+                  lineHeight: 1.15,
+                  letterSpacing: "0.01em",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  animation:
+                    "nex-live-footer-composer-cta-pulse 2.4s ease-in-out infinite",
+                }}
+              >
+                Let&rsquo;s Connect · Type A Message
+              </span>
+              <style>{`
+                @keyframes nex-live-footer-composer-cta-pulse {
+                  0%, 100% { opacity: 0.55; }
+                  50%      { opacity: 1;    }
+                }
+                @media (prefers-reduced-motion: reduce) {
+                  [data-nex-live-footer-composer-overlay-cta] {
+                    animation: none !important;
+                    opacity: 0.9 !important;
+                  }
+                }
+              `}</style>
+            </div>
+          )}
           <NexTextarea
             value={draft}
             onChange={setDraft}
@@ -1717,7 +1791,7 @@ export function LiveViewerFooter(
             maxLength={LIVE_COMMENT_MAX_LENGTH}
             data-nex-live-footer-text-input
             data-nex-live-footer-placeholder-rotation={
-              hasAuthorIdentity ? (rotateToName ? "name" : "prompt") : "static"
+              hasAuthorIdentity ? "overlay" : "static"
             }
             disabled={props.disabled}
             // Owner directive 2026-10-24 (sealed app-wide rule) ·
