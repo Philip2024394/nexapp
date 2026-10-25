@@ -148,8 +148,17 @@ describe("LiveViewerFooter · rendered", () => {
   };
 
   test("renders Like, View Shop, Share, and the text input", () => {
+    // Owner directive 2026-10-25 (F2) · the default label is
+    // context-aware since the 2026-10-24 "View Shop" vs "View
+    // Market" change (LiveViewerFooter.tsx line 56). Callers that
+    // want the "View Shop" label pass it explicitly as
+    // `viewTargetLabel` · when omitted, the fallback is "Shop". The
+    // test exercises the explicit-label path.
     const html = renderToStaticMarkup(
-      React.createElement(LiveViewerFooter, base),
+      React.createElement(LiveViewerFooter, {
+        ...base,
+        viewTargetLabel: "View Shop",
+      }),
     );
     expect(html).toContain("data-nex-live-footer-like");
     expect(html).toContain("data-nex-live-footer-view-shop");
@@ -169,12 +178,25 @@ describe("LiveViewerFooter · rendered", () => {
   });
 
   test("layout order · Like · View Shop · Share (left · center · right)", () => {
+    // Owner directive 2026-10-25 (F2) · the previous `indexOf` on
+    // raw HTML matched the data-attribute names inside the <style>
+    // blocks (which list `like,share,go-live,view-shop` in CSS
+    // selector order) · not the actual rendered buttons. Fix: locate
+    // the opening <button or <a tag that carries each attribute so
+    // we're measuring real DOM order.
     const html = renderToStaticMarkup(
       React.createElement(LiveViewerFooter, base),
     );
-    const likeIdx = html.indexOf("data-nex-live-footer-like");
-    const viewShopIdx = html.indexOf("data-nex-live-footer-view-shop");
-    const shareIdx = html.indexOf("data-nex-live-footer-share");
+    const findTagIdx = (attr: string): number => {
+      // Match the first `<button ... data-nex-...` or
+      // `<a ... data-nex-...` opening tag that contains the attr.
+      const re = new RegExp(`<(?:button|a)\\b[^>]*${attr}\\b`, "");
+      const m = re.exec(html);
+      return m ? m.index : -1;
+    };
+    const likeIdx = findTagIdx("data-nex-live-footer-like");
+    const viewShopIdx = findTagIdx("data-nex-live-footer-view-shop");
+    const shareIdx = findTagIdx("data-nex-live-footer-share");
     expect(likeIdx).toBeGreaterThan(-1);
     expect(viewShopIdx).toBeGreaterThan(likeIdx);
     expect(shareIdx).toBeGreaterThan(viewShopIdx);
@@ -245,8 +267,15 @@ describe("Viewer client · mounts the footer + comments overlay", () => {
     expect(VIEWER_CLIENT).toMatch(
       /import \{ LiveCommentsOverlay \} from "@\/components\/nex-native\/live-commerce\/LiveCommentsOverlay"/,
     );
+    // Owner directive 2026-10-25 (F2) · the LiveViewerFooter import
+    // was legitimately extended to include `type LiveReplyContext`
+    // between `LiveViewerFooter` and `type ShareEvidence` as part
+    // of the owner-authorised reply-context feature. Allow any
+    // intermediate imports (whitespace, types, named imports)
+    // between them without weakening the assertion that both the
+    // component and ShareEvidence are imported from the same path.
     expect(VIEWER_CLIENT).toMatch(
-      /LiveViewerFooter,\s*type ShareEvidence,?\s*\} from "@\/components\/nex-native\/live-commerce\/LiveViewerFooter"/,
+      /\bLiveViewerFooter\b[\s\S]*?\btype ShareEvidence\b[\s\S]*?\} from "@\/components\/nex-native\/live-commerce\/LiveViewerFooter"/,
     );
   });
 
@@ -424,7 +453,14 @@ describe("Viewer client · mounts the footer + comments overlay", () => {
   });
 
   test("comment post echoes locally (self-broadcast is filtered by the channel)", () => {
-    expect(VIEWER_CLIENT).toMatch(/handleSendComment[\s\S]*?channel\.post\(text\)/);
+    // Owner directive 2026-10-25 (F2) · `channel.post` legitimately
+    // takes an optional second argument (the reply context) since
+    // the 2026-10-24 reply-mode feature. Allow either `post(text)`
+    // or `post(text, <anything>)` without weakening the assertion
+    // that `text` is the first argument.
+    expect(VIEWER_CLIENT).toMatch(
+      /handleSendComment[\s\S]*?channel\.post\(\s*text[,)\s]/,
+    );
     expect(VIEWER_CLIENT).toMatch(/handleSendComment[\s\S]*?setComments/);
   });
 });
