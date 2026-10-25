@@ -264,22 +264,29 @@ export function CategoryGridSheet(
                 {/* Icon · high-quality white line-art from lucide-react
                     · owner directive 2026-10-25 "white icons high
                     quality · center on buttons and smaller size".
-                    Centred both axes in the top ~55% of the button
-                    (above the moon-shape label strip at the bottom).
-                    Container shrunk 46% → 32% for a tidier silhouette. */}
+                    Owner directive 2026-10-25 (revised again) · "move
+                    down the icon on buttons · center button position
+                    over text" — icon now sits directly above the
+                    moon-strip label instead of in the upper third of
+                    the tile. Container shrunk 46% → 32% for a tidier
+                    silhouette. */}
                 <span
                   aria-hidden
                   data-nex-category-tile-icon
                   style={{
                     position: "absolute",
                     left: "50%",
-                    // Owner directive 2026-10-25 (revised) · center
-                    // the icon in the upper half of the tile (above
-                    // the moon strip which spans the bottom 48%). The
-                    // 27% anchor + translate(-50%, -50%) puts the
-                    // icon's visual centre at the mid-point of the
-                    // tile's upper 54%.
-                    top: "27%",
+                    // Owner directive 2026-10-25 (revised) · the icon
+                    // was anchored at `top: 27%` (upper third of the
+                    // tile). The owner wants the icon centred directly
+                    // OVER the label text that lives inside the
+                    // moon-strip at the bottom. Moon-strip spans the
+                    // bottom 48% of the tile · its top edge is at
+                    // ~52% from the top. We anchor the icon's visual
+                    // centre at 42% so the icon's bottom edge rests
+                    // just above the moon-strip's top edge with ~4%
+                    // breathing room, directly above the text.
+                    top: "42%",
                     transform: "translate(-50%, -50%)",
                     width: "32%",
                     height: "32%",
