@@ -1301,9 +1301,11 @@ export function LiveViewerFooter(
           )}
           aria-label="Video playback position"
           style={{
+            // Owner directive 2026-10-25 · 30 px side insets so the
+            // bar never touches the screen edges on narrow phones.
             position: "relative",
             height: 2,
-            margin: "4px 8px 0",
+            margin: "4px 30px 0",
             background: "rgba(255, 255, 255, 0.18)",
             borderRadius: 999,
             overflow: "hidden",

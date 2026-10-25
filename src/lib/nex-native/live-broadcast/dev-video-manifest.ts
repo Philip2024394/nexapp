@@ -346,16 +346,44 @@ export function devVideoPublicUrl(entry: DevVideoManifestEntry): string {
   return `/dev/live-videos/${entry.filename}`;
 }
 
+/** Owner directive 2026-10-25 · 5 mock dev NEX accounts seeded via
+ *  `scripts/seed-dev-mock-accounts.mjs` into the sealed Supabase
+ *  project `ijvqdvsvwtwxzcqmoqit`. Dev manifest entries rotate
+ *  round-robin through these owners so the Live Message panel can
+ *  resolve a real `nex_handle` + `display_name` + country when the
+ *  viewer taps Message. Each dev video deterministically maps to
+ *  one owner by `index % DEV_MOCK_OWNER_ACCOUNT_IDS.length`.
+ *
+ *  These five UUIDs are the deterministic ids inserted by the seed
+ *  script · recognisable prefixes (1111.., 2222.., etc.) make
+ *  cleanup trivial if the owner ever authorises it. */
+export const DEV_MOCK_OWNER_ACCOUNT_IDS: readonly string[] = [
+  "11111111-1111-4111-8111-111111111111", // nex-99901 · Sari Dewi
+  "22222222-2222-4222-8222-222222222222", // nex-99902 · Rizky Pratama
+  "33333333-3333-4333-8333-333333333333", // nex-99903 · Budi Setiawan
+  "44444444-4444-4444-8444-444444444444", // nex-99904 · Maya Putri
+  "55555555-5555-4555-8555-555555555555", // nex-99905 · Dika Ananda
+];
+
+function devOwnerForEntry(entry: DevVideoManifestEntry): string {
+  // Round-robin by the entry's position in the manifest · deterministic.
+  const idx = DEV_VIDEO_MANIFEST.findIndex((e) => e.id === entry.id);
+  if (idx < 0) return DEV_MOCK_OWNER_ACCOUNT_IDS[0]!;
+  return DEV_MOCK_OWNER_ACCOUNT_IDS[idx % DEV_MOCK_OWNER_ACCOUNT_IDS.length]!;
+}
+
 /** Project a dev-manifest entry into the UploadedVideoRow shape
- *  that the rest of the feed pipeline consumes. Fields that are not
- *  meaningful in dev mode (owner_account_id, business_id,
- *  storage_bucket) get safe placeholder values. */
+ *  that the rest of the feed pipeline consumes. The dev-mode
+ *  `owner_account_id` resolves to one of 5 seeded mock accounts
+ *  (see DEV_MOCK_OWNER_ACCOUNT_IDS) so the Message panel renders a
+ *  real broadcaster identity. `business_id` + `storage_bucket` keep
+ *  their safe placeholder values. */
 export function devManifestToRow(
   entry: DevVideoManifestEntry,
 ): UploadedVideoRow {
   return {
     id: entry.id,
-    owner_account_id: "00000000-0000-0000-0000-000000000000",
+    owner_account_id: devOwnerForEntry(entry),
     business_id: null,
     title: entry.title,
     caption: entry.caption,
