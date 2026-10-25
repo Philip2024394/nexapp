@@ -1075,17 +1075,14 @@ export function LiveViewerFooter(
             opacity: extraActionsOpen ? 1 : 0,
             pointerEvents: extraActionsOpen ? "auto" : "none",
             zIndex: 20,
-            // Owner directive 2026-10-25 · the panel now hosts a
-            // Live Feed Preferences section · may exceed the viewer
-            // height when all 15 toggles are expanded. Cap at a safe
-            // mobile height and allow vertical scroll · the outside-
-            // tap close listener still fires because the scrim covers
-            // document, not the panel. `overscroll-behavior: contain`
-            // prevents the page from scrolling when a scroll bubbles
-            // out of the panel.
-            maxHeight: "calc(100vh - 170px)",
-            overflowY: "auto",
-            overscrollBehavior: "contain",
+            // Owner directive 2026-10-25 (revised) · "the 3 dots
+            // container must not enlarge but the inner can scrolling
+            // when need to see the other toggles". The panel itself
+            // no longer scrolls · it sizes to its content (buttons +
+            // optional Feed section). The preferences section inside
+            // caps its own height and scrolls internally, so opening
+            // the Feed accordion does not make the container visually
+            // taller than its baseline.
             // Owner directive 2026-10-25 · "control the container that
             // I can select text from any place without all text being
             // selected". Explicitly ENABLE native text selection on

@@ -228,6 +228,16 @@ export function LiveFeedPreferencesSection(): React.JSX.Element {
         display: "flex",
         flexDirection: "column",
         gap: 6,
+        // Owner directive 2026-10-25 · "the 3 dots container must not
+        // enlarge but the inner can scrolling when need to see the
+        // other toggles". The section itself scrolls internally
+        // when the viewer expands "Show more preferences", so the
+        // outer panel does not grow taller when Feed is opened.
+        // `overscroll-behavior: contain` prevents the page from
+        // scrolling when a scroll bubbles out of the section.
+        maxHeight: 300,
+        overflowY: "auto",
+        overscrollBehavior: "contain",
       }}
     >
       {/* Owner directive 2026-10-25 · "remove the header buttons from
