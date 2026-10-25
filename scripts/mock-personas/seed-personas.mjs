@@ -130,14 +130,15 @@ async function upsertNexAccount(p, supabaseUserId) {
 async function upsertProfile(p, avatarUrl) {
   await pgClient.query(
     `INSERT INTO nex_account_profile
-       (account_id, kind, avatar_url, location_label, is_public, is_discoverable)
-     VALUES ($1, 'exploring', $2, $3, true, true)
+       (account_id, kind, avatar_url, location_label, profession, is_public, is_discoverable)
+     VALUES ($1, 'exploring', $2, $3, $4, true, true)
      ON CONFLICT (account_id) DO UPDATE SET
        avatar_url      = EXCLUDED.avatar_url,
        location_label  = EXCLUDED.location_label,
+       profession      = EXCLUDED.profession,
        is_public       = true,
        is_discoverable = true`,
-    [p.id, avatarUrl, p.city],
+    [p.id, avatarUrl, p.city, p.profession],
   );
 }
 
