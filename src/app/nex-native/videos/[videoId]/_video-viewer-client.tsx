@@ -476,38 +476,6 @@ export function VideoViewerClient({
 
   return (
     <>
-      {devRoleBanner && (
-        /* Owner directive 2026-10-25 · dev-only role banner so you can
-           tell at a glance which role the current URL represents. Fixed
-           top-left · small · high z-index. Never shipped on real routes. */
-        <div
-          data-nex-video-viewer-dev-banner
-          data-nex-video-viewer-dev-banner-role={devRoleBanner}
-          style={{
-            position: "fixed",
-            top: 6,
-            left: 6,
-            zIndex: 1000,
-            padding: "3px 8px",
-            borderRadius: 999,
-            background:
-              devRoleBanner === "seller"
-                ? "rgba(255, 193, 7, 0.95)"
-                : "rgba(0, 175, 255, 0.95)",
-            color: "#0A0F1E",
-            fontSize: 10,
-            fontWeight: 900,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            boxShadow: "0 2px 6px -2px rgba(0,0,0,0.6)",
-            pointerEvents: "none",
-            fontFamily:
-              "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-          }}
-        >
-          DEV · {devRoleBanner === "seller" ? "Seller" : "User"}
-        </div>
-      )}
     <main
       data-nex-video-viewer
       data-nex-video-viewer-id={video.id}
@@ -743,6 +711,36 @@ export function VideoViewerClient({
                   }}
                 >
                   AI
+                </span>
+              )}
+              {devRoleBanner && (
+                /* Owner directive 2026-10-25 · "badge must displaying
+                   for dev seller and dev user under broadcasting" ·
+                   render under the "Broadcasted {date}" line, inside
+                   the header. Never renders on real routes. */
+                <span
+                  data-nex-video-viewer-dev-banner
+                  data-nex-video-viewer-dev-banner-role={devRoleBanner}
+                  style={{
+                    display: "block",
+                    marginTop: 3,
+                    padding: "2px 7px",
+                    borderRadius: 999,
+                    width: "fit-content",
+                    background:
+                      devRoleBanner === "seller"
+                        ? "rgba(255, 193, 7, 0.95)"
+                        : "rgba(0, 175, 255, 0.95)",
+                    color: "#0A0F1E",
+                    fontSize: 9,
+                    fontWeight: 900,
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    lineHeight: 1.4,
+                    boxShadow: "0 1px 3px -1px rgba(0,0,0,0.55)",
+                  }}
+                >
+                  DEV · {devRoleBanner === "seller" ? "Seller" : "User"}
                 </span>
               )}
             </div>
