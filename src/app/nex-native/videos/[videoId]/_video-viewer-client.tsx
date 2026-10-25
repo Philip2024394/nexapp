@@ -72,6 +72,9 @@ export function VideoViewerClient({
   likeCount,
   shareCount,
   saveCount,
+  authorDisplayNameOverride,
+  authorAvatarUrlOverride,
+  authorIsLiveOverride,
 }: {
   readonly video: UploadedVideoRow;
   readonly publicUrl: string;
@@ -101,6 +104,14 @@ export function VideoViewerClient({
   readonly likeCount?: number;
   readonly shareCount?: number;
   readonly saveCount?: number;
+  /** Owner directive 2026-10-26 · dev-route overrides for the
+   *  author chrome. When provided, these win over the default
+   *  (`authorDisplayName = video.title`, no avatar, not live) so a
+   *  dev page can mount the viewer with a seeded persona's identity
+   *  in the composer header + the sealed red "live" ping dot. */
+  readonly authorDisplayNameOverride?: string;
+  readonly authorAvatarUrlOverride?: string;
+  readonly authorIsLiveOverride?: boolean;
 }): React.JSX.Element {
   const router = useRouter();
   const [isLiked, setIsLiked] = React.useState(false);
@@ -1094,8 +1105,9 @@ export function VideoViewerClient({
            display name until a real author join (owner_account_id →
            display_name/avatar_url) lands. Recorded content is not
            currently live so authorIsLive stays false (no red ping). */
-        authorDisplayName={video.title}
-        authorIsLive={false}
+        authorDisplayName={authorDisplayNameOverride ?? video.title}
+        authorAvatarUrl={authorAvatarUrlOverride ?? null}
+        authorIsLive={authorIsLiveOverride ?? false}
         isBroadcaster={isBroadcasterPreview}
         broadcasterProducts={mockBroadcasterProducts}
         likeCount={likeCount}

@@ -544,18 +544,19 @@ export function LiveViewerFooter(
     };
   }, [extraActionsOpen, panelView]);
 
-  // Owner directive 2026-10-25 · composer placeholder rotates every
-  // 2 seconds between the author name and "Type Message…" when an
-  // author display name is provided. The rotation only drives the
-  // placeholder attribute · as soon as the viewer types a character
-  // the native placeholder is hidden, so the user never sees the
-  // rotation interfere with their own draft.
+  // Owner directive 2026-10-26 (revised) · composer placeholder
+  // rotates every 3 SECONDS between the author/business name and
+  // "Type message here" when an author display name is provided.
+  // The rotation only drives the placeholder attribute · as soon
+  // as the viewer types a character the native placeholder is
+  // hidden, so the user never sees the rotation interfere with
+  // their own draft.
   const [rotateToName, setRotateToName] = React.useState(true);
   React.useEffect(() => {
     if (!props.authorDisplayName) return;
     const id = window.setInterval(() => {
       setRotateToName((v) => !v);
-    }, 2000);
+    }, 3000);
     return () => {
       window.clearInterval(id);
     };
@@ -569,10 +570,10 @@ export function LiveViewerFooter(
   const dynamicComposerPlaceholder: string = (() => {
     if (props.replyContext)
       return `Reply to ${props.replyContext.replyToAuthorDisplayName}…`;
-    if (!hasAuthorIdentity) return "Say something…";
+    if (!hasAuthorIdentity) return "Type message here";
     return rotateToName
       ? (props.authorDisplayName as string)
-      : "Type Message…";
+      : "Type message here";
   })();
   const goLiveHref = props.goLiveHref ?? "/nex-native/live-commerce/go-live";
   const showGoLive = goLiveHref !== "";
