@@ -745,9 +745,11 @@ export function LiveViewerFooter(
             }
           `}</style>
           {hasAuthorIdentity && (
-            /* Owner directive 2026-10-25 · author identity bubble
-               inside the composer · 24px avatar on the left · red
-               ping on the top-right when the author is live/online. */
+            /* Owner directive 2026-10-25 (revised) · author identity
+               bubble inside the composer. SQUARE shape (slightly
+               rounded corners) · sized to fit the textarea height
+               with a little space top + bottom. Red ping anchors to
+               the top-right corner when the author is live. */
             <div
               data-nex-live-footer-author
               data-nex-live-footer-author-live={
@@ -756,18 +758,18 @@ export function LiveViewerFooter(
               aria-hidden
               style={{
                 position: "absolute",
-                left: 6,
+                left: 4,
                 top: "50%",
                 transform: "translateY(-50%)",
-                width: 24,
-                height: 24,
-                borderRadius: 999,
+                width: 26,
+                height: 26,
+                borderRadius: 5,
                 background: "linear-gradient(135deg, #152646 0%, #1E3A6E 100%)",
                 color: "#FFFFFF",
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 800,
                 letterSpacing: "0.02em",
                 border: "1px solid rgba(255,255,255,0.14)",
@@ -785,7 +787,7 @@ export function LiveViewerFooter(
                     width: "100%",
                     height: "100%",
                     objectFit: "cover",
-                    borderRadius: 999,
+                    borderRadius: 4,
                   }}
                 />
               ) : (
@@ -862,10 +864,10 @@ export function LiveViewerFooter(
               border: `1px solid ${BORDER}`,
               color: TEXT,
               borderRadius: 10,
-              // Owner directive 2026-10-25 · leave room on the LEFT
-              // for the 24px author avatar bubble + 6px inset + 6px
-              // gap, and keep the existing right-side room for the
-              // inline Send button.
+              // Owner directive 2026-10-25 (revised) · leave room on
+              // the LEFT for the 26px square author bubble + 4px inset
+              // + 6px gap. Right-side room for the inline Send button
+              // is unchanged.
               padding: hasAuthorIdentity
                 ? "6px 40px 6px 38px"
                 : "6px 40px 6px 10px",
