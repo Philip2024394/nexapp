@@ -114,11 +114,19 @@ export interface LiveViewerFooterProps {
    *  `<MessagePanel>` and toggle its `open` state in response. */
   readonly onMessagePressed?: () => void;
   /** Owner directive 2026-10-25 · optional 0..100 playback progress
-   *  for RECORDED videos. When a number is passed, a thin progress
-   *  bar renders below the composer row (white track, cyan fill).
-   *  Omit for live sessions · a progress bar has no meaning for an
+   *  for RECORDED videos. When a number is passed, a scrub bar
+   *  renders below the composer row · the white fill represents
+   *  REMAINING time (starts full, shrinks away as the video plays)
+   *  with a draggable white dot at the current playback head. Omit
+   *  for live sessions · a progress bar has no meaning for an
    *  open-ended live stream. */
   readonly videoProgressPercent?: number;
+  /** Owner directive 2026-10-25 · scrub callback · fires with the
+   *  target percent (0..100) when the viewer drags the white dot.
+   *  Parent is expected to seek the underlying video element to
+   *  `(percent / 100) * duration` and then update
+   *  `videoProgressPercent` from the next `timeupdate` event. */
+  readonly onSeek?: (percent: number) => void;
   /** Owner directive 2026-10-25 · composer-header author identity.
    *  When `authorDisplayName` is provided the composer placeholder
    *  rotates every 2 seconds between the author name and the gray
@@ -154,6 +162,143 @@ interface ExtraActionPillProps {
   readonly href?: string;
   readonly as?: "button" | "a";
   readonly [dataAttr: `data-${string}`]: string | undefined;
+}
+
+/** Owner directive 2026-10-25 (revised) · recorded-video scrub bar.
+ *  White fill shrinks from full (percent=0) to empty (percent=100)
+ *  so the viewer sees how much video is LEFT. A small white dot
+ *  sits at the current playback head; dragging it fires `onSeek`
+ *  (if provided) with the new percent so the parent can set
+ *  `video.currentTime` and the next timeupdate updates `percent`.
+ *
+ *  Pointer-driven · uses setPointerCapture so the drag follows the
+ *  finger/mouse even if it leaves the bar. During a scrub the
+ *  component uses a local override so the parent's streaming
+ *  percent updates don't fight the drag position. */
+function VideoScrubBar(props: {
+  readonly percent: number;
+  readonly onSeek?: (percent: number) => void;
+}): React.JSX.Element {
+  const trackRef = React.useRef<HTMLDivElement | null>(null);
+  const [scrubbing, setScrubbing] = React.useState<number | null>(null);
+  // Ref mirrors state so the pointermove handler (whose closure is
+  // captured at mount) sees the live scrubbing flag · a bare state
+  // check would see the stale initial null between pointerdown and
+  // the next commit.
+  const scrubbingRef = React.useRef(false);
+
+  const current = scrubbing ?? props.percent;
+  const clamp = (n: number) => Math.max(0, Math.min(100, n));
+
+  const emitAt = (clientX: number): void => {
+    const el = trackRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const pct = clamp(((clientX - rect.left) / rect.width) * 100);
+    setScrubbing(pct);
+    props.onSeek?.(pct);
+  };
+
+  const onPointerDown = (ev: React.PointerEvent<HTMLDivElement>) => {
+    if (!props.onSeek) return;
+    try {
+      ev.currentTarget.setPointerCapture(ev.pointerId);
+    } catch {}
+    scrubbingRef.current = true;
+    emitAt(ev.clientX);
+  };
+  const onPointerMove = (ev: React.PointerEvent<HTMLDivElement>) => {
+    if (!scrubbingRef.current) return;
+    emitAt(ev.clientX);
+  };
+  const onPointerUp = (ev: React.PointerEvent<HTMLDivElement>) => {
+    if (!scrubbingRef.current) return;
+    try {
+      ev.currentTarget.releasePointerCapture(ev.pointerId);
+    } catch {}
+    scrubbingRef.current = false;
+    setScrubbing(null);
+  };
+
+  return (
+    <div
+      data-nex-live-footer-video-progress
+      data-nex-live-footer-video-progress-value={Math.round(current)}
+      data-nex-live-footer-video-progress-scrubbing={
+        scrubbing !== null ? "true" : "false"
+      }
+      role="slider"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(current)}
+      aria-label="Video playback position · drag to seek"
+      style={{
+        // Owner directive 2026-10-25 · 30 px side insets so the bar
+        // never touches the screen edges on narrow phones. Container
+        // is 12 px tall so the 10 px thumb has room without the
+        // layout jumping.
+        position: "relative",
+        height: 12,
+        margin: "4px 30px 0",
+        touchAction: "none",
+        cursor: props.onSeek ? "pointer" : "default",
+      }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+    >
+      {/* Track · translucent navy so the white fill reads */}
+      <div
+        ref={trackRef}
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: "50%",
+          transform: "translateY(-50%)",
+          height: 3,
+          background: "rgba(255, 255, 255, 0.18)",
+          borderRadius: 999,
+          pointerEvents: "none",
+        }}
+      />
+      {/* Fill · WHITE · from current% to 100% · shrinks over time */}
+      <div
+        style={{
+          position: "absolute",
+          left: `${current}%`,
+          right: 0,
+          top: "50%",
+          transform: "translateY(-50%)",
+          height: 3,
+          background: "#FFFFFF",
+          borderRadius: 999,
+          transition: scrubbing === null ? "left 160ms linear" : "none",
+          pointerEvents: "none",
+        }}
+      />
+      {/* Thumb · small white ball at the current playback head */}
+      <div
+        data-nex-live-footer-video-progress-thumb
+        style={{
+          position: "absolute",
+          left: `${current}%`,
+          top: "50%",
+          width: 10,
+          height: 10,
+          transform: "translate(-50%, -50%)",
+          borderRadius: 999,
+          background: "#FFFFFF",
+          boxShadow:
+            "0 0 0 2px rgba(2, 9, 20, 0.65), 0 1px 3px rgba(0, 0, 0, 0.55)",
+          transition: scrubbing === null ? "left 160ms linear" : "none",
+          pointerEvents: "none",
+        }}
+      />
+    </div>
+  );
 }
 
 function ExtraActionPill(
@@ -1280,51 +1425,18 @@ export function LiveViewerFooter(
         </div>
       )}
 
-      {/* Owner directive 2026-10-25 · thin playback-progress bar
-          under the composer. Only renders for recorded videos
-          (parent passes `videoProgressPercent` 0..100). Live
-          streams omit the prop · no bar renders. White translucent
-          track + cyan fill that grows as the video plays. */}
+      {/* Owner directive 2026-10-25 (revised) · scrub bar under
+          the composer. White fill = REMAINING time (starts full,
+          shrinks away as the video plays). White dot at the current
+          playback head · drag it left/right to seek back/forward.
+          Only renders for recorded videos (parent passes
+          `videoProgressPercent` 0..100). Live streams omit the prop
+          and get no bar. */}
       {typeof props.videoProgressPercent === "number" && (
-        <div
-          data-nex-live-footer-video-progress
-          data-nex-live-footer-video-progress-value={Math.max(
-            0,
-            Math.min(100, Math.round(props.videoProgressPercent)),
-          )}
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={Math.max(
-            0,
-            Math.min(100, Math.round(props.videoProgressPercent)),
-          )}
-          aria-label="Video playback position"
-          style={{
-            // Owner directive 2026-10-25 · 30 px side insets so the
-            // bar never touches the screen edges on narrow phones.
-            position: "relative",
-            height: 2,
-            margin: "4px 30px 0",
-            background: "rgba(255, 255, 255, 0.18)",
-            borderRadius: 999,
-            overflow: "hidden",
-            pointerEvents: "none",
-          }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: `${Math.max(0, Math.min(100, props.videoProgressPercent))}%`,
-              background: CYAN,
-              borderRadius: 999,
-              transition: "width 160ms linear",
-            }}
-          />
-        </div>
+        <VideoScrubBar
+          percent={Math.max(0, Math.min(100, props.videoProgressPercent))}
+          onSeek={props.onSeek}
+        />
       )}
 
       {/* Share bottom-sheet is owned by the viewer parent · it

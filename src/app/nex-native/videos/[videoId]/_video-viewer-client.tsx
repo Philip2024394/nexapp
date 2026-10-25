@@ -939,11 +939,20 @@ export function VideoViewerClient({
             });
           }
         }}
-        /* Owner directive 2026-10-25 · playback progress for the
-           recorded video. The parent updates `videoProgress` from
-           the <video> element's timeupdate so the footer bar fills
-           as the video plays. */
+        /* Owner directive 2026-10-25 (revised) · playback progress
+           for the recorded video. The parent updates `videoProgress`
+           from the <video> element's `timeupdate` so the scrub bar
+           reflects live playback. `onSeek` lets the viewer drag the
+           white dot to scrub back/forward · we set `video.currentTime`
+           and the next `timeupdate` reconciles the state. */
         videoProgressPercent={videoProgress}
+        onSeek={(pct) => {
+          const el = videoRef.current;
+          if (!el) return;
+          const d = el.duration;
+          if (!Number.isFinite(d) || d <= 0) return;
+          el.currentTime = Math.max(0, Math.min(d, (pct / 100) * d));
+        }}
         /* Owner directive 2026-10-25 · composer-header author
            identity. Uploaded video → use the video's title as the
            display name until a real author join (owner_account_id →
