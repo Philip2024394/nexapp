@@ -92,6 +92,20 @@ export const FEED_CATEGORY_META: ReadonlyArray<FeedCategoryMeta> = [
 
 export type FeedCategoryToggleMap = Record<FeedCategoryId, boolean>;
 
+/** Owner directive 2026-10-25 · tri-state control for creator-added
+ *  text overlays on top of the video pixels. This is DIFFERENT from
+ *  NEX's own chrome (product cards, header labels, AI chip) · the
+ *  control affects ONLY the creator's in-video promotional text. */
+export type OverlayPreference = "all" | "reduce" | "hide";
+
+/** Persisted state shape (v2 · adds `overlayPref` next to `toggles`).
+ *  Old v1 payloads were a flat toggle map · the reader below handles
+ *  that shape transparently so nothing resets on upgrade. */
+export interface LiveFeedPreferencesState {
+  readonly toggles: FeedCategoryToggleMap;
+  readonly overlayPref: OverlayPreference;
+}
+
 /** Default · every category ALLOWED. Opt-out model. First-time users
  *  see everything · they turn OFF the categories they don't want. */
 function defaultToggleMap(): FeedCategoryToggleMap {
@@ -100,29 +114,49 @@ function defaultToggleMap(): FeedCategoryToggleMap {
   return m as FeedCategoryToggleMap;
 }
 
+function defaultState(): LiveFeedPreferencesState {
+  return { toggles: defaultToggleMap(), overlayPref: "all" };
+}
+
 /** Read + validate localStorage · falls back to defaults on any
  *  corruption / missing / old-schema state. Pure function · safe to
- *  call during a React effect. */
-function readStoredToggles(): FeedCategoryToggleMap {
-  if (typeof window === "undefined") return defaultToggleMap();
+ *  call during a React effect. Accepts BOTH the v1 flat-map shape
+ *  (older payloads) and the v2 nested shape so a returning user
+ *  doesn't lose their category toggles on this upgrade. */
+function readStoredState(): LiveFeedPreferencesState {
+  if (typeof window === "undefined") return defaultState();
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaultToggleMap();
+    if (!raw) return defaultState();
     const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object") return defaultToggleMap();
-    const defaults = defaultToggleMap();
-    const result: FeedCategoryToggleMap = { ...defaults };
+    if (!parsed || typeof parsed !== "object") return defaultState();
+    const defaults = defaultState();
+    // v2 shape: { toggles: {...}, overlayPref: "..." }
+    const v2Toggles = (parsed as Record<string, unknown>).toggles;
+    const v2Pref = (parsed as Record<string, unknown>).overlayPref;
+    if (v2Toggles && typeof v2Toggles === "object") {
+      const merged: FeedCategoryToggleMap = { ...defaults.toggles };
+      for (const c of FEED_CATEGORY_META) {
+        const v = (v2Toggles as Record<string, unknown>)[c.id];
+        if (typeof v === "boolean") merged[c.id] = v;
+      }
+      const pref: OverlayPreference =
+        v2Pref === "reduce" || v2Pref === "hide" ? v2Pref : "all";
+      return { toggles: merged, overlayPref: pref };
+    }
+    // v1 shape: flat { ai: true, food: false, ... }
+    const merged: FeedCategoryToggleMap = { ...defaults.toggles };
     for (const c of FEED_CATEGORY_META) {
       const v = (parsed as Record<string, unknown>)[c.id];
-      if (typeof v === "boolean") result[c.id] = v;
+      if (typeof v === "boolean") merged[c.id] = v;
     }
-    return result;
+    return { toggles: merged, overlayPref: "all" };
   } catch {
-    return defaultToggleMap();
+    return defaultState();
   }
 }
 
-function writeStoredToggles(next: FeedCategoryToggleMap): void {
+function writeStoredState(next: LiveFeedPreferencesState): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
@@ -131,31 +165,46 @@ function writeStoredToggles(next: FeedCategoryToggleMap): void {
   }
 }
 
-/** Public hook. Returns the current toggle map + a setter that
- *  immediately persists to localStorage. Hydration-safe: the initial
- *  render uses defaults, then a useEffect reads actual storage. */
+/** Public hook. Returns the current state + setters that persist
+ *  immediately. Hydration-safe: the initial render uses defaults,
+ *  then a useEffect reads actual storage. */
 export function useLiveFeedPreferences(): {
   readonly toggles: FeedCategoryToggleMap;
+  readonly overlayPref: OverlayPreference;
   readonly setToggle: (id: FeedCategoryId, allowed: boolean) => void;
+  readonly setOverlayPref: (pref: OverlayPreference) => void;
   readonly resetAll: () => void;
 } {
-  const [toggles, setToggles] = React.useState<FeedCategoryToggleMap>(defaultToggleMap);
+  const [state, setState] = React.useState<LiveFeedPreferencesState>(defaultState);
   React.useEffect(() => {
-    setToggles(readStoredToggles());
+    setState(readStoredState());
   }, []);
   const setToggle = React.useCallback((id: FeedCategoryId, allowed: boolean) => {
-    setToggles((prev) => {
-      const next = { ...prev, [id]: allowed };
-      writeStoredToggles(next);
+    setState((prev) => {
+      const next = { ...prev, toggles: { ...prev.toggles, [id]: allowed } };
+      writeStoredState(next);
+      return next;
+    });
+  }, []);
+  const setOverlayPref = React.useCallback((pref: OverlayPreference) => {
+    setState((prev) => {
+      const next = { ...prev, overlayPref: pref };
+      writeStoredState(next);
       return next;
     });
   }, []);
   const resetAll = React.useCallback(() => {
-    const d = defaultToggleMap();
-    writeStoredToggles(d);
-    setToggles(d);
+    const d = defaultState();
+    writeStoredState(d);
+    setState(d);
   }, []);
-  return { toggles, setToggle, resetAll };
+  return {
+    toggles: state.toggles,
+    overlayPref: state.overlayPref,
+    setToggle,
+    setOverlayPref,
+    resetAll,
+  };
 }
 
 /* ---------------------------------------------------------------
@@ -164,7 +213,8 @@ export function useLiveFeedPreferences(): {
  * --------------------------------------------------------------- */
 
 export function LiveFeedPreferencesSection(): React.JSX.Element {
-  const { toggles, setToggle } = useLiveFeedPreferences();
+  const { toggles, overlayPref, setToggle, setOverlayPref } =
+    useLiveFeedPreferences();
   const [expanded, setExpanded] = React.useState(false);
   const quick = FEED_CATEGORY_META.filter((c) => c.tier === "quick");
   const extra = FEED_CATEGORY_META.filter((c) => c.tier === "expanded");
@@ -256,6 +306,16 @@ export function LiveFeedPreferencesSection(): React.JSX.Element {
           />
         ))}
       </ul>
+      {/* Owner directive 2026-10-25 · "Add Excessive Text & Marketing
+          Overlays to Live Feed Preferences, with three options · Show
+          all / Reduce / Hide." · Separate sub-section from the on/off
+          category toggles because it's a tri-state preference about
+          creator-added in-video promotional text, NOT a category to
+          allow or hide. */}
+      <OverlayPreferenceControl
+        value={overlayPref}
+        onChange={setOverlayPref}
+      />
       {/* Expand toggle. */}
       <button
         type="button"
@@ -405,5 +465,151 @@ function PreferenceRow(props: {
         />
       </button>
     </li>
+  );
+}
+
+/** Owner directive 2026-10-25 · tri-state control for creator-added
+ *  promotional text overlays on top of the video pixels. Three
+ *  mutually-exclusive options (Show all / Reduce / Hide). The copy
+ *  is deliberately careful · NEX does NOT have overlay detection
+ *  today (verified by the pre-build audit this turn) · the amber
+ *  honest-limit chip at the bottom makes that explicit. The owner's
+ *  rule stands: "Don't build a toggle that promises filtering when
+ *  no actual filtering mechanism exists."
+ *
+ *  SCOPE boundary that must be preserved · the owner's distinction:
+ *  "A creator's promotional text inside a video is not the same as
+ *  NEX's own advertising or a product card. These should be handled
+ *  separately." This control affects ONLY creator-added in-video
+ *  text pixels · it never touches NEX chrome (product cards, AI
+ *  chip, header, composer, live chat). */
+function OverlayPreferenceControl(props: {
+  readonly value: OverlayPreference;
+  readonly onChange: (next: OverlayPreference) => void;
+}): React.JSX.Element {
+  const options: ReadonlyArray<{
+    readonly value: OverlayPreference;
+    readonly label: string;
+    readonly short: string;
+  }> = [
+    { value: "all",    label: "Show all overlays",    short: "Show all" },
+    { value: "reduce", label: "Reduce excessive overlays", short: "Reduce" },
+    { value: "hide",   label: "Hide excessive overlays",   short: "Hide" },
+  ];
+  return (
+    <section
+      data-nex-live-feed-prefs-overlay
+      aria-label="Promotional overlays preference"
+      style={{
+        marginTop: 6,
+        padding: "8px",
+        borderRadius: 10,
+        background: "rgba(255, 255, 255, 0.04)",
+        border: `1px solid ${BORDER}`,
+        display: "flex",
+        flexDirection: "column",
+        gap: 6,
+        boxSizing: "border-box",
+      }}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <h4
+          data-nex-live-feed-prefs-overlay-title
+          style={{
+            margin: 0,
+            fontSize: 12,
+            fontWeight: 700,
+            color: TEXT,
+            lineHeight: 1.2,
+          }}
+        >
+          Promotional overlays
+        </h4>
+        <p
+          style={{
+            margin: 0,
+            fontSize: 10,
+            color: DIM,
+            lineHeight: 1.3,
+          }}
+        >
+          Large text and sales messages added by the creator on top of
+          the video (not product cards or NEX labels).
+        </p>
+      </div>
+      {/* Segmented control · 3 mutually-exclusive radio-style buttons. */}
+      <div
+        role="radiogroup"
+        aria-label="Promotional overlays"
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          gap: 4,
+          padding: 2,
+          borderRadius: 8,
+          background: "rgba(0, 0, 0, 0.3)",
+          border: `1px solid ${BORDER}`,
+        }}
+      >
+        {options.map((opt) => {
+          const selected = props.value === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              role="radio"
+              aria-checked={selected ? "true" : "false"}
+              aria-label={opt.label}
+              data-nex-live-feed-prefs-overlay-option={opt.value}
+              data-nex-live-feed-prefs-overlay-selected={selected ? "true" : "false"}
+              onClick={() => props.onChange(opt.value)}
+              style={{
+                flex: "1 1 0",
+                minWidth: 0,
+                minHeight: 32,
+                padding: "4px 6px",
+                borderRadius: 6,
+                background: selected ? CYAN : "transparent",
+                border: "none",
+                color: selected ? "#0A0F1E" : TEXT,
+                fontSize: 11,
+                fontWeight: selected ? 800 : 600,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                boxSizing: "border-box",
+                transition: "background 160ms ease-out, color 160ms ease-out",
+              }}
+            >
+              {opt.short}
+            </button>
+          );
+        })}
+      </div>
+      {/* Honest limit · pre-build audit confirmed no overlay detection
+          exists in the live-broadcast layer. OCR adapters exist for
+          product-intake stills but are not wired to video. */}
+      <div
+        data-nex-live-feed-prefs-overlay-draft-banner
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 6,
+          padding: "6px 8px",
+          borderRadius: 6,
+          background: "rgba(255, 193, 7, 0.14)",
+          border: `1px solid ${AMBER}`,
+          color: AMBER,
+          fontSize: 10,
+          fontWeight: 700,
+          lineHeight: 1.3,
+        }}
+      >
+        <span aria-hidden style={{ fontSize: 11 }}>⚡</span>
+        <span>
+          Overlay detection isn&rsquo;t live yet. Your choice is saved for
+          when the detector lands.
+        </span>
+      </div>
+    </section>
   );
 }
