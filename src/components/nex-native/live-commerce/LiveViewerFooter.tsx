@@ -157,6 +157,32 @@ export interface LiveViewerFooterProps {
    *  5 is the owner-specified initial scroll depth · more are
    *  reachable by vertical scroll. */
   readonly broadcasterProducts?: ReadonlyArray<FooterFeaturedProduct>;
+  /** Owner directive 2026-10-25 · counts rendered under the
+   *  Like / Share / Save tiles. Omitting a prop hides the count
+   *  entirely. A count of 0 is HIDDEN for viewers (`isBroadcaster`
+   *  false/undefined) and SHOWN for broadcasters so they can
+   *  track their own metrics starting from zero. Numbers > 999
+   *  render as `1.2k` · > 999_999 as `1.3M`. */
+  readonly likeCount?: number;
+  readonly shareCount?: number;
+  readonly saveCount?: number;
+}
+
+/** Format a count for display under Like / Share / Save tiles.
+ *  Returns `null` when the count should be HIDDEN (zero + not a
+ *  broadcaster). Returns the numeric string otherwise with
+ *  k / M suffixes for large values. */
+function formatCount(n: number | undefined, isBroadcaster: boolean): string | null {
+  if (typeof n !== "number" || !Number.isFinite(n)) return null;
+  const v = Math.max(0, Math.floor(n));
+  if (v === 0 && !isBroadcaster) return null;
+  if (v < 1000) return String(v);
+  if (v < 1_000_000) {
+    const k = v / 1000;
+    return `${k < 10 ? k.toFixed(1).replace(/\.0$/, "") : Math.floor(k)}k`;
+  }
+  const m = v / 1_000_000;
+  return `${m < 10 ? m.toFixed(1).replace(/\.0$/, "") : Math.floor(m)}M`;
 }
 
 /** Owner directive 2026-10-25 · landscape product card featured
@@ -199,6 +225,11 @@ interface ExtraActionPillProps {
    *  is `flex: 1 1 0` sibling-equal · `full` keeps that but also
    *  removes the min-width floor so the pill reads as a bar. */
   readonly full?: boolean;
+  /** Owner directive 2026-10-25 · formatted count rendered beneath
+   *  the pill label (used by Save in the 3-dot panel). `null` or
+   *  omitted hides the count. The caller is responsible for
+   *  broadcaster-aware zero handling via `formatCount`. */
+  readonly count?: string | null;
   readonly [dataAttr: `data-${string}`]: string | undefined;
 }
 
@@ -381,13 +412,28 @@ function ExtraActionPill(
       >
         {props.label}
       </span>
+      {props.count ? (
+        <span
+          data-nex-live-footer-extra-pill-count
+          style={{
+            fontSize: 9,
+            fontWeight: 700,
+            lineHeight: 1,
+            color: "rgba(255,255,255,0.75)",
+            marginTop: 1,
+          }}
+        >
+          {props.count}
+        </span>
+      ) : null}
     </>
   );
   // Dispose of custom aria-less wiring: pull known props out and spread the rest.
-  const { label, icon, as, href, onClick, full, ...rest } = props;
+  const { label, icon, as, href, onClick, full, count, ...rest } = props;
   void label;
   void icon;
   void full;
+  void count;
   if (as === "a" && typeof href === "string") {
     return (
       <a
@@ -752,18 +798,84 @@ export function LiveViewerFooter(
           // overlays the actions when open.
           position: "relative",
           display: "grid",
-          // Owner directive 2026-10-25 · the Like button moves to the
-          // composer, so this row carries only Live / Market / Share
-          // (3-col) or Market / Share (2-col when goLive is hidden).
-          // The 3-dot menu trigger adds one `auto` column at the end.
+          // Owner directive 2026-10-25 · Like heart moves back INTO the
+          // action row at the left · counts render underneath Like /
+          // Share / (Save in panel). Grid columns:
+          //   with goLive: Like  Live  Market  Share  ⋮
+          //   no goLive:   Like         Market  Share  ⋮
+          // Market gets the wider share so it stays the hero CTA.
           gridTemplateColumns: showGoLive
-            ? "1fr 1.6fr 1fr auto"
-            : "2fr 1fr auto",
+            ? "1fr 1fr 1.4fr 1fr auto"
+            : "1fr 1.6fr 1fr auto",
           gap: 6,
           alignItems: "stretch",
           padding: "0 12px",
         }}
       >
+        {/* Owner directive 2026-10-25 · "like heart must have how
+            many likes under and heart correct size". Returned to the
+            action row at the same ~48 px height as the other tiles ·
+            optional count label beneath the heart · hidden at 0 for
+            viewers · visible at 0 for the broadcaster.
+            The spawnFloatingHeart cascade still fires from the tap
+            so the cinematic rise + full-screen shower animation is
+            preserved; only the anchor moved from composer to this
+            tile. */}
+        <button
+          type="button"
+          onClick={() => {
+            props.onLike();
+            setLikePulse((p) => p + 1);
+            spawnFloatingHeart();
+          }}
+          disabled={props.disabled}
+          data-nex-live-footer-like
+          data-nex-live-footer-like-row="true"
+          aria-pressed={props.isLiked ? "true" : "false"}
+          aria-label={props.isLiked ? "Unlike this live stream" : "Like this live stream"}
+          style={{
+            background: "rgba(255,255,255,0.06)",
+            border: `1px solid ${BORDER}`,
+            color: props.isLiked ? RED : TEXT,
+            borderRadius: 12,
+            padding: "6px 6px",
+            cursor: props.disabled ? "not-allowed" : "pointer",
+            display: "inline-flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 2,
+            minHeight: 48,
+            boxSizing: "border-box",
+            fontFamily: "inherit",
+          }}
+        >
+          <span
+            key={likePulse}
+            data-nex-live-footer-like-row-icon
+            aria-hidden
+            style={{
+              fontSize: 20,
+              lineHeight: 1,
+              display: "inline-block",
+              transformOrigin: "center",
+              animation:
+                likePulse > 0
+                  ? "nexLikePulse 320ms ease-out, nex-live-footer-like-idle 1.3s ease-in-out 320ms infinite"
+                  : "nex-live-footer-like-idle 1.3s ease-in-out infinite",
+            }}
+          >
+            {props.isLiked ? "❤" : "♡"}
+          </span>
+          {formatCount(props.likeCount, props.isBroadcaster === true) !== null && (
+            <span
+              data-nex-live-footer-like-count
+              style={{ fontSize: 11, fontWeight: 700, color: TEXT, lineHeight: 1.1 }}
+            >
+              {formatCount(props.likeCount, props.isBroadcaster === true)}
+            </span>
+          )}
+        </button>
         {showGoLive && (
           <a
             href={goLiveHref}
@@ -870,6 +982,14 @@ export function LiveViewerFooter(
         >
           <span aria-hidden style={{ fontSize: 18 }}>⤴</span>
           <span style={{ fontSize: 11, fontWeight: 700 }}>Share</span>
+          {formatCount(props.shareCount, props.isBroadcaster === true) !== null && (
+            <span
+              data-nex-live-footer-share-count
+              style={{ fontSize: 10, fontWeight: 700, color: DIM, lineHeight: 1.1 }}
+            >
+              {formatCount(props.shareCount, props.isBroadcaster === true)}
+            </span>
+          )}
         </button>
 
         {/* Owner directive 2026-10-25 · 3-dot vertical menu to the
@@ -1019,6 +1139,7 @@ export function LiveViewerFooter(
           <ExtraActionPill
             label="Save"
             data-nex-live-footer-extra-save="true"
+            count={formatCount(props.saveCount, props.isBroadcaster === true)}
             onClick={() => {
               setExtraActionsOpen(false);
               if (typeof window !== "undefined") {
@@ -1582,60 +1703,11 @@ export function LiveViewerFooter(
             </svg>
           </button>
         </div>
-        {/* Owner directive 2026-10-25 (revised again) · the Like
-            heart lives OUTSIDE the composer text field now, on its
-            right side as a flex sibling in the composer row. No
-            background chip · just the heart icon with the sealed
-            "alive" idle beat + the one-shot pulse on tap + the
-            existing spawnFloatingHeart rise/shower cascade. */}
-        <button
-          type="button"
-          onClick={() => {
-            props.onLike();
-            setLikePulse((p) => p + 1);
-            spawnFloatingHeart();
-          }}
-          disabled={props.disabled}
-          data-nex-live-footer-like
-          data-nex-live-footer-like-inline="true"
-          aria-pressed={props.isLiked ? "true" : "false"}
-          aria-label={props.isLiked ? "Unlike this live stream" : "Like this live stream"}
-          style={{
-            flex: "0 0 auto",
-            width: 36,
-            height: 36,
-            background: "transparent",
-            color: props.isLiked ? RED : "#FFFFFF",
-            fontSize: 22,
-            fontWeight: 900,
-            borderRadius: 999,
-            padding: 0,
-            border: "none",
-            cursor: props.disabled ? "not-allowed" : "pointer",
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            lineHeight: 1,
-            filter:
-              "drop-shadow(0 1px 2px rgba(0,0,0,0.5)) drop-shadow(0 0 4px rgba(0,0,0,0.3))",
-          }}
-        >
-          <span
-            key={likePulse}
-            data-nex-live-footer-like-inline-icon
-            aria-hidden
-            style={{
-              display: "inline-block",
-              animation:
-                likePulse > 0
-                  ? "nexLikePulse 320ms ease-out, nex-live-footer-like-idle 1.3s ease-in-out 320ms infinite"
-                  : "nex-live-footer-like-idle 1.3s ease-in-out infinite",
-              transformOrigin: "center",
-            }}
-          >
-            {props.isLiked ? "❤" : "♡"}
-          </span>
-        </button>
+        {/* Owner directive 2026-10-25 (revised) · the inline composer
+            Like heart was removed · the Like tile moved back to the
+            action row with a count beneath. The spawnFloatingHeart
+            cascade still fires from the action-row tile, so the
+            cinematic rise + shower is preserved. */}
         </div>
       )}
 

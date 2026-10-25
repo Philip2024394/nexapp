@@ -69,6 +69,9 @@ export function VideoViewerClient({
   currentTopicLabel,
   forceBroadcasterPreview,
   devRoleBanner,
+  likeCount,
+  shareCount,
+  saveCount,
 }: {
   readonly video: UploadedVideoRow;
   readonly publicUrl: string;
@@ -91,6 +94,13 @@ export function VideoViewerClient({
    *  top of the viewport. Makes it unmistakable which role the current
    *  page represents. Non-rendered on real routes. */
   readonly devRoleBanner?: "seller" | "viewer";
+  /** Owner directive 2026-10-25 · engagement counts forwarded to the
+   *  LiveViewerFooter so Like / Share / Save tiles render their count
+   *  labels. Hiding at 0 is handled inside the footer based on the
+   *  effective broadcaster flag. Omitting hides counts entirely. */
+  readonly likeCount?: number;
+  readonly shareCount?: number;
+  readonly saveCount?: number;
 }): React.JSX.Element {
   const router = useRouter();
   const [isLiked, setIsLiked] = React.useState(false);
@@ -1084,6 +1094,9 @@ export function VideoViewerClient({
         authorIsLive={false}
         isBroadcaster={isBroadcasterPreview}
         broadcasterProducts={mockBroadcasterProducts}
+        likeCount={likeCount}
+        shareCount={shareCount}
+        saveCount={saveCount}
       />
       {messagePanelOpen && (
         <MessagePanel

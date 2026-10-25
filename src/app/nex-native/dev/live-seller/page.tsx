@@ -49,6 +49,13 @@ export default async function DevLiveSellerPage(): Promise<React.JSX.Element> {
       siblingIds={siblings}
       forceBroadcasterPreview={true}
       devRoleBanner="seller"
+      /* Owner directive 2026-10-25 · dev-only mock counts so the
+         broadcaster can see what their own metrics look like.
+         Shows 0 to the broadcaster per sealed rule · use realistic
+         non-zero defaults for a healthy preview. */
+      likeCount={237}
+      shareCount={42}
+      saveCount={18}
     />
   );
 }

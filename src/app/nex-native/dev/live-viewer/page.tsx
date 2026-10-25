@@ -46,6 +46,13 @@ export default async function DevLiveViewerPage(): Promise<React.JSX.Element> {
       siblingIds={siblings}
       forceBroadcasterPreview={false}
       devRoleBanner="viewer"
+      /* Owner directive 2026-10-25 · mock counts for the user
+         (viewer) role · same numbers the broadcaster sees because
+         these are public engagement metrics. Save defaults to 0
+         so a viewer sees NO Save count (sealed zero-hide rule). */
+      likeCount={237}
+      shareCount={42}
+      saveCount={0}
     />
   );
 }
