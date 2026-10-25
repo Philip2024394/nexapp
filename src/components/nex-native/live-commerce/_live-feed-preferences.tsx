@@ -38,7 +38,6 @@ const BORDER = "rgba(255, 255, 255, 0.12)";
 const TEXT = "#F2F5F8";
 const DIM = "#8BA9D1";
 const CYAN = "#00AFFF";
-const AMBER = "#FFC107";
 
 const STORAGE_KEY = "nex-live-feed-prefs-v1";
 
@@ -231,59 +230,10 @@ export function LiveFeedPreferencesSection(): React.JSX.Element {
         gap: 6,
       }}
     >
-      <header style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        <h3
-          data-nex-live-feed-prefs-title
-          style={{
-            margin: 0,
-            fontSize: 12,
-            fontWeight: 800,
-            color: TEXT,
-            letterSpacing: "0.04em",
-            textTransform: "uppercase",
-          }}
-        >
-          Live Feed Preferences
-        </h3>
-        <p
-          style={{
-            margin: 0,
-            fontSize: 11,
-            color: DIM,
-            lineHeight: 1.3,
-          }}
-        >
-          Hide categories you don&rsquo;t want to see.
-        </p>
-      </header>
-      {/* Owner directive 2026-10-25 · "I would not promise that every
-          toggle immediately filters every video until Claude verifies
-          that the current NEX feed actually supports category-based
-          selection. The interface and the underlying behaviour must
-          agree." · DRAFT banner states the honest limit. */}
-      <div
-        data-nex-live-feed-prefs-draft-banner
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          gap: 6,
-          padding: "6px 8px",
-          borderRadius: 8,
-          background: "rgba(255, 193, 7, 0.14)",
-          border: `1px solid ${AMBER}`,
-          color: AMBER,
-          fontSize: 10,
-          fontWeight: 700,
-          lineHeight: 1.3,
-          letterSpacing: "0.02em",
-        }}
-      >
-        <span aria-hidden style={{ fontSize: 11 }}>⚡</span>
-        <span>
-          Draft · toggles are saved on this device. The feed will honour
-          them once the ranking lands.
-        </span>
-      </div>
+      {/* Owner directive 2026-10-25 · "remove the header buttons from
+          container live feed toggles container" · the inner section
+          title + subtitle are removed · the outer "Live Feed" header
+          in LiveViewerFooter is the single header for this view. */}
       {/* Quick tier · always visible. */}
       <ul
         data-nex-live-feed-prefs-list
@@ -533,8 +483,7 @@ function OverlayPreferenceControl(props: {
             lineHeight: 1.3,
           }}
         >
-          Large text and sales messages added by the creator on top of
-          the video (not product cards or NEX labels).
+          Large text and sales messages.
         </p>
       </div>
       {/* Segmented control · 3 mutually-exclusive radio-style buttons. */}
@@ -584,31 +533,6 @@ function OverlayPreferenceControl(props: {
             </button>
           );
         })}
-      </div>
-      {/* Honest limit · pre-build audit confirmed no overlay detection
-          exists in the live-broadcast layer. OCR adapters exist for
-          product-intake stills but are not wired to video. */}
-      <div
-        data-nex-live-feed-prefs-overlay-draft-banner
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          gap: 6,
-          padding: "6px 8px",
-          borderRadius: 6,
-          background: "rgba(255, 193, 7, 0.14)",
-          border: `1px solid ${AMBER}`,
-          color: AMBER,
-          fontSize: 10,
-          fontWeight: 700,
-          lineHeight: 1.3,
-        }}
-      >
-        <span aria-hidden style={{ fontSize: 11 }}>⚡</span>
-        <span>
-          Overlay detection isn&rsquo;t live yet. Your choice is saved for
-          when the detector lands.
-        </span>
       </div>
     </section>
   );

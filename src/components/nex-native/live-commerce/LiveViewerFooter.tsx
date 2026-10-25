@@ -1038,14 +1038,15 @@ export function LiveViewerFooter(
             flexDirection: "column",
             gap: 8,
             padding: "10px",
-            // Owner directive 2026-10-25 · navy frosted + comments
-            // must stack BEHIND the panel. Panel zIndex 20 beats the
-            // VideoCommentsOverlay (zIndex 2) and any other viewer
-            // chrome; alpha raised to 0.96/0.94 so chat bubbles do
-            // not visually bleed through the translucency. The
-            // backdrop blur still softens whatever shows at the rim.
+            // Owner directive 2026-10-25 (reinforced) · "comments
+            // cards are running on the 3 dots container". Panel now
+            // uses FULLY opaque navy (alpha 1.0) so chat bubbles can
+            // never show through. Panel zIndex 20 still beats the
+            // VideoCommentsOverlay (zIndex 2). Backdrop blur is kept
+            // but has no visible effect at full opacity · it stays as
+            // a safety net if a child ever becomes translucent.
             background: extraActionsOpen
-              ? "linear-gradient(135deg, rgba(21, 38, 70, 0.96) 0%, rgba(10, 15, 30, 0.94) 100%)"
+              ? "linear-gradient(135deg, rgb(21, 38, 70) 0%, rgb(10, 15, 30) 100%)"
               : "transparent",
             backdropFilter: extraActionsOpen ? "blur(18px) saturate(140%)" : undefined,
             WebkitBackdropFilter: extraActionsOpen ? "blur(18px) saturate(140%)" : undefined,
@@ -1074,17 +1075,26 @@ export function LiveViewerFooter(
             maxHeight: "calc(100vh - 170px)",
             overflowY: "auto",
             overscrollBehavior: "contain",
+            // Owner directive 2026-10-25 · "control the container that
+            // I can select text from any place without all text being
+            // selected". Explicitly ENABLE native text selection on
+            // the panel so viewers can copy a toggle label or an
+            // explainer line normally; the browser handles word/
+            // range selection on its own. Interactive controls still
+            // get their native hit-target behaviour. Overrides any
+            // inherited `user-select: none` from the composer side.
+            userSelect: "text",
+            WebkitUserSelect: "text",
           }}
         >
-          {/* Owner directive 2026-10-25 · "when you open the 3 dots
-              you see buttons · feed is the button that flips container
-              to show the toggle feed controls". Panel flips between
-              the BUTTONS sub-view (Share/Save/Live/Message/Feed +
-              broadcaster Products) and the FEED sub-view (Live Feed
-              Preferences full-screen inside the container). Only the
-              ⋮ toggle closes while on the Feed sub-view · the outside-
-              tap listener is suppressed higher up. */}
-          {panelView === "buttons" && (
+          {/* Owner directive 2026-10-25 (revised) · "why is the text
+              feed covering all buttons" · buttons must stay visible
+              when Feed opens. The container is now an accordion: the
+              5 primary pills (+ broadcaster Products row) always
+              render; the Feed pill toggles whether the Live Feed
+              Preferences section is appended BELOW the buttons. The
+              outside-tap close remains suppressed while the Feed
+              section is expanded · only the ⋮ toggle closes. */}
           <>
           <div
             data-nex-live-footer-extra-actions-row
@@ -1190,7 +1200,9 @@ export function LiveViewerFooter(
           <ExtraActionPill
             label="Feed"
             data-nex-live-footer-extra-feed="true"
-            onClick={() => setPanelView("feed")}
+            onClick={() =>
+              setPanelView((v) => (v === "feed" ? "buttons" : "feed"))
+            }
             icon={
               <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="3" y1="7" x2="21" y2="7" />
@@ -1238,12 +1250,13 @@ export function LiveViewerFooter(
             </div>
           )}
           </>
-          )}
-          {/* Owner directive 2026-10-25 · Feed sub-view · Live Feed
-              Preferences fills the panel. A compact header carries a
-              "← Back" button that returns to the buttons view. The
-              panel outside-tap close is disabled while on this view
-              (handled by the useEffect above). */}
+          {/* Owner directive 2026-10-25 (revised) · "remove the back
+              and to close from container · header · Live Feed". When
+              the Feed pill is pressed the preferences section appends
+              below the buttons · the header is a plain "Live Feed"
+              title. No Back button · no close hint. The ⋮ toggle
+              still closes everything; tapping Feed again collapses the
+              preferences without closing the panel. */}
           {panelView === "feed" && (
             <div
               data-nex-live-footer-extra-feed-view
@@ -1251,51 +1264,21 @@ export function LiveViewerFooter(
                 display: "flex",
                 flexDirection: "column",
                 gap: 8,
+                marginTop: 2,
               }}
             >
               <div
+                data-nex-live-footer-extra-feed-view-header
                 style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 8,
+                  fontSize: 12,
+                  fontWeight: 800,
+                  color: TEXT,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  padding: "4px 2px 0",
                 }}
               >
-                <button
-                  type="button"
-                  data-nex-live-footer-extra-feed-back
-                  onClick={() => setPanelView("buttons")}
-                  aria-label="Back to actions"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 4,
-                    padding: "4px 8px 4px 4px",
-                    borderRadius: 8,
-                    background: "rgba(255, 255, 255, 0.08)",
-                    border: `1px solid ${BORDER}`,
-                    color: TEXT,
-                    fontSize: 11,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  <span aria-hidden style={{ fontSize: 14, lineHeight: 1 }}>←</span>
-                  <span>Back</span>
-                </button>
-                <span
-                  style={{
-                    fontSize: 10,
-                    color: DIM,
-                    fontWeight: 700,
-                    letterSpacing: "0.04em",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Tap ⋮ to close
-                </span>
+                Live Feed
               </div>
               <LiveFeedPreferencesSection />
             </div>
@@ -1790,6 +1773,12 @@ export function LiveViewerFooter(
           <button
             type="button"
             onClick={() => {
+              // Owner directive 2026-10-25 · "user can only like a
+              // video one time". Already-liked taps are a no-op · no
+              // floating-heart cascade, no counter wobble, no second
+              // onLike callback. The parent viewer's handleLike is
+              // also one-way (prev ? prev : true) · belt-and-braces.
+              if (props.isLiked) return;
               props.onLike();
               setLikePulse((p) => p + 1);
               spawnFloatingHeart();
@@ -1797,8 +1786,10 @@ export function LiveViewerFooter(
             disabled={props.disabled}
             data-nex-live-footer-like
             data-nex-live-footer-like-inline="true"
+            data-nex-live-footer-like-locked={props.isLiked ? "true" : "false"}
             aria-pressed={props.isLiked ? "true" : "false"}
-            aria-label={props.isLiked ? "Unlike this live stream" : "Like this live stream"}
+            aria-disabled={props.isLiked ? "true" : "false"}
+            aria-label={props.isLiked ? "You liked this live stream" : "Like this live stream"}
             style={{
               width: 48,
               height: 48,
@@ -1835,20 +1826,30 @@ export function LiveViewerFooter(
               {props.isLiked ? "❤" : "♡"}
             </span>
           </button>
-          {formatCount(props.likeCount, props.isBroadcaster === true) !== null && (
-            <span
-              data-nex-live-footer-like-count
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: TEXT,
-                lineHeight: 1.1,
-                textShadow: "0 1px 2px rgba(0,0,0,0.55)",
-              }}
-            >
-              {formatCount(props.likeCount, props.isBroadcaster === true)}
-            </span>
-          )}
+          {(() => {
+            // Owner directive 2026-10-25 · "when pressed it will
+            // increase by 1". Optimistic local +1 while isLiked ·
+            // the server-provided baseline stays in props.likeCount
+            // and the viewer-side flag drives the single-shot bump.
+            const baseline = typeof props.likeCount === "number" ? props.likeCount : 0;
+            const displayed = baseline + (props.isLiked ? 1 : 0);
+            const label = formatCount(displayed, props.isBroadcaster === true);
+            if (label === null) return null;
+            return (
+              <span
+                data-nex-live-footer-like-count
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: TEXT,
+                  lineHeight: 1.1,
+                  textShadow: "0 1px 2px rgba(0,0,0,0.55)",
+                }}
+              >
+                {label}
+              </span>
+            );
+          })()}
         </div>
         </div>
       )}

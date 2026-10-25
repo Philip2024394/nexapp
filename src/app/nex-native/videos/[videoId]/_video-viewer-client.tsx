@@ -452,10 +452,14 @@ export function VideoViewerClient({
   );
 
   // Footer handlers · same contract as the Live viewer footer.
+  // Owner directive 2026-10-25 · "user can only like a video one
+  // time". One-way like · the first tap sets isLiked=true · subsequent
+  // taps are no-ops. The count display adds +1 locally when isLiked
+  // becomes true (optimistic UI · server source of truth stays in
+  // the `likeCount` prop · a server action will replace this when
+  // the sandbox lands).
   const handleLike = React.useCallback(() => {
-    setIsLiked((prev) => !prev);
-    // Dev-mode · no server action. When sandbox lands, wire a
-    // recordUploadedVideoLikeAction here.
+    setIsLiked((prev) => (prev ? prev : true));
   }, []);
   const handleComment = React.useCallback((text: string) => {
     // Owner directive 2026-10-24 · "live post feed should be active
