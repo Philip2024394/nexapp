@@ -17,6 +17,7 @@
 
 import { redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import * as businessService from "@/lib/nex-native/business-service";
 import * as productService from "@/lib/nex-native/product-service";
 import { GoLiveClient, type RealLiveCatalogEntry } from "./_go-live-client";
@@ -37,7 +38,8 @@ const DEV_FALLBACK_BROADCASTER_ID = "00000000-0000-0000-0000-000000000000";
 async function resolveBroadcasterIdOrRedirect(
   pathname: string,
 ): Promise<string> {
-  const session = await resolveNexAppSessionFromContext();
+  // Owner directive 2026-10-26 · dev persona impersonation.
+  const session = await resolveSessionWithDevOverride();
   if (session) return session.account.id;
   if (process.env.NODE_ENV !== "production") {
     return DEV_FALLBACK_BROADCASTER_ID;

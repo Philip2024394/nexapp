@@ -35,6 +35,7 @@
 
 import { redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import * as friendService from "@/lib/nex-native/friend-service";
 import * as accountService from "@/lib/nex-native/account-service";
 import { effectiveTier } from "@/lib/nex-native/account-service";
@@ -90,7 +91,11 @@ export default async function ContactsPage({ searchParams }: PageProps) {
     redirect("/nex-native/chat?tab=friends");
   }
 
-  const session = await resolveNexAppSessionFromContext();
+  // Owner directive 2026-10-26 · dev persona impersonation · when
+  // NEX_DEV_IMPERSONATE_HANDLE is set in .env.local, Hendra (or
+  // whichever handle) appears as the signed-in user across contacts
+  // + side drawer. Falls through to real session otherwise.
+  const session = await resolveSessionWithDevOverride();
   if (!session) {
     redirect("/nex-native/sign-in");
   }

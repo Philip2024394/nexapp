@@ -16,6 +16,7 @@
 
 import { redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import * as accountService from "@/lib/nex-native/account-service";
 import * as friendService from "@/lib/nex-native/friend-service";
 import * as relationshipService from "@/lib/nex-native/relationship-service";
@@ -158,7 +159,8 @@ export default async function PeerChatPage({
     typeof sp.focus_product === "string" && sp.focus_product.length > 0
       ? sp.focus_product
       : null;
-  const session = await resolveNexAppSessionFromContext();
+  // Owner directive 2026-10-26 · dev persona impersonation.
+  const session = await resolveSessionWithDevOverride();
   if (!session) {
     const base = `/nex-native/chat/peer/${peerAccountId}`;
     const nextUrl = focusProductIdFromUrl
@@ -393,11 +395,16 @@ export default async function PeerChatPage({
   const pendingProductIdRaw = sp.pending_product?.trim() ?? "";
   // Owner directive 2026-10-22 · Live Commerce · optional
   // live-session context carried through from the live viewer's
-  // "Order now" tap. Validated as plain UUID-shape · stored on the
-  // chip + sent as attachment_meta on the enquiry message.
+  // "Order now" tap. Validated as strict UUID shape (same regex as
+  // the live-viewer page `?product=` guard and
+  // shareProductToContactAction's live_session_id guard). A malformed
+  // value is dropped silently · chip renders without the "From Live"
+  // badge · the server action also drops it on send.
+  const LIVE_SESSION_UUID_SHAPE =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const liveSessionIdRaw = sp.live_session_id?.trim() ?? "";
   const liveSessionIdValid =
-    liveSessionIdRaw.length > 0 && liveSessionIdRaw.length <= 64
+    liveSessionIdRaw.length > 0 && LIVE_SESSION_UUID_SHAPE.test(liveSessionIdRaw)
       ? liveSessionIdRaw
       : null;
   const pendingProduct = await (async () => {
