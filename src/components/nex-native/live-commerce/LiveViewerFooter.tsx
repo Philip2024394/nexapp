@@ -140,6 +140,39 @@ export interface LiveViewerFooterProps {
   readonly authorAvatarUrl?: string | null;
   readonly authorDisplayName?: string | null;
   readonly authorIsLive?: boolean;
+  /** Owner directive 2026-10-25 · "the container will also have
+   *  button if seller has shop and this button will be called
+   *  products". When true the broadcaster-only "Products" pill
+   *  renders as a full-width second row inside the 3-dot panel,
+   *  the picker overlay + featured-product footer-card slot both
+   *  become available. When false/undefined the panel keeps its
+   *  4-pill shape and no Products machinery renders. The parent
+   *  page is responsible for the broadcaster-identity decision
+   *  (dev-mode preview uses the `?preview=broadcaster` query
+   *  flag · real-mode wiring is a follow-up slice). */
+  readonly isBroadcaster?: boolean;
+  /** Owner directive 2026-10-25 · catalog of broadcaster-owned
+   *  products shown in the picker overlay. Supplying 0 or
+   *  omitting the prop renders an honest empty-state message.
+   *  5 is the owner-specified initial scroll depth · more are
+   *  reachable by vertical scroll. */
+  readonly broadcasterProducts?: ReadonlyArray<FooterFeaturedProduct>;
+}
+
+/** Owner directive 2026-10-25 · landscape product card featured
+ *  in the viewer footer. Image left + name/price right. The card
+ *  replaces the main action row (Like/Market/Share) when a
+ *  product is picked · the 5-second glow fires on fresh pick ·
+ *  press-hold-2s prompts the broadcaster to return it to the
+ *  shop. */
+export interface FooterFeaturedProduct {
+  readonly id: string;
+  readonly name: string;
+  readonly priceLabel: string;
+  readonly imageUrl?: string | null;
+  /** Optional short note the broadcaster might type next to the
+   *  featured product (not editable in this slice). */
+  readonly subtitle?: string | null;
 }
 
 const BAR_BG = "rgba(2, 9, 20, 0.78)";
@@ -161,6 +194,11 @@ interface ExtraActionPillProps {
   readonly onClick?: () => void;
   readonly href?: string;
   readonly as?: "button" | "a";
+  /** Owner directive 2026-10-25 · when true the pill expands to
+   *  fill the row (full-width Products button). Default behaviour
+   *  is `flex: 1 1 0` sibling-equal · `full` keeps that but also
+   *  removes the min-width floor so the pill reads as a bar. */
+  readonly full?: boolean;
   readonly [dataAttr: `data-${string}`]: string | undefined;
 }
 
@@ -308,33 +346,48 @@ function ExtraActionPill(
     background: "rgba(255,255,255,0.09)",
     border: `1px solid ${BORDER}`,
     color: TEXT,
-    minWidth: 56,
-    minHeight: 44,
+    // Owner directive 2026-10-25 · "4 buttons each row" · the row
+    // uses flex and each pill takes an equal share. `minWidth: 0`
+    // lets pills shrink on 320 px. `full` keeps the equal share
+    // (there's only one sibling) but widens the min-height to
+    // read as a bar.
+    flex: "1 1 0",
+    minWidth: 0,
+    minHeight: props.full ? 48 : 44,
     borderRadius: 10,
-    padding: "4px 8px",
+    padding: props.full ? "6px 10px" : "4px 8px",
     cursor: "pointer",
     display: "inline-flex",
-    flexDirection: "column",
+    flexDirection: props.full ? "row" : "column",
     alignItems: "center",
     justifyContent: "center",
-    gap: 2,
+    gap: props.full ? 10 : 2,
     textDecoration: "none",
     fontFamily: "inherit",
+    boxSizing: "border-box",
   };
   const content = (
     <>
       <span aria-hidden style={{ display: "inline-flex" }}>
         {props.icon}
       </span>
-      <span style={{ fontSize: 10, fontWeight: 700, lineHeight: 1.1 }}>
+      <span
+        style={{
+          fontSize: props.full ? 13 : 10,
+          fontWeight: props.full ? 800 : 700,
+          lineHeight: 1.1,
+          letterSpacing: props.full ? "0.02em" : "normal",
+        }}
+      >
         {props.label}
       </span>
     </>
   );
   // Dispose of custom aria-less wiring: pull known props out and spread the rest.
-  const { label, icon, as, href, onClick, ...rest } = props;
+  const { label, icon, as, href, onClick, full, ...rest } = props;
   void label;
   void icon;
+  void full;
   if (as === "a" && typeof href === "string") {
     return (
       <a
@@ -371,6 +424,33 @@ export function LiveViewerFooter(
   // · Live · Message. UI chrome only in this slice; the per-action
   // handlers below are honest stubs pending backend authorisation.
   const [extraActionsOpen, setExtraActionsOpen] = React.useState(false);
+  // Owner directive 2026-10-25 · Products picker + featured card
+  // state. The picker opens from the panel's "Products" pill
+  // (broadcaster-only). Selecting a card closes the picker and
+  // pins the card in the footer slot where the main action row
+  // normally sits (sealed design decision: replace, don't stack).
+  const [productPickerOpen, setProductPickerOpen] = React.useState(false);
+  const [featuredProduct, setFeaturedProduct] =
+    React.useState<FooterFeaturedProduct | null>(null);
+  // Owner directive 2026-10-25 · "when they select a card it will
+  // glowing for 5 seconds until owner pick again". `glowKey`
+  // bumps on every fresh pick · the CSS animation re-triggers
+  // because the key changes · the glow auto-resolves after 5s.
+  const [glowKey, setGlowKey] = React.useState(0);
+  React.useEffect(() => {
+    if (!featuredProduct) return;
+    // 5-second visible glow · subsequent pick-overrides bump
+    // glowKey → animation restarts. We do NOT clear the card at
+    // 5 s; only the glow stops.
+    const id = window.setTimeout(() => {
+      // noop · the CSS animation ends naturally after 5s.
+    }, 5000);
+    return () => window.clearTimeout(id);
+  }, [featuredProduct, glowKey]);
+  // Press-hold-2s remove confirm · the broadcaster long-presses
+  // the featured card for 2 s → a confirm sheet asks whether to
+  // return the card to the shop. Release before 2 s cancels.
+  const [removeConfirmOpen, setRemoveConfirmOpen] = React.useState(false);
   // Owner directive 2026-10-25 · "any tap outside that container will
   // close it". The toggle button + panel each hold a ref so the
   // document-level pointerdown listener below can discriminate
@@ -649,6 +729,19 @@ export function LiveViewerFooter(
           transition: transform 120ms ease-out, background 160ms ease-out;
         }
       `}</style>
+      {/* Owner directive 2026-10-25 · "when they select a card it
+          will open in the footer area card position" · the featured
+          product card REPLACES the main action row (Like/Market/
+          Share) while active. The 3-dot container still mounts
+          because the broadcaster must still reach Products to
+          swap cards. */}
+      {featuredProduct ? (
+        <FooterFeaturedCard
+          product={featuredProduct}
+          glowKey={glowKey}
+          onLongPressRemove={() => setRemoveConfirmOpen(true)}
+        />
+      ) : (
       <div
         data-nex-live-viewer-footer-actions
         style={{
@@ -851,23 +944,22 @@ export function LiveViewerFooter(
           data-nex-live-footer-extra-actions-open={extraActionsOpen ? "true" : "false"}
           aria-hidden={!extraActionsOpen}
           style={{
-            // Owner directive 2026-10-25 · "the 3 dots open up
-            // container panel same design color style as category
-            // buttons" · the panel now carries the CategoryGridSheet
-            // tile palette: frosted-cyan gradient + 2px cyan rim +
-            // inner cyan outline + cyan glow + navy drop shadow. The
-            // outside-tap listener installed at the top of this
-            // component closes the panel when the user taps anywhere
-            // that is not the panel or the ⋮ toggle.
+            // Owner directive 2026-10-25 · "the 3 dots container
+            // must start just above the 3 dots and center to the
+            // page width with 4 buttons each row". The panel now
+            // anchors to the TOP of the actions row (bottom: 100%)
+            // and spans the row's full width (left: 8 right: 8 to
+            // echo the row's 8 px inset). It grows upward with the
+            // button grid height. Palette = CategoryGridSheet tile.
             position: "absolute",
-            top: 0,
-            bottom: 0,
-            right: 56,
+            bottom: "100%",
+            left: 8,
+            right: 8,
+            marginBottom: 8,
             display: "flex",
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 6,
-            padding: "4px 10px",
+            flexDirection: "column",
+            gap: 8,
+            padding: "10px",
             background: extraActionsOpen
               ? "linear-gradient(135deg, rgba(0, 175, 255, 0.42) 0%, rgba(0, 116, 255, 0.18) 100%)"
               : "transparent",
@@ -877,14 +969,31 @@ export function LiveViewerFooter(
             boxShadow: extraActionsOpen
               ? "inset 0 0 0 1px rgba(0, 175, 255, 0.5), 0 0 14px -4px rgba(0, 175, 255, 0.6), 0 4px 10px -6px rgba(0, 20, 50, 0.45)"
               : "none",
-            borderRadius: 999,
-            transition: "transform 240ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease-out",
-            transform: extraActionsOpen ? "translateX(0)" : "translateX(14px)",
+            borderRadius: 16,
+            transformOrigin: "bottom center",
+            transition:
+              "transform 240ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease-out",
+            transform: extraActionsOpen
+              ? "scaleY(1) translateY(0)"
+              : "scaleY(0.6) translateY(10px)",
             opacity: extraActionsOpen ? 1 : 0,
             pointerEvents: extraActionsOpen ? "auto" : "none",
             zIndex: 3,
           }}
         >
+          {/* Owner directive 2026-10-25 · "4 buttons each row" ·
+              first row holds the four original pills with equal
+              flex. Second row (broadcaster-only) holds a single
+              full-width Products pill. */}
+          <div
+            data-nex-live-footer-extra-actions-row
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              alignItems: "stretch",
+              gap: 6,
+            }}
+          >
           {/* Share · reuses the existing Share pipeline when wired.
               Honest stub for now · alerts the viewer the share-sheet
               with social destinations is pending authorisation. */}
@@ -970,8 +1079,73 @@ export function LiveViewerFooter(
               </svg>
             }
           />
+          </div>
+          {/* Owner directive 2026-10-25 · "the container will also
+              have button if seller has shop and this button will be
+              called products". Broadcaster-only second row · full-
+              width Products pill with the standard 4-pill palette
+              but stretched edge-to-edge so it reads as the primary
+              broadcaster action. */}
+          {props.isBroadcaster && (
+            <div
+              data-nex-live-footer-extra-actions-row
+              data-nex-live-footer-extra-actions-row-broadcaster="true"
+              style={{
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "stretch",
+                gap: 6,
+              }}
+            >
+              <ExtraActionPill
+                label="Products"
+                data-nex-live-footer-extra-products="true"
+                full
+                onClick={() => {
+                  setExtraActionsOpen(false);
+                  setProductPickerOpen(true);
+                }}
+                icon={
+                  <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 7h18l-1.5 11a2 2 0 0 1-2 1.75H6.5a2 2 0 0 1-2-1.75L3 7z" />
+                    <path d="M8 7V5a4 4 0 0 1 8 0v2" />
+                  </svg>
+                }
+              />
+            </div>
+          )}
         </div>
       </div>
+      )}
+      {/* Owner directive 2026-10-25 · product-picker overlay ·
+          mounted only when the broadcaster taps "Products" in the
+          3-dot panel. Opens a card list below the viewer header,
+          scrollable, tap-outside closes without picking. */}
+      {props.isBroadcaster && productPickerOpen && (
+        <ProductPickerOverlay
+          products={props.broadcasterProducts ?? []}
+          onClose={() => setProductPickerOpen(false)}
+          onPick={(p) => {
+            setFeaturedProduct(p);
+            setGlowKey((k) => k + 1);
+            setProductPickerOpen(false);
+          }}
+        />
+      )}
+      {/* Owner directive 2026-10-25 · remove-confirm sheet ·
+          "pop up window will ask owner do they want to return
+          card back to shop". Fires from the FooterFeaturedCard's
+          2-second press-hold. */}
+      {removeConfirmOpen && featuredProduct && (
+        <RemoveFeaturedConfirm
+          product={featuredProduct}
+          onCancel={() => setRemoveConfirmOpen(false)}
+          onConfirm={() => {
+            setFeaturedProduct(null);
+            setRemoveConfirmOpen(false);
+          }}
+        />
+      )}
 
       {/* Owner directive 2026-10-24 (refined) · cinematic Like
           animation · slower rise from the Like button with side-to-
@@ -1546,5 +1720,454 @@ function GuestLockedComposer({
         SIGN IN
       </span>
     </a>
+  );
+}
+
+/* ------------------------------------------------------------------
+ * Owner directive 2026-10-25 · footer landscape product-card slot
+ * + product-picker overlay + remove-confirm sheet.
+ * ------------------------------------------------------------------
+ * `FooterFeaturedCard` renders the LANDSCAPE card that replaces the
+ * main action row when the broadcaster picks a product. Image left
+ * (square · rounded corners · inset from card rim), name/price on
+ * the right. Fires `onLongPressRemove` after a 2-second continuous
+ * press · release before 2 s cancels.
+ * ------------------------------------------------------------------ */
+function FooterFeaturedCard(props: {
+  readonly product: FooterFeaturedProduct;
+  readonly glowKey: number;
+  readonly onLongPressRemove: () => void;
+}): React.JSX.Element {
+  const timerRef = React.useRef<number | null>(null);
+  const [pressing, setPressing] = React.useState(false);
+  const startPress = (): void => {
+    if (timerRef.current !== null) {
+      window.clearTimeout(timerRef.current);
+    }
+    setPressing(true);
+    timerRef.current = window.setTimeout(() => {
+      timerRef.current = null;
+      setPressing(false);
+      props.onLongPressRemove();
+    }, 2000);
+  };
+  const cancelPress = (): void => {
+    if (timerRef.current !== null) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    setPressing(false);
+  };
+  React.useEffect(() => {
+    return () => {
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
+  return (
+    <div
+      data-nex-live-footer-featured-card
+      data-nex-live-footer-featured-card-product-id={props.product.id}
+      data-nex-live-footer-featured-card-pressing={pressing ? "true" : "false"}
+      key={`featured-${props.glowKey}`}
+      onPointerDown={startPress}
+      onPointerUp={cancelPress}
+      onPointerCancel={cancelPress}
+      onPointerLeave={cancelPress}
+      style={{
+        margin: "0 12px",
+        minHeight: 60,
+        borderRadius: 14,
+        background: "rgba(2, 9, 20, 0.78)",
+        border: `1px solid ${BORDER}`,
+        boxSizing: "border-box",
+        display: "flex",
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        padding: 6,
+        position: "relative",
+        touchAction: "manipulation",
+        userSelect: "none",
+        WebkitUserSelect: "none",
+        WebkitTapHighlightColor: "transparent",
+        // 5-second glow · keyed to glowKey so a fresh pick re-triggers.
+        animation: "nex-live-featured-glow 5000ms ease-out 1",
+      }}
+    >
+      <style>{`
+        @keyframes nex-live-featured-glow {
+          0%   { box-shadow: 0 0 0 0 rgba(0, 175, 255, 0.0), 0 0 0 0 rgba(0, 175, 255, 0.0); border-color: ${BORDER}; }
+          8%   { box-shadow: 0 0 18px 2px rgba(0, 175, 255, 0.75), 0 0 32px 4px rgba(0, 175, 255, 0.35); border-color: rgba(0, 175, 255, 0.9); }
+          100% { box-shadow: 0 0 0 0 rgba(0, 175, 255, 0.0), 0 0 0 0 rgba(0, 175, 255, 0.0); border-color: ${BORDER}; }
+        }
+        /* Press-hold progress ring · a thin cyan border that grows
+           over 2 s so the broadcaster sees the remove timer. */
+        [data-nex-live-footer-featured-card-pressing="true"] {
+          outline: 2px solid rgba(255, 51, 85, 0.75) !important;
+          outline-offset: -1px;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          [data-nex-live-footer-featured-card] { animation: none !important; }
+        }
+      `}</style>
+      <div
+        data-nex-live-footer-featured-image
+        style={{
+          width: 48,
+          height: 48,
+          borderRadius: 10,
+          flexShrink: 0,
+          overflow: "hidden",
+          background: "rgba(255,255,255,0.06)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: DIM,
+          fontSize: 10,
+          fontWeight: 700,
+        }}
+      >
+        {props.product.imageUrl ? (
+          <img
+            src={props.product.imageUrl}
+            alt=""
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+        ) : (
+          <span aria-hidden>IMG</span>
+        )}
+      </div>
+      <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+        <div
+          data-nex-live-footer-featured-name
+          style={{
+            fontSize: 14,
+            fontWeight: 700,
+            color: TEXT,
+            lineHeight: 1.2,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {props.product.name}
+        </div>
+        <div
+          data-nex-live-footer-featured-price
+          style={{
+            marginTop: 2,
+            fontSize: 12,
+            fontWeight: 600,
+            color: CYAN,
+            lineHeight: 1.2,
+          }}
+        >
+          {props.product.priceLabel}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Owner directive 2026-10-25 · product-picker overlay. Opens when
+ *  the broadcaster taps the Products pill. Fills the viewer area
+ *  from under the header down to just above the footer with a
+ *  vertical scroll list of product cards. Tap outside the panel
+ *  (on the scrim) closes without picking. */
+function ProductPickerOverlay(props: {
+  readonly products: ReadonlyArray<FooterFeaturedProduct>;
+  readonly onClose: () => void;
+  readonly onPick: (p: FooterFeaturedProduct) => void;
+}): React.JSX.Element {
+  return (
+    <>
+      <button
+        type="button"
+        aria-label="Close product picker"
+        data-nex-live-footer-product-picker-scrim
+        onClick={props.onClose}
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0, 0, 0, 0.55)",
+          border: "none",
+          padding: 0,
+          cursor: "pointer",
+          zIndex: 20,
+        }}
+      />
+      <div
+        data-nex-live-footer-product-picker
+        role="dialog"
+        aria-label="Choose a product for Live"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: "fixed",
+          top: 80,
+          bottom: 160,
+          left: 16,
+          right: 16,
+          zIndex: 21,
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          padding: 12,
+          borderRadius: 16,
+          background: "rgba(14, 21, 38, 0.95)",
+          border: "1px solid rgba(255,255,255,0.12)",
+          boxShadow: "0 8px 24px -8px rgba(0,0,0,0.6)",
+          fontFamily: "inherit",
+          boxSizing: "border-box",
+        }}
+      >
+        <div
+          data-nex-live-footer-product-picker-title
+          style={{
+            fontSize: 13,
+            fontWeight: 800,
+            color: TEXT,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            textAlign: "center",
+            marginBottom: 2,
+          }}
+        >
+          Products
+        </div>
+        {props.products.length === 0 ? (
+          <div
+            data-nex-live-footer-product-picker-empty
+            style={{
+              flex: "1 1 auto",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: DIM,
+              fontSize: 13,
+              textAlign: "center",
+              padding: "0 10px",
+            }}
+          >
+            No products available yet.
+          </div>
+        ) : (
+          <div
+            data-nex-live-footer-product-picker-list
+            style={{
+              flex: "1 1 auto",
+              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+              paddingRight: 2,
+            }}
+          >
+            {props.products.map((p) => (
+              <button
+                type="button"
+                key={p.id}
+                data-nex-live-footer-product-picker-card
+                data-nex-live-footer-product-picker-card-id={p.id}
+                onClick={() => props.onPick(p)}
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: 8,
+                  minHeight: 72,
+                  borderRadius: 12,
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  color: TEXT,
+                  textAlign: "left",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  boxSizing: "border-box",
+                }}
+              >
+                <div
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 10,
+                    flexShrink: 0,
+                    overflow: "hidden",
+                    background: "rgba(255,255,255,0.06)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: DIM,
+                    fontSize: 10,
+                    fontWeight: 700,
+                  }}
+                >
+                  {p.imageUrl ? (
+                    <img
+                      src={p.imageUrl}
+                      alt=""
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  ) : (
+                    <span aria-hidden>IMG</span>
+                  )}
+                </div>
+                <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 700,
+                      color: TEXT,
+                      lineHeight: 1.2,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {p.name}
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 2,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: CYAN,
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {p.priceLabel}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+/** Owner directive 2026-10-25 · "pop up window will ask owner do
+ *  they want to return card back to shop". Simple confirm sheet
+ *  with Cancel + Return buttons. Tap scrim = cancel. */
+function RemoveFeaturedConfirm(props: {
+  readonly product: FooterFeaturedProduct;
+  readonly onCancel: () => void;
+  readonly onConfirm: () => void;
+}): React.JSX.Element {
+  return (
+    <>
+      <button
+        type="button"
+        aria-label="Keep product in Live"
+        data-nex-live-footer-remove-scrim
+        onClick={props.onCancel}
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.55)",
+          border: "none",
+          padding: 0,
+          cursor: "pointer",
+          zIndex: 30,
+        }}
+      />
+      <div
+        role="dialog"
+        aria-label="Return product to shop?"
+        data-nex-live-footer-remove-confirm
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: "fixed",
+          left: "50%",
+          top: "50%",
+          transform: "translate(-50%, -50%)",
+          zIndex: 31,
+          width: "min(320px, calc(100vw - 32px))",
+          padding: 16,
+          borderRadius: 14,
+          background: "rgba(14, 21, 38, 0.98)",
+          border: "1px solid rgba(255,255,255,0.14)",
+          boxShadow: "0 12px 32px -10px rgba(0,0,0,0.75)",
+          fontFamily: "inherit",
+          boxSizing: "border-box",
+        }}
+      >
+        <div
+          style={{
+            fontSize: 15,
+            fontWeight: 800,
+            color: TEXT,
+            marginBottom: 6,
+            textAlign: "center",
+          }}
+        >
+          Return to shop?
+        </div>
+        <div
+          style={{
+            fontSize: 13,
+            color: DIM,
+            marginBottom: 14,
+            textAlign: "center",
+            lineHeight: 1.3,
+          }}
+        >
+          Remove &ldquo;{props.product.name}&rdquo; from your Live.
+          The product stays in your shop.
+        </div>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            gap: 8,
+          }}
+        >
+          <button
+            type="button"
+            data-nex-live-footer-remove-cancel
+            onClick={props.onCancel}
+            style={{
+              flex: "1 1 0",
+              minHeight: 44,
+              borderRadius: 10,
+              background: "rgba(255,255,255,0.08)",
+              border: `1px solid ${BORDER}`,
+              color: TEXT,
+              fontWeight: 700,
+              fontSize: 14,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              boxSizing: "border-box",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            data-nex-live-footer-remove-confirm-ok
+            onClick={props.onConfirm}
+            style={{
+              flex: "1 1 0",
+              minHeight: 44,
+              borderRadius: 10,
+              background: RED,
+              border: `1px solid ${RED}`,
+              color: "#FFFFFF",
+              fontWeight: 800,
+              fontSize: 14,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              boxSizing: "border-box",
+            }}
+          >
+            Return
+          </button>
+        </div>
+      </div>
+    </>
   );
 }

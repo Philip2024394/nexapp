@@ -92,7 +92,7 @@ export default defineConfig({
       // live chips when Migration 219 is unapplied.
       name: "mobile-chromium-pixel7-live-public",
       use: { ...devices["Pixel 7"] },
-      testMatch: /live-commerce-public-surfaces\.spec\.ts|live-commerce-viewer-footer\.spec\.ts|live-commerce-visual-verify\.spec\.ts|live-commerce-video-journey\.spec\.ts|live-footer-3-dots-container\.spec\.ts|composer-overflow-diag\.spec\.ts|composer-overflow-regression\.spec\.ts|live-header-ping-and-ai-chip\.spec\.ts/,
+      testMatch: /live-commerce-public-surfaces\.spec\.ts|live-commerce-viewer-footer\.spec\.ts|live-commerce-visual-verify\.spec\.ts|live-commerce-video-journey\.spec\.ts|live-footer-3-dots-container\.spec\.ts|composer-overflow-diag\.spec\.ts|composer-overflow-regression\.spec\.ts|live-header-ping-and-ai-chip\.spec\.ts|live-footer-products-flow\.spec\.ts/,
     },
   ],
 });

@@ -388,6 +388,37 @@ export function VideoViewerClient({
     return undefined;
   }, [nextId, prevId, router]);
 
+  // Owner directive 2026-10-25 · broadcaster-preview flag.
+  // Reading `?preview=broadcaster` from the URL opens the
+  // Products pill + picker + featured-card slot in dev. Real
+  // broadcaster-identity (session.user.id === video.owner_
+  // account_id) is a separate wiring slice · we gate strictly
+  // on the query flag for now so no viewer sees broadcaster
+  // chrome by accident. Reading `window.location` inside a
+  // state initialiser is SSR-safe because this file is marked
+  // `"use client"` and the initial render happens after mount.
+  const [isBroadcasterPreview, setIsBroadcasterPreview] = React.useState(false);
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    setIsBroadcasterPreview(sp.get("preview") === "broadcaster");
+  }, []);
+
+  // Owner directive 2026-10-25 · dev-only mock products shown
+  // in the picker overlay. Real catalog wiring is a follow-up
+  // slice (session.user → shop → products). Deterministic IDs
+  // for test selection.
+  const mockBroadcasterProducts = React.useMemo(
+    () => [
+      { id: "mock-product-1", name: "Teak Carved Elephant",   priceLabel: "Rp 285,000" },
+      { id: "mock-product-2", name: "Batik Scarf · Yogya",     priceLabel: "Rp 125,000" },
+      { id: "mock-product-3", name: "Hand-rolled Clove Cigars", priceLabel: "Rp 48,000" },
+      { id: "mock-product-4", name: "Volcanic Stone Mortar",   priceLabel: "Rp 320,000" },
+      { id: "mock-product-5", name: "Rattan Fruit Basket",     priceLabel: "Rp 95,000" },
+    ],
+    [],
+  );
+
   // Footer handlers · same contract as the Live viewer footer.
   const handleLike = React.useCallback(() => {
     setIsLiked((prev) => !prev);
@@ -998,6 +1029,8 @@ export function VideoViewerClient({
            currently live so authorIsLive stays false (no red ping). */
         authorDisplayName={video.title}
         authorIsLive={false}
+        isBroadcaster={isBroadcasterPreview}
+        broadcasterProducts={mockBroadcasterProducts}
       />
       {messagePanelOpen && (
         <MessagePanel
