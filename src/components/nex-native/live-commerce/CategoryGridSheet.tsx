@@ -24,6 +24,21 @@
 //     animation.
 
 import * as React from "react";
+import {
+  UtensilsCrossed,
+  Shirt,
+  Plane,
+  Wrench,
+  ShoppingBag,
+  PartyPopper,
+  Home,
+  Bike,
+  Tag,
+  User,
+  Palette,
+  Trophy,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 const NEX = {
   bgSheet: "#0E1526",
@@ -54,100 +69,36 @@ export interface CategoryTile {
   readonly iconKey?: keyof typeof CATEGORY_ICONS;
 }
 
-/** Owner directive 2026-10-25 · 12 white line-art SVG icons.
- *  Stroke-only · currentColor · 24×24 viewBox · stroke width 1.8
- *  with round joins so the strokes look crisp at the ~26-30px
- *  render size inside the moon-shape tiles. The parent sets
- *  `color: #FFFFFF` so icons are white; a small drop-shadow adds
- *  separation against the cyan frosted-glass fill.
+/** Owner directive 2026-10-25 (revised) · 12 high-quality icons
+ *  from `lucide-react` (already a dep · `lucide-react@^1.23.0` in
+ *  package.json). Previous hand-rolled SVGs are replaced with
+ *  curated line-art from the Lucide library · consistent stroke
+ *  weight · professional geometry · identical API as React
+ *  components. The parent still sets `color: #FFFFFF` so the
+ *  strokes render white, with a drop-shadow for separation against
+ *  the cyan frosted-glass fill.
  *
- *  Icons are deliberately simple + consistent in visual weight ·
- *  no filled shapes, no gradients, no multiple colours. Replace
- *  individual entries when the final art lands. */
-export const CATEGORY_ICONS = {
-  food: (
-    <>
-      <path d="M4 11h16a7 7 0 0 1-7 7h-2a7 7 0 0 1-7-7z" />
-      <path d="M9 5v3M12 4v4M15 5v3" />
-    </>
-  ),
-  fashion: (
-    <>
-      <path d="M9 3a3 3 0 0 1 6 0" />
-      <path d="M9 3l-6 6 3 3 3-3v12h12V9l3 3 3-3-6-6" />
-    </>
-  ),
-  travel: (
-    <>
-      <path d="M12 2v6M12 22v-4" />
-      <path d="M5 10c0 4 3 7 7 7s7-3 7-7" />
-      <path d="M5 10h14" />
-      <path d="M8 10c0-3 2-6 4-8 2 2 4 5 4 8" />
-    </>
-  ),
-  services: (
-    <>
-      <path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-3 3-2.4-.6-.6-2.4z" />
-    </>
-  ),
-  products: (
-    <>
-      <path d="M6 8l1-4h10l1 4" />
-      <path d="M4 8h16l-1 12H5z" />
-      <path d="M9 11v2a3 3 0 0 0 6 0v-2" />
-    </>
-  ),
-  events: (
-    <>
-      <path d="M4 10h16v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" />
-      <path d="M4 10V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3" />
-      <path d="M8 3v4M16 3v4M4 14h16" />
-    </>
-  ),
-  stay: (
-    <>
-      <path d="M3 11l9-8 9 8" />
-      <path d="M5 10v10h14V10" />
-      <path d="M10 20v-5h4v5" />
-    </>
-  ),
-  transport: (
-    <>
-      <circle cx="6" cy="17" r="3" />
-      <circle cx="18" cy="17" r="3" />
-      <path d="M6 17l3-7h4l3 7" />
-      <path d="M9 10h7l2 4" />
-      <path d="M13 10V7h3" />
-    </>
-  ),
-  deals: (
-    <>
-      <path d="M3 12l9-9h7v7l-9 9z" />
-      <circle cx="15.5" cy="8.5" r="1.5" />
-    </>
-  ),
-  creators: (
-    <>
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
-    </>
-  ),
-  art: (
-    <>
-      <path d="M12 3C7 3 3 7 3 12c0 3 2 5 4 5h1a2 2 0 0 1 2 2v1c0 1 1 2 2 2 5 0 9-4 9-9s-4-10-9-10z" />
-      <circle cx="7.5" cy="11.5" r="1" />
-      <circle cx="12" cy="7.5" r="1" />
-      <circle cx="16.5" cy="11.5" r="1" />
-    </>
-  ),
-  sports: (
-    <>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 3a9 9 0 0 0 0 18M3 12a9 9 0 0 1 18 0" />
-      <path d="M6 6l12 12M18 6L6 18" />
-    </>
-  ),
-} as const;
+ *  To swap any individual icon, replace the import + the map entry
+ *  with another from `node_modules/lucide-react/dist/esm/icons/`.
+ *
+ *  Map values are React components (LucideIcon type). The old
+ *  JSX-fragment shape is preserved as a deliberate alias in the
+ *  render path · see the `<IconComp …/>` call below. */
+export const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  food:      UtensilsCrossed,
+  fashion:   Shirt,
+  travel:    Plane,
+  services:  Wrench,
+  products:  ShoppingBag,
+  events:    PartyPopper,
+  stay:      Home,
+  transport: Bike,
+  deals:     Tag,
+  creators:  User,
+  art:       Palette,
+  sports:    Trophy,
+};
+
 
 // Owner directive 2026-10-24 · "category name only 1 word".
 // Owner directive 2026-10-25 · each tile now carries an `iconKey`
@@ -273,7 +224,7 @@ export function CategoryGridSheet(
           }}
         >
           {tiles.slice(0, 12).map((t) => {
-            const iconPath = t.iconKey ? CATEGORY_ICONS[t.iconKey] : null;
+            const IconComp = t.iconKey ? CATEGORY_ICONS[t.iconKey] : null;
             return (
               <button
                 key={t.slug}
@@ -310,20 +261,28 @@ export function CategoryGridSheet(
                   pointerEvents: "auto",
                 }}
               >
-                {/* Icon · white line-art SVG · owner directive
-                    2026-10-25 "white icons high quality". Positioned
-                    in the upper portion of the button, above the
-                    moon-shape text strip. */}
+                {/* Icon · high-quality white line-art from lucide-react
+                    · owner directive 2026-10-25 "white icons high
+                    quality · center on buttons and smaller size".
+                    Centred both axes in the top ~55% of the button
+                    (above the moon-shape label strip at the bottom).
+                    Container shrunk 46% → 32% for a tidier silhouette. */}
                 <span
                   aria-hidden
                   data-nex-category-tile-icon
                   style={{
                     position: "absolute",
                     left: "50%",
-                    top: "28%",
+                    // Owner directive 2026-10-25 (revised) · center
+                    // the icon in the upper half of the tile (above
+                    // the moon strip which spans the bottom 48%). The
+                    // 27% anchor + translate(-50%, -50%) puts the
+                    // icon's visual centre at the mid-point of the
+                    // tile's upper 54%.
+                    top: "27%",
                     transform: "translate(-50%, -50%)",
-                    width: "46%",
-                    height: "46%",
+                    width: "32%",
+                    height: "32%",
                     display: "inline-flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -331,24 +290,20 @@ export function CategoryGridSheet(
                       "drop-shadow(0 1px 2px rgba(0,0,0,0.45)) drop-shadow(0 0 4px rgba(0,0,0,0.25))",
                   }}
                 >
-                  {iconPath ? (
-                    <svg
-                      viewBox="0 0 24 24"
-                      width="100%"
-                      height="100%"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      {iconPath}
-                    </svg>
+                  {IconComp ? (
+                    <IconComp
+                      strokeWidth={1.6}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        color: "currentColor",
+                      }}
+                    />
                   ) : (
                     // Backwards-compatible fallback · callers that pass
                     // custom tiles without `iconKey` still get the emoji
                     // glyph in the icon position.
-                    <span style={{ fontSize: 26, lineHeight: 1 }}>
+                    <span style={{ fontSize: 22, lineHeight: 1 }}>
                       {t.glyph}
                     </span>
                   )}
