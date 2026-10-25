@@ -471,6 +471,20 @@ export function LiveViewerFooter(
   // · Live · Message. UI chrome only in this slice; the per-action
   // handlers below are honest stubs pending backend authorisation.
   const [extraActionsOpen, setExtraActionsOpen] = React.useState(false);
+  // Owner directive 2026-10-25 · "feed is the button that flips
+  // container to show the toggle feed controls". The 3-dot panel
+  // flips between two sub-views:
+  //   · "buttons" · the default · Share / Save / Live / Message +
+  //     Feed + (broadcaster-only) Products pills.
+  //   · "feed"    · Live Feed Preferences fills the panel.
+  // Opening the panel always starts in "buttons". Closing resets to
+  // "buttons" so the next open is predictable.
+  const [panelView, setPanelView] = React.useState<"buttons" | "feed">(
+    "buttons",
+  );
+  React.useEffect(() => {
+    if (!extraActionsOpen) setPanelView("buttons");
+  }, [extraActionsOpen]);
   // Owner directive 2026-10-25 · Products picker + featured card
   // state. The picker opens from the panel's "Products" pill
   // (broadcaster-only). Selecting a card closes the picker and
@@ -508,6 +522,13 @@ export function LiveViewerFooter(
   const extraActionsPanelRef = React.useRef<HTMLDivElement | null>(null);
   React.useEffect(() => {
     if (!extraActionsOpen) return;
+    // Owner directive 2026-10-25 · "when on toggle page user must
+    // select the 3 dots again to close". The outside-tap close is
+    // SUPPRESSED while on the Feed sub-view · screen scrolls / tiny
+    // body taps never dismiss the preferences list. Only the ⋮
+    // toggle button closes the panel. The sibling toggle itself
+    // remains the one-tap close affordance.
+    if (panelView === "feed") return;
     const handler = (ev: PointerEvent) => {
       const target = ev.target as Node | null;
       if (!target) return;
@@ -521,7 +542,7 @@ export function LiveViewerFooter(
     return () => {
       document.removeEventListener("pointerdown", handler, true);
     };
-  }, [extraActionsOpen]);
+  }, [extraActionsOpen, panelView]);
 
   // Owner directive 2026-10-25 · composer placeholder rotates every
   // 2 seconds between the author name and "Type Message…" when an
@@ -1081,8 +1102,14 @@ export function LiveViewerFooter(
             flexDirection: "column",
             gap: 8,
             padding: "10px",
+            // Owner directive 2026-10-25 · "container background change
+            // to our navy frosted color". Replace the cyan gradient
+            // with NEX navy frosted (same deep-navy family used by
+            // BAR_BG and the FooterFeaturedCard). Keep the cyan rim +
+            // soft cyan glow because they're what give the panel its
+            // "lifted off the video" silhouette.
             background: extraActionsOpen
-              ? "linear-gradient(135deg, rgba(0, 175, 255, 0.42) 0%, rgba(0, 116, 255, 0.18) 100%)"
+              ? "linear-gradient(135deg, rgba(21, 38, 70, 0.82) 0%, rgba(10, 15, 30, 0.78) 100%)"
               : "transparent",
             backdropFilter: extraActionsOpen ? "blur(18px) saturate(140%)" : undefined,
             WebkitBackdropFilter: extraActionsOpen ? "blur(18px) saturate(140%)" : undefined,
@@ -1113,10 +1140,16 @@ export function LiveViewerFooter(
             overscrollBehavior: "contain",
           }}
         >
-          {/* Owner directive 2026-10-25 · "4 buttons each row" ·
-              first row holds the four original pills with equal
-              flex. Second row (broadcaster-only) holds a single
-              full-width Products pill. */}
+          {/* Owner directive 2026-10-25 · "when you open the 3 dots
+              you see buttons · feed is the button that flips container
+              to show the toggle feed controls". Panel flips between
+              the BUTTONS sub-view (Share/Save/Live/Message/Feed +
+              broadcaster Products) and the FEED sub-view (Live Feed
+              Preferences full-screen inside the container). Only the
+              ⋮ toggle closes while on the Feed sub-view · the outside-
+              tap listener is suppressed higher up. */}
+          {panelView === "buttons" && (
+          <>
           <div
             data-nex-live-footer-extra-actions-row
             style={{
@@ -1212,6 +1245,27 @@ export function LiveViewerFooter(
               </svg>
             }
           />
+          {/* Feed · owner directive 2026-10-25 · flips the container
+              to show the Live Feed Preferences toggles. Does NOT
+              close the panel · the outside-tap close is also disabled
+              while on the Feed sub-view so screen movement never
+              dismisses the toggles. The ⋮ toggle button is the ONLY
+              way to close while on Feed. */}
+          <ExtraActionPill
+            label="Feed"
+            data-nex-live-footer-extra-feed="true"
+            onClick={() => setPanelView("feed")}
+            icon={
+              <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="7" x2="21" y2="7" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="17" x2="21" y2="17" />
+                <circle cx="6" cy="7" r="1.1" fill="currentColor" />
+                <circle cx="6" cy="12" r="1.1" fill="currentColor" />
+                <circle cx="6" cy="17" r="1.1" fill="currentColor" />
+              </svg>
+            }
+          />
           </div>
           {/* Owner directive 2026-10-25 · "the container will also
               have button if seller has shop and this button will be
@@ -1247,11 +1301,69 @@ export function LiveViewerFooter(
               />
             </div>
           )}
-          {/* Owner directive 2026-10-25 · Live Feed Preferences at the
-              bottom of the 3-dot container. Quick 4-row tier + expand
-              for the other 11. Section is DRAFT · localStorage only ·
-              feed-ranking integration is a separate authorised slice. */}
-          <LiveFeedPreferencesSection />
+          </>
+          )}
+          {/* Owner directive 2026-10-25 · Feed sub-view · Live Feed
+              Preferences fills the panel. A compact header carries a
+              "← Back" button that returns to the buttons view. The
+              panel outside-tap close is disabled while on this view
+              (handled by the useEffect above). */}
+          {panelView === "feed" && (
+            <div
+              data-nex-live-footer-extra-feed-view
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 8,
+                }}
+              >
+                <button
+                  type="button"
+                  data-nex-live-footer-extra-feed-back
+                  onClick={() => setPanelView("buttons")}
+                  aria-label="Back to actions"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    padding: "4px 8px 4px 4px",
+                    borderRadius: 8,
+                    background: "rgba(255, 255, 255, 0.08)",
+                    border: `1px solid ${BORDER}`,
+                    color: TEXT,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  <span aria-hidden style={{ fontSize: 14, lineHeight: 1 }}>←</span>
+                  <span>Back</span>
+                </button>
+                <span
+                  style={{
+                    fontSize: 10,
+                    color: DIM,
+                    fontWeight: 700,
+                    letterSpacing: "0.04em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Tap ⋮ to close
+                </span>
+              </div>
+              <LiveFeedPreferencesSection />
+            </div>
+          )}
         </div>
       </div>
       )}
