@@ -601,7 +601,15 @@ export function VideoViewerClient({
                   textShadow: "none",
                 }}
               >
-                <SatelliteIconWithPing accentColor="#B30000" />
+                {/* Owner directive 2026-10-25 · "ping in header only
+                    ping lines change to white color · tower is red
+                    remain" · split the single accent into tower +
+                    ping. Tower + ball-dot stay in NEX dark red;
+                    the 3 concentric ping-wave rings render WHITE. */}
+                <SatelliteIconWithPing
+                  accentColor="#B30000"
+                  pingColor="#FFFFFF"
+                />
               </span>
               <span data-nex-video-viewer-title-text>
                 Live {countryLabel || video.country_of_origin || "NEX"}
@@ -648,7 +656,7 @@ export function VideoViewerClient({
                     verticalAlign: "baseline",
                   }}
                 >
-                  (AI)
+                  AI
                 </span>
               )}
             </div>

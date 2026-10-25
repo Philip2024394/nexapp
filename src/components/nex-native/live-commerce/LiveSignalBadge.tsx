@@ -97,9 +97,18 @@ export function LiveSignalBadge(
  *  ping-wave halo radiating from the tower top. */
 export function SatelliteIconWithPing({
   accentColor,
+  pingColor,
 }: {
   readonly accentColor: string;
+  /** Owner directive 2026-10-25 · "the ping in header only ping
+   *  lines change to white color · tower is red remain". Optional ·
+   *  when provided, the 3 concentric ping-wave rings use this colour
+   *  while the tower + ball-dot keep `accentColor`. Default falls
+   *  back to `accentColor` for every caller that pre-dates the
+   *  split (backwards-compatible). */
+  readonly pingColor?: string;
 }): React.JSX.Element {
+  const ping = pingColor ?? accentColor;
 
   return (
     <span
@@ -133,7 +142,7 @@ export function SatelliteIconWithPing({
         style={{
           position: "absolute",
           inset: 0,
-          border: `1.4px solid ${accentColor}`,
+          border: `1.4px solid ${ping}`,
           borderRadius: "50%",
           animation: "nexLiveSignalPing 1800ms ease-out infinite",
           animationDelay: "0ms",
@@ -145,7 +154,7 @@ export function SatelliteIconWithPing({
         style={{
           position: "absolute",
           inset: 0,
-          border: `1.4px solid ${accentColor}`,
+          border: `1.4px solid ${ping}`,
           borderRadius: "50%",
           animation: "nexLiveSignalPing 1800ms ease-out infinite",
           animationDelay: "600ms",
@@ -157,7 +166,7 @@ export function SatelliteIconWithPing({
         style={{
           position: "absolute",
           inset: 0,
-          border: `1.4px solid ${accentColor}`,
+          border: `1.4px solid ${ping}`,
           borderRadius: "50%",
           animation: "nexLiveSignalPing 1800ms ease-out infinite",
           animationDelay: "1200ms",
