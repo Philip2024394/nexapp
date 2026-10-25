@@ -961,6 +961,15 @@ export function LiveViewerPage({
           isGuest={isGuest}
           replyContext={replyContext}
           onReplyCancel={() => setReplyContext(null)}
+          /* Owner directive 2026-10-25 · composer-header author
+             identity. Live viewer passes the broadcaster display
+             name once an account→profile resolver lands; until then
+             a non-identifying placeholder keeps the UI mechanic
+             working. authorIsLive mirrors the real session state so
+             the red ping is honest: it only shows while state ===
+             "live". */
+          authorDisplayName="Broadcaster"
+          authorIsLive={state === "live"}
         />
       )}
       {isSelf && state === "live" && !isImmersive && (

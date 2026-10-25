@@ -108,6 +108,19 @@ export interface LiveViewerFooterProps {
    *  show the gate to everyone until the parent has an authoritative
    *  signal). */
   readonly isShopOwner?: boolean;
+  /** Owner directive 2026-10-25 · composer-header author identity.
+   *  When `authorDisplayName` is provided the composer placeholder
+   *  rotates every 2 seconds between the author name and the gray
+   *  "Type Message…" prompt (empty-state only · a typing user sees
+   *  only their own draft).
+   *  When `authorAvatarUrl` is provided (or when a display name is
+   *  provided without a URL · falls back to initials) a 24×24
+   *  avatar renders inside the textarea on the left · when
+   *  `authorIsLive` is true a small red ping dot sits on the
+   *  avatar's top-right. */
+  readonly authorAvatarUrl?: string | null;
+  readonly authorDisplayName?: string | null;
+  readonly authorIsLive?: boolean;
 }
 
 const BAR_BG = "rgba(2, 9, 20, 0.78)";
@@ -122,6 +135,37 @@ export function LiveViewerFooter(
 ): React.JSX.Element {
   const [draft, setDraft] = React.useState("");
   const [likePulse, setLikePulse] = React.useState(0);
+
+  // Owner directive 2026-10-25 · composer placeholder rotates every
+  // 2 seconds between the author name and "Type Message…" when an
+  // author display name is provided. The rotation only drives the
+  // placeholder attribute · as soon as the viewer types a character
+  // the native placeholder is hidden, so the user never sees the
+  // rotation interfere with their own draft.
+  const [rotateToName, setRotateToName] = React.useState(true);
+  React.useEffect(() => {
+    if (!props.authorDisplayName) return;
+    const id = window.setInterval(() => {
+      setRotateToName((v) => !v);
+    }, 2000);
+    return () => {
+      window.clearInterval(id);
+    };
+  }, [props.authorDisplayName]);
+  const hasAuthorIdentity =
+    typeof props.authorDisplayName === "string" &&
+    props.authorDisplayName.length > 0;
+  const avatarInitial = hasAuthorIdentity
+    ? (props.authorDisplayName as string).trim().charAt(0).toUpperCase()
+    : "·";
+  const dynamicComposerPlaceholder: string = (() => {
+    if (props.replyContext)
+      return `Reply to ${props.replyContext.replyToAuthorDisplayName}…`;
+    if (!hasAuthorIdentity) return "Say something…";
+    return rotateToName
+      ? (props.authorDisplayName as string)
+      : "Type Message…";
+  })();
   const goLiveHref = props.goLiveHref ?? "/nex-native/live-commerce/go-live";
   const showGoLive = goLiveHref !== "";
   const isShopOwner = props.isShopOwner === true;
@@ -690,17 +734,112 @@ export function LiveViewerFooter(
               background: transparent;
               color: inherit;
             }
+            @keyframes nex-live-footer-author-ping {
+              0%   { transform: scale(1);   opacity: 0.95; }
+              70%  { transform: scale(2.1); opacity: 0;    }
+              100% { transform: scale(2.1); opacity: 0;    }
+            }
+            @keyframes nex-live-footer-author-dot {
+              0%, 100% { opacity: 1;    }
+              50%      { opacity: 0.55; }
+            }
           `}</style>
+          {hasAuthorIdentity && (
+            /* Owner directive 2026-10-25 · author identity bubble
+               inside the composer · 24px avatar on the left · red
+               ping on the top-right when the author is live/online. */
+            <div
+              data-nex-live-footer-author
+              data-nex-live-footer-author-live={
+                props.authorIsLive === true ? "true" : "false"
+              }
+              aria-hidden
+              style={{
+                position: "absolute",
+                left: 6,
+                top: "50%",
+                transform: "translateY(-50%)",
+                width: 24,
+                height: 24,
+                borderRadius: 999,
+                background: "linear-gradient(135deg, #152646 0%, #1E3A6E 100%)",
+                color: "#FFFFFF",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: "0.02em",
+                border: "1px solid rgba(255,255,255,0.14)",
+                boxShadow: "0 0 0 1px rgba(2,9,20,0.6)",
+                overflow: "visible",
+                zIndex: 1,
+                pointerEvents: "none",
+              }}
+            >
+              {props.authorAvatarUrl ? (
+                <img
+                  src={props.authorAvatarUrl}
+                  alt=""
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    borderRadius: 999,
+                  }}
+                />
+              ) : (
+                <span>{avatarInitial}</span>
+              )}
+              {props.authorIsLive === true && (
+                <>
+                  {/* Static red dot */}
+                  <span
+                    data-nex-live-footer-author-dot
+                    style={{
+                      position: "absolute",
+                      right: -1,
+                      top: -1,
+                      width: 7,
+                      height: 7,
+                      borderRadius: 999,
+                      background: RED,
+                      boxShadow:
+                        "0 0 0 1.5px rgba(2, 9, 20, 0.9), 0 0 6px rgba(255,51,85,0.75)",
+                      animation:
+                        "nex-live-footer-author-dot 1.2s ease-in-out infinite",
+                    }}
+                  />
+                  {/* Expanding ping ring */}
+                  <span
+                    data-nex-live-footer-author-ping
+                    style={{
+                      position: "absolute",
+                      right: -1,
+                      top: -1,
+                      width: 7,
+                      height: 7,
+                      borderRadius: 999,
+                      background: "transparent",
+                      border: `1.5px solid ${RED}`,
+                      transformOrigin: "center",
+                      animation:
+                        "nex-live-footer-author-ping 1.6s ease-out infinite",
+                    }}
+                  />
+                </>
+              )}
+            </div>
+          )}
           <NexTextarea
             value={draft}
             onChange={setDraft}
-            placeholder={
-              props.replyContext
-                ? `Reply to ${props.replyContext.replyToAuthorDisplayName}…`
-                : "Say something…"
-            }
+            placeholder={dynamicComposerPlaceholder}
             maxLength={LIVE_COMMENT_MAX_LENGTH}
             data-nex-live-footer-text-input
+            data-nex-live-footer-placeholder-rotation={
+              hasAuthorIdentity ? (rotateToName ? "name" : "prompt") : "static"
+            }
             disabled={props.disabled}
             // Owner directive 2026-10-24 (sealed app-wide rule) ·
             // "any field that required text is active nex kepad".
@@ -723,8 +862,13 @@ export function LiveViewerFooter(
               border: `1px solid ${BORDER}`,
               color: TEXT,
               borderRadius: 10,
-              // Leave room on the right for the inline square Send button.
-              padding: "6px 40px 6px 10px",
+              // Owner directive 2026-10-25 · leave room on the LEFT
+              // for the 24px author avatar bubble + 6px inset + 6px
+              // gap, and keep the existing right-side room for the
+              // inline Send button.
+              padding: hasAuthorIdentity
+                ? "6px 40px 6px 38px"
+                : "6px 40px 6px 10px",
               fontSize: 13,
               lineHeight: 1.3,
               outline: "none",

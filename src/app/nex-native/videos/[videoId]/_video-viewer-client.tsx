@@ -881,6 +881,13 @@ export function VideoViewerClient({
         onShareEvidence={handleShareEvidence}
         isLiked={isLiked}
         disabled={false}
+        /* Owner directive 2026-10-25 · composer-header author
+           identity. Uploaded video → use the video's title as the
+           display name until a real author join (owner_account_id →
+           display_name/avatar_url) lands. Recorded content is not
+           currently live so authorIsLive stays false (no red ping). */
+        authorDisplayName={video.title}
+        authorIsLive={false}
       />
       {/* Owner spec 2026-10-24 · 3-option share bottom sheet. Owned
           by the viewer parent so it overlays the WHOLE viewer, not
