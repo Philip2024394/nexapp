@@ -130,11 +130,91 @@ const DIM = "#8BA9D1";
 const RED = "#FF3355";
 const CYAN = "#00AFFF";
 
+/** Owner directive 2026-10-25 · pill button used inside the 3-dot
+ *  slide-out panel. Renders either a `<button>` (default) or an
+ *  `<a>` (when `as="a" + href` is passed). Each pill shows a 16-px
+ *  white line-art icon on top of a short label underneath. All pills
+ *  are the same visual weight so Share/Save/Live/Message read as
+ *  siblings. */
+interface ExtraActionPillProps {
+  readonly label: string;
+  readonly icon: React.ReactNode;
+  readonly onClick?: () => void;
+  readonly href?: string;
+  readonly as?: "button" | "a";
+  readonly [dataAttr: `data-${string}`]: string | undefined;
+}
+
+function ExtraActionPill(
+  props: ExtraActionPillProps,
+): React.JSX.Element {
+  const style: React.CSSProperties = {
+    background: "rgba(255,255,255,0.09)",
+    border: `1px solid ${BORDER}`,
+    color: TEXT,
+    minWidth: 56,
+    minHeight: 44,
+    borderRadius: 10,
+    padding: "4px 8px",
+    cursor: "pointer",
+    display: "inline-flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+    textDecoration: "none",
+    fontFamily: "inherit",
+  };
+  const content = (
+    <>
+      <span aria-hidden style={{ display: "inline-flex" }}>
+        {props.icon}
+      </span>
+      <span style={{ fontSize: 10, fontWeight: 700, lineHeight: 1.1 }}>
+        {props.label}
+      </span>
+    </>
+  );
+  // Dispose of custom aria-less wiring: pull known props out and spread the rest.
+  const { label, icon, as, href, onClick, ...rest } = props;
+  void label;
+  void icon;
+  if (as === "a" && typeof href === "string") {
+    return (
+      <a
+        href={href}
+        onClick={onClick}
+        aria-label={props.label}
+        style={style}
+        {...rest}
+      >
+        {content}
+      </a>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={props.label}
+      style={style}
+      {...rest}
+    >
+      {content}
+    </button>
+  );
+}
+
 export function LiveViewerFooter(
   props: LiveViewerFooterProps,
 ): React.JSX.Element {
   const [draft, setDraft] = React.useState("");
   const [likePulse, setLikePulse] = React.useState(0);
+  // Owner directive 2026-10-25 · 3-dot ⋮ at the right end of the
+  // actions row toggles a horizontal slide-out carrying Share · Save
+  // · Live · Message. UI chrome only in this slice; the per-action
+  // handlers below are honest stubs pending backend authorisation.
+  const [extraActionsOpen, setExtraActionsOpen] = React.useState(false);
 
   // Owner directive 2026-10-25 · composer placeholder rotates every
   // 2 seconds between the author name and "Type Message…" when an
@@ -392,11 +472,20 @@ export function LiveViewerFooter(
       <div
         data-nex-live-viewer-footer-actions
         style={{
+          // Owner directive 2026-10-25 · 3-dot ⋮ sits at the far right
+          // of the actions row and slides out Share · Save · Live ·
+          // Message to its LEFT when tapped. We keep the row as a flex
+          // container so the slide-out can be an absolute child that
+          // overlays the actions when open.
+          position: "relative",
           display: "grid",
           // Owner directive 2026-10-25 · the Like button moves to the
           // composer, so this row carries only Live / Market / Share
           // (3-col) or Market / Share (2-col when goLive is hidden).
-          gridTemplateColumns: showGoLive ? "1fr 1.6fr 1fr" : "2fr 1fr",
+          // The 3-dot menu trigger adds one `auto` column at the end.
+          gridTemplateColumns: showGoLive
+            ? "1fr 1.6fr 1fr auto"
+            : "2fr 1fr auto",
           gap: 6,
           alignItems: "stretch",
           padding: "0 12px",
@@ -509,6 +598,168 @@ export function LiveViewerFooter(
           <span aria-hidden style={{ fontSize: 18 }}>⤴</span>
           <span style={{ fontSize: 11, fontWeight: 700 }}>Share</span>
         </button>
+
+        {/* Owner directive 2026-10-25 · 3-dot vertical menu to the
+            RIGHT of Share. Tapping toggles a horizontal slide-out
+            carrying four extra actions (Share · Save · Live ·
+            Message) that emerges leftward from the ⋮ position.
+            Chrome-only in this slice · the per-action handlers are
+            honest stubs pending backend authorisation. */}
+        <button
+          type="button"
+          data-nex-live-footer-more
+          data-nex-live-footer-more-open={extraActionsOpen ? "true" : "false"}
+          aria-label={extraActionsOpen ? "Close extra actions" : "Open extra actions"}
+          aria-expanded={extraActionsOpen ? "true" : "false"}
+          onClick={() => setExtraActionsOpen((v) => !v)}
+          style={{
+            background: extraActionsOpen
+              ? "rgba(0, 175, 255, 0.22)"
+              : "rgba(255,255,255,0.06)",
+            border: `1px solid ${extraActionsOpen ? CYAN : BORDER}`,
+            color: TEXT,
+            width: 44,
+            minHeight: 48,
+            borderRadius: 12,
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 0,
+            fontSize: 20,
+            lineHeight: 1,
+            transition: "background 160ms ease-out, border-color 160ms ease-out, transform 180ms ease-out",
+            transform: extraActionsOpen ? "rotate(90deg)" : "rotate(0deg)",
+          }}
+        >
+          <svg
+            aria-hidden
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="5" r="1.3" />
+            <circle cx="12" cy="12" r="1.3" />
+            <circle cx="12" cy="19" r="1.3" />
+          </svg>
+        </button>
+
+        {/* Owner directive 2026-10-25 · slide-out extra-actions panel.
+            Absolutely positioned over the actions row, right-anchored
+            at the ⋮ button (right: 56px inside the padded row). When
+            open, it slides in from the right (translateX 0 → right)
+            and reveals the four pill buttons. When closed, it slides
+            out to the right and `pointer-events: none` so the
+            underlying Live/Market/Share remain tappable. */}
+        <div
+          data-nex-live-footer-extra-actions
+          data-nex-live-footer-extra-actions-open={extraActionsOpen ? "true" : "false"}
+          aria-hidden={!extraActionsOpen}
+          style={{
+            position: "absolute",
+            top: 0,
+            bottom: 0,
+            right: 56,
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            paddingRight: 4,
+            background: extraActionsOpen
+              ? "linear-gradient(90deg, rgba(2,9,20,0) 0%, rgba(2,9,20,0.85) 24%, rgba(2,9,20,0.95) 100%)"
+              : "transparent",
+            borderRadius: 999,
+            transition: "transform 240ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease-out",
+            transform: extraActionsOpen ? "translateX(0)" : "translateX(14px)",
+            opacity: extraActionsOpen ? 1 : 0,
+            pointerEvents: extraActionsOpen ? "auto" : "none",
+            zIndex: 3,
+          }}
+        >
+          {/* Share · reuses the existing Share pipeline when wired.
+              Honest stub for now · alerts the viewer the share-sheet
+              with social destinations is pending authorisation. */}
+          <ExtraActionPill
+            label="Share"
+            data-nex-live-footer-extra-share="true"
+            onClick={() => {
+              setExtraActionsOpen(false);
+              openShareSheet();
+            }}
+            icon={
+              <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="18" cy="5" r="3" />
+                <circle cx="6" cy="12" r="3" />
+                <circle cx="18" cy="19" r="3" />
+                <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98" />
+              </svg>
+            }
+          />
+          {/* Save · honest stub · the owner must define the Save
+              target (bookmark · collection · server record) before
+              this does anything persistent. */}
+          <ExtraActionPill
+            label="Save"
+            data-nex-live-footer-extra-save="true"
+            onClick={() => {
+              setExtraActionsOpen(false);
+              if (typeof window !== "undefined") {
+                window.alert(
+                  "Save · UI only · owner must define Save behaviour (bookmark / collection / server record) before wiring.",
+                );
+              }
+            }}
+            icon={
+              <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+              </svg>
+            }
+          />
+          {/* Live · owner directive 2026-10-25 "the live button
+              activates the same page we designed for live that they
+              accept". Routes to the welcome/guidelines surface. */}
+          <ExtraActionPill
+            label="Live"
+            data-nex-live-footer-extra-live="true"
+            as="a"
+            href="/nex-native/live-commerce/welcome"
+            onClick={() => setExtraActionsOpen(false)}
+            icon={
+              <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3.4" fill="currentColor" />
+                <circle cx="12" cy="12" r="7" />
+                <circle cx="12" cy="12" r="10.5" />
+              </svg>
+            }
+          />
+          {/* Message · honest stub · the full flow (open panel with
+              owner profile → send message + user card → 24 h expiry →
+              mutual-accept chat creation) overlaps the existing
+              peer-invite + chat-creation plumbing. Needs separate
+              owner authorisation to pick the integration path. */}
+          <ExtraActionPill
+            label="Message"
+            data-nex-live-footer-extra-message="true"
+            onClick={() => {
+              setExtraActionsOpen(false);
+              if (typeof window !== "undefined") {
+                window.alert(
+                  "Message · UI only · the 24 h invitation + chat-creation flow requires owner authorisation to pick the integration path with the existing peer-invite plumbing.",
+                );
+              }
+            }}
+            icon={
+              <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 5h16v10H8l-4 4z" />
+              </svg>
+            }
+          />
+        </div>
       </div>
 
       {/* Owner directive 2026-10-24 (refined) · cinematic Like
