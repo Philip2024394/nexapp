@@ -27,6 +27,7 @@ import { NexTextarea } from "@/lib/nex-native/nex-keyboard/nex-textarea";
 import { LIVE_COMMENT_MAX_LENGTH } from "@/lib/nex-native/live-broadcast/live-comments-channel";
 import type { VideoShareEvidence } from "./VideoShareSheet";
 import { hasAcceptedLiveWelcome } from "@/lib/nex-native/live-broadcast/live-welcome-acceptance";
+import { LiveFeedPreferencesSection } from "./_live-feed-preferences";
 
 const LIVE_WELCOME_PATH = "/nex-native/live-commerce/welcome";
 
@@ -1099,6 +1100,17 @@ export function LiveViewerFooter(
             opacity: extraActionsOpen ? 1 : 0,
             pointerEvents: extraActionsOpen ? "auto" : "none",
             zIndex: 3,
+            // Owner directive 2026-10-25 · the panel now hosts a
+            // Live Feed Preferences section · may exceed the viewer
+            // height when all 15 toggles are expanded. Cap at a safe
+            // mobile height and allow vertical scroll · the outside-
+            // tap close listener still fires because the scrim covers
+            // document, not the panel. `overscroll-behavior: contain`
+            // prevents the page from scrolling when a scroll bubbles
+            // out of the panel.
+            maxHeight: "calc(100vh - 170px)",
+            overflowY: "auto",
+            overscrollBehavior: "contain",
           }}
         >
           {/* Owner directive 2026-10-25 · "4 buttons each row" ·
@@ -1235,6 +1247,11 @@ export function LiveViewerFooter(
               />
             </div>
           )}
+          {/* Owner directive 2026-10-25 · Live Feed Preferences at the
+              bottom of the 3-dot container. Quick 4-row tier + expand
+              for the other 11. Section is DRAFT · localStorage only ·
+              feed-ranking integration is a separate authorised slice. */}
+          <LiveFeedPreferencesSection />
         </div>
       </div>
       )}
