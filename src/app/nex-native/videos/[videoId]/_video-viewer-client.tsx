@@ -24,7 +24,7 @@ import { getLiveInviteTargetAction } from "@/app/nex-native/live-commerce/_invit
 import type { InviteTarget } from "@/lib/nex-native/live-broadcast/invite-target";
 import { VideoShareSheet } from "@/components/nex-native/live-commerce/VideoShareSheet";
 import { CategoryGridSheet } from "@/components/nex-native/live-commerce/CategoryGridSheet";
-import { ControlDrawer } from "@/components/nex-native/control-drawer/control-drawer-client";
+import { LiveSideDrawer } from "@/components/nex-native/live-commerce/LiveSideDrawer";
 import {
   VideoCommentsOverlay,
   type VideoComment,
@@ -844,16 +844,14 @@ export function VideoViewerClient({
                 </svg>
               )}
             </button>
-            {/* Owner directive 2026-10-24 · "side drawer live should
-                be exact same side drawer as on the page /contacts" ·
-                mount the sealed ControlDrawer directly · session=null
-                is the documented anonymous path (shows sign-in rows,
-                no identity bar). The drawer manages its own trigger
-                + open state + portal into the frame. The marker
-                `data-nex-video-viewer-menu-trigger` stays as a wrapper
-                data-attribute for test selectors. */}
+            {/* Owner directive 2026-10-25 · Live surfaces now mount
+                their own `LiveSideDrawer` (same visual chrome as the
+                sealed ControlDrawer, but Nex-Live header + 3 nav rows
+                + home icon that routes to /contacts). The viewer's
+                `data-nex-video-viewer-menu-trigger` marker stays as a
+                wrapper data-attribute for test selectors. */}
             <div data-nex-video-viewer-menu-trigger>
-              <ControlDrawer session={null} />
+              <LiveSideDrawer />
             </div>
           </div>
         </div>
