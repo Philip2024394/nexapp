@@ -548,6 +548,28 @@ test.describe("NEX Live · uploaded-video viewer · in-browser journey", () => {
   }) => {
     await page.goto(VIEWER_PATH);
     await page.locator("[data-nex-video-viewer]").waitFor({ timeout: 5000 });
+    // Owner directive 2026-10-25 (F3 corrective) · the viewer's
+    // keyboard handler is installed inside a `useEffect`, which
+    // React commits AFTER the first paint. `waitFor` on the viewer
+    // element resolves at paint time · the effect may not have run
+    // yet. Previously the test raced the dispatch against React's
+    // effect scheduler and failed intermittently.
+    //
+    // Fix: wait for two animation frames before dispatching. The
+    // first rAF boundary guarantees the current frame's paint has
+    // flushed and useEffect microtasks have run; the second
+    // guarantees React has processed any follow-up effects scheduled
+    // from inside the first. This is a test-only observable
+    // condition · no production code change was made to the
+    // keyboard-navigation implementation.
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve());
+          });
+        }),
+    );
     // Dispatch the keydown directly on window inside the page
     // context · bypasses focus-target ambiguity introduced by the
     // 4-button footer which can intercept body-level clicks.
