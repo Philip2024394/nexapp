@@ -25,10 +25,16 @@ export function DevLivePhoneFrame({
   return (
     <>
       <style>{`
+        /* Owner directive 2026-10-26 · dev route is wrapped in
+         * nex-admin-root which opts OUT of the sealed .nex-native-
+         * stage/frame styling. We apply the hero background + sealed
+         * phone silhouette directly on these two divs so the dev-
+         * persona preview is pixel-identical to the regular viewer
+         * (/nex-native/videos/[videoId]). */
         [data-nex-dev-live-outer] {
           position: fixed;
           inset: 0;
-          background: #020914;
+          background: #020914 url("/nex-desktop-hero.png") center center / cover no-repeat;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -43,14 +49,17 @@ export function DevLivePhoneFrame({
         }
         @media (min-width: ${DESKTOP_BREAKPOINT_PX}px) {
           [data-nex-dev-live-frame] {
-            width: ${PHONE_WIDTH_PX}px;
-            height: auto;
+            /* Match the sealed .nex-native-frame exactly: 360×780,
+             * 32 px radius, 4 px black bezel + outer shadow + inner
+             * hairline, same height-cap math. */
+            width: min(${PHONE_WIDTH_PX}px, calc((100dvh - 32px) * 9 / 19.5));
+            height: min(780px, calc(100dvh - 32px));
             aspect-ratio: ${PHONE_ASPECT};
-            max-height: calc(100vh - 24px);
-            border-radius: 24px;
+            border-radius: 32px;
             box-shadow:
-              0 0 0 2px rgba(255, 255, 255, 0.06),
-              0 24px 60px -16px rgba(0, 0, 0, 0.8);
+              0 0 0 4px #000000,
+              0 24px 60px -14px rgba(0, 0, 0, 0.9),
+              0 0 0 1px rgba(255, 255, 255, 0.06);
           }
         }
       `}</style>

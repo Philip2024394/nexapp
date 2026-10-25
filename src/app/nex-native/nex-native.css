@@ -177,7 +177,16 @@ body::-webkit-scrollbar,
     align-items: center;
     height: 100dvh;
     min-height: 0;
-    background: #020914;
+    /* Owner directive 2026-10-26 · desktop/tablet background image ·
+     * Neon NEX Cyber Hero Banner (character on left · neon-cyan
+     * glow). Falls back to solid #020914 if the image fails to load.
+     * Mobile (≤499.98 px) stays unchanged · the frame is full-bleed
+     * on real phones so the image would never show. */
+    background:
+      #020914
+      url("/nex-desktop-hero.png")
+      center center / cover
+      no-repeat;
     overflow: hidden;
   }
   .nex-native-frame {
