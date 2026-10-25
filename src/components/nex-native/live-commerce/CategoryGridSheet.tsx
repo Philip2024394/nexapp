@@ -36,27 +36,135 @@ const NEX = {
 /** Owner directive 2026-10-24 · placeholder 12 tiles. Final labels,
  *  icons, and ordering are STILL PENDING OWNER APPROVAL per the
  *  Discovery category decision — I am NOT seeding these into any DB
- *  table. These are visual placeholders only. */
+ *  table. These are visual placeholders only.
+ *
+ *  Owner directive 2026-10-25 · the per-tile `glyph` emoji is
+ *  retained for backwards compatibility with any caller that passes
+ *  custom tiles, but the default renderer swaps to the matching
+ *  `iconKey` to show a white line-art SVG instead. Callers that
+ *  pass their own `tiles` without `iconKey` will fall back to the
+ *  emoji glyph. */
 export interface CategoryTile {
   readonly slug: string;
   readonly glyph: string;
   readonly label: string;
+  /** Optional · when provided, the component renders the matching
+   *  white line-art SVG from the local `CATEGORY_ICONS` map. When
+   *  omitted the component falls back to `glyph`. */
+  readonly iconKey?: keyof typeof CATEGORY_ICONS;
 }
 
+/** Owner directive 2026-10-25 · 12 white line-art SVG icons.
+ *  Stroke-only · currentColor · 24×24 viewBox · stroke width 1.8
+ *  with round joins so the strokes look crisp at the ~26-30px
+ *  render size inside the moon-shape tiles. The parent sets
+ *  `color: #FFFFFF` so icons are white; a small drop-shadow adds
+ *  separation against the cyan frosted-glass fill.
+ *
+ *  Icons are deliberately simple + consistent in visual weight ·
+ *  no filled shapes, no gradients, no multiple colours. Replace
+ *  individual entries when the final art lands. */
+export const CATEGORY_ICONS = {
+  food: (
+    <>
+      <path d="M4 11h16a7 7 0 0 1-7 7h-2a7 7 0 0 1-7-7z" />
+      <path d="M9 5v3M12 4v4M15 5v3" />
+    </>
+  ),
+  fashion: (
+    <>
+      <path d="M9 3a3 3 0 0 1 6 0" />
+      <path d="M9 3l-6 6 3 3 3-3v12h12V9l3 3 3-3-6-6" />
+    </>
+  ),
+  travel: (
+    <>
+      <path d="M12 2v6M12 22v-4" />
+      <path d="M5 10c0 4 3 7 7 7s7-3 7-7" />
+      <path d="M5 10h14" />
+      <path d="M8 10c0-3 2-6 4-8 2 2 4 5 4 8" />
+    </>
+  ),
+  services: (
+    <>
+      <path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-3 3-2.4-.6-.6-2.4z" />
+    </>
+  ),
+  products: (
+    <>
+      <path d="M6 8l1-4h10l1 4" />
+      <path d="M4 8h16l-1 12H5z" />
+      <path d="M9 11v2a3 3 0 0 0 6 0v-2" />
+    </>
+  ),
+  events: (
+    <>
+      <path d="M4 10h16v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" />
+      <path d="M4 10V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3" />
+      <path d="M8 3v4M16 3v4M4 14h16" />
+    </>
+  ),
+  stay: (
+    <>
+      <path d="M3 11l9-8 9 8" />
+      <path d="M5 10v10h14V10" />
+      <path d="M10 20v-5h4v5" />
+    </>
+  ),
+  transport: (
+    <>
+      <circle cx="6" cy="17" r="3" />
+      <circle cx="18" cy="17" r="3" />
+      <path d="M6 17l3-7h4l3 7" />
+      <path d="M9 10h7l2 4" />
+      <path d="M13 10V7h3" />
+    </>
+  ),
+  deals: (
+    <>
+      <path d="M3 12l9-9h7v7l-9 9z" />
+      <circle cx="15.5" cy="8.5" r="1.5" />
+    </>
+  ),
+  creators: (
+    <>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />
+    </>
+  ),
+  art: (
+    <>
+      <path d="M12 3C7 3 3 7 3 12c0 3 2 5 4 5h1a2 2 0 0 1 2 2v1c0 1 1 2 2 2 5 0 9-4 9-9s-4-10-9-10z" />
+      <circle cx="7.5" cy="11.5" r="1" />
+      <circle cx="12" cy="7.5" r="1" />
+      <circle cx="16.5" cy="11.5" r="1" />
+    </>
+  ),
+  sports: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 3a9 9 0 0 0 0 18M3 12a9 9 0 0 1 18 0" />
+      <path d="M6 6l12 12M18 6L6 18" />
+    </>
+  ),
+} as const;
+
 // Owner directive 2026-10-24 · "category name only 1 word".
+// Owner directive 2026-10-25 · each tile now carries an `iconKey`
+// that resolves to a white line-art SVG from `CATEGORY_ICONS`.
 export const DEFAULT_CATEGORY_TILES: readonly CategoryTile[] = [
-  { slug: "food-drink",    glyph: "🍜", label: "Food" },
-  { slug: "fashion",       glyph: "👗", label: "Fashion" },
-  { slug: "travel",        glyph: "🏝️", label: "Travel" },
-  { slug: "services",      glyph: "🔧", label: "Services" },
-  { slug: "products",      glyph: "🛍️", label: "Products" },
-  { slug: "events",        glyph: "🎉", label: "Events" },
-  { slug: "stay",          glyph: "🏠", label: "Stay" },
-  { slug: "transport",     glyph: "🏍️", label: "Transport" },
-  { slug: "deals",         glyph: "💐", label: "Deals" },
-  { slug: "creators",      glyph: "👤", label: "Creators" },
-  { slug: "art",           glyph: "🎨", label: "Art" },
-  { slug: "sports",        glyph: "🏃", label: "Sports" },
+  { slug: "food-drink",    glyph: "🍜", iconKey: "food",      label: "Food" },
+  { slug: "fashion",       glyph: "👗", iconKey: "fashion",   label: "Fashion" },
+  { slug: "travel",        glyph: "🏝️", iconKey: "travel",    label: "Travel" },
+  { slug: "services",      glyph: "🔧", iconKey: "services",  label: "Services" },
+  { slug: "products",      glyph: "🛍️", iconKey: "products",  label: "Products" },
+  { slug: "events",        glyph: "🎉", iconKey: "events",    label: "Events" },
+  { slug: "stay",          glyph: "🏠", iconKey: "stay",      label: "Stay" },
+  { slug: "transport",     glyph: "🏍️", iconKey: "transport", label: "Transport" },
+  { slug: "deals",         glyph: "💐", iconKey: "deals",     label: "Deals" },
+  { slug: "creators",      glyph: "👤", iconKey: "creators",  label: "Creators" },
+  { slug: "art",           glyph: "🎨", iconKey: "art",       label: "Art" },
+  { slug: "sports",        glyph: "🏃", iconKey: "sports",    label: "Sports" },
 ];
 
 export interface CategoryGridSheetProps {
@@ -164,65 +272,132 @@ export function CategoryGridSheet(
             pointerEvents: "auto",
           }}
         >
-          {tiles.slice(0, 12).map((t) => (
-            <button
-              key={t.slug}
-              type="button"
-              data-nex-category-tile
-              data-nex-category-slug={t.slug}
-              onClick={() => {
-                props.onCategoryPick?.(t);
-                props.onClose();
-              }}
-              style={{
-                // Owner directive 2026-10-24 · "more blue app color
-                // rim and white buttons frosted". White translucent
-                // frosted-glass fill + bright NEX cyan rim.
-                aspectRatio: "1 / 1",
-                borderRadius: "50%",
-                // Owner directive 2026-10-24 · "change the frosted
-                // button color same as rim color". Fill now matches
-                // the NEX cyan rim · translucent cyan gradient
-                // behind the frosted blur.
-                background:
-                  "linear-gradient(135deg, rgba(0, 175, 255, 0.42) 0%, rgba(0, 116, 255, 0.18) 100%)",
-                backdropFilter: "blur(18px) saturate(140%)",
-                WebkitBackdropFilter: "blur(18px) saturate(140%)",
-                border: "2px solid rgba(0, 175, 255, 0.9)",
-                boxShadow:
-                  "inset 0 0 0 1px rgba(0, 175, 255, 0.5), 0 0 14px -4px rgba(0, 175, 255, 0.6), 0 4px 10px -6px rgba(0, 20, 50, 0.45)",
-                color: NEX.text,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 2,
-                cursor: "pointer",
-                padding: "4px 2px",
-                fontFamily: "inherit",
-                textShadow: "0 1px 3px rgba(0,0,0,0.55)",
-                pointerEvents: "auto",
-              }}
-            >
-              <span aria-hidden style={{ fontSize: 26, lineHeight: 1 }}>
-                {t.glyph}
-              </span>
-              <span
+          {tiles.slice(0, 12).map((t) => {
+            const iconPath = t.iconKey ? CATEGORY_ICONS[t.iconKey] : null;
+            return (
+              <button
+                key={t.slug}
+                type="button"
+                data-nex-category-tile
+                data-nex-category-slug={t.slug}
+                onClick={() => {
+                  props.onCategoryPick?.(t);
+                  props.onClose();
+                }}
                 style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  textAlign: "center",
-                  lineHeight: 1.2,
+                  // Owner directive 2026-10-24 · white-frosted button
+                  // with cyan rim. Owner directive 2026-10-25 · the
+                  // text label now sits inside a "moon-shape" strip at
+                  // the bottom-rounded portion of the button · we
+                  // make the button position:relative + overflow
+                  // hidden so the moon's rectangular edges are clipped
+                  // to the circular silhouette.
+                  position: "relative",
+                  aspectRatio: "1 / 1",
+                  borderRadius: "50%",
+                  background:
+                    "linear-gradient(135deg, rgba(0, 175, 255, 0.42) 0%, rgba(0, 116, 255, 0.18) 100%)",
+                  backdropFilter: "blur(18px) saturate(140%)",
+                  WebkitBackdropFilter: "blur(18px) saturate(140%)",
+                  border: "2px solid rgba(0, 175, 255, 0.9)",
+                  boxShadow:
+                    "inset 0 0 0 1px rgba(0, 175, 255, 0.5), 0 0 14px -4px rgba(0, 175, 255, 0.6), 0 4px 10px -6px rgba(0, 20, 50, 0.45)",
+                  color: "#FFFFFF",
+                  cursor: "pointer",
+                  padding: 0,
+                  fontFamily: "inherit",
                   overflow: "hidden",
-                  display: "-webkit-box",
-                  WebkitBoxOrient: "vertical",
-                  WebkitLineClamp: 2,
+                  pointerEvents: "auto",
                 }}
               >
-                {t.label}
-              </span>
-            </button>
-          ))}
+                {/* Icon · white line-art SVG · owner directive
+                    2026-10-25 "white icons high quality". Positioned
+                    in the upper portion of the button, above the
+                    moon-shape text strip. */}
+                <span
+                  aria-hidden
+                  data-nex-category-tile-icon
+                  style={{
+                    position: "absolute",
+                    left: "50%",
+                    top: "28%",
+                    transform: "translate(-50%, -50%)",
+                    width: "46%",
+                    height: "46%",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    filter:
+                      "drop-shadow(0 1px 2px rgba(0,0,0,0.45)) drop-shadow(0 0 4px rgba(0,0,0,0.25))",
+                  }}
+                >
+                  {iconPath ? (
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="100%"
+                      height="100%"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      {iconPath}
+                    </svg>
+                  ) : (
+                    // Backwards-compatible fallback · callers that pass
+                    // custom tiles without `iconKey` still get the emoji
+                    // glyph in the icon position.
+                    <span style={{ fontSize: 26, lineHeight: 1 }}>
+                      {t.glyph}
+                    </span>
+                  )}
+                </span>
+                {/* Moon shape · translucent dark crescent anchored at
+                    the bottom of the button · the parent's border-
+                    radius:50% + overflow:hidden clips the rectangular
+                    edges to the circle's curve so the strip reads as
+                    a moon. The text label sits inside, horizontally
+                    centred, close to the lower rounded edge. */}
+                <span
+                  data-nex-category-tile-moon
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: "48%",
+                    background:
+                      "linear-gradient(180deg, rgba(2, 9, 20, 0) 0%, rgba(2, 9, 20, 0.42) 32%, rgba(2, 9, 20, 0.78) 100%)",
+                    display: "flex",
+                    alignItems: "flex-end",
+                    justifyContent: "center",
+                    paddingBottom: "16%",
+                    pointerEvents: "none",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 800,
+                      letterSpacing: "0.02em",
+                      textAlign: "center",
+                      lineHeight: 1.1,
+                      color: "#FFFFFF",
+                      textShadow: "0 1px 3px rgba(0,0,0,0.65)",
+                      maxWidth: "88%",
+                      overflow: "hidden",
+                      display: "-webkit-box",
+                      WebkitBoxOrient: "vertical",
+                      WebkitLineClamp: 2,
+                    }}
+                  >
+                    {t.label}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
         </div>
         {/* Honest footer · placeholder tiles */}
         <div
