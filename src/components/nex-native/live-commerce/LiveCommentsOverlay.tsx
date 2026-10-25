@@ -55,6 +55,20 @@ export interface LiveCommentsOverlayProps {
    *  tapped comment · the parent decides whether to enter reply
    *  mode (e.g. only for signed-in viewers, not guests). */
   readonly onReplyRequested?: (comment: LiveCommentPayload) => void;
+  /** Owner directive 2026-10-25 (F1) · opt-in SSR seed. When
+   *  provided, the component initialises its visible-entries state
+   *  with these comments so `renderToStaticMarkup` tests can inspect
+   *  the rendered DOM. The seed is capped by `MAX_VISIBLE_COMMENTS`
+   *  using the same tail-based rule the Realtime useEffect applies
+   *  post-admit, so an SSR snapshot matches production behaviour
+   *  after mount.
+   *
+   *  Production callers DO NOT pass this prop · the state starts
+   *  empty, the useEffect admits comments as they arrive from
+   *  `props.comments`, and the exit timer runs normally. The seed
+   *  does NOT skip, bypass, or weaken the real comment-loading
+   *  behaviour · it is additive and opt-in. */
+  readonly initialVisibleEntries?: readonly LiveCommentPayload[];
 }
 
 /** Shape used internally · each comment gets a stable key + an
@@ -74,17 +88,47 @@ export function LiveCommentsOverlay(
   const resolveName = props.resolveDisplayName ?? (() => null);
   const resolveAvatar = props.resolveAvatarUrl ?? (() => null);
 
+  // Build a stable key per comment: {authorAccountId}:{clientSentAt}.
+  // Hoisted above the useState so the lazy initialiser can call it.
+  const stableKeyFor = (c: LiveCommentPayload): string =>
+    `${c.authorAccountId}:${c.clientSentAt}`;
+
   // Internal state · what the overlay is currently showing. The
   // parent feeds the full Realtime list via `props.comments`; the
   // overlay projects that into a bounded, timer-driven view.
-  const [entries, setEntries] = React.useState<readonly VisibleEntry[]>([]);
-  const lastConsumedKeyRef = React.useRef<string | null>(null);
+  //
+  // Owner directive 2026-10-25 (F1) · opt-in SSR seed. When
+  // `initialVisibleEntries` is provided we initialise entries with
+  // the tail-capped seed so renderToStaticMarkup can inspect visible
+  // content. In production this prop is omitted and entries starts
+  // empty · identical to the original behaviour.
+  const [entries, setEntries] = React.useState<readonly VisibleEntry[]>(() => {
+    if (
+      !props.initialVisibleEntries ||
+      props.initialVisibleEntries.length === 0
+    ) {
+      return [];
+    }
+    const seed = props.initialVisibleEntries.slice(-MAX_VISIBLE_COMMENTS);
+    const now = Date.now();
+    return seed.map((c, i) => ({
+      key: stableKeyFor(c),
+      comment: c,
+      arrivedAt: now + i,
+      state: "live" as const,
+    }));
+  });
+  const lastConsumedKeyRef = React.useRef<string | null>(
+    props.initialVisibleEntries && props.initialVisibleEntries.length > 0
+      ? stableKeyFor(
+          props.initialVisibleEntries[props.initialVisibleEntries.length - 1]!,
+        )
+      : null,
+  );
 
-  // Build a stable key per comment: {authorAccountId}:{clientSentAt}.
-  // Realtime sends are at-most-once so duplicate keys are unlikely,
-  // but we dedupe defensively.
-  const stableKey = (c: LiveCommentPayload): string =>
-    `${c.authorAccountId}:${c.clientSentAt}`;
+  // Alias for the hoisted key fn · keeps the useEffect body readable
+  // without a second declaration.
+  const stableKey = stableKeyFor;
 
   // Admit new comments: when `props.comments` grows at the tail,
   // ingest the new comments (bounded by the visible cap). This
