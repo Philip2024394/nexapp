@@ -31,6 +31,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { markLiveWelcomeAccepted } from "@/lib/nex-native/live-broadcast/live-welcome-acceptance";
+import { ControlDrawer } from "@/components/nex-native/control-drawer/control-drawer-client";
 
 const NEX = {
   text: "#F2F5F8",
@@ -148,34 +149,57 @@ export function WelcomeClient(
           boxSizing: "border-box",
         }}
       >
-        {/* Title band · roomier · owner directive 2026-10-24. */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 4 }}>
-          <h1
-            id="nex-live-welcome-title"
-            data-nex-live-welcome-title
-            style={{
-              margin: 0,
-              fontSize: 26,
-              fontWeight: 900,
-              lineHeight: 1.15,
-              letterSpacing: "-0.01em",
-              color: "#FFFFFF",
-              textShadow:
-                "0 2px 10px rgba(0, 0, 0, 0.75), 0 1px 2px rgba(0, 0, 0, 0.85)",
-            }}
-          >
-            Welcome to NEX LIVE! <span aria-hidden>🎉</span>
-          </h1>
+        {/* Title band · owner directive 2026-10-24 · 3-dot drawer
+            trigger pinned to the right of the title row. The
+            ControlDrawer renders its own vertical ⋮ button + sliding
+            panel · we just reserve the space and let it mount. */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 12,
+            marginBottom: 4,
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1, minWidth: 0 }}>
+            <h1
+              id="nex-live-welcome-title"
+              data-nex-live-welcome-title
+              style={{
+                margin: 0,
+                fontSize: 26,
+                fontWeight: 900,
+                lineHeight: 1.15,
+                letterSpacing: "-0.01em",
+                color: "#FFFFFF",
+                textShadow:
+                  "0 2px 10px rgba(0, 0, 0, 0.75), 0 1px 2px rgba(0, 0, 0, 0.85)",
+              }}
+            >
+              Welcome to NEX LIVE! <span aria-hidden>🎉</span>
+            </h1>
+            <div
+              style={{
+                fontSize: 13.5,
+                fontWeight: 700,
+                color: NEX.gold,
+                letterSpacing: "0.02em",
+                textShadow: "0 1px 3px rgba(0, 0, 0, 0.85)",
+              }}
+            >
+              Your moment. Your people. Your LIVE.
+            </div>
+          </div>
           <div
-            style={{
-              fontSize: 13.5,
-              fontWeight: 700,
-              color: NEX.gold,
-              letterSpacing: "0.02em",
-              textShadow: "0 1px 3px rgba(0, 0, 0, 0.85)",
-            }}
+            data-nex-live-welcome-drawer-slot
+            style={{ flexShrink: 0, marginTop: 2 }}
           >
-            Your moment. Your people. Your LIVE.
+            {/* Anonymous session · the welcome page runs before auth
+                is required. The drawer still renders its guest state
+                (Sign in to NEX bar + locked rows + the Live/Vault/
+                Socials quick-access buttons). */}
+            <ControlDrawer session={null} />
           </div>
         </div>
 
@@ -364,20 +388,6 @@ export function WelcomeClient(
             <span>Let&apos;s Go LIVE!</span>
           </a>
 
-          <div
-            data-nex-live-welcome-disclaimer
-            style={{
-              fontSize: 10,
-              lineHeight: 1.35,
-              color: NEX.textDim,
-              textAlign: "center",
-              textShadow: "0 1px 2px rgba(0, 0, 0, 0.65)",
-              opacity: 0.9,
-            }}
-          >
-            Concept preview · the button prepares a build plan, it does not
-            start a live broadcast.
-          </div>
         </div>
       </div>
     </div>
