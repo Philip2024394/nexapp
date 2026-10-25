@@ -770,7 +770,18 @@ export function LiveViewerFooter(
         display: "flex",
         flexDirection: "column",
         gap: 8,
-        zIndex: 2,
+        // Owner directive 2026-10-25 · "the feed post from users
+        // must sit behind container open". The 3-dot panel inside
+        // this footer has zIndex 20, but that's SCOPED inside this
+        // footer root's own stacking context. VideoCommentsOverlay
+        // ran at the same root zIndex (2) and was later in DOM, so
+        // comments painted over the panel. Raise the footer root
+        // to 25 so it decisively beats the overlay in the shared
+        // root context · scoped zIndex: 20 on the panel stays
+        // intact, and the composer / action row still render
+        // above the overlay as well (consistent with "footer sits
+        // above live chat").
+        zIndex: 25,
         fontFamily:
           "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
       }}

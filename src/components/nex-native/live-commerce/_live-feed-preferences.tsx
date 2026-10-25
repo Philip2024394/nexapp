@@ -312,20 +312,6 @@ export function LiveFeedPreferencesSection(): React.JSX.Element {
           ))}
         </ul>
       )}
-      {/* Final honest note on AI · the sealed no-claim doctrine. */}
-      <p
-        data-nex-live-feed-prefs-ai-note
-        style={{
-          margin: 0,
-          padding: "4px 2px 0",
-          fontSize: 10,
-          color: DIM,
-          lineHeight: 1.3,
-        }}
-      >
-        AI label stays visible on labelled videos regardless of this filter.
-        NEX never claims an unlabelled video is human-made.
-      </p>
     </section>
   );
 }
