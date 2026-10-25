@@ -29,12 +29,23 @@
 //     during SSR. For a demo that's acceptable; the slight
 //     SSR/client flicker on the online dot is a known trade-off.
 
+/** Owner directive 2026-10-26 · aligned with the sealed contacts-
+ *  profile convention (`_contact-row.tsx:38-40`): green=online ·
+ *  orange=busy · dark red=offline (static dot). Busy = during the
+ *  persona's siesta hour or the first/last 30 min of the awake
+ *  window (ramp-up / wind-down). */
+export type PresenceStatus = "online" | "busy" | "offline";
+
 export interface PresenceState {
+  readonly presence: PresenceStatus;
+  /** Convenience · `presence === "online"`. Kept for existing
+   *  call-sites that only need a boolean. */
   readonly isOnline: boolean;
   /** Timestamp of the most recent moment this persona was online.
    *  Equal to `now` when currently online. */
   readonly lastSeenAt: Date;
-  /** Human-friendly "last seen X ago" string. `null` while online. */
+  /** Human-friendly "last seen X ago" string. `null` while online
+   *  or busy (visibly available either way). */
   readonly lastSeenLabel: string | null;
   /** Internal schedule for debugging / UI display. */
   readonly schedule: {
@@ -95,11 +106,27 @@ export function computePresence(
     schedule.siestaHour !== null &&
     hour >= schedule.siestaHour &&
     hour < schedule.siestaHour + 1;
+  // Owner-aligned ramp · the first 30 min after waking and the last
+  // 30 min before sleeping read as "busy" (just starting the day /
+  // winding down). Keeps the online dot from flipping on the exact
+  // instant someone wakes up · more natural rhythm.
+  const inRampUp =
+    inAwakeWindow && hour < schedule.wakeHour + 0.5;
+  const inRampDown =
+    inAwakeWindow && hour >= schedule.sleepHour - 0.5;
 
-  const isOnline = !isSundayOff && inAwakeWindow && !inSiesta;
+  let presence: PresenceStatus;
+  if (isSundayOff || !inAwakeWindow) {
+    presence = "offline";
+  } else if (inSiesta || inRampUp || inRampDown) {
+    presence = "busy";
+  } else {
+    presence = "online";
+  }
+  const isOnline = presence === "online";
 
   let lastSeenAt: Date;
-  if (isOnline) {
+  if (isOnline || presence === "busy") {
     lastSeenAt = now;
   } else if (isSundayOff) {
     // Last online = Saturday bedtime (yesterday)
@@ -116,7 +143,7 @@ export function computePresence(
   }
 
   let lastSeenLabel: string | null = null;
-  if (!isOnline) {
+  if (presence === "offline") {
     const diffMs = Math.max(0, now.getTime() - lastSeenAt.getTime());
     const minutes = Math.floor(diffMs / 60_000);
     const hours = Math.floor(minutes / 60);
@@ -127,5 +154,5 @@ export function computePresence(
     else lastSeenLabel = `last seen just now`;
   }
 
-  return { isOnline, lastSeenAt, lastSeenLabel, schedule };
+  return { presence, isOnline, lastSeenAt, lastSeenLabel, schedule };
 }

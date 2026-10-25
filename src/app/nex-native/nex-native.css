@@ -181,34 +181,29 @@ body::-webkit-scrollbar,
     overflow: hidden;
   }
   .nex-native-frame {
-    /* Phone frame · reference 420 × 909 (ratio 0.462) · owner-approved
-     * 2026-10-16 · widened from 390 → 420 for extra breathing room
-     * while keeping the EXACT same aspect ratio as the original
-     * iPhone 14 Pro reference (390/844 = 420/909). Scaling the width
-     * + height proportionally preserves every mobile-first layout +
-     * background image (like the Cosmic Wanderer landing hero) that
-     * assumes a phone-aspect canvas. If the desktop window is tall
-     * enough, the frame renders at the full 420 × 909. If the window
-     * is shorter, both dimensions scale down proportionally (height
-     * limited by 100dvh, width derived from aspect-ratio), so the
-     * whole phone preview always fits on screen and image
-     * cover == contain. */
-    width: min(420px, calc((100dvh - 32px) * 420 / 909));
-    height: min(909px, calc(100dvh - 32px));
-    aspect-ratio: 420 / 909;
+    /* ─── SEALED PHONE FRAME · 2026-10-26 (fix-size) · DO NOT RESIZE ─
+     * Owner directive 2026-10-26 "screen is too big and also not same
+     * color page and phone frame · fix size". Shrunk from 390×845 to
+     * 360×780 (keeps 9/19.5 aspect · iPhone-class · just smaller on
+     * desktop). Bezel reduced from 12 → 4 px so the device chrome
+     * doesn't add visual chunk. Background now matches .nex-native-
+     * stage (#020914) so page + phone read as one surface. On
+     * viewports ≤ 499.98 px (real phones) the frame collapses to
+     * full-bleed · see rule below.
+     * ────────────────────────────────────────────────────────────── */
+    width: min(360px, calc((100dvh - 32px) * 9 / 19.5));
+    height: min(780px, calc(100dvh - 32px));
+    aspect-ratio: 9 / 19.5;
     min-height: 0;
     position: relative;
     overflow-y: auto;
     overflow-x: hidden;
-    border-radius: 44px;
-    /* Owner-authorised 2026-10-15 · "real phone frames black color".
-       The 12px black outer ring reads as a physical phone bezel on
-       desktop previews; the drop shadow stays below for depth. */
+    border-radius: 32px;
     box-shadow:
-      0 0 0 12px #000000,
-      0 32px 72px -14px rgba(0, 0, 0, 0.95),
-      0 0 0 1px rgba(255, 255, 255, 0.08);
-    background: #06060F;
+      0 0 0 4px #000000,
+      0 24px 60px -14px rgba(0, 0, 0, 0.9),
+      0 0 0 1px rgba(255, 255, 255, 0.06);
+    background: #020914;
   }
 }
 @media (max-width: 499.98px) {

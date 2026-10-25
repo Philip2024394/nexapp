@@ -9,8 +9,12 @@
 
 import type * as React from "react";
 
+// Owner directive 2026-10-26 (fix-size) · dev-persona frame matches
+// the sealed consumer .nex-native-frame · 360×780, 9/19.5 aspect,
+// bg #020914 (same as .nex-native-stage so page + phone read as one
+// surface).
 const DESKTOP_BREAKPOINT_PX = 500;
-const PHONE_WIDTH_PX = 390;
+const PHONE_WIDTH_PX = 360;
 const PHONE_ASPECT = "9 / 19.5";
 
 export function DevLivePhoneFrame({
@@ -24,7 +28,7 @@ export function DevLivePhoneFrame({
         [data-nex-dev-live-outer] {
           position: fixed;
           inset: 0;
-          background: #000;
+          background: #020914;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -34,7 +38,7 @@ export function DevLivePhoneFrame({
           position: relative;
           width: 100%;
           height: 100%;
-          background: #0A0F1E;
+          background: #020914;
           overflow: hidden;
         }
         @media (min-width: ${DESKTOP_BREAKPOINT_PX}px) {

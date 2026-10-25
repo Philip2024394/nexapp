@@ -259,3 +259,55 @@ export async function softRemoveUploadedVideo(
     );
   }
 }
+
+/** Owner directive 2026-10-26 · Broadcaster Library sheet · list
+ *  every video the broadcaster has posted that is still live
+ *  (visibility != 'removed'), newest first. Fail-open. The
+ *  broadcaster-only gate is applied at the server-action layer,
+ *  NOT here · this service primitive is used by any caller that
+ *  needs an owner's full catalogue (admin tooling, moderation,
+ *  the library sheet). */
+export async function listMyUploadedVideos(
+  ownerAccountId: NexUuid,
+  opts: { readonly limit?: number } = {},
+): Promise<readonly UploadedVideoRow[]> {
+  const limit = Math.max(1, Math.min(100, opts.limit ?? 50));
+  try {
+    const { data, error } = await nexSupabaseAdmin
+      .from("nex_uploaded_video")
+      .select("*")
+      .eq("owner_account_id", ownerAccountId)
+      .neq("visibility", "removed")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (error) return [];
+    return (data ?? []) as readonly UploadedVideoRow[];
+  } catch {
+    return [];
+  }
+}
+
+/** Owner directive 2026-10-26 · 5-sec undo window for the Library
+ *  sheet. Reverse a soft-remove by restoring the row to its prior
+ *  visibility. The caller passes the visibility snapshot it took
+ *  before the delete (NOT trusted to infer the right value here).
+ *  Fail-closed. */
+export async function restoreUploadedVideo(
+  id: NexUuid,
+  ownerAccountId: NexUuid,
+  previousVisibility: Exclude<UploadedVideoVisibility, "removed">,
+): Promise<void> {
+  const publishedAt = previousVisibility === "public" || previousVisibility === "unlisted"
+    ? new Date().toISOString()
+    : null;
+  const { error } = await nexSupabaseAdmin
+    .from("nex_uploaded_video")
+    .update({ visibility: previousVisibility, published_at: publishedAt })
+    .eq("id", id)
+    .eq("owner_account_id", ownerAccountId);
+  if (error) {
+    throw new Error(
+      `uploaded-video-service.restoreUploadedVideo: ${error.code ?? "unknown"}: ${error.message}`,
+    );
+  }
+}

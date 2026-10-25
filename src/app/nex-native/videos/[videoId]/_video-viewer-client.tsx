@@ -19,6 +19,10 @@ import {
   LiveViewerFooter,
   type ShareEvidence,
 } from "@/components/nex-native/live-commerce/LiveViewerFooter";
+import {
+  BroadcasterLibrarySheet,
+  type BroadcasterLibraryVideo,
+} from "@/components/nex-native/live-commerce/BroadcasterLibrarySheet";
 import { MessagePanel } from "@/components/nex-native/live-commerce/MessagePanel";
 import { getLiveInviteTargetAction } from "@/app/nex-native/live-commerce/_invite-target-action";
 import type { InviteTarget } from "@/lib/nex-native/live-broadcast/invite-target";
@@ -76,6 +80,9 @@ export function VideoViewerClient({
   authorAvatarUrlOverride,
   authorIsLiveOverride,
   authorIsOnlineOverride,
+  authorPresence,
+  videoHrefPrefix,
+  libraryVideos,
 }: {
   readonly video: UploadedVideoRow;
   readonly publicUrl: string;
@@ -118,11 +125,39 @@ export function VideoViewerClient({
    *  routes pass this to indicate the persona is online but
    *  not actively broadcasting. */
   readonly authorIsOnlineOverride?: boolean;
+  /** Owner directive 2026-10-26 · three-state presence · wins over
+   *  `authorIsOnlineOverride` when provided · forwarded straight
+   *  to the LiveViewerFooter composer avatar. */
+  readonly authorPresence?: "online" | "busy" | "offline";
+  /** Owner directive 2026-10-26 · "I have just scrolled or swiped
+   *  another video and lost my hendra · hendra should always appear
+   *  as I swipe". Dev routes mounting the viewer for a specific
+   *  persona pass a serialisable URL prefix (e.g.
+   *  `/nex-native/dev/live-persona/hendra?v=`) and the client
+   *  appends `encodeURIComponent(nextVideoId)`. Passed as a plain
+   *  string so the server/client boundary stays serialisable
+   *  (functions can't cross that boundary in Next.js). */
+  readonly videoHrefPrefix?: string;
+  /** Owner directive 2026-10-26 · "when hendra will press on his own
+   *  profile image his library of posts … will show on the screen
+   *  above". When this prop is non-empty AND the viewer is in
+   *  broadcaster mode, tapping the author avatar opens the
+   *  BroadcasterLibrarySheet. Omit on viewer routes. */
+  readonly libraryVideos?: readonly BroadcasterLibraryVideo[];
 }): React.JSX.Element {
   const router = useRouter();
   const [isLiked, setIsLiked] = React.useState(false);
   const [shareOpen, setShareOpen] = React.useState(false);
   const [categorySheetOpen, setCategorySheetOpen] = React.useState(false);
+  // Owner directive 2026-10-26 · Broadcaster Library sheet state.
+  // In-memory pending set so the 5-sec undo window can restore
+  // without any server round-trip. Dev-only semantics · real
+  // surface will chain through the softRemoveUploadedVideo service.
+  const [libraryOpen, setLibraryOpen] = React.useState(false);
+  const [pendingDeletedIds, setPendingDeletedIds] = React.useState<ReadonlySet<string>>(
+    () => new Set<string>(),
+  );
+  const [lastDeleted, setLastDeleted] = React.useState<BroadcasterLibraryVideo | null>(null);
   // Owner directive 2026-10-24 · "live post feed should be active
   // for user to post to screen overlay like tiktok with profile
   // image and name" · client-only comments list for the current
@@ -195,8 +230,10 @@ export function VideoViewerClient({
   const chainQueryParam = chainSlug ? `?chain=${chainSlug}` : "";
   const videoHref = React.useCallback(
     (id: string): string =>
-      `/nex-native/videos/${id}${chainQueryParam}`,
-    [chainQueryParam],
+      videoHrefPrefix
+        ? `${videoHrefPrefix}${encodeURIComponent(id)}`
+        : `/nex-native/videos/${id}${chainQueryParam}`,
+    [chainQueryParam, videoHrefPrefix],
   );
 
   // Owner spec 2026-10-24 · landscape fallback. Portrait videos use
@@ -832,7 +869,15 @@ export function VideoViewerClient({
               type="button"
               data-nex-video-viewer-search
               aria-label="Open categories"
-              onClick={() => setCategorySheetOpen(true)}
+              onClick={() => {
+                // Owner directive 2026-10-26 · mutual exclusion ·
+                // category tiles and library sheet never co-open.
+                // Closing the library first keeps the transition
+                // clean (library's fade-out starts, then category
+                // tiles fade in).
+                if (libraryOpen) setLibraryOpen(false);
+                setCategorySheetOpen(true);
+              }}
               style={{
                 width: 44,
                 height: 44,
@@ -1115,12 +1160,134 @@ export function VideoViewerClient({
         authorAvatarUrl={authorAvatarUrlOverride ?? null}
         authorIsLive={authorIsLiveOverride ?? false}
         authorIsOnline={authorIsOnlineOverride ?? false}
+        authorPresence={authorPresence}
         isBroadcaster={isBroadcasterPreview}
         broadcasterProducts={mockBroadcasterProducts}
         likeCount={likeCount}
         shareCount={shareCount}
         saveCount={saveCount}
+        onAuthorAvatarPress={
+          libraryVideos && libraryVideos.length > 0 && isBroadcasterPreview
+            ? () => {
+                // Owner directive 2026-10-26 · mutual exclusion ·
+                // close categories first if open · then open library.
+                if (categorySheetOpen) setCategorySheetOpen(false);
+                setLibraryOpen(true);
+              }
+            : undefined
+        }
+        hiddenForOverlay={libraryOpen}
       />
+      {/* Owner directive 2026-10-26 · Broadcaster library sheet ·
+          opens when the broadcaster taps their own avatar frame.
+          Pure UI · the dev route feeds the library list via the
+          `libraryVideos` prop. Delete uses an in-memory pending
+          set for the 5-sec undo window (dev-only semantics · the
+          real surface will route through the `softRemoveUploadedVideo`
+          service and the restore call). */}
+      {libraryVideos && libraryVideos.length > 0 && (
+        <BroadcasterLibrarySheet
+          open={libraryOpen}
+          onClose={() => setLibraryOpen(false)}
+          videos={libraryVideos.filter((v) => !pendingDeletedIds.has(v.id))}
+          broadcasterAvatarUrl={authorAvatarUrlOverride ?? null}
+          broadcasterDisplayName={authorDisplayNameOverride ?? video.title}
+          // Owner directive 2026-10-26 · Creator Loop trio ·
+          // Live routes to the sealed Live-welcome flow (same path
+          // the ⋮ "Live" tile uses). Record is an honest stub
+          // until the record UI lands · logs intent so we see it
+          // fires. Both callbacks close the sheet so Hendra lands
+          // on the next surface without a stale overlay behind.
+          onLive={() => {
+            setLibraryOpen(false);
+            router.push("/nex-native/live-commerce/welcome");
+          }}
+          onRecord={() => {
+            setLibraryOpen(false);
+            // Honest stub · record surface is a separate slice.
+            console.log("[dev] Record new post · surface not built yet");
+          }}
+          onDraft={() => {
+            setLibraryOpen(false);
+            // Honest stub · drafts list is a separate slice ·
+            // owner-chosen 4th Creator-Loop tile.
+            console.log("[dev] Open drafts · surface not built yet");
+          }}
+          onPlay={(v) => {
+            setLibraryOpen(false);
+            router.push(videoHref(v.id));
+          }}
+          onShareToContact={(v) => {
+            // Reuses the sealed VideoShareSheet · hand it the id so
+            // the share sheet surfaces this specific post's shortcut.
+            setLibraryOpen(false);
+            setShareOpen(true);
+            void v;
+          }}
+          onDelete={(v) => {
+            setPendingDeletedIds((prev) => {
+              const next = new Set(prev);
+              next.add(v.id);
+              return next;
+            });
+            setLastDeleted(v);
+            // 5-second undo window. Real surface would also call
+            // softRemoveUploadedVideo here · we keep the pending
+            // state only so the owner can see the pattern.
+            window.setTimeout(() => {
+              setLastDeleted((cur) => (cur?.id === v.id ? null : cur));
+            }, 5000);
+          }}
+        />
+      )}
+      {/* Undo toast · surfaces for 5 s after a soft-delete. */}
+      {lastDeleted && (
+        <div
+          data-nex-broadcaster-library-undo
+          role="status"
+          style={{
+            position: "absolute",
+            left: 16,
+            right: 16,
+            bottom: 90,
+            background: "rgba(10,15,30,0.98)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: 12,
+            padding: "10px 14px",
+            zIndex: 60,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            boxShadow: "0 10px 30px -10px rgba(0,0,0,0.6)",
+          }}
+        >
+          <span style={{ fontSize: 12, fontWeight: 600, color: "#F2F5F8" }}>
+            Post removed · you have 5 s to undo
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setPendingDeletedIds((prev) => {
+                const next = new Set(prev);
+                next.delete(lastDeleted.id);
+                return next;
+              });
+              setLastDeleted(null);
+            }}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "#00AFFF",
+              fontSize: 12,
+              fontWeight: 800,
+              cursor: "pointer",
+              padding: "4px 8px",
+            }}
+          >
+            UNDO
+          </button>
+        </div>
+      )}
       {messagePanelOpen && (
         <MessagePanel
           open={messagePanelOpen}
@@ -1167,7 +1334,15 @@ export function VideoViewerClient({
       {/* Owner directive 2026-10-24 · TikTok-style floating comments
           driven by the composer's send action. Client-only, no DB,
           no real-time fan-out. */}
-      <VideoCommentsOverlay comments={localComments} />
+      {/* Owner directive 2026-10-26 · "when the category buttons are
+          active the feed posting must not show in the back ground
+          until closed" · hide the live comments feed while the
+          category tiles are open · also hide while the broadcaster
+          library is open (same rationale · dedicated surface should
+          own the screen). */}
+      {!categorySheetOpen && !libraryOpen && (
+        <VideoCommentsOverlay comments={localComments} />
+      )}
     </main>
     </>
   );

@@ -243,8 +243,13 @@ export function CategoryGridSheet(
                   // make the button position:relative + overflow
                   // hidden so the moon's rectangular edges are clipped
                   // to the circular silhouette.
+                  // Owner directive 2026-10-26 (revised) · "category
+                  // buttons increase 30%" · 60% × 1.3 = 78% of
+                  // grid-cell width + justify-self center.
                   position: "relative",
                   aspectRatio: "1 / 1",
+                  width: "78%",
+                  justifySelf: "center",
                   borderRadius: "50%",
                   // Owner directive 2026-10-25 · "the category buttons
                   // same background color as 3 dots container". Match
@@ -252,8 +257,11 @@ export function CategoryGridSheet(
                   // LiveViewerFooter.tsx) · cyan rim preserved as the
                   // shared accent so tiles still read as a NEX chrome
                   // family.
-                  background:
-                    "linear-gradient(135deg, rgba(21, 38, 70, 0.96) 0%, rgba(10, 15, 30, 0.94) 100%)",
+                  // Owner directive 2026-10-26 · "category background
+                  // button color same as container back ground color"
+                  // · solid #020914 to match the Live Library container
+                  // + the chat page bg (sealed earlier).
+                  background: "#020914",
                   backdropFilter: "blur(18px) saturate(140%)",
                   WebkitBackdropFilter: "blur(18px) saturate(140%)",
                   border: "2px solid rgba(0, 175, 255, 0.9)",

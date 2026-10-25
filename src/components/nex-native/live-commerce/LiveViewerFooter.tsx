@@ -146,8 +146,30 @@ export interface LiveViewerFooterProps {
    *  dot shows when the broadcaster is simply ONLINE (not actively
    *  broadcasting). If both flags are true, LIVE wins (red
    *  dominates · live is more informative than merely online).
-   *  Omit or set false to show no presence dot. */
+   *  Omit or set false to show no presence dot. Superseded by
+   *  `authorPresence` when both are provided. */
   readonly authorIsOnline?: boolean;
+  /** Owner directive 2026-10-26 · three-state presence aligned
+   *  with the sealed contacts-profile convention
+   *  (`_contact-row.tsx:38-40`):
+   *    online  · green #16D66B · pulsing ping
+   *    busy    · orange #FF7200 · pulsing ping
+   *    offline · dark red #A60000 · STATIC dot (no pulse, no ring)
+   *  When both `authorPresence` and `authorIsOnline` are passed,
+   *  `authorPresence` wins. `authorIsLive` still trumps everything
+   *  (red live ping · see earlier docstring). */
+  readonly authorPresence?: "online" | "busy" | "offline";
+  /** Owner directive 2026-10-26 · broadcaster-only · tapping the
+   *  author avatar inside the composer frame fires this callback.
+   *  The caller mounts the BroadcasterLibrarySheet. Guarded on
+   *  `isBroadcaster === true` at the wiring site · passing a
+   *  handler on a non-broadcaster render is a no-op. */
+  readonly onAuthorAvatarPress?: () => void;
+  /** Owner directive 2026-10-26 · full-hide chrome while a parent
+   *  overlay (broadcaster library) owns the surface. Fades the
+   *  entire footer out via opacity + pointer-events:none · DOM
+   *  stays mounted so the chrome snaps back cleanly on close. */
+  readonly hiddenForOverlay?: boolean;
   /** Owner directive 2026-10-25 · "the container will also have
    *  button if seller has shop and this button will be called
    *  products". When true the broadcaster-only "Products" pill
@@ -564,6 +586,24 @@ export function LiveViewerFooter(
   const avatarInitial = hasAuthorIdentity
     ? (props.authorDisplayName as string).trim().charAt(0).toUpperCase()
     : "·";
+  // Owner directive 2026-10-26 · hoist presence resolution to the
+  // component scope so the AVATAR FRAME rim AND the SEND button
+  // background share one color token (live=red · online=green ·
+  // busy=orange · offline=dark red). Precedence: live > presence
+  // override > boolean online. Null when no author identity /
+  // no presence signal.
+  const presenceResolved: "live" | "online" | "busy" | "offline" | null = (() => {
+    if (props.authorIsLive === true) return "live";
+    if (props.authorPresence) return props.authorPresence;
+    if (props.authorIsOnline === true) return "online";
+    return null;
+  })();
+  const presenceToken = presenceResolved === null ? null : {
+    live:    { color: RED,       pulse: true,  shadow: "rgba(255,51,85,0.75)",  dotMs: 1200, pingMs: 1600 },
+    online:  { color: "#16D66B", pulse: true,  shadow: "rgba(22,214,107,0.7)",  dotMs: 1600, pingMs: 2200 },
+    busy:    { color: "#FF7200", pulse: true,  shadow: "rgba(255,114,0,0.7)",   dotMs: 1600, pingMs: 2200 },
+    offline: { color: "#A60000", pulse: false, shadow: "rgba(166,0,0,0.6)",     dotMs: 0,    pingMs: 0    },
+  }[presenceResolved];
   const dynamicComposerPlaceholder: string = (() => {
     if (props.replyContext)
       return `Reply to ${props.replyContext.replyToAuthorDisplayName}…`;
@@ -751,11 +791,19 @@ export function LiveViewerFooter(
   return (
     <div
       data-nex-live-viewer-footer
+      data-nex-live-viewer-footer-hidden={props.hiddenForOverlay ? "true" : "false"}
       style={{
         position: "absolute",
         left: 0,
         right: 0,
         bottom: 0,
+        // Owner directive 2026-10-26 · "when hendra avatar pressed
+        // we have only his profile avatar and 1 container with the
+        // buttons" · full fade-out when the broadcaster library owns
+        // the surface. DOM stays mounted for a clean 180 ms fade.
+        opacity: props.hiddenForOverlay ? 0 : 1,
+        pointerEvents: props.hiddenForOverlay ? "none" : "auto",
+        transition: "opacity 180ms ease-out",
         // Owner directive 2026-10-25 · composer must fit screen width.
         // The container keeps vertical safe-area + breathing padding
         // but drops horizontal padding so the inner composer stretches
@@ -796,16 +844,10 @@ export function LiveViewerFooter(
           40% { transform: scale(1.28); }
           100% { transform: scale(1); }
         }
-        [data-nex-live-footer-like]:active,
-        [data-nex-live-footer-share]:active,
-        [data-nex-live-footer-go-live]:active,
-        [data-nex-live-footer-view-shop]:active {
+        [data-nex-live-footer-like]:active {
           transform: scale(0.94);
         }
-        [data-nex-live-footer-like],
-        [data-nex-live-footer-share],
-        [data-nex-live-footer-go-live],
-        [data-nex-live-footer-view-shop] {
+        [data-nex-live-footer-like] {
           transition: transform 120ms ease-out, background 160ms ease-out;
         }
       `}</style>
@@ -825,143 +867,19 @@ export function LiveViewerFooter(
       <div
         data-nex-live-viewer-footer-actions
         style={{
-          // Owner directive 2026-10-25 · 3-dot ⋮ sits at the far right
-          // of the actions row and slides out Share · Save · Live ·
-          // Message to its LEFT when tapped. We keep the row as a flex
-          // container so the slide-out can be an absolute child that
-          // overlays the actions when open.
+          // Owner directive 2026-10-26 · "over the text container
+          // remove the live button the market button and the share
+          // button". Row is now just the 3-dot ⋮ anchored on the
+          // right · everything the removed buttons did (Live/Shop/
+          // Share) is still reachable from the ⋮ slide-out menu.
           position: "relative",
-          display: "grid",
-          // Owner directive 2026-10-25 (revised again) · Like heart
-          // moved OUT of the action row back to the composer-row right
-          // side (bigger · with count beneath). Action row returns to
-          // its original shape:
-          //   with goLive: Live  Market  Share  ⋮
-          //   no goLive:         Market  Share  ⋮
-          gridTemplateColumns: showGoLive
-            ? "1fr 1.6fr 1fr auto"
-            : "2fr 1fr auto",
-          gap: 6,
+          display: "flex",
+          justifyContent: "flex-end",
           alignItems: "stretch",
           padding: "0 12px",
+          minHeight: 48,
         }}
       >
-        {showGoLive && (
-          <a
-            href={goLiveHref}
-            data-nex-live-footer-go-live
-            data-nex-live-footer-go-live-gated={isShopOwner ? "false" : "true"}
-            aria-label="Start your own Live broadcast"
-            onClick={handleGoLiveClick}
-            style={{
-              background: "linear-gradient(135deg, #FF3355 0%, #FF7200 100%)",
-              color: "#FFFFFF",
-              fontSize: 11,
-              fontWeight: 800,
-              borderRadius: 12,
-              padding: "6px 6px",
-              textAlign: "center",
-              textDecoration: "none",
-              boxShadow: "0 6px 14px -6px rgba(255, 51, 85, 0.5)",
-              letterSpacing: "0.04em",
-              display: "inline-flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 2,
-              minHeight: 48,
-            }}
-          >
-            <span aria-hidden style={{ fontSize: 16 }}>●</span>
-            <span>Live</span>
-          </a>
-        )}
-
-        <a
-          href={props.viewShopHref}
-          data-nex-live-footer-view-shop
-          data-nex-live-footer-view-target-kind={props.viewTargetKind ?? "shop"}
-          aria-label={props.viewTargetAriaLabel ?? "Open this seller's shop"}
-          style={{
-            background: `linear-gradient(135deg, ${CYAN} 0%, #0074ff 100%)`,
-            color: "#FFFFFF",
-            fontSize: 11,
-            fontWeight: 800,
-            borderRadius: 12,
-            padding: "6px 6px",
-            textAlign: "center",
-            textDecoration: "none",
-            boxShadow: "0 8px 18px -6px rgba(0, 175, 255, 0.5)",
-            letterSpacing: "0.04em",
-            display: "inline-flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 2,
-            minHeight: 48,
-          }}
-        >
-          {/* Owner directive 2026-10-24 · "add market icon". Simple
-              storefront SVG · 16px · white monochrome · same visual
-              weight as the Live-dot and the Share arrow. */}
-          <svg
-            aria-hidden
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            {/* Storefront roof awning */}
-            <path d="M3 7 L4 4 h16 L21 7" />
-            {/* Awning base */}
-            <path d="M3 7 h18" />
-            {/* Shop body walls + floor */}
-            <path d="M4 7 v13 h16 v-13" />
-            {/* Door */}
-            <path d="M10 20 v-6 h4 v6" />
-          </svg>
-          <span>{props.viewTargetLabel ?? "Shop"}</span>
-        </a>
-
-        <button
-          type="button"
-          onClick={openShareSheet}
-          disabled={props.disabled}
-          data-nex-live-footer-share
-          aria-label="Share this live stream"
-          style={{
-            background: "rgba(255,255,255,0.06)",
-            border: `1px solid ${BORDER}`,
-            color: TEXT,
-            fontSize: 15,
-            fontWeight: 700,
-            borderRadius: 12,
-            padding: "10px 6px",
-            cursor: props.disabled ? "not-allowed" : "pointer",
-            display: "inline-flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 2,
-            minHeight: 48,
-          }}
-        >
-          <span aria-hidden style={{ fontSize: 18 }}>⤴</span>
-          <span style={{ fontSize: 11, fontWeight: 700 }}>Share</span>
-          {formatCount(props.shareCount, props.isBroadcaster === true) !== null && (
-            <span
-              data-nex-live-footer-share-count
-              style={{ fontSize: 10, fontWeight: 700, color: DIM, lineHeight: 1.1 }}
-            >
-              {formatCount(props.shareCount, props.isBroadcaster === true)}
-            </span>
-          )}
-        </button>
-
         {/* Owner directive 2026-10-25 · 3-dot vertical menu to the
             RIGHT of Share. Tapping toggles a horizontal slide-out
             carrying four extra actions (Share · Save · Live ·
@@ -1565,32 +1483,75 @@ export function LiveViewerFooter(
               }
             }
           `}</style>
-          {hasAuthorIdentity && (
-            /* Owner directive 2026-10-25 (revised) · author identity
-               bubble inside the composer. SQUARE shape (slightly
-               rounded corners) · sized to fit the textarea height
-               with a little space top + bottom. Red ping anchors to
-               the top-right corner when the author is live. */
+          {hasAuthorIdentity && (() => {
+            // Uses the hoisted `presenceResolved` + `presenceToken`
+            // from the component scope · same token drives the Send
+            // button background below. Rim via box-shadow (not border)
+            // so the 42×42 image area stays intact.
+            const resolved = presenceResolved;
+            const token = presenceToken;
+            const rimShadow = token
+              ? `0 0 0 2px ${token.color}, 0 0 10px ${token.shadow}`
+              : "none";
+            return (
             <div
               data-nex-live-footer-author
               data-nex-live-footer-author-live={
                 props.authorIsLive === true ? "true" : "false"
               }
-              aria-hidden
+              data-nex-live-footer-author-rim={resolved ?? "none"}
+              data-nex-live-footer-author-pressable={
+                props.isBroadcaster === true && props.onAuthorAvatarPress ? "true" : "false"
+              }
+              onClick={
+                props.isBroadcaster === true && props.onAuthorAvatarPress
+                  ? (e) => {
+                      // Stop the viewer's swipe-tracker from
+                      // consuming the gesture (main has pointer-
+                      // down/up handlers that treat avatar taps
+                      // as swipe starts, which can swallow the
+                      // click before it fires).
+                      e.stopPropagation();
+                      props.onAuthorAvatarPress?.();
+                    }
+                  : undefined
+              }
+              onPointerDown={
+                props.isBroadcaster === true && props.onAuthorAvatarPress
+                  ? (e) => e.stopPropagation()
+                  : undefined
+              }
+              onPointerUp={
+                props.isBroadcaster === true && props.onAuthorAvatarPress
+                  ? (e) => e.stopPropagation()
+                  : undefined
+              }
+              aria-hidden={!(props.isBroadcaster === true && props.onAuthorAvatarPress)}
+              aria-label={
+                props.isBroadcaster === true && props.onAuthorAvatarPress
+                  ? "Open your posts library"
+                  : undefined
+              }
+              role={
+                props.isBroadcaster === true && props.onAuthorAvatarPress
+                  ? "button"
+                  : undefined
+              }
               style={{
                 position: "absolute",
+                // Owner directive 2026-10-26 · "profile image height
+                // should be same height as the text container". The
+                // textarea uses box-sizing: border-box so its 30 px
+                // minHeight IS the pill's full visible height.
+                // Frame is inset 2 px top AND bottom so the 2 px
+                // external rim box-shadow lands EXACTLY on the
+                // textarea pill's top and bottom edges · no halo
+                // overflow above/below the text container.
                 left: 3,
-                top: "50%",
-                transform: "translateY(-50%)",
-                // Owner directive 2026-10-25 (revised again) · the
-                // author bubble enlarges by +3 px · 30 → 33 so it
-                // reads as more prominent beside the enlarged inline
-                // initial. borderRadius 6 → 7 keeps the gentle
-                // rounded-square silhouette and fontSize 14 → 15
-                // matches the bigger box.
-                width: 33,
-                height: 33,
-                borderRadius: 7,
+                top: 2,
+                bottom: 2,
+                aspectRatio: "1 / 1",
+                borderRadius: 8,
                 background: "linear-gradient(135deg, #152646 0%, #1E3A6E 100%)",
                 color: "#FFFFFF",
                 display: "inline-flex",
@@ -1599,17 +1560,22 @@ export function LiveViewerFooter(
                 fontSize: 15,
                 fontWeight: 800,
                 letterSpacing: "0.02em",
-                // Owner directive 2026-10-26 · "profile image should
-                // be full size in profile container no white at top
-                // of bottom". Removed the 1px border + the inset
-                // boxShadow · the img now fills the square edge-to-
-                // edge. Border-radius on img matches the container
-                // (7 → 7) so corners align perfectly.
                 border: "none",
-                boxShadow: "none",
+                boxShadow: rimShadow,
                 overflow: "hidden",
                 zIndex: 1,
-                pointerEvents: "none",
+                // Owner directive 2026-10-26 · when the broadcaster
+                // taps their OWN avatar the library sheet opens ·
+                // pointer-events enabled only for the broadcaster so
+                // viewer taps still fall through to the composer.
+                pointerEvents:
+                  props.isBroadcaster === true && props.onAuthorAvatarPress
+                    ? "auto"
+                    : "none",
+                cursor:
+                  props.isBroadcaster === true && props.onAuthorAvatarPress
+                    ? "pointer"
+                    : "default",
               }}
             >
               {props.authorAvatarUrl ? (
@@ -1620,62 +1586,18 @@ export function LiveViewerFooter(
                     width: "100%",
                     height: "100%",
                     objectFit: "cover",
-                    borderRadius: 7,
+                    borderRadius: 8,
                     display: "block",
                   }}
                 />
               ) : (
                 <span>{avatarInitial}</span>
               )}
-              {props.authorIsLive === true ? (
-                <>
-                  {/* Static red dot · LIVE */}
-                  <span
-                    data-nex-live-footer-author-dot
-                    data-nex-live-footer-author-presence="live"
-                    style={{
-                      position: "absolute",
-                      right: -1,
-                      top: -1,
-                      width: 7,
-                      height: 7,
-                      borderRadius: 999,
-                      background: RED,
-                      boxShadow:
-                        "0 0 0 1.5px rgba(2, 9, 20, 0.9), 0 0 6px rgba(255,51,85,0.75)",
-                      animation:
-                        "nex-live-footer-author-dot 1.2s ease-in-out infinite",
-                    }}
-                  />
-                  {/* Expanding ping ring */}
-                  <span
-                    data-nex-live-footer-author-ping
-                    style={{
-                      position: "absolute",
-                      right: -1,
-                      top: -1,
-                      width: 7,
-                      height: 7,
-                      borderRadius: 999,
-                      background: "transparent",
-                      border: `1.5px solid ${RED}`,
-                      transformOrigin: "center",
-                      animation:
-                        "nex-live-footer-author-ping 1.6s ease-out infinite",
-                    }}
-                  />
-                </>
-              ) : props.authorIsOnline === true && (
-                /* Owner directive 2026-10-26 · "the square pings
-                   with green for online". When the author is online
-                   but not actively live, render a softer green dot
-                   + a slower ping ring (1 cycle every 2.2 s vs the
-                   live 1.6 s · less attention-grabbing but still a
-                   clear "available" cue). */
+              {token !== null && (
                 <>
                   <span
                     data-nex-live-footer-author-dot
-                    data-nex-live-footer-author-presence="online"
+                    data-nex-live-footer-author-presence={resolved}
                     style={{
                       position: "absolute",
                       right: -1,
@@ -1683,33 +1605,35 @@ export function LiveViewerFooter(
                       width: 7,
                       height: 7,
                       borderRadius: 999,
-                      background: "#22C55E",
-                      boxShadow:
-                        "0 0 0 1.5px rgba(2, 9, 20, 0.9), 0 0 6px rgba(34, 197, 94, 0.7)",
-                      animation:
-                        "nex-live-footer-author-dot 1.6s ease-in-out infinite",
+                      background: token.color,
+                      boxShadow: `0 0 0 1.5px rgba(2, 9, 20, 0.9), 0 0 6px ${token.shadow}`,
+                      animation: token.pulse
+                        ? `nex-live-footer-author-dot ${token.dotMs}ms ease-in-out infinite`
+                        : undefined,
                     }}
                   />
-                  <span
-                    data-nex-live-footer-author-ping
-                    style={{
-                      position: "absolute",
-                      right: -1,
-                      top: -1,
-                      width: 7,
-                      height: 7,
-                      borderRadius: 999,
-                      background: "transparent",
-                      border: "1.5px solid #22C55E",
-                      transformOrigin: "center",
-                      animation:
-                        "nex-live-footer-author-ping 2.2s ease-out infinite",
-                    }}
-                  />
+                  {token.pulse && (
+                    <span
+                      data-nex-live-footer-author-ping
+                      style={{
+                        position: "absolute",
+                        right: -1,
+                        top: -1,
+                        width: 7,
+                        height: 7,
+                        borderRadius: 999,
+                        background: "transparent",
+                        border: `1.5px solid ${token.color}`,
+                        transformOrigin: "center",
+                        animation: `nex-live-footer-author-ping ${token.pingMs}ms ease-out infinite`,
+                      }}
+                    />
+                  )}
                 </>
               )}
             </div>
-          )}
+            );
+          })()}
           {/* Owner directive 2026-10-26 · composer two-line overlay ·
               static white name on top + slowly-pulsing CTA
               underneath. Replaces the earlier rotating placeholder.
@@ -1724,7 +1648,10 @@ export function LiveViewerFooter(
               aria-hidden
               style={{
                 position: "absolute",
-                left: 48,
+                // Owner directive 2026-10-26 (shift right · +7) ·
+                // overlay-name pushed to 67 (was 60) for a wider gap
+                // from the frame.
+                left: 67,
                 right: 44,
                 top: "50%",
                 transform: "translateY(-50%)",
@@ -1811,18 +1738,26 @@ export function LiveViewerFooter(
               minHeight: 30,
               maxHeight: 64,
               resize: "none",
-              background: "rgba(255,255,255,0.08)",
+              // Owner directive 2026-10-26 (revised) · "frosted
+              // black" look · backdrop-filter removed because it
+              // was causing typed text not to render in some
+              // browsers (form elements + backdrop-filter don't
+              // play nicely). Solid darker black (0.75) reads as
+              // "frosted black" against the video behind.
+              background: "rgba(0, 0, 0, 0.75)",
               border: `1px solid ${BORDER}`,
               color: TEXT,
+              // Explicit text fill color so autofill or dark-mode
+              // UA styles don't mask typed characters.
+              WebkitTextFillColor: TEXT,
+              caretColor: "#00AFFF",
               borderRadius: 10,
-              // Owner directive 2026-10-25 (revised again) · leave
-              // room on the LEFT for the enlarged 33 px author bubble
-              // + 3 px inset + 6 px gap = 42, rounded to 45. The
-              // RIGHT side only needs room for the inline Send button
-              // (28 + 4 + a 6 gap = 38, rounded to 40) because the
-              // Like heart moved OUTSIDE the composer on 2026-10-25.
+              // Owner directive 2026-10-26 (shift right · +7) ·
+              // textarea padding-left stays in lockstep with the
+              // overlay-name left (67) so typed text starts exactly
+              // where the overlay sits.
               padding: hasAuthorIdentity
-                ? "6px 40px 6px 45px"
+                ? "6px 40px 6px 67px"
                 : "6px 40px 6px 10px",
               // Owner directive 2026-10-26 · "the user or business
               // name in text field is 16 size". The rotating
@@ -1858,7 +1793,15 @@ export function LiveViewerFooter(
               transform: "translateY(-50%)",
               width: 28,
               height: 28,
-              background: draft.trim().length > 0 ? CYAN : "rgba(255,255,255,0.08)",
+              // Owner directive 2026-10-26 · "send button same color
+              // as rim color solid". When there's a presence token,
+              // the Send button fills with the same rim color
+              // (online=green · busy=orange · offline=dark red ·
+              // live=red). Falls back to CYAN when no presence
+              // signal exists. Empty draft still dims the button.
+              background: draft.trim().length > 0
+                ? (presenceToken?.color ?? CYAN)
+                : "rgba(255,255,255,0.08)",
               color: draft.trim().length > 0 ? "#FFFFFF" : DIM,
               fontSize: 14,
               fontWeight: 900,

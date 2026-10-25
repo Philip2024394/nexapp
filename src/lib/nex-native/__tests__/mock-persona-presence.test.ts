@@ -37,7 +37,7 @@ describe("computePresence", () => {
     expect(p.lastSeenLabel).toMatch(/last seen \d+h ago/);
   });
 
-  it("isOnline flips to false during the siesta hour (for siesta-takers)", () => {
+  it("siesta hour flips presence to 'busy' (not offline) for siesta-takers", () => {
     // Walk `handle` space until we find one with a siesta.
     const napTaker = [
       "bayu", "dewi", "nurul", "rizky", "siti", "melati", "fatimah",
@@ -50,16 +50,11 @@ describe("computePresence", () => {
     if (!napTaker) return;
     const sched = computePresence(napTaker, atLocal(2026, 10, 26, 12)).schedule;
     const napHour = sched.siestaHour as number;
-    // During siesta hour · offline.
+    // During siesta hour · busy (not offline, not online).
     const nap = computePresence(napTaker, atLocal(2026, 10, 27, napHour));
+    expect(nap.presence).toBe("busy");
     expect(nap.isOnline).toBe(false);
-    expect(nap.lastSeenLabel).toMatch(/last seen (\d+m|just now) ago|last seen just now/);
-    // Just before siesta · online.
-    const beforeNap = computePresence(
-      napTaker,
-      atLocal(2026, 10, 27, napHour - 1),
-    );
-    expect(beforeNap.isOnline).toBe(true);
+    expect(nap.lastSeenLabel).toBe(null); // visibly available
   });
 
   it("sundayOff personas are offline all day Sunday", () => {

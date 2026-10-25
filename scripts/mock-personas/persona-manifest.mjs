@@ -37,9 +37,11 @@ function deterministicUuid(seed) {
  *   handle: string,
  *   displayName: string,
  *   city: string,
+ *   profession: string,
  *   locale: string,
  *   sourceCrop: string,
  *   avatarFile: string,
+ *   nexHandle: string,
  * }} Persona */
 
 /** @type {ReadonlyArray<Persona>} */
