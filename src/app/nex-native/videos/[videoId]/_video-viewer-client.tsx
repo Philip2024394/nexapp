@@ -67,6 +67,8 @@ export function VideoViewerClient({
   chainLabel,
   chainSlug,
   currentTopicLabel,
+  forceBroadcasterPreview,
+  devRoleBanner,
 }: {
   readonly video: UploadedVideoRow;
   readonly publicUrl: string;
@@ -78,6 +80,17 @@ export function VideoViewerClient({
   readonly chainLabel?: string | null;
   readonly chainSlug?: string | null;
   readonly currentTopicLabel?: string | null;
+  /** Owner directive 2026-10-25 · dev-route override for the broadcaster
+   *  preview flag. When `true` the Products pill / picker / featured-
+   *  card slot ALL mount regardless of the `?preview=broadcaster` query
+   *  param. When `false` they NEVER mount. Omit on real routes so the
+   *  query-param gate is honoured. Used by `/nex-native/dev/live-seller`
+   *  and `/nex-native/dev/live-viewer`. */
+  readonly forceBroadcasterPreview?: boolean;
+  /** Owner directive 2026-10-25 · dev-only role banner anchored at the
+   *  top of the viewport. Makes it unmistakable which role the current
+   *  page represents. Non-rendered on real routes. */
+  readonly devRoleBanner?: "seller" | "viewer";
 }): React.JSX.Element {
   const router = useRouter();
   const [isLiked, setIsLiked] = React.useState(false);
@@ -397,12 +410,21 @@ export function VideoViewerClient({
   // chrome by accident. Reading `window.location` inside a
   // state initialiser is SSR-safe because this file is marked
   // `"use client"` and the initial render happens after mount.
-  const [isBroadcasterPreview, setIsBroadcasterPreview] = React.useState(false);
+  const [isBroadcasterPreview, setIsBroadcasterPreview] = React.useState(
+    forceBroadcasterPreview === true,
+  );
   React.useEffect(() => {
+    // Dev-route override wins over the query-param flag · the two
+    // dedicated dev routes (`/dev/live-seller` and `/dev/live-viewer`)
+    // pin the role regardless of URL params.
+    if (typeof forceBroadcasterPreview === "boolean") {
+      setIsBroadcasterPreview(forceBroadcasterPreview);
+      return;
+    }
     if (typeof window === "undefined") return;
     const sp = new URLSearchParams(window.location.search);
     setIsBroadcasterPreview(sp.get("preview") === "broadcaster");
-  }, []);
+  }, [forceBroadcasterPreview]);
 
   // Owner directive 2026-10-25 · dev-only mock products shown
   // in the picker overlay. Real catalog wiring is a follow-up
@@ -453,6 +475,39 @@ export function VideoViewerClient({
       : `/nex-native/videos/${video.id}`;
 
   return (
+    <>
+      {devRoleBanner && (
+        /* Owner directive 2026-10-25 · dev-only role banner so you can
+           tell at a glance which role the current URL represents. Fixed
+           top-left · small · high z-index. Never shipped on real routes. */
+        <div
+          data-nex-video-viewer-dev-banner
+          data-nex-video-viewer-dev-banner-role={devRoleBanner}
+          style={{
+            position: "fixed",
+            top: 6,
+            left: 6,
+            zIndex: 1000,
+            padding: "3px 8px",
+            borderRadius: 999,
+            background:
+              devRoleBanner === "seller"
+                ? "rgba(255, 193, 7, 0.95)"
+                : "rgba(0, 175, 255, 0.95)",
+            color: "#0A0F1E",
+            fontSize: 10,
+            fontWeight: 900,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            boxShadow: "0 2px 6px -2px rgba(0,0,0,0.6)",
+            pointerEvents: "none",
+            fontFamily:
+              "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+          }}
+        >
+          DEV · {devRoleBanner === "seller" ? "Seller" : "User"}
+        </div>
+      )}
     <main
       data-nex-video-viewer
       data-nex-video-viewer-id={video.id}
@@ -1080,5 +1135,6 @@ export function VideoViewerClient({
           no real-time fan-out. */}
       <VideoCommentsOverlay comments={localComments} />
     </main>
+    </>
   );
 }
