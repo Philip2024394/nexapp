@@ -84,15 +84,103 @@ Repository wiring is correct. The Directory service **assembles exactly what the
 
 ## 3 · Vault
 
-*(not probed this session · sealed LOCKED policy stands)*
+### 3.1 · Verified pieces (2026-10-27)
+
+| Piece | Status | Evidence |
+|---|---|---|
+| Service layer | **IMPLEMENTED** | `src/lib/nex-native/vault-entry-service.ts` + `vault-file-service.ts` + `vault-persistence-service.ts`. 14 service functions covering list, move, remove, and file read. Participant-asserting writes before any insert. |
+| `nex_vault_entry` | **VERIFIED-SUPABASE-RO** | 5 cols: `id`, `account_id`, `entry_kind`, `ref_id`, `moved_at`. RLS own-only INSERT + SELECT + DELETE. |
+| `nex_vault_file` | **VERIFIED-SUPABASE-RO** | 19 cols incl. `wrapped_content_key`, `content_nonce`, `encryption_algorithm`, `rotation_generation`, `bucket_path`, `legacy_bytes_path`, `migration_state`. RLS own-only INSERT + SELECT + UPDATE + DELETE. |
+| Full Vault family | **VERIFIED-SUPABASE-RO** | 8 tables live: `nex_vault_entry`, `nex_vault_file`, `nex_vault_conversation_envelope`, `nex_vault_key_envelope`, `nex_vault_pin_attempt`, `nex_vault_recovery_attempt`, `nex_vault_setup`, `nex_vault_file_migration_attempt`. |
+
+### 3.2 · Vault conclusion
+
+Vault schema is **complete, RLS-protected per-viewer only, and matches
+the sealed service-layer contract**. **No locked policy was changed.** The LOCKED Vault Entitlements Policy (2026-10-20) is untouched by this probe. Vault reads and writes trace end-to-end against existing live tables.
+
+Open items · encryption flows (key-envelope rotation, PIN recovery, cross-tab lock) not functionally exercised in this read-only pass; byte-level file retrieval not verified; storage bucket not inspected.
 
 ## 4 · Themes
 
-*(not probed this session · DRAFT contracts stand)*
+### 4.1 · Verified pieces (2026-10-27)
+
+| Piece | Status | Evidence |
+|---|---|---|
+| `nex_chat_theme` | **VERIFIED-SUPABASE-RO** | 18 cols: `id`, `name`, `tagline`, `accent_hex`, `tier`, `category`, `hero_image_url`, `is_active`, `sort_order`, `bubble_rim_hex`, `composer_rim_hex`, `wallpaper_config`, `layout_style`, `intro_video_url`, `intro_duration_ms`, `intro_poster_url`. Public SELECT RLS. |
+| `nex_theme_emoji`, `nex_theme_sticker` | **VERIFIED-SUPABASE-RO** | Both tables present for per-theme emoji/sticker packs. |
+| `nex_theme_intro_seen` | **VERIFIED-SUPABASE-RO** | Per-user intro-seen tracker. |
+| `nex_theme_view_counter` | **VERIFIED-SUPABASE-RO** | Theme view analytics table. |
+| Account entitlement cols | **VERIFIED-SUPABASE-RO** | `nex_account` carries `tier`, `bisnis_expires_at`, `themes_trial_used_at`, `themes_trial_package_id`, `chat_theme` (active-theme id). |
+| Purchase/entitlement rows | **MISSING** | No `nex_%purchase%` or `nex_%entitlement%` tables found. Matches the Theme Commerce Purchase Journey DRAFT 2026-10-20 state — purchase flow is DRAFT, not implemented. |
+
+### 4.2 · Themes conclusion
+
+Theme catalogue + per-theme assets + per-account entitlement hints
+are **live in Supabase**. Theme selection + the LOCKED Theme Commerce
+Purchase Journey DRAFT boundary is untouched. The absence of a
+purchase/entitlement table matches the DRAFT state · the draft is NOT
+yet authorised for a Stage 5 receipt / purchase surface build.
 
 ## 5 · Intro
 
-*(not probed this session)*
+### 5.1 · Verified pieces (2026-10-27)
+
+| Piece | Status | Evidence |
+|---|---|---|
+| `nex_account_custom_intro` | **VERIFIED-SUPABASE-RO** | 11 cols incl. `entitlement_at`, `entitlement_source`, `video_url`, `video_duration_ms`, `video_width`, `video_height`, `video_size_bytes`, `uploaded_at`, `enabled`, `updated_at`. RLS: owner-only SELECT + UPDATE. |
+| UI surface | **IMPLEMENTED** | `src/app/nex-native/settings/intro-video/page.tsx` + `_intro-video-client.tsx` + `live/_live-client.tsx`. |
+
+### 5.2 · Intro conclusion
+
+Custom-intro persistence is live. Entitlement is explicit on the row
+(`entitlement_at` + `entitlement_source`). RLS blocks cross-account
+read/write. **The approved intro flow matches the recorded schema.**
+
+Open items · intro upload storage bucket not inspected; the "live"
+intro-recording surface not E2E-tested.
+
+## 6b · R9 classifier bug fix (2026-10-27)
+
+### 6b.1 · The bug
+
+Read-only Supabase inspection on 2026-10-27 revealed that
+`nex_account.business_trial_status` **does not currently exist** in the
+sealed project (`ijvqdvsvwtwxzcqmoqit`). PostgREST returns `undefined`
+for this field on every real account row.
+
+The pre-fix classifier in `live-eligibility.ts` used:
+
+```ts
+if (
+  account.business_trial_status !== null &&
+  account.business_trial_status !== "active"
+) {
+  return { ok: false, reason: "trial-expired" };
+}
+```
+
+Because `undefined !== null` is `true` AND `undefined !== "active"`
+is `true`, **every ineligible real account was tagged
+`trial-expired`** instead of the honest `free-tier`.
+
+### 6b.2 · Effect
+
+- The eligibility gate itself still worked · users were still
+  correctly redirected to `/packages`.
+- Only the reason-code was wrong · telemetry would overcount
+  "trial-expired" and undercount "free-tier"; client UX copy that
+  branches on `reason` would be misleading.
+
+### 6b.3 · Fix
+
+Commit `68ac4a2` guards both `null` AND `undefined` as "never had a
+trial" before interpreting any value as expired. Documented inline so
+the next reader understands the explicit `undefined` guard is
+load-bearing against the live schema.
+
+Verification · 8/8 vitest green, includes a new regression case that
+deletes the field from the fixture to simulate the live PostgREST
+shape.
 
 ## 6 · Shop
 
