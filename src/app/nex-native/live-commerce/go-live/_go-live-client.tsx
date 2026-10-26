@@ -190,6 +190,15 @@ export function GoLiveClient({
             .then((r) => {
               if (r.ok) {
                 dbSessionIdRef.current = r.data.sessionId;
+              } else if (r.reason.startsWith("not-eligible:")) {
+                // Owner directive 2026-10-27 (R9) · Shop gate rejection ·
+                // surface the sealed upsell copy so the broadcaster
+                // sees why "Enter broadcast room" refused. We do NOT
+                // keep this error silent · unlike not-signed-in, this
+                // is a hard product gate, not a dev-only hiccup.
+                setError(
+                  "Live is a Shop member tool. Shop members can broadcast from their own device to their customers.",
+                );
               } else {
                 setError(`live-session persist failed: ${r.reason}`);
               }
