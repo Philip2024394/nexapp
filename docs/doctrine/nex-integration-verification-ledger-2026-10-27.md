@@ -156,9 +156,64 @@ read/write. **The approved intro flow matches the recorded schema.**
 Open items · intro upload storage bucket not inspected; the "live"
 intro-recording surface not E2E-tested.
 
-## 6b · R9 classifier bug fix (2026-10-27)
+## 6c · Signup / Welcome (I-I · 2026-10-27)
 
-### 6b.1 · The bug
+### 6c.1 · Verified pieces
+
+| Piece | Status | Evidence |
+|---|---|---|
+| UI 2-step signup | **IMPLEMENTED** | `src/app/nex-native/create-account/_two-step-signup-form.tsx` + `_create-submit.tsx` + name/phone/password fields. |
+| Server action | **LOCALLY VERIFIED** | `_actions.ts:118 createNexAccountAction` validates FormData, calls `accountService.createAccount`. |
+| Service | **LOCALLY VERIFIED** | `account-service.ts:69 createAccount` validates phone shape + chosen_handle, inserts `nex_account` with sealed `chat_theme: "theme-0"` (Joker), auto-allocates `nex_handle` via `ensureNexHandle`. |
+| Tier default | **VERIFIED-SUPABASE-RO** | `nex_account.tier` default `'gratis'::text` · NOT NULL. 757 accounts live · 756 gratis + 1 bisnis. Fresh signup correctly lands on `gratis` tier. |
+| Welcome flow | **IMPLEMENTED** | `/welcome` with `_vertical-picker.tsx` + `_remember-intent-action.ts` + `_remember-vertical-action.ts` + `/welcome/entering-free-chat`. |
+
+### 6c.2 · Signup gaps and unverified items
+
+- **B1 provisional-account claim** remains UNRESOLVED per `nex-complete-messaging-gap-analysis-and-build-roadmap-2026-10-14.md`. Signup does not transfer the provisional conversation. **No change in this session.**
+- Supabase Auth hand-off (`supabase_user_id` population path) not traced in depth here.
+- Browser E2E signup not run.
+
+## 6d · Shop onboarding (I-J · 2026-10-27)
+
+### 6d.1 · Verified pieces
+
+| Piece | Status | Evidence |
+|---|---|---|
+| `/manage/*` UI surfaces | **IMPLEMENTED** | accommodation · analytics · banners · categories · community-discovery · email · gallery · info · ladder · live · menu · orders directories present. |
+| `business-service.ts` surface | **LOCALLY VERIFIED** | 15 service functions including `createBusiness`, `updateBusinessProfile`, `updateBusinessCategoryAndKeywords`, `updateBusinessLocation`, `uploadSizeChartImage`, et al. |
+| Business creation tier gate | **LOCALLY VERIFIED** | `createBusiness` imports `./tier-gate` and calls `assertCanCreateBusiness` BEFORE any Supabase insert. Gratis: 1/account · Bisnis: 5 · Pro: 5 (migration 046 · Indonesia launch package doctrine). |
+| `nex_business` RLS | **VERIFIED-SUPABASE-RO** | owner-insert + owner-update + public-read. |
+| `nex_product` RLS | **VERIFIED-SUPABASE-RO** | owner-insert + owner-read + owner-update + public-read-live. |
+| `nex_menu_item` | **VERIFIED-SUPABASE-RO** | Table EXISTS. |
+
+### 6d.2 · Shop onboarding gaps
+
+| Table | Expected migration | Status |
+|---|---|---|
+| `nex_accommodation_listing` | 213 (Phase A1 Accommodation Backend · commit `901a552`) | **MISSING FROM SUPABASE** · migration 213 is in the gap list. `/manage/accommodation` surface writes would fail. |
+| `nex_service_listing` | — | **MISSING FROM SUPABASE** · service vertical scaffolding not applied; path unknown. |
+
+## 6e · Vault PIN / unlock (I-K · 2026-10-27)
+
+### 6e.1 · Verified pieces
+
+| Piece | Status | Evidence |
+|---|---|---|
+| `nex_vault_setup` | **VERIFIED-SUPABASE-RO** | 11 cols: `account_id`, `vmk_generation`, `pin_mode`, `pin_salt`, `pin_argon_params`, `prf_salt`, `recovery_configured_at`, `recovery_salt`, `recovery_argon_params`, `created_at`, `updated_at`. Argon2 params stored per-row (parameter rotation supported). PRF salt separate for WebAuthn-PRF biometric unlock. RLS: owner-read. |
+| `nex_vault_pin_attempt` | **VERIFIED-SUPABASE-RO** | 5 cols: `id`, `account_id`, `device_id`, `success`, `attempted_at`. Device-scoped audit log. RLS: owner-read. |
+| `nex_vault_recovery_attempt` | **VERIFIED-SUPABASE-RO** | 4 cols: `id`, `account_id`, `success`, `attempted_at`. Account-scoped audit log. |
+| `nex_vault_key_envelope` | **VERIFIED-SUPABASE-RO** | 12 cols: `id`, `account_id`, `kind`, `target_device_id`, `credential_id`, `wrapped_vmk`, `nonce`, `algorithm`, `generation`, `consumed_at`, `expires_at`, `created_at`. Per-device wrapped VMK · supports multi-device via `target_device_id` + `credential_id` · supports single-use envelopes via `consumed_at` · supports rotation via `generation`. |
+
+### 6e.2 · Vault PIN / unlock conclusion
+
+The schema supports a production-grade E2EE flow: Argon2 PIN hashing with per-row params, WebAuthn-PRF biometric unlock, per-device VMK wrapping, rotation via generation, single-use recovery envelopes, device-scoped audit log. **LOCKED Vault entitlement policy untouched · no permissions invented.**
+
+Open items · the pin-entry reducer + unlock dispatch logic not functionally exercised; UI reducer test (`_pin-entry-reducer.test.ts`) exists in repo but was not re-run this session.
+
+## 6f · R9 classifier bug fix (2026-10-27)
+
+### 6f.1 · The bug
 
 Read-only Supabase inspection on 2026-10-27 revealed that
 `nex_account.business_trial_status` **does not currently exist** in the
@@ -180,7 +235,7 @@ Because `undefined !== null` is `true` AND `undefined !== "active"`
 is `true`, **every ineligible real account was tagged
 `trial-expired`** instead of the honest `free-tier`.
 
-### 6b.2 · Effect
+### 6f.2 · Effect
 
 - The eligibility gate itself still worked · users were still
   correctly redirected to `/packages`.
@@ -188,7 +243,7 @@ is `true`, **every ineligible real account was tagged
   "trial-expired" and undercount "free-tier"; client UX copy that
   branches on `reason` would be misleading.
 
-### 6b.3 · Fix
+### 6f.3 · Fix
 
 Commit `68ac4a2` guards both `null` AND `undefined` as "never had a
 trial" before interpreting any value as expired. Documented inline so
