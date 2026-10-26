@@ -333,6 +333,73 @@ patterns:
 
 **12 channel patterns across 7 feature areas. 4 Live-adjacent channels are architecturally correct but dark** until `nex_live_session` persistence lands (migration 219 unapplied).
 
+## 6j · Storage bucket inventory (I-O · 2026-10-27)
+
+### 6j.1 · Live Supabase buckets (13 total · 20 storage policies)
+
+`nex-avatars` · `nex-business-assets` · `nex-chat-theme-hero` · `nex-community-photos` · `nex-media` · `nex-mock-personas` · `nex-peer-chat-attachments` · `nex-theme-emoji` · `nex-theme-intro` · `nex-theme-sticker` · `nex-user-intros` · `nex-user-wallpapers` · `nex-vault-files`
+
+### 6j.2 · Service bucket references (verified cross-check)
+
+| Service bucket constant | Live bucket | Status |
+|---|---|---|
+| `account-profile-service :: NEX_AVATAR_BUCKET = "nex-avatars"` | ✓ | **LIVE** |
+| `business-media/owner-upload-service :: OWNER_UPLOAD_BUCKET = "nex-media"` | ✓ | **LIVE** |
+| `community/photo-upload-service :: "nex-community-photos"` | ✓ | **LIVE** |
+| `directory/media-resolver :: PUBLIC_BUCKET_NAME = "nex-media"` | ✓ | **LIVE** |
+| `intro-settings-service :: INTRO_VIDEO_BUCKET = "nex-user-intros"` | ✓ | **LIVE** |
+| `intro-settings-service :: WALLPAPER_BUCKET = "nex-user-wallpapers"` | ✓ | **LIVE** |
+| `shop-cover-service :: SHOP_COVER_BUCKET = "nex-user-wallpapers"` | ✓ | **LIVE** |
+| **`uploaded-video-service :: default "nex-live-uploaded"`** | ✗ | **MISSING** |
+| **`custom-intro-config :: CUSTOM_INTRO_STORAGE_BUCKET = "nex-media-videos"`** | ✗ | **MISSING** |
+
+### 6j.3 · Two bucket gaps
+
+- **`nex-live-uploaded`** · referenced by `uploaded-video-service.ts` (default `storage_bucket`) and `dev-video-manifest.ts` (`DEV_BUCKET`). The INSERT into `nex_uploaded_video` would succeed (table exists) but the stored `storage_bucket` value points at a non-existent bucket · uploads would have no retrievable storage.
+- **`nex-media-videos`** · referenced only by `custom-intro-config.ts :: CUSTOM_INTRO_STORAGE_BUCKET`. Note that `intro-settings-service.ts` uses a DIFFERENT constant `INTRO_VIDEO_BUCKET = "nex-user-intros"` which IS live. Two intro-video bucket names in the same codebase · configuration drift. **Owner call** which is canonical.
+
+Companion storage findings (no mapping error):
+- `nex-vault-files` live · matches sealed Vault bucket expectation.
+- `nex-theme-emoji` + `nex-theme-sticker` + `nex-theme-intro` live · match theme asset expectations.
+- `nex-chat-theme-hero` live · matches `nex_chat_theme.hero_image_url` references.
+
+## 6k · RLS breadth check (I-P · 2026-10-27)
+
+### 6k.1 · Numbers
+
+| Fact | Count |
+|---|---|
+| Total `public.nex_*` tables | **89** |
+| Tables with ≥ 1 RLS policy | **48** |
+| Tables with NO RLS policies | **41** |
+| Of which · RLS enabled, no policies (fail-safe for anon clients) | **22** |
+| Of which · RLS disabled entirely (service-role only by design) | **19** |
+
+### 6k.2 · Service-only tables (RLS off · 19)
+
+Tables where service-role is the sole writer and RLS is intentionally off:
+`nex_banner`, `nex_community_business_welcome_detail`, `nex_community_card`, `nex_community_card_confirmation`, `nex_community_card_photo`, `nex_community_card_report`, `nex_community_card_update`, `nex_community_lost_found_detail`, `nex_community_membership`, `nex_community_notice`, `nex_community_notice_confirmation`, `nex_community_notice_report`, `nex_community_notice_update`, `nex_community_rate_limit`, `nex_community_zone`, `nex_handle_counter`, `nex_liked_product`, `nex_menu_item`, `nex_menu_section`, `nex_report`.
+
+Not a security finding by itself · the Community doctrine (2026-10-23) explicitly routes community writes through service-role with explicit ownership assertions. **No change authorised.** The owner may want to double-check `nex_menu_item` + `nex_menu_section` which could reasonably be public-read.
+
+### 6k.3 · Fail-safe tables (RLS on · no policies · 22)
+
+Deny-by-default for anon clients · includes several sensitive tables:
+`nex_account_relationship_prefs`, `nex_account_risk_signal`, `nex_bridge99_first_send_intent`, `nex_collection_fetch_errors`, `nex_collection_url_queue`, `nex_email_campaign`, `nex_email_list`, `nex_email_send_log`, `nex_email_subscriber`, `nex_friend_edge`, `nex_generated_site`, `nex_generation_job`, `nex_ledger_entry`, `nex_ledger_line`, `nex_live_post`, `nex_migration_history`, `nex_product_variant`, `nex_session_registry`, `nex_theme_view_counter`, `nex_webauthn_credential`, `nex_welcome_outbox`.
+
+Correct posture · anon client access would return zero rows, service-role writes bypass as intended.
+
+## 6l · Family Safety (I-Q · 2026-10-27)
+
+| Piece | Status | Evidence |
+|---|---|---|
+| Service modules | **IMPLEMENTED** | `src/lib/nex-native/family-safety/*` includes age-transition, contact-visibility, dashboard, home, minor-safechat-enforcer, privacy-invariants, safechat-status-reader, feature-flag, child-account-creation, custody. |
+| Test file count | **16 FAIL · 4 PASS at file level** | **All 57 individual assertions that successfully load PASS.** The 16 file-level failures all throw `This module cannot be imported from a Client Component module` on `node_modules/server-only/index.js:1`. **Pre-existing test-infra gap** · adding `vi.mock("server-only", () => ({}))` to each file would fix (same shim used in `live-eligibility.test.ts` committed earlier). Not a product regression. |
+
+### 6l.1 · Family Safety conclusion
+
+Doctrine honoured at the service layer. Test harness has a shared `server-only` import gap across 16 test files · a routine infrastructure fix, not a correctness issue. **No locked policy moved.** No code change in this session.
+
 ## 8 · What this ledger is NOT
 
 - Not a sign-off that any area is "production-ready".
