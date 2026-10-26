@@ -20,6 +20,8 @@ import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import * as businessService from "@/lib/nex-native/business-service";
 import * as productService from "@/lib/nex-native/product-service";
+import { getAccountById } from "@/lib/nex-native/account-service";
+import { resolveLiveEligibility } from "@/lib/nex-native/live-broadcast/live-eligibility";
 import { GoLiveClient, type RealLiveCatalogEntry } from "./_go-live-client";
 
 export const metadata = {
@@ -51,6 +53,29 @@ export default async function GoLivePage(): Promise<React.JSX.Element> {
   const selfAccountId = await resolveBroadcasterIdOrRedirect(
     "/nex-native/live-commerce/go-live",
   );
+
+  /* Owner directive 2026-10-27 (R9 · Live-eligibility contract) ·
+     Public Live broadcasting is a Shop membership benefit.
+     Enforce at the SERVER SHELL layer so an ineligible account
+     cannot even render the surface. Dev impersonation uses the
+     persona's REAL seeded tier (no production bypass) · the
+     seeded Hendra row carries `tier=bisnis` which passes the gate,
+     a seeded `tier=gratis` persona correctly hits the upsell.
+     The DEV_FALLBACK_BROADCASTER_ID branch (nil UUID) resolves
+     to a NON-existent account and therefore is NOT eligible ·
+     the dev route redirects to packages exactly as a real free
+     user would, surfacing the gate end-to-end. */
+  const account =
+    selfAccountId === DEV_FALLBACK_BROADCASTER_ID
+      ? null
+      : await getAccountById(selfAccountId).catch(() => null);
+  const eligibility = resolveLiveEligibility(account);
+  if (!eligibility.ok) {
+    const returnTo = encodeURIComponent("/nex-native/live-commerce/welcome");
+    redirect(
+      `/nex-native/packages?upsell=live&reason=${eligibility.reason}&returnTo=${returnTo}`,
+    );
+  }
 
   /* Phase 2 · G2 · real-catalog integration. Replace the sealed
      CRISPY_CHICKEN_MOCK with the broadcaster's own nex_product rows.
