@@ -50,6 +50,18 @@ import {
 } from "@/lib/nex-native/live-broadcast/dev-video-manifest";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// Owner-authorised 2026-10-27 (D-C integration slice 1) · bridge the
+// sealed Live-feed category toggles into the server-rendered feed.
+// Reads a URL-encoded JSON cookie (`nex-feed-prefs`) that mirrors
+// the device-local localStorage state in `_live-feed-preferences.tsx`.
+// Honours only the AI category today · the predicate documents the
+// honest limit for the other 14 categories (no server-side classifier).
+import { cookies } from "next/headers";
+import {
+  FEED_PREFS_COOKIE_NAME,
+  parseFeedPrefs,
+} from "@/lib/nex-native/live-feed/feed-preferences-cookie";
+import { filterUploadedVideosByCategoryPrefs } from "@/lib/nex-native/live-feed/feed-preferences-filter";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -335,9 +347,19 @@ export default async function LiveFeedPage(): Promise<React.JSX.Element> {
 }
 
 async function RecordedVideosSection(): Promise<React.JSX.Element | null> {
-  const videos = isDevManifestActive()
+  const rawVideos = isDevManifestActive()
     ? listDevUploadedVideos({ limit: 20 })
     : await listPublishedUploadedVideos({ limit: 20 });
+  if (rawVideos.length === 0) return null;
+
+  // D-C integration slice 1 · honour the viewer's category toggles.
+  // Fail-open · if the cookie is missing or malformed, the predicate
+  // falls back to "all allowed" and the viewer sees the full pool
+  // (same behaviour as before this slice landed).
+  const prefCookieValue =
+    (await cookies()).get(FEED_PREFS_COOKIE_NAME)?.value ?? null;
+  const prefs = parseFeedPrefs(prefCookieValue);
+  const videos = filterUploadedVideosByCategoryPrefs(rawVideos, prefs);
   if (videos.length === 0) return null;
 
   return (
