@@ -539,6 +539,72 @@ Every `.from("nex_menu_item")` + `.from("nex_menu_section")` call in `src/`:
 
 **No RLS change authorised.** No change needed in this session.
 
+## 6r · Accommodation surface (I-X · 2026-10-27)
+
+### 6r.1 · Correction to §6d
+
+My earlier §6d entry listed the missing table as `nex_accommodation_listing`. The actual table referenced by the service is `nex_accommodation_unit` (confirmed at `accommodation-service.ts:240,275,298,318,388`). The service header comment references migration 213 explicitly.
+
+### 6r.2 · Verified pieces
+
+| Piece | Status | Evidence |
+|---|---|---|
+| UI surface | **IMPLEMENTED** | `/manage/accommodation/page.tsx` + `[roomId]/page.tsx` + `_actions.ts`. |
+| Service | **IMPLEMENTED** | `src/lib/nex-native/accommodation-service.ts` · ~5 CRUD functions against `nex_accommodation_unit`. |
+| Service tests | **LOCALLY VERIFIED** | `__tests__/accommodation-service.test.ts` · **33/33 PASS**. |
+| `nex_accommodation_unit` live | **MISSING** | Migration 213 unapplied. Any production CRUD call throws at Supabase. |
+| Harvester canonical | **VERIFIED-SUPABASE-RO** | `nex.accommodation_business` + enrichment/provenance/snapshot tables are present in the harvester-canonical layer (`nex` schema), unrelated to the merchant-managed `nex_accommodation_unit` surface. |
+
+### 6r.3 · Accommodation conclusion
+
+Same posture as watches marketplace · code fully built, tests green locally, Supabase persistence blocked by migration 213 hold. Owner decision gate 4 in the gap ledger covers this.
+
+## 6s · WebAuthn credential flow (I-Y · 2026-10-27)
+
+### 6s.1 · Verified pieces
+
+| Piece | Status | Evidence |
+|---|---|---|
+| `nex_webauthn_credential` | **VERIFIED-SUPABASE-RO** | 10 cols: `id`, `account_id`, `credential_id`, `credential_public_key`, `counter`, `transports`, `device_label`, `created_at`, `last_used_at`, `prf_supported`. RLS enabled, no policies (service-role only · fail-safe for anon). **0 rows live** · no users have registered a credential yet. |
+| `webauthn-service.ts` | **IMPLEMENTED** | 6 service functions: `saveCredential`, `getCredentialById`, `listCredentialsForAccount`, `markCredentialUsed`, `revokeCredentialForOwner`, `renameCredentialForOwner`. |
+| API routes | **IMPLEMENTED** | `/api/nex-native/auth/webauthn/assert-start` + `/assert-finish` + register surfaces. |
+| Sign-in UI | **IMPLEMENTED** | `/nex-native/sign-in` surface present per the sealed Bridge 2b commit `7991095c`. |
+| PRF biometric integration | **INFRASTRUCTURE READY** | `prf_supported` column on credential + `prf_salt` column on `nex_vault_setup` (§6e) · ready for WebAuthn-PRF biometric Vault unlock when authorised. |
+
+### 6s.2 · WebAuthn conclusion
+
+**Infrastructure complete. Zero adoption.** The sealed face-sign-in contract (Bridge 2b, 2026-10-xx) is in place end-to-end. 0 rows live suggests the UI is either not promoted on the sign-in surface yet, or users default to password/phone sign-in. No change authorised.
+
+## 6t · Untracked doctrine inventory (I-Z · 2026-10-27)
+
+Fourteen untracked `docs/doctrine/*.md` files were present in the dirty tree at session start. Reading each file's status marker:
+
+| File | Status marker | Category |
+|---|---|---|
+| `nex-content-quality-constitution-2026-10-27.md` | DRAFT · owner review required | **DRAFT** (my work this session) |
+| `nex-commerce-live-relationship-plan-2026-10-24.md` | Strategic plan · owner-authored | **Owner-recorded plan** |
+| `nex-directory-tile-uniqueness-g3-amendment-2026-10-26.md` | Owner-SIGNED amendment · 2026-10-26 | **Owner-approved** |
+| `nex-live-data-path-verification-2026-10-24.md` | VERIFICATION DOCUMENT · source-level trace only | **Verification report** |
+| `nex-live-deferred-features-2026-10-24.md` | RECORDED FOR NEXT IMPLEMENTATION SCOPE · NOT COMPLETE | **Owner-recorded plan** |
+| `nex-live-feed-ranking-brainstorm-2026-10-24.md` | BRAINSTORM · owner-sketched · needs owner decisions | **Brainstorm** |
+| `nex-live-interaction-feature-contract-2026-10-24.md` | PRODUCT CONTRACT · OWNER-APPROVED on three defaults | **Owner-approved** |
+| `nex-live-migrations-apply-procedure-2026-10-24.md` | PROCEDURE AUTHORED · NOT APPLIED · NOT PRODUCTION-APPROVED | **Procedure** (held) |
+| `nex-live-sandbox-pre-apply-report-2026-10-24.md` | PRE-APPLY REPORT · NO MIGRATIONS APPLIED | **Pre-apply report** (held) |
+| `nex-live-uploaded-video-contract-2026-10-24.md` | CODE SCAFFOLD SHIPPED · DB NOT APPLIED · NO BYTES UPLOADED · Owner "Not now · wait for isolated sandbox" | **Scaffold-only** (held) |
+| `nex-live-video-streaming-roadmap-2026-10-27.md` | S1-S3 + S4-light + S5-foundation SHIPPED · S4-full + S5-content DEFERRED | **Owner-approved** (I shipped earlier) |
+| `nex-private-groups-contract-draft-2026-10-23.md` | DRAFT · rev 3 · NO implementation authorised yet | **DRAFT** |
+| `nex-private-groups-protocol-design-draft-2026-10-23.md` | DRAFT · READ-ONLY REVIEW ARTEFACT · NO implementation authorised | **DRAFT** |
+| `nex-shop-watches-upload-draft-2026-10-26.md` | DRAFT · owner-recorded 2026-10-26 · PROPOSED · not approved | **DRAFT** |
+
+Note: three further doctrines I authored this session are **already committed** on `origin/main`:
+- `nex-live-eligibility-contract-2026-10-27.md` (R9 DRAFT · 22b960d)
+- `nex-supabase-gap-ledger-2026-10-27.md` (50e97ac)
+- `nex-integration-verification-ledger-2026-10-27.md` (9a9f634 + continued updates)
+
+### 6t.1 · Doctrine inventory conclusion
+
+14 untracked doctrine files sit in the dirty tree. Their status markers are honest and self-describing (DRAFT · HELD · OWNER-APPROVED). **No change to commit them in this session** · owner decides whether and in which release batch each lands. The DRAFT state is the correct posture for the 4 explicit DRAFT files; the SHIPPED/APPROVED ones (3) could be committed under owner authorisation to make their status part of the git record.
+
 ## 8 · What this ledger is NOT
 
 - Not a sign-off that any area is "production-ready".
