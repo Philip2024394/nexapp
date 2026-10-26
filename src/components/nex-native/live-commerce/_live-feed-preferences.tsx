@@ -33,6 +33,13 @@
 // That's a separate slice the owner has NOT authorised yet.
 
 import * as React from "react";
+// Owner-authorised 2026-10-27 (D-C integration slice 1) · cookie
+// mirror so the Live-feed server component can honour toggles.
+// localStorage remains the source of truth for this component.
+import {
+  FEED_PREFS_COOKIE_NAME,
+  serializeFeedPrefs,
+} from "@/lib/nex-native/live-feed/feed-preferences-cookie";
 
 const BORDER = "rgba(255, 255, 255, 0.12)";
 const TEXT = "#F2F5F8";
@@ -161,6 +168,20 @@ function writeStoredState(next: LiveFeedPreferencesState): void {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   } catch {
     /* localStorage disabled / quota exceeded · silently ignore */
+  }
+  // Owner-authorised 2026-10-27 (D-C integration slice 1) · mirror
+  // the device-local toggles into a cookie the Live-feed server
+  // component can read. Does NOT replace localStorage · localStorage
+  // remains the source of truth for the component's state. The
+  // cookie is a one-way mirror that survives across SSR + refresh.
+  // Fail-silent on tampered storage, SameSite=Lax, 1-year rolling.
+  // No cross-device sync · owner directive explicitly defers that.
+  try {
+    const value = serializeFeedPrefs(next);
+    const maxAge = 60 * 60 * 24 * 365; // 1 year
+    document.cookie = `${FEED_PREFS_COOKIE_NAME}=${value}; Max-Age=${maxAge}; Path=/; SameSite=Lax`;
+  } catch {
+    /* cookie write failed · the feed still works, just without the filter */
   }
 }
 
