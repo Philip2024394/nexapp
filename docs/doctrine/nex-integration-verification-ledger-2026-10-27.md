@@ -27,10 +27,18 @@
 | **DB schema (Supabase)** | **VERIFIED-SUPABASE-RO** | `nex_peer_message` 28 cols incl. `send_intent_id`, `encrypted`, `ciphertext`, `nonce`, `delivered_at`, `read_at`, `message_group_id`, `attachment_url/type/meta`, `reactions`, `link_*`. RLS policies: INSERT + SELECT + UPDATE (read). `nex_peer_conversation` 6 cols incl. `participant_a_id`, `participant_b_id`, `last_message_at`, `origin_cover_business_id`. RLS policies: INSERT + SELECT + UPDATE. |
 | Existing coverage | **LOCALLY VERIFIED** | `src/app/nex-native/__tests__/send-cart-order-slice-0.test.ts` · **39/39 PASS** exercising the full send-chain through `sendPeerMessage`. |
 
-### 1.2 · Chat gaps and unverified items
+### 1.2 · Chat receive side · verified (2026-10-27)
+
+| Piece | Status | Evidence |
+|---|---|---|
+| Server-side arrival nudge | **LOCALLY VERIFIED** | `src/lib/nex-native/realtime/message-arrival.ts` fire-and-forget Supabase Realtime HTTP broadcast on `nex:messages:{conversationId}` channel, event `arrival`. Doctrine: nudge-not-message, payload never exposes plaintext/ciphertext. |
+| Client-side subscription | **LOCALLY VERIFIED** | `src/app/nex-native/chat/peer/[accountId]/_message-events-client.tsx` subscribes to `nex:messages:{conversationId}`. On `arrival` → `router.refresh()` → SSR re-render → Bridge 76 MutationObserver decryptor swaps ciphertext for plaintext. |
+| Reconciliation | **LOCALLY VERIFIED** | Triggers on mount · visibilitychange visible · realtime (re)subscribe. No setInterval polling. |
+| R1 arrival contract | **LOCALLY VERIFIED** | `src/lib/nex-native/__tests__/r1-live-messaging.test.ts` · **29/29 PASS**. |
+
+### 1.3 · Chat gaps and unverified items
 
 - **No service-level unit test** for `sendPeerMessage` directly. Covered indirectly by the cart-order integration test. Dedicated test would increase regression safety but is additive, not corrective.
-- **Receive path realtime subscription** not re-verified in this session. The arrival-emit side is implemented; the subscribe side (viewer page listening for inbound messages) is not probed here.
 - **Attachment storage** not inspected. `attachment_url` is accepted but the storage bucket + signed-URL path were not read-only verified.
 - **Push notification dispatch** success is not browser-verified. Fire-and-forget design means a dispatch failure cannot flip a successful send.
 - **E2E browser test** not run. No message sent through a real browser against the live Supabase in this session.
@@ -73,7 +81,16 @@ Observed effect:
 
 The paid-listing readers in `eligible-paid-listing-service.ts` fail-open — Directory degrades gracefully to no paid listings. **Paid individual listings (watches, Live posts) do not appear in the Directory today.**
 
-### 2.4 · Directory conclusion
+### 2.4a · Directory detail page (2026-10-27)
+
+| Piece | Status | Evidence |
+|---|---|---|
+| `/directory/[id]` server component | **IMPLEMENTED** | `src/app/nex-native/directory/[id]/page.tsx` reads `getCanonicalBusinessById(id)` from the sealed `directory-service.ts`. |
+| `getCanonicalBusinessById` query | **LOCALLY VERIFIED** | Reads from `nex.business_directory_v` (sealed publication view) + `nex.business_evidence` presence check. UUID-shape guard on bad id → 404. |
+| `nex.business_directory_v` live row count | **VERIFIED-SUPABASE-RO** | **40,541 rows** published in Supabase. **40,703 evidence rows** backing. |
+| Read-path divergence (SAME as §2.2) | **BLOCKED** | `withClient()` uses `NEX_POSTGRES_URL` (localhost:5433), not Supabase. The 40,541 published rows in Supabase are unreachable from production code until the env-var decision is resolved. |
+
+### 2.4b · Directory conclusion
 
 Repository wiring is correct. The Directory service **assembles exactly what the sealed G3 contract specifies**. The gap is at the **operational / migration layer**:
 
@@ -190,6 +207,9 @@ shape.
 |---|---|---|
 | `nex_business` + `nex_product` existence | **VERIFIED-SUPABASE-RO** | Both tables confirmed present in Supabase. |
 | Watch listing marketplace | **IMPLEMENTED** · **NOT verified against Supabase** | Task log #65–#77 shows migrations 227–230 applied to local `nex_dev` only. `nex_watch_listing` + `nex_watch_listing_entitlement` are **MISSING** from Supabase per gap ledger §4.2. End-to-end non-functional against this project. |
+| Watch service surface | **LOCALLY VERIFIED** | `src/lib/nex-native/watches/watch-listing-service.ts` exports 8 functions (createWatchListing · grantWatchListingEntitlement · softRemoveWatchListing · getWatchListingById · getPublicWatchListingById · listMyWatchListings · listPublicDirectoryTiles · searchPublicWatchListings). Companion rate-limit + payment-webhook + retention + dev-mock-guard modules present. **8/8 service test PASS**. |
+| Watch actions surface | **IMPLEMENTED** | 5 server actions (createWatchListingAction · grantWatchListingEntitlementMockAction · softRemoveWatchListingAction · searchWatchListingsAction · listMyWatchListingsAction). |
+| Watch UI surfaces | **IMPLEMENTED** | `/manage/watches/new` (upload form) · `/nex-native/watches` (search) · `/nex-native/watches/[listingId]` (detail). |
 
 ## 7 · NEX Live
 
