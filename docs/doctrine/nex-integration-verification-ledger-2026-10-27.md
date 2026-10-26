@@ -457,6 +457,88 @@ The sealed `nex-vault-entitlements-policy-sheet-2026-10-20.md` + the memory entr
 
 Already recorded in `nex-supabase-gap-ledger-2026-10-27.md` §9 under the implicit "W1–W12 Vault implementation" cluster · no new decisions created.
 
+## 6o · S1 dependency investigation (I-U · 2026-10-27)
+
+### 6o.1 · Call-site enumeration
+
+`grep` across `src/` for `publishUploadedVideo` + `nex-live-uploaded`:
+
+- `uploaded-video-service.ts:217` · service default `storage_bucket ?? "nex-live-uploaded"` (STRING LITERAL only, no `storage.from()` call).
+- `dev-video-manifest.ts:764 DEV_BUCKET = "nex-live-uploaded"` · used only as fake-row metadata; **not** used for URL construction (dev videos are served from Next's `public/dev/live-videos/` static path, verified at line 770).
+- `live-eligibility.ts:15` · doctrine comment reference only.
+- `__tests__/uploaded-video-service.test.ts` · test fixtures.
+
+**Zero production callers of `publishUploadedVideo`.** **Zero `storage.from("nex-live-uploaded")` writes anywhere.**
+
+### 6o.2 · Alternative-bucket compatibility
+
+| Alternative | Compatible? | Notes |
+|---|---|---|
+| `nex-media` | **YES** | Already used by `owner-upload-service` + directory media-resolver. Co-locating public uploaded videos with other public media is consistent. |
+| `nex-user-intros` | NO | Reserved for `/settings/intro-video` custom-intros. |
+| `nex-user-wallpapers` | NO | Reserved for chat wallpapers + shop covers. |
+| Create `nex-live-uploaded` | — | Owner-decision bucket creation; preserves current defaults. |
+
+### 6o.3 · S1 conclusion
+
+The bucket is referenced only as a string value — not as the target of any upload. Current behaviour against live Supabase: `publishUploadedVideo` would insert rows with `storage_bucket='nex-live-uploaded'`, but no bytes exist in that bucket because nothing has ever uploaded. **The three defensible resolutions from the gap ledger remain owner-only decisions** · no implementation authorised in this session.
+
+## 6p · S2 dependency investigation (I-V · 2026-10-27)
+
+### 6p.1 · Call-site enumeration
+
+Two parallel intro-video systems:
+
+- **`CUSTOM_INTRO_STORAGE_BUCKET = "nex-media-videos"`** · referenced by:
+  - `custom-intro-config.ts:14`
+  - `custom-intro-service.ts:32`
+  - `/api/nex-native/custom-intro/upload/route.ts:28,102` · performs actual `storage.put(CUSTOM_INTRO_STORAGE_BUCKET, …)` write
+
+- **`INTRO_VIDEO_BUCKET = "nex-user-intros"`** · referenced by:
+  - `intro-settings-service.ts:38`
+  - `/settings/intro-video/*` UI comments mention this bucket
+
+### 6p.2 · Live stored objects (read-only probe)
+
+| Bucket | Status | Objects live |
+|---|---|---|
+| `nex-user-intros` | **LIVE** | **0** |
+| `nex-media-videos` | **MISSING** | would be **0** |
+| `nex-theme-intro` | **LIVE** | **11** (theme catalogue intros · unrelated) |
+| `nex_account_custom_intro` row count | **LIVE** | **0** |
+
+### 6p.3 · S2 conclusion
+
+**Both custom-intro features are UNUSED in production.** The drift is latent · zero rows exist, zero objects exist, zero users have ever uploaded. The two features appear to be independent (one for Chat intros reached via `/api/custom-intro/upload`, one for Settings intros reached via `intro-settings-service.ts`), but neither has run.
+
+Four defensible resolutions remain owner-only decisions:
+- (a) Delete whichever system is not intended.
+- (b) Create `nex-media-videos` bucket when authorised.
+- (c) Point `CUSTOM_INTRO_STORAGE_BUCKET` at the live `nex-user-intros`.
+- (d) Hold indefinitely · zero rows means zero impact.
+
+**No implementation authorised in this session.**
+
+## 6q · S3 dependency investigation (I-W · 2026-10-27)
+
+### 6q.1 · Access-path audit
+
+Every `.from("nex_menu_item")` + `.from("nex_menu_section")` call in `src/`:
+
+- `menu-service.ts:194,208,241,256,273,293,312,326,404` · **uses `nexSupabaseAdmin` (service role · bypasses RLS)**.
+- `discover-card-context.ts:119,160` · also service role.
+- `intelligence/business-evidence-retriever.ts:176` · also service role.
+
+**No client-side query to either table exists anywhere in `src/`.** No browser code uses the Supabase anon key against `nex_menu_item` or `nex_menu_section`. All reads go through server-side services.
+
+### 6q.2 · S3 conclusion
+
+**RLS being disabled on `nex_menu_item` and `nex_menu_section` is INTENTIONAL and CORRECT.** The current posture matches the Community doctrine pattern — service-role writes with explicit ownership checks in the service layer. The flag I raised in §6k is downgraded: service-only tables with no client-reachable path do not need RLS policies for the current access pattern.
+
+**Only caveat:** if the Supabase anon key is ever granted SELECT on these tables (currently it is not), RLS being off would allow unauthenticated reads. The current posture is correct as long as the anon key stays unauthorised against these tables.
+
+**No RLS change authorised.** No change needed in this session.
+
 ## 8 · What this ledger is NOT
 
 - Not a sign-off that any area is "production-ready".
