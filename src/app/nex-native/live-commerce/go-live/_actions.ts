@@ -19,6 +19,7 @@
 "use server";
 
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { resolveLiveEligibility } from "@/lib/nex-native/live-broadcast/live-eligibility";
 import * as businessService from "@/lib/nex-native/business-service";
 import * as productService from "@/lib/nex-native/product-service";
 import {
@@ -54,6 +55,16 @@ export async function startLiveSessionAction(): Promise<
   const session = await resolveNexAppSessionFromContext();
   if (!session) return { ok: false, reason: "not-signed-in" };
   const broadcasterAccountId = session.account.id;
+
+  // Owner directive 2026-10-27 (R9 · Live-eligibility contract) ·
+  // Enforce Shop entitlement independently of the server page gate.
+  // The action must refuse even if a client bypasses the page redirect
+  // (e.g. direct POST). `session.account` already carries the full
+  // nex_account row, so no extra DB round-trip is needed here.
+  const eligibility = resolveLiveEligibility(session.account);
+  if (!eligibility.ok) {
+    return { ok: false, reason: `not-eligible:${eligibility.reason}` };
+  }
 
   // Tier distinction (§5.0): any user may broadcast, business-owners
   // may feature products. Resolve the first business the caller owns
