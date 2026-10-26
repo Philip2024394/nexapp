@@ -400,6 +400,63 @@ Correct posture · anon client access would return zero rows, service-role write
 
 Doctrine honoured at the service layer. Test harness has a shared `server-only` import gap across 16 test files · a routine infrastructure fix, not a correctness issue. **No locked policy moved.** No code change in this session.
 
+## 6m · Push notification dispatch (I-S · 2026-10-27)
+
+### 6m.1 · Verified pieces
+
+| Piece | Status | Evidence |
+|---|---|---|
+| `dispatchPushNotification` | **LOCALLY VERIFIED** | `src/lib/nex-native/notification-dispatch-service.ts:142`. Three-step dispatch: fail-closed prefs read → Vault-boundary check (conversation payloads only, type-system guaranteed) → fan-out to subscriptions with pruning on invalid. Honest skipped_reason enum: `disabled`, `prefs_unavailable`, `vault_check_failed`, `vault_rejected`. |
+| `nex_account_push_subscription` | **VERIFIED-SUPABASE-RO** | 8 cols: `id`, `account_id`, `endpoint`, `p256dh`, `auth`, `user_agent`, `created_at`, `last_seen_at`. **441 rows live.** RLS: owner-write ALL. |
+| `nex_account_notification_prefs` | **VERIFIED-SUPABASE-RO** | 7 cols: `account_id`, `message_enabled`, `call_enabled`, `reaction_enabled`, `mention_enabled`, `marketing_enabled`, `updated_at`. RLS: owner-rw ALL. |
+| Vault boundary guard | **LOCALLY VERIFIED** | Fail-closed · if `listVaultedConversationIds` throws, suppress push. If conversation is vaulted, suppress push. No preview copy carries plaintext. |
+| Dispatch tests | **LOCALLY VERIFIED** | `__tests__/notification-dispatch-service.test.ts` · **14/14 PASS**. |
+
+### 6m.2 · Push notification conclusion
+
+End-to-end dispatch path is sound against existing live tables. Fail-closed posture respects Vault boundary + saved prefs. **No locked policy moved.** Browser/webpush/APNs integration + endpoint validity testing not exercised in this read-only probe.
+
+## 6n · Vault tier schema check (I-T · 2026-10-27)
+
+### 6n.1 · Observations
+
+| Fact | Value |
+|---|---|
+| `nex_account.vault_tier` column in Supabase | **DOES NOT EXIST** |
+| Any `vault_tier` column anywhere in schema | **DOES NOT EXIST** |
+| Code references | `src/lib/nex-native/vault/vault-service.ts:effectiveVaultAccess` reads `account.vault_tier` + `account.vault_trial_used_at`. `src/lib/nex-native/business-trial/__tests__/migration-shape.test.ts` also references the column name. |
+
+### 6n.2 · Behaviour against live Supabase
+
+`effectiveVaultAccess(account)` logic when `vault_tier` is absent:
+
+```ts
+if (account.vault_tier && account.vault_tier !== "gratis") return true;
+// ^ undefined → falsy → fall through
+```
+
+PostgREST returns `undefined` for the missing column. The guard short-circuits. The function then checks `vault_trial_used_at` fallback (also missing). Net effect: `effectiveVaultAccess` returns **false** for every real account on this project.
+
+### 6n.3 · Agreement with the locked Vault policy
+
+The sealed `nex-vault-entitlements-policy-sheet-2026-10-20.md` + the memory entry `project_nex_vault_entitlements_locked_2026_10_20.md` explicitly record:
+> *"Lock = decisions only · NO implementation authorised. W1–W12 unscheduled."*
+
+**The missing column is CONSISTENT with the locked policy** — the schema is intentionally un-provisioned because the implementation is not authorised. The code in `vault-service.ts` is a stub that gracefully returns `false` until the owner authorises the Vault Entitlements implementation.
+
+### 6n.4 · Fail-closed verification
+
+`effectiveVaultAccess` returning `false` for every account is **the correct fail-closed behaviour** given:
+1. The policy is LOCKED (decisions only, no implementation).
+2. The schema is intentionally un-provisioned.
+3. The code must not accidentally grant Vault access to any account before the owner authorises the implementation.
+
+**No discrepancy against the locked contract.** No change authorised in this session.
+
+### 6n.5 · Owner-decision items this probe surfaces
+
+Already recorded in `nex-supabase-gap-ledger-2026-10-27.md` §9 under the implicit "W1–W12 Vault implementation" cluster · no new decisions created.
+
 ## 8 · What this ledger is NOT
 
 - Not a sign-off that any area is "production-ready".
