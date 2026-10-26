@@ -3,8 +3,12 @@
 // Unit tests for the Family Safety home-page snapshot service.
 // Deps are injected · we never touch the real DB.
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+// Shim `server-only` for the vitest module graph · same pattern as
+// `src/lib/nex-native/live-broadcast/__tests__/live-eligibility.test.ts`.
+// Pure test-infrastructure fix · no product behaviour touched.
+vi.mock("server-only", () => ({}));
 import { getFamilyHomeSnapshot } from "./home-service";
 import { FAMILY_HOME_SNAPSHOT_SAFE_DEFAULT } from "@/components/nex-native/family-safety/types";
 

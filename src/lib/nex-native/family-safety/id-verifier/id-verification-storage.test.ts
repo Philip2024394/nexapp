@@ -6,6 +6,11 @@
 // reader token is required for raw-bytes access.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+// Shim `server-only` for the vitest module graph · same pattern as
+// `src/lib/nex-native/live-broadcast/__tests__/live-eligibility.test.ts`.
+// Pure test-infrastructure fix · no product behaviour touched.
+vi.mock("server-only", () => ({}));
 import { createHash } from "node:crypto";
 
 type QueryResponder = (

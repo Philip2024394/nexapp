@@ -3,7 +3,12 @@
 // Pure unit tests on invariants that do NOT require a live DB.
 // Live-DB coverage lives in the integration suite + Playwright.
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
+
+// Shim `server-only` for the vitest module graph · same pattern as
+// `src/lib/nex-native/live-broadcast/__tests__/live-eligibility.test.ts`.
+// Pure test-infrastructure fix · no product behaviour touched.
+vi.mock("server-only", () => ({}));
 import {
   PHASE_1_SIMULATED,
   PHASE_1_TEST_MODE,

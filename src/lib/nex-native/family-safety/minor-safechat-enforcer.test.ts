@@ -8,6 +8,10 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+// Shim `server-only` for the vitest module graph · same pattern as
+// `src/lib/nex-native/live-broadcast/__tests__/live-eligibility.test.ts`.
+// Pure test-infrastructure fix · no product behaviour touched.
+vi.mock("server-only", () => ({}));
 type QueryResponder = (
   sql: string,
   params: readonly unknown[],

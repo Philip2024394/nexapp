@@ -15,6 +15,11 @@
 //      in grep-invariants.test.ts covers the full module source)
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+// Shim `server-only` for the vitest module graph · same pattern as
+// `src/lib/nex-native/live-broadcast/__tests__/live-eligibility.test.ts`.
+// Pure test-infrastructure fix · no product behaviour touched.
+vi.mock("server-only", () => ({}));
 import * as fs from "node:fs";
 import * as path from "node:path";
 
