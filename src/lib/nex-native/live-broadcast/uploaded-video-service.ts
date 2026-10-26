@@ -32,6 +32,9 @@
 
 import "server-only";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
+import { getAccountById } from "@/lib/nex-native/account-service";
+import * as businessService from "@/lib/nex-native/business-service";
+import { resolveLiveEligibility } from "@/lib/nex-native/live-broadcast/live-eligibility";
 
 export type NexUuid = string;
 
@@ -131,6 +134,41 @@ export async function publishUploadedVideo(
       `uploaded-video-service.publishUploadedVideo: title must be 1..120 chars (got ${title.length})`,
     );
   }
+
+  /* Owner directive 2026-10-27 (R9 · Live-eligibility contract) ·
+     Public seller video uploads are a Shop member benefit.
+     We gate at the SERVICE boundary so every caller — current and
+     future — must pass the check, regardless of client-side UI.
+     Drafts and unlisted videos remain unrestricted so an unpaid
+     account can prepare content before upgrading; only `public`
+     is the public-feed surface the Shop entitlement guards.
+     Business attachment is additionally validated against the
+     signed-in account's ownership · a caller cannot attribute a
+     video to a business they do not own. */
+  const requestedVisibility: UploadedVideoVisibility =
+    input.visibility ?? "draft";
+  if (requestedVisibility === "public") {
+    const account = await getAccountById(input.ownerAccountId).catch(
+      () => null,
+    );
+    const eligibility = resolveLiveEligibility(account);
+    if (!eligibility.ok) {
+      throw new Error(
+        `uploaded-video-service.publishUploadedVideo: not-eligible:${eligibility.reason}`,
+      );
+    }
+    if (input.businessId) {
+      const owned = await businessService
+        .listBusinessesByOwner(input.ownerAccountId)
+        .catch(() => []);
+      const owns = owned.some((b) => b.id === input.businessId);
+      if (!owns) {
+        throw new Error(
+          "uploaded-video-service.publishUploadedVideo: business_id does not belong to owner_account_id",
+        );
+      }
+    }
+  }
   const caption = (() => {
     if (typeof input.caption !== "string") return null;
     const trimmed = input.caption.trim();
@@ -138,7 +176,7 @@ export async function publishUploadedVideo(
     if (trimmed.length > 500) return trimmed.slice(0, 500);
     return trimmed;
   })();
-  const visibility: UploadedVideoVisibility = input.visibility ?? "draft";
+  const visibility: UploadedVideoVisibility = requestedVisibility;
   const publishedAt = visibility === "public" || visibility === "unlisted"
     ? new Date().toISOString()
     : null;
