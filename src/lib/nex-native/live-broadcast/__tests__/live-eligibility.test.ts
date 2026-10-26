@@ -79,6 +79,18 @@ describe("resolveLiveEligibility", () => {
     expect(r).toEqual({ ok: false, reason: "trial-expired" });
   });
 
+  it("classifies an account with ABSENT business_trial_status as free-tier (Supabase shape)", () => {
+    // The sealed Supabase schema does not currently carry
+    // business_trial_status · PostgREST returns `undefined` for
+    // this field on every real production row. The classifier
+    // must treat absent-field as "no trial exists" (free-tier),
+    // not "trial-expired".
+    const row = acc();
+    delete (row as Record<string, unknown>).business_trial_status;
+    const r = resolveLiveEligibility(row, NOW_MS);
+    expect(r).toEqual({ ok: false, reason: "free-tier" });
+  });
+
   it("accepts a pro-tier account", () => {
     const r = resolveLiveEligibility(acc({ tier: "pro" }), NOW_MS);
     expect(r).toEqual({ ok: true, mode: "paid-pro" });

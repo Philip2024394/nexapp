@@ -105,8 +105,16 @@ export function resolveLiveEligibility(
         return { ok: false, reason: "lapsed" };
       }
     }
+    // Treat BOTH null AND undefined as "never had a trial" · the
+    // sealed Supabase `nex_account` schema does not currently carry
+    // the `business_trial_status` column (verified read-only on
+    // 2026-10-27 against project ijvqdvsvwtwxzcqmoqit), so PostgREST
+    // returns `undefined` for this field for every real production
+    // account. Without this guard, every ineligible real account
+    // would classify as "trial-expired" instead of "free-tier".
     if (
       account.business_trial_status !== null &&
+      account.business_trial_status !== undefined &&
       account.business_trial_status !== "active"
     ) {
       // "expired" / "converted" / "cancelled" land here · the
