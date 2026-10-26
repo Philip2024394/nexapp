@@ -285,6 +285,54 @@ shape.
 
 R9 enforcement is live at THREE layers. **The gate is correct. The surface it protects is non-functional against this Supabase until migration 219 is applied** (owner decision gate per `nex-supabase-gap-ledger-2026-10-27.md` §9.1).
 
+## 6g · Payment / Stripe compliance (I-L · 2026-10-27)
+
+Existing audit `nex-stripe-compliance-readiness-audit-2026-10-20.md`
+stands. No code probe required this turn.
+
+- `stripe@^17.7.0` installed in `package.json`, **zero production code uses it**.
+- Sealed doctrine "NEX never handles payments" is repeated across 7+ customer-facing pages — intact.
+- Legal entity, canonical legal-page system, price catalogue specifics remain UNKNOWN / UNRESOLVED per the existing audit.
+- **No change in this session.** Payment adoption remains a sealed owner decision.
+
+## 6h · Social edges (I-M · 2026-10-27)
+
+### 6h.1 · Verified pieces
+
+| Piece | Status | Evidence |
+|---|---|---|
+| `nex_friend_edge` | **VERIFIED-SUPABASE-RO** | 6 cols: `a_account_id`, `b_account_id`, `requested_by`, `status`, `created_at`, `updated_at`. **5 rows live.** NO RLS policies — service-role writes only (confirmed by `friend-service.ts` using `nexSupabaseAdmin`). Defence-in-depth comes from service-layer ownership assertions in `blockAccount`, `unblockAccount`, `sendInvite`, `respondToInvite`. |
+| `nex_friend_request` | **VERIFIED-SUPABASE-RO** | 12 cols incl. `sender_account_id`, `recipient_nex_handle`, `recipient_account_id`, `status`, `expires_at`, `cooldown_ends_at`, `intro_note`. **0 rows live.** 5 RLS policies (sender + recipient scoped). |
+| `friend-service.ts` surface | **IMPLEMENTED** | 9 service functions: sendInvite, respondToInvite, getEdge, countMutualFriends, listFriends, listPendingIncoming, listPendingOutgoing, blockAccount, listBlockedByMe, unblockAccount. |
+| Settings → Blocked | **IMPLEMENTED** | `/settings/blocked` route uses `listBlockedByMe` + `unblockAccountAction`. |
+
+### 6h.2 · Gaps
+
+- **`nex_discovery_signal`** confirmed MISSING in both `public` and `nex` schemas (reinforces gap ledger §4.2). All dismiss/tap/save/chat_open/enquiry_initiated/cart_sent writes silently fail against this project.
+- **Migration 215 anomaly**: `nex_friend_request` table EXISTS in Supabase, but migration version `215` is NOT in `public.nex_migration_history`. Likely applied via a different path at some point. Cosmetic ledger drift · no runtime impact.
+
+## 6i · Realtime channel inventory (I-N · 2026-10-27)
+
+All `openNexChannel` call sites and their concrete channel name
+patterns:
+
+| Pattern | Purpose | File | Keyed off | Status |
+|---|---|---|---|---|
+| `nex:messages:{conversationId}` | Chat arrival + read-ack | realtime/message-events.ts | `nex_peer_conversation.id` | **LIVE** — table exists |
+| `nex:typing:{conversationId}` | Chat typing indicator | realtime/typing.ts | `nex_peer_conversation.id` | **LIVE** |
+| `nex:signal:{conversationId}` | WebRTC signalling | realtime/signalling.ts | `nex_peer_conversation.id` | **LIVE** |
+| `nex:presence:conv:{conversationId}` | Per-conversation presence | realtime/presence.ts | `nex_peer_conversation.id` | **LIVE** |
+| `nex:calls:in:{accountId}` | Incoming call ring | realtime/incoming-calls.ts | `nex_account.id` | **LIVE** |
+| `nex:group:{sessionId}` | Group-call presence | calls/group-call-engine.ts | call session id | **LIVE** (session is in-memory) |
+| `nex:live:{sessionId}` | Live broadcast WebRTC + presence | live-broadcast/broadcast-engine.ts + viewer-client.ts | `nex_live_session.id` | **DEAD** — table missing |
+| `nex:live-comments:{sessionId}` | Live chat | live-broadcast/live-comments-channel.ts | `nex_live_session.id` | **DEAD** — table missing |
+| `nex:live-featured:{sessionId}` | Live featured product | live-broadcast/featured-product-channel.ts | `nex_live_session.id` | **DEAD** — table missing |
+| `nex:live-jail:{sessionId}` | Live jail/mute broadcast | live-broadcast/jail-channel.ts | `nex_live_session.id` | **DEAD** — table missing |
+| `nex:status-owners` | Status feature · global owners | status-p2p/presence.ts | — | **LIVE** |
+| `nex:status-serve:{ownerAccountId}` | Status feature · per-owner serve | status-p2p/serve.ts | `nex_account.id` | **LIVE** |
+
+**12 channel patterns across 7 feature areas. 4 Live-adjacent channels are architecturally correct but dark** until `nex_live_session` persistence lands (migration 219 unapplied).
+
 ## 8 · What this ledger is NOT
 
 - Not a sign-off that any area is "production-ready".
