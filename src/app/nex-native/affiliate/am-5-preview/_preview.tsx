@@ -996,10 +996,18 @@ function EditorView({
     setPreviewPublished(false);
   }, [seller]);
 
-  const excluded = seller.category === "property";
   const defaults = MOCK_STANDARD_DEFAULTS;
+  // 2026-10-28 · TS7053 fix · MockBusinessCategory includes "property"
+  // but defaults.by_category only indexes the 4 selling categories
+  // (property is the excluded one). Inlining the discriminant check
+  // lets TS narrow seller.category to Exclude<…, "property"> in the
+  // else branch; the previous `const excluded = …` binding was a
+  // plain boolean so TS couldn't carry the narrowing.
+  const excluded = seller.category === "property";
   const sampleQualifyingEvent: MockQualifyingEvent =
-    excluded ? "paid_order_shipped" : defaults.by_category[seller.category].qualifying_event;
+    seller.category === "property"
+      ? "paid_order_shipped"
+      : defaults.by_category[seller.category].qualifying_event;
 
   return (
     <section data-nex-am5-view="editor" style={{ marginTop: 20 }}>
