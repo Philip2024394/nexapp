@@ -548,7 +548,12 @@ function ShopModal({
             style={{
               padding: "3px 10px",
               fontSize: 12,
-              color: PALETTE.emerald,
+              // 2026-10-28 · PALETTE has no `emerald` key · the
+              // emerald colour (#5FED8B) is stored as `mariaName`
+              // (incoming-speaker name colour, used across this
+              // theme at lines 459, 463, 464). The close button
+              // was clearly intended to pick up that same shade.
+              color: PALETTE.mariaName,
               background: "transparent",
               border: `1px dashed rgba(76,255,122,0.42)`,
               borderRadius: 4,
