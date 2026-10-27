@@ -9,7 +9,14 @@ import { NEX_FONT_SANS } from "@/lib/nex-native/design-tokens";
 
 interface ThemeActivationWrapperProps {
   theme: BrowserThemeRow;
-  activateAction: (formData: FormData) => Promise<void>;
+  // 2026-10-28 · widened to match _theme-browser-client's activateAction
+  // signature. Next.js server actions can return `Promise<never>` (when
+  // they redirect), `void` (sync returns), or `Promise<void>` — the
+  // parent client already types the prop as the full union so the
+  // wrapper must accept the same shape (TS2322).
+  activateAction: (
+    formData: FormData,
+  ) => Promise<never> | void | Promise<void>;
   onClose: () => void;
 }
 
@@ -64,6 +71,8 @@ export function ThemeActivationWrapper({
                await activateAction(formData);
             }}
             onClose={onClose}
+            onPrev={null}
+            onNext={null}
             prevLabel={null}
             nextLabel={null}
             openFullScreenHref={`/nex-native/themes/${theme.id}`}
