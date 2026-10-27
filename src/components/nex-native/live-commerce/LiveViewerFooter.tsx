@@ -348,18 +348,46 @@ function VideoScrubBar(props: {
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
     >
-      {/* Track · translucent navy so the white fill reads */}
+      {/* Owner directive 2026-10-28 · "no gray line showing after
+          playing" · the backdrop track is clipped to the unplayed
+          portion (current% → 100%). The played portion of the bar
+          renders as fully empty space · no faint navy line underneath
+          where the segments used to be. The full-width ref container
+          (next div) still owns pointer capture so the whole bar
+          remains clickable to seek even on the "played" side.
+
+          Owner directive 2026-10-28 · "the play bar line must be
+          perfect in timing with video play" · no CSS transition on
+          `left` · track clip updates on the same tick the parent
+          emits `videoProgressPercent`. A trailing 160ms ease would
+          lag the clip behind the segment-disappear step and the
+          video frame · unacceptable per the sync directive. */}
       <div
-        ref={trackRef}
+        aria-hidden
         style={{
           position: "absolute",
-          left: 0,
+          left: `${current}%`,
           right: 0,
           top: "50%",
           transform: "translateY(-50%)",
           height: 3,
           background: "rgba(255, 255, 255, 0.18)",
           borderRadius: 999,
+          pointerEvents: "none",
+        }}
+      />
+      {/* Full-width pointer-capture track · zero paint · owns the
+          getBoundingClientRect() for emitAt() so pointer-events on
+          the "played" side still produce correct seek percents. */}
+      <div
+        ref={trackRef}
+        aria-hidden
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: 0,
           pointerEvents: "none",
         }}
       />
