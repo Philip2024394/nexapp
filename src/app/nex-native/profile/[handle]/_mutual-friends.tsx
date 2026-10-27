@@ -33,6 +33,12 @@ const NEX = {
   textDim: "#B5C3D6",
   textMuted: "#7D9BC0",
   panel: "rgba(3, 16, 29, 0.72)",
+  // 2026-10-27 · solid page background. Three `boxShadow: 0 0 0 2px
+  // ${NEX.bg}` rules in this file (preview avatars + overflow chip)
+  // use this to create "cutout" rings matching the profile page
+  // background · same value sourced from the sibling palette at
+  // `profile/[handle]/page.tsx:805`.
+  bg: "#020914",
 };
 
 const SANS =
