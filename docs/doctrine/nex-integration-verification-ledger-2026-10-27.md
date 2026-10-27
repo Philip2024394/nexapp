@@ -61,6 +61,14 @@ The repository-level Chat send chain is **wired end-to-end against existing live
 | `nex.business_canonical` (harvester pool) | **VERIFIED-SUPABASE-RO** | **87,013 rows** live in Supabase. |
 | Fail-open paid-listing adapters | **LOCALLY VERIFIED** | `eligible-paid-listing-service.ts` wraps the two views in try/catch so missing views short-circuit to `[]` gracefully. |
 
+### 2.2a · CORRECTION 2026-10-27 (afternoon) · earlier G5 claim was WRONG
+
+**Correction:** the next sub-section (§2.2) claims the app reads canonical from `NEX_POSTGRES_URL = localhost:5433` and the Supabase 87k rows are unreachable. **That claim is incorrect** · live `.env.local` on this dev machine has `NEX_POSTGRES_URL = aws-0-eu-west-1.pooler.supabase.com:5432` (same Supabase pooler as `DATABASE_URL`). CLAUDE.md §8's note about localhost:5433 reflects an older environment that no longer applies.
+
+**Impact:** G5 (Directory read-path divergence) is **RESOLVED on the dev-env side** · both local-dev and production read from the same Supabase project. Owner decision §9.5 of `nex-supabase-gap-ledger-2026-10-27.md` can be closed. §2.2 below is retained as a historical note; its conclusion is superseded by this correction.
+
+Separately · a direct harvest-pipeline audit on 2026-10-27 confirmed the Vercel cron (`/api/nex-native/harvest/tick`, hourly) is **ACTIVELY WRITING** to Supabase: 453 `nex.aof_cycle` rows, canonical dates 2026-10-08 through 2026-10-26. The harvester is live and operational for identity data; broken only for email persistence and images per gap ledger §4.2.
+
 ### 2.2 · Directory gap · critical read-path divergence
 
 **App code reads canonical from `NEX_POSTGRES_URL` (localhost:5433), NOT from Supabase.** This is documented in `local-directory-service.ts:10-15` and `CLAUDE.md §8`:
