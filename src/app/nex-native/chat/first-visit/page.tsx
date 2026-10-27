@@ -120,7 +120,7 @@ export default async function FirstVisitChatPage(): Promise<React.ReactElement> 
     redirect("/nex-native/welcome");
   }
 
-  const displayName = viewer.account?.display_name ?? "there";
+  const displayName = viewer.session.account.display_name ?? "there";
   const firstName = displayName.split(" ")[0] || "there";
 
   return (
