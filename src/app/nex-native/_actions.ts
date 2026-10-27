@@ -38,6 +38,11 @@ import {
 } from "@/lib/nex-native/affiliate-service";
 import * as chatThemeService from "@/lib/nex-native/chat-theme-service";
 import * as businessService from "@/lib/nex-native/business-service";
+// 2026-10-27 · admin-tier action code at lines ~6934 / 6939 / 6977 /
+// 7815 uses the NEX-native service-role client directly for auth
+// listing + nex_account updates. The import had been dropped; four
+// bare `nexSupabaseAdmin` references were failing to resolve.
+import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import * as productService from "@/lib/nex-native/product-service";
 import * as menuService from "@/lib/nex-native/menu-service";
 import * as safeTradeConsentService from "@/lib/nex-native/safe-trade-consent-service";
@@ -671,10 +676,17 @@ export async function postMessageAction(
   // Enqueue an NEX reply through the queue (Wave 10). Best-effort · never
   // fabricates a reply, never blocks the send on generation.
   try {
+    // 2026-10-27 · field names repaired to match EnqueueNexReplyInput
+    // at `src/lib/nex-native/intelligence/enqueue-nex-reply.ts:44-52`.
+    // Previous names (conversationId / requestedByAccountId / side) did
+    // NOT match the type · at runtime every field read as `undefined`
+    // and the enqueue would reject, so NEX Assistant replies silently
+    // never fired for peer-chat sends. The try/catch above swallowed
+    // the throw ("non-fatal") so no error surfaced to users or logs.
     await enqueueNexReply({
-      conversationId,
-      requestedByAccountId: session.account.id,
-      side: participation.side,
+      conversation_id: conversationId,
+      requester_account_id: session.account.id,
+      requester_side: participation.side,
     });
   } catch {
     /* non-fatal · reply arrives when engine drains, or not at all */
