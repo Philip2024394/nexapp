@@ -209,9 +209,21 @@ export async function listCentreFeedItems(
         merchant_google_review_count: (merchant.google_review_count as number) ?? null,
         merchant_services:            (merchant.hammerex_standard_products as string[]) ?? [],
         merchant_years_in_trade:      (merchant.years_in_trade as number) ?? null,
-        merchant_photos:              (merchant.photos as string[]) ?? [],
-        merchant_instagram:           (merchant.instagram as string) ?? null,
-        merchant_facebook:            (merchant.facebook as string) ?? null,
+        // R3 2026-10-27 · columns `photos` / `instagram` / `facebook` are
+        // NOT in the SELECT on line 100 AND there is no evidence in
+        // nex-supabase/migrations that they exist on
+        // `hammerex_trade_off_listings` (grepped: 10+ other callers
+        // across src/lib/nex/ never SELECT them either). Pre-R2-E,
+        // `(merchant.X as T) ?? default` evaluated to `default` because
+        // `merchant.X` was `undefined` at runtime. Post-R2-E the real
+        // row typing surfaces the mismatch at compile time. Honest
+        // default · never fabricate. If a future migration adds these
+        // columns, (a) add them to the SELECT, (b) replace these
+        // constants with real property reads · behaviour was never
+        // sourcing real data anyway.
+        merchant_photos:              [],
+        merchant_instagram:           null,
+        merchant_facebook:            null,
         distance_km: distanceKm,
         region_match_score:
           distanceKm != null ? Math.max(0, 100 - Math.round(distanceKm)) : null,
