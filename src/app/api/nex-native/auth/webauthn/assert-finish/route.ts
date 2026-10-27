@@ -18,7 +18,10 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { verifyAuthenticationResponse } from "@simplewebauthn/server";
-import type { AuthenticationResponseJSON } from "@simplewebauthn/server";
+// 2026-10-28 · in @simplewebauthn v11 the TS types moved to a
+// separate `@simplewebauthn/types` package. Same pattern as
+// `sign-in/_face-button.tsx` + enroll-finish route (ea36901).
+import type { AuthenticationResponseJSON } from "@simplewebauthn/types";
 import {
   nexAppSsrServerClient,
 } from "@/lib/nex-native/app/session";

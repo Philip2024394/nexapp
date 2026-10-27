@@ -5,7 +5,12 @@
 
 import { NextResponse } from "next/server";
 import { verifyRegistrationResponse } from "@simplewebauthn/server";
-import type { RegistrationResponseJSON } from "@simplewebauthn/server";
+// 2026-10-28 · in @simplewebauthn v11 the TS types moved to a
+// separate `@simplewebauthn/types` package. The server package's
+// main export no longer surfaces them (deps.d.ts re-exports from
+// types/, but the top-level index.d.ts does not pass them through).
+// Same pattern as `sign-in/_face-button.tsx` fix (ea36901).
+import type { RegistrationResponseJSON } from "@simplewebauthn/types";
 import { cookies } from "next/headers";
 import { resolveNexAppSession } from "@/lib/nex-native/app/session";
 import { resolveWebauthnConfig } from "@/lib/nex-native/webauthn-config";
