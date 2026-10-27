@@ -52,7 +52,7 @@ export default async function Page({ searchParams }: PageProps) {
               <Link href={`/nex-native/${business.slug}`} className="underline">your NEX</Link>
             </p>
             <p className="mt-1 max-w-md text-[11px] text-[var(--nex-neutral-500)]">
-              Lists and subscribers are ready · compose and send from here.
+              Lists and subscribers are ready · open a list to send campaigns.
             </p>
           </div>
           <form action={signOutAction}>
