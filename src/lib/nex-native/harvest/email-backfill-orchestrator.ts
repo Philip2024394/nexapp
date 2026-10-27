@@ -208,14 +208,39 @@ export async function runEmailBackfillBatch(
     }
   }
 
+  // Resolve the per-domain rate. Precedence:
+  //   explicit opts.rateMsPerDomain  →  env NEX_EMAIL_BACKFILL_RATE_MS
+  //     →  DEFAULT_RATE_MS. All three are floored at RATE_MS_HARD_FLOOR.
+  //   NaN / Infinity / non-finite values are rejected (falls through to
+  //   the next source) so a malformed input cannot blow past the floor.
+  // Fix 2026-10-27 · the env override was documented at seal time but
+  // never wired · operator trust in the comment is restored by reading
+  // the env var here. Non-positive opts fall through to the env (and
+  // then default) · a non-positive env falls through to default.
+  const envRateRaw = Number((process.env.NEX_EMAIL_BACKFILL_RATE_MS ?? "").trim());
+  const envRate =
+    Number.isFinite(envRateRaw) && envRateRaw > 0 ? envRateRaw : null;
+  const optRate =
+    typeof opts.rateMsPerDomain === "number" &&
+    Number.isFinite(opts.rateMsPerDomain) &&
+    opts.rateMsPerDomain > 0
+      ? opts.rateMsPerDomain
+      : null;
   const rateMs = Math.max(
     RATE_MS_HARD_FLOOR,
-    opts.rateMsPerDomain ?? DEFAULT_RATE_MS,
+    optRate ?? envRate ?? DEFAULT_RATE_MS,
   );
-  const batchSize = Math.max(
-    1,
-    Math.min(BATCH_HARD_CAP, opts.batchSize ?? 25),
-  );
+  // batchSize: honour the existing clamp semantics ·
+  //   opts.batchSize = 0        → clamp to 1 (preserves sealed test)
+  //   opts.batchSize = -5       → clamp to 1
+  //   opts.batchSize = 9999     → clamp to 50
+  // Only reject NaN / Infinity which the old `Math.max(1, Math.min(...))`
+  // propagated as NaN (would blow up pg's LIMIT $1 parameter).
+  const batchSizeRaw =
+    typeof opts.batchSize === "number" && Number.isFinite(opts.batchSize)
+      ? opts.batchSize
+      : 25;
+  const batchSize = Math.max(1, Math.min(BATCH_HARD_CAP, batchSizeRaw));
 
   const result = await withClient(async (client) => {
     // Fast fail-safe · if migration 202 has not landed, the column
@@ -430,8 +455,29 @@ export async function runEmailBackfillBatch(
             newStatus = "NOT_FOUND";
           }
         }
-      } catch {
+      } catch (walkerError) {
         errors++;
+        // Owner directive 2026-10-27 · a failed contact-data write
+        // must be counted AND surfaced. Previously the walker throw
+        // was silently counted. Emit one structured warn carrying the
+        // sentinel event + the canonical id + the website apex so an
+        // operator can diagnose WHY the walker failed without having
+        // to add trace instrumentation after the fact. We deliberately
+        // DO NOT include any candidate email VALUE (none exists at
+        // throw time anyway) or the raw error message (may contain
+        // PII fragments from a malformed HTML candidate parser).
+        console.warn(
+          JSON.stringify({
+            event: "email_backfill_walker_threw",
+            canonical_business_id: row.canonical_business_id,
+            website_apex: row.website_apex,
+            country: row.country,
+            error_name:
+              walkerError instanceof Error
+                ? walkerError.name
+                : "unknown_error",
+          }),
+        );
         // Phase 1.3 cursor-advance recovery · if the walker threw, we
         // stamp email_last_attempted_at = now() on this row (and nothing
         // else) so the next tick does not immediately re-select the

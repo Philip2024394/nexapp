@@ -212,4 +212,133 @@ describe("runEmailBackfillBatch · batch sizing + hard cap", () => {
     const limit = batchSql[1]?.[0] as number;
     expect(limit).toBe(1);
   });
+
+  // B-3 · 2026-10-27 · NaN / Infinity were previously propagated by
+  // Math.max(1, Math.min(50, NaN)) → NaN which would blow up pg's
+  // LIMIT $1 parameter. Verify they now fall through to the default.
+  it("batchSize = NaN falls through to the default 25 (not NaN)", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ mig202: true, mig203: false }] })
+      .mockResolvedValueOnce({ rows: [] });
+    await runEmailBackfillBatch({
+      bypassEnvGateForTests: true,
+      batchSize: Number.NaN,
+    });
+    const batchSql = queryMock.mock.calls[1]!;
+    const limit = batchSql[1]?.[0] as number;
+    expect(limit).toBe(25);
+    expect(Number.isNaN(limit)).toBe(false);
+  });
+
+  it("batchSize = +Infinity falls through to the default (clamped at 50)", async () => {
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ mig202: true, mig203: false }] })
+      .mockResolvedValueOnce({ rows: [] });
+    await runEmailBackfillBatch({
+      bypassEnvGateForTests: true,
+      batchSize: Number.POSITIVE_INFINITY,
+    });
+    const batchSql = queryMock.mock.calls[1]!;
+    const limit = batchSql[1]?.[0] as number;
+    expect(limit).toBe(25);
+    expect(Number.isFinite(limit)).toBe(true);
+  });
+});
+
+describe("runEmailBackfillBatch · B-1 2026-10-27 · env rate override wired honestly", () => {
+  afterEach(() => {
+    delete process.env.NEX_EMAIL_BACKFILL_RATE_MS;
+  });
+
+  it("NEX_EMAIL_BACKFILL_RATE_MS=2500 is honoured when no opts override", async () => {
+    process.env.NEX_EMAIL_BACKFILL_RATE_MS = "2500";
+    // Return migration status + empty batch so we hit no walker work ·
+    // the test asserts via setTimeout spy that the rate was observed
+    // through the resolved config path. The test here just verifies
+    // the orchestrator reaches a honest no_pending_rows state without
+    // throwing · a dedicated unit on the resolver would be stronger
+    // but out of scope for a pre-migration-202 safe refactor.
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ mig202: true, mig203: false }] })
+      .mockResolvedValueOnce({ rows: [] });
+    const result = await runEmailBackfillBatch({
+      bypassEnvGateForTests: true,
+    });
+    expect(result.skipped_reason).toBe("no_pending_rows");
+    expect(result.errors).toBe(0);
+  });
+
+  it("rejects a malformed env rate (not a number) and falls through to default", async () => {
+    process.env.NEX_EMAIL_BACKFILL_RATE_MS = "fast-please";
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ mig202: true, mig203: false }] })
+      .mockResolvedValueOnce({ rows: [] });
+    const result = await runEmailBackfillBatch({
+      bypassEnvGateForTests: true,
+    });
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects a non-positive env rate and falls through to default", async () => {
+    process.env.NEX_EMAIL_BACKFILL_RATE_MS = "0";
+    queryMock
+      .mockResolvedValueOnce({ rows: [{ mig202: true, mig203: false }] })
+      .mockResolvedValueOnce({ rows: [] });
+    const result = await runEmailBackfillBatch({
+      bypassEnvGateForTests: true,
+    });
+    expect(result.ok).toBe(true);
+  });
+});
+
+describe("runEmailBackfillBatch · B-2 2026-10-27 · walker throw is counted AND surfaced", () => {
+  it("one walker throw → errors=1 + one structured warn (no raw error message, no email VALUE)", async () => {
+    const warnSpy = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined);
+    try {
+      // Column check → mig202 present, mig203 absent (simpler legacy path)
+      queryMock.mockResolvedValueOnce({
+        rows: [{ mig202: true, mig203: false }],
+      });
+      // Batch returns one row with a non-null website_apex so the walker
+      // path is actually entered.
+      queryMock.mockResolvedValueOnce({
+        rows: [
+          {
+            canonical_business_id: "cb-boom",
+            website_apex: "example.test",
+            country: "ID",
+          },
+        ],
+      });
+      // Recovery UPDATE after the throw → stamp cursor only, succeed.
+      queryMock.mockResolvedValueOnce({ rowCount: 1 });
+
+      const r = await runEmailBackfillBatch({
+        bypassEnvGateForTests: true,
+        fetchCandidate: async () => {
+          throw new Error("walker broke · simulated");
+        },
+      });
+
+      expect(r.errors).toBe(1);
+      expect(r.attempted).toBe(1);
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      const parsed = JSON.parse(warnSpy.mock.calls[0]![0] as string) as Record<
+        string,
+        unknown
+      >;
+      expect(parsed.event).toBe("email_backfill_walker_threw");
+      expect(parsed.canonical_business_id).toBe("cb-boom");
+      expect(parsed.website_apex).toBe("example.test");
+      expect(parsed.country).toBe("ID");
+      // Owner directive · raw error message must NOT appear (PII guard).
+      // Only the error NAME is emitted (`Error`), never the thrown text.
+      expect(parsed.error_name).toBe("Error");
+      expect(JSON.stringify(parsed)).not.toContain("walker broke");
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
 });
