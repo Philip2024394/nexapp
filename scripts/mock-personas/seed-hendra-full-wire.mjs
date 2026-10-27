@@ -176,8 +176,7 @@ const STATEMENTS = [
       UPDATE nex_account
          SET chat_theme        = $2,
              tier              = 'bisnis',
-             bisnis_expires_at = now() + interval '365 days',
-             updated_at        = now()
+             bisnis_expires_at = now() + interval '365 days'
        WHERE id = $1
          AND is_mock_persona = true
        RETURNING id, display_name, nex_handle, chat_theme, tier, bisnis_expires_at
