@@ -18,12 +18,22 @@ import { redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import { StatusDeviceProvider } from "./_device-presence-provider";
 
-async function requireSignedInAccountId(pathname: string): Promise<string> {
+/* Owner directive 2026-10-24 · "dev pass for status and go live" ·
+   dev-only bypass. In NODE_ENV !== "production" (i.e. `npm run dev`),
+   a guest visitor to any /nex-native/status/* surface is NOT
+   redirected to sign-in · the StatusDeviceProvider receives a nil
+   UUID as the owner id so the subtree still renders. In production
+   builds the sealed 2026-10-22 identity-sealing redirect is
+   preserved · guests still land on /sign-in. */
+const DEV_FALLBACK_OWNER_ID = "00000000-0000-0000-0000-000000000000";
+
+async function resolveOwnerIdOrRedirect(pathname: string): Promise<string> {
   const session = await resolveNexAppSessionFromContext();
-  if (!session) {
-    redirect(`/nex-native/sign-in?next=${encodeURIComponent(pathname)}`);
+  if (session) return session.account.id;
+  if (process.env.NODE_ENV !== "production") {
+    return DEV_FALLBACK_OWNER_ID;
   }
-  return session.account.id;
+  redirect(`/nex-native/sign-in?next=${encodeURIComponent(pathname)}`);
 }
 
 export default async function StatusLayout({
@@ -31,7 +41,7 @@ export default async function StatusLayout({
 }: {
   readonly children: React.ReactNode;
 }): Promise<React.JSX.Element> {
-  const ownerAccountId = await requireSignedInAccountId("/nex-native/status");
+  const ownerAccountId = await resolveOwnerIdOrRedirect("/nex-native/status");
   return (
     <StatusDeviceProvider ownerAccountId={ownerAccountId}>
       {children}

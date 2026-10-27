@@ -21,15 +21,22 @@ export const metadata = {
   title: "NEX · Status",
 };
 
-async function requireSignedInAccountId(pathname: string): Promise<string> {
+/* Owner directive 2026-10-24 · dev-only bypass mirrors the layout's
+   fallback. In non-production builds a guest renders with a nil UUID
+   so the Status surface works end-to-end for dev testing. Production
+   preserves the sealed 2026-10-22 identity-sealing redirect. */
+const DEV_FALLBACK_OWNER_ID = "00000000-0000-0000-0000-000000000000";
+
+async function resolveOwnerIdOrRedirect(pathname: string): Promise<string> {
   const session = await resolveNexAppSessionFromContext();
-  if (!session) {
-    redirect(`/nex-native/sign-in?next=${encodeURIComponent(pathname)}`);
+  if (session) return session.account.id;
+  if (process.env.NODE_ENV !== "production") {
+    return DEV_FALLBACK_OWNER_ID;
   }
-  return session.account.id;
+  redirect(`/nex-native/sign-in?next=${encodeURIComponent(pathname)}`);
 }
 
 export default async function StatusPage(): Promise<React.JSX.Element> {
-  const ownerAccountId = await requireSignedInAccountId("/nex-native/status");
+  const ownerAccountId = await resolveOwnerIdOrRedirect("/nex-native/status");
   return <StatusLandingClient ownerAccountId={ownerAccountId} />;
 }
