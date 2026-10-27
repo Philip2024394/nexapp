@@ -247,16 +247,31 @@ export async function submitSafeTradeReportAction(formData: FormData): Promise<n
 
   // Submit the report · persistence is confirmed only when createReport
   // returns normally (it throws on any DB error · see sealed service).
+  //
+  // 2026-10-28 · field names repaired to match CreateReportInput at
+  // `src/lib/nex-native/report-service.ts:96-105`:
+  // - `reporter_account_id` → `reporterAccountId`
+  // - `reported_account_id` → `reportedAccountId`
+  // - `conversation_id: null` → `snapshotConversation: false` (the
+  //   interface models the "capture conversation snapshot" decision
+  //   as a boolean flag · passing conversation_id was a lie that
+  //   evaluated to `undefined` at runtime)
+  //
+  // Pre-fix runtime behaviour: all three fields read as `undefined`
+  // on the service side. Line 114 (`input.reporterAccountId ===
+  // input.reportedAccountId`) resolved to `undefined === undefined`
+  // = `true` and threw "cannot report yourself" · EVERY profile-page
+  // report submission was silently broken.
   try {
     await reportService.createReport({
-      reporter_account_id: session.account.id,
-      reported_account_id: reportedAccountId,
+      reporterAccountId: session.account.id,
+      reportedAccountId: reportedAccountId,
       reason: reason as SealedReportReason,
       note,
       // No conversation snapshot on the profile-page submit path ·
       // the chat 3-dot menu continues to capture the conversation
       // snapshot via the sealed /support?topic=report flow.
-      conversation_id: null,
+      snapshotConversation: false,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
