@@ -363,21 +363,46 @@ function VideoScrubBar(props: {
           pointerEvents: "none",
         }}
       />
-      {/* Fill · WHITE · from current% to 100% · shrinks over time */}
-      <div
-        style={{
-          position: "absolute",
-          left: `${current}%`,
-          right: 0,
-          top: "50%",
-          transform: "translateY(-50%)",
-          height: 3,
-          background: "#FFFFFF",
-          borderRadius: 999,
-          transition: scrubbing === null ? "left 160ms linear" : "none",
-          pointerEvents: "none",
-        }}
-      />
+      {/* Owner directive 2026-10-28 · segmented remaining-time bars.
+          Replaces the previous continuous white fill. Each segment
+          represents 1/SEGMENT_COUNT of the video; segments whose
+          START position has been passed by the playhead unmount
+          entirely so the "played" portion of the track is empty
+          (not just colour-shrunk). Semantics match the previous
+          fill (user sees how much is LEFT) but the visual reads as
+          broken bars with gaps · as time advances, segments at the
+          left edge of the group drop off one by one. */}
+      {(() => {
+        const SEGMENT_COUNT = 20;
+        const STRIDE_PCT = 100 / SEGMENT_COUNT; // 5%
+        const SEGMENT_WIDTH_PCT = STRIDE_PCT * 0.72; // 3.6% bar + 1.4% gap
+        return Array.from({ length: SEGMENT_COUNT }, (_, i) => {
+          const startPct = i * STRIDE_PCT;
+          // Hide segments whose start has been passed by the playhead ·
+          // produces the "played bars disappear" behaviour the owner
+          // asked for (2026-10-28). Partial segments at the playhead
+          // edge are hidden the moment their start is crossed · keeps
+          // the step-off behaviour crisp.
+          if (startPct < current) return null;
+          return (
+            <div
+              key={`segment-${i}`}
+              data-nex-live-footer-video-progress-segment={i}
+              style={{
+                position: "absolute",
+                left: `${startPct}%`,
+                width: `${SEGMENT_WIDTH_PCT}%`,
+                top: "50%",
+                transform: "translateY(-50%)",
+                height: 3,
+                background: "#FFFFFF",
+                borderRadius: 999,
+                pointerEvents: "none",
+              }}
+            />
+          );
+        });
+      })()}
       {/* Thumb · small white ball at the current playback head */}
       <div
         data-nex-live-footer-video-progress-thumb
