@@ -82,6 +82,10 @@ export function PushSubscribeHub(props: PushSubscribeHubProps): null {
         }
 
         // Subscribe.
+        // 2026-10-27 · narrowing from the early-return at line 35 is
+        // erased across the async boundary; re-guard before the
+        // non-null consumer call.
+        if (!props.vapidPublicKey) return;
         const key = urlBase64ToUint8Array(props.vapidPublicKey);
         const sub = await reg.pushManager.subscribe({
           userVisibleOnly: true,
@@ -114,7 +118,14 @@ async function postSubscription(sub: PushSubscription): Promise<void> {
   await upsertPushSubscriptionAction(fd);
 }
 
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
+// 2026-10-27 · return narrowed to `Uint8Array<ArrayBuffer>` (not the
+// default generic `Uint8Array<ArrayBufferLike>`). The lib.dom
+// `PushSubscriptionOptionsInit.applicationServerKey` expects
+// `BufferSource = ArrayBufferView | ArrayBuffer`, which does NOT cover
+// `SharedArrayBuffer`. `new Uint8Array(number)` always creates a fresh
+// ArrayBuffer; the explicit annotation makes that provable to TS 5.7+
+// without an `as unknown as BufferSource` cast at the call site.
+function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const raw = atob(base64);
