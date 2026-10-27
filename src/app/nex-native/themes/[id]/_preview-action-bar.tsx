@@ -75,20 +75,15 @@ export function ThemePreviewActionBar(
 ): React.JSX.Element | null {
   const accent = props.accentHex ?? NEX.orange;
 
-  // Owner directive 2026-10-19 · when the previewed theme is already
-  // the viewer's active chat_theme, the whole bar reveals for 3s and
-  // then unmounts so the sealed composer below (UniversalComposer-
-  // Footer) becomes reachable. We mount the bar first, then flip
-  // visible=false 3s later. Not-already-applied → stays mounted
-  // (user still needs the Back + Use buttons).
-  const [visible, setVisible] = React.useState(true);
-  React.useEffect(() => {
-    if (!props.isAlreadyApplied) return;
-    const t = window.setTimeout(() => setVisible(false), 3000);
-    return () => window.clearTimeout(t);
-  }, [props.isAlreadyApplied]);
-
-  if (props.isAlreadyApplied && !visible) {
+  // Owner directive 2026-10-28 · amends 2026-10-19 · when the
+  // previewed theme is already the viewer's active chat_theme,
+  // return null IMMEDIATELY on first render · no bar at all · no
+  // 3-second affirmation flash. The post-purchase experience is
+  // the user's own chat · the "Back to themes" + "Use this theme"
+  // chrome belongs to BROWSE / PREVIEW · not to OWN. Owner words
+  // verbatim: "hendra has purchased intro and theme - he does not
+  // see in footer back to themes".
+  if (props.isAlreadyApplied) {
     return null;
   }
 
