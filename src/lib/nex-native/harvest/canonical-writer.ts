@@ -48,6 +48,17 @@ export interface WriteSummary {
   readonly skipped_no_name: number;
   readonly skipped_no_coords: number;
   readonly errors: number;
+  // Owner directive 2026-10-27: a failed contact-data write must be
+  // counted and surfaced; it must not be reported as a successful
+  // enrichment. Pre-migration-202 the extended INSERT that carries
+  // email + email_source_url + email_verified_at + email_status fails
+  // with 42703 ("column does not exist") and the catch block falls
+  // back to the identity-only INSERT · prior to this change the
+  // discarded OSM email was invisible. The counter below makes the
+  // discard observable per-tick so the aof_cycle report + the tick
+  // response carry an honest audit trail. Zero-impact once migration
+  // 202 lands (the extended path succeeds and the counter stays 0).
+  readonly emails_dropped_schema_missing: number;
 }
 
 export async function writeCanonicalRowsFromOverpass(
@@ -61,6 +72,7 @@ export async function writeCanonicalRowsFromOverpass(
     let skipped_no_name = 0;
     let skipped_no_coords = 0;
     let errors = 0;
+    let emails_dropped_schema_missing = 0;
 
     for (const el of elements) {
       const name = (el.tags.name ?? "").trim();
@@ -205,6 +217,25 @@ export async function writeCanonicalRowsFromOverpass(
             );
             if (rowCount && rowCount > 0) inserted++;
             else duplicates++;
+            // Owner directive 2026-10-27: count + surface the dropped
+            // email so the tick cannot silently discard contact data.
+            // The structured warn deliberately OMITS the email VALUE
+            // (PII legal basis is not yet settled) · it carries only
+            // the sentinel reason + the identifying context a human
+            // auditor needs to confirm the drop against the aof_cycle
+            // ledger and the source URL for the fact.
+            emails_dropped_schema_missing++;
+            console.warn(
+              JSON.stringify({
+                event: "email_dropped_schema_missing_migration_202",
+                cycle_id: cycleId,
+                bbox_id: bbox.id,
+                country: bbox.isoAlpha2,
+                city: bbox.cityName,
+                osm_ref: osmRef,
+                email_source_url: osmEmail.sourceUrl,
+              }),
+            );
           } catch {
             errors++;
           }
@@ -214,7 +245,14 @@ export async function writeCanonicalRowsFromOverpass(
       }
     }
 
-    return { inserted, duplicates, skipped_no_name, skipped_no_coords, errors };
+    return {
+      inserted,
+      duplicates,
+      skipped_no_name,
+      skipped_no_coords,
+      errors,
+      emails_dropped_schema_missing,
+    };
   });
 
   return (
@@ -224,6 +262,7 @@ export async function writeCanonicalRowsFromOverpass(
       skipped_no_name: 0,
       skipped_no_coords: 0,
       errors: 0,
+      emails_dropped_schema_missing: 0,
     }
   );
 }

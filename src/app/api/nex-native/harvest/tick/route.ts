@@ -53,6 +53,12 @@ interface TickResponse {
   readonly skipped_no_name: number;
   readonly skipped_no_coords: number;
   readonly errors: number;
+  /** Owner directive 2026-10-27 · surface the per-tick count of OSM
+   *  emails discarded because migration 202 is unapplied. A failed
+   *  contact-data write MUST be counted and surfaced to the caller · it
+   *  must not be reported as a successful enrichment. Stays 0 once
+   *  migration 202 lands. */
+  readonly emails_dropped_schema_missing: number;
   readonly overpassHost: string | null;
   readonly fetchMs: number;
   readonly totalMs: number;
@@ -110,6 +116,7 @@ export async function POST(req: Request): Promise<NextResponse<TickResponse>> {
       skipped_no_name: 0,
       skipped_no_coords: 0,
       errors: 0,
+      emails_dropped_schema_missing: 0,
     }, started, "overpass_failed", cycleId);
     return NextResponse.json(
       {
@@ -122,6 +129,7 @@ export async function POST(req: Request): Promise<NextResponse<TickResponse>> {
         skipped_no_name: 0,
         skipped_no_coords: 0,
         errors: 0,
+        emails_dropped_schema_missing: 0,
         overpassHost: overpass.host,
         fetchMs: overpass.fetchMs,
         totalMs: Date.now() - started,
@@ -148,6 +156,7 @@ export async function POST(req: Request): Promise<NextResponse<TickResponse>> {
     skipped_no_name: write.skipped_no_name,
     skipped_no_coords: write.skipped_no_coords,
     errors: write.errors,
+    emails_dropped_schema_missing: write.emails_dropped_schema_missing,
     overpassHost: overpass.host,
     fetchMs: overpass.fetchMs,
     totalMs: Date.now() - started,
@@ -317,6 +326,7 @@ function emptyResponse(
     skipped_no_name: 0,
     skipped_no_coords: 0,
     errors: 0,
+    emails_dropped_schema_missing: 0,
     overpassHost: null,
     fetchMs: 0,
     totalMs: Date.now() - started,
