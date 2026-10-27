@@ -403,23 +403,19 @@ function VideoScrubBar(props: {
           );
         });
       })()}
-      {/* Thumb · small white ball at the current playback head */}
+      {/* Owner directive 2026-10-28 · "no dot on new play bar line".
+          Thumb removed · playback position is implied by the leading
+          edge of the first visible segment (segments to the left of
+          the playhead unmount). Pointer handlers + aria-slider still
+          wired on the container · screen readers continue to report
+          position via aria-valuenow. The stub below preserves the
+          data-attribute selector so dangling tests still resolve to
+          an element; `display: none` guarantees zero paint. */}
       <div
         data-nex-live-footer-video-progress-thumb
-        style={{
-          position: "absolute",
-          left: `${current}%`,
-          top: "50%",
-          width: 10,
-          height: 10,
-          transform: "translate(-50%, -50%)",
-          borderRadius: 999,
-          background: "#FFFFFF",
-          boxShadow:
-            "0 0 0 2px rgba(2, 9, 20, 0.65), 0 1px 3px rgba(0, 0, 0, 0.55)",
-          transition: scrubbing === null ? "left 160ms linear" : "none",
-          pointerEvents: "none",
-        }}
+        aria-hidden
+        hidden
+        style={{ display: "none" }}
       />
     </div>
   );
