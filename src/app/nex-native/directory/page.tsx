@@ -29,6 +29,17 @@ import type * as React from "react";
 import {
   getLandingFeed,
 } from "@/lib/nex-native/directory/landing-feed-service";
+// Owner directive 2026-10-27 · search Feature A · the directory
+// page's existing <input type="search" name="q" /> was decorative ·
+// `q` was never read server-side. This import wires the sealed search
+// path which calls BOTH searchCanonicalBusinesses + searchBusinesses
+// in parallel + ranks results. Only used when the request carries a
+// non-empty `q`; the seed-shuffled landing feed is preserved for the
+// no-query browse flow.
+import {
+  getDirectorySearchResults,
+  normaliseSearchQuery,
+} from "@/lib/nex-native/directory/search-service";
 import {
   isLandingCategorySlug,
   type LandingCategorySlug,
@@ -63,6 +74,11 @@ interface PageProps {
     readonly s?: string;
     /** Owner directive 2026-10-16 · "within N km" distance filter. */
     readonly km?: string;
+    /** Owner directive 2026-10-27 · Feature A · free-text search over
+     *  canonical + nex_business. Non-empty routes through the sealed
+     *  `getDirectorySearchResults`; empty / absent preserves the
+     *  seed-shuffled landing feed. */
+    readonly q?: string;
   }>;
 }
 
@@ -133,16 +149,33 @@ export default async function DirectoryPage({
     // Guest · keep drawerSession = null
   }
 
-  const feed = await getLandingFeed({
-    limit: PAGE_SIZE,
-    visitorSeed: seed,
-    categorySlug: landingSlug,
-    country: requestedCountry,
-    offset: (page - 1) * PAGE_SIZE,
-    maxDistanceKm: hasViewerLocation ? distanceKm : null,
-    viewerLat: viewerLocation?.lat ?? null,
-    viewerLng: viewerLocation?.lng ?? null,
-  });
+  // Owner directive 2026-10-27 · Feature A · when the user submits
+  // a non-empty search query via the <input name="q"> we route through
+  // the sealed `getDirectorySearchResults` which calls BOTH
+  // searchCanonicalBusinesses + searchBusinesses in parallel + ranks
+  // results. Empty / absent `q` preserves the seed-shuffled landing
+  // feed byte-identically to pre-fix behaviour.
+  const rawQuery = typeof sp.q === "string" ? sp.q : null;
+  const query = normaliseSearchQuery(rawQuery);
+  const feed =
+    query.length > 0
+      ? await getDirectorySearchResults({
+          query,
+          limit: PAGE_SIZE,
+          offset: (page - 1) * PAGE_SIZE,
+          country: requestedCountry,
+          seed,
+        })
+      : await getLandingFeed({
+          limit: PAGE_SIZE,
+          visitorSeed: seed,
+          categorySlug: landingSlug,
+          country: requestedCountry,
+          offset: (page - 1) * PAGE_SIZE,
+          maxDistanceKm: hasViewerLocation ? distanceKm : null,
+          viewerLat: viewerLocation?.lat ?? null,
+          viewerLng: viewerLocation?.lng ?? null,
+        });
 
   return (
     <LandingDirectoryView
@@ -156,6 +189,7 @@ export default async function DirectoryPage({
       pageSize={PAGE_SIZE}
       feed={feed}
       drawerSession={drawerSession}
+      query={query}
     />
   );
 }

@@ -121,6 +121,7 @@ export async function LandingDirectoryView({
   pageSize,
   feed,
   drawerSession,
+  query = "",
 }: {
   readonly seed: string;
   readonly category: LandingCategorySlug | null;
@@ -143,6 +144,11 @@ export async function LandingDirectoryView({
    *  server-side by the parent route. Null for guests · the drawer
    *  renders the sealed anon identity bar + locked rows. */
   readonly drawerSession: ControlDrawerSession | null;
+  /** Owner directive 2026-10-27 · Feature A · the normalised search
+   *  query echoed back into the input so a submitted search stays
+   *  visible. Defaults to empty so pre-feature callers compile
+   *  unchanged. */
+  readonly query?: string;
 }) {
   // Merge: mock seeds FIRST so the preview surface always has
   // content, then the real feed. Mock ids never collide with real
@@ -228,6 +234,7 @@ export async function LandingDirectoryView({
           countryFilter={countryFilter}
           distanceKm={distanceKm}
           hasViewerLocation={hasViewerLocation}
+          query={query}
         />
         <DirectoryCategoryDropdown activeSlug={category} />
         {/* Owner directive 2026-10-18 · Slice 1 of the directory
@@ -410,12 +417,16 @@ function DirectorySearchBar({
   countryFilter,
   distanceKm,
   hasViewerLocation,
+  query,
 }: {
   readonly seed: string;
   readonly category: LandingCategorySlug | null;
   readonly countryFilter: string | null;
   readonly distanceKm: number | null;
   readonly hasViewerLocation: boolean;
+  /** Owner directive 2026-10-27 · echo the submitted query back into
+   *  the input so the user sees what they searched for. */
+  readonly query: string;
 }) {
   return (
     <div style={searchRowStyle}>
@@ -435,6 +446,8 @@ function DirectorySearchBar({
           autoComplete="off"
           style={searchInputStyle}
           aria-label="Search listings"
+          defaultValue={query}
+          maxLength={100}
         />
         <input type="hidden" name="s" value={seed} />
         {category ? (
