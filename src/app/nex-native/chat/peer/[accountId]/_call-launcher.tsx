@@ -571,12 +571,19 @@ export function PeerCallLauncher(props: PeerCallLauncherProps): React.JSX.Elemen
   const peerName = incomingCaller || props.peerDisplayName;
 
   // Phase 4 wiring 2026-10-19 · 1:1 connection quality. The hook
-  // polls callRef.current.getPeerConnection() every 3s when the call
-  // is actively connected or reconnecting. It returns null in every
+  // polls callRef.current.getPeerConnection() every 3s while the call
+  // is in the "connected" PeerCallState · the hook internally reports
+  // its own "reconnecting" quality label when the underlying RTC
+  // connection flaps (see _use-peer-call-quality.ts). The PeerCall
+  // state machine never has a "reconnecting" value · it stays
+  // "connected" throughout. getPeerConnection() returns null in every
   // other state (idle, dialling, ringing, ended) and when stats are
   // unavailable · the ConnectionFooter below renders "Measuring…"
   // for null · we NEVER fabricate a quality label.
-  const qualityEnabled = state === "connected" || state === "reconnecting";
+  // 2026-10-28 · removed dead `state === "reconnecting"` branch · it
+  // conflated the PeerCallState enum with the quality-label enum. TS
+  // flagged the mismatch (TS2367) because the two unions don't overlap.
+  const qualityEnabled = state === "connected";
   const getPC = React.useCallback(
     () => callRef.current?.getPeerConnection() ?? null,
     [],
