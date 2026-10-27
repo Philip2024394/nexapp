@@ -117,6 +117,32 @@ Grouped by urgency. Each has: **what**, **why**, **recommended answer**, **conse
 - **Recommendation**: commit as isolated doc commit so the evidence persists.
 - **Safe to continue elsewhere while pending**: YES.
 
+### D14 · Business owner `/manage` inbox badge-vs-link semantic mismatch
+- **Decision**: resolve the mismatch between the unread badge count and the link destination on `/nex-native/manage/page.tsx:134-141` (the business-owner header "inbox" link).
+- **Why it matters** · USER-VISIBLE DISHONEST STATE:
+  - The badge calls `/api/nex-native/unread-count` which returns `countTotalUnreadPeerMessages(session.account.id)` · PEER system (`nex_peer_message` + `nex_peer_conversation`).
+  - The adjacent link href is `/nex-native/conversations` which is the Wave-5 BUSINESS-CONVERSATION inbox (`nex_conversation` + `nex_conversation_participant` tables, service: `conversationService.listConversationsForAccount`).
+  - Product enquiries from `/[businessSlug]/[productId]/page.tsx` → `sendProductInquiryAction` → `peerMessageService.sendPeerMessage` land in the PEER system.
+  - Visitor-first-messages, API chat, and NEX-AI replies land in the WAVE-5 system.
+  - Owner sees badge "3 unread" but clicks link to see empty / unrelated inbox. The 3 messages are at `/nex-native/chat/inbox` (peer inbox) which has NO production navigation entry.
+- **Recommendation**: option (A) · change the `/manage` inbox link from `/nex-native/conversations` → `/nex-native/chat/inbox` to match badge semantics. One-line fix, reversible. Product enquiries ARE the dominant real-user case. Downside: owners lose a `/manage` entry point to the Wave-5 inbox.
+- **Alternatives + consequence**:
+  - (A) Point link at `/nex-native/chat/inbox` → badge-link honesty restored · Wave-5 orphaned from `/manage` nav.
+  - (B) Change badge to count Wave-5 unread → honesty restored but requires new API + conflicts with sealed home-screen app-badge contract (owner directive 2026-10-16).
+  - (C) Add BOTH as navigation entries → extra chrome; UI decision territory.
+  - (D) Compound badge counting UNION(peer, wave5) → new API, non-trivial.
+- **Related sealed context** (do not infer "already decided"):
+  - Owner directive 2026-10-16 sealed PEER semantics for the home-screen app-badge endpoint.
+  - Candidate B commit (2026-10-27, `70571e3`) explicitly chose Path 1 "badge-only, do NOT touch the gate" when adding the badge next to the existing `/conversations` link. That decision pre-dates the semantic-mismatch finding here.
+- **Safe to continue elsewhere while pending**: YES. The bug is latent · owners still receive push notifications and can navigate to `/chat/peer/[accountId]` from other paths. But every signed-in owner-session that opens `/manage` sees a confusing badge today.
+
+### D15 · Peer inbox `/nex-native/chat/inbox` has no production navigation
+- **Decision**: provide a navigation entry (or merge inboxes) so users can discover the peer-conversation inbox.
+- **Why it matters**: `/nex-native/chat/inbox` is the destination for all product-inquiry chats (via `sendProductInquiryAction` + `sendMenuItemInquiryAction`), direct peer DMs, and theme-gift conversations. Grep across `src/app` for `href=.*chat/inbox` finds only `chat/prototypes/direct-text/page.tsx` (dev prototype). ZERO production entry points.
+- **Impact**: a customer sends a product enquiry → the message lands in the owner's peer inbox → the owner has no way to reach that inbox from any main navigation surface. They must bookmark `/nex-native/chat/inbox` directly, OR arrive via a push-notification click.
+- **Recommendation**: option (A) above (`D14`) · pointing `/manage` inbox there is the minimal navigation addition. The home shell could also mount a Chat/Messages entry point if there's product intent to expose it broadly.
+- **Safe to continue elsewhere while pending**: YES.
+
 ---
 
 ## Autonomous workstream (no decisions required · in progress)
