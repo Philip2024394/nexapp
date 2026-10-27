@@ -132,11 +132,22 @@ export default async function JokerBespokePreviewPage(): Promise<React.JSX.Eleme
             boxShadow: "0 20px 60px rgba(0,0,0,0.55)",
           }}
         >
-          {/* @ts-expect-error · ThemeViewerClient is a client component
-              with a complex prop interface · the fixture-prop bundle is
-              intentionally minimal and the component is expected to
-              handle missing-asset defaults gracefully. */}
-          <ThemeViewerClient {...JOKER_FIXTURE_PROPS} />
+          {/*
+            ThemeViewerClient is a client component with a complex
+            prop interface · the fixture-prop bundle is intentionally
+            minimal (dev page, isolated preview) and the component
+            handles missing-asset defaults gracefully. The previous
+            `@ts-expect-error` directive did not reach the JSX
+            element below (multi-line JSX comment positioning) so TS
+            was still flagging the mismatch · an explicit `unknown`
+            cast is honest about the dev intent and keeps the surface
+            buildable. 2026-10-28.
+          */}
+          <ThemeViewerClient
+            {...(JOKER_FIXTURE_PROPS as unknown as React.ComponentProps<
+              typeof ThemeViewerClient
+            >)}
+          />
         </div>
       </main>
     </>
