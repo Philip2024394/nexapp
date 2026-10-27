@@ -420,7 +420,17 @@ const NEX_SLUG_REGEX = /^[a-z0-9]([-a-z0-9]{0,62}[a-z0-9])?$/;
 // Auth actions
 // ---------------------------------------------------------------------------
 
-export async function signInAction(formData: FormData): Promise<ActionResult> {
+// 2026-10-27 · return narrowed from `Promise<ActionResult>` to
+// `Promise<void>`. Every code path in this function calls `redirect()`
+// (next/navigation · typed as `never`), so the function cannot resolve
+// to an ActionResult value at runtime. The declared ActionResult return
+// also made the function fail to typecheck as a `<form action={…}>`
+// prop (Next.js expects `(fd) => void | Promise<void>`), surfacing as
+// TS2322 at sign-in/page.tsx:415 + conversations/page.tsx:84+113. Zero
+// caller currently reads the return value · verified by grep. If a
+// future caller wants a value back, add a separate wrapper that
+// catches the redirect throw.
+export async function signInAction(formData: FormData): Promise<void> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   if (!email || !password) {
@@ -558,7 +568,10 @@ export async function devPassAction(_formData: FormData): Promise<never> {
 // provisioned via `scripts/nex-provision-dev-admin.mts` and sign in
 // through the standard email+password form.
 
-export async function signUpAction(formData: FormData): Promise<ActionResult> {
+// 2026-10-27 · same narrowing as signInAction above · every path
+// calls redirect(), so Promise<ActionResult> was a lie. Changing to
+// Promise<void> makes this valid as a `<form action>` prop.
+export async function signUpAction(formData: FormData): Promise<void> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const passwordConfirm = String(formData.get("password_confirm") ?? "");
