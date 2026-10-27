@@ -45,6 +45,9 @@ import { SubmitButton } from "../_submit-button";
 import { NexNativeShell } from "../_shell";
 import { YourNexCard } from "../_your-nex-card";
 import { nexAddressForBusiness } from "@/lib/nex-native/nex-address";
+// Candidate B · 2026-10-27 · live unread-count pill next to the
+// existing "inbox" link. Does NOT touch the /conversations launch gate.
+import { ManageInboxUnreadBadgeClient } from "./_inbox-unread-badge-client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -129,8 +132,12 @@ export default async function Page({ searchParams }: PageProps) {
             </h1>
           </div>
           <div className="flex items-center gap-3 text-xs text-[var(--nex-neutral-500)]">
-            <Link href="/nex-native/conversations" className="underline">
+            <Link
+              href="/nex-native/conversations"
+              className="inline-flex items-center underline"
+            >
               inbox
+              <ManageInboxUnreadBadgeClient />
             </Link>
             <form action={signOutAction}>
               <button type="submit" className="underline">
