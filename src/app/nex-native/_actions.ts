@@ -347,23 +347,46 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
       redirect(dest);
     }
   }
-  // 2026-10-27 · redirect target repaired to match the SEALED hard
-  // rule at `src/app/nex-native/free-chat/page.tsx:110-128`:
-  // *"/free-chat is the GUEST surface. Signed-in users never see the
-  // picker · they belong on /nex-native/contacts (post-auth landing).
-  // Bouncing them out at the page boundary prevents the 'my name
-  // shows but theme picker is forced' contradiction..."*
+  // 2026-10-27 · intent-aware post-signup routing.
   //
-  // The previous redirect to `/free-chat?show-themes=1` was a lie:
-  // the fresh signup user IS signed-in, so the /free-chat guard
-  // immediately re-redirects them to /contacts. User experiences a
-  // double redirect; the "complete theme + avatar + name + location"
-  // flow referenced in the earlier comment is unreachable from this
-  // path because the guard runs before the picker renders.
+  // The 2026-10-22 (afternoon) sealed hard rule at
+  // `src/app/nex-native/free-chat/page.tsx:110-128` makes /free-chat
+  // guest-only · signed-in users bounce to /contacts. The previous
+  // signup redirect to `/free-chat?show-themes=1` was therefore a
+  // double-redirect (wasted hop) regardless of intent.
   //
-  // Landing straight at /contacts removes the wasted hop. If a
-  // dedicated post-signup setup surface is wanted later, it needs its
-  // own route that doesn't share /free-chat's guest-only guard.
+  // The 2026-10-18 S3 sealed flow (`_onboarding-destinations.ts` +
+  // `/create-account/pick-theme` + `/business-kind` + `/pick-cover`
+  // + `/building`) IS intent-aware and signed-in-friendly: pick-theme
+  // only bounces GUESTS to /sign-in, lets signed-in users through,
+  // and reads the WELCOME_INTENT_COOKIE at line 76 to drive the
+  // shop/themes/personalised chain. If an intent cookie is set from
+  // the welcome landing (`rememberWelcomeIntentAction`), route the
+  // fresh signup there so the sealed S1/S2/S3 flow actually
+  // activates.
+  //
+  // Signups without an intent cookie (direct /create-account visit,
+  // email-confirmation completion, QR-code deep link) continue to
+  // /contacts · the pick-theme banner adds no value when the user
+  // never tapped a welcome card.
+  //
+  // Cookie is HTTP-only and consumed by /pick-theme (which deletes
+  // it inline). We only READ it here · we do NOT clear it so the
+  // destination page retains its single source of truth.
+  {
+    const { WELCOME_INTENT_COOKIE, isWelcomeIntent } = await import(
+      "./welcome/_welcome-intent"
+    );
+    const jar = await cookies();
+    const rawIntent = jar.get(WELCOME_INTENT_COOKIE)?.value ?? null;
+    if (isWelcomeIntent(rawIntent)) {
+      revalidatePath("/nex-native/create-account/pick-theme");
+      redirect("/nex-native/create-account/pick-theme");
+    }
+  }
+  // No intent cookie · default post-signup landing is the Contacts
+  // tab (post-auth home). Matches the sealed /home → /contacts
+  // chain used by the signed-in-root redirect at /nex-native/page.tsx.
   revalidatePath("/nex-native/contacts");
   redirect("/nex-native/contacts");
 }
