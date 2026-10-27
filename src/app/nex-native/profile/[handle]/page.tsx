@@ -42,6 +42,10 @@
 
 import { notFound, redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// 2026-10-28 · dev-impersonation parity · without this Hendra
+// signed in via NEX_DEV_IMPERSONATE_HANDLE renders as a non-owner
+// viewer of his own profile · zero prod risk per sealed module.
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import * as accountService from "@/lib/nex-native/account-service";
 import * as accountProfileService from "@/lib/nex-native/account-profile-service";
 import { effectiveTier } from "@/lib/nex-native/account-service";
@@ -244,7 +248,7 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
   const profileAccount = await accountService.getAccountByNexHandle(handle);
   if (!profileAccount) notFound();
 
-  const session = await resolveNexAppSessionFromContext().catch(() => null);
+  const session = await resolveSessionWithDevOverride().catch(() => null);
   const viewerAccountId = session?.account.id ?? null;
   const isOwner = viewerAccountId === profileAccount.id;
 

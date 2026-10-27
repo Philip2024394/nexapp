@@ -17,6 +17,11 @@
 
 import { redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// 2026-10-28 · dev-impersonation parity with themes/[id] fix ·
+// without this, Hendra signed in via NEX_DEV_IMPERSONATE_HANDLE
+// bounces to /sign-in from /profile/me. Zero prod risk per sealed
+// dev-impersonation module doctrine.
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,7 +31,7 @@ interface PageProps {
 }
 
 export default async function MyProfileShortcut({ searchParams }: PageProps): Promise<never> {
-  const session = await resolveNexAppSessionFromContext().catch(() => null);
+  const session = await resolveSessionWithDevOverride().catch(() => null);
   if (!session) {
     redirect("/nex-native/sign-in?return_to=/nex-native/profile/me");
   }
