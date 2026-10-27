@@ -646,7 +646,30 @@ Installed Postgres extensions in project `ijvqdvsvwtwxzcqmoqit`:
 
 **All expected extensions installed.** `pg_trgm` supports the watch-listing tsvector search in migration 230 (when applied). `postgis` is live and ready for Community `community_discovery_zone_id` + directory distance queries. `vector` is available for future embedding features.
 
-## 8 · What this ledger is NOT
+## 6r · Enrichment pipeline hardening (F-1..F-6 · commit 37654a4)
+
+### 6r.1 · Shipped
+
+Follow-up to review of `cebd4d1`. One isolated code-only batch. 7 files touched (all under `src/lib/nex-native/enrichment/`), +488/-38 lines. 66/66 tests PASS (was 53).
+
+### 6r.2 · ENFORCED vs SPECIFIED (per owner's directive)
+
+| Fix | ENFORCED by committed code | SPECIFIED by contract |
+|---|---|---|
+| **F-1** worker catches persister throws | ✅ try/catch at `enrichment-worker.ts` write call · regression test asserts no abort | — |
+| **F-2** idempotence | — | ✅ `written_idempotent_noop` variant in `PersistOutcome` · dedup keys documented · dry-run honestly does NOT pretend |
+| **F-3** downgrade refusal | ✅ dry-run uses injected `priorImageStates` to prove the refusal path · `would_downgrade_persisted_image` rejection | ✅ real persister MUST implement `getCurrentImageState` against real DB |
+| **F-4** whatsapp vertical routing | ✅ dry-run default-safe rejection · `no_vertical_table_for_contact` outcome | ✅ real persister MUST route to `nex.food_business.whatsapp_number` / `nex.accommodation_business.whatsapp_number` |
+| **F-5** licence normalisation | ✅ `isLicenceUnknown()` strips case + whitespace · variants `Unknown` / `UNKNOWN` / `  unknown  ` / `""` all refuse to promote | — |
+| **F-6** typed governance input | ✅ `SourceRegistryGovernance` replaces booleans · `governance_source_mismatch` refusal when snapshot's `sourceId` ≠ `provenance.sourceRegistryId` | — |
+
+### 6r.3 · Still blocked
+
+- **H-4 schema gap** · `nex.business_media` cannot retain per-image provenance · OWNER DECISION · migration not authorised.
+- **Real persister implementation** · depends on F-2 dedup columns + F-3 state-lookup query + F-4 vertical-routing logic + H-4 schema.
+- **Sandbox project** · preparation only · creation not authorised.
+- **Legal basis + opt-out mechanism for email collection** · DRAFT doctrine gates stand.
+- **Image rights basis for harvester-fetched images** · OWNER DECISION.
 
 - Not a sign-off that any area is "production-ready".
 - Not a claim that any journey has been browser-tested unless marked **BROWSER-TESTED**.
