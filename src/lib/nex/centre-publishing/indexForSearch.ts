@@ -90,11 +90,14 @@ export async function listCentreFeedItems(
       .eq("lifecycle_status", "active"),
     supabaseAdmin
       .from("hammerex_trade_off_listings")
+      // R2-E 2026-10-27 · SELECT string joined into a single literal
+      // (previously `+`-concatenated across 4 lines). The concatenated
+      // form widened to `string` at the type layer, which caused
+      // Supabase to fall back to `GenericStringError[]` for the row type
+      // and produced TS2339 on `.id` access downstream. The literal form
+      // keeps Supabase's inferred row type intact · no runtime change.
       .select(
-        "id, slug, display_name, city, postcode_prefix, lat, lng, status, " +
-          "avatar_url, whatsapp, email, phone, website, " +
-          "nex_show_whatsapp, nex_show_email, nex_show_phone, nex_show_website, " +
-          "hammerex_standard_verified, trust_tier"
+        "id, slug, display_name, city, postcode_prefix, lat, lng, status, avatar_url, whatsapp, email, phone, website, nex_show_whatsapp, nex_show_email, nex_show_phone, nex_show_website, hammerex_standard_verified, trust_tier"
       )
       .in("id", merchantIds)
       .eq("status", "live"),

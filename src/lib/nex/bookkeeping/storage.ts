@@ -75,7 +75,12 @@ export type NexBkStore = {
 
 class SupabaseNexBkStore implements NexBkStore {
   private get sb() {
-    return supabaseAdmin();
+    // R2-E 2026-10-27 · supabaseAdmin is exported as the SupabaseClient
+    // instance (not a factory). The historical factory pattern
+    // `supabaseAdmin()` was a legacy inconsistency hidden by implicit-any
+    // before the R1 shim restored proper typing. 108 other callers already
+    // use the instance pattern (`.from(...)`, `.rpc(...)`, `.storage.*`).
+    return supabaseAdmin;
   }
 
   async appendEvent(input: NexBkEventInput): Promise<NexBkEvent> {

@@ -52,10 +52,16 @@ const SELECT_COLUMNS =
 export async function loadBlueprintBySlug(
   slug: string
 ): Promise<BusinessRecord | null> {
+  // R2-E 2026-10-27 · `.returns<BusinessBlueprintRow[]>()` overrides
+  // Supabase's inferred row type (which widens to GenericStringError
+  // when the SELECT string is runtime-concatenated · see SELECT_COLUMNS).
+  // This replaces the previous `as BusinessBlueprintRow` cast that
+  // pre-R1 implicit-any had suppressed.
   const { data, error } = await supabaseAdmin
     .from("os_business_listings")
     .select(SELECT_COLUMNS)
     .eq("slug", slug)
+    .returns<BusinessBlueprintRow[]>()
     .maybeSingle();
 
   if (error) {
@@ -64,14 +70,13 @@ export async function loadBlueprintBySlug(
     );
   }
   if (!data) return null;
-  const row = data as BusinessBlueprintRow;
-  if (!row.blueprint_snapshot) return null;
+  if (!data.blueprint_snapshot) return null;
 
   return {
-    slug: row.slug,
-    blueprint: deserialiseBlueprint(row.blueprint_snapshot),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    slug: data.slug,
+    blueprint: deserialiseBlueprint(data.blueprint_snapshot),
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
   };
 }
 
@@ -87,6 +92,7 @@ export async function loadBlueprintByOwningEntityId(
     .from("os_business_listings")
     .select(SELECT_COLUMNS)
     .eq("owning_entity_id", entityId)
+    .returns<BusinessBlueprintRow[]>()
     .maybeSingle();
 
   if (error) {
@@ -95,14 +101,13 @@ export async function loadBlueprintByOwningEntityId(
     );
   }
   if (!data) return null;
-  const row = data as BusinessBlueprintRow;
-  if (!row.blueprint_snapshot) return null;
+  if (!data.blueprint_snapshot) return null;
 
   return {
-    slug: row.slug,
-    blueprint: deserialiseBlueprint(row.blueprint_snapshot),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    slug: data.slug,
+    blueprint: deserialiseBlueprint(data.blueprint_snapshot),
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
   };
 }
 
@@ -166,6 +171,7 @@ export async function publishBlueprintForSlug(
     })
     .eq("slug", slug)
     .select(SELECT_COLUMNS)
+    .returns<BusinessBlueprintRow[]>()
     .maybeSingle();
 
   if (error || !data) {
@@ -176,16 +182,15 @@ export async function publishBlueprintForSlug(
     };
   }
 
-  const row = data as BusinessBlueprintRow;
   return {
     ok: true,
-    dbRevision: row.blueprint_revision,
-    publishedAt: row.blueprint_published_at ?? nowIso,
+    dbRevision: data.blueprint_revision,
+    publishedAt: data.blueprint_published_at ?? nowIso,
     record: {
-      slug: row.slug,
+      slug: data.slug,
       blueprint,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
     },
   };
 }
@@ -203,14 +208,15 @@ export async function listPublishedBlueprints(
     .select(SELECT_COLUMNS)
     .not("blueprint_snapshot", "is", null)
     .order("blueprint_published_at", { ascending: false, nullsFirst: false })
-    .limit(limit);
+    .limit(limit)
+    .returns<BusinessBlueprintRow[]>();
 
   if (error) {
     throw new Error(
       `listPublishedBlueprints: ${error.message ?? "unknown supabase error"}`
     );
   }
-  const rows = (data ?? []) as BusinessBlueprintRow[];
+  const rows = data ?? [];
   return rows.map((row) => ({
     slug: row.slug,
     blueprint: deserialiseBlueprint(row.blueprint_snapshot),
