@@ -168,7 +168,7 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
        surface) · routes to /nex-native/contacts. Shown at the top of
        YOUR NEX so it reads as the first/primary action. */
     href: CONTACTS_HREF,
-    locked: true,
+    locked: false, // owner directive 2026-10-28 · drawer links unlocked
   },
   {
     key: "profile",
@@ -180,7 +180,7 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
     // profile. The retired /settings/profile route also now
     // redirects to /profile/me?mode=edit for backward compat.
     href: "/nex-native/profile/me",
-    locked: true,
+    locked: false, // owner directive 2026-10-28 · drawer links unlocked
   },
   {
     key: "chats-contacts",
@@ -201,7 +201,7 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
     label: "Chat appearance",
     subtitle: "Themes and personalisation",
     href: "/nex-native/chat-themes-library",
-    locked: true,
+    locked: false, // owner directive 2026-10-28 · drawer links unlocked
   },
   {
     /* Owner directive 2026-10-20 · shop face cover themes · browse
@@ -213,7 +213,7 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
     label: "Shop appearance",
     subtitle: "Face cover and layouts",
     href: "/nex-native/cover-themes-library",
-    locked: true,
+    locked: false, // owner directive 2026-10-28 · drawer links unlocked
   },
   {
     key: "intro-video",
@@ -225,7 +225,7 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
        action + Supabase bucket + nex_account column migration land
        separately per the Safety Constitution deployment gate. */
     href: "/nex-native/settings/intro-video",
-    locked: true,
+    locked: false, // owner directive 2026-10-28 · drawer links unlocked
   },
   // Status + Go Live now require sign-in · owner directive 2026-10-22
   // identity-sealing · the Status surface persists owner id into
@@ -238,7 +238,7 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
     label: "Status",
     subtitle: "Share for 24h · stays on your device",
     href: "/nex-native/status",
-    locked: true,
+    locked: false, // owner directive 2026-10-28 · drawer links unlocked
   },
 ];
 
@@ -255,7 +255,7 @@ const YOUR_BUSINESS_ROWS: ReadonlyArray<MenuRow> = [
     label: "My Shop",
     subtitle: "Upload products · edit · turn off · delete",
     href: "/nex-native/chat-themes-library/marketplace-prototype/my-shop/crispy-chicken",
-    locked: true,
+    locked: false, // owner directive 2026-10-28 · drawer links unlocked
   },
   // Status + Go Live now require sign-in · owner directive 2026-10-22
   // identity-sealing · the broadcaster id is now the signed-in NEX
@@ -294,7 +294,7 @@ const YOUR_BUSINESS_ROWS: ReadonlyArray<MenuRow> = [
     label: "My businesses",
     subtitle: "Business profiles and management",
     href: "/nex-native/manage",
-    locked: true,
+    locked: false, // owner directive 2026-10-28 · drawer links unlocked
   },
   // Owner directive 2026-10-22 · Delivery pricing · routes to the
   // prototype surface at /nex-native/delivery-prototype. Per the
@@ -309,7 +309,7 @@ const YOUR_BUSINESS_ROWS: ReadonlyArray<MenuRow> = [
     label: "Delivery pricing",
     subtitle: "Bike · cargo · pickup rules per order",
     href: "/nex-native/delivery-prototype",
-    locked: true,
+    locked: false, // owner directive 2026-10-28 · drawer links unlocked
   },
   // Business Vault is CONDITIONAL · rendered only when isBisnis is true.
   // The row itself lives in a separate const below so the gate stays
@@ -319,7 +319,7 @@ const YOUR_BUSINESS_ROWS: ReadonlyArray<MenuRow> = [
     label: "Packages and billing",
     subtitle: "Your plan and entitlements",
     href: "/nex-native/settings/tier",
-    locked: true,
+    locked: false, // owner directive 2026-10-28 · drawer links unlocked
   },
 ];
 
@@ -328,7 +328,7 @@ const BUSINESS_VAULT_ROW: MenuRow = {
   label: "Business Vault",
   subtitle: "For eligible business accounts",
   href: "/nex-native/vault",
-  locked: true,
+  locked: false, // owner directive 2026-10-28 · drawer links unlocked
 };
 
 const PREFERENCES_ROWS: ReadonlyArray<MenuRow> = [
@@ -336,13 +336,13 @@ const PREFERENCES_ROWS: ReadonlyArray<MenuRow> = [
     key: "settings",
     label: "Settings and privacy",
     href: "/nex-native/settings",
-    locked: true,
+    locked: false, // owner directive 2026-10-28 · drawer links unlocked
   },
   {
     key: "security",
     label: "Security",
     href: "/nex-native/settings/security",
-    locked: true,
+    locked: false, // owner directive 2026-10-28 · drawer links unlocked
   },
   {
     key: "help",
