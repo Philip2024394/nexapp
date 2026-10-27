@@ -455,7 +455,12 @@ export default async function Page({ searchParams }: PageProps) {
         <form action={updateBusinessHoursAction} className="rounded border border-neutral-300 bg-white p-4">
           <fieldset className="space-y-2">
             {(["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const).map((day) => {
-              const dayHours = business.hours && typeof business.hours === "object" ? (business.hours as Record<string, {open:string;close:string}|null>)[day] : null;
+              // 2026-10-28 · TS2352 fix · NexWeeklyHours is already a
+              // typed struct (mon|tue|…|sun → NexDayHours), and the
+              // `day` iterator is `keyof NexWeeklyHours`, so a direct
+              // field read is type-safe without the suspicious
+              // Record cast.
+              const dayHours = business.hours ? business.hours[day] : null;
               const isClosed = dayHours === null && business.hours !== null;
               const openDefault = dayHours?.open ?? "09:00";
               const closeDefault = dayHours?.close ?? "17:00";
