@@ -193,8 +193,15 @@ export default function ThemeViewerClient(
   // Bridge Reactions-Order · sealed 2026-10-01 · preview now uses
   // useState so the founder can tap reaction tiles in the picker and
   // see the big-newest + small-older stack update live · no DB write.
+  // 2026-10-28 · TS2345 fix · the useState init callback inferred
+  // each preset message's `reactions` as an object with specific
+  // emoji keys (👋 vs ❤️ vs 👍+🔥 etc). Without an explicit
+  // annotation the union was `{"👋"?: string[], "❤️"?: undefined,
+  // ...}` which does NOT satisfy `Record<string, string[]>` because
+  // the `undefined` arms violate the value type. Annotating the
+  // returned array widens each entry to the declared message shape.
   const [messages, setMessages] = React.useState<PortraitBloomMessage[]>(
-    () => [
+    (): PortraitBloomMessage[] => [
       /* Owner directive 2026-10-18 · "chat theme chat must be able
          scrolling up or down". Expanded preset conversation so the
          message column overflows the chat area · PortraitBloomShell's
