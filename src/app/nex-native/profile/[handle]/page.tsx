@@ -254,10 +254,17 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
   if (!isOwner && !isDiscoverable) notFound();
 
   // R10 Stage 5 profile_visibility gate (sealed · migration 200 unapplied).
-  const visibility = await resolveProfileVisibilityForViewer({
-    ownerAccountId: profileAccount.id,
+  // 2026-10-28 · TS2554 fix · the service takes 2 positional args
+  // (viewerAccountId, profileOwnerAccountId) — not a single options
+  // object. Caller was passing the wrong shape so the call blew up
+  // at runtime: `viewerAccountId` arrived as the whole object and
+  // `profileOwnerAccountId` was undefined, so the owner-equality
+  // short-circuit silently flipped and the DB read either threw or
+  // mis-targeted. Correct order per service signature.
+  const visibility = await resolveProfileVisibilityForViewer(
     viewerAccountId,
-  });
+    profileAccount.id,
+  );
   if (!visibility.visible && !isOwner) notFound();
 
   // Non-owner trying to view edit mode · drop the flag silently.

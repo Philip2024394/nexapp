@@ -10,7 +10,7 @@ import Link from "next/link";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import * as liveService from "@/lib/nex-native/live-service";
 import * as businessService from "@/lib/nex-native/business-service";
-import type { NexBusinessRow } from "@/lib/nex-native/business-service";
+import type { NexBusinessRow } from "@/lib/nex-native/types";
 import { NexNativeShell } from "../_shell";
 
 export const runtime = "nodejs";
