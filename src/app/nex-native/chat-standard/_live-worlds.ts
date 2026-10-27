@@ -36,6 +36,7 @@ import { PINK_DREAM_PACKAGE } from "./packages/pink-dream.package";
 import { HOLLYWOOD_PACKAGE } from "./packages/hollywood.package";
 import { VITAMIN_FRUIT_PACKAGE } from "./packages/vitamin-fruit.package";
 import { WATCHES_ROLEX_PACKAGE } from "./packages/watches-rolex.package";
+import { WATCHES_HENDRA_PACKAGE } from "./packages/watches-hendra.package";
 // Pink Dream registration note (2026-10-11):
 //   · Registered here so the Theme Library shows it under Teddy
 //     with the authentic pink/plum palette.
@@ -71,6 +72,7 @@ export const LIVE_WORLD_PACKAGES = {
   hollywood: HOLLYWOOD_PACKAGE,
   "vitamin-fruit": VITAMIN_FRUIT_PACKAGE,
   "watches-rolex": WATCHES_ROLEX_PACKAGE,
+  "watches-hendra": WATCHES_HENDRA_PACKAGE,
 } as const satisfies Record<string, ThemePackage>;
 
 export type LiveWorldId = keyof typeof LIVE_WORLD_PACKAGES;
