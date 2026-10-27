@@ -207,6 +207,11 @@ function adaptCanonical(row: CanonicalRow): NexBusinessRow {
     created_at: new Date(0).toISOString(),
     updated_at: new Date(0).toISOString(),
     city: row.city,
+    // Defensive-field · emitted so the A-strict CATEGORY_FALLBACK
+    // adapter (directory-image-adapter.ts) can gate on country=ID.
+    // Not part of NexBusinessRow's declared surface · consumers that
+    // need it read it defensively.
+    country: row.country,
     business_category: row.entity_type,
     search_keywords: chips,
     verified_at: verifiedAt,

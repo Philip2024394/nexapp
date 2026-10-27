@@ -56,6 +56,10 @@ import {
   type LandingCategorySlug,
   type CategoryVisuals,
 } from "./landing-category-mapping";
+// A-strict Universal Directory Image · scope-gated CATEGORY_FALLBACK
+// resolver · 2026-10-27 · see directory-image-adapter.ts for the full
+// owner-authorised scope. Pure · no I/O.
+import { resolveCategoryFallbackImageUrl } from "./directory-image-adapter";
 
 // ─── Public view model ──────────────────────────────────────────────
 
@@ -563,7 +567,14 @@ function adaptRowToCard(row: NexBusinessRow): ListingCardViewModel {
     categoryAccent: visuals.accent,
     categoryIconCol: visuals.iconCol,
     categoryIconRow: visuals.iconRow,
-    imageUrl: row.logo_url ?? null,
+    // Universal Image Doctrine priority (2026-08-22) · the resolver is
+    // the single authority. OWNER_IMAGE is honoured upstream via the
+    // seller-uploaded `logo_url` and takes precedence. When no owner
+    // image exists, the A-strict adapter supplies a CATEGORY_FALLBACK
+    // url ONLY for owner-authorised rows (country=ID + canonical food
+    // family). Every other row keeps a null here and the card renders
+    // its honest letter-monogram.
+    imageUrl: row.logo_url ?? resolveCategoryFallbackImageUrl(row, source),
     description: row.description ?? null,
     // Owner directive 2026-10-18 · featured-offering slot wired in
     // the view model so the directory card can show "Kings Room" /
