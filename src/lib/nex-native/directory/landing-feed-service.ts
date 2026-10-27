@@ -574,7 +574,24 @@ function adaptRowToCard(row: NexBusinessRow): ListingCardViewModel {
     // preview.
     featuredOffering: null,
     city: readOptionalCity(row),
-    href: `/nex-native/${slug}`,
+    // Owner directive 2026-10-27 · fix broken detail navigation.
+    // The directory-side detail surface lives at
+    // src/app/nex-native/directory/[id]/page.tsx. The route handler
+    // accepts BOTH canonical UUIDs AND nex_business slugs (it 301-
+    // redirects nex_business rows to their owner cover page).
+    //
+    // Previously this adapter emitted `/nex-native/${slug}` which has
+    // no matching route · the request falls through to the catch-all
+    // and 307-redirects to /nex-native/home. The sibling resolvers
+    // (market-cta-resolver.ts:135, _landing-directory-view.tsx:114,
+    // _filter-sheet-client.tsx:116) all use `/nex-native/directory/
+    // ${slug}` · we now match that pattern for cards too.
+    //
+    // Verified live 2026-10-27 against the running dev server:
+    //   /nex-native/directory/<canonical-uuid> → 200
+    //   /nex-native/directory/<nex_business-slug> → 200
+    //   /nex-native/<any> → 307 → /nex-native/home (BROKEN)
+    href: `/nex-native/directory/${slug}`,
     source,
     // Phase A · no data source carries pricing today · owner rule #6.
     // Card renders each slot conditionally so a null simply hides it.
