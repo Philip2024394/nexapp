@@ -315,9 +315,14 @@ export function GoLiveClient({
     const ping = () => {
       const sid = dbSessionIdRef.current;
       if (!sid || cancelled) return;
-      void touchLiveHeartbeatAction({ sessionId: sid }).catch(() => {
+      void touchLiveHeartbeatAction({ sessionId: sid }).catch((err: unknown) => {
         // Fail-open · one dropped heartbeat is tolerated by the
-        // staleness window (6× the ping interval).
+        // staleness window (6× the ping interval). Emit a warn so a
+        // run of failures is observable in production diagnostics
+        // (2026-10-28 · silent-catch observability batch).
+        if (typeof console !== "undefined" && typeof console.warn === "function") {
+          console.warn("[nex-live-heartbeat] ping failed", err);
+        }
       });
     };
 
