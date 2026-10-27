@@ -444,6 +444,7 @@ export function ImmersivePreviewShell(
           activateAction={activateAction}
           openFullScreenHref={openFullScreenHref}
           scope="mobile"
+          onClose={onClose}
         />
 
         {/* ─── Desktop info rail · hidden on mobile via CSS ─── */}
@@ -454,6 +455,7 @@ export function ImmersivePreviewShell(
           canUsePremium={canUsePremium}
           activateAction={activateAction}
           openFullScreenHref={openFullScreenHref}
+          onClose={onClose}
         />
 
         {/* ─── Share sheet · bottom slide-up when shareOpen ─── */}
@@ -1107,6 +1109,7 @@ function ActionFooter({
   activateAction,
   openFullScreenHref,
   scope,
+  onClose,
 }: {
   theme: BrowserThemeRow;
   active: boolean;
@@ -1115,6 +1118,11 @@ function ActionFooter({
   activateAction: (formData: FormData) => Promise<never> | void | Promise<void>;
   openFullScreenHref: string | null;
   scope: "mobile" | "desktop";
+  // 2026-10-28 · thread the shell's onClose into the footer so the
+  // "← Back to themes" button (added when a theme is not active) can
+  // dismiss the preview. Previously the handler referenced an
+  // undeclared `onClose` (TS2552).
+  onClose: () => void;
 }): React.JSX.Element {
   const base: React.CSSProperties =
     scope === "mobile"
@@ -1297,6 +1305,7 @@ function InfoRail({
   canUsePremium,
   activateAction,
   openFullScreenHref,
+  onClose,
 }: {
   theme: BrowserThemeRow;
   active: boolean;
@@ -1304,6 +1313,7 @@ function InfoRail({
   canUsePremium: boolean;
   activateAction: (formData: FormData) => Promise<never> | void | Promise<void>;
   openFullScreenHref: string | null;
+  onClose: () => void;
 }): React.JSX.Element {
   return (
     <div
@@ -1393,6 +1403,7 @@ function InfoRail({
         activateAction={activateAction}
         openFullScreenHref={openFullScreenHref}
         scope="desktop"
+        onClose={onClose}
       />
     </div>
   );
