@@ -576,6 +576,14 @@ export interface NexBusinessRow {
    *  auto-accepted). Rendered on /[shop]/returns + a small link
    *  on every product page. Seller edits inline on /manage/shop. */
   return_policy: NexReturnPolicy;
+  /** Bridge 49a · migration 087 · sealed 2026-09-29. Default markup %
+   *  used to derive the "typical delivery app" comparison price on
+   *  every product (`price × (1 + markup / 100)`). Default 22
+   *  mirrors approximate GoFood commission. CHECK-constrained to
+   *  0-60 at the DB level. NOT NULL · migration added with
+   *  DEFAULT 22 so pre-existing rows backfill without seller input.
+   *  Consumed on /manage/ladder page + ladder editor. */
+  compare_markup_pct: number;
   /** Bridge 13 · Responsiveness signals · migration 063.
    *  last_seller_activity_at drives the graduated status badge on
    *  every shop landing (active · slow · away · archived). Bumped
