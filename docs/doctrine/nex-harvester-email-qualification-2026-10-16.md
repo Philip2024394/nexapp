@@ -233,3 +233,323 @@ Migration 202 is forward-only by default. Dropping the columns after user data h
 | Owner · backfill enable in production | _owner to fill_ | _tbd_ |
 
 Until every row has a date, the backfill orchestrator stays dormant.
+
+---
+
+> **Sections 10–17 added 2026-10-27 · owner-review DRAFT.** These sections capture the explicit rules the owner asked to see drafted before any email collection activates. Nothing in these sections authorises anything · every section ends with a clearly-labelled **OWNER DECISION REQUIRED** block. No legal conclusion has been invented. No source is being marked approved.
+
+## 10 · Permitted sources + source-level restrictions · DRAFT 2026-10-27
+
+Three distinct sources exist in the current code paths. Each has a different legitimacy posture that MUST be settled per source before activation.
+
+### 10.1 · Source inventory (as implemented today)
+
+| Source id (in `nex.source_registry`) | Technical path | OSM licence context | Current `can_display` | Required decision |
+|---|---|---|---|---|
+| `osm_overpass` | `canonical-writer.ts` reads `tags.email` + `tags["contact:email"]` from the Overpass response · zero outbound HTTP beyond the Overpass query already made for discovery | ODbL (database rights) + each contributor retains any individual rights in the field · OSM's own guidance explicitly discourages contact-tag use for mass marketing | `false` | Owner must decide: is OSM contact-tag email in-scope for NEX qualification? Separately: in-scope for display? |
+| `business_website` | `email-backfill-orchestrator.ts` → `walkEntityWebsite` → six-method extractor → validator (format + authoritative-source + MX) | Public-facing contact page content, published by the business itself. Access rules depend on the destination site's terms. | `false` | Owner must decide: is walking the business's own website in-scope? If yes, with what rate limits, path allowlist, and `robots.txt` respect posture? |
+| `owner_upload` | Not an email path today · owner-upload is image-only via `src/lib/nex-native/business-media/owner-upload-service.ts`. Reserved here for a future owner-provided email flow. | Direct consent from the data subject (the business owner). | `false` | Owner must decide: does NEX ever accept owner-uploaded emails? Different consent requirements apply. |
+
+### 10.2 · Source-level restrictions proposed as DRAFT
+
+| Restriction | Applies to | Rationale |
+|---|---|---|
+| **No scraping outside the business's own apex host** | `business_website` | Prevents sideways-fetching links on the business's site that point at third-party pages (social media, press articles, aggregators). Already enforced in `_WALKER_NEVER_LEAVES_ENTITY_DOMAIN` sealed export. |
+| **No construction / inference** | all sources | Already sealed in `_EXTRACTOR_NEVER_FABRICATES` + the `email-extractor.ts` header. Reaffirmed here as a doctrine clause. |
+| **No `robots.txt`-disallowed path fetches** | `business_website` | Not currently enforced. If owner approves `business_website` as a source, respect for the site's own `robots.txt` must be a prerequisite. |
+| **Address must be email-shape AND pass the three-layer validator before any marketing use** | all sources | FOUND without VALIDATED is a tentative observation, not a confirmed deliverable address. See §1 state machine. |
+| **Role-prefix addresses (`info@`, `contact@`, `hello@`) are flagged separately from personal-name addresses** | all sources | Many jurisdictions treat role addresses as less-sensitive than personal addresses. Flag at persistence time via a `role_prefix` boolean (would require a new column after migration 202 lands · not yet proposed). |
+
+**OWNER DECISION REQUIRED (10.D1 – 10.D5):**
+- **10.D1** Is `osm_overpass` email in-scope? YES / NO / qualified-only (no public display, no marketing)
+- **10.D2** Is `business_website` walking in-scope? YES / NO / qualified-only
+- **10.D3** Will NEX respect destination-site `robots.txt`? YES / NO (recommended: YES)
+- **10.D4** Is owner-uploaded email in-scope at this layer? YES / NO / defer
+- **10.D5** Should NEX distinguish role-prefix (`info@`, `contact@`) from personal addresses, and treat them differently in use (display, outreach)? YES / NO
+
+---
+
+## 11 · Purpose + lawful basis · DRAFT 2026-10-27
+
+### 11.1 · Purpose statement (DRAFT · owner refines)
+
+> NEX harvests business email addresses from publicly-available business sources (OSM contact tags and the business's own website) for the **sole** purpose of determining whether a business is **reachable** for inclusion in the NEX directory. The address is used, if at all, to send **non-marketing** service communications (directory listing notice · opt-out confirmation · claim-flow emails). Marketing use requires a separate, documented consent flow and is **out of scope** of the harvest layer.
+
+### 11.2 · Lawful basis options · OWNER TO SELECT
+
+| Jurisdiction | Candidate basis | What it permits | Boundary |
+|---|---|---|---|
+| **UK / EU GDPR Art 6(1)(f)** · legitimate interest | directory inclusion + non-marketing service email | Requires a documented legitimate-interests assessment (LIA) + Art 14 notice (data collected from a third-party source) + visible opt-out | Does NOT cover marketing to the harvested address |
+| **UK / EU GDPR Art 6(1)(a)** · consent | any processing listed in the consent text | Requires affirmative, specific, informed opt-in | Not available at harvest time (we don't talk to the business first) |
+| **Indonesia · UU 27/2022 PDP** · public-interest / contract preparation | directory inclusion if the directory is in the public interest, or preparing for a contract | Requires owner to formally state the basis + register as a Pengendali Data Pribadi if applicable | Role addresses (`info@`) have a narrower scope than personal addresses |
+| **CAN-SPAM (US)** · B2B commercial email | commercial email to businesses if opt-out honoured | Only applies if NEX sends commercial email to these addresses; does not retroactively legitimise collection |
+| **CASL (Canada)** · implied consent via published address | B2B commercial email to a published business address | Narrow · requires the address to be published by the business itself and used for a related purpose |
+
+**OWNER DECISION REQUIRED (11.D1 – 11.D3):**
+- **11.D1** Which jurisdiction(s) govern NEX's email processing? (depends on NEX HQ location, user location, business location, server location)
+- **11.D2** Which lawful basis applies to each permitted source from §10?
+- **11.D3** If GDPR legitimate interest is chosen, who authors the Legitimate Interests Assessment + Article 14 "data collected from third party" notice?
+
+---
+
+## 12 · Business-address association + verification evidence · DRAFT 2026-10-27
+
+An email alone is not a confirmed business contact. The address must be associated with the specific canonical business the row represents. The three-layer validator at §1.VALIDATED-contract is the technical gate; this section records the **evidence trail** we store so an auditor can replay a decision.
+
+### 12.1 · Evidence recorded per attempt (via migration 202 columns)
+
+| Column | What it proves | Nullable? |
+|---|---|---|
+| `email` | the normalised address observed | NULL = never found |
+| `email_source_url` | the exact URL where it was observed (e.g. `https://acme.co/contact`) | NULL = not sourced from a walked URL (OSM tag path uses the OSM element URL instead) |
+| `email_verified_at` | timestamp of the VALIDATED decision (not persistence time) | NULL = never promoted past FOUND |
+| `email_status` | FOUND / VALIDATED / INVALID (never NOT_FOUND persisted · that's a cursor-only state) | NOT NULL once walked |
+| `qualification_status` | PENDING / QUALIFIED / UNQUALIFIED / DISQUALIFIED | NOT NULL once walked |
+| `email_last_attempted_at` | cursor timestamp · advances on every tick | NOT NULL once walked |
+
+**Not recorded** today: the specific extraction method that produced the candidate (JSON-LD / mailto / obfuscated / plain text / etc). Owner may want this later for evidence-quality ranking · it's a column add decision, deferred.
+
+### 12.2 · Authoritative-source rule (sealed in `email-validation.ts`)
+
+An email is attributed to the business ONLY if its domain **equals** or is a **strict subdomain** of the business's `website_apex`. Dot-boundary enforcement is sealed in `isAuthoritativeSource`:
+
+```ts
+emailDomain === apexHost || emailDomain.endsWith(`.${apexHost}`)
+```
+
+Edge cases:
+- `info@acme.co` on `acme.co` apex → VALIDATED-eligible (domain matches apex)
+- `info@orders.acme.co` on `acme.co` apex → VALIDATED-eligible (strict subdomain)
+- `info@gmail.com` on `acme.co` apex → FOUND / `third_party_source` (gmail is not the business's apex)
+- `info@acme-fake.co` on `acme.co` apex → FOUND / `third_party_source` (not a dot-bounded subdomain · look-alike protection)
+- business has no `website_apex` → FOUND / `missing_apex_host` (cannot verify association · stays FOUND, never VALIDATED)
+
+### 12.3 · What this layer does NOT prove
+
+- **Mailbox existence** · a VALIDATED address proves the DOMAIN is configured to receive mail (one or more MX records exist). It does NOT prove the specific mailbox exists or accepts a message. SMTP RCPT TO handshake is **not** performed (sealed §1).
+- **Current correctness** · the address may have been valid when scraped and no longer be valid. A re-walk after the 7-day UNQUALIFIED cooldown is the only automatic refresh. See §1.
+- **Business ownership of the address** · a business operating from a shared coworking space may list a reception@building.example address. This passes authoritative-source if `building.example` is their published `website_apex`, but the business owner may not control it.
+
+**OWNER DECISION REQUIRED (12.D1 – 12.D3):**
+- **12.D1** Is three-layer VALIDATED (format + authoritative-source + MX) sufficient as the "confirmed business email" threshold? YES / NO (if NO, what additional evidence?)
+- **12.D2** Should the extraction method be recorded per attempt (column add + schema change)? YES / NO
+- **12.D3** For a business with no `website_apex`, is a FOUND email ever usable, or always discarded? KEEP-AS-FOUND / DISCARD
+
+---
+
+## 13 · Retention · deletion · suppression · DRAFT 2026-10-27
+
+### 13.1 · Retention windows (DRAFT · owner approves)
+
+| State | Proposed retention | Rationale |
+|---|---|---|
+| PENDING (walked once, awaiting a future re-walk) | ≤ 90 days from first `email_last_attempted_at`; if still PENDING after 90 days → auto-flip to UNQUALIFIED | Prevents indefinite "we tried but can't decide" state |
+| QUALIFIED | retained while the business row is in the directory; purged when the canonical row is deleted or OWNER_UNCLAIMED | Email follows the business |
+| UNQUALIFIED | retained for 7 days (the cooldown); if still UNQUALIFIED after N retries (TBD, suggest 3) → `DISQUALIFIED` | Terminal state after exhausting retries |
+| DISQUALIFIED | admin lock · retained for audit (12 months DRAFT), then purged | Preserves the trail of a human decision |
+
+### 13.2 · Deletion triggers
+
+- **Owner-request deletion**: fully purge email + source URL + verified_at + status + qualification columns on the row (NULL them + set `qualification_status='DISQUALIFIED'` with admin note). Do NOT delete the canonical business row itself unless separately authorised.
+- **Opt-out received** (see §14): same purge, plus write the normalised email to a suppression list so a future harvest skips it.
+- **Canonical business deleted / superseded**: cascade purge the email fields.
+- **Jurisdictional right-to-erasure**: honoured within the SLA of the applicable law (GDPR: 30 days; PDP: 30 days under UU 27/2022 Art 20).
+
+### 13.3 · Suppression list
+
+A sealed `nex.email_suppression_list` table (schema TBD · requires a separate migration) stores normalised addresses that MUST NOT be re-harvested. The harvester SELECT eligibility clause (see §1) MUST be extended to `AND normalised_email NOT IN (SELECT email FROM nex.email_suppression_list)` before any re-harvest activates.
+
+**OWNER DECISION REQUIRED (13.D1 – 13.D4):**
+- **13.D1** Approve the proposed retention windows, or state alternatives.
+- **13.D2** For UNQUALIFIED → DISQUALIFIED promotion, how many retry attempts? (DRAFT: 3)
+- **13.D3** Approve the suppression-list design (requires a separate migration, not migration 202).
+- **13.D4** For jurisdictional right-to-erasure, who holds the operational responsibility and SLA?
+
+---
+
+## 14 · Opt-out processing + honouring across future harvests · DRAFT 2026-10-27
+
+### 14.1 · Opt-out channels (DRAFT · owner approves one or more)
+
+| Channel | Flow | Operator burden |
+|---|---|---|
+| **A** · Public `/nex-opt-out?email=…` route | Form submission → email verification (one-time code to the opt-out requester) → write to suppression list + purge row | Low · fully automated |
+| **B** · `optout@nexapp.com` mailbox | Human triage → verify request → suppression list + purge | Medium · requires monitored inbox |
+| **C** · `/.well-known/nex-no-harvest.json` on the business's own site | Harvester checks before walking | Low on NEX side; requires businesses to self-publish |
+| **D** · Direct NEX account action (owner-claimed business clicks "remove email from NEX") | In-app flow in the owner-claimed business profile | Low · reuses existing claim/session infra |
+
+Not every business will see every channel. DRAFT recommendation: **A + D** at minimum. A is the discoverable public opt-out; D is for owners who are already in NEX.
+
+### 14.2 · Future-harvest honouring
+
+Once suppressed, an email MUST stay suppressed across:
+- Future OSM tick re-harvests
+- Future `business_website` walks
+- Future owner uploads (an owner cannot re-add an address that was previously opted-out from THEIR own business, unless they re-opt-in through an explicit affirmative confirmation UI)
+- Future bulk operations
+
+Enforcement is a SELECT-side predicate in the orchestrator + an INSERT-side check in `canonical-writer.ts`'s OSM-tag path (new code path · not written yet).
+
+### 14.3 · Opt-out confirmation + audit
+
+- Every opt-out produces an audit row (channel, timestamp, requester identity if any, outcome).
+- No opt-out ever requires the opt-out requester to disclose which business the address belongs to · one submission can match multiple rows and all of them are purged.
+
+**OWNER DECISION REQUIRED (14.D1 – 14.D4):**
+- **14.D1** Which opt-out channels does NEX offer? (DRAFT: A + D)
+- **14.D2** What SLA for honouring an opt-out? (DRAFT: 48 hours maximum, 24 hours target)
+- **14.D3** Who monitors the public opt-out intake?
+- **14.D4** Does an owner-claimed business's "remove email" action also prevent future RE-collection, or only remove the current row?
+
+---
+
+## 15 · Access control · auditability · PII-safe logging · DRAFT 2026-10-27
+
+### 15.1 · PII-safe logging rule (SEALED by this doctrine)
+
+**Email VALUES must never appear in logs, structured warn events, telemetry, dashboards (except as explicit user-visible counters), audit trails that leave the primary DB, or any artefact the development team can read without an authorised data-access ticket.**
+
+Current enforcement:
+- `canonical-writer.ts:224` structured warn for schema-missing drops · **email VALUE deliberately OMITTED** · only `email_source_url` is included (not the address itself).
+- `email-backfill-orchestrator.ts:449` structured warn for walker throws · **email VALUE deliberately OMITTED** · only error.name is logged (not error.message, which may contain fragments of a malformed candidate).
+- `email-extractor.ts` context_snippet is bounded to ≤200 chars and persisted ONLY in-process (never written to a log sink).
+
+Known gaps:
+- The orchestrator UPDATE statements include `$2` = email VALUE in the parameter array. pg's query logger (if enabled) would print this. **DO NOT enable pg query logging** on the harvest DB without a plan to redact the `nex.business_canonical` INSERT/UPDATE paths.
+- The HQ dashboard query at `harvest-dashboard.ts` must never render the email VALUE · counters only.
+
+### 15.2 · Access control (DRAFT · owner approves)
+
+| Role | Access to email VALUES |
+|---|---|
+| Harvest cron (service account) | WRITE only (INSERT/UPDATE on canonical) · never SELECT |
+| HQ dashboard page | COUNTS only (`count(*) FILTER (WHERE qualification_status = ...)`) · never SELECT raw emails |
+| Admin review screens | SELECT a single row's email for the review decision · logged in `admin_access_log` with reason |
+| Owner (Philip) | SELECT with ad-hoc query (today, via direct pooler access) · documented, not restricted |
+| Developers (any) | NO access to raw emails in production · dev environment uses synthetic data only |
+
+### 15.3 · Auditability
+
+- Every INSERT/UPDATE of `email` is traceable to a `cycle_id` (already sealed in `aof_cycle` + canonical metadata).
+- Every admin SELECT of a specific email VALUE is logged (schema TBD; requires migration or reuse of `nex.social_admin_access_log` structure).
+- Every opt-out is auditable (§14.3).
+
+**OWNER DECISION REQUIRED (15.D1 – 15.D4):**
+- **15.D1** Confirm the PII-safe logging rule above as sealed policy. YES / NO
+- **15.D2** Approve the access control matrix in §15.2 (or state alternatives).
+- **15.D3** Who performs admin review of qualification-related rows, and how is their access logged?
+- **15.D4** Should pg query logging be explicitly DISABLED on the production harvest DB, by policy? (recommended: YES)
+
+---
+
+## 16 · Downstream display · search · export restrictions · DRAFT 2026-10-27
+
+Harvesting an email ≠ publishing it. Each downstream use is a separate decision gate.
+
+### 16.1 · Public display (directory tile shows email)
+
+- **Default: NO.** The public directory tile does not display a business email unless (a) the row is QUALIFIED, (b) the business is OWNER_CLAIMED or OWNER_VERIFIED, AND (c) the owner has not opted out of email display.
+- The owner-claimed status gives us a human confirmation that the business approves of being contacted this way.
+- A VALIDATED non-claimed row stays INTERNAL (used for internal "is this business reachable" scoring) · it does NOT light up a public mailto link.
+
+### 16.2 · Search (type an email to find a business)
+
+- **Default: NO.** Email is not a search index term for public users.
+- Admin/owner search for operational purposes: separate gate · requires same access-control rules as §15.
+
+### 16.3 · Export (CSV / API / bulk extract)
+
+- **Default: NO public export** of email. The directory API MUST NOT include the email field for anonymous callers.
+- Owner-authenticated export of their own business row's email: ALLOWED (it's their data).
+- Admin export of operational slice: ALLOWED with audit log entry.
+
+### 16.4 · Source attribution at display time
+
+Any surface that renders an email VALUE (e.g. admin review screen, owner-only mailto) MUST render:
+- The `email_source_url` (where NEX saw it)
+- The `email_verified_at` timestamp
+- The `email_status` + reason (e.g. "VALIDATED on 2026-11-15 via https://acme.co/contact")
+- A visible "opt out" link under the address
+
+**OWNER DECISION REQUIRED (16.D1 – 16.D5):**
+- **16.D1** Approve the display rule in §16.1 (QUALIFIED + OWNER_CLAIMED required for public mailto), or state alternatives.
+- **16.D2** Should email ever appear in public search? YES / NO (DRAFT: NO)
+- **16.D3** Should the directory API ever return email for anonymous callers? YES / NO (DRAFT: NO)
+- **16.D4** Who can export email data in bulk, under what circumstances?
+- **16.D5** Approve the source-attribution-at-display rules in §16.4.
+
+---
+
+## 17 · Approval gates · DRAFT 2026-10-27
+
+The sealed rollout in §5 lists six phases. This section ties each phase to the specific DECISIONS from §§10-16 that must land first.
+
+| Gate | What it unblocks | Required DECISIONS before this gate can clear |
+|---|---|---|
+| **G-A** · Migration 202 applied | `email`, `email_source_url`, `email_status`, `qualification_status`, `email_last_attempted_at`, `email_verified_at` columns exist · OSM-tag persistence stops dropping · suppression-list migration (if §13 approved) is drafted separately | 10.D1 (OSM in-scope?) · 11.D1 (jurisdiction) · 11.D2 (legal basis) · 12.D1 (VALIDATED threshold) · 13.D1-D3 (retention policy) · 15.D1-D4 (logging + access control) |
+| **G-B** · `NEX_EMAIL_BACKFILL_ENABLED=true` in staging | Orchestrator runs against staging rows · still DORMANT_FETCHER (no outbound HTTP) · verifies UPDATE paths against real schema | G-A cleared · 14.D1-D4 (opt-out mechanism exists before any attempt that could later be opted out of) |
+| **G-C** · Real `fetchCandidate` injected (replaces DORMANT_FETCHER) | Live walking of business websites · outbound HTTP · real emails flow through validator → DB | G-B cleared · 10.D2 (business_website in-scope?) · 10.D3 (robots.txt policy) · 16.D1-D5 (display rules known) |
+| **G-D** · Production enable | Live NEX directory accumulates qualified emails | G-C cleared + 48-hour staging soak + owner final sign-off |
+
+**No gate jumps the gate ahead of it. Each gate is a separate owner authorisation.**
+
+**OWNER DECISION REQUIRED (17.D1):**
+- **17.D1** Confirm the gate chain G-A → G-B → G-C → G-D as sealed. YES / NO
+
+---
+
+## 18 · Consolidated owner-decision checklist · DRAFT 2026-10-27
+
+Every DECISION flagged in §§10-17 collected in order:
+
+### Governance
+- [ ] 10.D1 `osm_overpass` email in-scope? Y/N/qualified-only
+- [ ] 10.D2 `business_website` walking in-scope? Y/N/qualified-only
+- [ ] 10.D3 Honour destination `robots.txt`? Y/N
+- [ ] 10.D4 Owner-uploaded email in-scope? Y/N/defer
+- [ ] 10.D5 Distinguish role-prefix (`info@`) from personal addresses? Y/N
+- [ ] 11.D1 Jurisdiction(s)?
+- [ ] 11.D2 Lawful basis per source?
+- [ ] 11.D3 LIA + Art 14 notice authored by whom (if GDPR LI)?
+
+### Validation threshold
+- [ ] 12.D1 Three-layer VALIDATED sufficient as "confirmed"? Y/N
+- [ ] 12.D2 Record extraction method per attempt? Y/N
+- [ ] 12.D3 FOUND without apex: keep or discard?
+
+### Retention + deletion
+- [ ] 13.D1 Retention windows approved?
+- [ ] 13.D2 Retry count before DISQUALIFIED (DRAFT: 3)?
+- [ ] 13.D3 Suppression list migration approved (separate from 202)?
+- [ ] 13.D4 Right-to-erasure operator + SLA?
+
+### Opt-out
+- [ ] 14.D1 Which opt-out channels (A/B/C/D)?
+- [ ] 14.D2 Opt-out SLA (DRAFT: 48h max, 24h target)?
+- [ ] 14.D3 Public opt-out intake owner?
+- [ ] 14.D4 Owner-claimed removal also blocks re-collection?
+
+### Logging + access
+- [ ] 15.D1 PII-safe logging rule sealed? Y/N
+- [ ] 15.D2 Access control matrix approved?
+- [ ] 15.D3 Admin reviewer identity + logging mechanism?
+- [ ] 15.D4 pg query logging DISABLED by policy? Y/N
+
+### Display + search + export
+- [ ] 16.D1 QUALIFIED + OWNER_CLAIMED required for public mailto?
+- [ ] 16.D2 Email in public search? Y/N (DRAFT: N)
+- [ ] 16.D3 Email in anonymous API? Y/N (DRAFT: N)
+- [ ] 16.D4 Bulk export authority?
+- [ ] 16.D5 Source-attribution-at-display rules confirmed?
+
+### Gates
+- [ ] 17.D1 Gate chain G-A → G-B → G-C → G-D confirmed?
+
+### Final sign-off (brings §9 back into effect)
+- [ ] §9 legal basis signed
+- [ ] §9 opt-out mechanism signed
+- [ ] §9 migration 202 apply signed
+- [ ] §9 staging enable signed
+- [ ] §9 production enable signed
+
+**Until every box above is ticked, nothing enables.** The current working set — migration 202 unapplied, `NEX_EMAIL_BACKFILL_ENABLED` unset, `DORMANT_FETCHER` default — IS the correct state and must be preserved.
