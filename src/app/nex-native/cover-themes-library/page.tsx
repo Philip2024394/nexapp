@@ -86,6 +86,8 @@ const COVER_LAYOUT_BLURB: Record<CoverLayoutId, string> = {
     "Same identity as Personal Brand · landscape product cards · 6 per page",
   personal_brand_round:
     "Same identity as Personal Brand · round product cards · name below · magnifier on rim",
+  accommodation:
+    "Hero image · suite grid · amenities row · check-in/out · Visit Us",
 };
 
 const DEFAULT_THEME = "pink-dream";
