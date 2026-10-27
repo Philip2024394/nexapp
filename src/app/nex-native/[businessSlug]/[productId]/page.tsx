@@ -196,7 +196,16 @@ export default async function Page({
                   ? "Low stock"
                   : product.stock_status === "made_to_order"
                     ? "Made to order"
-                    : product.stock_status.replace(/_/g, " ")}
+                    : // 2026-10-28 · TS2339 fix · three ternary
+                      // branches cover every value of
+                      // NexProductStockStatus after the outer null +
+                      // in_stock guard, so TS narrows this branch to
+                      // `never` and refuses the method call. Keep
+                      // the future-looking fallback (if the union
+                      // ever gains a new variant without an explicit
+                      // branch) via a cast-through-string. Runtime
+                      // identical.
+                      (product.stock_status as string).replace(/_/g, " ")}
             </div>
           )}
         </div>
