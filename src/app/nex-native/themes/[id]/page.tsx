@@ -49,6 +49,13 @@ import { trackThemeView } from "@/lib/nex-native/theme-view-service";
 import { getIntroSettings } from "@/lib/nex-native/intro-settings-service";
 import { resolveNexAppSessionOrGuest } from "@/lib/nex-native/app/session-or-guest";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// 2026-10-28 · owner-visible bug · Hendra signed in via
+// NEX_DEV_IMPERSONATE_HANDLE was being shown GuestSignupBanner +
+// Use-this-theme + guest-glyph avatar on this page because the two
+// session resolutions below bypassed the dev-impersonation path. The
+// override module falls through to the real resolver when the env
+// var is unset OR NODE_ENV=production · zero prod risk.
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import {
   effectiveTier,
   isThemesTrialActive,
@@ -144,7 +151,13 @@ export default async function ThemeViewerPage({
     | Awaited<ReturnType<typeof getIntroSettings>>
     | null = null;
   try {
-    const sess = await resolveNexAppSessionFromContext();
+    // 2026-10-28 · use dev-impersonation-aware resolver · so Hendra
+    // signed in via NEX_DEV_IMPERSONATE_HANDLE is recognised here and
+    // GuestSignupBanner + ThemePreviewActionBar + viewer intro
+    // settings all read his real account state. Prod behaviour
+    // unchanged (env var gated · falls through to the direct
+    // resolver when unset / in production).
+    const sess = await resolveSessionWithDevOverride();
     if (sess) {
       drawerSession = {
         displayName: sess.account.display_name,
@@ -319,7 +332,15 @@ export default async function ThemeViewerPage({
   // Service-role reads of nex_chat_theme (nexSupabaseAdmin) make
   // the theme row visible regardless of RLS, which is correct for
   // the viewer preview path.
-  const viewer = await resolveNexAppSessionOrGuest();
+  // 2026-10-28 · dev-impersonation-aware viewer resolution · same
+  // reason as the sess block above · so Hendra's bisnis tier +
+  // trial-active status cascade into canUsePremium instead of
+  // reading as a guest. Inlined (rather than wrapping into the
+  // session-or-guest helper) to keep the fix scoped to this file.
+  const viewerSess = await resolveSessionWithDevOverride();
+  const viewer = viewerSess
+    ? ({ kind: "session" as const, session: viewerSess } as const)
+    : ({ kind: "guest" as const } as const);
   const canUsePremium =
     viewer.kind === "session" &&
     (effectiveTier(viewer.session.account) === "bisnis" ||
