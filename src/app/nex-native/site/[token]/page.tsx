@@ -389,8 +389,14 @@ function renderSection(sec: NexSiteSection, ctx: SectionCtx) {
       type FaqRow = { q: string; a: string };
       const faqs: FaqRow[] = [];
       if (business.hours) {
-        const openDays = DAY_ORDER.filter((d) =>
-          (business.hours as Record<string, { open: string; close: string } | null>)[d] !== null);
+        // 2026-10-27 · typed index into NexWeeklyHours directly.
+        // DAY_ORDER elements are already keyof NexWeeklyHours, so
+        // business.hours[d] is correctly inferred as NexDayHours ·
+        // the previous `as Record<string, ...>` was both a type lie
+        // (fixed-key struct ≠ open-key Record) and runtime-unsafe
+        // against the `| null` branch of business.hours.
+        const hours = business.hours;
+        const openDays = DAY_ORDER.filter((d) => hours[d] !== null);
         if (openDays.length > 0) {
           faqs.push({
             q: "When are you open?",
@@ -453,7 +459,13 @@ function renderSection(sec: NexSiteSection, ctx: SectionCtx) {
                 <table className="text-sm text-neutral-700">
                   <tbody>
                     {DAY_ORDER.map((d) => {
-                      const h = (business.hours as Record<string, { open: string; close: string } | null>)[d];
+                      // 2026-10-27 · optional-chain index · the enclosing
+                      // `{showHours && (...)}` block guarantees hours is
+                      // non-null at runtime but TS doesn't track that
+                      // across the showHours alias. `?.[d] ?? null` is
+                      // the honest expression: real value when hours
+                      // exists, closed-day semantics otherwise.
+                      const h = business.hours?.[d] ?? null;
                       return (
                         <tr key={d}>
                           <td className="pr-4 py-0.5 text-neutral-500">{DAY_LABEL[d]}</td>
