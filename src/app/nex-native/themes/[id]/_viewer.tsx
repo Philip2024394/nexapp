@@ -540,9 +540,14 @@ export default function ThemeViewerClient(
           full-screen panel of toggles. Only mounted for theme-0 so
           other themes stay quiet. */}
       {props.themeId === "theme-0" && (
-        <JokerController
-          onOpenTrustScan={() => setTrustScanOpenRequest(true)}
-        />
+        // 2026-10-27 · dropped the `onOpenTrustScan` prop · the seal at
+        // `_joker-controller.tsx:89-93` (Stage 1 sealed 2026-10-05)
+        // removed this prop · Trust Scan is now a universal shell
+        // action owned by UniversalChatControls, not a Joker-controller
+        // action. The `trustScanOpenRequest` state above is kept as the
+        // hold-until-wired slot for the planned universal Scan button
+        // in the chat header (see comment at line 549 below).
+        <JokerController />
       )}
       {/* NEX Trust Scan · NEX product with ONE visual identity across
           every chat theme (Joker, Night Sky, Pink Dream, future).
