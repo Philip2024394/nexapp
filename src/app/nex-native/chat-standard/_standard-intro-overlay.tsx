@@ -113,7 +113,17 @@ export function StandardIntroOverlay({
     () => `${STORAGE_PREFIX}${themeId}`,
     [themeId],
   );
-  const isBusinessIntro = intro?.kind === "business";
+  // 2026-10-28 · TS2367 cast · pkg.intro is typed as StandardIntro
+  // only (`kind: "standard"`), so a literal "business" check against
+  // intro.kind is provably false by types. Business intros live on
+  // pkg.businessIntro — the sealed comment at the top (line 28) says
+  // this overlay should respect them, but the wire-up never landed:
+  // the overlay reads only `pkg.intro`. Preserve runtime behaviour
+  // (always false today) via a widened cast so the branch stays ready
+  // to light up when businessIntro consumption is wired through
+  // pkg.intro's type union in a future commit.
+  const isBusinessIntro =
+    (intro as { kind?: string } | null)?.kind === "business";
 
   // null = still reading from localStorage (first mount), number =
   // resolved count. SSR renders null on the server pass; the overlay
