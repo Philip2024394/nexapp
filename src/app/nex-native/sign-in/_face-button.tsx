@@ -16,7 +16,12 @@
 
 import { useCallback, useState } from "react";
 import { startAuthentication } from "@simplewebauthn/browser";
-import type { PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/browser";
+// 2026-10-28 · in @simplewebauthn v11 the TypeScript types moved
+// to a separate `@simplewebauthn/types` package. The browser
+// package's main export no longer re-exports them (see
+// `node_modules/@simplewebauthn/browser/dist/types/index.d.ts`
+// which only lists runtime helpers + WebAuthnError).
+import type { PublicKeyCredentialRequestOptionsJSON } from "@simplewebauthn/types";
 
 const NEX = {
   panel: "#03101D",

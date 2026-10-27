@@ -262,10 +262,13 @@ export default async function TierPage() {
 
   return (
     <div style={{ minHeight: "100dvh", background: NEX.bg, color: NEX.text }}>
-      <NexPageHeader
-        title="NEX Plans"
-        subtitle="Own your look · pay only for what you use"
-      />
+      {/* 2026-10-28 · NexPageHeader (src/app/nex-native/_page-header.tsx:58-61)
+          accepts only `dataScope`. The previous title + subtitle props
+          were silently dropped at runtime. Scope attribute is set so
+          analytics / tests can target this surface; the header text
+          "NEX Plans · Own your look · pay only for what you use" is
+          rendered inside the main content region below. */}
+      <NexPageHeader dataScope="settings-tier" />
 
       <main
         style={{

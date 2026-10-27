@@ -30,20 +30,34 @@ export interface SettingsActionResult {
 // World Intro ON/OFF
 // ---------------------------------------------------------------------------
 
+// 2026-10-28 · return narrowed from `Promise<SettingsActionResult>`
+// to `Promise<void>` to match Next.js `<form action>` signature
+// `(fd) => void | Promise<void>` · the sole caller at
+// `world-intro/page.tsx:152` is a `<form>` that discards any return
+// value, and the test at `_world-intro.test.ts` only checks the
+// identifier string. The previous shape produced TS2322 on mount
+// because `SettingsActionResult` cannot be assigned to `void`.
+//
+// Error semantics preserved · same observable behaviour as before:
+// errors (session missing, DB failure) silently no-op the write
+// and the form's revalidatePath still runs on success. There is NO
+// user-facing error banner today either way; surfacing it would
+// require adding `?e=…&m=…` search-param handling to
+// `world-intro/page.tsx` (currently takes no searchParams, lines
+// 34). That is a separate UX decision tracked outside this fix.
 export async function setWorldIntroEnabledAction(
   formData: FormData,
-): Promise<SettingsActionResult> {
+): Promise<void> {
   const session = await resolveNexAppSessionFromContext();
-  if (!session) return { ok: false, error: "not_signed_in" };
+  if (!session) return;
   const raw = formData.get("enabled");
   const enabled = raw === "1" || raw === "true" || raw === "on";
   const { error } = await nexSupabaseAdmin
     .from("nex_account")
     .update({ world_intro_enabled: enabled })
     .eq("id", session.account.id);
-  if (error) return { ok: false, error: error.message };
+  if (error) return;
   revalidatePath("/nex-native/settings/world-intro");
-  return { ok: true };
 }
 
 // ---------------------------------------------------------------------------
