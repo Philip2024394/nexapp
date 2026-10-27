@@ -347,15 +347,25 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
       redirect(dest);
     }
   }
-  // Owner directive 2026-10-22 (afternoon · final) · fresh signup
-  // completion lands on /nex-native/free-chat?show-themes=1 · the
-  // user is now authenticated and the free-chat 5-theme picker +
-  // ChatSetupContainer is where they complete theme + avatar + name
-  // + location in one surface. From there they continue into chat.
-  // Prior same-day directive routed here to /contacts · superseded
-  // by the final landing-page mapping tree.
-  revalidatePath("/nex-native/free-chat");
-  redirect("/nex-native/free-chat?show-themes=1");
+  // 2026-10-27 · redirect target repaired to match the SEALED hard
+  // rule at `src/app/nex-native/free-chat/page.tsx:110-128`:
+  // *"/free-chat is the GUEST surface. Signed-in users never see the
+  // picker · they belong on /nex-native/contacts (post-auth landing).
+  // Bouncing them out at the page boundary prevents the 'my name
+  // shows but theme picker is forced' contradiction..."*
+  //
+  // The previous redirect to `/free-chat?show-themes=1` was a lie:
+  // the fresh signup user IS signed-in, so the /free-chat guard
+  // immediately re-redirects them to /contacts. User experiences a
+  // double redirect; the "complete theme + avatar + name + location"
+  // flow referenced in the earlier comment is unreachable from this
+  // path because the guard runs before the picker renders.
+  //
+  // Landing straight at /contacts removes the wasted hop. If a
+  // dedicated post-signup setup surface is wanted later, it needs its
+  // own route that doesn't share /free-chat's guest-only guard.
+  revalidatePath("/nex-native/contacts");
+  redirect("/nex-native/contacts");
 }
 
 function redirectToOnboardingWithError(code: string, message: string): never {
