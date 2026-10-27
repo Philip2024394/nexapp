@@ -310,7 +310,13 @@ function ComingSoonSection({
   readonly reason: string;
 }) {
   return (
-    <section style={{ ...sectionStyle, opacity: 0.52 }}>
+    // 2026-10-28 · a11y · aria-disabled signals the section is
+    // not actionable to screen readers · the opacity+chip did it
+    // visually but assistive tech had no equivalent cue.
+    <section
+      aria-disabled="true"
+      style={{ ...sectionStyle, opacity: 0.52 }}
+    >
       <div style={comingSoonHeaderStyle}>
         <h3 style={sectionTitleStyle}>{title}</h3>
         <span style={comingSoonChipStyle}>Coming soon</span>
