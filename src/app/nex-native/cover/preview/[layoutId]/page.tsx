@@ -234,7 +234,8 @@ export default async function CoverLayoutPreview({
               >
                 {themes.map((t) => (
                   <option key={t.id} value={t.id}>
-                    {t.display_name}
+                    {/* 2026-10-27 · NexChatThemeRow exposes `name` */}
+                    {t.name}
                   </option>
                 ))}
               </select>

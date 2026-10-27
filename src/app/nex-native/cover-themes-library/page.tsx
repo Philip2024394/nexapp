@@ -355,7 +355,11 @@ export default async function CoverThemesLibraryPage({
                     border: `1px solid ${currentTheme.accent_hex}`,
                   }}
                 />
-                <span>Theme · {currentTheme.display_name}</span>
+                {/* 2026-10-27 · NexChatThemeRow exposes `name` (not
+                    `display_name`); the schema field was renamed /
+                    never had a display_name alias (see
+                    `src/lib/nex-native/chat-theme-service.ts:21`). */}
+                <span>Theme · {currentTheme.name}</span>
               </div>
             )}
           </section>

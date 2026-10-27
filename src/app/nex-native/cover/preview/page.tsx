@@ -178,7 +178,8 @@ export default async function CoverPreviewGallery({
                 >
                   {themes.map((t) => (
                     <option key={t.id} value={t.id}>
-                      {t.display_name} ({t.id})
+                      {/* 2026-10-27 · NexChatThemeRow exposes `name` */}
+                      {t.name} ({t.id})
                     </option>
                   ))}
                 </select>
