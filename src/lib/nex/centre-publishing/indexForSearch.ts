@@ -199,28 +199,36 @@ export async function listCentreFeedItems(
             ? (merchant.website as string) ?? null
             : null,
         merchant_verification_level: verificationLevel,
-        // Philip 2026-08-02 · Trade Center v2 · membership + profile fields.
-        // Real values sourced from hammerex_trade_off_listings columns when
-        // present. Instagram + facebook use nex_show_* opt-in flags where
-        // available. Star rating comes from google_rating on the merchant
-        // record; null when absent (no fabrication).
-        merchant_tier:                (merchant.tier as string) ?? null,
-        merchant_google_rating:       (merchant.google_rating as number) ?? null,
-        merchant_google_review_count: (merchant.google_review_count as number) ?? null,
-        merchant_services:            (merchant.hammerex_standard_products as string[]) ?? [],
-        merchant_years_in_trade:      (merchant.years_in_trade as number) ?? null,
-        // R3 2026-10-27 · columns `photos` / `instagram` / `facebook` are
-        // NOT in the SELECT on line 100 AND there is no evidence in
+        // R3b 2026-10-27 · Trade Center v2 membership + profile fields.
+        // The columns `tier` / `google_rating` / `google_review_count` /
+        // `hammerex_standard_products` / `years_in_trade` are NOT in the
+        // SELECT on line 100 AND there is no evidence in
         // nex-supabase/migrations that they exist on
-        // `hammerex_trade_off_listings` (grepped: 10+ other callers
-        // across src/lib/nex/ never SELECT them either). Pre-R2-E,
-        // `(merchant.X as T) ?? default` evaluated to `default` because
-        // `merchant.X` was `undefined` at runtime. Post-R2-E the real
-        // row typing surfaces the mismatch at compile time. Honest
-        // default · never fabricate. If a future migration adds these
-        // columns, (a) add them to the SELECT, (b) replace these
+        // `hammerex_trade_off_listings`. Verified grep: none of the
+        // other callers of this table (apiHelpers.ts, ab/queue.ts,
+        // ab/agents.ts, world/location.ts) request these columns except
+        // `tier` (apiHelpers.ts:52 selects it, same latent issue).
+        // Per CLAUDE.md Fork hygiene note, `hammerex_*` tables may not
+        // exist in the NEX Supabase project at all. Honest default ·
+        // never fabricate. If a future migration adds these columns,
+        // (a) add them to the SELECT on line 100, (b) replace these
         // constants with real property reads · behaviour was never
-        // sourcing real data anyway.
+        // sourcing real data anyway (pre-R2-E: `(undefined as T) ?? X`
+        // evaluated to `X` at runtime).
+        //
+        // R3 2026-10-27 · same reasoning for `photos` / `instagram` /
+        // `facebook` (committed in 98e300a).
+        //
+        // Verification notes:
+        //   · `trust_tier` (line 100) IS in the SELECT and IS consumed
+        //     at line 147 for `verificationLevel` · do NOT touch.
+        //   · Star rating is honest `null` here; the UI must render a
+        //     "no rating yet" fallback when the field is null.
+        merchant_tier:                null,
+        merchant_google_rating:       null,
+        merchant_google_review_count: null,
+        merchant_services:            [],
+        merchant_years_in_trade:      null,
         merchant_photos:              [],
         merchant_instagram:           null,
         merchant_facebook:            null,
