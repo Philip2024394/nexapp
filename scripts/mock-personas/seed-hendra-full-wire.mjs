@@ -185,6 +185,35 @@ const STATEMENTS = [
     expectRows: 1,
   },
   {
+    label:
+      "1b · UPSERT nex_account_profile · Hendra identity (headline + bio + professional kind)",
+    sql: `
+      INSERT INTO nex_account_profile
+        (account_id, kind, headline, bio, profession, location_label,
+         is_public, is_discoverable)
+      VALUES
+        ($1, $2, $3, $4, $5, $6, true, true)
+      ON CONFLICT (account_id) DO UPDATE SET
+        kind            = EXCLUDED.kind,
+        headline        = EXCLUDED.headline,
+        bio             = EXCLUDED.bio,
+        profession      = EXCLUDED.profession,
+        location_label  = EXCLUDED.location_label,
+        is_public       = true,
+        is_discoverable = true
+      RETURNING account_id, kind, headline, profession, location_label
+    `,
+    binds: [
+      HENDRA_UUID,
+      "professional",
+      "Luxury pre-owned timepieces · Bogor",
+      "Watch dealer in Bogor, Indonesia. Specialising in luxury pre-owned chronographs, divers, and dress watches: Daytona, Seamaster, Nautilus, Submariner, and more. Full set documentation. Trade-ins welcome.",
+      "Watch Seller",
+      "Bogor, Indonesia",
+    ],
+    expectRows: 1,
+  },
+  {
     label: "2 · UPSERT nex_business · Hendra's Watches shop",
     sql: `
       INSERT INTO nex_business
