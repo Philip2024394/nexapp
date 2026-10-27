@@ -31,6 +31,18 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+// 2026-10-28 · owner directive · "on the live hendra change the 3 dots
+// in header to home icon when hendra will select the home icon the
+// live diverts to hendra contacts page on his chat".
+// Scoped to the Hendra dev-persona Live route only · other Live
+// surfaces keep the sealed 3-dot drawer trigger. The drawer rows
+// (Go Live · Shop · Wallet · Home) remain available on those other
+// surfaces · what changes here is purely the header affordance for
+// the Hendra route: direct Home-to-contacts link instead of drawer.
+const HENDRA_LIVE_ROUTE_PREFIX = "/nex-native/dev/live-persona/hendra";
+const HENDRA_HOME_HREF = "/nex-native/contacts";
 
 const TEXT = "#F2F5F8";
 const MUTED = "#7D9BC0";
@@ -51,6 +63,15 @@ export interface LiveSideDrawerProps {
 }
 
 export function LiveSideDrawer(props: LiveSideDrawerProps): React.JSX.Element {
+  // 2026-10-28 · owner directive · Hendra Live header affordance. See
+  // header comment for HENDRA_LIVE_ROUTE_PREFIX / HENDRA_HOME_HREF.
+  // Null is possible at SSR + during the first client render before
+  // next/navigation populates the hook; we treat that as "not Hendra"
+  // so the drawer path remains the default.
+  const pathname = usePathname();
+  const isHendraLiveRoute =
+    typeof pathname === "string" && pathname.startsWith(HENDRA_LIVE_ROUTE_PREFIX);
+
   const [open, setOpen] = React.useState(false);
   const [rendered, setRendered] = React.useState(false);
   const [visible, setVisible] = React.useState(false);
@@ -306,7 +327,7 @@ export function LiveSideDrawer(props: LiveSideDrawerProps): React.JSX.Element {
         style={{
           width: 36,
           height: 36,
-          display: "inline-flex",
+          display: isHendraLiveRoute ? "none" : "inline-flex",
           alignItems: "center",
           justifyContent: "center",
           background: "transparent",
@@ -336,6 +357,52 @@ export function LiveSideDrawer(props: LiveSideDrawerProps): React.JSX.Element {
           <circle cx="12" cy="19" r="1.4" />
         </svg>
       </button>
+
+      {/* 2026-10-28 · Hendra Live route · the 3-dot drawer trigger
+          above is display:none-hidden and a direct Home-icon Link
+          replaces it. Tapping routes to /nex-native/contacts (Hendra
+          escaping Live back to his chat Contacts) · no drawer opens ·
+          no multi-row menu. See header comment for scope rationale. */}
+      {isHendraLiveRoute ? (
+        <Link
+          href={HENDRA_HOME_HREF}
+          aria-label="Home · back to Contacts"
+          data-nex-live-side-drawer-home-link
+          style={{
+            width: 36,
+            height: 36,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "transparent",
+            border: "none",
+            outline: "none",
+            boxShadow: "none",
+            WebkitTapHighlightColor: "transparent",
+            cursor: "pointer",
+            color: TEXT,
+            padding: 0,
+            textDecoration: "none",
+            ...(props.triggerStyle ?? {}),
+          }}
+        >
+          <svg
+            aria-hidden
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M3 10.5 12 3l9 7.5" />
+            <path d="M5 9.5V21h14V9.5" />
+            <path d="M10 21v-6h4v6" />
+          </svg>
+        </Link>
+      ) : null}
 
       {rendered && frameNode ? createPortal(overlay, frameNode) : null}
     </>
