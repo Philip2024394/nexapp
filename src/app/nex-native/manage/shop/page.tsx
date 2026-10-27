@@ -75,7 +75,22 @@ const NEX = {
   green: "#16D66B",
   amber: "#F59E0B",
   purple: "#A384FF",
+  // 2026-10-27 · "Clear QR" button at line ~1277 uses NEX.red for
+  // its destructive-action text colour (border is already
+  // rgba(255,51,85,0.4)). Value sourced from the canonical sibling
+  // palette at manage/categories/page.tsx:48 + manage/gallery:43 +
+  // manage/info:61 + manage/menu:58 (same convention, same hex).
+  red: "#FF3355",
 };
+
+// 2026-10-27 · sibling-canonical font stack referenced at lines
+// 1278 + 1324 for form controls on this page. Same literal used
+// across manage/categories/page.tsx:51 + manage/gallery:46 +
+// manage/info:64. The sealed 2026-10-17 design-tokens rule
+// specifies ONE font stack; this inline const mirrors the sealed
+// value until the per-page palettes are consolidated.
+const SANS =
+  "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
 const STOCK_LABEL: Record<string, string> = {
   in_stock: "In stock",
