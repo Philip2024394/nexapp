@@ -29,6 +29,7 @@ import { NextResponse } from "next/server";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import { getBusinessBySlug } from "@/lib/nex-native/business-service";
 import { effectiveTier } from "@/lib/nex-native/account-service";
+import type { NexAccountTier } from "@/lib/nex-native/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,11 +55,17 @@ const RESERVED_PREFIXES = [
 // Gratis sellers can register ANY slug that is ≥ 7 characters OR that
 // contains a hyphen (compound name). Short, single-word slugs stay in
 // the Bisnis namespace so Bisnis has an exclusive upgrade value.
+// 2026-10-28 · parameter widened from `"gratis" | "bisnis"` to the
+// full NexAccountTier union. `effectiveTier()` returns the full union
+// including `"pro"` (which is strictly a paid tier higher than
+// bisnis), so passing an unresolved tier produced TS2345 at the
+// caller. All paid tiers (bisnis + pro) are treated the same for
+// slug admissions · short slugs allowed. gratis stays gated.
 function tierAllowsSlug(
   slug: string,
-  tier: "gratis" | "bisnis",
+  tier: NexAccountTier,
 ): boolean {
-  if (tier === "bisnis") return true;
+  if (tier === "bisnis" || tier === "pro") return true;
   if (slug.length >= 7) return true;
   if (slug.includes("-")) return true;
   return false;

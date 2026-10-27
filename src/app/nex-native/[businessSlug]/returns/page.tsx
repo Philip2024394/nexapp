@@ -72,7 +72,13 @@ export default async function ReturnsPage({
   if (!business) notFound();
 
   const rp = business.return_policy ?? NEX_RETURN_POLICY_DEFAULT;
-  const acceptsReasons = new Set(rp.accepts_reasons ?? []);
+  // 2026-10-28 · explicit `Set<string>` annotation · `rp.accepts_reasons`
+  // is typed as the sealed NexReturnReason union so inferred Set would
+  // reject the plain-string key iteration below (REASON_LABEL keys are
+  // typed `string`). The iteration keeps every REASON_LABEL entry and
+  // the Set is only used for `.has(r)` membership, so widening to
+  // string is semantically correct.
+  const acceptsReasons = new Set<string>(rp.accepts_reasons ?? []);
   const shopHref = `/nex-native/${business.slug}`;
   const meetsMin =
     rp.window_days >= NEX_RETURN_LEGAL_MIN_WINDOW_DAYS &&
