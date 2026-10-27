@@ -59,6 +59,7 @@ export type ValidationReason =
   | "third_party_source"
   | "no_mx_record"
   | "mx_lookup_failed"
+  | "mx_domain_nxdomain"
   | "missing_apex_host";
 
 export interface ValidationResult {
@@ -239,10 +240,22 @@ export async function validateEmailForBusiness(
   let records: ReadonlyArray<{ readonly exchange: string }>;
   try {
     records = await mx(emailDomain);
-  } catch {
+  } catch (dnsErr) {
+    // C-1 2026-10-27 · Distinguish NXDOMAIN (permanent · domain doesn't
+    // exist) from transient DNS failures (SERVFAIL · timeout · ECONN).
+    // Both still produce status=FOUND so no orchestrator retry-behaviour
+    // changes · but the reason code is accurate so operators + the HQ
+    // dashboard can see "the domain itself does not exist" vs "DNS was
+    // flaky." The Node `dns.resolveMx` sets `.code` on the error · we
+    // read it defensively without changing the broader flow.
+    const code =
+      dnsErr && typeof dnsErr === "object" && "code" in dnsErr
+        ? String((dnsErr as { code?: unknown }).code ?? "")
+        : "";
+    const isNxdomain = code === "ENOTFOUND" || code === "ENODATA";
     return {
       status: "FOUND",
-      reason: "mx_lookup_failed",
+      reason: isNxdomain ? "mx_domain_nxdomain" : "mx_lookup_failed",
       checkedDomain: emailDomain,
       mxExchanges: [],
     };

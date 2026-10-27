@@ -206,6 +206,58 @@ describe("validateEmailForBusiness · FOUND (not VALIDATED) · MX layer", () => 
     expect(r.status).toBe("FOUND");
     expect(r.reason).toBe("mx_lookup_failed");
   });
+
+  // C-1 2026-10-27 · NXDOMAIN discrimination
+  //   A domain that does not exist (DNS returns ENOTFOUND / ENODATA) is
+  //   PERMANENTLY unreachable · a transient SERVFAIL is retry-worthy.
+  //   The orchestrator currently retries both via the 7-day cooldown ·
+  //   this change does NOT alter retry behaviour (status stays FOUND)
+  //   but the reason code now carries honest diagnostic information.
+  test("DNS throws with ENOTFOUND → FOUND / mx_domain_nxdomain (distinct reason)", async () => {
+    const nxdomainMx = async () => {
+      const e: Error & { code?: string } = new Error("getaddrinfo ENOTFOUND");
+      e.code = "ENOTFOUND";
+      throw e;
+    };
+    const r = await validateEmailForBusiness("hello@acme.co", "acme.co", {
+      mxLookup: nxdomainMx,
+    });
+    expect(r.status).toBe("FOUND");
+    expect(r.reason).toBe("mx_domain_nxdomain");
+    expect(r.checkedDomain).toBe("acme.co");
+  });
+
+  test("DNS throws with ENODATA → FOUND / mx_domain_nxdomain (treated as permanent)", async () => {
+    const noDataMx = async () => {
+      const e: Error & { code?: string } = new Error("ENODATA · no MX records");
+      e.code = "ENODATA";
+      throw e;
+    };
+    const r = await validateEmailForBusiness("hello@acme.co", "acme.co", {
+      mxLookup: noDataMx,
+    });
+    expect(r.reason).toBe("mx_domain_nxdomain");
+  });
+
+  test("DNS throws with SERVFAIL → FOUND / mx_lookup_failed (transient, not permanent)", async () => {
+    const servfailMx = async () => {
+      const e: Error & { code?: string } = new Error("DNS SERVFAIL");
+      e.code = "SERVFAIL";
+      throw e;
+    };
+    const r = await validateEmailForBusiness("hello@acme.co", "acme.co", {
+      mxLookup: servfailMx,
+    });
+    expect(r.reason).toBe("mx_lookup_failed");
+  });
+
+  test("DNS throws plain Error (no .code) → FOUND / mx_lookup_failed (not misclassified NXDOMAIN)", async () => {
+    const r = await validateEmailForBusiness("hello@acme.co", "acme.co", {
+      mxLookup: throwMx,
+    });
+    expect(r.reason).toBe("mx_lookup_failed");
+    expect(r.reason).not.toBe("mx_domain_nxdomain");
+  });
 });
 
 describe("validateEmailForBusiness · VALIDATED happy path", () => {

@@ -157,8 +157,15 @@ function isValidTld(tld: string): boolean {
 export function extractEmails(html: string, opts: ExtractOptions = {}): ReadonlyArray<ExtractedEmail> {
   if (!html || typeof html !== "string" || html.length === 0) return [];
   const max = opts.max_emails ?? 200;
-  // Decode common encodings ONCE at the top so every extractor step sees
-  // the real characters instead of escape sequences.
+  // Preserve the raw HTML so method 4 (html_entity_at) can scan for
+  // literal `&#64;` sequences. preDecodeHtml decodes `&#64;` → `@`,
+  // which would otherwise leave method 4 permanently empty (sealed test
+  // A5 of walker-and-extractor.test.ts asserts the opposite behaviour).
+  // Fix 2026-10-27 · method 4 now scans `rawHtml`; the rest scan the
+  // decoded `html`. Zero semantic change to WHICH emails get returned ·
+  // only the method tag for `&#64;`-encoded addresses is restored to
+  // the sealed value.
+  const rawHtml = html;
   html = preDecodeHtml(html);
 
   const seen = new Map<string, ExtractedEmail>();      // key: normalized email · first-method wins
@@ -217,10 +224,14 @@ export function extractEmails(html: string, opts: ExtractOptions = {}): Readonly
   }
 
   // 4 · HTML-entity at (&#64;)  ────────────────────────────────────
+  // Scan the UNDECODED HTML · preDecodeHtml decoded `&#64;` → `@`
+  // which would otherwise leave this method permanently empty. The
+  // context_snippet is clipped from `rawHtml` so an auditor can see
+  // the actual on-page encoding, not the decoded form.
   HTML_ENTITY_AT_RX.lastIndex = 0;
-  while ((m = HTML_ENTITY_AT_RX.exec(html)) !== null) {
+  while ((m = HTML_ENTITY_AT_RX.exec(rawHtml)) !== null) {
     const normalized = `${m[1]}@${m[2]}`.toLowerCase();
-    record(m[0], normalized, "html_entity_at", clip(html, m.index, 200), roleHintNear(html, m.index));
+    record(m[0], normalized, "html_entity_at", clip(rawHtml, m.index, 200), roleHintNear(rawHtml, m.index));
   }
 
   // 5 · Obfuscated · " at " / " (at) " · " dot " / " (dot) "  ──────
