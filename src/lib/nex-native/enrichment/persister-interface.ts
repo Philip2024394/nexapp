@@ -16,6 +16,8 @@
 // instead chose a dedicated bucket) must both be cleared.
 
 import type { ContactCandidate, PipelineImage, ImageProvenance } from "./types";
+import type { ImageFlowState } from "./image-states";
+import { imageStateOrdinal } from "./image-states";
 
 // ─── Persist request / response ──────────────────────────────────────
 
@@ -43,6 +45,20 @@ export type PersistOutcome =
        *  would never surface this. */
       readonly capturedRequest: PersistRequest;
     }
+  /** F-2 fix 2026-10-27 · when a real persister sees a payload it has
+   *  already written (dedup on `(canonical_business_id, source_image_url,
+   *  content_sha256)` for images and `(canonical_business_id, kind,
+   *  value)` for contacts), it MUST return this outcome · never
+   *  silently double-insert.
+   *
+   *  The sealed dry-run persister in this module NEVER produces this
+   *  outcome · the dry-run has no persistent state to deduplicate
+   *  against. The variant exists for real persisters to use. */
+  | {
+      readonly kind: "written_idempotent_noop";
+      readonly canonicalBusinessId: string;
+      readonly skippedBecauseAlreadyPresent: PersistedFieldCount;
+    }
   | {
       readonly kind: "rejected";
       readonly canonicalBusinessId: string;
@@ -59,7 +75,22 @@ export type PersistRejection =
   | "image_without_rights_check"
   | "image_without_per_image_provenance_capture"
   | "contact_missing_evidence"
-  | "unknown_db_error";
+  | "unknown_db_error"
+  /** F-3 fix 2026-10-27 · a real persister MUST read the current
+   *  state of the image at (canonical_business_id, source_image_url)
+   *  and refuse any incoming payload whose state is strictly less
+   *  than the persisted state. This refusal preserves the sealed
+   *  "state never regresses" invariant from the module header. */
+  | "would_downgrade_persisted_image"
+  /** F-4 fix 2026-10-27 · `nex.business_canonical` has no `whatsapp`
+   *  column. A real persister MUST route a `ContactCandidate.kind ==
+   *  "whatsapp"` to the vertical overlay table matching the canonical
+   *  row's `entity_type` (`nex.food_business.whatsapp_number` or
+   *  `nex.accommodation_business.whatsapp_number`). If no vertical
+   *  overlay matches, the write is rejected with this reason. The
+   *  dry-run surfaces the requirement via `rejectWhatsappWithoutVertical`
+   *  (default true). */
+  | "no_vertical_table_for_contact";
 
 export interface PersistedFieldCount {
   readonly emails: number;
@@ -71,9 +102,42 @@ export interface PersistedFieldCount {
 
 // ─── Persister contract ──────────────────────────────────────────────
 
+/** F-3 fix 2026-10-27 · the persister must expose the current state
+ *  of any already-persisted image for the same
+ *  (canonical_business_id, source_image_url) so the state machine's
+ *  "never regress" invariant can be enforced AT THE PERSISTENCE
+ *  BOUNDARY · not just inside the pure state-machine functions.
+ *
+ *  Returns null when no prior row exists · the write is then a
+ *  first-time insert and no downgrade check applies. A real persister
+ *  reads this via `SELECT state FROM nex.business_media WHERE
+ *  canonical_business_id = $1 AND storage_key = <derived-from-sha> …`
+ *  or the equivalent on an extended provenance table. The dry-run
+ *  returns null unless a test injects a stub prior-state map. */
+export type ImageStateLookup = (opts: {
+  readonly canonicalBusinessId: string;
+  readonly sourceImageUrl: string;
+}) => Promise<ImageFlowState | null>;
+
 export interface Persister {
   readonly isDryRun: boolean;
+  /** F-2 fix 2026-10-27 · implementations MUST deduplicate on:
+   *    · images  → (canonical_business_id, source_image_url, content_sha256)
+   *    · contacts → (canonical_business_id, kind, value)
+   *  A second write of the same payload MUST return a
+   *  `kind: "written_idempotent_noop"` outcome · never a
+   *  `kind: "written"` with a second row inserted.
+   *
+   *  F-1 contract · the worker catches any throw and converts it to
+   *  `kind: "failed", reason: "unexpected_io_error"` · implementations
+   *  SHOULD still prefer returning `kind: "rejected"` with a precise
+   *  `PersistRejection` reason, but throws are safely contained. */
   write(request: PersistRequest): Promise<PersistOutcome>;
+  /** F-3 fix · read the current persisted state so the write path
+   *  can refuse a downgrade. Implementations MUST honour this ·
+   *  real persisters query the DB, dry-run returns null by default
+   *  (no prior state). */
+  getCurrentImageState: ImageStateLookup;
 }
 
 // ─── Dry-run default · honest about not writing ──────────────────────
@@ -88,6 +152,38 @@ export interface DryRunPersisterOptions {
    *  `true` · tests inspect this. A real persister would not retain
    *  the payload. */
   readonly captureRequest?: boolean;
+  /** F-3 test hook · tests inject a simulated "already persisted"
+   *  state so the downgrade-refusal contract can be verified against
+   *  the dry-run. Production dry-run leaves this undefined · in that
+   *  case `getCurrentImageState` returns null for every lookup and
+   *  no downgrade check fires. The map key is
+   *  `${canonicalBusinessId}::${sourceImageUrl}`. */
+  readonly priorImageStates?: ReadonlyMap<string, ImageFlowState>;
+  /** F-4 test hook · a map from canonical_business_id to the
+   *  entity_type class the whatsapp candidate can be routed to.
+   *  Missing entries (or default `undefined`) mean "no compatible
+   *  vertical" · the dry-run then rejects whatsapp candidates with
+   *  `no_vertical_table_for_contact`. Set this map in tests to
+   *  simulate a food / accommodation vertical being available. */
+  readonly whatsappVerticalByCanonicalId?: ReadonlyMap<
+    string,
+    "food" | "accommodation"
+  >;
+  /** F-4 default-safe mode · when `true` (default), whatsapp
+   *  candidates without a known vertical are rejected. A caller that
+   *  genuinely wants to accept whatsapp without routing (e.g. in a
+   *  write-nothing sanity test) can set this to false, but production
+   *  never does. */
+  readonly rejectWhatsappWithoutVertical?: boolean;
+}
+
+/** F-3 helper · key generator for `priorImageStates` so tests have a
+ *  deterministic lookup. Exported for test visibility. */
+export function priorImageStateKey(
+  canonicalBusinessId: string,
+  sourceImageUrl: string,
+): string {
+  return `${canonicalBusinessId}::${sourceImageUrl}`;
 }
 
 /** The ONLY persister available in Phase 2 · honest · writes nothing.
@@ -99,8 +195,21 @@ export function createDryRunPersister(
 ): Persister {
   const rejectUnapproved = opts.rejectUnapprovedImages ?? true;
   const capture = opts.captureRequest ?? true;
+  const priorStates = opts.priorImageStates;
+  const whatsappVerticals = opts.whatsappVerticalByCanonicalId;
+  const rejectWhatsappNoVertical = opts.rejectWhatsappWithoutVertical ?? true;
+
+  const getCurrentImageState: ImageStateLookup = async ({
+    canonicalBusinessId,
+    sourceImageUrl,
+  }) => {
+    if (!priorStates) return null;
+    return priorStates.get(priorImageStateKey(canonicalBusinessId, sourceImageUrl)) ?? null;
+  };
+
   return {
     isDryRun: true,
+    getCurrentImageState,
     async write(request: PersistRequest): Promise<PersistOutcome> {
       // ─── Image checks · each independent · first failure wins ────
       for (const img of request.images) {
@@ -120,6 +229,21 @@ export function createDryRunPersister(
             detail: `image for ${request.canonicalBusinessId} is in state '${img.state}' · dry-run rejects anything below ApprovedForDisplay`,
           };
         }
+        // F-3 · downgrade refusal · consult prior state (null = first
+        // time, no downgrade possible). If a prior state exists and
+        // the incoming state is strictly less, refuse.
+        const prior = await getCurrentImageState({
+          canonicalBusinessId: request.canonicalBusinessId,
+          sourceImageUrl: img.provenance.sourceImageUrl,
+        });
+        if (prior !== null && imageStateOrdinal(img.state) < imageStateOrdinal(prior)) {
+          return {
+            kind: "rejected",
+            canonicalBusinessId: request.canonicalBusinessId,
+            reason: "would_downgrade_persisted_image",
+            detail: `incoming image state '${img.state}' is strictly less than persisted '${prior}' for sourceImageUrl=${img.provenance.sourceImageUrl} · the sealed state-never-regresses invariant forbids this write`,
+          };
+        }
       }
       // ─── Contact checks · evidence is required ──────────────────
       for (const c of request.contacts) {
@@ -132,6 +256,21 @@ export function createDryRunPersister(
             reason: "contact_missing_evidence",
             detail: `contact of kind '${c.kind}' has no evidence record`,
           };
+        }
+        // F-4 · whatsapp routing · `nex.business_canonical` has no
+        // whatsapp column. A real persister MUST route to a vertical
+        // overlay. Dry-run rejects by default unless the caller
+        // provided a vertical mapping.
+        if (c.kind === "whatsapp" && rejectWhatsappNoVertical) {
+          const vertical = whatsappVerticals?.get(request.canonicalBusinessId);
+          if (!vertical) {
+            return {
+              kind: "rejected",
+              canonicalBusinessId: request.canonicalBusinessId,
+              reason: "no_vertical_table_for_contact",
+              detail: `whatsapp candidate requires a vertical overlay (food | accommodation) · none registered for ${request.canonicalBusinessId} · a real persister must look this up from nex.business_canonical.entity_type and route accordingly`,
+            };
+          }
         }
       }
       // ─── All checks pass · honest "would-write" response ────────

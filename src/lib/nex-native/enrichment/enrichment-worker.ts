@@ -114,11 +114,26 @@ export async function enrichOneCanonicalRow(
   }
 
   // ─── Persist via the sealed interface · honest failure path ─────
-  const persistResult = await opts.persister.write({
-    canonicalBusinessId: row.canonical_business_id,
-    contacts: extraction.contacts,
-    images: extraction.images,
-  });
+  // F-1 fix 2026-10-27 · a persister that THROWS (DB connection
+  // drop, driver bug, service outage) must not crash the whole
+  // batch. We catch here and convert to a `failed` outcome with the
+  // sealed `unexpected_io_error` reason so counting stays honest.
+  let persistResult;
+  try {
+    persistResult = await opts.persister.write({
+      canonicalBusinessId: row.canonical_business_id,
+      contacts: extraction.contacts,
+      images: extraction.images,
+    });
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    return {
+      kind: "failed",
+      canonicalBusinessId: row.canonical_business_id,
+      reason: "unexpected_io_error",
+      rejectionDetail: detail,
+    };
+  }
 
   if (persistResult.kind === "rejected") {
     const reason =
@@ -133,10 +148,15 @@ export async function enrichOneCanonicalRow(
     };
   }
 
-  // Dry-run and real-write both count as "completed" for the
-  // worker · dry-run honestly surfaces that persistence did not
-  // happen via the `isDryRun` flag on the persister and via the
-  // `wouldPersistAny` boolean below · callers must read both.
+  // Dry-run, real-write, and idempotent-noop all count as "completed"
+  // for the worker · the persister's `kind` tells the caller which
+  // path was taken · the worker's `wouldPersistAny` reflects what the
+  // extractor produced, not what hit the DB.
+  //
+  // F-2 note · when the persister returns `written_idempotent_noop`
+  // the worker's `alreadyEnrichedThisCycle` still records the id so
+  // we don't re-process within this cycle · the persister's
+  // deduplication is the source of truth across cycles.
   opts.alreadyEnrichedThisCycle.add(row.canonical_business_id);
   return {
     kind: "completed",

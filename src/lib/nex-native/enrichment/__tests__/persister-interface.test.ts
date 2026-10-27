@@ -4,7 +4,11 @@ import { describe, it, expect, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { createDryRunPersister } from "../persister-interface";
+import {
+  createDryRunPersister,
+  priorImageStateKey,
+} from "../persister-interface";
+import type { ImageFlowState } from "../image-states";
 import type {
   PipelineImage,
   ContactCandidate,
@@ -185,5 +189,174 @@ describe("DryRunPersister · honest reporting", () => {
     if (r.kind === "written_dry_run") {
       expect(r.capturedRequest.contacts).toEqual([]);
     }
+  });
+});
+
+describe("F-3 · persisted-state downgrade refusal · contract-enforced", () => {
+  it("exposes getCurrentImageState · returns null when no prior state", async () => {
+    const p = createDryRunPersister();
+    const s = await p.getCurrentImageState({
+      canonicalBusinessId: "cb-x",
+      sourceImageUrl: "https://ex.com/x.webp",
+    });
+    expect(s).toBeNull();
+  });
+
+  it("test hook · getCurrentImageState returns injected prior state", async () => {
+    const prior = new Map<string, ImageFlowState>([
+      [
+        priorImageStateKey("cb-1", "https://ex.com/img.webp"),
+        "ApprovedForDisplay",
+      ],
+    ]);
+    const p = createDryRunPersister({ priorImageStates: prior });
+    const s = await p.getCurrentImageState({
+      canonicalBusinessId: "cb-1",
+      sourceImageUrl: "https://ex.com/img.webp",
+    });
+    expect(s).toBe("ApprovedForDisplay");
+  });
+
+  it("rejects downgrade · ApprovedForDisplay persisted + Fetched incoming", async () => {
+    const prior = new Map<string, ImageFlowState>([
+      [
+        priorImageStateKey("cb-1", "https://ex.com/img.webp"),
+        "ApprovedForDisplay",
+      ],
+    ]);
+    const p = createDryRunPersister({
+      priorImageStates: prior,
+      rejectUnapprovedImages: false, // disable so we isolate the downgrade check
+    });
+    const incoming: PipelineImage = {
+      ...image("Fetched"),
+    };
+    const r = await p.write({
+      canonicalBusinessId: "cb-1",
+      contacts: [],
+      images: [incoming],
+    });
+    expect(r.kind).toBe("rejected");
+    if (r.kind === "rejected") {
+      expect(r.reason).toBe("would_downgrade_persisted_image");
+      expect(r.detail).toContain("ApprovedForDisplay");
+    }
+  });
+
+  it("permits equal state · no downgrade (ordinal === ordinal)", async () => {
+    const prior = new Map<string, ImageFlowState>([
+      [
+        priorImageStateKey("cb-1", "https://ex.com/img.webp"),
+        "ApprovedForDisplay",
+      ],
+    ]);
+    const p = createDryRunPersister({ priorImageStates: prior });
+    const r = await p.write({
+      canonicalBusinessId: "cb-1",
+      contacts: [],
+      images: [image("ApprovedForDisplay")],
+    });
+    expect(r.kind).toBe("written_dry_run");
+  });
+});
+
+describe("F-4 · whatsapp vertical routing · contract-enforced", () => {
+  function whatsappContact(): ContactCandidate {
+    return {
+      kind: "whatsapp",
+      value: "+628123456789",
+      evidence: {
+        kind: "owner_website_apex",
+        businessWebsiteApex: "ex.com",
+        observedPageUrl: "https://ex.com/contact",
+        domainMatchReason: "exact_apex",
+      },
+    };
+  }
+
+  it("rejects whatsapp when no vertical mapping is registered · default-safe", async () => {
+    const p = createDryRunPersister();
+    const r = await p.write({
+      canonicalBusinessId: "cb-no-vertical",
+      contacts: [whatsappContact()],
+      images: [],
+    });
+    expect(r.kind).toBe("rejected");
+    if (r.kind === "rejected") {
+      expect(r.reason).toBe("no_vertical_table_for_contact");
+    }
+  });
+
+  it("accepts whatsapp when a vertical mapping is registered (food)", async () => {
+    const verticals = new Map([["cb-food", "food" as const]]);
+    const p = createDryRunPersister({
+      whatsappVerticalByCanonicalId: verticals,
+    });
+    const r = await p.write({
+      canonicalBusinessId: "cb-food",
+      contacts: [whatsappContact()],
+      images: [],
+    });
+    expect(r.kind).toBe("written_dry_run");
+    if (r.kind === "written_dry_run") {
+      expect(r.wouldWrite.whatsapp).toBe(1);
+    }
+  });
+
+  it("accepts whatsapp when a vertical mapping is registered (accommodation)", async () => {
+    const verticals = new Map([["cb-acc", "accommodation" as const]]);
+    const p = createDryRunPersister({
+      whatsappVerticalByCanonicalId: verticals,
+    });
+    const r = await p.write({
+      canonicalBusinessId: "cb-acc",
+      contacts: [whatsappContact()],
+      images: [],
+    });
+    expect(r.kind).toBe("written_dry_run");
+  });
+
+  it("permits accepting whatsapp without vertical only when override is explicit · unsafe path explicit", async () => {
+    const p = createDryRunPersister({
+      rejectWhatsappWithoutVertical: false,
+    });
+    const r = await p.write({
+      canonicalBusinessId: "cb-override",
+      contacts: [whatsappContact()],
+      images: [],
+    });
+    expect(r.kind).toBe("written_dry_run");
+  });
+});
+
+describe("F-2 · idempotence contract types", () => {
+  it("PersistOutcome admits a `written_idempotent_noop` variant for real persisters", () => {
+    // The sealed type system now carries the variant · a real
+    // persister can return it when a payload is already present.
+    // The dry-run never produces it (it has no persistent state),
+    // but the TYPE guarantees any caller code must handle it.
+    type Outcome = Awaited<ReturnType<ReturnType<typeof createDryRunPersister>["write"]>>;
+    const kinds: Outcome["kind"][] = [
+      "written",
+      "written_dry_run",
+      "written_idempotent_noop",
+      "rejected",
+    ];
+    expect(kinds).toContain("written_idempotent_noop");
+  });
+
+  it("dry-run honestly does NOT emit written_idempotent_noop · it has no state to dedup against", async () => {
+    const p = createDryRunPersister();
+    const req = {
+      canonicalBusinessId: "cb-same",
+      contacts: [emailContact()],
+      images: [],
+    };
+    const r1 = await p.write(req);
+    const r2 = await p.write(req);
+    // Both calls return written_dry_run · the dry-run never pretends
+    // to be idempotent · the real persister enforces the contract.
+    expect(r1.kind).toBe("written_dry_run");
+    expect(r2.kind).toBe("written_dry_run");
   });
 });

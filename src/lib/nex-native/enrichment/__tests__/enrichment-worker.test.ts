@@ -141,9 +141,34 @@ describe("enrichOneCanonicalRow · honest outcomes", () => {
     }
   });
 
+  it("F-1 · catches a persister that THROWS · maps to unexpected_io_error · never aborts", async () => {
+    const throwingPersister = {
+      isDryRun: false,
+      async getCurrentImageState() {
+        return null;
+      },
+      async write() {
+        throw new Error("simulated supabase RST · connection reset");
+      },
+    };
+    const r = await enrichOneCanonicalRow(cRow("cb-io"), {
+      extractor: happyExtractor,
+      persister: throwingPersister,
+      alreadyEnrichedThisCycle: new Set(),
+    });
+    expect(r.kind).toBe("failed");
+    if (r.kind === "failed") {
+      expect(r.reason).toBe("unexpected_io_error");
+      expect(r.rejectionDetail).toContain("simulated supabase RST");
+    }
+  });
+
   it("maps persister 'schema_column_missing' to a distinct failure reason", async () => {
     const schemaMissingPersister = {
       isDryRun: true,
+      async getCurrentImageState() {
+        return null;
+      },
       async write(req: Parameters<ReturnType<typeof createDryRunPersister>["write"]>[0]) {
         return {
           kind: "rejected" as const,

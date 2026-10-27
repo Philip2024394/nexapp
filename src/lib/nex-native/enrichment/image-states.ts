@@ -20,7 +20,15 @@
 // and does NOT downgrade the existing state (same preservation rule
 // the sealed email-qualification state machine uses).
 
-import type { ImageProvenance } from "./types";
+import type { ImageProvenance, SourceRegistryGovernance } from "./types";
+
+/** Normalise a free-form licence identifier so case or whitespace
+ *  variants of "unknown" (e.g. "Unknown", "UNKNOWN", "  unknown  ")
+ *  cannot bypass the sealed state-machine guard · F-5 fix 2026-10-27. */
+export function isLicenceUnknown(raw: string): boolean {
+  const trimmed = raw.trim().toLowerCase();
+  return trimmed === "" || trimmed === "unknown";
+}
 
 /** The 4 sealed states · ordered strictest-last. Compare via
  *  `imageStateOrdinal` · do NOT compare string identity for ordering. */
@@ -66,17 +74,19 @@ export interface MatchPromotionInput {
 /** Promote Matched → RightsChecked requires the licence identifier
  *  AND (when the licence requires it) the attribution text. "unknown"
  *  licence can NEVER promote · it is honest to refuse rather than
- *  guess. */
+ *  guess.
+ *
+ *  F-6 fix 2026-10-27 · governance comes from a typed registry
+ *  snapshot, NOT free-form caller booleans. A caller that wants to
+ *  "lie" would have to construct a complete `SourceRegistryGovernance`
+ *  record and that record's `sourceId` must match the provenance's
+ *  `sourceRegistryId` · the state machine checks the match. */
 export interface RightsPromotionInput {
   readonly provenance: ImageProvenance;
-  /** Does the chosen licence require attribution? Looked up from
-   *  `nex.source_registry.attribution_required` for the record's
-   *  `source_id` · owner directive forbids us hard-coding this per
-   *  source. */
-  readonly licenceRequiresAttribution: boolean;
-  /** Does the chosen licence permit display? Looked up from
-   *  `nex.source_registry.can_display`. */
-  readonly licencePermitsDisplay: boolean;
+  /** Typed snapshot of the `nex.source_registry` row for the
+   *  provenance's `sourceRegistryId`. The caller resolves this against
+   *  the live registry · this module checks the id matches. */
+  readonly governance: SourceRegistryGovernance;
 }
 
 /** Promote RightsChecked → ApprovedForDisplay requires an admin review
@@ -113,7 +123,12 @@ export type PromotionRejectionReason =
   | "attribution_required_but_missing"
   | "reviewer_missing_for_approve"
   | "decision_was_reject"
-  | "decided_at_malformed";
+  | "decided_at_malformed"
+  /** F-6 fix · the caller passed a governance snapshot whose
+   *  `sourceId` does not match the image's `provenance.sourceRegistryId`.
+   *  Refusing here prevents a stale or wrong-source governance read
+   *  from accidentally authorising a different source's licence. */
+  | "governance_source_mismatch";
 
 // ─── Promotion functions · each is PURE ──────────────────────────────
 
@@ -156,13 +171,22 @@ export function promoteMatchedToRightsChecked(
   if (currentState !== "Matched") {
     return { kind: "rejected", reason: "match_evidence_missing" };
   }
-  if (input.provenance.licenceIdentifier === "unknown") {
+  // F-6 · the governance snapshot must be for the SAME source the
+  // image's provenance claims · a caller that fetches governance for
+  // the wrong source gets refused here, not accidentally approved.
+  if (input.governance.sourceId !== input.provenance.sourceRegistryId) {
+    return { kind: "rejected", reason: "governance_source_mismatch" };
+  }
+  // F-5 · normalised unknown-licence guard · case- and whitespace-
+  // insensitive so "Unknown" / "UNKNOWN" / "  unknown  " / "" cannot
+  // bypass the honest-refusal rule.
+  if (isLicenceUnknown(input.provenance.licenceIdentifier)) {
     return { kind: "rejected", reason: "licence_unknown" };
   }
-  if (!input.licencePermitsDisplay) {
+  if (!input.governance.canDisplay) {
     return { kind: "rejected", reason: "licence_forbids_display" };
   }
-  if (input.licenceRequiresAttribution) {
+  if (input.governance.attributionRequired) {
     const hasAttribution =
       input.provenance.attributionText !== null &&
       input.provenance.attributionText.trim().length > 0;

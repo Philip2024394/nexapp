@@ -11,7 +11,21 @@ import {
   promoteMatchedToRightsChecked,
   promoteRightsCheckedToApproved,
 } from "../image-states";
-import type { ImageProvenance } from "../types";
+import type { ImageProvenance, SourceRegistryGovernance } from "../types";
+
+function governance(
+  overrides: Partial<SourceRegistryGovernance> = {},
+): SourceRegistryGovernance {
+  return {
+    sourceId: "src-1",
+    canDisplay: true,
+    canDerive: true,
+    canRedistribute: true,
+    attributionRequired: true,
+    attributionTemplate: "Attribution: {{text}}",
+    ...overrides,
+  };
+}
 
 function provenance(
   overrides: Partial<ImageProvenance> = {},
@@ -76,8 +90,7 @@ describe("Matched -> RightsChecked", () => {
   it("promotes when licence permits display + attribution satisfied", () => {
     const r = promoteMatchedToRightsChecked("Matched", {
       provenance: provenance(),
-      licenceRequiresAttribution: true,
-      licencePermitsDisplay: true,
+      governance: governance(),
     });
     expect(r).toEqual({ kind: "promoted", nextState: "RightsChecked" });
   });
@@ -85,17 +98,26 @@ describe("Matched -> RightsChecked", () => {
   it("rejects unknown licence · honest refusal, never guess", () => {
     const r = promoteMatchedToRightsChecked("Matched", {
       provenance: provenance({ licenceIdentifier: "unknown" }),
-      licenceRequiresAttribution: false,
-      licencePermitsDisplay: true,
+      governance: governance({ attributionRequired: false }),
     });
     expect(r).toEqual({ kind: "rejected", reason: "licence_unknown" });
+  });
+
+  it("F-5 · rejects case-variant Unknown · case- and whitespace-insensitive guard", () => {
+    const variants = ["Unknown", "UNKNOWN", "  unknown  ", "UnKnOwN", ""];
+    for (const v of variants) {
+      const r = promoteMatchedToRightsChecked("Matched", {
+        provenance: provenance({ licenceIdentifier: v }),
+        governance: governance({ attributionRequired: false }),
+      });
+      expect(r).toEqual({ kind: "rejected", reason: "licence_unknown" });
+    }
   });
 
   it("rejects licence that forbids display", () => {
     const r = promoteMatchedToRightsChecked("Matched", {
       provenance: provenance(),
-      licenceRequiresAttribution: false,
-      licencePermitsDisplay: false,
+      governance: governance({ attributionRequired: false, canDisplay: false }),
     });
     expect(r).toEqual({ kind: "rejected", reason: "licence_forbids_display" });
   });
@@ -103,8 +125,7 @@ describe("Matched -> RightsChecked", () => {
   it("rejects missing attribution when licence requires it", () => {
     const r = promoteMatchedToRightsChecked("Matched", {
       provenance: provenance({ attributionText: null }),
-      licenceRequiresAttribution: true,
-      licencePermitsDisplay: true,
+      governance: governance(),
     });
     expect(r).toEqual({
       kind: "rejected",
@@ -115,8 +136,7 @@ describe("Matched -> RightsChecked", () => {
   it("passes when licence does NOT require attribution and no attribution set", () => {
     const r = promoteMatchedToRightsChecked("Matched", {
       provenance: provenance({ attributionText: null }),
-      licenceRequiresAttribution: false,
-      licencePermitsDisplay: true,
+      governance: governance({ attributionRequired: false }),
     });
     expect(r).toEqual({ kind: "promoted", nextState: "RightsChecked" });
   });
@@ -124,12 +144,22 @@ describe("Matched -> RightsChecked", () => {
   it("rejects promotion attempt from a state before Matched", () => {
     const r = promoteMatchedToRightsChecked("Fetched", {
       provenance: provenance(),
-      licenceRequiresAttribution: false,
-      licencePermitsDisplay: true,
+      governance: governance({ attributionRequired: false }),
     });
     expect(r).toEqual({
       kind: "rejected",
       reason: "match_evidence_missing",
+    });
+  });
+
+  it("F-6 · rejects governance whose sourceId does not match the image's sourceRegistryId", () => {
+    const r = promoteMatchedToRightsChecked("Matched", {
+      provenance: provenance({ sourceRegistryId: "src-1" }),
+      governance: governance({ sourceId: "src-DIFFERENT" }),
+    });
+    expect(r).toEqual({
+      kind: "rejected",
+      reason: "governance_source_mismatch",
     });
   });
 });

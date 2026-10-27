@@ -34,6 +34,45 @@
 
 import type { ImageFlowState } from "./image-states";
 
+// ─── Source-registry governance input (F-6) ──────────────────────────
+
+/** Typed snapshot of a `nex.source_registry` row for the governance
+ *  gate. Replaces the earlier free-form `licenceRequiresAttribution` +
+ *  `licencePermitsDisplay` booleans so the state machine can read the
+ *  governance flags directly off the registry record · a caller
+ *  cannot "lie" with boolean literals, they must present a typed
+ *  governance object sourced from the registry.
+ *
+ *  Owner directive 2026-10-27 (F-6): *"Replace caller-supplied
+ *  governance booleans with a typed source-registry governance input,
+ *  or an equally safe typed contract."* */
+export interface SourceRegistryGovernance {
+  /** `nex.source_registry.source_id` · retained for provenance stamps
+   *  on `ImageProvenance.sourceRegistryId`. */
+  readonly sourceId: string;
+  /** `nex.source_registry.can_display` · whether the sealed Directory
+   *  publication view can emit rows attributed to this source. */
+  readonly canDisplay: boolean;
+  /** `nex.source_registry.can_derive` · whether NEX may create a
+   *  derivative work (e.g. a resized / re-encoded image) from the
+   *  source. The pipeline needs this true to persist a webp
+   *  re-encode. */
+  readonly canDerive: boolean;
+  /** `nex.source_registry.can_redistribute` · whether NEX may serve
+   *  the asset from its own storage bucket. Required true for images
+   *  that will be served from the sealed `nex-media` bucket. */
+  readonly canRedistribute: boolean;
+  /** `nex.source_registry.attribution_required` · when true, the
+   *  state machine refuses to promote without a non-empty
+   *  `ImageProvenance.attributionText`. */
+  readonly attributionRequired: boolean;
+  /** `nex.source_registry.attribution_template` · null when the
+   *  licence does not require attribution. The pipeline carries this
+   *  through so the UI can render the required attribution verbatim ·
+   *  it is NEVER fabricated. */
+  readonly attributionTemplate: string | null;
+}
+
 // ─── Business-match evidence ─────────────────────────────────────────
 
 /** Why this pipeline believes a given image/contact-field belongs to a
