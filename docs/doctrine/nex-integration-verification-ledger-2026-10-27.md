@@ -605,6 +605,47 @@ Note: three further doctrines I authored this session are **already committed** 
 
 14 untracked doctrine files sit in the dirty tree. Their status markers are honest and self-describing (DRAFT · HELD · OWNER-APPROVED). **No change to commit them in this session** · owner decides whether and in which release batch each lands. The DRAFT state is the correct posture for the 4 explicit DRAFT files; the SHIPPED/APPROVED ones (3) could be committed under owner authorisation to make their status part of the git record.
 
+## 6u · Cart + cart-order (I-AA · 2026-10-27)
+
+| Piece | Status | Evidence |
+|---|---|---|
+| UI | **IMPLEMENTED** | `/cart/page.tsx` + `_cart-client.tsx` + delivery address + estimator. |
+| `sendCartOrderAction` | **LOCALLY VERIFIED** | `_actions.ts:2223` sends cart as peer message via sealed `sendPeerMessage` path (shared with Chat §1). |
+| `cart-service.ts` | **IMPLEMENTED** | `getServerCart`, `saveServerCart`, `clearServerCart` + actions. |
+| `nex_cart` table | **VERIFIED-SUPABASE-RO** | Present. |
+| Tests | **LOCALLY VERIFIED** | `send-cart-order-slice-0.test.ts` · **39/39 PASS**. |
+
+**Cart conclusion:** one of the healthiest flows · UI → action → sendPeerMessage → persisted on existing live Supabase. No gap.
+
+## 6v · Emergency-help (I-BB · 2026-10-27)
+
+| Piece | Status | Evidence |
+|---|---|---|
+| UI surface (11 routes) | **IMPLEMENTED** | `/emergency-help/*` · activate · active · alert · group · history · how-it-works · incident · responder · trusted-contacts. |
+| Service modules | **IMPLEMENTED** | `src/lib/nex-native/emergency/emergency-activation.ts` + `emergency-notification-service.ts`. |
+| Supabase tables | **MISSING** | **Zero `nex_emergency*` tables** in Supabase. Migration 225 (`225_nex_emergency_profile.sql`) is in the gap list. |
+| Table reads in production code | **NONE FOUND** | `grep "from(.*nex_emergency"` across `src/` returns zero results. Only reference is `_group-countdown.ts` using a **localStorage key** named `nex_emergency_group_started_at` (NOT a table). |
+
+**Emergency-help conclusion:** large UI surface with no Supabase backend binding today. State lives in localStorage / in-memory. Migration 225 remains in the gap list. Owner decision gate required before this becomes persisted-live.
+
+## 6w · Supabase extensions (I-CC · 2026-10-27)
+
+Installed Postgres extensions in project `ijvqdvsvwtwxzcqmoqit`:
+
+| Extension | Version | Purpose |
+|---|---|---|
+| `pg_cron` | 1.6.4 | Scheduled jobs |
+| `pg_stat_statements` | 1.11 | Query performance |
+| `pg_trgm` | 1.6 | Trigram text search |
+| `pgcrypto` | 1.3 | Encryption primitives |
+| `plpgsql` | 1.0 | Procedural language |
+| `postgis` | 3.3.7 | Geographic queries · supports Community 2km address-anchored radius and directory location (`location_lat` / `location_lng` on `nex_business`). |
+| `supabase_vault` | 0.3.1 | Supabase-managed secret storage (unrelated to NEX Vault feature naming). |
+| `uuid-ossp` | 1.1 | UUID generation. |
+| `vector` | 0.8.2 | pgvector · AI embeddings / semantic search capability. |
+
+**All expected extensions installed.** `pg_trgm` supports the watch-listing tsvector search in migration 230 (when applied). `postgis` is live and ready for Community `community_discovery_zone_id` + directory distance queries. `vector` is available for future embedding features.
+
 ## 8 · What this ledger is NOT
 
 - Not a sign-off that any area is "production-ready".
