@@ -198,9 +198,11 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       kind: "friend" as const,
       displayName: a.display_name ?? "friend",
       handle: a.nex_handle,
-      // avatar_url lives on nex_account_profile (not nex_account) · Phase 1
-      // falls back to initials for every row · profile-service wiring deferred.
-      avatarUrl: null,
+      // avatar_url lives on nex_account_profile (not nex_account). Phase 1
+      // wiring complete 2026-10-28 · profile fetched in parallel above at
+      // friendProfiles[i] · hand the real URL through; the UI falls back
+      // to initials when null for accounts without a profile avatar.
+      avatarUrl: profile?.avatar_url ?? null,
       chatHref: `/nex-native/chat/peer/${a.id}`,
       profileHref: a.nex_handle ? `/nex-native/u/${a.nex_handle}` : null,
       // Owner directive 2026-10-17 · "profession · headline" with

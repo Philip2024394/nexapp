@@ -41,9 +41,13 @@ import {
   serializeFeedPrefs,
 } from "@/lib/nex-native/live-feed/feed-preferences-cookie";
 
-const BORDER = "rgba(255, 255, 255, 0.12)";
-const TEXT = "#F2F5F8";
-const DIM = "#8BA9D1";
+// Owner directive 2026-10-27 · "same theme color as this NEX palette
+// object" · aligned to the LIGHT MessagePanel palette (near-white
+// panel with dark navy text). Only consumed by LiveFeedModal, so a
+// local palette swap is safe.
+const BORDER = "rgba(16, 32, 51, 0.14)";
+const TEXT = "#102033";
+const DIM = "#4A6080";
 const CYAN = "#00AFFF";
 
 const STORAGE_KEY = "nex-live-feed-prefs-v1";
@@ -364,7 +368,7 @@ function PreferenceRow(props: {
         gap: 8,
         padding: "6px 8px",
         borderRadius: 8,
-        background: "rgba(255, 255, 255, 0.04)",
+        background: "rgba(16, 32, 51, 0.04)",
         border: `1px solid ${BORDER}`,
         boxSizing: "border-box",
       }}
@@ -407,7 +411,7 @@ function PreferenceRow(props: {
           width: 40,
           height: 22,
           borderRadius: 999,
-          background: allowed ? CYAN : "rgba(255, 255, 255, 0.14)",
+          background: allowed ? CYAN : "rgba(16, 32, 51, 0.14)",
           border: `1px solid ${allowed ? CYAN : BORDER}`,
           cursor: "pointer",
           position: "relative",
@@ -471,7 +475,7 @@ function OverlayPreferenceControl(props: {
         marginTop: 6,
         padding: "8px",
         borderRadius: 10,
-        background: "rgba(255, 255, 255, 0.04)",
+        background: "rgba(16, 32, 51, 0.04)",
         border: `1px solid ${BORDER}`,
         display: "flex",
         flexDirection: "column",
@@ -513,7 +517,7 @@ function OverlayPreferenceControl(props: {
           gap: 4,
           padding: 2,
           borderRadius: 8,
-          background: "rgba(0, 0, 0, 0.3)",
+          background: "rgba(16, 32, 51, 0.06)",
           border: `1px solid ${BORDER}`,
         }}
       >

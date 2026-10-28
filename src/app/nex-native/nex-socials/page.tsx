@@ -26,7 +26,12 @@ export const dynamic = "force-dynamic";
 
 export default async function NexSocialsLandingPage() {
   const session = await resolveNexAppSessionFromContext();
-  if (!session) {
+  // Owner directive 2026-10-25 · dev-pass pattern (same as emergency
+  // flow surfaces) · in production a guest still redirects to sign-in,
+  // but in dev the drawer click-through to Socials renders cold so
+  // the page can be previewed without authentication. The chooser
+  // handles declaredIntents=[] honestly (no preselect).
+  if (!session && process.env.NODE_ENV === "production") {
     redirect("/nex-native/sign-in?next=/nex-native/nex-socials");
   }
 
@@ -34,24 +39,26 @@ export default async function NexSocialsLandingPage() {
   // Empty array means they haven't declared yet; chooser renders cold
   // without preselects. Never fabricated.
   let declared: SocialIntent[] = [];
-  try {
-    const { data } = await nexSupabaseAdmin
-      .from("nex_account")
-      .select("social_intents")
-      .eq("id", session.account.id)
-      .maybeSingle();
-    const raw = (data as { social_intents?: unknown } | null)?.social_intents;
-    if (Array.isArray(raw)) {
-      declared = raw.filter(
-        (t): t is SocialIntent =>
-          t === "business" ||
-          t === "new_friends" ||
-          t === "dating" ||
-          t === "nightlife",
-      );
+  if (session) {
+    try {
+      const { data } = await nexSupabaseAdmin
+        .from("nex_account")
+        .select("social_intents")
+        .eq("id", session.account.id)
+        .maybeSingle();
+      const raw = (data as { social_intents?: unknown } | null)?.social_intents;
+      if (Array.isArray(raw)) {
+        declared = raw.filter(
+          (t): t is SocialIntent =>
+            t === "business" ||
+            t === "new_friends" ||
+            t === "dating" ||
+            t === "nightlife",
+        );
+      }
+    } catch {
+      // Non-fatal · chooser renders cold.
     }
-  } catch {
-    // Non-fatal · chooser renders cold.
   }
 
   return <NexSocialsChooser declaredIntents={declared} />;

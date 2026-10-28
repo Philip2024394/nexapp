@@ -105,6 +105,18 @@ export async function withdrawIncidentAction(
   return { incidentId, status: "withdrawn" };
 }
 
+// Owner directive 2026-10-25 · Mark-as-safe (activator-initiated
+// resolve) and Report-false-alarm (helper-initiated flag) actions.
+// Prototype shape · returns a deterministic acknowledgement. The
+// real backend will update `emergency_incident.state = 'resolved'`
+// / 'flagged_for_review' and emit the corresponding fanout events.
+export async function flagEmergencyAction(
+  incidentId: string,
+  reason?: string,
+): Promise<{ incidentId: string; flagged: true; reason: string | null }> {
+  return { incidentId, flagged: true, reason: reason ?? null };
+}
+
 export async function optInAsResponderAction(args: {
   radiusKm: number;
 }): Promise<EmergencyResponderOptIn> {

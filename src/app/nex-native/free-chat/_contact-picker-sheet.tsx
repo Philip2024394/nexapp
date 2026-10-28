@@ -30,6 +30,15 @@ import { NEX_FONT_SANS } from "@/lib/nex-native/design-tokens";
 // the sheet falls back to MOCK_CONTACTS for its original demo
 // behaviour inside /free-chat.
 
+// Owner directive 2026-10-23 (revised) · aligned with the sealed Chat
+// Master Layout Rule 2026-10-14 ("themes = skins NEVER chrome"). The
+// contact-picker sheet is CHROME mounted on top of a chat · it must
+// stay NEX cyan regardless of which theme the chat behind it uses.
+// The prior `accentHex` prop is retired below so no caller can tint
+// the sheet by accident. The chat behind the sheet still shows its
+// theme · the sheet itself is neutral chrome.
+const SHEET_ACCENT_HEX = "#00AFFF";
+
 const NEX = {
   bgNavy: "#050F1E",
   bgDeep: "#020914",
@@ -55,7 +64,6 @@ const NEX = {
 
 export interface ContactPickerSheetProps {
   readonly open: boolean;
-  readonly accentHex: string;
   readonly onClose: () => void;
   // Owner directive 2026-10-22 (evening · pass 20) · invite-only
   // doctrine. Contact-share action is retired to match the sealed
@@ -79,12 +87,13 @@ const HOLD_TO_SEND_MS = 5000;
 
 export function ContactPickerSheet({
   open,
-  accentHex,
   onClose,
   onInvite,
   onShopShare,
   contacts,
 }: ContactPickerSheetProps): React.JSX.Element | null {
+  // Chrome-locked accent · see SHEET_ACCENT_HEX note above.
+  const accentHex = SHEET_ACCENT_HEX;
   // Resolve the source of truth for which rows this instance renders.
   // Free-chat composer (default · contacts omitted) → MOCK_CONTACTS.
   // Signed-in wrapper → real rows loaded from the server.
@@ -419,7 +428,6 @@ export function ContactPickerSheet({
             <ContactCard
               key={c.id}
               contact={c}
-              accentHex={accentHex}
               onInvite={() => onInvite(c)}
               onShopShare={() => onShopShare(c)}
               onHoldStart={() => startHold(c.id)}
@@ -440,7 +448,6 @@ export function ContactPickerSheet({
 
 function ContactCard({
   contact,
-  accentHex,
   onInvite,
   onShopShare,
   onHoldStart,
@@ -448,13 +455,14 @@ function ContactCard({
   holdProgress,
 }: {
   readonly contact: MockContact;
-  readonly accentHex: string;
   readonly onInvite: () => void;
   readonly onShopShare: () => void;
   readonly onHoldStart: () => void;
   readonly onHoldEnd: () => void;
   readonly holdProgress: number;
 }): React.JSX.Element {
+  // Chrome-locked accent · see SHEET_ACCENT_HEX note above.
+  const accentHex = SHEET_ACCENT_HEX;
   const ringColor =
     contact.presence === "online"
       ? NEX.presenceOnline
@@ -790,7 +798,10 @@ function ContactCard({
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
-              textShadow: `0 0 8px ${accentHex}99`,
+              // Owner directive 2026-10-23 · "remove the line behind
+              // the user name and nex id number" · same rule applied
+              // to the contact-slider card · textShadow glow halo
+              // retired · name sits cleanly against the chip + rim.
             }}
           >
             {contact.displayName}

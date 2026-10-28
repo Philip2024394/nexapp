@@ -119,6 +119,25 @@ export default async function VideoViewerPage({
     siblingIds = allVideos.map((v) => v.id);
   }
 
+  // Owner directive 2026-10-27 · S2 streaming hardening · resolve
+  // the public URLs for the swipe-next AND swipe-prev neighbours so
+  // the viewer can mount hidden `<video preload="auto">` elements
+  // for both. Starting the fetch during the current playback means
+  // the first frame of the next clip is already decoded by the time
+  // the user swipes. Null when the neighbour doesn't exist (end /
+  // start of the chain) or resolves to not-found.
+  const currentIndex = siblingIds.indexOf(videoId);
+  const nextId = currentIndex >= 0 && currentIndex < siblingIds.length - 1
+    ? siblingIds[currentIndex + 1]
+    : null;
+  const prevId = currentIndex > 0 ? siblingIds[currentIndex - 1] : null;
+  const [nextResolved, prevResolved] = await Promise.all([
+    nextId ? resolveCurrentVideo(nextId) : Promise.resolve(null),
+    prevId ? resolveCurrentVideo(prevId) : Promise.resolve(null),
+  ]);
+  const nextPublicUrl = nextResolved?.publicUrl ?? null;
+  const prevPublicUrl = prevResolved?.publicUrl ?? null;
+
   return (
     <VideoViewerClient
       video={resolved.video}
@@ -127,6 +146,8 @@ export default async function VideoViewerPage({
       chainLabel={chainLabel}
       chainSlug={chain ? chain.slug : null}
       currentTopicLabel={currentTopicLabel}
+      nextPublicUrl={nextPublicUrl}
+      prevPublicUrl={prevPublicUrl}
     />
   );
 }

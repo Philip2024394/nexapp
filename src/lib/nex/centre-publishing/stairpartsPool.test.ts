@@ -101,7 +101,13 @@ describe("isStairpartsSupplier detection", () => {
 
   it("returns false for a plain staircase manufacturer", () => {
     const seed = baseSeed({
-      capabilities: { manufacture: "yes", installation: "yes" },
+      // 2026-10-28 · typo fix · the enum key is `staircase_manufacture`
+      // (full form), not `manufacture`. The function under test doesn't
+      // read these keys at all · the assertion runs through the
+      // `business_type` branch · so this annotation is for human
+      // readers only. Using the canonical key keeps the test aligned
+      // with the RefacingCapabilityKey union.
+      capabilities: { staircase_manufacture: "yes", installation: "yes" },
     });
     (seed as unknown as { business_type?: string }).business_type =
       "STAIRCASE_MANUFACTURER";

@@ -164,14 +164,20 @@ export async function activateEmergencyAction(
     if (owned.state !== "draft") return fail("invalid_state_transition");
 
     // Resolve recipients using the incident's captured location.
+    // Owner directive 2026-10-25 · "the alert is for all nex app users
+    // within 50 km distance approx". Search radius bumped 5 → 50.
+    // See the three remaining caps surfaced below the activateEmergencyAction
+    // comment (responder.radius_km CHECK ≤ 25 · maxNearbyOptIns cap at
+    // 25 · resolver not wired into countdown flow) — all three need
+    // owner decisions before "all 50km users" actually broadcasts.
     const resolved = await svcResolveRecipients({
       incidentId,
       locationLat: owned.locationLat,
       locationLng: owned.locationLng,
       requesterAccountId,
       maxTrustedContacts: 20,
-      maxNearbyOptIns: 25,
-      radiusKm: 5,
+      maxNearbyOptIns: 50,
+      radiusKm: 50,
     });
 
     // Write recipient rows (idempotent).
@@ -298,6 +304,36 @@ export async function confirmPendingAlertAction(args: {
       incidentId: args.incidentId,
       actorAccountId: requesterAccountId,
     });
+
+    // Owner directive 2026-10-25 · wire the recipient resolver into
+    // the countdown flow. Previously only the legacy draft→active path
+    // populated incident_recipient rows; the countdown flow left the
+    // incident_recipient table empty so the matrix "accepted by X
+    // nearby member" lines described a reality that didn't exist.
+    // Resolve + write rows BEFORE firing the fan-out hook so the hook
+    // (once live) has a real recipient list to deliver to. All failures
+    // are swallowed · an incident reaching "active" without a recipient
+    // list is still worth keeping (owner's "on the record" doctrine)
+    // rather than failing the whole confirm.
+    try {
+      const resolved = await svcResolveRecipients({
+        incidentId: confirmed.incidentId,
+        locationLat: confirmed.locationLat,
+        locationLng: confirmed.locationLng,
+        requesterAccountId,
+        maxTrustedContacts: 20,
+        maxNearbyOptIns: 50,
+        radiusKm: 50,
+      });
+      await svcWriteRecipientRows(
+        confirmed.incidentId,
+        resolved.layer1 as string[],
+        resolved.layer2 as string[],
+      );
+    } catch {
+      // intentionally swallowed · see comment above
+    }
+
     const fanOut = await fanOutForTransitionStub({
       incidentId: confirmed.incidentId,
       requesterAccountId,
@@ -471,6 +507,14 @@ export async function acceptIncidentAction(
   incidentId: string,
   etaMinutes: number,
 ): Promise<EmergencyActionResult<{ incidentState: string }>> {
+  // Dev-only mock bypass · unblocks the 3-button recipient Alert
+  // Screen without session or migration 224.
+  if (isEmergencyDevMockActive()) {
+    const existing = await resolveActorAccountId();
+    if (existing === null) {
+      return ok({ incidentState: "responders_assigned" });
+    }
+  }
   return requireActor(async (responderAccountId) => {
     if (!Number.isFinite(etaMinutes) || !Number.isInteger(etaMinutes)
         || etaMinutes < 1 || etaMinutes > 480) {
@@ -483,6 +527,12 @@ export async function acceptIncidentAction(
 export async function declineIncidentAction(
   incidentId: string,
 ): Promise<EmergencyActionResult<{ incidentState: string }>> {
+  if (isEmergencyDevMockActive()) {
+    const existing = await resolveActorAccountId();
+    if (existing === null) {
+      return ok({ incidentState: "active" });
+    }
+  }
   return requireActor(async (responderAccountId) =>
     updateResponderStatus(incidentId, responderAccountId, "declined", null),
   );
@@ -491,6 +541,12 @@ export async function declineIncidentAction(
 export async function withdrawIncidentAction(
   incidentId: string,
 ): Promise<EmergencyActionResult<{ incidentState: string }>> {
+  if (isEmergencyDevMockActive()) {
+    const existing = await resolveActorAccountId();
+    if (existing === null) {
+      return ok({ incidentState: "active" });
+    }
+  }
   return requireActor(async (responderAccountId) =>
     updateResponderStatus(incidentId, responderAccountId, "withdrawn", null),
   );

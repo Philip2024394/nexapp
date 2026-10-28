@@ -51,6 +51,13 @@ import * as likedProductService from "@/lib/nex-native/liked-product-service";
 import * as orderService from "@/lib/nex-native/order-service";
 import * as commerceService from "@/lib/nex-native/commerce-service";
 import * as cartService from "@/lib/nex-native/cart-service";
+// Phase 1 · Slice 1D · owner-authorised 2026-10-24 · marketing-layer
+// signal writer. Fire-and-await after successful sendPeerMessage so
+// the signal reflects a confirmed enquiry · never a request that
+// failed validation. The writer is env-gated and swallows errors
+// (see discovery-signal-service.ts) so a failed write cannot corrupt
+// a successful enquiry.
+import { recordDiscoverySignal } from "@/lib/nex-native/discovery/discovery-signal-service";
 import {
   NEX_DELIVERY_ADDRESS_EMPTY,
   type NexCartItem,
@@ -1185,7 +1192,7 @@ export async function uploadPeerAttachmentAction(
   }
 
   let successUrl: { url: string; kind: string } | null = null;
-  let failure: string | null = null;
+  let failureRaw: string | null = null;
   try {
     const { url, kind } = await peerMessageService.uploadPeerAttachment(
       session.account.id,
@@ -1193,7 +1200,8 @@ export async function uploadPeerAttachmentAction(
     );
     successUrl = { url, kind };
   } catch (e) {
-    failure = e instanceof Error ? e.message : String(e);
+    failureRaw = e instanceof Error ? e.message : String(e);
+    console.warn("[peer-message] uploadPeerAttachment failed", failureRaw);
   }
 
   // Redirects live outside the try/catch so Next's internal
@@ -1205,7 +1213,17 @@ export async function uploadPeerAttachmentAction(
     });
     redirect(`/nex-native/chat/peer/${peerAccountId}?${qs.toString()}`);
   }
-  const qs = new URLSearchParams({ upload_error: failure ?? "unknown" });
+  // Classify to a safe enum before carrying through the URL · raw
+  // Error.message would leak internals · the server log captures the
+  // underlying reason above for diagnostics.
+  let code: "too_large" | "unsupported_type" | "failed" = "failed";
+  if (failureRaw) {
+    const m = failureRaw.toLowerCase();
+    if (m.includes("too large") || m.includes("size")) code = "too_large";
+    else if (m.includes("mime") || m.includes("type") || m.includes("unsupported"))
+      code = "unsupported_type";
+  }
+  const qs = new URLSearchParams({ upload_error: code });
   redirect(`/nex-native/chat/peer/${peerAccountId}?${qs.toString()}`);
 }
 
@@ -1953,6 +1971,21 @@ export async function sendProductInquiryAction(
   const intent: "ask" | "want" =
     intentRaw === "want" ? "want" : "ask";
   const customBody = String(formData.get("body") ?? "").trim();
+  // Phase 1 · Slice 1A · owner-authorised 2026-10-24 · send-intent-id
+  // idempotency, mirroring sendCartOrderAction's existing pattern
+  // (Migration 102 Part C partial-unique index on nex_peer_message).
+  // Audit 1 (2026-10-24) flagged this action as missing the guard;
+  // a double-tap on "Order Now" / "Chat about X" could create two
+  // messages. Shape-validated UUID is accepted; malformed drops to
+  // undefined so the pre-slice behaviour (no idempotency) is the
+  // fallback instead of throwing.
+  const sendIntentRaw = String(formData.get("send_intent_id") ?? "").trim();
+  const UUID_SHAPE =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const sendIntentId =
+    sendIntentRaw.length > 0 && UUID_SHAPE.test(sendIntentRaw)
+      ? sendIntentRaw
+      : undefined;
   // Bridge 19 · quantity from the +/- picker on product detail.
   const qtyRaw = String(formData.get("quantity") ?? "").trim();
   const qtyParsed = Number.parseInt(qtyRaw, 10);
@@ -2055,7 +2088,46 @@ export async function sendProductInquiryAction(
     attachment_url: hasImage ? product.image_url : null,
     attachment_type: hasImage ? "product" : null,
     attachment_meta: hasImage ? { product: snapshot } : null,
+    send_intent_id: sendIntentId,
   });
+
+  // Phase 1 · Slice 1D · owner-authorised 2026-10-24 · fire the
+  // enquiry_initiated marketing signal AFTER the peer-message insert
+  // resolves successfully, so the signal reflects a confirmed send.
+  // The writer is env-gated (NEX_DISCOVERY_SIGNAL_ENABLED !== "1" →
+  // no DB access) and swallows errors (returns an outcome object ·
+  // never throws · see discovery-signal-service.ts). Defence-in-
+  // depth try/catch guards against any uncaught import-time surprise.
+  //
+  // Idempotency honesty: nex.discovery_signal has NO unique
+  // constraint today. A double-submit emits two signals even though
+  // sendPeerMessage dedups the message via send_intent_id. We ship
+  // the send_intent_id into metadata so a FUTURE slice can add a
+  // partial unique index · exactly-once is NOT yet guaranteed.
+  //
+  // Privacy posture: no message body, no customBody value, no PII
+  // beyond identifiers. The product name / price are already visible
+  // to the seller via the message snapshot · they are not analytics.
+  try {
+    await recordDiscoverySignal({
+      accountId: session.account.id,
+      signalType: "enquiry_initiated",
+      businessId: business.id,
+      metadata: {
+        source: "product_inquiry",
+        product_id: product.id,
+        conversation_id: conversation.id,
+        intent,
+        attachment_type: hasImage ? "product" : null,
+        send_intent_id: sendIntentId ?? null,
+        has_live_context: false,
+      },
+    });
+  } catch {
+    // Fail-open · a signal failure must NEVER corrupt a successful
+    // enquiry. The writer should not throw · this catch is pure
+    // defence-in-depth.
+  }
 
   revalidatePath(`/nex-native/chat/peer/${peerAccountId}`);
   redirect(`/nex-native/chat/peer/${peerAccountId}`);
@@ -2078,6 +2150,17 @@ export async function sendMenuItemInquiryAction(
   const intentRaw = String(formData.get("intent") ?? "").trim();
   const intent: "ask" | "order" = intentRaw === "order" ? "order" : "ask";
   const customBody = String(formData.get("body") ?? "").trim();
+  // Phase 1 · Slice 1A · owner-authorised 2026-10-24 · send-intent-id
+  // idempotency; same pattern as sendProductInquiryAction. Double-tap
+  // on "Order the Nasi Goreng · what's next?" / "Is X available?"
+  // must not produce two messages.
+  const sendIntentRaw = String(formData.get("send_intent_id") ?? "").trim();
+  const UUID_SHAPE =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const sendIntentId =
+    sendIntentRaw.length > 0 && UUID_SHAPE.test(sendIntentRaw)
+      ? sendIntentRaw
+      : undefined;
 
   if (!menuItemId) redirect(`/nex-native/chat/peer/${peerAccountId}`);
 
@@ -2170,7 +2253,31 @@ export async function sendMenuItemInquiryAction(
     attachment_url: hasImage ? item.image_url : null,
     attachment_type: hasImage ? "menu_item" : null,
     attachment_meta: hasImage ? { menu_item: snapshot } : null,
+    send_intent_id: sendIntentId,
   });
+
+  // Phase 1 · Slice 1D · emit enquiry_initiated for menu-item path.
+  // Same posture as sendProductInquiryAction above · fire-and-await ·
+  // fail-open · no PII in metadata. See the inline doc there for the
+  // idempotency / env-gate reasoning.
+  try {
+    await recordDiscoverySignal({
+      accountId: session.account.id,
+      signalType: "enquiry_initiated",
+      businessId: business.id,
+      metadata: {
+        source: "menu_item_inquiry",
+        menu_item_id: item.id,
+        conversation_id: conversation.id,
+        intent,
+        attachment_type: hasImage ? "menu_item" : null,
+        send_intent_id: sendIntentId ?? null,
+        has_live_context: false,
+      },
+    });
+  } catch {
+    // Fail-open · signal failure must not corrupt a successful enquiry.
+  }
 
   revalidatePath(`/nex-native/chat/peer/${peerAccountId}`);
   redirect(`/nex-native/chat/peer/${peerAccountId}`);
@@ -2728,6 +2835,38 @@ export async function sendCartOrderAction(
   // The snapshot still lives on attachment_meta so if a client wants
   // to hydrate it via a separate mechanism it can.
 
+  // Phase 1 · Slice 1D · emit cart_sent after a confirmed cart
+  // delivery. Metadata carries aggregate shape (item_count,
+  // subtotal_pence, currency) + conversation + idempotency key.
+  // Explicitly NOT included: buyer_notes (private · may contain
+  // personal context), delivery_address (PII · recipient_name /
+  // phone / street), per-line product names / notes.
+  //
+  // Idempotency honesty: same limitation as the enquiry emissions
+  // above · a double-tap on Send yields two signals even though
+  // sendPeerMessage dedups the message. send_intent_id is passed
+  // through so a future partial unique index on
+  // (account_id, metadata->>'send_intent_id') can close the gap.
+  try {
+    await recordDiscoverySignal({
+      accountId: session.account.id,
+      signalType: "cart_sent",
+      businessId: shopId,
+      metadata: {
+        source: "cart_order",
+        conversation_id: conversation.id,
+        item_count: snapshot.item_count,
+        subtotal_pence: snapshot.subtotal_pence,
+        currency: snapshot.currency,
+        has_delivery_quote: !!snapshot.delivery_quote,
+        has_direct_price: !!snapshot.direct_price,
+        send_intent_id: sendIntentId ?? null,
+      },
+    });
+  } catch {
+    // Fail-open · signal failure must not corrupt a successful cart.
+  }
+
   // Bridge 49b-final · consume the applied grant · one-shot mark so
   // it can't be re-applied on a follow-up cart send within the 48hr
   // window. Non-fatal · if the mark fails, the grant will still lapse
@@ -3231,6 +3370,38 @@ export async function shareProductToContactAction(
       ? shareBackHref
       : "/nex-native/chat";
 
+  // Phase 1 · Slice 1B · owner-authorised 2026-10-24 · persist the
+  // originating live-session reference inside the product snapshot
+  // when the share comes from the viewer-side "Order now" CTA on a
+  // NEX Live Commerce broadcast. Audit 2 (2026-10-24) flagged this
+  // action as DROPPING live_session_id · the composer form passes the
+  // field (chat/peer/[accountId]/_composer.tsx:647-653) but the server
+  // ignored it.
+  //
+  // Validation posture:
+  //   · Shape validation only (UUID). Malformed values are DROPPED
+  //     (field omitted from the snapshot) rather than throwing so
+  //     non-Live product shares keep working.
+  //   · Server-side session EXISTENCE + broadcaster OWNERSHIP checks
+  //     are BLOCKED by G2 (no nex_live_session table yet · Phase 2
+  //     schema work). A client-supplied id is therefore trusted ONLY
+  //     as a historical reference to the session the client claims
+  //     to have come from · NEVER as proof that a Live session is
+  //     active or that peerAccountId is the broadcaster.
+  //   · Downstream renderers that want to display "LIVE NOW" MUST
+  //     look up the session's actual state (G2 Phase 2). Rendering a
+  //     persisted live_session_id as currently-live without lookup is
+  //     a doctrine violation. See NexPeerProductSnapshot JSDoc.
+  const liveSessionRaw = String(
+    formData.get("live_session_id") ?? "",
+  ).trim();
+  const UUID_SHAPE =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const liveSessionId =
+    liveSessionRaw.length > 0 && UUID_SHAPE.test(liveSessionRaw)
+      ? liveSessionRaw
+      : null;
+
   if (!productId) {
     redirect(
       safeBack +
@@ -3270,6 +3441,10 @@ export async function shareProductToContactAction(
     image_url: product.image_url ?? null,
     short_description:
       product.description?.split(/[.··]/)[0]?.trim().slice(0, 140) ?? null,
+    // Phase 1 · Slice 1B · additive. Null when the share is not from
+    // a Live context (preserves pre-slice behaviour) or when the
+    // client-supplied value failed shape validation.
+    live_session_id: liveSessionId,
   };
 
   const defaultBody = `Just seen and it looks keen 👀 · from ${originShop.display_name}`;
@@ -3323,6 +3498,38 @@ export async function shareProductToContactAction(
     attachment_meta: hasImage ? { product: snapshot } : null,
   });
 
+  // Phase 1 · Slice 1D · emit enquiry_initiated for product-share
+  // path. This is the live-aware action · live_session_id (if the
+  // client supplied a valid UUID per Slice 1B) is captured in the
+  // metadata as `has_live_context: true` so a future seller
+  // dashboard can count enquiries that originated from Live without
+  // leaking the raw session id to anywhere the Marketing-layer
+  // boundary says it should not go.
+  //
+  // The raw live_session_id is INTENTIONALLY NOT added to metadata
+  // here · it is already persisted alongside the product snapshot
+  // in the chat message (Slice 1B). Replicating it into
+  // discovery_signal would spread the identifier across layers
+  // unnecessarily. If a future slice needs it for cross-layer joins
+  // that respect the Marketing boundary, add it then with explicit
+  // scope.
+  try {
+    await recordDiscoverySignal({
+      accountId: session.account.id,
+      signalType: "enquiry_initiated",
+      businessId: originShop.id,
+      metadata: {
+        source: "product_share",
+        product_id: product.id,
+        conversation_id: conversation.id,
+        attachment_type: hasImage ? "product" : null,
+        has_live_context: liveSessionId !== null,
+      },
+    });
+  } catch {
+    // Fail-open · signal failure must not corrupt a successful share.
+  }
+
   revalidatePath(`/nex-native/chat/peer/${peerAccountId}`);
   redirect(`/nex-native/chat/peer/${peerAccountId}`);
 }
@@ -3342,10 +3549,23 @@ export async function deletePeerMessageAction(
       session.account.id,
     );
   } catch (e) {
-    // Failure surfaces in the URL as a small banner. Keeps the send
-    // path simple · no throw across the server boundary.
-    const msg = e instanceof Error ? e.message : String(e);
-    const qs = new URLSearchParams({ delete_error: msg });
+    if ((e as { digest?: string } | undefined)?.digest === "NEXT_REDIRECT") {
+      throw e;
+    }
+    // Classify to a safe enum before carrying through the URL. Raw
+    // Error.message would leak service-layer internals (table names,
+    // ids) into the user's address bar · logged server-side instead so
+    // diagnostic info isn't lost.
+    const rawMsg = e instanceof Error ? e.message : String(e);
+    console.warn(
+      "[peer-message] deletePeerMessageForEveryone failed",
+      e instanceof Error ? e.message : e,
+    );
+    let code: "not_found" | "not_allowed" | "too_late" | "failed" = "failed";
+    if (rawMsg.includes("message not found")) code = "not_found";
+    else if (rawMsg.includes("only the sender can delete")) code = "not_allowed";
+    else if (rawMsg.includes("delete window has passed")) code = "too_late";
+    const qs = new URLSearchParams({ delete_error: code });
     redirect(`/nex-native/chat/peer/${peerAccountId}?${qs.toString()}`);
   }
 

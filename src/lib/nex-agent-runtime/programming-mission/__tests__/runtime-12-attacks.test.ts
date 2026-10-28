@@ -26,8 +26,6 @@ import path from "node:path";
 import { generateKeyPairSync, randomUUID, sign as ed25519Sign } from "node:crypto";
 
 import { startNex1Daemon } from "@/lib/nex-agent-runtime/nex1/daemon";
-import { generateKeyPair } from "@/lib/nex-controlled-hands/ed25519";
-import { buildFounderKeyRecordForTest, type FounderKeyManifest } from "@/lib/nex1-orchestrator/wo2-founder-keys";
 
 import { prepareProgrammingMissionDraft, loadDraft, PROGRAMMING_MISSION_DRAFT_COLLECTION } from "../draft";
 import { canonicaliseDelegation, signFounderDelegation, persistRevocation, signFounderRevocation } from "@/lib/nex-agent-runtime/founder-authority/delegation";

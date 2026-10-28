@@ -275,13 +275,13 @@ const YOUR_BUSINESS_ROWS: ReadonlyArray<MenuRow> = [
          3 · empty state → /live-commerce/feed
        Keeps the drawer entry opening the Live SCREEN with chrome,
        not a list. Direct routes still work:
-         /live-commerce/go-live  → broadcaster surface
+         /live-commerce/enter-broadcast-room  → broadcaster surface
          /live-commerce/feed     → discovery list fallback
          /videos/[videoId]       → uploaded-video viewer */
     href: "/nex-native/live-commerce",
     /* Owner directive 2026-10-24 · "unlock go live in side drawer".
        The drawer no longer renders a lock icon on this row. The
-       underlying page at /nex-native/live-commerce/go-live keeps its
+       underlying page at /nex-native/live-commerce/enter-broadcast-room keeps its
        OWN sealed sign-in gate (sealed 2026-10-22 identity-sealing · the
        broadcaster id is the signed-in NEX account id · guests still
        land on sign-in before the broadcaster surface renders). The
@@ -748,7 +748,7 @@ const QUICK_ACCESS_ROWS: ReadonlyArray<{
 }> = [
   { key: "live",    label: "Live",    href: "/nex-native/live-commerce", glyph: "●" },
   { key: "vault",   label: "Vault",   href: "/nex-native/vault",         glyph: "🔒" },
-  { key: "socials", label: "Socials", href: "/nex-native/nex-socials",   glyph: "👥" },
+  { key: "socials", label: "Socials", href: "/nex-native/nex-socials/intro",   glyph: "👥" },
 ];
 
 function QuickAccessRow(): React.JSX.Element {

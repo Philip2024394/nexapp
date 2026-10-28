@@ -10,7 +10,7 @@
 // Chat Now stays a plain link · that's a pure conversation start
 // with no quantity yet.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 const NEX = {
@@ -34,6 +34,20 @@ export function OrderBar({
   const [qty, setQty] = useState<number>(1);
   const dec = () => setQty((v) => Math.max(1, v - 1));
   const inc = () => setQty((v) => Math.min(99, v + 1));
+
+  // Phase 1 · Slice 1A · owner-authorised 2026-10-24 · idempotency
+  // key for the Order Now submit. Generated client-side after mount
+  // so SSR + first client render agree (empty), eliminating hydration
+  // mismatch. Pre-hydration submits fall back to the pre-slice no-
+  // idempotency behaviour; once the key populates, double-tap and
+  // network-retry collapse onto the same nex_peer_message row via
+  // the sealed partial-unique index.
+  const [sendIntentId, setSendIntentId] = useState<string>("");
+  useEffect(() => {
+    if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+      setSendIntentId(crypto.randomUUID());
+    }
+  }, []);
 
   return (
     <div
@@ -99,6 +113,13 @@ export function OrderBar({
         <input type="hidden" name="product_id" value={productId} />
         <input type="hidden" name="intent" value="want" />
         <input type="hidden" name="quantity" value={qty} readOnly />
+        <input
+          type="hidden"
+          name="send_intent_id"
+          value={sendIntentId}
+          readOnly
+          data-nex-send-intent-id
+        />
         <button
           type="submit"
           style={{

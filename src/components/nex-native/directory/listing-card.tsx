@@ -62,6 +62,7 @@ import { SafeTradeFooterClient } from "./_safe-trade-footer-client";
 import { findIsoCountry } from "@/lib/nex-native/geo/iso-countries";
 import type { ListingCardViewModel } from "@/lib/nex-native/directory/landing-feed-service";
 import { CountryFlag } from "@/components/nex-native/directory/country-flag";
+import { LiveProductIndicator } from "@/components/nex-native/live-commerce/LiveProductIndicator";
 
 const CATEGORY_ICON_SHEET = "/nex-directory/icons/category-grid.png";
 
@@ -75,6 +76,23 @@ export type ListingCardSize = "compact" | "grid" | "grid-tall";
 export interface ListingCardProps {
   readonly listing: ListingCardViewModel;
   readonly size?: ListingCardSize;
+  /** Phase 2 · G2 · optional server-resolved live state (via
+   *  `resolveLiveStateByBusinessIds` from live-broadcast). Default
+   *  undefined · the card renders exactly as before. When
+   *  `isOwnerLive=true`, the image slot renders a small LIVE chip
+   *  top-right · tapping routes to the broadcast instead of the
+   *  shop. Fail-open · unavailable live state renders nothing. */
+  readonly liveState?:
+    | {
+        readonly isOwnerLive: false;
+        readonly liveWatchHref: null;
+      }
+    | {
+        readonly isOwnerLive: true;
+        readonly liveExpiresInMs: number;
+        readonly liveWatchHref: string;
+      }
+    | null;
   /** Owner directive 2026-10-18 · final location-row fallback. When
    *  a listing has neither `city` nor `sellerCountryIso`, the card
    *  uses THIS label instead of hiding the location row. Honest
@@ -96,6 +114,7 @@ export function ListingCard({
   size = "compact",
   fallbackLocationLabel,
   fallbackCountryIso,
+  liveState,
 }: ListingCardProps) {
   const isGrid = size === "grid" || size === "grid-tall";
   const isTall = size === "grid-tall";
@@ -158,6 +177,13 @@ export function ListingCard({
         <SellerCountryFlagChip
           iso={listing.sellerCountryIso ?? fallbackCountryIso ?? null}
         />
+        {liveState?.isOwnerLive ? (
+          <ListingCardLiveChip
+            watchHref={liveState.liveWatchHref ?? null}
+            ownerLabel={listing.title}
+            liveExpiresInMs={liveState.liveExpiresInMs}
+          />
+        ) : null}
         <ViewDetailsCircle />
       </div>
 
@@ -521,8 +547,10 @@ const cardShellStyle: CSSProperties = {
   // column boundaries. Harmless on grid/flex parents · simply
   // ignored. Also adds a small bottom margin so cards don't butt
   // against the next card in the same column.
+  // 2026-10-28 · removed stale `WebkitColumnBreakInside` (vendor
+  // prefix for Safari ≤ 10, no longer in csstype). Modern Safari
+  // supports `breakInside` since v10 (2017).
   breakInside: "avoid",
-  WebkitColumnBreakInside: "avoid",
   marginBottom: 12,
 };
 
@@ -807,3 +835,61 @@ const chevronStyle: CSSProperties = {
 // Dark-ink constant retained for callers who want to style a surrounding
 // grid cell to match. Non-rendering · exported but not required.
 export const LISTING_CARD_INK = COLOR_BG;
+
+// Plan v4 · AC-6 + AC-8 · the per-card LIVE pill is the shared
+// `LiveProductIndicator` so the server-computed TTL decays
+// client-side consistently with the product-page + shop-strip
+// implementations. The absolute positioning + Link wrapping is
+// preserved by this adapter. When the hook signals expiry the inner
+// chip returns null and this wrapper renders an empty element (no
+// stale LIVE claim).
+function ListingCardLiveChip({
+  watchHref,
+  ownerLabel,
+  liveExpiresInMs,
+}: {
+  readonly watchHref: string | null;
+  readonly ownerLabel: string;
+  readonly liveExpiresInMs?: number;
+}) {
+  const indicator = (
+    <LiveProductIndicator
+      isFeaturedLive={true}
+      liveExpiresInMs={liveExpiresInMs}
+      label={`${ownerLabel} is live now`}
+    />
+  );
+  if (watchHref !== null) {
+    return (
+      <a
+        href={watchHref}
+        data-nex-listing-card-live-link
+        aria-label={`Watch ${ownerLabel} on NEX Live`}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: "absolute",
+          top: 8,
+          right: 8,
+          padding: 0,
+          textDecoration: "none",
+          zIndex: 3,
+        }}
+      >
+        {indicator}
+      </a>
+    );
+  }
+  return (
+    <span
+      data-nex-listing-card-live-chip
+      style={{
+        position: "absolute",
+        top: 8,
+        right: 8,
+        zIndex: 3,
+      }}
+    >
+      {indicator}
+    </span>
+  );
+}

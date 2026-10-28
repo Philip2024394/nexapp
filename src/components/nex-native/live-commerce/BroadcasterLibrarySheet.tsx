@@ -44,6 +44,11 @@ export interface BroadcasterLibraryVideo {
    *  published_at, caller decides which is more honest). */
   readonly postedAtIso: string;
   readonly posterUrl: string | null;
+  /** Owner directive 2026-10-27 · "real video instead of image on
+   *  the cards" · the thumbnail renders a muted autoplay <video>
+   *  when this is present, falling back to the poster image when
+   *  it's null (e.g. offline personas or still-processing uploads). */
+  readonly videoUrl?: string | null;
   readonly durationSeconds: number | null;
   readonly viewCount: number;
   readonly likeCount: number;
@@ -63,16 +68,34 @@ export interface BroadcasterLibrarySheetProps {
    *  surfaces the undo toast. The sheet does NOT manage the undo
    *  timeout itself to keep this component pure UI. */
   readonly onDelete: (video: BroadcasterLibraryVideo) => void;
-  /** Owner directive 2026-10-26 · Creator Loop quartet above
-   *  composer · 4 square tiles (same silhouette as the sealed Like
-   *  heart). Live = start a broadcast (red). Record = shoot a new
-   *  post (cyan). Draft = resume an unpublished post (cyan).
-   *  Insights = toggle the metrics strip (cyan). All callbacks are
-   *  caller-managed · the sheet surfaces user intent and leaves
-   *  routing to the parent. */
+  /** Owner directive 2026-10-27 · Creator Loop reshaped from 4
+   *  small tiles into 3 bigger ones:
+   *    · Go Live   → start a broadcast
+   *    · Create    → Add-a-listing page (opens
+   *                   /nex-native/manage/watches/new · Stage A
+   *                   redesign 2026-10-28)
+   *    · Studio    → Insights + Followers + Shop (opens
+   *                   /nex-native/live-commerce/studio)
+   *  All callbacks are caller-managed · the sheet surfaces user
+   *  intent and leaves routing to the parent. */
   readonly onLive?: () => void;
-  readonly onRecord?: () => void;
-  readonly onDraft?: () => void;
+  readonly onCreate?: () => void;
+  readonly onStudio?: () => void;
+  /** Owner directive 2026-10-27 (R9 · Live-eligibility contract) ·
+   *  when the signed-in account is NOT a Shop member, the Go Live
+   *  tile renders a 🔒 overlay + muted styling + routes to the
+   *  packages page instead of starting a broadcast. The server
+   *  shell gate (`/go-live/page.tsx`) is the authoritative check ·
+   *  this prop is a VISUAL hint so the user sees the gate before
+   *  they tap. Caller resolves eligibility via a server action and
+   *  passes `true` for ineligible accounts. Default `false` keeps
+   *  the pre-R9 behaviour for all existing call sites. */
+  readonly liveLocked?: boolean;
+  /** Caller-provided tap handler when the Go Live tile is locked.
+   *  Typically routes to `/nex-native/packages?upsell=live` ·
+   *  caller controls the destination so the sheet stays pure UI.
+   *  Ignored when `liveLocked !== true`. */
+  readonly onLiveLockedTap?: () => void;
   /** Owner directive 2026-10-26 · full-hide chrome mode · the top
    *  chrome bar inside the overlay renders the broadcaster's avatar
    *  + display name + close ✕. Parent passes the identity so the
@@ -82,9 +105,13 @@ export interface BroadcasterLibrarySheetProps {
 }
 
 const RED = "#FF3355";
-const TEXT = "#F2F5F8";
-const DIM = "#8BA9D1";
-const MUTE = "#526B89";
+// Owner directive 2026-10-27 · "same theme color as this NEX palette
+// object (lines 39–48)" · aligned to the LIGHT MessagePanel palette
+// (near-white panel · dark navy text · muted navy secondary). Prior
+// dark values (#F2F5F8 / #8BA9D1 / #526B89) are retired.
+const TEXT = "#102033";
+const DIM = "#4A6080";
+const MUTE = "#4A6080";
 // Owner directive 2026-10-26 (NEX neon blue · not dark) · cards
 // + Record/Draft/Insights quartet tiles use the sealed NEX cyan
 // (#00AFFF) · translucent frosted overlay + brighter cyan rim +
@@ -94,13 +121,10 @@ const CARD_BG = "linear-gradient(135deg, rgba(0, 175, 255, 0.28) 0%, rgba(0, 140
 const CARD_BORDER = "1px solid rgba(0, 200, 255, 0.65)";
 const CARD_SHADOW = "0 0 12px -2px rgba(0, 175, 255, 0.45), 0 4px 14px -4px rgba(0, 20, 50, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12)";
 const CARD_BACKDROP_FILTER = "blur(18px) saturate(160%)";
-// Owner directive 2026-10-26 (polish batch · elevate top performer)
-// · the single card with the highest viewCount gets an amber rim
-// + ⭐ before its title. Signals at-a-glance which post is
-// winning without reading a single number.
-const BEST_BORDER = "1px solid rgba(255, 180, 80, 0.6)";
-const BEST_SHADOW = "0 4px 14px -4px rgba(90, 60, 10, 0.6), inset 0 1px 0 rgba(255, 220, 140, 0.08), 0 0 12px -6px rgba(255, 180, 80, 0.5)";
-const BEST_ACCENT = "#FFB450";
+// Owner directive 2026-10-27 · "remove the yellow on the side" ·
+// the amber top-performer accent (BEST_BORDER / BEST_SHADOW /
+// BEST_ACCENT) is retired. Constants deleted to keep this module
+// honest about what's actually painted on screen.
 // Owner directive 2026-10-26 (revised) · metrics color-split ·
 // views stay neutral · likes a dark red · shares a dark green ·
 // visibly distinct against the navy container background.
@@ -151,8 +175,10 @@ export function BroadcasterLibrarySheet({
   onShareToContact,
   onDelete,
   onLive,
-  onRecord,
-  onDraft,
+  onCreate,
+  onStudio,
+  liveLocked,
+  onLiveLockedTap,
   broadcasterAvatarUrl,
   broadcasterDisplayName,
 }: BroadcasterLibrarySheetProps): React.JSX.Element | null {
@@ -160,10 +186,9 @@ export function BroadcasterLibrarySheet({
   // rather than firing straight to the caller so the owner directive
   // "confirm before destructive" is respected inside the component.
   const [confirmTarget, setConfirmTarget] = React.useState<BroadcasterLibraryVideo | null>(null);
-  // Insights-strip toggle · owner directive 2026-10-26 "world class
-  // for NEX" · aggregate metrics computed from `videos` so the user
-  // sees totals + best performer without any backend call.
-  const [insightsOpen, setInsightsOpen] = React.useState(false);
+  // Owner directive 2026-10-27 · the in-sheet Insights toggle is
+  // retired · Insights moved to the Studio hub at /nex-native/live-
+  // commerce/studio. Prior `insightsOpen` state deleted.
 
   // Hold-to-share detection · 500 ms press-and-hold threshold with
   // haptic feedback. Owner directive sealed: tap=play, hold=share.
@@ -227,12 +252,10 @@ export function BroadcasterLibrarySheet({
         style={{
           position: "absolute",
           inset: 0,
-          // Owner directive 2026-10-26 (undo blur) · "i want the
-          // buttons and cards same screen as footer". Backdrop stays
-          // in place to catch tap-to-close, but no dim and no blur ·
-          // the Live video + footer stay fully visible behind the
-          // floating cards and quartet.
-          background: "transparent",
+          // Owner directive 2026-10-27 · align the backdrop to the
+          // MessagePanel scrim (rgba(2, 9, 20, 0.55)) so every NEX
+          // overlay fades through the same deep-navy wash.
+          background: "rgba(2, 9, 20, 0.55)",
           zIndex: 100,
           cursor: "pointer",
         }}
@@ -253,24 +276,16 @@ export function BroadcasterLibrarySheet({
           inset: 0,
           display: "flex",
           flexDirection: "column",
-          // Owner directive 2026-10-26 · "fix the container center
-          // in width of the screen" · align the container as a
-          // centred column (was stretch · which made the container's
-          // width = full overlay minus padding and the margin:auto
-          // on the container was a no-op).
-          alignItems: "center",
-          // Owner directive 2026-10-26 · "5 cards displaying at time
-          // maybe 6" · centre the card stack vertically in the
-          // viewport (otherwise an 8-item list would stretch top to
-          // bottom and all 8 would be visible with no scroll). The
-          // list below caps itself to ~400 px so 5-6 compact cards
-          // are visible and the rest scroll into view.
-          justifyContent: "center",
           zIndex: 101,
           color: TEXT,
-          // Owner directive 2026-10-26 (−20 more) · top padding
-          // 120 (was 140). Container sits closer to header area.
-          padding: "120px 12px 30px",
+          // Owner directive 2026-10-27 · "Live Library should be
+          // exact same height and color theme as message center" ·
+          // overlay now mirrors the Message Center wrapper:
+          // `padding: 16` on all sides with the container child
+          // filling via `flex: 1 1 auto`. Prior centred small-box
+          // layout (`alignItems: center; justifyContent: center;
+          // padding: 100px 12px 30px`) is retired.
+          padding: 16,
           boxSizing: "border-box",
           pointerEvents: "none",
         }}
@@ -348,84 +363,141 @@ export function BroadcasterLibrarySheet({
         <div
           data-nex-broadcaster-library-container
           style={{
-            maxWidth: 320,
+            // Owner directive 2026-10-27 · "exact same height and
+            // color theme as message center" · container fills the
+            // padded overlay via `flex: 1 1 auto` with MC's padding
+            // (`14px 14px 16px`) and radius (16). Prior fixed 240px
+            // width + 12px padding + 14px radius are retired.
+            // Owner troubleshoot 2026-10-27 · "live libary container
+            // width on right is outside screen" · explicit `boxSizing:
+            // border-box` so the 1.5 px rim + 14 px padding stay
+            // inside the overlay's 100% width (default content-box
+            // was adding them, pushing the right edge past the phone
+            // frame).
+            flex: "1 1 auto",
             width: "100%",
-            marginLeft: "auto",
-            marginRight: "auto",
-            padding: 12,
-            borderRadius: 14,
-            // Owner directive 2026-10-26 · "background color on the
-            // container is the same color as chat page back ground"
-            // · solid #020914 (matches `conversations/[conversationId]
-            // /page.tsx:145`). Hairline cyan rim preserved for the
-            // slight NEX family identity.
-            background: "#020914",
-            border: "1px solid rgba(0, 175, 255, 0.25)",
+            minHeight: 0,
+            boxSizing: "border-box",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            padding: "14px 14px 16px",
+            borderRadius: 16,
+            // Owner directive 2026-10-27 · "same theme color as this
+            // NEX palette object" · align Live Library container to
+            // the LIGHT MessagePanel panel: near-white frosted body ·
+            // muted blue-grey hairline rim · blurred saturate backdrop
+            // for the same glassy feel. Prior solid #020914 + cyan
+            // rim are retired.
+            background: "rgba(240, 244, 250, 0.96)",
+            backdropFilter: "blur(14px) saturate(1.4)",
+            WebkitBackdropFilter: "blur(14px) saturate(1.4)",
+            border: "1.5px solid rgba(90, 110, 140, 0.5)",
+            boxShadow: "0 20px 50px -16px rgba(0, 20, 60, 0.5)",
             pointerEvents: "auto",
           }}
         >
-        {/* Owner directive 2026-10-26 · container header · "Live
-            Library" on left, "Live N" on right where N is the live
-            post count. */}
+        {/* Owner directive 2026-10-27 · "header and size text" ·
+            Live Library header mirrors the Message Center header:
+            18px/900 title + 12.5px/600 "Posts (N)" subtitle + navy
+            close ✕ (same navy chip used on MC). Prior 14px/800 title
+            + bare cyan ✕ are retired. */}
         <div
           data-nex-broadcaster-library-header
           style={{
             display: "flex",
-            alignItems: "baseline",
+            alignItems: "flex-start",
             justifyContent: "space-between",
-            gap: 8,
-            padding: "2px 4px 10px",
-            borderBottom: "1px solid rgba(0, 175, 255, 0.2)",
-            marginBottom: 8,
+            gap: 10,
+            marginBottom: 10,
           }}
         >
-          <div
-            style={{
-              fontSize: 14,
-              fontWeight: 800,
-              color: TEXT,
-              letterSpacing: "0.02em",
-            }}
-          >
-            Live Library
+          <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: 18,
+                fontWeight: 900,
+                color: TEXT,
+                lineHeight: 1.1,
+                letterSpacing: "-0.01em",
+              }}
+            >
+              Live Library
+            </div>
+            <div
+              style={{
+                fontSize: 12.5,
+                fontWeight: 600,
+                color: DIM,
+                lineHeight: 1.2,
+              }}
+            >
+              Posts ({videos.length})
+            </div>
+            {/* Owner directive 2026-10-27 · "add this under header
+                smaller text - swipe Card left to delete" · teaches
+                the sealed swipe-left-reveal-bin gesture (iOS Mail
+                pattern · already wired via revealedBinId + swipe
+                tracking in this file). Smaller mute-text so it reads
+                as instructional rather than status. */}
+            <div
+              data-nex-broadcaster-library-swipe-hint
+              style={{
+                fontSize: 10.5,
+                fontWeight: 600,
+                color: MUTE,
+                lineHeight: 1.3,
+                marginTop: 2,
+                letterSpacing: "0.02em",
+              }}
+            >
+              Swipe card left to delete
+            </div>
           </div>
-          {/* Owner directive 2026-10-26 · "remove the live 8 from
-              top header right and add x button blue" · the count
-              now lives in the bottom Hendra chrome · top-right slot
-              becomes the explicit close ✕. */}
           <button
             type="button"
             onClick={onClose}
             aria-label="Close library"
             style={{
-              background: "transparent",
-              border: "none",
-              color: "#00AFFF",
-              fontSize: 20,
-              fontWeight: 400,
-              lineHeight: 1,
-              padding: 4,
-              cursor: "pointer",
               flexShrink: 0,
+              width: 36,
+              height: 36,
+              borderRadius: "50%",
+              background: "linear-gradient(135deg, #152646 0%, #1E3A6E 100%)",
+              border: "none",
+              color: "#FFFFFF",
+              fontSize: 16,
+              lineHeight: 1,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              boxShadow: "0 2px 6px -2px rgba(16, 32, 51, 0.4)",
             }}
           >
-            ✕
+            ×
           </button>
         </div>
-        {/* Owner directive 2026-10-26 (−1 row) · 5 rows visible ·
-            72 × 5 = 360 px list height. */}
+        {/* Owner directive 2026-10-27 · "exact same height" as
+            Message Center · list fills the remaining container space
+            via flex instead of the earlier 360 px cap. 8 px gap
+            between cards gives each row visual separation now that
+            the dashed divider is retired. */}
         <div
           data-nex-broadcaster-library-list
           style={{
-            height: 360,
-            maxHeight: 360,
+            flex: "1 1 auto",
+            minHeight: 0,
             width: "100%",
+            boxSizing: "border-box",
             overflowY: "auto",
             overflowX: "hidden",
-            padding: 0,
+            // Owner troubleshoot 2026-10-27 · "the gray card on the
+            // right should have space from scrolling bar" · the 6 px
+            // scrollbar now has 8 px of breathing room before the
+            // card edges.
+            paddingRight: 8,
             display: "flex",
             flexDirection: "column",
-            gap: 0,
+            gap: 8,
             WebkitOverflowScrolling: "touch",
             scrollSnapType: "y mandatory",
             scrollPaddingTop: 0,
@@ -447,18 +519,12 @@ export function BroadcasterLibrarySheet({
               <span style={{ color: MUTE, fontSize: 11 }}>Your first live post will show here.</span>
             </div>
           ) : (
-            (() => {
-              // Owner directive 2026-10-26 (polish batch) · compute
-              // the top-performing video id ONCE for the whole map ·
-              // only elevate when there's more than one post to
-              // avoid "every card is best" when the library has 1.
-              const bestId: string | null = videos.length > 1
-                ? videos.reduce(
-                    (b, v) => (v.viewCount > b.viewCount ? v : b),
-                  ).id
-                : null;
-              return videos.map((v) => {
-              const isBest = bestId !== null && v.id === bestId;
+            videos.map((v) => {
+              // Owner directive 2026-10-27 · "remove the yellow on
+              // the side" · the top-performer amber accent (⭐ + 3 px
+              // amber left stripe) is retired · all cards render
+              // identically. `bestId` + `isBest` + `BEST_ACCENT`
+              // usage removed.
               const duration = formatDuration(v.durationSeconds);
               const isRevealed = revealedBinId === v.id;
               return (
@@ -468,17 +534,21 @@ export function BroadcasterLibrarySheet({
                   data-nex-broadcaster-library-card-id={v.id}
                   data-nex-broadcaster-library-card-revealed={isRevealed ? "true" : "false"}
                   style={{
-                    // Owner directive 2026-10-26 (revised) · row
-                    // uses the card LAYOUT (thumbnail + meta) but
-                    // NO card chrome. Dotted gray separator between
-                    // rows · 72 px tall fits the 16:9 thumbnail.
+                    // Owner directive 2026-10-27 · cards get the
+                    // Message Center treatment: subtle navy-tinted
+                    // bg + 10 px radius · no rim · dashed row
+                    // divider retired. Height sized to the trimmed
+                    // thumbnail: 72 px row fits the 76 × 43 chip
+                    // with symmetric vertical breathing per owner's
+                    // "reduce the height of the cards".
                     position: "relative",
                     overflow: "hidden",
                     height: 72,
                     minHeight: 72,
                     maxHeight: 72,
                     boxSizing: "border-box",
-                    borderBottom: "1px dashed rgba(255, 255, 255, 0.14)",
+                    background: "rgba(16, 32, 51, 0.04)",
+                    borderRadius: 10,
                     scrollSnapAlign: "start",
                     scrollSnapStop: "always",
                     flexShrink: 0,
@@ -592,37 +662,62 @@ export function BroadcasterLibrarySheet({
                   style={{
                     position: "relative",
                     zIndex: 2,
+                    // Owner troubleshoot 2026-10-27 · "text on right
+                    // is not on the gray card" · explicit `width:
+                    // 100%` + `boxSizing: border-box` so the flex
+                    // row stays inside the row-outer (prior default
+                    // auto width was letting content push the layer
+                    // past the card edge on narrow phone frames).
+                    width: "100%",
                     display: "flex",
                     flexDirection: "row",
                     alignItems: "center",
                     gap: 10,
-                    padding: "4px 8px",
+                    padding: "6px 10px",
                     height: "100%",
-                    // No card chrome · flat on the container · top-
-                    // performer row carries a subtle amber left stripe.
                     background: "transparent",
-                    borderLeft: isBest
-                      ? `3px solid ${BEST_ACCENT}`
-                      : "3px solid transparent",
                     cursor: "pointer",
                     transform: isRevealed ? "translateX(-72px)" : "translateX(0)",
                     transition: "transform 180ms ease-out",
                     boxSizing: "border-box",
                   }}
                 >
-                  {/* Thumbnail · 16:9 · white glass ▶ overlay · duration chip */}
+                  {/* Owner directive 2026-10-27 · thumbnail now
+                      renders a muted autoplay <video> when the row
+                      carries `videoUrl` · falls back to the poster
+                      <img> when it's absent. Width tuned to the
+                      88 px row: 76 × 42.75 at 16:9 leaves the meta
+                      column enough room for name + date + metrics
+                      to stay inside the card edge. */}
                   <div
                     style={{
                       position: "relative",
                       flexShrink: 0,
-                      width: 72,
+                      width: 76,
                       aspectRatio: "16 / 9",
-                      borderRadius: 6,
+                      borderRadius: 8,
                       overflow: "hidden",
                       background: "#0A0F1E",
                     }}
                   >
-                    {v.posterUrl ? (
+                    {v.videoUrl ? (
+                      <video
+                        src={v.videoUrl}
+                        poster={v.posterUrl ?? undefined}
+                        muted
+                        loop
+                        playsInline
+                        autoPlay
+                        preload="metadata"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          display: "block",
+                          pointerEvents: "none",
+                        }}
+                      />
+                    ) : v.posterUrl ? (
                       <img
                         src={v.posterUrl}
                         alt=""
@@ -640,23 +735,30 @@ export function BroadcasterLibrarySheet({
                         top: "50%",
                         left: "50%",
                         transform: "translate(-50%, -50%)",
-                        width: 20,
-                        height: 20,
-                        borderRadius: 999,
-                        // Owner directive 2026-10-26 · play button
-                        // dark red (was white glass).
+                        // Owner directive 2026-10-27 · "reduce the
+                        // play button" · 34 → 24 rounded-square chip
+                        // (6 px radius) · dark red · scales down for
+                        // the trimmed 72 px row + 76 px thumbnail.
+                        width: 24,
+                        height: 24,
+                        borderRadius: 6,
                         background: "#A62424",
-                        border: "1px solid rgba(255, 70, 70, 0.6)",
+                        border: "1px solid rgba(255, 70, 70, 0.7)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.45), 0 0 8px rgba(166,36,36,0.5)",
+                        boxShadow: "0 2px 6px rgba(0,0,0,0.5), 0 0 6px rgba(166,36,36,0.5)",
                       }}
                     >
+                      {/* Owner directive 2026-10-27 · "change the
+                          play icon to white color and enlarge the
+                          icon little only" · fill reverted to white
+                          (reads cleaner on the dark-red chip) and
+                          glyph nudged 14 → 16. */}
                       <svg
                         aria-hidden
-                        width="8"
-                        height="8"
+                        width="16"
+                        height="16"
                         viewBox="0 0 24 24"
                         fill="#FFFFFF"
                       >
@@ -695,8 +797,12 @@ export function BroadcasterLibrarySheet({
                   >
                     <div
                       style={{
-                        fontSize: 12,
-                        fontWeight: 700,
+                        // Owner directive 2026-10-27 · taller rows ·
+                        // room for a slightly bigger title. The ⭐
+                        // amber "best-performing" prefix is retired
+                        // per "remove the yellow on the side".
+                        fontSize: 12.5,
+                        fontWeight: 800,
                         color: TEXT,
                         lineHeight: 1.2,
                         overflow: "hidden",
@@ -704,20 +810,7 @@ export function BroadcasterLibrarySheet({
                         whiteSpace: "nowrap",
                       }}
                     >
-                      {isBest && (
-                        <span
-                          aria-label="Best-performing post"
-                          style={{
-                            color: BEST_ACCENT,
-                            marginRight: 4,
-                            fontSize: 10,
-                            verticalAlign: "middle",
-                          }}
-                        >
-                          ★
-                        </span>
-                      )}
-                      {v.title}
+                      {v.title.split(" · ")[0]}
                     </div>
                     {(() => {
                       const ageMs = Date.now() - new Date(v.postedAtIso).getTime();
@@ -755,7 +848,14 @@ export function BroadcasterLibrarySheet({
                       style={{
                         display: "flex",
                         flexDirection: "row",
-                        gap: 10,
+                        // Owner troubleshoot 2026-10-27 · narrower
+                        // meta column after thumbnail trim · tighter
+                        // metric gap (10 → 8) + `flexWrap: nowrap`
+                        // + `overflow: hidden` keeps the three
+                        // metric chips inside the card edge.
+                        gap: 8,
+                        flexWrap: "nowrap",
+                        overflow: "hidden",
                         fontSize: 10,
                         fontWeight: 700,
                         color: DIM,
@@ -765,7 +865,10 @@ export function BroadcasterLibrarySheet({
                           crisp pixel-perfect rendering across OSes,
                           color inherits from span so the dim/rose/
                           teal split renders cleanly. */}
-                      <span style={{ color: DIM, display: "inline-flex", alignItems: "center", gap: 3 }}>
+                      {/* Owner directive 2026-10-26 · "views on the
+                          card and icon blue color" · cyan accent on
+                          the views metric (icon + count both inherit). */}
+                      <span style={{ color: "#00AFFF", display: "inline-flex", alignItems: "center", gap: 3 }}>
                         <svg aria-hidden width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M1 12 s4 -7 11 -7 s11 7 11 7 s-4 7 -11 7 s-11 -7 -11 -7 z" />
                           <circle cx="12" cy="12" r="3" />
@@ -791,8 +894,7 @@ export function BroadcasterLibrarySheet({
                   {/* /content-layer */}
                 </div>
               );
-            });
-            })()
+            })
           )}
         </div>
         {/* Owner directive 2026-10-26 (connect) · Hendra chrome
@@ -804,7 +906,7 @@ export function BroadcasterLibrarySheet({
           style={{
             marginTop: 10,
             paddingTop: 10,
-            borderTop: "1px dashed rgba(255, 255, 255, 0.14)",
+            borderTop: "1px dashed rgba(16, 32, 51, 0.14)",
             display: "flex",
             flexDirection: "column",
             gap: 8,
@@ -828,7 +930,10 @@ export function BroadcasterLibrarySheet({
                   borderRadius: 8,
                   overflow: "hidden",
                   flexShrink: 0,
-                  background: "#0A0F1E",
+                  // Owner directive 2026-10-27 · avatar fallback uses
+                  // the sealed MessagePanel navy gradient (visible
+                  // when the image fails or is pending).
+                  background: "linear-gradient(135deg, #152646 0%, #1E3A6E 100%)",
                 }}
               >
                 <img
@@ -839,6 +944,23 @@ export function BroadcasterLibrarySheet({
                     height: "100%",
                     objectFit: "cover",
                     display: "block",
+                  }}
+                />
+                {/* Owner directive 2026-10-26 · "reduce back to the
+                    dot on header name" · restore the small green
+                    presence dot on the broadcaster avatar. */}
+                <span
+                  aria-label="Online"
+                  style={{
+                    position: "absolute",
+                    right: -1,
+                    top: -1,
+                    width: 7,
+                    height: 7,
+                    borderRadius: 999,
+                    background: "#16D66B",
+                    boxShadow:
+                      "0 0 0 1.5px rgba(2,9,20,0.9), 0 0 6px rgba(22,214,107,0.7)",
                   }}
                 />
               </div>
@@ -874,19 +996,42 @@ export function BroadcasterLibrarySheet({
               Live {videos.length}
             </div>
           </div>
-          {/* Row 2 · Live / Record / Draft / Insights · blue rim */}
+          {/* Owner directive 2026-10-27 · "make the buttons more
+              bigger less" + "ok add [Go Live / Create / Studio]" ·
+              retired the 4-tile set (Live/Record/Draft/Insights) in
+              favour of 3 bigger tiles that each route to a real
+              surface:
+                · Go Live  → /nex-native/live-commerce/welcome
+                · Create   → /nex-native/manage/watches/new
+                             (Stage A redesign 2026-10-28: category
+                             picker + colour variants + spec sheet)
+                · Studio   → /nex-native/live-commerce/studio
+                             (Insights · Followers · Shop hub)
+              Grid went 4-col/6 gap → 3-col/8 gap, padding 6px/2px
+              → 12px/4px, label 10 → 12.5, glyph 14 → 20 so each
+              tile reads as a primary action. Live keeps its pulsing
+              red dot inside the navy chip. */}
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr 1fr 1fr 1fr",
-              gap: 6,
+              gridTemplateColumns: "1fr 1fr 1fr",
+              gap: 8,
             }}
           >
             {([
-              { key: "live",     label: "Live",     onClick: onLive,     disabled: !onLive, red: true },
-              { key: "record",   label: "Record",   onClick: onRecord,   disabled: !onRecord, red: false },
-              { key: "draft",    label: "Draft",    onClick: onDraft,    disabled: !onDraft, red: false },
-              { key: "insights", label: "Insights", onClick: () => setInsightsOpen((v) => !v), disabled: false, red: false },
+              // Owner directive 2026-10-27 (R9) · when liveLocked is
+              // true the Go Live tile is NOT disabled (users can still
+              // tap through to the upsell) · the tap is redirected to
+              // `onLiveLockedTap` so the caller can route to packages.
+              // The lock glyph below communicates the state visually.
+              {
+                key: "live",
+                label: "Go Live",
+                onClick: liveLocked ? onLiveLockedTap : onLive,
+                disabled: liveLocked ? !onLiveLockedTap : !onLive,
+              },
+              { key: "create", label: "Create",  onClick: onCreate, disabled: !onCreate },
+              { key: "studio", label: "Studio",  onClick: onStudio, disabled: !onStudio },
             ] as const).map((b) => (
               <button
                 key={b.key}
@@ -895,39 +1040,62 @@ export function BroadcasterLibrarySheet({
                 aria-label={b.label}
                 disabled={b.disabled}
                 data-nex-broadcaster-library-footer-btn={b.key}
+                data-nex-broadcaster-library-go-live-locked={
+                  b.key === "live" && liveLocked ? "true" : undefined
+                }
                 style={{
                   display: "inline-flex",
                   flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: 2,
-                  padding: "6px 2px",
-                  borderRadius: 10,
-                  // Owner directive 2026-10-26 · Live tile dark
-                  // red + pulsing dot ping (was lighter red tint).
-                  background: b.red
-                    ? "linear-gradient(135deg, rgba(140, 15, 20, 0.95) 0%, rgba(90, 5, 10, 0.95) 100%)"
-                    : "rgba(255,255,255,0.06)",
-                  border: b.red
-                    ? "1px solid rgba(200, 40, 50, 0.7)"
-                    : "1px solid rgba(0, 175, 255, 0.6)",
-                  color: TEXT,
-                  fontSize: 10,
+                  gap: 6,
+                  padding: "12px 4px",
+                  borderRadius: 12,
+                  background: "linear-gradient(135deg, #152646 0%, #1E3A6E 100%)",
+                  border: "none",
+                  color: "#FFFFFF",
+                  fontSize: 12.5,
                   fontWeight: 800,
                   letterSpacing: "0.02em",
                   cursor: b.disabled ? "not-allowed" : "pointer",
-                  opacity: b.disabled ? 0.4 : 1,
+                  opacity: b.disabled
+                    ? 0.4
+                    : b.key === "live" && liveLocked
+                      ? 0.72
+                      : 1,
+                  boxShadow: "0 3px 10px -3px rgba(16, 32, 51, 0.45)",
                   WebkitTapHighlightColor: "transparent",
                 }}
               >
-                {b.key === "live" && (
+                {b.key === "live" && liveLocked && (
+                  // Owner directive 2026-10-27 (R9) · lock glyph in
+                  // place of the pulsing red dot when the account is
+                  // ineligible. 🔒 is the sealed lock pattern already
+                  // used on "Shop Products" when there is no shop
+                  // (LiveViewerFooter) · reusing it keeps the surface
+                  // familiar instead of inventing a new symbol.
+                  <span
+                    aria-hidden
+                    style={{
+                      display: "inline-block",
+                      width: 14,
+                      height: 14,
+                      lineHeight: "14px",
+                      fontSize: 13,
+                      textAlign: "center",
+                    }}
+                  >
+                    🔒
+                  </span>
+                )}
+                {b.key === "live" && !liveLocked && (
                   <span
                     aria-hidden
                     style={{
                       position: "relative",
                       display: "inline-block",
-                      width: 8,
-                      height: 8,
+                      width: 14,
+                      height: 14,
                     }}
                   >
                     <span
@@ -936,7 +1104,7 @@ export function BroadcasterLibrarySheet({
                         inset: 0,
                         borderRadius: 999,
                         background: RED,
-                        boxShadow: "0 0 6px rgba(255,51,85,0.95)",
+                        boxShadow: "0 0 8px rgba(255,51,85,0.95)",
                         animation: "nex-library-live-dot 1200ms ease-in-out infinite",
                       }}
                     />
@@ -953,22 +1121,15 @@ export function BroadcasterLibrarySheet({
                     />
                   </span>
                 )}
-                {b.key === "record" && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="4" fill="currentColor" />
+                {b.key === "create" && (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="9" />
+                    <path d="M12 7 V17" />
+                    <path d="M7 12 H17" />
                   </svg>
                 )}
-                {b.key === "draft" && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M6 3 h9 l4 4 v14 H6 Z" />
-                    <path d="M15 3 v4 h4" />
-                    <path d="M9 13 h6" />
-                    <path d="M9 17 h4" />
-                  </svg>
-                )}
-                {b.key === "insights" && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {b.key === "studio" && (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M4 20 V10" />
                     <path d="M12 20 V4" />
                     <path d="M20 20 V14" />
@@ -991,7 +1152,8 @@ export function BroadcasterLibrarySheet({
           style={{
             position: "absolute",
             inset: 0,
-            background: "rgba(2,9,20,0.75)",
+            // Owner directive 2026-10-27 · MessagePanel scrim exact.
+            background: "rgba(2, 9, 20, 0.55)",
             zIndex: 110,
           }}
         />
@@ -1006,10 +1168,15 @@ export function BroadcasterLibrarySheet({
             left: 20,
             right: 20,
             bottom: 24,
-            background: "#0A0F1E",
+            // Owner directive 2026-10-27 · confirm sheet matches the
+            // light MessagePanel panel (near-white frosted body ·
+            // muted navy rim · deep-navy drop shadow).
+            background: "rgba(240, 244, 250, 0.96)",
+            backdropFilter: "blur(14px) saturate(1.4)",
+            WebkitBackdropFilter: "blur(14px) saturate(1.4)",
             borderRadius: 16,
-            border: "1px solid rgba(255,255,255,0.08)",
-            boxShadow: "0 -14px 40px -12px rgba(0,0,0,0.65)",
+            border: "1.5px solid rgba(90, 110, 140, 0.5)",
+            boxShadow: "0 -14px 40px -12px rgba(0, 20, 60, 0.5)",
             padding: 18,
             zIndex: 111,
             color: TEXT,
@@ -1029,9 +1196,12 @@ export function BroadcasterLibrarySheet({
               style={{
                 flex: 1,
                 padding: "10px 14px",
-                background: "rgba(255,255,255,0.08)",
+                // Owner directive 2026-10-27 · Cancel pill on the
+                // light confirm sheet uses a muted navy tint (not
+                // the old white 0.08 which disappears on near-white).
+                background: "rgba(16, 32, 51, 0.08)",
                 color: TEXT,
-                border: "none",
+                border: "1px solid rgba(16, 32, 51, 0.14)",
                 borderRadius: 10,
                 fontSize: 13,
                 fontWeight: 700,

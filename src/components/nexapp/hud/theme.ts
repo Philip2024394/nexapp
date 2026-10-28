@@ -103,6 +103,30 @@ export interface NexHudTheme {
     background?: string;
   };
   /**
+   * Interior background crossfade sequence (Philip 2026-08-28).
+   * Rendered by `InteriorBackgroundLayer` in `NexHudFrame.tsx` · all
+   * fields optional so themes can opt in incrementally. Shape mirrors
+   * the consumer's prop surface verbatim (see InteriorBackgroundLayer).
+   * Type added 2026-10-28 · TS Wave 3 · the feature shipped on
+   * 2026-08-28 but was never typed, triggering TS2353 on all three
+   * seeded themes (TITANIUM / PINK_METAL / GOLD).
+   */
+  interior?: {
+    /** Base hero image · fallback when `heroSequence` is absent. */
+    backgroundSrc?: string;
+    /** Optional CSS filter applied to the hero layer. */
+    backgroundFilter?: string;
+    /** Images cycled during the speaking state (older 2-image cycle;
+     *  superseded by `heroSequence` when present). */
+    speakingBackgrounds?: string[];
+    /** Crossfade cadence in ms · 900 fallback inside the consumer. */
+    speakingSwapMs?: number;
+    /** Ordered sequence player · each entry is an image URL; the layer
+     *  cycles through them at `speakingSwapMs` intervals. Repeats are
+     *  allowed (e.g. "1 2 3 1 2 3 2 1 3" rhythm). */
+    heroSequence?: string[];
+  };
+  /**
    * Mascot recommendation metadata · Philip 2026-08-27.
    * Theme influences ORDERING in the Mascot Drawer, never AVAILABILITY.
    * `recommendedTags` are matched against Mascot.tags (universal library

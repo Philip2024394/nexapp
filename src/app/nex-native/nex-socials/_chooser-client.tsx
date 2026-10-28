@@ -50,15 +50,31 @@ export function NexSocialsChooser({ declaredIntents }: NexSocialsChooserProps) {
       data-nex-socials-landing
       data-nex-socials-declared={declaredIntents.join(",")}
       style={{
-        position: "fixed",
-        inset: 0,
+        // Owner directive 2026-10-25 · mobile-first screen size · the
+        // Socials chooser stays INSIDE the .nex-native-frame on desktop
+        // (420×909 phone silhouette) rather than escaping to the full
+        // browser viewport. position: relative + minHeight 100%.
+        position: "relative",
+        minHeight: "100%",
+        width: "100%",
         color: NEX.textPrimary,
         fontFamily:
           "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-        background: `linear-gradient(180deg, rgba(2,9,20,0.40) 0%, rgba(2,9,20,0.72) 60%, rgba(2,9,20,0.92) 100%), url("${BG_URL}") center/cover no-repeat ${NEX.navy}`,
+        // Owner directive 2026-10-25 · background image fills full
+        // height AND width · explicit properties replace the earlier
+        // shorthand so `cover` applies cleanly across the layered
+        // gradient + image. Any area that scrolls past the natural
+        // image fit falls back to NEX navy (base backgroundColor).
+        backgroundColor: NEX.navy,
+        backgroundImage: `linear-gradient(180deg, rgba(2,9,20,0.40) 0%, rgba(2,9,20,0.72) 60%, rgba(2,9,20,0.92) 100%), url("${BG_URL}")`,
+        backgroundSize: "cover, cover",
+        backgroundPosition: "center, center",
+        backgroundRepeat: "no-repeat, no-repeat",
+        backgroundAttachment: "scroll, scroll",
         overflow: "auto",
         padding:
           "max(20px, env(safe-area-inset-top)) 20px max(28px, env(safe-area-inset-bottom))",
+        boxSizing: "border-box",
       }}
     >
       <header

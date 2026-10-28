@@ -41,7 +41,7 @@ export default async function ResponderIncidentPage(props: {
   return (
     <main
       style={{
-        minHeight: "100dvh",
+        minHeight: "100%",
         background: EMERGENCY_PALETTE.bg,
         color: EMERGENCY_PALETTE.textPrimary,
         padding: "20px 20px 40px",

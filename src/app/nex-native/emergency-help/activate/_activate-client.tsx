@@ -129,7 +129,11 @@ export function ActivateClient(
       data-nex-emergency-activate-page
       style={{
         position: "relative",
-        minHeight: "100vh",
+        // Owner directive 2026-10-25 · mobile-first fit · "100%" fills
+        // the .nex-native-frame (viewport on mobile, 909px phone
+        // silhouette on desktop) instead of escaping to the full
+        // browser viewport.
+        minHeight: "100%",
         width: "100%",
         // Owner directive 2026-10-24 · "Futuristic Red Cross Rescue
         // Shield" background. Stretches edge-to-edge (same approach

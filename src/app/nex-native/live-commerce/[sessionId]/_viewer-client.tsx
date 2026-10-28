@@ -249,7 +249,7 @@ export function LiveViewerPage({
     // leaves the UI optimistic state unchanged · the next like still
     // tries and the ledger simply does not record this viewer if
     // every attempt fails.
-    void import("@/app/nex-native/live-commerce/go-live/_actions").then(
+    void import("@/app/nex-native/live-commerce/enter-broadcast-room/_actions").then(
       ({ recordLiveEngagementAction }) =>
         recordLiveEngagementAction({ sessionId, kind: "like" }).catch(() => {}),
     );
@@ -293,7 +293,7 @@ export function LiveViewerPage({
       // Record once per session via the server action · subsequent
       // comments in the same session are idempotent no-ops at the
       // DB level.
-      void import("@/app/nex-native/live-commerce/go-live/_actions").then(
+      void import("@/app/nex-native/live-commerce/enter-broadcast-room/_actions").then(
         ({ recordLiveEngagementAction }) =>
           recordLiveEngagementAction({ sessionId, kind: "comment" }).catch(
             () => {},
@@ -348,7 +348,7 @@ export function LiveViewerPage({
           : evidence === "whatsapp"
             ? "native-share"
             : evidence;
-      void import("@/app/nex-native/live-commerce/go-live/_actions").then(
+      void import("@/app/nex-native/live-commerce/enter-broadcast-room/_actions").then(
         ({ recordLiveEngagementAction }) =>
           recordLiveEngagementAction({
             sessionId,
@@ -372,7 +372,7 @@ export function LiveViewerPage({
      is actually the broadcaster of this session (opening the viewer
      URL on their own stream · typically accidental or via self-link),
      we do NOT render the customer-facing View Shop button. The
-     broadcaster has their own controls at /live-commerce/go-live.
+     broadcaster has their own controls at /live-commerce/enter-broadcast-room.
      The footer stays mounted (Like/Share still make no sense on
      one's own stream · so Like + Share hide too; the composer stays
      so the broadcaster can at least SEE the comments overlay they're
@@ -947,10 +947,24 @@ export function LiveViewerPage({
             commit; the overlay falls back to a static dark panel
             while the asset is unconfirmed. */}
         {jailEvent && (
+          {/* Owner directive 2026-10-28 · the sealed `onComplete`
+              callback (fired at the END of the 10-minute jail) is
+              renamed to `onDismiss` which now fires at the 8-second
+              overlay-dismiss window. The jail state itself persists
+              for the full durationMs · a follow-up Phase A2 edit
+              will replace the composer with a muted-state pill
+              until the full countdown ends. For now, keep the
+              setJailEvent(null) handler so the overlay still clears
+              honestly · once the muted-composer wire is in place
+              we'll separate the two state transitions. */}
           <JailOverlay
             startedAtMs={jailEvent.startedAtMs}
             durationMs={jailEvent.durationMs}
-            onComplete={() => setJailEvent(null)}
+            onDismiss={() => setJailEvent(null)}
+            /* Owner directive 2026-10-29 · full-bleed background MP4
+               copied to public/nex-jail-background.mp4 · plays while
+               the 8-s dismiss window elapses. */
+            videoSrc="/nex-jail-background.mp4"
           />
         )}
       </div>

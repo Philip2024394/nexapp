@@ -1,0 +1,119 @@
+[
+  {
+    "area": "Chat landing",
+    "url": "/nex-native/chat",
+    "final": "http://localhost:3008/nex-native/chat",
+    "status": "OK",
+    "hendraMarker": false,
+    "hasAvatar": false,
+    "excerpt": "CHATS"
+  },
+  {
+    "area": "Chat inbox",
+    "url": "/nex-native/chat/inbox",
+    "final": "http://localhost:3008/nex-native/chat/inbox",
+    "status": "OK",
+    "hendraMarker": false,
+    "hasAvatar": false,
+    "excerpt": "NEX Chat Your conversations · newest first 💬 No conversations yet Find someone and start a conversation. Open Contacts →"
+  },
+  {
+    "area": "Themes library",
+    "url": "/nex-native/chat-themes-library",
+    "final": "http://localhost:3008/nex-native/chat-themes-library",
+    "status": "OK",
+    "hendraMarker": false,
+    "hasAvatar": false,
+    "excerpt": "NEX NEX THEMES Make It Yours New Free Premium NEX THEMES · MARKETPLACE Crispy Chicken Warm gold · food · casual dining PRICE TBD Theme Intro Shop Pink Dream Soft pastel · dreamy · "
+  },
+  {
+    "area": "Themes · watches-hendra",
+    "url": "/nex-native/themes/watches-hendra",
+    "final": "http://localhost:3008/nex-native/themes/watches-hendra",
+    "status": "OK",
+    "hendraMarker": true,
+    "hasAvatar": false,
+    "excerpt": "SKIP INTRO → Hendra's Watches NEX - 50014 Hendra's Watches hey! just finished the sketches for the new sandal line 🌊 ❤️ 2 07:56 ooh — show me! 07:58 Hendra's Watches sending sampl"
+  },
+  {
+    "area": "Intro settings",
+    "url": "/nex-native/settings/intro-video",
+    "final": "http://localhost:3008/nex-native/settings/intro-video",
+    "status": "OK",
+    "hendraMarker": true,
+    "hasAvatar": true,
+    "excerpt": "NEX Intro Chat First impressions always last EDIT INTRO Intro on Hendra's Watches Free Delivery ⏱ Open · Mon–Sat · 10am–10pm Use theme original Reset Back To Original Theme Choose "
+  },
+  {
+    "area": "Vault",
+    "url": "/nex-native/vault",
+    "final": "http://localhost:3008/nex-native/vault",
+    "status": "OK",
+    "hendraMarker": false,
+    "hasAvatar": false,
+    "excerpt": "VAULT"
+  },
+  {
+    "area": "Shop · public",
+    "url": "/nex-native/hendra-watches",
+    "final": "http://localhost:3008/nex-native/hendra-watches",
+    "status": "OK",
+    "hendraMarker": true,
+    "hasAvatar": false,
+    "excerpt": "✨ Personalise your business Pick a chat theme and cover · 2 steps · always optional. MAKE NEX YOURS → NE X HENDRA-WATCHES.NEX Hendra's Watches Working hours 7am-11pm · usually repl"
+  },
+  {
+    "area": "Shop · manage",
+    "url": "/nex-native/manage/shop",
+    "final": "http://localhost:3008/nex-native/manage/shop",
+    "status": "OK",
+    "hendraMarker": true,
+    "hasAvatar": false,
+    "excerpt": "← Manage VIEW SHOP ↗ SHOP SETTINGS Hendra's Watches NEX DIRECT PRICE Loyalty ladder + share rewards More orders → bigger discount for buyers · you still net more than on GoFood OPE"
+  },
+  {
+    "area": "Directory",
+    "url": "/nex-native/directory",
+    "final": "http://localhost:3008/nex-native/directory",
+    "status": "OK",
+    "hendraMarker": false,
+    "hasAvatar": false,
+    "excerpt": "NEX DIRECTORY"
+  },
+  {
+    "area": "Live feed",
+    "url": "/nex-native/live",
+    "final": "http://localhost:3008/nex-native/live",
+    "status": "OK",
+    "hendraMarker": false,
+    "hasAvatar": false,
+    "excerpt": "NEX Live ← inbox · post on Live Phase 1 · global feed. All active NEX-business Live posts appear here newest-first. A geo-boundary filter (only show posts near you) is phase-2 work"
+  },
+  {
+    "area": "Live · go-live",
+    "url": "/nex-native/live-commerce/go-live",
+    "final": "http://localhost:3008/nex-native/live-commerce/go-live",
+    "status": "OK",
+    "hendraMarker": false,
+    "hasAvatar": false,
+    "excerpt": "Ready to broadcast Your video and microphone will stream directly to viewers who join · NEX never receives the video. Enter broadcast room"
+  },
+  {
+    "area": "Profile · me",
+    "url": "/nex-native/profile/me",
+    "final": "http://localhost:3008/nex-native/profile/nex-50014",
+    "status": "OK",
+    "hendraMarker": true,
+    "hasAvatar": true,
+    "excerpt": "NEX-50014 Edit Hendra Gunawan Bogor, Indonesia Watch Seller · Luxury pre-owned timepieces · Bogor Watch dealer in Bogor, Indonesia. Specialising in luxury pre-owned chronographs, d"
+  },
+  {
+    "area": "Contacts",
+    "url": "/nex-native/contacts",
+    "final": "http://localhost:3008/nex-native/contacts",
+    "status": "OK",
+    "hendraMarker": true,
+    "hasAvatar": false,
+    "excerpt": "NEX Contacts Contacts Business Groups NEX · WELCOME Hi Hendra · NEX has sent you a hello message DISMISS Open it any time · dismissing this banner won't delete the conversation. OP"
+  }
+]

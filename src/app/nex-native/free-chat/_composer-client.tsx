@@ -1509,7 +1509,6 @@ export function FreeChatComposerClient({
         peer-chat participant service lands. */}
     <ContactPickerSheet
       open={contactPickerOpen}
-      accentHex={accentHex}
       onClose={() => setContactPickerOpen(false)}
       onInvite={handleContactInvite}
       onShopShare={handleContactShopShare}

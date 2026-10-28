@@ -25,6 +25,12 @@ import * as React from "react";
 export interface JailPickerViewerRow {
   readonly accountId: string;
   readonly displayName: string | null;
+  /** Owner directive 2026-10-28 · the Jail picker now accepts an
+   *  optional avatar URL per row so mock-persona entries (and future
+   *  real viewers with resolvable avatars) show their face instead
+   *  of just an initial letter. Null falls back to the sealed
+   *  letter chip. */
+  readonly avatarUrl?: string | null;
 }
 
 export interface JailPickerSheetProps {
@@ -124,17 +130,27 @@ export function JailPickerSheet(
           flexDirection: "column",
         }}
       >
+        {/* Owner directive 2026-10-28 · "header of slider will be
+            Jail with smaller text · Select user to block from live
+            feed posting for 10 minute". The header reverts to "Jail"
+            (big) with the owner-authored subtitle underneath. Note ·
+            this partially unwinds the sealed 2026-10-25 rename to
+            "Timeout" at the picker-sheet title layer · the owner-rail
+            button label and the internal confirm/countdown copy
+            remain on "Timeout" so the sealed mechanism language is
+            preserved everywhere except where the owner specifically
+            re-authored it. */}
         <header style={{ marginBottom: 10 }}>
           <h2
             id="nex-jail-picker-title"
             style={{
               margin: 0,
-              fontSize: 18,
-              fontWeight: 700,
+              fontSize: 22,
+              fontWeight: 800,
               letterSpacing: "-0.01em",
             }}
           >
-            Timeout a viewer
+            Jail
           </h2>
           <p
             style={{
@@ -144,8 +160,7 @@ export function JailPickerSheet(
               color: NEX.textDim,
             }}
           >
-            Pick a viewer to put on a 10-minute timeout. They can still
-            watch · their comments will be hidden until the countdown ends.
+            Select Profile 10 Minute Block from live posting to live feed.
           </p>
         </header>
 
@@ -293,9 +308,30 @@ export function JailPickerSheet(
                         fontSize: 12,
                         fontWeight: 700,
                         flexShrink: 0,
+                        overflow: "hidden",
                       }}
                     >
-                      {(v.displayName ?? v.accountId).slice(0, 1).toUpperCase()}
+                      {v.avatarUrl ? (
+                        /* Owner troubleshoot 2026-10-27 (sealed) ·
+                           nex-mock-personas PNGs carry 10-15% white
+                           padding on the edges · scale+translate crops
+                           them cleanly inside the 32px chip. */
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={v.avatarUrl}
+                          alt=""
+                          draggable={false}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            transform: "scale(1.4) translateY(-2%)",
+                            transformOrigin: "center 48%",
+                          }}
+                        />
+                      ) : (
+                        (v.displayName ?? v.accountId).slice(0, 1).toUpperCase()
+                      )}
                     </span>
                     <span style={{ flex: 1, minWidth: 0 }}>
                       <span

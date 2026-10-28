@@ -123,6 +123,46 @@ export interface JokerKeypadProps {
    *  video settings surface passes "emoji" so users land on the emoji
    *  grid immediately · chat composers keep the default "letters". */
   initialPlane?: "letters" | "emoji" | "sticker";
+  /** Owner-authorised 2026-10-24 · Phase 0.1 · Controls what the Enter
+   *  key does.
+   *   · "chat"        · default · sealed behaviour · fires onSend + closes
+   *   · "single-line" · fires the caller-supplied onEnter if provided,
+   *                     otherwise just closes · no newline inserted
+   *   · "multiline"   · inserts "\n" at the cursor position + keeps the
+   *                     keypad open · caller must provide an alternate
+   *                     Send/Done affordance outside the keypad
+   *
+   *  DEFAULTS PRESERVE BYTE-EQUIVALENT CHAT BEHAVIOUR. Every pre-existing
+   *  JokerKeypad consumer that does not pass `mode` continues to call
+   *  onSend() + onClose() on Enter exactly as before.
+   */
+  mode?: "chat" | "single-line" | "multiline";
+  /** Owner-authorised 2026-10-24 · Phase 0.1 · Restrict which planes the
+   *  user can switch to.
+   *   · undefined (default) · all 6 planes allowed · byte-equivalent to
+   *                           sealed behaviour
+   *   · array of planes      · hides the toggle UI for planes NOT in the
+   *                            list. For a numeric-only field pass
+   *                            `["numbers"]` and the user has no path
+   *                            back to letters / emoji / stickers.
+   *
+   *  If the resolved initialPlane is not in the allow-list, the keypad
+   *  opens on the FIRST entry of the list instead.
+   */
+  planes?: readonly Plane[];
+  /** Owner-authorised 2026-10-24 · Phase 0.1 · Caller-supplied Enter
+   *  handler for "single-line" mode (ignored in "chat" and "multiline").
+   *  Typical uses: `form.requestSubmit()`, focus next field, close.
+   */
+  onEnter?: () => void;
+  /** Owner-authorised 2026-10-24 · Phase 0.1 · Soft maxLength clamp
+   *  enforced before onChange fires. Pass undefined (default) for no
+   *  cap. Keys that would push the value past the cap are swallowed
+   *  silently (keypad press no-ops). Native <input maxLength> is still
+   *  honoured on the input element itself; this prop is a defence-in-
+   *  depth clamp inside the keypad for the suppressed-OS-keyboard path.
+   */
+  maxLength?: number;
 }
 
 /** Convert a hex accent into the five rgba() tints the keypad needs
@@ -170,7 +210,27 @@ export function JokerKeypad({
   onPickGiphy,
   accentColor,
   initialPlane = "letters",
+  mode = "chat",
+  planes,
+  onEnter,
+  maxLength,
 }: JokerKeypadProps): React.JSX.Element | null {
+  /* Owner-authorised 2026-10-24 · Phase 0.1 · plane allow-list guard.
+     When `planes` is undefined every plane is allowed (sealed behaviour).
+     When `planes` is supplied the keypad hides the toggle UI for planes
+     NOT in the list AND rejects programmatic switches to disallowed
+     planes. Pure · no state. */
+  const isPlaneAllowed = React.useCallback(
+    (p: Plane): boolean => {
+      if (!planes) return true;
+      return planes.includes(p);
+    },
+    [planes],
+  );
+  const resolvedInitialPlane = React.useMemo<Plane>(() => {
+    if (!planes || planes.length === 0) return initialPlane;
+    return planes.includes(initialPlane) ? initialPlane : planes[0];
+  }, [planes, initialPlane]);
   /* Owner directive 2026-10-18 · derive the five CSS vars once per
      render from accentColor · defaults to Joker acid-green so the
      Joker theme stays visually identical to the sealed primitive. */
@@ -179,11 +239,13 @@ export function JokerKeypad({
     [accentColor],
   );
   const [shift, setShift] = React.useState<ShiftState>("upper"); // first letter capitalised
-  const [plane, setPlane] = React.useState<Plane>(initialPlane);
+  const [plane, setPlane] = React.useState<Plane>(resolvedInitialPlane);
   /* Owner directive 2026-10-20 · when the caller changes initialPlane
-     between opens, honour the new default on the next open. */
+     between opens, honour the new default on the next open.
+     Owner-authorised 2026-10-24 · Phase 0.1 · honour the `planes`
+     allow-list by preferring `resolvedInitialPlane` over the raw prop. */
   React.useEffect(() => {
-    if (open) setPlane(initialPlane);
+    if (open) setPlane(resolvedInitialPlane);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
   const [pressed, setPressed] = React.useState<string | null>(null);
@@ -250,6 +312,11 @@ export function JokerKeypad({
   const pressKey = (char: string) => {
     const emit = shift === "lower" ? char : char.toUpperCase();
     const next = value.slice(0, cursorPos) + emit + value.slice(cursorPos);
+    /* Owner-authorised 2026-10-24 · Phase 0.1 · soft maxLength clamp.
+       When the cap is defined and the next value would exceed it, the
+       press is swallowed silently (no onChange, no visual feedback) so
+       the user cannot type past the limit via the keypad. */
+    if (maxLength !== undefined && next.length > maxLength) return;
     onChange(next);
     setCursorPos(cursorPos + emit.length);
     prevValueRef.current = next;
@@ -292,10 +359,95 @@ export function JokerKeypad({
 
   const pressSpace = () => {
     const next = value.slice(0, cursorPos) + " " + value.slice(cursorPos);
+    /* Owner-authorised 2026-10-24 · Phase 0.1 · maxLength clamp. */
+    if (maxLength !== undefined && next.length > maxLength) return;
     onChange(next);
     setCursorPos(cursorPos + 1);
     prevValueRef.current = next;
     flashPressed("␣");
+  };
+
+  /* Owner-authorised 2026-10-24 · Phase 0 corrective patch A ·
+     clipboard paste. Explicit user gesture (the KeyCap tap) satisfies
+     the Clipboard API's permissions requirement. Pure defence against
+     unavailable API / permission denial / empty clipboard · errors
+     surface via a transient `pasteError` state rendered in the
+     preview strip (3-second auto-dismiss · aria-live="polite" for
+     screen readers · never silent failure).
+     SECURITY · the pasted text is written into `onChange(value)`
+     only · it is NOT logged, transmitted, or persisted anywhere by
+     the keypad. The caller receives it exactly as any other key
+     press. */
+  const [pasteError, setPasteError] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (pasteError === null) return;
+    const t = window.setTimeout(() => setPasteError(null), 3000);
+    return () => window.clearTimeout(t);
+  }, [pasteError]);
+
+  const pressPaste = async (): Promise<void> => {
+    try {
+      /* Unavailable API guard · older iOS WebViews, locked-down PWA
+         contexts, Firefox < 90 lack `navigator.clipboard.readText`. */
+      if (
+        typeof navigator === "undefined" ||
+        !navigator.clipboard ||
+        typeof navigator.clipboard.readText !== "function"
+      ) {
+        setPasteError("Clipboard not available on this device");
+        return;
+      }
+      let text: string;
+      try {
+        text = await navigator.clipboard.readText();
+      } catch (readErr) {
+        /* NotAllowedError (permission denied) · SecurityError (iframe
+           without clipboard-read allow) · DOMException on cancellation
+           · any other error · surface honest text to the user. */
+        const name =
+          readErr instanceof Error ? readErr.name : "ClipboardError";
+        if (name === "NotAllowedError") {
+          setPasteError("Clipboard permission denied");
+        } else if (name === "SecurityError") {
+          setPasteError("Clipboard blocked by this page");
+        } else {
+          setPasteError("Could not read the clipboard");
+        }
+        return;
+      }
+      if (text.length === 0) {
+        setPasteError("Clipboard is empty");
+        return;
+      }
+      /* Build the full next value · maxLength clamp truncates the
+         inserted segment rather than rejecting the entire paste · same
+         semantic the NexInput wrapper uses so the two agree. */
+      const inserted =
+        maxLength !== undefined
+          ? text.slice(0, Math.max(0, maxLength - (value.length - 0)))
+          : text;
+      const next = value.slice(0, cursorPos) + inserted + value.slice(cursorPos);
+      const final =
+        maxLength !== undefined && next.length > maxLength
+          ? next.slice(0, maxLength)
+          : next;
+      /* No-op if clamp reduced the paste to nothing (e.g. already at
+         max). Surface a user-visible message so the user understands
+         why their paste didn't land. */
+      if (final === value) {
+        setPasteError("Nothing to paste · maxLength reached");
+        return;
+      }
+      onChange(final);
+      setCursorPos(cursorPos + (final.length - value.length));
+      prevValueRef.current = final;
+      flashPressed("📋");
+    } catch (err) {
+      /* Catch-all · never leaves the user wondering if the tap worked. */
+      const message =
+        err instanceof Error ? err.message : "Clipboard paste failed";
+      setPasteError(message);
+    }
   };
 
   /* Space-bar long-press + swipe cursor-nav · owner directive
@@ -350,13 +502,46 @@ export function JokerKeypad({
   };
 
   const pressPlaneToggle = () => {
-    setPlane((prev) => (prev === "letters" ? "numbers" : "letters"));
+    /* Owner-authorised 2026-10-24 · Phase 0.1 · respect the plane
+       allow-list · if the target plane is restricted, the toggle no-ops
+       and the keypad stays on the current plane. */
+    setPlane((prev) => {
+      const target: Plane = prev === "letters" ? "numbers" : "letters";
+      return isPlaneAllowed(target) ? target : prev;
+    });
     flashPressed(plane === "letters" ? "123" : "ABC");
   };
 
   const pressSymbolsToggle = () => {
-    setPlane((prev) => (prev === "numbers" ? "symbols" : "numbers"));
+    setPlane((prev) => {
+      const target: Plane = prev === "numbers" ? "symbols" : "numbers";
+      return isPlaneAllowed(target) ? target : prev;
+    });
     flashPressed("#+=");
+  };
+
+  /* Owner-authorised 2026-10-24 · Phase 0.1 · mode-aware Enter handler.
+     Default "chat" preserves the sealed behaviour (sealed byte-equivalent).
+     "single-line" fires the caller's onEnter (or just closes). "multiline"
+     inserts "\n" at the cursor and keeps the keypad open. */
+  const handleEnterKey = (): void => {
+    if (mode === "multiline") {
+      const next = value.slice(0, cursorPos) + "\n" + value.slice(cursorPos);
+      if (maxLength !== undefined && next.length > maxLength) return;
+      onChange(next);
+      setCursorPos(cursorPos + 1);
+      prevValueRef.current = next;
+      flashPressed("↵");
+      return;
+    }
+    if (mode === "single-line") {
+      onEnter?.();
+      onClose();
+      return;
+    }
+    /* mode === "chat" · sealed default · fires onSend + closes. */
+    onSend();
+    onClose();
   };
 
   const flashPressed = (char: string) => {
@@ -445,13 +630,27 @@ export function JokerKeypad({
              reads var(--nex-kp-accent-*) so the whole keypad recolours
              from this one block. */
           ...paletteVars,
-          position: "fixed",
+          /* Owner directive 2026-10-27 · "oue kepad need same screen
+             width and moved down to footer" · reinforced the frame-
+             anchoring. `position: absolute` + `left/right: 0` already
+             spans the containing block but needed `box-sizing:
+             border-box` + explicit `width: 100%` + `max-width: 100%`
+             so the 6 px side padding + 1 px top rim can't push the
+             outer box past the frame edge in any containing-block
+             scenario (some surfaces mount the keypad inside modals
+             that re-compute the containing block during animations).
+             Bottom padding reduced to pure safe-area so the keys
+             sit flush with the phone frame's bottom edge on desktop. */
+          position: "absolute",
           left: 0,
           right: 0,
           bottom: 0,
+          width: "100%",
+          maxWidth: "100%",
+          boxSizing: "border-box",
           zIndex: 221,
           padding:
-            "10px 6px calc(env(safe-area-inset-bottom, 0px) + 10px)",
+            "10px 6px calc(env(safe-area-inset-bottom, 0px) + 2px)",
           background:
             `linear-gradient(180deg, ${DEEP_1} 0%, ${DEEP_2} 100%)`,
           borderTop: `1px solid var(--nex-kp-accent-dim, rgba(143,255,110,0.22))`,
@@ -466,6 +665,40 @@ export function JokerKeypad({
           WebkitUserSelect: "none",
         }}
       >
+        {/* Owner-authorised 2026-10-24 · Phase 0 corrective patch A ·
+            paste-error banner · absolutely positioned at the top of
+            the keypad root so it never shifts the key layout. 3-second
+            auto-dismiss (handled by the pasteError effect above).
+            role="status" + aria-live="polite" so screen readers
+            announce the failure without interrupting. */}
+        {pasteError ? (
+          <div
+            data-nex-keypad-paste-error
+            role="status"
+            aria-live="polite"
+            style={{
+              position: "absolute",
+              top: -34,
+              left: 10,
+              right: 10,
+              padding: "6px 10px",
+              borderRadius: 8,
+              background: "rgba(179,0,0,0.92)",
+              color: "#FFF",
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: 0.2,
+              lineHeight: 1.3,
+              textAlign: "center",
+              boxShadow: "0 2px 10px rgba(0,0,0,0.5)",
+              zIndex: 1,
+              pointerEvents: "none",
+            }}
+          >
+            ⚠ {pasteError}
+          </div>
+        ) : null}
+
         {/* Faint CRT scanline overlay · pointer-events:none so it
             never swallows a tap · 4px repeating gradient at ~4%
             opacity. Reads as "worn CRT" at this density. */}
@@ -639,14 +872,53 @@ export function JokerKeypad({
             </div>
           </div>
 
+          {/* Owner-authorised 2026-10-24 · Phase 0 corrective patch A ·
+              paste KeyCap · lives in the top strip next to the Send
+              button so it reads as a peer action, not a keyboard key.
+              Explicit tap satisfies the Clipboard API user-gesture
+              requirement. */}
           <button
             type="button"
-            aria-label="Send message"
-            disabled={value.length === 0}
+            aria-label="Paste from clipboard"
             onClick={() => {
-              if (value.length === 0) return;
-              onSend();
-              onClose();
+              /* Fire-and-forget · the async handler owns its own
+                 state updates + user-visible error surface. */
+              void pressPaste();
+            }}
+            data-nex-keypad-paste
+            style={{
+              flexShrink: 0,
+              appearance: "none",
+              width: 36,
+              height: 32,
+              borderRadius: 10,
+              padding: 0,
+              display: "grid",
+              placeItems: "center",
+              background: "var(--nex-kp-accent-dim, rgba(143,255,110,0.22))",
+              color: KEY_TEXT,
+              border: `1px solid var(--nex-kp-accent, #8FFF6E)`,
+              cursor: "pointer",
+              fontSize: 16,
+              lineHeight: 1,
+              transition: "background 120ms ease",
+              marginRight: 6,
+            }}
+          >
+            📋
+          </button>
+          <button
+            type="button"
+            aria-label={mode === "chat" ? "Send message" : mode === "multiline" ? "Insert line break" : "Done"}
+            /* Owner-authorised 2026-10-24 · Phase 0.1 · the empty-input
+               disable only applies to chat mode where sending an empty
+               bubble doesn't make sense · single-line + multiline modes
+               allow Enter on an empty value (Enter means "insert newline"
+               or "close/submit", both valid on empty). */
+            disabled={mode === "chat" && value.length === 0}
+            onClick={() => {
+              if (mode === "chat" && value.length === 0) return;
+              handleEnterKey();
             }}
             style={{
               flexShrink: 0,
@@ -686,35 +958,48 @@ export function JokerKeypad({
             marginBottom: 6,
           }}
         >
-          <ModeTab
-            label="Aa"
-            active={!isDrawerPlane}
-            onPress={() => {
-              // Return to the last text plane · default to letters
-              // (symbols/numbers are reached via the row-4 toggle
-              // once the user is back on the keyboard).
-              setPlane("letters");
-            }}
-          />
-          <ModeTab
-            label="😊"
-            active={plane === "emoji"}
-            onPress={() => setPlane("emoji")}
-          />
-          <ModeTab
-            label="🃏"
-            active={plane === "sticker"}
-            onPress={() => setPlane("sticker")}
-          />
+          {/* Owner-authorised 2026-10-24 · Phase 0.1 · each mode-tab
+              only renders when its target plane is allowed by the
+              `planes` prop. undefined (default) = all tabs render,
+              byte-equivalent to sealed behaviour. */}
+          {(isPlaneAllowed("letters") || isPlaneAllowed("numbers") || isPlaneAllowed("symbols")) && (
+            <ModeTab
+              label="Aa"
+              active={!isDrawerPlane}
+              onPress={() => {
+                // Return to the last text plane · default to letters
+                // if allowed, else first allowed text plane.
+                if (isPlaneAllowed("letters")) setPlane("letters");
+                else if (isPlaneAllowed("numbers")) setPlane("numbers");
+                else if (isPlaneAllowed("symbols")) setPlane("symbols");
+              }}
+            />
+          )}
+          {isPlaneAllowed("emoji") && (
+            <ModeTab
+              label="😊"
+              active={plane === "emoji"}
+              onPress={() => setPlane("emoji")}
+            />
+          )}
+          {isPlaneAllowed("sticker") && (
+            <ModeTab
+              label="🃏"
+              active={plane === "sticker"}
+              onPress={() => setPlane("sticker")}
+            />
+          )}
           {/* Owner directive 2026-10-20 · "all keypads have emoji and
               stickers and giphy buttons and library" · third drawer
               tab opens the NEX GIFs library (fully offline · same
               catalog the chat composer picker uses). */}
-          <ModeTab
-            label="GIF"
-            active={plane === "giphy"}
-            onPress={() => setPlane("giphy")}
-          />
+          {isPlaneAllowed("giphy") && (
+            <ModeTab
+              label="GIF"
+              active={plane === "giphy"}
+              onPress={() => setPlane("giphy")}
+            />
+          )}
         </div>
 
         {/* Inline drawer (emoji / sticker) · world-class standard.
@@ -852,10 +1137,8 @@ export function JokerKeypad({
           <KeyCap
             glyph="↵"
             intent="enter"
-            onPress={() => {
-              onSend();
-              onClose();
-            }}
+            /* Owner-authorised 2026-10-24 · Phase 0.1 · mode-aware. */
+            onPress={handleEnterKey}
             flash={pressed === "↵"}
             widthFactor={1.6}
           />

@@ -16,6 +16,11 @@ export interface MockContact {
   readonly displayName: string;
   readonly profession: string;
   readonly city: string | null;
+  /** Owner directive 2026-10-24 · ISO 3166-1 alpha-2 country code
+   *  for the Create Group contact-picker flag chip. `null` when the
+   *  mock entry has no city/location set. Replace with the real
+   *  nex_account.country column when the backing service lands. */
+  readonly country: string | null;
   readonly presence: ContactPresence;
   readonly lastSeenMinsAgo: number | null;  // null if online
   readonly hasShop: boolean;
@@ -42,6 +47,7 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
     displayName: "Philip O'Farrell",
     profession: "NEX Founder",
     city: "London",
+    country: "GB",
     presence: "online",
     lastSeenMinsAgo: null,
     hasShop: true,
@@ -62,6 +68,7 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
     displayName: "Maria Santos",
     profession: "Photographer",
     city: "Yogyakarta",
+    country: "ID",
     presence: "online",
     lastSeenMinsAgo: null,
     hasShop: true,
@@ -77,6 +84,7 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
     displayName: "Crispy Chicken",
     profession: "Restaurant owner",
     city: "Jakarta",
+    country: "ID",
     presence: "online",
     lastSeenMinsAgo: null,
     hasShop: true,
@@ -92,6 +100,7 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
     displayName: "Hammer Ex Products",
     profession: "Industrial hardware",
     city: "Surabaya",
+    country: "ID",
     presence: "away",
     lastSeenMinsAgo: 15,
     hasShop: true,
@@ -107,6 +116,7 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
     displayName: "Lisa Rodriguez",
     profession: "Fitness coach",
     city: "Bali",
+    country: "ID",
     presence: "online",
     lastSeenMinsAgo: null,
     hasShop: true,
@@ -122,6 +132,7 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
     displayName: "Dr. James Okafor",
     profession: "Doctor",
     city: "Jakarta",
+    country: "ID",
     presence: "away",
     lastSeenMinsAgo: 32,
     hasShop: false,
@@ -137,6 +148,7 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
     displayName: "Priya Patel",
     profession: "Yoga instructor",
     city: "Bali",
+    country: "ID",
     presence: "online",
     lastSeenMinsAgo: null,
     hasShop: true,
@@ -152,6 +164,7 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
     displayName: "Sarah Chen",
     profession: "UX Designer",
     city: "Singapore",
+    country: "SG",
     presence: "offline",
     lastSeenMinsAgo: 240,
     hasShop: false,
@@ -167,6 +180,7 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
     displayName: "Ahmed Hassan",
     profession: "Software engineer",
     city: "Dubai",
+    country: "AE",
     presence: "away",
     lastSeenMinsAgo: 8,
     hasShop: false,
@@ -182,6 +196,7 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
     displayName: "Mike's Delivery",
     profession: "Logistics",
     city: "Jakarta",
+    country: "ID",
     presence: "online",
     lastSeenMinsAgo: null,
     hasShop: true,
@@ -197,6 +212,7 @@ export const MOCK_CONTACTS: ReadonlyArray<MockContact> = [
     displayName: "Elena Volkov",
     profession: "Travel blogger",
     city: "Prague",
+    country: "CZ",
     presence: "offline",
     lastSeenMinsAgo: 1440,
     hasShop: false,

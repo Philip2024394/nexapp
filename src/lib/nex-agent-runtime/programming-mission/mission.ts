@@ -35,7 +35,6 @@ import { AGENT_EVIDENCE_COLLECTION } from "@/lib/nex-agent-runtime/process/types
 import type { FounderDelegationEnvelope, DelegatedAuthorizationEnvelope } from "@/lib/nex-agent-runtime/founder-authority/types";
 import type { OrchestratorGateReceipt } from "@/lib/nex-agent-runtime/orchestrator/types";
 import { executeThroughWorkstation } from "@/lib/nex-agent-runtime/workstation-integration/execute";
-import type { CapabilityGap } from "@/lib/nex-cap/types";
 import type { CapEngineeringProposal } from "@/lib/nex-cap/nex1-engineer";
 import {
   CAP_KIND_PROGRAMMING_SMALL_CHANGE,

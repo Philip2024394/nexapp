@@ -30,6 +30,12 @@ import * as productService from "@/lib/nex-native/product-service";
 // is the customer-safe filter (status='live' AND is_available=true).
 // Owner-only management lives under /nex-native/manage/accommodation.
 import * as accommodationService from "@/lib/nex-native/accommodation-service";
+import {
+  getActiveSessionForBroadcaster,
+  getFeaturedProductForSession,
+} from "@/lib/nex-native/live-broadcast/live-session-service";
+import { evaluateLiveness } from "@/lib/nex-native/live-broadcast/stale-session-policy";
+import { ShopLiveStrip } from "@/components/nex-native/live-commerce/ShopLiveStrip";
 import * as accountService from "@/lib/nex-native/account-service";
 import {
   isLiveWorldId,
@@ -321,6 +327,41 @@ export default async function Page({
     }
   }
 
+  /* Phase 2 · G2 · §5.2 Live heartbeat (shop-strip variant). Both
+     reads are fail-open · if the service errors (e.g. nex_live_session
+     table not yet applied in a non-sandbox env), the strip just does
+     not render and the page continues to work. The strip only appears
+     when the broadcaster has an open session. */
+  // Plan v4 · AC-1 · one nowMs per request flows through every
+  // DB-heartbeat-derived resolver on this page.
+  const nowMs = Date.now();
+  const ownerLiveSession = await getActiveSessionForBroadcaster(
+    business.owner_account_id,
+    nowMs,
+  );
+  // Plan v4 · AC-2 + AC-3 · derive the authoritative verdict using
+  // the SAME nowMs so the shop strip can decay client-side.
+  const shopLiveness = ownerLiveSession
+    ? evaluateLiveness(ownerLiveSession, nowMs)
+    : ({ isLive: false } as const);
+  let shopLiveWatchHref: string | null = null;
+  let shopLiveFeaturedProductName: string | null = null;
+  if (ownerLiveSession && shopLiveness.isLive) {
+    const activePin = await getFeaturedProductForSession(ownerLiveSession.id);
+    const productQuery = activePin
+      ? `?product=${encodeURIComponent(activePin.product_id)}`
+      : "";
+    shopLiveWatchHref = `/nex-native/live-commerce/${ownerLiveSession.id}${productQuery}`;
+    if (activePin) {
+      try {
+        const row = await productService.getProductById(activePin.product_id);
+        shopLiveFeaturedProductName = row?.name ?? null;
+      } catch {
+        // Fail-open · just drop the product name decoration.
+      }
+    }
+  }
+
   return (
     <div
       style={{
@@ -331,6 +372,28 @@ export default async function Page({
       }}
     >
       {setupBanner}
+      {/* Phase 2 · G2 · §5.2 shop-strip live heartbeat. Renders ONLY
+         when the broadcaster has an open session (ShopLiveStrip
+         returns null otherwise). Positioned above the hero header
+         as a non-intrusive banner that opens the broadcast. The
+         strip never fabricates a Live state · the server-side
+         service lookup is the source of truth. */}
+      {ownerLiveSession && shopLiveness.isLive && (
+        <div
+          style={{
+            padding:
+              "calc(env(safe-area-inset-top, 0) + 10px) 12px 0",
+          }}
+        >
+          <ShopLiveStrip
+            isLive={true}
+            watchHref={shopLiveWatchHref}
+            broadcasterLabel={business.display_name}
+            featuredProductName={shopLiveFeaturedProductName}
+            liveExpiresInMs={shopLiveness.liveExpiresInMs}
+          />
+        </div>
+      )}
       {/* --- TOP HEADER · NEX brand + home + settings ----------------
           Transparent · no container · floats directly over the hero
           photograph. The wordmark carries a subtle text-shadow and

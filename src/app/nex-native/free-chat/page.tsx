@@ -381,16 +381,6 @@ export default async function FreeChatPage({
             panel with voice/video/dial-pad/recent/contacts rows. All
             visual placeholders · no call-engine wiring. */}
         <FreeChatCallCenterDrawerClient />
-
-        {/* ── Guest-only sticky "Create free NEX" CTA · retired
-            2026-10-22 (afternoon) · owner directive · the create-
-            account URL is now the signed-out root destination, so
-            the sticky CTA on /free-chat is redundant. Any guest
-            that reaches /free-chat (e.g. by direct URL in a share
-            link) can still open the side drawer and tap "Sign in
-            to NEX" there. The isGuest flag is now unused on this
-            page but kept resolved above in case a later surface
-            needs it. */}
       </main>
     </>
   );

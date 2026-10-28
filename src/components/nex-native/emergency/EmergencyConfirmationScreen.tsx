@@ -58,6 +58,10 @@ import Link from "next/link";
 import { EMERGENCY_PALETTE } from "./_palette";
 import { SimulatedBadge } from "./SimulatedBadge";
 import type { IncidentCategory } from "./types";
+// Owner directive 2026-10-25 · 3-dot side-drawer trigger pinned to the
+// top-right of every emergency phase so the user can access the NEX
+// Center drawer without leaving the flow.
+import { ControlDrawer } from "@/components/nex-native/control-drawer/control-drawer-client";
 
 type Phase =
   | "acknowledging-policy"
@@ -65,6 +69,10 @@ type Phase =
   | "awaiting-geolocation"
   | "counting-down"
   | "submitting"
+  // Owner directive 2026-10-25 · stay on the page after the countdown
+  // completes · show a matrix-processing animation + "Alert Is Active
+  // And Will Not Be Long" + Close button. No navigation.
+  | "active-matrix"
   | "revoked"
   | "error"
   | "no-responders";
@@ -301,7 +309,10 @@ export function EmergencyConfirmationScreen({
 
   // Confirm the pending alert · reached by the natural T=0 tick or by
   // the explicit Skip countdown tap. Both paths flip the row's state
-  // to active and navigate to /active.
+  // to active · owner directive 2026-10-25 keeps the user on THIS
+  // page instead of routing to /active · phase moves to
+  // "active-matrix" and the Shell renders a matrix-processing
+  // animation + "Alert Is Active And Will Not Be Long" + Close.
   const confirmAlertFromCountdown = React.useCallback(async () => {
     if (firedRef.current) return;
     const id = incidentIdRef.current;
@@ -328,7 +339,7 @@ export function EmergencyConfirmationScreen({
         firedRef.current = false;
         return;
       }
-      router.push("/nex-native/emergency-help/active");
+      setPhase("active-matrix");
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Unknown error confirming alert.";
@@ -718,6 +729,63 @@ export function EmergencyConfirmationScreen({
     );
   }
 
+  if (phase === "active-matrix") {
+    return (
+      <Shell>
+        <SimulatedBadge live={!simulated} />
+        <Header>Alert Active</Header>
+        <ActiveMatrixPanel />
+        <p
+          data-testid="nex-emergency-active-matrix-copy"
+          style={{
+            margin: "16px 0 0",
+            fontSize: 15,
+            fontWeight: 800,
+            color: EMERGENCY_PALETTE.textPrimary,
+            textAlign: "center",
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+          }}
+        >
+          Processing
+        </p>
+        <button
+          type="button"
+          onClick={returnToIdle}
+          data-testid="nex-emergency-active-matrix-close"
+          aria-label="Close emergency alert view"
+          style={{
+            display: "block",
+            width: "100%",
+            marginTop: 20,
+            padding: "14px 18px",
+            background: "transparent",
+            color: EMERGENCY_PALETTE.textPrimary,
+            border: "2px solid rgba(0, 175, 255, 0.65)",
+            borderRadius: 12,
+            fontSize: 15,
+            fontWeight: 800,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            touchAction: "manipulation",
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          Close
+        </button>
+        {/* Owner directive 2026-10-25 · "counter at bottom of the alert
+            is active page showing from the time the alert was activated
+            · this could also make bad people afraid that time has
+            passed". Honest counter: time since the active-matrix phase
+            was entered. Updates once per second. Red + monospace reads
+            as "clock is ticking, system remembers." */}
+        <ElapsedSinceActivation />
+      </Shell>
+    );
+  }
+
   if (phase === "revoked") {
     return (
       <Shell>
@@ -1079,7 +1147,12 @@ function Shell({ children }: { children: React.ReactNode }): React.JSX.Element {
     <main
       data-testid="nex-emergency-confirmation-screen"
       style={{
-        minHeight: "100dvh",
+        position: "relative",
+        // Owner directive 2026-10-25 · mobile-first fit · "100%" so
+        // we fill the .nex-native-frame (viewport on mobile, 909px
+        // phone silhouette on desktop) instead of escaping to the real
+        // browser viewport.
+        minHeight: "100%",
         // Owner directive 2026-10-25 · unified emergency background ·
         // the Futuristic Red Cross Rescue Shield image (already used
         // on the activation page) now also stands behind the
@@ -1099,6 +1172,23 @@ function Shell({ children }: { children: React.ReactNode }): React.JSX.Element {
           "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
       }}
     >
+      {/* Owner directive 2026-10-25 · side-drawer trigger pinned to
+          the top-right so every emergency phase keeps the "⋮ NEX
+          Center" affordance. `session={null}` mirrors the
+          activate/welcome pages · the drawer renders its guest-state
+          (Sign in to NEX bar + locked rows + Live/Vault/Socials
+          quick-access) and the full user state once auth lands. */}
+      <div
+        data-nex-emergency-header-drawer-slot
+        style={{
+          position: "absolute",
+          top: 16,
+          right: 16,
+          zIndex: 5,
+        }}
+      >
+        <ControlDrawer session={null} />
+      </div>
       <div style={{ maxWidth: 480, margin: "0 auto" }}>{children}</div>
     </main>
   );
@@ -1441,6 +1531,290 @@ function LocationReadyPanel(): React.JSX.Element {
       >
         Your exact location will be shared when the button is activated.
       </div>
+    </div>
+  );
+}
+
+// ─── ActiveMatrixPanel ─────────────────────────────────────────────
+//
+// Owner directive 2026-10-25 · "longer matrix animation, add some
+// details in red color Police - yellow accepted alert · if bad guy
+// was watching we need he think nex has made contact and nex community
+// are active · we don't say that just the animation · make sure the
+// animation is not showing same all the time."
+//
+// What this component honestly represents:
+//   · DECORATIVE. The scrolling lines are not real server logs. They
+//     signal that the system is doing substantial work after the
+//     button press · a deterrent against bad actors who assume
+//     "pressed and no visible fallout = nothing happened."
+//   · The pool rotates: a cycling window of lines is drawn from a
+//     ~25-entry pool each tick, so the panel never shows the same
+//     frame twice. Hex noise reshuffles every tick.
+//   · The honest backstop line "simulated=true · no real alerts sent
+//     in pilot" is PINNED at the bottom of every frame · it never
+//     cycles out. The deterrent framing stays within an honest
+//     perimeter.
+//
+// Color code:
+//   · green  (#00FF66) · default NEX system log
+//   · yellow (#FFC24B) · accepted-alert / responder-join events
+//   · red    (#FF3355) · police / emergency-services routing lines
+//   · dim    (opacity 0.55) · metadata / noise
+//
+// The sealed doctrine at line 14 of this file holds: the fan-out hook
+// is a NO-OP, no real alerts dispatch, no real police contact. This
+// panel is the user-facing "working" indicator while the pilot
+// completes · once real delivery lands these lines can be swapped for
+// real event streams.
+
+type MatrixColor = "green" | "yellow" | "red";
+interface MatrixLine {
+  readonly text: string;
+  readonly color?: MatrixColor;
+  readonly dim?: boolean;
+}
+
+const MATRIX_FAKE_NEX_IDS = [
+  "NEX-7F3A2", "NEX-C1B84", "NEX-9D2E1", "NEX-4B8C0",
+  "NEX-2A6E5", "NEX-E70D9", "NEX-5F13C", "NEX-A2B47",
+  "NEX-D08EF", "NEX-61C3A",
+] as const;
+
+function ActiveMatrixPanel(): React.JSX.Element {
+  const [tick, setTick] = React.useState(0);
+  const [startedAt] = React.useState<number>(() => Date.now());
+
+  React.useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 180);
+    return () => clearInterval(id);
+  }, []);
+
+  const hexNoise = React.useMemo(() => {
+    const chars = "0123456789abcdef";
+    const line = Array.from({ length: 44 }, (_, i) => {
+      const seed = (tick + i * 7) % 16;
+      return chars[seed] ?? "0";
+    }).join("");
+    return line.match(/.{1,4}/g)?.join(" ") ?? line;
+  }, [tick]);
+
+  const elapsedSec = Math.max(
+    0,
+    Math.floor((Date.now() - startedAt) / 1000),
+  );
+
+  // Pool of all possible lines. Each cycle picks a subset so the
+  // visible frame never repeats exactly. Honest-fact lines carry
+  // `dim: true` so the eye is drawn to the colored action lines.
+  const nexId = (offset: number): string =>
+    MATRIX_FAKE_NEX_IDS[(tick + offset) % MATRIX_FAKE_NEX_IDS.length]!;
+
+  const pool: ReadonlyArray<MatrixLine> = [
+    { text: `[nex] alert.channel: open`, dim: true },
+    { text: `[nex] incident.id: sim-${hexNoise.slice(0, 11)}`, dim: true },
+    { text: `[nex] device.ip: logged`, dim: true },
+    { text: `[nex] location.pin: shared with recipients`, dim: true },
+    { text: `[nex] t+${elapsedSec}s · acquiring responder list` },
+    { text: `[nex] trusted_contact.notified: 3/3` },
+    { text: `[nex] nearby_responder.scan: in progress` },
+    { text: `[nex] nearby_responder.radius: 3 km` },
+    { text: `[nex] nearby_responder.found: ${((tick * 3) % 14) + 2}` },
+    { text: `[nex] community.beacon: broadcasting` },
+    { text: `[nex] handshake: encrypted` },
+    { text: `[nex] response_group.open: standby` },
+    { text: `${nexId(0)} · accepted alert`, color: "yellow" },
+    { text: `${nexId(2)} · responding · eta 4 min`, color: "yellow" },
+    { text: `${nexId(5)} · joining response group`, color: "yellow" },
+    { text: `${nexId(1)} · standing by`, color: "yellow" },
+    { text: `${nexId(7)} · acknowledged`, color: "yellow" },
+    { text: `[police] dispatch.channel: contact.pending`, color: "red" },
+    { text: `[police] jurisdiction: resolving`, color: "red" },
+    { text: `[police] routing: nearest.unit`, color: "red" },
+    { text: `[police] on.record: incident ref sim-${hexNoise.slice(0, 6)}`, color: "red" },
+    { text: `[hex] ${hexNoise}`, dim: true },
+    { text: `[nex] dispatch.channel: in_app · sms · email · whatsapp`, dim: true },
+  ];
+
+  // Rotating window · 14 lines visible out of ~23 in the pool. The
+  // starting offset advances every ~4 ticks so the window glides
+  // slowly instead of flashing random content.
+  const WINDOW = 14;
+  const start = Math.floor(tick / 4) % pool.length;
+  const windowed: MatrixLine[] = [];
+  for (let i = 0; i < WINDOW; i++) {
+    windowed.push(pool[(start + i) % pool.length]!);
+  }
+
+  const colorFor = (c: MatrixColor | undefined): string => {
+    if (c === "yellow") return "#FFC24B";
+    if (c === "red") return "#FF3355";
+    return "#00FF66";
+  };
+
+  return (
+    <div
+      data-nex-emergency-active-matrix
+      data-testid="nex-emergency-active-matrix-panel"
+      style={{
+        marginTop: 16,
+        padding: "16px 16px 14px",
+        borderRadius: 14,
+        background: "rgba(0, 10, 2, 0.9)",
+        border: "1px solid rgba(0, 220, 90, 0.45)",
+        boxShadow: "inset 0 0 32px rgba(0, 220, 90, 0.08)",
+        overflow: "hidden",
+        maxHeight: 360,
+      }}
+    >
+      <style>{`
+        @keyframes nexEmergencyMatrixFlicker {
+          0%, 100% { opacity: 1; }
+          50%      { opacity: 0.72; }
+        }
+        [data-nex-emergency-active-matrix-cursor] {
+          display: inline-block;
+          width: 7px;
+          height: 12px;
+          background: #00FF66;
+          margin-left: 2px;
+          vertical-align: baseline;
+          animation: nexEmergencyMatrixFlicker 900ms steps(2) infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          [data-nex-emergency-active-matrix] * {
+            animation: none !important;
+          }
+          [data-nex-emergency-active-matrix-cursor] { opacity: 1; }
+        }
+      `}</style>
+      <div
+        style={{
+          fontFamily:
+            "ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace",
+          fontSize: 11,
+          lineHeight: 1.55,
+          whiteSpace: "pre",
+          overflow: "hidden",
+        }}
+      >
+        {windowed.map((l, i) => (
+          <div
+            // Keyed by position + tick-slice so React recycles rows as
+            // the window slides · smooth, not jarring.
+            key={`${start}-${i}`}
+            style={{
+              color: colorFor(l.color),
+              opacity: l.dim ? 0.55 : 1,
+              fontWeight: l.color === "red" ? 700 : 400,
+              animation: `nexEmergencyMatrixFlicker ${900 + (i % 4) * 180}ms ease-in-out infinite`,
+            }}
+          >
+            {l.text}
+          </div>
+        ))}
+
+        {/* Honest backstop · pinned, never cycles out. */}
+        <div
+          style={{
+            marginTop: 6,
+            paddingTop: 6,
+            borderTop: "1px dashed rgba(0, 220, 90, 0.2)",
+            color: "#00FF66",
+            opacity: 0.5,
+          }}
+        >
+          [nex] simulated=true · no real alerts sent in pilot
+        </div>
+        <div style={{ color: "#00FF66" }}>
+          <span style={{ opacity: 0.65 }}>[nex]&nbsp;processing</span>
+          <span data-nex-emergency-active-matrix-cursor aria-hidden />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── ElapsedSinceActivation ────────────────────────────────────────
+//
+// Owner directive 2026-10-25 · counter at the bottom of the Alert
+// Active phase showing time since activation. Honest (reads a real
+// Date.now() diff) · ticks every second · red + monospace so a bad
+// actor watching sees the clock advancing + understands NEX has
+// retained the moment of activation.
+
+function ElapsedSinceActivation(): React.JSX.Element {
+  const [startedAt] = React.useState<number>(() => Date.now());
+  const [now, setNow] = React.useState<number>(() => Date.now());
+  React.useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const elapsed = Math.max(0, Math.floor((now - startedAt) / 1000));
+  const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
+  const ss = String(elapsed % 60).padStart(2, "0");
+  return (
+    <div
+      data-testid="nex-emergency-elapsed-since-activation"
+      style={{
+        marginTop: 18,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 10,
+        padding: "10px 14px",
+        borderRadius: 10,
+        background: "rgba(6, 2, 6, 0.68)",
+        border: "1px solid rgba(255, 51, 85, 0.45)",
+        fontFamily:
+          "ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace",
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: "50%",
+          background: "#FF3355",
+          boxShadow: "0 0 0 2px rgba(255, 51, 85, 0.25)",
+          animation: "nexEmergencyElapsedDot 1200ms ease-in-out infinite",
+        }}
+      />
+      <style>{`
+        @keyframes nexEmergencyElapsedDot {
+          0%, 100% { opacity: 1;   transform: scale(1); }
+          50%      { opacity: 0.5; transform: scale(0.86); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          [data-testid="nex-emergency-elapsed-since-activation"] span {
+            animation: none !important;
+          }
+        }
+      `}</style>
+      <span
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          color: "#FF6B81",
+        }}
+      >
+        Active for
+      </span>
+      <span
+        style={{
+          fontSize: 18,
+          fontWeight: 800,
+          letterSpacing: "0.08em",
+          color: EMERGENCY_PALETTE.textPrimary,
+          minWidth: 72,
+          textAlign: "center",
+        }}
+      >
+        {mm}:{ss}
+      </span>
     </div>
   );
 }

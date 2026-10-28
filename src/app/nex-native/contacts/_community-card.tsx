@@ -32,8 +32,14 @@ export function CommunityCard(): React.ReactElement {
     <GroupCard
       group={COMMUNITY_GROUP}
       href="/nex-native/community"
-      accent="orange"
-      eyebrow="Explore"
+      // Owner directive 2026-10-23 · "the groups cards should also
+      // be the same color as contacts cards" · Community flipped
+      // from orange → cyan so every card in the Groups tab reads as
+      // one NEX-cyan vocabulary.
+      // Owner directive 2026-10-23 (revised) · "remove the explore
+      // text" · eyebrow retired · the Community card now reads as a
+      // plain group card byte-identical to the mock groups below it.
+      accent="cyan"
     />
   );
 }

@@ -9,7 +9,6 @@ import path from "node:path";
 import { generateKeyPairSync } from "node:crypto";
 import { _resetRateLimiter } from "@/lib/nex-intelligence/host-rate-limiter";
 import { signSourceRegistryManifest, persistSourceRegistryManifest, SOURCE_REGISTRY_MANIFEST_COLLECTION } from "@/lib/nex-intelligence/source-registry-manifest";
-import { SOURCE_GUARDIAN_REJECTIONS_COLLECTION } from "@/lib/nex-intelligence/source-guardian";
 
 import { generateAgentKeypair, createAgentIdentity, hashCapabilityManifest, hashAuthorityManifest } from "../identity";
 import { buildAuthorityManifest } from "../authority-manifest";

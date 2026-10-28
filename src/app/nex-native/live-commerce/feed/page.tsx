@@ -255,7 +255,7 @@ export default async function LiveFeedPage(): Promise<React.JSX.Element> {
         </div>
         {viewerAccountId !== null && (
           <Link
-            href="/nex-native/live-commerce/go-live"
+            href="/nex-native/live-commerce/enter-broadcast-room"
             data-nex-live-feed-go-live-cta
             data-nex-live-feed-go-live-state={
               viewerHasActiveBroadcast ? "resume" : "start"
@@ -596,7 +596,7 @@ function EmptyState(): React.JSX.Element {
         Check back later or go live yourself.
       </div>
       <Link
-        href="/nex-native/live-commerce/go-live"
+        href="/nex-native/live-commerce/enter-broadcast-room"
         data-nex-live-feed-cta-go-live
         style={{
           display: "inline-block",

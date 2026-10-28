@@ -46,6 +46,4 @@ export {
   type BrainEstimateLine
 } from "./_integrations";
 
-export { withBrain } from "./_catalog_hook";
-
 export * from "./_schema";

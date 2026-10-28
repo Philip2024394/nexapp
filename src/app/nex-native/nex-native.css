@@ -156,12 +156,19 @@ body::-webkit-scrollbar,
 @media (min-width: 500px) {
   html,
   body {
-    /* Owner directive 2026-10-18 · desktop backdrop around the phone
-     * frame is NEX dark navy (#020914 · brand background token) ·
-     * previously flat black (#000) which felt disconnected from the
-     * NEX palette. The 12px bezel ring stays black so the frame
-     * still reads as a physical phone edge against the navy stage. */
-    background: #020914 !important;
+    /* Owner directive 2026-10-26 · "desktop and tablet background
+     * image should be set for every single page on desktop and
+     * tablet as we are mobile first" · hero image lives on html/body
+     * so it blankets EVERY /nex-native/* route (consumer, admin,
+     * dev, prototype — all opt-outs inherit this). background-
+     * attachment:fixed keeps the hero pinned when admin routes
+     * scroll past their natural height. Falls back to solid #020914
+     * if the image fails to load. */
+    background:
+      #020914
+      url("/nex-desktop-hero.png")
+      center center / cover
+      no-repeat fixed !important;
     /* Pin the page viewport so content that overshoots the frame
      * can't scroll the whole document. The frame handles its own
      * internal scroll below. */
@@ -172,21 +179,13 @@ body::-webkit-scrollbar,
     display: flex;
     justify-content: center;
     /* Centre the phone frame vertically on tall desktop screens so
-     * the NEX navy backdrop appears above AND below rather than
-     * only below. */
+     * the NEX hero backdrop (on body) appears above AND below the
+     * phone rather than only below. Stage itself is transparent so
+     * the body-level hero bg shows through. */
     align-items: center;
     height: 100dvh;
     min-height: 0;
-    /* Owner directive 2026-10-26 · desktop/tablet background image ·
-     * Neon NEX Cyber Hero Banner (character on left · neon-cyan
-     * glow). Falls back to solid #020914 if the image fails to load.
-     * Mobile (≤499.98 px) stays unchanged · the frame is full-bleed
-     * on real phones so the image would never show. */
-    background:
-      #020914
-      url("/nex-desktop-hero.png")
-      center center / cover
-      no-repeat;
+    background: transparent;
     overflow: hidden;
   }
   .nex-native-frame {
@@ -199,6 +198,21 @@ body::-webkit-scrollbar,
      * stage (#020914) so page + phone read as one surface. On
      * viewports ≤ 499.98 px (real phones) the frame collapses to
      * full-bleed · see rule below.
+     *
+     * Owner troubleshoot 2026-10-26 · "screen phone on desktop and
+     * tablet is the only active phone screen area for the
+     * application" · the known-tradeoff described at lines 148-151
+     * above (position:fixed escapes to the viewport) is now
+     * REVERSED. `transform: translateZ(0)` establishes a new
+     * containing block for every `position: fixed` descendant · so
+     * the message inbox panel, keypad overlay, chat sheets, and any
+     * other modal that uses `position: fixed` now anchor to this
+     * phone frame on desktop/tablet instead of flying out to the
+     * viewport edges. Also doubles as a GPU-layer hint so the frame
+     * renders cleanly during scroll + animation. Only applied
+     * inside the ≥500 px media query · real phones (<500 px) use
+     * the full-bleed frame below so the containing-block semantics
+     * don't matter there (viewport === frame).
      * ────────────────────────────────────────────────────────────── */
     width: min(360px, calc((100dvh - 32px) * 9 / 19.5));
     height: min(780px, calc(100dvh - 32px));
@@ -213,6 +227,9 @@ body::-webkit-scrollbar,
       0 24px 60px -14px rgba(0, 0, 0, 0.9),
       0 0 0 1px rgba(255, 255, 255, 0.06);
     background: #020914;
+    /* Containing block for position:fixed descendants · see note
+     * above. Any CSS transform other than `none` is sufficient. */
+    transform: translateZ(0);
   }
 }
 @media (max-width: 499.98px) {
@@ -255,7 +272,16 @@ body::-webkit-scrollbar,
 @media (min-width: 500px) {
   html:has(.nex-admin-root),
   body:has(.nex-admin-root) {
-    background: #020914 !important;
+    /* Owner directive 2026-10-26 · "every single page on desktop and
+     * tablet" · admin/dev/prototype routes inherit the hero bg too.
+     * Replaces the previous solid-navy override so these routes
+     * don't black out the hero. background-attachment:fixed keeps
+     * the hero pinned while admin content scrolls past height:auto. */
+    background:
+      #020914
+      url("/nex-desktop-hero.png")
+      center center / cover
+      no-repeat fixed !important;
     height: auto !important;
     overflow: auto !important;
   }

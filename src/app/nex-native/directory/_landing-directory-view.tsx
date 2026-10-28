@@ -30,6 +30,10 @@ import type * as React from "react";
 import Link from "next/link";
 
 import { ListingCard } from "@/components/nex-native/directory/listing-card";
+import {
+  resolveLiveStateByBusinessIds,
+  type DirectoryLiveState,
+} from "@/lib/nex-native/live-broadcast/directory-live-state";
 // Owner directive 2026-10-18 · every card must display a location
 // row · we need the sealed ISO lookup to convert the directory's
 // active country code into a human label used as the fallback.
@@ -79,7 +83,12 @@ const NEX = {
   panelBorder: "rgba(0,175,255,0.18)",
 } as const;
 
-const DIRECTORY_BG = "/nex-directory/directory-bg.png";
+// Owner directive 2026-10-27 · grid-page background swapped to the
+// Neon Cyberpunk City Explorer artwork. Applies to the result pages
+// ONLY (/directory, /directory/{category}, paginated views). The
+// directory landing hub at /directory/landing uses its own hero art
+// (landing-hero.png) and is deliberately NOT touched by this change.
+const DIRECTORY_BG = "/nex-directory/neon-cyberpunk-city-explorer.png";
 const CATEGORY_ICON_SHEET = "/nex-directory/icons/category-grid.png";
 
 /** Owner-authorised preview mocks are prepended to the live feed on
@@ -207,6 +216,22 @@ export async function LandingDirectoryView({
     }),
   );
 
+  // Phase 2 · G2 · resolve server-side Live state for the subset of
+  // listings whose source is `nex_business`. Round-trip budget: ≤ 3
+  // queries · fail-open on any error (empty Map → cards render
+  // without the LIVE chip).
+  const liveBusinessIds = augmentedCombined
+    .filter((c) => c.source === "nex_business")
+    .map((c) => c.id);
+  // Plan v4 · AC-1 · request-scoped nowMs.
+  const nowMs = Date.now();
+  const liveStateByListingId: ReadonlyMap<string, DirectoryLiveState> =
+    liveBusinessIds.length > 0
+      ? await resolveLiveStateByBusinessIds(liveBusinessIds, nowMs).catch(
+          () => new Map<string, DirectoryLiveState>(),
+        )
+      : new Map();
+
   return (
     <main
       data-nex-directory-page
@@ -245,10 +270,14 @@ export async function LandingDirectoryView({
         <div data-nex-directory-currency-row style={currencyRowStyle}>
           <CurrencyPickerClient currentCode={preferredCurrency.code} />
         </div>
+        {/* Phase 2 · G2 · Live state resolved above (liveStateByListingId).
+            Fail-open: Map is empty when migrations are unapplied or the
+            resolver throws · cards render without the LIVE chip. */}
         <DirectoryResultsGrid
           listings={augmentedCombined}
           feed={feed}
           directoryCountry={country}
+          liveStateByListingId={liveStateByListingId}
         />
         {(() => {
           // Owner directive 2026-10-16 (second pass) · hide the
@@ -622,6 +651,7 @@ function DirectoryResultsGrid({
   listings,
   feed,
   directoryCountry,
+  liveStateByListingId,
 }: {
   readonly listings: readonly ListingCardViewModel[];
   readonly feed: LandingFeedOutcomeShape;
@@ -632,6 +662,11 @@ function DirectoryResultsGrid({
    *  Honest default · not fabricated · the directory IS filtered
    *  by this country, so attributing listings to it is accurate. */
   readonly directoryCountry: string;
+  /** Phase 2 · G2 · optional server-resolved live state keyed by
+   *  listing id (which equals `nex_business.id` for the subset we
+   *  can resolve). Undefined / empty Map = no LIVE chips render.
+   *  Honest fail-open: unknown ids simply get no chip. */
+  readonly liveStateByListingId?: ReadonlyMap<string, DirectoryLiveState>;
 }) {
   if (listings.length === 0) {
     if (feed.reducedState === "slug_unsupported") {
@@ -685,6 +720,7 @@ function DirectoryResultsGrid({
           size={pickCardVariant(card.id)}
           fallbackLocationLabel={fallbackLocationLabel}
           fallbackCountryIso={directoryCountry}
+          liveState={liveStateByListingId?.get(card.id) ?? null}
         />
       ))}
     </div>
@@ -1009,10 +1045,16 @@ const headerIconLinkStyle: React.CSSProperties = {
 };
 
 // Search bar
+// Owner directive 2026-10-27 · push the search row (and everything
+// below it · filter button, category dropdown, currency row, cards,
+// pagination) down 300px (90 → 150 → 300 over three iterations) so
+// the grid-page hero background is visible above them. Header stays
+// anchored to the top.
 const searchRowStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: 8,
+  marginTop: 300,
   marginBottom: 14,
 };
 const searchFormStyle: React.CSSProperties = {

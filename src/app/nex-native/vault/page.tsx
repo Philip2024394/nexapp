@@ -32,8 +32,17 @@ export const dynamic = "force-dynamic";
 
 export default async function VaultEntryPage() {
   const session = await resolveNexAppSessionFromContext();
+  // Owner directive 2026-10-25 · dev-pass pattern · in production a
+  // guest still redirects to sign-in, but in dev the drawer click-
+  // through to Vault routes to the intro surface so the Vault
+  // welcome page can be previewed without a session. The Vault
+  // crypto itself still refuses to operate without a real session
+  // (defence-in-depth: see src/lib/nex-native/vault/*).
   if (!session) {
-    redirect("/nex-native/sign-in?next=/nex-native/vault");
+    if (process.env.NODE_ENV === "production") {
+      redirect("/nex-native/sign-in?next=/nex-native/vault");
+    }
+    redirect("/nex-native/vault/intro");
   }
 
   // Server-side state resolution. The client component will refresh

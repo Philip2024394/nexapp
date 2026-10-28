@@ -1,3 +1,5 @@
+"use client";
+
 // src/app/nex-native/contacts/_contacts-header.tsx
 //
 // NEX Contacts header row.
@@ -26,11 +28,11 @@
 //   · 2026-10-17 · ControlDrawer mounted (replaces any earlier
 //     bespoke per-page drawer · one drawer across the app).
 //
-// Server Component · identity primitives are client-safe · the
-// ControlDrawer is a client component but imports cleanly from the
-// server boundary.
+// Client Component (2026-10-23) · the header title swaps between
+// "Contacts" and "Create Group" based on the Create Group flip
+// singleton · so the whole component needs client-side state.
 
-import type * as React from "react";
+import * as React from "react";
 import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
 import {
   ControlDrawer,
@@ -42,6 +44,10 @@ import {
   NEX_FONT_SANS,
   NEX_PING_BADGE_HEADER_SIZE,
 } from "@/lib/nex-native/design-tokens";
+import {
+  getCreateGroupFlipped,
+  subscribeCreateGroupFlipped,
+} from "./_create-group-flip-state";
 
 const NEX = {
   cyan: "#00AFFF",
@@ -54,6 +60,13 @@ export interface ContactsHeaderProps {
 }
 
 export function ContactsHeader({ drawerSession }: ContactsHeaderProps) {
+  // Owner directive 2026-10-23 · header title swaps to "Create
+  // Group" while the hero is flipped so the user sees a context-
+  // appropriate heading. Subscribes to the same singleton the pills
+  // + list + search bar use.
+  const [flipped, setFlipped] = React.useState<boolean>(getCreateGroupFlipped);
+  React.useEffect(() => subscribeCreateGroupFlipped(setFlipped), []);
+  const title = flipped ? "Create Group" : "Contacts";
   return (
     <header
       data-nex-contacts-header
@@ -90,18 +103,12 @@ export function ContactsHeader({ drawerSession }: ContactsHeaderProps) {
             whiteSpace: "nowrap",
           }}
         >
-          NEX CONTACTS
+          {title}
         </h1>
-        <p
-          style={{
-            margin: 0,
-            fontSize: 11,
-            lineHeight: 1.3,
-            color: NEX.textSecondary,
-          }}
-        >
-          Your World Closer
-        </p>
+        {/* Owner directive 2026-10-23 · "Your World Closer" subtitle
+            retired for the signed-in surface · adds no navigational
+            value once a user is inside the app. The main `Contacts`
+            h1 is the sole header text now · tighter + more neutral. */}
       </div>
       <div
         data-nex-contacts-header-actions

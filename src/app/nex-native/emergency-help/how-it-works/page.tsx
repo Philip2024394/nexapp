@@ -65,7 +65,7 @@ export default function EmergencyHowItWorksPage(): React.JSX.Element {
   return (
     <div
       style={{
-        minHeight: "100vh",
+        minHeight: "100%",
         background: NEX.bg,
         color: NEX.text,
         fontFamily:

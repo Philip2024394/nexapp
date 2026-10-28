@@ -613,7 +613,7 @@ function Shell({ children }: { children: React.ReactNode }): React.JSX.Element {
     <main
       data-testid="nex-emergency-active-view"
       style={{
-        minHeight: "100dvh",
+        minHeight: "100%",
         background: EMERGENCY_PALETTE.bg,
         color: EMERGENCY_PALETTE.textPrimary,
         padding: "20px 20px 40px",

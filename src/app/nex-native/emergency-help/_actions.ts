@@ -122,6 +122,17 @@ export async function withdrawServerAction(incidentId: string) {
   return mock.withdrawIncidentAction(incidentId);
 }
 
+// Owner directive 2026-10-25 · "build the missing gaps world
+// standard". Flag an incident for NEX HQ review (Report false
+// alarm). The real build will route this to the sealed Community
+// Notice strike-system doctrine.
+export async function flagServerAction(
+  incidentId: string,
+  reason?: string,
+) {
+  return mock.flagEmergencyAction(incidentId, reason);
+}
+
 export async function optInServerAction(args: { radiusKm: number }) {
   return mock.optInAsResponderAction(args);
 }

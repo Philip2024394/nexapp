@@ -57,7 +57,10 @@ const CAPABILITIES: ReadonlyArray<{
 
 export default async function NexSocialsIntroPage() {
   const session = await resolveNexAppSessionFromContext();
-  if (!session) {
+  // Owner directive 2026-10-25 · sealed dev-pass pattern · a guest in
+  // dev clicking the drawer `Socials` button lands here and sees the
+  // "Coming Soon" intro cold; production still redirects to sign-in.
+  if (!session && process.env.NODE_ENV === "production") {
     redirect("/nex-native/sign-in?next=/nex-native/nex-socials/intro");
   }
 

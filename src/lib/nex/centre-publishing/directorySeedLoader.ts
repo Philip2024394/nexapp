@@ -37,7 +37,13 @@ export type CapabilityAnswer = "yes" | "no" | "unknown";
  *  Philip 2026-08-13 · added `staircase_manufacture` and `bespoke_joinery`
  *  so one company record can hold multiple services (a single business may
  *  manufacture NEW staircases AND refurbish EXISTING ones — never create
- *  duplicate records for different services offered by the same trade). */
+ *  duplicate records for different services offered by the same trade).
+ *  2026-10-28 · TS Wave 6 · added `kit_or_product_supplier` to type the
+ *  key already read by `isStairpartsSupplier` at line 423. The feature
+ *  shipped (consumer actively branches on `capabilities?.kit_or_product_supplier
+ *  === "yes"` and the Trade Centre Stairparts chip uses this flag per the
+ *  function doc at line 420). The enum entry was missing · adding it closes
+ *  3 TS2353 errors without changing runtime behavior. */
 export type RefacingCapabilityKey =
   | "staircase_manufacture"
   | "staircase_refurbishment"
@@ -63,7 +69,8 @@ export type RefacingCapabilityKey =
   | "restoration"
   | "repair"
   | "installation"
-  | "bespoke_joinery";
+  | "bespoke_joinery"
+  | "kit_or_product_supplier";
 
 export type RefacingEvidenceItem = {
   url: string;

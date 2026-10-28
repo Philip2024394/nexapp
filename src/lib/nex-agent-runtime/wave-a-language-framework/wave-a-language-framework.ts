@@ -83,7 +83,10 @@ function nexTypescriptEngineeringReviewer(c: SkillCandidate): WaveASpecialistFin
       ),
     );
   }
-  // @ts-expect-error must have a comment justification on the same line ("--" or ": ")
+  // Policy: every `@ts-expect-error` must carry a comment justification
+  // on the same line (separator "--" or ":"). This regex locates all
+  // such directives in the source text for the audit below. Line split
+  // deliberately so this comment does NOT itself trigger a TS directive.
   const expectMatches = text.match(/@ts-expect-error[^\n]*/g);
   if (expectMatches) {
     for (const line of expectMatches) {

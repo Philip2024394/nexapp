@@ -57,7 +57,6 @@ describe("resolveClientLang · precedence + safety", () => {
   beforeEach(() => {
     // Reset a fresh jsdom-like window + localStorage for each test.
     const store: Record<string, string> = {};
-    // @ts-expect-error test shim
     globalThis.window = {
       location: { href: "https://nex.local/nex-app" },
       localStorage: {
@@ -73,30 +72,24 @@ describe("resolveClientLang · precedence + safety", () => {
   });
 
   it("prefers URL ?lang= over localStorage", () => {
-    // @ts-expect-error test shim
     globalThis.window.location.href = "https://nex.local/nex-app?lang=id";
-    // @ts-expect-error test shim
     globalThis.window.localStorage.setItem("nex_user_lang", "en");
     expect(resolveClientLang()).toBe("id");
   });
 
   it("falls back to localStorage when URL query missing", () => {
-    // @ts-expect-error test shim
     globalThis.window.localStorage.setItem("nex_user_lang", "id");
     expect(resolveClientLang()).toBe("id");
   });
 
   it("ignores unsupported URL ?lang= values and falls through", () => {
-    // @ts-expect-error test shim
     globalThis.window.location.href = "https://nex.local/nex-app?lang=xx";
-    // @ts-expect-error test shim
     globalThis.window.localStorage.setItem("nex_user_lang", "id");
     // xx is unsupported → skip URL → fall back to localStorage
     expect(resolveClientLang()).toBe("id");
   });
 
   it("ignores unsupported localStorage values and falls through to default", () => {
-    // @ts-expect-error test shim
     globalThis.window.localStorage.setItem("nex_user_lang", "xx");
     expect(resolveClientLang()).toBe(DEFAULT_LANG);
   });
@@ -113,7 +106,6 @@ describe("resolveClientLang · precedence + safety", () => {
 describe("writeClientLang · persistence + safety", () => {
   beforeEach(() => {
     const store: Record<string, string> = {};
-    // @ts-expect-error test shim
     globalThis.window = {
       location: { href: "https://nex.local/nex-app" },
       localStorage: {
@@ -140,7 +132,6 @@ describe("writeClientLang · persistence + safety", () => {
   });
 
   it("silent on localStorage failure (private mode)", () => {
-    // @ts-expect-error test shim
     globalThis.window.localStorage.setItem = () => { throw new Error("private mode"); };
     expect(() => writeClientLang("id")).not.toThrow();
   });

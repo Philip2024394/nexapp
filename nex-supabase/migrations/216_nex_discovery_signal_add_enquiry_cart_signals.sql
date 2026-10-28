@@ -1,0 +1,118 @@
+-- 216_nex_discovery_signal_add_enquiry_cart_signals.sql
+--
+-- Owner-authorised 2026-10-24 · Phase 1 · Slice 1C of the
+-- NEX Live & Commerce project (docs/doctrine/nex-commerce-live-
+-- relationship-plan-2026-10-24.md).
+--
+-- STATUS: AUTHORED FOR SLICE 1C IMPLEMENTATION · NOT YET APPLIED TO
+-- ANY DATABASE. Application to any Supabase project (including
+-- sandbox) requires separate authorisation. This migration must NOT
+-- be applied to the live NEX project `ijvqdvsvwtwxzcqmoqit` without
+-- explicit owner approval.
+--
+-- ----------------------------------------------------------------------------
+-- SUMMARY
+-- ----------------------------------------------------------------------------
+-- Extends the sealed `nex.discovery_signal_type` ENUM (Migration 208)
+-- with two additional values:
+--
+--   · 'enquiry_initiated'
+--     Fires when a signed-in user initiates a product-attached
+--     enquiry (taps "Order Now" / "Chat about X" / "Chat about
+--     <dish>" from a product-detail or menu surface, OR sends a
+--     product-share from the composer). Named interest event.
+--
+--   · 'cart_sent'
+--     Fires when a signed-in user sends a cart as a `cart_order`
+--     message to a seller's peer chat. Named interest event.
+--
+-- Depends on (APPLIED, per existing production state assumption):
+--   208_nex_discovery_signal.sql
+--     · creates nex.discovery_signal_type ENUM
+--     · creates nex.discovery_signal table + RLS + indexes
+--     · pairs with src/lib/nex-native/discovery/discovery-signal-types.ts
+--
+-- ----------------------------------------------------------------------------
+-- DOCTRINE
+-- ----------------------------------------------------------------------------
+-- MARKETING-LAYER ONLY. Sealed in Migration 208 lines 20-25. These
+-- new signal types inherit the same boundary:
+--   · must NEVER be joined into Intelligence / Directory canonical
+--     queries (NEX Intelligence = what-is-TRUE; NEX Directory = what-
+--     is-safe-to-PUBLISH; signals belong in NEX Marketing = acquisition
+--     opportunities · DOWNSTREAM ONLY).
+--   · must NEVER be used to derive business truth or verification
+--     state.
+--   · must NEVER leak individual-account behaviour to a business
+--     owner about THEIR customers.
+--
+-- Separation of consent from interest:
+--   · Adding these signal types does NOT change marketing opt-in.
+--     `nex_account_notification_prefs.marketing_enabled` remains
+--     NOT NULL DEFAULT FALSE (Migration 198). A customer initiating
+--     an enquiry or sending a cart IS NOT marketing permission.
+--
+-- Retention and deletion:
+--   · This migration does NOT make any customer-facing retention or
+--     deletion promise. Existing retention posture (Migration 208
+--     lines 31-33 "age out via future nightly worker · owner-approved
+--     at data-governance review") is unchanged. Retention + verified
+--     deletion are tracked as G3 unresolved per the saved plan.
+--
+-- Backward compatibility:
+--   · Existing signal types `view`, `tap`, `chat_open`, `save`,
+--     `dismiss` remain untouched. Writers that emit them, readers
+--     that filter on them, and the `isDiscoverySignalType` validator
+--     continue to work exactly as before.
+--   · PG ENUMs are append-only. `ALTER TYPE ... ADD VALUE` is a
+--     non-destructive, additive operation. Rolling back this
+--     migration requires manual intervention (DROP TYPE + recreate)
+--     and is not scoped here.
+--
+-- Behaviour of actions:
+--   · This migration is PURELY SCHEMA. It does NOT guarantee that
+--     any action currently emits the new types. Writer wiring is
+--     Slice 1D (separate authorisation). The presence of these enum
+--     values after this migration is NOT evidence that writers emit
+--     them.
+--
+-- ----------------------------------------------------------------------------
+-- COMPATIBILITY NOTE
+-- ----------------------------------------------------------------------------
+-- `ALTER TYPE ... ADD VALUE` cannot be used in the SAME transaction
+-- where the new value is referenced (Postgres 12+ relaxation lets
+-- it run inside a transaction block, but the value is not visible
+-- until commit). Each statement below is standalone (no BEGIN/COMMIT
+-- wrapper) so that:
+--   (a) each ADD VALUE is autonomous and idempotent (via IF NOT
+--       EXISTS), safe to re-run,
+--   (b) consumers of the enum (e.g. the TS layer loaded by server
+--       code) see the new values as soon as the server reconnects,
+--   (c) a partial failure of one ADD VALUE does not leave the type
+--       in an inconsistent state.
+-- ----------------------------------------------------------------------------
+
+-- 1 · Add enquiry_initiated
+ALTER TYPE nex.discovery_signal_type ADD VALUE IF NOT EXISTS 'enquiry_initiated';
+
+-- 2 · Add cart_sent
+ALTER TYPE nex.discovery_signal_type ADD VALUE IF NOT EXISTS 'cart_sent';
+
+-- ----------------------------------------------------------------------------
+-- POST-MIGRATION VERIFICATION (manual, not executed)
+-- ----------------------------------------------------------------------------
+-- After applying, operators should verify:
+--
+--   SELECT unnest(enum_range(NULL::nex.discovery_signal_type)) AS v
+--     ORDER BY v;
+--
+-- Expected rows:
+--   cart_sent
+--   chat_open
+--   dismiss
+--   enquiry_initiated
+--   save
+--   tap
+--   view
+--
+-- No existing policies, indexes, grants, or table definitions change.

@@ -1,0 +1,2634 @@
+{
+  "counts": {
+    "total": 260,
+    "candidates": 7,
+    "ambiguous": 32,
+    "skipped": 221
+  },
+  "candidates": [
+    {
+      "file": "src/lib/nex-agent-runtime/__tests__/crawler-reference-agent.test.ts",
+      "line": 12,
+      "module": "@/lib/nex-intelligence/source-guardian",
+      "importText": "import { SOURCE_GUARDIAN_REJECTIONS_COLLECTION } from \"@/lib/nex-intelligence/source-guardian\";",
+      "symbols": [
+        "SOURCE_GUARDIAN_REJECTIONS_COLLECTION"
+      ],
+      "verdict": "all-unused"
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/__tests__/restart-and-failure-honesty.test.ts",
+      "line": 16,
+      "module": "@/lib/nex-intelligence/source-guardian",
+      "importText": "import { SOURCE_GUARDIAN_REJECTIONS_COLLECTION } from \"@/lib/nex-intelligence/source-guardian\";",
+      "symbols": [
+        "SOURCE_GUARDIAN_REJECTIONS_COLLECTION"
+      ],
+      "verdict": "all-unused"
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/orchestrator/__tests__/orchestrator.test.ts",
+      "line": 19,
+      "module": "@/lib/nex-cap/registry",
+      "importText": "import { persistCapabilityGap } from \"@/lib/nex-cap/registry\";",
+      "symbols": [
+        "persistCapabilityGap"
+      ],
+      "verdict": "all-unused"
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/programming-mission/__tests__/runtime-12-attacks.test.ts",
+      "line": 29,
+      "module": "@/lib/nex-controlled-hands/ed25519",
+      "importText": "import { generateKeyPair } from \"@/lib/nex-controlled-hands/ed25519\";",
+      "symbols": [
+        "generateKeyPair"
+      ],
+      "verdict": "all-unused"
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/programming-mission/__tests__/runtime-12-attacks.test.ts",
+      "line": 30,
+      "module": "@/lib/nex1-orchestrator/wo2-founder-keys",
+      "importText": "import { buildFounderKeyRecordForTest, type FounderKeyManifest } from \"@/lib/nex1-orchestrator/wo2-founder-keys\";",
+      "symbols": [
+        "buildFounderKeyRecordForTest",
+        "FounderKeyManifest"
+      ],
+      "verdict": "all-unused"
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/programming-mission/mission.ts",
+      "line": 38,
+      "module": "@/lib/nex-cap/types",
+      "importText": "import type { CapabilityGap } from \"@/lib/nex-cap/types\";",
+      "symbols": [
+        "CapabilityGap"
+      ],
+      "verdict": "all-unused"
+    },
+    {
+      "file": "src/lib/nex/geography/postcodeCentroid.ts",
+      "line": 18,
+      "module": "@/lib/ukPostcodeCentroids",
+      "importText": "export { haversineKm } from \"@/lib/ukPostcodeCentroids\";",
+      "symbols": [
+        "haversineKm"
+      ],
+      "verdict": "all-unused"
+    }
+  ],
+  "ambiguous": [
+    {
+      "file": "src/components/nex-app/materials/add-stock/AddStockWorkflow.tsx",
+      "line": 35,
+      "module": "@/apps/materials/_schema/memory_types",
+      "reason": "parse-failed",
+      "importText": "} from \"@/apps/materials/_schema/memory_types\";"
+    },
+    {
+      "file": "src/components/nex-app/materials/pack-detail/PackDetailScreen.tsx",
+      "line": 25,
+      "module": "@/apps/materials/_schema/types",
+      "reason": "parse-failed",
+      "importText": "} from \"@/apps/materials/_schema/types\";"
+    },
+    {
+      "file": "src/components/nexapp/ContactsPanel.tsx",
+      "line": 51,
+      "module": "@/lib/nexapp/mockContacts",
+      "reason": "parse-failed",
+      "importText": "} from \"@/lib/nexapp/mockContacts\";"
+    },
+    {
+      "file": "src/components/nexapp/FoodListingCard.tsx",
+      "line": 15,
+      "module": "@/lib/nexapp/foodListings",
+      "reason": "parse-failed",
+      "importText": "} from \"@/lib/nexapp/foodListings\";"
+    },
+    {
+      "file": "src/components/nexapp/FoodListingDetail.tsx",
+      "line": 17,
+      "module": "@/lib/nexapp/foodListings",
+      "reason": "parse-failed",
+      "importText": "} from \"@/lib/nexapp/foodListings\";"
+    },
+    {
+      "file": "src/components/nexapp/hud/NexMascotDrawerContent.tsx",
+      "line": 21,
+      "module": "@/lib/nex-mascots/registry",
+      "reason": "partial-use",
+      "importText": "import { listAll, search as searchMascots } from \"@/lib/nex-mascots/registry\";",
+      "unused": [
+        "searchMascots"
+      ],
+      "used": [
+        "listAll"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexEmojiTray.tsx",
+      "line": 17,
+      "module": "@/lib/nexapp/nexEmojis",
+      "reason": "partial-use",
+      "importText": "import { NEX_REACTIONS, type NexEmoji } from \"@/lib/nexapp/nexEmojis\";",
+      "unused": [
+        "NEX_REACTIONS"
+      ],
+      "used": [
+        "NexEmoji"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexIdentityOnboarding.tsx",
+      "line": 40,
+      "module": "@/lib/nex-identity",
+      "reason": "parse-failed",
+      "importText": "} from \"@/lib/nex-identity\";"
+    },
+    {
+      "file": "src/components/nexapp/NexWorkspaceBusinessHome.tsx",
+      "line": 47,
+      "module": "@/lib/nexapp/mockBusinessHome",
+      "reason": "parse-failed",
+      "importText": "} from \"@/lib/nexapp/mockBusinessHome\";"
+    },
+    {
+      "file": "src/components/nexapp/NexWorkspaceBusinessOnboarding.tsx",
+      "line": 39,
+      "module": "@/lib/nexapp/mockBusinessOnboarding",
+      "reason": "parse-failed",
+      "importText": "} from \"@/lib/nexapp/mockBusinessOnboarding\";"
+    },
+    {
+      "file": "src/components/nexapp/NexWorkspaceProductCreator.tsx",
+      "line": 60,
+      "module": "@/lib/nexapp/mockProductCreator",
+      "reason": "parse-failed",
+      "importText": "} from \"@/lib/nexapp/mockProductCreator\";"
+    },
+    {
+      "file": "src/components/nexapp/rooms/NexRoomDrawer.tsx",
+      "line": 27,
+      "module": "@/lib/nexapp-shell/rooms",
+      "reason": "parse-failed",
+      "importText": "} from \"@/lib/nexapp-shell/rooms\";"
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/__tests__/crawler-reference-agent.test.ts",
+      "line": 11,
+      "module": "@/lib/nex-intelligence/source-registry-manifest",
+      "reason": "partial-use",
+      "importText": "import { signSourceRegistryManifest, persistSourceRegistryManifest, SOURCE_REGISTRY_MANIFEST_COLLECTION } from \"@/lib/nex-intelligence/source-registry-manifest\";",
+      "unused": [
+        "SOURCE_REGISTRY_MANIFEST_COLLECTION"
+      ],
+      "used": [
+        "signSourceRegistryManifest",
+        "persistSourceRegistryManifest"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/__tests__/restart-and-failure-honesty.test.ts",
+      "line": 15,
+      "module": "@/lib/nex-intelligence/source-registry-manifest",
+      "reason": "partial-use",
+      "importText": "import { signSourceRegistryManifest, persistSourceRegistryManifest, SOURCE_REGISTRY_MANIFEST_COLLECTION } from \"@/lib/nex-intelligence/source-registry-manifest\";",
+      "unused": [
+        "SOURCE_REGISTRY_MANIFEST_COLLECTION"
+      ],
+      "used": [
+        "signSourceRegistryManifest",
+        "persistSourceRegistryManifest"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/brains/intelligence-brains.ts",
+      "line": 20,
+      "module": "@/lib/nex-intelligence/source-pool",
+      "reason": "parse-failed",
+      "importText": "} from \"@/lib/nex-intelligence/source-pool\";"
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/growth-snapshot.ts",
+      "line": 13,
+      "module": "@/lib/nex-intelligence/provenance",
+      "reason": "partial-use",
+      "importText": "import { canonicalJson, provenanceChainHash, sha256Hex } from \"@/lib/nex-intelligence/provenance\";",
+      "unused": [
+        "sha256Hex"
+      ],
+      "used": [
+        "canonicalJson",
+        "provenanceChainHash"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/nex1/__tests__/nex1.test.ts",
+      "line": 21,
+      "module": "@/lib/nex-cap/registry",
+      "reason": "partial-use",
+      "importText": "import { persistCapabilityGap, loadCap } from \"@/lib/nex-cap/registry\";",
+      "unused": [
+        "loadCap"
+      ],
+      "used": [
+        "persistCapabilityGap"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/nex3/__tests__/nex3.test.ts",
+      "line": 16,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "partial-use",
+      "importText": "import { CAP_ENGINEERING_PROPOSAL_COLLECTION, type CapEngineeringProposal, type AuthorisedWorkstationScope } from \"@/lib/nex-cap/nex1-engineer\";",
+      "unused": [
+        "AuthorisedWorkstationScope"
+      ],
+      "used": [
+        "CAP_ENGINEERING_PROPOSAL_COLLECTION",
+        "CapEngineeringProposal"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/orchestrator/gate-verification.ts",
+      "line": 14,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "parse-failed",
+      "importText": "} from \"@/lib/nex-cap/nex1-engineer\";"
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/orchestrator/orchestrator.ts",
+      "line": 32,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "parse-failed",
+      "importText": "} from \"@/lib/nex-cap/nex1-engineer\";"
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/programming-mission/mission.ts",
+      "line": 45,
+      "module": "@/lib/nex-cap/cap-spec-bridge",
+      "reason": "parse-failed",
+      "importText": "} from \"@/lib/nex-cap/cap-spec-bridge\";"
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/workstation-integration/__tests__/runtime-10.test.ts",
+      "line": 55,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "parse-failed",
+      "importText": "} from \"@/lib/nex-cap/nex1-engineer\";"
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/workstation-integration/__tests__/runtime-10.test.ts",
+      "line": 60,
+      "module": "@/lib/nex-cap/cap-spec-bridge",
+      "reason": "parse-failed",
+      "importText": "} from \"@/lib/nex-cap/cap-spec-bridge\";"
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/workstation-integration/__tests__/runtime-10.test.ts",
+      "line": 65,
+      "module": "@/lib/nex1-orchestrator/wo2-founder-keys",
+      "reason": "parse-failed",
+      "importText": "} from \"@/lib/nex1-orchestrator/wo2-founder-keys\";"
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/workstation-integration/execute.ts",
+      "line": 58,
+      "module": "@/lib/nex-cap/cap-spec-bridge",
+      "reason": "parse-failed",
+      "importText": "} from \"@/lib/nex-cap/cap-spec-bridge\";"
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/workstation-integration/execute.ts",
+      "line": 64,
+      "module": "@/lib/nex-cap/execution",
+      "reason": "parse-failed",
+      "importText": "} from \"@/lib/nex-cap/execution\";"
+    },
+    {
+      "file": "src/lib/nex/city-registry.test.ts",
+      "line": 134,
+      "module": "../../../scripts/nex-city-catalogue/loader.mjs",
+      "reason": "parse-failed",
+      "importText": "const loader = await import(\"../../../scripts/nex-city-catalogue/loader.mjs\");"
+    },
+    {
+      "file": "src/lib/nex/city-registry.test.ts",
+      "line": 141,
+      "module": "../../../scripts/nex-city-catalogue/loader.mjs",
+      "reason": "parse-failed",
+      "importText": "const loader = await import(\"../../../scripts/nex-city-catalogue/loader.mjs\");"
+    },
+    {
+      "file": "src/lib/nex/city-registry.test.ts",
+      "line": 148,
+      "module": "../../../scripts/nex-city-catalogue/loader.mjs",
+      "reason": "parse-failed",
+      "importText": "const loader = await import(\"../../../scripts/nex-city-catalogue/loader.mjs\");"
+    },
+    {
+      "file": "src/lib/nex/merchant-assistant/toolExecutors.test.ts",
+      "line": 40,
+      "module": "@/lib/products/read",
+      "reason": "parse-failed",
+      "importText": "} from \"@/lib/products/read\";"
+    },
+    {
+      "file": "src/lib/nex/merchant-assistant/toolExecutors.ts",
+      "line": 29,
+      "module": "@/lib/products/read",
+      "reason": "parse-failed",
+      "importText": "} from \"@/lib/products/read\";"
+    },
+    {
+      "file": "src/lib/nex/programmer-review/reviewer.test.ts",
+      "line": 24,
+      "module": "../../../../tests/fixtures/programmer-review-proof/_phase_c_fixture_cases",
+      "reason": "parse-failed",
+      "importText": "} from \"../../../../tests/fixtures/programmer-review-proof/_phase_c_fixture_cases\";"
+    }
+  ],
+  "skipped": [
+    {
+      "file": "src/components/nex-app/materials/_shared/BoardCard.tsx",
+      "line": 15,
+      "module": "@/apps/materials/_schema/types",
+      "reason": "all-used",
+      "importText": "import type { BoardWithCurrentMeasurement } from \"@/apps/materials/_schema/types\";",
+      "symbols": [
+        "BoardWithCurrentMeasurement"
+      ]
+    },
+    {
+      "file": "src/components/nex-app/materials/_shared/PackHeader.tsx",
+      "line": 11,
+      "module": "@/apps/materials/_schema/types",
+      "reason": "all-used",
+      "importText": "import type { PackStatus } from \"@/apps/materials/_schema/types\";",
+      "symbols": [
+        "PackStatus"
+      ]
+    },
+    {
+      "file": "src/components/nex-app/materials/_shared/StatusBadge.tsx",
+      "line": 11,
+      "module": "@/apps/materials/_schema/types",
+      "reason": "all-used",
+      "importText": "import type { BoardStatus, PackStatus } from \"@/apps/materials/_schema/types\";",
+      "symbols": [
+        "BoardStatus",
+        "PackStatus"
+      ]
+    },
+    {
+      "file": "src/components/nex-app/materials/add-stock/ActionsCard.tsx",
+      "line": 10,
+      "module": "@/apps/materials/_schema/memory_types",
+      "reason": "all-used",
+      "importText": "import type { NexAddStockDraft } from \"@/apps/materials/_schema/memory_types\";",
+      "symbols": [
+        "NexAddStockDraft"
+      ]
+    },
+    {
+      "file": "src/components/nex-app/materials/add-stock/AddStockWorkflow.tsx",
+      "line": 36,
+      "module": "@/apps/materials/_schema/types",
+      "reason": "all-used",
+      "importText": "import type { SpeciesRow } from \"@/apps/materials/_schema/types\";",
+      "symbols": [
+        "SpeciesRow"
+      ]
+    },
+    {
+      "file": "src/components/nex-app/materials/add-stock/ConfirmationForm.tsx",
+      "line": 6,
+      "module": "@/apps/materials/_schema/types",
+      "reason": "all-used",
+      "importText": "import type { SpeciesRow } from \"@/apps/materials/_schema/types\";",
+      "symbols": [
+        "SpeciesRow"
+      ]
+    },
+    {
+      "file": "src/components/nex-app/materials/add-stock/ConfirmationForm.tsx",
+      "line": 7,
+      "module": "@/apps/materials/_schema/memory_types",
+      "reason": "all-used",
+      "importText": "import type { MemoryCategory } from \"@/apps/materials/_schema/memory_types\";",
+      "symbols": [
+        "MemoryCategory"
+      ]
+    },
+    {
+      "file": "src/components/nex-app/materials/add-stock/DoneView.tsx",
+      "line": 11,
+      "module": "@/apps/materials/_schema/memory_types",
+      "reason": "all-used",
+      "importText": "import type { NexAddStockDraft } from \"@/apps/materials/_schema/memory_types\";",
+      "symbols": [
+        "NexAddStockDraft"
+      ]
+    },
+    {
+      "file": "src/components/nex-app/materials/add-stock/InterpretationCard.tsx",
+      "line": 6,
+      "module": "@/apps/materials/_schema/memory_types",
+      "reason": "all-used",
+      "importText": "import type { NexAddStockIntent } from \"@/apps/materials/_schema/memory_types\";",
+      "symbols": [
+        "NexAddStockIntent"
+      ]
+    },
+    {
+      "file": "src/components/nex-app/materials/add-stock/MemoryMatchCard.tsx",
+      "line": 7,
+      "module": "@/apps/materials/_schema/memory_types",
+      "reason": "all-used",
+      "importText": "import type { MemoryMatch, NexAddStockDraft } from \"@/apps/materials/_schema/memory_types\";",
+      "symbols": [
+        "MemoryMatch",
+        "NexAddStockDraft"
+      ]
+    },
+    {
+      "file": "src/components/nex-app/materials/lists/PacksList.tsx",
+      "line": 7,
+      "module": "@/apps/materials/_schema/types",
+      "reason": "all-used",
+      "importText": "import type { HardwoodPackRow } from \"@/apps/materials/_schema/types\";",
+      "symbols": [
+        "HardwoodPackRow"
+      ]
+    },
+    {
+      "file": "src/components/nex-app/materials/lists/StockList.tsx",
+      "line": 5,
+      "module": "@/apps/materials/_schema/types",
+      "reason": "all-used",
+      "importText": "import type { StockSummaryRow } from \"@/apps/materials/_schema/types\";",
+      "symbols": [
+        "StockSummaryRow"
+      ]
+    },
+    {
+      "file": "src/components/nex-app/materials/MaterialsLanding.tsx",
+      "line": 26,
+      "module": "@/apps/materials/_services/recent_activity",
+      "reason": "all-used",
+      "importText": "import type { ActivityGroup } from \"@/apps/materials/_services/recent_activity\";",
+      "symbols": [
+        "ActivityGroup"
+      ]
+    },
+    {
+      "file": "src/components/nex-app/materials/RecentActivity.tsx",
+      "line": 9,
+      "module": "@/apps/materials/_services/recent_activity",
+      "reason": "all-used",
+      "importText": "import type { ActivityGroup, ActivityItem } from \"@/apps/materials/_services/recent_activity\";",
+      "symbols": [
+        "ActivityGroup",
+        "ActivityItem"
+      ]
+    },
+    {
+      "file": "src/components/nex-app/shell/ChatToolTilesRow.tsx",
+      "line": 10,
+      "module": "@/lib/nex-apps/_types",
+      "reason": "all-used",
+      "importText": "import type { ConversationState } from \"@/lib/nex-apps/_types\";",
+      "symbols": [
+        "ConversationState"
+      ]
+    },
+    {
+      "file": "src/components/nex-app/shell/QuickActionsGrid.tsx",
+      "line": 14,
+      "module": "@/lib/nex-apps/_types",
+      "reason": "all-used",
+      "importText": "import type { QuickAction } from \"@/lib/nex-apps/_types\";",
+      "symbols": [
+        "QuickAction"
+      ]
+    },
+    {
+      "file": "src/components/nex-app/state/ConversationStateProvider.tsx",
+      "line": 19,
+      "module": "@/lib/nex-apps/_types",
+      "reason": "all-used",
+      "importText": "import type { ConversationState, TradeConfig, QuickAction } from \"@/lib/nex-apps/_types\";",
+      "symbols": [
+        "ConversationState",
+        "TradeConfig",
+        "QuickAction"
+      ]
+    },
+    {
+      "file": "src/components/nex-app/ui/DualPrice.tsx",
+      "line": 16,
+      "module": "@/lib/pricing/_locale",
+      "reason": "all-used",
+      "importText": "import { COUNTRY_TO_CURRENCY, currencyFor, formatMoney } from \"@/lib/pricing/_locale\";",
+      "symbols": [
+        "COUNTRY_TO_CURRENCY",
+        "currencyFor",
+        "formatMoney"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/AmbientKnowledgeCard.tsx",
+      "line": 16,
+      "module": "@/lib/nexapp/ambientInjector",
+      "reason": "all-used",
+      "importText": "import type { AmbientVariant } from \"@/lib/nexapp/ambientInjector\";",
+      "symbols": [
+        "AmbientVariant"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/BusinessCarousel.tsx",
+      "line": 15,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/BusinessCarousel.tsx",
+      "line": 16,
+      "module": "@/lib/nexapp/mockData",
+      "reason": "all-used",
+      "importText": "import type { BusinessCard } from \"@/lib/nexapp/mockData\";",
+      "symbols": [
+        "BusinessCard"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/CapabilitySurface.tsx",
+      "line": 10,
+      "module": "@/lib/nexapp-shell/capabilities",
+      "reason": "all-used",
+      "importText": "import { capabilityRegistry, type CapabilityFrame, type CapabilityId } from \"@/lib/nexapp-shell/capabilities\";",
+      "symbols": [
+        "capabilityRegistry",
+        "CapabilityFrame",
+        "CapabilityId"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/CategoryBusinessCard.tsx",
+      "line": 20,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/CategoryBusinessCard.tsx",
+      "line": 21,
+      "module": "@/app/api/nex-directory/listings/route",
+      "reason": "all-used",
+      "importText": "import type { DirectoryListing } from \"@/app/api/nex-directory/listings/route\";",
+      "symbols": [
+        "DirectoryListing"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/CategoryConstellation.tsx",
+      "line": 35,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/CategoryConstellation.tsx",
+      "line": 37,
+      "module": "@/lib/nexapp/nex-state",
+      "reason": "all-used",
+      "importText": "import type { NexState } from \"@/lib/nexapp/nex-state\";",
+      "symbols": [
+        "NexState"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/CategoryConstellation.tsx",
+      "line": 39,
+      "module": "@/app/api/nex-directory/listings/route",
+      "reason": "all-used",
+      "importText": "import type { DirectoryListing } from \"@/app/api/nex-directory/listings/route\";",
+      "symbols": [
+        "DirectoryListing"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/ContactActionSheet.tsx",
+      "line": 7,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/ContactActionSheet.tsx",
+      "line": 8,
+      "module": "@/lib/nexapp/mockContacts",
+      "reason": "all-used",
+      "importText": "import { type MockContact } from \"@/lib/nexapp/mockContacts\";",
+      "symbols": [
+        "MockContact"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/ContactAvatar.tsx",
+      "line": 7,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/ContactAvatar.tsx",
+      "line": 8,
+      "module": "@/lib/nexapp/mockContacts",
+      "reason": "all-used",
+      "importText": "import { nameInitials } from \"@/lib/nexapp/mockContacts\";",
+      "symbols": [
+        "nameInitials"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/ContactCards.tsx",
+      "line": 8,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/ContactCards.tsx",
+      "line": 9,
+      "module": "@/lib/nexapp/mockContacts",
+      "reason": "all-used",
+      "importText": "import { formatRelativeTime, type MockContact, type MockGroup } from \"@/lib/nexapp/mockContacts\";",
+      "symbols": [
+        "formatRelativeTime",
+        "MockContact",
+        "MockGroup"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/ContactsPanel.tsx",
+      "line": 39,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/ContactsPanel.tsx",
+      "line": 40,
+      "module": "@/lib/nex-identity",
+      "reason": "all-used",
+      "importText": "import { normalisePublicNexId } from \"@/lib/nex-identity\";",
+      "symbols": [
+        "normalisePublicNexId"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/CreateGroupSteps.tsx",
+      "line": 9,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/CreateGroupSteps.tsx",
+      "line": 10,
+      "module": "@/lib/nexapp/mockContacts",
+      "reason": "all-used",
+      "importText": "import { type MockContact } from \"@/lib/nexapp/mockContacts\";",
+      "symbols": [
+        "MockContact"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/DirectoryPanel.tsx",
+      "line": 19,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/DirectoryPanel.tsx",
+      "line": 21,
+      "module": "@/lib/nexapp/nex-state",
+      "reason": "all-used",
+      "importText": "import type { NexState } from \"@/lib/nexapp/nex-state\";",
+      "symbols": [
+        "NexState"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/FoodCategoryChips.tsx",
+      "line": 9,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/FoodCategoryChips.tsx",
+      "line": 10,
+      "module": "@/lib/nexapp/foodListings",
+      "reason": "all-used",
+      "importText": "import { FOOD_CATEGORIES, type FoodCategory } from \"@/lib/nexapp/foodListings\";",
+      "symbols": [
+        "FOOD_CATEGORIES",
+        "FoodCategory"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/FoodDirectoryPanel.tsx",
+      "line": 24,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/FoodDirectoryPanel.tsx",
+      "line": 25,
+      "module": "@/lib/nexapp/foodListings",
+      "reason": "all-used",
+      "importText": "import { type FoodListing } from \"@/lib/nexapp/foodListings\";",
+      "symbols": [
+        "FoodListing"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/FoodDirectoryPanel.tsx",
+      "line": 26,
+      "module": "@/lib/nexapp/foodListingsRemote",
+      "reason": "all-used",
+      "importText": "import { useFoodListings } from \"@/lib/nexapp/foodListingsRemote\";",
+      "symbols": [
+        "useFoodListings"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/FoodListingCard.tsx",
+      "line": 10,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/FoodListingDetail.tsx",
+      "line": 10,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/FoodSearchBar.tsx",
+      "line": 13,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/hud/NexMascotDetail.tsx",
+      "line": 20,
+      "module": "@/lib/nex-mascots/types",
+      "reason": "all-used",
+      "importText": "import type { Mascot } from \"@/lib/nex-mascots/types\";",
+      "symbols": [
+        "Mascot"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/hud/NexMascotDrawerContent.tsx",
+      "line": 20,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/hud/NexMascotDrawerContent.tsx",
+      "line": 22,
+      "module": "@/lib/nex-mascots/meaning",
+      "reason": "all-used",
+      "importText": "import { pickPersonalTemplate } from \"@/lib/nex-mascots/meaning\";",
+      "symbols": [
+        "pickPersonalTemplate"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/hud/NexMascotDrawerContent.tsx",
+      "line": 23,
+      "module": "@/lib/nex-mascots/types",
+      "reason": "all-used",
+      "importText": "import type { Mascot, MascotSection } from \"@/lib/nex-mascots/types\";",
+      "symbols": [
+        "Mascot",
+        "MascotSection"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/hud/NexMascotDrawerContent.tsx",
+      "line": 24,
+      "module": "@/lib/nex-mascots/useActiveMascot",
+      "reason": "all-used",
+      "importText": "import { useActiveMascot } from \"@/lib/nex-mascots/useActiveMascot\";",
+      "symbols": [
+        "useActiveMascot"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/hud/NexMascotStage.tsx",
+      "line": 21,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/hud/NexMascotStage.tsx",
+      "line": 22,
+      "module": "@/lib/nex-mascots/registry",
+      "reason": "all-used",
+      "importText": "import { listAll } from \"@/lib/nex-mascots/registry\";",
+      "symbols": [
+        "listAll"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/hud/NexMascotStage.tsx",
+      "line": 23,
+      "module": "@/lib/nex-mascots/meaning",
+      "reason": "all-used",
+      "importText": "import { pickPersonalTemplate } from \"@/lib/nex-mascots/meaning\";",
+      "symbols": [
+        "pickPersonalTemplate"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/hud/NexMascotStage.tsx",
+      "line": 24,
+      "module": "@/lib/nex-mascots/types",
+      "reason": "all-used",
+      "importText": "import type { Mascot, MascotSection } from \"@/lib/nex-mascots/types\";",
+      "symbols": [
+        "Mascot",
+        "MascotSection"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/hud/NexMascotStage.tsx",
+      "line": 25,
+      "module": "@/lib/nex-mascots/useActiveMascot",
+      "reason": "all-used",
+      "importText": "import { useActiveMascot } from \"@/lib/nex-mascots/useActiveMascot\";",
+      "symbols": [
+        "useActiveMascot"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexActivityBars.tsx",
+      "line": 18,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexCategoryMode.tsx",
+      "line": 31,
+      "module": "@/lib/nexapp-shell/rooms",
+      "reason": "all-used",
+      "importText": "import { ROOMS, type Room, type RoomId, type RoomSection, type UserRole } from \"@/lib/nexapp-shell/rooms\";",
+      "symbols": [
+        "ROOMS",
+        "Room",
+        "RoomId",
+        "RoomSection",
+        "UserRole"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexCommsSatellites.tsx",
+      "line": 29,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexCommsSatellites.tsx",
+      "line": 30,
+      "module": "@/lib/nexapp/useVirtualKeyboard",
+      "reason": "all-used",
+      "importText": "import { useVirtualKeyboard } from \"@/lib/nexapp/useVirtualKeyboard\";",
+      "symbols": [
+        "useVirtualKeyboard"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexComposer.tsx",
+      "line": 20,
+      "module": "@/lib/nex-voice",
+      "reason": "all-used",
+      "importText": "import type { NexVoiceState } from \"@/lib/nex-voice\";",
+      "symbols": [
+        "NexVoiceState"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexConnectionLine.tsx",
+      "line": 33,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexCornerSlot.tsx",
+      "line": 16,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexDirectoryCards.tsx",
+      "line": 31,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexEmojiTray.tsx",
+      "line": 16,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexEmojiTray.tsx",
+      "line": 18,
+      "module": "@/lib/nex-actions/registry",
+      "reason": "all-used",
+      "importText": "import { NEX_ACTIONS, sectionForTier } from \"@/lib/nex-actions/registry\";",
+      "symbols": [
+        "NEX_ACTIONS",
+        "sectionForTier"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexExploreSatellites.tsx",
+      "line": 31,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexFriendChatView.tsx",
+      "line": 165,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexGrenadeAnimation.tsx",
+      "line": 16,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexHudFrame.tsx",
+      "line": 38,
+      "module": "@/lib/nex-voice",
+      "reason": "all-used",
+      "importText": "import type { NexVoiceState } from \"@/lib/nex-voice\";",
+      "symbols": [
+        "NexVoiceState"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexIdentityButton.tsx",
+      "line": 34,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexIdentityButton.tsx",
+      "line": 35,
+      "module": "@/lib/nexapp/nex-state",
+      "reason": "all-used",
+      "importText": "import type { NexState } from \"@/lib/nexapp/nex-state\";",
+      "symbols": [
+        "NexState"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexIdentityOnboarding.tsx",
+      "line": 32,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexPendingChats.tsx",
+      "line": 23,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexReactionFullScreen.tsx",
+      "line": 13,
+      "module": "@/lib/nexapp/nexEmojis",
+      "reason": "all-used",
+      "importText": "import type { NexFullScreenEffect } from \"@/lib/nexapp/nexEmojis\";",
+      "symbols": [
+        "NexFullScreenEffect"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexSideDrawer.tsx",
+      "line": 20,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexTooltip.tsx",
+      "line": 23,
+      "module": "@/lib/nexapp/tokens",
+      "reason": "all-used",
+      "importText": "import { NEX } from \"@/lib/nexapp/tokens\";",
+      "symbols": [
+        "NEX"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexVoiceOrb.tsx",
+      "line": 20,
+      "module": "@/lib/nex-voice",
+      "reason": "all-used",
+      "importText": "import type { NexVoiceState } from \"@/lib/nex-voice\";",
+      "symbols": [
+        "NexVoiceState"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexWorkspaceBusinesses.tsx",
+      "line": 17,
+      "module": "@/lib/nexapp/verticals/food",
+      "reason": "all-used",
+      "importText": "import { foodVertical } from \"@/lib/nexapp/verticals/food\";",
+      "symbols": [
+        "foodVertical"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexWorkspaceChat.tsx",
+      "line": 25,
+      "module": "@/lib/nex-voice",
+      "reason": "all-used",
+      "importText": "import type { NexVoiceState } from \"@/lib/nex-voice\";",
+      "symbols": [
+        "NexVoiceState"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexWorkspaceFeed.tsx",
+      "line": 18,
+      "module": "@/app/nex-video/VideoFeedClient",
+      "reason": "all-used",
+      "importText": "import { VideoFeedClient } from \"@/app/nex-video/VideoFeedClient\";",
+      "symbols": [
+        "VideoFeedClient"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexWorkspaceFriends.tsx",
+      "line": 30,
+      "module": "@/lib/nex-mascots/registry",
+      "reason": "all-used",
+      "importText": "import { listAllWithArtwork } from \"@/lib/nex-mascots/registry\";",
+      "symbols": [
+        "listAllWithArtwork"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/NexWorkspaceMyRoles.tsx",
+      "line": 25,
+      "module": "@/components/nex/ProviderBikeCard",
+      "reason": "all-used",
+      "importText": "import { ProviderBikeCard } from \"@/components/nex/ProviderBikeCard\";",
+      "symbols": [
+        "ProviderBikeCard"
+      ]
+    },
+    {
+      "file": "src/components/nexapp/OrangeParticleField.tsx",
+      "line": 30,
+      "module": "@/lib/nexapp/nex-state",
+      "reason": "all-used",
+      "importText": "import type { NexState } from \"@/lib/nexapp/nex-state\";",
+      "symbols": [
+        "NexState"
+      ]
+    },
+    {
+      "file": "src/lib/llm/composeForChannel.ts",
+      "line": 14,
+      "module": "@/lib/insights/loader",
+      "reason": "all-used",
+      "importText": "import { loadInsightsFor } from \"@/lib/insights/loader\";",
+      "symbols": [
+        "loadInsightsFor"
+      ]
+    },
+    {
+      "file": "src/lib/llm/composeForChannel.ts",
+      "line": 15,
+      "module": "@/lib/events/types",
+      "reason": "all-used",
+      "importText": "import type { BusinessEvent } from \"@/lib/events/types\";",
+      "symbols": [
+        "BusinessEvent"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/__tests__/all-brains.test.ts",
+      "line": 13,
+      "module": "@/lib/nex-hq-agents/registry",
+      "reason": "all-used",
+      "importText": "import { AGENT_REGISTRY } from \"@/lib/nex-hq-agents/registry\";",
+      "symbols": [
+        "AGENT_REGISTRY"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/__tests__/crawler-reference-agent.test.ts",
+      "line": 10,
+      "module": "@/lib/nex-intelligence/host-rate-limiter",
+      "reason": "all-used",
+      "importText": "import { _resetRateLimiter } from \"@/lib/nex-intelligence/host-rate-limiter\";",
+      "symbols": [
+        "_resetRateLimiter"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/__tests__/growth-snapshot.test.ts",
+      "line": 8,
+      "module": "@/lib/nex-intelligence/provenance",
+      "reason": "all-used",
+      "importText": "import { canonicalJson } from \"@/lib/nex-intelligence/provenance\";",
+      "symbols": [
+        "canonicalJson"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/__tests__/restart-and-failure-honesty.test.ts",
+      "line": 12,
+      "module": "@/lib/nex-intelligence/host-rate-limiter",
+      "reason": "all-used",
+      "importText": "import { _resetRateLimiter } from \"@/lib/nex-intelligence/host-rate-limiter\";",
+      "symbols": [
+        "_resetRateLimiter"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/authority-manifest.ts",
+      "line": 9,
+      "module": "@/lib/nex-intelligence/provenance",
+      "reason": "all-used",
+      "importText": "import { canonicalJson, provenanceChainHash } from \"@/lib/nex-intelligence/provenance\";",
+      "symbols": [
+        "canonicalJson",
+        "provenanceChainHash"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/brains/crawler-brain.ts",
+      "line": 14,
+      "module": "@/lib/nex-intelligence/provenance",
+      "reason": "all-used",
+      "importText": "import { sha256Hex } from \"@/lib/nex-intelligence/provenance\";",
+      "symbols": [
+        "sha256Hex"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/brains/crawler-brain.ts",
+      "line": 16,
+      "module": "@/lib/nex-intelligence/host-rate-limiter",
+      "reason": "all-used",
+      "importText": "import { checkAcquisitionPermitted, beginRequest, recordRequestOutcome, type HostPolicy } from \"@/lib/nex-intelligence/host-rate-limiter\";",
+      "symbols": [
+        "checkAcquisitionPermitted",
+        "beginRequest",
+        "recordRequestOutcome",
+        "HostPolicy"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/brains/crawler-brain.ts",
+      "line": 17,
+      "module": "@/lib/nex-intelligence/source-registry",
+      "reason": "all-used",
+      "importText": "import { listEligibleSources, pickNextEligibleSource, recordSourceOutcome, AUTHORISED_SOURCES } from \"@/lib/nex-intelligence/source-registry\";",
+      "symbols": [
+        "listEligibleSources",
+        "pickNextEligibleSource",
+        "recordSourceOutcome",
+        "AUTHORISED_SOURCES"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/brains/crawler-brain.ts",
+      "line": 18,
+      "module": "@/lib/nex-intelligence/source-guardian",
+      "reason": "all-used",
+      "importText": "import { guardianCheck } from \"@/lib/nex-intelligence/source-guardian\";",
+      "symbols": [
+        "guardianCheck"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/brains/crawler-brain.ts",
+      "line": 19,
+      "module": "@/lib/nex-intelligence/source-pool",
+      "reason": "all-used",
+      "importText": "import { persistSourceRecord, persistSourceEntry } from \"@/lib/nex-intelligence/source-pool\";",
+      "symbols": [
+        "persistSourceRecord",
+        "persistSourceEntry"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/brains/intelligence-brains.ts",
+      "line": 12,
+      "module": "@/lib/nex-intelligence/provenance",
+      "reason": "all-used",
+      "importText": "import { sha256Hex } from \"@/lib/nex-intelligence/provenance\";",
+      "symbols": [
+        "sha256Hex"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/brains/intelligence-brains.ts",
+      "line": 425,
+      "module": "@/lib/nex-intelligence/source-pool",
+      "reason": "all-used",
+      "importText": "const { loadRecentProposals } = await import(\"@/lib/nex-intelligence/source-pool\");",
+      "symbols": [
+        "loadRecentProposals"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/brains/lab-security-brains.ts",
+      "line": 8,
+      "module": "@/lib/nex-intelligence/provenance",
+      "reason": "all-used",
+      "importText": "import { sha256Hex } from \"@/lib/nex-intelligence/provenance\";",
+      "symbols": [
+        "sha256Hex"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/brains/nex-coding-brains.ts",
+      "line": 8,
+      "module": "@/lib/nex-intelligence/provenance",
+      "reason": "all-used",
+      "importText": "import { sha256Hex } from \"@/lib/nex-intelligence/provenance\";",
+      "symbols": [
+        "sha256Hex"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/brains/orchestrator-brains.ts",
+      "line": 7,
+      "module": "@/lib/nex-intelligence/provenance",
+      "reason": "all-used",
+      "importText": "import { sha256Hex } from \"@/lib/nex-intelligence/provenance\";",
+      "symbols": [
+        "sha256Hex"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/capability-manifest.ts",
+      "line": 11,
+      "module": "@/lib/nex-intelligence/provenance",
+      "reason": "all-used",
+      "importText": "import { canonicalJson, provenanceChainHash } from \"@/lib/nex-intelligence/provenance\";",
+      "symbols": [
+        "canonicalJson",
+        "provenanceChainHash"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/founder-authority/__tests__/runtime-08.test.ts",
+      "line": 30,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "all-used",
+      "importText": "import { CAP_ENGINEERING_PROPOSAL_COLLECTION, type CapEngineeringProposal } from \"@/lib/nex-cap/nex1-engineer\";",
+      "symbols": [
+        "CAP_ENGINEERING_PROPOSAL_COLLECTION",
+        "CapEngineeringProposal"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/founder-authority/__tests__/runtime-08.test.ts",
+      "line": 31,
+      "module": "@/lib/nex-cap/registry",
+      "reason": "all-used",
+      "importText": "import { persistCapabilityGap } from \"@/lib/nex-cap/registry\";",
+      "symbols": [
+        "persistCapabilityGap"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/founder-authority/authorization.ts",
+      "line": 15,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "all-used",
+      "importText": "import type { CapEngineeringProposal } from \"@/lib/nex-cap/nex1-engineer\";",
+      "symbols": [
+        "CapEngineeringProposal"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/founder-authority/authorization.ts",
+      "line": 16,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "all-used",
+      "importText": "import { hashAuthorisedScope } from \"@/lib/nex-cap/nex1-engineer\";",
+      "symbols": [
+        "hashAuthorisedScope"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/founder-authority/authorization.ts",
+      "line": 243,
+      "module": "@/lib/nex-cap/registry",
+      "reason": "all-used",
+      "importText": "const { loadCap } = await import(\"@/lib/nex-cap/registry\");",
+      "symbols": [
+        "loadCap"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/growth-snapshot.ts",
+      "line": 15,
+      "module": "@/lib/nex-hq-agents/registry",
+      "reason": "all-used",
+      "importText": "import { AGENT_REGISTRY } from \"@/lib/nex-hq-agents/registry\";",
+      "symbols": [
+        "AGENT_REGISTRY"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/heartbeat-emitter.ts",
+      "line": 13,
+      "module": "@/lib/nex-intelligence/provenance",
+      "reason": "all-used",
+      "importText": "import { canonicalJson, provenanceChainHash } from \"@/lib/nex-intelligence/provenance\";",
+      "symbols": [
+        "canonicalJson",
+        "provenanceChainHash"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/identity.ts",
+      "line": 15,
+      "module": "@/lib/nex-intelligence/provenance",
+      "reason": "all-used",
+      "importText": "import { canonicalJson, provenanceChainHash, sha256Hex } from \"@/lib/nex-intelligence/provenance\";",
+      "symbols": [
+        "canonicalJson",
+        "provenanceChainHash",
+        "sha256Hex"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/internet-doorway/__tests__/runtime-09.test.ts",
+      "line": 14,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "all-used",
+      "importText": "import { CAP_ENGINEERING_PROPOSAL_COLLECTION, type CapEngineeringProposal } from \"@/lib/nex-cap/nex1-engineer\";",
+      "symbols": [
+        "CAP_ENGINEERING_PROPOSAL_COLLECTION",
+        "CapEngineeringProposal"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/learning-contribution.ts",
+      "line": 11,
+      "module": "@/lib/nex-intelligence/provenance",
+      "reason": "all-used",
+      "importText": "import { canonicalJson, provenanceChainHash } from \"@/lib/nex-intelligence/provenance\";",
+      "symbols": [
+        "canonicalJson",
+        "provenanceChainHash"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/memory.ts",
+      "line": 9,
+      "module": "@/lib/nex-intelligence/provenance",
+      "reason": "all-used",
+      "importText": "import { canonicalJson, provenanceChainHash, sha256Hex } from \"@/lib/nex-intelligence/provenance\";",
+      "symbols": [
+        "canonicalJson",
+        "provenanceChainHash",
+        "sha256Hex"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/mission-dispatcher.ts",
+      "line": 11,
+      "module": "@/lib/nex-intelligence/provenance",
+      "reason": "all-used",
+      "importText": "import { canonicalJson, provenanceChainHash } from \"@/lib/nex-intelligence/provenance\";",
+      "symbols": [
+        "canonicalJson",
+        "provenanceChainHash"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/nex-net-growth.ts",
+      "line": 20,
+      "module": "@/lib/nex-intelligence/provenance",
+      "reason": "all-used",
+      "importText": "import { canonicalJson, provenanceChainHash } from \"@/lib/nex-intelligence/provenance\";",
+      "symbols": [
+        "canonicalJson",
+        "provenanceChainHash"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/nex-net-growth.ts",
+      "line": 22,
+      "module": "@/lib/nex-hq-agents/registry",
+      "reason": "all-used",
+      "importText": "import { AGENT_REGISTRY } from \"@/lib/nex-hq-agents/registry\";",
+      "symbols": [
+        "AGENT_REGISTRY"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/nex-net-growth.ts",
+      "line": 25,
+      "module": "@/lib/nex-intelligence/source-pool",
+      "reason": "all-used",
+      "importText": "import { SOURCE_POOL_COLLECTION, SANITIZED_POOL_COLLECTION, DISCOVERY_POOL_COLLECTION, HYPOTHESIS_POOL_COLLECTION, EXPERIMENT_POOL_COLLECTION, KNOWLEDGE_POOL_COLLECTION, PROPOSAL_POOL_COLLECTION } from \"@/lib/nex-intelligence/source-pool\";",
+      "symbols": [
+        "SOURCE_POOL_COLLECTION",
+        "SANITIZED_POOL_COLLECTION",
+        "DISCOVERY_POOL_COLLECTION",
+        "HYPOTHESIS_POOL_COLLECTION",
+        "EXPERIMENT_POOL_COLLECTION",
+        "KNOWLEDGE_POOL_COLLECTION",
+        "PROPOSAL_POOL_COLLECTION"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/nex1/__tests__/nex1-tick-integration.test.ts",
+      "line": 12,
+      "module": "@/lib/nex-runtime-queue/queue",
+      "reason": "all-used",
+      "importText": "import { enqueue } from \"@/lib/nex-runtime-queue/queue\";",
+      "symbols": [
+        "enqueue"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/nex1/__tests__/nex1-tick-integration.test.ts",
+      "line": 13,
+      "module": "@/lib/nex-runtime-queue/persistence",
+      "reason": "all-used",
+      "importText": "import { loadMission } from \"@/lib/nex-runtime-queue/persistence\";",
+      "symbols": [
+        "loadMission"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/nex1/__tests__/nex1-tick-integration.test.ts",
+      "line": 14,
+      "module": "@/lib/nex-cap/registry",
+      "reason": "all-used",
+      "importText": "import { persistCapabilityGap } from \"@/lib/nex-cap/registry\";",
+      "symbols": [
+        "persistCapabilityGap"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/nex1/__tests__/nex1.test.ts",
+      "line": 18,
+      "module": "@/lib/nex-runtime-queue/queue",
+      "reason": "all-used",
+      "importText": "import { enqueue } from \"@/lib/nex-runtime-queue/queue\";",
+      "symbols": [
+        "enqueue"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/nex1/__tests__/nex1.test.ts",
+      "line": 233,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "all-used",
+      "importText": "const { loadAllProposals } = await import(\"@/lib/nex-cap/nex1-engineer\");",
+      "symbols": [
+        "loadAllProposals"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/nex1/brain.ts",
+      "line": 25,
+      "module": "@/lib/nex-runtime-queue/types",
+      "reason": "all-used",
+      "importText": "import type { EngineeringMission } from \"@/lib/nex-runtime-queue/types\";",
+      "symbols": [
+        "EngineeringMission"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/nex1/brain.ts",
+      "line": 26,
+      "module": "@/lib/nex-cap/registry",
+      "reason": "all-used",
+      "importText": "import { loadCap } from \"@/lib/nex-cap/registry\";",
+      "symbols": [
+        "loadCap"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/nex1/brain.ts",
+      "line": 27,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "all-used",
+      "importText": "import { nex1EngineerProposeFor } from \"@/lib/nex-cap/nex1-engineer\";",
+      "symbols": [
+        "nex1EngineerProposeFor"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/nex1/daemon.ts",
+      "line": 14,
+      "module": "@/lib/nex-runtime-queue/queue",
+      "reason": "all-used",
+      "importText": "import { claimMission, markMissionInProgress, completeMission, failMission, pickNextMission, DEFAULT_QUEUE_CONFIG } from \"@/lib/nex-runtime-queue/queue\";",
+      "symbols": [
+        "claimMission",
+        "markMissionInProgress",
+        "completeMission",
+        "failMission",
+        "pickNextMission",
+        "DEFAULT_QUEUE_CONFIG"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/nex2/__tests__/nex2.test.ts",
+      "line": 14,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "all-used",
+      "importText": "import { CAP_ENGINEERING_PROPOSAL_COLLECTION, type CapEngineeringProposal, type AuthorisedWorkstationScope } from \"@/lib/nex-cap/nex1-engineer\";",
+      "symbols": [
+        "CAP_ENGINEERING_PROPOSAL_COLLECTION",
+        "CapEngineeringProposal",
+        "AuthorisedWorkstationScope"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/nex2/__tests__/nex2.test.ts",
+      "line": 15,
+      "module": "@/lib/nex-cap/registry",
+      "reason": "all-used",
+      "importText": "import { persistCapabilityGap } from \"@/lib/nex-cap/registry\";",
+      "symbols": [
+        "persistCapabilityGap"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/nex2/daemon.ts",
+      "line": 15,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "all-used",
+      "importText": "import { loadAllProposals } from \"@/lib/nex-cap/nex1-engineer\";",
+      "symbols": [
+        "loadAllProposals"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/nex2/review.ts",
+      "line": 13,
+      "module": "@/lib/nex-cap/registry",
+      "reason": "all-used",
+      "importText": "import { loadCap } from \"@/lib/nex-cap/registry\";",
+      "symbols": [
+        "loadCap"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/nex2/review.ts",
+      "line": 14,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "all-used",
+      "importText": "import { loadAllProposals, type CapEngineeringProposal } from \"@/lib/nex-cap/nex1-engineer\";",
+      "symbols": [
+        "loadAllProposals",
+        "CapEngineeringProposal"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/nex2/review.ts",
+      "line": 18,
+      "module": "@/lib/nex-cap/types",
+      "reason": "all-used",
+      "importText": "import type { CapabilityGap } from \"@/lib/nex-cap/types\";",
+      "symbols": [
+        "CapabilityGap"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/nex3/__tests__/nex3.test.ts",
+      "line": 17,
+      "module": "@/lib/nex-cap/registry",
+      "reason": "all-used",
+      "importText": "import { persistCapabilityGap } from \"@/lib/nex-cap/registry\";",
+      "symbols": [
+        "persistCapabilityGap"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/nex3/arbitration.ts",
+      "line": 17,
+      "module": "@/lib/nex-cap/registry",
+      "reason": "all-used",
+      "importText": "import { loadCap } from \"@/lib/nex-cap/registry\";",
+      "symbols": [
+        "loadCap"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/nex3/arbitration.ts",
+      "line": 18,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "all-used",
+      "importText": "import { loadAllProposals, type CapEngineeringProposal } from \"@/lib/nex-cap/nex1-engineer\";",
+      "symbols": [
+        "loadAllProposals",
+        "CapEngineeringProposal"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/nex3/arbitration.ts",
+      "line": 21,
+      "module": "@/lib/nex-cap/types",
+      "reason": "all-used",
+      "importText": "import type { CapabilityGap } from \"@/lib/nex-cap/types\";",
+      "symbols": [
+        "CapabilityGap"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/orchestrator/__tests__/orchestrator.test.ts",
+      "line": 18,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "all-used",
+      "importText": "import { CAP_ENGINEERING_PROPOSAL_COLLECTION, type CapEngineeringProposal, founderSignProposal } from \"@/lib/nex-cap/nex1-engineer\";",
+      "symbols": [
+        "CAP_ENGINEERING_PROPOSAL_COLLECTION",
+        "CapEngineeringProposal",
+        "founderSignProposal"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/orchestrator/daemon.ts",
+      "line": 12,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "all-used",
+      "importText": "import { loadAllProposals } from \"@/lib/nex-cap/nex1-engineer\";",
+      "symbols": [
+        "loadAllProposals"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/performance-history.ts",
+      "line": 8,
+      "module": "@/lib/nex-intelligence/provenance",
+      "reason": "all-used",
+      "importText": "import { canonicalJson, provenanceChainHash } from \"@/lib/nex-intelligence/provenance\";",
+      "symbols": [
+        "canonicalJson",
+        "provenanceChainHash"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/programming-mission/__tests__/runtime-11.test.ts",
+      "line": 31,
+      "module": "@/lib/nex-controlled-hands/ed25519",
+      "reason": "all-used",
+      "importText": "import { generateKeyPair } from \"@/lib/nex-controlled-hands/ed25519\";",
+      "symbols": [
+        "generateKeyPair"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/programming-mission/__tests__/runtime-11.test.ts",
+      "line": 32,
+      "module": "@/lib/nex1-orchestrator/wo2-founder-keys",
+      "reason": "all-used",
+      "importText": "import { buildFounderKeyRecordForTest, type FounderKeyManifest } from \"@/lib/nex1-orchestrator/wo2-founder-keys\";",
+      "symbols": [
+        "buildFounderKeyRecordForTest",
+        "FounderKeyManifest"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/programming-mission/__tests__/runtime-12-attacks.test.ts",
+      "line": 35,
+      "module": "@/app/api/nex/programming-mission/execute/route",
+      "reason": "all-used",
+      "importText": "import { POST as executeRoute } from \"@/app/api/nex/programming-mission/execute/route\";",
+      "symbols": [
+        "executeRoute"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/programming-mission/__tests__/runtime-12-attacks.test.ts",
+      "line": 36,
+      "module": "@/app/api/nex/programming-mission/prepare/route",
+      "reason": "all-used",
+      "importText": "import { POST as prepareRoute } from \"@/app/api/nex/programming-mission/prepare/route\";",
+      "symbols": [
+        "prepareRoute"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/programming-mission/mission.ts",
+      "line": 39,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "all-used",
+      "importText": "import type { CapEngineeringProposal } from \"@/lib/nex-cap/nex1-engineer\";",
+      "symbols": [
+        "CapEngineeringProposal"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/programming-mission/mission.ts",
+      "line": 289,
+      "module": "@/lib/nex-cap/registry",
+      "reason": "all-used",
+      "importText": "const { persistCapabilityGap } = await import(\"@/lib/nex-cap/registry\");",
+      "symbols": [
+        "persistCapabilityGap"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/programming-mission/mission.ts",
+      "line": 299,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "all-used",
+      "importText": "const { nex1EngineerProposeFor, attachWorkstationScopeToProposal, founderSignProposal } = await import(\"@/lib/nex-cap/nex1-engineer\");",
+      "symbols": [
+        "nex1EngineerProposeFor",
+        "attachWorkstationScopeToProposal",
+        "founderSignProposal"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/programming-mission/mission.ts",
+      "line": 300,
+      "module": "@/lib/nex-cap/cap-spec-bridge",
+      "reason": "all-used",
+      "importText": "const { authorisedScopeForProgrammingMission } = await import(\"@/lib/nex-cap/cap-spec-bridge\");",
+      "symbols": [
+        "authorisedScopeForProgrammingMission"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/provisioning.ts",
+      "line": 19,
+      "module": "@/lib/nex-hq-agents/registry",
+      "reason": "all-used",
+      "importText": "import { AGENT_REGISTRY } from \"@/lib/nex-hq-agents/registry\";",
+      "symbols": [
+        "AGENT_REGISTRY"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/provisioning.ts",
+      "line": 20,
+      "module": "@/lib/nex-hq-agents/types",
+      "reason": "all-used",
+      "importText": "import type { AgentDescriptor } from \"@/lib/nex-hq-agents/types\";",
+      "symbols": [
+        "AgentDescriptor"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/security/__tests__/security.test.ts",
+      "line": 18,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "all-used",
+      "importText": "import { CAP_ENGINEERING_PROPOSAL_COLLECTION, type CapEngineeringProposal } from \"@/lib/nex-cap/nex1-engineer\";",
+      "symbols": [
+        "CAP_ENGINEERING_PROPOSAL_COLLECTION",
+        "CapEngineeringProposal"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/security/daemon.ts",
+      "line": 11,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "all-used",
+      "importText": "import { loadAllProposals } from \"@/lib/nex-cap/nex1-engineer\";",
+      "symbols": [
+        "loadAllProposals"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/security/detection.ts",
+      "line": 8,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "all-used",
+      "importText": "import type { CapEngineeringProposal } from \"@/lib/nex-cap/nex1-engineer\";",
+      "symbols": [
+        "CapEngineeringProposal"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/security/review.ts",
+      "line": 10,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "all-used",
+      "importText": "import { loadAllProposals, type CapEngineeringProposal } from \"@/lib/nex-cap/nex1-engineer\";",
+      "symbols": [
+        "loadAllProposals",
+        "CapEngineeringProposal"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/supervisor.ts",
+      "line": 17,
+      "module": "@/lib/nex-hq-agents/registry",
+      "reason": "all-used",
+      "importText": "import { AGENT_REGISTRY } from \"@/lib/nex-hq-agents/registry\";",
+      "symbols": [
+        "AGENT_REGISTRY"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/workstation-integration/__tests__/runtime-10.test.ts",
+      "line": 56,
+      "module": "@/lib/nex-cap/registry",
+      "reason": "all-used",
+      "importText": "import { persistCapabilityGap } from \"@/lib/nex-cap/registry\";",
+      "symbols": [
+        "persistCapabilityGap"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/workstation-integration/__tests__/runtime-10.test.ts",
+      "line": 61,
+      "module": "@/lib/nex-controlled-hands/ed25519",
+      "reason": "all-used",
+      "importText": "import { generateKeyPair } from \"@/lib/nex-controlled-hands/ed25519\";",
+      "symbols": [
+        "generateKeyPair"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/workstation-integration/__tests__/runtime-10.test.ts",
+      "line": 180,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "all-used",
+      "importText": "const { founderSignProposal } = await import(\"@/lib/nex-cap/nex1-engineer\");",
+      "symbols": [
+        "founderSignProposal"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/workstation-integration/execute.ts",
+      "line": 49,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "all-used",
+      "importText": "import type { CapEngineeringProposal } from \"@/lib/nex-cap/nex1-engineer\";",
+      "symbols": [
+        "CapEngineeringProposal"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/workstation-integration/execute.ts",
+      "line": 50,
+      "module": "@/lib/nex-cap/nex1-engineer",
+      "reason": "all-used",
+      "importText": "import { hashAuthorisedScope } from \"@/lib/nex-cap/nex1-engineer\";",
+      "symbols": [
+        "hashAuthorisedScope"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/workstation-integration/execute.ts",
+      "line": 51,
+      "module": "@/lib/nex-cap/types",
+      "reason": "all-used",
+      "importText": "import type { CapabilityGap } from \"@/lib/nex-cap/types\";",
+      "symbols": [
+        "CapabilityGap"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent-runtime/workstation-integration/execute.ts",
+      "line": 59,
+      "module": "@/lib/nex-cap/real-workstation-adapter",
+      "reason": "all-used",
+      "importText": "import { realWorkstationAdapter } from \"@/lib/nex-cap/real-workstation-adapter\";",
+      "symbols": [
+        "realWorkstationAdapter"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent/code-engine/capability-investigation-to-agent.ts",
+      "line": 24,
+      "module": "../../nex-coding-team/types",
+      "reason": "all-used",
+      "importText": "import type { AgentId } from \"../../nex-coding-team/types\";",
+      "symbols": [
+        "AgentId"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent/code-engine/native-investigation-actions.ts",
+      "line": 31,
+      "module": "@/lib/nex-independent-observer/observer",
+      "reason": "all-used",
+      "importText": "import { IndependentObserver } from \"@/lib/nex-independent-observer/observer\";",
+      "symbols": [
+        "IndependentObserver"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent/code-engine/native-investigation-mode.ts",
+      "line": 51,
+      "module": "@/lib/nex-independent-observer/observer",
+      "reason": "all-used",
+      "importText": "import { IndependentObserver } from \"@/lib/nex-independent-observer/observer\";",
+      "symbols": [
+        "IndependentObserver"
+      ]
+    },
+    {
+      "file": "src/lib/nex-agent/code-engine/native-programming-loop.ts",
+      "line": 27,
+      "module": "@/lib/nex-coding-team/test-runner",
+      "reason": "all-used",
+      "importText": "import { runVitest, runTsc, type TestRunResult } from \"@/lib/nex-coding-team/test-runner\";",
+      "symbols": [
+        "runVitest",
+        "runTsc",
+        "TestRunResult"
+      ]
+    },
+    {
+      "file": "src/lib/nex-native/__tests__/directory-v1-api-contract.test.ts",
+      "line": 16,
+      "module": "@/app/api/nex-directory/v1/listings/route",
+      "reason": "all-used",
+      "importText": "import { GET } from \"@/app/api/nex-directory/v1/listings/route\";",
+      "symbols": [
+        "GET"
+      ]
+    },
+    {
+      "file": "src/lib/nex-native/directory/types.ts",
+      "line": 42,
+      "module": "../../../../scripts/nex-canonical/generate-candidates",
+      "reason": "all-used",
+      "importText": "import type { EntityType } from \"../../../../scripts/nex-canonical/generate-candidates\";",
+      "symbols": [
+        "EntityType"
+      ]
+    },
+    {
+      "file": "src/lib/nex-native/directory/types.ts",
+      "line": 43,
+      "module": "../../../../scripts/nex-canonical/canonical-row",
+      "reason": "all-used",
+      "importText": "import type { LifecycleState } from \"../../../../scripts/nex-canonical/canonical-row\";",
+      "symbols": [
+        "LifecycleState"
+      ]
+    },
+    {
+      "file": "src/lib/nex/agent.ts",
+      "line": 20,
+      "module": "@/lib/knowledge/search",
+      "reason": "all-used",
+      "importText": "import type { KnowledgeHit } from \"@/lib/knowledge/search\";",
+      "symbols": [
+        "KnowledgeHit"
+      ]
+    },
+    {
+      "file": "src/lib/nex/apiHelpers.ts",
+      "line": 8,
+      "module": "@/lib/merchantSession",
+      "reason": "all-used",
+      "importText": "import { getMerchantSlug } from \"@/lib/merchantSession\";",
+      "symbols": [
+        "getMerchantSlug"
+      ]
+    },
+    {
+      "file": "src/lib/nex/apiHelpers.ts",
+      "line": 9,
+      "module": "@/lib/homeowners/auth",
+      "reason": "all-used",
+      "importText": "import { getHomeownerFromCookie } from \"@/lib/homeowners/auth\";",
+      "symbols": [
+        "getHomeownerFromCookie"
+      ]
+    },
+    {
+      "file": "src/lib/nex/brain-loader.ts",
+      "line": 13,
+      "module": "@/lib/nex-apps/_config-loader",
+      "reason": "all-used",
+      "importText": "import { listAvailableTrades, loadTradeConfig } from \"@/lib/nex-apps/_config-loader\";",
+      "symbols": [
+        "listAvailableTrades",
+        "loadTradeConfig"
+      ]
+    },
+    {
+      "file": "src/lib/nex/brain/world-adapters/accommodation-postgres.ts",
+      "line": 55,
+      "module": "@/lib/nex-accommodation/db",
+      "reason": "all-used",
+      "importText": "const { getAccommodationDbPool } = await import(\"@/lib/nex-accommodation/db\");",
+      "symbols": [
+        "getAccommodationDbPool"
+      ]
+    },
+    {
+      "file": "src/lib/nex/brain/world-adapters/commerce-postgres.ts",
+      "line": 59,
+      "module": "@/lib/nex-food/db",
+      "reason": "all-used",
+      "importText": "const { getFoodDbPool } = await import(\"@/lib/nex-food/db\");",
+      "symbols": [
+        "getFoodDbPool"
+      ]
+    },
+    {
+      "file": "src/lib/nex/brain/world-adapters/food-postgres.ts",
+      "line": 51,
+      "module": "@/lib/nex-food/db",
+      "reason": "all-used",
+      "importText": "const { getFoodDbPool } = await import(\"@/lib/nex-food/db\");",
+      "symbols": [
+        "getFoodDbPool"
+      ]
+    },
+    {
+      "file": "src/lib/nex/brain/world-adapters/service-postgres.ts",
+      "line": 51,
+      "module": "@/lib/nex-food/db",
+      "reason": "all-used",
+      "importText": "const { getFoodDbPool } = await import(\"@/lib/nex-food/db\");",
+      "symbols": [
+        "getFoodDbPool"
+      ]
+    },
+    {
+      "file": "src/lib/nex/brain/world-adapters/transport-postgres.ts",
+      "line": 52,
+      "module": "@/lib/nex-food/db",
+      "reason": "all-used",
+      "importText": "const { getFoodDbPool } = await import(\"@/lib/nex-food/db\");",
+      "symbols": [
+        "getFoodDbPool"
+      ]
+    },
+    {
+      "file": "src/lib/nex/business-context/__tests__/wave1.test.ts",
+      "line": 36,
+      "module": "@/lib/app-builder/examples/staircase-company-completed",
+      "reason": "all-used",
+      "importText": "import { staircaseCompletedBlueprint } from \"@/lib/app-builder/examples/staircase-company-completed\";",
+      "symbols": [
+        "staircaseCompletedBlueprint"
+      ]
+    },
+    {
+      "file": "src/lib/nex/business-context/__tests__/wave1.test.ts",
+      "line": 59,
+      "module": "@/lib/tierCatalog",
+      "reason": "all-used",
+      "importText": "import { TIER_CATALOG } from \"@/lib/tierCatalog\";",
+      "symbols": [
+        "TIER_CATALOG"
+      ]
+    },
+    {
+      "file": "src/lib/nex/business-context/blueprint-serialisation.ts",
+      "line": 13,
+      "module": "@/lib/app-builder/blueprint-schema",
+      "reason": "all-used",
+      "importText": "import type { AppBlueprint } from \"@/lib/app-builder/blueprint-schema\";",
+      "symbols": [
+        "AppBlueprint"
+      ]
+    },
+    {
+      "file": "src/lib/nex/business-context/database.ts",
+      "line": 20,
+      "module": "@/lib/app-builder/blueprint-schema",
+      "reason": "all-used",
+      "importText": "import type { AppBlueprint } from \"@/lib/app-builder/blueprint-schema\";",
+      "symbols": [
+        "AppBlueprint"
+      ]
+    },
+    {
+      "file": "src/lib/nex/business-context/registry.ts",
+      "line": 10,
+      "module": "@/lib/app-builder/blueprint-schema",
+      "reason": "all-used",
+      "importText": "import type { AppBlueprint } from \"@/lib/app-builder/blueprint-schema\";",
+      "symbols": [
+        "AppBlueprint"
+      ]
+    },
+    {
+      "file": "src/lib/nex/business-context/seed.ts",
+      "line": 8,
+      "module": "@/lib/app-builder/examples/staircase-company-completed",
+      "reason": "all-used",
+      "importText": "import { staircaseCompletedBlueprint } from \"@/lib/app-builder/examples/staircase-company-completed\";",
+      "symbols": [
+        "staircaseCompletedBlueprint"
+      ]
+    },
+    {
+      "file": "src/lib/nex/business-context/seed.ts",
+      "line": 9,
+      "module": "@/lib/app-builder/examples/phase10-scenarios",
+      "reason": "all-used",
+      "importText": "import { scenario5_ServiceBusinessPlumber } from \"@/lib/app-builder/examples/phase10-scenarios\";",
+      "symbols": [
+        "scenario5_ServiceBusinessPlumber"
+      ]
+    },
+    {
+      "file": "src/lib/nex/business-context/types.ts",
+      "line": 7,
+      "module": "@/lib/app-builder/blueprint-schema",
+      "reason": "all-used",
+      "importText": "import type { AppBlueprint } from \"@/lib/app-builder/blueprint-schema\";",
+      "symbols": [
+        "AppBlueprint"
+      ]
+    },
+    {
+      "file": "src/lib/nex/city-registry.test.ts",
+      "line": 12,
+      "module": "@/lib/nex-hq/discovery-rotation",
+      "reason": "all-used",
+      "importText": "import { TRACKED_CITIES } from \"@/lib/nex-hq/discovery-rotation\";",
+      "symbols": [
+        "TRACKED_CITIES"
+      ]
+    },
+    {
+      "file": "src/lib/nex/city-registry.ts",
+      "line": 21,
+      "module": "../../../data/nex-city-catalogue.json",
+      "reason": "all-used",
+      "importText": "import cityCatalogue from \"../../../data/nex-city-catalogue.json\";",
+      "symbols": [
+        "cityCatalogue"
+      ]
+    },
+    {
+      "file": "src/lib/nex/context.ts",
+      "line": 14,
+      "module": "@/lib/knowledge/search",
+      "reason": "all-used",
+      "importText": "import { searchKnowledge, type KnowledgeHit } from \"@/lib/knowledge/search\";",
+      "symbols": [
+        "searchKnowledge",
+        "KnowledgeHit"
+      ]
+    },
+    {
+      "file": "src/lib/nex/cv/analyze.ts",
+      "line": 12,
+      "module": "@/lib/openai/vision",
+      "reason": "all-used",
+      "importText": "import { reviewImage } from \"@/lib/openai/vision\";",
+      "symbols": [
+        "reviewImage"
+      ]
+    },
+    {
+      "file": "src/lib/nex/cv/damage.ts",
+      "line": 4,
+      "module": "@/lib/openai/vision",
+      "reason": "all-used",
+      "importText": "import { reviewImage } from \"@/lib/openai/vision\";",
+      "symbols": [
+        "reviewImage"
+      ]
+    },
+    {
+      "file": "src/lib/nex/cv/measure.ts",
+      "line": 4,
+      "module": "@/lib/openai/vision",
+      "reason": "all-used",
+      "importText": "import { reviewImage } from \"@/lib/openai/vision\";",
+      "symbols": [
+        "reviewImage"
+      ]
+    },
+    {
+      "file": "src/lib/nex/cv/ocr.ts",
+      "line": 5,
+      "module": "@/lib/openai/vision",
+      "reason": "all-used",
+      "importText": "import { reviewImage } from \"@/lib/openai/vision\";",
+      "symbols": [
+        "reviewImage"
+      ]
+    },
+    {
+      "file": "src/lib/nex/cv/safety.ts",
+      "line": 5,
+      "module": "@/lib/openai/vision",
+      "reason": "all-used",
+      "importText": "import { reviewImage } from \"@/lib/openai/vision\";",
+      "symbols": [
+        "reviewImage"
+      ]
+    },
+    {
+      "file": "src/lib/nex/cx/enrichers/opportunities.test.ts",
+      "line": 5,
+      "module": "@/lib/crm/loadContactTimeline",
+      "reason": "all-used",
+      "importText": "import type { ContactSummary } from \"@/lib/crm/loadContactTimeline\";",
+      "symbols": [
+        "ContactSummary"
+      ]
+    },
+    {
+      "file": "src/lib/nex/cx/enrichers/opportunities.ts",
+      "line": 7,
+      "module": "@/lib/crm/loadContactTimeline",
+      "reason": "all-used",
+      "importText": "import type { ContactSummary } from \"@/lib/crm/loadContactTimeline\";",
+      "symbols": [
+        "ContactSummary"
+      ]
+    },
+    {
+      "file": "src/lib/nex/cx/enrichers/preferences.test.ts",
+      "line": 5,
+      "module": "@/lib/crm/loadContactTimeline",
+      "reason": "all-used",
+      "importText": "import type { ContactSummary } from \"@/lib/crm/loadContactTimeline\";",
+      "symbols": [
+        "ContactSummary"
+      ]
+    },
+    {
+      "file": "src/lib/nex/cx/enrichers/preferences.ts",
+      "line": 8,
+      "module": "@/lib/crm/loadContactTimeline",
+      "reason": "all-used",
+      "importText": "import type { ContactSummary } from \"@/lib/crm/loadContactTimeline\";",
+      "symbols": [
+        "ContactSummary"
+      ]
+    },
+    {
+      "file": "src/lib/nex/cx/health.test.ts",
+      "line": 5,
+      "module": "@/lib/crm/loadContactTimeline",
+      "reason": "all-used",
+      "importText": "import type { ContactSummary } from \"@/lib/crm/loadContactTimeline\";",
+      "symbols": [
+        "ContactSummary"
+      ]
+    },
+    {
+      "file": "src/lib/nex/cx/health.ts",
+      "line": 8,
+      "module": "@/lib/crm/loadContactTimeline",
+      "reason": "all-used",
+      "importText": "import type { ContactSummary } from \"@/lib/crm/loadContactTimeline\";",
+      "symbols": [
+        "ContactSummary"
+      ]
+    },
+    {
+      "file": "src/lib/nex/cx/resolver.ts",
+      "line": 18,
+      "module": "@/lib/crm/loadContactTimeline",
+      "reason": "all-used",
+      "importText": "import { loadContactSummary, type ContactSummary } from \"@/lib/crm/loadContactTimeline\";",
+      "symbols": [
+        "loadContactSummary",
+        "ContactSummary"
+      ]
+    },
+    {
+      "file": "src/lib/nex/cx/types.ts",
+      "line": 17,
+      "module": "@/lib/crm/loadContactTimeline",
+      "reason": "all-used",
+      "importText": "import type { ContactSummary } from \"@/lib/crm/loadContactTimeline\";",
+      "symbols": [
+        "ContactSummary"
+      ]
+    },
+    {
+      "file": "src/lib/nex/est/trades/staircase.ts",
+      "line": 37,
+      "module": "@/lib/staircase-knowledge",
+      "reason": "all-used",
+      "importText": "import { getCompatibility } from \"@/lib/staircase-knowledge\";",
+      "symbols": [
+        "getCompatibility"
+      ]
+    },
+    {
+      "file": "src/lib/nex/geography/postcodeCentroid.ts",
+      "line": 15,
+      "module": "@/lib/ukPostcodeCentroids",
+      "reason": "all-used",
+      "importText": "import { centroidOf as ukCentroidOf, type Latlng } from \"@/lib/ukPostcodeCentroids\";",
+      "symbols": [
+        "ukCentroidOf",
+        "Latlng"
+      ]
+    },
+    {
+      "file": "src/lib/nex/geography/postcodeCentroid.ts",
+      "line": 17,
+      "module": "@/lib/ukPostcodeCentroids",
+      "reason": "all-used",
+      "importText": "export type { Latlng } from \"@/lib/ukPostcodeCentroids\";",
+      "symbols": [
+        "Latlng"
+      ]
+    },
+    {
+      "file": "src/lib/nex/intelligence/research.ts",
+      "line": 20,
+      "module": "@/lib/openai/reasoning",
+      "reason": "all-used",
+      "importText": "import { reasonJson } from \"@/lib/openai/reasoning\";",
+      "symbols": [
+        "reasonJson"
+      ]
+    },
+    {
+      "file": "src/lib/nex/live/upload-validation.test.ts",
+      "line": 19,
+      "module": "@/lib/nex-media/media-object",
+      "reason": "all-used",
+      "importText": "import type { Queryable } from \"@/lib/nex-media/media-object\";",
+      "symbols": [
+        "Queryable"
+      ]
+    },
+    {
+      "file": "src/lib/nex/live/upload-validation.ts",
+      "line": 21,
+      "module": "@/lib/nex-media/media-object",
+      "reason": "all-used",
+      "importText": "import type { Queryable } from \"@/lib/nex-media/media-object\";",
+      "symbols": [
+        "Queryable"
+      ]
+    },
+    {
+      "file": "src/lib/nex/merchant-assistant/bannerGenerator.test.ts",
+      "line": 62,
+      "module": "@/lib/products/read",
+      "reason": "all-used",
+      "importText": "import { findCanonicalById } from \"@/lib/products/read\";",
+      "symbols": [
+        "findCanonicalById"
+      ]
+    },
+    {
+      "file": "src/lib/nex/merchant-assistant/contextLoader.ts",
+      "line": 18,
+      "module": "@/lib/merchantSession",
+      "reason": "all-used",
+      "importText": "import { getMerchantIdentity } from \"@/lib/merchantSession\";",
+      "symbols": [
+        "getMerchantIdentity"
+      ]
+    },
+    {
+      "file": "src/lib/nex/merchant-assistant/toolExecutors.ts",
+      "line": 210,
+      "module": "@/lib/os/events",
+      "reason": "all-used",
+      "importText": "import { publish as publishEvent } from \"@/lib/os/events\";",
+      "symbols": [
+        "publishEvent"
+      ]
+    },
+    {
+      "file": "src/lib/nex/merchant-assistant/writeExecutors.test.ts",
+      "line": 53,
+      "module": "@/lib/products/read",
+      "reason": "all-used",
+      "importText": "import { findCanonicalById } from \"@/lib/products/read\";",
+      "symbols": [
+        "findCanonicalById"
+      ]
+    },
+    {
+      "file": "src/lib/nex/mutations/batch.ts",
+      "line": 17,
+      "module": "@/lib/app-builder/blueprint-schema",
+      "reason": "all-used",
+      "importText": "import type { AppBlueprint } from \"@/lib/app-builder/blueprint-schema\";",
+      "symbols": [
+        "AppBlueprint"
+      ]
+    },
+    {
+      "file": "src/lib/nex/mutations/engine.ts",
+      "line": 6,
+      "module": "@/lib/app-builder/blueprint-schema",
+      "reason": "all-used",
+      "importText": "import type { AppBlueprint } from \"@/lib/app-builder/blueprint-schema\";",
+      "symbols": [
+        "AppBlueprint"
+      ]
+    },
+    {
+      "file": "src/lib/nex/mutations/registry.ts",
+      "line": 6,
+      "module": "@/lib/app-builder/blueprint-schema",
+      "reason": "all-used",
+      "importText": "import type { AppBlueprint } from \"@/lib/app-builder/blueprint-schema\";",
+      "symbols": [
+        "AppBlueprint"
+      ]
+    },
+    {
+      "file": "src/lib/nex/mutations/registry.ts",
+      "line": 8,
+      "module": "@/lib/app-builder/provenance",
+      "reason": "all-used",
+      "importText": "import { setKnown } from \"@/lib/app-builder/provenance\";",
+      "symbols": [
+        "setKnown"
+      ]
+    },
+    {
+      "file": "src/lib/nex/mutations/types.ts",
+      "line": 3,
+      "module": "@/lib/app-builder/blueprint-schema",
+      "reason": "all-used",
+      "importText": "import type { AppBlueprint } from \"@/lib/app-builder/blueprint-schema\";",
+      "symbols": [
+        "AppBlueprint"
+      ]
+    },
+    {
+      "file": "src/lib/nex/mutations/undo.ts",
+      "line": 8,
+      "module": "@/lib/app-builder/blueprint-schema",
+      "reason": "all-used",
+      "importText": "import type { AppBlueprint } from \"@/lib/app-builder/blueprint-schema\";",
+      "symbols": [
+        "AppBlueprint"
+      ]
+    },
+    {
+      "file": "src/lib/nex/programmer-benchmark/evaluator.test.ts",
+      "line": 16,
+      "module": "../../../../tests/fixtures/programmer-benchmark-proof/_corpus_v1/cases",
+      "reason": "all-used",
+      "importText": "import { CORPUS_V1_CASES, CORPUS_VERSION } from \"../../../../tests/fixtures/programmer-benchmark-proof/_corpus_v1/cases\";",
+      "symbols": [
+        "CORPUS_V1_CASES",
+        "CORPUS_VERSION"
+      ]
+    },
+    {
+      "file": "src/lib/nex/programmer-stability/stability.test.ts",
+      "line": 47,
+      "module": "../../../../tests/fixtures/programmer-benchmark-proof/_corpus_v1/cases",
+      "reason": "all-used",
+      "importText": "import { CORPUS_V1_CASES, CORPUS_VERSION } from \"../../../../tests/fixtures/programmer-benchmark-proof/_corpus_v1/cases\";",
+      "symbols": [
+        "CORPUS_V1_CASES",
+        "CORPUS_VERSION"
+      ]
+    },
+    {
+      "file": "src/lib/nex/social/generator.ts",
+      "line": 10,
+      "module": "@/lib/openai/reasoning",
+      "reason": "all-used",
+      "importText": "import { reasonJson } from \"@/lib/openai/reasoning\";",
+      "symbols": [
+        "reasonJson"
+      ]
+    }
+  ]
+}

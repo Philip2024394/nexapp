@@ -164,3 +164,56 @@ Compared to Diagnostic 2-5: this one is NOT a cast but a direct property access.
 - Does NOT propose a fix batch for the diagnostics (each disposition requires its own authorisation).
 - Does NOT re-run or modify R1.
 - Does NOT touch founder-created UI, sealed doctrine, RLS, schema, storage, env, or payment infrastructure.
+
+---
+
+## Post-publication disposition log
+
+### R2-E · 2026-10-27 · commit `4868b0b` · diagnostics 1-6 fixed
+Founder-authorised R2-E applied smallest type-safe corrections to all 6 original diagnostics:
+- Diagnostic 1 (storage.ts:78): `supabaseAdmin()` → `supabaseAdmin` (correct property access).
+- Diagnostics 2-5 (business-context/database.ts): added `.returns<BusinessBlueprintRow[]>()` to 4 Supabase queries; removed the `as BusinessBlueprintRow` casts.
+- Diagnostic 6 (indexForSearch.ts:112): joined the `+`-concatenated SELECT string into a single literal, which keeps Supabase's inferred row type intact rather than falling back to `GenericStringError`.
+Measured: 1,383 → 1,377 (−6 target + 3 newly exposed = −3 net). The 3 newly exposed diagnostics were documented honestly in `nex-r1-safety-review-and-r2-analysis-2026-10-27.md`.
+
+### R3 · 2026-10-27 · commit `98e300a` · 3 R2-E-exposed TS2339 fixed
+Fixed the 3 newly exposed `.photos` / `.instagram` / `.facebook` accesses at `indexForSearch.ts:212-214` with honest defaults (`[]`, `null`, `null`). Measured 1,377 → 1,374 (−3). Behaviour PROVABLY unchanged (pre: `(undefined as T) ?? default` = `default`; post: `default`).
+
+### R3b · 2026-10-27 · commit `5c4e552` · 5 pre-existing TS2339 fixed
+Fixed the identical pattern at `indexForSearch.ts:207-211` (`tier` / `google_rating` / `google_review_count` / `hammerex_standard_products` / `years_in_trade`) with honest defaults. Measured 1,374 → 1,369 (−5). Independent review APPROVED on 6 points. Comment block updated to replace the misleading *"Real values sourced from hammerex_trade_off_listings columns when present"* with accurate data-contract documentation.
+
+---
+
+## Appendix A · R3c dead-module candidate · `src/lib/nex/apiHelpers.ts`
+
+**Status**: founder-approved R3c-A on 2026-10-27 · **no code change** · evidence recorded here · deletion NOT yet approved.
+
+**Discovery context**: surfaced by the R3b commit (`5c4e552`) comment block, which flagged `apiHelpers.ts:52` as a related latent issue because it selects `tier` from `hammerex_trade_off_listings` — the same table whose `tier` column has no migration evidence.
+
+**Investigation findings** (read-only, no files touched):
+
+1. **No TS2339 at `apiHelpers.ts:52`**. The `.select("tier")` string literal types the resulting `data` as `{ tier: SomeType } | null` regardless of what the real DB schema contains, so the compiler never flags the subsequent `data?.tier` access. The R3/R3b pattern (column accessed but not in SELECT → TS2339) does not fit here.
+
+2. **Current baseline diagnostics on this file** (per 2026-10-27 run after R3b):
+   - `src/lib/nex/apiHelpers.ts(8,33): error TS2307` · missing module `@/lib/merchantSession`
+   - `src/lib/nex/apiHelpers.ts(9,40): error TS2307` · missing module `@/lib/homeowners/auth`
+   Both are missing-module errors (legacy monorepo imports), not column-access signals.
+
+3. **`isMerchantUncapped` has zero callers**. Grep `isMerchantUncapped` across `src/` returns only the definition at line 49.
+
+4. **The whole file has no static importers**. Grep `\bapiHelpers\b` across `src/` returns only one match: a comment reference in `indexForSearch.ts` added by the R3b commit (`5c4e552`), which is documentation, not an import. Dynamic imports have NOT been scanned.
+
+5. **Runtime behaviour of `isMerchantUncapped` is already defensive**. If `tier` is absent on the real DB row: `data?.tier` → `undefined` → `String(undefined ?? "")` → `""` → `UNCAPPED_TIERS.has("")` → `false`. Returns the safe answer (= cap applies) rather than fabricating "uncapped".
+
+**Classification**: dead-module candidate. Not a diagnostic-reduction target under the R3/R3b pattern. Removal would be a reachability-audit-plus-deletion operation requiring its own founder authorisation.
+
+**What was explicitly NOT done per R3c-A approval**:
+- Did NOT delete `src/lib/nex/apiHelpers.ts`.
+- Did NOT rewrite `isMerchantUncapped`.
+- Did NOT change the file's runtime behaviour.
+- Did NOT run a dynamic-import reachability scan.
+- Did NOT touch founder-created UI, sealed doctrine, RLS, schema, storage, env, or payment infrastructure.
+
+**Preserved baseline**: 1,369 diagnostics. R3c-A introduces zero code change and therefore zero delta.
+
+**Follow-up candidate (future, not authorised)**: a focused reachability audit of `src/lib/nex/apiHelpers.ts` + any sibling modules that also fail to resolve post-fork (`merchantSession`, `homeowners/auth`). If the reachability audit confirms zero dynamic callers, deletion of this module would clear 2 TS2307 at lines 8-9 and remove ~125 lines of dead code. Scope and risk controls to be designed as a separate batch when founder prioritises it.

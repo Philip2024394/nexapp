@@ -16,7 +16,6 @@ import { nex2ReviewProposal } from "@/lib/nex-agent-runtime/nex2/review";
 import { securityReviewProposal } from "@/lib/nex-agent-runtime/security/review";
 import { getStorage } from "@/lib/nex/storage/registry";
 import { CAP_ENGINEERING_PROPOSAL_COLLECTION, type CapEngineeringProposal, founderSignProposal } from "@/lib/nex-cap/nex1-engineer";
-import { persistCapabilityGap } from "@/lib/nex-cap/registry";
 
 const REPO = process.cwd();
 const RUN = `orc-${randomUUID().slice(0, 8)}`;

@@ -281,7 +281,23 @@ export interface NexPeerCartOrderSnapshot {
 
 /** Product snapshot embedded in an attachment_meta when a peer
  *  message carries a product inquiry. Sealed 2026-09-27 · migration
- *  059. */
+ *  059.
+ *
+ *  Phase 1 · Slice 1B · owner-authorised 2026-10-24 · additive
+ *  live_session_id field. Captured when the share was initiated from
+ *  a NEX Live Commerce broadcaster's featured product. This is a
+ *  HISTORICAL REFERENCE to the originating live session, NOT a
+ *  liveness claim. Downstream renderers that need to display "LIVE
+ *  NOW" MUST look up the session's actual state (requires the
+ *  nex_live_session table from Phase 2 · G2 blocker tracked in
+ *  nex-commerce-live-relationship-plan-2026-10-24 §10 R3). Rendering
+ *  a persisted live_session_id as currently-live without that lookup
+ *  is a doctrine violation.
+ *
+ *  Optional and nullable · legacy snapshots without the field
+ *  deserialise correctly. The field is TypeScript-only at the type
+ *  layer; the on-disk JSONB column accepts the addition without a
+ *  migration. */
 export interface NexPeerProductSnapshot {
   product_id: string;
   business_id: string;
@@ -291,6 +307,11 @@ export interface NexPeerProductSnapshot {
   currency: string;
   image_url: string | null;
   short_description: string | null;
+  /** UUID of the originating NEX Live session, if the share was
+   *  initiated from a Live broadcaster's featured product. Historical
+   *  reference only. See snapshot-level comment above re G2 renderer
+   *  requirement. */
+  live_session_id?: string | null;
 }
 
 /** Menu-item (dish) snapshot embedded in an attachment_meta when a

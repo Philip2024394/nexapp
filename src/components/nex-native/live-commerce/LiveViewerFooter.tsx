@@ -23,6 +23,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { NexTextarea } from "@/lib/nex-native/nex-keyboard/nex-textarea";
 import { LIVE_COMMENT_MAX_LENGTH } from "@/lib/nex-native/live-broadcast/live-comments-channel";
 import type { VideoShareEvidence } from "./VideoShareSheet";
@@ -98,7 +99,7 @@ export interface LiveViewerFooterProps {
   /** Optional Go Live affordance · when provided, a 4th action
    *  button routes the viewer to the broadcaster surface so they
    *  can start their own stream from inside the viewer. Default
-   *  `/nex-native/live-commerce/go-live`. Pass empty string to
+   *  `/nex-native/live-commerce/enter-broadcast-room`. Pass empty string to
    *  hide the button entirely. */
   readonly goLiveHref?: string;
   /** Owner directive 2026-10-24 · account-aware Live gate. When
@@ -114,6 +115,15 @@ export interface LiveViewerFooterProps {
    *  development-only alert. The parent is expected to mount a
    *  `<MessagePanel>` and toggle its `open` state in response. */
   readonly onMessagePressed?: () => void;
+  /** Owner directive 2026-10-27 · "remove the live button and move
+   *  the sound off from header to the container" · the ⋮ panel's
+   *  Live pill is retired and a Sound pill takes its slot. Parent
+   *  passes the mute state so the pill mirrors the <video>.muted
+   *  attribute, and `onToggleSound` to flip it. Both are optional ·
+   *  omit them to hide the Sound pill altogether on surfaces that
+   *  don't own a video element. */
+  readonly isMuted?: boolean;
+  readonly onToggleSound?: () => void;
   /** Owner directive 2026-10-25 · optional 0..100 playback progress
    *  for RECORDED videos. When a number is passed, a scrub bar
    *  renders below the composer row · the white fill represents
@@ -229,6 +239,12 @@ export interface FooterFeaturedProduct {
   /** Optional short note the broadcaster might type next to the
    *  featured product (not editable in this slice). */
   readonly subtitle?: string | null;
+  /** Owner authorisation 2026-10-26 (⋮ panel restoration) · optional
+   *  destination the VIEWER product browse sheet navigates to when a
+   *  landscape card is tapped. When omitted, the card is informational
+   *  only (no navigation). Broadcaster-side pick behaviour is unchanged
+   *  by this field. */
+  readonly href?: string | null;
 }
 
 const BAR_BG = "rgba(2, 9, 20, 0.78)";
@@ -569,6 +585,11 @@ export function LiveViewerFooter(
   // pins the card in the footer slot where the main action row
   // normally sits (sealed design decision: replace, don't stack).
   const [productPickerOpen, setProductPickerOpen] = React.useState(false);
+  // Owner authorisation 2026-10-26 (⋮ panel restoration) · the Products
+  // pill now opens for VIEWERS too. The viewer sees a read-only
+  // landscape-card browse sheet (ViewerProductBrowseSheet below). The
+  // broadcaster's existing pick-overlay path is unchanged.
+  const [viewerProductBrowseOpen, setViewerProductBrowseOpen] = React.useState(false);
   const [featuredProduct, setFeaturedProduct] =
     React.useState<FooterFeaturedProduct | null>(null);
   // Owner directive 2026-10-25 · "when they select a card it will
@@ -664,7 +685,7 @@ export function LiveViewerFooter(
     if (!hasAuthorIdentity) return "Type message here";
     return "";
   })();
-  const goLiveHref = props.goLiveHref ?? "/nex-native/live-commerce/go-live";
+  const goLiveHref = props.goLiveHref ?? "/nex-native/live-commerce/enter-broadcast-room";
   const showGoLive = goLiveHref !== "";
   const isShopOwner = props.isShopOwner === true;
 
@@ -879,7 +900,23 @@ export function LiveViewerFooter(
         // intact, and the composer / action row still render
         // above the overlay as well (consistent with "footer sits
         // above live chat").
-        zIndex: 25,
+        //
+        // Owner troubleshoot 2026-10-26 · raised 25 → 45. The
+        // Hendra persona mounts `WatchOverlayCaption` as a sibling
+        // of this footer, and that overlay's root container runs at
+        // `zIndex: 40`. Scoped stacking context rules mean the
+        // panel's inner `zIndex: 45` only beats sibling children of
+        // this footer · against the overlay's root (40), the FOOTER
+        // ROOT's z-index is what matters. 25 < 40 made the overlay
+        // card paint over the ⋮ panel in their overlap zone, so a
+        // ⋮ tap near the top of the panel landed on the overlay's
+        // collapsed brand/description row instead · opening the
+        // Rolex watch description panel instead of Share · Save ·
+        // Live · Message · Feed · Products. 45 keeps the footer
+        // above the overlay (40) and its backdrop (35), while still
+        // below top-level modals like BroadcasterLibrarySheet / the
+        // Video Center grid (70+) and the dev palette (90).
+        zIndex: 45,
         fontFamily:
           "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
       }}
@@ -1024,14 +1061,22 @@ export function LiveViewerFooter(
             // VideoCommentsOverlay (zIndex 2). Backdrop blur is kept
             // but has no visible effect at full opacity · it stays as
             // a safety net if a child ever becomes translucent.
+            // Owner directive 2026-10-27 · "we can also change the
+            // color theme same as other container" · aligned the ⋮
+            // panel to the sealed LIGHT MessagePanel palette (same
+            // family as Live Library / Message Center / Live Feed):
+            // near-white frosted body · muted navy rim · deep navy
+            // drop shadow. Prior dark-navy gradient + cyan rim is
+            // retired. Pill text + icon tint for the light surface
+            // is applied via the scoped <style> block just below.
             background: extraActionsOpen
-              ? "linear-gradient(135deg, rgb(21, 38, 70) 0%, rgb(10, 15, 30) 100%)"
+              ? "rgba(240, 244, 250, 0.96)"
               : "transparent",
-            backdropFilter: extraActionsOpen ? "blur(18px) saturate(140%)" : undefined,
-            WebkitBackdropFilter: extraActionsOpen ? "blur(18px) saturate(140%)" : undefined,
-            border: extraActionsOpen ? "2px solid rgba(0, 175, 255, 0.9)" : "none",
+            backdropFilter: extraActionsOpen ? "blur(14px) saturate(1.4)" : undefined,
+            WebkitBackdropFilter: extraActionsOpen ? "blur(14px) saturate(1.4)" : undefined,
+            border: extraActionsOpen ? "1.5px solid rgba(90, 110, 140, 0.5)" : "none",
             boxShadow: extraActionsOpen
-              ? "inset 0 0 0 1px rgba(0, 175, 255, 0.5), 0 0 14px -4px rgba(0, 175, 255, 0.6), 0 4px 10px -6px rgba(0, 20, 50, 0.45)"
+              ? "0 20px 50px -16px rgba(0, 20, 60, 0.5)"
               : "none",
             borderRadius: 16,
             transformOrigin: "bottom center",
@@ -1042,7 +1087,17 @@ export function LiveViewerFooter(
               : "scaleY(0.6) translateY(10px)",
             opacity: extraActionsOpen ? 1 : 0,
             pointerEvents: extraActionsOpen ? "auto" : "none",
-            zIndex: 20,
+            // Owner troubleshoot 2026-10-26 · the ⋮ panel used to sit
+            // at zIndex 20 but the WatchOverlayCaption (mounted on
+            // Hendra persona only) is at zIndex 40, so the collapsed
+            // watch-overlay row was COVERING the panel in their
+            // overlap zone · identical visuals vs user URL in the
+            // DOM but visually blocked on Hendra. Raised to 45 to
+            // sit above the overlay card (40) and its backdrop (35),
+            // while still below modals like the Video Center (70)
+            // and BroadcasterLibrarySheet which should still cover
+            // the panel when they are open.
+            zIndex: 45,
             // Owner directive 2026-10-25 (revised) · "the 3 dots
             // container must not enlarge but the inner can scrolling
             // when need to see the other toggles". The panel itself
@@ -1063,6 +1118,69 @@ export function LiveViewerFooter(
             WebkitUserSelect: "text",
           }}
         >
+          {/* Owner directive 2026-10-27 · pill text + icon tint for
+              the light panel. The ExtraActionPill module-level `TEXT`
+              is `#F2F5F8` (white, built for the retired dark panel).
+              A scoped selector re-tints every pill inside this panel
+              to dark navy without touching the shared constant · and
+              gives each pill a muted-navy tinted background + rim so
+              it reads as an actionable chip on the near-white body. */}
+          {/* Owner directive 2026-10-27 · "the 3 dot panel add header
+              name to the container - Control Panel" · a header rail
+              at the top of the panel labels the surface so viewers
+              land on a clearly-named context instead of a bare pill
+              row. Dark-navy title on the near-white panel, 18 / 900
+              to match the Live Library / Message Center header sizing
+              language, hairline divider separates it from the pills. */}
+          <div
+            data-nex-live-footer-extra-actions-header
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
+              paddingBottom: 8,
+              borderBottom: "1px solid rgba(16, 32, 51, 0.14)",
+              marginBottom: 2,
+            }}
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 18,
+                  fontWeight: 900,
+                  color: "#102033",
+                  lineHeight: 1.1,
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                Control Panel
+              </div>
+            </div>
+          </div>
+          <style>{`
+            /* Owner troubleshoot 2026-10-27 · "i cant see any of the
+               buttons on the container when i select the 1 dots" ·
+               the earlier child-combinator chain missed the fragment
+               root inside the panel, so pills kept their dark-panel
+               defaults (white 0.09 bg + white text) which are
+               invisible on the new near-white body. Switched to
+               descendant selectors that match every pill regardless
+               of nesting depth. */
+            [data-nex-live-footer-extra-actions][data-nex-live-footer-extra-actions-open="true"] [data-nex-live-footer-extra-actions-row] button,
+            [data-nex-live-footer-extra-actions][data-nex-live-footer-extra-actions-open="true"] [data-nex-live-footer-extra-actions-row] a {
+              background: rgba(16, 32, 51, 0.06) !important;
+              border: 1px solid rgba(16, 32, 51, 0.14) !important;
+              color: #102033 !important;
+            }
+            [data-nex-live-footer-extra-actions][data-nex-live-footer-extra-actions-open="true"] [data-nex-live-footer-extra-pill-count] {
+              color: rgba(16, 32, 51, 0.6) !important;
+            }
+            [data-nex-live-footer-extra-actions][data-nex-live-footer-extra-actions-open="true"] [data-nex-live-footer-shop-products-locked="true"] {
+              opacity: 0.72;
+              cursor: not-allowed !important;
+            }
+          `}</style>
           {/* Owner directive 2026-10-25 (revised) · "why is the text
               feed covering all buttons" · buttons must stay visible
               when Feed opens. The container is now an accordion: the
@@ -1124,20 +1242,43 @@ export function LiveViewerFooter(
           {/* Live · owner directive 2026-10-25 "the live button
               activates the same page we designed for live that they
               accept". Routes to the welcome/guidelines surface. */}
-          <ExtraActionPill
-            label="Live"
-            data-nex-live-footer-extra-live="true"
-            as="a"
-            href="/nex-native/live-commerce/welcome"
-            onClick={() => setExtraActionsOpen(false)}
-            icon={
-              <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="3.4" fill="currentColor" />
-                <circle cx="12" cy="12" r="7" />
-                <circle cx="12" cy="12" r="10.5" />
-              </svg>
-            }
-          />
+          {/* Owner directive 2026-10-27 · "remove the live button and
+              move the sound off from header to the container" · the
+              Live pill is retired. A Sound pill takes its slot and
+              reflects the current mute state via `isMuted` + flips
+              it via `onToggleSound`. Rendered only when the parent
+              wires both props · surfaces without a video element
+              get no Sound chip (no silent dead pill). */}
+          {props.onToggleSound ? (
+            <ExtraActionPill
+              label={props.isMuted ? "Sound off" : "Sound on"}
+              data-nex-live-footer-extra-sound="true"
+              data-nex-live-footer-extra-sound-muted={props.isMuted ? "true" : "false"}
+              onClick={() => {
+                props.onToggleSound?.();
+                setExtraActionsOpen(false);
+              }}
+              icon={
+                props.isMuted ? (
+                  // Owner directive 2026-10-27 · "sound off on the
+                  // button when select should show red line for off"
+                  // · reinstated the sealed red diagonal (same NEX
+                  // red #FF3355 the retired header toggle used) so
+                  // the muted state reads at a glance.
+                  <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 9v6h4l5 4V5l-5 4H3z" fill="currentColor" stroke="currentColor" />
+                    <line x1="4" y1="4" x2="20" y2="20" stroke="#FF3355" strokeWidth="2.6" />
+                  </svg>
+                ) : (
+                  <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 9v6h4l5 4V5l-5 4H3z" fill="currentColor" stroke="currentColor" />
+                    <path d="M16 8 a5 5 0 0 1 0 8" />
+                    <path d="M19 5 a9 9 0 0 1 0 14" />
+                  </svg>
+                )
+              }
+            />
+          ) : null}
           {/* Message · owner directive 2026-10-25 (Phase B) · opens
               the MessagePanel which reuses the EXISTING
               `createFriendRequestAction` from the Contacts page.
@@ -1191,74 +1332,78 @@ export function LiveViewerFooter(
             }
           />
           </div>
-          {/* Owner directive 2026-10-25 · "the container will also
-              have button if seller has shop and this button will be
-              called products". Broadcaster-only second row · full-
-              width Products pill with the standard 4-pill palette
-              but stretched edge-to-edge so it reads as the primary
-              broadcaster action. */}
-          {props.isBroadcaster && (
-            <div
-              data-nex-live-footer-extra-actions-row
-              data-nex-live-footer-extra-actions-row-broadcaster="true"
-              style={{
-                display: "flex",
-                flexDirection: "row",
-                alignItems: "stretch",
-                gap: 6,
-              }}
-            >
-              <ExtraActionPill
-                label="Products"
-                data-nex-live-footer-extra-products="true"
-                full
-                onClick={() => {
-                  setExtraActionsOpen(false);
-                  setProductPickerOpen(true);
-                }}
-                icon={
-                  <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 7h18l-1.5 11a2 2 0 0 1-2 1.75H6.5a2 2 0 0 1-2-1.75L3 7z" />
-                    <path d="M8 7V5a4 4 0 0 1 8 0v2" />
-                  </svg>
-                }
-              />
-            </div>
-          )}
-          </>
-          {/* Owner directive 2026-10-25 (revised) · "remove the back
-              and to close from container · header · Live Feed". When
-              the Feed pill is pressed the preferences section appends
-              below the buttons · the header is a plain "Live Feed"
-              title. No Back button · no close hint. The ⋮ toggle
-              still closes everything; tapping Feed again collapses the
-              preferences without closing the panel. */}
-          {panelView === "feed" && (
-            <div
-              data-nex-live-footer-extra-feed-view
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 8,
-                marginTop: 2,
-              }}
-            >
+          {/* Owner directive 2026-10-25 (restored 2026-10-26) · the
+              Products pill opens for BOTH roles when at least one
+              product is attached to the broadcaster's catalogue:
+                · Broadcaster · opens the existing ProductPickerOverlay
+                  (pin a product to the featured-card slot).
+                · Viewer · opens the new ViewerProductBrowseSheet
+                  (read-only landscape cards · tap to navigate when
+                  the product carries an `href`).
+              The pill renders only when there is at least one product
+              to show · honest-empty behaviour. */}
+          {/* Owner directive 2026-10-27 · "if seller has no shop we
+              show lock on the products button - and we change the
+              name to shop Products" · the pill now ALWAYS renders.
+              When the seller has no catalogue (`broadcasterProducts`
+              empty or missing) the pill shows a 🔒 lock icon and the
+              onClick is a no-op · the viewer gets an honest signal
+              that this seller doesn't have a shop to browse. */}
+          {(() => {
+            const hasShop = (props.broadcasterProducts?.length ?? 0) > 0;
+            return (
               <div
-                data-nex-live-footer-extra-feed-view-header
+                data-nex-live-footer-extra-actions-row
+                data-nex-live-footer-extra-actions-row-products="true"
                 style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  color: TEXT,
-                  letterSpacing: "0.04em",
-                  textTransform: "uppercase",
-                  padding: "4px 2px 0",
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "stretch",
+                  gap: 6,
                 }}
               >
-                Live Feed
+                <ExtraActionPill
+                  label="Shop Products"
+                  data-nex-live-footer-extra-products="true"
+                  data-nex-live-footer-extra-products-role={
+                    props.isBroadcaster === true ? "broadcaster" : "viewer"
+                  }
+                  data-nex-live-footer-shop-products-locked={hasShop ? "false" : "true"}
+                  full
+                  onClick={() => {
+                    if (!hasShop) return;
+                    // Owner directive 2026-10-26 · same browse sheet
+                    // for viewer AND broadcaster · unchanged.
+                    setExtraActionsOpen(false);
+                    setViewerProductBrowseOpen(true);
+                  }}
+                  icon={
+                    hasShop ? (
+                      <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 7h18l-1.5 11a2 2 0 0 1-2 1.75H6.5a2 2 0 0 1-2-1.75L3 7z" />
+                        <path d="M8 7V5a4 4 0 0 1 8 0v2" />
+                      </svg>
+                    ) : (
+                      <svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="5" y="11" width="14" height="10" rx="2" />
+                        <path d="M8 11 V7 a4 4 0 0 1 8 0 V11" />
+                      </svg>
+                    )
+                  }
+                />
               </div>
-              <LiveFeedPreferencesSection />
-            </div>
-          )}
+            );
+          })()}
+          </>
+          {/* Owner troubleshoot 2026-10-26 · "live feed container
+              move down from header and center on screen" + "when the
+              live feed is open container all other footer overlay
+              will turn off and buy button". The Feed sub-view used
+              to append below the pills row (anchored to the footer).
+              It now mounts as a SEPARATE centered modal (see
+              `<LiveFeedModal>` block below · outside the ⋮ panel
+              container · fires its own body-data-attr so overlays
+              hide while it's open). */}
         </div>
       </div>
       )}
@@ -1275,6 +1420,31 @@ export function LiveViewerFooter(
             setGlowKey((k) => k + 1);
             setProductPickerOpen(false);
           }}
+        />
+      )}
+      {/* Owner authorisation 2026-10-26 (⋮ panel restoration) · viewer-
+          side landscape-card browse sheet. Opens when a non-broadcaster
+          taps Products in the ⋮ panel. Read-only · never implies NEX
+          intermediated a buyer-seller transaction. */}
+      {viewerProductBrowseOpen && (
+        <ViewerProductBrowseSheet
+          products={props.broadcasterProducts ?? []}
+          onClose={() => setViewerProductBrowseOpen(false)}
+          sellerLabel={props.authorDisplayName ?? "the seller"}
+        />
+      )}
+      {/* Owner troubleshoot 2026-10-27 · the Live Feed modal mounts
+          here, nested inside the footer root. The footer root is
+          `position: absolute` at the frame's bottom strip, so an
+          `inset: 0` on the modal would anchor to that strip. The
+          modal switches back to `position: fixed` with explicit
+          16 px insets so it anchors to the phone frame via the
+          sealed `transform: translateZ(0)` on `.nex-native-frame`,
+          mirroring Live Library's effective footprint. Previously
+          this block was duplicated · the second render is retired. */}
+      {extraActionsOpen && panelView === "feed" && (
+        <LiveFeedModal
+          onClose={() => setPanelView("buttons")}
         />
       )}
       {/* Owner directive 2026-10-25 · remove-confirm sheet ·
@@ -1517,6 +1687,23 @@ export function LiveViewerFooter(
               0%, 100% { opacity: 1;    }
               50%      { opacity: 0.55; }
             }
+            /* Owner directive 2026-10-27 · "green rim and ping around
+               image container" · the broadcaster avatar wears a green
+               online-presence rim at all times (sealed online colour
+               #16D66B) plus an outward ping that radiates once per
+               1.8s. Rim + ping are drawn with box-shadow spread so
+               neither needs a DOM child inside the avatar's own
+               overflow-hidden clip. Honours prefers-reduced-motion. */
+            @keyframes nex-live-footer-author-outer-ping {
+              0%   { box-shadow: 0 0 0 2px #16D66B, 0 0 0 2px rgba(22, 214, 107, 0.75), 0 0 10px rgba(22, 214, 107, 0.4); }
+              70%  { box-shadow: 0 0 0 2px #16D66B, 0 0 0 12px rgba(22, 214, 107, 0),   0 0 10px rgba(22, 214, 107, 0.2); }
+              100% { box-shadow: 0 0 0 2px #16D66B, 0 0 0 12px rgba(22, 214, 107, 0),   0 0 10px rgba(22, 214, 107, 0.2); }
+            }
+            @media (prefers-reduced-motion: reduce) {
+              [data-nex-live-footer-author][data-nex-live-footer-author-pressable="true"] {
+                animation: none !important;
+              }
+            }
             /* Owner directive 2026-10-25 · subtle "alive" idle beat
                on the inline Like heart · small scale-up every 1.3 s
                so the heart looks alive while idle. Respects
@@ -1533,15 +1720,15 @@ export function LiveViewerFooter(
             }
           `}</style>
           {hasAuthorIdentity && (() => {
-            // Uses the hoisted `presenceResolved` + `presenceToken`
-            // from the component scope · same token drives the Send
-            // button background below. Rim via box-shadow (not border)
-            // so the 42×42 image area stays intact.
+            // Owner directive 2026-10-27 · "green rim and ping around
+            // image container" · the presenceToken is preserved for
+            // the status data-attribute (test selectors) but the
+            // visual rim now ALWAYS reads online-green on the
+            // broadcaster avatar · ping animation on the box-shadow
+            // spread emanates outward every 1.8 s without touching
+            // the avatar's own `overflow: hidden` clip.
             const resolved = presenceResolved;
             const token = presenceToken;
-            const rimShadow = token
-              ? `0 0 0 2px ${token.color}, 0 0 10px ${token.shadow}`
-              : "none";
             return (
             <div
               data-nex-live-footer-author
@@ -1610,7 +1797,14 @@ export function LiveViewerFooter(
                 fontWeight: 800,
                 letterSpacing: "0.02em",
                 border: "none",
-                boxShadow: rimShadow,
+                // Owner directive 2026-10-27 · green rim + outward
+                // ping · box-shadow spread handles both rim and
+                // ping without a DOM sibling (works inside overflow:
+                // hidden). Starts from the animation keyframe above.
+                boxShadow:
+                  "0 0 0 2px #16D66B, 0 0 10px rgba(22, 214, 107, 0.4)",
+                animation:
+                  "nex-live-footer-author-outer-ping 1800ms ease-out infinite",
                 overflow: "hidden",
                 zIndex: 1,
                 // Owner directive 2026-10-26 · when the broadcaster
@@ -1627,59 +1821,37 @@ export function LiveViewerFooter(
                     : "default",
               }}
             >
+              {/* Owner troubleshoot 2026-10-27 · "the avatar image is
+                  causing issue · when I select the image it won't
+                  open the panel" · explicit `pointer-events: none`
+                  on the <img> so the native image hit-target can't
+                  swallow the click before it reaches the parent's
+                  onClick / role="button" handler. Same guard applied
+                  to the fallback <span>. */}
               {props.authorAvatarUrl ? (
                 <img
                   src={props.authorAvatarUrl}
                   alt=""
+                  draggable={false}
                   style={{
                     width: "100%",
                     height: "100%",
                     objectFit: "cover",
                     borderRadius: 8,
                     display: "block",
+                    pointerEvents: "none",
                   }}
                 />
               ) : (
-                <span>{avatarInitial}</span>
+                <span style={{ pointerEvents: "none" }}>{avatarInitial}</span>
               )}
-              {token !== null && (
-                <>
-                  <span
-                    data-nex-live-footer-author-dot
-                    data-nex-live-footer-author-presence={resolved}
-                    style={{
-                      position: "absolute",
-                      right: -1,
-                      top: -1,
-                      width: 7,
-                      height: 7,
-                      borderRadius: 999,
-                      background: token.color,
-                      boxShadow: `0 0 0 1.5px rgba(2, 9, 20, 0.9), 0 0 6px ${token.shadow}`,
-                      animation: token.pulse
-                        ? `nex-live-footer-author-dot ${token.dotMs}ms ease-in-out infinite`
-                        : undefined,
-                    }}
-                  />
-                  {token.pulse && (
-                    <span
-                      data-nex-live-footer-author-ping
-                      style={{
-                        position: "absolute",
-                        right: -1,
-                        top: -1,
-                        width: 7,
-                        height: 7,
-                        borderRadius: 999,
-                        background: "transparent",
-                        border: `1.5px solid ${token.color}`,
-                        transformOrigin: "center",
-                        animation: `nex-live-footer-author-ping ${token.pingMs}ms ease-out infinite`,
-                      }}
-                    />
-                  )}
-                </>
-              )}
+              {/* Owner directive 2026-10-27 · corner dot + corner ping
+                  retired · the full outer green ring + ping on the
+                  parent `boxShadow` (above) carries the online-
+                  presence signal around the whole avatar. The
+                  presenceToken is kept in the data attributes above
+                  for test selectors but no longer paints a dot here. */}
+              {void token}
             </div>
             );
           })()}
@@ -2396,9 +2568,550 @@ function ProductPickerOverlay(props: {
   );
 }
 
+/** Owner authorisation 2026-10-26 (⋮ panel restoration) · viewer-side
+ *  landscape-card browse sheet for the Products pill. Mounted when a
+ *  non-broadcaster taps Products. Read-only: tapping a card either
+ *  navigates to `product.href` (when present) or does nothing (no
+ *  "buy" / "pick" semantics). The honest-copy footer line reiterates
+ *  that NEX does not process the buyer-seller transaction. */
+function ViewerProductBrowseSheet(props: {
+  readonly products: ReadonlyArray<FooterFeaturedProduct>;
+  readonly onClose: () => void;
+  readonly sellerLabel: string;
+}): React.JSX.Element {
+  // Escape + outside-tap dismiss.
+  React.useEffect(() => {
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === "Escape") props.onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [props]);
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-label={`Close ${props.sellerLabel}'s products`}
+        data-nex-live-footer-viewer-browse-scrim
+        onClick={props.onClose}
+        style={{
+          position: "fixed",
+          inset: 0,
+          // Owner directive 2026-10-27 · MessagePanel scrim exact.
+          background: "rgba(2, 9, 20, 0.55)",
+          border: "none",
+          padding: 0,
+          cursor: "pointer",
+          zIndex: 20,
+        }}
+      />
+      <div
+        role="dialog"
+        aria-label={`${props.sellerLabel}'s products`}
+        data-nex-live-footer-viewer-browse
+        data-nex-live-footer-viewer-browse-count={props.products.length}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: "fixed",
+          top: 80,
+          bottom: 160,
+          left: 16,
+          right: 16,
+          zIndex: 21,
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          padding: 12,
+          borderRadius: 16,
+          // Owner directive 2026-10-27 · "same theme color as this
+          // NEX palette object" · align Products browse sheet to the
+          // LIGHT MessagePanel panel.
+          background: "rgba(240, 244, 250, 0.96)",
+          backdropFilter: "blur(14px) saturate(1.4)",
+          WebkitBackdropFilter: "blur(14px) saturate(1.4)",
+          border: "1.5px solid rgba(90, 110, 140, 0.5)",
+          boxShadow: "0 20px 50px -16px rgba(0, 20, 60, 0.5)",
+          color: "#102033",
+          fontFamily: "inherit",
+          boxSizing: "border-box",
+        }}
+      >
+        <div
+          data-nex-live-footer-viewer-browse-header
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              minWidth: 0,
+              flex: "1 1 auto",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 800,
+                color: CYAN,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+              }}
+            >
+              Products
+            </div>
+            <div
+              style={{
+                fontSize: 13.5,
+                fontWeight: 800,
+                color: "#102033",
+                lineHeight: 1.25,
+                marginTop: 2,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              From {props.sellerLabel}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={props.onClose}
+            aria-label="Close products"
+            style={{
+              flexShrink: 0,
+              width: 32,
+              height: 32,
+              borderRadius: "50%",
+              background: "rgba(16, 32, 51, 0.08)",
+              border: "1px solid rgba(16, 32, 51, 0.14)",
+              color: "#102033",
+              fontSize: 15,
+              lineHeight: 1,
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            ×
+          </button>
+        </div>
+        {props.products.length === 0 ? (
+          <div
+            data-nex-live-footer-viewer-browse-empty
+            style={{
+              flex: "1 1 auto",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#4A6080",
+              fontSize: 13,
+              textAlign: "center",
+              padding: "0 10px",
+            }}
+          >
+            {props.sellerLabel} hasn't published any products yet.
+          </div>
+        ) : (
+          <div
+            data-nex-live-footer-viewer-browse-list
+            style={{
+              flex: "1 1 auto",
+              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+              paddingRight: 2,
+            }}
+          >
+            {props.products.map((p) => {
+              const Card = (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: 8,
+                    minHeight: 72,
+                    borderRadius: 12,
+                    background: "rgba(16, 32, 51, 0.06)",
+                    border: "1px solid rgba(16, 32, 51, 0.14)",
+                    color: "#102033",
+                    textAlign: "left",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 72,
+                      height: 72,
+                      borderRadius: 10,
+                      flexShrink: 0,
+                      overflow: "hidden",
+                      background: "rgba(16, 32, 51, 0.06)",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#4A6080",
+                      fontSize: 10,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {p.imageUrl ? (
+                      <img
+                        src={p.imageUrl}
+                        alt=""
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
+                    ) : (
+                      <span aria-hidden>IMG</span>
+                    )}
+                  </div>
+                  <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 700,
+                        color: "#102033",
+                        lineHeight: 1.25,
+                        overflow: "hidden",
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                      }}
+                    >
+                      {p.name}
+                    </div>
+                    <div
+                      style={{
+                        marginTop: 4,
+                        fontSize: 12.5,
+                        fontWeight: 600,
+                        color: CYAN,
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {p.priceLabel}
+                    </div>
+                    {p.subtitle ? (
+                      <div
+                        style={{
+                          marginTop: 3,
+                          fontSize: 11,
+                          color: "#4A6080",
+                          lineHeight: 1.3,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {p.subtitle}
+                      </div>
+                    ) : null}
+                  </div>
+                  {p.href ? (
+                    <span
+                      aria-hidden
+                      style={{
+                        flexShrink: 0,
+                        color: CYAN,
+                        fontSize: 20,
+                        lineHeight: 1,
+                        paddingRight: 4,
+                      }}
+                    >
+                      ›
+                    </span>
+                  ) : null}
+                </div>
+              );
+              return p.href ? (
+                <a
+                  key={p.id}
+                  href={p.href}
+                  data-nex-live-footer-viewer-browse-card
+                  data-nex-live-footer-viewer-browse-card-id={p.id}
+                  onClick={props.onClose}
+                  style={{
+                    textDecoration: "none",
+                    color: "inherit",
+                    cursor: "pointer",
+                    display: "block",
+                  }}
+                >
+                  {Card}
+                </a>
+              ) : (
+                <div
+                  key={p.id}
+                  data-nex-live-footer-viewer-browse-card
+                  data-nex-live-footer-viewer-browse-card-id={p.id}
+                >
+                  {Card}
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {/* Honest-copy footer · NEX never handles the buyer-seller
+            transaction. Keeps the viewer-side browse sheet aligned
+            with the sealed §2.4 clause. */}
+        <div
+          data-nex-live-footer-viewer-browse-note
+          style={{
+            fontSize: 10.5,
+            color: "#4A6080",
+            textAlign: "center",
+            padding: "4px 6px 2px",
+            lineHeight: 1.4,
+          }}
+        >
+          Message the seller to arrange the sale · NEX does not process
+          the transaction.
+        </div>
+      </div>
+    </>
+  );
+}
+
 /** Owner directive 2026-10-25 · "pop up window will ask owner do
  *  they want to return card back to shop". Simple confirm sheet
  *  with Cancel + Return buttons. Tap scrim = cancel. */
+/** Owner troubleshoot 2026-10-26 · Live Feed container · centered
+ *  below the header inside the phone frame. Rendered when the ⋮
+ *  panel's Feed sub-view is active. Replaces the earlier accordion-
+ *  inside-panel layout per owner: "live feed container move down
+ *  from header and center on screen".
+ *
+ *  Side-effects:
+ *    · Sets `document.body.dataset.nexLiveFeedOpen = "true"` on mount
+ *      and removes it on unmount. A sibling CSS block (same file ·
+ *      see the <style> inside the modal) uses that attribute to hide
+ *      every other floating overlay inside the frame while the Feed
+ *      is open:
+ *        · [data-nex-live-buy-now]            · the yellow Buy Now pill
+ *        · [data-nex-hendra-inbox-btn]        · the 💬 inbox button
+ *        · [data-nex-dev-palette]             · the dev reference numbers
+ *        · [data-nex-live-like-rail]          · the right-rail heart
+ *        · [data-nex-watch-overlay]           · the brand/description row
+ *      Closing the modal restores every one of them (attribute is
+ *      removed, `display:none` falls off).
+ *    · Escape closes · click-outside closes · explicit × closes. */
+function LiveFeedModal(props: { readonly onClose: () => void }): React.JSX.Element | null {
+  // Owner troubleshoot 2026-10-27 · "feed is not fitting inside
+  // screen size" · the modal was rendering inside the footer root
+  // (`position: absolute` bottom strip) · `position: fixed` + the
+  // sealed `translateZ(0)` on `.nex-native-frame` was supposed to
+  // anchor it to the frame, but some ancestor's transform/filter
+  // was shifting the containing block anyway. Portaling the modal
+  // DOM directly into `.nex-native-frame` makes it a sibling of
+  // Live Library + the Hendra inbox, so `position: absolute;
+  // inset: 0` lands on the exact same box.
+  const [portalTarget, setPortalTarget] = React.useState<HTMLElement | null>(null);
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    const frame = document.querySelector<HTMLElement>(".nex-native-frame");
+    setPortalTarget(frame ?? document.body);
+  }, []);
+  React.useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.body.setAttribute("data-nex-live-feed-open", "true");
+    return () => document.body.removeAttribute("data-nex-live-feed-open");
+  }, []);
+  React.useEffect(() => {
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === "Escape") props.onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [props]);
+
+  if (!portalTarget) return null;
+
+  return createPortal(
+    (<>
+      {/* Hide-siblings-while-open · scoped to body data attribute so
+          the rules self-remove when the modal unmounts. */}
+      <style>{`
+        body[data-nex-live-feed-open="true"] [data-nex-live-buy-now],
+        body[data-nex-live-feed-open="true"] [data-nex-hendra-inbox-btn],
+        body[data-nex-live-feed-open="true"] [data-nex-dev-palette],
+        body[data-nex-live-feed-open="true"] [data-nex-live-like-rail],
+        body[data-nex-live-feed-open="true"] [data-nex-watch-overlay] {
+          display: none !important;
+        }
+      `}</style>
+      {/* Owner directive 2026-10-27 · portaled to `.nex-native-frame`
+          · scrim + overlay use `position: absolute; inset: 0` with a
+          16 px padding wrapper, matching Live Library exactly. */}
+      {/* Owner troubleshoot 2026-10-27 · "live feed container is not
+          fitting inside screen size mobile phone frame on desktop" ·
+          added explicit `width: 100%; height: 100%; max-width: 100%;
+          max-height: 100%; overflow: hidden` on both scrim + overlay
+          so the modal can never paint past the portaled frame's
+          padding box, regardless of any ancestor scroll geometry or
+          flexbox min-size quirk. `inset: 0` kept for backward-compat;
+          the explicit top/left/right/bottom pair reinforces it. */}
+      <button
+        type="button"
+        aria-label="Close Live Feed preferences"
+        data-nex-live-feed-modal-scrim
+        onClick={props.onClose}
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: "100%",
+          height: "100%",
+          maxWidth: "100%",
+          maxHeight: "100%",
+          background: "rgba(2, 9, 20, 0.55)",
+          backdropFilter: "blur(2px)",
+          WebkitBackdropFilter: "blur(2px)",
+          border: "none",
+          padding: 0,
+          cursor: "pointer",
+          zIndex: 100,
+          boxSizing: "border-box",
+        }}
+      />
+      <div
+        data-nex-live-feed-modal-overlay
+        aria-hidden
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: "100%",
+          height: "100%",
+          maxWidth: "100%",
+          maxHeight: "100%",
+          overflow: "hidden",
+          padding: 16,
+          display: "flex",
+          flexDirection: "column",
+          zIndex: 101,
+          boxSizing: "border-box",
+          pointerEvents: "none",
+        }}
+      >
+      <div
+        role="dialog"
+        aria-label="Live Feed preferences"
+        data-nex-live-feed-modal
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          flex: "1 1 auto",
+          width: "100%",
+          minHeight: 0,
+          boxSizing: "border-box",
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+          padding: "14px 14px 16px",
+          borderRadius: 16,
+          background: "rgba(240, 244, 250, 0.96)",
+          backdropFilter: "blur(14px) saturate(1.4)",
+          WebkitBackdropFilter: "blur(14px) saturate(1.4)",
+          border: "1.5px solid rgba(90, 110, 140, 0.5)",
+          boxShadow: "0 20px 50px -16px rgba(0, 20, 60, 0.5)",
+          color: "#102033",
+          fontFamily: "inherit",
+          pointerEvents: "auto",
+          animation: "nexLiveFeedModalIn 180ms cubic-bezier(0.22, 1, 0.36, 1)",
+        }}
+      >
+        <style>{`
+          @keyframes nexLiveFeedModalIn {
+            from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+            to   { opacity: 1; transform: translateY(0)    scale(1);    }
+          }
+          @media (prefers-reduced-motion: reduce) {
+            [data-nex-live-feed-modal] { animation: none !important; }
+          }
+        `}</style>
+        {/* Owner directive 2026-10-27 · "header color size same" as
+            Live Library · 18 px / 900 title + 12.5 px / 600 subtitle
+            + navy close chip (sealed MessagePanel gradient). Prior
+            10 px uppercase eyebrow + 13 px body line retired. */}
+        <div
+          data-nex-live-feed-modal-header
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 10,
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: 18,
+                fontWeight: 900,
+                color: "#102033",
+                lineHeight: 1.1,
+                letterSpacing: "-0.01em",
+              }}
+            >
+              Live Feed
+            </div>
+            <div
+              style={{
+                fontSize: 12.5,
+                fontWeight: 600,
+                color: "#4A6080",
+                lineHeight: 1.2,
+              }}
+            >
+              Choose what plays
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={props.onClose}
+            aria-label="Close Live Feed preferences"
+            data-nex-live-feed-modal-close
+            style={{
+              flexShrink: 0,
+              width: 36,
+              height: 36,
+              borderRadius: "50%",
+              background: "linear-gradient(135deg, #152646 0%, #1E3A6E 100%)",
+              border: "none",
+              color: "#FFFFFF",
+              fontSize: 16,
+              lineHeight: 1,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              boxShadow: "0 2px 6px -2px rgba(16, 32, 51, 0.4)",
+            }}
+          >
+            ×
+          </button>
+        </div>
+        {/* The sealed preferences component · same contract as before,
+            just rendered inside this centered modal instead of inside
+            the ⋮ panel accordion. */}
+        <div style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto" }}>
+          <LiveFeedPreferencesSection />
+        </div>
+      </div>
+      </div>
+    </>),
+    portalTarget,
+  );
+}
+
 function RemoveFeaturedConfirm(props: {
   readonly product: FooterFeaturedProduct;
   readonly onCancel: () => void;

@@ -30,6 +30,7 @@ import * as peerConvService from "@/lib/nex-native/peer-conversation-service";
 import * as vaultEntryService from "@/lib/nex-native/vault-entry-service";
 import * as peerMsgService from "@/lib/nex-native/peer-message-service";
 import * as accountService from "@/lib/nex-native/account-service";
+import * as accountProfileService from "@/lib/nex-native/account-profile-service";
 import * as chatThemeService from "@/lib/nex-native/chat-theme-service";
 import { NexPageHeader } from "../../_page-header";
 import { MoveToVaultAffordance } from "../../vault/_move-to-vault-affordance";
@@ -52,6 +53,9 @@ interface InboxRow {
   peerAccountId: string;
   peerDisplayName: string;
   peerHandle: string | null;
+  // Canonical nex_account_profile.avatar_url when the peer has a profile ·
+  // null falls back to the themed initials circle at render time.
+  peerAvatarUrl: string | null;
   lastMessageAt: string | null;
   lastMessagePreview: string;
   unreadCount: number;
@@ -124,13 +128,15 @@ export default async function InboxPage() {
           peerAccountId: "",
           peerDisplayName: "Unknown",
           peerHandle: null,
+          peerAvatarUrl: null,
           lastMessageAt: conv.last_message_at,
           lastMessagePreview: "",
           unreadCount: 0,
         };
       }
-      const [peer, lastMsg, unread] = await Promise.all([
+      const [peer, peerProfile, lastMsg, unread] = await Promise.all([
         accountService.getAccountById(peerId),
+        accountProfileService.getProfileByAccountId(peerId).catch(() => null),
         peerMsgService.getLastPeerMessageInConversation(conv.id),
         peerMsgService.countUnreadPeerMessages(conv.id, session.account.id),
       ]);
@@ -139,6 +145,7 @@ export default async function InboxPage() {
         peerAccountId: peerId,
         peerDisplayName: peer?.display_name ?? "NEX user",
         peerHandle: peer?.nex_handle ?? null,
+        peerAvatarUrl: peerProfile?.avatar_url ?? null,
         lastMessageAt: conv.last_message_at,
         lastMessagePreview: previewFor(lastMsg),
         unreadCount: unread,
@@ -228,26 +235,46 @@ export default async function InboxPage() {
                       boxShadow: r.unreadCount > 0 ? `0 0 0 1px ${themeAccent}22, 0 10px 24px ${themeAccent}10` : "none",
                     }}
                   >
-                    {/* Avatar · initials circle in theme accent */}
-                    <div
-                      aria-hidden
-                      style={{
-                        flexShrink: 0,
-                        width: 44,
-                        height: 44,
-                        borderRadius: "50%",
-                        background: `linear-gradient(145deg, ${themeAccent}55, ${themeAccent}22)`,
-                        border: `1px solid ${themeAccent}66`,
-                        display: "grid",
-                        placeItems: "center",
-                        fontSize: 15,
-                        fontWeight: 700,
-                        color: NEX.textPrimary,
-                        letterSpacing: "0.04em",
-                      }}
-                    >
-                      {initialsOf(r.peerDisplayName)}
-                    </div>
+                    {/* Avatar · peer avatar when nex_account_profile.avatar_url is set ·
+                        falls back to a themed initials circle in the viewer's theme accent. */}
+                    {r.peerAvatarUrl ? (
+                      <img
+                        src={r.peerAvatarUrl}
+                        alt=""
+                        width={44}
+                        height={44}
+                        loading="lazy"
+                        style={{
+                          flexShrink: 0,
+                          width: 44,
+                          height: 44,
+                          borderRadius: "50%",
+                          objectFit: "cover",
+                          border: `1px solid ${themeAccent}66`,
+                          display: "block",
+                        }}
+                      />
+                    ) : (
+                      <div
+                        aria-hidden
+                        style={{
+                          flexShrink: 0,
+                          width: 44,
+                          height: 44,
+                          borderRadius: "50%",
+                          background: `linear-gradient(145deg, ${themeAccent}55, ${themeAccent}22)`,
+                          border: `1px solid ${themeAccent}66`,
+                          display: "grid",
+                          placeItems: "center",
+                          fontSize: 15,
+                          fontWeight: 700,
+                          color: NEX.textPrimary,
+                          letterSpacing: "0.04em",
+                        }}
+                      >
+                        {initialsOf(r.peerDisplayName)}
+                      </div>
+                    )}
                     {/* Name + preview column */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div
@@ -379,8 +406,36 @@ function EmptyState({ themeAccent }: { themeAccent: string }) {
         No conversations yet
       </div>
       <div style={{ marginTop: 6, fontSize: 12, color: NEX.textSecondary, lineHeight: 1.5 }}>
-        Open <Link href="/nex-native/chat" style={{ color: themeAccent, textDecoration: "none", fontWeight: 600 }}>Contacts</Link> to find someone and start a conversation.
+        Find someone and start a conversation.
       </div>
+      {/* C-09 2026-10-28 · lift the Contacts CTA from inline text to a
+          button-weight pill · 44px min-height tap target · theme-accent
+          outline · secondary (outlined, not filled) so it doesn't
+          out-weigh the primary content hierarchy on this empty-state. */}
+      <Link
+        href="/nex-native/chat"
+        data-nex-inbox-empty-cta
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 6,
+          marginTop: 16,
+          minHeight: 44,
+          padding: "0 20px",
+          borderRadius: 999,
+          background: `${themeAccent}1A`,
+          border: `1px solid ${themeAccent}80`,
+          color: themeAccent,
+          fontSize: 13,
+          fontWeight: 700,
+          letterSpacing: "0.02em",
+          textDecoration: "none",
+          WebkitTapHighlightColor: "transparent",
+        }}
+      >
+        Open Contacts <span aria-hidden>→</span>
+      </Link>
     </div>
   );
 }

@@ -7,14 +7,14 @@
 //
 // Server shell · forwards the optional ?returnTo so the client can
 // route back to the broadcaster surface (defaults to the sealed
-// `/nex-native/live-commerce/go-live`) after the owner accepts.
+// `/nex-native/live-commerce/enter-broadcast-room`) after the owner accepts.
 
 import { WelcomeClient } from "./_welcome-client";
 
 export const metadata = {
   title: "Welcome to NEX LIVE",
   description:
-    "Your moment. Your people. Your LIVE. Read the NEX LIVE guidelines before you go live.",
+    "Lets Make live Great. Read the NEX LIVE guidelines before you go live.",
 };
 
 export default async function LiveWelcomePage({
@@ -23,9 +23,14 @@ export default async function LiveWelcomePage({
   readonly searchParams: Promise<{ readonly returnTo?: string }>;
 }): Promise<React.JSX.Element> {
   const params = await searchParams;
-  // Honest default · the broadcaster surface. Any explicit returnTo
-  // from the viewer is forwarded verbatim (the client does its own
-  // same-origin safety check before navigating).
-  const returnTo = params.returnTo ?? "/nex-native/live-commerce/go-live";
+  // Owner directive 2026-10-28 (revised · "remove this page from
+  // before enter broadcaster room") · the welcome agreement now
+  // routes directly to /enter-broadcast-room. The "Starting Live"
+  // splash fires AFTER the user taps "Enter broadcast room" inside
+  // the broadcast room (not before), so no intermediary route is
+  // needed. Any explicit returnTo from the viewer is forwarded
+  // verbatim (the client does its own same-origin safety check
+  // before navigating).
+  const returnTo = params.returnTo ?? "/nex-native/live-commerce/enter-broadcast-room";
   return <WelcomeClient returnTo={returnTo} />;
 }

@@ -1,6 +1,6 @@
 {
   "audit_id": "§36-RRD-AB · REAL-REPO-DEMO-A-PLUS-B · 2026-09-15",
-  "generated_at": "2026-10-18T08:05:08.815Z",
+  "generated_at": "2026-10-27T23:51:59.564Z",
   "curated_files_count": 6,
   "files_audited": 6,
   "total_findings_wave_a": 7,
@@ -44,7 +44,7 @@
     },
     {
       "file": "src/lib/nex-agent-runtime/wave-a-language-framework/wave-a-language-framework.ts",
-      "candidate_sha256": "de86af267a82a924eb25e56e7f26589b43755c98b7a5fe309c09c900a02638e7",
+      "candidate_sha256": "e1d185dd04619c64c7a44b6c84e7f8ede57d13f42bfea51ebf178793c4554182",
       "wave_a": {
         "overall_verdict": "action_required",
         "total_findings": 7

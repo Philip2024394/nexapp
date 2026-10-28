@@ -48,6 +48,7 @@ import {
 import { type PortraitBloomPresenceKind } from "../../_portrait-bloom-shell";
 import { resolveChromeSet } from "@/lib/nex-native/chat-render/registry";
 import { PeerCallLauncher } from "./_call-launcher";
+import { ChatErrorBanner } from "./_error-banner";
 import { PeerTypingClient } from "./_typing-client";
 import { PeerPresenceClient } from "./_presence-client";
 import { PeerMessageEventsClient } from "./_message-events-client";
@@ -104,6 +105,12 @@ export default async function PeerChatPage({
   searchParams: Promise<{
     online?: string;
     reply?: string;
+    /** Set by sendPeerMessageAction when sender hits recipient's
+     *  contacts-only wall or the send pipeline fails. Enum:
+     *  contacts_only | send_failed. Rendered by ChatErrorBanner. */
+    message_error?: string;
+    /** Set by sendPeerStickerAction · same classes as message_error. */
+    sticker_error?: string;
     delete_error?: string;
     attachment_url?: string;
     attachment_type?: string;
@@ -142,10 +149,8 @@ export default async function PeerChatPage({
   const isOffline = sp.online === "0";
   const replyId = sp.reply?.trim() || null;
   // Bridge 6 · surfaced by deletePeerMessageAction on retract failure.
-  // Parsed for future banner surface · currently only observable via
-  // the URL (the confirm modal closes, the message remains). Wiring
-  // a proper toast is a follow-up.
-  void sp.delete_error;
+  // Consumed by <ChatErrorBanner /> below · raw Error.message is
+  // sanitised to a bounded enum at the setter (_actions.ts).
 
   // Phase 3 · deep-link preservation across sign-in. When an unsigned
   // visitor taps a product thumbnail on a business page, their path
@@ -159,13 +164,24 @@ export default async function PeerChatPage({
     typeof sp.focus_product === "string" && sp.focus_product.length > 0
       ? sp.focus_product
       : null;
+  // C-08 fix 2026-10-28 · pending_product must survive the sign-in
+  // redirect so an unsigned Ask-Seller tap still routes the buyer
+  // back to the exact product chip. Whitelist is explicit · only
+  // these two chat-page params are rebuilt into `next=…` to avoid
+  // reflecting attacker-supplied values back into the sign-in URL.
+  const pendingProductIdFromUrl =
+    typeof sp.pending_product === "string" && sp.pending_product.length > 0
+      ? sp.pending_product
+      : null;
   // Owner directive 2026-10-26 · dev persona impersonation.
   const session = await resolveSessionWithDevOverride();
   if (!session) {
     const base = `/nex-native/chat/peer/${peerAccountId}`;
-    const nextUrl = focusProductIdFromUrl
-      ? `${base}?focus_product=${encodeURIComponent(focusProductIdFromUrl)}`
-      : base;
+    const nextParams = new URLSearchParams();
+    if (focusProductIdFromUrl) nextParams.set("focus_product", focusProductIdFromUrl);
+    if (pendingProductIdFromUrl) nextParams.set("pending_product", pendingProductIdFromUrl);
+    const nextQs = nextParams.toString();
+    const nextUrl = nextQs ? `${base}?${nextQs}` : base;
     redirect(`/nex-native/sign-in?next=${encodeURIComponent(nextUrl)}`);
   }
   if (peerAccountId === session.account.id) redirect("/nex-native/chat");
@@ -802,6 +818,18 @@ export default async function PeerChatPage({
           strings={safeTradeStrings}
         />
       )}
+      {/* 2026-10-28 · Chat error banner consumer (C-01…C-04) · surfaces
+          sanitised message_error / sticker_error / upload_error /
+          delete_error with calm, actionable copy. Renders null when
+          no error param is set. */}
+      <ChatErrorBanner
+        peerAccountId={peer.id}
+        peerDisplayName={peer.display_name}
+        messageError={sp.message_error}
+        stickerError={sp.sticker_error}
+        uploadError={sp.upload_error}
+        deleteError={sp.delete_error}
+      />
       {/* Bridge 17e · Report affordance moved from the peer chat to
           /nex-native/report/[accountId] · reachable from /friends
           next to Remove / Block · keeps the chat surface clean.

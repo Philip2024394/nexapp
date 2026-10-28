@@ -1,0 +1,53 @@
+{
+  "url": "http://localhost:3008/nex-native/create",
+  "viewport": {
+    "width": 412,
+    "height": 839
+  },
+  "main_bbox": {
+    "x": 0,
+    "y": 16,
+    "width": 412,
+    "height": 871
+  },
+  "panel_bbox": {
+    "x": 16,
+    "y": 32,
+    "width": 380,
+    "height": 589.0625
+  },
+  "grid_bbox": {
+    "x": 35,
+    "y": 151.1875,
+    "width": 342,
+    "height": 448.875
+  },
+  "cards_count": 5,
+  "first_card_bbox": {
+    "x": 35,
+    "y": 151.1875,
+    "width": 166,
+    "height": 140
+  },
+  "computed_main": {
+    "display": "block",
+    "visibility": "visible",
+    "opacity": "1",
+    "position": "static",
+    "width": "380px",
+    "height": "839px",
+    "overflow": "visible",
+    "zIndex": "auto"
+  },
+  "computed_panel": {
+    "display": "block",
+    "visibility": "visible",
+    "opacity": "1",
+    "width": "342px",
+    "height": "547.062px",
+    "background": "rgba(240, 244, 250, 0.96) none repeat scroll 0% 0% / auto padding-box border-box",
+    "zIndex": "auto"
+  },
+  "console_errors": [],
+  "page_errors": []
+}

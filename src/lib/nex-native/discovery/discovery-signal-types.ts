@@ -28,7 +28,12 @@
 
 /** The enumerated signal types the discovery system records. New
  *  types require a doctrine review before they can be added · they
- *  determine what the ranking layer can derive about user intent. */
+ *  determine what the ranking layer can derive about user intent.
+ *
+ *  Must stay in sync with the sealed PG ENUM `nex.discovery_signal_type`
+ *  (Migrations 208 + 216). Drift breaks the `isDiscoverySignalType`
+ *  validator at this layer AND the server-role INSERT at the DB
+ *  layer. */
 export const DISCOVERY_SIGNAL_TYPES = [
   // User saw a card render in viewport. The lightest signal · we
   // weigh it low in any ranking policy because card impressions
@@ -45,6 +50,24 @@ export const DISCOVERY_SIGNAL_TYPES = [
   // User explicitly dismissed / "not interested" · negative signal
   // for the ranking policy (filter out, not just downweight).
   "dismiss",
+  // Phase 1 · Slice 1C · owner-authorised 2026-10-24 · Migration 216.
+  //
+  // User initiated a product-attached enquiry (taps "Order Now" /
+  // "Chat about X" / "Chat about <dish>" from a product-detail or
+  // menu surface, OR sends a product-share from the composer).
+  // Semantically distinct from `chat_open` because it carries a
+  // product_id in metadata and reflects a specific-item intent
+  // rather than a surface-open intent. NAMED customer action per
+  // the privacy model: emits only on explicit customer action, not
+  // on anonymous view. Writer wiring is Slice 1D.
+  "enquiry_initiated",
+  // Phase 1 · Slice 1C · owner-authorised 2026-10-24 · Migration 216.
+  //
+  // User sent a cart as a `cart_order` message to a seller's peer
+  // chat. NAMED customer action. Does NOT grant marketing opt-in ·
+  // `nex_account_notification_prefs.marketing_enabled` default FALSE
+  // stands. Writer wiring is Slice 1D.
+  "cart_sent",
 ] as const;
 
 export type DiscoverySignalType = (typeof DISCOVERY_SIGNAL_TYPES)[number];

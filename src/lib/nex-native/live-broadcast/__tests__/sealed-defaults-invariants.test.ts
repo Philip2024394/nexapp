@@ -114,7 +114,7 @@ describe("D2 · share evidence · trichotomy sealed", () => {
   });
 
   test("server action rejects spurious evidence on non-share kinds (defence-in-depth)", async () => {
-    const src = read("src/app/nex-native/live-commerce/go-live/_actions.ts");
+    const src = read("src/app/nex-native/live-commerce/enter-broadcast-room/_actions.ts");
     expect(src).toMatch(/share-evidence-only-valid-for-share/);
     expect(src).toMatch(/share-requires-evidence/);
   });

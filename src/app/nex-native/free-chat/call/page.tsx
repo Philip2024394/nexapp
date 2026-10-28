@@ -260,11 +260,36 @@ export default function FreeChatCallPage(): React.ReactElement {
             flexShrink: 0,
           }}
         >
-          <CallButton kind="mute" label="Mute" icon={<MicIcon />} />
-          <CallButton kind="speaker" label="Speaker" icon={<SpeakerIcon />} />
+          {/* C-06 2026-10-28 · Mute / Speaker / Add / Record have no
+              backend wiring yet · marked unavailable with honest
+              aria-disabled + title tooltip instead of pretending to
+              work. Keypad routes to a real dialler so stays active.
+              End is a working action via FreeChatCallEndClient. */}
+          <CallButton
+            kind="mute"
+            label="Mute"
+            icon={<MicIcon />}
+            unavailableReason="Mute isn't wired up on calls yet."
+          />
+          <CallButton
+            kind="speaker"
+            label="Speaker"
+            icon={<SpeakerIcon />}
+            unavailableReason="Speaker switching isn't wired up on calls yet."
+          />
           <CallButton kind="keypad" label="Keypad" icon={<KeypadGridIcon />} href="/nex-native/call/dial" />
-          <CallButton kind="add" label="Add" icon={<PersonPlusIcon />} />
-          <CallButton kind="record" label="Record" icon={<RecordIcon />} />
+          <CallButton
+            kind="add"
+            label="Add"
+            icon={<PersonPlusIcon />}
+            unavailableReason="Adding a second participant isn't wired up on calls yet."
+          />
+          <CallButton
+            kind="record"
+            label="Record"
+            icon={<RecordIcon />}
+            unavailableReason="Call recording isn't wired up on calls yet."
+          />
           {/* End · wrapped in a small client component so tap routes
               back to the free chat (ending the call). */}
           <FreeChatCallEndClient>
@@ -283,13 +308,22 @@ function CallButton({
   icon,
   isDanger,
   href,
+  unavailableReason,
 }: {
   kind: string;
   label: string;
   icon: React.ReactNode;
   isDanger?: boolean;
   href?: string;
+  /** C-06 2026-10-28 · when set, the button renders as honestly
+   *  disabled · native `disabled` attribute · aria-disabled="true" ·
+   *  `title` tooltip · dimmed. Keyboard-focus still lands on the
+   *  control so screen readers can read the reason. We do NOT swap
+   *  the icon or hide the control · the user sees the feature exists
+   *  but isn't live yet. */
+  unavailableReason?: string;
 }): React.ReactElement {
+  const isUnavailable = !href && !!unavailableReason;
   const base: React.CSSProperties = {
     width: 60,
     height: 60,
@@ -302,7 +336,8 @@ function CallButton({
       : C.btnBg,
     border: isDanger ? "none" : `1px solid ${C.btnBorder}`,
     color: isDanger ? "#FFFFFF" : C.btnIcon,
-    cursor: "pointer",
+    cursor: isUnavailable ? "not-allowed" : "pointer",
+    opacity: isUnavailable ? 0.52 : 1,
     boxShadow: isDanger
       ? `0 10px 24px -8px ${C.danger}, inset 0 2px 6px rgba(255, 255, 255, 0.3)`
       : "0 6px 18px -10px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06)",
@@ -330,8 +365,16 @@ function CallButton({
       ) : (
         <button
           type="button"
-          aria-label={label}
+          aria-label={
+            isUnavailable
+              ? `${label} · ${unavailableReason ?? "not available yet"}`
+              : label
+          }
+          aria-disabled={isUnavailable || undefined}
+          disabled={isUnavailable}
+          title={isUnavailable ? unavailableReason : undefined}
           data-nex-free-chat-call-btn={label.toLowerCase()}
+          data-nex-call-btn-unavailable={isUnavailable ? "true" : undefined}
           style={{ ...base, padding: 0 }}
         >
           {icon}

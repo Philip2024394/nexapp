@@ -21,7 +21,15 @@ import * as businessService from "@/lib/nex-native/business-service";
 import * as productService from "@/lib/nex-native/product-service";
 import { sendProductInquiryAction } from "../../_actions";
 import { OrderBar } from "./_order-bar";
+import { IdentityShareNote } from "./_identity-share-note";
 import { VariantPicker } from "./_variant-picker";
+import {
+  getActiveSessionForBroadcaster,
+  getFeaturedProductForSession,
+} from "@/lib/nex-native/live-broadcast/live-session-service";
+import { evaluateLiveness } from "@/lib/nex-native/live-broadcast/stale-session-policy";
+import { LiveHeartbeatRing } from "@/components/nex-native/live-commerce/LiveHeartbeatRing";
+import { LiveProductIndicator } from "@/components/nex-native/live-commerce/LiveProductIndicator";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -66,6 +74,46 @@ export default async function Page({
   const price = formatPrice(product.price_pence, product.currency);
   const galleryUrls = product.gallery_urls ?? [];
   const hasGallery = galleryUrls.length > 0;
+
+  /* Phase 2 · G2 · Live indicators resolution. Both reads are fail-
+     open (service returns null/false on query error) so a Live
+     outage never breaks the product page. Two derived values:
+       · ownerLiveSession  · the broadcaster's active session row,
+                             or null. Powers the §5.2 heartbeat ring
+                             on the seller avatar.
+       · productIsFeatured · true iff THIS product is the one
+                             currently pinned on that session.
+                             Powers the §5.3 product-level indicator.
+     Cross-session leakage is impossible: we only consult the owner-
+     of-this-product's own session, so a different seller's broadcast
+     can never show up here. */
+  // Plan v4 · AC-1 · one nowMs per request flows through every
+  // DB-heartbeat-derived resolver on this page.
+  const nowMs = Date.now();
+  const ownerLiveSession = await getActiveSessionForBroadcaster(
+    business.owner_account_id,
+    nowMs,
+  );
+  // Plan v4 · AC-2 + AC-3 · derive the authoritative liveness verdict
+  // using the SAME nowMs so the LIVE chip + heartbeat ring can decay
+  // client-side via `useLiveClockTick`. `evaluateLiveness` fail-closes
+  // internally; if it returns `{ isLive: false }` we DO NOT render the
+  // live chrome.
+  const ownerLiveness = ownerLiveSession
+    ? evaluateLiveness(ownerLiveSession, nowMs)
+    : ({ isLive: false } as const);
+  let productIsFeatured = false;
+  if (ownerLiveSession && ownerLiveness.isLive) {
+    const activePin = await getFeaturedProductForSession(ownerLiveSession.id);
+    productIsFeatured = activePin?.product_id === product.id;
+  }
+  const liveWatchHref =
+    ownerLiveSession && ownerLiveness.isLive
+      ? `/nex-native/live-commerce/${ownerLiveSession.id}?product=${encodeURIComponent(product.id)}`
+      : null;
+  const liveExpiresInMs = ownerLiveness.isLive
+    ? ownerLiveness.liveExpiresInMs
+    : undefined;
 
   return (
     <div
@@ -252,6 +300,21 @@ export default async function Page({
           </div>
         )}
 
+        {/* Phase 2 · G2 · §5.3 · product-level Live indicator.
+           Renders ONLY when this specific product is the pin on the
+           owner's current open session. Links to the broadcast with
+           the product id as a query param so the viewer surface
+           opens with the correct pin highlighted. */}
+        {productIsFeatured && liveWatchHref && (
+          <div style={{ marginBottom: 12 }}>
+            <LiveProductIndicator
+              isFeaturedLive={true}
+              watchHref={liveWatchHref}
+              label={`${business.display_name} is demonstrating this product live now · tap to watch`}
+              liveExpiresInMs={liveExpiresInMs}
+            />
+          </div>
+        )}
         {/* --- NAME + PRICE ---------------------------------------- */}
         <h1
           style={{
@@ -449,46 +512,61 @@ export default async function Page({
               transition: "border-color 160ms ease",
             }}
           >
-            <div
-              style={{
-                flexShrink: 0,
-                width: 52,
-                height: 52,
-                borderRadius: "50%",
-                overflow: "hidden",
-                background: NEX.panel,
-                border: `1px solid ${NEX.borderStrong}`,
-              }}
+            {/* Phase 2 · G2 · §5.2 · seller-identity Live heartbeat.
+               Wraps the 52×52 avatar with the animated ring when the
+               broadcaster has an open session. The ring is NEVER a
+               source of truth · it is a visual projection of the
+               fail-open isBroadcasterLive() lookup above. When the
+               broadcaster is NOT live the component passes children
+               through unchanged. */}
+            <LiveHeartbeatRing
+              isLive={ownerLiveness.isLive}
+              size={52}
+              ariaLabel={`${business.display_name} is live now · tap to watch`}
+              onTapHref={liveWatchHref}
+              liveExpiresInMs={liveExpiresInMs}
             >
-              {business.logo_url ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={business.logo_url}
-                  alt=""
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    display: "block",
-                  }}
-                />
-              ) : (
-                <div
-                  aria-hidden
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    display: "grid",
-                    placeItems: "center",
-                    color: NEX.cyan,
-                    fontSize: 18,
-                    fontWeight: 700,
-                  }}
-                >
-                  {business.display_name.slice(0, 1)}
-                </div>
-              )}
-            </div>
+              <div
+                style={{
+                  flexShrink: 0,
+                  width: 52,
+                  height: 52,
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                  background: NEX.panel,
+                  border: `1px solid ${NEX.borderStrong}`,
+                }}
+              >
+                {business.logo_url ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={business.logo_url}
+                    alt=""
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      display: "block",
+                    }}
+                  />
+                ) : (
+                  <div
+                    aria-hidden
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      display: "grid",
+                      placeItems: "center",
+                      color: NEX.cyan,
+                      fontSize: 18,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {business.display_name.slice(0, 1)}
+                  </div>
+                )}
+              </div>
+            </LiveHeartbeatRing>
             <div style={{ minWidth: 0, flex: 1 }}>
               <div
                 style={{
@@ -531,6 +609,12 @@ export default async function Page({
           WebkitBackdropFilter: "blur(12px)",
         }}
       >
+        {/* Phase 1 · Slice 1G · owner-authorised 2026-10-24 ·
+           non-blocking transparency note. Sits ABOVE the OrderBar
+           so the user sees the identity-share implication BEFORE
+           tapping Order Now or Chat Now. See
+           _identity-share-note.tsx for the sealed copy. */}
+        <IdentityShareNote />
         <OrderBar
           productId={product.id}
           chatHref={chatHref}

@@ -685,6 +685,18 @@ function MenuDishCard({
           <form action={dishInquiryAction}>
             <input type="hidden" name="menu_item_id" value={item.id} />
             <input type="hidden" name="intent" value="ask" />
+            {/* Phase 1 · Slice 1A · owner-authorised 2026-10-24 ·
+               server-rendered idempotency key. One UUID per server
+               render; a double-tap on the same card carries the same
+               key and dedupes via the sealed partial-unique index.
+               Navigation or refresh re-renders a fresh UUID. */}
+            <input
+              type="hidden"
+              name="send_intent_id"
+              value={crypto.randomUUID()}
+              readOnly
+              data-nex-send-intent-id
+            />
             <button
               type="submit"
               style={{

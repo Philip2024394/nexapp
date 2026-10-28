@@ -54,6 +54,19 @@ export interface DirectoryResultsProps {
     readonly listing: DirectoryListingVM;
     readonly destination: DirectoryDestination;
     readonly areaIntel?: AreaIntelligence | null;
+    /** Phase 2 · G2 · live state resolved server-side by the batch
+     *  resolver `resolveLiveStateForDirectoryListings`. Default
+     *  undefined · the card renders exactly as before. When present
+     *  with `isOwnerLive=true`, the card title row renders the
+     *  minimal LIVE chip; tapping routes to `liveWatchHref` instead
+     *  of the directory destination. */
+    readonly isOwnerLive?: boolean;
+    readonly liveWatchHref?: string | null;
+    /** Plan v4 · AC-3 · server-computed relative TTL (ms) threaded
+     *  in from `resolveLiveStateForDirectoryListings`. Required when
+     *  `isOwnerLive === true` · consumed by the shared chip hook to
+     *  decay client-side at expiry. */
+    readonly liveExpiresInMs?: number;
   }>;
   /** Signals that at least one listing has non-null coordinates ·
    *  the geolocation opt-in button only shows if there's a reason
@@ -99,6 +112,9 @@ type DirectoryCardWithCallbacks = React.ComponentType<
     readonly onOpenDetail?: () => void;
     readonly onOpenChat?: () => void;
     readonly areaIntel?: AreaIntelligence | null;
+    readonly isOwnerLive?: boolean;
+    readonly liveWatchHref?: string | null;
+    readonly liveExpiresInMs?: number;
   }
 >;
 
@@ -173,7 +189,7 @@ export function DirectoryResults(props: DirectoryResultsProps): React.ReactEleme
       {props.anyListingHasCoords && savedCtx.location === null ? (
         <DistanceOptIn geo={geo} onEnable={requestLocation} />
       ) : null}
-      {props.results.map(({ listing, destination, areaIntel }) => (
+      {props.results.map(({ listing, destination, areaIntel, isOwnerLive, liveWatchHref, liveExpiresInMs }) => (
         <DirectoryCardWithCbs
           key={listing.canonicalBusinessId}
           listing={listing}
@@ -183,6 +199,9 @@ export function DirectoryResults(props: DirectoryResultsProps): React.ReactEleme
           onOpenChat={() => openChat(listing, destination)}
           categoryImageLibrary={props.categoryImageLibrary}
           areaIntel={areaIntel ?? null}
+          isOwnerLive={isOwnerLive}
+          liveWatchHref={liveWatchHref ?? null}
+          liveExpiresInMs={liveExpiresInMs}
         />
       ))}
       {panelFor !== null ? (

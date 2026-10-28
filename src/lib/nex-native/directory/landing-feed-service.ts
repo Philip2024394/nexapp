@@ -36,6 +36,14 @@
 //     has no coverage, we return [].
 //   · Does NOT touch `nex_product` / `nex_menu_item` / `nex_service`
 //     rows (owner decision G3 · one card per shop).
+//     See amendment at
+//     docs/doctrine/nex-directory-tile-uniqueness-g3-amendment-2026-10-26.md
+//     (2026-10-26) · adds one tile per eligible paid individual listing.
+//     Watch listings are a separate projection surfaced at
+//     `/nex-native/watches` and through `watch_listing_directory_v`
+//     (Migration 229) · they do NOT flow through this service today.
+//     A future owner-authorised step may merge them into the feed
+//     here; the sealed G3 original stays intact above.
 //
 // Random ordering is driven by a `visitorSeed` the caller supplies.
 // Same seed → same order (stable across refresh + Prev/Next). A fresh
@@ -47,6 +55,15 @@ import * as discoveryService from "@/lib/nex-native/discovery-service";
 import * as localDirectory from "@/lib/nex-native/local-directory-service";
 import type { NexBusinessRow } from "@/lib/nex-native/types";
 import { haversineKm } from "@/lib/nex-native/bike-delivery-service";
+// Directory Integration Fix 2026-10-26 · bounded readers for the two
+// G3-amendment-compatible sources of eligible paid individual
+// listings. Both fail-open when their views are missing (migrations
+// 229, 233 are authored but NOT APPLIED).
+import {
+  listPaidWatchListings,
+  listPaidLivePosts,
+  type EligiblePaidListingPoolEntry,
+} from "./eligible-paid-listing-service";
 
 import {
   resolveLandingSlugToCategories,
@@ -118,7 +135,7 @@ export interface ListingCardViewModel {
    *    · `mock_seed`    → "SAMPLE" (orange · owner-authorised preview
    *      cards only · see `mock-seed-listings.ts`). Never confused
    *      with production data because the chip is visually distinct. */
-  readonly source: "nex_business" | "canonical" | "mock_seed";
+  readonly source: "nex_business" | "canonical" | "mock_seed" | "watch_listing" | "live_post";
   // ─── Owner card-design template · 2026-10-16 ───────────────────
   //
   // The card template supports an orange discount badge, a cyan
@@ -350,7 +367,18 @@ export async function getLandingFeed(
   //
   //   · nex_business is a Supabase source · no country column, so
   //     when a country filter is active we skip it (honest-null).
-  const [nexBusinessRows, canonicalRows] = await Promise.all([
+  // Directory Integration Fix 2026-10-26 · the feed now sources from
+  // FOUR pools in parallel:
+  //   · nex_business          · shop-level cards · G3 original (one card per shop)
+  //   · canonical             · harvester shop-level cards
+  //   · watch_listing_directory_v · one card per eligible paid individual watch listing · G3 amendment
+  //   · nex_live_post_directory_v · one card per eligible paid live post · G3 amendment extended
+  // The two paid-individual-listing views bake price_pence > 0 into
+  // their WHERE clauses, so no-price listings are STRUCTURALLY
+  // excluded from the directory. The two legacy shop-level sources
+  // represent entities (not priced listings) so they continue to
+  // pass through regardless of price · G3 original is preserved.
+  const [nexBusinessRows, canonicalRows, paidWatchPool, paidLivePool] = await Promise.all([
     fetchNexBusinessRows({
       categories: nexBusinessCategories,
       skipBecauseCountryFilter: country !== null,
@@ -362,9 +390,22 @@ export async function getLandingFeed(
       country,
       seed,
     }),
+    // Paid individual listings · scoped to slug-compatible categories.
+    // · watches live under the "products" landing slug (shop + watches
+    //   both appear when the viewer is in the products category or
+    //   the all-view).
+    // · live posts live in their own "live" slot today · when a slug
+    //   is active we only include them if the slug is null (all-view).
+    //   A future landing-category-mapping update can broaden this.
+    slug === null || slug === "products"
+      ? listPaidWatchListings({ limit: 100 })
+      : Promise.resolve([] as readonly EligiblePaidListingPoolEntry[]),
+    slug === null
+      ? listPaidLivePosts({ limit: 100 })
+      : Promise.resolve([] as readonly EligiblePaidListingPoolEntry[]),
   ]);
 
-  // ─── Slug-based dedup · owner-claimed WINS ──────────────────────
+  // ─── Legacy shop-level merge · G3 original · slug-dedup ─────────
   //
   // Mirrors `src/app/nex-native/search/page.tsx:426-434` exactly.
   // When a slug collides, the `nex_business` row (owner-claimed)
@@ -378,42 +419,70 @@ export async function getLandingFeed(
     merged.push(row);
   }
 
+  // ─── Build unified pool · shop-level cards + paid individual listings ─
+  //
+  // Each pool entry carries the adapted card + optional lat/lng for
+  // the distance filter below. Paid individual listings do not expose
+  // location today · their lat/lng are null, so an active distance
+  // filter excludes them (honest-null).
+  const pool: Array<{
+    readonly card: ListingCardViewModel;
+    readonly location_lat: number | null;
+    readonly location_lng: number | null;
+  }> = merged.map((row) => ({
+    card: adaptRowToCard(row),
+    location_lat: readOptionalNumber(row, "location_lat"),
+    location_lng: readOptionalNumber(row, "location_lng"),
+  }));
+
+  // Append paid individual listings · dedup by slug against the shop
+  // pool so a shop's own watch listing can't double-tile.
+  const shopSlugs = new Set(pool.map((p) => p.card.slug));
+  const paidSeen = new Set<string>();
+  for (const entry of [...paidWatchPool, ...paidLivePool]) {
+    const key = entry.card.slug;
+    if (!key || shopSlugs.has(key) || paidSeen.has(key)) continue;
+    paidSeen.add(key);
+    pool.push(entry);
+  }
+
   // ─── Seed-stable shuffle (Fisher-Yates with seeded PRNG) ────────
   //
-  // Both source fetches are now deterministic for identical args.
+  // Both source fetches are deterministic for identical args.
   // Mulberry shuffle with the same seed on the same input produces
   // the same output. Combined with the slice-by-page-offset below,
   // this guarantees: same seed + same page → same cards; different
   // pages → non-overlapping slices.
-  shuffleInPlaceWithSeed(merged, seed);
+  shuffleInPlaceWithSeed(pool, seed);
 
   // ─── Distance filter · owner directive 2026-10-16 ───────────────
   //
   // Applied AFTER the shuffle so pagination remains stable. When a
   // maxDistanceKm is active AND viewer coordinates are present:
-  //   · Rows WITH `location_lat` + `location_lng` are kept iff
+  //   · Entries WITH `location_lat` + `location_lng` are kept iff
   //     haversineKm <= maxDistanceKm.
-  //   · Rows WITHOUT coordinates are EXCLUDED (honest-null · we
-  //     cannot assert they are within range).
-  // When maxDistanceKm is null or the viewer has no coords, every
-  // row passes through untouched.
+  //   · Entries WITHOUT coordinates are EXCLUDED (honest-null · we
+  //     cannot assert they are within range). This correctly
+  //     excludes paid individual listings when a distance filter is
+  //     active, since those sources don't expose coordinates today.
   const maxKm = opts.maxDistanceKm ?? null;
   const vLat = opts.viewerLat ?? null;
   const vLng = opts.viewerLng ?? null;
-  const filtered =
+  const filteredPool =
     maxKm !== null && vLat !== null && vLng !== null
-      ? merged.filter((row) => {
-          const rLat = (row as unknown as { location_lat?: unknown }).location_lat;
-          const rLng = (row as unknown as { location_lng?: unknown }).location_lng;
-          if (typeof rLat !== "number" || typeof rLng !== "number") return false;
-          return haversineKm(vLat, vLng, rLat, rLng) <= maxKm;
+      ? pool.filter((entry) => {
+          if (entry.location_lat === null || entry.location_lng === null) return false;
+          return (
+            haversineKm(vLat, vLng, entry.location_lat, entry.location_lng) <= maxKm
+          );
         })
-      : merged;
+      : pool;
 
   // ─── Page slice ─────────────────────────────────────────────────
   const offset = Math.max(0, opts.offset ?? 0);
-  const page = filtered.slice(offset, offset + limit);
-  const cards = page.map(adaptRowToCard);
+  const pageEntries = filteredPool.slice(offset, offset + limit);
+  const cards = pageEntries.map((entry) => entry.card);
+  const filtered = filteredPool; // kept for the totalEligible metric below
 
   // ─── Honest-reduced classification ──────────────────────────────
   let reducedState: LandingFeedOutcome["reducedState"] | undefined;
@@ -635,6 +704,20 @@ function adaptRowToCard(row: NexBusinessRow): ListingCardViewModel {
  *  can replace it with an explicit `source` tag on the row. */
 function isCanonicalSyntheticSlug(slug: string, id: string): boolean {
   return slug === id;
+}
+
+/** Defensive numeric accessor · reads a numeric field off a row when
+ *  it is actually present as a `number`. Used by the distance filter
+ *  for `location_lat` / `location_lng` because the `NexBusinessRow`
+ *  type does not declare these columns uniformly across both source
+ *  adapters. */
+function readOptionalNumber(
+  row: NexBusinessRow,
+  key: "location_lat" | "location_lng",
+): number | null {
+  const anyRow = row as unknown as Record<string, unknown>;
+  const v = anyRow[key];
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
 }
 
 /** Some rows carry an optional city field through the adapter · we

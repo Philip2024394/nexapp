@@ -13,6 +13,7 @@
 
 import "server-only";
 import { nexSupabaseAdmin } from "./supabase-admin";
+import { NEX_OFFICIAL_ACCOUNT_ID } from "./nex-official";
 import type {
   NexAccountKind,
   NexAccountProfileInsert,
@@ -22,6 +23,17 @@ import type {
   NexDailyActivityDetail,
   NexUuid,
 } from "./types";
+
+/** Owner directive 2026-10-28 · the NEX1 account (founder's chat
+ *  identity · sealed id 00000000-0000-0000-0000-000000000001) always
+ *  renders the Futuristic Cyan + Orange NEX brand mark inside its
+ *  profile rim. The brand asset ships at `public/staircase-images/
+ *  nex-logo.png` so every surface that reads the canonical profile
+ *  via `getProfileByAccountId` picks it up automatically — chat
+ *  identity header (56px rim) · inbox peer rows · contacts rows ·
+ *  profile sheet · future surfaces. A real `nex_account_profile.
+ *  avatar_url` written later for NEX1 overrides this fallback. */
+const NEX_OFFICIAL_AVATAR_URL = "/staircase-images/nex-logo.png" as const;
 import {
   NEX_ACCOUNT_KINDS,
   NEX_DAILY_ACTIVITIES,
@@ -166,7 +178,24 @@ export async function getProfileByAccountId(
       `account-profile-service.getProfileByAccountId: ${error.message}`,
     );
   }
-  return (data as NexAccountProfileRow) ?? null;
+  const row = (data as NexAccountProfileRow) ?? null;
+  // Owner directive 2026-10-28 · NEX1 brand-mark fallback. When the
+  // DB row for the NEX1 account exists but has no `avatar_url`, inject
+  // the shipped brand asset so every surface rendering NEX1 (chat
+  // identity header rim · inbox · contacts · future) shows the
+  // Futuristic Cyan + Orange logo instead of initials. A DB-written
+  // avatar_url later overrides this fallback silently. If no row exists
+  // at all for NEX1 (edge case · migration 084 is expected to seed it),
+  // return null unchanged — avoids inventing a synthetic profile that
+  // might contradict a future owner-authored row.
+  if (
+    row &&
+    accountId === NEX_OFFICIAL_ACCOUNT_ID &&
+    (!row.avatar_url || row.avatar_url.length === 0)
+  ) {
+    return { ...row, avatar_url: NEX_OFFICIAL_AVATAR_URL };
+  }
+  return row;
 }
 
 /** Insert a new profile row. Throws if one already exists (PK constraint). */

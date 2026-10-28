@@ -162,7 +162,6 @@ export function ContactPickerLauncher({
       {open && rows !== null && !empty && (
         <ContactPickerSheet
           open={open}
-          accentHex={accentHex}
           onClose={close}
           onInvite={onInvite}
           onShopShare={onShopShare}

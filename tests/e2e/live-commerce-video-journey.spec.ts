@@ -340,7 +340,7 @@ test.describe("NEX Live · uploaded-video viewer · in-browser journey", () => {
     const goLive = page.locator("[data-nex-live-footer-go-live]");
     await expect(goLive).toBeVisible({ timeout: 5000 });
     const href = await goLive.getAttribute("href");
-    expect(href).toBe("/nex-native/live-commerce/go-live");
+    expect(href).toBe("/nex-native/live-commerce/enter-broadcast-room");
     const tagName = await goLive.evaluate((el) => el.tagName.toLowerCase());
     expect(tagName).toBe("a");
     // Minimum tap-target height · owner directive "fix the ... go live button".

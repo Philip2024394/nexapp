@@ -6,7 +6,8 @@
 // 4-tile (Live/Record/Draft/Insights) Creator Loop:
 //
 //   · Go Live  → /nex-native/live-commerce/welcome
-//   · Create   → /nex-native/live-commerce/create
+//   · Create   → /nex-native/manage/watches/new (Stage A redesign
+//                 2026-10-28 · was /live-commerce/create)
 //   · Studio   → /nex-native/live-commerce/studio
 //
 // This test proves the shape of the control panel + the real routing
@@ -70,28 +71,51 @@ test.describe("Live Library · 3-tile control panel", () => {
     ).toHaveCount(0);
   });
 
-  test("Create tile routes to /nex-native/live-commerce/create and surface renders", async ({ page }) => {
+  test("Create tile routes to /nex-native/create and the 5-card entry renders", async ({ page }) => {
+    // Owner directive 2026-10-28 · Gate 7 Option 1 · the Library Create
+    // tile is now the entry point to the 5-card NEX Create page. Only
+    // Card A (Go Live) is functional · Cards B-E are Coming soon
+    // placeholders. The Watches route stays reachable via its own URL
+    // and via Card B once Phase 5 ships (not yet).
     await openLibrary(page);
     await page.locator('[data-nex-broadcaster-library-footer-btn="create"]').click();
 
-    await expect(page).toHaveURL(/\/nex-native\/live-commerce\/create$/, { timeout: 7000 });
-    await expect(page.locator("[data-nex-live-create]")).toBeVisible();
-    await expect(page.locator("[data-nex-live-create-panel]")).toBeVisible();
-    await expect(page.locator("[data-nex-live-create-tabs]")).toBeVisible();
+    await expect(page).toHaveURL(/\/nex-native\/create$/, { timeout: 7000 });
+    await expect(page.locator("[data-nex-create-page]")).toBeVisible();
+    await expect(page.locator("[data-nex-create-grid]")).toBeVisible();
 
-    // Default tab is Record · honest-state notice visible.
-    await expect(
-      page.locator('[data-nex-live-create-tab="record"][data-nex-live-create-tab-selected="true"]'),
-    ).toBeVisible();
-    await expect(page.locator("[data-nex-live-create-record-notice]")).toBeVisible();
-    await expect(page.locator("[data-nex-live-create-record-start]")).toBeDisabled();
+    // All five cards render.
+    for (const cardId of [
+      "go-live",
+      "product-video",
+      "entertainment-video",
+      "image",
+      "music",
+    ]) {
+      await expect(
+        page.locator(`[data-nex-create-card="${cardId}"]`),
+      ).toBeVisible();
+    }
 
-    // Switching to Drafts shows the empty state.
-    await page.locator('[data-nex-live-create-tab="drafts"]').click();
+    // Card A is the only enabled card.
     await expect(
-      page.locator('[data-nex-live-create-tab="drafts"][data-nex-live-create-tab-selected="true"]'),
+      page.locator('[data-nex-create-card="go-live"][data-nex-create-card-enabled="true"]'),
     ).toBeVisible();
-    await expect(page.locator("[data-nex-live-create-drafts-empty]")).toBeVisible();
+    for (const cardId of [
+      "product-video",
+      "entertainment-video",
+      "image",
+      "music",
+    ]) {
+      await expect(
+        page.locator(`[data-nex-create-card="${cardId}"][data-nex-create-card-enabled="false"]`),
+      ).toBeVisible();
+    }
+
+    // Card A has a real Link to the Go Live welcome route.
+    await expect(
+      page.locator('[data-nex-create-card-link="go-live"]'),
+    ).toHaveAttribute("href", "/nex-native/live-commerce/welcome");
   });
 
   test("Studio tile routes to /nex-native/live-commerce/studio and surface renders", async ({ page }) => {

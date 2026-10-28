@@ -11,7 +11,13 @@
 // URL so they land back on the session after signing in.
 
 import { redirect } from "next/navigation";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// Owner directive 2026-10-27 · "we need for all our mock accounts
+// that they are signed in". Live-session viewer route now resolves
+// identity through the dev-impersonation helper so a seeded persona
+// (NEX_DEV_IMPERSONATE_HANDLE=hendra …) can view a live session
+// without a real Supabase cookie. Production unchanged — the helper
+// gates on NODE_ENV !== "production".
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { listOpenSessionsPublic } from "@/lib/nex-native/live-broadcast/live-session-service";
 import { LiveViewerPage } from "./_viewer-client";
 
@@ -23,7 +29,7 @@ export const metadata = {
 };
 
 async function requireSignedInAccountId(pathname: string): Promise<string> {
-  const session = await resolveNexAppSessionFromContext();
+  const session = await resolveSessionWithDevOverride();
   if (!session) {
     redirect(`/nex-native/sign-in?next=${encodeURIComponent(pathname)}`);
   }

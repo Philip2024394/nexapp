@@ -13,11 +13,27 @@
 
 import * as React from "react";
 import { ContactRow } from "./_contact-row";
-import { CommunityCard } from "./_community-card";
+// Owner directive 2026-10-23 · the sealed CommunityCard is retired
+// in favour of the new client-side `CommunityNoticeCard` which
+// carries the mute toggle + unread badge + conditional-tap behaviour
+// per the full Community Notice doctrine. The old file stays on
+// disk for history.
+import { CommunityNoticeCard } from "./_community-notice-card";
+import { MyPrivateGroupsList, MyPrivateGroupsBadge } from "./_my-private-groups-list";
+import { OpenGroupsDiscovery } from "./_open-groups-discovery";
+import {
+  getCreateGroupFlipped,
+  subscribeCreateGroupFlipped,
+} from "./_create-group-flip-state";
 import { GroupCard } from "./_group-card";
 import { MOCK_GROUPS } from "./_mock-groups";
 import { CONTACTS_SEARCH_EVENT } from "./_contacts-search-bar";
 import type { ContactsFilter } from "./_contacts-filter-pills";
+import {
+  loadAccepted,
+  MOCK_ACCEPTED_EVENT,
+  type MockAcceptedContact,
+} from "./_mock-accepted-contacts";
 
 export interface ContactRowDisplay {
   readonly id: string;
@@ -35,6 +51,20 @@ export interface ContactRowDisplay {
    * NULL today · a business-specific identity line is a future pass.
    */
   readonly professionLine: string | null;
+  /**
+   * Owner directive 2026-10-23 · "same cards on the contact slider"
+   * — the picker-card features below are OPTIONAL enrichment data.
+   * Rendered when present, honestly omitted when null. No fabrication
+   * on real rows · the dev-only mock fills them to show the full card.
+   */
+  readonly presence?: "online" | "away" | "offline" | null;
+  readonly lastSeenMinsAgo?: number | null;
+  readonly hasShop?: boolean;
+  readonly shopHref?: string | null;
+  readonly isVerified?: boolean;
+  readonly unreadCount?: number;
+  readonly city?: string | null;
+  readonly initials?: string | null;
 }
 
 const NEX = {
@@ -47,10 +77,48 @@ interface ContactsListProps {
   readonly rows: ReadonlyArray<ContactRowDisplay>;
   readonly totalCount: number;
   readonly activeFilter: ContactsFilter;
+  /**
+   * Owner directive 2026-10-23 · "follow the chat theme color from
+   * home page chat screen" · resolved on the server from the
+   * nex-free-chat-wallpaper cookie via resolveFreeChatAccentHex.
+   * Defaults to NEX cyan (#00AFFF) when no theme is picked.
+   */
+  readonly accentHex: string;
+  /**
+   * Owner directive 2026-10-23 · viewer identity needed by the Groups
+   * tab's mock Private-Groups surface (Create Group hero · initial
+   * invitee · "my groups" filter). Passed through from the server page.
+   */
+  readonly viewerDisplayName: string;
+  readonly viewerNexHandle: string;
 }
 
-export function ContactsList({ rows, totalCount, activeFilter }: ContactsListProps) {
+export function ContactsList({ rows, totalCount, activeFilter, accentHex, viewerDisplayName, viewerNexHandle }: ContactsListProps) {
+  // Owner directive 2026-10-23 · "when the create groups flip · clear
+  // the groups cards and toggle from under the page" · hide the
+  // whole contacts list while the Create Group hero is flipped so
+  // the form has a clean workspace. Hooks MUST stay unconditional ·
+  // we gate on `flipped` at the final JSX return, not before the
+  // other hooks (rules of hooks).
+  const [flipped, setFlipped] = React.useState<boolean>(getCreateGroupFlipped);
+  React.useEffect(() => subscribeCreateGroupFlipped(setFlipped), []);
   const [query, setQuery] = React.useState("");
+
+  // Owner directive 2026-10-23 · "i just saved 1 contact to business
+  // but is not showing in the business page contacts" · ContactsList
+  // now reads the client-side mock-accepted store on mount AND
+  // listens for `nex-contacts-mock-accepted-changed` so a Confirm
+  // from PendingInvitesSection flows straight into the list without
+  // a reload. The store starts empty on both server and client, so
+  // SSR output matches first-paint hydration byte-for-byte.
+  const [acceptedContacts, setAcceptedContacts] =
+    React.useState<ReadonlyArray<MockAcceptedContact>>([]);
+  React.useEffect(() => {
+    const sync = () => setAcceptedContacts(loadAccepted());
+    sync();
+    window.addEventListener(MOCK_ACCEPTED_EVENT, sync);
+    return () => window.removeEventListener(MOCK_ACCEPTED_EVENT, sync);
+  }, []);
 
   React.useEffect(() => {
     function onSearch(e: Event) {
@@ -61,41 +129,73 @@ export function ContactsList({ rows, totalCount, activeFilter }: ContactsListPro
     return () => window.removeEventListener(CONTACTS_SEARCH_EVENT, onSearch);
   }, []);
 
-  const filtered = React.useMemo(() => {
-    if (query.trim().length === 0) return rows;
-    const q = query.trim().toLowerCase();
-    return rows.filter((r) => r.displayName.toLowerCase().includes(q));
-  }, [rows, query]);
+  // Merge the server-provided rows with any client-accepted mock
+  // contacts · acceptedContacts is tagged with its category · we
+  // map it into ContactRowDisplay shape so the renderer treats them
+  // identically. Mock rows pin to the top within their category so
+  // the user sees their just-saved contact immediately.
+  const mergedRows = React.useMemo<ReadonlyArray<ContactRowDisplay>>(() => {
+    if (acceptedContacts.length === 0) return rows;
+    const mapped: ContactRowDisplay[] = acceptedContacts.map((c) => ({
+      id: c.id,
+      kind: c.category === "business" ? "business" : "friend",
+      displayName: c.displayName,
+      handle: c.nexId,
+      avatarUrl: c.avatarUrl,
+      chatHref: `/nex-native/chat/peer/${c.nexId}`,
+      profileHref: `/nex-native/u/${c.nexId}`,
+      professionLine: c.profession ?? null,
+      presence: null,
+      lastSeenMinsAgo: null,
+      hasShop: c.hasShop,
+      shopHref: c.shopHref,
+      isVerified: c.isVerified,
+      unreadCount: 0,
+      city: c.city,
+      initials: c.initials,
+    }));
+    return [...mapped, ...rows];
+  }, [rows, acceptedContacts]);
 
-  const sectionLabel = sectionLabelForFilter(activeFilter);
+  const filtered = React.useMemo(() => {
+    if (query.trim().length === 0) return mergedRows;
+    const q = query.trim().toLowerCase();
+    return mergedRows.filter((r) => r.displayName.toLowerCase().includes(q));
+  }, [mergedRows, query]);
+
+  // Owner directive 2026-10-23 · "remove ... my contacts text" ·
+  // the section-label resolution + `sectionLabelForFilter()` helper
+  // are retained below but no longer consumed · the <h2> that used
+  // to render them was retired this pass. Keep for a one-line
+  // restore if the section title ever comes back.
+
+
+  // Owner directive 2026-10-23 · gate at the JSX return (NOT via
+  // early-return before the hooks above) so the hook order stays
+  // stable across renders. Rules of Hooks compliance.
+  if (flipped) return null;
 
   return (
     <section
       data-nex-contacts-list-section
       style={{ display: "flex", flexDirection: "column", gap: 10 }}
     >
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "4px 2px",
-        }}
-      >
-        <PeopleIcon color={NEX.cyan} />
-        <h2
+      {/* Owner directive 2026-10-23 · spacing audit · the section
+          header is only rendered when there's a count to show. On
+          the Groups tab + Dating tab + zero-contacts empty state the
+          count span was already hidden AND the right-anchored
+          PeopleIcon was retired · an empty 8px block was adding
+          dead space above the first content row. Skipping the
+          <header> entirely closes that gap cleanly. */}
+      {mergedRows.length > 0 ? (
+        <header
           style={{
-            margin: 0,
-            fontSize: 15,
-            fontWeight: 600,
-            color: NEX.textPrimary,
-            flex: 1,
-            minWidth: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "4px 2px",
           }}
         >
-          {sectionLabel}
-        </h2>
-        {rows.length > 0 ? (
           <span
             data-nex-contacts-list-count
             style={{
@@ -103,12 +203,13 @@ export function ContactsList({ rows, totalCount, activeFilter }: ContactsListPro
               color: NEX.textMuted,
             }}
           >
-            {filtered.length === rows.length
-              ? `${rows.length} ${rows.length === 1 ? "contact" : "contacts"}`
-              : `${filtered.length} of ${rows.length}`}
+            {filtered.length === mergedRows.length
+              ? `${mergedRows.length} ${mergedRows.length === 1 ? "contact" : "contacts"}`
+              : `${filtered.length} of ${mergedRows.length}`}
           </span>
-        ) : null}
-      </header>
+          <div style={{ flex: 1, minWidth: 0 }} />
+        </header>
+      ) : null}
 
       {/* Content branches · prioritise honest empty states (D5/D6/D8).
           Groups tab (owner directive 2026-10-17 · "show the groups
@@ -122,8 +223,11 @@ export function ContactsList({ rows, totalCount, activeFilter }: ContactsListPro
           dataAttr="dating-coming-soon"
         />
       ) : activeFilter === "groups" ? (
-        <GroupsPlaceholderGrid />
-      ) : totalCount === 0 ? (
+        <GroupsPlaceholderGrid
+          viewerDisplayName={viewerDisplayName}
+          viewerNexHandle={viewerNexHandle}
+        />
+      ) : mergedRows.length === 0 && totalCount === 0 ? (
         <EmptyState
           title="No contacts yet"
           body="Add friends by their NEX handle or start a conversation with a business from NEX Discover."
@@ -139,11 +243,28 @@ export function ContactsList({ rows, totalCount, activeFilter }: ContactsListPro
       ) : (
         <ul
           data-nex-contacts-list
-          style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 8 }}
+          /* Owner directive 2026-10-23 · "why is the contacts cards
+             touching each other - we need little space" · list gap
+             8 → 16 so the overlapping chips on each card (top:-24)
+             get clean breathing room between rows · matches the
+             Waiting + Inbound sections' spacing rhythm.
+             Owner directive 2026-10-24 · "business contacts cards
+             are not fitting screen width" · `gridTemplateColumns:
+             minmax(0, 1fr)` forces the single column to shrink to
+             the container width · without it, grid items auto-size
+             to content and can push past the mobile frame edge. */
+          style={{
+            listStyle: "none",
+            margin: 0,
+            padding: 0,
+            display: "grid",
+            gap: 16,
+            gridTemplateColumns: "minmax(0, 1fr)",
+          }}
         >
           {filtered.map((row) => (
             <li key={`${row.kind}:${row.id}`} style={{ margin: 0, padding: 0 }}>
-              <ContactRow row={row} />
+              <ContactRow row={row} accentHex={accentHex} />
             </li>
           ))}
         </ul>
@@ -234,22 +355,50 @@ function EmptyState({ title, body, dataAttr, cta }: EmptyStateProps) {
    2026-10-17 · they looked too much like real groups the user could
    enter, which was dishonest while the feature is not yet shipped. */
 
-function GroupsPlaceholderGrid() {
+function GroupsPlaceholderGrid({
+  viewerDisplayName,
+  viewerNexHandle,
+}: {
+  readonly viewerDisplayName: string;
+  readonly viewerNexHandle: string;
+}) {
   return (
     <div
       data-nex-contacts-groups-grid
-      style={{ display: "grid", gap: 10 }}
+      /* Gap aligned to the contacts list (16) · overlapping chips on
+         each GroupCard need the same breathing room between rows.
+         `grid-template-columns: minmax(0, 1fr)` forces one full-width
+         column · without it, each row defaults to auto-width based on
+         content and GroupCard's `width: 100%` resolves to the auto
+         column (narrower than the shell), causing visible fit-off. */
+      style={{
+        display: "grid",
+        gap: 16,
+        gridTemplateColumns: "minmax(0, 1fr)",
+      }}
     >
-      {/* Owner directive 2026-10-23 · "same for community group" ·
-          NEX Community now renders via the shared GroupCard chrome
-          with orange accent · uses the live /community route. */}
-      <CommunityCard />
-      {/* Owner directive 2026-10-23 · "same card design for groups
-          but for groups the card will show small profile images
-          round and total members in group last circle with count ·
-          under the group location". MOCK_GROUPS (4 mock entries ·
-          swap for a real group-service call when nex_group schema
-          lands). */}
+      {/* Owner directive 2026-10-23 · "add search bar under the
+          header over the banner with country round map on the
+          outside at right side" · open-groups discovery UI · owns
+          its own country + query state + Join handler. */}
+      <OpenGroupsDiscovery
+        viewerDisplayName={viewerDisplayName}
+        viewerNexHandle={viewerNexHandle}
+      />
+      {/* Owner directive 2026-10-23 · "move up - my private group" ·
+          count badge for viewer's own joined private groups. */}
+      <MyPrivateGroupsBadge viewerNexHandle={viewerNexHandle} />
+      {/* Owner directive 2026-10-23 · "community notice should be the
+          first card on groups page always" · NEX Community sits
+          above viewer's private groups + the illustrative mock groups. */}
+      <CommunityNoticeCard />
+      {/* Viewer's private groups · rendered as GroupCards. */}
+      <MyPrivateGroupsList
+        viewerDisplayName={viewerDisplayName}
+        viewerNexHandle={viewerNexHandle}
+      />
+      {/* Illustrative mock groups kept for visual breadth. These are
+          NOT in the viewer's groups store · they render regardless. */}
       {MOCK_GROUPS.map((group) => (
         <GroupCard key={group.id} group={group} />
       ))}
@@ -257,23 +406,3 @@ function GroupsPlaceholderGrid() {
   );
 }
 
-function PeopleIcon({ color }: { readonly color: string }) {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  );
-}

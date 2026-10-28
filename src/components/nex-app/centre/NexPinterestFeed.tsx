@@ -574,7 +574,7 @@ export function NexPinterestFeed() {
             <div
               key={item.id}
               className="mb-2.5"
-              style={{ breakInside: "avoid", WebkitColumnBreakInside: "avoid", pageBreakInside: "avoid" }}
+              style={{ breakInside: "avoid", pageBreakInside: "avoid" }}
             >
               <FeedCard item={item} />
             </div>

@@ -73,10 +73,15 @@ export function WelcomeClient(
         setCheckboxShake((v) => v + 1);
         return;
       }
+      // Owner directive 2026-10-28 (revised · "remove this page from
+      // before enter broadcaster room") · the agreement CTA now
+      // routes directly to /enter-broadcast-room. The splash moved
+      // from pre-entry doorway to post-tap transition inside the
+      // broadcast room itself.
       const safeReturnTo =
         props.returnTo.startsWith("/") && !props.returnTo.startsWith("//")
           ? props.returnTo
-          : "/nex-native/live-commerce/go-live";
+          : "/nex-native/live-commerce/enter-broadcast-room";
       e.preventDefault();
       markLiveWelcomeAccepted();
       router.push(safeReturnTo);
@@ -89,7 +94,12 @@ export function WelcomeClient(
       data-nex-live-welcome-page
       style={{
         position: "relative",
-        height: "100vh",
+        // Fit the sealed phone frame exactly · the parent
+        // `.nex-native-frame` is `min(780px, 100dvh - 32px)` on desktop
+        // and `100dvh` on mobile. Using `100vh` here overflows that
+        // frame (desktop viewport > 780px, mobile 100vh > 100dvh when
+        // the browser chrome is visible) and caused scrolling.
+        height: "100%",
         width: "100%",
         overflow: "hidden",
         // Owner directive 2026-10-24 · "back ground image must fit
@@ -188,7 +198,7 @@ export function WelcomeClient(
                 textShadow: "0 1px 3px rgba(0, 0, 0, 0.85)",
               }}
             >
-              Your moment. Your people. Your LIVE.
+              Lets Make live Great
             </div>
           </div>
           <div

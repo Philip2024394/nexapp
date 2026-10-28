@@ -57,17 +57,40 @@ async function loadPersonaAccount(handle: string): Promise<NexAccountRow | null>
     .eq("nex_handle", `nex-${handle.replace(/^nex-/, "")}`)
     .eq("is_mock_persona", true)
     .maybeSingle<NexAccountRow>();
-  if (error || !data) {
-    // Try the handle verbatim (owner may have set NEX_DEV_IMPERSONATE_HANDLE=nex-50012)
-    const { data: alt } = await nexSupabaseAdmin
+  if (!error && data) return data;
+
+  // Try the handle verbatim (owner may have set NEX_DEV_IMPERSONATE_HANDLE=nex-50012)
+  const { data: alt } = await nexSupabaseAdmin
+    .from("nex_account")
+    .select("*")
+    .eq("nex_handle", handle)
+    .eq("is_mock_persona", true)
+    .maybeSingle<NexAccountRow>();
+  if (alt) return alt;
+
+  // Owner directive 2026-10-28 · friendly-handle fallback: resolve by
+  // nex_account_profile.display_name (first word, case-insensitive)
+  // so NEX_DEV_IMPERSONATE_HANDLE=hendra resolves to the row whose
+  // profile display_name starts with "Hendra" (e.g. "Hendra Gunawan"
+  // with nex_handle=nex-50014). Two-step lookup keeps the typing
+  // simple + preserves the is_mock_persona gate.
+  const { data: profile } = await nexSupabaseAdmin
+    .from("nex_account_profile")
+    .select("account_id, display_name")
+    .ilike("display_name", `${handle}%`)
+    .limit(1)
+    .maybeSingle<{ account_id: string; display_name: string }>();
+  if (profile?.account_id) {
+    const { data: byProfile } = await nexSupabaseAdmin
       .from("nex_account")
       .select("*")
-      .eq("nex_handle", handle)
+      .eq("id", profile.account_id)
       .eq("is_mock_persona", true)
       .maybeSingle<NexAccountRow>();
-    return alt ?? null;
+    if (byProfile) return byProfile;
   }
-  return data;
+
+  return null;
 }
 
 /** Owner directive 2026-10-26 · dev-only session override. Call sites

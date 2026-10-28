@@ -18,6 +18,7 @@
 import type * as React from "react";
 import Link from "next/link";
 import type { MockGroup } from "./_mock-groups";
+import { formatMinutesAgo } from "./_mock-groups";
 
 const NEX = {
   bgPanel: "rgba(2,9,20,0.92)",
@@ -45,13 +46,19 @@ interface GroupCardProps {
 export function GroupCard({
   group,
   href,
-  accent = "pink",
+  // Owner directive 2026-10-23 · "the groups cards should also be
+  // the same color as contacts cards" · default accent flipped from
+  // pink → cyan so mock groups match the My Contacts row chrome.
+  // Community card still overrides via accent="orange" explicitly.
+  accent = "cyan",
   eyebrow,
 }: GroupCardProps) {
   const accentHex =
     accent === "pink" ? NEX.pink : accent === "cyan" ? NEX.cyan : NEX.orange;
 
-  const remaining = Math.max(0, group.memberCount - group.members.length);
+  // Owner directive 2026-10-23 · count pill shows TOTAL memberCount
+  // now that it's standalone under the chip · the earlier `+N remaining`
+  // helper is retired.
 
   const content = (
     <>
@@ -86,10 +93,53 @@ export function GroupCard({
         </div>
       </div>
 
+      {/* Owner directive 2026-10-23 revised · "remove the badge from
+          the group members count and center the numbers" · pill
+          chrome retired (no border, no background, no shadow) · pure
+          numeric glyph in the accent colour · still absolute-positioned
+          directly under the chip and centred in the 48px chip column. */}
+      <div
+        aria-label={`${group.memberCount} total members`}
+        data-nex-group-card-count
+        style={{
+          position: "absolute",
+          // Owner directive 2026-10-23 · "move down center" · bumped
+          // 30 → 38 so the number sits further below the chip bottom
+          // (chip bottom = y:24 · 38 = 14px gap) · horizontally
+          // centred under the chip column via left:12 + width:48 +
+          // textAlign:center · chip itself is left:12 width:48 so the
+          // number is exactly below the chip's visual centre.
+          top: 38,
+          left: 12,
+          width: 48,
+          textAlign: "center",
+          fontSize: 14,
+          fontWeight: 900,
+          color: accentHex,
+          letterSpacing: 0.3,
+          lineHeight: 1,
+          zIndex: 3,
+          pointerEvents: "none",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {/* Owner directive 2026-10-23 · hydration-safe number format
+            · `.toLocaleString()` without a locale arg uses the runtime's
+            default (Node locale on server · browser locale on client)
+            → produces "1.248" vs "1,248" mismatches. Pinning to en-US
+            gives stable `1,248` output on both sides. Swap for the
+            user's chosen NEX locale when a locale system is wired. */}
+        {group.memberCount.toLocaleString("en-US")}
+      </div>
+
       {/* Identity text · translateY lifts the block above the rim ·
-          same picker-sheet treatment as ContactRow. */}
+          same picker-sheet treatment as ContactRow. flex:1 + minWidth:0
+          so the column absorbs available width in the parent flex row
+          (matches ContactRow identity column). */}
       <div
         style={{
+          flex: 1,
+          minWidth: 0,
           display: "flex",
           flexDirection: "column",
           gap: 4,
@@ -127,8 +177,12 @@ export function GroupCard({
         >
           {group.name}
         </div>
-        {/* Member stack + count circle · small round chips with
-            initials + a trailing "+N" circle for the remainder. */}
+        {/* Owner directive 2026-10-23 · "count pill move under the
+            group profile image" · the count element is now a pill
+            absolute-positioned directly beneath the chip (left:12,
+            same column as the chip, 48px wide to match the chip's
+            footprint). The inline member stack keeps only the small
+            round initials chips · no trailing count circle. */}
         <div
           data-nex-group-card-members
           style={{
@@ -162,32 +216,6 @@ export function GroupCard({
               {m.initials}
             </div>
           ))}
-          {/* Trailing count circle · last chip in the stack · shows
-              the total member count OR "+N" if there are more than
-              the shown chips. */}
-          <div
-            aria-label={`${group.memberCount} total members`}
-            data-nex-group-card-count
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: "50%",
-              border: `2px solid ${accentHex}`,
-              background: `rgba(2,9,20,0.95)`,
-              display: "grid",
-              placeItems: "center",
-              fontSize: 10,
-              fontWeight: 900,
-              color: accentHex,
-              letterSpacing: 0.3,
-              marginLeft: -8,
-              boxShadow: `0 2px 8px ${accentHex}55`,
-              zIndex: group.members.length + 1,
-              position: "relative",
-            }}
-          >
-            {remaining > 0 ? `+${remaining}` : group.memberCount}
-          </div>
         </div>
         {/* Location · under the member stack · red map pin + text */}
         <div
@@ -209,13 +237,51 @@ export function GroupCard({
           <span>{group.location}</span>
         </div>
       </div>
+
+      {/* Owner directive 2026-10-23 · "group cards on the right side
+          lower corner time last post by user" · tiny muted timestamp
+          in the card's bottom-right · stable "Nm ago" / "Nh ago" /
+          "Nd ago" format from the sealed `formatMinutesAgo` helper ·
+          hydration-safe (no clock reads on render). Omitted when
+          `minutesSinceLastPost` is undefined so cards without a
+          last-post signal (new groups) stay clean. */}
+      {typeof group.minutesSinceLastPost === "number" ? (
+        <div
+          data-nex-group-card-last-post
+          style={{
+            position: "absolute",
+            right: 10,
+            bottom: 8,
+            fontSize: 10,
+            fontWeight: 700,
+            color: NEX.textMute,
+            letterSpacing: 0.2,
+            pointerEvents: "none",
+            zIndex: 1,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {formatMinutesAgo(group.minutesSinceLastPost)}
+        </div>
+      ) : null}
     </>
   );
 
+  // Owner directive 2026-10-23 · "why the group name is not displaying
+  // on the line" · GroupCard layout now mirrors ContactRow byte-for-
+  // byte (flex row · items-center · padding "2px 14px 2px 70px") so
+  // the identity text column (lifted via translateY(-12)) sits on
+  // the top rim identically to accepted-contact rows. Previously
+  // display:block + padding 6/10 pushed content below the rim.
   const style: React.CSSProperties = {
     position: "relative",
-    display: "block",
-    padding: "6px 14px 10px 70px",
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: "2px 14px 2px 70px",
+    width: "100%",
+    boxSizing: "border-box",
     borderRadius: 10,
     background: NEX.bgPanel,
     border: `1.5px solid ${accentHex}`,

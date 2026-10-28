@@ -49,18 +49,25 @@ const FEATURES: ReadonlyArray<{ line1: string; line2: string }> = [
 
 export default async function VaultIntroPage() {
   const session = await resolveNexAppSessionFromContext();
-  if (!session) {
+  // Owner directive 2026-10-25 · dev-pass pattern · in production a
+  // guest still redirects to sign-in, but in dev the drawer click-
+  // through from /nex-native/vault lands here and renders the intro
+  // cold. The setup-row check is skipped for guest viewers (nothing
+  // to query without an account_id).
+  if (!session && process.env.NODE_ENV === "production") {
     redirect("/nex-native/sign-in?next=/nex-native/vault");
   }
-  // Defence in depth: if the user already configured Vault, skip the
-  // marketing landing and send them to the PIN pad they expect.
-  const { data: setup } = await nexSupabaseAdmin
-    .from("nex_vault_setup")
-    .select("account_id")
-    .eq("account_id", session.account.id)
-    .maybeSingle();
-  if (setup) {
-    redirect("/nex-native/vault");
+  if (session) {
+    // Defence in depth: if the user already configured Vault, skip the
+    // marketing landing and send them to the PIN pad they expect.
+    const { data: setup } = await nexSupabaseAdmin
+      .from("nex_vault_setup")
+      .select("account_id")
+      .eq("account_id", session.account.id)
+      .maybeSingle();
+    if (setup) {
+      redirect("/nex-native/vault");
+    }
   }
 
   return (

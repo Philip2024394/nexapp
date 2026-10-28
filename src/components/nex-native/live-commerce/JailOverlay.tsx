@@ -1,78 +1,79 @@
 // src/components/nex-native/live-commerce/JailOverlay.tsx
 //
-// NEX Live · full-screen Jail overlay (owner-authorised 2026-10-25).
+// NEX Live · full-screen Jail overlay (owner-authorised 2026-10-28 ·
+// redesign of the sealed 2026-10-25 version).
 //
-// Renders over the live stream on the targeted viewer's device only.
-// The overlay carries:
-//   · A full-screen video background (owner-supplied asset) with a
-//     static dark fallback for `prefers-reduced-motion` + for the
-//     interval before the real asset is confirmed/committed. Honest-
-//     copy: the fallback does not fabricate branded motion when the
-//     asset isn't present.
-//   · A large top-right countdown · derived locally from the server-
-//     issued `startedAtMs + durationMs` payload (see
-//     src/lib/nex-native/live-broadcast/jail-channel.ts). Monotonic
-//     tick via `performance.now()`-free rAF is overkill here · a 1s
-//     setInterval is sufficient for a 10-minute window.
-//   · A footer legend "Comments Turned Off" that overlays the video.
-//   · Dismisses automatically when the countdown hits 00:00.
+// Fires on the targeted viewer's device only. Full-bleed takeover
+// (100% viewport width + height) with:
+//   · Dark red radial-gradient background using sealed NEX accent.
+//   · Large lock icon centred (72 px · sealed SVG · prefers-reduced-
+//     motion disables the pulse).
+//   · "You've Been Jailed" headline (26 px / 900).
+//   · "10 Minutes from live feed posting" subcopy (14 px dim).
+//   · Full 10:00 countdown pill derived from server-issued
+//     `startedAtMs + durationMs`.
+//   · Small red progress bar at the bottom ticking the 8-second
+//     overlay-dismiss window.
+//   · Auto-dismisses after 8 s (owner-sealed 2026-10-28) · fires
+//     `onDismiss` so the parent re-renders to the muted-composer
+//     state. The jail state itself persists until `durationMs`
+//     elapses · that gate is the parent's responsibility.
 //
-// Doctrine:
+// Doctrine (unchanged from 2026-10-25):
 //   · The targeted viewer can still WATCH the stream · the broadcast
-//     is NOT torn down. Only comments + composer are suppressed. The
-//     caller (viewer client) is responsible for passing an empty
-//     comments array AND hiding the composer while this overlay is
-//     active (see _viewer-client.tsx).
-//   · The jail state is Realtime-only. A reload clears it. This is
-//     intentional for a 10-minute cooling-off window; a persistent
-//     ban is a separately-authorised future feature.
+//     is NOT torn down. Only comments + composer are suppressed by
+//     the parent.
+//   · The jail state is Realtime-only in the pilot · a reload clears
+//     it. A persistent server-side jail list is a separately-
+//     authorised future feature (Phase B scope).
 //   · Accessibility:
-//       - `role="alertdialog"` + `aria-live="assertive"` + `aria-
-//         labelledby` so a screen reader announces the state.
-//       - `prefers-reduced-motion: reduce` disables the video entirely
-//         and renders a static dark panel + countdown instead.
-//
-// Honest video asset:
-//   · The owner-provided video file at
-//     `C:/Users/Victus/Downloads/Girl_looking_at_phone_and_20261025141623.mp4`
-//     has not been added to the repo yet (owner has not confirmed
-//     disposition). The component accepts an optional `videoSrc`
-//     prop; when absent, the overlay renders the static-dark fallback.
-//     Once owner authorises the asset path, pass it in from the
-//     consuming site.
+//       - `role="alertdialog"` + `aria-live="assertive"` + visible
+//         `aria-labelledby` headline (owner directive today unwinds
+//         the sealed hidden title · "You've Been Jailed" is on
+//         screen now).
+//       - `prefers-reduced-motion: reduce` disables the lock-pulse
+//         animation.
 
 "use client";
 
 import * as React from "react";
 
 export interface JailOverlayProps {
-  /** Monotonic epoch ms when the jail started (broadcaster-authored). */
+  /** Monotonic epoch ms when the jail started (broadcaster-authored
+   *  via sealed jail-channel). */
   readonly startedAtMs: number;
-  /** Jail duration in ms. */
+  /** Total jail duration in ms · sealed 10 minutes = 600_000. */
   readonly durationMs: number;
-  /** Optional web-safe video source · when absent the overlay renders
-   *  the static-dark fallback. Expected at `public/nex-live/jail/*`
-   *  once owner authorises the asset. */
+  /** Overlay-dismiss window in ms · owner-sealed 2026-10-28 to 8_000.
+   *  When this elapses the overlay fires `onDismiss` so the viewer
+   *  returns to the live feed (muted composer still enforced by the
+   *  parent for the remainder of `durationMs`). */
+  readonly dismissAfterMs?: number;
+  /** Fires exactly once when the dismiss window elapses OR on tap. */
+  readonly onDismiss: () => void;
+  /** Owner directive 2026-10-29 · optional full-bleed video played
+   *  behind the overlay content (autoplay · muted · loop ·
+   *  playsInline · object-cover). Owner-supplied asset expected at
+   *  `/nex-jail-background.mp4` (public dir). When absent the sealed
+   *  radial-gradient fallback renders. */
   readonly videoSrc?: string | null;
-  /** Optional static poster image (shown while video loads AND when
-   *  `prefers-reduced-motion: reduce` is active). */
-  readonly posterSrc?: string | null;
-  /** Fires when the countdown reaches 0 so the parent can tear down
-   *  the overlay state. */
-  readonly onComplete?: () => void;
 }
 
 const NEX = {
   deepBg: "#06101E",
   text: "#F4F7FC",
-  textDim: "#8BA9D1",
+  textDim: "#C8D4E8",
+  textMute: "#8BA9D1",
   accent: "#FF3355",
-  gold: "#C8A96A",
-  footerBg: "rgba(2, 9, 20, 0.82)",
+  accentDeep: "#B10E25",
+  /* Owner directive 2026-10-29 (reverted) · the orange ping colour
+     is retired · ping rings + pulse glow back to NEX.accent red. */
 } as const;
 
-const SERIF =
-  "Georgia, 'Times New Roman', 'Palatino', 'Palatino Linotype', ui-serif, serif";
+const SANS =
+  "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+
+const DEFAULT_DISMISS_MS = 8_000;
 
 function pad2(n: number): string {
   return n < 10 ? `0${n}` : String(n);
@@ -86,40 +87,44 @@ function formatMMSS(remainingMs: number): string {
 }
 
 export function JailOverlay(props: JailOverlayProps): React.JSX.Element {
-  const { startedAtMs, durationMs, videoSrc, posterSrc, onComplete } = props;
+  const { startedAtMs, durationMs, onDismiss, videoSrc } = props;
+  const dismissAfterMs = props.dismissAfterMs ?? DEFAULT_DISMISS_MS;
+  const hasVideo = typeof videoSrc === "string" && videoSrc.length > 0;
 
-  // Tick · 1Hz is enough for mm:ss resolution. We derive remaining
-  // from the SERVER-ISSUED startedAtMs so a reload would restart the
-  // overlay from the correct remaining value (if the parent kept the
-  // jail event in its state).
+  // Monotonic 100-ms tick drives both the jail-countdown (shown
+  // as mm:ss · updates once a second visually) and the 8-s dismiss
+  // bar (visually smooth · needs higher resolution).
   const [nowMs, setNowMs] = React.useState<number>(() => Date.now());
   React.useEffect(() => {
-    const id = window.setInterval(() => {
-      setNowMs(Date.now());
-    }, 1000);
+    const id = window.setInterval(() => setNowMs(Date.now()), 100);
     return () => window.clearInterval(id);
   }, []);
 
-  const remainingMs = Math.max(0, startedAtMs + durationMs - nowMs);
-  const expired = remainingMs <= 0;
+  const jailRemainingMs = Math.max(0, startedAtMs + durationMs - nowMs);
+  const dismissElapsedMs = Math.max(0, nowMs - startedAtMs);
+  const dismissProgress = Math.min(1, dismissElapsedMs / dismissAfterMs);
+  const dismissed = dismissElapsedMs >= dismissAfterMs;
 
-  // Fire onComplete exactly once when the countdown first crosses zero.
-  const completedRef = React.useRef(false);
+  // Fire onDismiss exactly once when the dismiss-window closes OR
+  // when the parent sets a short durationMs and the whole jail ends
+  // before the dismiss elapses (edge case).
+  const dismissedRef = React.useRef(false);
   React.useEffect(() => {
-    if (expired && !completedRef.current) {
-      completedRef.current = true;
-      onComplete?.();
+    if ((dismissed || jailRemainingMs <= 0) && !dismissedRef.current) {
+      dismissedRef.current = true;
+      onDismiss();
     }
-  }, [expired, onComplete]);
+  }, [dismissed, jailRemainingMs, onDismiss]);
 
-  if (expired) {
-    // When the countdown has finished, render nothing · the parent
-    // typically clears its jail state on `onComplete`. We also guard
-    // the render-path so a stale mount doesn't flash 00:00 forever.
+  const handleTap = React.useCallback(() => {
+    if (dismissedRef.current) return;
+    dismissedRef.current = true;
+    onDismiss();
+  }, [onDismiss]);
+
+  if (dismissedRef.current) {
     return <></>;
   }
-
-  const videoAvailable = typeof videoSrc === "string" && videoSrc.length > 0;
 
   return (
     <div
@@ -127,155 +132,235 @@ export function JailOverlay(props: JailOverlayProps): React.JSX.Element {
       role="alertdialog"
       aria-live="assertive"
       aria-labelledby="nex-jail-overlay-title"
-      aria-describedby="nex-jail-overlay-footer"
+      onClick={handleTap}
       style={{
+        /* Owner directive 2026-10-29 (revert) · reverted from
+           `position: fixed; width: 100vw; height: 100dvh` back to
+           `position: absolute; inset: 0` · overlay fills the
+           sealed `.nex-native-frame` parent (phone-frame size on
+           desktop) instead of the whole browser viewport. The
+           earlier fixed-viewport sizing is retired per owner
+           request. */
         position: "absolute",
         inset: 0,
-        zIndex: 60,
-        background: NEX.deepBg,
+        zIndex: 300,
+        background:
+          "radial-gradient(circle at 50% 38%, rgba(255, 51, 85, 0.22) 0%, rgba(6, 16, 30, 0.0) 55%), " +
+          NEX.deepBg,
         color: NEX.text,
+        fontFamily: SANS,
         display: "flex",
         flexDirection: "column",
-        justifyContent: "flex-end",
-        alignItems: "stretch",
-        overflow: "hidden",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+        boxSizing: "border-box",
+        cursor: "pointer",
+        animation: "nexJailOverlayFadeIn 220ms ease-out",
+        WebkitTapHighlightColor: "transparent",
       }}
     >
+      {/* Owner directive 2026-10-29 · "video for page jail full
+          height and full width" · owner-supplied MP4 played as a
+          full-bleed background layer behind the overlay content.
+          `object-cover` fills the frame on any aspect ratio.
+          autoplay + muted + loop + playsInline so mobile browsers
+          start it without user gesture. A 0.52-alpha scrim stacks
+          on top so the lock + text + countdown stay legible against
+          whatever's in the video. `prefers-reduced-motion` disables
+          the video entirely and reveals the sealed radial-gradient
+          fallback. */}
+      {hasVideo && (
+        <>
+          {/* Owner troubleshoot 2026-10-29 · "the video should be
+             behind the overlay text" · video plays at full brightness
+             as the primary visual · text + lock + countdown sit on
+             top at zIndex 2 and rely on their own text-shadows +
+             the countdown pill's dark backing for legibility. Scrim
+             retired to a very subtle 0.22-flat film · just enough to
+             guarantee contrast at the darkest frames of the video
+             without obscuring it. */}
+          {/* eslint-disable-next-line @next/next/no-img-element -- native <video>, not <img> */}
+          <video
+            data-nex-jail-overlay-video
+            src={videoSrc ?? undefined}
+            autoPlay
+            muted
+            loop
+            playsInline
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              zIndex: 0,
+              pointerEvents: "none",
+            }}
+          />
+          <div
+            aria-hidden
+            data-nex-jail-overlay-scrim
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "rgba(2, 9, 20, 0.22)",
+              zIndex: 1,
+              pointerEvents: "none",
+            }}
+          />
+        </>
+      )}
+
       <style>{`
+        @keyframes nexJailOverlayFadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
         @media (prefers-reduced-motion: reduce) {
-          [data-nex-jail-overlay] video[data-nex-jail-video] {
-            display: none !important;
-          }
-          [data-nex-jail-overlay] [data-nex-jail-static-fallback] {
-            display: block !important;
-          }
+          [data-nex-jail-overlay-video] { display: none !important; }
+          [data-nex-jail-overlay-scrim] { display: none !important; }
+        }
+        @keyframes nexJailLockPulse {
+          0%, 100% { transform: scale(1);   filter: drop-shadow(0 0 20px rgba(255, 51, 85, 0.6)); }
+          50%      { transform: scale(1.06); filter: drop-shadow(0 0 32px rgba(255, 51, 85, 0.95)); }
+        }
+        @keyframes nexJailRingExpand {
+          0%   { transform: scale(0.4); opacity: 0.95; }
+          80%  { transform: scale(1.8); opacity: 0;    }
+          100% { transform: scale(1.8); opacity: 0;    }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          [data-nex-jail-overlay-lock] { animation: none !important; }
+          [data-nex-jail-overlay-ring] { animation: none !important; }
+          [data-nex-jail-overlay] { animation: none !important; }
         }
       `}</style>
 
-      {/* Video layer · honest fallback when asset not provided OR
-          when the user prefers reduced motion. */}
-      {videoAvailable ? (
-        <video
-          data-nex-jail-video
-          autoPlay
-          muted
-          loop
-          playsInline
-          poster={posterSrc ?? undefined}
-          src={videoSrc ?? undefined}
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            zIndex: 0,
-            // Slight dim so the countdown + footer stay legible.
-            filter: "brightness(0.72)",
-          }}
-        />
-      ) : null}
-      <div
-        data-nex-jail-static-fallback
-        aria-hidden
-        style={{
-          position: "absolute",
-          inset: 0,
-          background:
-            "radial-gradient(circle at 50% 42%, rgba(255, 51, 85, 0.18) 0%, rgba(6, 16, 30, 0.0) 55%), " +
-            NEX.deepBg,
-          display: videoAvailable ? "none" : "block",
-          zIndex: 0,
-        }}
-      />
+      {/* Owner directive 2026-10-29 (revised) · "remove the handcuffs
+          and ping" · the central handcuffs image + 3 concentric ping
+          rings + pulsing halo are retired. The overlay now reads as
+          video + headline + countdown + progress bar · no central
+          glyph. The `nexJailRingExpand` + `nexJailLockPulse`
+          keyframes stay defined in the style block so a future
+          re-add is a one-block revert, but no element consumes them. */}
 
-      {/* Hidden visible-only title for a11y · screen reader announces
-          "You are on a 10-minute timeout". No visible text to avoid
-          duplicating the countdown + footer copy. */}
       <h2
         id="nex-jail-overlay-title"
+        data-nex-jail-overlay-headline
         style={{
-          position: "absolute",
-          width: 1,
-          height: 1,
-          padding: 0,
-          margin: -1,
-          overflow: "hidden",
-          clip: "rect(0 0 0 0)",
-          whiteSpace: "nowrap",
-          border: 0,
+          margin: 0,
+          fontSize: 26,
+          fontWeight: 900,
+          letterSpacing: "0.01em",
+          color: "#FFFFFF",
+          textShadow: "0 2px 10px rgba(0,0,0,0.78), 0 1px 3px rgba(0,0,0,0.6)",
+          textAlign: "center",
+          lineHeight: 1.15,
+          position: "relative",
+          zIndex: 2,
         }}
       >
-        You are on a timeout. Comments are turned off until the countdown ends.
+        You&rsquo;ve Been Jailed
       </h2>
 
-      {/* Large countdown · top-right. */}
+      <p
+        data-nex-jail-overlay-subcopy
+        style={{
+          margin: "10px 0 24px",
+          fontSize: 14,
+          lineHeight: 1.5,
+          color: NEX.textDim,
+          textAlign: "center",
+          maxWidth: 300,
+          textShadow: "0 1px 3px rgba(0,0,0,0.6)",
+          position: "relative",
+          zIndex: 2,
+        }}
+      >
+        10 Minutes from live feed posting
+      </p>
+
+      {/* Full 10-minute countdown pill · tabular-nums for stable
+          digit width · ticks every 100 ms (visually readable at
+          1-s cadence given the formatMMSS flooring). */}
       <div
         data-nex-jail-overlay-countdown
         aria-hidden
         style={{
-          position: "absolute",
-          top: "calc(env(safe-area-inset-top, 0px) + 20px)",
-          right: 18,
-          zIndex: 2,
-          padding: "10px 16px",
+          padding: "12px 22px",
           borderRadius: 14,
-          background: "rgba(2, 9, 20, 0.62)",
-          border: `1px solid ${NEX.gold}`,
-          color: NEX.text,
-          fontFamily: SERIF,
-          fontSize: 44,
-          fontWeight: 700,
-          letterSpacing: "0.02em",
+          background: "rgba(2, 9, 20, 0.72)",
+          border: `1.5px solid ${NEX.accent}`,
+          boxShadow:
+            "0 0 18px rgba(255, 51, 85, 0.4), 0 4px 14px rgba(0, 0, 0, 0.6)",
+          color: "#FFFFFF",
+          fontSize: 36,
+          fontWeight: 900,
+          letterSpacing: "0.04em",
           lineHeight: 1,
-          textShadow: "0 2px 10px rgba(0, 0, 0, 0.72)",
           fontVariantNumeric: "tabular-nums",
+          textShadow: "0 2px 10px rgba(0, 0, 0, 0.72)",
+          position: "relative",
+          zIndex: 2,
         }}
       >
-        {formatMMSS(remainingMs)}
+        {formatMMSS(jailRemainingMs)}
       </div>
 
-      {/* Supporting label under the countdown · small-caps serif. */}
+      {/* 8-second dismiss progress bar · pinned bottom · tells the
+          viewer "overlay will clear in …" so returning to the feed
+          doesn't feel abrupt. The jail itself persists for the full
+          10 minutes · parent enforces that via its muted composer. */}
+      <div
+        data-nex-jail-overlay-dismiss-track
+        aria-hidden
+        style={{
+          /* Owner directive 2026-10-29 (revert) · back to the
+             sealed left/right-inset layout now that the overlay is
+             contained to the phone frame again. */
+          position: "absolute",
+          left: 32,
+          right: 32,
+          bottom: "calc(env(safe-area-inset-bottom, 0px) + 44px)",
+          height: 4,
+          borderRadius: 999,
+          background: "rgba(255, 255, 255, 0.14)",
+          overflow: "hidden",
+          zIndex: 2,
+        }}
+      >
+        <div
+          data-nex-jail-overlay-dismiss-fill
+          style={{
+            width: `${dismissProgress * 100}%`,
+            height: "100%",
+            background: NEX.accent,
+            boxShadow: "0 0 10px rgba(255, 51, 85, 0.7)",
+            transition: "width 100ms linear",
+          }}
+        />
+      </div>
+
       <div
         aria-hidden
         style={{
           position: "absolute",
-          top: "calc(env(safe-area-inset-top, 0px) + 92px)",
-          right: 18,
-          zIndex: 2,
-          fontFamily: SERIF,
-          fontSize: 11,
-          letterSpacing: "0.36em",
-          textTransform: "uppercase",
-          color: NEX.gold,
-          textShadow: "0 1px 4px rgba(0, 0, 0, 0.65)",
-        }}
-      >
-        Timeout
-      </div>
-
-      {/* Footer · full-width overlay text "Comments Turned Off". */}
-      <div
-        id="nex-jail-overlay-footer"
-        data-nex-jail-overlay-footer
-        style={{
-          position: "relative",
-          zIndex: 2,
-          width: "100%",
-          padding:
-            "16px 20px calc(env(safe-area-inset-bottom, 0px) + 16px)",
-          background: NEX.footerBg,
-          borderTop: `1px solid ${NEX.gold}`,
+          bottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)",
+          left: 0,
+          right: 0,
           textAlign: "center",
-          fontFamily: SERIF,
-          fontSize: 16,
-          fontWeight: 600,
-          letterSpacing: "0.08em",
+          fontSize: 10.5,
+          fontWeight: 700,
+          color: "rgba(255, 255, 255, 0.72)",
+          letterSpacing: "0.1em",
           textTransform: "uppercase",
-          color: NEX.text,
+          textShadow: "0 1px 2px rgba(0,0,0,0.75)",
+          pointerEvents: "none",
+          zIndex: 2,
         }}
       >
-        Comments Turned Off
+        Returning to live feed…
       </div>
     </div>
   );

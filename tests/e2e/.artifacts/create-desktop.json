@@ -1,0 +1,53 @@
+{
+  "url": "http://localhost:3008/nex-native/create",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "panel_bbox": {
+    "x": 556,
+    "y": 76,
+    "width": 328,
+    "height": 586.9375
+  },
+  "main_bbox": {
+    "x": 540,
+    "y": 60,
+    "width": 360,
+    "height": 780
+  },
+  "cards_count": 5,
+  "html_bg": "rgb(2, 9, 20) url(\"http://localhost:3008/nex-desktop-hero.png\") no-repeat fixed 50% 50% / cover padding-box border-box",
+  "body_bg": "rgb(2, 9, 20) url(\"http://localhost:3008/nex-desktop-hero.png\") no-repeat fixed 50% 50% / cover padding-box border-box",
+  "stage_bbox": {
+    "bbox": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900
+    },
+    "overflow": "hidden",
+    "background": "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+    "bg_image": "none"
+  },
+  "frame_bbox": {
+    "bbox": {
+      "x": 540,
+      "y": 60,
+      "w": 360,
+      "h": 780
+    },
+    "overflow": "hidden auto"
+  },
+  "panel_computed": {
+    "display": "block",
+    "visibility": "visible",
+    "opacity": "1",
+    "width": "328px",
+    "height": "586.938px",
+    "zIndex": "auto",
+    "inside_viewport": true
+  },
+  "console_errors": [],
+  "page_errors": []
+}

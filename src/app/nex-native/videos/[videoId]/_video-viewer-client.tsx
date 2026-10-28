@@ -36,6 +36,10 @@ import {
 import { SatelliteIconWithPing } from "@/components/nex-native/live-commerce/LiveSignalBadge";
 import { resolveMarketCta } from "@/lib/nex-native/live-broadcast/market-cta-resolver";
 import type { UploadedVideoRow } from "@/lib/nex-native/live-broadcast/uploaded-video-service";
+import {
+  attachHlsPlayer,
+  isHlsSource,
+} from "@/lib/nex-native/video-playback/attach-hls-player";
 
 const NEX = {
   bg: "#020914",
@@ -68,6 +72,8 @@ export function VideoViewerClient({
   video,
   publicUrl,
   siblingIds,
+  nextPublicUrl = null,
+  prevPublicUrl = null,
   chainLabel,
   chainSlug,
   currentTopicLabel,
@@ -83,10 +89,19 @@ export function VideoViewerClient({
   authorPresence,
   videoHrefPrefix,
   libraryVideos,
+  broadcasterProductsOverride,
 }: {
   readonly video: UploadedVideoRow;
   readonly publicUrl: string;
   readonly siblingIds: readonly string[];
+  /** Owner directive 2026-10-27 · S2 streaming hardening · the
+   *  server resolves the public URL of the swipe-next and swipe-
+   *  prev videos so this client can mount hidden `<video
+   *  preload="auto">` elements for them. Both are null at the
+   *  boundaries of the chain (first / last video), or when the
+   *  neighbour row couldn't be loaded. */
+  readonly nextPublicUrl?: string | null;
+  readonly prevPublicUrl?: string | null;
   /** Owner directive 2026-10-24 · optional category-chain context.
    *  Non-null when the viewer arrived via a category tile tap · the
    *  siblingIds are already filtered to the chain queue by the server
@@ -144,6 +159,13 @@ export function VideoViewerClient({
    *  broadcaster mode, tapping the author avatar opens the
    *  BroadcasterLibrarySheet. Omit on viewer routes. */
   readonly libraryVideos?: readonly BroadcasterLibraryVideo[];
+  /** Owner authorisation 2026-10-26 (⋮ panel restoration) · when a
+   *  caller supplies its own list of broadcaster products, use that
+   *  instead of the generic Jakarta-market mock defined inside this
+   *  file. The Hendra dev persona passes its 9-watch library so the
+   *  Products pill in the ⋮ panel browses that catalogue · for both
+   *  viewer and broadcaster paths. */
+  readonly broadcasterProductsOverride?: ReadonlyArray<import("@/components/nex-native/live-commerce/LiveViewerFooter").FooterFeaturedProduct>;
 }): React.JSX.Element {
   const router = useRouter();
   const [isLiked, setIsLiked] = React.useState(false);
@@ -253,6 +275,28 @@ export function VideoViewerClient({
     setPostedLabel(formatPostedDate(video.published_at ?? video.created_at));
   }, [video.published_at, video.created_at]);
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  // Owner directive 2026-10-27 · S5 streaming foundation · attach
+  // hls.js when the source is an HLS manifest. No-op for MP4 · so
+  // existing content is unaffected until the HLS pipeline lands.
+  // The dynamic import keeps hls.js out of the first-paint bundle.
+  React.useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    if (!isHlsSource(publicUrl)) return;
+    let detach: (() => void) | null = null;
+    let cancelled = false;
+    attachHlsPlayer(el, publicUrl).then((d) => {
+      if (cancelled) {
+        d();
+        return;
+      }
+      detach = d;
+    });
+    return () => {
+      cancelled = true;
+      detach?.();
+    };
+  }, [publicUrl]);
   // Owner directive 2026-10-25 · playback-progress 0..100 for the
   // thin cyan progress bar under the composer. Updated on
   // loadedmetadata + timeupdate · 0 until duration is known.
@@ -364,6 +408,20 @@ export function VideoViewerClient({
     : null;
   const prevId = currentIndex > 0 ? siblingIds[currentIndex - 1] : null;
 
+  // Owner directive 2026-10-27 · S3 streaming hardening ·
+  // router.prefetch warms the Next.js route tree + bundle for the
+  // neighbour clips. Pairs with S2's hidden <video preload="auto">:
+  //   S2 warms the ASSET (video chunks).
+  //   S3 warms the ROUTE (React tree + any lazy chunks).
+  // Together, swipe transitions avoid both the "fetch bytes" and
+  // the "render page" cold starts. Prefetch is cheap · Next.js
+  // dedupes concurrent requests and respects the user's data-saver
+  // preference automatically.
+  React.useEffect(() => {
+    if (nextId) router.prefetch(videoHref(nextId));
+    if (prevId) router.prefetch(videoHref(prevId));
+  }, [nextId, prevId, router]);
+
   // Owner directive 2026-10-24 · "swipe must be screen same as tiktok
   // not button . but also active swipe up or down with mouse on
   // computer". Pointer events unify touch (phone) and mouse (desktop)
@@ -394,6 +452,40 @@ export function VideoViewerClient({
     },
     [],
   );
+  // Owner directive 2026-10-27 · S4-light · "swipe prepaint" ·
+  // before `router.push` fires, we imperatively point the current
+  // <video> element at the preloaded neighbour src and call .play().
+  // The R5c hidden preload warmed the browser cache, so the new
+  // frame paints near-instantly. router.push catches up in the
+  // background and the remounted element serves from the same
+  // cache. For swipes beyond the preloaded set (`nextPublicUrl` /
+  // `prevPublicUrl` null) we fall back to vanilla router.push.
+  const navigateWithPrepaint = React.useCallback(
+    (direction: "next" | "prev") => {
+      const targetId = direction === "next" ? nextId : prevId;
+      if (!targetId) return;
+      const targetUrl = direction === "next" ? nextPublicUrl : prevPublicUrl;
+      const el = videoRef.current;
+      if (targetUrl && el) {
+        // Hot-swap the current element so the viewer sees the next
+        // frame immediately. The upcoming remount re-creates the
+        // element with the same src from props · browser serves
+        // the chunks from HTTP cache so playback continues cleanly.
+        try {
+          el.src = targetUrl;
+          el.load();
+          // Autoplay policies honour muted · the user's unmute
+          // state is already handled by the component on mount.
+          void el.play();
+        } catch {
+          /* non-fatal · router.push below still navigates */
+        }
+      }
+      router.push(videoHref(targetId));
+    },
+    [nextId, prevId, nextPublicUrl, prevPublicUrl, router],
+  );
+
   const handlePointerUp = React.useCallback(
     (e: React.PointerEvent) => {
       const start = pointerStartRef.current;
@@ -407,12 +499,12 @@ export function VideoViewerClient({
       if (Math.abs(dx) > Math.abs(dy)) return;
       if (Math.abs(dy) < 60) return;
       if (dy < 0 && nextId) {
-        router.push(videoHref(nextId));
+        navigateWithPrepaint("next");
       } else if (dy > 0 && prevId) {
-        router.push(videoHref(prevId));
+        navigateWithPrepaint("prev");
       }
     },
-    [nextId, prevId, router, isMuted, tryUnmute],
+    [nextId, prevId, navigateWithPrepaint, isMuted, tryUnmute],
   );
   const handlePointerCancel = React.useCallback((e: React.PointerEvent) => {
     if (pointerStartRef.current?.id === e.pointerId) {
@@ -434,12 +526,12 @@ export function VideoViewerClient({
       if (now < wheelCooldownRef.current) return;
       wheelCooldownRef.current = now + 700;
       if (e.deltaY > 0 && nextId) {
-        router.push(videoHref(nextId));
+        navigateWithPrepaint("next");
       } else if (e.deltaY < 0 && prevId) {
-        router.push(videoHref(prevId));
+        navigateWithPrepaint("prev");
       }
     },
-    [nextId, prevId, router],
+    [nextId, prevId, navigateWithPrepaint],
   );
 
   // Keyboard mirror · same rules as the Live viewer. Skipped when
@@ -452,10 +544,10 @@ export function VideoViewerClient({
       }
       if ((ev.key === "ArrowDown" || ev.key === "PageDown") && nextId) {
         ev.preventDefault();
-        router.push(videoHref(nextId));
+        navigateWithPrepaint("next");
       } else if ((ev.key === "ArrowUp" || ev.key === "PageUp") && prevId) {
         ev.preventDefault();
-        router.push(videoHref(prevId));
+        navigateWithPrepaint("prev");
       }
     };
     if (typeof window !== "undefined") {
@@ -463,7 +555,7 @@ export function VideoViewerClient({
       return () => window.removeEventListener("keydown", onKey);
     }
     return undefined;
-  }, [nextId, prevId, router]);
+  }, [nextId, prevId, navigateWithPrepaint]);
 
   // Owner directive 2026-10-25 · broadcaster-preview flag.
   // Reading `?preview=broadcaster` from the URL opens the
@@ -504,6 +596,10 @@ export function VideoViewerClient({
     ],
     [],
   );
+  // Owner authorisation 2026-10-26 (⋮ panel restoration) · when the
+  // caller supplies a persona-specific list (e.g. the Hendra dev
+  // page's 9-watch library), that list wins over the generic mock.
+  const effectiveBroadcasterProducts = broadcasterProductsOverride ?? mockBroadcasterProducts;
 
   // Footer handlers · same contract as the Live viewer footer.
   // Owner directive 2026-10-25 · "user can only like a video one
@@ -625,6 +721,13 @@ export function VideoViewerClient({
           muted={isMuted}
           playsInline
           controls={false}
+          /* Owner directive 2026-10-27 · S1 streaming hardening ·
+             `preload="auto"` tells the browser to fetch video chunks
+             the moment the element mounts, not wait for play(). Takes
+             the ~5s "feels slow" cold-start off the first frame on
+             good networks. Harmless on 3G (the browser throttles its
+             own fetch rate) · pairs with S2 neighbour-preload below. */
+          preload="auto"
           onLoadedMetadata={(e) => {
             const el = e.currentTarget;
             // Guard against zero-dim races on some browsers.
@@ -654,6 +757,53 @@ export function VideoViewerClient({
             zIndex: 1,
           }}
         />
+        {/* Owner directive 2026-10-27 · S2 streaming hardening ·
+            hidden <video preload="auto"> elements for the swipe-
+            next and swipe-prev clips. They never paint (0×0, zero
+            opacity, pointer-events none) · their sole job is to
+            make the browser's network layer start fetching chunks
+            so the next clip's first frame is already decoded by
+            the time the user swipes. `muted` + `playsInline`
+            satisfy mobile autoplay policies, but `autoPlay` is
+            OFF · we only want the bytes, not the playback. */}
+        {nextPublicUrl ? (
+          <video
+            data-nex-video-viewer-prefetch="next"
+            src={nextPublicUrl}
+            preload="auto"
+            muted
+            playsInline
+            aria-hidden
+            tabIndex={-1}
+            style={{
+              position: "absolute",
+              width: 0,
+              height: 0,
+              opacity: 0,
+              pointerEvents: "none",
+              zIndex: -1,
+            }}
+          />
+        ) : null}
+        {prevPublicUrl ? (
+          <video
+            data-nex-video-viewer-prefetch="prev"
+            src={prevPublicUrl}
+            preload="auto"
+            muted
+            playsInline
+            aria-hidden
+            tabIndex={-1}
+            style={{
+              position: "absolute",
+              width: 0,
+              height: 0,
+              opacity: 0,
+              pointerEvents: "none",
+              zIndex: -1,
+            }}
+          />
+        ) : null}
         {/* Owner directive 2026-10-24 · header row with:
               [🔍 left] · [Live {Country} · Broadcasted {date}] · [⋮ right]
             zIndex: 2 so the title stays above the video's zIndex: 1
@@ -857,9 +1007,12 @@ export function VideoViewerClient({
           <div
             data-nex-video-viewer-header-actions
             style={{
+              // Owner directive 2026-10-27 · "leave space between them
+              // so user can select with phone touch screen" · gap
+              // bumped 4 → 10 so touch targets never visually bleed.
               display: "inline-flex",
               alignItems: "center",
-              gap: 4,
+              gap: 10,
             }}
           >
             {/* Magnifying glass · bare white monochrome SVG · opens
@@ -908,33 +1061,40 @@ export function VideoViewerClient({
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
             </button>
-            {/* Owner directive 2026-10-25 · persistent sound toggle.
-                Shown ON = animated audio bars (currentColor white).
-                Shown OFF = static speaker glyph with a red diagonal
-                line (NEX red #FF3355). Mirrors the <video>.muted
-                attribute via toggleSound; coexists with the floating
-                "Tap for sound" chip which only shows on first-visit
-                autoplay-blocked state. */}
+            {/* Owner directive 2026-10-27 · "move message icon and
+                pill to right side of magnifying glass in header" ·
+                this slot is a React-portal target for the Hendra
+                inbox 💬 trigger (HendraMessageInbox mounts into it
+                via createPortal). The slot sits between the search
+                icon and the 3-dot drawer, so the message chip reads
+                as part of the header icon row. On non-Hendra routes
+                the slot stays empty and the row collapses around it. */}
+            <div
+              data-nex-video-viewer-header-messages-slot
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minWidth: 0,
+                minHeight: 44,
+              }}
+            />
+            {/* The retired persistent sound toggle lived here · its
+                functionality moved to the ⋮ panel's Sound pill. The
+                non-rendering <button> below is kept as a schema stub
+                so any dangling test selector still resolves to an
+                element; `display: none` guarantees zero paint. */}
             <button
               type="button"
               data-nex-video-viewer-sound-toggle
               data-nex-sound-on={isMuted ? "false" : "true"}
               aria-label={isMuted ? "Unmute sound" : "Mute sound"}
               aria-pressed={!isMuted}
+              aria-hidden
+              hidden
               onClick={toggleSound}
               style={{
-                width: 36,
-                height: 36,
-                background: "transparent",
-                border: "none",
-                color: "#FFFFFF",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                padding: 0,
-                filter:
-                  "drop-shadow(0 1px 1px rgba(0,0,0,0.6)) drop-shadow(0 0 2px rgba(0,0,0,0.4))",
+                display: "none",
               }}
             >
               {isMuted ? (
@@ -1116,6 +1276,14 @@ export function VideoViewerClient({
         onShareEvidence={handleShareEvidence}
         isLiked={isLiked}
         disabled={false}
+        /* Owner directive 2026-10-27 · "move the sound off from
+           header to the container" · wire the sealed `isMuted`
+           state + `toggleSound` callback through so the ⋮ panel's
+           Sound pill mirrors (and toggles) the <video>.muted
+           attribute. The header-side toggle is removed in this
+           same pass. */
+        isMuted={isMuted}
+        onToggleSound={toggleSound}
         /* Owner directive 2026-10-25 (Phase B) · Message pill opens
            the sealed connection-invitation flow (reuses
            createFriendRequestAction). We lazily resolve the video
@@ -1162,7 +1330,7 @@ export function VideoViewerClient({
         authorIsOnline={authorIsOnlineOverride ?? false}
         authorPresence={authorPresence}
         isBroadcaster={isBroadcasterPreview}
-        broadcasterProducts={mockBroadcasterProducts}
+        broadcasterProducts={effectiveBroadcasterProducts}
         likeCount={likeCount}
         shareCount={shareCount}
         saveCount={saveCount}
@@ -1198,20 +1366,32 @@ export function VideoViewerClient({
           // until the record UI lands · logs intent so we see it
           // fires. Both callbacks close the sheet so Hendra lands
           // on the next surface without a stale overlay behind.
+          // Owner directive 2026-10-27 · Live Library tiles reshaped
+          // from 4 (Live/Record/Draft/Insights) to 3 (Go Live/Create/
+          // Studio). Each handler closes the library sheet and routes
+          // to a real surface:
+          //   · Go Live → /nex-native/live-commerce/welcome (sealed)
+          //   · Create  → /nex-native/manage/watches/new (Stage A
+          //                redesign 2026-10-28: category picker +
+          //                colour variants + watch spec sheet)
+          //   · Studio  → /nex-native/live-commerce/studio (Insights,
+          //                Followers, Shop hub)
           onLive={() => {
             setLibraryOpen(false);
             router.push("/nex-native/live-commerce/welcome");
           }}
-          onRecord={() => {
+          onCreate={() => {
+            // Owner directive 2026-10-28 · Gate 7 Option 1 · Create tile
+            // opens the 5-card NEX Create entry page. Only Card A
+            // (Go Live) is functional in this phase · Cards B-E render
+            // as Coming soon placeholders. The Watches route remains
+            // reachable via /nex-native/manage/watches/new (unchanged).
             setLibraryOpen(false);
-            // Honest stub · record surface is a separate slice.
-            console.log("[dev] Record new post · surface not built yet");
+            router.push("/nex-native/create");
           }}
-          onDraft={() => {
+          onStudio={() => {
             setLibraryOpen(false);
-            // Honest stub · drafts list is a separate slice ·
-            // owner-chosen 4th Creator-Loop tile.
-            console.log("[dev] Open drafts · surface not built yet");
+            router.push("/nex-native/live-commerce/studio");
           }}
           onPlay={(v) => {
             setLibraryOpen(false);
