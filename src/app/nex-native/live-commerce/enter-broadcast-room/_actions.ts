@@ -320,3 +320,50 @@ export async function touchLiveHeartbeatAction(input: {
     };
   }
 }
+
+/* Owner-authorised 2026-10-29 · Jail Phase B.
+ *
+ * Record a 10-minute jail for a viewer in the sealed `nex_live_jail`
+ * table (migration 234). Called from the broadcaster-side onConfirm
+ * handler in `_go-live-client.tsx` in addition to the sealed
+ * Realtime `jailChannelRef.jail()` broadcast · the Realtime path
+ * delivers the viewer-side overlay in <1 s · this action persists
+ * the authoritative server-side gate state so the viewer cannot
+ * bypass by refreshing / resending.
+ *
+ * Fail-closed on auth / invalid-session · the sealed owner-rail Jail
+ * button is only visible on live state, so a bad call from the UI
+ * means a bug · better to surface it than silently succeed. */
+export async function issueJailAction(input: {
+  readonly viewerAccountId: string;
+  readonly sessionId: string;
+}): Promise<LiveActionResult<undefined>> {
+  const session = await resolveSessionWithDevOverride();
+  if (!session) return { ok: false, reason: "not-signed-in" };
+  if (!UUID_SHAPE.test(input.viewerAccountId)) {
+    return { ok: false, reason: "invalid-viewer-id" };
+  }
+  if (!UUID_SHAPE.test(input.sessionId)) {
+    return { ok: false, reason: "invalid-session-id" };
+  }
+  const broadcasterAccountId = session.account.id;
+  if (input.viewerAccountId === broadcasterAccountId) {
+    return { ok: false, reason: "self-jail-forbidden" };
+  }
+  try {
+    const { issueJail } = await import(
+      "@/lib/nex-native/live-broadcast/jail-list-service"
+    );
+    await issueJail({
+      viewerAccountId: input.viewerAccountId,
+      broadcasterAccountId,
+      sessionId: input.sessionId,
+    });
+    return { ok: true, data: undefined };
+  } catch (err) {
+    return {
+      ok: false,
+      reason: err instanceof Error ? err.message : String(err),
+    };
+  }
+}

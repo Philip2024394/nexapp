@@ -51,6 +51,7 @@ import {
   setLiveFeaturedProductAction,
   clearLiveFeaturedProductAction,
   touchLiveHeartbeatAction,
+  issueJailAction,
 } from "./_actions";
 import { HEARTBEAT_INTERVAL_MS } from "@/lib/nex-native/live-broadcast/stale-session-policy";
 
@@ -1510,7 +1511,26 @@ export function GoLiveClient({
           onCancel={() => setJailPickerOpen(false)}
           onConfirm={(accountId) => {
             setJailPickerOpen(false);
+            // Fire the Realtime broadcast (viewer-side overlay path).
             void jailChannelRef.current?.jail(accountId);
+            /* Owner directive 2026-10-29 · Jail Phase B · persist
+               the jail to `public.nex_live_jail` so the sealed
+               comment-send + DM-send server gates can enforce the
+               10-minute block beyond the Realtime channel. Needs
+               the DB session UUID · if the broadcaster hasn't
+               reached live yet (dbSessionIdRef unset), skip the
+               persist · the Realtime path still fires. */
+            const dbSid = dbSessionIdRef.current;
+            if (dbSid) {
+              void issueJailAction({
+                viewerAccountId: accountId,
+                sessionId: dbSid,
+              }).then((r) => {
+                if (!r.ok) {
+                  console.warn("[jail] persist failed:", r.reason);
+                }
+              });
+            }
             /* Owner directive 2026-10-28 · broadcaster sees the
                jail confirmation overlay. Look up the target's
                display name + avatar from the current roster /
