@@ -104,6 +104,17 @@ REVOKE ALL ON TABLE public.nex_account_music_rights_ack FROM anon;
 GRANT  SELECT, INSERT ON TABLE public.nex_account_music_rights_ack TO authenticated;
 GRANT  ALL           ON TABLE public.nex_account_music_rights_ack TO service_role;
 
+-- Owner-authorised 2026-10-31 · migration ledger insert.
+-- Backfilled on first application · retained in-file so future
+-- re-applies against a reset database remain self-documenting.
+INSERT INTO public.nex_migration_history (version, description, notes)
+VALUES (
+  '240',
+  'nex_account_music_rights_ack table · composite PK (account_id, terms_version) · RLS SELECT/INSERT own · sealed E1 2026-10-30',
+  'Owner-authorised 2026-10-31 drafted · applied same day as Phase C-4 playbook step 3.'
+)
+ON CONFLICT (version) DO NOTHING;
+
 COMMIT;
 
 -- ----------------------------------------------------------------

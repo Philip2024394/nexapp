@@ -94,6 +94,17 @@ CREATE POLICY nex_music_track_owner_select
 REVOKE ALL ON public.nex_music_track FROM anon;
 GRANT SELECT ON public.nex_music_track TO authenticated;
 
+-- Owner-authorised 2026-10-31 · migration ledger insert.
+-- Backfilled on first application · retained in-file so future
+-- re-applies against a reset database remain self-documenting.
+INSERT INTO public.nex_migration_history (version, description, notes)
+VALUES (
+  '235',
+  'nex_music_track table · 24-column canonical track row · owner-scoped indexes · RLS defaults',
+  'Owner-authorised 2026-10-29 drafted · applied 2026-10-31 as Phase C-2 playbook step 1.'
+)
+ON CONFLICT (version) DO NOTHING;
+
 COMMIT;
 
 -- ----------------------------------------------------------------
