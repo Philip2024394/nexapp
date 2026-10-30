@@ -2,15 +2,14 @@
 
 // src/components/nex-native/product-create/ImageGallerySection.tsx
 //
-// Owner-authorised 2026-10-30 (initial) + 2026-10-31 (Technical Point
-// 2: real image file uploads). Multi-image gallery editor supporting:
+// Owner-authorised 2026-10-30 (initial) + 2026-10-31 (file-uploads) +
+// 2026-10-31 (URL input REMOVED — "we dont use url for image").
 //
-//   · File picker — upload directly from the seller's phone or
-//     computer. Uploads POST to /api/nex-native/product/upload-image
-//     which stores under nex-business-assets/products/<businessId>/…
+// File-upload-only multi-image gallery editor:
+//   · "+ Upload from device" button — opens the OS file picker, posts
+//     the chosen file to /api/nex-native/product/upload-image which
+//     stores it under nex-business-assets/products/<businessId>/…
 //     and returns a public URL. Up to 4 MB per file, png/jpg/webp.
-//   · URL paste fallback — sellers whose images are already hosted
-//     can still paste a URL.
 //   · Reorder — up/down arrow buttons per row swap with the adjacent
 //     entry.
 //   · Set as main — promotes a gallery entry into the parent form's
@@ -18,6 +17,9 @@
 //   · Remove — strips the URL from the list. Does NOT clean up the
 //     bucket object (storage GC is a separate concern per the sealed
 //     gallery-image-service pattern).
+//
+// There is NO URL-paste path. Sellers always upload from device. If
+// a seller already hosts an image elsewhere they must re-upload it.
 //
 // Shape of persisted data: nex_product.gallery_urls text[]. No new
 // migration required.
@@ -53,16 +55,7 @@ export function ImageGallerySection({ value, onChange, businessId, onSetAsMain }
   const [uploading, setUploading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
-  const updateAt = (i: number, next: string) => {
-    const copy = [...value];
-    copy[i] = next;
-    onChange(copy);
-  };
   const removeAt = (i: number) => onChange(value.filter((_, idx) => idx !== i));
-  const addEmpty = () => {
-    if (atCap) return;
-    onChange([...value, ""]);
-  };
   const moveUp = (i: number) => {
     if (i <= 0) return;
     const copy = [...value];
@@ -129,7 +122,7 @@ export function ImageGallerySection({ value, onChange, businessId, onSetAsMain }
           </span>
         </h2>
         <p style={{ fontSize: 11.5, color: INK_DIM, margin: 0 }}>
-          Upload from your device, or paste a hosted URL. Reorder with the arrows. Click Set as main to promote.
+          Upload additional product images from your device. Reorder with the arrows. Click Set as main to promote.
         </p>
       </div>
 
@@ -158,27 +151,8 @@ export function ImageGallerySection({ value, onChange, businessId, onSetAsMain }
             fontFamily: NEX_FONT_SANS,
           }}
         >
-          {uploading ? "Uploading…" : "+ Upload from device"}
+          {uploading ? "Uploading…" : "+ Upload image"}
         </label>
-        <button
-          type="button"
-          onClick={addEmpty}
-          disabled={atCap}
-          style={{
-            padding: "9px 14px",
-            borderRadius: 999,
-            border: `1.5px solid ${ACCENT}`,
-            background: "transparent",
-            color: ACCENT,
-            fontWeight: 800,
-            fontSize: 13,
-            cursor: atCap ? "not-allowed" : "pointer",
-            opacity: atCap ? 0.5 : 1,
-            fontFamily: NEX_FONT_SANS,
-          }}
-        >
-          + Paste URL
-        </button>
       </div>
 
       {!businessId ? (
@@ -203,7 +177,6 @@ export function ImageGallerySection({ value, onChange, businessId, onSetAsMain }
             index={i}
             total={value.length}
             value={url}
-            onChange={(next) => updateAt(i, next)}
             onRemove={() => removeAt(i)}
             onMoveUp={() => moveUp(i)}
             onMoveDown={() => moveDown(i)}
@@ -219,29 +192,27 @@ interface RowProps {
   readonly index: number;
   readonly total: number;
   readonly value: string;
-  readonly onChange: (next: string) => void;
   readonly onRemove: () => void;
   readonly onMoveUp: () => void;
   readonly onMoveDown: () => void;
   readonly onSetAsMain: (() => void) | null;
 }
 
-function GalleryRow({ value, onChange, onRemove, onMoveUp, onMoveDown, onSetAsMain, index, total }: RowProps): React.JSX.Element {
-  const trimmed = value.trim();
-  const looksValid = /^https?:\/\//i.test(trimmed) && trimmed.length <= 1024;
-  const showError = trimmed.length > 0 && !looksValid;
-  const canSetAsMain = onSetAsMain !== null && looksValid;
+function GalleryRow({ value, onRemove, onMoveUp, onMoveDown, onSetAsMain, index, total }: RowProps): React.JSX.Element {
+  // URL input removed 2026-10-31 · "we dont use url for image". Rows
+  // now show only the uploaded image + reorder + Set as main + Remove.
+  const canSetAsMain = onSetAsMain !== null && value.trim().length > 0;
 
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "28px 60px 1fr auto",
+        gridTemplateColumns: "28px 72px 1fr auto",
         gap: 10,
         alignItems: "center",
         padding: 8,
         borderRadius: 10,
-        border: `1.5px solid ${showError ? "rgba(200,16,46,0.4)" : RIM}`,
+        border: `1.5px solid ${RIM}`,
         background: BG,
       }}
     >
@@ -267,39 +238,17 @@ function GalleryRow({ value, onChange, onRemove, onMoveUp, onMoveDown, onSetAsMa
       </div>
       <div
         style={{
-          width: 60,
-          height: 60,
+          width: 72,
+          height: 72,
           borderRadius: 8,
-          background: looksValid ? `url(${trimmed}) center/cover` : "#E8EEF5",
+          background: `url(${value}) center/cover`,
           flexShrink: 0,
+          border: `1px solid ${RIM}`,
         }}
-        aria-hidden
+        aria-label={`Image ${index + 1} preview`}
       />
-      <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-        <input
-          type="url"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="https://… or upload from your device"
-          maxLength={1200}
-          style={{
-            padding: "8px 10px",
-            borderRadius: 8,
-            border: `1.5px solid ${RIM}`,
-            background: BG,
-            color: INK,
-            fontSize: 13,
-            outline: "none",
-            width: "100%",
-            boxSizing: "border-box",
-            fontFamily: NEX_FONT_SANS,
-          }}
-        />
-        {showError ? (
-          <span style={{ fontSize: 11, color: RED, fontWeight: 700 }}>
-            URL must start with http:// or https:// and be ≤ 1024 chars
-          </span>
-        ) : null}
+      <div style={{ fontSize: 12, color: INK_DIM, fontWeight: 600 }}>
+        Image {index + 1}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         {canSetAsMain ? (

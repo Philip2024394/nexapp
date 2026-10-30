@@ -20,6 +20,7 @@ import {
   type MarketSelectorValue,
 } from "@/components/nex-native/product-create/MarketSelector";
 import { ImageGallerySection } from "@/components/nex-native/product-create/ImageGallerySection";
+import { MainImageUploader } from "@/components/nex-native/product-create/MainImageUploader";
 import {
   VariantsBuilder,
   type VariantDraft,
@@ -218,9 +219,11 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
               </select>
             </Field>
           </div>
-          <Field label="Main image URL">
-            <input type="url" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} style={COMMON_INPUT} />
-          </Field>
+          <MainImageUploader
+            value={imageUrl}
+            onChange={setImageUrl}
+            businessId={props.businessId}
+          />
           <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
             <ImageGallerySection
               value={gallery}
