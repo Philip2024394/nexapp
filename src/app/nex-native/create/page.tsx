@@ -75,7 +75,7 @@ interface CreateCard {
 // Routes to the shared Create Product flow with business picker →
 // category picker → shared form.
 const CARDS: readonly CreateCard[] = [
-  { id: "go-live",             label: "Go Live",            blurb: "Stream now",    glyph: "LIVE_DOT", href: "/nex-native/live-commerce/welcome" },
+  { id: "go-live",             label: "Go Live",            blurb: "Stream now",    glyph: "LIVE_DOT", href: "/nex-native/live-commerce/library" },
   { id: "product",             label: "Product",            blurb: "Create & sell", glyph: "🛍️", href: "/nex-native/create/product" },
   { id: "product-video",       label: "Product Video",      blurb: "Add to shop",   glyph: "🛒", href: null },
   { id: "entertainment-video", label: "Entertainment Video", blurb: "Video post",   glyph: "🎥", href: null },
