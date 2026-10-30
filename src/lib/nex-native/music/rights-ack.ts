@@ -26,29 +26,47 @@
 import "server-only";
 import { nexSupabaseAdmin } from "../supabase-admin";
 
-/** CRITICAL · must be updated when the owner authors the real terms.
- *  Suggested convention: v{n}-YYYY-MM-DD. Rolling this value forces
- *  every account to re-ack on next upload. */
-export const CURRENT_TERMS_VERSION = "v0-DRAFT-PLACEHOLDER";
+/** Owner-authorised 2026-10-31 · bumped from v0-DRAFT-PLACEHOLDER to
+ *  v1 DRAFT. Rolling this value forces every account to re-ack on
+ *  next upload. Suggested convention: v{n}-YYYY-MM-DD.
+ *
+ *  CRITICAL: this is a FIRST-DRAFT framework intended to anchor the
+ *  conversation with legal counsel · it is NOT final legal copy.
+ *  Before promoting this value to a production-public gate, the terms
+ *  below MUST be reviewed and signed off by qualified counsel
+ *  familiar with: (a) your operating jurisdiction (Indonesia + the
+ *  jurisdictions you intend to serve), (b) music licensing law in
+ *  those jurisdictions, (c) DMCA / local-equivalent takedown regimes,
+ *  (d) your indemnification posture. */
+export const CURRENT_TERMS_VERSION = "v1-draft-2026-10-31";
 
-/** PLACEHOLDER — NOT legal copy. The owner MUST author this text
- *  (sealed G/D11-7) before the rights-ack gate ships to production.
- *  Shown in the UI modal. */
-export const RIGHTS_TERMS_PLACEHOLDER = `
-[DRAFT · owner to author · do not ship]
+/** DRAFT TERMS · NOT YET LEGAL-REVIEWED. Shown in the UI modal.
+ *
+ *  This text was AUTHORED by the engineering team on 2026-10-31 per
+ *  owner directive "Legal copy" to replace the earlier placeholder.
+ *  It represents a defensible starting framework — not final terms.
+ *  Each paragraph is intentionally short so legal review can edit
+ *  without a full rewrite. */
+export const RIGHTS_TERMS_PLACEHOLDER = `When you upload music to NEX, you confirm all of the following:
 
-By uploading music to NEX you confirm that:
+1. Rights. You are the owner of the audio recording and any associated artwork, OR you hold a licence from the rightsholder(s) that permits the uses you are about to make on NEX, OR the content is in the public domain in your jurisdiction.
 
-  1. You own the rights to the content, OR
-  2. You hold a licence that permits the specific NEX surfaces where
-     the content may appear (library, live feed, chat sticker, etc.), OR
-  3. The content is in the public domain in your jurisdiction.
+2. Scope of permission to NEX. You grant NEX a non-exclusive, worldwide, royalty-free licence to host, stream, cache, and display the content, and the audio/image bytes you upload, strictly for the purpose of operating the NEX service and the surfaces you choose to publish it on. You may revoke this permission by removing the content from your NEX library.
 
-You acknowledge that NEX will remove the content on receipt of a
-valid rightsholder complaint without prior notice.
+3. Metadata. Title, artist, and any description you enter are shown to other users on NEX surfaces where you choose to share the content.
 
-[Replace this placeholder with legal-reviewed copy before ship.]
-`.trim();
+4. Takedown. If a rightsholder tells NEX in good faith that your upload infringes their rights, NEX will remove the content without prior notice. If you believe the takedown was wrong, you can submit a counter-notice via the support channel; the content is not restored automatically.
+
+5. Responsibility. You remain responsible for the rights to the content you upload. If a rightsholder successfully claims damages from NEX because of your upload, you will indemnify NEX for the amount of those damages. NEX does not independently verify rights claims and does not warrant that any upload is lawful in every jurisdiction.
+
+6. Enforcement. NEX may suspend uploads from an account that has multiple sustained takedown complaints, or that attempts to defeat these terms (for example, repeatedly re-uploading removed content).
+
+7. Changes. NEX may update these terms. If the version string changes, you will be asked to review and acknowledge the new version before your next upload.
+
+By ticking the box below, you confirm you have read these terms and that your upload complies with paragraph 1.
+
+———
+This is a draft awaiting legal review (version ${""}v1-draft-2026-10-31). Do not treat it as final terms. If you are reading this on a non-dev build, something has gone wrong — stop and contact support.`.trim();
 
 export interface AckStatus {
   readonly acked: boolean;

@@ -334,8 +334,23 @@ function UploadTab(props: {
     { readonly kind: "idle" }
     | { readonly kind: "measuring" }
     | { readonly kind: "uploading"; readonly progress: number }
-    | { readonly kind: "ok"; readonly trackId: string }
-    | { readonly kind: "error"; readonly code: string; readonly message: string }
+    | {
+        readonly kind: "ok";
+        readonly trackId: string;
+        /** Owner-authorised 2026-10-31 · audit finding #8 · partial-
+         *  success warnings · surfaces "cover upload failed" etc.
+         *  without masking the overall upload success. */
+        readonly warnings?: readonly string[];
+      }
+    | {
+        readonly kind: "error";
+        readonly code: string;
+        readonly message: string;
+        /** Owner-authorised 2026-10-31 · audit finding #6 · correlation
+         *  ID returned by the server so support can match client-
+         *  reported errors to server-side log entries. */
+        readonly requestId?: string;
+      }
   >({ kind: "idle" });
 
   const onAudioChange = (f: File | null) => {
@@ -421,17 +436,23 @@ function UploadTab(props: {
         ok?: boolean;
         code?: string;
         message?: string;
-        data?: { trackId?: string };
+        requestId?: string;
+        data?: { trackId?: string; warnings?: readonly string[] };
       };
       if (!res.ok || !payload.ok || !payload.data?.trackId) {
         setStatus({
           kind: "error",
           code: payload.code ?? "unknown",
           message: payload.message ?? `Upload failed · HTTP ${res.status}`,
+          requestId: payload.requestId,
         });
         return;
       }
-      setStatus({ kind: "ok", trackId: payload.data.trackId });
+      setStatus({
+        kind: "ok",
+        trackId: payload.data.trackId,
+        warnings: payload.data.warnings,
+      });
       // Owner-authorised 2026-10-29 (preview-first flow) · redirect
       // the author to the preview page where they can inspect the
       // player with their cover + background, then choose Edit or
@@ -591,8 +612,17 @@ function ExternalUrlTab(props: {
   const [status, setStatus] = React.useState<
     { readonly kind: "idle" }
     | { readonly kind: "saving" }
-    | { readonly kind: "ok"; readonly trackId: string }
-    | { readonly kind: "error"; readonly code: string; readonly message: string }
+    | {
+        readonly kind: "ok";
+        readonly trackId: string;
+        readonly warnings?: readonly string[];
+      }
+    | {
+        readonly kind: "error";
+        readonly code: string;
+        readonly message: string;
+        readonly requestId?: string;
+      }
   >({ kind: "idle" });
 
   const canSubmit =
@@ -866,8 +896,17 @@ function StatusBanner(props: {
     | { readonly kind: "measuring" }
     | { readonly kind: "uploading"; readonly progress: number }
     | { readonly kind: "saving" }
-    | { readonly kind: "ok"; readonly trackId: string }
-    | { readonly kind: "error"; readonly code: string; readonly message: string };
+    | {
+        readonly kind: "ok";
+        readonly trackId: string;
+        readonly warnings?: readonly string[];
+      }
+    | {
+        readonly kind: "error";
+        readonly code: string;
+        readonly message: string;
+        readonly requestId?: string;
+      };
 }): React.JSX.Element | null {
   const { status } = props;
   if (status.kind === "idle") return null;
@@ -884,15 +923,43 @@ function StatusBanner(props: {
     );
   }
   if (status.kind === "ok") {
+    // Owner-authorised 2026-10-31 (audit finding #8): if the server
+    // reported non-fatal warnings (cover/background upload failed),
+    // surface them next to the "Saved" line so the user knows to
+    // retry the image via the Edit flow rather than silently ending
+    // up with a track that has no artwork.
+    const warningLabels: Record<string, string> = {
+      "cover-upload-failed": "Cover image failed to upload — add it from Edit.",
+      "background-upload-failed":
+        "Background image failed to upload — add it from Edit.",
+    };
     return (
-      <div style={{ color: "#1F8F4F", fontWeight: 700, fontSize: 13 }}>
-        Saved to your library.
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <div style={{ color: "#1F8F4F", fontWeight: 700, fontSize: 13 }}>
+          Saved to your library.
+        </div>
+        {status.warnings?.map((w) => (
+          <div
+            key={w}
+            style={{ color: "#B45309", fontWeight: 600, fontSize: 12 }}
+          >
+            ⚠ {warningLabels[w] ?? w}
+          </div>
+        ))}
       </div>
     );
   }
   return (
     <div style={{ color: RED, fontWeight: 700, fontSize: 13 }}>
       {status.message} <small style={{ color: INK_DIM }}>({status.code})</small>
+      {status.requestId ? (
+        <>
+          <br />
+          <small style={{ color: INK_DIM, fontWeight: 500, fontSize: 11 }}>
+            Share this reference with support: <code>{status.requestId}</code>
+          </small>
+        </>
+      ) : null}
     </div>
   );
 }

@@ -30,14 +30,41 @@ export const dynamic = "force-dynamic";
 const MAX_PER_ACCOUNT_BYTES = 500 * 1024 * 1024; // DRAFT §2.1 proposal
 const MAX_PER_ACCOUNT_TRACKS = 100;
 
-function errorJson(code: string, message: string, status: number) {
-  return NextResponse.json({ ok: false, code, message }, { status });
+// Owner-authorised 2026-10-31 (music-upload-audit · finding #6):
+// every POST gets a short correlation ID. Server-side errors log the
+// ID + full stack; the UI shows the ID so support can match. Format:
+// `up-<timestamp36>-<rand4>` · opaque to the client, no PII.
+function makeRequestId(): string {
+  return `up-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
+function errorJson(
+  code: string,
+  message: string,
+  status: number,
+  requestId: string,
+  cause?: unknown,
+) {
+  // Server-side log is the single place the full error ever lands.
+  // Keep the public response free of stack traces / provider URLs.
+  if (cause !== undefined) {
+    // eslint-disable-next-line no-console
+    console.error(
+      `[music-upload] ${requestId} · ${code} · ${message}`,
+      cause instanceof Error ? cause.stack ?? cause.message : cause,
+    );
+  }
+  return NextResponse.json(
+    { ok: false, code, message, requestId },
+    { status },
+  );
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const requestId = makeRequestId();
   const session = await resolveSessionWithDevOverride();
   if (!session) {
-    return errorJson("not-signed-in", "Sign in required", 401);
+    return errorJson("not-signed-in", "Sign in required", 401, requestId);
   }
   const ownerAccountId = session.account.id;
 
@@ -45,12 +72,12 @@ export async function POST(request: Request): Promise<Response> {
   try {
     formData = await request.formData();
   } catch {
-    return errorJson("invalid-input", "Could not parse multipart body", 400);
+    return errorJson("invalid-input", "Could not parse multipart body", 400,requestId);
   }
 
   // --- Required fields ---
   const title = sanitiseTitle(formData.get("title"));
-  if (!title) return errorJson("invalid-input", "Title is required", 400);
+  if (!title) return errorJson("invalid-input", "Title is required", 400,requestId);
 
   const artist = sanitiseName(formData.get("artist"), MUSIC_UPLOAD_LIMITS.MAX_ARTIST_LEN);
   // Owner-authorised 2026-10-30 · optional long-form description.
@@ -70,6 +97,7 @@ export async function POST(request: Request): Promise<Response> {
       "rights-required",
       "Rights declaration is required",
       400,
+    requestId
     );
   }
 
@@ -84,13 +112,14 @@ export async function POST(request: Request): Promise<Response> {
   // --- Audio file ---
   const audioFile = formData.get("audio");
   if (!(audioFile instanceof File)) {
-    return errorJson("invalid-input", "Audio file is required", 400);
+    return errorJson("invalid-input", "Audio file is required", 400,requestId);
   }
   if (!ALLOWED_AUDIO_MIME.includes(audioFile.type as (typeof ALLOWED_AUDIO_MIME)[number])) {
     return errorJson(
       "unsupported-media-type",
       `Only ${ALLOWED_AUDIO_MIME.join(", ")} accepted`,
       415,
+    requestId
     );
   }
   if (audioFile.size > MUSIC_UPLOAD_LIMITS.MAX_AUDIO_BYTES) {
@@ -98,6 +127,7 @@ export async function POST(request: Request): Promise<Response> {
       "too-large",
       `Audio file exceeds ${MUSIC_UPLOAD_LIMITS.MAX_AUDIO_BYTES} bytes`,
       413,
+    requestId
     );
   }
   const audioBytes = Buffer.from(await audioFile.arrayBuffer());
@@ -107,6 +137,7 @@ export async function POST(request: Request): Promise<Response> {
       "signature-mismatch",
       `Audio file does not look like MP3 or M4A: ${audioSig.reason}`,
       422,
+    requestId
     );
   }
 
@@ -120,6 +151,7 @@ export async function POST(request: Request): Promise<Response> {
         "unsupported-media-type",
         `Cover must be JPEG, PNG, or WebP`,
         415,
+      requestId
       );
     }
     if (coverFile.size > MUSIC_UPLOAD_LIMITS.MAX_COVER_BYTES) {
@@ -127,6 +159,7 @@ export async function POST(request: Request): Promise<Response> {
         "too-large",
         `Cover exceeds ${MUSIC_UPLOAD_LIMITS.MAX_COVER_BYTES} bytes`,
         413,
+      requestId
       );
     }
     coverBytes = Buffer.from(await coverFile.arrayBuffer());
@@ -136,6 +169,7 @@ export async function POST(request: Request): Promise<Response> {
         "signature-mismatch",
         `Cover image signature invalid: ${coverSig.reason}`,
         422,
+      requestId
       );
     }
     coverMime = coverSig.detectedMime;
@@ -151,6 +185,7 @@ export async function POST(request: Request): Promise<Response> {
         "unsupported-media-type",
         `Background must be JPEG, PNG, or WebP`,
         415,
+      requestId
       );
     }
     if (backgroundFile.size > MUSIC_UPLOAD_LIMITS.MAX_BACKGROUND_BYTES) {
@@ -158,6 +193,7 @@ export async function POST(request: Request): Promise<Response> {
         "too-large",
         `Background exceeds ${MUSIC_UPLOAD_LIMITS.MAX_BACKGROUND_BYTES} bytes`,
         413,
+      requestId
       );
     }
     backgroundBytes = Buffer.from(await backgroundFile.arrayBuffer());
@@ -167,6 +203,7 @@ export async function POST(request: Request): Promise<Response> {
         "signature-mismatch",
         `Background image signature invalid: ${bgSig.reason}`,
         422,
+      requestId
       );
     }
     backgroundMime = bgSig.detectedMime;
@@ -181,6 +218,7 @@ export async function POST(request: Request): Promise<Response> {
       "invalid-input",
       `Could not read audio duration · ${probe.reason}${probe.detail ? ` (${probe.detail})` : ""}`,
       422,
+    requestId
     );
   }
   if (probe.durationMs > MUSIC_UPLOAD_LIMITS.MAX_DURATION_MS) {
@@ -188,6 +226,7 @@ export async function POST(request: Request): Promise<Response> {
       "too-large",
       `Track exceeds ${Math.floor(MUSIC_UPLOAD_LIMITS.MAX_DURATION_MS / 60000)}-minute limit (probed ${Math.round(probe.durationMs / 1000)}s)`,
       413,
+    requestId
     );
   }
   const probedDurationMs = probe.durationMs;
@@ -203,6 +242,7 @@ export async function POST(request: Request): Promise<Response> {
       "storage-quota-exceeded",
       `Storage quota exceeded (${usedBytes} / ${MAX_PER_ACCOUNT_BYTES} bytes used)`,
       429,
+    requestId
     );
   }
   if (usedCount >= MAX_PER_ACCOUNT_TRACKS) {
@@ -210,10 +250,17 @@ export async function POST(request: Request): Promise<Response> {
       "track-count-exceeded",
       `Track-count quota exceeded (${usedCount} / ${MAX_PER_ACCOUNT_TRACKS})`,
       429,
+    requestId
     );
   }
 
   // --- Store bytes ---
+  // Owner-authorised 2026-10-31 (audit finding #8): accumulate
+  // non-fatal warnings (cover/background upload failures) and return
+  // them in the success payload so the UI can surface "cover upload
+  // failed — edit the track to retry" without masking the overall
+  // upload success.
+  const warnings: string[] = [];
   const storage = getMusicStorageAdapter();
   const audioKey = `audio-${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${audioSig.detectedMime === "audio/mpeg" ? "mp3" : "m4a"}`;
   let audioRef: string;
@@ -231,6 +278,8 @@ export async function POST(request: Request): Promise<Response> {
       "storage-write-failed",
       err instanceof Error ? err.message : "Storage write failed",
       500,
+      requestId,
+      err,
     );
   }
 
@@ -252,9 +301,17 @@ export async function POST(request: Request): Promise<Response> {
         ownerAccountId,
       });
       coverRef = put.reference;
-    } catch {
-      // Non-fatal · we persisted the audio · default cover will render.
+    } catch (err) {
+      // Owner-authorised 2026-10-31 (audit finding #8): record a
+      // warning + log the real error server-side so the user is told
+      // about the partial failure instead of silently losing the cover.
       coverRef = null;
+      warnings.push("cover-upload-failed");
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[music-upload] ${requestId} · cover-upload-failed`,
+        err instanceof Error ? err.message : err,
+      );
     }
   }
 
@@ -276,8 +333,16 @@ export async function POST(request: Request): Promise<Response> {
         ownerAccountId,
       });
       backgroundRef = put.reference;
-    } catch {
+    } catch (err) {
+      // Owner-authorised 2026-10-31 (audit finding #8): same partial-
+      // success treatment as the cover above.
       backgroundRef = null;
+      warnings.push("background-upload-failed");
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[music-upload] ${requestId} · background-upload-failed`,
+        err instanceof Error ? err.message : err,
+      );
     }
   }
 
@@ -325,7 +390,14 @@ export async function POST(request: Request): Promise<Response> {
            later via the preview page. */
       }
     }
-    return NextResponse.json({ ok: true, data: { trackId: row.id } });
+    return NextResponse.json({
+      ok: true,
+      requestId,
+      data: {
+        trackId: row.id,
+        warnings: warnings.length > 0 ? warnings : undefined,
+      },
+    });
   } catch (err) {
     // Rollback the storage writes if the row insert failed. This covers
     // both the lock-race QuotaExceededError (finding #9) and any other
@@ -344,12 +416,15 @@ export async function POST(request: Request): Promise<Response> {
         err.kind === "bytes" ? "storage-quota-exceeded" : "track-count-exceeded",
         err.message,
         429,
+      requestId
       );
     }
     return errorJson(
       "unknown",
       err instanceof Error ? err.message : "Could not record track",
       500,
+      requestId,
+      err,
     );
   }
 }
