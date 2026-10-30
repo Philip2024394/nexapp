@@ -1,0 +1,658 @@
+{
+  "schema_version": 1,
+  "source": "nex_migration_history on sealed production project ijvqdvsvwtwxzcqmoqit",
+  "probed_at": "2026-10-30T18:09:53.041Z",
+  "total": 161,
+  "resolution_map": {
+    "187": "187_nex_world_country_us_au_seed.sql",
+    "224": "224_nex_account_is_mock_persona.sql"
+  },
+  "entries": [
+    {
+      "version": "001",
+      "file": "001_nex_migration_history_and_account.sql"
+    },
+    {
+      "version": "002",
+      "file": "002_nex_business.sql"
+    },
+    {
+      "version": "003",
+      "file": "003_nex_product.sql"
+    },
+    {
+      "version": "004",
+      "file": "004_nex_conversation_and_message.sql"
+    },
+    {
+      "version": "005",
+      "file": "005_nex_order.sql"
+    },
+    {
+      "version": "006",
+      "file": "006_nex_ledger.sql"
+    },
+    {
+      "version": "007",
+      "file": "007_nex_order_state_machine.sql"
+    },
+    {
+      "version": "008",
+      "file": "008_nex_ledger_unique_reversal.sql"
+    },
+    {
+      "version": "009",
+      "file": "009_nex_message_immutability.sql"
+    },
+    {
+      "version": "010",
+      "file": "010_nex_rls_recursion_fix.sql"
+    },
+    {
+      "version": "011",
+      "file": "011_nex_generation_job.sql"
+    },
+    {
+      "version": "012",
+      "file": "012_nex_generation_job_atomic_failure.sql"
+    },
+    {
+      "version": "013",
+      "file": "013_nex_account_handle.sql"
+    },
+    {
+      "version": "014",
+      "file": "014_nex_business_profile.sql"
+    },
+    {
+      "version": "015",
+      "file": "015_nex_product_image_url.sql"
+    },
+    {
+      "version": "016",
+      "file": "016_nex_product_gallery.sql"
+    },
+    {
+      "version": "017",
+      "file": "017_nex_product_tags.sql"
+    },
+    {
+      "version": "018",
+      "file": "018_nex_business_payment_offline.sql"
+    },
+    {
+      "version": "019",
+      "file": "019_nex_order_customer_note.sql"
+    },
+    {
+      "version": "020",
+      "file": "020_nex_order_merchant_note.sql"
+    },
+    {
+      "version": "021",
+      "file": "021_nex_account_chat_theme.sql"
+    },
+    {
+      "version": "022",
+      "file": "022_nex_business_status_message.sql"
+    },
+    {
+      "version": "023",
+      "file": "023_nex_product_stock_status.sql"
+    },
+    {
+      "version": "024",
+      "file": "024_nex_account_phone.sql"
+    },
+    {
+      "version": "025",
+      "file": "025_nex_friend_edge.sql"
+    },
+    {
+      "version": "026",
+      "file": "026_nex_business_social_handles.sql"
+    },
+    {
+      "version": "027",
+      "file": "027_nex_business_social_handles_relax.sql"
+    },
+    {
+      "version": "028",
+      "file": "028_nex_banner.sql"
+    },
+    {
+      "version": "029",
+      "file": "029_nex_live_post.sql"
+    },
+    {
+      "version": "030",
+      "file": "030_nex_product_sku.sql"
+    },
+    {
+      "version": "031",
+      "file": "031_nex_business_hours.sql"
+    },
+    {
+      "version": "032",
+      "file": "032_nex_order_tracking.sql"
+    },
+    {
+      "version": "033",
+      "file": "033_nex_account_relationship_prefs.sql"
+    },
+    {
+      "version": "034",
+      "file": "034_nex_friend_edge_blocked.sql"
+    },
+    {
+      "version": "035",
+      "file": "035_nex_product_variant.sql"
+    },
+    {
+      "version": "036",
+      "file": "036_nex_email_marketing.sql"
+    },
+    {
+      "version": "037",
+      "file": "037_nex_email_campaign.sql"
+    },
+    {
+      "version": "038",
+      "file": "038_nex_email_send_log.sql"
+    },
+    {
+      "version": "039",
+      "file": "039_nex_generated_site.sql"
+    },
+    {
+      "version": "040",
+      "file": "040_nex_site_warm_artisan.sql"
+    },
+    {
+      "version": "041",
+      "file": "041_nex_site_sections.sql"
+    },
+    {
+      "version": "042",
+      "file": "042_nex_account_profile.sql"
+    },
+    {
+      "version": "043",
+      "file": "043_nex_webauthn_credential.sql"
+    },
+    {
+      "version": "044",
+      "file": "044_nex_account_profile_kind_reseller.sql"
+    },
+    {
+      "version": "045",
+      "file": "045_nex_account_profile_avatar_url.sql"
+    },
+    {
+      "version": "046",
+      "file": "046_nex_account_tier.sql"
+    },
+    {
+      "version": "047",
+      "file": "047_nex_peer_chat.sql"
+    },
+    {
+      "version": "048",
+      "file": "048_nex_chat_theme.sql"
+    },
+    {
+      "version": "049",
+      "file": "049_nex_chat_theme_hero_bucket.sql"
+    },
+    {
+      "version": "050",
+      "file": "050_nex_chat_theme_rose_default.sql"
+    },
+    {
+      "version": "051",
+      "file": "051_nex_chat_theme_per_element_colors.sql"
+    },
+    {
+      "version": "052",
+      "file": "052_nex_peer_message_reply_to.sql"
+    },
+    {
+      "version": "053",
+      "file": "053_nex_peer_message_delete.sql"
+    },
+    {
+      "version": "054",
+      "file": "054_nex_peer_message_attachments.sql"
+    },
+    {
+      "version": "055",
+      "file": "055_nex_peer_chat_attachments_bucket.sql"
+    },
+    {
+      "version": "056",
+      "file": "056_nex_chat_theme_wallpaper_config.sql"
+    },
+    {
+      "version": "057",
+      "file": "057_nex_chat_theme_theme1.sql"
+    },
+    {
+      "version": "058",
+      "file": "058_nex_chat_theme_theme0.sql"
+    },
+    {
+      "version": "059",
+      "file": "059_nex_peer_message_product_attachment.sql"
+    },
+    {
+      "version": "060",
+      "file": "060_nex_business_market_reach.sql"
+    },
+    {
+      "version": "061",
+      "file": "061_nex_business_seller_details.sql"
+    },
+    {
+      "version": "062",
+      "file": "062_nex_business_tier_reach_lock.sql"
+    },
+    {
+      "version": "063",
+      "file": "063_nex_business_activity.sql"
+    },
+    {
+      "version": "064",
+      "file": "064_nex_product_dispatch_sample_times.sql"
+    },
+    {
+      "version": "065",
+      "file": "065_nex_business_category.sql"
+    },
+    {
+      "version": "066",
+      "file": "066_nex_menu.sql"
+    },
+    {
+      "version": "067",
+      "file": "067_nex_peer_message_menu_item_attachment.sql"
+    },
+    {
+      "version": "068",
+      "file": "068_nex_business_payment_methods.sql"
+    },
+    {
+      "version": "069",
+      "file": "069_nex_account_safe_trade_consent.sql"
+    },
+    {
+      "version": "070",
+      "file": "070_nex_report.sql"
+    },
+    {
+      "version": "071",
+      "file": "071_nex_account_locale.sql"
+    },
+    {
+      "version": "072",
+      "file": "072_nex_business_city_hours_display.sql"
+    },
+    {
+      "version": "073",
+      "file": "073_nex_business_safe_trade_activated.sql"
+    },
+    {
+      "version": "074",
+      "file": "074_nex_liked_product.sql"
+    },
+    {
+      "version": "075",
+      "file": "075_nex_product_spec_and_typed_variants.sql"
+    },
+    {
+      "version": "076",
+      "file": "076_nex_business_return_policy.sql"
+    },
+    {
+      "version": "077",
+      "file": "077_nex_peer_message_cart_order_attachment.sql"
+    },
+    {
+      "version": "079",
+      "file": "079_nex_menu_item_spice_and_perks.sql"
+    },
+    {
+      "version": "080",
+      "file": "080_nex_business_events_and_gallery.sql"
+    },
+    {
+      "version": "081",
+      "file": "081_nex_chat_theme_pink_dream.sql"
+    },
+    {
+      "version": "082",
+      "file": "082_nex_business_location_latlng.sql"
+    },
+    {
+      "version": "083",
+      "file": "083_nex_business_verified.sql"
+    },
+    {
+      "version": "084",
+      "file": "084_nex_official_account.sql"
+    },
+    {
+      "version": "085",
+      "file": "085_nex_chat_theme_layout_style.sql"
+    },
+    {
+      "version": "086",
+      "file": "086_nex_account_profile_daily_activity.sql"
+    },
+    {
+      "version": "087",
+      "file": "087_nex_product_ladder.sql"
+    },
+    {
+      "version": "088",
+      "file": "088_nex_product_share_grant.sql"
+    },
+    {
+      "version": "099",
+      "file": "099_nex_chat_theme_layout_terminal.sql"
+    },
+    {
+      "version": "100",
+      "file": "100_nex_business_cover_layout_id.sql"
+    },
+    {
+      "version": "101",
+      "file": "101_nex_business_social_links.sql"
+    },
+    {
+      "version": "102",
+      "file": "102_bridge99_provisional_state.sql"
+    },
+    {
+      "version": "103",
+      "file": "103_nex_welcome_outbox.sql"
+    },
+    {
+      "version": "104",
+      "file": "104_nex_bridge99_first_message_atomic.sql"
+    },
+    {
+      "version": "105",
+      "file": "105_nex_bridge99_first_send_dedup.sql"
+    },
+    {
+      "version": "106",
+      "file": "106_nex_bridge99_dedup_device_scope.sql"
+    },
+    {
+      "version": "107",
+      "file": "107_nex_product_section.sql"
+    },
+    {
+      "version": "108",
+      "file": "108_nex_business_shipping_scope.sql"
+    },
+    {
+      "version": "109",
+      "file": "109_nex_business_info_pages.sql"
+    },
+    {
+      "version": "110",
+      "file": "110_nex_business_qr_code.sql"
+    },
+    {
+      "version": "111",
+      "file": "111_nex_gallery_image.sql"
+    },
+    {
+      "version": "112",
+      "file": "112_nex_service.sql"
+    },
+    {
+      "version": "113",
+      "file": "113_nex_vertical.sql"
+    },
+    {
+      "version": "114",
+      "file": "114_nex_profession.sql"
+    },
+    {
+      "version": "115",
+      "file": "115_nex_business_profession.sql"
+    },
+    {
+      "version": "116",
+      "file": "116_nex_theme_emoji.sql"
+    },
+    {
+      "version": "118",
+      "file": "118_nex_theme_sticker.sql"
+    },
+    {
+      "version": "119",
+      "file": "119_nex_peer_message_sticker_attachment.sql"
+    },
+    {
+      "version": "120",
+      "file": "120_nex_affiliate_account.sql"
+    },
+    {
+      "version": "121",
+      "file": "121_nex_chat_theme_joker_noir_bubbles.sql"
+    },
+    {
+      "version": "122",
+      "file": "122_nex_product_size_chart.sql"
+    },
+    {
+      "version": "123",
+      "file": "123_nex_color_palette.sql"
+    },
+    {
+      "version": "124",
+      "file": "124_nex_affiliate_marketplace.sql"
+    },
+    {
+      "version": "125",
+      "file": "125_nex_peer_message_link_preview.sql"
+    },
+    {
+      "version": "126",
+      "file": "126_nex_business_profile_and_overrides.sql"
+    },
+    {
+      "version": "127",
+      "file": "127_nex_surface_health_event.sql"
+    },
+    {
+      "version": "128",
+      "file": "128_nex_vault_entry.sql"
+    },
+    {
+      "version": "129",
+      "file": "129_nex_vault_file.sql"
+    },
+    {
+      "version": "130",
+      "file": "130_nex_chat_theme_haunted_hotel.sql"
+    },
+    {
+      "version": "131",
+      "file": "131_nex_call_log.sql"
+    },
+    {
+      "version": "132",
+      "file": "132_nex_call_link.sql"
+    },
+    {
+      "version": "133",
+      "file": "133_nex_group_call.sql"
+    },
+    {
+      "version": "134",
+      "file": "134_nex_account_profile_discoverable.sql"
+    },
+    {
+      "version": "135",
+      "file": "135_nex_theme_intro.sql"
+    },
+    {
+      "version": "136",
+      "file": "136_nex_chat_theme_motorbike_rental.sql"
+    },
+    {
+      "version": "137",
+      "file": "137_nex_chat_theme_vitamins.sql"
+    },
+    {
+      "version": "138",
+      "file": "138_nex_chat_theme_cakes.sql"
+    },
+    {
+      "version": "139",
+      "file": "139_nex_phase_1_security.sql"
+    },
+    {
+      "version": "140",
+      "file": "140_nex_vault_persistence.sql"
+    },
+    {
+      "version": "141",
+      "file": "141_nex_vault_phase_a_schema.sql"
+    },
+    {
+      "version": "142",
+      "file": "142_nex_vault_envelope_tables.sql"
+    },
+    {
+      "version": "144",
+      "file": "144_nex_peer_chat_attachments_bucket_allow_opaque.sql"
+    },
+    {
+      "version": "166",
+      "file": "166_nex_source_registry.sql"
+    },
+    {
+      "version": "167",
+      "file": "167_nex_business_canonical.sql"
+    },
+    {
+      "version": "168",
+      "file": "168_nex_business_canonical_lifecycle.sql"
+    },
+    {
+      "version": "169",
+      "file": "169_nex_legacy_canonical_backfill.sql"
+    },
+    {
+      "version": "170",
+      "file": "170_nex_business_evidence.sql"
+    },
+    {
+      "version": "171",
+      "file": "171_nex_business_evidence_backfill.sql"
+    },
+    {
+      "version": "172",
+      "file": "172_nex_business_freshness_band.sql"
+    },
+    {
+      "version": "173",
+      "file": "173_nex_business_media.sql"
+    },
+    {
+      "version": "174",
+      "file": "174_nex_business_fact_conflict.sql"
+    },
+    {
+      "version": "175",
+      "file": "175_nex_business_directory_v.sql"
+    },
+    {
+      "version": "176",
+      "file": "176_nex_business_claim.sql"
+    },
+    {
+      "version": "177",
+      "file": "177_nex_walker_attribution_unify.sql"
+    },
+    {
+      "version": "178",
+      "file": "178_nex_business_canonical_rich_location.sql"
+    },
+    {
+      "version": "179",
+      "file": "179_nex_source_registry_legacy_food_business.sql"
+    },
+    {
+      "version": "180",
+      "file": "180_nex_source_registry_derived_from.sql"
+    },
+    {
+      "version": "181",
+      "file": "181_nex_business_directory_attribution.sql"
+    },
+    {
+      "version": "182",
+      "file": "182_nex_source_registry_attribution_templates.sql"
+    },
+    {
+      "version": "183",
+      "file": "183_nex_directory_dp3_grant_revoke.sql"
+    },
+    {
+      "version": "185",
+      "file": "185_nex_source_registry_legacy_accommodation.sql"
+    },
+    {
+      "version": "186",
+      "file": "186_nex_source_registry_legacy_service.sql"
+    },
+    {
+      "version": "187",
+      "file": "187_nex_world_country_us_au_seed.sql",
+      "disambiguation_note": "Seed US + AU into nex.world_country"
+    },
+    {
+      "version": "190",
+      "file": "190_nex_harvester_schema_match.sql"
+    },
+    {
+      "version": "198",
+      "file": "198_nex_account_notification_prefs.sql"
+    },
+    {
+      "version": "199",
+      "file": "199_nex_account_chat_privacy_prefs.sql"
+    },
+    {
+      "version": "219",
+      "file": "219_nex_live_session_and_featured_product.sql"
+    },
+    {
+      "version": "220",
+      "file": "220_nex_friend_request_intro_note.sql"
+    },
+    {
+      "version": "221",
+      "file": "221_nex_uploaded_video_is_ai_generated.sql"
+    },
+    {
+      "version": "222",
+      "file": "222_nex_live_engagement.sql"
+    },
+    {
+      "version": "223",
+      "file": "223_nex_uploaded_video.sql"
+    },
+    {
+      "version": "224",
+      "file": "224_nex_account_is_mock_persona.sql",
+      "disambiguation_note": "nex_account.is_mock_persona flag"
+    }
+  ]
+}
