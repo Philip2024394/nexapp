@@ -326,6 +326,115 @@ export async function createProduct(input: NexProductInsert): Promise<NexProduct
   return data as NexProductRow;
 }
 
+/** Owner-authorised 2026-10-30 (Product Upload World-Class brief) ·
+ *  batch update for the shared Edit flow. Writes name/description/
+ *  price/currency/image/stock/spec in a single UPDATE so the Edit
+ *  form behaves atomically (one DB call per save). All fields are
+ *  optional in the patch; only supplied keys are written. Caller
+ *  (updateProductAction) handles session + ownership + Zod validation
+ *  BEFORE this helper runs. */
+export async function updateProductBatch(
+  id: NexUuid,
+  patch: {
+    name?: string;
+    description?: string | null;
+    image_url?: string | null;
+    gallery_urls?: string[] | null;
+    tags?: string[] | null;
+    sku?: string | null;
+    stock_status?: NexProductStockStatus | null;
+    price_pence?: number;
+    currency?: string;
+    status?: NexProductStatus;
+    department_id?: string;
+    category_id?: string;
+    spec?: NexProductSpec;
+  },
+): Promise<NexProductRow> {
+  const update: Record<string, unknown> = {};
+  if (patch.name !== undefined) {
+    const name = patch.name.trim();
+    if (name.length === 0 || name.length > 240) {
+      throw new Error(`product-service.updateProductBatch: name must be 1..240 chars`);
+    }
+    update.name = name;
+  }
+  if (patch.description !== undefined) {
+    if (patch.description === null) {
+      update.description = null;
+    } else {
+      const v = patch.description.trim();
+      if (v.length > 2000) {
+        throw new Error(`product-service.updateProductBatch: description max 2000 chars`);
+      }
+      update.description = v.length > 0 ? v : null;
+    }
+  }
+  if (patch.image_url !== undefined) {
+    if (patch.image_url === null) {
+      update.image_url = null;
+    } else {
+      const v = patch.image_url.trim();
+      if (v.length === 0) update.image_url = null;
+      else if (v.length > 1024) {
+        throw new Error(`product-service.updateProductBatch: image_url max 1024 chars`);
+      } else if (!/^https?:\/\//i.test(v)) {
+        throw new Error(`product-service.updateProductBatch: image_url must start with http:// or https://`);
+      } else {
+        update.image_url = v;
+      }
+    }
+  }
+  if (patch.gallery_urls !== undefined) {
+    update.gallery_urls = patch.gallery_urls && patch.gallery_urls.length > 0 ? patch.gallery_urls : null;
+  }
+  if (patch.tags !== undefined) {
+    update.tags = patch.tags && patch.tags.length > 0 ? patch.tags : null;
+  }
+  if (patch.sku !== undefined) {
+    update.sku = patch.sku;
+  }
+  if (patch.stock_status !== undefined) {
+    if (patch.stock_status !== null && !NEX_PRODUCT_STOCK_STATUSES.includes(patch.stock_status)) {
+      throw new Error(`product-service.updateProductBatch: unknown stock_status '${patch.stock_status}'`);
+    }
+    update.stock_status = patch.stock_status;
+  }
+  if (patch.price_pence !== undefined) {
+    if (!Number.isInteger(patch.price_pence) || patch.price_pence < 0) {
+      throw new Error(`product-service.updateProductBatch: price_pence must be a non-negative integer`);
+    }
+    update.price_pence = patch.price_pence;
+  }
+  if (patch.currency !== undefined) {
+    if (!/^[A-Z]{3}$/.test(patch.currency)) {
+      throw new Error(`product-service.updateProductBatch: currency must be ISO 4217 3-letter`);
+    }
+    update.currency = patch.currency;
+  }
+  if (patch.status !== undefined) {
+    update.status = patch.status;
+  }
+  if (patch.department_id !== undefined) update.department_id = patch.department_id;
+  if (patch.category_id !== undefined) update.category_id = patch.category_id;
+  if (patch.spec !== undefined) update.spec = normaliseSpec(patch.spec);
+  if (Object.keys(update).length === 0) {
+    throw new Error(`product-service.updateProductBatch: empty patch`);
+  }
+  const { data, error } = await nexSupabaseAdmin
+    .from("nex_product")
+    .update(update)
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error || !data) {
+    throw new Error(
+      `product-service.updateProductBatch: ${error?.message ?? "no row returned"}`,
+    );
+  }
+  return data as NexProductRow;
+}
+
 /** Bridge 13c · update the buyer-facing turnaround texts on a single
  *  product. Empty string clears the value · service treats "" as
  *  NULL so seller edits behave intuitively. */
