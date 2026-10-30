@@ -2,23 +2,25 @@
 
 // src/components/nex-native/product-create/ColorsEditor.tsx
 //
-// Owner-authorised 2026-10-31. Colour-variant editor with:
-//   · 24-swatch standard palette (quick-pick strip)
-//   · Native <input type="color"> hex picker (fallback: text #RRGGBB)
-//   · Per-colour row with name + hex + image upload + price override
-//   · Image upload reuses the shared /api/nex-native/product/upload-image
-//     route (same bucket + ownership gates as the main gallery)
+// Owner-authorised 2026-10-31 (initial) + 2026-10-31 (redesign).
 //
-// Progressive disclosure within each row: when the seller provides an
-// image, the thumbnail replaces the hex swatch so they can see at a
-// glance that this colour will render as an image on the shop surface.
-// When no image is provided, the hex swatch remains as the visual
-// anchor.
+// Owner feedback: "Variants we need redesign i am confused when i
+// select color nothing happens." Previous version had 28×28 palette
+// swatches and dropped a dense 4-field form below on each tap · easy
+// to miss, easy to misread.
 //
-// Compliance posture:
-//   · Image + colour name + hex are seller-declared. NEX does not
-//     verify colour accuracy or that the image depicts the labelled
-//     colour.
+// New shape (seller-first):
+//   · Big 44×44 tappable swatches arranged in a wrapping grid · tap
+//     toggles selection with instant visual confirmation (border +
+//     check mark + name chip).
+//   · Below the palette: a native colour picker + "Add" for custom
+//     hex colours that aren't in the standard set.
+//   · Below that: "Your colours (N)" section with a VISUAL CARD per
+//     selected colour · circle swatch (or image thumbnail if uploaded)
+//     + colour name + three plain action buttons: "+ Image", "+ Price",
+//     "× Remove". Price input only appears after "+ Price" is tapped.
+//
+// Image upload path and data contract unchanged.
 
 import * as React from "react";
 import {
@@ -29,6 +31,7 @@ import { NEX_FONT_SANS } from "@/lib/nex-native/design-tokens";
 
 const INK = "#102033";
 const INK_DIM = "#4A6080";
+const INK_MUTE = "#8BA9D1";
 const ACCENT = "#00AFFF";
 const RIM = "rgba(0, 175, 255, 0.18)";
 const BG = "#FFFFFF";
@@ -38,9 +41,9 @@ export const COLORS_MAX_ENTRIES = 20;
 
 export interface ColorEntryDraft {
   readonly name: string;
-  readonly hex: string;           // normalised #RRGGBB uppercase
-  readonly priceMajor: string;    // optional override (major currency string)
-  readonly imageUrl: string;      // optional
+  readonly hex: string;        // normalised #RRGGBB uppercase
+  readonly priceMajor: string; // optional override · "" = base price
+  readonly imageUrl: string;   // optional
 }
 
 export interface ColorsEditorValue {
@@ -48,8 +51,6 @@ export interface ColorsEditorValue {
 }
 
 export const EMPTY_COLORS: ColorsEditorValue = { entries: [] };
-
-const EMPTY_ENTRY: ColorEntryDraft = { name: "", hex: "#000000", priceMajor: "", imageUrl: "" };
 
 export interface ColorsEditorProps {
   readonly value: ColorsEditorValue;
@@ -60,41 +61,49 @@ export interface ColorsEditorProps {
 
 export function ColorsEditor({ value, onChange, businessId, baseCurrency }: ColorsEditorProps): React.JSX.Element {
   const [uploadError, setUploadError] = React.useState<string | null>(null);
-  const [uploadingIndex, setUploadingIndex] = React.useState<number | null>(null);
+  const [uploadingHex, setUploadingHex] = React.useState<string | null>(null);
   const atCap = value.entries.length >= COLORS_MAX_ENTRIES;
 
-  const addEntry = (seed?: Partial<ColorEntryDraft>) => {
+  const setEntries = (next: readonly ColorEntryDraft[]) => onChange({ entries: next });
+
+  const toggleStandard = (swatch: { name: string; hex: string }) => {
+    const idx = value.entries.findIndex((e) => e.hex === swatch.hex);
+    if (idx >= 0) {
+      // Already selected → remove it (toggle off)
+      setEntries(value.entries.filter((_, i) => i !== idx));
+      return;
+    }
     if (atCap) return;
-    onChange({ entries: [...value.entries, { ...EMPTY_ENTRY, ...seed }] });
-  };
-  const updateAt = (i: number, next: ColorEntryDraft) => {
-    const copy = [...value.entries];
-    copy[i] = next;
-    onChange({ entries: copy });
-  };
-  const removeAt = (i: number) => {
-    onChange({ entries: value.entries.filter((_, idx) => idx !== i) });
-  };
-  const moveUp = (i: number) => {
-    if (i <= 0) return;
-    const copy = [...value.entries];
-    [copy[i - 1], copy[i]] = [copy[i], copy[i - 1]!];
-    onChange({ entries: copy });
-  };
-  const moveDown = (i: number) => {
-    if (i >= value.entries.length - 1) return;
-    const copy = [...value.entries];
-    [copy[i], copy[i + 1]] = [copy[i + 1], copy[i]!];
-    onChange({ entries: copy });
+    setEntries([
+      ...value.entries,
+      { name: swatch.name, hex: swatch.hex, priceMajor: "", imageUrl: "" },
+    ]);
   };
 
-  const uploadFileFor = async (i: number, file: File) => {
+  const addCustom = (hex: string, name: string) => {
+    if (atCap) return;
+    if (value.entries.some((e) => e.hex === hex)) return;
+    setEntries([
+      ...value.entries,
+      { name: name.trim() || "Custom", hex, priceMajor: "", imageUrl: "" },
+    ]);
+  };
+
+  const updateEntry = (hex: string, patch: Partial<ColorEntryDraft>) => {
+    setEntries(value.entries.map((e) => (e.hex === hex ? { ...e, ...patch } : e)));
+  };
+
+  const removeEntry = (hex: string) => {
+    setEntries(value.entries.filter((e) => e.hex !== hex));
+  };
+
+  const uploadImageFor = async (hex: string, file: File) => {
     if (!businessId) {
       setUploadError("Pick a business first before uploading colour images.");
       return;
     }
-    setUploadingIndex(i);
     setUploadError(null);
+    setUploadingHex(hex);
     try {
       const form = new FormData();
       form.set("business_id", businessId);
@@ -113,22 +122,18 @@ export function ColorsEditor({ value, onChange, businessId, baseCurrency }: Colo
         setUploadError(`Upload failed · ${code}: ${message}`);
         return;
       }
-      updateAt(i, { ...value.entries[i]!, imageUrl: json.data.url });
+      updateEntry(hex, { imageUrl: json.data.url });
     } catch (e) {
       setUploadError(`Upload failed · ${e instanceof Error ? e.message : String(e)}`);
     } finally {
-      setUploadingIndex(null);
+      setUploadingHex(null);
     }
   };
 
-  const pickStandard = (swatch: { name: string; hex: string }) => {
-    const existingIdx = value.entries.findIndex((e) => e.hex === swatch.hex);
-    if (existingIdx >= 0) return; // already in list
-    addEntry({ name: swatch.name, hex: swatch.hex });
-  };
+  const selectedHexSet = new Set(value.entries.map((e) => e.hex));
 
   return (
-    <section aria-labelledby="nex-colors-heading" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <section aria-labelledby="nex-colors-heading" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div>
         <h2 id="nex-colors-heading" style={{ fontSize: 15, fontWeight: 800, margin: 0, color: INK }}>
           Colour variants
@@ -136,66 +141,100 @@ export function ColorsEditor({ value, onChange, businessId, baseCurrency }: Colo
             {value.entries.length}/{COLORS_MAX_ENTRIES}
           </span>
         </h2>
-        <p style={{ fontSize: 12, color: INK_DIM, margin: "4px 0 0", lineHeight: 1.5 }}>
-          Pick from the standard palette, or pick a custom colour. Add an image per colour to show it as a thumbnail — leave blank to show the colour circle. Add a price override to charge differently for this colour.
+        <p style={{ fontSize: 11.5, color: INK_DIM, margin: "4px 0 0", lineHeight: 1.5 }}>
+          Tap a colour below to add it. Then add an image or a price override per colour (both optional).
         </p>
       </div>
 
-      {/* Standard palette strip */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-        {STANDARD_COLOR_PALETTE.map((s) => {
-          const already = value.entries.some((e) => e.hex === s.hex);
-          return (
-            <button
-              key={s.hex}
-              type="button"
-              onClick={() => pickStandard(s)}
-              aria-label={`Add ${s.name}`}
-              title={`${s.name} ${s.hex}`}
-              disabled={already || atCap}
-              style={{
-                position: "relative",
-                width: 28,
-                height: 28,
-                padding: 0,
-                borderRadius: "50%",
-                background: s.hex,
-                border: `1.5px solid ${already ? ACCENT : "rgba(16,32,51,0.14)"}`,
-                cursor: already || atCap ? "default" : "pointer",
-                opacity: atCap ? 0.4 : 1,
-                boxShadow: already ? `0 0 0 1.5px rgba(0,175,255,0.3)` : "none",
-              }}
-            >
-              {already ? (
+      {/* ── Standard palette (big swatches, instant feedback) ───── */}
+      <div style={blockStyle}>
+        <h3 style={subHeadingStyle}>Standard colours</h3>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(44px, 1fr))",
+            gap: 8,
+          }}
+        >
+          {STANDARD_COLOR_PALETTE.map((s) => {
+            const selected = selectedHexSet.has(s.hex);
+            return (
+              <button
+                key={s.hex}
+                type="button"
+                onClick={() => toggleStandard(s)}
+                aria-pressed={selected}
+                aria-label={`${selected ? "Remove" : "Add"} ${s.name}`}
+                title={`${s.name} ${s.hex}`}
+                disabled={!selected && atCap}
+                style={{
+                  position: "relative",
+                  width: "100%",
+                  aspectRatio: "1 / 1",
+                  padding: 0,
+                  borderRadius: 12,
+                  background: s.hex,
+                  border: selected ? `3px solid ${ACCENT}` : `2px solid rgba(16,32,51,0.18)`,
+                  cursor: !selected && atCap ? "not-allowed" : "pointer",
+                  opacity: !selected && atCap ? 0.4 : 1,
+                  boxShadow: selected ? `0 0 0 2px rgba(0,175,255,0.25)` : "none",
+                  transition: "border 100ms, box-shadow 100ms",
+                }}
+              >
+                {selected ? (
+                  <span
+                    aria-hidden
+                    style={{
+                      position: "absolute",
+                      top: 2,
+                      right: 2,
+                      width: 18,
+                      height: 18,
+                      borderRadius: "50%",
+                      background: ACCENT,
+                      color: "#031018",
+                      fontSize: 11,
+                      fontWeight: 900,
+                      lineHeight: "18px",
+                      textAlign: "center",
+                      border: "2px solid #FFFFFF",
+                    }}
+                  >
+                    ✓
+                  </span>
+                ) : null}
                 <span
                   aria-hidden
                   style={{
                     position: "absolute",
-                    inset: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: luminance(s.hex) > 0.6 ? "#102033" : "#FFFFFF",
-                    fontWeight: 900,
-                    fontSize: 14,
-                    pointerEvents: "none",
+                    bottom: -16,
+                    left: 0,
+                    right: 0,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: INK_DIM,
+                    textAlign: "center",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
                   }}
                 >
-                  ✓
+                  {s.name}
                 </span>
-              ) : null}
-            </button>
-          );
-        })}
+              </button>
+            );
+          })}
+        </div>
+        {/* bottom-space so the name labels under swatches don't overlap the next block */}
+        <div style={{ height: 10 }} />
       </div>
 
-      {/* Custom-colour picker */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <CustomHexPicker onPick={(hex, name) => addEntry({ hex, name })} disabled={atCap} />
-        {atCap ? (
-          <span style={{ fontSize: 11, color: INK_DIM, fontStyle: "italic" }}>Palette is at the {COLORS_MAX_ENTRIES} colour cap.</span>
-        ) : null}
-      </div>
+      {/* ── Custom colour picker ─────────────────────────────────── */}
+      <CustomColourPicker
+        disabled={atCap}
+        selectedHexes={selectedHexSet}
+        onAdd={addCustom}
+      />
 
       {uploadError ? (
         <div role="alert" style={{ padding: "8px 12px", borderRadius: 8, background: "rgba(200,16,46,0.08)", color: RED, fontSize: 12, fontWeight: 700 }}>
@@ -203,290 +242,307 @@ export function ColorsEditor({ value, onChange, businessId, baseCurrency }: Colo
         </div>
       ) : null}
 
-      {/* Picked rows */}
+      {/* ── Selected colours · one card per entry ────────────────── */}
       {value.entries.length === 0 ? (
-        <div style={emptyStyle}>No colours yet. Pick from the palette above or add a custom one.</div>
+        <div style={emptyStyle}>
+          <strong style={{ color: INK }}>No colours selected yet.</strong>
+          <br />
+          Tap a swatch above to add it.
+        </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {value.entries.map((entry, i) => (
-            <ColorRow
-              key={`${entry.hex}-${i}`}
-              value={entry}
-              index={i}
-              total={value.entries.length}
-              baseCurrency={baseCurrency}
-              uploading={uploadingIndex === i}
-              onChange={(next) => updateAt(i, next)}
-              onRemove={() => removeAt(i)}
-              onMoveUp={() => moveUp(i)}
-              onMoveDown={() => moveDown(i)}
-              onPickFile={(file) => void uploadFileFor(i, file)}
-            />
-          ))}
+        <div style={blockStyle}>
+          <h3 style={subHeadingStyle}>Your selected colours · {value.entries.length}</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {value.entries.map((e) => (
+              <ColorCard
+                key={e.hex}
+                entry={e}
+                baseCurrency={baseCurrency}
+                uploading={uploadingHex === e.hex}
+                onPickFile={(file) => void uploadImageFor(e.hex, file)}
+                onClearImage={() => updateEntry(e.hex, { imageUrl: "" })}
+                onPriceChange={(v) => updateEntry(e.hex, { priceMajor: v })}
+                onRename={(v) => updateEntry(e.hex, { name: v })}
+                onRemove={() => removeEntry(e.hex)}
+              />
+            ))}
+          </div>
         </div>
       )}
     </section>
   );
 }
 
-function CustomHexPicker(props: { onPick: (hex: string, name: string) => void; disabled: boolean }): React.JSX.Element {
-  const [hex, setHex] = React.useState<string>("#102033");
-  const [name, setName] = React.useState<string>("");
-  const canAdd = !props.disabled && name.trim().length > 0 && /^#[0-9A-Fa-f]{6}$/.test(hex);
+function CustomColourPicker(props: {
+  disabled: boolean;
+  selectedHexes: Set<string>;
+  onAdd: (hex: string, name: string) => void;
+}): React.JSX.Element {
+  const [hex, setHex] = React.useState("#102033");
+  const [name, setName] = React.useState("");
+
+  const normalisedHex = normaliseHex(hex) ?? hex;
+  const canAdd =
+    !props.disabled
+    && name.trim().length > 0
+    && /^#[0-9A-Fa-f]{6}$/.test(normalisedHex)
+    && !props.selectedHexes.has(normalisedHex);
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: 8, border: `1.5px solid ${RIM}`, borderRadius: 10, background: BG }}>
-      <input
-        type="color"
-        value={hex}
-        onChange={(e) => setHex(e.target.value.toUpperCase())}
-        disabled={props.disabled}
-        aria-label="Pick custom colour"
-        style={{ width: 36, height: 36, border: "none", background: "transparent", cursor: props.disabled ? "not-allowed" : "pointer", padding: 0 }}
-      />
-      <input
-        type="text"
-        value={hex}
-        onChange={(e) => {
-          const normalised = normaliseHex(e.target.value);
-          if (normalised) setHex(normalised);
-          else setHex(e.target.value);
-        }}
-        placeholder="#RRGGBB"
-        maxLength={7}
-        disabled={props.disabled}
-        style={{ width: 90, padding: "6px 8px", borderRadius: 6, border: `1px solid ${RIM}`, fontSize: 12, fontFamily: "monospace" }}
-      />
-      <input
-        type="text"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="Colour name"
-        maxLength={60}
-        disabled={props.disabled}
-        style={{ width: 140, padding: "6px 8px", borderRadius: 6, border: `1px solid ${RIM}`, fontSize: 12, fontFamily: NEX_FONT_SANS }}
-      />
-      <button
-        type="button"
-        onClick={() => {
-          if (!canAdd) return;
-          const final = normaliseHex(hex) ?? hex;
-          props.onPick(final, name.trim());
-          setName("");
-        }}
-        disabled={!canAdd}
-        style={{
-          padding: "6px 12px",
-          borderRadius: 999,
-          border: `1.5px solid ${ACCENT}`,
-          background: canAdd ? ACCENT : "transparent",
-          color: canAdd ? "#031018" : ACCENT,
-          fontWeight: 800,
-          fontSize: 12,
-          cursor: canAdd ? "pointer" : "not-allowed",
-          opacity: canAdd ? 1 : 0.5,
-        }}
-      >
-        + Add
-      </button>
+    <div style={blockStyle}>
+      <h3 style={subHeadingStyle}>Not in the palette? Pick a custom colour</h3>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+        <input
+          type="color"
+          value={hex}
+          onChange={(e) => setHex(e.target.value.toUpperCase())}
+          disabled={props.disabled}
+          aria-label="Custom colour picker"
+          style={{
+            width: 44,
+            height: 44,
+            padding: 0,
+            border: "none",
+            background: "transparent",
+            cursor: props.disabled ? "not-allowed" : "pointer",
+          }}
+        />
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Colour name (required)"
+          maxLength={60}
+          disabled={props.disabled}
+          style={textInputStyle}
+        />
+        <button
+          type="button"
+          onClick={() => {
+            if (!canAdd) return;
+            props.onAdd(normalisedHex, name.trim());
+            setName("");
+          }}
+          disabled={!canAdd}
+          style={{
+            padding: "9px 16px",
+            borderRadius: 999,
+            border: `1.5px solid ${ACCENT}`,
+            background: canAdd ? ACCENT : "transparent",
+            color: canAdd ? "#031018" : ACCENT,
+            fontWeight: 800,
+            fontSize: 13,
+            cursor: canAdd ? "pointer" : "not-allowed",
+            opacity: canAdd ? 1 : 0.5,
+            fontFamily: NEX_FONT_SANS,
+          }}
+        >
+          + Add
+        </button>
+      </div>
     </div>
   );
 }
 
-function ColorRow(props: {
-  readonly value: ColorEntryDraft;
-  readonly index: number;
-  readonly total: number;
-  readonly baseCurrency?: string;
-  readonly uploading: boolean;
-  readonly onChange: (next: ColorEntryDraft) => void;
-  readonly onRemove: () => void;
-  readonly onMoveUp: () => void;
-  readonly onMoveDown: () => void;
-  readonly onPickFile: (file: File) => void;
+function ColorCard(props: {
+  entry: ColorEntryDraft;
+  baseCurrency?: string;
+  uploading: boolean;
+  onPickFile: (file: File) => void;
+  onClearImage: () => void;
+  onPriceChange: (v: string) => void;
+  onRename: (v: string) => void;
+  onRemove: () => void;
 }): React.JSX.Element {
-  const { value, index, total, uploading, onChange, onRemove, onMoveUp, onMoveDown, onPickFile } = props;
-  const set = <K extends keyof ColorEntryDraft>(k: K, v: ColorEntryDraft[K]) => onChange({ ...value, [k]: v });
+  const { entry, baseCurrency, uploading } = props;
+  const hasImage = entry.imageUrl.trim().length > 0;
+  const hasPrice = entry.priceMajor.trim().length > 0;
+  const [editingPrice, setEditingPrice] = React.useState(hasPrice);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   return (
     <div
       style={{
         padding: 10,
-        borderRadius: 10,
+        borderRadius: 12,
         border: `1.5px solid ${RIM}`,
         background: BG,
         display: "grid",
-        gridTemplateColumns: "28px 56px 1fr auto",
-        gap: 10,
+        gridTemplateColumns: "72px 1fr auto",
+        gap: 12,
         alignItems: "center",
       }}
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        <button type="button" onClick={onMoveUp} disabled={index === 0} aria-label="Move up" style={arrowStyle(index === 0)}>▲</button>
-        <button type="button" onClick={onMoveDown} disabled={index === total - 1} aria-label="Move down" style={arrowStyle(index === total - 1)}>▼</button>
-      </div>
+      {/* 72px preview · image if uploaded, otherwise a hex circle */}
       <div
         style={{
-          width: 56,
-          height: 56,
-          borderRadius: value.imageUrl ? 8 : "50%",
-          background: value.imageUrl ? `url(${value.imageUrl}) center/cover` : value.hex,
-          border: `1.5px solid rgba(16,32,51,0.12)`,
+          width: 72,
+          height: 72,
+          borderRadius: hasImage ? 10 : "50%",
+          background: hasImage ? `url(${entry.imageUrl}) center/cover` : entry.hex,
+          border: `1.5px solid rgba(16,32,51,0.14)`,
+          flexShrink: 0,
         }}
-        aria-label={value.imageUrl ? `${value.name} image preview` : `${value.name} ${value.hex}`}
+        aria-label={hasImage ? `${entry.name} image` : `${entry.name} ${entry.hex}`}
       />
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, minWidth: 0 }}>
-        <Field label="Colour name">
-          <input type="text" value={value.name} onChange={(e) => set("name", e.target.value)} maxLength={60} style={inputStyle} />
-        </Field>
-        <Field label="Hex">
-          <input
-            type="text"
-            value={value.hex}
-            onChange={(e) => {
-              const n = normaliseHex(e.target.value);
-              set("hex", n ?? e.target.value);
-            }}
-            maxLength={7}
-            style={{ ...inputStyle, fontFamily: "monospace" }}
-          />
-        </Field>
-        <Field label={`Price override (${props.baseCurrency ?? "base"})`}>
-          <input
-            type="number"
-            value={value.priceMajor}
-            onChange={(e) => set("priceMajor", e.target.value)}
-            min={0}
-            step="0.01"
-            placeholder="leave blank = base price"
-            style={inputStyle}
-          />
-        </Field>
-        <Field label="Image for this colour">
-          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) onPickFile(f);
-                if (fileInputRef.current) fileInputRef.current.value = "";
-              }}
-              style={{ display: "none" }}
-            />
+
+      {/* Middle column · name + status + actions */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+        <input
+          type="text"
+          value={entry.name}
+          onChange={(e) => props.onRename(e.target.value)}
+          maxLength={60}
+          style={{ ...textInputStyle, fontWeight: 800, fontSize: 14, padding: "6px 10px" }}
+        />
+        <div style={{ fontSize: 11.5, color: INK_DIM }}>
+          {hasImage ? "Image uploaded" : "Shows as colour circle"}
+          {hasPrice ? ` · override ${baseCurrency ?? ""} ${entry.priceMajor}` : " · base price"}
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) props.onPickFile(f);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+          }}
+          style={{ display: "none" }}
+        />
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            style={pillBtn(ACCENT, "rgba(0,175,255,0.08)", uploading)}
+          >
+            {uploading ? "Uploading…" : hasImage ? "Replace image" : "+ Image"}
+          </button>
+          {hasImage ? (
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              style={smallBtnStyle(ACCENT, "rgba(0,175,255,0.08)")}
+              onClick={props.onClearImage}
+              style={pillBtn(INK_DIM, "transparent", false)}
             >
-              {uploading ? "Uploading…" : value.imageUrl ? "Replace" : "Upload"}
+              Clear image
             </button>
-            {value.imageUrl ? (
-              <button
-                type="button"
-                onClick={() => set("imageUrl", "")}
-                style={smallBtnStyle(RED, "transparent")}
-              >
-                Clear
-              </button>
-            ) : null}
-          </div>
-        </Field>
+          ) : null}
+          {!editingPrice ? (
+            <button
+              type="button"
+              onClick={() => setEditingPrice(true)}
+              style={pillBtn(ACCENT, "rgba(0,175,255,0.08)", false)}
+            >
+              + Price
+            </button>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ fontSize: 11, color: INK_DIM, fontWeight: 700 }}>{baseCurrency ?? "Price"}</span>
+              <input
+                type="number"
+                value={entry.priceMajor}
+                onChange={(e) => props.onPriceChange(e.target.value)}
+                min={0}
+                step="0.01"
+                placeholder="override"
+                style={{ ...textInputStyle, width: 110, padding: "6px 8px", fontSize: 12 }}
+              />
+              {hasPrice ? (
+                <button
+                  type="button"
+                  onClick={() => { props.onPriceChange(""); setEditingPrice(false); }}
+                  style={pillBtn(INK_DIM, "transparent", false)}
+                >
+                  Clear
+                </button>
+              ) : null}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* × remove pin */}
       <button
         type="button"
-        onClick={onRemove}
-        aria-label="Remove colour"
+        onClick={props.onRemove}
+        aria-label={`Remove ${entry.name}`}
         style={{
-          padding: "8px 10px",
-          borderRadius: 999,
-          border: `1.5px solid rgba(200,16,46,0.35)`,
-          background: "transparent",
+          width: 28,
+          height: 28,
+          padding: 0,
+          borderRadius: "50%",
+          border: "none",
+          background: "rgba(200,16,46,0.1)",
           color: RED,
-          fontWeight: 800,
-          fontSize: 11,
+          fontSize: 16,
+          fontWeight: 900,
           cursor: "pointer",
-          fontFamily: NEX_FONT_SANS,
-          whiteSpace: "nowrap",
+          lineHeight: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
-        Remove
+        ×
       </button>
     </div>
   );
 }
 
-function Field(props: { label: string; children: React.ReactNode }): React.JSX.Element {
-  return (
-    <label style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      <span style={{ fontSize: 10, fontWeight: 700, color: INK_DIM, textTransform: "uppercase", letterSpacing: "0.04em" }}>{props.label}</span>
-      {props.children}
-    </label>
-  );
-}
-
-function arrowStyle(disabled: boolean): React.CSSProperties {
+const blockStyle: React.CSSProperties = {
+  padding: 12,
+  borderRadius: 12,
+  border: `1.5px solid ${RIM}`,
+  background: BG,
+  display: "flex",
+  flexDirection: "column",
+  gap: 10,
+};
+const subHeadingStyle: React.CSSProperties = {
+  fontSize: 12,
+  fontWeight: 800,
+  margin: 0,
+  color: INK_DIM,
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+};
+const textInputStyle: React.CSSProperties = {
+  padding: "8px 10px",
+  borderRadius: 8,
+  border: `1.5px solid ${RIM}`,
+  background: BG,
+  color: INK,
+  fontSize: 13,
+  outline: "none",
+  flex: "1 1 160px",
+  minWidth: 100,
+  boxSizing: "border-box",
+  fontFamily: NEX_FONT_SANS,
+};
+const emptyStyle: React.CSSProperties = {
+  padding: "14px 16px",
+  borderRadius: 10,
+  border: `2px dashed rgba(0, 175, 255, 0.35)`,
+  color: INK_MUTE,
+  fontSize: 12.5,
+  textAlign: "center",
+  lineHeight: 1.6,
+};
+function pillBtn(color: string, bg: string, disabled: boolean): React.CSSProperties {
   return {
-    width: 24,
-    height: 20,
-    padding: 0,
-    borderRadius: 4,
-    border: `1px solid ${RIM}`,
-    background: disabled ? "rgba(74,96,128,0.05)" : BG,
-    color: disabled ? INK_DIM : INK,
-    fontSize: 10,
-    lineHeight: 1,
-    cursor: disabled ? "not-allowed" : "pointer",
-    opacity: disabled ? 0.4 : 1,
-  };
-}
-
-function smallBtnStyle(color: string, bg: string): React.CSSProperties {
-  return {
-    padding: "5px 10px",
+    padding: "6px 12px",
     borderRadius: 999,
     border: `1.5px solid ${color}`,
     background: bg,
     color,
     fontWeight: 800,
-    fontSize: 10.5,
-    cursor: "pointer",
+    fontSize: 11,
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.5 : 1,
     fontFamily: NEX_FONT_SANS,
     whiteSpace: "nowrap",
   };
-}
-
-const inputStyle: React.CSSProperties = {
-  padding: "6px 8px",
-  borderRadius: 6,
-  border: `1.5px solid ${RIM}`,
-  background: BG,
-  color: INK,
-  fontSize: 12,
-  outline: "none",
-  width: "100%",
-  boxSizing: "border-box",
-  fontFamily: NEX_FONT_SANS,
-};
-
-const emptyStyle: React.CSSProperties = {
-  padding: "10px 12px",
-  borderRadius: 8,
-  border: `1.5px dashed ${RIM}`,
-  color: INK_DIM,
-  fontSize: 12,
-  fontStyle: "italic",
-};
-
-/** Relative-luminance approximation for pick-contrast on the ✓ check.
- *  Not WCAG-grade; just enough to pick a light vs dark glyph colour. */
-function luminance(hex: string): number {
-  const n = hex.replace("#", "");
-  const r = parseInt(n.slice(0, 2), 16) / 255;
-  const g = parseInt(n.slice(2, 4), 16) / 255;
-  const b = parseInt(n.slice(4, 6), 16) / 255;
-  return 0.299 * r + 0.587 * g + 0.114 * b;
 }
