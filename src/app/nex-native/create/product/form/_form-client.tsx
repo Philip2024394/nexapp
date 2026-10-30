@@ -22,6 +22,10 @@ import {
   type MarketSelectorValue,
 } from "@/components/nex-native/product-create/MarketSelector";
 import { ImageGallerySection } from "@/components/nex-native/product-create/ImageGallerySection";
+import {
+  VariantsBuilder,
+  type VariantDraft,
+} from "@/components/nex-native/product-create/VariantsBuilder";
 import { createProductAction } from "@/app/nex-native/create/product/_actions";
 import type { SpecFieldConfig } from "@/lib/nex-native/catalogue/specs/types";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
@@ -70,6 +74,7 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
   const [spec, setSpec] = React.useState<Record<string, unknown>>({});
   const [market, setMarket] = React.useState<MarketSelectorValue>(EMPTY_MARKET_VALUE);
   const [gallery, setGallery] = React.useState<readonly string[]>([]);
+  const [variants, setVariants] = React.useState<readonly VariantDraft[]>([]);
   const [submitting, setSubmitting] = React.useState<null | "draft" | "live">(null);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -98,6 +103,7 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
         spec,
         market: toMarketPayload(market),
         status: publishLive ? "live" : "draft",
+        variants: toVariantPayload(variants),
       });
       if (!result.ok) {
         setError(`${result.code}: ${result.message}`);
@@ -186,6 +192,9 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
           </Field>
           <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
             <ImageGallerySection value={gallery} onChange={setGallery} />
+          </div>
+          <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
+            <VariantsBuilder value={variants} onChange={setVariants} />
           </div>
           <Field label="Stock status">
             <select
@@ -328,6 +337,31 @@ function toMarketPayload(v: MarketSelectorValue): {
     payload.export = cleanExport(v.export);
   }
   return payload;
+}
+
+/** Convert local VariantDraft rows to the server-side payload shape.
+ *  Drops blank-name rows silently (seller may have hit "+ Add variant"
+ *  without filling the row). Empty axis + empty stock + empty price
+ *  all map to null on the server. */
+function toVariantPayload(drafts: readonly VariantDraft[]) {
+  return drafts
+    .filter((d) => d.name.trim().length > 0)
+    .map((d, i) => {
+      const priceRaw = d.priceMajor.trim();
+      const priceNum = priceRaw === "" ? null : Number(priceRaw);
+      const price_pence =
+        priceNum !== null && Number.isFinite(priceNum) && priceNum >= 0
+          ? Math.round(priceNum * 100)
+          : null;
+      return {
+        existingId: d.existingId,
+        name: d.name.trim(),
+        attribute: d.axis === "" ? null : d.axis,
+        price_pence,
+        stock_status: d.stock === "" ? null : d.stock,
+        position: i,
+      };
+    });
 }
 
 function Field(props: { label: string; required?: boolean; children: React.ReactNode }): React.JSX.Element {

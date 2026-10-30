@@ -32,7 +32,17 @@ import {
   type Market,
 } from "@/lib/nex-native/catalogue/market-spec";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
-import type { NexProductStatus, NexProductStockStatus } from "@/lib/nex-native/types";
+import type { NexProductStatus, NexProductStockStatus, NexVariantAttribute } from "@/lib/nex-native/types";
+import { NEX_VARIANT_ATTRIBUTES, NEX_PRODUCT_STOCK_STATUSES } from "@/lib/nex-native/types";
+
+export interface UpdateProductVariantPayload {
+  readonly existingId?: string;
+  readonly name: string;
+  readonly attribute: string | null;
+  readonly price_pence?: number | null;
+  readonly stock_status?: string | null;
+  readonly position?: number;
+}
 
 export type UpdateProductErrorCode =
   | "not-signed-in"
@@ -45,7 +55,7 @@ export type UpdateProductErrorCode =
   | "internal";
 
 export type UpdateProductResult =
-  | { ok: true; data: { productId: string } }
+  | { ok: true; data: { productId: string; variantWarning?: string } }
   | { ok: false; code: UpdateProductErrorCode; message: string };
 
 export interface UpdateProductInput {
@@ -62,6 +72,8 @@ export interface UpdateProductInput {
   readonly spec: unknown;
   readonly market: unknown;
   readonly status?: Extract<NexProductStatus, "draft" | "live" | "archived">;
+  /** Full desired variant list · diff-synced against existing rows. */
+  readonly variants?: readonly UpdateProductVariantPayload[];
 }
 
 function err(code: UpdateProductErrorCode, message: string): UpdateProductResult {
@@ -159,8 +171,36 @@ export async function updateProductAction(
       category_id: input.categoryId,
       spec: specWithMarket,
     });
+    // Variant sync (fail-soft · same posture as createProductAction).
+    if (input.variants !== undefined) {
+      try {
+        await productService.syncProductVariants(
+          row.id,
+          input.variants.map((v, i) => ({
+            existingId: v.existingId,
+            name: v.name,
+            attribute: validAxis(v.attribute),
+            price_pence: typeof v.price_pence === "number" ? v.price_pence : null,
+            stock_status: validStock(v.stock_status),
+            position: typeof v.position === "number" ? v.position : i,
+          })),
+        );
+      } catch (ve) {
+        return { ok: true, data: { productId: row.id, variantWarning: ve instanceof Error ? ve.message : String(ve) } };
+      }
+    }
     return { ok: true, data: { productId: row.id } };
   } catch (e) {
     return err("internal", `updateProduct failed: ${e instanceof Error ? e.message : String(e)}`);
   }
+}
+
+function validAxis(a: string | null | undefined): NexVariantAttribute | null {
+  if (!a) return null;
+  return (NEX_VARIANT_ATTRIBUTES as readonly string[]).includes(a) ? (a as NexVariantAttribute) : null;
+}
+
+function validStock(s: string | null | undefined): NexProductStockStatus | null {
+  if (!s) return null;
+  return (NEX_PRODUCT_STOCK_STATUSES as readonly string[]).includes(s) ? (s as NexProductStockStatus) : null;
 }

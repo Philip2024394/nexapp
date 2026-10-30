@@ -20,6 +20,10 @@ import {
   type MarketSelectorValue,
 } from "@/components/nex-native/product-create/MarketSelector";
 import { ImageGallerySection } from "@/components/nex-native/product-create/ImageGallerySection";
+import {
+  VariantsBuilder,
+  type VariantDraft,
+} from "@/components/nex-native/product-create/VariantsBuilder";
 import { updateProductAction } from "@/app/nex-native/manage/products/[productId]/edit/_actions";
 import type { SpecFieldConfig } from "@/lib/nex-native/catalogue/specs/types";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
@@ -65,6 +69,7 @@ export interface EditProductFormClientProps {
     readonly status: "draft" | "live" | "archived";
     readonly spec: Record<string, unknown>;
     readonly market: MarketSelectorValue;
+    readonly variants: readonly VariantDraft[];
   };
 }
 
@@ -80,6 +85,7 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
   const [spec, setSpec] = React.useState<Record<string, unknown>>(props.initial.spec);
   const [market, setMarket] = React.useState<MarketSelectorValue>(props.initial.market);
   const [gallery, setGallery] = React.useState<readonly string[]>(props.initial.galleryUrls);
+  const [variants, setVariants] = React.useState<readonly VariantDraft[]>(props.initial.variants);
   const [submitting, setSubmitting] = React.useState<null | "save" | "publish" | "archive">(null);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -108,6 +114,7 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
         status: desiredStatus,
         spec,
         market: toMarketPayload(market),
+        variants: toVariantPayload(variants),
       });
       if (!result.ok) {
         setError(`${result.code}: ${result.message}`);
@@ -167,6 +174,9 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
           </Field>
           <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
             <ImageGallerySection value={gallery} onChange={setGallery} />
+          </div>
+          <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
+            <VariantsBuilder value={variants} onChange={setVariants} />
           </div>
           <Field label="Stock status">
             <select value={stockStatus} onChange={(e) => setStockStatus(e.target.value as EditProductFormClientProps["initial"]["stockStatus"])} style={COMMON_INPUT}>
@@ -254,6 +264,30 @@ function StatusChip(props: { status: "draft" | "live" | "archived" }): React.JSX
       {p.label}
     </span>
   );
+}
+
+/** Mirror of the Create form's toVariantPayload. Drops blank-name
+ *  drafts silently. Includes existingId so the server diff-sync knows
+ *  which rows are updates vs new inserts. */
+function toVariantPayload(drafts: readonly VariantDraft[]) {
+  return drafts
+    .filter((d) => d.name.trim().length > 0)
+    .map((d, i) => {
+      const priceRaw = d.priceMajor.trim();
+      const priceNum = priceRaw === "" ? null : Number(priceRaw);
+      const price_pence =
+        priceNum !== null && Number.isFinite(priceNum) && priceNum >= 0
+          ? Math.round(priceNum * 100)
+          : null;
+      return {
+        existingId: d.existingId,
+        name: d.name.trim(),
+        attribute: d.axis === "" ? null : d.axis,
+        price_pence,
+        stock_status: d.stock === "" ? null : d.stock,
+        position: i,
+      };
+    });
 }
 
 function toMarketPayload(v: MarketSelectorValue): { scope: "local" | "export" | "both"; local?: Record<string, unknown>; export?: Record<string, unknown> } {

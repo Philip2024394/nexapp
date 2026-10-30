@@ -203,6 +203,87 @@ export async function deleteVariant(id: NexUuid): Promise<void> {
   if (error) throw new Error(`product-service.deleteVariant: ${error.message}`);
 }
 
+/** Owner-authorised 2026-10-30 (Product Upload World-Class brief) ·
+ *  diff-sync a product's variants against a desired list.
+ *
+ *  Rules:
+ *   · Variant in desired without existingId → create
+ *   · Variant in desired with existingId → update
+ *   · Existing variant not referenced by any desired entry → delete
+ *
+ *  Order of operations: delete first (frees up any unique-constraint
+ *  slots subsequent writes may need), then update, then insert.
+ *  Fail-fast on first error — the caller surfaces the message.
+ *
+ *  Blank-name drafts are skipped silently so sellers can hit "+ Add
+ *  variant" without being forced to fill the row before saving.
+ */
+export interface DesiredVariant {
+  readonly existingId?: NexUuid;
+  readonly name: string;
+  readonly attribute: NexVariantAttribute | null;
+  readonly price_pence: number | null;
+  readonly stock_status: NexProductStockStatus | null;
+  readonly position: number;
+}
+
+export async function syncProductVariants(
+  productId: NexUuid,
+  desired: readonly DesiredVariant[],
+): Promise<readonly NexProductVariantRow[]> {
+  const existing = await listVariants(productId);
+  const desiredById = new Map<string, DesiredVariant>();
+  for (const d of desired) {
+    if (d.existingId) desiredById.set(d.existingId, d);
+  }
+  // Delete existing rows not referenced in the desired set.
+  for (const row of existing) {
+    if (!desiredById.has(row.id)) {
+      await deleteVariant(row.id);
+    }
+  }
+  // Update rows that are referenced AND actually changed.
+  for (const row of existing) {
+    const d = desiredById.get(row.id);
+    if (!d) continue;
+    const changed =
+      d.name.trim() !== row.name
+      || d.attribute !== row.attribute
+      || d.price_pence !== row.price_pence
+      || d.stock_status !== row.stock_status
+      || d.position !== row.position;
+    if (changed) {
+      const { error } = await nexSupabaseAdmin
+        .from("nex_product_variant")
+        .update({
+          name: d.name.trim(),
+          attribute: d.attribute,
+          price_pence: d.price_pence,
+          stock_status: d.stock_status,
+          position: d.position,
+        })
+        .eq("id", row.id);
+      if (error) {
+        throw new Error(`product-service.syncProductVariants: update failed: ${error.message}`);
+      }
+    }
+  }
+  // Insert the brand-new variants.
+  for (const d of desired) {
+    if (d.existingId) continue;
+    if (!d.name.trim()) continue; // skip blank rows silently
+    await createVariant({
+      product_id: productId,
+      name: d.name,
+      attribute: d.attribute,
+      price_pence: d.price_pence ?? undefined,
+      stock_status: d.stock_status ?? undefined,
+      position: d.position,
+    });
+  }
+  return listVariants(productId);
+}
+
 /** Get one variant by id · null when not found. */
 export async function getVariantById(id: NexUuid): Promise<NexProductVariantRow | null> {
   const { data, error } = await nexSupabaseAdmin

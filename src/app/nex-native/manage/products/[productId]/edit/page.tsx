@@ -24,6 +24,7 @@ import {
 import { findDepartment, type DepartmentId } from "@/lib/nex-native/catalogue/departments";
 import { extractMarket, MARKET_SPEC_KEY } from "@/lib/nex-native/catalogue/market-spec";
 import type { MarketSelectorValue } from "@/components/nex-native/product-create/MarketSelector";
+import type { VariantDraft } from "@/components/nex-native/product-create/VariantsBuilder";
 import { EditProductFormClient } from "./_edit-client";
 
 export const dynamic = "force-dynamic";
@@ -90,6 +91,17 @@ export default async function EditProductPage({
   const biz = await businessService.getBusinessById(product.business_id).catch(() => null);
   const businessName = biz?.display_name ?? owningBusiness.display_name;
 
+  // Load variants and translate to the client-facing VariantDraft shape
+  // (major-currency price string, blank-string axis/stock when null).
+  const variantRows = await productService.listVariants(product.id).catch(() => []);
+  const variantDrafts: readonly VariantDraft[] = variantRows.map((v) => ({
+    existingId: v.id,
+    name: v.name,
+    axis: (v.attribute ?? "") as VariantDraft["axis"],
+    priceMajor: typeof v.price_pence === "number" ? (v.price_pence / 100).toString() : "",
+    stock: (v.stock_status ?? "") as VariantDraft["stock"],
+  }));
+
   return (
     <EditProductFormClient
       productId={product.id}
@@ -112,6 +124,7 @@ export default async function EditProductPage({
         status,
         spec: categoryOnlySpec,
         market: initial,
+        variants: variantDrafts,
       }}
     />
   );
