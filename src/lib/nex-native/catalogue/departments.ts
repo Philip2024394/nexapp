@@ -360,7 +360,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "arts_crafts_handmade",
     label: "Arts, Crafts & Handmade",
     blurb: "Painting, sewing, handmade goods",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "painting_drawing", label: "Painting & Drawing" },
       { id: "sewing_textiles", label: "Sewing & Textiles" },
@@ -375,7 +375,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "music_film_entertainment",
     label: "Music, Film & Entertainment",
     blurb: "Music, movies, video games",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "music", label: "Music" },
       { id: "movies_tv", label: "Movies & Television" },
@@ -388,7 +388,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "travel_luggage_outdoor",
     label: "Travel, Luggage & Outdoor",
     blurb: "Luggage, travel accessories, business travel",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "travel_accessories", label: "Travel Accessories" },
       { id: "travel_essentials", label: "Travel Essentials" },
