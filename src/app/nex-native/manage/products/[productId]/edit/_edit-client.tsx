@@ -19,8 +19,12 @@ import {
   MarketSelector,
   type MarketSelectorValue,
 } from "@/components/nex-native/product-create/MarketSelector";
-import { ImageGallerySection } from "@/components/nex-native/product-create/ImageGallerySection";
-import { MainImageUploader } from "@/components/nex-native/product-create/MainImageUploader";
+import {
+  ProductImagesEditor,
+  productImagesFromStored,
+  productImagesToStored,
+  type ProductImagesValue,
+} from "@/components/nex-native/product-create/ProductImagesEditor";
 import {
   VariantsBuilder,
   type VariantDraft,
@@ -112,12 +116,13 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
   const [description, setDescription] = React.useState(props.initial.description);
   const [price, setPrice] = React.useState(props.initial.pricePenceMajor);
   const [currency, setCurrency] = React.useState(props.initial.currency);
-  const [imageUrl, setImageUrl] = React.useState(props.initial.imageUrl);
+  const [images, setImages] = React.useState<ProductImagesValue>(
+    productImagesFromStored(props.initial.imageUrl, props.initial.galleryUrls),
+  );
   const [stockStatus, setStockStatus] = React.useState(props.initial.stockStatus);
   const [status, setStatus] = React.useState(props.initial.status);
   const [spec, setSpec] = React.useState<Record<string, unknown>>(props.initial.spec);
   const [market, setMarket] = React.useState<MarketSelectorValue>(props.initial.market);
-  const [gallery, setGallery] = React.useState<readonly string[]>(props.initial.galleryUrls);
   const [variants, setVariants] = React.useState<readonly VariantDraft[]>(props.initial.variants);
   const [delivery, setDelivery] = React.useState<DeliveryEditorValue>(props.initial.delivery);
   const [identity, setIdentity] = React.useState<IdentityDraft>(props.initial.identity);
@@ -152,8 +157,8 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
         description: description.trim() ? description.trim() : null,
         pricePence,
         currency: currency.trim().toUpperCase(),
-        imageUrl: imageUrl.trim() ? imageUrl.trim() : null,
-        galleryUrls: gallery.map((u) => u.trim()).filter((u) => u.length > 0),
+        imageUrl: productImagesToStored(images).image_url,
+        galleryUrls: productImagesToStored(images).gallery_urls,
         stockStatus,
         status: desiredStatus,
         spec,
@@ -219,25 +224,11 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
               </select>
             </Field>
           </div>
-          <MainImageUploader
-            value={imageUrl}
-            onChange={setImageUrl}
+          <ProductImagesEditor
+            value={images}
+            onChange={setImages}
             businessId={props.businessId}
           />
-          <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
-            <ImageGallerySection
-              value={gallery}
-              onChange={setGallery}
-              businessId={props.businessId}
-              onSetAsMain={(url) => {
-                const oldMain = imageUrl.trim();
-                const next = gallery.filter((u) => u !== url);
-                if (oldMain && !next.includes(oldMain)) next.push(oldMain);
-                setGallery(next);
-                setImageUrl(url);
-              }}
-            />
-          </div>
           <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
             <VariantsBuilder value={variants} onChange={setVariants} />
           </div>

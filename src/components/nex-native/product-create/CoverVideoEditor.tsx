@@ -140,8 +140,11 @@ export function CoverVideoEditor({ value, onChange, businessId }: CoverVideoEdit
             optional · 1 only · ≤ {COVER_VIDEO_MAX_DURATION_SECONDS}s
           </span>
         </h2>
-        <p style={{ fontSize: 12, color: INK_DIM, margin: "4px 0 0", lineHeight: 1.5 }}>
-          Attach a short video to the product&rsquo;s main image slot. mp4 / webm / mov up to 60 MB. Longer than {COVER_VIDEO_MAX_DURATION_SECONDS} seconds will be refused.
+        <p style={{ fontSize: 11.5, color: INK_DIM, margin: "4px 0 0", lineHeight: 1.5 }}>
+          MP4 · WebM · MOV · ≤ 60 MB · ≤ {COVER_VIDEO_MAX_DURATION_SECONDS} seconds
+        </p>
+        <p style={{ fontSize: 11.5, color: INK_DIM, margin: "4px 0 0", lineHeight: 1.5, fontStyle: "italic" }}>
+          The video will replace your main image on the shop page.
         </p>
       </div>
 

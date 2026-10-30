@@ -21,8 +21,12 @@ import {
   EMPTY_MARKET_VALUE,
   type MarketSelectorValue,
 } from "@/components/nex-native/product-create/MarketSelector";
-import { ImageGallerySection } from "@/components/nex-native/product-create/ImageGallerySection";
-import { MainImageUploader } from "@/components/nex-native/product-create/MainImageUploader";
+import {
+  ProductImagesEditor,
+  EMPTY_PRODUCT_IMAGES,
+  productImagesToStored,
+  type ProductImagesValue,
+} from "@/components/nex-native/product-create/ProductImagesEditor";
 import {
   VariantsBuilder,
   type VariantDraft,
@@ -98,13 +102,12 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
   const [description, setDescription] = React.useState("");
   const [price, setPrice] = React.useState("");
   const [currency, setCurrency] = React.useState("IDR");
-  const [imageUrl, setImageUrl] = React.useState("");
   const [stockStatus, setStockStatus] = React.useState<"in_stock" | "low_stock" | "sold_out" | "made_to_order">(
     "in_stock",
   );
   const [spec, setSpec] = React.useState<Record<string, unknown>>({});
   const [market, setMarket] = React.useState<MarketSelectorValue>(EMPTY_MARKET_VALUE);
-  const [gallery, setGallery] = React.useState<readonly string[]>([]);
+  const [images, setImages] = React.useState<ProductImagesValue>(EMPTY_PRODUCT_IMAGES);
   const [variants, setVariants] = React.useState<readonly VariantDraft[]>([]);
   const [delivery, setDelivery] = React.useState<DeliveryEditorValue>(EMPTY_DELIVERY);
   const [identity, setIdentity] = React.useState<IdentityDraft>(EMPTY_IDENTITY);
@@ -139,8 +142,8 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
         description: description.trim() || undefined,
         pricePence,
         currency: currency.trim().toUpperCase(),
-        imageUrl: imageUrl.trim() || null,
-        galleryUrls: gallery.map((u) => u.trim()).filter((u) => u.length > 0),
+        imageUrl: productImagesToStored(images).image_url,
+        galleryUrls: productImagesToStored(images).gallery_urls,
         stockStatus,
         spec,
         market: toMarketPayload(market),
@@ -229,28 +232,11 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
               </select>
             </Field>
           </div>
-          <MainImageUploader
-            value={imageUrl}
-            onChange={setImageUrl}
+          <ProductImagesEditor
+            value={images}
+            onChange={setImages}
             businessId={props.businessId}
           />
-          <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
-            <ImageGallerySection
-              value={gallery}
-              onChange={setGallery}
-              businessId={props.businessId}
-              onSetAsMain={(url) => {
-                // Promote gallery entry → main image. Keep the old main
-                // in the gallery so nothing is lost; if it was blank,
-                // just drop it from the gallery.
-                const oldMain = imageUrl.trim();
-                const next = gallery.filter((u) => u !== url);
-                if (oldMain && !next.includes(oldMain)) next.push(oldMain);
-                setGallery(next);
-                setImageUrl(url);
-              }}
-            />
-          </div>
           <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
             <VariantsBuilder value={variants} onChange={setVariants} />
           </div>
