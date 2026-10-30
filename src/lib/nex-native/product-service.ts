@@ -203,6 +203,60 @@ export async function deleteVariant(id: NexUuid): Promise<void> {
   if (error) throw new Error(`product-service.deleteVariant: ${error.message}`);
 }
 
+// ─── Product image uploads (owner-authorised 2026-10-31) ──────────────
+//
+// Technical Point 2 from the owner's variant/upload review. Sellers
+// paste a URL today (fallback preserved) OR select a file from their
+// device which lands in the shared nex-business-assets bucket under
+// products/<business_id>/<timestamp-random>.<ext> and returns the
+// public URL. Same bucket + size + MIME policy as the gallery-image-
+// service (Bridge Gallery-B) · no new bucket, no new migration.
+
+export const NEX_PRODUCT_IMAGE_MAX_BYTES = 4 * 1024 * 1024; // 4 MB
+export const NEX_PRODUCT_IMAGE_ALLOWED_MIMES: Readonly<Record<string, string>> = Object.freeze({
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/webp": "webp",
+});
+
+/** Upload a raw product image to the shared nex-business-assets bucket.
+ *  Caller is responsible for session + ownership gating BEFORE this
+ *  runs. Returns the public URL. */
+export async function uploadProductImage(input: {
+  businessId: NexUuid;
+  file: File;
+}): Promise<{ url: string; objectPath: string }> {
+  const { businessId, file } = input;
+  if (file.size > NEX_PRODUCT_IMAGE_MAX_BYTES) {
+    throw new Error(
+      `product-service.uploadProductImage: file exceeds ${NEX_PRODUCT_IMAGE_MAX_BYTES / (1024 * 1024)}MB cap`,
+    );
+  }
+  const mime = (file.type || "").toLowerCase();
+  const ext = NEX_PRODUCT_IMAGE_ALLOWED_MIMES[mime];
+  if (!ext) {
+    throw new Error(
+      `product-service.uploadProductImage: image must be png / jpg / webp · got ${file.type || "unknown"}`,
+    );
+  }
+  const objectPath = `products/${businessId}/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
+  const bucket = nexSupabaseAdmin.storage.from("nex-business-assets");
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const { error: upErr } = await bucket.upload(objectPath, bytes, {
+    contentType: file.type,
+    upsert: false,
+  });
+  if (upErr) {
+    throw new Error(`product-service.uploadProductImage: ${upErr.message}`);
+  }
+  const { data: pub } = bucket.getPublicUrl(objectPath);
+  if (!pub?.publicUrl) {
+    throw new Error("product-service.uploadProductImage: public URL unavailable");
+  }
+  return { url: pub.publicUrl, objectPath };
+}
+
 /** Owner-authorised 2026-10-30 (Product Upload World-Class brief) ·
  *  diff-sync a product's variants against a desired list.
  *

@@ -223,7 +223,21 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
             />
           </Field>
           <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
-            <ImageGallerySection value={gallery} onChange={setGallery} />
+            <ImageGallerySection
+              value={gallery}
+              onChange={setGallery}
+              businessId={props.businessId}
+              onSetAsMain={(url) => {
+                // Promote gallery entry → main image. Keep the old main
+                // in the gallery so nothing is lost; if it was blank,
+                // just drop it from the gallery.
+                const oldMain = imageUrl.trim();
+                const next = gallery.filter((u) => u !== url);
+                if (oldMain && !next.includes(oldMain)) next.push(oldMain);
+                setGallery(next);
+                setImageUrl(url);
+              }}
+            />
           </div>
           <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
             <VariantsBuilder value={variants} onChange={setVariants} />

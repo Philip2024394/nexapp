@@ -68,6 +68,7 @@ const COMMON_INPUT: React.CSSProperties = {
 
 export interface EditProductFormClientProps {
   readonly productId: string;
+  readonly businessId: string;
   readonly businessName: string;
   readonly departmentId: DepartmentId;
   readonly departmentLabel: string;
@@ -206,7 +207,18 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
             <input type="url" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} style={COMMON_INPUT} />
           </Field>
           <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
-            <ImageGallerySection value={gallery} onChange={setGallery} />
+            <ImageGallerySection
+              value={gallery}
+              onChange={setGallery}
+              businessId={props.businessId}
+              onSetAsMain={(url) => {
+                const oldMain = imageUrl.trim();
+                const next = gallery.filter((u) => u !== url);
+                if (oldMain && !next.includes(oldMain)) next.push(oldMain);
+                setGallery(next);
+                setImageUrl(url);
+              }}
+            />
           </div>
           <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
             <VariantsBuilder value={variants} onChange={setVariants} />

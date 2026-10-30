@@ -2,26 +2,25 @@
 
 // src/components/nex-native/product-create/ImageGallerySection.tsx
 //
-// Owner-authorised 2026-10-30 (Product Upload World-Class brief) ·
-// multi-image gallery editor for the shared Create + Edit forms. Phase
-// 1 contract: URL-based (paste a hosted image URL). File-upload
-// swap-in is a separate deliverable — the storage layer
-// (updateProductGalleryUrls) already enforces http/https, 1024-char
-// limit, and the 10-entry cap, so we align the UI to those bounds now.
+// Owner-authorised 2026-10-30 (initial) + 2026-10-31 (Technical Point
+// 2: real image file uploads). Multi-image gallery editor supporting:
 //
-// Shape of persisted data: nex_product.gallery_urls text[] (already
-// exists on the row — no migration required).
+//   · File picker — upload directly from the seller's phone or
+//     computer. Uploads POST to /api/nex-native/product/upload-image
+//     which stores under nex-business-assets/products/<businessId>/…
+//     and returns a public URL. Up to 4 MB per file, png/jpg/webp.
+//   · URL paste fallback — sellers whose images are already hosted
+//     can still paste a URL.
+//   · Reorder — up/down arrow buttons per row swap with the adjacent
+//     entry.
+//   · Set as main — promotes a gallery entry into the parent form's
+//     main image slot (via the `onSetAsMain` callback).
+//   · Remove — strips the URL from the list. Does NOT clean up the
+//     bucket object (storage GC is a separate concern per the sealed
+//     gallery-image-service pattern).
 //
-// Visual contract (deliberately minimal):
-//
-//   ┌────────────────────────────────────────────────────┐
-//   │  Gallery (0/10)                                    │
-//   │  ┌─────────────┬───────────────┐                  │
-//   │  │ [preview]   │ https://cdn/… │  [Remove]        │
-//   │  └─────────────┴───────────────┘                  │
-//   │  … up to 10 rows …                                 │
-//   │  [+ Add image URL]                                 │
-//   └────────────────────────────────────────────────────┘
+// Shape of persisted data: nex_product.gallery_urls text[]. No new
+// migration required.
 
 import * as React from "react";
 import { NEX_FONT_SANS } from "@/lib/nex-native/design-tokens";
@@ -38,28 +37,91 @@ export const GALLERY_MAX_ENTRIES = 10;
 export interface ImageGallerySectionProps {
   readonly value: readonly string[];
   readonly onChange: (next: readonly string[]) => void;
+  /** Business UUID required for file uploads. When absent the file
+   *  picker is disabled (URL paste still works). */
+  readonly businessId?: string | null;
+  /** Optional callback invoked when the seller clicks "Set as main"
+   *  on a gallery row. Receives the gallery URL. Parent form swaps
+   *  this URL into the main image slot. If not provided, the Set-as-
+   *  main button is hidden. */
+  readonly onSetAsMain?: (url: string) => void;
 }
 
-export function ImageGallerySection({ value, onChange }: ImageGallerySectionProps): React.JSX.Element {
+export function ImageGallerySection({ value, onChange, businessId, onSetAsMain }: ImageGallerySectionProps): React.JSX.Element {
   const atCap = value.length >= GALLERY_MAX_ENTRIES;
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
+  const [uploading, setUploading] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const updateAt = (i: number, next: string) => {
     const copy = [...value];
     copy[i] = next;
     onChange(copy);
   };
-  const removeAt = (i: number) => {
-    const copy = value.filter((_, idx) => idx !== i);
-    onChange(copy);
-  };
+  const removeAt = (i: number) => onChange(value.filter((_, idx) => idx !== i));
   const addEmpty = () => {
     if (atCap) return;
     onChange([...value, ""]);
   };
+  const moveUp = (i: number) => {
+    if (i <= 0) return;
+    const copy = [...value];
+    [copy[i - 1], copy[i]] = [copy[i], copy[i - 1]!];
+    onChange(copy);
+  };
+  const moveDown = (i: number) => {
+    if (i >= value.length - 1) return;
+    const copy = [...value];
+    [copy[i], copy[i + 1]] = [copy[i + 1], copy[i]!];
+    onChange(copy);
+  };
+
+  const uploadFile = async (file: File) => {
+    if (!businessId) {
+      setUploadError("Pick a business first before uploading product images.");
+      return;
+    }
+    if (atCap) {
+      setUploadError(`Gallery is at the ${GALLERY_MAX_ENTRIES}-image cap.`);
+      return;
+    }
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const form = new FormData();
+      form.set("business_id", businessId);
+      form.set("file", file);
+      const res = await fetch("/api/nex-native/product/upload-image", {
+        method: "POST",
+        body: form,
+      });
+      const json = (await res.json().catch(() => null)) as
+        | { ok: true; data: { url: string; objectPath: string } }
+        | { ok: false; code: string; message?: string }
+        | null;
+      if (!json || !res.ok || !json.ok) {
+        const code = json && !json.ok ? json.code : `http-${res.status}`;
+        const message = json && !json.ok ? json.message ?? code : `HTTP ${res.status}`;
+        setUploadError(`Upload failed · ${code}: ${message}`);
+        return;
+      }
+      onChange([...value, json.data.url]);
+    } catch (e) {
+      setUploadError(`Upload failed · ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const onPickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) void uploadFile(file);
+  };
 
   return (
     <section aria-labelledby="nex-gallery-heading" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
         <h2 id="nex-gallery-heading" style={{ fontSize: 15, fontWeight: 800, margin: 0, color: INK }}>
           Gallery
           <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: INK_DIM }}>
@@ -67,69 +129,114 @@ export function ImageGallerySection({ value, onChange }: ImageGallerySectionProp
           </span>
         </h2>
         <p style={{ fontSize: 11.5, color: INK_DIM, margin: 0 }}>
-          Additional product images shown alongside the main image.
+          Upload from your device, or paste a hosted URL. Reorder with the arrows. Click Set as main to promote.
         </p>
       </div>
 
-      {value.length === 0 ? (
-        <div style={emptyStyle}>
-          No gallery images yet.
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          onChange={onPickFile}
+          style={{ display: "none" }}
+          id="nex-gallery-file-input"
+        />
+        <label
+          htmlFor="nex-gallery-file-input"
+          aria-disabled={atCap || uploading || !businessId}
+          style={{
+            padding: "9px 14px",
+            borderRadius: 999,
+            border: `1.5px solid ${ACCENT}`,
+            background: ACCENT,
+            color: "#031018",
+            fontWeight: 800,
+            fontSize: 13,
+            cursor: atCap || uploading || !businessId ? "not-allowed" : "pointer",
+            opacity: atCap || uploading || !businessId ? 0.5 : 1,
+            fontFamily: NEX_FONT_SANS,
+          }}
+        >
+          {uploading ? "Uploading…" : "+ Upload from device"}
+        </label>
+        <button
+          type="button"
+          onClick={addEmpty}
+          disabled={atCap}
+          style={{
+            padding: "9px 14px",
+            borderRadius: 999,
+            border: `1.5px solid ${ACCENT}`,
+            background: "transparent",
+            color: ACCENT,
+            fontWeight: 800,
+            fontSize: 13,
+            cursor: atCap ? "not-allowed" : "pointer",
+            opacity: atCap ? 0.5 : 1,
+            fontFamily: NEX_FONT_SANS,
+          }}
+        >
+          + Paste URL
+        </button>
+      </div>
+
+      {!businessId ? (
+        <p style={{ fontSize: 11, color: INK_DIM, margin: 0, fontStyle: "italic" }}>
+          File upload disabled until the business is selected.
+        </p>
+      ) : null}
+      {uploadError ? (
+        <div role="alert" style={{ padding: "8px 12px", borderRadius: 8, background: "rgba(200,16,46,0.08)", color: RED, fontSize: 12, fontWeight: 700 }}>
+          {uploadError}
         </div>
+      ) : null}
+
+      {value.length === 0 ? (
+        <div style={emptyStyle}>No gallery images yet.</div>
       ) : null}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {value.map((url, i) => (
           <GalleryRow
-            key={i}
+            key={`${i}-${url}`}
             index={i}
+            total={value.length}
             value={url}
             onChange={(next) => updateAt(i, next)}
             onRemove={() => removeAt(i)}
+            onMoveUp={() => moveUp(i)}
+            onMoveDown={() => moveDown(i)}
+            onSetAsMain={onSetAsMain ? () => onSetAsMain(url.trim()) : null}
           />
         ))}
       </div>
-
-      <button
-        type="button"
-        onClick={addEmpty}
-        disabled={atCap}
-        style={{
-          alignSelf: "flex-start",
-          padding: "9px 14px",
-          borderRadius: 999,
-          border: `1.5px solid ${ACCENT}`,
-          background: "transparent",
-          color: ACCENT,
-          fontWeight: 800,
-          fontSize: 13,
-          cursor: atCap ? "not-allowed" : "pointer",
-          opacity: atCap ? 0.5 : 1,
-          fontFamily: NEX_FONT_SANS,
-        }}
-      >
-        {atCap ? "Gallery full" : "+ Add image URL"}
-      </button>
     </section>
   );
 }
 
 interface RowProps {
   readonly index: number;
+  readonly total: number;
   readonly value: string;
   readonly onChange: (next: string) => void;
   readonly onRemove: () => void;
+  readonly onMoveUp: () => void;
+  readonly onMoveDown: () => void;
+  readonly onSetAsMain: (() => void) | null;
 }
 
-function GalleryRow({ value, onChange, onRemove }: RowProps): React.JSX.Element {
+function GalleryRow({ value, onChange, onRemove, onMoveUp, onMoveDown, onSetAsMain, index, total }: RowProps): React.JSX.Element {
   const trimmed = value.trim();
   const looksValid = /^https?:\/\//i.test(trimmed) && trimmed.length <= 1024;
   const showError = trimmed.length > 0 && !looksValid;
+  const canSetAsMain = onSetAsMain !== null && looksValid;
 
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "60px 1fr auto",
+        gridTemplateColumns: "28px 60px 1fr auto",
         gap: 10,
         alignItems: "center",
         padding: 8,
@@ -138,6 +245,26 @@ function GalleryRow({ value, onChange, onRemove }: RowProps): React.JSX.Element 
         background: BG,
       }}
     >
+      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <button
+          type="button"
+          onClick={onMoveUp}
+          disabled={index === 0}
+          aria-label={`Move row ${index + 1} up`}
+          style={arrowBtnStyle(index === 0)}
+        >
+          ▲
+        </button>
+        <button
+          type="button"
+          onClick={onMoveDown}
+          disabled={index === total - 1}
+          aria-label={`Move row ${index + 1} down`}
+          style={arrowBtnStyle(index === total - 1)}
+        >
+          ▼
+        </button>
+      </div>
       <div
         style={{
           width: 60,
@@ -153,7 +280,7 @@ function GalleryRow({ value, onChange, onRemove }: RowProps): React.JSX.Element 
           type="url"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="https://… (http or https, max 1024 chars)"
+          placeholder="https://… or upload from your device"
           maxLength={1200}
           style={{
             padding: "8px 10px",
@@ -174,26 +301,58 @@ function GalleryRow({ value, onChange, onRemove }: RowProps): React.JSX.Element 
           </span>
         ) : null}
       </div>
-      <button
-        type="button"
-        onClick={onRemove}
-        aria-label="Remove image"
-        style={{
-          padding: "8px 12px",
-          borderRadius: 999,
-          border: `1.5px solid rgba(200,16,46,0.35)`,
-          background: "transparent",
-          color: RED,
-          fontWeight: 800,
-          fontSize: 12,
-          cursor: "pointer",
-          fontFamily: NEX_FONT_SANS,
-        }}
-      >
-        Remove
-      </button>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {canSetAsMain ? (
+          <button
+            type="button"
+            onClick={() => onSetAsMain!()}
+            style={pillBtnStyle(ACCENT, "rgba(0,175,255,0.35)", "rgba(0,175,255,0.08)")}
+          >
+            Set as main
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label="Remove image"
+          style={pillBtnStyle(RED, "rgba(200,16,46,0.35)", "transparent")}
+        >
+          Remove
+        </button>
+      </div>
     </div>
   );
+}
+
+function arrowBtnStyle(disabled: boolean): React.CSSProperties {
+  return {
+    width: 24,
+    height: 20,
+    padding: 0,
+    borderRadius: 4,
+    border: `1px solid ${RIM}`,
+    background: disabled ? "rgba(74, 96, 128, 0.05)" : BG,
+    color: disabled ? INK_DIM : INK,
+    fontSize: 10,
+    lineHeight: 1,
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.4 : 1,
+  };
+}
+
+function pillBtnStyle(color: string, borderColor: string, bg: string): React.CSSProperties {
+  return {
+    padding: "6px 10px",
+    borderRadius: 999,
+    border: `1.5px solid ${borderColor}`,
+    background: bg,
+    color,
+    fontSize: 11,
+    fontWeight: 800,
+    cursor: "pointer",
+    fontFamily: NEX_FONT_SANS,
+    whiteSpace: "nowrap",
+  };
 }
 
 const emptyStyle: React.CSSProperties = {

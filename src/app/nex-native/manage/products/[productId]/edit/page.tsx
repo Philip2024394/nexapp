@@ -145,6 +145,7 @@ export default async function EditProductPage({
   return (
     <EditProductFormClient
       productId={product.id}
+      businessId={product.business_id}
       businessName={businessName}
       departmentId={deptId}
       departmentLabel={departmentLabel}
