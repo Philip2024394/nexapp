@@ -205,7 +205,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "toys_games_hobbies",
     label: "Toys, Games & Hobbies",
     blurb: "Dolls, board games, musical instruments",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "toys", label: "Toys" },
       { id: "board_games", label: "Board Games" },
@@ -219,7 +219,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "sports_fitness_outdoors",
     label: "Sports, Fitness & Outdoors",
     blurb: "Gym, cycling, camping, fishing",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "fitness_equipment", label: "Fitness Equipment" },
       { id: "running", label: "Running" },
@@ -235,7 +235,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "garden_outdoor_agriculture",
     label: "Garden, Outdoor & Agriculture",
     blurb: "Tools, plants, machinery",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "gardening_tools", label: "Gardening Tools" },
       { id: "plants_seeds", label: "Plants & Seeds" },
