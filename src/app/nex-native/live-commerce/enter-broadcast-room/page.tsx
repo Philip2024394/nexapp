@@ -49,7 +49,22 @@ async function resolveBroadcasterIdOrRedirect(
   redirect(`/nex-native/sign-in?next=${encodeURIComponent(pathname)}`);
 }
 
-export default async function GoLivePage(): Promise<React.JSX.Element> {
+export default async function GoLivePage({
+  searchParams,
+}: {
+  // Owner-authorised 2026-10-31 · product deep-link from the Live
+  // Product Library. The library tiles already pass `?product=<id>`;
+  // this server shell reads it to re-order the realCatalog so the
+  // chosen product is first in the broadcaster's picker. GoLiveClient
+  // internals stay sealed — no new prop, no auto-select change. The
+  // picker's existing tap-to-feature flow is preserved.
+  searchParams?: Promise<{ product?: string; autoPlayMusic?: string }>;
+}): Promise<React.JSX.Element> {
+  const sp = searchParams ? await searchParams : {};
+  const requestedProductId =
+    typeof sp.product === "string" && /^[0-9a-f-]{36}$/i.test(sp.product.trim())
+      ? sp.product.trim()
+      : null;
   const selfAccountId = await resolveBroadcasterIdOrRedirect(
     "/nex-native/live-commerce/enter-broadcast-room",
   );
@@ -110,7 +125,24 @@ export default async function GoLivePage(): Promise<React.JSX.Element> {
         business.id,
         "live",
       );
-      realCatalog = products.map<RealLiveCatalogEntry>((p) => ({
+      // Owner-authorised 2026-10-31 · if ?product=<id> was passed by
+      // the Live Library AND that id matches one of the broadcaster's
+      // own live products, re-order so the chosen product is FIRST in
+      // the picker. Invalid / unknown ids fail safely (ignored · the
+      // list renders in its default created_at DESC order). Does NOT
+      // bypass the status="live" filter — a draft or archived id in
+      // the URL is treated as unknown here, preserving §K.14
+      // draft-leak closure.
+      const orderedProducts = (() => {
+        if (!requestedProductId) return products;
+        const idx = products.findIndex((p) => p.id === requestedProductId);
+        if (idx <= 0) return products; // not found, or already first
+        const copy = [...products];
+        const [chosen] = copy.splice(idx, 1);
+        if (chosen) copy.unshift(chosen);
+        return copy;
+      })();
+      realCatalog = orderedProducts.map<RealLiveCatalogEntry>((p) => ({
         id: p.id,
         name: p.name,
         price_pence: p.price_pence,
