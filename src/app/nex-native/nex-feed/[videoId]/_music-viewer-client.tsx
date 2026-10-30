@@ -47,6 +47,7 @@ import { MusicPostShell } from "@/components/nex-native/music/MusicPostShell";
 import {
   toggleMusicTrackLikeAction,
   recordMusicTrackShareAction,
+  recordMusicTrackPlayAction,
 } from "@/app/nex-native/create/upload-music/_actions";
 import type { MusicFeedEntry } from "@/lib/nex-native/music/active-music-feed-reader";
 import type { NexMusicTrackRow } from "@/lib/nex-native/music/types";
@@ -86,6 +87,13 @@ export interface MusicViewerClientProps {
    *  first render. Null when the fetch fails · the stack hides
    *  the label rather than render stale zeros. */
   readonly initialFollowerCount: number | null;
+  /** Owner-authorised 2026-10-30 · broadcaster country for the
+   *  "Live {country}" header line. Resolved server-side from
+   *  nex_account.phone_country_code via dialCodeToIsoCountry.
+   *  ISO 3166-1 alpha-2 (e.g., "ID", "IE", "US") or null when the
+   *  dial code is unknown or malformed; null falls through to the
+   *  sealed "Live NEX" fallback in MusicPostShell. */
+  readonly broadcasterCountryCode: string | null;
   /** Owner-authorised 2026-10-30 · prev/next track ids within the
    *  creator's own chronological music cycle. Used by the in-player
    *  prev/next arrows so they walk the creator's songs (not the mixed
@@ -259,6 +267,13 @@ export function MusicViewerClient(
   // is lifted to this client so the shell can suppress the Up-Next
   // banner while the description is up.
   const [descriptionOpen, setDescriptionOpen] = React.useState(false);
+  // Owner-authorised 2026-10-30 · plays-counter dedup. On the first
+  // isPlaying=true for this track mount, fire recordMusicTrackPlayAction
+  // once and never again for the same mount. Prevents the player's
+  // natural play/pause toggling from double-counting. Phase 2 will
+  // replace this with per-event ingestion against valid-play criteria;
+  // for Phase 1 this is the honest counter driver.
+  const playBumpedRef = React.useRef(false);
   // Owner-authorised 2026-10-30 · Up-Next banner surfaces at
   // ≤ 30 s remaining in the current song. The overlay publishes
   // position + duration via `onPositionTick`; we store the remaining
@@ -383,7 +398,7 @@ export function MusicViewerClient(
         broadcasterNexHandle={props.entry.ownerNexHandle}
         broadcasterAvatarUrl={props.entry.ownerAvatarUrl}
         broadcasterPresence="online"
-        broadcasterCountryCode="ID"
+        broadcasterCountryCode={props.broadcasterCountryCode}
         autoPlayOnMount={true}
         isLiked={liked}
         // Owner directive 2026-10-30 · track remaining time so the
@@ -392,6 +407,18 @@ export function MusicViewerClient(
         onPositionTick={(positionMs, durationMs) => {
           if (durationMs > 0) {
             setRemainingMs(Math.max(0, durationMs - positionMs));
+          }
+        }}
+        // Owner-authorised 2026-10-30 · universal plays-counter
+        // trigger. First isPlaying=true per mount bumps the track's
+        // view_count via recordMusicTrackPlayAction. Server-side
+        // enforces signed-in only (guest plays excluded per sealed
+        // §12.4). Fire-and-forget · the counter is a weak signal, a
+        // failed bump must not block playback.
+        onPlayStateChange={(isPlaying) => {
+          if (isPlaying && !playBumpedRef.current) {
+            playBumpedRef.current = true;
+            void recordMusicTrackPlayAction({ trackId: props.entry.trackId }).catch(() => undefined);
           }
         }}
         upNext={

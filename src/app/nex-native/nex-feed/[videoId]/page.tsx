@@ -37,6 +37,7 @@ import { getMusicStorageAdapter } from "@/lib/nex-native/music/storage-adapter";
 import type { NexMusicTrackRow } from "@/lib/nex-native/music/types";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { getFollowState, readFollowCounts } from "@/lib/nex-native/follow/follow-repository";
+import { dialCodeToIsoCountry } from "@/lib/nex-native/country/dial-code-to-iso";
 import { VideoViewerClient } from "./_video-viewer-client";
 import { MusicViewerClient } from "./_music-viewer-client";
 
@@ -453,7 +454,15 @@ export default async function NexFeedViewerPage({
     // owner's follower count, even for owner self-view). Fails
     // open independently to false / null so a repository error on
     // one path never cascades to the other.
-    const [initialFollowed, initialFollowerCount] = await Promise.all([
+    // Owner-authorised 2026-10-30 · broadcaster country derived from
+    // nex_account.phone_country_code (sealed Four-Country doctrine
+    // reference project_nex_country_scope_from_phone_country_code_
+    // 2026_08_22). Resolve the owner's phone dial code once, map to
+    // ISO 3166-1 alpha-2, pass to MusicViewerClient so the "Live
+    // {country}" header line in MusicPostShell renders truthfully.
+    // Null-tolerant: unknown dial codes fall through to the sealed
+    // "Live NEX" fallback at MusicPostShell:559.
+    const [initialFollowed, initialFollowerCount, broadcasterCountryCode] = await Promise.all([
       viewerAccountId !== null && !viewerIsOwner
         ? getFollowState({
             followerId: viewerAccountId,
@@ -465,6 +474,18 @@ export default async function NexFeedViewerPage({
       readFollowCounts(musicEntry.ownerAccountId)
         .then((c) => c.followersCount)
         .catch(() => null as number | null),
+      (async (): Promise<string | null> => {
+        try {
+          const { data } = await nexSupabaseAdmin
+            .from("nex_account")
+            .select("phone_country_code")
+            .eq("id", musicEntry.ownerAccountId)
+            .maybeSingle<{ phone_country_code: string | null }>();
+          return dialCodeToIsoCountry(data?.phone_country_code ?? null);
+        } catch {
+          return null;
+        }
+      })(),
     ]);
 
     return (
@@ -479,6 +500,7 @@ export default async function NexFeedViewerPage({
         viewerAccountId={viewerAccountId}
         initialFollowed={initialFollowed}
         initialFollowerCount={initialFollowerCount}
+        broadcasterCountryCode={broadcasterCountryCode}
         prevOwnerTrackId={prevOwnerTrackId}
         nextOwnerTrackId={nextOwnerTrackId}
         nextOwnerTrack={nextOwnerTrackRow}

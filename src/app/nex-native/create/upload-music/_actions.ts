@@ -19,6 +19,7 @@ import {
   listTracksByOwner,
   updateTrackMetadata,
   bumpTrackViewCount,
+  bumpTrackPlayCountAnyViewer,
   bumpTrackShareCount,
   toggleTrackLike,
   hasLikedTrack,
@@ -429,6 +430,29 @@ export async function recordMusicTrackViewAction(input: {
     trackId: input.trackId,
     ownerAccountId: session.account.id,
   });
+  if (!row) return { ok: false, code: "not-found", message: "Track not found" };
+  return { ok: true, data: { viewCount: row.view_count } };
+}
+
+/** Owner-authorised 2026-10-30 · universal plays counter · any
+ *  signed-in viewer increments the track's view_count on first
+ *  playback per mount. Not ownership-scoped (any viewer bumps any
+ *  track). Guest sessions are rejected per sealed Music Directory
+ *  doctrine §12.4 (guest plays excluded from Phase 1 trending).
+ *  Caller-side dedup via a ref prevents multiple bumps per mount.
+ *
+ *  Honest limitation: this is a Phase 1 approximate counter, not
+ *  the sealed Phase 2 per-event nex_music_play ingestion with
+ *  valid-play criteria (heard_ms threshold, exposure dedup window).
+ *  Phase 2 analytics remain unauthorised. */
+export async function recordMusicTrackPlayAction(input: {
+  readonly trackId: string;
+}): Promise<NexMusicResult<{ readonly viewCount: number }>> {
+  const session = await resolveSessionWithDevOverride();
+  if (!session) return { ok: false, code: "not-signed-in", message: "Sign in required" };
+  const limited = rateLimitedReject("preview", session.account.id);
+  if (limited) return limited;
+  const row = await bumpTrackPlayCountAnyViewer({ trackId: input.trackId });
   if (!row) return { ok: false, code: "not-found", message: "Track not found" };
   return { ok: true, data: { viewCount: row.view_count } };
 }

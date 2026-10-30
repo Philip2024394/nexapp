@@ -173,6 +173,31 @@ export async function bumpTrackViewCount(args: {
   });
 }
 
+/** Owner-authorised 2026-10-30 · universal play-count bump · any
+ *  signed-in viewer can increment view_count on any track (not
+ *  ownership-scoped). Caller supplies only the trackId. Used by the
+ *  music feed viewer when a track transitions to isPlaying=true for
+ *  the first time per mount (client-side dedup). Honest limitation:
+ *  this is a Phase 1 approximate counter, not the sealed Phase 2
+ *  per-event nex_music_play ingestion with valid-play criteria. */
+export async function bumpTrackPlayCountAnyViewer(args: {
+  readonly trackId: string;
+}): Promise<NexMusicTrackRow | null> {
+  return serialMutate(async (snap) => {
+    const idx = snap.tracks.findIndex((t) => t.id === args.trackId);
+    if (idx < 0) return { next: snap, result: null };
+    const prev = normaliseLoaded(snap.tracks[idx]!);
+    const next: NexMusicTrackRow = {
+      ...prev,
+      view_count: prev.view_count + 1,
+      updated_at: new Date().toISOString(),
+    };
+    const nextTracks = snap.tracks.slice();
+    nextTracks[idx] = next;
+    return { next: { tracks: nextTracks }, result: next };
+  });
+}
+
 export async function bumpTrackShareCount(args: {
   readonly trackId: string;
   readonly ownerAccountId: string;
