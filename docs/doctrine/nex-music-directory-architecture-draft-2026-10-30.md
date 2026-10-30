@@ -1044,36 +1044,50 @@ constitute production-ready music storage.** No claim about Supabase
 Storage, pooler connectivity, or production filesystem adapters is
 established by this doctrine.
 
-### 11.4 Known migration number conflict (237)
+### 11.4 Migration-number conflict (237) · RESOLVED 2026-10-30
+
+**Resolution.** Migration 237 is permanently assigned to Follow
+(`nex_follow_graph`). The future `nex_account_music_rights_ack`
+migration (deferred per the earlier music-publishing readiness
+audit) will take whatever number is next-free at the time its build
+is authorised. Phase 1 of this doctrine proposes numbers 239–241
+for playlists + search; whichever migration is drafted and
+authorised first takes 239, and so on in next-free order.
+
+**Context (preserved for history).**
 
 The earlier doctrine
 `docs/doctrine/nex-music-publishing-integration-readiness-audit-2026-10-30.md`
-explicitly reserved migration **237** for `nex_account_music_rights_ack`
-(the owner-rights-acknowledgement step for the publishing flow). The
-local Follow commit used migration **237** for `nex_follow_graph.sql`.
+reserved migration 237 for `nex_account_music_rights_ack`. The
+local Follow commit chain used 237 for `nex_follow_graph.sql`. The
+Follow commit chain was subsequently pushed to `origin/main` (as of
+commit `b6db755`, 2026-10-30), making the Follow 237 assignment
+part of public repository history.
 
-**This is a numbering conflict.**
+**Why option 1 (renumber rights-ack) over option 2 (rebase Follow).**
 
-Resolution requirements:
+Rebasing the Follow commit chain would require a force-push on
+`origin/main` to rewrite public history. That is a destructive
+operation per CLAUDE.md §3 and would invalidate any downstream
+clones of the repository. Option 1 (renumber the as-yet-unauthored
+rights-ack migration at build time) is non-destructive, requires
+zero code change today, and simply records a numbering convention
+going forward.
 
-- This doctrine **does not** renumber either migration.
-- This doctrine **does not** edit either migration file.
-- The conflict is recorded here for later **read-only reconciliation**
-  by the owner.
-- The reconciliation can take one of several shapes (owner's choice,
-  separately authorised):
-  1. Renumber the as-yet-unauthored `nex_account_music_rights_ack`
-     to a later number (e.g., 239 or whatever is next unused when the
-     rights-ack build is authorised).
-  2. Rebase the Follow migration numbers (invasive; requires rewriting
-     the Follow commit chain; **not recommended** given the Follow
-     work is already locally committed and verification-complete).
-  3. Any other option the owner designs.
-- The reconciliation does not block the Music Directory doctrine from
-  advancing. Phase 1 of this doctrine does not require migration 237
-  or the rights-ack primitive; it depends only on the directory and
-  playlist tables (new numbers) and the existing `nex_music_track`
-  substrate.
+**Impact on other doctrines.**
+
+- The music-publishing readiness audit's historical statement that
+  "migration 237 = `nex_account_music_rights_ack`" is now a
+  reservation that was superseded; it will be renumbered at build
+  time when the rights-ack migration is authorised.
+- The Phase 1 build plan
+  (`nex-music-directory-phase-1-build-plan-draft-2026-10-30.md`)
+  assumes numbers 239–241 for its three migrations and explicitly
+  notes that actual numbers are confirmed at drafting time
+  (§3.2 of that build plan).
+- No existing SQL file is renamed.
+- No existing commit is rewritten.
+- No history on `origin/main` is modified.
 
 ### 11.5 Dev-filesystem versus Supabase
 
