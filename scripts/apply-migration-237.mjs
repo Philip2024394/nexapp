@@ -17,19 +17,48 @@ import { resolve } from "node:path";
 import pg from "pg";
 
 function readEnv(key) {
-  const raw = readFileSync(".env.local", "utf8");
-  for (const line of raw.split(/\r?\n/)) {
-    const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
-    if (m && m[1] === key) return m[2];
+  try {
+    const raw = readFileSync(".env.local", "utf8");
+    for (const line of raw.split(/\r?\n/)) {
+      const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
+      if (m && m[1] === key) return m[2];
+    }
+  } catch {
+    /* .env.local absent in CI/disposable contexts · fall through */
   }
   return null;
 }
 
-const url = readEnv("DATABASE_URL");
+const url = process.env.DATABASE_URL ?? readEnv("DATABASE_URL");
 if (!url) { console.error("ERR: DATABASE_URL missing"); process.exit(2); }
-if (!url.includes("ijvqdvsvwtwxzcqmoqit")) {
-  console.error("ERR: DATABASE_URL does not point at ijvqdvsvwtwxzcqmoqit · aborting");
-  process.exit(3);
+
+// Owner-authorised 2026-10-30 · dry-run path. When
+// NEX_FOLLOW_DISPOSABLE_APPLY=yes is set in the environment the
+// script accepts a NON-production URL · defence-in-depth refuses to
+// run against production when the disposable flag is active (to
+// prevent accidental "I thought this was my dev DB" mishaps).
+const PROD_SIGIL = "ijvqdvsvwtwxzcqmoqit";
+const DISPOSABLE = process.env.NEX_FOLLOW_DISPOSABLE_APPLY === "yes";
+if (DISPOSABLE) {
+  if (url.includes(PROD_SIGIL)) {
+    console.error(
+      "ERR: NEX_FOLLOW_DISPOSABLE_APPLY=yes but DATABASE_URL points at production (" +
+        PROD_SIGIL +
+        ") · refusing to mix flags · aborting",
+    );
+    process.exit(4);
+  }
+  console.log("MODE: DISPOSABLE (production id guard inverted)");
+} else {
+  if (!url.includes(PROD_SIGIL)) {
+    console.error(
+      "ERR: DATABASE_URL does not point at " +
+        PROD_SIGIL +
+        " · aborting · (set NEX_FOLLOW_DISPOSABLE_APPLY=yes for a disposable-DB dry run)",
+    );
+    process.exit(3);
+  }
+  console.log("MODE: PRODUCTION (" + PROD_SIGIL + ")");
 }
 
 const sql = readFileSync(
@@ -39,7 +68,7 @@ const sql = readFileSync(
 
 const client = new pg.Client({ connectionString: url });
 await client.connect();
-console.log("CONNECTED to ijvqdvsvwtwxzcqmoqit via pooler");
+console.log(`CONNECTED to ${DISPOSABLE ? "DISPOSABLE DB" : PROD_SIGIL + " via pooler"}`);
 
 try {
   const pre = await client.query(
