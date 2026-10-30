@@ -105,6 +105,9 @@ export default async function EditProductPage({
         pricePenceMajor: (product.price_pence / 100).toString(),
         currency: product.currency,
         imageUrl: product.image_url ?? "",
+        galleryUrls: Array.isArray(product.gallery_urls)
+          ? product.gallery_urls.filter((u): u is string => typeof u === "string")
+          : [],
         stockStatus: stock,
         status,
         spec: categoryOnlySpec,

@@ -19,6 +19,7 @@ import {
   MarketSelector,
   type MarketSelectorValue,
 } from "@/components/nex-native/product-create/MarketSelector";
+import { ImageGallerySection } from "@/components/nex-native/product-create/ImageGallerySection";
 import { updateProductAction } from "@/app/nex-native/manage/products/[productId]/edit/_actions";
 import type { SpecFieldConfig } from "@/lib/nex-native/catalogue/specs/types";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
@@ -59,6 +60,7 @@ export interface EditProductFormClientProps {
     readonly pricePenceMajor: string;
     readonly currency: string;
     readonly imageUrl: string;
+    readonly galleryUrls: readonly string[];
     readonly stockStatus: "in_stock" | "low_stock" | "sold_out" | "made_to_order";
     readonly status: "draft" | "live" | "archived";
     readonly spec: Record<string, unknown>;
@@ -77,6 +79,7 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
   const [status, setStatus] = React.useState(props.initial.status);
   const [spec, setSpec] = React.useState<Record<string, unknown>>(props.initial.spec);
   const [market, setMarket] = React.useState<MarketSelectorValue>(props.initial.market);
+  const [gallery, setGallery] = React.useState<readonly string[]>(props.initial.galleryUrls);
   const [submitting, setSubmitting] = React.useState<null | "save" | "publish" | "archive">(null);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -100,6 +103,7 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
         pricePence,
         currency: currency.trim().toUpperCase(),
         imageUrl: imageUrl.trim() ? imageUrl.trim() : null,
+        galleryUrls: gallery.map((u) => u.trim()).filter((u) => u.length > 0),
         stockStatus,
         status: desiredStatus,
         spec,
@@ -161,6 +165,9 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
           <Field label="Main image URL">
             <input type="url" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} style={COMMON_INPUT} />
           </Field>
+          <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
+            <ImageGallerySection value={gallery} onChange={setGallery} />
+          </div>
           <Field label="Stock status">
             <select value={stockStatus} onChange={(e) => setStockStatus(e.target.value as EditProductFormClientProps["initial"]["stockStatus"])} style={COMMON_INPUT}>
               <option value="in_stock">In stock</option>

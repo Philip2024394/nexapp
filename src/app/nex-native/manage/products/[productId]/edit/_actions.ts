@@ -57,6 +57,7 @@ export interface UpdateProductInput {
   readonly pricePence: number;
   readonly currency: string;
   readonly imageUrl?: string | null;
+  readonly galleryUrls?: readonly string[];
   readonly stockStatus?: NexProductStockStatus;
   readonly spec: unknown;
   readonly market: unknown;
@@ -147,6 +148,9 @@ export async function updateProductAction(
       name: input.name.trim(),
       description: input.description === undefined ? undefined : input.description,
       image_url: input.imageUrl === undefined ? undefined : input.imageUrl,
+      gallery_urls: input.galleryUrls === undefined
+        ? undefined
+        : (input.galleryUrls.length > 0 ? [...input.galleryUrls] : null),
       stock_status: input.stockStatus,
       price_pence: input.pricePence,
       currency: input.currency,

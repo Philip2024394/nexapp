@@ -21,6 +21,7 @@ import {
   EMPTY_MARKET_VALUE,
   type MarketSelectorValue,
 } from "@/components/nex-native/product-create/MarketSelector";
+import { ImageGallerySection } from "@/components/nex-native/product-create/ImageGallerySection";
 import { createProductAction } from "@/app/nex-native/create/product/_actions";
 import type { SpecFieldConfig } from "@/lib/nex-native/catalogue/specs/types";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
@@ -68,6 +69,7 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
   );
   const [spec, setSpec] = React.useState<Record<string, unknown>>({});
   const [market, setMarket] = React.useState<MarketSelectorValue>(EMPTY_MARKET_VALUE);
+  const [gallery, setGallery] = React.useState<readonly string[]>([]);
   const [submitting, setSubmitting] = React.useState<null | "draft" | "live">(null);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -91,6 +93,7 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
         pricePence,
         currency: currency.trim().toUpperCase(),
         imageUrl: imageUrl.trim() || null,
+        galleryUrls: gallery.map((u) => u.trim()).filter((u) => u.length > 0),
         stockStatus,
         spec,
         market: toMarketPayload(market),
@@ -181,6 +184,9 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
               style={COMMON_INPUT}
             />
           </Field>
+          <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
+            <ImageGallerySection value={gallery} onChange={setGallery} />
+          </div>
           <Field label="Stock status">
             <select
               value={stockStatus}
