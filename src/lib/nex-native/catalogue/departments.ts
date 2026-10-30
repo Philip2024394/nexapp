@@ -443,7 +443,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "services_marketplace",
     label: "Services Marketplace",
     blurb: "Home, trades, creative, personal",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "home_services", label: "Home Services" },
       { id: "construction_trades", label: "Construction & Trades" },
@@ -460,7 +460,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "experiences_activities_tickets",
     label: "Experiences & Tickets",
     blurb: "Activities, tours, classes, tickets",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "activities", label: "Activities" },
       { id: "entertainment", label: "Entertainment" },
@@ -474,7 +474,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "second_hand_refurbished",
     label: "Second-Hand & Refurbished",
     blurb: "Pre-owned across categories",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "used_electronics", label: "Used Electronics" },
       { id: "refurbished_computers", label: "Refurbished Computers" },

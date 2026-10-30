@@ -36,6 +36,9 @@ import { TravelLuggageOutdoorSpecs } from "./travel-luggage-outdoor";
 import { DigitalProductsSoftwareSpecs } from "./digital-products-software";
 import { AccommodationPropertySpecs } from "./accommodation-property";
 import { FoodDeliveryRestaurantsSpecs } from "./food-delivery-restaurants";
+import { ServicesMarketplaceSpecs } from "./services-marketplace";
+import { ExperiencesActivitiesTicketsSpecs } from "./experiences-activities-tickets";
+import { SecondHandRefurbishedSpecs } from "./second-hand-refurbished";
 
 // Registry entries · one row per sub-category.
 const ALL_CATEGORY_SPECS: readonly CategorySpec[] = [
@@ -61,6 +64,9 @@ const ALL_CATEGORY_SPECS: readonly CategorySpec[] = [
   ...DigitalProductsSoftwareSpecs,
   ...AccommodationPropertySpecs,
   ...FoodDeliveryRestaurantsSpecs,
+  ...ServicesMarketplaceSpecs,
+  ...ExperiencesActivitiesTicketsSpecs,
+  ...SecondHandRefurbishedSpecs,
   // Other departments: add entries here as they ship per §I.5 batches.
 ];
 
