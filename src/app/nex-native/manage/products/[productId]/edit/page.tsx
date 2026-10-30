@@ -24,6 +24,12 @@ import {
 import { findDepartment, type DepartmentId } from "@/lib/nex-native/catalogue/departments";
 import { extractMarket, MARKET_SPEC_KEY } from "@/lib/nex-native/catalogue/market-spec";
 import { extractDelivery, DELIVERY_SPEC_KEY } from "@/lib/nex-native/catalogue/delivery-spec";
+import {
+  extractIdentity,
+  extractWholesale,
+  IDENTITY_SPEC_KEY,
+  WHOLESALE_SPEC_KEY,
+} from "@/lib/nex-native/catalogue/identity-wholesale-spec";
 import type { MarketSelectorValue } from "@/components/nex-native/product-create/MarketSelector";
 import type { VariantDraft } from "@/components/nex-native/product-create/VariantsBuilder";
 import type {
@@ -31,6 +37,12 @@ import type {
   LocalZoneDraft,
   ExportDestDraft,
 } from "@/components/nex-native/product-create/DeliveryEditor";
+import {
+  EMPTY_IDENTITY,
+  EMPTY_WHOLESALE,
+  type IdentityDraft,
+  type WholesaleDraft,
+} from "@/components/nex-native/product-create/IdentityWholesaleEditor";
 import { EditProductFormClient } from "./_edit-client";
 
 export const dynamic = "force-dynamic";
@@ -89,14 +101,20 @@ export default async function EditProductPage({
   const {
     [MARKET_SPEC_KEY]: _marketBlock,
     [DELIVERY_SPEC_KEY]: _deliveryBlock,
+    [IDENTITY_SPEC_KEY]: _identityBlock,
+    [WHOLESALE_SPEC_KEY]: _wholesaleBlock,
     ...categoryOnlySpec
   } = rawSpec;
-  void _marketBlock; void _deliveryBlock;
+  void _marketBlock; void _deliveryBlock; void _identityBlock; void _wholesaleBlock;
   const market = extractMarket(rawSpec);
   const delivery = extractDelivery(rawSpec);
+  const identity = extractIdentity(rawSpec);
+  const wholesale = extractWholesale(rawSpec);
 
   const initial: MarketSelectorValue = marketToUIValue(market);
   const initialDelivery: DeliveryEditorValue = deliveryToUIValue(delivery);
+  const initialIdentity: IdentityDraft = identityToUIValue(identity);
+  const initialWholesale: WholesaleDraft = wholesaleToUIValue(wholesale);
 
   const status: AllowedStatus = ((["draft", "live", "archived"] as readonly string[]).includes(product.status) ? product.status : "draft") as AllowedStatus;
   const stock: AllowedStock = ((["in_stock", "low_stock", "sold_out", "made_to_order"] as readonly string[]).includes(product.stock_status ?? "") ? (product.stock_status as AllowedStock) : "in_stock");
@@ -140,9 +158,38 @@ export default async function EditProductPage({
         market: initial,
         variants: variantDrafts,
         delivery: initialDelivery,
+        identity: initialIdentity,
+        wholesale: initialWholesale,
       }}
     />
   );
+}
+
+/** Translate stored Identity substrate into UI drafts. */
+function identityToUIValue(i: ReturnType<typeof extractIdentity>): IdentityDraft {
+  if (!i) return EMPTY_IDENTITY;
+  return {
+    condition: i.condition,
+    conditionNotes: i.condition_notes ?? "",
+    countryOfManufacture: i.country_of_manufacture ?? "",
+    countryOfOrigin: i.country_of_origin ?? "",
+  };
+}
+
+/** Translate stored Wholesale substrate into UI drafts. */
+function wholesaleToUIValue(w: ReturnType<typeof extractWholesale>): WholesaleDraft {
+  if (!w) return EMPTY_WHOLESALE;
+  return {
+    offered: w.offered,
+    minQty: typeof w.min_qty === "number" ? String(w.min_qty) : "",
+    pricingMode: w.pricing_mode,
+    tiers: (w.tiers ?? []).map((t) => ({
+      minQty: String(t.min_qty),
+      priceMajor: (t.price_pence / 100).toString(),
+      currency: t.currency,
+    })),
+    notes: w.notes ?? "",
+  };
 }
 
 /** Translate stored Delivery substrate (pence integers, arrays) back

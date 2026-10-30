@@ -42,6 +42,14 @@ import {
   mergeDeliveryIntoSpec,
   type DeliveryT,
 } from "@/lib/nex-native/catalogue/delivery-spec";
+import {
+  IdentitySpec,
+  WholesaleSpec,
+  mergeIdentityIntoSpec,
+  mergeWholesaleIntoSpec,
+  type IdentityT,
+  type WholesaleT,
+} from "@/lib/nex-native/catalogue/identity-wholesale-spec";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
 import type { NexProductStatus, NexProductStockStatus, NexVariantAttribute } from "@/lib/nex-native/types";
 import { NEX_VARIANT_ATTRIBUTES, NEX_PRODUCT_STOCK_STATUSES } from "@/lib/nex-native/types";
@@ -62,6 +70,8 @@ export type CreateProductErrorCode =
   | "spec-invalid"
   | "market-invalid"
   | "delivery-invalid"
+  | "identity-invalid"
+  | "wholesale-invalid"
   | "tier-limit"
   | "internal";
 
@@ -88,6 +98,8 @@ export interface CreateProductInput {
   /** Optional · when provided, validated by DeliverySpec and merged
    *  under spec.__delivery. Omit for non-shippable listings. */
   readonly delivery?: unknown;
+  readonly identity?: unknown;
+  readonly wholesale?: unknown;
   readonly status?: Extract<NexProductStatus, "draft" | "live">;
   /** Optional · zero variants means a flat non-variant product. */
   readonly variants?: readonly CreateProductVariantPayload[];
@@ -171,7 +183,27 @@ export async function createProductAction(
       return err("delivery-invalid", `Delivery validation failed: ${dResult.error.message}`);
     }
     const delivery: DeliveryT = dResult.data;
-    specFinal = mergeDeliveryIntoSpec(specWithMarket, delivery);
+    specFinal = mergeDeliveryIntoSpec(specFinal, delivery);
+  }
+
+  // 7c · Identity substrate (optional).
+  if (input.identity !== undefined) {
+    const iResult = IdentitySpec.safeParse(input.identity);
+    if (!iResult.success) {
+      return err("identity-invalid", `Identity validation failed: ${iResult.error.message}`);
+    }
+    const identity: IdentityT = iResult.data;
+    specFinal = mergeIdentityIntoSpec(specFinal, identity);
+  }
+
+  // 7d · Wholesale substrate (optional).
+  if (input.wholesale !== undefined) {
+    const wResult = WholesaleSpec.safeParse(input.wholesale);
+    if (!wResult.success) {
+      return err("wholesale-invalid", `Wholesale validation failed: ${wResult.error.message}`);
+    }
+    const wholesale: WholesaleT = wResult.data;
+    specFinal = mergeWholesaleIntoSpec(specFinal, wholesale);
   }
 
   // 8 · Write canonical nex_product row

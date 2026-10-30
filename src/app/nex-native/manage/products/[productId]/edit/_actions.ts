@@ -36,6 +36,14 @@ import {
   mergeDeliveryIntoSpec,
   type DeliveryT,
 } from "@/lib/nex-native/catalogue/delivery-spec";
+import {
+  IdentitySpec,
+  WholesaleSpec,
+  mergeIdentityIntoSpec,
+  mergeWholesaleIntoSpec,
+  type IdentityT,
+  type WholesaleT,
+} from "@/lib/nex-native/catalogue/identity-wholesale-spec";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
 import type { NexProductStatus, NexProductStockStatus, NexVariantAttribute } from "@/lib/nex-native/types";
 import { NEX_VARIANT_ATTRIBUTES, NEX_PRODUCT_STOCK_STATUSES } from "@/lib/nex-native/types";
@@ -58,6 +66,8 @@ export type UpdateProductErrorCode =
   | "spec-invalid"
   | "market-invalid"
   | "delivery-invalid"
+  | "identity-invalid"
+  | "wholesale-invalid"
   | "internal";
 
 export type UpdateProductResult =
@@ -78,6 +88,8 @@ export interface UpdateProductInput {
   readonly spec: unknown;
   readonly market: unknown;
   readonly delivery?: unknown;
+  readonly identity?: unknown;
+  readonly wholesale?: unknown;
   readonly status?: Extract<NexProductStatus, "draft" | "live" | "archived">;
   /** Full desired variant list · diff-synced against existing rows. */
   readonly variants?: readonly UpdateProductVariantPayload[];
@@ -169,7 +181,27 @@ export async function updateProductAction(
       return err("delivery-invalid", `Delivery validation failed: ${dResult.error.message}`);
     }
     const delivery: DeliveryT = dResult.data;
-    specFinal = mergeDeliveryIntoSpec(specWithMarket, delivery);
+    specFinal = mergeDeliveryIntoSpec(specFinal, delivery);
+  }
+
+  // 8c · Identity (optional)
+  if (input.identity !== undefined) {
+    const iResult = IdentitySpec.safeParse(input.identity);
+    if (!iResult.success) {
+      return err("identity-invalid", `Identity validation failed: ${iResult.error.message}`);
+    }
+    const identity: IdentityT = iResult.data;
+    specFinal = mergeIdentityIntoSpec(specFinal, identity);
+  }
+
+  // 8d · Wholesale (optional)
+  if (input.wholesale !== undefined) {
+    const wResult = WholesaleSpec.safeParse(input.wholesale);
+    if (!wResult.success) {
+      return err("wholesale-invalid", `Wholesale validation failed: ${wResult.error.message}`);
+    }
+    const wholesale: WholesaleT = wResult.data;
+    specFinal = mergeWholesaleIntoSpec(specFinal, wholesale);
   }
 
   // 9 · updateProductBatch

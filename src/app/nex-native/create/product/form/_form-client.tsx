@@ -33,6 +33,13 @@ import {
   type LocalZoneDraft,
   type ExportDestDraft,
 } from "@/components/nex-native/product-create/DeliveryEditor";
+import {
+  IdentityWholesaleEditor,
+  EMPTY_IDENTITY,
+  EMPTY_WHOLESALE,
+  type IdentityDraft,
+  type WholesaleDraft,
+} from "@/components/nex-native/product-create/IdentityWholesaleEditor";
 import { createProductAction } from "@/app/nex-native/create/product/_actions";
 import type { SpecFieldConfig } from "@/lib/nex-native/catalogue/specs/types";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
@@ -83,6 +90,8 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
   const [gallery, setGallery] = React.useState<readonly string[]>([]);
   const [variants, setVariants] = React.useState<readonly VariantDraft[]>([]);
   const [delivery, setDelivery] = React.useState<DeliveryEditorValue>(EMPTY_DELIVERY);
+  const [identity, setIdentity] = React.useState<IdentityDraft>(EMPTY_IDENTITY);
+  const [wholesale, setWholesale] = React.useState<WholesaleDraft>(EMPTY_WHOLESALE);
   const [submitting, setSubmitting] = React.useState<null | "draft" | "live">(null);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -111,6 +120,8 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
         spec,
         market: toMarketPayload(market),
         delivery: toDeliveryPayload(delivery, market.scope),
+        identity: toIdentityPayload(identity),
+        wholesale: toWholesalePayload(wholesale),
         status: publishLive ? "live" : "draft",
         variants: toVariantPayload(variants),
       });
@@ -207,6 +218,12 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
           </div>
           <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
             <DeliveryEditor scope={market.scope} value={delivery} onChange={setDelivery} />
+          </div>
+          <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
+            <IdentityWholesaleEditor
+              identity={identity} onIdentityChange={setIdentity}
+              wholesale={wholesale} onWholesaleChange={setWholesale}
+            />
           </div>
           <Field label="Stock status">
             <select
@@ -349,6 +366,53 @@ function toMarketPayload(v: MarketSelectorValue): {
     payload.export = cleanExport(v.export);
   }
   return payload;
+}
+
+/** Convert IdentityDraft → server payload. Empty ISO strings become
+ *  undefined (not sent) so Zod doesn't reject partial filling. */
+function toIdentityPayload(v: IdentityDraft): Record<string, unknown> {
+  const out: Record<string, unknown> = { condition: v.condition };
+  if (v.conditionNotes.trim()) out.condition_notes = v.conditionNotes.trim();
+  const m = v.countryOfManufacture.trim().toUpperCase();
+  if (/^[A-Z]{2}$/.test(m)) out.country_of_manufacture = m;
+  const o = v.countryOfOrigin.trim().toUpperCase();
+  if (/^[A-Z]{2}$/.test(o)) out.country_of_origin = o;
+  return out;
+}
+
+/** Convert WholesaleDraft → server payload. Drops blank tiers. */
+function toWholesalePayload(v: WholesaleDraft): Record<string, unknown> {
+  const toPenceOpt = (raw: string): number | undefined => {
+    const t = raw.trim();
+    if (t === "") return undefined;
+    const n = Number(t);
+    if (!Number.isFinite(n) || n < 0) return undefined;
+    return Math.round(n * 100);
+  };
+  const toIntOpt = (raw: string): number | undefined => {
+    const t = raw.trim();
+    if (t === "") return undefined;
+    const n = Number(t);
+    if (!Number.isFinite(n) || n < 0) return undefined;
+    return Math.round(n);
+  };
+  const tiers = v.tiers
+    .map((t) => {
+      const min_qty = toIntOpt(t.minQty);
+      const price_pence = toPenceOpt(t.priceMajor);
+      if (min_qty === undefined || price_pence === undefined) return null;
+      return { min_qty, price_pence, currency: t.currency };
+    })
+    .filter((x): x is { min_qty: number; price_pence: number; currency: string } => x !== null);
+  const out: Record<string, unknown> = {
+    offered: v.offered,
+    pricing_mode: v.pricingMode,
+  };
+  const mq = toIntOpt(v.minQty);
+  if (mq !== undefined) out.min_qty = mq;
+  if (tiers.length > 0) out.tiers = tiers;
+  if (v.notes.trim()) out.notes = v.notes.trim();
+  return out;
 }
 
 /** Convert the DeliveryEditor UI state into the server-side shape:
