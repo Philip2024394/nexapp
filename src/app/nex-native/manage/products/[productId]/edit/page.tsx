@@ -37,8 +37,8 @@ import type { MarketSelectorValue } from "@/components/nex-native/product-create
 import type { VariantDraft } from "@/components/nex-native/product-create/VariantsBuilder";
 import type {
   DeliveryEditorValue,
-  LocalZoneDraft,
-  ExportDestDraft,
+  LocalRadiusDraft,
+  ExportCountryDraft,
 } from "@/components/nex-native/product-create/DeliveryEditor";
 import {
   EMPTY_IDENTITY,
@@ -256,36 +256,16 @@ function wholesaleToUIValue(w: ReturnType<typeof extractWholesale>): WholesaleDr
 function deliveryToUIValue(d: ReturnType<typeof extractDelivery>): DeliveryEditorValue {
   if (!d) return { local: [], export: [] };
   const toMajor = (p: number | undefined): string => (typeof p === "number" ? (p / 100).toString() : "");
-  const toStr = (v: number | undefined): string => (typeof v === "number" ? String(v) : "");
-  const joinArr = (a: readonly string[] | undefined): string => (Array.isArray(a) ? a.join(", ") : "");
-  const local: LocalZoneDraft[] = (d.local?.zones ?? []).map((z) => ({
-    label: z.label,
-    cities: joinArr(z.cities),
-    areas: joinArr(z.areas),
-    priceMajor: toMajor(z.price_pence),
-    currency: z.currency,
-    freeAboveMajor: toMajor(z.free_above_pence),
-    dispatchDays: toStr(z.dispatch_days),
-    deliveryMinDays: toStr(z.delivery_days_min),
-    deliveryMaxDays: toStr(z.delivery_days_max),
-    codEnabled: z.cod_enabled,
-    codMinOrderMajor: toMajor(z.cod_min_order_pence),
-    pickupAvailable: z.pickup_available,
-    notes: z.notes ?? "",
+  const local: LocalRadiusDraft[] = (d.local?.radii ?? []).map((r) => ({
+    km: String(r.km),
+    priceMajor: toMajor(r.price_pence),
+    currency: r.currency,
   }));
-  const exportDest: ExportDestDraft[] = (d.export?.destinations ?? []).map((x) => ({
+  const exportDest: ExportCountryDraft[] = (d.export?.countries ?? []).map((x) => ({
     iso: x.iso,
-    enabled: x.enabled,
     priceMajor: toMajor(x.price_pence),
-    currency: x.currency ?? "USD",
-    shippingCostMajor: toMajor(x.shipping_cost_pence),
-    shippingCurrency: x.shipping_currency,
-    dispatchMinDays: toStr(x.dispatch_days_min),
-    dispatchMaxDays: toStr(x.dispatch_days_max),
-    deliveryMinDays: toStr(x.delivery_days_min),
-    deliveryMaxDays: toStr(x.delivery_days_max),
-    minOrderMajor: toMajor(x.min_order_pence),
-    notes: x.notes ?? "",
+    currency: x.currency,
+    weightKg: x.weight_kg.toString(),
   }));
   return { local, export: exportDest };
 }

@@ -35,8 +35,8 @@ import {
   DeliveryEditor,
   EMPTY_DELIVERY,
   type DeliveryEditorValue,
-  type LocalZoneDraft,
-  type ExportDestDraft,
+  type LocalRadiusDraft,
+  type ExportCountryDraft,
 } from "@/components/nex-native/product-create/DeliveryEditor";
 import {
   IdentityWholesaleEditor,
@@ -526,15 +526,9 @@ function toWholesalePayload(v: WholesaleDraft): Record<string, unknown> {
   return out;
 }
 
-/** Convert the DeliveryEditor UI state into the server-side shape:
- *   · major-currency inputs → integer pence
- *   · comma-separated city/area strings → string arrays
- *   · number inputs → integers (0 fallback when the field is required)
- *   · scope-aware: blocks that don't apply are omitted.
- *
- *  Blank rows (no zone label / no ISO) are dropped silently so sellers
- *  can hit "+ Add" without being forced to fill the row.
- */
+/** Convert the simplified DeliveryEditor UI state into the server
+ *  shape: major-currency → integer pence; km/weight strings → numbers;
+ *  blank/invalid rows dropped silently. Scope-aware. */
 function toDeliveryPayload(
   v: DeliveryEditorValue,
   scope: "local" | "export" | "both",
@@ -546,77 +540,46 @@ function toDeliveryPayload(
     if (!Number.isFinite(n) || n < 0) return undefined;
     return Math.round(n * 100);
   };
-  const toIntOpt = (raw: string): number | undefined => {
+  const toPositiveNumOpt = (raw: string): number | undefined => {
     const t = raw.trim();
     if (t === "") return undefined;
     const n = Number(t);
-    if (!Number.isFinite(n) || n < 0) return undefined;
+    if (!Number.isFinite(n) || n <= 0) return undefined;
+    return n;
+  };
+  const toPositiveIntOpt = (raw: string): number | undefined => {
+    const n = toPositiveNumOpt(raw);
+    if (n === undefined) return undefined;
     return Math.round(n);
   };
-  const splitCsv = (raw: string): string[] | undefined => {
-    const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
-    return parts.length > 0 ? parts : undefined;
+
+  const mapLocal = (r: LocalRadiusDraft) => {
+    const km = toPositiveIntOpt(r.km);
+    const price_pence = toPenceOpt(r.priceMajor);
+    if (km === undefined || price_pence === undefined) return null;
+    return { km, price_pence, currency: r.currency };
   };
 
-  const mapLocal = (z: LocalZoneDraft) => {
-    const price_pence = toPenceOpt(z.priceMajor);
-    const dispatch_days = toIntOpt(z.dispatchDays) ?? 0;
-    const delivery_days_min = toIntOpt(z.deliveryMinDays) ?? 0;
-    const delivery_days_max = toIntOpt(z.deliveryMaxDays) ?? delivery_days_min;
-    const row: Record<string, unknown> = {
-      label: z.label.trim(),
-      cities: splitCsv(z.cities),
-      areas: splitCsv(z.areas),
-      price_pence: price_pence ?? 0,
-      currency: z.currency,
-      dispatch_days,
-      delivery_days_min,
-      delivery_days_max,
-      cod_enabled: z.codEnabled,
-      pickup_available: z.pickupAvailable,
-    };
-    const free = toPenceOpt(z.freeAboveMajor);
-    if (free !== undefined) row.free_above_pence = free;
-    const codMin = toPenceOpt(z.codMinOrderMajor);
-    if (codMin !== undefined) row.cod_min_order_pence = codMin;
-    if (z.notes.trim()) row.notes = z.notes.trim();
-    return row;
-  };
-
-  const mapExport = (d: ExportDestDraft) => {
+  const mapExport = (d: ExportCountryDraft) => {
     const iso = d.iso.trim().toUpperCase();
-    const shipping_cost_pence = toPenceOpt(d.shippingCostMajor) ?? 0;
-    const dispatch_days_min = toIntOpt(d.dispatchMinDays) ?? 0;
-    const dispatch_days_max = toIntOpt(d.dispatchMaxDays) ?? dispatch_days_min;
-    const delivery_days_min = toIntOpt(d.deliveryMinDays) ?? 0;
-    const delivery_days_max = toIntOpt(d.deliveryMaxDays) ?? delivery_days_min;
-    const row: Record<string, unknown> = {
-      iso,
-      enabled: d.enabled,
-      shipping_cost_pence,
-      shipping_currency: d.shippingCurrency,
-      dispatch_days_min,
-      dispatch_days_max,
-      delivery_days_min,
-      delivery_days_max,
-    };
-    const price = toPenceOpt(d.priceMajor);
-    if (price !== undefined) row.price_pence = price;
-    if (d.currency) row.currency = d.currency;
-    const minOrder = toPenceOpt(d.minOrderMajor);
-    if (minOrder !== undefined) row.min_order_pence = minOrder;
-    if (d.notes.trim()) row.notes = d.notes.trim();
-    return row;
+    const price_pence = toPenceOpt(d.priceMajor);
+    const weight_kg = toPositiveNumOpt(d.weightKg);
+    if (!/^[A-Z]{2}$/.test(iso) || price_pence === undefined || weight_kg === undefined) return null;
+    return { iso, price_pence, currency: d.currency, weight_kg };
   };
 
   const out: { local?: unknown; export?: unknown } = {};
   if (scope === "local" || scope === "both") {
-    const zones = v.local.filter((z) => z.label.trim().length > 0).map(mapLocal);
-    out.local = { zones };
+    const radii = v.local
+      .map(mapLocal)
+      .filter((x): x is NonNullable<ReturnType<typeof mapLocal>> => x !== null);
+    out.local = { radii };
   }
   if (scope === "export" || scope === "both") {
-    const destinations = v.export.filter((d) => d.iso.trim().length === 2).map(mapExport);
-    out.export = { destinations };
+    const countries = v.export
+      .map(mapExport)
+      .filter((x): x is NonNullable<ReturnType<typeof mapExport>> => x !== null);
+    out.export = { countries };
   }
   return out;
 }
