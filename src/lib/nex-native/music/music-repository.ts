@@ -140,43 +140,105 @@ async function serialMutate<T>(
   return chained;
 }
 
+/** Owner-authorised 2026-10-31 (music-upload-audit · finding #9).
+ *  Hard-enforced quota at the atomic boundary. The pre-write check in
+ *  the upload route is a soft-fast-path; this is the single source of
+ *  truth. Both are honoured so concurrent uploads cannot slip past the
+ *  limit (route-level check reads stale state outside the lock).
+ *
+ *  Throws QuotaExceededError when the proposed insert would exceed
+ *  either cap. Caller MUST catch + delete the already-uploaded storage
+ *  object (orphan-cleanup — audit finding #2 covered separately). */
+export class QuotaExceededError extends Error {
+  readonly kind: "bytes" | "tracks";
+  readonly used: number;
+  readonly max: number;
+  constructor(kind: "bytes" | "tracks", used: number, max: number) {
+    super(
+      kind === "bytes"
+        ? `Storage quota exceeded (${used} / ${max} bytes)`
+        : `Track-count quota exceeded (${used} / ${max})`,
+    );
+    this.name = "QuotaExceededError";
+    this.kind = kind;
+    this.used = used;
+    this.max = max;
+  }
+}
+
+export interface MusicQuota {
+  readonly maxBytes: number;
+  readonly maxTracks: number;
+}
+
+export async function insertMusicTrackWithQuota(
+  input: NexMusicTrackInsert,
+  quota: MusicQuota,
+): Promise<NexMusicTrackRow> {
+  return serialMutate(async (snap) => {
+    // Hard re-check inside the lock. If a concurrent insert raced ahead
+    // between the route's soft-check and here, this is where it fails.
+    const owned = snap.tracks.filter(
+      (t) => t.owner_account_id === input.owner_account_id && t.visibility !== "removed",
+    );
+    const usedBytes = owned.reduce((s, t) => s + (t.byte_size ?? 0), 0);
+    const proposedBytes = usedBytes + (input.byte_size ?? 0);
+    if (proposedBytes > quota.maxBytes) {
+      throw new QuotaExceededError("bytes", usedBytes, quota.maxBytes);
+    }
+    if (owned.length >= quota.maxTracks) {
+      throw new QuotaExceededError("tracks", owned.length, quota.maxTracks);
+    }
+    // Delegate row construction to the shared builder below.
+    return buildInsertResult(input, snap);
+  });
+}
+
 export async function insertMusicTrack(
   input: NexMusicTrackInsert,
 ): Promise<NexMusicTrackRow> {
-  return serialMutate(async (snap) => {
-    const now = new Date().toISOString();
-    const row: NexMusicTrackRow = {
-      id: crypto.randomUUID(),
-      owner_account_id: input.owner_account_id,
-      business_id: input.business_id ?? null,
-      source_type: input.source_type,
-      title: input.title,
-      artist: input.artist,
-      album: input.album ?? null,
-      duration_ms: input.duration_ms,
-      media_url: input.media_url,
-      source_url: input.source_url,
-      cover_image_url: input.cover_image_url,
-      background_image_url: input.background_image_url ?? null,
-      byte_size: input.byte_size,
-      mime_type: input.mime_type,
-      bitrate_kbps: input.bitrate_kbps ?? null,
-      rights_declaration: input.rights_declaration,
-      rights_notes: input.rights_notes ?? null,
-      visibility: "private",
-      created_at: now,
-      updated_at: now,
-      removed_at: null,
-      view_count: 0,
-      like_count: 0,
-      share_count: 0,
-      description: null,
-    };
-    return {
-      next: { tracks: [row, ...snap.tracks] },
-      result: row,
-    };
-  });
+  return serialMutate(async (snap) => buildInsertResult(input, snap));
+}
+
+// Shared row-construction used by both insertMusicTrack (no quota) and
+// insertMusicTrackWithQuota (atomic quota enforcement). Keeps the row
+// shape in exactly one place.
+function buildInsertResult(
+  input: NexMusicTrackInsert,
+  snap: Snapshot,
+): { next: Snapshot; result: NexMusicTrackRow } {
+  const now = new Date().toISOString();
+  const row: NexMusicTrackRow = {
+    id: crypto.randomUUID(),
+    owner_account_id: input.owner_account_id,
+    business_id: input.business_id ?? null,
+    source_type: input.source_type,
+    title: input.title,
+    artist: input.artist,
+    album: input.album ?? null,
+    duration_ms: input.duration_ms,
+    media_url: input.media_url,
+    source_url: input.source_url,
+    cover_image_url: input.cover_image_url,
+    background_image_url: input.background_image_url ?? null,
+    byte_size: input.byte_size,
+    mime_type: input.mime_type,
+    bitrate_kbps: input.bitrate_kbps ?? null,
+    rights_declaration: input.rights_declaration,
+    rights_notes: input.rights_notes ?? null,
+    visibility: "private",
+    created_at: now,
+    updated_at: now,
+    removed_at: null,
+    view_count: 0,
+    like_count: 0,
+    share_count: 0,
+    description: null,
+  };
+  return {
+    next: { tracks: [row, ...snap.tracks] },
+    result: row,
+  };
 }
 
 function normaliseLoaded(row: NexMusicTrackRow): NexMusicTrackRow {

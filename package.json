@@ -95,6 +95,7 @@
     "lucide-react": "^1.23.0",
     "maxmind": "^5.0.7",
     "mjml": "^5.4.0",
+    "music-metadata": "^12.3.2",
     "next": "^16.2.9",
     "nodemailer": "^10.0.3",
     "onnxruntime-web": "^1.27.0",

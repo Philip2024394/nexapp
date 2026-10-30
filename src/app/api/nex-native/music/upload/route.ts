@@ -10,7 +10,8 @@
 import { NextResponse } from "next/server";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { getMusicStorageAdapter } from "@/lib/nex-native/music/storage-adapter";
-import { insertMusicTrack, getOwnerStorageUsageBytes, getOwnerTrackCount } from "@/lib/nex-native/music/music-repository";
+import { insertMusicTrackWithQuota, getOwnerStorageUsageBytes, getOwnerTrackCount, QuotaExceededError } from "@/lib/nex-native/music/music-repository";
+import { probeAudioDuration } from "@/lib/nex-native/music/music-duration-probe";
 import {
   ALLOWED_AUDIO_MIME,
   ALLOWED_COVER_MIME,
@@ -72,17 +73,13 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  const durationRaw = formData.get("duration_ms");
-  let durationMs: number | null = null;
-  if (typeof durationRaw === "string" && durationRaw.length > 0) {
-    const parsed = Math.round(Number(durationRaw));
-    if (Number.isFinite(parsed) && parsed > 0) {
-      if (parsed > MUSIC_UPLOAD_LIMITS.MAX_DURATION_MS) {
-        return errorJson("too-large", "Track exceeds 10-minute limit", 413);
-      }
-      durationMs = parsed;
-    }
-  }
+  // Owner-authorised 2026-10-31 (music-upload-audit · finding #10):
+  // the client-reported `duration_ms` is NO LONGER TRUSTED. We probe
+  // the audio bytes server-side after signature validation. The
+  // formData value is read + ignored here only to keep the client
+  // contract backwards-compatible (older clients still send it).
+  // The authoritative value is set at line ~180 (`probedDurationMs`).
+  void formData.get("duration_ms");
 
   // --- Audio file ---
   const audioFile = formData.get("audio");
@@ -175,6 +172,27 @@ export async function POST(request: Request): Promise<Response> {
     backgroundMime = bgSig.detectedMime;
   }
 
+  // --- Server-side duration probe (owner-authorised 2026-10-31 ·
+  //     music-upload-audit · finding #10). Replaces client-reported
+  //     duration_ms. Fails closed. ---
+  const probe = await probeAudioDuration(audioBytes, audioSig.detectedMime);
+  if (!probe.ok) {
+    return errorJson(
+      "invalid-input",
+      `Could not read audio duration · ${probe.reason}${probe.detail ? ` (${probe.detail})` : ""}`,
+      422,
+    );
+  }
+  if (probe.durationMs > MUSIC_UPLOAD_LIMITS.MAX_DURATION_MS) {
+    return errorJson(
+      "too-large",
+      `Track exceeds ${Math.floor(MUSIC_UPLOAD_LIMITS.MAX_DURATION_MS / 60000)}-minute limit (probed ${Math.round(probe.durationMs / 1000)}s)`,
+      413,
+    );
+  }
+  const probedDurationMs = probe.durationMs;
+  const probedBitrateKbps = probe.bitrateKbps;
+
   // --- Per-account quota checks ---
   const [usedBytes, usedCount] = await Promise.all([
     getOwnerStorageUsageBytes(ownerAccountId),
@@ -264,25 +282,32 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   // --- Persist row ---
+  // Owner-authorised 2026-10-31 (music-upload-audit · finding #9):
+  // use insertMusicTrackWithQuota so quota is re-checked INSIDE the
+  // write lock. Prevents the race where two concurrent uploads both
+  // pass the soft route-level check (lines 178-196) and both land.
   try {
-    const row = await insertMusicTrack({
-      owner_account_id: ownerAccountId,
-      business_id: null,
-      source_type: "uploaded_audio",
-      title,
-      artist,
-      album: null,
-      duration_ms: durationMs,
-      media_url: audioRef,
-      source_url: null,
-      cover_image_url: coverRef,
-      background_image_url: backgroundRef,
-      byte_size: audioBytes.length,
-      mime_type: audioSig.detectedMime,
-      bitrate_kbps: null,
-      rights_declaration: rightsDeclaration,
-      rights_notes: null,
-    });
+    const row = await insertMusicTrackWithQuota(
+      {
+        owner_account_id: ownerAccountId,
+        business_id: null,
+        source_type: "uploaded_audio",
+        title,
+        artist,
+        album: null,
+        duration_ms: probedDurationMs,
+        media_url: audioRef,
+        source_url: null,
+        cover_image_url: coverRef,
+        background_image_url: backgroundRef,
+        byte_size: audioBytes.length,
+        mime_type: audioSig.detectedMime,
+        bitrate_kbps: probedBitrateKbps,
+        rights_declaration: rightsDeclaration,
+        rights_notes: null,
+      },
+      { maxBytes: MAX_PER_ACCOUNT_BYTES, maxTracks: MAX_PER_ACCOUNT_TRACKS },
+    );
     // Owner-authorised 2026-10-30 · if a description was provided
     // during upload, persist it via the metadata update path · the
     // insert signature stays unchanged to minimise the schema diff.
@@ -302,13 +327,24 @@ export async function POST(request: Request): Promise<Response> {
     }
     return NextResponse.json({ ok: true, data: { trackId: row.id } });
   } catch (err) {
-    // Rollback the storage write if the row insert failed.
+    // Rollback the storage writes if the row insert failed. This covers
+    // both the lock-race QuotaExceededError (finding #9) and any other
+    // repository failure. The soft route-level check above cannot
+    // catch the race because it reads snapshot state outside the lock.
     try {
       await storage.deleteObject({ reference: audioRef });
       if (coverRef) await storage.deleteObject({ reference: coverRef });
       if (backgroundRef) await storage.deleteObject({ reference: backgroundRef });
     } catch {
-      // Fire-and-forget cleanup.
+      // Fire-and-forget cleanup. The dead-letter design (audit #2)
+      // will cover this gap separately.
+    }
+    if (err instanceof QuotaExceededError) {
+      return errorJson(
+        err.kind === "bytes" ? "storage-quota-exceeded" : "track-count-exceeded",
+        err.message,
+        429,
+      );
     }
     return errorJson(
       "unknown",
