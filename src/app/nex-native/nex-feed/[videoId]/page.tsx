@@ -38,6 +38,7 @@ import type { NexMusicTrackRow } from "@/lib/nex-native/music/types";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { getFollowState, readFollowCounts } from "@/lib/nex-native/follow/follow-repository";
 import { dialCodeToIsoCountry } from "@/lib/nex-native/country/dial-code-to-iso";
+import { isIrishAccount } from "@/lib/nex-native/country/is-irish-account";
 import { VideoViewerClient } from "./_video-viewer-client";
 import { MusicViewerClient } from "./_music-viewer-client";
 
@@ -462,7 +463,7 @@ export default async function NexFeedViewerPage({
     // {country}" header line in MusicPostShell renders truthfully.
     // Null-tolerant: unknown dial codes fall through to the sealed
     // "Live NEX" fallback at MusicPostShell:559.
-    const [initialFollowed, initialFollowerCount, broadcasterCountryCode] = await Promise.all([
+    const [initialFollowed, initialFollowerCount, broadcasterCountryInfo] = await Promise.all([
       viewerAccountId !== null && !viewerIsOwner
         ? getFollowState({
             followerId: viewerAccountId,
@@ -474,19 +475,25 @@ export default async function NexFeedViewerPage({
       readFollowCounts(musicEntry.ownerAccountId)
         .then((c) => c.followersCount)
         .catch(() => null as number | null),
-      (async (): Promise<string | null> => {
+      (async (): Promise<{ iso: string | null; isIrish: boolean }> => {
         try {
           const { data } = await nexSupabaseAdmin
             .from("nex_account")
             .select("phone_country_code")
             .eq("id", musicEntry.ownerAccountId)
             .maybeSingle<{ phone_country_code: string | null }>();
-          return dialCodeToIsoCountry(data?.phone_country_code ?? null);
+          const dial = data?.phone_country_code ?? null;
+          return {
+            iso: dialCodeToIsoCountry(dial),
+            isIrish: isIrishAccount(dial),
+          };
         } catch {
-          return null;
+          return { iso: null, isIrish: false };
         }
       })(),
     ]);
+    const broadcasterCountryCode = broadcasterCountryInfo.iso;
+    const isIrishBroadcaster = broadcasterCountryInfo.isIrish;
 
     return (
       <MusicViewerClient
@@ -501,6 +508,7 @@ export default async function NexFeedViewerPage({
         initialFollowed={initialFollowed}
         initialFollowerCount={initialFollowerCount}
         broadcasterCountryCode={broadcasterCountryCode}
+        isIrishBroadcaster={isIrishBroadcaster}
         prevOwnerTrackId={prevOwnerTrackId}
         nextOwnerTrackId={nextOwnerTrackId}
         nextOwnerTrack={nextOwnerTrackRow}

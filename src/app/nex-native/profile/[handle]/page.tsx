@@ -65,7 +65,8 @@ import { IdentityHero } from "./_identity-hero";
 import { InterestsPills } from "./_interests-pills";
 import { MutualFriends, type MutualPreviewAccount } from "./_mutual-friends";
 import { ActionButtons, type ConnectState } from "./_action-buttons";
-import { FollowButton } from "@/components/nex-native/follow/FollowButton";
+import { FollowButtonWithShamrock } from "@/components/nex-native/country-flare/FollowButtonWithShamrock";
+import { isAccountIrishAction } from "@/lib/nex-native/country/country-actions";
 import { FollowersCountChip } from "@/components/nex-native/follow/FollowersCountChip";
 import { readFollowCounts, getFollowState } from "@/lib/nex-native/follow/follow-repository";
 // SafeTradeCard import retired 2026-10-17 · the hero icon owns
@@ -311,8 +312,17 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
           followeeId: profileAccount.id,
         }).catch(() => "not-following" as const)
       : Promise.resolve("not-following" as const);
+  // Owner-authorised 2026-10-30 · resolve the profile owner's
+  // Irish-account flag so the FollowButton can fire the sealed
+  // IrishShamrockBurst on Follow / Unfollow. Fails open to false
+  // (burst stays silent).
+  const isIrishOwnerPromise = isAccountIrishAction({
+    accountId: profileAccount.id,
+  })
+    .then((r) => (r.ok ? r.isIrish : false))
+    .catch(() => false);
 
-  const [profile, businesses, isVerified, connectState, mutualResult, followCounts, viewerFollowState] = await Promise.all([
+  const [profile, businesses, isVerified, connectState, mutualResult, followCounts, viewerFollowState, isIrishOwner] = await Promise.all([
     profilePromise,
     businessesPromise,
     verifiedPromise,
@@ -320,6 +330,7 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
     mutualFriendsPromise,
     followCountsPromise,
     viewerFollowStatePromise,
+    isIrishOwnerPromise,
   ]);
 
   // Pre-migration-205 shape: cover_image_url + interests may be absent.
@@ -631,6 +642,7 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
             followersCount={followCounts.followersCount}
             followingCount={followCounts.followingCount}
             viewerFollowState={viewerFollowState}
+            isIrishOwner={isIrishOwner}
           />
         </OwnerEditShell>
       ) : (
@@ -669,6 +681,7 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
           followersCount={followCounts.followersCount}
           followingCount={followCounts.followingCount}
           viewerFollowState={viewerFollowState}
+          isIrishOwner={isIrishOwner}
         />
       )}
     </main>
@@ -731,6 +744,11 @@ function ProfileBody(props: {
   followersCount: number;
   followingCount: number;
   viewerFollowState: import("@/lib/nex-native/follow/types").NexFollowState;
+  /** Owner-authorised 2026-10-30 · when true, Follow / Unfollow taps
+   *  fire the sealed IrishShamrockBurst overlay. Scoped to Ireland
+   *  only (phone_country_code === '+353') per Phase 1 hard-coded
+   *  owner decision. */
+  isIrishOwner: boolean;
 }) {
   // Avatar + cover camera overlays only when the owner is actively
   // editing · zero footprint for viewers or in view mode.
@@ -825,12 +843,13 @@ function ProfileBody(props: {
             inkDim="#4A6080"
           />
           {!props.isOwner && props.isSignedIn ? (
-            <FollowButton
+            <FollowButtonWithShamrock
               followeeId={props.profileAccountId}
               source="profile"
               initialState={props.viewerFollowState}
               size="md"
               isSelfAccount={false}
+              isIrishOwner={props.isIrishOwner}
             />
           ) : null}
         </div>

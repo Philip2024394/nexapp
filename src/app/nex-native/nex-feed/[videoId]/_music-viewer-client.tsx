@@ -44,6 +44,7 @@ import { DevViewerBadge } from "@/components/nex-native/music/DevViewerBadge";
 import { MusicActionsStack } from "@/components/nex-native/music/MusicActionsStack";
 import { MusicDescriptionAffordance } from "@/components/nex-native/music/MusicDescriptionAffordance";
 import { MusicPostShell } from "@/components/nex-native/music/MusicPostShell";
+import { IrishShamrockBurst } from "@/components/nex-native/country-flare/IrishShamrockBurst";
 import {
   toggleMusicTrackLikeAction,
   recordMusicTrackShareAction,
@@ -94,6 +95,11 @@ export interface MusicViewerClientProps {
    *  dial code is unknown or malformed; null falls through to the
    *  sealed "Live NEX" fallback in MusicPostShell. */
   readonly broadcasterCountryCode: string | null;
+  /** Owner-authorised 2026-10-30 · when true, Save / Follow taps
+   *  fire the IrishShamrockBurst overlay. Resolved server-side via
+   *  isIrishAccount(phone_country_code === '+353'). Scoped to Phase 1
+   *  hard-coded Ireland-only per sealed owner decision. */
+  readonly isIrishBroadcaster: boolean;
   /** Owner-authorised 2026-10-30 · prev/next track ids within the
    *  creator's own chronological music cycle. Used by the in-player
    *  prev/next arrows so they walk the creator's songs (not the mixed
@@ -274,6 +280,15 @@ export function MusicViewerClient(
   // replace this with per-event ingestion against valid-play criteria;
   // for Phase 1 this is the honest counter driver.
   const playBumpedRef = React.useRef(false);
+  // Owner-authorised 2026-10-30 · shamrock burst trigger for Irish
+  // broadcasters. Increments on each Save or Follow tap; the
+  // IrishShamrockBurst component watches this and spawns a fresh
+  // overlay per bump. No-op when the owner is not Irish.
+  const [shamrockTrigger, setShamrockTrigger] = React.useState(0);
+  const fireShamrockBurst = React.useCallback(() => {
+    if (!props.isIrishBroadcaster) return;
+    setShamrockTrigger((n) => n + 1);
+  }, [props.isIrishBroadcaster]);
   // Owner-authorised 2026-10-30 · Up-Next banner surfaces at
   // ≤ 30 s remaining in the current song. The overlay publishes
   // position + duration via `onPositionTick`; we store the remaining
@@ -606,7 +621,21 @@ export function MusicViewerClient(
             setShareSheetOpen(true);
             return null;
           }}
+          // Owner-authorised 2026-10-30 · Save + Follow taps fire the
+          // IrishShamrockBurst for Irish-broadcaster accounts (hard-
+          // coded per sealed owner decision). fireShamrockBurst
+          // internally short-circuits when the broadcaster is not
+          // Irish, so these callbacks are no-ops for non-Irish owners.
+          onSave={fireShamrockBurst}
+          onFollow={fireShamrockBurst}
         />
+        {/* Owner-authorised 2026-10-30 · hollywood-grade shamrock
+            fall on Save/Follow of Irish-attributed tracks. Mounts
+            only when the broadcaster is Irish (zero cost for
+            non-Irish surfaces · no DOM overhead). */}
+        {props.isIrishBroadcaster && (
+          <IrishShamrockBurst trigger={shamrockTrigger} />
+        )}
 
         {/* Owner-only inbox slot · HendraMessageInbox portals its
             💬 trigger + unread-count pill into this slot (sealed

@@ -53,10 +53,12 @@ import { MessagePanel } from "@/components/nex-native/live-commerce/MessagePanel
 import { getLiveInviteTargetAction } from "@/app/nex-native/live-commerce/_invite-target-action";
 import type { InviteTarget } from "@/lib/nex-native/live-broadcast/invite-target";
 import { FollowButton } from "@/components/nex-native/follow/FollowButton";
+import { IrishShamrockBurst } from "@/components/nex-native/country-flare/IrishShamrockBurst";
 import {
   isFollowingAction,
   getFollowCountsAction,
 } from "@/lib/nex-native/follow/follow-actions";
+import { isAccountIrishAction } from "@/lib/nex-native/country/country-actions";
 
 /** Compact k/M formatter for the inline Live follower-count chip.
  *  Owner-authorised 2026-10-30 · Stage 2b · duplicates the sealed
@@ -129,6 +131,13 @@ export function LiveViewerPage({
   const [broadcasterFollowersCount, setBroadcasterFollowersCount] = React.useState<
     number | null
   >(null);
+  // Owner-authorised 2026-10-30 · shamrock-burst trigger for Irish
+  // broadcasters on the Live surface. Broadcaster identity resolves
+  // client-side via presence · country flag loaded via a tiny server
+  // action in the same effect that already fetches follow state +
+  // follower count. No-op when the broadcaster isn't Irish.
+  const [isIrishBroadcaster, setIsIrishBroadcaster] = React.useState(false);
+  const [shamrockTrigger, setShamrockTrigger] = React.useState(0);
   // Owner directive 2026-10-25 (Phase B) · Message panel state. The
   // broadcaster InviteTarget is resolved on-demand when the viewer
   // taps Message in the 3-dot slide-out · we do NOT prefetch to avoid
@@ -428,11 +437,13 @@ export function LiveViewerPage({
     if (!broadcasterAccountId) {
       setResolvedFollowState(null);
       setBroadcasterFollowersCount(null);
+      setIsIrishBroadcaster(false);
       return;
     }
     let cancelled = false;
     setResolvedFollowState(null);
     setBroadcasterFollowersCount(null);
+    setIsIrishBroadcaster(false);
     // Follow-state query is auth-gated · skip for guests + self-view.
     // Count query is public · always fetch when broadcaster is known
     // (viewers want to see the broadcaster's follower count even if
@@ -458,7 +469,15 @@ export function LiveViewerPage({
       .catch(() => {
         /* fail-open · leave null · chip stays hidden */
       });
-    void Promise.all([followStatePromise, countPromise]);
+    const irishPromise = isAccountIrishAction({ accountId: broadcasterAccountId })
+      .then((r) => {
+        if (cancelled) return;
+        if (r.ok) setIsIrishBroadcaster(r.isIrish);
+      })
+      .catch(() => {
+        /* fail-open · leave false · burst stays silent */
+      });
+    void Promise.all([followStatePromise, countPromise, irishPromise]);
     return () => {
       cancelled = true;
     };
@@ -1101,6 +1120,13 @@ export function LiveViewerPage({
             size="sm"
             initialState={resolvedFollowState ?? "not-following"}
             isSelfAccount={false}
+            // Owner-authorised 2026-10-30 · fire shamrock burst on
+            // state change (follow OR unfollow) when the broadcaster
+            // is Irish. onStateChange is the sealed callback the
+            // FollowButton exposes · parent controls flare.
+            onStateChange={() => {
+              if (isIrishBroadcaster) setShamrockTrigger((n) => n + 1);
+            }}
           />
           {/* Owner-authorised 2026-10-30 · Stage 2b · compact
               broadcaster follower-count chip for the Live overlay.
@@ -1127,6 +1153,15 @@ export function LiveViewerPage({
             </div>
           )}
         </div>
+      )}
+
+      {/* Owner-authorised 2026-10-30 · hollywood-grade shamrock fall
+          when a viewer follows / unfollows an Irish broadcaster on
+          Live. Fires via setShamrockTrigger from the FollowButton
+          onStateChange callback above. Mounts only when the
+          broadcaster is Irish (zero DOM cost otherwise). */}
+      {isIrishBroadcaster && (
+        <IrishShamrockBurst trigger={shamrockTrigger} />
       )}
 
       {(state === "idle" || state === "waiting" || state === "connecting" || state === "live") && !isSelf && !jailEvent && !isImmersive && (
