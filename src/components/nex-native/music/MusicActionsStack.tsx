@@ -588,7 +588,9 @@ function HeartIcon(props: {
   // Replaces the previous simplified three-arc path with a true
   // double-lobed curve that reads as a heart at any size + any
   // stroke width. Material-standard shape.
-  const s = props.size ?? 20;
+  // Default raised 20 → 24 (owner directive 2026-10-30) · explicit
+  // overrides for burst-animation sizes stay untouched.
+  const s = props.size ?? 24;
   const color = props.color ?? "currentColor";
   return (
     <svg
@@ -612,7 +614,7 @@ function BookmarkIcon(props: {
 }): React.JSX.Element {
   const color = props.color ?? "currentColor";
   return (
-    <svg viewBox="0 0 24 24" width={20} height={20} fill={props.filled ? color : "none"} stroke={color} strokeWidth={2} strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" width={24} height={24} fill={props.filled ? color : "none"} stroke={color} strokeWidth={2} strokeLinejoin="round">
       <path d="M6 3h12v18l-6-4-6 4V3z" />
     </svg>
   );
@@ -630,8 +632,8 @@ function ShareIcon(props: {
   return (
     <svg
       viewBox="0 0 24 24"
-      width={20}
-      height={20}
+      width={24}
+      height={24}
       fill="none"
       stroke={color}
       strokeWidth={1.9}
@@ -653,7 +655,7 @@ function PersonPlusIcon(props: {
 }): React.JSX.Element {
   const color = props.color ?? "currentColor";
   return (
-    <svg viewBox="0 0 24 24" width={20} height={20} fill={props.filled ? color : "none"} stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" width={24} height={24} fill={props.filled ? color : "none"} stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
       <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
       <circle cx="9" cy="7" r="4" />
       <line x1="19" y1="8" x2="19" y2="14" />
@@ -666,14 +668,15 @@ function EditIcon(props: {
   readonly color?: string;
 }): React.JSX.Element {
   // Owner-authorised 2026-10-30 · pencil glyph · same visual weight
-  // as the other right-rail icons (20 × 20 · 2 stroke · no fill).
+  // as the other right-rail icons (24 × 24 · 2 stroke · no fill after
+  // owner directive 2026-10-30 bumped the rail icons from 20 → 24).
   // Opens the sealed track-edit surface (preview?edit=1).
   const color = props.color ?? "currentColor";
   return (
     <svg
       viewBox="0 0 24 24"
-      width={20}
-      height={20}
+      width={24}
+      height={24}
       fill="none"
       stroke={color}
       strokeWidth={2}
@@ -690,14 +693,15 @@ function MessageIcon(props: {
   readonly color?: string;
 }): React.JSX.Element {
   // Owner-authorised 2026-10-30 · chat-bubble glyph · same visual
-  // weight as the other right-rail icons (20 × 20 · 1.9 stroke · no
-  // fill). Opens the sealed connection-invitation panel.
+  // weight as the other right-rail icons (24 × 24 · 1.9 stroke · no
+  // fill after owner directive 2026-10-30 bumped the rail icons from
+  // 20 → 24). Opens the sealed connection-invitation panel.
   const color = props.color ?? "currentColor";
   return (
     <svg
       viewBox="0 0 24 24"
-      width={20}
-      height={20}
+      width={24}
+      height={24}
       fill="none"
       stroke={color}
       strokeWidth={1.9}

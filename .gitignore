@@ -389,3 +389,11 @@ build.log
 
 # Dev-only live videos — not committed · see docs/doctrine/nex-live-uploaded-video-contract-2026-10-24.md
 public/dev/live-videos/
+
+# Dev-only music filesystem adapter data — tracks.json, active-slots.json,
+# publish-idempotency.json, track-likes.json, audio/ (owner-authorised
+# 2026-10-30 to keep dev music metadata + binary audio local-only · rights-
+# pending covers must not land in a public repo · doctrine ref:
+# nex-music-directory-architecture-draft-2026-10-30.md §8.1 + §Active-Slot
+# Rotation Rule).
+.dev-music-data/

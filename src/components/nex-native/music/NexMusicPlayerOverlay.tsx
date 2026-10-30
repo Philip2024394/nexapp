@@ -168,10 +168,15 @@ export function NexMusicPlayerOverlay(
   // honoured once on mount for callers that still pass it; the
   // `onVolumeChange` callback is retained in the interface for
   // callers that mix via Web Audio but is no longer fired from here.
+  // Owner-authorised 2026-10-30 · default raised from 0.8 → 1.0 to
+  // apply NO attenuation at the HTML Audio layer · the phone system
+  // volume remains the sole governor per the sealed 2026-10-29
+  // phone-volume policy. 1.0 is the maximum standard HTML Audio
+  // value · going above 1 is non-standard and risks clipping.
   const initialVolumeValue =
     typeof props.initialVolume === "number"
       ? Math.max(0, Math.min(1, props.initialVolume))
-      : 0.8;
+      : 1.0;
   const [error, setError] = React.useState<string | null>(null);
 
   const isExternal = props.track.source_type !== "uploaded_audio";
@@ -891,7 +896,7 @@ export function NexMusicPlayerOverlay(
                            preview-load bumps already represent plays)
                   RIGHT  = total duration (position swapped out — the
                            replay round icon took its place) */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: INK_DIM, marginTop: 4 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 14, fontWeight: 700, color: INK_DIM, marginTop: 4 }}>
               <button
                 type="button"
                 aria-label="Replay from start"
