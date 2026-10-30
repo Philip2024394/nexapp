@@ -2,38 +2,33 @@
 //
 // Owner-authorised 2026-10-29 · DRAFT §5 adapter factory.
 //
-// For v1 the only wired adapter is the dev filesystem store · the
-// production storage provider decision is deferred to Gate 3+
-// (sealed memory 2026-10-30 · H2 unsealed).
-//
 // Owner-authorised 2026-10-31 (music-upload-audit · finding #1 + #3 +
 // #12): HARD-GATE the FS adapter to dev. On Vercel/production
 // serverless, `.dev-music-data/` lives on an ephemeral per-invocation
 // disk that disappears before the next request — uploads would appear
 // to succeed (HTTP 200) but the bytes would 404 seconds later.
 //
-// Owner-authorised 2026-10-31 (Phase B draft · #81): the production
-// Supabase Storage adapter is DRAFT-wired. Selection matrix:
+// Owner-authorised 2026-10-31 (Phase B draft · #81): Supabase Storage
+// adapter wired behind a `NEX_MUSIC_STORAGE=supabase` env flag.
 //
-//   NODE_ENV      NEX_MUSIC_STORAGE   result
-//   -----------   -----------------   -------------------------------
-//   !production   (unset)             dev-fs (today)
-//   !production   "dev-fs"            dev-fs
-//   !production   "supabase"          Supabase Storage (opt-in dev-test)
-//   production    "supabase"          Supabase Storage (requires H2 seal)
-//   production    (unset / anything   THROW · prevents accidental ship
-//   production    other than          with no provider selected
-//                 "supabase")
+// Owner-authorised 2026-10-31 (Phase B+ · in-service): factory is now
+// REFERENCE-PREFIX-AWARE. If a caller already has a `reference` string
+// (e.g. for getSignedReadUrl / deleteObject / objectExists), the
+// factory routes to the adapter that owns that reference. This lets a
+// single `tracks.json` snapshot carry both legacy `fs://` rows AND
+// newly-uploaded `sb://` rows and have them play transparently with
+// no env flipping. The env flag now ONLY controls where NEW uploads
+// (putObject with no reference) land.
 //
-// This means a prod build CANNOT silently use the FS adapter. Enabling
-// Supabase Storage in production additionally requires:
-//   · H2 sealed in `project_nex_music_publishing_locks_sealed_2026_10_30.md`
-//   · Bucket `nex-music-media` created in Supabase project
-//     `ijvqdvsvwtwxzcqmoqit` with correct RLS policies
-//   · V7 verification against staging
+// Reference prefix routing:
+//   fs://      → fsMusicDevAdapter (dev only)
+//   sb://      → supabaseMusicStorageAdapter
+//   (unknown)  → throw
 //
-// None of those are automatic. The env flag is only the enablement
-// knob; the ops prerequisites are separate.
+// Env flag routing (for putObject):
+//   NEX_MUSIC_STORAGE=supabase      → supabaseMusicStorageAdapter
+//   NEX_MUSIC_STORAGE=dev-fs (unset)→ fsMusicDevAdapter (dev only)
+//   production + anything else      → throw (prevents accidental ship)
 
 import "server-only";
 import type { MusicMediaStorage } from "./types";
@@ -42,31 +37,55 @@ import { supabaseMusicStorageAdapter } from "./supabase-storage-adapter";
 
 type ProviderChoice = "dev-fs" | "supabase";
 
-function pickProvider(): ProviderChoice {
+function pickDefaultProvider(): ProviderChoice {
   const envRaw = process.env.NEX_MUSIC_STORAGE;
   const env = typeof envRaw === "string" ? envRaw.trim().toLowerCase() : "";
   if (env === "supabase") return "supabase";
   if (env === "dev-fs") return "dev-fs";
-  return "dev-fs"; // default
+  return "dev-fs";
 }
 
-export function getMusicStorageAdapter(): MusicMediaStorage {
-  const choice = pickProvider();
-
-  if (process.env.NODE_ENV === "production") {
-    if (choice === "supabase") {
-      return supabaseMusicStorageAdapter;
+function adapterByReference(reference: string): MusicMediaStorage | null {
+  if (reference.startsWith("fs://")) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "nex-music: fs:// reference is not readable in production. " +
+          "Legacy dev-FS objects must be migrated to Supabase Storage " +
+          "before this build serves them. See the production apply-" +
+          "order playbook.",
+      );
     }
+    return fsMusicDevAdapter;
+  }
+  if (reference.startsWith("sb://")) return supabaseMusicStorageAdapter;
+  return null;
+}
+
+/** Get the adapter responsible for a given storage reference, or the
+ *  default (env-flag-driven) adapter if no reference is supplied.
+ *
+ *  Callers:
+ *   · putObject   → pass no reference · env flag decides
+ *   · getSignedReadUrl / deleteObject / objectExists → pass the
+ *     stored `media_url` so the correct adapter handles the operation */
+export function getMusicStorageAdapter(reference?: string): MusicMediaStorage {
+  if (reference && reference.length > 0) {
+    const byRef = adapterByReference(reference);
+    if (byRef) return byRef;
     throw new Error(
-      "nex-music: no production storage adapter is wired. Set " +
-        "NEX_MUSIC_STORAGE=supabase AND seal H2 before shipping music " +
-        "uploads to production. Blocked by sealed memory 2026-10-30 · " +
-        "H2 unsealed. The filesystem dev adapter cannot run on " +
-        "serverless (ephemeral disk between requests).",
+      `nex-music: unrecognised storage reference prefix in "${reference.slice(0, 32)}…"`,
     );
   }
 
-  // Dev / preview / test.
+  const choice = pickDefaultProvider();
+  if (process.env.NODE_ENV === "production") {
+    if (choice === "supabase") return supabaseMusicStorageAdapter;
+    throw new Error(
+      "nex-music: no production storage adapter is wired. Set " +
+        "NEX_MUSIC_STORAGE=supabase AND seal H2 before shipping music " +
+        "uploads to production.",
+    );
+  }
   if (choice === "supabase") return supabaseMusicStorageAdapter;
   return fsMusicDevAdapter;
 }

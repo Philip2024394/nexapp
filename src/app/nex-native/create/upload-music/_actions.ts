@@ -299,38 +299,36 @@ export async function getMusicPlayUrlAction(input: {
     return { ok: false, code: "forbidden", message: "Not the owner" };
   }
 
-  const storage = getMusicStorageAdapter();
+  // Owner-authorised 2026-10-31 (Phase B+): reference-prefix-aware
+  // signing. Factory routes fs:// to dev FS adapter, sb:// to Supabase.
+  const signRef = (ref: string) =>
+    getMusicStorageAdapter(ref).getSignedReadUrl({
+      reference: ref,
+      ownerAccountId: session.account.id,
+      expiresInSeconds: 3600,
+    });
+
   let signedUrl: string | null = null;
   if (track.media_url) {
-    const signed = await storage.getSignedReadUrl({
-      reference: track.media_url,
-      ownerAccountId: session.account.id,
-      expiresInSeconds: 3600,
-    });
-    signedUrl = signed.signedUrl;
+    signedUrl = (await signRef(track.media_url)).signedUrl;
   }
   let coverUrl: string | null = null;
-  if (track.cover_image_url && track.cover_image_url.startsWith("fs://")) {
-    const signed = await storage.getSignedReadUrl({
-      reference: track.cover_image_url,
-      ownerAccountId: session.account.id,
-      expiresInSeconds: 3600,
-    });
-    coverUrl = signed.signedUrl;
+  if (
+    track.cover_image_url &&
+    (track.cover_image_url.startsWith("fs://") ||
+      track.cover_image_url.startsWith("sb://"))
+  ) {
+    coverUrl = (await signRef(track.cover_image_url)).signedUrl;
   } else if (track.cover_image_url) {
     coverUrl = track.cover_image_url;
   }
   let backgroundUrl: string | null = null;
   if (
     track.background_image_url &&
-    track.background_image_url.startsWith("fs://")
+    (track.background_image_url.startsWith("fs://") ||
+      track.background_image_url.startsWith("sb://"))
   ) {
-    const signed = await storage.getSignedReadUrl({
-      reference: track.background_image_url,
-      ownerAccountId: session.account.id,
-      expiresInSeconds: 3600,
-    });
-    backgroundUrl = signed.signedUrl;
+    backgroundUrl = (await signRef(track.background_image_url)).signedUrl;
   } else if (track.background_image_url) {
     backgroundUrl = track.background_image_url;
   }
@@ -518,13 +516,22 @@ export async function hardDeleteMusicTrackAction(input: {
   if (existing.owner_account_id !== session.account.id) {
     return { ok: false, code: "forbidden", message: "Not the owner" };
   }
-  const storage = getMusicStorageAdapter();
+  // Owner-authorised 2026-10-31 (Phase B+): factory routes per
+  // reference prefix. Delete handles both fs:// and sb:// cleanly.
   try {
     if (existing.media_url) {
-      await storage.deleteObject({ reference: existing.media_url });
+      await getMusicStorageAdapter(existing.media_url).deleteObject({
+        reference: existing.media_url,
+      });
     }
-    if (existing.cover_image_url && existing.cover_image_url.startsWith("fs://")) {
-      await storage.deleteObject({ reference: existing.cover_image_url });
+    if (
+      existing.cover_image_url &&
+      (existing.cover_image_url.startsWith("fs://") ||
+        existing.cover_image_url.startsWith("sb://"))
+    ) {
+      await getMusicStorageAdapter(existing.cover_image_url).deleteObject({
+        reference: existing.cover_image_url,
+      });
     }
   } catch {
     // Non-fatal · continue to row delete.

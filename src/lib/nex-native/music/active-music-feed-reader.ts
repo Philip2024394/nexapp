@@ -112,12 +112,15 @@ async function mintSignedUrlIfReference(
   expiresInSeconds: number,
 ): Promise<string | null> {
   if (!ref) return null;
-  if (!ref.startsWith("fs://")) {
-    // Already a URL (e.g. external cover). Return as-is.
+  // Owner-authorised 2026-10-31 (Phase B+ · reference-prefix-aware
+  // factory). Both fs:// (dev FS) and sb:// (Supabase Storage) are
+  // honoured transparently. Anything else is treated as an already-
+  // valid absolute URL (external cover art, etc.) and returned as-is.
+  if (!ref.startsWith("fs://") && !ref.startsWith("sb://")) {
     return ref;
   }
   try {
-    const storage = getMusicStorageAdapter();
+    const storage = getMusicStorageAdapter(ref);
     const { signedUrl } = await storage.getSignedReadUrl({
       reference: ref,
       ownerAccountId,

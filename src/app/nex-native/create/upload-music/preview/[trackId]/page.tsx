@@ -54,38 +54,41 @@ export default async function PreviewPage({
     trackId,
     likerAccountId: session.account.id,
   });
-  const storage = getMusicStorageAdapter();
+  // Owner-authorised 2026-10-31 (Phase B+ · reference-prefix-aware
+  // factory). Each sign call now picks the correct adapter based on
+  // the reference prefix (fs:// → dev FS · sb:// → Supabase Storage).
+  // Legacy fs:// and new sb:// rows coexist in the same tracks snapshot
+  // and play transparently.
+  const signRef = async (ref: string) => {
+    const { signedUrl } = await getMusicStorageAdapter(ref).getSignedReadUrl({
+      reference: ref,
+      ownerAccountId: session.account.id,
+      expiresInSeconds: 3600,
+    });
+    return signedUrl;
+  };
+
   let audioUrl: string | null = null;
   let coverUrl: string | null = null;
   let backgroundUrl: string | null = null;
   if (track.media_url) {
-    const s = await storage.getSignedReadUrl({
-      reference: track.media_url,
-      ownerAccountId: session.account.id,
-      expiresInSeconds: 3600,
-    });
-    audioUrl = s.signedUrl;
+    audioUrl = await signRef(track.media_url);
   }
-  if (track.cover_image_url && track.cover_image_url.startsWith("fs://")) {
-    const s = await storage.getSignedReadUrl({
-      reference: track.cover_image_url,
-      ownerAccountId: session.account.id,
-      expiresInSeconds: 3600,
-    });
-    coverUrl = s.signedUrl;
+  if (
+    track.cover_image_url &&
+    (track.cover_image_url.startsWith("fs://") ||
+      track.cover_image_url.startsWith("sb://"))
+  ) {
+    coverUrl = await signRef(track.cover_image_url);
   } else if (track.cover_image_url) {
     coverUrl = track.cover_image_url;
   }
   if (
     track.background_image_url &&
-    track.background_image_url.startsWith("fs://")
+    (track.background_image_url.startsWith("fs://") ||
+      track.background_image_url.startsWith("sb://"))
   ) {
-    const s = await storage.getSignedReadUrl({
-      reference: track.background_image_url,
-      ownerAccountId: session.account.id,
-      expiresInSeconds: 3600,
-    });
-    backgroundUrl = s.signedUrl;
+    backgroundUrl = await signRef(track.background_image_url);
   } else if (track.background_image_url) {
     backgroundUrl = track.background_image_url;
   }
@@ -139,27 +142,19 @@ export default async function PreviewPage({
     try {
       if (
         nextTrack.cover_image_url &&
-        nextTrack.cover_image_url.startsWith("fs://")
+        (nextTrack.cover_image_url.startsWith("fs://") ||
+          nextTrack.cover_image_url.startsWith("sb://"))
       ) {
-        const s = await storage.getSignedReadUrl({
-          reference: nextTrack.cover_image_url,
-          ownerAccountId: session.account.id,
-          expiresInSeconds: 3600,
-        });
-        nextCoverUrl = s.signedUrl;
+        nextCoverUrl = await signRef(nextTrack.cover_image_url);
       } else if (nextTrack.cover_image_url) {
         nextCoverUrl = nextTrack.cover_image_url;
       }
       if (
         nextTrack.background_image_url &&
-        nextTrack.background_image_url.startsWith("fs://")
+        (nextTrack.background_image_url.startsWith("fs://") ||
+          nextTrack.background_image_url.startsWith("sb://"))
       ) {
-        const s = await storage.getSignedReadUrl({
-          reference: nextTrack.background_image_url,
-          ownerAccountId: session.account.id,
-          expiresInSeconds: 3600,
-        });
-        nextBackgroundUrl = s.signedUrl;
+        nextBackgroundUrl = await signRef(nextTrack.background_image_url);
       } else if (nextTrack.background_image_url) {
         nextBackgroundUrl = nextTrack.background_image_url;
       }
@@ -177,27 +172,19 @@ export default async function PreviewPage({
     try {
       if (
         prevTrack.cover_image_url &&
-        prevTrack.cover_image_url.startsWith("fs://")
+        (prevTrack.cover_image_url.startsWith("fs://") ||
+          prevTrack.cover_image_url.startsWith("sb://"))
       ) {
-        const s = await storage.getSignedReadUrl({
-          reference: prevTrack.cover_image_url,
-          ownerAccountId: session.account.id,
-          expiresInSeconds: 3600,
-        });
-        prevCoverUrl = s.signedUrl;
+        prevCoverUrl = await signRef(prevTrack.cover_image_url);
       } else if (prevTrack.cover_image_url) {
         prevCoverUrl = prevTrack.cover_image_url;
       }
       if (
         prevTrack.background_image_url &&
-        prevTrack.background_image_url.startsWith("fs://")
+        (prevTrack.background_image_url.startsWith("fs://") ||
+          prevTrack.background_image_url.startsWith("sb://"))
       ) {
-        const s = await storage.getSignedReadUrl({
-          reference: prevTrack.background_image_url,
-          ownerAccountId: session.account.id,
-          expiresInSeconds: 3600,
-        });
-        prevBackgroundUrl = s.signedUrl;
+        prevBackgroundUrl = await signRef(prevTrack.background_image_url);
       } else if (prevTrack.background_image_url) {
         prevBackgroundUrl = prevTrack.background_image_url;
       }
@@ -231,14 +218,13 @@ export default async function PreviewPage({
   const libraryTracks = await Promise.all(
     popularityOrdered.map(async (t) => {
       let signedCover: string | null = null;
-      if (t.cover_image_url && t.cover_image_url.startsWith("fs://")) {
+      if (
+        t.cover_image_url &&
+        (t.cover_image_url.startsWith("fs://") ||
+          t.cover_image_url.startsWith("sb://"))
+      ) {
         try {
-          const s = await storage.getSignedReadUrl({
-            reference: t.cover_image_url,
-            ownerAccountId: session.account.id,
-            expiresInSeconds: 3600,
-          });
-          signedCover = s.signedUrl;
+          signedCover = await signRef(t.cover_image_url);
         } catch {
           signedCover = null;
         }

@@ -132,20 +132,21 @@ export default async function NexFeedViewerPage({
         row.visibility !== "removed" &&
         permittedRights.has(row.rights_declaration)
       ) {
-        const storage = getMusicStorageAdapter();
+        // Owner-authorised 2026-10-31 (Phase B+): mint via the
+        // reference-prefix-aware factory so fs:// and sb:// both play.
         const mintSigned = async (
           ref: string | null,
         ): Promise<string | null> => {
           if (!ref) return null;
-          if (!ref.startsWith("fs://")) return ref;
+          if (!ref.startsWith("fs://") && !ref.startsWith("sb://")) {
+            return ref;
+          }
           try {
-            const s = await storage.getSignedReadUrl({
+            const s = await getMusicStorageAdapter(ref).getSignedReadUrl({
               reference: ref,
               ownerAccountId: row.owner_account_id,
               // Owner-authorised 2026-10-30 · 60 s → 3600 s to match
-              // the preview page's signed-URL TTL. Short cap was
-              // causing "Playback error · the file may be
-              // unavailable" after swipe-away / resume.
+              // the preview page's signed-URL TTL.
               expiresInSeconds: 3600,
             });
             return s.signedUrl;
@@ -324,7 +325,6 @@ export default async function NexFeedViewerPage({
     // cover, library hidden, etc.).
     const musicEntry = current.entry;
     const track = await getTrackById(musicEntry.trackId);
-    const storage = getMusicStorageAdapter();
 
     // Build the viewer's library view of the creator's tracks. On
     // this public surface we only expose non-removed tracks whose
@@ -358,9 +358,13 @@ export default async function NexFeedViewerPage({
     const libraryTracks = await Promise.all(
       eligibleTracks.map(async (t) => {
         let coverUrl: string | null = null;
-        if (t.cover_image_url && t.cover_image_url.startsWith("fs://")) {
+        if (
+          t.cover_image_url &&
+          (t.cover_image_url.startsWith("fs://") ||
+            t.cover_image_url.startsWith("sb://"))
+        ) {
           try {
-            const s = await storage.getSignedReadUrl({
+            const s = await getMusicStorageAdapter(t.cover_image_url).getSignedReadUrl({
               reference: t.cover_image_url,
               ownerAccountId: musicEntry.ownerAccountId,
               expiresInSeconds: 3600,
@@ -427,9 +431,9 @@ export default async function NexFeedViewerPage({
         ref: string | null,
       ): Promise<string | null> => {
         if (!ref) return null;
-        if (!ref.startsWith("fs://")) return ref;
+        if (!ref.startsWith("fs://") && !ref.startsWith("sb://")) return ref;
         try {
-          const s = await storage.getSignedReadUrl({
+          const s = await getMusicStorageAdapter(ref).getSignedReadUrl({
             reference: ref,
             ownerAccountId: musicEntry.ownerAccountId,
             expiresInSeconds: 3600,
