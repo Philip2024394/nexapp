@@ -513,7 +513,7 @@ function MusicPostHeaderIdentity(props: {
             icon row at its sealed vertical position. */}
         <span
           style={{
-            fontSize: 13,
+            fontSize: 15,
             fontWeight: 800,
             lineHeight: 1.2,
             whiteSpace: "nowrap",
@@ -528,7 +528,7 @@ function MusicPostHeaderIdentity(props: {
         {props.broadcasterNexHandle && (
           <span
             style={{
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 700,
               color: "rgba(240, 246, 255, 0.75)",
               letterSpacing: "0.03em",
@@ -545,7 +545,7 @@ function MusicPostHeaderIdentity(props: {
         )}
         <span
           style={{
-            fontSize: 11,
+            fontSize: 13,
             fontWeight: 700,
             color: "#D9E6F5",
             lineHeight: 1.2,
