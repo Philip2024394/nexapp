@@ -35,6 +35,11 @@ export interface ReturnsDraft {
   readonly whoPaysShipping: "buyer" | "seller" | "negotiable";
   readonly conditionRequirement: string;
   readonly notes: string;
+  /** Owner-authorised 2026-10-31 (Decision 2 · Option 1) · seller's
+   *  own market country, picked per-product. ISO alpha-2. "" means
+   *  the seller has not declared it; the UI falls back to showing
+   *  destination cards only. */
+  readonly sellerCountryIso: string;
 }
 
 export const EMPTY_RETURNS: ReturnsDraft = {
@@ -43,6 +48,7 @@ export const EMPTY_RETURNS: ReturnsDraft = {
   whoPaysShipping: "buyer",
   conditionRequirement: "",
   notes: "",
+  sellerCountryIso: "",
 };
 
 export interface ReturnsEditorProps {
@@ -51,18 +57,17 @@ export interface ReturnsEditorProps {
   /** List of destination country ISOs declared on the Delivery editor
    *  (export destinations). Each one gets a statutory-floor card. */
   readonly destinationIsos: readonly string[];
-  /** Seller's own country ISO (optional). When present, its statutory
-   *  floor is also shown — local buyers are governed by local law. */
-  readonly sellerCountryIso?: string | null;
 }
 
 export function ReturnsEditor(props: ReturnsEditorProps): React.JSX.Element {
-  const { value, onChange, destinationIsos, sellerCountryIso } = props;
+  const { value, onChange, destinationIsos } = props;
   const set = <K extends keyof ReturnsDraft>(k: K, v: ReturnsDraft[K]) =>
     onChange({ ...value, [k]: v });
 
+  const sellerCountryIso = value.sellerCountryIso.trim().toUpperCase();
+  const normalisedSellerIso = /^[A-Z]{2}$/.test(sellerCountryIso) ? sellerCountryIso : "";
   const dedupIsos = Array.from(new Set(
-    [sellerCountryIso, ...destinationIsos]
+    [normalisedSellerIso, ...destinationIsos]
       .filter((x): x is string => typeof x === "string" && /^[A-Z]{2}$/.test(x.toUpperCase()))
       .map((x) => x.toUpperCase()),
   ));
@@ -80,6 +85,19 @@ export function ReturnsEditor(props: ReturnsEditorProps): React.JSX.Element {
 
       <div style={blockStyle}>
         <h3 style={headingStyle}>Your return policy</h3>
+        <div style={gridStyle}>
+          <Field label="Your market (ISO 2-letter)">
+            <input
+              type="text"
+              value={value.sellerCountryIso}
+              onChange={(e) => set("sellerCountryIso", e.target.value.toUpperCase())}
+              maxLength={2}
+              placeholder="ID, GB, DE…"
+              style={inputStyle(false)}
+            />
+          </Field>
+          <div />
+        </div>
         <div style={gridStyle}>
           <Field label="Accept returns beyond statutory rights?">
             <input type="checkbox" checked={value.acceptsReturns} onChange={(e) => set("acceptsReturns", e.target.checked)} style={{ width: 18, height: 18, accentColor: ACCENT }} />
@@ -129,7 +147,7 @@ export function ReturnsEditor(props: ReturnsEditorProps): React.JSX.Element {
                 key={iso}
                 iso={iso}
                 rights={COUNTRY_CONSUMER_RIGHTS[iso] ?? UNKNOWN_CONSUMER_RIGHTS}
-                sellerCountry={iso === (sellerCountryIso ?? "").toUpperCase()}
+                sellerCountry={iso === normalisedSellerIso}
               />
             ))}
           </div>
@@ -137,7 +155,7 @@ export function ReturnsEditor(props: ReturnsEditorProps): React.JSX.Element {
       ) : (
         <div style={{ ...blockStyle, borderStyle: "dashed" }}>
           <div style={{ fontSize: 12.5, color: INK_DIM, lineHeight: 1.5 }}>
-            Add export destinations on the Delivery editor to see per-country statutory floors here. (Local-only sellers see their own country&rsquo;s floor once their seller country is set on the business profile.)
+            Enter your market (ISO 2-letter) above and/or add export destinations on the Delivery editor to see the applicable statutory floor(s) here.
           </div>
         </div>
       )}

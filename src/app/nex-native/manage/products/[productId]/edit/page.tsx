@@ -217,6 +217,7 @@ function returnsToUIValue(r: ReturnType<typeof extractReturns>): ReturnsDraft {
     whoPaysShipping: p.who_pays_shipping,
     conditionRequirement: p.condition_requirement ?? "",
     notes: p.notes ?? "",
+    sellerCountryIso: p.seller_country_iso ?? "",
   };
 }
 

@@ -485,6 +485,8 @@ function toReturnsPayload(v: ReturnsDraft): Record<string, unknown> {
   if (within !== undefined) sellerPolicy.within_days = within;
   if (v.conditionRequirement.trim()) sellerPolicy.condition_requirement = v.conditionRequirement.trim();
   if (v.notes.trim()) sellerPolicy.notes = v.notes.trim();
+  const iso = v.sellerCountryIso.trim().toUpperCase();
+  if (/^[A-Z]{2}$/.test(iso)) sellerPolicy.seller_country_iso = iso;
   return { seller_policy: sellerPolicy };
 }
 

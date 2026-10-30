@@ -34,6 +34,14 @@ export const SellerReturnsPolicy = z.object({
   /** Free-text additional terms. Must NOT exclude statutory rights.
    *  UI copy reminds the seller of that constraint. */
   notes: z.string().max(1200).optional(),
+  /** Owner-authorised 2026-10-31 (Decision 2 · Option 1) · the
+   *  seller's own market country, captured per-product because
+   *  nex_account carries no reliable country field (phone_country_code
+   *  is ambiguous for +1/+44; last_known_country_iso is user-initiated
+   *  and null for most new accounts). Explicit per-product field keeps
+   *  the data honest and avoids a new DB column. Drives the "your
+   *  market" statutory-floor card in the ReturnsEditor. */
+  seller_country_iso: z.string().regex(/^[A-Z]{2}$/, "ISO 3166-1 alpha-2").optional(),
 });
 
 export const ReturnsSpec = z.object({
