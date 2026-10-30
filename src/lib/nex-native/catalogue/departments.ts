@@ -76,7 +76,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "electronics_technology",
     label: "Electronics & Technology",
     blurb: "Phones, laptops, audio, cameras",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "mobile_phones", label: "Mobile Phones & Accessories" },
       { id: "computers_laptops", label: "Computers & Laptops" },
@@ -95,7 +95,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "home_furniture_living",
     label: "Home, Furniture & Living",
     blurb: "Sofas, beds, décor, lighting",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "living_room", label: "Living Room Furniture" },
       { id: "bedroom", label: "Bedroom Furniture" },
@@ -113,7 +113,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "kitchen_dining",
     label: "Kitchen & Dining",
     blurb: "Cookware, tableware, appliances",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "cookware", label: "Cookware" },
       { id: "kitchen_utensils", label: "Kitchen Utensils" },

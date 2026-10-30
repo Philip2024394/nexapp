@@ -15,10 +15,16 @@
 import type { CategorySpec } from "./types";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
 import { FashionClothingSpecs } from "./fashion-clothing";
+import { ElectronicsTechnologySpecs } from "./electronics-technology";
+import { HomeFurnitureLivingSpecs } from "./home-furniture-living";
+import { KitchenDiningSpecs } from "./kitchen-dining";
 
 // Registry entries · one row per sub-category.
 const ALL_CATEGORY_SPECS: readonly CategorySpec[] = [
   ...FashionClothingSpecs,
+  ...ElectronicsTechnologySpecs,
+  ...HomeFurnitureLivingSpecs,
+  ...KitchenDiningSpecs,
   // Other departments: add entries here as they ship per §I.5 batches.
 ];
 
