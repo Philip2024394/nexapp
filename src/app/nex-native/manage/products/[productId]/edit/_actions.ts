@@ -49,6 +49,11 @@ import {
   mergeReturnsIntoSpec,
   type ReturnsT,
 } from "@/lib/nex-native/catalogue/returns-spec";
+import {
+  ColorsSpec,
+  mergeColorsIntoSpec,
+  type ColorsT,
+} from "@/lib/nex-native/catalogue/colors-spec";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
 import type { NexProductStatus, NexProductStockStatus, NexVariantAttribute } from "@/lib/nex-native/types";
 import { NEX_VARIANT_ATTRIBUTES, NEX_PRODUCT_STOCK_STATUSES } from "@/lib/nex-native/types";
@@ -74,6 +79,7 @@ export type UpdateProductErrorCode =
   | "identity-invalid"
   | "wholesale-invalid"
   | "returns-invalid"
+  | "colors-invalid"
   | "internal";
 
 export type UpdateProductResult =
@@ -97,6 +103,7 @@ export interface UpdateProductInput {
   readonly identity?: unknown;
   readonly wholesale?: unknown;
   readonly returns?: unknown;
+  readonly colors?: unknown;
   readonly status?: Extract<NexProductStatus, "draft" | "live" | "archived">;
   /** Full desired variant list · diff-synced against existing rows. */
   readonly variants?: readonly UpdateProductVariantPayload[];
@@ -219,6 +226,16 @@ export async function updateProductAction(
     }
     const returns: ReturnsT = rResult.data;
     specFinal = mergeReturnsIntoSpec(specFinal, returns);
+  }
+
+  // 8f · Colors (optional · owner-authorised 2026-10-31)
+  if (input.colors !== undefined) {
+    const cResult = ColorsSpec.safeParse(input.colors);
+    if (!cResult.success) {
+      return err("colors-invalid", `Colors validation failed: ${cResult.error.message}`);
+    }
+    const colors: ColorsT = cResult.data;
+    specFinal = mergeColorsIntoSpec(specFinal, colors);
   }
 
   // 9 · updateProductBatch

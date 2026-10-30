@@ -45,6 +45,12 @@ import {
   EMPTY_RETURNS,
   type ReturnsDraft,
 } from "@/components/nex-native/product-create/ReturnsEditor";
+import {
+  ColorsEditor,
+  EMPTY_COLORS,
+  type ColorsEditorValue,
+  type ColorEntryDraft,
+} from "@/components/nex-native/product-create/ColorsEditor";
 import { createProductAction } from "@/app/nex-native/create/product/_actions";
 import type { SpecFieldConfig } from "@/lib/nex-native/catalogue/specs/types";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
@@ -98,6 +104,7 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
   const [identity, setIdentity] = React.useState<IdentityDraft>(EMPTY_IDENTITY);
   const [wholesale, setWholesale] = React.useState<WholesaleDraft>(EMPTY_WHOLESALE);
   const [returns, setReturns] = React.useState<ReturnsDraft>(EMPTY_RETURNS);
+  const [colors, setColors] = React.useState<ColorsEditorValue>(EMPTY_COLORS);
 
   const exportDestinationIsos = React.useMemo(
     () => delivery.export.map((d) => d.iso.trim().toUpperCase()).filter((iso) => /^[A-Z]{2}$/.test(iso)),
@@ -134,6 +141,7 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
         identity: toIdentityPayload(identity),
         wholesale: toWholesalePayload(wholesale),
         returns: toReturnsPayload(returns),
+        colors: toColorsPayload(colors),
         status: publishLive ? "live" : "draft",
         variants: toVariantPayload(variants),
       });
@@ -255,6 +263,13 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
             <ReturnsEditor
               value={returns} onChange={setReturns}
               destinationIsos={exportDestinationIsos}
+            />
+          </div>
+          <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
+            <ColorsEditor
+              value={colors} onChange={setColors}
+              businessId={props.businessId}
+              baseCurrency={currency}
             />
           </div>
           <Field label="Stock status">
@@ -398,6 +413,34 @@ function toMarketPayload(v: MarketSelectorValue): {
     payload.export = cleanExport(v.export);
   }
   return payload;
+}
+
+/** Convert ColorsEditorValue → server payload. Normalise hex to upper,
+ *  convert major-currency price string to integer pence, strip blank-
+ *  name entries silently so sellers can click a palette swatch and
+ *  immediately move on without being forced to fill every slot. */
+function toColorsPayload(v: ColorsEditorValue): Record<string, unknown> {
+  const toPenceOpt = (raw: string): number | undefined => {
+    const t = raw.trim();
+    if (t === "") return undefined;
+    const n = Number(t);
+    if (!Number.isFinite(n) || n < 0) return undefined;
+    return Math.round(n * 100);
+  };
+  const entries = v.entries
+    .filter((e) => e.name.trim().length > 0 && /^#[0-9A-Fa-f]{6}$/.test(e.hex))
+    .map((e, i) => {
+      const price = toPenceOpt(e.priceMajor);
+      const out: Record<string, unknown> = {
+        name: e.name.trim(),
+        hex: e.hex.toUpperCase(),
+        position: i,
+      };
+      if (price !== undefined) out.price_pence_override = price;
+      if (e.imageUrl.trim()) out.image_url = e.imageUrl.trim();
+      return out;
+    });
+  return { entries };
 }
 
 /** Convert ReturnsDraft → server payload. */

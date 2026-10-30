@@ -40,6 +40,11 @@ import {
   ReturnsEditor,
   type ReturnsDraft,
 } from "@/components/nex-native/product-create/ReturnsEditor";
+import {
+  ColorsEditor,
+  type ColorsEditorValue,
+  type ColorEntryDraft,
+} from "@/components/nex-native/product-create/ColorsEditor";
 import { updateProductAction } from "@/app/nex-native/manage/products/[productId]/edit/_actions";
 import type { SpecFieldConfig } from "@/lib/nex-native/catalogue/specs/types";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
@@ -91,6 +96,7 @@ export interface EditProductFormClientProps {
     readonly identity: IdentityDraft;
     readonly wholesale: WholesaleDraft;
     readonly returns: ReturnsDraft;
+    readonly colors: ColorsEditorValue;
   };
 }
 
@@ -111,6 +117,7 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
   const [identity, setIdentity] = React.useState<IdentityDraft>(props.initial.identity);
   const [wholesale, setWholesale] = React.useState<WholesaleDraft>(props.initial.wholesale);
   const [returns, setReturns] = React.useState<ReturnsDraft>(props.initial.returns);
+  const [colors, setColors] = React.useState<ColorsEditorValue>(props.initial.colors);
 
   const exportDestinationIsos = React.useMemo(
     () => delivery.export.map((d) => d.iso.trim().toUpperCase()).filter((iso) => /^[A-Z]{2}$/.test(iso)),
@@ -148,6 +155,7 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
         identity: toIdentityPayload(identity),
         wholesale: toWholesalePayload(wholesale),
         returns: toReturnsPayload(returns),
+        colors: toColorsPayload(colors),
         variants: toVariantPayload(variants),
       });
       if (!result.ok) {
@@ -238,6 +246,13 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
               destinationIsos={exportDestinationIsos}
             />
           </div>
+          <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
+            <ColorsEditor
+              value={colors} onChange={setColors}
+              businessId={props.businessId}
+              baseCurrency={currency}
+            />
+          </div>
           <Field label="Stock status">
             <select value={stockStatus} onChange={(e) => setStockStatus(e.target.value as EditProductFormClientProps["initial"]["stockStatus"])} style={COMMON_INPUT}>
               <option value="in_stock">In stock</option>
@@ -324,6 +339,29 @@ function StatusChip(props: { status: "draft" | "live" | "archived" }): React.JSX
       {p.label}
     </span>
   );
+}
+
+/** Mirror of Create form's toColorsPayload. */
+function toColorsPayload(v: ColorsEditorValue): Record<string, unknown> {
+  const toPenceOpt = (raw: string): number | undefined => {
+    const t = raw.trim(); if (t === "") return undefined;
+    const n = Number(t); if (!Number.isFinite(n) || n < 0) return undefined;
+    return Math.round(n * 100);
+  };
+  const entries = v.entries
+    .filter((e) => e.name.trim().length > 0 && /^#[0-9A-Fa-f]{6}$/.test(e.hex))
+    .map((e, i) => {
+      const price = toPenceOpt(e.priceMajor);
+      const out: Record<string, unknown> = {
+        name: e.name.trim(),
+        hex: e.hex.toUpperCase(),
+        position: i,
+      };
+      if (price !== undefined) out.price_pence_override = price;
+      if (e.imageUrl.trim()) out.image_url = e.imageUrl.trim();
+      return out;
+    });
+  return { entries };
 }
 
 /** Mirror of Create form's toReturnsPayload. */
