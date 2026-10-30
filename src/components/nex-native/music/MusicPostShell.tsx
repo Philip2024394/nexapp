@@ -586,7 +586,10 @@ function MusicPostUpNextBanner(props: {
         position: "absolute",
         left: 10,
         right: 10,
-        top: "calc(env(safe-area-inset-top, 0px) + 95px)",
+        // Owner-authorised 2026-10-30 · nudged up 15px (95 → 80)
+        // · applies universally to every music surface that mounts
+        //   MusicPostUpNextBanner · preview, feed, Live.
+        top: "calc(env(safe-area-inset-top, 0px) + 80px)",
         height: 92,
         borderRadius: 14,
         overflow: "hidden",

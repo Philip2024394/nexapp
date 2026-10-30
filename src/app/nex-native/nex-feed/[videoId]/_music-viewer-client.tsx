@@ -421,6 +421,30 @@ export function MusicViewerClient(
             void recordMusicTrackPlayAction({ trackId: props.entry.trackId }).catch(() => undefined);
           }
         }}
+        // Owner-authorised 2026-10-30 · auto-advance on song end ·
+        // parity with the sealed preview-page behaviour at
+        // _preview-client.tsx:377-386. When the audio ends, if the
+        // owner's chrono cycle has a next track AND no navigation
+        // is already in flight AND the library overlay is closed,
+        // router.push to the next track's feed URL. Reuses the
+        // sealed inFlightNavRef pattern + NAV_LOCK_SAFETY_MS to
+        // guard against double-nav from rapid state transitions.
+        onAudioEnded={() => {
+          if (libraryOpen) return;
+          if (inFlightNavRef.current) return;
+          if (!props.nextOwnerTrackId) return;
+          inFlightNavRef.current = true;
+          if (inFlightTimerRef.current) {
+            clearTimeout(inFlightTimerRef.current);
+          }
+          inFlightTimerRef.current = setTimeout(() => {
+            inFlightNavRef.current = false;
+            inFlightTimerRef.current = null;
+          }, NAV_LOCK_SAFETY_MS);
+          router.push(
+            `/nex-native/nex-feed/music-${props.nextOwnerTrackId}`,
+          );
+        }}
         upNext={
           showUpNextBanner && props.nextOwnerTrack
             ? {
