@@ -251,7 +251,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "tools_diy_construction",
     label: "Tools, DIY & Construction",
     blurb: "Hand/power tools, building materials",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "hand_tools", label: "Hand Tools" },
       { id: "power_tools", label: "Power Tools" },
@@ -276,7 +276,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "automotive_motorcycles_transport",
     label: "Automotive & Motorcycles",
     blurb: "Parts, tyres, EVs, vehicles",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "car_parts", label: "Car Parts" },
       { id: "car_accessories", label: "Car Accessories" },
@@ -294,7 +294,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "food_grocery_beverages",
     label: "Food, Grocery & Beverages",
     blurb: "Fresh, pantry, speciality",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "fresh_produce", label: "Fresh Produce" },
       { id: "meat_poultry", label: "Meat & Poultry" },
