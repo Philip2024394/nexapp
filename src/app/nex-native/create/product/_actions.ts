@@ -32,6 +32,11 @@ import {
   resolveCategorySpec,
   isCategorySpecRegistered,
 } from "@/lib/nex-native/catalogue/specs";
+import {
+  MarketSpec,
+  mergeMarketIntoSpec,
+  type Market,
+} from "@/lib/nex-native/catalogue/market-spec";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
 import type { NexProductStatus, NexProductStockStatus } from "@/lib/nex-native/types";
 
@@ -41,6 +46,7 @@ export type CreateProductErrorCode =
   | "business-not-owned"
   | "unknown-category"
   | "spec-invalid"
+  | "market-invalid"
   | "tier-limit"
   | "internal";
 
@@ -62,6 +68,8 @@ export interface CreateProductInput {
   readonly sku?: string | null;
   readonly stockStatus?: NexProductStockStatus;
   readonly spec: unknown;
+  /** Sales-market substrate. Required · every product declares scope. */
+  readonly market: unknown;
   readonly status?: Extract<NexProductStatus, "draft" | "live">;
 }
 
@@ -122,7 +130,20 @@ export async function createProductAction(
     return err("spec-invalid", `Spec validation failed: ${validated.error.message}`);
   }
 
-  // 6 · Write canonical nex_product row
+  // 6 · Market payload validation (fail-closed · scope mandatory)
+  const marketResult = MarketSpec.safeParse(input.market);
+  if (!marketResult.success) {
+    return err("market-invalid", `Market validation failed: ${marketResult.error.message}`);
+  }
+  const market: Market = marketResult.data;
+
+  // 7 · Merge market into spec jsonb under reserved key __market
+  const specWithMarket = mergeMarketIntoSpec(
+    validated.data as Record<string, unknown>,
+    market,
+  );
+
+  // 8 · Write canonical nex_product row
   try {
     const row = await productService.createProduct({
       business_id: input.businessId,
@@ -138,7 +159,7 @@ export async function createProductAction(
       status: input.status ?? "draft",
       department_id: input.departmentId,
       category_id: input.categoryId,
-      spec: validated.data as Record<string, unknown>,
+      spec: specWithMarket,
     });
     return { ok: true, data: { productId: row.id } };
   } catch (e) {

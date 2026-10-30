@@ -16,6 +16,11 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { SpecFormBuilder } from "@/components/nex-native/product-create/SpecFormBuilder";
+import {
+  MarketSelector,
+  EMPTY_MARKET_VALUE,
+  type MarketSelectorValue,
+} from "@/components/nex-native/product-create/MarketSelector";
 import { createProductAction } from "@/app/nex-native/create/product/_actions";
 import type { SpecFieldConfig } from "@/lib/nex-native/catalogue/specs/types";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
@@ -62,6 +67,7 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
     "in_stock",
   );
   const [spec, setSpec] = React.useState<Record<string, unknown>>({});
+  const [market, setMarket] = React.useState<MarketSelectorValue>(EMPTY_MARKET_VALUE);
   const [submitting, setSubmitting] = React.useState<null | "draft" | "live">(null);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -87,6 +93,7 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
         imageUrl: imageUrl.trim() || null,
         stockStatus,
         spec,
+        market: toMarketPayload(market),
         status: publishLive ? "live" : "draft",
       });
       if (!result.ok) {
@@ -200,6 +207,16 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
             <SpecFormBuilder fields={props.fields} value={spec} onChange={setSpec} />
           </div>
 
+          <div
+            style={{
+              marginTop: 4,
+              paddingTop: 14,
+              borderTop: `1px solid ${RIM}`,
+            }}
+          >
+            <MarketSelector value={market} onChange={setMarket} />
+          </div>
+
           {error ? (
             <div
               role="alert"
@@ -259,6 +276,52 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
       </div>
     </main>
   );
+}
+
+/** Translate the UI market value (major-currency price) into the
+ *  server-side payload (minor-currency price in integer pence). */
+function toMarketPayload(v: MarketSelectorValue): {
+  scope: "local" | "export" | "both";
+  local?: Record<string, unknown>;
+  export?: Record<string, unknown>;
+} {
+  const toPence = (raw: unknown): number | undefined => {
+    if (raw === undefined || raw === null || raw === "") return undefined;
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n < 0) return undefined;
+    return Math.round(n * 100);
+  };
+  const cleanLocal = (obj: Record<string, unknown>) => {
+    const { price_pence_major, ...rest } = obj;
+    const price_pence = toPence(price_pence_major);
+    const out: Record<string, unknown> = { ...rest };
+    if (price_pence !== undefined) out.price_pence = price_pence;
+    return out;
+  };
+  const cleanExport = (obj: Record<string, unknown>) => {
+    const cleaned = cleanLocal(obj);
+    // Countries field arrives as a comma-separated string from the UI;
+    // normalise to a trimmed string array before Zod validation.
+    const countries = cleaned.countries;
+    if (typeof countries === "string") {
+      const list = countries.split(",").map((c) => c.trim()).filter(Boolean);
+      if (list.length > 0) cleaned.countries = list;
+      else delete cleaned.countries;
+    }
+    return cleaned;
+  };
+  const payload: {
+    scope: "local" | "export" | "both";
+    local?: Record<string, unknown>;
+    export?: Record<string, unknown>;
+  } = { scope: v.scope };
+  if (v.scope === "local" || v.scope === "both") {
+    payload.local = cleanLocal(v.local);
+  }
+  if (v.scope === "export" || v.scope === "both") {
+    payload.export = cleanExport(v.export);
+  }
+  return payload;
 }
 
 function Field(props: { label: string; required?: boolean; children: React.ReactNode }): React.JSX.Element {
