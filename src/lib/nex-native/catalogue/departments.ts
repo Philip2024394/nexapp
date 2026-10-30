@@ -518,7 +518,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "renewable_energy_utilities",
     label: "Renewable Energy & Utilities",
     blurb: "Solar, backup, efficiency, water",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "solar_energy", label: "Solar Energy" },
       { id: "power_backup", label: "Power Backup" },
@@ -531,7 +531,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "everything_else",
     label: "Everything Else",
     blurb: "Unclassified · controlled fallback",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "unclassified", label: "Products not yet classified" },
     ],

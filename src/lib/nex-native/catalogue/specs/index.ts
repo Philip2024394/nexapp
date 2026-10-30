@@ -8,9 +8,11 @@
 // or `null` when the pair is unknown. Callers that write to
 // nex_product MUST validate against the returned schema before INSERT.
 //
-// Only Fashion & Clothing is enabled Phase 1 (pilot per §K.1). Other
-// departments are stubbed with no spec registered until their
-// implementation batch per §I.5.
+// All 30 departments of the sealed taxonomy are now registered via
+// §I.5 batches A-J (Phase 5 rollout 2026-10-30). Fashion & Clothing
+// was the Phase 1 pilot per §K.1. The registry is the authoritative
+// source for category availability; the picker reads it via
+// isCategorySpecRegistered() rather than any stale enabled flag.
 
 import type { CategorySpec } from "./types";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
@@ -42,6 +44,8 @@ import { SecondHandRefurbishedSpecs } from "./second-hand-refurbished";
 import { JewelleryWatchesSpecs } from "./jewellery-watches";
 import { LuxuryPremiumCollectiblesSpecs } from "./luxury-premium-collectibles";
 import { GiftsCelebrationsSeasonalSpecs } from "./gifts-celebrations-seasonal";
+import { RenewableEnergyUtilitiesSpecs } from "./renewable-energy-utilities";
+import { EverythingElseSpecs } from "./everything-else";
 
 // Registry entries · one row per sub-category.
 const ALL_CATEGORY_SPECS: readonly CategorySpec[] = [
@@ -73,7 +77,9 @@ const ALL_CATEGORY_SPECS: readonly CategorySpec[] = [
   ...JewelleryWatchesSpecs,
   ...LuxuryPremiumCollectiblesSpecs,
   ...GiftsCelebrationsSeasonalSpecs,
-  // Other departments: add entries here as they ship per §I.5 batches.
+  ...RenewableEnergyUtilitiesSpecs,
+  ...EverythingElseSpecs,
+  // All 30 departments of the sealed taxonomy are now registered.
 ];
 
 // Fast lookup table built once at module load.
