@@ -73,6 +73,7 @@ import { readFollowCounts, getFollowState } from "@/lib/nex-native/follow/follow
 // the sole entry to the Safe Trade sheet · bottom card removed.
 import { OwnerEditShell } from "./_owner-edit-shell";
 import { SafeTradeHeroIcon } from "./_safe-trade-hero-icon";
+import { AccountMusicPreloader } from "@/components/nex-native/music/_account-music-preloader";
 import { savePersonalProfileAction, submitSafeTradeReportAction } from "./_actions";
 import type {
   TrustAccountTier,
@@ -322,7 +323,30 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
     .then((r) => (r.ok ? r.isIrish : false))
     .catch(() => false);
 
-  const [profile, businesses, isVerified, connectState, mutualResult, followCounts, viewerFollowState, isIrishOwner] = await Promise.all([
+  // Owner-authorised 2026-10-31 · world-class "premium app feel" ·
+  // warm the viewer's browser cache for the profile owner's music
+  // library the moment they land on the account page. If they tap
+  // music / an avatar / anywhere that deep-links to the music feed,
+  // the first slide loads from cache instead of blocking on a cold
+  // signed-URL fetch. Fail-open: resolver returns an empty bundle on
+  // any error so a music outage never breaks the profile page.
+  const musicPreloadPromise = (async () => {
+    const { resolveAccountMusicPreload } = await import(
+      "@/lib/nex-native/music/account-music-preload"
+    );
+    return resolveAccountMusicPreload({
+      ownerAccountId: profileAccount.id,
+      viewerIsOwner: isOwner,
+    });
+  })().catch(() => ({
+    topTrackHref: null,
+    topCoverUrl: null,
+    topBackgroundUrl: null,
+    topAudioUrl: null,
+    libraryCoverUrls: [] as readonly string[],
+  }));
+
+  const [profile, businesses, isVerified, connectState, mutualResult, followCounts, viewerFollowState, isIrishOwner, musicPreload] = await Promise.all([
     profilePromise,
     businessesPromise,
     verifiedPromise,
@@ -331,6 +355,7 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
     followCountsPromise,
     viewerFollowStatePromise,
     isIrishOwnerPromise,
+    musicPreloadPromise,
   ]);
 
   // Pre-migration-205 shape: cover_image_url + interests may be absent.
@@ -518,6 +543,20 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
       data-nex-profile-themed={themeAccent ? "true" : "false"}
       style={mainStyle}
     >
+      {/* Owner-authorised 2026-10-31 · world-class premium app feel.
+          Invisible: warms the browser cache for the profile owner's
+          top music track + library row thumbnails + the music-feed
+          route payload. If the viewer taps anything that deep-links
+          to /nex-native/nex-feed/music-{trackId}, the slide loads
+          from cache instead of a cold start. Save-Data / 2G guards
+          live inside the component. */}
+      <AccountMusicPreloader
+        topTrackHref={musicPreload.topTrackHref}
+        topCoverUrl={musicPreload.topCoverUrl}
+        topBackgroundUrl={musicPreload.topBackgroundUrl}
+        topAudioUrl={musicPreload.topAudioUrl}
+        libraryCoverUrls={musicPreload.libraryCoverUrls}
+      />
       {/* Owner directive 2026-10-18 · when the viewer arrives from a
           chat theme preview (?themeAccent in URL) · show a theme-
           coloured strip at the top of the page so the continuity
