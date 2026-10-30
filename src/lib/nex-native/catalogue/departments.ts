@@ -492,7 +492,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "luxury_premium_collectibles",
     label: "Luxury, Premium & Collectibles",
     blurb: "Designer fashion, fine jewellery, art",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "luxury_fashion", label: "Luxury Fashion" },
       { id: "luxury_watches", label: "Luxury Watches" },
@@ -506,7 +506,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "gifts_celebrations_seasonal",
     label: "Gifts, Celebrations & Seasonal",
     blurb: "Occasions, hampers, seasonal shopping",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "gift_occasions", label: "Gift Occasions" },
       { id: "gift_types", label: "Gift Types" },
