@@ -40,6 +40,11 @@ import {
   type IdentityDraft,
   type WholesaleDraft,
 } from "@/components/nex-native/product-create/IdentityWholesaleEditor";
+import {
+  ReturnsEditor,
+  EMPTY_RETURNS,
+  type ReturnsDraft,
+} from "@/components/nex-native/product-create/ReturnsEditor";
 import { createProductAction } from "@/app/nex-native/create/product/_actions";
 import type { SpecFieldConfig } from "@/lib/nex-native/catalogue/specs/types";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
@@ -92,6 +97,12 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
   const [delivery, setDelivery] = React.useState<DeliveryEditorValue>(EMPTY_DELIVERY);
   const [identity, setIdentity] = React.useState<IdentityDraft>(EMPTY_IDENTITY);
   const [wholesale, setWholesale] = React.useState<WholesaleDraft>(EMPTY_WHOLESALE);
+  const [returns, setReturns] = React.useState<ReturnsDraft>(EMPTY_RETURNS);
+
+  const exportDestinationIsos = React.useMemo(
+    () => delivery.export.map((d) => d.iso.trim().toUpperCase()).filter((iso) => /^[A-Z]{2}$/.test(iso)),
+    [delivery.export],
+  );
   const [submitting, setSubmitting] = React.useState<null | "draft" | "live">(null);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -122,6 +133,7 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
         delivery: toDeliveryPayload(delivery, market.scope),
         identity: toIdentityPayload(identity),
         wholesale: toWholesalePayload(wholesale),
+        returns: toReturnsPayload(returns),
         status: publishLive ? "live" : "draft",
         variants: toVariantPayload(variants),
       });
@@ -223,6 +235,12 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
             <IdentityWholesaleEditor
               identity={identity} onIdentityChange={setIdentity}
               wholesale={wholesale} onWholesaleChange={setWholesale}
+            />
+          </div>
+          <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
+            <ReturnsEditor
+              value={returns} onChange={setReturns}
+              destinationIsos={exportDestinationIsos}
             />
           </div>
           <Field label="Stock status">
@@ -366,6 +384,24 @@ function toMarketPayload(v: MarketSelectorValue): {
     payload.export = cleanExport(v.export);
   }
   return payload;
+}
+
+/** Convert ReturnsDraft → server payload. */
+function toReturnsPayload(v: ReturnsDraft): Record<string, unknown> {
+  const toIntOpt = (raw: string): number | undefined => {
+    const t = raw.trim(); if (t === "") return undefined;
+    const n = Number(t); if (!Number.isFinite(n) || n < 0) return undefined;
+    return Math.round(n);
+  };
+  const sellerPolicy: Record<string, unknown> = {
+    accepts_returns: v.acceptsReturns,
+    who_pays_shipping: v.whoPaysShipping,
+  };
+  const within = toIntOpt(v.withinDays);
+  if (within !== undefined) sellerPolicy.within_days = within;
+  if (v.conditionRequirement.trim()) sellerPolicy.condition_requirement = v.conditionRequirement.trim();
+  if (v.notes.trim()) sellerPolicy.notes = v.notes.trim();
+  return { seller_policy: sellerPolicy };
 }
 
 /** Convert IdentityDraft → server payload. Empty ISO strings become

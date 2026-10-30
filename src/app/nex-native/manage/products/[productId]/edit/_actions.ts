@@ -44,6 +44,11 @@ import {
   type IdentityT,
   type WholesaleT,
 } from "@/lib/nex-native/catalogue/identity-wholesale-spec";
+import {
+  ReturnsSpec,
+  mergeReturnsIntoSpec,
+  type ReturnsT,
+} from "@/lib/nex-native/catalogue/returns-spec";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
 import type { NexProductStatus, NexProductStockStatus, NexVariantAttribute } from "@/lib/nex-native/types";
 import { NEX_VARIANT_ATTRIBUTES, NEX_PRODUCT_STOCK_STATUSES } from "@/lib/nex-native/types";
@@ -68,6 +73,7 @@ export type UpdateProductErrorCode =
   | "delivery-invalid"
   | "identity-invalid"
   | "wholesale-invalid"
+  | "returns-invalid"
   | "internal";
 
 export type UpdateProductResult =
@@ -90,6 +96,7 @@ export interface UpdateProductInput {
   readonly delivery?: unknown;
   readonly identity?: unknown;
   readonly wholesale?: unknown;
+  readonly returns?: unknown;
   readonly status?: Extract<NexProductStatus, "draft" | "live" | "archived">;
   /** Full desired variant list · diff-synced against existing rows. */
   readonly variants?: readonly UpdateProductVariantPayload[];
@@ -202,6 +209,16 @@ export async function updateProductAction(
     }
     const wholesale: WholesaleT = wResult.data;
     specFinal = mergeWholesaleIntoSpec(specFinal, wholesale);
+  }
+
+  // 8e · Returns (optional)
+  if (input.returns !== undefined) {
+    const rResult = ReturnsSpec.safeParse(input.returns);
+    if (!rResult.success) {
+      return err("returns-invalid", `Returns validation failed: ${rResult.error.message}`);
+    }
+    const returns: ReturnsT = rResult.data;
+    specFinal = mergeReturnsIntoSpec(specFinal, returns);
   }
 
   // 9 · updateProductBatch

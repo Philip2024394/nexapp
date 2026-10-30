@@ -30,6 +30,7 @@ import {
   IDENTITY_SPEC_KEY,
   WHOLESALE_SPEC_KEY,
 } from "@/lib/nex-native/catalogue/identity-wholesale-spec";
+import { extractReturns, RETURNS_SPEC_KEY } from "@/lib/nex-native/catalogue/returns-spec";
 import type { MarketSelectorValue } from "@/components/nex-native/product-create/MarketSelector";
 import type { VariantDraft } from "@/components/nex-native/product-create/VariantsBuilder";
 import type {
@@ -43,6 +44,10 @@ import {
   type IdentityDraft,
   type WholesaleDraft,
 } from "@/components/nex-native/product-create/IdentityWholesaleEditor";
+import {
+  EMPTY_RETURNS,
+  type ReturnsDraft,
+} from "@/components/nex-native/product-create/ReturnsEditor";
 import { EditProductFormClient } from "./_edit-client";
 
 export const dynamic = "force-dynamic";
@@ -103,18 +108,21 @@ export default async function EditProductPage({
     [DELIVERY_SPEC_KEY]: _deliveryBlock,
     [IDENTITY_SPEC_KEY]: _identityBlock,
     [WHOLESALE_SPEC_KEY]: _wholesaleBlock,
+    [RETURNS_SPEC_KEY]: _returnsBlock,
     ...categoryOnlySpec
   } = rawSpec;
-  void _marketBlock; void _deliveryBlock; void _identityBlock; void _wholesaleBlock;
+  void _marketBlock; void _deliveryBlock; void _identityBlock; void _wholesaleBlock; void _returnsBlock;
   const market = extractMarket(rawSpec);
   const delivery = extractDelivery(rawSpec);
   const identity = extractIdentity(rawSpec);
   const wholesale = extractWholesale(rawSpec);
+  const returns = extractReturns(rawSpec);
 
   const initial: MarketSelectorValue = marketToUIValue(market);
   const initialDelivery: DeliveryEditorValue = deliveryToUIValue(delivery);
   const initialIdentity: IdentityDraft = identityToUIValue(identity);
   const initialWholesale: WholesaleDraft = wholesaleToUIValue(wholesale);
+  const initialReturns: ReturnsDraft = returnsToUIValue(returns);
 
   const status: AllowedStatus = ((["draft", "live", "archived"] as readonly string[]).includes(product.status) ? product.status : "draft") as AllowedStatus;
   const stock: AllowedStock = ((["in_stock", "low_stock", "sold_out", "made_to_order"] as readonly string[]).includes(product.stock_status ?? "") ? (product.stock_status as AllowedStock) : "in_stock");
@@ -160,9 +168,23 @@ export default async function EditProductPage({
         delivery: initialDelivery,
         identity: initialIdentity,
         wholesale: initialWholesale,
+        returns: initialReturns,
       }}
     />
   );
+}
+
+/** Translate stored Returns substrate into UI draft. */
+function returnsToUIValue(r: ReturnType<typeof extractReturns>): ReturnsDraft {
+  if (!r) return EMPTY_RETURNS;
+  const p = r.seller_policy;
+  return {
+    acceptsReturns: p.accepts_returns,
+    withinDays: typeof p.within_days === "number" ? String(p.within_days) : "",
+    whoPaysShipping: p.who_pays_shipping,
+    conditionRequirement: p.condition_requirement ?? "",
+    notes: p.notes ?? "",
+  };
 }
 
 /** Translate stored Identity substrate into UI drafts. */
