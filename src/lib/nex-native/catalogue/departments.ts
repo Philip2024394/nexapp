@@ -129,7 +129,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "fashion_clothing",
     label: "Fashion & Clothing",
     blurb: "Women, men, kids, shoes, bags",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "womens", label: "Women's Clothing" },
       { id: "mens", label: "Men's Clothing" },

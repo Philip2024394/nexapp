@@ -836,6 +836,18 @@ export interface NexProductInsert {
   status?: NexProductStatus;
   dispatch_time?: string | null;
   sample_request_time?: string | null;
+  /** Owner-authorised 2026-10-30 · Phase 1 Product System (migration
+   *  239 drafted · not yet applied in production). Taxonomic home per
+   *  src/lib/nex-native/catalogue/departments.ts. Pre-migration-239
+   *  writes should omit; after apply, writes MUST provide both. The
+   *  shared createProductAction supplies these; legacy call sites
+   *  that omit will fall through the DB default (`everything_else`/
+   *  `other`) only until migration 239 is applied, after which the
+   *  columns are NOT NULL. */
+  department_id?: string;
+  category_id?: string;
+  /** Category-specific validated spec payload. jsonb column. */
+  spec?: Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------------------

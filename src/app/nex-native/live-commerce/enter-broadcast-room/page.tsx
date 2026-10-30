@@ -102,8 +102,13 @@ export default async function GoLivePage(): Promise<React.JSX.Element> {
     const business = businesses[0];
     if (business) {
       businessDisplayName = business.display_name;
+      // Owner-authorised 2026-10-30 · draft-leak closure (§K.14 parallel).
+      // Mandatory status="live" filter · draft and archived products must
+      // NEVER appear in the broadcaster picker or be featurable to viewers.
+      // Sealed per Product System Implementation Contract §H.1.
       const products = await productService.listProductsByBusiness(
         business.id,
+        "live",
       );
       realCatalog = products.map<RealLiveCatalogEntry>((p) => ({
         id: p.id,

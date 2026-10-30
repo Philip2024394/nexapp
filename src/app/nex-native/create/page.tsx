@@ -63,15 +63,20 @@ const CHIP_DISABLED_BG = "rgba(255, 255, 255, 0.1)";
 const CHIP_DISABLED_FG = "#8BA9D1";
 
 interface CreateCard {
-  readonly id: "go-live" | "product-video" | "entertainment-video" | "image" | "music";
+  readonly id: "go-live" | "product" | "product-video" | "entertainment-video" | "image" | "music";
   readonly label: string;
   readonly blurb: string;
   readonly glyph: string;
   readonly href: string | null;
 }
 
+// Owner-authorised 2026-10-30 · Product card added per Phase 1 of the
+// sealed Product System Implementation Contract (§K owner-resolved).
+// Routes to the shared Create Product flow with business picker →
+// category picker → shared form.
 const CARDS: readonly CreateCard[] = [
   { id: "go-live",             label: "Go Live",            blurb: "Stream now",    glyph: "LIVE_DOT", href: "/nex-native/live-commerce/welcome" },
+  { id: "product",             label: "Product",            blurb: "Create & sell", glyph: "🛍️", href: "/nex-native/create/product" },
   { id: "product-video",       label: "Product Video",      blurb: "Add to shop",   glyph: "🛒", href: null },
   { id: "entertainment-video", label: "Entertainment Video", blurb: "Video post",   glyph: "🎥", href: null },
   { id: "image",               label: "Image",              blurb: "Photo post",    glyph: "🖼️", href: null },

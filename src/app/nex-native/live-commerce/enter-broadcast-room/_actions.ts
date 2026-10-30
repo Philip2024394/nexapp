@@ -261,6 +261,13 @@ export async function setLiveFeaturedProductAction(input: {
   if (!ownedIds.has(product.business_id)) {
     return { ok: false, reason: "product-not-in-owned-business" };
   }
+  // Owner-authorised 2026-10-30 · draft-leak closure (§K.14 parallel).
+  // Server-side status gate · a draft or archived product MUST NEVER
+  // be featured publicly on Live. Fail-closed with explicit reason.
+  // Sealed per Product System Implementation Contract §H.1.
+  if (product.status !== "live") {
+    return { ok: false, reason: "product-not-live" };
+  }
 
   try {
     await setFeaturedProduct({

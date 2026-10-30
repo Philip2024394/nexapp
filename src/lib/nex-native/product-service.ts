@@ -291,22 +291,31 @@ export async function createProduct(input: NexProductInsert): Promise<NexProduct
   // Tier gate · Gratis owners capped at 10 live/draft products per business.
   // Migration 046 · Indonesia launch package doctrine 2026-09-27.
   await (await import("./tier-gate")).assertCanCreateProduct(input.business_id);
+  // Owner-authorised 2026-10-30 · Phase 1 Product System · insert payload
+  // includes department_id/category_id/spec when supplied by caller
+  // (shared createProductAction). Legacy callers that omit continue to
+  // work pre-migration-239 (DB column nullable); post-apply they rely on
+  // the DB default (everything_else/other) until reclassified.
+  const insertPayload: Record<string, unknown> = {
+    business_id: input.business_id,
+    name: input.name,
+    description: input.description ?? null,
+    image_url: input.image_url ?? null,
+    gallery_urls: input.gallery_urls && input.gallery_urls.length > 0 ? input.gallery_urls : null,
+    tags: input.tags && input.tags.length > 0 ? input.tags : null,
+    stock_status: input.stock_status ?? null,
+    price_pence: input.price_pence,
+    currency: input.currency,
+    status: input.status ?? "draft",
+    dispatch_time: input.dispatch_time ?? null,
+    sample_request_time: input.sample_request_time ?? null,
+  };
+  if (input.department_id) insertPayload.department_id = input.department_id;
+  if (input.category_id) insertPayload.category_id = input.category_id;
+  if (input.spec) insertPayload.spec = input.spec;
   const { data, error } = await nexSupabaseAdmin
     .from("nex_product")
-    .insert({
-      business_id: input.business_id,
-      name: input.name,
-      description: input.description ?? null,
-      image_url: input.image_url ?? null,
-      gallery_urls: input.gallery_urls && input.gallery_urls.length > 0 ? input.gallery_urls : null,
-      tags: input.tags && input.tags.length > 0 ? input.tags : null,
-      stock_status: input.stock_status ?? null,
-      price_pence: input.price_pence,
-      currency: input.currency,
-      status: input.status ?? "draft",
-      dispatch_time: input.dispatch_time ?? null,
-      sample_request_time: input.sample_request_time ?? null,
-    })
+    .insert(insertPayload)
     .select("*")
     .single();
   if (error || !data) {
