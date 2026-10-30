@@ -732,6 +732,46 @@ export function GoLiveClient({
     }
   }, []);
 
+  /* Owner-authorised 2026-10-31 (Decision 3) · deep-link auto-feature.
+     Mirrors the sealed autoPlayMusic precedent at line 244 but acts
+     on the product picker instead of the music overlay.
+
+     When the broadcaster lands here with `?product=<id>` (passed by
+     the Live Product Library tile hrefs), find the matching entry in
+     realCatalog and call handlePickProduct so the chosen product is
+     already featured BEFORE the broadcaster hits Go Live. One-shot
+     via autoFeatureHandledRef so a later manual re-pick stays
+     authoritative — the ref remembers the id we've already handled
+     and never re-fires for the same id.
+
+     Narrow boundary (per owner approval):
+       · No change to handlePickProduct, autoPlayMusic, picker UX, or
+         any other existing effect.
+       · If `?product=` is absent → effect no-ops (every pre-brief
+         broadcast journey is byte-identical).
+       · If the id doesn't match an entry in realCatalog → effect
+         marks the id handled and no-ops (never throws, never
+         re-fires).
+
+     Complementary to the sealed server-shell re-order (commit
+     ac5326e, local-only) which also honours ?product= by putting the
+     chosen product first in the picker. Both work together; this
+     effect simply upgrades "first in list" to "already featured". */
+  const autoFeatureProductId = searchParams?.get("product") ?? null;
+  const autoFeatureHandledRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!autoFeatureProductId) return;
+    if (autoFeatureHandledRef.current === autoFeatureProductId) return;
+    const entry = realCatalog.find((p) => p.id === autoFeatureProductId);
+    if (!entry) {
+      autoFeatureHandledRef.current = autoFeatureProductId;
+      return;
+    }
+    autoFeatureHandledRef.current = autoFeatureProductId;
+    const snapshot = toSnapshotFromReal(entry, businessDisplayName ?? "Your shop");
+    handlePickProduct(snapshot);
+  }, [autoFeatureProductId, realCatalog, businessDisplayName, handlePickProduct]);
+
   return (
     <main
       style={{
