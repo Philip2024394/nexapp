@@ -29,14 +29,18 @@ function vm(partial: Partial<ListingCardViewModel> = {}): ListingCardViewModel {
     categoryIconRow: partial.categoryIconRow ?? 0,
     imageUrl: partial.imageUrl ?? null,
     description: partial.description ?? null,
+    featuredOffering: partial.featuredOffering ?? null,
     city: partial.city ?? null,
     href: partial.href ?? "/nex-native/slug-1",
     source: partial.source ?? "nex_business",
     priceNow: partial.priceNow ?? null,
     priceWas: partial.priceWas ?? null,
     discountLabel: partial.discountLabel ?? null,
+    priceAmountMinor: partial.priceAmountMinor ?? null,
+    priceCurrency: partial.priceCurrency ?? null,
     sellerCountryIso: partial.sellerCountryIso ?? null,
     buyerLocalPrice: partial.buyerLocalPrice ?? null,
+    marketScope: partial.marketScope ?? null,
   };
 }
 

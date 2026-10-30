@@ -56,6 +56,11 @@ import Link from "next/link";
 // Owner directive 2026-10-18 · category footer retired · replaced
 // by Safe Trade footer that opens a lightweight info sheet.
 import { SafeTradeFooterClient } from "./_safe-trade-footer-client";
+// Owner-authorised 2026-10-30 (Product Upload World-Class brief) ·
+// market-visibility pill. Rendered only when the view model carries a
+// non-null marketScope · card is byte-identical to the previous render
+// for every business + legacy-product + watch listing.
+import { MarketBadge } from "./_market-badge";
 // Owner directive 2026-10-18 · location row fallback uses the
 // sealed ISO country lookup so cards don't invent their own
 // country-code → name mapping.
@@ -274,6 +279,14 @@ export function ListingCard({
             </div>
           );
         })()}
+        {/* Owner-authorised 2026-10-30 (Product Upload World-Class
+             brief) · market scope pill. Only renders for product-
+             sourced rows that declared a scope on the canonical
+             nex_product record. Null (every business + legacy
+             product + watch listing + live post) → component
+             returns null, card is byte-identical to the pre-brief
+             render. Never inferred from country/currency/location. */}
+        <MarketBadge scope={listing.marketScope} />
       </div>
 
       {/* ── Footer · Safe Trade · replaces the retired category row.

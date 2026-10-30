@@ -54,6 +54,7 @@ import {
   visualsForCanonicalEntityType,
   type CategoryVisuals,
 } from "./landing-category-mapping";
+import { extractMarket } from "@/lib/nex-native/catalogue/market-spec";
 
 // ─── Public shape · reuses the sealed LandingFeedOutcome ───────────
 // A search result is a LandingFeedOutcome whose `reducedState` carries
@@ -320,6 +321,9 @@ function adaptRowToSearchCard(row: NexBusinessRow): ListingCardViewModel {
     priceCurrency: null,
     sellerCountryIso: readCountryIso(row),
     buyerLocalPrice: null,
+    // Business cards describe shops, not products. marketScope stays
+    // null — the card never infers scope from country or category.
+    marketScope: null,
   };
 }
 
@@ -385,6 +389,11 @@ function adaptProductRowToSearchCard(row: ProductSearchRow): ListingCardViewMode
   // department-visual mapping · pass null to let the sealed helper
   // return its fallback.
   const visuals: CategoryVisuals = visualsForCategoryId(null);
+  // Owner-authorised 2026-10-30 (Product Upload World-Class brief) ·
+  // read the sales-market scope from the canonical spec jsonb. NEVER
+  // infer from country/currency/location; absence is honest and leaves
+  // the card unlabelled.
+  const market = extractMarket(row.spec);
   return {
     id: row.id,
     slug: row.business_slug,
@@ -414,6 +423,7 @@ function adaptProductRowToSearchCard(row: ProductSearchRow): ListingCardViewMode
     priceCurrency: row.currency,
     sellerCountryIso: null,
     buyerLocalPrice: null,
+    marketScope: market?.scope ?? null,
   };
 }
 

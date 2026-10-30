@@ -801,6 +801,11 @@ export interface ProductSearchRow {
   readonly business_display_name: string;
   readonly department_id: string | null;
   readonly category_id: string | null;
+  /** Owner-authorised 2026-10-30 · forwards the jsonb spec so the
+   *  directory adapter can extract market scope via extractMarket().
+   *  Unknown-shape · callers must validate before use. Nullable only
+   *  for legacy products that predate the spec column. */
+  readonly spec: Record<string, unknown> | null;
 }
 
 export async function searchLiveProducts(
@@ -816,7 +821,7 @@ export async function searchLiveProducts(
   const { data, error } = await nexSupabaseAdmin
     .from("nex_product")
     .select(
-      "id, name, description, image_url, price_pence, currency, stock_status, business_id, department_id, category_id, nex_business!inner(slug, display_name)",
+      "id, name, description, image_url, price_pence, currency, stock_status, business_id, department_id, category_id, spec, nex_business!inner(slug, display_name)",
     )
     .eq("status", "live")
     .ilike("name", pattern)
@@ -835,6 +840,7 @@ export async function searchLiveProducts(
     business_id: string;
     department_id: string | null;
     category_id: string | null;
+    spec: Record<string, unknown> | null;
     nex_business: { slug: string; display_name: string } | { slug: string; display_name: string }[];
   };
   const rows = (data as JoinedRow[] | null) ?? [];
@@ -853,6 +859,7 @@ export async function searchLiveProducts(
       business_display_name: biz?.display_name ?? "",
       department_id: r.department_id,
       category_id: r.category_id,
+      spec: r.spec,
     };
   }).filter((r) => r.business_slug.length > 0);
 }

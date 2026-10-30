@@ -207,6 +207,22 @@ export interface ListingCardViewModel {
     readonly countryIso: string;
     readonly fxUpdatedAt: string;
   } | null;
+  /** Owner-authorised 2026-10-30 (Product Upload World-Class brief) ·
+   *  narrowly-scoped market-visibility extension. Carries the sales-
+   *  market scope declared on the canonical nex_product record. Only
+   *  product-sourced cards populate this field; business-sourced cards
+   *  (which are shops, not products) leave it null and the card
+   *  renders exactly as before. Legacy products without a market block
+   *  also leave this null — the card never INFERS scope from country,
+   *  currency or seller location.
+   *
+   *  Values:
+   *    · null       → no market data (business row OR legacy product)
+   *    · "local"    → domestic sales only
+   *    · "export"   → international sales only
+   *    · "both"     → local + export (seller-declared on both sides)
+   */
+  readonly marketScope: "local" | "export" | "both" | null;
 }
 
 // ─── Options + outcomes ─────────────────────────────────────────────
@@ -695,6 +711,10 @@ function adaptRowToCard(row: NexBusinessRow): ListingCardViewModel {
     // without a reshape. Owner directive · never populated from a
     // fabricated rate.
     buyerLocalPrice: null,
+    // Business rows describe shops, not products. The marketScope
+    // field is a product-level fact and must stay null on business
+    // cards — the card never infers it from country or category.
+    marketScope: null,
   };
 }
 

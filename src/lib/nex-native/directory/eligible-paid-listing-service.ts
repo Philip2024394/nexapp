@@ -147,6 +147,10 @@ function toCard(row: WatchListingDirectoryRow | LivePostDirectoryRow): ListingCa
     discountLabel: null,
     sellerCountryIso: null,
     buyerLocalPrice: null,
+    // Watch listings + live posts predate the Product System market
+    // substrate (migration 239 et al). The view model keeps marketScope
+    // null for these rows; the card renders exactly as before.
+    marketScope: null,
   };
 }
 
