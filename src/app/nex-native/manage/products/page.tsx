@@ -21,8 +21,7 @@ import { redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import * as businessService from "@/lib/nex-native/business-service";
 import * as productService from "@/lib/nex-native/product-service";
-import type { NexProductRow } from "@/lib/nex-native/types";
-import { toggleProductStockAction } from "./_actions";
+import { ProductCardClient, type ProductCardViewModel } from "./_product-card-client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,7 +47,7 @@ const NEX = {
 export default async function ManageProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ e?: string; m?: string }>;
+  searchParams: Promise<{ e?: string; m?: string; business?: string; filter?: string }>;
 }) {
   const session = await resolveNexAppSessionFromContext();
   if (!session) redirect("/nex-native/sign-in");
@@ -59,13 +58,31 @@ export default async function ManageProductsPage({
   const businesses = await businessService.listBusinessesByOwner(
     session.account.id,
   );
-  const business = businesses[0] ?? null;
-
-  if (!business) {
+  if (businesses.length === 0) {
     redirect("/nex-native/onboarding?commerce=1");
   }
 
-  const products = await productService.listProductsByBusiness(business.id);
+  // Multi-business support · pick explicit ?business= or first owned.
+  const businessId = (sp.business && businesses.some((b) => b.id === sp.business)) ? sp.business : businesses[0]!.id;
+  const business = businesses.find((b) => b.id === businessId)!;
+
+  // Status filter · "all" (default · live+draft+archived) · "live" ·
+  // "draft" · "archived". Clamp to known values.
+  const rawFilter = (sp.filter ?? "all").toLowerCase();
+  const filter: "all" | "live" | "draft" | "archived" =
+    rawFilter === "live" || rawFilter === "draft" || rawFilter === "archived" ? rawFilter : "all";
+
+  // listProductsByBusiness returns all statuses when `status` is
+  // omitted · we filter client-side after loading so the counts can be
+  // computed for the filter pills.
+  const allProducts = await productService.listProductsByBusiness(business.id);
+  const products = filter === "all" ? allProducts : allProducts.filter((p) => p.status === filter);
+  const counts = {
+    all: allProducts.length,
+    live: allProducts.filter((p) => p.status === "live").length,
+    draft: allProducts.filter((p) => p.status === "draft").length,
+    archived: allProducts.filter((p) => p.status === "archived").length,
+  };
 
   return (
     <div
@@ -144,22 +161,29 @@ export default async function ManageProductsPage({
         </h1>
         <p
           style={{
-            margin: "0 0 24px",
+            margin: "0 0 20px",
             fontSize: 13,
             color: NEX.textDim,
             lineHeight: 1.55,
           }}
         >
-          Every product you sell · toggle a line to <b>sold out</b> when
-          stock runs out without hiding it from the shop · flip it back to{" "}
-          <b>available</b> when it&apos;s restocked. No deletes here · the
-          full editor lives on the shop editor.
+          Your library. Each card shows the main image plus up to three gallery
+          thumbnails · click a thumbnail to preview it in the main slot. Use the
+          toggle to flip a product between <b>available</b> and <b>sold out</b>{" "}
+          (keeps it listed), <b>Edit</b> to reopen the upload form with every
+          field pre-filled, or <b>Archive</b> to soft-hide (restorable).
         </p>
+
+        {businesses.length > 1 ? (
+          <BusinessPicker businesses={businesses} activeId={business.id} filter={filter} />
+        ) : null}
+
+        <FilterPills counts={counts} active={filter} businessId={business.id} />
 
         {banner && <Banner code={banner.code} message={banner.message} />}
 
         {products.length === 0 ? (
-          <EmptyState businessSlug={business.slug} />
+          <EmptyState businessSlug={business.slug} filter={filter} />
         ) : (
           <div
             style={{
@@ -169,7 +193,7 @@ export default async function ManageProductsPage({
             }}
           >
             {products.map((product) => (
-              <ProductRow key={product.id} product={product} />
+              <ProductCardClient key={product.id} product={toCardVM(product)} />
             ))}
           </div>
         )}
@@ -179,127 +203,121 @@ export default async function ManageProductsPage({
 }
 
 /* --------------------------------------------------------------------- *
- * Product row · thumb + name + price + sold-out toggle                  *
+ * Server-side view-model mapper                                         *
  * --------------------------------------------------------------------- */
 
-function ProductRow({ product }: { product: NexProductRow }) {
-  const isSoldOut = product.stock_status === "sold_out";
-  const nextStatus = isSoldOut ? "in_stock" : "sold_out";
-  const priceIdr = Math.round(product.price_pence / 100);
-  const price = new Intl.NumberFormat("id-ID").format(priceIdr);
+import type { NexProductRow } from "@/lib/nex-native/types";
 
+function toCardVM(p: NexProductRow): ProductCardViewModel {
+  const status: ProductCardViewModel["status"] =
+    p.status === "live" || p.status === "draft" || p.status === "archived"
+      ? p.status
+      : "draft";
+  const stock: ProductCardViewModel["stock_status"] =
+    p.stock_status === "in_stock" || p.stock_status === "low_stock"
+    || p.stock_status === "sold_out" || p.stock_status === "made_to_order"
+      ? p.stock_status
+      : null;
+  const gallery: readonly string[] | null = Array.isArray(p.gallery_urls)
+    ? p.gallery_urls.filter((u): u is string => typeof u === "string" && u.length > 0)
+    : null;
+  return {
+    id: p.id,
+    name: p.name,
+    description: p.description ?? null,
+    price_pence: p.price_pence,
+    currency: p.currency,
+    status,
+    stock_status: stock,
+    image_url: p.image_url ?? null,
+    gallery_urls: gallery,
+  };
+}
+
+/* --------------------------------------------------------------------- *
+ * Business picker (shown only when seller owns >1 business)             *
+ * --------------------------------------------------------------------- */
+
+function BusinessPicker(props: {
+  businesses: ReadonlyArray<{ id: string; display_name: string; slug: string }>;
+  activeId: string;
+  filter: "all" | "live" | "draft" | "archived";
+}): React.JSX.Element {
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "56px 1fr auto",
-        gap: 12,
-        alignItems: "flex-start",
-        padding: 12,
-        borderRadius: 12,
-        background: "rgba(0,0,0,0.32)",
-        border: `1px solid ${NEX.border}`,
-        opacity: isSoldOut ? 0.75 : 1,
-      }}
-    >
-      {/* thumb */}
-      <div
-        style={{
-          width: 56,
-          height: 56,
-          borderRadius: 8,
-          background: product.image_url
-            ? `url(${product.image_url}) center/cover`
-            : "rgba(139,169,209,0.08)",
-          border: `1px solid ${NEX.border}`,
-          flexShrink: 0,
-        }}
-      />
-
-      {/* meta */}
-      <div style={{ minWidth: 0 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "baseline",
-            gap: 8,
-            flexWrap: "wrap",
-            marginBottom: 4,
-          }}
-        >
-          <div
+    <div style={{
+      display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14,
+      padding: 8, borderRadius: 10, background: "rgba(0,0,0,0.28)",
+      border: `1px solid ${NEX.border}`,
+    }}>
+      {props.businesses.map((b) => {
+        const active = b.id === props.activeId;
+        const href = `/nex-native/manage/products?business=${encodeURIComponent(b.id)}&filter=${props.filter}`;
+        return (
+          <Link
+            key={b.id}
+            href={href}
             style={{
-              fontSize: 13,
+              padding: "6px 10px",
+              borderRadius: 999,
+              background: active ? "rgba(0,175,255,0.14)" : "transparent",
+              color: active ? NEX.cyan : NEX.textDim,
+              border: `1px solid ${active ? NEX.cyanSoft : NEX.border}`,
+              fontSize: 11,
               fontWeight: 700,
-              letterSpacing: "-0.005em",
+              textDecoration: "none",
+              letterSpacing: "0.04em",
             }}
           >
-            {product.name}
-          </div>
-          <div
-            style={{
-              fontSize: 12,
-              color: NEX.orange,
-              fontWeight: 700,
-            }}
-          >
-            {product.currency === "IDR" ? "Rp " : `${product.currency} `}
-            {price}
-          </div>
-          {product.status !== "live" && (
-            <span style={statusPillStyle}>{product.status}</span>
-          )}
-          {isSoldOut && <span style={soldOutPillStyle}>Sold out</span>}
-          {product.stock_status === "low_stock" && (
-            <span style={lowStockPillStyle}>Low stock</span>
-          )}
-          {product.stock_status === "made_to_order" && (
-            <span style={madeToOrderPillStyle}>Made to order</span>
-          )}
-        </div>
-        {product.description && (
-          <div
-            style={{
-              fontSize: 12,
-              color: NEX.textDim,
-              lineHeight: 1.5,
-              marginBottom: 6,
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-            }}
-          >
-            {product.description}
-          </div>
-        )}
+            {b.display_name}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
 
-        {/* action row · toggle */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          <form action={toggleProductStockAction}>
-            <input type="hidden" name="product_id" value={product.id} />
-            <input type="hidden" name="next_status" value={nextStatus} />
-            <button
-              type="submit"
-              style={{
-                ...pillButtonStyle,
-                color: isSoldOut ? NEX.green : NEX.textDim,
-                borderColor: isSoldOut
-                  ? "rgba(22,214,107,0.35)"
-                  : NEX.borderStrong,
-                background: isSoldOut
-                  ? "rgba(22,214,107,0.10)"
-                  : "rgba(0,0,0,0.28)",
-              }}
-            >
-              {isSoldOut ? "Mark available" : "Mark sold out"}
-            </button>
-          </form>
-        </div>
-      </div>
+/* --------------------------------------------------------------------- *
+ * Filter pills · All / Live / Draft / Archived                          *
+ * --------------------------------------------------------------------- */
 
-      {/* right column reserved · empty for now */}
-      <div />
+function FilterPills(props: {
+  counts: { all: number; live: number; draft: number; archived: number };
+  active: "all" | "live" | "draft" | "archived";
+  businessId: string;
+}): React.JSX.Element {
+  const items: { k: "all" | "live" | "draft" | "archived"; label: string }[] = [
+    { k: "all", label: "All" },
+    { k: "live", label: "Live" },
+    { k: "draft", label: "Draft" },
+    { k: "archived", label: "Archived" },
+  ];
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+      {items.map((it) => {
+        const active = it.k === props.active;
+        const count = props.counts[it.k];
+        const href = `/nex-native/manage/products?business=${encodeURIComponent(props.businessId)}&filter=${it.k}`;
+        return (
+          <Link
+            key={it.k}
+            href={href}
+            style={{
+              padding: "6px 12px",
+              borderRadius: 999,
+              background: active ? "rgba(0,175,255,0.14)" : "rgba(0,0,0,0.28)",
+              color: active ? NEX.cyan : NEX.textDim,
+              border: `1px solid ${active ? NEX.cyanSoft : NEX.borderStrong}`,
+              fontSize: 11,
+              fontWeight: 800,
+              textDecoration: "none",
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+            }}
+          >
+            {it.label} <span style={{ opacity: 0.7, marginLeft: 4 }}>{count}</span>
+          </Link>
+        );
+      })}
     </div>
   );
 }
@@ -308,7 +326,8 @@ function ProductRow({ product }: { product: NexProductRow }) {
  * Empty state                                                           *
  * --------------------------------------------------------------------- */
 
-function EmptyState({ businessSlug }: { businessSlug: string }) {
+function EmptyState({ businessSlug, filter }: { businessSlug: string; filter: "all" | "live" | "draft" | "archived" }) {
+  const label = filter === "all" ? "No products yet." : `No ${filter} products.`;
   return (
     <div
       style={{
@@ -322,25 +341,43 @@ function EmptyState({ businessSlug }: { businessSlug: string }) {
         marginBottom: 20,
       }}
     >
-      No products yet.
-      <div style={{ marginTop: 12 }}>
+      {label}
+      <div style={{ marginTop: 12, display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+        <Link
+          href="/nex-native/create/product"
+          style={{
+            display: "inline-block",
+            padding: "10px 16px",
+            borderRadius: 12,
+            background: NEX.cyan,
+            color: "#031018",
+            fontSize: 12,
+            fontWeight: 800,
+            textDecoration: "none",
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
+            boxShadow: "0 8px 22px rgba(0,175,255,0.35)",
+          }}
+        >
+          + Create a product
+        </Link>
         <Link
           href={`/nex-native/${businessSlug}`}
           style={{
             display: "inline-block",
             padding: "10px 16px",
             borderRadius: 12,
-            background: NEX.orange,
-            color: "#0B0F1A",
+            background: "transparent",
+            color: NEX.textDim,
+            border: `1px solid ${NEX.borderStrong}`,
             fontSize: 12,
             fontWeight: 700,
             textDecoration: "none",
             letterSpacing: "0.06em",
             textTransform: "uppercase",
-            boxShadow: "0 8px 22px rgba(255,114,0,0.35)",
           }}
         >
-          Open your shop editor
+          View shop
         </Link>
       </div>
     </div>
@@ -377,68 +414,3 @@ function Banner({ code, message }: { code: string; message: string }) {
   );
 }
 
-/* --------------------------------------------------------------------- *
- * Shared styles                                                         *
- * --------------------------------------------------------------------- */
-
-const pillButtonStyle: React.CSSProperties = {
-  padding: "6px 10px",
-  borderRadius: 999,
-  border: `1px solid ${NEX.borderStrong}`,
-  background: "rgba(0,0,0,0.32)",
-  color: NEX.text,
-  fontSize: 10,
-  fontWeight: 700,
-  letterSpacing: "0.08em",
-  textTransform: "uppercase",
-  cursor: "pointer",
-  fontFamily: "inherit",
-};
-
-const soldOutPillStyle: React.CSSProperties = {
-  fontSize: 9,
-  letterSpacing: "0.12em",
-  textTransform: "uppercase",
-  color: NEX.red,
-  fontWeight: 700,
-  padding: "3px 8px",
-  borderRadius: 999,
-  border: `1px solid rgba(255,51,85,0.35)`,
-  background: "rgba(255,51,85,0.10)",
-};
-
-const lowStockPillStyle: React.CSSProperties = {
-  fontSize: 9,
-  letterSpacing: "0.12em",
-  textTransform: "uppercase",
-  color: NEX.amber,
-  fontWeight: 700,
-  padding: "3px 8px",
-  borderRadius: 999,
-  border: `1px solid rgba(245,158,11,0.35)`,
-  background: "rgba(245,158,11,0.10)",
-};
-
-const madeToOrderPillStyle: React.CSSProperties = {
-  fontSize: 9,
-  letterSpacing: "0.12em",
-  textTransform: "uppercase",
-  color: NEX.cyan,
-  fontWeight: 700,
-  padding: "3px 8px",
-  borderRadius: 999,
-  border: `1px solid ${NEX.cyanSoft}`,
-  background: "rgba(0,175,255,0.10)",
-};
-
-const statusPillStyle: React.CSSProperties = {
-  fontSize: 9,
-  letterSpacing: "0.12em",
-  textTransform: "uppercase",
-  color: NEX.textMute,
-  fontWeight: 700,
-  padding: "3px 8px",
-  borderRadius: 999,
-  border: `1px solid ${NEX.border}`,
-  background: "rgba(139,169,209,0.08)",
-};

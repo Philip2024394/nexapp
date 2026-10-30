@@ -86,3 +86,103 @@ export async function toggleProductStockAction(
       : `${product.name} · marked available`;
   redirectWithBanner("stock_status_updated", label);
 }
+
+/**
+ * Owner-authorised 2026-10-30 (Product Upload World-Class brief ·
+ * seller product library). Soft-delete a product by moving it to
+ * status='archived'. We do NOT physically DELETE because:
+ *   · variants + spec jsonb carry history the owner may want to
+ *     reinstate later
+ *   · existing conversations may reference about_product_id
+ *   · the sealed stock-management copy "No deletes here" was never
+ *     a prohibition on soft-hide, only on destructive loss
+ *
+ * Status transitions on 'archived' from either 'live' or 'draft'.
+ * Already-archived rows are a no-op (idempotent redirect).
+ */
+export async function archiveProductAction(
+  formData: FormData,
+): Promise<never> {
+  const session = await resolveNexAppSessionFromContext();
+  if (!session) {
+    redirect("/nex-native/sign-in");
+  }
+
+  const productId = String(formData.get("product_id") ?? "").trim();
+  if (!productId) {
+    redirectWithBanner("missing_product_id", "product id required");
+  }
+
+  const product = await productService.getProductById(productId);
+  if (!product) {
+    redirectWithBanner("product_not_found", "product not found");
+  }
+
+  const owned = await businessService.listBusinessesByOwner(session.account.id);
+  const ownedIds = new Set(owned.map((b) => b.id));
+  if (!ownedIds.has(product.business_id)) {
+    redirectWithBanner("not_owner", "you do not own this product's business");
+  }
+
+  if (product.status === "archived") {
+    redirectWithBanner("archive_noop", `${product.name} · already archived`);
+  }
+
+  try {
+    await productService.updateProductStatus(productId, "archived");
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    redirectWithBanner("archive_failed", msg);
+  }
+
+  revalidatePath("/nex-native/manage/products");
+  const business = owned.find((b) => b.id === product.business_id);
+  if (business) revalidatePath(`/nex-native/${business.slug}`);
+  redirectWithBanner("product_archived", `${product.name} · archived`);
+}
+
+/**
+ * Companion to archive: restore an archived product to 'draft' so the
+ * seller can finish editing it before republishing. Mirrors the
+ * archive gate shape.
+ */
+export async function restoreProductAction(
+  formData: FormData,
+): Promise<never> {
+  const session = await resolveNexAppSessionFromContext();
+  if (!session) {
+    redirect("/nex-native/sign-in");
+  }
+
+  const productId = String(formData.get("product_id") ?? "").trim();
+  if (!productId) {
+    redirectWithBanner("missing_product_id", "product id required");
+  }
+
+  const product = await productService.getProductById(productId);
+  if (!product) {
+    redirectWithBanner("product_not_found", "product not found");
+  }
+
+  const owned = await businessService.listBusinessesByOwner(session.account.id);
+  const ownedIds = new Set(owned.map((b) => b.id));
+  if (!ownedIds.has(product.business_id)) {
+    redirectWithBanner("not_owner", "you do not own this product's business");
+  }
+
+  if (product.status !== "archived") {
+    redirectWithBanner("restore_noop", `${product.name} · not archived`);
+  }
+
+  try {
+    await productService.updateProductStatus(productId, "draft");
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    redirectWithBanner("restore_failed", msg);
+  }
+
+  revalidatePath("/nex-native/manage/products");
+  const business = owned.find((b) => b.id === product.business_id);
+  if (business) revalidatePath(`/nex-native/${business.slug}`);
+  redirectWithBanner("product_restored", `${product.name} · restored as draft`);
+}
