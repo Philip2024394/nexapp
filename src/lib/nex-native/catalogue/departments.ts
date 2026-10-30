@@ -312,7 +312,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "pet_supplies_animals",
     label: "Pet Supplies & Animals",
     blurb: "Dogs, cats, birds, fish",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "dogs", label: "Dogs" },
       { id: "cats", label: "Cats" },
@@ -328,7 +328,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "books_education_stationery",
     label: "Books, Education & Stationery",
     blurb: "Books, school, office stationery",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "books", label: "Books" },
       { id: "school_supplies", label: "School Supplies" },
@@ -342,7 +342,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "office_business_industrial",
     label: "Office, Business & Industrial",
     blurb: "Equipment, furniture, packaging",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "office_equipment", label: "Office Equipment" },
       { id: "business_furniture", label: "Business Furniture" },

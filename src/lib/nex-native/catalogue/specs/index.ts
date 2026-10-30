@@ -27,6 +27,9 @@ import { GardenOutdoorAgricultureSpecs } from "./garden-outdoor-agriculture";
 import { ToolsDiyConstructionSpecs } from "./tools-diy-construction";
 import { AutomotiveMotorcyclesTransportSpecs } from "./automotive-motorcycles-transport";
 import { FoodGroceryBeveragesSpecs } from "./food-grocery-beverages";
+import { PetSuppliesAnimalsSpecs } from "./pet-supplies-animals";
+import { BooksEducationStationerySpecs } from "./books-education-stationery";
+import { OfficeBusinessIndustrialSpecs } from "./office-business-industrial";
 
 // Registry entries · one row per sub-category.
 const ALL_CATEGORY_SPECS: readonly CategorySpec[] = [
@@ -43,6 +46,9 @@ const ALL_CATEGORY_SPECS: readonly CategorySpec[] = [
   ...ToolsDiyConstructionSpecs,
   ...AutomotiveMotorcyclesTransportSpecs,
   ...FoodGroceryBeveragesSpecs,
+  ...PetSuppliesAnimalsSpecs,
+  ...BooksEducationStationerySpecs,
+  ...OfficeBusinessIndustrialSpecs,
   // Other departments: add entries here as they ship per §I.5 batches.
 ];
 
