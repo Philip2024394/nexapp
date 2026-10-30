@@ -32,6 +32,7 @@ import {
 } from "@/lib/nex-native/catalogue/identity-wholesale-spec";
 import { extractReturns, RETURNS_SPEC_KEY } from "@/lib/nex-native/catalogue/returns-spec";
 import { extractColors, COLORS_SPEC_KEY } from "@/lib/nex-native/catalogue/colors-spec";
+import { extractCoverVideo, COVER_VIDEO_SPEC_KEY } from "@/lib/nex-native/catalogue/cover-video-spec";
 import type { MarketSelectorValue } from "@/components/nex-native/product-create/MarketSelector";
 import type { VariantDraft } from "@/components/nex-native/product-create/VariantsBuilder";
 import type {
@@ -53,6 +54,10 @@ import {
   EMPTY_COLORS,
   type ColorsEditorValue,
 } from "@/components/nex-native/product-create/ColorsEditor";
+import {
+  EMPTY_COVER_VIDEO,
+  type CoverVideoDraft,
+} from "@/components/nex-native/product-create/CoverVideoEditor";
 import { EditProductFormClient } from "./_edit-client";
 
 export const dynamic = "force-dynamic";
@@ -115,15 +120,17 @@ export default async function EditProductPage({
     [WHOLESALE_SPEC_KEY]: _wholesaleBlock,
     [RETURNS_SPEC_KEY]: _returnsBlock,
     [COLORS_SPEC_KEY]: _colorsBlock,
+    [COVER_VIDEO_SPEC_KEY]: _coverVideoBlock,
     ...categoryOnlySpec
   } = rawSpec;
-  void _marketBlock; void _deliveryBlock; void _identityBlock; void _wholesaleBlock; void _returnsBlock; void _colorsBlock;
+  void _marketBlock; void _deliveryBlock; void _identityBlock; void _wholesaleBlock; void _returnsBlock; void _colorsBlock; void _coverVideoBlock;
   const market = extractMarket(rawSpec);
   const delivery = extractDelivery(rawSpec);
   const identity = extractIdentity(rawSpec);
   const wholesale = extractWholesale(rawSpec);
   const returns = extractReturns(rawSpec);
   const colors = extractColors(rawSpec);
+  const coverVideo = extractCoverVideo(rawSpec);
 
   const initial: MarketSelectorValue = marketToUIValue(market);
   const initialDelivery: DeliveryEditorValue = deliveryToUIValue(delivery);
@@ -131,6 +138,9 @@ export default async function EditProductPage({
   const initialWholesale: WholesaleDraft = wholesaleToUIValue(wholesale);
   const initialReturns: ReturnsDraft = returnsToUIValue(returns);
   const initialColors: ColorsEditorValue = colorsToUIValue(colors);
+  const initialCoverVideo: CoverVideoDraft = coverVideo
+    ? { url: coverVideo.url, durationSeconds: coverVideo.duration_seconds, objectPath: coverVideo.object_path ?? "" }
+    : EMPTY_COVER_VIDEO;
 
   const status: AllowedStatus = ((["draft", "live", "archived"] as readonly string[]).includes(product.status) ? product.status : "draft") as AllowedStatus;
   const stock: AllowedStock = ((["in_stock", "low_stock", "sold_out", "made_to_order"] as readonly string[]).includes(product.stock_status ?? "") ? (product.stock_status as AllowedStock) : "in_stock");
@@ -179,6 +189,7 @@ export default async function EditProductPage({
         wholesale: initialWholesale,
         returns: initialReturns,
         colors: initialColors,
+        coverVideo: initialCoverVideo,
       }}
     />
   );

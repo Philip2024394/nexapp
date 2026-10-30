@@ -54,6 +54,11 @@ import {
   mergeColorsIntoSpec,
   type ColorsT,
 } from "@/lib/nex-native/catalogue/colors-spec";
+import {
+  CoverVideoSpec,
+  mergeCoverVideoIntoSpec,
+  type CoverVideoT,
+} from "@/lib/nex-native/catalogue/cover-video-spec";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
 import type { NexProductStatus, NexProductStockStatus, NexVariantAttribute } from "@/lib/nex-native/types";
 import { NEX_VARIANT_ATTRIBUTES, NEX_PRODUCT_STOCK_STATUSES } from "@/lib/nex-native/types";
@@ -80,6 +85,7 @@ export type UpdateProductErrorCode =
   | "wholesale-invalid"
   | "returns-invalid"
   | "colors-invalid"
+  | "cover-video-invalid"
   | "internal";
 
 export type UpdateProductResult =
@@ -104,6 +110,7 @@ export interface UpdateProductInput {
   readonly wholesale?: unknown;
   readonly returns?: unknown;
   readonly colors?: unknown;
+  readonly coverVideo?: unknown;
   readonly status?: Extract<NexProductStatus, "draft" | "live" | "archived">;
   /** Full desired variant list · diff-synced against existing rows. */
   readonly variants?: readonly UpdateProductVariantPayload[];
@@ -236,6 +243,16 @@ export async function updateProductAction(
     }
     const colors: ColorsT = cResult.data;
     specFinal = mergeColorsIntoSpec(specFinal, colors);
+  }
+
+  // 8g · Cover video (optional · owner-authorised 2026-10-31)
+  if (input.coverVideo !== undefined && input.coverVideo !== null) {
+    const vResult = CoverVideoSpec.safeParse(input.coverVideo);
+    if (!vResult.success) {
+      return err("cover-video-invalid", `Cover video validation failed: ${vResult.error.message}`);
+    }
+    const video: CoverVideoT = vResult.data;
+    specFinal = mergeCoverVideoIntoSpec(specFinal, video);
   }
 
   // 9 · updateProductBatch

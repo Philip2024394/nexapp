@@ -220,6 +220,16 @@ export const NEX_PRODUCT_IMAGE_ALLOWED_MIMES: Readonly<Record<string, string>> =
   "image/webp": "webp",
 });
 
+// Cover-video upload (owner-authorised 2026-10-31) · one per product,
+// 30 s max, 60 MB cap. Server enforces size + MIME; duration cap is
+// client-declared (see cover-video-spec.ts for the trust boundary).
+export const NEX_PRODUCT_COVER_VIDEO_MAX_BYTES = 60 * 1024 * 1024; // 60 MB
+export const NEX_PRODUCT_COVER_VIDEO_ALLOWED_MIMES: Readonly<Record<string, string>> = Object.freeze({
+  "video/mp4": "mp4",
+  "video/webm": "webm",
+  "video/quicktime": "mov",
+});
+
 /** Upload a raw product image to the shared nex-business-assets bucket.
  *  Caller is responsible for session + ownership gating BEFORE this
  *  runs. Returns the public URL. */
@@ -253,6 +263,44 @@ export async function uploadProductImage(input: {
   const { data: pub } = bucket.getPublicUrl(objectPath);
   if (!pub?.publicUrl) {
     throw new Error("product-service.uploadProductImage: public URL unavailable");
+  }
+  return { url: pub.publicUrl, objectPath };
+}
+
+/** Owner-authorised 2026-10-31 · cover-video upload to the shared
+ *  nex-business-assets bucket under products/<business_id>/videos/.
+ *  Caller handles session + ownership before this runs. Returns the
+ *  public URL and the object path (for future cleanup). */
+export async function uploadProductCoverVideo(input: {
+  businessId: NexUuid;
+  file: File;
+}): Promise<{ url: string; objectPath: string }> {
+  const { businessId, file } = input;
+  if (file.size > NEX_PRODUCT_COVER_VIDEO_MAX_BYTES) {
+    throw new Error(
+      `product-service.uploadProductCoverVideo: file exceeds ${NEX_PRODUCT_COVER_VIDEO_MAX_BYTES / (1024 * 1024)}MB cap`,
+    );
+  }
+  const mime = (file.type || "").toLowerCase();
+  const ext = NEX_PRODUCT_COVER_VIDEO_ALLOWED_MIMES[mime];
+  if (!ext) {
+    throw new Error(
+      `product-service.uploadProductCoverVideo: video must be mp4 / webm / mov · got ${file.type || "unknown"}`,
+    );
+  }
+  const objectPath = `products/${businessId}/videos/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
+  const bucket = nexSupabaseAdmin.storage.from("nex-business-assets");
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const { error: upErr } = await bucket.upload(objectPath, bytes, {
+    contentType: file.type,
+    upsert: false,
+  });
+  if (upErr) {
+    throw new Error(`product-service.uploadProductCoverVideo: ${upErr.message}`);
+  }
+  const { data: pub } = bucket.getPublicUrl(objectPath);
+  if (!pub?.publicUrl) {
+    throw new Error("product-service.uploadProductCoverVideo: public URL unavailable");
   }
   return { url: pub.publicUrl, objectPath };
 }

@@ -45,6 +45,10 @@ import {
   type ColorsEditorValue,
   type ColorEntryDraft,
 } from "@/components/nex-native/product-create/ColorsEditor";
+import {
+  CoverVideoEditor,
+  type CoverVideoDraft,
+} from "@/components/nex-native/product-create/CoverVideoEditor";
 import { updateProductAction } from "@/app/nex-native/manage/products/[productId]/edit/_actions";
 import type { SpecFieldConfig } from "@/lib/nex-native/catalogue/specs/types";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
@@ -97,6 +101,7 @@ export interface EditProductFormClientProps {
     readonly wholesale: WholesaleDraft;
     readonly returns: ReturnsDraft;
     readonly colors: ColorsEditorValue;
+    readonly coverVideo: CoverVideoDraft;
   };
 }
 
@@ -118,6 +123,7 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
   const [wholesale, setWholesale] = React.useState<WholesaleDraft>(props.initial.wholesale);
   const [returns, setReturns] = React.useState<ReturnsDraft>(props.initial.returns);
   const [colors, setColors] = React.useState<ColorsEditorValue>(props.initial.colors);
+  const [coverVideo, setCoverVideo] = React.useState<CoverVideoDraft>(props.initial.coverVideo);
 
   const exportDestinationIsos = React.useMemo(
     () => delivery.export.map((d) => d.iso.trim().toUpperCase()).filter((iso) => /^[A-Z]{2}$/.test(iso)),
@@ -156,6 +162,7 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
         wholesale: toWholesalePayload(wholesale),
         returns: toReturnsPayload(returns),
         colors: toColorsPayload(colors),
+        coverVideo: toCoverVideoPayload(coverVideo),
         variants: toVariantPayload(variants),
       });
       if (!result.ok) {
@@ -253,6 +260,13 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
               baseCurrency={currency}
             />
           </div>
+          <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
+            <CoverVideoEditor
+              value={coverVideo}
+              onChange={setCoverVideo}
+              businessId={props.businessId}
+            />
+          </div>
           <Field label="Stock status">
             <select value={stockStatus} onChange={(e) => setStockStatus(e.target.value as EditProductFormClientProps["initial"]["stockStatus"])} style={COMMON_INPUT}>
               <option value="in_stock">In stock</option>
@@ -339,6 +353,17 @@ function StatusChip(props: { status: "draft" | "live" | "archived" }): React.JSX
       {p.label}
     </span>
   );
+}
+
+/** Mirror of Create form's toCoverVideoPayload. */
+function toCoverVideoPayload(v: CoverVideoDraft): Record<string, unknown> | null {
+  if (!v.url || v.durationSeconds <= 0) return null;
+  const out: Record<string, unknown> = {
+    url: v.url,
+    duration_seconds: Math.min(Math.max(1, Math.round(v.durationSeconds)), 30),
+  };
+  if (v.objectPath) out.object_path = v.objectPath;
+  return out;
 }
 
 /** Mirror of Create form's toColorsPayload. */

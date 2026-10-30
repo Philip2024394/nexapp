@@ -60,6 +60,11 @@ import {
   mergeColorsIntoSpec,
   type ColorsT,
 } from "@/lib/nex-native/catalogue/colors-spec";
+import {
+  CoverVideoSpec,
+  mergeCoverVideoIntoSpec,
+  type CoverVideoT,
+} from "@/lib/nex-native/catalogue/cover-video-spec";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
 import type { NexProductStatus, NexProductStockStatus, NexVariantAttribute } from "@/lib/nex-native/types";
 import { NEX_VARIANT_ATTRIBUTES, NEX_PRODUCT_STOCK_STATUSES } from "@/lib/nex-native/types";
@@ -84,6 +89,7 @@ export type CreateProductErrorCode =
   | "wholesale-invalid"
   | "returns-invalid"
   | "colors-invalid"
+  | "cover-video-invalid"
   | "tier-limit"
   | "internal";
 
@@ -114,6 +120,7 @@ export interface CreateProductInput {
   readonly wholesale?: unknown;
   readonly returns?: unknown;
   readonly colors?: unknown;
+  readonly coverVideo?: unknown;
   readonly status?: Extract<NexProductStatus, "draft" | "live">;
   /** Optional · zero variants means a flat non-variant product. */
   readonly variants?: readonly CreateProductVariantPayload[];
@@ -240,6 +247,17 @@ export async function createProductAction(
     }
     const colors: ColorsT = cResult.data;
     specFinal = mergeColorsIntoSpec(specFinal, colors);
+  }
+
+  // 7g · Cover video (optional · owner-authorised 2026-10-31).
+  //    null payload → skip; declared payload → Zod validate + merge.
+  if (input.coverVideo !== undefined && input.coverVideo !== null) {
+    const vResult = CoverVideoSpec.safeParse(input.coverVideo);
+    if (!vResult.success) {
+      return err("cover-video-invalid", `Cover video validation failed: ${vResult.error.message}`);
+    }
+    const video: CoverVideoT = vResult.data;
+    specFinal = mergeCoverVideoIntoSpec(specFinal, video);
   }
 
   // 8 · Write canonical nex_product row

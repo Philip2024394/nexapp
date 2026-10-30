@@ -51,6 +51,11 @@ import {
   type ColorsEditorValue,
   type ColorEntryDraft,
 } from "@/components/nex-native/product-create/ColorsEditor";
+import {
+  CoverVideoEditor,
+  EMPTY_COVER_VIDEO,
+  type CoverVideoDraft,
+} from "@/components/nex-native/product-create/CoverVideoEditor";
 import { createProductAction } from "@/app/nex-native/create/product/_actions";
 import type { SpecFieldConfig } from "@/lib/nex-native/catalogue/specs/types";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
@@ -105,6 +110,7 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
   const [wholesale, setWholesale] = React.useState<WholesaleDraft>(EMPTY_WHOLESALE);
   const [returns, setReturns] = React.useState<ReturnsDraft>(EMPTY_RETURNS);
   const [colors, setColors] = React.useState<ColorsEditorValue>(EMPTY_COLORS);
+  const [coverVideo, setCoverVideo] = React.useState<CoverVideoDraft>(EMPTY_COVER_VIDEO);
 
   const exportDestinationIsos = React.useMemo(
     () => delivery.export.map((d) => d.iso.trim().toUpperCase()).filter((iso) => /^[A-Z]{2}$/.test(iso)),
@@ -142,6 +148,7 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
         wholesale: toWholesalePayload(wholesale),
         returns: toReturnsPayload(returns),
         colors: toColorsPayload(colors),
+        coverVideo: toCoverVideoPayload(coverVideo),
         status: publishLive ? "live" : "draft",
         variants: toVariantPayload(variants),
       });
@@ -270,6 +277,13 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
               value={colors} onChange={setColors}
               businessId={props.businessId}
               baseCurrency={currency}
+            />
+          </div>
+          <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
+            <CoverVideoEditor
+              value={coverVideo}
+              onChange={setCoverVideo}
+              businessId={props.businessId}
             />
           </div>
           <Field label="Stock status">
@@ -413,6 +427,19 @@ function toMarketPayload(v: MarketSelectorValue): {
     payload.export = cleanExport(v.export);
   }
   return payload;
+}
+
+/** Convert CoverVideoDraft → server payload. Returns null when the
+ *  seller has no video set so the server can simply omit the
+ *  substrate rather than persisting an empty object. */
+function toCoverVideoPayload(v: CoverVideoDraft): Record<string, unknown> | null {
+  if (!v.url || v.durationSeconds <= 0) return null;
+  const out: Record<string, unknown> = {
+    url: v.url,
+    duration_seconds: Math.min(Math.max(1, Math.round(v.durationSeconds)), 30),
+  };
+  if (v.objectPath) out.object_path = v.objectPath;
+  return out;
 }
 
 /** Convert ColorsEditorValue → server payload. Normalise hex to upper,
