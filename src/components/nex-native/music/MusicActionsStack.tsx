@@ -191,12 +191,24 @@ export function MusicActionsStack(
         // Roll back on server rejection (rate-limit · blocked · etc.)
         setFollowed(prev);
         if (typeof prevCount === "number") setFollowerCount(prevCount);
+        if (process.env.NODE_ENV !== "production") {
+          // eslint-disable-next-line no-console
+          console.warn(
+            `[nex-follow] music-stack rejected · code=${result.code} message="${result.message}" followeeId=${props.followeeId}`,
+          );
+        }
         props.onFollowReject?.(result.code, result.message);
       }
     } catch (e) {
       setFollowed(prev);
       if (typeof prevCount === "number") setFollowerCount(prevCount);
       const msg = e instanceof Error ? e.message : String(e);
+      if (process.env.NODE_ENV !== "production") {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[nex-follow] music-stack threw · message="${msg}" followeeId=${props.followeeId}`,
+        );
+      }
       props.onFollowReject?.("internal", msg);
     }
   };

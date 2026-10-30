@@ -40,6 +40,7 @@ import {
   getFollowState,
   isBlockedBetween,
   accountExists,
+  readFollowCounts,
 } from "./follow-repository";
 import {
   checkFollowAttempt,
@@ -52,6 +53,7 @@ import {
   log,
 } from "./follow-observability";
 import type {
+  NexFollowCounts,
   NexFollowErrorCode,
   NexFollowResult,
   NexFollowSource,
@@ -238,5 +240,27 @@ export async function isFollowingAction(input: {
     const msg = e instanceof Error ? e.message : String(e);
     log.error("is_following_failed", { followerId, followeeId: input.followeeId, msg });
     return err("internal", `State query failed: ${msg}`);
+  }
+}
+
+/** getFollowCountsAction · read-only follower + following counts for
+ *  a public account. Owner-authorised 2026-10-30 · Stage 2 companion
+ *  to isFollowingAction, lets client surfaces (Live viewer) fetch
+ *  the trigger-maintained counts from nex_account after broadcaster
+ *  identity resolves client-side. No auth required · counts are a
+ *  public social signal per §16 D2 default. */
+export async function getFollowCountsAction(input: {
+  readonly accountId: string;
+}): Promise<NexFollowResult<NexFollowCounts>> {
+  if (!isUuidLike(input.accountId)) {
+    return err("invalid-input", "accountId must be a UUID");
+  }
+  try {
+    const counts = await readFollowCounts(input.accountId);
+    return { ok: true, data: counts };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    log.error("read_follow_counts_failed", { accountId: input.accountId, msg });
+    return err("internal", `Count read failed: ${msg}`);
   }
 }

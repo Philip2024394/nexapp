@@ -53,7 +53,22 @@ import { MessagePanel } from "@/components/nex-native/live-commerce/MessagePanel
 import { getLiveInviteTargetAction } from "@/app/nex-native/live-commerce/_invite-target-action";
 import type { InviteTarget } from "@/lib/nex-native/live-broadcast/invite-target";
 import { FollowButton } from "@/components/nex-native/follow/FollowButton";
-import { isFollowingAction } from "@/lib/nex-native/follow/follow-actions";
+import {
+  isFollowingAction,
+  getFollowCountsAction,
+} from "@/lib/nex-native/follow/follow-actions";
+
+/** Compact k/M formatter for the inline Live follower-count chip.
+ *  Owner-authorised 2026-10-30 · Stage 2b · duplicates the sealed
+ *  formatter in `FollowersCountChip.formatCount` with the same
+ *  thresholds so the display is consistent across Profile + Live. */
+function formatLiveCount(n: number): string {
+  if (!Number.isFinite(n) || n < 0) return "0";
+  if (n < 1000) return String(n);
+  if (n < 10_000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+  if (n < 1_000_000) return `${Math.floor(n / 1000)}k`;
+  return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+}
 
 const NEX = {
   bg: "#020914",
@@ -106,6 +121,13 @@ export function LiveViewerPage({
   // way.
   const [resolvedFollowState, setResolvedFollowState] = React.useState<
     "not-following" | "following" | null
+  >(null);
+  // Owner-authorised 2026-10-30 · Stage 2b · broadcaster follower
+  // count (null = unresolved, number = trigger-maintained value from
+  // nex_account.followers_count). Fetched in parallel with the
+  // follow-state effect once broadcasterAccountId resolves.
+  const [broadcasterFollowersCount, setBroadcasterFollowersCount] = React.useState<
+    number | null
   >(null);
   // Owner directive 2026-10-25 (Phase B) · Message panel state. The
   // broadcaster InviteTarget is resolved on-demand when the viewer
@@ -403,22 +425,40 @@ export function LiveViewerPage({
   // state immediately on dependency change so the stale answer never
   // leaks between sessions.
   React.useEffect(() => {
-    if (!broadcasterAccountId || !viewerAccountId || isSelf) {
+    if (!broadcasterAccountId) {
       setResolvedFollowState(null);
+      setBroadcasterFollowersCount(null);
       return;
     }
     let cancelled = false;
     setResolvedFollowState(null);
-    void isFollowingAction({ followeeId: broadcasterAccountId })
+    setBroadcasterFollowersCount(null);
+    // Follow-state query is auth-gated · skip for guests + self-view.
+    // Count query is public · always fetch when broadcaster is known
+    // (viewers want to see the broadcaster's follower count even if
+    // they're the broadcaster themself inspecting their own stream).
+    const followStatePromise =
+      viewerAccountId !== null && !isSelf
+        ? isFollowingAction({ followeeId: broadcasterAccountId })
+            .then((r) => {
+              if (cancelled) return;
+              if (r.ok) {
+                setResolvedFollowState(r.data.state === "following" ? "following" : "not-following");
+              }
+            })
+            .catch(() => {
+              /* fail-open · leave null */
+            })
+        : Promise.resolve();
+    const countPromise = getFollowCountsAction({ accountId: broadcasterAccountId })
       .then((r) => {
         if (cancelled) return;
-        if (r.ok) {
-          setResolvedFollowState(r.data ? "following" : "not-following");
-        }
+        if (r.ok) setBroadcasterFollowersCount(r.data.followersCount);
       })
       .catch(() => {
-        /* fail-open · leave null (= "pending" key → defaults to not-following) */
+        /* fail-open · leave null · chip stays hidden */
       });
+    void Promise.all([followStatePromise, countPromise]);
     return () => {
       cancelled = true;
     };
@@ -1042,6 +1082,10 @@ export function LiveViewerPage({
             right: 12,
             zIndex: 25,
             pointerEvents: "auto",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-end",
+            gap: 6,
           }}
         >
           <FollowButton
@@ -1058,6 +1102,30 @@ export function LiveViewerPage({
             initialState={resolvedFollowState ?? "not-following"}
             isSelfAccount={false}
           />
+          {/* Owner-authorised 2026-10-30 · Stage 2b · compact
+              broadcaster follower-count chip for the Live overlay.
+              Inlined (not FollowersCountChip which is a two-number
+              side-by-side layout for Profile) · Live shows only
+              the follower number, right-aligned under the Follow
+              button. Hidden until the server returns a count. */}
+          {broadcasterFollowersCount !== null && (
+            <div
+              data-nex-live-broadcaster-followers
+              style={{
+                background: "rgba(0, 0, 0, 0.55)",
+                padding: "3px 10px",
+                borderRadius: 999,
+                backdropFilter: "blur(8px)",
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#F0F6FF",
+                letterSpacing: "0.04em",
+                lineHeight: 1.3,
+              }}
+            >
+              {formatLiveCount(broadcasterFollowersCount)} followers
+            </div>
+          )}
         </div>
       )}
 

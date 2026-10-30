@@ -114,6 +114,17 @@ export function FollowButton(props: FollowButtonProps): React.JSX.Element | null
         setErrorMsg(result.message);
         setRejectedAtMs(Date.now());
         props.onStateChange?.(prev);
+        // Dev-only visibility · the sealed convention has no toast
+        // primitive, so until a Stage 3 UI lands, developers at
+        // least see rejection reasons in the console. Suppressed in
+        // production by the NODE_ENV gate. onReject hook still fires
+        // for caller-wired handling.
+        if (process.env.NODE_ENV !== "production") {
+          // eslint-disable-next-line no-console
+          console.warn(
+            `[nex-follow] rejected · code=${result.code} message="${result.message}" followeeId=${props.followeeId} source=${props.source}`,
+          );
+        }
         props.onReject?.(result.code, result.message);
       } else {
         // Reconcile against server-authoritative state
@@ -129,6 +140,12 @@ export function FollowButton(props: FollowButtonProps): React.JSX.Element | null
       setErrorMsg(msg);
       setRejectedAtMs(Date.now());
       props.onStateChange?.(prev);
+      if (process.env.NODE_ENV !== "production") {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[nex-follow] threw · message="${msg}" followeeId=${props.followeeId} source=${props.source}`,
+        );
+      }
       props.onReject?.("internal", msg);
     } finally {
       setPending(false);
