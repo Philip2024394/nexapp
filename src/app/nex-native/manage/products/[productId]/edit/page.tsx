@@ -195,6 +195,8 @@ function identityToUIValue(i: ReturnType<typeof extractIdentity>): IdentityDraft
     conditionNotes: i.condition_notes ?? "",
     countryOfManufacture: i.country_of_manufacture ?? "",
     countryOfOrigin: i.country_of_origin ?? "",
+    dimensions: i.dimensions ?? "",
+    weightG: typeof i.weight_g === "number" ? String(i.weight_g) : "",
   };
 }
 

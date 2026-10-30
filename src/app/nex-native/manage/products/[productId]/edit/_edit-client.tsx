@@ -340,6 +340,12 @@ function toIdentityPayload(v: IdentityDraft): Record<string, unknown> {
   if (/^[A-Z]{2}$/.test(m)) out.country_of_manufacture = m;
   const o = v.countryOfOrigin.trim().toUpperCase();
   if (/^[A-Z]{2}$/.test(o)) out.country_of_origin = o;
+  if (v.dimensions.trim()) out.dimensions = v.dimensions.trim();
+  const w = v.weightG.trim();
+  if (w !== "") {
+    const n = Number(w);
+    if (Number.isFinite(n) && n > 0) out.weight_g = n;
+  }
   return out;
 }
 

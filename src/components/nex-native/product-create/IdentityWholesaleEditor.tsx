@@ -28,6 +28,8 @@ export interface IdentityDraft {
   readonly conditionNotes: string;
   readonly countryOfManufacture: string;
   readonly countryOfOrigin: string;
+  readonly dimensions: string;
+  readonly weightG: string;
 }
 
 export interface WholesaleTierDraft {
@@ -49,6 +51,8 @@ export const EMPTY_IDENTITY: IdentityDraft = {
   conditionNotes: "",
   countryOfManufacture: "",
   countryOfOrigin: "",
+  dimensions: "",
+  weightG: "",
 };
 
 export const EMPTY_WHOLESALE: WholesaleDraft = {
@@ -110,6 +114,14 @@ function IdentityBlock(props: { value: IdentityDraft; onChange: (next: IdentityD
         </Field>
         <Field label="Country of origin (ISO 2-letter)" help="Customs/trade concept — may differ from manufacture.">
           <input type="text" value={value.countryOfOrigin} onChange={(e) => set("countryOfOrigin", e.target.value.toUpperCase())} maxLength={2} placeholder="ID" style={inputStyle(false)} />
+        </Field>
+      </div>
+      <div style={gridStyle}>
+        <Field label="Dimensions (L × W × H)" help="Product itself, unpackaged.">
+          <input type="text" value={value.dimensions} onChange={(e) => set("dimensions", e.target.value)} maxLength={80} placeholder="30 × 20 × 10 cm" style={inputStyle(false)} />
+        </Field>
+        <Field label="Weight (g)" help="Product itself, unpackaged.">
+          <input type="number" min={0} value={value.weightG} onChange={(e) => set("weightG", e.target.value)} style={inputStyle(false)} />
         </Field>
       </div>
     </div>

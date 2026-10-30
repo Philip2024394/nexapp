@@ -43,6 +43,15 @@ export const IdentitySpec = z.object({
   condition_notes: z.string().max(400).optional(),
   country_of_manufacture: ISO_COUNTRY.optional(),
   country_of_origin: ISO_COUNTRY.optional(),
+  /** Product-level dimensions (unpackaged). Free text so sellers can
+   *  state L × W × H in whatever units they commonly list. The
+   *  separate `packaged_dimensions_cm` field on export destinations
+   *  (delivery-spec.ts) captures the shipping-packaged dimensions
+   *  which are a different measurement. */
+  dimensions: z.string().max(80).optional(),
+  /** Product-level weight in grams (unpackaged). Also optional for
+   *  non-physical categories (digital, services). */
+  weight_g: z.number().positive().optional(),
 });
 
 export type IdentityT = z.infer<typeof IdentitySpec>;
@@ -127,4 +136,6 @@ export const IdentityFields: readonly SpecFieldConfig[] = [
   { key: "condition_notes", label: "Condition notes (optional)", kind: "textarea", maxLength: 400 },
   { key: "country_of_manufacture", label: "Country of manufacture (ISO 2-letter)", kind: "text", maxLength: 2, placeholder: "e.g. ID, CN, DE", helpText: "Where the product is made." },
   { key: "country_of_origin", label: "Country of origin (ISO 2-letter)", kind: "text", maxLength: 2, placeholder: "e.g. ID", helpText: "For customs / trade — not always the same as manufacture." },
+  { key: "dimensions", label: "Dimensions (L × W × H)", kind: "text", maxLength: 80, placeholder: "e.g. 30 × 20 × 10 cm", helpText: "Product itself, unpackaged." },
+  { key: "weight_g", label: "Weight (g)", kind: "number", min: 0, helpText: "Product itself, unpackaged." },
 ];
