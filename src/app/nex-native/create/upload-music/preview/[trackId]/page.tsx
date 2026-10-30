@@ -138,6 +138,10 @@ export default async function PreviewPage({
   }
   let nextCoverUrl: string | null = null;
   let nextBackgroundUrl: string | null = null;
+  // Owner-authorised 2026-10-31 · world-class gapless · also mint
+  // next/prev audio URLs so the shell preloader can warm the browser
+  // cache before swipe · the song starts the instant the user flips.
+  let nextAudioUrl: string | null = null;
   if (nextTrack) {
     try {
       if (
@@ -158,6 +162,13 @@ export default async function PreviewPage({
       } else if (nextTrack.background_image_url) {
         nextBackgroundUrl = nextTrack.background_image_url;
       }
+      if (
+        nextTrack.media_url &&
+        (nextTrack.media_url.startsWith("fs://") ||
+          nextTrack.media_url.startsWith("sb://"))
+      ) {
+        nextAudioUrl = await signRef(nextTrack.media_url);
+      }
     } catch {
       /* signing failures are non-fatal · card falls back to text */
     }
@@ -168,6 +179,7 @@ export default async function PreviewPage({
   // next-track block above. Signing failures stay non-fatal.
   let prevCoverUrl: string | null = null;
   let prevBackgroundUrl: string | null = null;
+  let prevAudioUrl: string | null = null;
   if (prevTrack) {
     try {
       if (
@@ -187,6 +199,13 @@ export default async function PreviewPage({
         prevBackgroundUrl = await signRef(prevTrack.background_image_url);
       } else if (prevTrack.background_image_url) {
         prevBackgroundUrl = prevTrack.background_image_url;
+      }
+      if (
+        prevTrack.media_url &&
+        (prevTrack.media_url.startsWith("fs://") ||
+          prevTrack.media_url.startsWith("sb://"))
+      ) {
+        prevAudioUrl = await signRef(prevTrack.media_url);
       }
     } catch {
       /* signing failures are non-fatal · preload hint simply skipped */
@@ -255,9 +274,11 @@ export default async function PreviewPage({
       nextTrack={nextTrack}
       nextCoverUrl={nextCoverUrl}
       nextBackgroundUrl={nextBackgroundUrl}
+      nextAudioUrl={nextAudioUrl}
       prevTrack={prevTrack}
       prevCoverUrl={prevCoverUrl}
       prevBackgroundUrl={prevBackgroundUrl}
+      prevAudioUrl={prevAudioUrl}
       libraryTracks={libraryTracks}
     />
   );

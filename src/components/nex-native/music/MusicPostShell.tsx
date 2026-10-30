@@ -62,6 +62,12 @@ export interface MusicPostShellSiblingHints {
   readonly prevBackgroundUrl: string | null;
   readonly nextCoverUrl: string | null;
   readonly nextBackgroundUrl: string | null;
+  /** Owner-authorised 2026-10-31 · world-class gapless playback.
+   *  Signed audio URL for the next/prev track so the preloader can
+   *  warm the browser cache 5 s before the current track ends · the
+   *  moment the user swipes, bytes are already fetched. */
+  readonly prevAudioUrl?: string | null;
+  readonly nextAudioUrl?: string | null;
 }
 
 export interface MusicPostShellLibrary {
@@ -856,6 +862,8 @@ function MusicPostSiblingPreloader(props: {
     prevBackgroundUrl,
     nextCoverUrl,
     nextBackgroundUrl,
+    prevAudioUrl,
+    nextAudioUrl,
   } = props.siblings;
   const basePath = props.basePath;
   React.useEffect(() => {
@@ -895,6 +903,28 @@ function MusicPostSiblingPreloader(props: {
     if (prevBackgroundUrl) injectPreload(prevBackgroundUrl);
     if (nextCoverUrl) injectPreload(nextCoverUrl);
     if (nextBackgroundUrl) injectPreload(nextBackgroundUrl);
+    // Owner-authorised 2026-10-31 · world-class gapless · also preload
+    // next/prev audio bytes. Hidden <audio preload="auto"> is more
+    // reliable across browsers than <link rel="preload" as="audio">
+    // (Firefox+Safari treat as="audio" inconsistently). The element
+    // stays attached while the slide is mounted; its bytes land in
+    // the browser cache so the next slide's playback starts instant.
+    const audioEls: HTMLAudioElement[] = [];
+    const injectAudioPreload = (url: string): void => {
+      const el = document.createElement("audio");
+      el.src = url;
+      el.preload = "auto";
+      el.crossOrigin = "anonymous";
+      el.muted = true;
+      el.style.display = "none";
+      // Explicitly do not add to any playback graph. The DOM presence
+      // alone + preload="auto" is enough to warm the HTTP cache.
+      document.body.appendChild(el);
+      try { el.load(); } catch { /* ignore */ }
+      audioEls.push(el);
+    };
+    if (nextAudioUrl) injectAudioPreload(nextAudioUrl);
+    if (prevAudioUrl) injectAudioPreload(prevAudioUrl);
     // The feed slide passes full hrefs (already encoded by the server
     // shell); the preview page passes trackIds. We treat the two the
     // same by expecting the parent to pass "track href" values that
@@ -925,6 +955,16 @@ function MusicPostSiblingPreloader(props: {
           /* ignore */
         }
       }
+      for (const el of audioEls) {
+        try {
+          el.pause();
+          el.removeAttribute("src");
+          el.load();
+          el.parentNode?.removeChild(el);
+        } catch {
+          /* ignore */
+        }
+      }
     };
   }, [
     basePath,
@@ -934,6 +974,8 @@ function MusicPostSiblingPreloader(props: {
     prevBackgroundUrl,
     nextCoverUrl,
     nextBackgroundUrl,
+    prevAudioUrl,
+    nextAudioUrl,
     props.router,
   ]);
   return null;

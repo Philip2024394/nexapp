@@ -70,6 +70,10 @@ export function PreviewClient(props: {
   readonly nextTrack?: NexMusicTrackRow | null;
   readonly nextCoverUrl?: string | null;
   readonly nextBackgroundUrl?: string | null;
+  /** Owner-authorised 2026-10-31 · world-class gapless · signed audio
+   *  URL for the next/prev track so the shell preloader can warm the
+   *  browser cache 5 s before the current track ends. */
+  readonly nextAudioUrl?: string | null;
   // Owner-authorised 2026-10-29 (swipe navigation on music pages) ·
   // the previous shared_live sibling in chronological order (wraps
   // at the start of the list). Used only for swipe-right navigation;
@@ -77,6 +81,7 @@ export function PreviewClient(props: {
   readonly prevTrack?: NexMusicTrackRow | null;
   readonly prevCoverUrl?: string | null;
   readonly prevBackgroundUrl?: string | null;
+  readonly prevAudioUrl?: string | null;
   // Owner-authorised 2026-10-30 (Main Feed → Creator Music feature) ·
   // the current viewer's eligible track list for the library
   // overlay. Already pre-signed owner-scoped by the server
@@ -411,8 +416,10 @@ export function PreviewClient(props: {
         nextTrackHref: props.nextTrack?.id ?? null,
         prevCoverUrl: props.prevCoverUrl ?? null,
         prevBackgroundUrl: props.prevBackgroundUrl ?? null,
+        prevAudioUrl: props.prevAudioUrl ?? null,
         nextCoverUrl: props.nextCoverUrl ?? null,
         nextBackgroundUrl: props.nextBackgroundUrl ?? null,
+        nextAudioUrl: props.nextAudioUrl ?? null,
       }}
       siblingPrefetchBasePath="/nex-native/create/upload-music/preview/"
       upNext={

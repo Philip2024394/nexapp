@@ -113,6 +113,10 @@ export interface MusicViewerClientProps {
   readonly nextOwnerTrack: NexMusicTrackRow | null;
   readonly nextOwnerCoverUrl: string | null;
   readonly nextOwnerBackgroundUrl: string | null;
+  /** Owner-authorised 2026-10-31 · world-class gapless · signed audio
+   *  URL for the next owner-track so MusicPostShell's preloader can
+   *  warm the browser cache before the current track ends. */
+  readonly nextOwnerAudioUrl: string | null;
   /** Owner-authorised 2026-10-30 · dev-only session chip. Null in
    *  production. "owner" → yellow · "viewer" → blue. */
   readonly devViewerBadge: "owner" | "viewer" | null;
@@ -300,6 +304,16 @@ export function MusicViewerClient(
     remainingMs !== null &&
     remainingMs <= NEXT_SONG_CARD_THRESHOLD_MS;
 
+  // Owner-authorised 2026-10-31 · world-class gapless · belt-and-braces
+  // backup to the <audio preload="auto"> element in the sibling
+  // preloader. When ≤ 5 s remain, kick an explicit `fetch()` so the
+  // next track's bytes are in the browser HTTP cache before the user
+  // sees the Up-Next card. The preloader's hidden element already
+  // starts fetching on mount; this is defensive for lazy browsers +
+  // slow starts. Fires exactly once per slide via a ref flag.
+  const GAPLESS_PRELOAD_THRESHOLD_MS = 5_000;
+  const gaplessWarmedRef = React.useRef<boolean>(false);
+
   const isSelfViewing =
     props.viewerAccountId !== null &&
     props.viewerAccountId === props.entry.ownerAccountId;
@@ -409,6 +423,27 @@ export function MusicViewerClient(
         audioUrl={props.entry.audioSignedUrl}
         coverUrl={props.entry.coverSignedUrl}
         backgroundUrl={props.entry.backgroundSignedUrl}
+        // Owner-authorised 2026-10-31 · world-class gapless. Siblings
+        // activates the MusicPostSiblingPreloader on this surface so
+        // the next/prev track's audio + cover + background bytes
+        // land in the browser cache before the user swipes. Previous
+        // state: feed surface had no preloader; only the preview page
+        // did. Now both surfaces are symmetric.
+        siblings={{
+          prevTrackHref: props.prevOwnerTrackId
+            ? `/nex-native/nex-feed/music-${props.prevOwnerTrackId}`
+            : null,
+          nextTrackHref: props.nextOwnerTrackId
+            ? `/nex-native/nex-feed/music-${props.nextOwnerTrackId}`
+            : null,
+          prevCoverUrl: null,
+          prevBackgroundUrl: null,
+          prevAudioUrl: null,
+          nextCoverUrl: props.nextOwnerCoverUrl,
+          nextBackgroundUrl: props.nextOwnerBackgroundUrl,
+          nextAudioUrl: props.nextOwnerAudioUrl,
+        }}
+        siblingPrefetchBasePath="/nex-native/nex-feed/"
         broadcasterDisplayName={props.entry.ownerDisplayName}
         broadcasterNexHandle={props.entry.ownerNexHandle}
         broadcasterAvatarUrl={props.entry.ownerAvatarUrl}
@@ -421,7 +456,24 @@ export function MusicViewerClient(
         // from the player's <audio>.timeupdate.
         onPositionTick={(positionMs, durationMs) => {
           if (durationMs > 0) {
-            setRemainingMs(Math.max(0, durationMs - positionMs));
+            const remaining = Math.max(0, durationMs - positionMs);
+            setRemainingMs(remaining);
+            // Owner-authorised 2026-10-31 · gapless backup fetch. One
+            // shot per slide. Primary preload is the hidden <audio>
+            // element in MusicPostSiblingPreloader; this is defence.
+            if (
+              !gaplessWarmedRef.current &&
+              remaining <= GAPLESS_PRELOAD_THRESHOLD_MS &&
+              props.nextOwnerAudioUrl
+            ) {
+              gaplessWarmedRef.current = true;
+              const url = props.nextOwnerAudioUrl;
+              fetch(url, { method: "GET", cache: "force-cache" }).catch(
+                () => {
+                  /* non-fatal · preload remains as the primary path */
+                },
+              );
+            }
           }
         }}
         // Owner-authorised 2026-10-30 · universal plays-counter

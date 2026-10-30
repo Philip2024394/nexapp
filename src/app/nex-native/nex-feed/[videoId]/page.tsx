@@ -426,6 +426,10 @@ export default async function NexFeedViewerPage({
         : null;
     let nextOwnerCoverUrl: string | null = null;
     let nextOwnerBackgroundUrl: string | null = null;
+    // Owner-authorised 2026-10-31 · world-class gapless · also mint the
+    // audio URL for the next track so the shell preloader can warm the
+    // browser cache 5 s before the current track ends.
+    let nextOwnerAudioUrl: string | null = null;
     if (nextOwnerTrackRow) {
       const mintUpNext = async (
         ref: string | null,
@@ -443,10 +447,12 @@ export default async function NexFeedViewerPage({
           return null;
         }
       };
-      [nextOwnerCoverUrl, nextOwnerBackgroundUrl] = await Promise.all([
-        mintUpNext(nextOwnerTrackRow.cover_image_url),
-        mintUpNext(nextOwnerTrackRow.background_image_url),
-      ]);
+      [nextOwnerCoverUrl, nextOwnerBackgroundUrl, nextOwnerAudioUrl] =
+        await Promise.all([
+          mintUpNext(nextOwnerTrackRow.cover_image_url),
+          mintUpNext(nextOwnerTrackRow.background_image_url),
+          mintUpNext(nextOwnerTrackRow.media_url),
+        ]);
     }
 
     // Owner-authorised 2026-10-30 · Stage 1+2 Follow SSR seeds.
@@ -518,6 +524,7 @@ export default async function NexFeedViewerPage({
         nextOwnerTrack={nextOwnerTrackRow}
         nextOwnerCoverUrl={nextOwnerCoverUrl}
         nextOwnerBackgroundUrl={nextOwnerBackgroundUrl}
+        nextOwnerAudioUrl={nextOwnerAudioUrl}
         devViewerBadge={devViewerBadge}
       />
     );
