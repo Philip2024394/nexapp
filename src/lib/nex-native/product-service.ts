@@ -211,12 +211,29 @@ export async function deleteVariant(id: NexUuid): Promise<void> {
  *   · Variant in desired with existingId → update
  *   · Existing variant not referenced by any desired entry → delete
  *
- *  Order of operations: delete first (frees up any unique-constraint
- *  slots subsequent writes may need), then update, then insert.
- *  Fail-fast on first error — the caller surfaces the message.
+ *  Order of operations (sealed 2026-10-30 after owner's variant-safety
+ *  review): INSERT → UPDATE → DELETE. Fail-forward posture.
+ *
+ *  Why: Supabase.js does NOT expose a client-level SQL transaction
+ *  wrapper, so a mid-run failure can leave the DB in a partial state.
+ *  By running the destructive step LAST, a failed insert or update
+ *  cannot cause data loss — the worst case is "has duplicate variants"
+ *  (the row the seller tried to replace plus the row that was going
+ *  to be removed, both intact). Duplicates are recoverable from Edit:
+ *  the seller sees them and removes one. Lost variants are not.
+ *
+ *  Future (gated · requires migration): a Postgres function
+ *  nex_sync_product_variants(product_id uuid, desired jsonb) returning
+ *  the final row set in one transaction would eliminate even the
+ *  duplicate-leak window. This is the migration path if this fail-
+ *  forward posture ever surfaces operational pain.
  *
  *  Blank-name drafts are skipped silently so sellers can hit "+ Add
  *  variant" without being forced to fill the row before saving.
+ *
+ *  Fail-fast on first error within each phase — the caller surfaces
+ *  the message and (per the server-action contract) the parent
+ *  product write is NOT revoked.
  */
 export interface DesiredVariant {
   readonly existingId?: NexUuid;
@@ -236,13 +253,24 @@ export async function syncProductVariants(
   for (const d of desired) {
     if (d.existingId) desiredById.set(d.existingId, d);
   }
-  // Delete existing rows not referenced in the desired set.
-  for (const row of existing) {
-    if (!desiredById.has(row.id)) {
-      await deleteVariant(row.id);
-    }
+
+  // Phase 1 · INSERT new rows FIRST (fail-forward: a failure here
+  // affects nothing already in the DB).
+  for (const d of desired) {
+    if (d.existingId) continue;
+    if (!d.name.trim()) continue;
+    await createVariant({
+      product_id: productId,
+      name: d.name,
+      attribute: d.attribute,
+      price_pence: d.price_pence ?? undefined,
+      stock_status: d.stock_status ?? undefined,
+      position: d.position,
+    });
   }
-  // Update rows that are referenced AND actually changed.
+
+  // Phase 2 · UPDATE referenced rows that actually changed. A failure
+  // here still leaves every row present; only the field change is lost.
   for (const row of existing) {
     const d = desiredById.get(row.id);
     if (!d) continue;
@@ -268,19 +296,15 @@ export async function syncProductVariants(
       }
     }
   }
-  // Insert the brand-new variants.
-  for (const d of desired) {
-    if (d.existingId) continue;
-    if (!d.name.trim()) continue; // skip blank rows silently
-    await createVariant({
-      product_id: productId,
-      name: d.name,
-      attribute: d.attribute,
-      price_pence: d.price_pence ?? undefined,
-      stock_status: d.stock_status ?? undefined,
-      position: d.position,
-    });
+
+  // Phase 3 · DELETE existing rows not referenced in the desired set
+  // (runs LAST so earlier failures cannot cause data loss).
+  for (const row of existing) {
+    if (!desiredById.has(row.id)) {
+      await deleteVariant(row.id);
+    }
   }
+
   return listVariants(productId);
 }
 
