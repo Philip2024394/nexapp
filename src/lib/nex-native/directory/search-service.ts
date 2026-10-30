@@ -42,6 +42,8 @@ import "server-only";
 
 import * as discoveryService from "@/lib/nex-native/discovery-service";
 import * as localDirectory from "@/lib/nex-native/local-directory-service";
+import * as productService from "@/lib/nex-native/product-service";
+import type { ProductSearchRow } from "@/lib/nex-native/product-service";
 import type { NexBusinessRow } from "@/lib/nex-native/types";
 import type {
   LandingFeedOutcome,
@@ -118,18 +120,36 @@ export async function getDirectorySearchResults(
   // have enough material to work with before slicing to the page.
   const POOL = Math.max(limit * 3, 60);
 
-  // Both services return NexBusinessRow[]. Failures are swallowed to
-  // honest-empty so a single-source outage doesn't poison the other
-  // (same pattern landing-feed-service uses).
-  const [canonicalRows, nexBusinessRows] = await Promise.all([
+  // Three services called in parallel. Business sources return
+  // NexBusinessRow[]; product source returns ProductSearchRow[].
+  // Failures are swallowed to honest-empty so a single-source outage
+  // doesn't poison the others (same pattern landing-feed-service uses).
+  //
+  // Owner-authorised 2026-10-30 · Phase 3 of the Product System
+  // Implementation Contract (§K owner-resolved). Live products
+  // (status='live') appear as directory cards alongside businesses.
+  // Product cards route directly to the sealed product detail page
+  // /nex-native/{businessSlug}/{productId} · bypasses the sealed
+  // 2026-10-27 /directory/{slug} detour because for products the
+  // search intent is explicit (user searched for the product).
+  const [canonicalRows, nexBusinessRows, productRows] = await Promise.all([
     searchCanonicalSafe(q, POOL, country),
     searchNexBusinessSafe(q, POOL),
+    searchProductsSafe(q, Math.ceil(POOL / 2)),
   ]);
 
   const merged = mergeDedupe(canonicalRows, nexBusinessRows);
   const ranked = rankByMatchQuality(merged, q);
-  const page = ranked.slice(offset, offset + limit);
-  const cards = page.map(adaptRowToSearchCard);
+  // Interleave: businesses first (sealed ranking), then products
+  // (fresh ranking by name-match proximity). Rough but honest. A
+  // Phase 3 enhancement can introduce unified scoring if the owner
+  // decides product cards should outrank business cards for
+  // product-shaped queries.
+  const businessCards = ranked.slice(offset, offset + limit).map(adaptRowToSearchCard);
+  const productCards = productRows
+    .slice(0, Math.max(0, limit - businessCards.length))
+    .map(adaptProductRowToSearchCard);
+  const cards = [...businessCards, ...productCards];
 
   if (cards.length === 0) {
     return {
@@ -340,3 +360,73 @@ function normaliseCountry(input: string | null | undefined): string | null {
 // Explicit boundary marker · future owner audits can grep for this
 // to find every search-path addition.
 export const _DIRECTORY_SEARCH_PATH_LANDED = "2026-10-27";
+
+// ─── Product search · Phase 3 Product System Contract ─────────────
+// Owner-authorised 2026-10-30. Live products (status='live') join
+// the directory search results as cards that route directly to the
+// product detail page.
+
+async function searchProductsSafe(q: string, pool: number): Promise<ProductSearchRow[]> {
+  try {
+    return await productService.searchLiveProducts(q, pool);
+  } catch {
+    return [];
+  }
+}
+
+function adaptProductRowToSearchCard(row: ProductSearchRow): ListingCardViewModel {
+  // Shop URL base for the product. Product tap routes to the sealed
+  // detail page at /nex-native/{businessSlug}/{productId}.
+  const productHref = `/nex-native/${encodeURIComponent(row.business_slug)}/${encodeURIComponent(row.id)}`;
+  // Visual · prefer a shop-attributed category visual if we have one.
+  // Phase 1 fallback: generic product visuals via visualsForCategoryId
+  // called with the business_category axis the business lives under.
+  // For Phase 3 Product System work, we don't yet carry a
+  // department-visual mapping · pass null to let the sealed helper
+  // return its fallback.
+  const visuals: CategoryVisuals = visualsForCategoryId(null);
+  return {
+    id: row.id,
+    slug: row.business_slug,
+    title: row.name,
+    categoryLabel: visuals.label,
+    categoryId: row.department_id,
+    categoryAccent: visuals.accent,
+    categoryIconCol: visuals.iconCol,
+    categoryIconRow: visuals.iconRow,
+    imageUrl: row.image_url,
+    description:
+      row.description && row.description.length > 0
+        ? row.description
+        : `From ${row.business_display_name}`,
+    featuredOffering: null,
+    city: null,
+    href: productHref,
+    // Reuse the sealed ListingCardViewModel source union · we tag
+    // product rows as `nex_business` for Phase 1 to avoid widening
+    // the union. The href already signals the product-detail route;
+    // a future union extension can introduce `nex_product` cleanly.
+    source: "nex_business",
+    priceNow: formatProductPrice(row.price_pence, row.currency),
+    priceWas: null,
+    discountLabel: null,
+    priceAmountMinor: row.price_pence,
+    priceCurrency: row.currency,
+    sellerCountryIso: null,
+    buyerLocalPrice: null,
+  };
+}
+
+function formatProductPrice(pence: number, currency: string): string | null {
+  if (!Number.isFinite(pence) || pence < 0) return null;
+  const major = pence / 100;
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      maximumFractionDigits: currency === "IDR" ? 0 : 2,
+    }).format(major);
+  } catch {
+    return `${currency} ${major.toLocaleString()}`;
+  }
+}

@@ -662,3 +662,88 @@ export async function updateProductPrice(
   }
   return data as NexProductRow;
 }
+
+/** Owner-authorised 2026-10-30 · Phase 3 of the Product System
+ *  Implementation Contract · NEX search directory product integration.
+ *
+ *  Returns live products matching the free-text query. Joins
+ *  nex_business to carry the slug + display_name needed to render
+ *  the product in a directory card and route taps to the sealed
+ *  /nex-native/{slug}/{productId} detail page.
+ *
+ *  Scope:
+ *   · status='live' MANDATORY · drafts never surface
+ *   · ILIKE on name (Phase 1 fallback · no search_tsv on nex_product
+ *     today · a Phase 3+ enhancement can add tsvector + GIN later)
+ *   · Scoped to the shared 'q' input · hard capped limit
+ *   · Service-role connection (consistent with other directory reads)
+ *
+ *  Returns the shape the directory search adapter needs. */
+export interface ProductSearchRow {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string | null;
+  readonly image_url: string | null;
+  readonly price_pence: number;
+  readonly currency: string;
+  readonly stock_status: string | null;
+  readonly business_id: string;
+  readonly business_slug: string;
+  readonly business_display_name: string;
+  readonly department_id: string | null;
+  readonly category_id: string | null;
+}
+
+export async function searchLiveProducts(
+  query: string,
+  limit: number = 24,
+): Promise<ProductSearchRow[]> {
+  const q = query.trim();
+  if (q.length === 0) return [];
+  const safeLimit = Math.max(1, Math.min(limit, 60));
+  // ILIKE pattern · escape SQL LIKE wildcards in the query so a user
+  // typing "%" or "_" doesn't trigger pathological matches.
+  const pattern = `%${q.replace(/[\\%_]/g, (c) => "\\" + c)}%`;
+  const { data, error } = await nexSupabaseAdmin
+    .from("nex_product")
+    .select(
+      "id, name, description, image_url, price_pence, currency, stock_status, business_id, department_id, category_id, nex_business!inner(slug, display_name)",
+    )
+    .eq("status", "live")
+    .ilike("name", pattern)
+    .limit(safeLimit);
+  if (error) {
+    throw new Error(`product-service.searchLiveProducts: ${error.message}`);
+  }
+  type JoinedRow = {
+    id: string;
+    name: string;
+    description: string | null;
+    image_url: string | null;
+    price_pence: number;
+    currency: string;
+    stock_status: string | null;
+    business_id: string;
+    department_id: string | null;
+    category_id: string | null;
+    nex_business: { slug: string; display_name: string } | { slug: string; display_name: string }[];
+  };
+  const rows = (data as JoinedRow[] | null) ?? [];
+  return rows.map((r) => {
+    const biz = Array.isArray(r.nex_business) ? r.nex_business[0] : r.nex_business;
+    return {
+      id: r.id,
+      name: r.name,
+      description: r.description,
+      image_url: r.image_url,
+      price_pence: r.price_pence,
+      currency: r.currency,
+      stock_status: r.stock_status,
+      business_id: r.business_id,
+      business_slug: biz?.slug ?? "",
+      business_display_name: biz?.display_name ?? "",
+      department_id: r.department_id,
+      category_id: r.category_id,
+    };
+  }).filter((r) => r.business_slug.length > 0);
+}
