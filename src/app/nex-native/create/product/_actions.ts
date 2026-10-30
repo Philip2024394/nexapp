@@ -110,6 +110,10 @@ export interface CreateProductInput {
   readonly tags?: readonly string[];
   readonly sku?: string | null;
   readonly stockStatus?: NexProductStockStatus;
+  /** Owner-authorised 2026-10-31 · free-text dispatch-time string
+   *  shown immediately beneath Stock status. Stored on
+   *  `nex_product.dispatch_time` (migration 064). */
+  readonly dispatchTime?: string;
   readonly spec: unknown;
   /** Sales-market substrate. Required · every product declares scope. */
   readonly market: unknown;
@@ -271,6 +275,7 @@ export async function createProductAction(
       tags: input.tags ? [...input.tags] : null,
       sku: input.sku ?? null,
       stock_status: input.stockStatus ?? "in_stock",
+      dispatch_time: input.dispatchTime?.trim() ? input.dispatchTime.trim() : null,
       price_pence: input.pricePence,
       currency: input.currency as "GBP" | "USD" | "EUR" | "IDR" | string,
       status: input.status ?? "draft",

@@ -48,28 +48,42 @@ export const LocalRadiusEntry = z.object({
   km: z.number().int().positive().max(1000),
   price_pence: z.number().int().nonnegative(),
   currency: ISO_CURRENCY,
+  /** Owner-authorised 2026-10-31 · delivery estimate in days.
+   *  Seller-declared, applies to this radius ring. */
+  delivery_days: z.number().int().positive().max(365).optional(),
 });
 
 export const LocalDeliverySpec = z.object({
   radii: z.array(LocalRadiusEntry).max(20),
 });
 
-/** Export destination · country + price + parcel weight (kg). */
+/** Export destination · country + shipping price + delivery days.
+ *  Package weight + dimensions live once per product in
+ *  DeliverySpec.package. */
 export const ExportCountryEntry = z.object({
   iso: ISO_COUNTRY,
   price_pence: z.number().int().nonnegative(),
   currency: ISO_CURRENCY,
-  /** Parcel weight in kilograms. Owner-exact field: "kg weight". */
-  weight_kg: z.number().positive().max(2000),
+  /** Owner-authorised 2026-10-31 · delivery estimate in days. */
+  delivery_days: z.number().int().positive().max(365).optional(),
 });
 
 export const ExportDeliverySpec = z.object({
   countries: z.array(ExportCountryEntry).max(250),
 });
 
-/** Combined delivery substrate · both blocks optional at the top
- *  level; parent form shows the right block based on market scope. */
+/** Package dimensions + weight (owner-authorised 2026-10-31 ·
+ *  "weight (g) this should be at delivery container and local and
+ *  export and weights and dimension should be 1 section"). Shared
+ *  across local + export so the seller declares it once per product. */
+export const PackageSpec = z.object({
+  dimensions: z.string().max(80).optional(),
+  weight_kg: z.number().positive().max(2000).optional(),
+});
+
+/** Combined delivery substrate · all blocks optional. */
 export const DeliverySpec = z.object({
+  package: PackageSpec.optional(),
   local: LocalDeliverySpec.optional(),
   export: ExportDeliverySpec.optional(),
 });

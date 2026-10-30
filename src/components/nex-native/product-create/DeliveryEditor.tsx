@@ -39,36 +39,46 @@ export interface LocalRadiusDraft {
   readonly km: string;           // one of LOCAL_DELIVERY_RADIUS_KM
   readonly priceMajor: string;
   readonly currency: string;
+  readonly deliveryDays: string; // owner directive 2026-10-31
 }
 
 export interface ExportCountryDraft {
   readonly iso: string;
   readonly priceMajor: string;
   readonly currency: string;
+  readonly deliveryDays: string; // owner directive 2026-10-31
+}
+
+export interface PackageDraft {
+  readonly dimensions: string;
   readonly weightKg: string;
 }
 
 export interface DeliveryEditorValue {
+  readonly packageInfo: PackageDraft;
   readonly local: readonly LocalRadiusDraft[];
   readonly export: readonly ExportCountryDraft[];
 }
 
-export const EMPTY_LOCAL_RADIUS: LocalRadiusDraft = { km: "", priceMajor: "", currency: "IDR" };
-export const EMPTY_EXPORT_COUNTRY: ExportCountryDraft = { iso: "", priceMajor: "", currency: "USD", weightKg: "" };
-export const EMPTY_DELIVERY: DeliveryEditorValue = { local: [], export: [] };
+export const EMPTY_LOCAL_RADIUS: LocalRadiusDraft = { km: "", priceMajor: "", currency: "IDR", deliveryDays: "" };
+export const EMPTY_EXPORT_COUNTRY: ExportCountryDraft = { iso: "", priceMajor: "", currency: "USD", deliveryDays: "" };
+export const EMPTY_PACKAGE: PackageDraft = { dimensions: "", weightKg: "" };
+export const EMPTY_DELIVERY: DeliveryEditorValue = { packageInfo: EMPTY_PACKAGE, local: [], export: [] };
 
 export interface DeliveryEditorProps {
   readonly scope: "local" | "export" | "both";
   readonly value: DeliveryEditorValue;
   readonly onChange: (next: DeliveryEditorValue) => void;
-  /** Optional display label for the seller's set shop location
-   *  (e.g. "Yogyakarta · (-7.80, 110.37)"). When supplied, the
-   *  local block surfaces it so the seller can see what the km
-   *  radius is anchored to. */
+  /** Product-level currency chosen at the top of the form. Delivery
+   *  rows no longer carry their own currency dropdown · they all
+   *  inherit this. Owner directive 2026-10-31: "we know currency at
+   *  top of page so we dont need more than 1 currency on the page". */
+  readonly productCurrency: string;
+  /** Optional display label for the seller's set shop location. */
   readonly sellerLocationLabel?: string | null;
 }
 
-export function DeliveryEditor({ scope, value, onChange, sellerLocationLabel }: DeliveryEditorProps): React.JSX.Element {
+export function DeliveryEditor({ scope, value, onChange, productCurrency, sellerLocationLabel }: DeliveryEditorProps): React.JSX.Element {
   const showLocal  = scope === "local"  || scope === "both";
   const showExport = scope === "export" || scope === "both";
 
@@ -79,14 +89,20 @@ export function DeliveryEditor({ scope, value, onChange, sellerLocationLabel }: 
           Delivery
         </h2>
         <p style={{ fontSize: 12, color: INK_DIM, margin: "4px 0 0", lineHeight: 1.5 }}>
-          Set a price per local distance ring and a price per export country. Keep it simple — add as many as you want.
+          Set a price per local distance ring and a price per export country.
         </p>
       </div>
+
+      <PackageBlock
+        value={value.packageInfo}
+        onChange={(next) => onChange({ ...value, packageInfo: next })}
+      />
 
       {showLocal ? (
         <LocalBlock
           value={value.local}
           onChange={(next) => onChange({ ...value, local: next })}
+          productCurrency={productCurrency}
           sellerLocationLabel={sellerLocationLabel ?? null}
         />
       ) : null}
@@ -95,9 +111,47 @@ export function DeliveryEditor({ scope, value, onChange, sellerLocationLabel }: 
         <ExportBlock
           value={value.export}
           onChange={(next) => onChange({ ...value, export: next })}
+          productCurrency={productCurrency}
         />
       ) : null}
     </section>
+  );
+}
+
+function PackageBlock(props: {
+  value: PackageDraft;
+  onChange: (next: PackageDraft) => void;
+}): React.JSX.Element {
+  const set = <K extends keyof PackageDraft>(k: K, v: PackageDraft[K]) => props.onChange({ ...props.value, [k]: v });
+  return (
+    <div style={blockStyle}>
+      <SectionHeading
+        title="Package size & weight"
+        subtitle="One parcel per product."
+      />
+      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 8 }}>
+        <Field label="Dimensions (L × W × H)">
+          <input
+            type="text"
+            value={props.value.dimensions}
+            onChange={(e) => set("dimensions", e.target.value)}
+            placeholder="e.g. 30 × 20 × 10 cm"
+            maxLength={80}
+            style={inputStyle}
+          />
+        </Field>
+        <Field label="Weight (kg)">
+          <input
+            type="number"
+            min={0}
+            step="0.01"
+            value={props.value.weightKg}
+            onChange={(e) => set("weightKg", e.target.value)}
+            style={inputStyle}
+          />
+        </Field>
+      </div>
+    </div>
   );
 }
 
@@ -106,9 +160,10 @@ export function DeliveryEditor({ scope, value, onChange, sellerLocationLabel }: 
 function LocalBlock(props: {
   value: readonly LocalRadiusDraft[];
   onChange: (next: readonly LocalRadiusDraft[]) => void;
+  productCurrency: string;
   sellerLocationLabel: string | null;
 }): React.JSX.Element {
-  const addRow = () => props.onChange([...props.value, EMPTY_LOCAL_RADIUS]);
+  const addRow = () => props.onChange([...props.value, { ...EMPTY_LOCAL_RADIUS, currency: props.productCurrency }]);
   const updateAt = (i: number, next: LocalRadiusDraft) => {
     const copy = [...props.value];
     copy[i] = next;
@@ -134,6 +189,7 @@ function LocalBlock(props: {
             <LocalRow
               key={i}
               value={r}
+              productCurrency={props.productCurrency}
               used={new Set(props.value.map((x) => x.km).filter((km, j) => j !== i && km !== ""))}
               onChange={(next) => updateAt(i, next)}
               onRemove={() => removeAt(i)}
@@ -148,6 +204,7 @@ function LocalBlock(props: {
 
 function LocalRow(props: {
   value: LocalRadiusDraft;
+  productCurrency: string;
   used: Set<string>;
   onChange: (next: LocalRadiusDraft) => void;
   onRemove: () => void;
@@ -171,13 +228,11 @@ function LocalRow(props: {
             })}
           </select>
         </Field>
-        <Field label="Delivery price">
+        <Field label="Price">
           <input type="number" min={0} step="0.01" value={props.value.priceMajor} onChange={(e) => set("priceMajor", e.target.value)} style={inputStyle} />
         </Field>
-        <Field label="Currency">
-          <select value={props.value.currency} onChange={(e) => set("currency", e.target.value)} style={inputStyle}>
-            {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
+        <Field label="Delivery (days)">
+          <input type="number" min={1} value={props.value.deliveryDays} onChange={(e) => set("deliveryDays", e.target.value)} placeholder="e.g. 2" style={inputStyle} />
         </Field>
         <button type="button" onClick={props.onRemove} aria-label="Remove radius" style={xBtnStyle}>×</button>
       </div>
@@ -190,8 +245,9 @@ function LocalRow(props: {
 function ExportBlock(props: {
   value: readonly ExportCountryDraft[];
   onChange: (next: readonly ExportCountryDraft[]) => void;
+  productCurrency: string;
 }): React.JSX.Element {
-  const addRow = () => props.onChange([...props.value, EMPTY_EXPORT_COUNTRY]);
+  const addRow = () => props.onChange([...props.value, { ...EMPTY_EXPORT_COUNTRY, currency: props.productCurrency }]);
   const updateAt = (i: number, next: ExportCountryDraft) => {
     const copy = [...props.value];
     copy[i] = next;
@@ -203,7 +259,7 @@ function ExportBlock(props: {
     <div style={blockStyle}>
       <SectionHeading
         title="Export destinations"
-        subtitle="Pick a country from the dropdown, set a price and the parcel weight. Repeat for every country you ship to."
+        subtitle="Pick a country and set the shipping price. Weight comes from Package size & weight above."
       />
       {props.value.length === 0 ? (
         <div style={emptyStyle}>No export countries yet.</div>
@@ -213,6 +269,7 @@ function ExportBlock(props: {
             <ExportRow
               key={i}
               value={r}
+              productCurrency={props.productCurrency}
               used={new Set(props.value.map((x) => x.iso).filter((iso, j) => j !== i && iso !== ""))}
               onChange={(next) => updateAt(i, next)}
               onRemove={() => removeAt(i)}
@@ -227,6 +284,7 @@ function ExportBlock(props: {
 
 function ExportRow(props: {
   value: ExportCountryDraft;
+  productCurrency: string;
   used: Set<string>;
   onChange: (next: ExportCountryDraft) => void;
   onRemove: () => void;
@@ -235,7 +293,7 @@ function ExportRow(props: {
 
   return (
     <div style={rowStyle}>
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr auto", gap: 8, alignItems: "end" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", gap: 8, alignItems: "end" }}>
         <Field label="Country">
           <select value={props.value.iso} onChange={(e) => set("iso", e.target.value)} style={inputStyle}>
             <option value="">— pick a country —</option>
@@ -252,13 +310,8 @@ function ExportRow(props: {
         <Field label="Price">
           <input type="number" min={0} step="0.01" value={props.value.priceMajor} onChange={(e) => set("priceMajor", e.target.value)} style={inputStyle} />
         </Field>
-        <Field label="Currency">
-          <select value={props.value.currency} onChange={(e) => set("currency", e.target.value)} style={inputStyle}>
-            {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </Field>
-        <Field label="Weight (kg)">
-          <input type="number" min={0} step="0.01" value={props.value.weightKg} onChange={(e) => set("weightKg", e.target.value)} style={inputStyle} />
+        <Field label="Delivery (days)">
+          <input type="number" min={1} value={props.value.deliveryDays} onChange={(e) => set("deliveryDays", e.target.value)} placeholder="e.g. 7" style={inputStyle} />
         </Field>
         <button type="button" onClick={props.onRemove} aria-label={`Remove ${countryName(props.value.iso)}`} style={xBtnStyle}>×</button>
       </div>

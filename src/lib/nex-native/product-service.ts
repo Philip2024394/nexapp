@@ -550,6 +550,9 @@ export async function updateProductBatch(
     tags?: string[] | null;
     sku?: string | null;
     stock_status?: NexProductStockStatus | null;
+    /** Owner-authorised 2026-10-31 · dispatch-time text. undefined =
+     *  leave unchanged · null = clear · trimmed string = write. */
+    dispatch_time?: string | null;
     price_pence?: number;
     currency?: string;
     status?: NexProductStatus;
@@ -606,6 +609,17 @@ export async function updateProductBatch(
       throw new Error(`product-service.updateProductBatch: unknown stock_status '${patch.stock_status}'`);
     }
     update.stock_status = patch.stock_status;
+  }
+  if (patch.dispatch_time !== undefined) {
+    if (patch.dispatch_time === null) {
+      update.dispatch_time = null;
+    } else {
+      const v = patch.dispatch_time.trim();
+      if (v.length > 240) {
+        throw new Error(`product-service.updateProductBatch: dispatch_time max 240 chars`);
+      }
+      update.dispatch_time = v.length > 0 ? v : null;
+    }
   }
   if (patch.price_pence !== undefined) {
     if (!Number.isInteger(patch.price_pence) || patch.price_pence < 0) {

@@ -28,6 +28,7 @@ import {
 import {
   VariantsBuilder,
   type VariantDraft,
+  type VariantAxis,
 } from "@/components/nex-native/product-create/VariantsBuilder";
 import {
   DeliveryEditor,
@@ -97,6 +98,7 @@ export interface EditProductFormClientProps {
     readonly imageUrl: string;
     readonly galleryUrls: readonly string[];
     readonly stockStatus: "in_stock" | "low_stock" | "sold_out" | "made_to_order";
+    readonly dispatchTime: string;
     readonly status: "draft" | "live" | "archived";
     readonly spec: Record<string, unknown>;
     readonly market: MarketSelectorValue;
@@ -120,6 +122,7 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
     productImagesFromStored(props.initial.imageUrl, props.initial.galleryUrls),
   );
   const [stockStatus, setStockStatus] = React.useState(props.initial.stockStatus);
+  const [dispatchTime, setDispatchTime] = React.useState(props.initial.dispatchTime);
   const [status, setStatus] = React.useState(props.initial.status);
   const [spec, setSpec] = React.useState<Record<string, unknown>>(props.initial.spec);
   const [market, setMarket] = React.useState<MarketSelectorValue>(props.initial.market);
@@ -130,6 +133,19 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
   const [returns, setReturns] = React.useState<ReturnsDraft>(props.initial.returns);
   const [colors, setColors] = React.useState<ColorsEditorValue>(props.initial.colors);
   const [coverVideo, setCoverVideo] = React.useState<CoverVideoDraft>(props.initial.coverVideo);
+  // Infer the initial variant type from the pre-filled data:
+  // · any colour entries → "colour"
+  // · any variant row    → use its stored axis (default "size")
+  // · neither            → "none"
+  const [variantType, setVariantType] = React.useState<"none" | VariantAxis>(() => {
+    if (props.initial.colors.entries.length > 0) return "colour";
+    const firstVariant = props.initial.variants[0];
+    if (firstVariant && firstVariant.axis !== "" && firstVariant.axis !== "colour") {
+      return firstVariant.axis;
+    }
+    if (firstVariant) return "size";
+    return "none";
+  });
 
   const exportDestinationIsos = React.useMemo(
     () => delivery.export.map((d) => d.iso.trim().toUpperCase()).filter((iso) => /^[A-Z]{2}$/.test(iso)),
@@ -160,16 +176,23 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
         imageUrl: productImagesToStored(images).image_url,
         galleryUrls: productImagesToStored(images).gallery_urls,
         stockStatus,
+        dispatchTime: dispatchTime.trim() || null,
         status: desiredStatus,
         spec,
         market: toMarketPayload(market),
-        delivery: toDeliveryPayload(delivery, market.scope),
+        delivery: toDeliveryPayload(delivery, market.scope, currency),
         identity: toIdentityPayload(identity),
         wholesale: toWholesalePayload(wholesale),
         returns: toReturnsPayload(returns),
-        colors: toColorsPayload(colors),
+        colors:
+          variantType === "colour"
+            ? toColorsPayload(colors)
+            : { entries: [] },
         coverVideo: toCoverVideoPayload(coverVideo),
-        variants: toVariantPayload(variants),
+        variants:
+          variantType !== "none" && variantType !== "colour"
+            ? toVariantPayload(variants).map((v) => ({ ...v, attribute: variantType }))
+            : [],
       });
       if (!result.ok) {
         setError(`${result.code}: ${result.message}`);
@@ -194,13 +217,36 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
         padding: 24,
       }}
     >
-      <div style={{ maxWidth: 640, margin: "0 auto" }}>
-        <nav style={{ fontSize: 12, color: INK_DIM, marginBottom: 12 }}>
-          {props.businessName} · <strong style={{ color: INK }}>{props.departmentLabel}</strong> · {props.categoryLabel}
-          {" · "}
+      <div style={{ maxWidth: 640, margin: "0 auto", position: "relative" }}>
+        <button
+          type="button"
+          onClick={() => router.back()}
+          aria-label="Close"
+          style={{
+            position: "absolute",
+            top: 0,
+            right: 0,
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            border: `1.5px solid ${RIM}`,
+            background: "#FFFFFF",
+            color: INK,
+            fontSize: 20,
+            lineHeight: 1,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 1px 2px rgba(16,32,51,0.06)",
+          }}
+        >
+          ×
+        </button>
+        <div style={{ marginBottom: 12 }}>
           <StatusChip status={status} />
-        </nav>
-        <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0, marginBottom: 20 }}>
+        </div>
+        <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0, marginBottom: 20, paddingRight: 48 }}>
           Edit {props.categoryLabel.toLowerCase()}
         </h1>
 
@@ -208,14 +254,49 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
           <Field label="Product name" required>
             <input type="text" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} style={COMMON_INPUT} />
           </Field>
+          <Field label="Stock status">
+            <select value={stockStatus} onChange={(e) => setStockStatus(e.target.value as EditProductFormClientProps["initial"]["stockStatus"])} style={COMMON_INPUT}>
+              <option value="in_stock">In stock</option>
+              <option value="low_stock">Low stock</option>
+              <option value="sold_out">Sold out</option>
+              <option value="made_to_order">Made to order</option>
+            </select>
+          </Field>
+          <Field label="Dispatch time">
+            <input
+              type="text"
+              value={dispatchTime}
+              onChange={(e) => setDispatchTime(e.target.value)}
+              placeholder="e.g. Ships within 2 business days"
+              maxLength={120}
+              style={COMMON_INPUT}
+            />
+          </Field>
           <Field label="Description">
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={2000} style={{ ...COMMON_INPUT, resize: "vertical", minHeight: 70 }} />
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value.slice(0, 500))}
+              rows={3}
+              maxLength={500}
+              style={{ ...COMMON_INPUT, resize: "vertical", minHeight: 70 }}
+            />
+            <div
+              style={{
+                marginTop: 4,
+                fontSize: 11,
+                fontWeight: 700,
+                textAlign: "right",
+                color: description.length >= 450 ? "#C8102E" : "#4A6080",
+              }}
+            >
+              {description.length} / 500
+            </div>
           </Field>
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12 }}>
             <Field label="Price" required>
               <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} min={0} step="0.01" style={COMMON_INPUT} />
             </Field>
-            <Field label="Currency">
+            <Field label="Price">
               <select value={currency} onChange={(e) => setCurrency(e.target.value)} style={COMMON_INPUT}>
                 <option value="IDR">IDR</option>
                 <option value="USD">USD</option>
@@ -224,16 +305,59 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
               </select>
             </Field>
           </div>
+          {/* ── MEDIA · images + cover video together ──────────── */}
           <ProductImagesEditor
             value={images}
             onChange={setImages}
             businessId={props.businessId}
           />
+          <CoverVideoEditor
+            value={coverVideo}
+            onChange={setCoverVideo}
+            businessId={props.businessId}
+          />
+
+          {/* ── VARIANTS · type selector + slide-down ──────────── */}
           <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
-            <VariantsBuilder value={variants} onChange={setVariants} />
+            <h2 style={{ fontSize: 15, fontWeight: 800, margin: 0, color: INK }}>
+              Variants
+            </h2>
+            <p style={{ fontSize: 11.5, color: INK_DIM, margin: "4px 0 10px", lineHeight: 1.5 }}>
+              Does this product come in different versions? Pick one type.
+            </p>
+            <Field label="Variant type">
+              <select
+                value={variantType}
+                onChange={(e) => setVariantType(e.target.value as typeof variantType)}
+                style={COMMON_INPUT}
+              >
+                <option value="none">No variants</option>
+                <option value="colour">Colour</option>
+                <option value="size">Size</option>
+                <option value="material">Material</option>
+                <option value="style">Style / Model</option>
+                <option value="pack_size">Pack size</option>
+                <option value="fit">Fit</option>
+                <option value="other">Other</option>
+              </select>
+            </Field>
+            {variantType === "colour" ? (
+              <div style={{ marginTop: 10 }}>
+                <ColorsEditor
+                  value={colors} onChange={setColors}
+                  businessId={props.businessId}
+                  baseCurrency={currency}
+                />
+              </div>
+            ) : variantType !== "none" ? (
+              <div style={{ marginTop: 10 }}>
+                <VariantsBuilder value={variants} onChange={setVariants} />
+              </div>
+            ) : null}
           </div>
+
           <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
-            <DeliveryEditor scope={market.scope} value={delivery} onChange={setDelivery} />
+            <DeliveryEditor scope={market.scope} value={delivery} onChange={setDelivery} productCurrency={currency} />
           </div>
           <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
             <IdentityWholesaleEditor
@@ -247,28 +371,6 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
               destinationIsos={exportDestinationIsos}
             />
           </div>
-          <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
-            <ColorsEditor
-              value={colors} onChange={setColors}
-              businessId={props.businessId}
-              baseCurrency={currency}
-            />
-          </div>
-          <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
-            <CoverVideoEditor
-              value={coverVideo}
-              onChange={setCoverVideo}
-              businessId={props.businessId}
-            />
-          </div>
-          <Field label="Stock status">
-            <select value={stockStatus} onChange={(e) => setStockStatus(e.target.value as EditProductFormClientProps["initial"]["stockStatus"])} style={COMMON_INPUT}>
-              <option value="in_stock">In stock</option>
-              <option value="low_stock">Low stock</option>
-              <option value="sold_out">Sold out</option>
-              <option value="made_to_order">Made to order</option>
-            </select>
-          </Field>
 
           <div style={{ marginTop: 10, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
             <h2 style={{ fontSize: 15, fontWeight: 800, margin: 0, marginBottom: 12 }}>{props.categoryLabel} details</h2>
@@ -383,44 +485,32 @@ function toColorsPayload(v: ColorsEditorValue): Record<string, unknown> {
   return { entries };
 }
 
-/** Mirror of Create form's toReturnsPayload. */
+/** Mirror of Create form's simplified toReturnsPayload. */
 function toReturnsPayload(v: ReturnsDraft): Record<string, unknown> {
-  const toIntOpt = (raw: string): number | undefined => {
-    const t = raw.trim(); if (t === "") return undefined;
-    const n = Number(t); if (!Number.isFinite(n) || n < 0) return undefined;
-    return Math.round(n);
-  };
-  const sellerPolicy: Record<string, unknown> = {
-    accepts_returns: v.acceptsReturns,
-    who_pays_shipping: v.whoPaysShipping,
-  };
-  const within = toIntOpt(v.withinDays);
-  if (within !== undefined) sellerPolicy.within_days = within;
-  if (v.conditionRequirement.trim()) sellerPolicy.condition_requirement = v.conditionRequirement.trim();
-  if (v.notes.trim()) sellerPolicy.notes = v.notes.trim();
-  const iso = v.sellerCountryIso.trim().toUpperCase();
-  if (/^[A-Z]{2}$/.test(iso)) sellerPolicy.seller_country_iso = iso;
+  const sellerPolicy: Record<string, unknown> = {};
+  if (v.policyText.trim()) sellerPolicy.policy_text = v.policyText.trim();
+  if (v.daysOption !== null) sellerPolicy.days_option = v.daysOption;
   return { seller_policy: sellerPolicy };
 }
 
-/** Mirror of Create form's toIdentityPayload. */
+/** Mirror of Create form's toIdentityPayload (simplified 2026-10-31 ·
+ *  dims + weight moved to DeliverySpec.package). */
 function toIdentityPayload(v: IdentityDraft): Record<string, unknown> {
   const out: Record<string, unknown> = { condition: v.condition };
-  if (v.conditionNotes.trim()) out.condition_notes = v.conditionNotes.trim();
+  // Owner directive 2026-10-31: condition_notes only applies to USED
+  // items. Drop stale text when the condition is anything else.
+  if (v.condition === "used" && v.conditionNotes.trim()) {
+    out.condition_notes = v.conditionNotes.trim();
+  }
   const m = v.countryOfManufacture.trim().toUpperCase();
   if (/^[A-Z]{2}$/.test(m)) out.country_of_manufacture = m;
   const o = v.countryOfOrigin.trim().toUpperCase();
   if (/^[A-Z]{2}$/.test(o)) out.country_of_origin = o;
-  if (v.dimensions.trim()) out.dimensions = v.dimensions.trim();
-  const w = v.weightG.trim();
-  if (w !== "") {
-    const n = Number(w);
-    if (Number.isFinite(n) && n > 0) out.weight_g = n;
-  }
   return out;
 }
 
-/** Mirror of Create form's toWholesalePayload. */
+/** Mirror of Create form's toWholesalePayload (simplified 2026-10-31 ·
+ *  single row: min_qty + price_per_piece_pence). */
 function toWholesalePayload(v: WholesaleDraft): Record<string, unknown> {
   const toPenceOpt = (raw: string): number | undefined => {
     const t = raw.trim(); if (t === "") return undefined;
@@ -432,26 +522,19 @@ function toWholesalePayload(v: WholesaleDraft): Record<string, unknown> {
     const n = Number(t); if (!Number.isFinite(n) || n < 0) return undefined;
     return Math.round(n);
   };
-  const tiers = v.tiers.map((t) => {
-    const min_qty = toIntOpt(t.minQty);
-    const price_pence = toPenceOpt(t.priceMajor);
-    if (min_qty === undefined || price_pence === undefined) return null;
-    return { min_qty, price_pence, currency: t.currency };
-  }).filter((x): x is { min_qty: number; price_pence: number; currency: string } => x !== null);
-  const out: Record<string, unknown> = { offered: v.offered, pricing_mode: v.pricingMode };
+  const out: Record<string, unknown> = { offered: v.offered };
   const mq = toIntOpt(v.minQty); if (mq !== undefined) out.min_qty = mq;
-  if (tiers.length > 0) out.tiers = tiers;
-  if (v.notes.trim()) out.notes = v.notes.trim();
+  const pp = toPenceOpt(v.pricePerPieceMajor); if (pp !== undefined) out.price_per_piece_pence = pp;
   return out;
 }
 
-/** Mirror of Create form's toDeliveryPayload for the simplified shape:
- *  local = radii[{km, price_pence, currency}];
- *  export = countries[{iso, price_pence, currency, weight_kg}]. */
+/** Mirror of Create form's toDeliveryPayload. Package dims + weight
+ *  shared across local + export; currency inherited from product. */
 function toDeliveryPayload(
   v: DeliveryEditorValue,
   scope: "local" | "export" | "both",
-): { local?: unknown; export?: unknown } {
+  productCurrency: string,
+): { package?: unknown; local?: unknown; export?: unknown } {
   const toPenceOpt = (raw: string): number | undefined => {
     const t = raw.trim(); if (t === "") return undefined;
     const n = Number(t); if (!Number.isFinite(n) || n < 0) return undefined;
@@ -470,17 +553,26 @@ function toDeliveryPayload(
     const km = toPositiveIntOpt(r.km);
     const price_pence = toPenceOpt(r.priceMajor);
     if (km === undefined || price_pence === undefined) return null;
-    return { km, price_pence, currency: r.currency };
+    const row: Record<string, unknown> = { km, price_pence, currency: productCurrency };
+    const dd = toPositiveIntOpt(r.deliveryDays); if (dd !== undefined) row.delivery_days = dd;
+    return row;
   };
   const mapExport = (d: ExportCountryDraft) => {
     const iso = d.iso.trim().toUpperCase();
     const price_pence = toPenceOpt(d.priceMajor);
-    const weight_kg = toPositiveNumOpt(d.weightKg);
-    if (!/^[A-Z]{2}$/.test(iso) || price_pence === undefined || weight_kg === undefined) return null;
-    return { iso, price_pence, currency: d.currency, weight_kg };
+    if (!/^[A-Z]{2}$/.test(iso) || price_pence === undefined) return null;
+    const row: Record<string, unknown> = { iso, price_pence, currency: productCurrency };
+    const dd = toPositiveIntOpt(d.deliveryDays); if (dd !== undefined) row.delivery_days = dd;
+    return row;
   };
 
-  const out: { local?: unknown; export?: unknown } = {};
+  const out: { package?: unknown; local?: unknown; export?: unknown } = {};
+  const pkg: Record<string, unknown> = {};
+  if (v.packageInfo.dimensions.trim()) pkg.dimensions = v.packageInfo.dimensions.trim();
+  const wkg = toPositiveNumOpt(v.packageInfo.weightKg);
+  if (wkg !== undefined) pkg.weight_kg = wkg;
+  if (Object.keys(pkg).length > 0) out.package = pkg;
+
   if (scope === "local" || scope === "both") {
     const radii = v.local.map(mapLocal).filter((x): x is NonNullable<ReturnType<typeof mapLocal>> => x !== null);
     out.local = { radii };

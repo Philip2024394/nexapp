@@ -103,6 +103,10 @@ export interface UpdateProductInput {
   readonly imageUrl?: string | null;
   readonly galleryUrls?: readonly string[];
   readonly stockStatus?: NexProductStockStatus;
+  /** Owner-authorised 2026-10-31 · free-text dispatch-time string
+   *  rendered immediately beneath Stock status in both forms. `null`
+   *  explicitly clears the value; `undefined` leaves it unchanged. */
+  readonly dispatchTime?: string | null;
   readonly spec: unknown;
   readonly market: unknown;
   readonly delivery?: unknown;
@@ -265,6 +269,9 @@ export async function updateProductAction(
         ? undefined
         : (input.galleryUrls.length > 0 ? [...input.galleryUrls] : null),
       stock_status: input.stockStatus,
+      dispatch_time: input.dispatchTime === undefined
+        ? undefined
+        : (input.dispatchTime && input.dispatchTime.trim() ? input.dispatchTime.trim() : null),
       price_pence: input.pricePence,
       currency: input.currency,
       status: input.status,

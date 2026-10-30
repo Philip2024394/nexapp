@@ -43,50 +43,24 @@ export const IdentitySpec = z.object({
   condition_notes: z.string().max(400).optional(),
   country_of_manufacture: ISO_COUNTRY.optional(),
   country_of_origin: ISO_COUNTRY.optional(),
-  /** Product-level dimensions (unpackaged). Free text so sellers can
-   *  state L × W × H in whatever units they commonly list. The
-   *  separate `packaged_dimensions_cm` field on export destinations
-   *  (delivery-spec.ts) captures the shipping-packaged dimensions
-   *  which are a different measurement. */
-  dimensions: z.string().max(80).optional(),
-  /** Product-level weight in grams (unpackaged). Also optional for
-   *  non-physical categories (digital, services). */
-  weight_g: z.number().positive().optional(),
+  // Dimensions + weight MOVED to DeliverySpec.package 2026-10-31 per
+  // owner directive: "weights and dimensions should be 1 section" and
+  // live inside the Delivery container.
 });
 
 export type IdentityT = z.infer<typeof IdentitySpec>;
 
 // ─── Wholesale ───────────────────────────────────────────────────────
 
-export const WholesaleTier = z.object({
-  min_qty: z.number().int().positive(),
-  price_pence: z.number().int().nonnegative(),
-  currency: ISO_CURRENCY,
-});
-
+// Owner directive 2026-10-31 · simplified wholesale: single row with
+// min_qty + price_per_piece. Dropped: pricing_mode, tiers[], notes.
 export const WholesaleSpec = z.object({
   offered: z.boolean().default(false),
   min_qty: z.number().int().positive().optional(),
-  /** How wholesale pricing is communicated:
-   *   · tiers        — explicit price tiers (shown on the listing)
-   *   · on_request   — "contact seller" (no tier shown)
-   *   · none         — no wholesale (ignored when offered=false)
-   */
-  pricing_mode: z.enum(["tiers", "on_request", "none"]).default("none"),
-  tiers: z.array(WholesaleTier).max(10).optional(),
-  notes: z.string().max(400).optional(),
-}).superRefine((v, ctx) => {
-  if (v.offered && v.pricing_mode === "tiers" && (!v.tiers || v.tiers.length === 0)) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "At least one tier required when pricing_mode is 'tiers'",
-      path: ["tiers"],
-    });
-  }
+  price_per_piece_pence: z.number().int().nonnegative().optional(),
 });
 
 export type WholesaleT = z.infer<typeof WholesaleSpec>;
-export type WholesaleTierT = z.infer<typeof WholesaleTier>;
 
 // ─── Pure helpers ────────────────────────────────────────────────────
 
@@ -136,6 +110,5 @@ export const IdentityFields: readonly SpecFieldConfig[] = [
   { key: "condition_notes", label: "Condition notes (optional)", kind: "textarea", maxLength: 400 },
   { key: "country_of_manufacture", label: "Country of manufacture (ISO 2-letter)", kind: "text", maxLength: 2, placeholder: "e.g. ID, CN, DE", helpText: "Where the product is made." },
   { key: "country_of_origin", label: "Country of origin (ISO 2-letter)", kind: "text", maxLength: 2, placeholder: "e.g. ID", helpText: "For customs / trade — not always the same as manufacture." },
-  { key: "dimensions", label: "Dimensions (L × W × H)", kind: "text", maxLength: 80, placeholder: "e.g. 30 × 20 × 10 cm", helpText: "Product itself, unpackaged." },
-  { key: "weight_g", label: "Weight (g)", kind: "number", min: 0, helpText: "Product itself, unpackaged." },
+  // dimensions + weight_g moved to DeliverySpec.package 2026-10-31.
 ];

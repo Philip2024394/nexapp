@@ -39,6 +39,7 @@ import type {
   DeliveryEditorValue,
   LocalRadiusDraft,
   ExportCountryDraft,
+  PackageDraft,
 } from "@/components/nex-native/product-create/DeliveryEditor";
 import {
   EMPTY_IDENTITY,
@@ -180,6 +181,7 @@ export default async function EditProductPage({
           ? product.gallery_urls.filter((u): u is string => typeof u === "string")
           : [],
         stockStatus: stock,
+        dispatchTime: product.dispatch_time ?? "",
         status,
         spec: categoryOnlySpec,
         market: initial,
@@ -212,16 +214,13 @@ function returnsToUIValue(r: ReturnType<typeof extractReturns>): ReturnsDraft {
   if (!r) return EMPTY_RETURNS;
   const p = r.seller_policy;
   return {
-    acceptsReturns: p.accepts_returns,
-    withinDays: typeof p.within_days === "number" ? String(p.within_days) : "",
-    whoPaysShipping: p.who_pays_shipping,
-    conditionRequirement: p.condition_requirement ?? "",
-    notes: p.notes ?? "",
-    sellerCountryIso: p.seller_country_iso ?? "",
+    policyText: p.policy_text ?? "",
+    daysOption: p.days_option ?? null,
   };
 }
 
-/** Translate stored Identity substrate into UI drafts. */
+/** Translate stored Identity substrate into UI drafts.
+ *  Simplified 2026-10-31 · dims/weight moved to DeliverySpec.package. */
 function identityToUIValue(i: ReturnType<typeof extractIdentity>): IdentityDraft {
   if (!i) return EMPTY_IDENTITY;
   return {
@@ -229,45 +228,47 @@ function identityToUIValue(i: ReturnType<typeof extractIdentity>): IdentityDraft
     conditionNotes: i.condition_notes ?? "",
     countryOfManufacture: i.country_of_manufacture ?? "",
     countryOfOrigin: i.country_of_origin ?? "",
-    dimensions: i.dimensions ?? "",
-    weightG: typeof i.weight_g === "number" ? String(i.weight_g) : "",
   };
 }
 
-/** Translate stored Wholesale substrate into UI drafts. */
+/** Translate stored Wholesale substrate into UI drafts.
+ *  Simplified 2026-10-31 · one row {offered, min_qty, price_per_piece}. */
 function wholesaleToUIValue(w: ReturnType<typeof extractWholesale>): WholesaleDraft {
   if (!w) return EMPTY_WHOLESALE;
   return {
     offered: w.offered,
     minQty: typeof w.min_qty === "number" ? String(w.min_qty) : "",
-    pricingMode: w.pricing_mode,
-    tiers: (w.tiers ?? []).map((t) => ({
-      minQty: String(t.min_qty),
-      priceMajor: (t.price_pence / 100).toString(),
-      currency: t.currency,
-    })),
-    notes: w.notes ?? "",
+    pricePerPieceMajor:
+      typeof w.price_per_piece_pence === "number"
+        ? (w.price_per_piece_pence / 100).toString()
+        : "",
   };
 }
 
-/** Translate stored Delivery substrate (pence integers, arrays) back
- *  into the UI shape the DeliveryEditor expects (major-currency
- *  strings, comma-separated CSVs). */
+/** Translate stored Delivery substrate back into the UI shape the
+ *  DeliveryEditor expects. Package dims/weight live on top-level
+ *  packageInfo; delivery_days threaded per row; currency is inherited
+ *  from the product and therefore not surfaced on each row. */
 function deliveryToUIValue(d: ReturnType<typeof extractDelivery>): DeliveryEditorValue {
-  if (!d) return { local: [], export: [] };
+  if (!d) return { packageInfo: { dimensions: "", weightKg: "" }, local: [], export: [] };
   const toMajor = (p: number | undefined): string => (typeof p === "number" ? (p / 100).toString() : "");
+  const packageInfo: PackageDraft = {
+    dimensions: d.package?.dimensions ?? "",
+    weightKg: typeof d.package?.weight_kg === "number" ? String(d.package.weight_kg) : "",
+  };
   const local: LocalRadiusDraft[] = (d.local?.radii ?? []).map((r) => ({
     km: String(r.km),
     priceMajor: toMajor(r.price_pence),
     currency: r.currency,
+    deliveryDays: typeof r.delivery_days === "number" ? String(r.delivery_days) : "",
   }));
   const exportDest: ExportCountryDraft[] = (d.export?.countries ?? []).map((x) => ({
     iso: x.iso,
     priceMajor: toMajor(x.price_pence),
     currency: x.currency,
-    weightKg: x.weight_kg.toString(),
+    deliveryDays: typeof x.delivery_days === "number" ? String(x.delivery_days) : "",
   }));
-  return { local, export: exportDest };
+  return { packageInfo, local, export: exportDest };
 }
 
 /** Translate a server-side Market (price_pence integer) back into the UI

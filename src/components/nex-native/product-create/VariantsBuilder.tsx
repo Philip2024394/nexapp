@@ -95,24 +95,14 @@ export function VariantsBuilder({ value, onChange }: VariantsBuilderProps): Reac
   const removeAt = (i: number) => onChange(value.filter((_, idx) => idx !== i));
   const addRow = () => onChange([...value, EMPTY_VARIANT]);
 
+  // Owner directive 2026-10-31: the Variants section used to render its
+  // own header + description + empty-state + "+ Add variant" button.
+  // All of that is removed — the parent form now owns the context via
+  // the variantType selector and seeds the first row. Here we only
+  // render the rows + a quiet inline "+ Add another" that appears only
+  // when at least one row exists.
   return (
-    <section aria-labelledby="nex-variants-heading" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <div>
-        <h2 id="nex-variants-heading" style={{ fontSize: 15, fontWeight: 800, margin: 0, color: INK }}>
-          Variants
-          <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: INK_DIM }}>{value.length}</span>
-        </h2>
-        <p style={{ fontSize: 11.5, color: INK_DIM, margin: "4px 0 0", lineHeight: 1.5 }}>
-          Optional. Add sizes, colours, models, or packs. Each variant can override price and stock.
-        </p>
-      </div>
-
-      {value.length === 0 ? (
-        <div style={emptyStyle}>
-          No variants yet. The product sells at the main price and stock status above.
-        </div>
-      ) : null}
-
+    <section aria-label="Variants" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {value.map((v, i) => (
           <VariantRow
@@ -124,24 +114,26 @@ export function VariantsBuilder({ value, onChange }: VariantsBuilderProps): Reac
         ))}
       </div>
 
-      <button
-        type="button"
-        onClick={addRow}
-        style={{
-          alignSelf: "flex-start",
-          padding: "9px 14px",
-          borderRadius: 999,
-          border: `1.5px solid ${ACCENT}`,
-          background: "transparent",
-          color: ACCENT,
-          fontWeight: 800,
-          fontSize: 13,
-          cursor: "pointer",
-          fontFamily: NEX_FONT_SANS,
-        }}
-      >
-        + Add variant
-      </button>
+      {value.length > 0 ? (
+        <button
+          type="button"
+          onClick={addRow}
+          style={{
+            alignSelf: "flex-start",
+            padding: "6px 10px",
+            borderRadius: 999,
+            border: "none",
+            background: "transparent",
+            color: ACCENT,
+            fontWeight: 700,
+            fontSize: 12.5,
+            cursor: "pointer",
+            fontFamily: NEX_FONT_SANS,
+          }}
+        >
+          + Add another
+        </button>
+      ) : null}
     </section>
   );
 }
@@ -259,11 +251,3 @@ function Field(props: { label: string; children: React.ReactNode }): React.JSX.E
   );
 }
 
-const emptyStyle: React.CSSProperties = {
-  padding: "12px 14px",
-  borderRadius: 10,
-  border: `1.5px dashed ${RIM}`,
-  color: INK_DIM,
-  fontSize: 12.5,
-  fontStyle: "italic",
-};

@@ -1,47 +1,44 @@
 // src/lib/nex-native/catalogue/returns-spec.ts
 //
-// Returns substrate · owner-authorised 2026-10-30 (Product Upload
-// World-Class brief · expansion §4 Returns and consumer rights by
-// country).
+// Returns substrate · owner-authorised 2026-10-30 (initial) +
+// 2026-10-31 (SIMPLIFIED per owner directive).
 //
-// Policy contract (sealed):
+// Owner directive 2026-10-31 verbatim: "Returns & legal information
+// change to Returns Policy and leave black container for owner to
+// add their own returns policy but add 3 small circle for select
+// days 7 - 14 - 30 days and if owner select one of them auto add
+// text to container text field".
 //
-//   The seller's declared policy sits BESIDE the statutory floor
-//   drawn from consumer-rights.ts for every buyer-destination
-//   country. The seller policy CANNOT override statutory rights:
-//   the UI shows both; the lower-bound (buyer-favouring) applies.
+// Simplified shape:
+//   · policy_text  — seller-authored free text, up to 2000 chars.
+//   · days_option  — optional 7 | 14 | 30 (which quick-select the
+//     seller tapped) · persisted so the UI can reflect which chip
+//     was active on reload.
 //
-//   This file encodes the seller policy only. Statutory rights are a
-//   separate concern · do not merge them.
+// What was dropped: accepts_returns toggle · within_days numeric ·
+// who_pays_shipping dropdown · condition_requirement free-text ·
+// seller_country_iso · notes (replaced by the main policy_text) ·
+// the statutory-floor overlay reads from catalogue/consumer-rights.ts.
 //
-// Storage: nex_product.spec.__returns jsonb. No new migration.
+// Legacy data note: products saved against the previous Zod shape
+// fail safeParse against this new schema. extractReturns() returns
+// null · the Edit form shows the policy section empty. The seller's
+// next save overwrites with the simpler shape.
+//
+// Storage: nex_product.spec.__returns jsonb · no migration.
 
 import { z } from "zod";
 
-export const WhoPaysShipping = z.enum(["buyer", "seller", "negotiable"]);
-
 export const SellerReturnsPolicy = z.object({
-  /** Does the seller accept returns outside statutory rights?
-   *  (Statutory rights apply regardless · see consumer-rights.ts.) */
-  accepts_returns: z.boolean().default(false),
-  /** Number of days from delivery that the seller accepts returns.
-   *  Ignored when accepts_returns is false. */
-  within_days: z.number().int().nonnegative().optional(),
-  /** Who pays the return shipping on seller-policy returns. */
-  who_pays_shipping: WhoPaysShipping.default("buyer"),
-  /** Condition the item must be in to qualify (e.g. "unopened"). */
-  condition_requirement: z.string().max(400).optional(),
-  /** Free-text additional terms. Must NOT exclude statutory rights.
-   *  UI copy reminds the seller of that constraint. */
-  notes: z.string().max(1200).optional(),
-  /** Owner-authorised 2026-10-31 (Decision 2 · Option 1) · the
-   *  seller's own market country, captured per-product because
-   *  nex_account carries no reliable country field (phone_country_code
-   *  is ambiguous for +1/+44; last_known_country_iso is user-initiated
-   *  and null for most new accounts). Explicit per-product field keeps
-   *  the data honest and avoids a new DB column. Drives the "your
-   *  market" statutory-floor card in the ReturnsEditor. */
-  seller_country_iso: z.string().regex(/^[A-Z]{2}$/, "ISO 3166-1 alpha-2").optional(),
+  /** Owner-authored returns-policy text. The whole policy lives here;
+   *  "we accept returns…" boilerplate is a seed string injected by
+   *  the UI when the seller taps a 7/14/30-day chip, then editable
+   *  as plain text. Max 2000 chars matches the sealed
+   *  updateProductDescription cap. */
+  policy_text: z.string().max(2000).optional(),
+  /** Which quick-select days chip the seller last tapped. Persisted
+   *  so the UI shows the active chip on reload. Optional. */
+  days_option: z.union([z.literal(7), z.literal(14), z.literal(30)]).optional(),
 });
 
 export const ReturnsSpec = z.object({
@@ -66,4 +63,15 @@ export function mergeReturnsIntoSpec(
   returns: ReturnsT,
 ): Record<string, unknown> {
   return { ...spec, [RETURNS_SPEC_KEY]: returns };
+}
+
+/** Seed string the UI injects when the seller taps a day chip.
+ *  Owner-approved copy (reworded for clarity). */
+export function policyTemplateForDays(days: 7 | 14 | 30): string {
+  return (
+    `We accept returns of this product in its original packaging within ${days} days. `
+    + `Please reach out to us to arrange a return. If the package arrives damaged, `
+    + `this must be noted on the delivery docket at the time of delivery to support `
+    + `any future claim.`
+  );
 }

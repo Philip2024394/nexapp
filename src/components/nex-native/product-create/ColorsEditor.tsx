@@ -80,12 +80,15 @@ export function ColorsEditor({ value, onChange, businessId, baseCurrency }: Colo
     ]);
   };
 
-  const addCustom = (hex: string, name: string) => {
+  const addCustom = (hex: string) => {
     if (atCap) return;
     if (value.entries.some((e) => e.hex === hex)) return;
+    // Owner directive 2026-10-31 · "remove the field for color name".
+    // Custom colours auto-name to the hex string. Standard-palette
+    // colours still carry their English display name.
     setEntries([
       ...value.entries,
-      { name: name.trim() || "Custom", hex, priceMajor: "", imageUrl: "" },
+      { name: hex, hex, priceMajor: "", imageUrl: "" },
     ]);
   };
 
@@ -229,13 +232,6 @@ export function ColorsEditor({ value, onChange, businessId, baseCurrency }: Colo
         <div style={{ height: 10 }} />
       </div>
 
-      {/* ── Custom colour picker ─────────────────────────────────── */}
-      <CustomColourPicker
-        disabled={atCap}
-        selectedHexes={selectedHexSet}
-        onAdd={addCustom}
-      />
-
       {uploadError ? (
         <div role="alert" style={{ padding: "8px 12px", borderRadius: 8, background: "rgba(200,16,46,0.08)", color: RED, fontSize: 12, fontWeight: 700 }}>
           {uploadError}
@@ -262,13 +258,19 @@ export function ColorsEditor({ value, onChange, businessId, baseCurrency }: Colo
                 onPickFile={(file) => void uploadImageFor(e.hex, file)}
                 onClearImage={() => updateEntry(e.hex, { imageUrl: "" })}
                 onPriceChange={(v) => updateEntry(e.hex, { priceMajor: v })}
-                onRename={(v) => updateEntry(e.hex, { name: v })}
                 onRemove={() => removeEntry(e.hex)}
               />
             ))}
           </div>
         </div>
       )}
+
+      {/* ── Custom colour picker · AT THE END per owner directive ─ */}
+      <CustomColourPicker
+        disabled={atCap}
+        selectedHexes={selectedHexSet}
+        onAdd={addCustom}
+      />
     </section>
   );
 }
@@ -276,22 +278,20 @@ export function ColorsEditor({ value, onChange, businessId, baseCurrency }: Colo
 function CustomColourPicker(props: {
   disabled: boolean;
   selectedHexes: Set<string>;
-  onAdd: (hex: string, name: string) => void;
+  onAdd: (hex: string) => void;
 }): React.JSX.Element {
   const [hex, setHex] = React.useState("#102033");
-  const [name, setName] = React.useState("");
 
   const normalisedHex = normaliseHex(hex) ?? hex;
   const canAdd =
     !props.disabled
-    && name.trim().length > 0
     && /^#[0-9A-Fa-f]{6}$/.test(normalisedHex)
     && !props.selectedHexes.has(normalisedHex);
 
   return (
     <div style={blockStyle}>
       <h3 style={subHeadingStyle}>Not in the palette? Pick a custom colour</h3>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
         <input
           type="color"
           value={hex}
@@ -307,21 +307,14 @@ function CustomColourPicker(props: {
             cursor: props.disabled ? "not-allowed" : "pointer",
           }}
         />
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Colour name (required)"
-          maxLength={60}
-          disabled={props.disabled}
-          style={textInputStyle}
-        />
+        <span style={{ fontSize: 12, color: INK_DIM, fontFamily: "monospace", fontWeight: 700 }}>
+          {normalisedHex}
+        </span>
         <button
           type="button"
           onClick={() => {
             if (!canAdd) return;
-            props.onAdd(normalisedHex, name.trim());
-            setName("");
+            props.onAdd(normalisedHex);
           }}
           disabled={!canAdd}
           style={{
@@ -335,6 +328,7 @@ function CustomColourPicker(props: {
             cursor: canAdd ? "pointer" : "not-allowed",
             opacity: canAdd ? 1 : 0.5,
             fontFamily: NEX_FONT_SANS,
+            marginLeft: "auto",
           }}
         >
           + Add
@@ -351,7 +345,6 @@ function ColorCard(props: {
   onPickFile: (file: File) => void;
   onClearImage: () => void;
   onPriceChange: (v: string) => void;
-  onRename: (v: string) => void;
   onRemove: () => void;
 }): React.JSX.Element {
   const { entry, baseCurrency, uploading } = props;
@@ -386,18 +379,14 @@ function ColorCard(props: {
         aria-label={hasImage ? `${entry.name} image` : `${entry.name} ${entry.hex}`}
       />
 
-      {/* Middle column · name + status + actions */}
+      {/* Middle column · read-only name badge + status + actions */}
       <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
-        <input
-          type="text"
-          value={entry.name}
-          onChange={(e) => props.onRename(e.target.value)}
-          maxLength={60}
-          style={{ ...textInputStyle, fontWeight: 800, fontSize: 14, padding: "6px 10px" }}
-        />
+        <div style={{ fontSize: 14, fontWeight: 800, color: INK, letterSpacing: "-0.005em" }}>
+          {entry.name}
+        </div>
         <div style={{ fontSize: 11.5, color: INK_DIM }}>
           {hasImage ? "Image uploaded" : "Shows as colour circle"}
-          {hasPrice ? ` · override ${baseCurrency ?? ""} ${entry.priceMajor}` : " · base price"}
+          {hasPrice ? ` · override ${entry.priceMajor}` : " · base price"}
         </div>
 
         <input
@@ -440,7 +429,7 @@ function ColorCard(props: {
             </button>
           ) : (
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <span style={{ fontSize: 11, color: INK_DIM, fontWeight: 700 }}>{baseCurrency ?? "Price"}</span>
+              <span style={{ fontSize: 11, color: INK_DIM, fontWeight: 700 }}>Price</span>
               <input
                 type="number"
                 value={entry.priceMajor}
