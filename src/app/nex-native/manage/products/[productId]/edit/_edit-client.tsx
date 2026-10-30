@@ -24,6 +24,13 @@ import {
   VariantsBuilder,
   type VariantDraft,
 } from "@/components/nex-native/product-create/VariantsBuilder";
+import {
+  DeliveryEditor,
+  EMPTY_DELIVERY,
+  type DeliveryEditorValue,
+  type LocalZoneDraft,
+  type ExportDestDraft,
+} from "@/components/nex-native/product-create/DeliveryEditor";
 import { updateProductAction } from "@/app/nex-native/manage/products/[productId]/edit/_actions";
 import type { SpecFieldConfig } from "@/lib/nex-native/catalogue/specs/types";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
@@ -70,6 +77,7 @@ export interface EditProductFormClientProps {
     readonly spec: Record<string, unknown>;
     readonly market: MarketSelectorValue;
     readonly variants: readonly VariantDraft[];
+    readonly delivery: DeliveryEditorValue;
   };
 }
 
@@ -86,6 +94,7 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
   const [market, setMarket] = React.useState<MarketSelectorValue>(props.initial.market);
   const [gallery, setGallery] = React.useState<readonly string[]>(props.initial.galleryUrls);
   const [variants, setVariants] = React.useState<readonly VariantDraft[]>(props.initial.variants);
+  const [delivery, setDelivery] = React.useState<DeliveryEditorValue>(props.initial.delivery);
   const [submitting, setSubmitting] = React.useState<null | "save" | "publish" | "archive">(null);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -114,6 +123,7 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
         status: desiredStatus,
         spec,
         market: toMarketPayload(market),
+        delivery: toDeliveryPayload(delivery, market.scope),
         variants: toVariantPayload(variants),
       });
       if (!result.ok) {
@@ -177,6 +187,9 @@ export function EditProductFormClient(props: EditProductFormClientProps): React.
           </div>
           <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
             <VariantsBuilder value={variants} onChange={setVariants} />
+          </div>
+          <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
+            <DeliveryEditor scope={market.scope} value={delivery} onChange={setDelivery} />
           </div>
           <Field label="Stock status">
             <select value={stockStatus} onChange={(e) => setStockStatus(e.target.value as EditProductFormClientProps["initial"]["stockStatus"])} style={COMMON_INPUT}>
@@ -264,6 +277,78 @@ function StatusChip(props: { status: "draft" | "live" | "archived" }): React.JSX
       {p.label}
     </span>
   );
+}
+
+/** Mirror of Create form's toDeliveryPayload. See create/_form-client.tsx
+ *  for the per-field reasoning; both paths share the same server shape. */
+function toDeliveryPayload(
+  v: DeliveryEditorValue,
+  scope: "local" | "export" | "both",
+): { local?: unknown; export?: unknown } {
+  const toPenceOpt = (raw: string): number | undefined => {
+    const t = raw.trim();
+    if (t === "") return undefined;
+    const n = Number(t);
+    if (!Number.isFinite(n) || n < 0) return undefined;
+    return Math.round(n * 100);
+  };
+  const toIntOpt = (raw: string): number | undefined => {
+    const t = raw.trim();
+    if (t === "") return undefined;
+    const n = Number(t);
+    if (!Number.isFinite(n) || n < 0) return undefined;
+    return Math.round(n);
+  };
+  const splitCsv = (raw: string): string[] | undefined => {
+    const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+    return parts.length > 0 ? parts : undefined;
+  };
+  const mapLocal = (z: LocalZoneDraft) => {
+    const dispatch_days = toIntOpt(z.dispatchDays) ?? 0;
+    const delivery_days_min = toIntOpt(z.deliveryMinDays) ?? 0;
+    const delivery_days_max = toIntOpt(z.deliveryMaxDays) ?? delivery_days_min;
+    const row: Record<string, unknown> = {
+      label: z.label.trim(),
+      cities: splitCsv(z.cities),
+      areas: splitCsv(z.areas),
+      price_pence: toPenceOpt(z.priceMajor) ?? 0,
+      currency: z.currency,
+      dispatch_days, delivery_days_min, delivery_days_max,
+      cod_enabled: z.codEnabled,
+      pickup_available: z.pickupAvailable,
+    };
+    const free = toPenceOpt(z.freeAboveMajor); if (free !== undefined) row.free_above_pence = free;
+    const codMin = toPenceOpt(z.codMinOrderMajor); if (codMin !== undefined) row.cod_min_order_pence = codMin;
+    if (z.notes.trim()) row.notes = z.notes.trim();
+    return row;
+  };
+  const mapExport = (d: ExportDestDraft) => {
+    const dispatch_days_min = toIntOpt(d.dispatchMinDays) ?? 0;
+    const dispatch_days_max = toIntOpt(d.dispatchMaxDays) ?? dispatch_days_min;
+    const delivery_days_min = toIntOpt(d.deliveryMinDays) ?? 0;
+    const delivery_days_max = toIntOpt(d.deliveryMaxDays) ?? delivery_days_min;
+    const row: Record<string, unknown> = {
+      iso: d.iso.trim().toUpperCase(),
+      enabled: d.enabled,
+      shipping_cost_pence: toPenceOpt(d.shippingCostMajor) ?? 0,
+      shipping_currency: d.shippingCurrency,
+      dispatch_days_min, dispatch_days_max,
+      delivery_days_min, delivery_days_max,
+    };
+    const price = toPenceOpt(d.priceMajor); if (price !== undefined) row.price_pence = price;
+    if (d.currency) row.currency = d.currency;
+    const minOrder = toPenceOpt(d.minOrderMajor); if (minOrder !== undefined) row.min_order_pence = minOrder;
+    if (d.notes.trim()) row.notes = d.notes.trim();
+    return row;
+  };
+  const out: { local?: unknown; export?: unknown } = {};
+  if (scope === "local" || scope === "both") {
+    out.local = { zones: v.local.filter((z) => z.label.trim().length > 0).map(mapLocal) };
+  }
+  if (scope === "export" || scope === "both") {
+    out.export = { destinations: v.export.filter((d) => d.iso.trim().length === 2).map(mapExport) };
+  }
+  return out;
 }
 
 /** Mirror of the Create form's toVariantPayload. Drops blank-name

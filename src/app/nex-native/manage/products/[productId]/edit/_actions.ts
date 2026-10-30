@@ -31,6 +31,11 @@ import {
   mergeMarketIntoSpec,
   type Market,
 } from "@/lib/nex-native/catalogue/market-spec";
+import {
+  DeliverySpec,
+  mergeDeliveryIntoSpec,
+  type DeliveryT,
+} from "@/lib/nex-native/catalogue/delivery-spec";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
 import type { NexProductStatus, NexProductStockStatus, NexVariantAttribute } from "@/lib/nex-native/types";
 import { NEX_VARIANT_ATTRIBUTES, NEX_PRODUCT_STOCK_STATUSES } from "@/lib/nex-native/types";
@@ -52,6 +57,7 @@ export type UpdateProductErrorCode =
   | "unknown-category"
   | "spec-invalid"
   | "market-invalid"
+  | "delivery-invalid"
   | "internal";
 
 export type UpdateProductResult =
@@ -71,6 +77,7 @@ export interface UpdateProductInput {
   readonly stockStatus?: NexProductStockStatus;
   readonly spec: unknown;
   readonly market: unknown;
+  readonly delivery?: unknown;
   readonly status?: Extract<NexProductStatus, "draft" | "live" | "archived">;
   /** Full desired variant list · diff-synced against existing rows. */
   readonly variants?: readonly UpdateProductVariantPayload[];
@@ -154,6 +161,17 @@ export async function updateProductAction(
     market,
   );
 
+  // 8b · Delivery (optional)
+  let specFinal: Record<string, unknown> = specWithMarket;
+  if (input.delivery !== undefined) {
+    const dResult = DeliverySpec.safeParse(input.delivery);
+    if (!dResult.success) {
+      return err("delivery-invalid", `Delivery validation failed: ${dResult.error.message}`);
+    }
+    const delivery: DeliveryT = dResult.data;
+    specFinal = mergeDeliveryIntoSpec(specWithMarket, delivery);
+  }
+
   // 9 · updateProductBatch
   try {
     const row = await productService.updateProductBatch(input.productId, {
@@ -169,7 +187,7 @@ export async function updateProductAction(
       status: input.status,
       department_id: input.departmentId,
       category_id: input.categoryId,
-      spec: specWithMarket,
+      spec: specFinal,
     });
     // Variant sync (fail-soft · same posture as createProductAction).
     if (input.variants !== undefined) {

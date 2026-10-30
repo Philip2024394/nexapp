@@ -23,8 +23,14 @@ import {
 } from "@/lib/nex-native/catalogue/specs";
 import { findDepartment, type DepartmentId } from "@/lib/nex-native/catalogue/departments";
 import { extractMarket, MARKET_SPEC_KEY } from "@/lib/nex-native/catalogue/market-spec";
+import { extractDelivery, DELIVERY_SPEC_KEY } from "@/lib/nex-native/catalogue/delivery-spec";
 import type { MarketSelectorValue } from "@/components/nex-native/product-create/MarketSelector";
 import type { VariantDraft } from "@/components/nex-native/product-create/VariantsBuilder";
+import type {
+  DeliveryEditorValue,
+  LocalZoneDraft,
+  ExportDestDraft,
+} from "@/components/nex-native/product-create/DeliveryEditor";
 import { EditProductFormClient } from "./_edit-client";
 
 export const dynamic = "force-dynamic";
@@ -77,12 +83,20 @@ export default async function EditProductPage({
     redirect(`/nex-native/manage/products/${productId}?e=no-spec`);
   }
 
-  // Split spec: strip the market block, keep category-specific keys.
+  // Split spec: strip the reserved blocks (market + delivery), keep
+  // category-specific keys. Rename `_unused` so lint doesn't flag.
   const rawSpec = (product.spec ?? {}) as Record<string, unknown>;
-  const { [MARKET_SPEC_KEY]: _marketBlock, ...categoryOnlySpec } = rawSpec;
+  const {
+    [MARKET_SPEC_KEY]: _marketBlock,
+    [DELIVERY_SPEC_KEY]: _deliveryBlock,
+    ...categoryOnlySpec
+  } = rawSpec;
+  void _marketBlock; void _deliveryBlock;
   const market = extractMarket(rawSpec);
+  const delivery = extractDelivery(rawSpec);
 
   const initial: MarketSelectorValue = marketToUIValue(market);
+  const initialDelivery: DeliveryEditorValue = deliveryToUIValue(delivery);
 
   const status: AllowedStatus = ((["draft", "live", "archived"] as readonly string[]).includes(product.status) ? product.status : "draft") as AllowedStatus;
   const stock: AllowedStock = ((["in_stock", "low_stock", "sold_out", "made_to_order"] as readonly string[]).includes(product.stock_status ?? "") ? (product.stock_status as AllowedStock) : "in_stock");
@@ -125,9 +139,50 @@ export default async function EditProductPage({
         spec: categoryOnlySpec,
         market: initial,
         variants: variantDrafts,
+        delivery: initialDelivery,
       }}
     />
   );
+}
+
+/** Translate stored Delivery substrate (pence integers, arrays) back
+ *  into the UI shape the DeliveryEditor expects (major-currency
+ *  strings, comma-separated CSVs). */
+function deliveryToUIValue(d: ReturnType<typeof extractDelivery>): DeliveryEditorValue {
+  if (!d) return { local: [], export: [] };
+  const toMajor = (p: number | undefined): string => (typeof p === "number" ? (p / 100).toString() : "");
+  const toStr = (v: number | undefined): string => (typeof v === "number" ? String(v) : "");
+  const joinArr = (a: readonly string[] | undefined): string => (Array.isArray(a) ? a.join(", ") : "");
+  const local: LocalZoneDraft[] = (d.local?.zones ?? []).map((z) => ({
+    label: z.label,
+    cities: joinArr(z.cities),
+    areas: joinArr(z.areas),
+    priceMajor: toMajor(z.price_pence),
+    currency: z.currency,
+    freeAboveMajor: toMajor(z.free_above_pence),
+    dispatchDays: toStr(z.dispatch_days),
+    deliveryMinDays: toStr(z.delivery_days_min),
+    deliveryMaxDays: toStr(z.delivery_days_max),
+    codEnabled: z.cod_enabled,
+    codMinOrderMajor: toMajor(z.cod_min_order_pence),
+    pickupAvailable: z.pickup_available,
+    notes: z.notes ?? "",
+  }));
+  const exportDest: ExportDestDraft[] = (d.export?.destinations ?? []).map((x) => ({
+    iso: x.iso,
+    enabled: x.enabled,
+    priceMajor: toMajor(x.price_pence),
+    currency: x.currency ?? "USD",
+    shippingCostMajor: toMajor(x.shipping_cost_pence),
+    shippingCurrency: x.shipping_currency,
+    dispatchMinDays: toStr(x.dispatch_days_min),
+    dispatchMaxDays: toStr(x.dispatch_days_max),
+    deliveryMinDays: toStr(x.delivery_days_min),
+    deliveryMaxDays: toStr(x.delivery_days_max),
+    minOrderMajor: toMajor(x.min_order_pence),
+    notes: x.notes ?? "",
+  }));
+  return { local, export: exportDest };
 }
 
 /** Translate a server-side Market (price_pence integer) back into the UI

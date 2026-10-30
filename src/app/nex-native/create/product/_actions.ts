@@ -37,6 +37,11 @@ import {
   mergeMarketIntoSpec,
   type Market,
 } from "@/lib/nex-native/catalogue/market-spec";
+import {
+  DeliverySpec,
+  mergeDeliveryIntoSpec,
+  type DeliveryT,
+} from "@/lib/nex-native/catalogue/delivery-spec";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
 import type { NexProductStatus, NexProductStockStatus, NexVariantAttribute } from "@/lib/nex-native/types";
 import { NEX_VARIANT_ATTRIBUTES, NEX_PRODUCT_STOCK_STATUSES } from "@/lib/nex-native/types";
@@ -56,6 +61,7 @@ export type CreateProductErrorCode =
   | "unknown-category"
   | "spec-invalid"
   | "market-invalid"
+  | "delivery-invalid"
   | "tier-limit"
   | "internal";
 
@@ -79,6 +85,9 @@ export interface CreateProductInput {
   readonly spec: unknown;
   /** Sales-market substrate. Required · every product declares scope. */
   readonly market: unknown;
+  /** Optional · when provided, validated by DeliverySpec and merged
+   *  under spec.__delivery. Omit for non-shippable listings. */
+  readonly delivery?: unknown;
   readonly status?: Extract<NexProductStatus, "draft" | "live">;
   /** Optional · zero variants means a flat non-variant product. */
   readonly variants?: readonly CreateProductVariantPayload[];
@@ -154,6 +163,17 @@ export async function createProductAction(
     market,
   );
 
+  // 7b · Delivery substrate (optional).
+  let specFinal: Record<string, unknown> = specWithMarket;
+  if (input.delivery !== undefined) {
+    const dResult = DeliverySpec.safeParse(input.delivery);
+    if (!dResult.success) {
+      return err("delivery-invalid", `Delivery validation failed: ${dResult.error.message}`);
+    }
+    const delivery: DeliveryT = dResult.data;
+    specFinal = mergeDeliveryIntoSpec(specWithMarket, delivery);
+  }
+
   // 8 · Write canonical nex_product row
   try {
     const row = await productService.createProduct({
@@ -170,7 +190,7 @@ export async function createProductAction(
       status: input.status ?? "draft",
       department_id: input.departmentId,
       category_id: input.categoryId,
-      spec: specWithMarket,
+      spec: specFinal,
     });
     // 9 · Variant sync (fail-soft · bad variants surface a diagnostic
     // but DO NOT revoke the parent product. The seller can finish the
