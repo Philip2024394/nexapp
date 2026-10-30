@@ -75,6 +75,17 @@ export interface MusicViewerClientProps {
    *  or unresolved session · the icon still renders and the invite-
    *  target action handles the honest guest + self cases on submit. */
   readonly viewerAccountId: string | null;
+  /** Owner-authorised 2026-10-30 · Stage 1 Follow SSR seed. Server-
+   *  resolved from `getFollowState` so the person-plus icon paints
+   *  the correct state on first render. Always false for guests
+   *  (not signed in) and owner self-view (no self-follow). */
+  readonly initialFollowed: boolean;
+  /** Owner-authorised 2026-10-30 · Stage 2 follower count seed.
+   *  Server-resolved via `readFollowCounts(entry.ownerAccountId)`
+   *  so the person-plus icon's CountLabel paints real numbers on
+   *  first render. Null when the fetch fails · the stack hides
+   *  the label rather than render stale zeros. */
+  readonly initialFollowerCount: number | null;
   /** Owner-authorised 2026-10-30 · prev/next track ids within the
    *  creator's own chronological music cycle. Used by the in-player
    *  prev/next arrows so they walk the creator's songs (not the mixed
@@ -510,7 +521,12 @@ export function MusicViewerClient(
           // reconciles on tap. Non-owner viewers only · owner view
           // suppresses the follow icon entirely per §16 scope.
           followeeId={isSelfViewing ? null : props.entry.ownerAccountId}
-          initialFollowed={false}
+          initialFollowed={props.initialFollowed}
+          initialFollowerCount={
+            props.initialFollowerCount === null
+              ? undefined
+              : props.initialFollowerCount
+          }
           onEdit={
             isSelfViewing
               ? () =>

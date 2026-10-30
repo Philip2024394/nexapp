@@ -53,6 +53,7 @@ import { MessagePanel } from "@/components/nex-native/live-commerce/MessagePanel
 import { getLiveInviteTargetAction } from "@/app/nex-native/live-commerce/_invite-target-action";
 import type { InviteTarget } from "@/lib/nex-native/live-broadcast/invite-target";
 import { FollowButton } from "@/components/nex-native/follow/FollowButton";
+import { isFollowingAction } from "@/lib/nex-native/follow/follow-actions";
 
 const NEX = {
   bg: "#020914",
@@ -93,6 +94,19 @@ export function LiveViewerPage({
   const [state, setState] = React.useState<LiveViewerState>("idle");
   const [error, setError] = React.useState<string | null>(null);
   const [broadcasterAccountId, setBroadcasterAccountId] = React.useState<string | null>(null);
+  // Owner-authorised 2026-10-30 · Stage 2 Follow seed. Live resolves
+  // the broadcaster identity client-side via the presence channel, so
+  // the pure-SSR seed used on Music + Profile is architecturally
+  // unavailable here. Pattern: once the broadcaster id resolves, we
+  // call isFollowingAction once and feed the result into FollowButton
+  // via a key-remount so the button repaints with correct state.
+  // Until the resolution completes, FollowButton shows "Follow" (same
+  // behaviour as before this seed existed) · idempotent follow actions
+  // ensure a tap during the pending window reconciles honestly either
+  // way.
+  const [resolvedFollowState, setResolvedFollowState] = React.useState<
+    "not-following" | "following" | null
+  >(null);
   // Owner directive 2026-10-25 (Phase B) · Message panel state. The
   // broadcaster InviteTarget is resolved on-demand when the viewer
   // taps Message in the 3-dot slide-out · we do NOT prefetch to avoid
@@ -380,6 +394,35 @@ export function LiveViewerPage({
      authoring from the viewer side). */
   const isSelf = broadcasterAccountId !== null
     && broadcasterAccountId === viewerAccountId;
+
+  // Owner-authorised 2026-10-30 · Stage 2 Follow seed effect.
+  // Resolves the viewer's follow state against the broadcaster once
+  // both identities are known + viewer is signed-in + not self.
+  // Cancellation guard protects against the broadcaster swap during
+  // the vertical-swipe navigation (siblings) · we clear the resolved
+  // state immediately on dependency change so the stale answer never
+  // leaks between sessions.
+  React.useEffect(() => {
+    if (!broadcasterAccountId || !viewerAccountId || isSelf) {
+      setResolvedFollowState(null);
+      return;
+    }
+    let cancelled = false;
+    setResolvedFollowState(null);
+    void isFollowingAction({ followeeId: broadcasterAccountId })
+      .then((r) => {
+        if (cancelled) return;
+        if (r.ok) {
+          setResolvedFollowState(r.data ? "following" : "not-following");
+        }
+      })
+      .catch(() => {
+        /* fail-open · leave null (= "pending" key → defaults to not-following) */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [broadcasterAccountId, viewerAccountId, isSelf]);
 
   /* Vertical swipeable feed · 2026-10-24.
      TikTok-Live-style navigation: swipe up → next live broadcast,
@@ -1002,9 +1045,17 @@ export function LiveViewerPage({
           }}
         >
           <FollowButton
+            // Owner-authorised 2026-10-30 · Stage 2 Follow seed ·
+            // key-remount with the resolved state so the button
+            // repaints honestly once isFollowingAction returns.
+            // Pending window = "pending-<id>" · once resolved the
+            // key flips and FollowButton re-seeds its own useState
+            // from the new `initialState` prop.
+            key={`live-follow-${broadcasterAccountId}-${resolvedFollowState ?? "pending"}`}
             followeeId={broadcasterAccountId}
             source="live"
             size="sm"
+            initialState={resolvedFollowState ?? "not-following"}
             isSelfAccount={false}
           />
         </div>

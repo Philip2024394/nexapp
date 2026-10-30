@@ -31,6 +31,7 @@ import {
   followAction,
   unfollowAction,
 } from "@/lib/nex-native/follow/follow-actions";
+import type { NexFollowErrorCode } from "@/lib/nex-native/follow/types";
 
 const RED_DARK = "#8B0000";
 // Owner-authorised 2026-10-29 · burst red tuned darker (previous
@@ -64,6 +65,18 @@ export interface MusicActionsStackProps {
    *  follow icon matches server truth. */
   readonly followeeId?: string | null;
   readonly initialFollowed?: boolean;
+  /** Owner-authorised 2026-10-30 · Stage 2 Follow surface · initial
+   *  follower count for the person-plus icon's CountLabel. Server-
+   *  resolved via `readFollowCounts(ownerAccountId)` on SSR, then
+   *  optimistically incremented/decremented on follow/unfollow with
+   *  the sealed GREATEST(x-1, 0) floor to match trigger behaviour.
+   *  Omitted → no CountLabel renders (legacy call sites unaffected). */
+  readonly initialFollowerCount?: number;
+  /** Owner-authorised 2026-10-30 · Stage 2 feedback hook · fires
+   *  when the server rejects a follow/unfollow (rate-limit · blocked
+   *  · internal-error · etc.). Parity with FollowButton.onReject.
+   *  Omit to accept the sealed silent-rollback default. */
+  readonly onFollowReject?: (reason: NexFollowErrorCode, message: string) => void;
   /** Owner-authorised 2026-10-30 · message icon · when provided the
    *  stack renders a 5th button between Share and Follow. Tapping
    *  opens the caller-mounted MessagePanel (same sealed connection-
@@ -95,6 +108,11 @@ export function MusicActionsStack(
   // these states are session-only and do NOT persist across reloads.
   const [saved, setSaved] = React.useState(false);
   const [followed, setFollowed] = React.useState(props.initialFollowed === true);
+  const [followerCount, setFollowerCount] = React.useState<number | null>(
+    typeof props.initialFollowerCount === "number"
+      ? props.initialFollowerCount
+      : null,
+  );
   // Burst batches · each like tap pushes a new entry; the burst
   // component self-unmounts via setTimeout after its animation ends.
   const [bursts, setBursts] = React.useState<readonly number[]>([]);
@@ -147,8 +165,14 @@ export function MusicActionsStack(
   const handleFollow = async () => {
     const prev = followed;
     const next = !prev;
+    const prevCount = followerCount;
     // Optimistic flip · consistent with handleLike pattern above.
     setFollowed(next);
+    if (typeof prevCount === "number") {
+      // GREATEST(x-1, 0) floor matches the sealed delete-trigger
+      // semantics in migration 238 · never render a negative count.
+      setFollowerCount(next ? prevCount + 1 : Math.max(0, prevCount - 1));
+    }
     props.onFollow?.();
 
     // Owner-authorised 2026-10-30 · Stage 1 Follow wiring. When
@@ -166,9 +190,14 @@ export function MusicActionsStack(
       if (!result.ok) {
         // Roll back on server rejection (rate-limit · blocked · etc.)
         setFollowed(prev);
+        if (typeof prevCount === "number") setFollowerCount(prevCount);
+        props.onFollowReject?.(result.code, result.message);
       }
-    } catch {
+    } catch (e) {
       setFollowed(prev);
+      if (typeof prevCount === "number") setFollowerCount(prevCount);
+      const msg = e instanceof Error ? e.message : String(e);
+      props.onFollowReject?.("internal", msg);
     }
   };
 
@@ -285,13 +314,18 @@ export function MusicActionsStack(
         )}
 
         {!props.isOwnerView && (
-          <IconButton
-            ariaLabel={followed ? "Unfollow" : "Follow"}
-            onClick={handleFollow}
-            active={followed}
-          >
-            <PersonPlusIcon filled color={followed ? "#4FC3FF" : SOLID_WHITE} />
-          </IconButton>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+            <IconButton
+              ariaLabel={followed ? "Unfollow" : "Follow"}
+              onClick={handleFollow}
+              active={followed}
+            >
+              <PersonPlusIcon filled color={followed ? "#4FC3FF" : SOLID_WHITE} />
+            </IconButton>
+            {typeof followerCount === "number" && (
+              <CountLabel value={followerCount} />
+            )}
+          </div>
         )}
       </div>
 

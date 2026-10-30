@@ -36,6 +36,7 @@ import {
 import { getMusicStorageAdapter } from "@/lib/nex-native/music/storage-adapter";
 import type { NexMusicTrackRow } from "@/lib/nex-native/music/types";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
+import { getFollowState, readFollowCounts } from "@/lib/nex-native/follow/follow-repository";
 import { VideoViewerClient } from "./_video-viewer-client";
 import { MusicViewerClient } from "./_music-viewer-client";
 
@@ -442,6 +443,30 @@ export default async function NexFeedViewerPage({
       ]);
     }
 
+    // Owner-authorised 2026-10-30 · Stage 1+2 Follow SSR seeds.
+    // Resolve the viewer's follow state AND the owner's follower
+    // count in parallel so the person-plus icon paints both the
+    // correct state AND the correct count on first render. Guest
+    // + self-view both short-circuit `initialFollowed` to false
+    // (self cannot follow self; guest cannot follow anything).
+    // The count fetch is universal (we always want to display the
+    // owner's follower count, even for owner self-view). Fails
+    // open independently to false / null so a repository error on
+    // one path never cascades to the other.
+    const [initialFollowed, initialFollowerCount] = await Promise.all([
+      viewerAccountId !== null && !viewerIsOwner
+        ? getFollowState({
+            followerId: viewerAccountId,
+            followeeId: musicEntry.ownerAccountId,
+          })
+            .then((s) => s === "following")
+            .catch(() => false)
+        : Promise.resolve(false),
+      readFollowCounts(musicEntry.ownerAccountId)
+        .then((c) => c.followersCount)
+        .catch(() => null as number | null),
+    ]);
+
     return (
       <MusicViewerClient
         entry={musicEntry}
@@ -452,6 +477,8 @@ export default async function NexFeedViewerPage({
         nextId={nextId}
         prevId={prevId}
         viewerAccountId={viewerAccountId}
+        initialFollowed={initialFollowed}
+        initialFollowerCount={initialFollowerCount}
         prevOwnerTrackId={prevOwnerTrackId}
         nextOwnerTrackId={nextOwnerTrackId}
         nextOwnerTrack={nextOwnerTrackRow}
