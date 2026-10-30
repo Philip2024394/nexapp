@@ -27,6 +27,21 @@ import type {
 
 const ROOT = path.resolve(process.cwd(), ".dev-music-data", "audio");
 
+// Owner-authorised 2026-10-31 (music-upload-audit · finding #12):
+// defence-in-depth guard. The adapter factory also refuses in prod,
+// but a direct import of fsMusicDevAdapter would bypass that. Hard-
+// throw at first use so a prod runtime cannot silently write bytes
+// to an ephemeral serverless disk and lose them seconds later.
+function assertDevOnly(op: string): void {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      `nex-music fs-dev-adapter.${op}: cannot run in production. ` +
+        "The filesystem dev adapter is explicitly scoped to NODE_ENV !== 'production'. " +
+        "Blocked by sealed memory 2026-10-30 · H2 (production storage adapter) unsealed.",
+    );
+  }
+}
+
 function devSignKey(): string {
   const fromEnv = process.env.NEX_MUSIC_DEV_SIGN_KEY;
   if (fromEnv && fromEnv.length >= 32) return fromEnv;
@@ -62,6 +77,7 @@ async function ensureDir(dir: string): Promise<void> {
 
 export const fsMusicDevAdapter: MusicMediaStorage = {
   async putObject(args: PutObjectArgs): Promise<{ reference: string }> {
+    assertDevOnly("putObject");
     const ownerDir = path.join(ROOT, sanitiseKeyPart(args.ownerAccountId));
     await ensureDir(ownerDir);
     const dest = path.join(ownerDir, sanitiseKeyPart(args.objectKey));
@@ -72,6 +88,7 @@ export const fsMusicDevAdapter: MusicMediaStorage = {
   async getSignedReadUrl(
     args: SignedReadUrlArgs,
   ): Promise<SignedReadUrlResult> {
+    assertDevOnly("getSignedReadUrl");
     const expiresAt = new Date(
       Date.now() + Math.min(Math.max(args.expiresInSeconds, 1), 3600) * 1000,
     );
@@ -89,6 +106,7 @@ export const fsMusicDevAdapter: MusicMediaStorage = {
   async deleteObject(args: { reference: string }): Promise<{
     deleted: boolean;
   }> {
+    assertDevOnly("deleteObject");
     const abs = pathFor(args.reference);
     if (!abs) return { deleted: false };
     try {
@@ -102,6 +120,7 @@ export const fsMusicDevAdapter: MusicMediaStorage = {
   async objectExists(args: {
     reference: string;
   }): Promise<{ exists: boolean; byteLength?: number }> {
+    assertDevOnly("objectExists");
     const abs = pathFor(args.reference);
     if (!abs) return { exists: false };
     try {

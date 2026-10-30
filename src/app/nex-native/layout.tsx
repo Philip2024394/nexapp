@@ -33,6 +33,7 @@ import { resolveServerLocale } from "@/lib/nex/i18n/server";
 import { IncomingCallHub } from "./_incoming-call-hub";
 import { PushSubscribeHub } from "./_push-subscribe-hub";
 import { AppBadgeSyncClient } from "./_app-badge-sync-client";
+import { DevImpersonationBanner } from "./_dev-impersonation-banner";
 import { SwCacheRegister } from "./_sw-cache-register";
 // Owner directive 2026-10-18 · preload the Cover Themes Library +
 // each per-layout preview on idle so the library opens instantly
@@ -153,6 +154,9 @@ export default async function NexNativeLayout({
 
   return (
     <I18nProvider initialLang={initialLang}>
+      {/* Dev-only banner · see _dev-impersonation-banner.tsx. Renders
+          `null` in production so there is zero prod footprint. */}
+      <DevImpersonationBanner />
       <div className="nex-native-stage">
         <div className="nex-native-frame">
           {children}

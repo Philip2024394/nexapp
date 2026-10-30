@@ -67,12 +67,59 @@ async function loadSnapshot(): Promise<Snapshot> {
   return { tracks: [] };
 }
 
+// Owner-authorised 2026-10-31 (music-upload-audit · finding #5 + #11).
+// On Windows, fs.rename(tmp, TRACKS_FILE) can fail with EACCES/EBUSY if
+// another process (editor, antivirus, file explorer) has TRACKS_FILE
+// open — the pre-fix .dev-music-data/ had 2500+ orphan .tmp files
+// proving this is recurring. Retry with exponential backoff, then
+// surface the real error (previously silent via unhandled rejection).
 async function writeSnapshot(next: Snapshot): Promise<void> {
   await ensureDataDir();
   const tmp = `${TRACKS_FILE}.${process.pid}.${Date.now()}.tmp`;
   await fs.writeFile(tmp, JSON.stringify(next, null, 2));
-  await fs.rename(tmp, TRACKS_FILE);
+  const maxAttempts = 5;
+  let lastErr: unknown = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await fs.rename(tmp, TRACKS_FILE);
+      return;
+    } catch (err) {
+      lastErr = err;
+      const code = (err as NodeJS.ErrnoException | null)?.code ?? "";
+      // Only retry transient Windows file-contention codes. Other
+      // errors (ENOENT, ENOSPC) are unrecoverable here.
+      if (code !== "EACCES" && code !== "EBUSY" && code !== "EPERM") break;
+      if (attempt === maxAttempts) break;
+      await new Promise((r) => setTimeout(r, 25 * Math.pow(2, attempt - 1)));
+    }
+  }
+  // Best-effort cleanup of the orphan tmp before surfacing the error.
+  try { await fs.unlink(tmp); } catch { /* ignore */ }
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error(`writeSnapshot: rename failed · ${String(lastErr)}`);
 }
+
+// Owner-authorised 2026-10-31 (music-upload-audit · finding #11).
+// Sweep orphan `.tmp` files > 1h old. Fire once at module load so
+// subsequent dev-server restarts clean up the accumulated backlog
+// without blocking any request. Fails silently — this is housekeeping,
+// not a correctness guarantee.
+void (async function sweepOrphanTmpFiles() {
+  try {
+    const entries = await fs.readdir(DATA_DIR);
+    const cutoff = Date.now() - 60 * 60 * 1000;
+    const prefix = path.basename(TRACKS_FILE) + ".";
+    for (const name of entries) {
+      if (!name.startsWith(prefix) || !name.endsWith(".tmp")) continue;
+      const abs = path.join(DATA_DIR, name);
+      try {
+        const st = await fs.stat(abs);
+        if (st.mtimeMs < cutoff) await fs.unlink(abs);
+      } catch { /* ignore per-file errors */ }
+    }
+  } catch { /* no DATA_DIR yet · nothing to sweep */ }
+})();
 
 async function serialMutate<T>(
   fn: (snap: Snapshot) => Promise<{ next: Snapshot; result: T }>,

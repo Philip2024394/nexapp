@@ -436,6 +436,13 @@ function UploadTab(props: {
       // the author to the preview page where they can inspect the
       // player with their cover + background, then choose Edit or
       // Go Live.
+      // Owner-authorised 2026-10-31 (music-upload-audit · finding #7):
+      // router.refresh() before push so the previously-cached library
+      // list is invalidated. Without this, navigating back from the
+      // preview page shows a stale list that doesn't contain the new
+      // track → users assume the upload failed → upload again →
+      // duplicate tracks in the library.
+      router.refresh();
       router.push(
         `/nex-native/create/upload-music/preview/${payload.data.trackId}`,
       );

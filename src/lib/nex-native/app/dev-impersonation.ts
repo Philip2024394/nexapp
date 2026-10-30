@@ -125,3 +125,35 @@ export function devImpersonationHandle(): string | null {
   if (!isDevImpersonationEnabled()) return null;
   return (process.env[ENV_VAR] as string).trim();
 }
+
+/** Owner-authorised 2026-10-31 (music-upload-audit · finding #4) ·
+ *  honest state exporter for dev chrome. Returns:
+ *   · "off"         — env unset OR NODE_ENV=production
+ *   · "fallen-back" — env set but handle resolved to no is_mock_persona
+ *                     row (the warn-only silent fallback that caused
+ *                     the nex-99901 confusion). Current session is the
+ *                     caller's REAL account, not the persona.
+ *   · "active"      — env set and resolved to a seeded persona. Session
+ *                     chrome is the persona's. */
+export type DevImpersonationStatus =
+  | { readonly kind: "off" }
+  | { readonly kind: "fallen-back"; readonly requested: string }
+  | {
+      readonly kind: "active";
+      readonly requested: string;
+      readonly nexHandle: string;
+      readonly accountId: string;
+    };
+
+export async function devImpersonationStatus(): Promise<DevImpersonationStatus> {
+  if (!isDevImpersonationEnabled()) return { kind: "off" };
+  const requested = (process.env[ENV_VAR] as string).trim();
+  const account = await loadPersonaAccount(requested);
+  if (!account) return { kind: "fallen-back", requested };
+  return {
+    kind: "active",
+    requested,
+    nexHandle: account.nex_handle ?? requested,
+    accountId: account.id,
+  };
+}
