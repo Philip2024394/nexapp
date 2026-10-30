@@ -476,8 +476,9 @@ any other sealed section of this doctrine.
 
 ### Owner-decided rules
 
-Simplified sealed wording owner-stated 2026-10-30 (replaces the
-earlier three-rule phrasing drafted earlier the same day):
+Sealed wording owner-stated 2026-10-30 (consolidated three-rule
+version after owner clarification that new uploads must auto-promote
+to the active slot).
 
 1. **24-hour loop.** Songs rotate from the creator's library to the
    NEX feed every 24 hours. Rotation cycles through the creator's
@@ -489,10 +490,23 @@ earlier three-rule phrasing drafted earlier the same day):
    is turned off. Toggle on or off at any time from the creator's
    library.
 
-Natural consequence (not a third rule): a creator with exactly one
+3. **New-upload auto-promotion.** When a creator uploads a new song
+   to their library, that new song **immediately replaces** whatever
+   track was previously in their active slot on the NEX feed. The
+   24-hour loop (Rule 1) resumes 24 hours later, starting from this
+   newly-promoted track. The previous active-slot track stays in the
+   creator's library at `visibility: shared_live` (not deleted, not
+   downgraded) — it is simply no longer the active slot. Station
+   mode (Rule 2) **overrides** auto-promotion: if station mode is ON
+   when a creator uploads, the stationed track remains the active
+   slot and the new upload joins the library pool at its
+   chronological position without promoting.
+
+Natural consequence (not a fourth rule): a creator with exactly one
 directory-eligible track effectively has that track live on the
 feed by default — the rotation of one song is static. When they
-add a second song, the 24-hour loop activates automatically.
+add a second song, Rule 3 promotes it to the active slot
+immediately; Rule 1 then rotates the pair every 24 hours.
 
 ### Owner-recommended defaults (build-plan may override without doctrine amendment)
 
@@ -503,12 +517,19 @@ add a second song, the 24-hour loop activates automatically.
 - **Private tracks:** excluded from the rotation pool. Only tracks
   with `visibility: shared_live` and a directory-eligible
   `rights_declaration` (see §8.2) enter the pool.
-- **New uploads:** join the rotation pool from day one. There is **no
-  fresh-window grace** in this version. (The earlier three-part rule
-  stated 2026-10-30 earlier that day — which included a 72-hour fresh
-  window for new uploads — was explicitly replaced by the simplified
-  two-rule system above. If the fresh-window idea returns, it is a
-  separate amendment.)
+- **New uploads:** auto-promote to the active slot on upload (Rule 3).
+  The uploaded track becomes the active slot immediately, replacing
+  whatever was there; the 24-hour loop (Rule 1) resumes 24 hours
+  later starting from the new upload. Previous active-slot track
+  stays in the library at `visibility: shared_live` (not deleted,
+  not downgraded). No fresh-window grace beyond the normal
+  24-hour slot time. Station mode (Rule 2) overrides auto-promotion:
+  a stationed track stays. (The earlier three-part rule drafted
+  2026-10-30 earlier that day with a 72-hour fresh window was
+  explicitly replaced by the simplified two-rule system; the owner
+  then clarified later that same day that auto-promotion on upload
+  must remain part of the sealed set, so it is now Rule 3. If the
+  fresh-window idea returns, it is a separate amendment.)
 - **Track removal mid-rotation:** rotation advances to the next
   eligible track; the removed track is not re-exposed; the slot
   stays alive.
