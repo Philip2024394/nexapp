@@ -52,6 +52,7 @@ import {
 import { MessagePanel } from "@/components/nex-native/live-commerce/MessagePanel";
 import { getLiveInviteTargetAction } from "@/app/nex-native/live-commerce/_invite-target-action";
 import type { InviteTarget } from "@/lib/nex-native/live-broadcast/invite-target";
+import { FollowButton } from "@/components/nex-native/follow/FollowButton";
 
 const NEX = {
   bg: "#020914",
@@ -947,25 +948,27 @@ export function LiveViewerPage({
             commit; the overlay falls back to a static dark panel
             while the asset is unconfirmed. */}
         {jailEvent && (
-          {/* Owner directive 2026-10-28 · the sealed `onComplete`
-              callback (fired at the END of the 10-minute jail) is
-              renamed to `onDismiss` which now fires at the 8-second
-              overlay-dismiss window. The jail state itself persists
-              for the full durationMs · a follow-up Phase A2 edit
-              will replace the composer with a muted-state pill
-              until the full countdown ends. For now, keep the
-              setJailEvent(null) handler so the overlay still clears
-              honestly · once the muted-composer wire is in place
-              we'll separate the two state transitions. */}
-          <JailOverlay
-            startedAtMs={jailEvent.startedAtMs}
-            durationMs={jailEvent.durationMs}
-            onDismiss={() => setJailEvent(null)}
-            /* Owner directive 2026-10-29 · full-bleed background MP4
-               copied to public/nex-jail-background.mp4 · plays while
-               the 8-s dismiss window elapses. */
-            videoSrc="/nex-jail-background.mp4"
-          />
+          <>
+            {/* Owner directive 2026-10-28 · the sealed `onComplete`
+                callback (fired at the END of the 10-minute jail) is
+                renamed to `onDismiss` which now fires at the 8-second
+                overlay-dismiss window. The jail state itself persists
+                for the full durationMs · a follow-up Phase A2 edit
+                will replace the composer with a muted-state pill
+                until the full countdown ends. For now, keep the
+                setJailEvent(null) handler so the overlay still clears
+                honestly · once the muted-composer wire is in place
+                we'll separate the two state transitions. */}
+            <JailOverlay
+              startedAtMs={jailEvent.startedAtMs}
+              durationMs={jailEvent.durationMs}
+              onDismiss={() => setJailEvent(null)}
+              /* Owner directive 2026-10-29 · full-bleed background MP4
+                 copied to public/nex-jail-background.mp4 · plays while
+                 the 8-s dismiss window elapses. */
+              videoSrc="/nex-jail-background.mp4"
+            />
+          </>
         )}
       </div>
       {/* Footer sits OUTSIDE the video div so the StateOverlay
@@ -977,6 +980,36 @@ export function LiveViewerPage({
           against a session that isn't yet broadcasting. Hidden in
           dead states (ended / at-capacity / offline) where there is
           nothing to engage with. */}
+      {/* Owner-authorised 2026-10-30 · Stage 1 Follow surface on Live
+          viewer. Floats top-right · visible when state is live/
+          waiting/connecting · hidden on self-view · hidden when
+          jailed · hidden in immersive mode (same gates as the
+          footer below). Follow source is 'live' per the sealed
+          D11/D12 scope. */}
+      {(state === "idle" || state === "waiting" || state === "connecting" || state === "live")
+        && !isSelf
+        && !jailEvent
+        && !isImmersive
+        && broadcasterAccountId !== null && (
+        <div
+          data-nex-live-viewer-follow-slot
+          style={{
+            position: "absolute",
+            top: "calc(env(safe-area-inset-top, 0px) + 14px)",
+            right: 12,
+            zIndex: 25,
+            pointerEvents: "auto",
+          }}
+        >
+          <FollowButton
+            followeeId={broadcasterAccountId}
+            source="live"
+            size="sm"
+            isSelfAccount={false}
+          />
+        </div>
+      )}
+
       {(state === "idle" || state === "waiting" || state === "connecting" || state === "live") && !isSelf && !jailEvent && !isImmersive && (
         <LiveViewerFooter
           viewShopHref={viewShopHref}

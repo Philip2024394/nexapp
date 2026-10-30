@@ -70,7 +70,18 @@ export type CounterName =
   | "timeout.pool_acquire"
   | "timeout.idle_transaction"
   | "timeout.worker_cycle"
-  | "timeout.job_budget";
+  | "timeout.job_budget"
+  // Stage 1 · NEX Follow (owner-authorised 2026-10-30 per
+  // `docs/doctrine/nex-follow-architecture-draft-2026-10-30.md` §16
+  // + Stage 1 preparation §13.6 + §12 O-7/O-8). Emitted by
+  // `src/lib/nex-native/follow/follow-observability.ts`.
+  | "follow.action_ok"
+  | "follow.action_rate_limited"
+  | "follow.action_blocked"
+  | "follow.action_self_follow"
+  | "follow.action_internal_error"
+  | "follow.churn_flagged"
+  | "follow.counter_drift";
 
 export type CounterSnapshot = {
   count: number;
@@ -136,6 +147,9 @@ export function snapshot(): Record<CounterName, CounterSnapshot> {
     "supervisor.error",
     "timeout.statement", "timeout.pool_acquire", "timeout.idle_transaction",
     "timeout.worker_cycle", "timeout.job_budget",
+    "follow.action_ok", "follow.action_rate_limited", "follow.action_blocked",
+    "follow.action_self_follow", "follow.action_internal_error",
+    "follow.churn_flagged", "follow.counter_drift",
   ];
   for (const n of names) out[n] = read(n);
   return out as Record<CounterName, CounterSnapshot>;

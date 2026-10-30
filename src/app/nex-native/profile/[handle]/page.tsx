@@ -65,6 +65,9 @@ import { IdentityHero } from "./_identity-hero";
 import { InterestsPills } from "./_interests-pills";
 import { MutualFriends, type MutualPreviewAccount } from "./_mutual-friends";
 import { ActionButtons, type ConnectState } from "./_action-buttons";
+import { FollowButton } from "@/components/nex-native/follow/FollowButton";
+import { FollowersCountChip } from "@/components/nex-native/follow/FollowersCountChip";
+import { readFollowCounts, getFollowState } from "@/lib/nex-native/follow/follow-repository";
 // SafeTradeCard import retired 2026-10-17 · the hero icon owns
 // the sole entry to the Safe Trade sheet · bottom card removed.
 import { OwnerEditShell } from "./_owner-edit-shell";
@@ -292,12 +295,31 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
           .catch(() => ({ count: 0, previewIds: [] as string[] }))
       : Promise.resolve({ count: 0, previewIds: [] as string[] });
 
-  const [profile, businesses, isVerified, connectState, mutualResult] = await Promise.all([
+  // Owner-authorised 2026-10-30 · Stage 1 Follow surface. Resolve the
+  // follow counts (always) and the viewer's follow state (only when
+  // viewer is signed in + not the owner · self-follow is impossible).
+  // Per Stage 1 preparation §13.6 the list UI is deferred to Stage 2 ·
+  // only the count chip + the FollowButton render Stage 1.
+  const followCountsPromise = readFollowCounts(profileAccount.id).catch(() => ({
+    followersCount: 0,
+    followingCount: 0,
+  }));
+  const viewerFollowStatePromise =
+    viewerAccountId && !isOwner
+      ? getFollowState({
+          followerId: viewerAccountId,
+          followeeId: profileAccount.id,
+        }).catch(() => "not-following" as const)
+      : Promise.resolve("not-following" as const);
+
+  const [profile, businesses, isVerified, connectState, mutualResult, followCounts, viewerFollowState] = await Promise.all([
     profilePromise,
     businessesPromise,
     verifiedPromise,
     connectStatePromise,
     mutualFriendsPromise,
+    followCountsPromise,
+    viewerFollowStatePromise,
   ]);
 
   // Pre-migration-205 shape: cover_image_url + interests may be absent.
@@ -606,6 +628,9 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
             chatHref={chatHref}
             trustScore={trustScore}
             ownerClaimedAtIso={businessOwnerClaimedAtIso}
+            followersCount={followCounts.followersCount}
+            followingCount={followCounts.followingCount}
+            viewerFollowState={viewerFollowState}
           />
         </OwnerEditShell>
       ) : (
@@ -641,6 +666,9 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
           trustVerification={trustVerification}
           trustReportsOnFile={trustReportsOnFile}
           viewerIsSignedIn={session !== null}
+          followersCount={followCounts.followersCount}
+          followingCount={followCounts.followingCount}
+          viewerFollowState={viewerFollowState}
         />
       )}
     </main>
@@ -695,6 +723,14 @@ function ProfileBody(props: {
    *  panel and the shield renders next to the business name. */
   trustScore: import("@/lib/nex-native/trust/trust-score-shared").TrustScoreResult | null;
   ownerClaimedAtIso: string | null;
+  // Owner-authorised 2026-10-30 · Stage 1 Follow (§13.6). Prop widened
+  // to the full NexFollowState union (includes "pending") so this body
+  // can forward whatever `getFollowState` returned without narrowing.
+  // Stage 1 UI treats "pending" the same as "not-following" visually ·
+  // the pending branch is reserved for a Stage 2 handshake flow.
+  followersCount: number;
+  followingCount: number;
+  viewerFollowState: import("@/lib/nex-native/follow/types").NexFollowState;
 }) {
   // Avatar + cover camera overlays only when the owner is actively
   // editing · zero footprint for viewers or in view mode.
@@ -768,6 +804,36 @@ function ProfileBody(props: {
           connectState={props.connectState}
           sendFriendInviteAction={sendFriendInviteAction}
         />
+
+        {/* Owner-authorised 2026-10-30 · Stage 1 Follow surface
+            (§13.6). Count chip renders for all viewers (including
+            the owner · they see their own counts). FollowButton
+            renders only for non-owner signed-in viewers. */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            paddingTop: 4,
+          }}
+        >
+          <FollowersCountChip
+            followersCount={props.followersCount}
+            followingCount={props.followingCount}
+            ink="#102033"
+            inkDim="#4A6080"
+          />
+          {!props.isOwner && props.isSignedIn ? (
+            <FollowButton
+              followeeId={props.profileAccountId}
+              source="profile"
+              initialState={props.viewerFollowState}
+              size="md"
+              isSelfAccount={false}
+            />
+          ) : null}
+        </div>
         {/* Footer Safe Trade card RETIRED 2026-10-17 per owner
             directive · the Safe Trade shield icon on the hero top-
             left is now the sole entry point to the 4-state sheet ·
