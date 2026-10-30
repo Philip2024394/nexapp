@@ -400,7 +400,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "digital_products_software",
     label: "Digital Products & Software",
     blurb: "Software, courses, assets, gift cards",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "software", label: "Software" },
       { id: "digital_learning", label: "Digital Learning" },
@@ -414,7 +414,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "accommodation_property",
     label: "Accommodation & Property",
     blurb: "Hotels, rentals, property for sale",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "hotels", label: "Hotels" },
       { id: "holiday_accommodation", label: "Holiday Accommodation" },
@@ -429,7 +429,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "food_delivery_restaurants",
     label: "Food Delivery & Restaurants",
     blurb: "Restaurants, delivery, catering",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "restaurants", label: "Restaurants" },
       { id: "food_types", label: "Food Types" },
