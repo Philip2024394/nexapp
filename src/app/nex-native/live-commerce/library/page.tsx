@@ -25,6 +25,7 @@ import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-imperson
 import { listBusinessesByOwner } from "@/lib/nex-native/business-service";
 import * as productService from "@/lib/nex-native/product-service";
 import { resolveLiveEligibility } from "@/lib/nex-native/live-broadcast/live-eligibility";
+import { extractMarket, describeMarket } from "@/lib/nex-native/catalogue/market-spec";
 
 export const dynamic = "force-dynamic";
 
@@ -105,17 +106,24 @@ export default async function LiveProductLibraryPage({
     price_pence: number;
     currency: string;
     stock_status: string | null;
+    market_label: string;
+    market_scope: "local" | "export" | "both" | null;
   }>;
   try {
     const raw = await productService.listProductsByBusiness(businessId, "live");
-    products = raw.map((p) => ({
-      id: p.id,
-      name: p.name,
-      image_url: p.image_url ?? null,
-      price_pence: p.price_pence,
-      currency: p.currency,
-      stock_status: p.stock_status ?? null,
-    }));
+    products = raw.map((p) => {
+      const market = extractMarket(p.spec);
+      return {
+        id: p.id,
+        name: p.name,
+        image_url: p.image_url ?? null,
+        price_pence: p.price_pence,
+        currency: p.currency,
+        stock_status: p.stock_status ?? null,
+        market_label: describeMarket(market),
+        market_scope: market?.scope ?? null,
+      };
+    });
   } catch {
     products = [];
   }
@@ -169,6 +177,9 @@ export default async function LiveProductLibraryPage({
                 <div style={{ fontSize: 13, fontWeight: 700, color: ACCENT }}>
                   {formatPrice(p.price_pence, p.currency)}
                 </div>
+                {p.market_label ? (
+                  <div style={marketBadgeStyle(p.market_scope)}>{p.market_label}</div>
+                ) : null}
                 {p.stock_status === "sold_out" && (
                   <div style={{ fontSize: 11, color: "#C8102E", fontWeight: 700, marginTop: 4 }}>
                     Sold out
@@ -245,6 +256,26 @@ const gridStyle: React.CSSProperties = {
   gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
   gap: 12,
 };
+function marketBadgeStyle(scope: "local" | "export" | "both" | null): React.CSSProperties {
+  const palette: Record<Exclude<typeof scope, null>, { bg: string; fg: string }> = {
+    local:  { bg: "rgba(16, 32, 51, 0.08)",  fg: INK_DIM },
+    export: { bg: "rgba(0, 175, 255, 0.14)", fg: ACCENT },
+    both:   { bg: "rgba(16, 214, 107, 0.14)", fg: "#0E8A4A" },
+  };
+  const p = scope ? palette[scope] : palette.local;
+  return {
+    display: "inline-block",
+    marginTop: 4,
+    padding: "2px 8px",
+    background: p.bg,
+    color: p.fg,
+    borderRadius: 999,
+    fontSize: 10.5,
+    fontWeight: 800,
+    letterSpacing: "0.03em",
+  };
+}
+
 const productTileStyle: React.CSSProperties = {
   background: "#FFFFFF",
   padding: 12,
