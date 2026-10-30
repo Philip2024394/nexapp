@@ -192,13 +192,45 @@ export default async function GoLivePage(): Promise<React.JSX.Element> {
         ] as const)
       : null;
 
+  /* Owner directive 2026-10-29 (Options C + D · host identity display) ·
+     forward the broadcaster's personal display_name so the idle
+     header chip + live-state identity caption render it without
+     being confused with businessDisplayName. Null when the account
+     could not be resolved (dev-fallback nil UUID branch). */
+  const selfDisplayName: string | null = account?.display_name ?? null;
+
+  /* Owner-authorised 2026-10-29 (NEX Music · Live overlay) · fetch
+     the broadcaster's shared_live tracks so the Music right-rail
+     button can open a picker + overlay. Fail-open: an empty library
+     renders a Music button that shows the "no shared tracks yet"
+     empty state · it never prevents Go-Live. */
+  let musicLibrary: readonly import("@/lib/nex-native/music/types").NexMusicTrackRow[] = [];
+  if (selfAccountId !== DEV_FALLBACK_BROADCASTER_ID) {
+    try {
+      const { listTracksByOwner } = await import(
+        "@/lib/nex-native/music/music-repository"
+      );
+      const all = await listTracksByOwner(selfAccountId);
+      musicLibrary = all.filter((t) => t.visibility === "shared_live");
+    } catch {
+      musicLibrary = [];
+    }
+  }
+
   return (
     <GoLiveClient
       selfAccountId={selfAccountId}
       realCatalog={realCatalog}
       businessDisplayName={businessDisplayName}
       selfAvatarUrl={selfAvatarUrl}
+      selfDisplayName={selfDisplayName}
       devMockViewers={devMockViewers}
+      musicLibrary={musicLibrary}
     />
   );
 }
+
+/* Note: the autoPlayMusic query param is read client-side (via
+   next/navigation `useSearchParams`) inside GoLiveClient to avoid
+   RSC-vs-dynamic rendering friction. The server shell above stays
+   static-friendly. */

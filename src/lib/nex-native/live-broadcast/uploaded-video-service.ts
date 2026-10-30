@@ -135,6 +135,33 @@ export async function publishUploadedVideo(
     );
   }
 
+  /* Owner directive 2026-10-29 · portrait-only video uploads. NEX
+     Live surfaces render video at full-bleed 9:16 · landscape or
+     square uploads would letterbox against the viewport. We reject
+     non-portrait aspect ratios at the service boundary so the rule
+     holds regardless of which client-facing form invoked the upload.
+     The sealed 2026-10-24 "contain + blurred-fill" viewer fallback
+     stays live for pre-existing landscape content; this rule only
+     blocks NEW uploads. If the caller omits width/height (legacy
+     seed path), we fail OPEN · the dev manifest + seed scripts don't
+     carry dimensions and must not break. Production client-facing
+     uploaders are expected to probe the file and pass dimensions. */
+  const w = input.width;
+  const h = input.height;
+  if (
+    typeof w === "number" &&
+    typeof h === "number" &&
+    Number.isFinite(w) &&
+    Number.isFinite(h) &&
+    w > 0 &&
+    h > 0 &&
+    w > h
+  ) {
+    throw new Error(
+      `uploaded-video-service.publishUploadedVideo: aspect-not-portrait:${w}x${h} (height must be greater than width for full-bleed 9:16 playback)`,
+    );
+  }
+
   /* Owner directive 2026-10-27 (R9 · Live-eligibility contract) ·
      Public seller video uploads are a Shop member benefit.
      We gate at the SERVICE boundary so every caller — current and

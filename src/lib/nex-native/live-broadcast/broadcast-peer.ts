@@ -100,6 +100,22 @@ export class BroadcastPeer {
   private readonly signalling: SignallingChannel;
   private readonly callId: string;
   private pc: RTCPeerConnection | null = null;
+
+  /** Owner directive 2026-10-29 (NEX Music live wiring) · swap the
+   *  outgoing audio track in-place. Does NOT renegotiate · viewers
+   *  see no interruption. Mesh-wide caller is
+   *  LiveBroadcastEngine.replaceAudioTrack. */
+  async replaceAudioTrack(newTrack: MediaStreamTrack): Promise<void> {
+    const pc = this.pc;
+    if (!pc) return;
+    const sender = pc.getSenders().find((s) => s.track?.kind === "audio");
+    if (!sender) return;
+    try {
+      await sender.replaceTrack(newTrack);
+    } catch {
+      // Preserve existing track · caller surfaces an honest toast.
+    }
+  }
   private state: BroadcastPeerState = "idle";
   private remoteDescriptionSet = false;
   private queuedIce: RTCIceCandidateInit[] = [];

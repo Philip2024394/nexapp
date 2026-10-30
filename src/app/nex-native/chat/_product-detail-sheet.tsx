@@ -479,7 +479,18 @@ function writeItemToCart(
     });
   }
   window.localStorage.setItem(NEX_CART_STORAGE_KEY, JSON.stringify(arr));
-  window.dispatchEvent(new CustomEvent("nex-cart-changed"));
+  // Owner-authorised correction 2026-10-30 · `setItem` returning
+  // without throwing is the persistence boundary. The dispatch is
+  // best-effort notification and must not be able to throw out of
+  // this helper, otherwise a successful cart write would be reported
+  // to the caller as a failure (and the user's retry would
+  // double-add the quantity on the already-persisted line).
+  try {
+    window.dispatchEvent(new CustomEvent("nex-cart-changed"));
+  } catch {
+    /* Rare (document teardown). Persistence stands; listeners catch
+       up on next storage event / page refresh. */
+  }
   return arr;
 }
 
@@ -491,36 +502,92 @@ function AddToCartCtaButton({
   shopContext: ShopContext;
 }) {
   const [added, setAdded] = React.useState(false);
+  // C-0 fix 2026-10-30 · honest failure state. The previous
+  // implementation silently swallowed a thrown `writeItemToCart`
+  // and left the UI identical to its idle state, so the user had
+  // no reliable signal that the add actually succeeded. We now
+  // surface failure visibly ("Not added · tap to retry").
+  const [failed, setFailed] = React.useState(false);
+  const [pending, setPending] = React.useState(false);
+  // Synchronous dedupe guard · a fast double-tap must not record
+  // the quantity twice before React has had a chance to render the
+  // pending flag.
+  const busyRef = React.useRef(false);
+
   function onClick() {
+    if (busyRef.current || added) return;
+    busyRef.current = true;
+    setPending(true);
+    setFailed(false);
+
+    let ok = false;
     try {
+      // `writeItemToCart` performs the full read/mutate/setItem
+      // sequence; if any step throws (storage unavailable, quota
+      // exceeded) we fall through with `ok` still false.
       writeItemToCart(product, shopContext);
-      setAdded(true);
-      setTimeout(() => setAdded(false), 1400);
+      ok = true;
     } catch {
-      // localStorage may be disabled · silently no-op.
+      ok = false;
+    }
+
+    setPending(false);
+    if (ok) {
+      setAdded(true);
+      setTimeout(() => {
+        setAdded(false);
+        busyRef.current = false;
+      }, 1400);
+    } else {
+      setFailed(true);
+      setTimeout(() => {
+        setFailed(false);
+        busyRef.current = false;
+      }, 2400);
     }
   }
+
+  const label = failed
+    ? "Not added · tap to retry"
+    : pending
+      ? "Adding…"
+      : added
+        ? "✓ Added"
+        : "Add to cart";
+
   const style: React.CSSProperties = {
     width: "100%",
     padding: "13px 14px",
     borderRadius: 12,
-    background: added
-      ? "linear-gradient(180deg, #22E37A 0%, #16D66B 100%)"
-      : "linear-gradient(180deg, rgba(0,159,239,0.24) 0%, rgba(0,159,239,0.16) 100%)",
-    border: added
-      ? "1px solid rgba(22,214,107,0.55)"
-      : `1px solid ${NEX.cyanSoft}`,
-    color: added ? "#0B0F1A" : NEX.text,
+    background: failed
+      ? "linear-gradient(180deg, #FF4B5C 0%, #C8102E 100%)"
+      : added
+        ? "linear-gradient(180deg, #22E37A 0%, #16D66B 100%)"
+        : "linear-gradient(180deg, rgba(0,159,239,0.24) 0%, rgba(0,159,239,0.16) 100%)",
+    border: failed
+      ? "1px solid rgba(200,16,46,0.65)"
+      : added
+        ? "1px solid rgba(22,214,107,0.55)"
+        : `1px solid ${NEX.cyanSoft}`,
+    color: failed ? "#FFFFFF" : added ? "#0B0F1A" : NEX.text,
     fontSize: 13,
     fontWeight: 700,
     letterSpacing: "0.02em",
-    cursor: "pointer",
+    cursor: pending ? "wait" : "pointer",
+    opacity: pending ? 0.75 : 1,
     fontFamily: "inherit",
     transition: "background 160ms ease, border-color 160ms ease",
   };
   return (
-    <button type="button" onClick={onClick} style={style}>
-      {added ? "✓ Added" : "Add to cart"}
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={pending}
+      aria-label={label}
+      aria-live={failed || added ? "polite" : undefined}
+      style={style}
+    >
+      {label}
     </button>
   );
 }

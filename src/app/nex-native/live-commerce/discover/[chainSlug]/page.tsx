@@ -48,7 +48,7 @@ export default async function DiscoverChainEntryPage({
   const chain = getCategoryChain(chainSlug);
   if (!chain) {
     // Unknown slug · bounce back to the feed landing.
-    redirect("/nex-native/live-commerce/feed?chain-unknown=1");
+    redirect("/nex-native/nex-feed?chain-unknown=1");
   }
 
   const rows = isDevManifestActive()
@@ -65,10 +65,10 @@ export default async function DiscoverChainEntryPage({
     // landing with a marker the UI can surface as "No {chain.label}
     // content yet". The feed page can read `?empty-chain={slug}`.
     redirect(
-      `/nex-native/live-commerce/feed?empty-chain=${encodeURIComponent(chainSlug)}`,
+      `/nex-native/nex-feed?empty-chain=${encodeURIComponent(chainSlug)}`,
     );
   }
 
   const firstId = queue[0];
-  redirect(`/nex-native/videos/${firstId}?chain=${chainSlug}`);
+  redirect(`/nex-native/nex-feed/${firstId}?chain=${chainSlug}`);
 }

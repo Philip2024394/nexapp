@@ -52,69 +52,35 @@ const CYAN = "#00AFFF";
 
 const STORAGE_KEY = "nex-live-feed-prefs-v1";
 
-export type FeedCategoryId =
-  | "ai"
-  | "shopping"
-  | "food"
-  | "travel"
-  | "music"
-  | "dancing"
-  | "work"
-  | "subscriptions"
-  | "gaming"
-  | "education"
-  | "sports"
-  | "news"
-  | "comedy"
-  | "beauty"
-  | "health";
+// Owner-authorised 2026-10-29 · catalogue + types moved to a plain
+// shared module so server-render callers (feed-preferences-cookie)
+// can import the array without hitting the Next.js client-module
+// proxy that made `FEED_CATEGORY_META` non-iterable on SSR. This
+// file re-exports the same symbols so existing client call-sites
+// keep working through the familiar path.
+export {
+  FEED_CATEGORY_META,
+  type FeedCategoryId,
+  type FeedCategoryMeta,
+  type FeedCategoryToggleMap,
+  type OverlayPreference,
+  type LiveFeedPreferencesState,
+} from "@/lib/nex-native/live-feed/feed-categories";
+import {
+  FEED_CATEGORY_META,
+  type FeedCategoryId,
+  type FeedCategoryMeta,
+  type FeedCategoryToggleMap,
+  type OverlayPreference,
+  type LiveFeedPreferencesState,
+} from "@/lib/nex-native/live-feed/feed-categories";
 
-export interface FeedCategoryMeta {
-  readonly id: FeedCategoryId;
-  readonly label: string;
-  readonly description: string;
-  /** Owner's two-tier design · "quick" renders above the fold,
-   *  "expanded" renders only after the viewer taps "Show more". */
-  readonly tier: "quick" | "expanded";
-}
-
-/** Owner-sealed catalogue · 15 categories · 4 quick + 11 expanded.
- *  Mirrors the ordering in the owner's 2026-10-25 brief. */
-export const FEED_CATEGORY_META: ReadonlyArray<FeedCategoryMeta> = [
-  // Quick tier · the 4 the owner explicitly called out as always-visible.
-  { id: "ai",          label: "AI-generated",        description: "AI-created videos and broadcasts", tier: "quick" },
-  { id: "shopping",    label: "Shopping & Business", description: "Products, shops and live selling", tier: "quick" },
-  { id: "food",        label: "Food",                description: "Cooking, meals and food businesses", tier: "quick" },
-  { id: "travel",      label: "Travel",              description: "Destinations and travel experiences", tier: "quick" },
-  // Expanded tier.
-  { id: "music",         label: "Music",                description: "Music and performances", tier: "expanded" },
-  { id: "dancing",       label: "Dancing",              description: "Dance and choreography", tier: "expanded" },
-  { id: "work",          label: "Work & Online Services", description: "Professional work and services", tier: "expanded" },
-  { id: "subscriptions", label: "Subscriptions",        description: "Creators and subscription content", tier: "expanded" },
-  { id: "gaming",        label: "Gaming",               description: "Games and live gameplay", tier: "expanded" },
-  { id: "education",     label: "Education",            description: "Learning, tutorials and explainers", tier: "expanded" },
-  { id: "sports",        label: "Sports",               description: "Fitness, workouts and events", tier: "expanded" },
-  { id: "news",          label: "News & Current Affairs", description: "News, politics and current events", tier: "expanded" },
-  { id: "comedy",        label: "Comedy",               description: "Jokes, sketches and stand-up", tier: "expanded" },
-  { id: "beauty",        label: "Beauty & Lifestyle",   description: "Makeup, fashion and lifestyle", tier: "expanded" },
-  { id: "health",        label: "Health & Fitness",     description: "Wellness and health advice", tier: "expanded" },
-];
-
-export type FeedCategoryToggleMap = Record<FeedCategoryId, boolean>;
-
-/** Owner directive 2026-10-25 · tri-state control for creator-added
- *  text overlays on top of the video pixels. This is DIFFERENT from
- *  NEX's own chrome (product cards, header labels, AI chip) · the
- *  control affects ONLY the creator's in-video promotional text. */
-export type OverlayPreference = "all" | "reduce" | "hide";
-
-/** Persisted state shape (v2 · adds `overlayPref` next to `toggles`).
- *  Old v1 payloads were a flat toggle map · the reader below handles
- *  that shape transparently so nothing resets on upgrade. */
-export interface LiveFeedPreferencesState {
-  readonly toggles: FeedCategoryToggleMap;
-  readonly overlayPref: OverlayPreference;
-}
+// Re-export the state shape types from the shared plain module so
+// existing callers that imported them from `_live-feed-preferences`
+// keep working. Full doc lives alongside the data at
+// `@/lib/nex-native/live-feed/feed-categories`. The re-exports and
+// the local imports (above, next to FEED_CATEGORY_META) together
+// preserve both the public API and the internal references.
 
 /** Default · every category ALLOWED. Opt-out model. First-time users
  *  see everything · they turn OFF the categories they don't want. */

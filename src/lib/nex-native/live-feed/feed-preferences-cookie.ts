@@ -42,13 +42,18 @@
 // parse honest and the shape identical to what the component already
 // writes to localStorage · zero translation surface.
 
+// Owner-authorised 2026-10-29 · imports moved from the client
+// component to the plain shared module so RSC server renders can
+// iterate `FEED_CATEGORY_META` (previous import routed through a
+// "use client" module and surfaced as a non-iterable proxy on
+// server render → 500 on /nex-native/live-commerce/feed).
 import type {
   FeedCategoryId,
   FeedCategoryToggleMap,
   LiveFeedPreferencesState,
   OverlayPreference,
-} from "@/components/nex-native/live-commerce/_live-feed-preferences";
-import { FEED_CATEGORY_META } from "@/components/nex-native/live-commerce/_live-feed-preferences";
+} from "@/lib/nex-native/live-feed/feed-categories";
+import { FEED_CATEGORY_META } from "@/lib/nex-native/live-feed/feed-categories";
 
 /** The exact name clients + server share. Changing this value is a
  *  BREAKING CHANGE · existing cookies silently stop working on both

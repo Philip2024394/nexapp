@@ -39,8 +39,10 @@
 //     visible on non-feed surfaces · the chip is rendered by the
 //     viewer header independently of this filter.
 
-import type { FeedCategoryId } from "@/components/nex-native/live-commerce/_live-feed-preferences";
-import type { LiveFeedPreferencesState } from "@/components/nex-native/live-commerce/_live-feed-preferences";
+// Owner-authorised 2026-10-29 · imports moved to the plain shared
+// module (see sibling cookie module for full rationale).
+import type { FeedCategoryId } from "@/lib/nex-native/live-feed/feed-categories";
+import type { LiveFeedPreferencesState } from "@/lib/nex-native/live-feed/feed-categories";
 
 /** The minimal video shape this predicate needs. Keeps the predicate
  *  decoupled from the full `UploadedVideoRow` so tests can pass

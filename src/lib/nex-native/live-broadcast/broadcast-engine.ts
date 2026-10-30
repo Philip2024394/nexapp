@@ -137,6 +137,23 @@ export class LiveBroadcastEngine {
     return this.cameraOff;
   }
 
+  /** Owner directive 2026-10-29 (NEX Music live wiring) · forward a
+   *  replacement audio track to every live BroadcastPeer. The caller
+   *  (NEX Music overlay) builds a WebAudio-mixed MediaStream and
+   *  hands its audio track here · viewers continue receiving one
+   *  audio track per peer with mic + music mixed. The engine's own
+   *  `localStream` reference is left alone · it is still the mic-
+   *  only capture used for the local self-view and preview. */
+  async replaceAudioTrack(newTrack: MediaStreamTrack): Promise<void> {
+    for (const peer of this.peers.values()) {
+      try {
+        await peer.replaceAudioTrack(newTrack);
+      } catch {
+        /* best-effort per peer */
+      }
+    }
+  }
+
   async start(opts: LiveBroadcastEngineStartOptions): Promise<void> {
     if (this.state !== "idle") return;
     this.sessionId = opts.sessionId;

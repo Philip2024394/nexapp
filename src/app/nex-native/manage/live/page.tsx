@@ -71,7 +71,7 @@ export default async function Page({ searchParams }: PageProps) {
             <p className="text-xs text-neutral-500">
               <Link href="/nex-native/manage" className="underline">← back to manage</Link>
               {" · "}
-              <Link href="/nex-native/live" className="underline">public Live feed</Link>
+              <Link href="/nex-native/nex-feed" className="underline">public Live feed</Link>
               {" · "}
               <Link href={`/nex-native/${business.slug}`} className="underline">your NEX</Link>
             </p>

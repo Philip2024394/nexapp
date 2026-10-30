@@ -25,17 +25,30 @@ import {
   type MockContact,
 } from "@/app/nex-native/free-chat/_contact-picker-data";
 
+// Owner directive 2026-10-30 (iteration · reverted) · "change the
+// slider back to color same as chat nex back ground" · palette
+// returns to the dark NEX chat-free page (`src/app/nex-native/free-
+// chat/page.tsx:63 bg: "#020914"`). The message-center light theme
+// is retired here; share sheet is dark again. Text + border swap
+// back to the dark-chrome variants (white text, white-at-low-alpha
+// borders).
 const NEX = {
   bgNavy: "#050F1E",
   bgDeep: "#020914",
-  bgSheet: "#0E1526",
+  bgSheet: "#020914",
   text: "#F2F5F8",
   textDim: "#8BA9D1",
   textMute: "#526B89",
   cyan: "#00AFFF",
-  border: "rgba(255,255,255,0.12)",
+  border: "rgba(255, 255, 255, 0.12)",
   whatsapp: "#25D366",
 } as const;
+
+// Owner directive 2026-10-30 · "here is the buttons for whats app ·
+// nex chat and share" · glossy neon icon atlas shipped at
+// `/public/nex-share/glossy-neon-icons.png`. One 3-up PNG · each
+// icon mapped by background-position below. 48 × 48 button size.
+const SHARE_ICON_ATLAS_URL = "/nex-share/glossy-neon-icons.png";
 
 export type VideoShareEvidence = "nex-contact" | "whatsapp" | "copy-link";
 
@@ -125,7 +138,12 @@ export function VideoShareSheet(
           border: "none",
           padding: 0,
           cursor: "pointer",
-          zIndex: 10,
+          // Owner directive 2026-10-30 · "slider for share opens on
+          // front, not behind player". Scrim lifted 10 → 70 so it
+          // paints ABOVE the music player (z=23), actions stack
+          // (z=24), description bar (z=28), and the preview Edit/
+          // Live floating cluster. Sheet one above the scrim.
+          zIndex: 70,
         }}
       />
       {/* Sheet · absolute inside the viewer main · slides up */}
@@ -149,7 +167,7 @@ export function VideoShareSheet(
           display: "flex",
           flexDirection: "column",
           gap: 10,
-          zIndex: 11,
+          zIndex: 71,
           animation: "nexVideoShareSlideUp 220ms ease-out",
           fontFamily:
             "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
@@ -161,14 +179,14 @@ export function VideoShareSheet(
             to   { transform: translateY(0);    opacity: 1; }
           }
         `}</style>
-        {/* Grab handle */}
+        {/* Grab handle · white on the dark navy panel. */}
         <div
           aria-hidden
           style={{
             width: 44,
             height: 4,
             borderRadius: 2,
-            background: "rgba(255,255,255,0.22)",
+            background: "rgba(255, 255, 255, 0.22)",
             alignSelf: "center",
             marginBottom: 4,
           }}
@@ -216,12 +234,17 @@ export function VideoShareSheet(
                 </div>
               </div>
             </button>
-            {/* Copy link · doubles as the confirmation surface */}
+            {/* Copy link · doubles as the confirmation surface.
+                Owner directive 2026-10-30 · "copy link edge left add
+                purple color" · left-edge accent is now the sealed
+                NEX purple that matches the glossy share icon's hue.
+                The copied state briefly flips to green as success
+                feedback. */}
             <button
               type="button"
               data-nex-video-share-option-copy-link
               onClick={handleCopy}
-              style={shareOptionStyle(copied ? "#16D66B" : NEX.textDim)}
+              style={shareOptionStyle(copied ? "#16D66B" : "#A855F7")}
             >
               <ShareIcon kind={copied ? "check" : "link"} />
               <div style={shareOptionTextStyle}>
@@ -361,8 +384,9 @@ const shareOptionStyle = (accent: string): React.CSSProperties => ({
   alignItems: "center",
   gap: 12,
   padding: "11px 12px",
-  background: "rgba(255,255,255,0.04)",
-  border: `1px solid rgba(255,255,255,0.08)`,
+  // Light overlay on the dark navy sheet · subtle card lift.
+  background: "rgba(255, 255, 255, 0.04)",
+  border: `1px solid rgba(255, 255, 255, 0.08)`,
   borderLeft: `3px solid ${accent}`,
   borderRadius: 12,
   color: "#F2F5F8",
@@ -370,7 +394,7 @@ const shareOptionStyle = (accent: string): React.CSSProperties => ({
     "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
   cursor: "pointer",
   textAlign: "left",
-  minHeight: 56,
+  minHeight: 64,
 });
 
 const shareOptionTextStyle: React.CSSProperties = {
@@ -393,79 +417,37 @@ const shareOptionSubtitleStyle: React.CSSProperties = {
   color: "#8BA9D1",
 };
 
+// Owner directive 2026-10-30 · ShareIcon now renders the glossy neon
+// atlas at `/public/nex-share/glossy-neon-icons.png`. Atlas layout
+// (3-up horizontal, equal widths):
+//   · slot 0 (background-position: 0% 50%)   = green WhatsApp
+//   · slot 1 (background-position: 50% 50%)  = blue/purple NEX chat
+//   · slot 2 (background-position: 100% 50%) = pink/purple share
+// The "check" (post-copy) + "link" (default copy) kinds both reuse
+// the share slot so the row's icon doesn't flip visually mid-tap ·
+// the title text handles the "Copied!" vs "Copy link" affordance.
 function ShareIcon({
   kind,
 }: {
   readonly kind: "nex" | "whatsapp" | "link" | "check";
 }): React.JSX.Element {
-  const common = {
-    width: 28,
-    height: 28,
-    display: "inline-flex" as const,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-    fontSize: 15,
-    fontWeight: 900 as const,
-    borderRadius: 8,
-    flexShrink: 0,
-  };
-  if (kind === "nex") {
-    return (
-      <span
-        aria-hidden
-        style={{
-          ...common,
-          background:
-            "linear-gradient(135deg, #00AFFF 0%, #0074ff 100%)",
-          color: "#FFFFFF",
-        }}
-      >
-        NEX
-      </span>
-    );
-  }
-  if (kind === "whatsapp") {
-    return (
-      <span
-        aria-hidden
-        style={{
-          ...common,
-          background: "#25D366",
-          color: "#FFFFFF",
-          fontSize: 18,
-        }}
-      >
-        ✓
-      </span>
-    );
-  }
-  if (kind === "check") {
-    return (
-      <span
-        aria-hidden
-        style={{
-          ...common,
-          background: "rgba(22,214,107,0.18)",
-          color: "#16D66B",
-          fontSize: 16,
-          border: "1px solid rgba(22,214,107,0.4)",
-        }}
-      >
-        ✓
-      </span>
-    );
-  }
+  const slot = kind === "whatsapp" ? 0 : kind === "nex" ? 1 : 2;
+  const positionX = slot === 0 ? "0%" : slot === 1 ? "50%" : "100%";
   return (
     <span
       aria-hidden
+      data-nex-video-share-icon-kind={kind}
       style={{
-        ...common,
-        background: "rgba(255,255,255,0.08)",
-        color: "#F2F5F8",
-        fontSize: 16,
+        width: 48,
+        height: 48,
+        flexShrink: 0,
+        backgroundImage: `url(${SHARE_ICON_ATLAS_URL})`,
+        // 300% × 100% stretches the atlas so each 1/3 slot fits the
+        // container width exactly · positionX picks which slot shows.
+        backgroundSize: "300% 100%",
+        backgroundPosition: `${positionX} 50%`,
+        backgroundRepeat: "no-repeat",
       }}
-    >
-      ⎘
-    </span>
+    />
   );
 }

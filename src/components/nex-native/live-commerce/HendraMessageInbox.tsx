@@ -219,17 +219,27 @@ export function HendraMessageInbox(
   // Owner directive 2026-10-27 · "move message icon and pill to right
   // side of magnifying glass in header" · the 💬 trigger is now a
   // flex child of the header's icon row rather than a floating
-  // `position: absolute` chip. The target slot is created by
-  // `_video-viewer-client.tsx` as `[data-nex-video-viewer-header-
-  // messages-slot]`. We portal into it so the trigger lives in the
-  // real DOM order (search → messages → 3-dot drawer) while this
-  // component keeps ownership of the inbox state.
+  // `position: absolute` chip. Owner directive 2026-10-30 · the same
+  // component now also serves the music surfaces, so the selector
+  // list is widened to cover every known header-messages slot. The
+  // first matching element wins · unmatched surfaces simply never
+  // render the trigger (the component becomes a no-op).
+  // Selector priority (first match wins):
+  //   1. Music right-rail inbox slot (owner directive 2026-10-30 ·
+  //      moved out of header so long names don't collide).
+  //   2. Video viewer header slot (sealed Live surface placement).
+  // The preview + feed music header slots were retired on 2026-10-30
+  // when the inbox moved to the right rail.
   const [headerSlot, setHeaderSlot] = React.useState<HTMLElement | null>(null);
   React.useEffect(() => {
     if (typeof document === "undefined") return;
-    const el = document.querySelector<HTMLElement>(
-      "[data-nex-video-viewer-header-messages-slot]",
-    );
+    const el =
+      document.querySelector<HTMLElement>(
+        "[data-nex-music-right-rail-inbox-slot]",
+      ) ??
+      document.querySelector<HTMLElement>(
+        "[data-nex-video-viewer-header-messages-slot]",
+      );
     setHeaderSlot(el);
   }, []);
 

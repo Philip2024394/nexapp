@@ -359,7 +359,7 @@ function PlusPanel({ onClose }: { onClose: () => void }) {
             onClose={onClose}
           />
           <PlusTile
-            href="/nex-native/live"
+            href="/nex-native/nex-feed"
             icon={<LiveIcon />}
             label="Live post"
             onClose={onClose}

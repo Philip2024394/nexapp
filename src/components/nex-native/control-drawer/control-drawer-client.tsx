@@ -265,20 +265,14 @@ const YOUR_BUSINESS_ROWS: ReadonlyArray<MenuRow> = [
     key: "go-live",
     label: "Nex Live",
     subtitle: "Watch live · tap for full-screen video with controls",
-    /* Owner directive 2026-10-24 (R3) · the drawer entry now routes
-       to the LANDING page at /nex-native/live-commerce which picks
-       the first candidate and redirects to a full-bleed playing
-       video with the footer buttons. Routing order (see landing
-       page.tsx):
-         1 · open Live session → /live-commerce/[sessionId]
-         2 · uploaded video → /videos/[videoId]
-         3 · empty state → /live-commerce/feed
-       Keeps the drawer entry opening the Live SCREEN with chrome,
-       not a list. Direct routes still work:
+    /* Owner directive 2026-10-30 · "this is the only nex feed on the
+       app". The drawer entry routes to /nex-native/nex-feed · the
+       single central NEX feed (full-bleed vertical-swipe reel). The
+       former forks (/live, /live-commerce/feed, /videos/) have been
+       deleted. Direct broadcaster/viewer routes still exist:
          /live-commerce/enter-broadcast-room  → broadcaster surface
-         /live-commerce/feed     → discovery list fallback
-         /videos/[videoId]       → uploaded-video viewer */
-    href: "/nex-native/live-commerce",
+         /live-commerce/[sessionId]           → open Live viewer */
+    href: "/nex-native/nex-feed",
     /* Owner directive 2026-10-24 · "unlock go live in side drawer".
        The drawer no longer renders a lock icon on this row. The
        underlying page at /nex-native/live-commerce/enter-broadcast-room keeps its
@@ -746,7 +740,7 @@ const QUICK_ACCESS_ROWS: ReadonlyArray<{
   readonly href: string;
   readonly glyph: string;
 }> = [
-  { key: "live",    label: "Live",    href: "/nex-native/live-commerce", glyph: "●" },
+  { key: "live",    label: "Live",    href: "/nex-native/nex-feed",      glyph: "●" },
   { key: "vault",   label: "Vault",   href: "/nex-native/vault",         glyph: "🔒" },
   { key: "socials", label: "Socials", href: "/nex-native/nex-socials/intro",   glyph: "👥" },
 ];

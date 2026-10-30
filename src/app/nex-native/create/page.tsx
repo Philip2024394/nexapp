@@ -75,7 +75,7 @@ const CARDS: readonly CreateCard[] = [
   { id: "product-video",       label: "Product Video",      blurb: "Add to shop",   glyph: "🛒", href: null },
   { id: "entertainment-video", label: "Entertainment Video", blurb: "Video post",   glyph: "🎥", href: null },
   { id: "image",               label: "Image",              blurb: "Photo post",    glyph: "🖼️", href: null },
-  { id: "music",               label: "Music",              blurb: "Playlist",      glyph: "🎵", href: null },
+  { id: "music",               label: "Music",              blurb: "Upload tracks", glyph: "🎵", href: "/nex-native/create/upload-music" },
 ] as const;
 
 // Owner directive 2026-10-28 · "golive red dark dot with ping". Dark

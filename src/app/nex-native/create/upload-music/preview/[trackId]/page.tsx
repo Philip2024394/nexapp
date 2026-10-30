@@ -1,0 +1,278 @@
+// src/app/nex-native/create/upload-music/preview/[trackId]/page.tsx
+//
+// Owner-authorised 2026-10-29 (preview-first flow) · server shell
+// for the post-upload preview page. Fetches the track row, mints
+// signed URLs for cover + background + audio, hands them to the
+// client component which renders a Live-surface mock plus the
+// NexMusicPlayerOverlay. The author then chooses Edit or Go Live.
+
+import { notFound, redirect } from "next/navigation";
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
+import {
+  getTrackById,
+  bumpTrackViewCount,
+  hasLikedTrack,
+  listTracksByOwner,
+} from "@/lib/nex-native/music/music-repository";
+import { getMusicStorageAdapter } from "@/lib/nex-native/music/storage-adapter";
+import { getProfileByAccountId } from "@/lib/nex-native/account-profile-service";
+import { PreviewClient } from "./_preview-client";
+import type { NexMusicTrackRow } from "@/lib/nex-native/music/types";
+
+export const metadata = { title: "Preview · NEX Music" };
+
+export default async function PreviewPage({
+  params,
+  searchParams,
+}: {
+  readonly params: Promise<{ readonly trackId: string }>;
+  readonly searchParams: Promise<{ readonly edit?: string }>;
+}): Promise<React.JSX.Element> {
+  const { trackId } = await params;
+  const { edit } = await searchParams;
+  const startInEditMode = edit === "1";
+  const session = await resolveSessionWithDevOverride();
+  if (!session) {
+    redirect(
+      `/nex-native/sign-in?next=${encodeURIComponent(`/nex-native/create/upload-music/preview/${trackId}`)}`,
+    );
+  }
+  const track = await getTrackById(trackId);
+  if (!track || track.owner_account_id !== session.account.id) {
+    notFound();
+  }
+
+  // Owner-authorised 2026-10-29 (library card metrics) · bump view
+  // counter on every preview load. Fire-and-forget · failures do
+  // not block the render.
+  void bumpTrackViewCount({
+    trackId,
+    ownerAccountId: session.account.id,
+  }).catch(() => undefined);
+
+  const likedByMe = await hasLikedTrack({
+    trackId,
+    likerAccountId: session.account.id,
+  });
+  const storage = getMusicStorageAdapter();
+  let audioUrl: string | null = null;
+  let coverUrl: string | null = null;
+  let backgroundUrl: string | null = null;
+  if (track.media_url) {
+    const s = await storage.getSignedReadUrl({
+      reference: track.media_url,
+      ownerAccountId: session.account.id,
+      expiresInSeconds: 3600,
+    });
+    audioUrl = s.signedUrl;
+  }
+  if (track.cover_image_url && track.cover_image_url.startsWith("fs://")) {
+    const s = await storage.getSignedReadUrl({
+      reference: track.cover_image_url,
+      ownerAccountId: session.account.id,
+      expiresInSeconds: 3600,
+    });
+    coverUrl = s.signedUrl;
+  } else if (track.cover_image_url) {
+    coverUrl = track.cover_image_url;
+  }
+  if (
+    track.background_image_url &&
+    track.background_image_url.startsWith("fs://")
+  ) {
+    const s = await storage.getSignedReadUrl({
+      reference: track.background_image_url,
+      ownerAccountId: session.account.id,
+      expiresInSeconds: 3600,
+    });
+    backgroundUrl = s.signedUrl;
+  } else if (track.background_image_url) {
+    backgroundUrl = track.background_image_url;
+  }
+
+  // Owner-authorised 2026-10-29 · broadcaster chip on the music
+  // overlay reads from the account profile (nex_account_profile).
+  // Failure is non-fatal · the overlay falls back to its "NEX Music"
+  // label when the avatar is missing.
+  let selfAvatarUrl: string | null = null;
+  try {
+    const profile = await getProfileByAccountId(session.account.id);
+    selfAvatarUrl = profile?.avatar_url ?? null;
+  } catch {
+    selfAvatarUrl = null;
+  }
+
+  // Owner-authorised 2026-10-29 (expanded cycle · next + prev
+  // siblings include PRIVATE tracks) · the preview surface is
+  // Hendra's own self-view · her private tracks are legitimately
+  // part of her up-next cycle. `removed` tracks remain filtered
+  // out. Visibility filter widened from `=== "shared_live"` to
+  // `!== "removed"` so e.g. Hotel California (currently private)
+  // appears in the next-up chronological wrap.
+  const siblingTracks = await listTracksByOwner(session.account.id);
+  const chronologicalCycle = siblingTracks
+    .filter((t) => t.visibility !== "removed")
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
+  const currentChronoIdx = chronologicalCycle.findIndex(
+    (t) => t.id === track.id,
+  );
+  let nextTrack: NexMusicTrackRow | null = null;
+  let prevTrack: NexMusicTrackRow | null = null;
+  if (currentChronoIdx !== -1 && chronologicalCycle.length > 1) {
+    nextTrack =
+      chronologicalCycle[
+        (currentChronoIdx + 1) % chronologicalCycle.length
+      ] ?? null;
+    prevTrack =
+      chronologicalCycle[
+        (currentChronoIdx - 1 + chronologicalCycle.length) %
+          chronologicalCycle.length
+      ] ?? null;
+  } else if (currentChronoIdx === -1) {
+    // Current track is removed (should not happen · getTrackById
+    // returns null first) · fall back to oldest live-worthy sibling.
+    nextTrack = chronologicalCycle[0] ?? null;
+  }
+  let nextCoverUrl: string | null = null;
+  let nextBackgroundUrl: string | null = null;
+  if (nextTrack) {
+    try {
+      if (
+        nextTrack.cover_image_url &&
+        nextTrack.cover_image_url.startsWith("fs://")
+      ) {
+        const s = await storage.getSignedReadUrl({
+          reference: nextTrack.cover_image_url,
+          ownerAccountId: session.account.id,
+          expiresInSeconds: 3600,
+        });
+        nextCoverUrl = s.signedUrl;
+      } else if (nextTrack.cover_image_url) {
+        nextCoverUrl = nextTrack.cover_image_url;
+      }
+      if (
+        nextTrack.background_image_url &&
+        nextTrack.background_image_url.startsWith("fs://")
+      ) {
+        const s = await storage.getSignedReadUrl({
+          reference: nextTrack.background_image_url,
+          ownerAccountId: session.account.id,
+          expiresInSeconds: 3600,
+        });
+        nextBackgroundUrl = s.signedUrl;
+      } else if (nextTrack.background_image_url) {
+        nextBackgroundUrl = nextTrack.background_image_url;
+      }
+    } catch {
+      /* signing failures are non-fatal · card falls back to text */
+    }
+  }
+
+  // World-class preload path · prev track covers are signed here so the
+  // client can hint-preload them (link rel=preload). Symmetric to the
+  // next-track block above. Signing failures stay non-fatal.
+  let prevCoverUrl: string | null = null;
+  let prevBackgroundUrl: string | null = null;
+  if (prevTrack) {
+    try {
+      if (
+        prevTrack.cover_image_url &&
+        prevTrack.cover_image_url.startsWith("fs://")
+      ) {
+        const s = await storage.getSignedReadUrl({
+          reference: prevTrack.cover_image_url,
+          ownerAccountId: session.account.id,
+          expiresInSeconds: 3600,
+        });
+        prevCoverUrl = s.signedUrl;
+      } else if (prevTrack.cover_image_url) {
+        prevCoverUrl = prevTrack.cover_image_url;
+      }
+      if (
+        prevTrack.background_image_url &&
+        prevTrack.background_image_url.startsWith("fs://")
+      ) {
+        const s = await storage.getSignedReadUrl({
+          reference: prevTrack.background_image_url,
+          ownerAccountId: session.account.id,
+          expiresInSeconds: 3600,
+        });
+        prevBackgroundUrl = s.signedUrl;
+      } else if (prevTrack.background_image_url) {
+        prevBackgroundUrl = prevTrack.background_image_url;
+      }
+    } catch {
+      /* signing failures are non-fatal · preload hint simply skipped */
+    }
+  }
+
+  // Owner-authorised 2026-10-30 (Main Feed → Creator Music feature) ·
+  // precompute the full eligible-tracks list for the library overlay.
+  // Reuses `chronologicalCycle` (already filtered to `visibility !==
+  // "removed"`) so there is one single source of truth for "what
+  // tracks are shown to this viewer." Covers are signed owner-scoped
+  // (viewer == owner on this surface — same auth model as the audio
+  // + background signing above). When the sealed D1 public-listening
+  // primitive lands, the signing calls here would swap to the public
+  // path; the overlay component contract does not change.
+  // Owner-authorised 2026-10-30 · library overlay shows most popular
+  // tracks first. Popularity score = like_count + share_count (the
+  // signals the owner called out · "most likes or shares"). view_count
+  // acts as a tiebreaker so an older track with many plays still beats
+  // a newer silent one, and title keeps the order deterministic when
+  // all counts are equal.
+  const popularityOrdered = [...chronologicalCycle].sort((a, b) => {
+    const scoreA = a.like_count + a.share_count;
+    const scoreB = b.like_count + b.share_count;
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    if (b.view_count !== a.view_count) return b.view_count - a.view_count;
+    return a.title.localeCompare(b.title);
+  });
+  const libraryTracks = await Promise.all(
+    popularityOrdered.map(async (t) => {
+      let signedCover: string | null = null;
+      if (t.cover_image_url && t.cover_image_url.startsWith("fs://")) {
+        try {
+          const s = await storage.getSignedReadUrl({
+            reference: t.cover_image_url,
+            ownerAccountId: session.account.id,
+            expiresInSeconds: 3600,
+          });
+          signedCover = s.signedUrl;
+        } catch {
+          signedCover = null;
+        }
+      } else if (t.cover_image_url) {
+        signedCover = t.cover_image_url;
+      }
+      return {
+        id: t.id,
+        title: t.title,
+        artist: t.artist,
+        coverUrl: signedCover,
+        viewCount: t.view_count,
+      };
+    }),
+  );
+
+  return (
+    <PreviewClient
+      track={track}
+      audioUrl={audioUrl}
+      coverUrl={coverUrl}
+      backgroundUrl={backgroundUrl}
+      selfDisplayName={session.account.display_name ?? "You"}
+      selfAvatarUrl={selfAvatarUrl}
+      selfNexHandle={session.account.nex_handle ?? null}
+      startInEditMode={startInEditMode}
+      initiallyLiked={likedByMe}
+      nextTrack={nextTrack}
+      nextCoverUrl={nextCoverUrl}
+      nextBackgroundUrl={nextBackgroundUrl}
+      prevTrack={prevTrack}
+      prevCoverUrl={prevCoverUrl}
+      prevBackgroundUrl={prevBackgroundUrl}
+      libraryTracks={libraryTracks}
+    />
+  );
+}

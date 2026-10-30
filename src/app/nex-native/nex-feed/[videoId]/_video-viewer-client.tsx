@@ -1,6 +1,6 @@
 "use client";
 
-// src/app/nex-native/videos/[videoId]/_video-viewer-client.tsx
+// src/app/nex-native/nex-feed/[videoId]/_video-viewer-client.tsx
 //
 // Full-bleed uploaded-video viewer · swipeable (up/down) across
 // sibling videos · reuses the Live viewer's Like/View Shop/Share/
@@ -40,6 +40,7 @@ import {
   attachHlsPlayer,
   isHlsSource,
 } from "@/lib/nex-native/video-playback/attach-hls-player";
+import { DevViewerBadge } from "@/components/nex-native/music/DevViewerBadge";
 
 const NEX = {
   bg: "#020914",
@@ -90,6 +91,7 @@ export function VideoViewerClient({
   videoHrefPrefix,
   libraryVideos,
   broadcasterProductsOverride,
+  devViewerBadge,
 }: {
   readonly video: UploadedVideoRow;
   readonly publicUrl: string;
@@ -166,6 +168,10 @@ export function VideoViewerClient({
    *  Products pill in the ⋮ panel browses that catalogue · for both
    *  viewer and broadcaster paths. */
   readonly broadcasterProductsOverride?: ReadonlyArray<import("@/components/nex-native/live-commerce/LiveViewerFooter").FooterFeaturedProduct>;
+  /** Owner-authorised 2026-10-30 · dev-only session chip. Null in
+   *  production. "owner" → yellow · "viewer" → blue. Matches the
+   *  music surface so dev can tell at a glance who's watching. */
+  readonly devViewerBadge?: "owner" | "viewer" | null;
 }): React.JSX.Element {
   const router = useRouter();
   const [isLiked, setIsLiked] = React.useState(false);
@@ -254,7 +260,7 @@ export function VideoViewerClient({
     (id: string): string =>
       videoHrefPrefix
         ? `${videoHrefPrefix}${encodeURIComponent(id)}`
-        : `/nex-native/videos/${id}${chainQueryParam}`,
+        : `/nex-native/nex-feed/${id}${chainQueryParam}`,
     [chainQueryParam, videoHrefPrefix],
   );
 
@@ -635,8 +641,8 @@ export function VideoViewerClient({
 
   const shareUrl =
     typeof window !== "undefined"
-      ? `${window.location.origin}/nex-native/videos/${video.id}`
-      : `/nex-native/videos/${video.id}`;
+      ? `${window.location.origin}/nex-native/nex-feed/${video.id}`
+      : `/nex-native/nex-feed/${video.id}`;
 
   return (
     <>
@@ -1524,6 +1530,7 @@ export function VideoViewerClient({
         <VideoCommentsOverlay comments={localComments} />
       )}
     </main>
+    {devViewerBadge && <DevViewerBadge kind={devViewerBadge} />}
     </>
   );
 }

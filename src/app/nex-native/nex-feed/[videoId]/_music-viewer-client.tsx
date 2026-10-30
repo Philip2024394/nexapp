@@ -1,0 +1,602 @@
+"use client";
+
+// src/app/nex-native/nex-feed/[videoId]/_music-viewer-client.tsx
+//
+// Owner-authorised 2026-10-30 (iteration C) · "the page should be 100%
+// same as hendra preview page music" supersedes the four-item overlay
+// list from iteration B · the LiveViewerFooter / BroadcasterLibrarySheet
+// / VideoCommentsOverlay are intentionally NOT mounted here, because:
+//   · The preview page does not have a bottom LiveViewerFooter — it uses
+//     `MusicActionsStack` on the right rail for like + share. Mounting a
+//     bottom composer broke visual parity (3-dot and heart appeared at
+//     the top of the composer while the actual composer field + author
+//     avatar were obscured by the music player overlay).
+//   · BroadcasterLibrarySheet is video-shaped (duration, played-at,
+//     play count). The music-native equivalent is `MusicLibraryOverlay`,
+//     which the shell already mounts via its `library` prop.
+//   · VideoCommentsOverlay has no DB fan-out yet; preview surface omits
+//     it, so the feed slide matches.
+//
+// Chrome shipped (parity with preview page):
+//   · Shell background + rotating-avatar top header + NexMusicPlayerOverlay
+//     + Up-Next banner + MusicLibraryOverlay (via MusicPostShell).
+//   · Right-rail MusicActionsStack with like + share wired to the sealed
+//     `toggleMusicTrackLikeAction` / `recordMusicTrackShareAction`.
+//   · Top-right LiveSideDrawer (same component the preview uses).
+//   · Top-right search icon (opens CategoryGridSheet in viewer context —
+//     intentional divergence from preview, which routes to the owner's
+//     upload-music library; viewer category tiles fit this surface
+//     better than an owner-only route).
+//
+// Sealed gates preserved:
+//   · Gate 1 (pointer-swipe consistency) · pointer start/up/cancel +
+//     horizontal-dominant guard + interactive-descendant guard + nav-
+//     lock safety timer.
+//   · Gate 2 (minimum wheel safety) · 120 ms settle + descendant guard.
+
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { CategoryGridSheet } from "@/components/nex-native/live-commerce/CategoryGridSheet";
+import { HendraMessageInbox } from "@/components/nex-native/live-commerce/HendraMessageInbox";
+import { LiveSideDrawer } from "@/components/nex-native/live-commerce/LiveSideDrawer";
+import { VideoShareSheet } from "@/components/nex-native/live-commerce/VideoShareSheet";
+import { DevViewerBadge } from "@/components/nex-native/music/DevViewerBadge";
+import { MusicActionsStack } from "@/components/nex-native/music/MusicActionsStack";
+import { MusicDescriptionAffordance } from "@/components/nex-native/music/MusicDescriptionAffordance";
+import { MusicPostShell } from "@/components/nex-native/music/MusicPostShell";
+import {
+  toggleMusicTrackLikeAction,
+  recordMusicTrackShareAction,
+} from "@/app/nex-native/create/upload-music/_actions";
+import type { MusicFeedEntry } from "@/lib/nex-native/music/active-music-feed-reader";
+import type { NexMusicTrackRow } from "@/lib/nex-native/music/types";
+
+const SWIPE_THRESHOLD_PX = 60;
+const NAV_LOCK_SAFETY_MS = 1500;
+
+export interface MusicViewerLibraryTrack {
+  readonly id: string;
+  readonly title: string;
+  readonly artist: string | null;
+  readonly coverUrl: string | null;
+  readonly viewCount: number;
+}
+
+export interface MusicViewerClientProps {
+  readonly entry: MusicFeedEntry;
+  readonly trackRow: NexMusicTrackRow | null;
+  readonly libraryTracks: readonly MusicViewerLibraryTrack[];
+  readonly feedEntryId: string;
+  readonly siblingIds: readonly string[];
+  readonly nextId: string | null;
+  readonly prevId: string | null;
+  /** Server-resolved viewer id. When equal to the track owner the
+   *  message icon is hidden ("can't message yourself"). Null = guest
+   *  or unresolved session · the icon still renders and the invite-
+   *  target action handles the honest guest + self cases on submit. */
+  readonly viewerAccountId: string | null;
+  /** Owner-authorised 2026-10-30 · prev/next track ids within the
+   *  creator's own chronological music cycle. Used by the in-player
+   *  prev/next arrows so they walk the creator's songs (not the mixed
+   *  feed). Null when the creator has only one eligible track. */
+  readonly prevOwnerTrackId: string | null;
+  readonly nextOwnerTrackId: string | null;
+  /** Owner-authorised 2026-10-30 · next-track metadata for the
+   *  Up-Next banner. Rendered when ≥ 30 s remain in the current
+   *  song (parity with preview page). All three can be null when
+   *  the owner has only one eligible track. */
+  readonly nextOwnerTrack: NexMusicTrackRow | null;
+  readonly nextOwnerCoverUrl: string | null;
+  readonly nextOwnerBackgroundUrl: string | null;
+  /** Owner-authorised 2026-10-30 · dev-only session chip. Null in
+   *  production. "owner" → yellow · "viewer" → blue. */
+  readonly devViewerBadge: "owner" | "viewer" | null;
+}
+
+export function MusicViewerClient(
+  props: MusicViewerClientProps,
+): React.JSX.Element {
+  const router = useRouter();
+
+  // ----- vertical swipe (sealed Gate 1) ---------------------------
+  const pointerStartRef = React.useRef<
+    { x: number; y: number; id: number } | null
+  >(null);
+  const inFlightNavRef = React.useRef<boolean>(false);
+  const inFlightTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
+  const nextHref = React.useMemo(
+    (): string | null =>
+      props.nextId ? `/nex-native/nex-feed/${props.nextId}` : null,
+    [props.nextId],
+  );
+  const prevHref = React.useMemo(
+    (): string | null =>
+      props.prevId ? `/nex-native/nex-feed/${props.prevId}` : null,
+    [props.prevId],
+  );
+
+  const navigate = React.useCallback(
+    (direction: "next" | "prev"): void => {
+      if (inFlightNavRef.current) return;
+      const href = direction === "next" ? nextHref : prevHref;
+      if (!href) return;
+      inFlightNavRef.current = true;
+      if (inFlightTimerRef.current) clearTimeout(inFlightTimerRef.current);
+      inFlightTimerRef.current = setTimeout(() => {
+        inFlightNavRef.current = false;
+        inFlightTimerRef.current = null;
+      }, NAV_LOCK_SAFETY_MS);
+      router.push(href);
+    },
+    [router, nextHref, prevHref],
+  );
+
+  React.useEffect(() => {
+    return () => {
+      if (inFlightTimerRef.current) {
+        clearTimeout(inFlightTimerRef.current);
+        inFlightTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  const handlePointerDown = React.useCallback(
+    (e: React.PointerEvent<HTMLElement>): void => {
+      const target = e.target as HTMLElement | null;
+      // Owner-authorised 2026-10-30 · "the music feed dot user should
+      // be able to pull left or right to move forward or backwards
+      // on the song". The scrub bar renders `role="slider"` and
+      // handles its own pointer drag · leaving it out of this ignore
+      // list caused the shell's swipe-nav to capture the pointer and
+      // kill the seek drag. Same slider guard matches the preview
+      // page's `_preview-client.tsx` pointer handler.
+      if (
+        target &&
+        target.closest(
+          'button, a, textarea, input, [role="slider"]',
+        )
+      )
+        return;
+      pointerStartRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        id: e.pointerId,
+      };
+      try {
+        (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+    },
+    [],
+  );
+
+  const handlePointerUp = React.useCallback(
+    (e: React.PointerEvent<HTMLElement>): void => {
+      const start = pointerStartRef.current;
+      if (!start || start.id !== e.pointerId) return;
+      pointerStartRef.current = null;
+      try {
+        (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+      const dx = e.clientX - start.x;
+      const dy = e.clientY - start.y;
+      if (Math.abs(dx) > Math.abs(dy)) return;
+      if (Math.abs(dy) < SWIPE_THRESHOLD_PX) return;
+      if (dy < 0) navigate("next");
+      else navigate("prev");
+    },
+    [navigate],
+  );
+
+  const handlePointerCancel = React.useCallback(
+    (e: React.PointerEvent<HTMLElement>): void => {
+      if (pointerStartRef.current?.id === e.pointerId) {
+        pointerStartRef.current = null;
+        try {
+          (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+        } catch {
+          /* ignore */
+        }
+      }
+    },
+    [],
+  );
+
+  // ----- wheel (sealed Gate 2) ------------------------------------
+  const wheelAccumRef = React.useRef<number>(0);
+  const wheelTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleWheel = React.useCallback(
+    (e: React.WheelEvent<HTMLElement>): void => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        target.closest(
+          'textarea, input, button, a, [role="slider"]',
+        )
+      )
+        return;
+      wheelAccumRef.current += e.deltaY;
+      if (wheelTimerRef.current) clearTimeout(wheelTimerRef.current);
+      wheelTimerRef.current = setTimeout(() => {
+        const dy = wheelAccumRef.current;
+        wheelAccumRef.current = 0;
+        if (dy > SWIPE_THRESHOLD_PX) navigate("next");
+        else if (dy < -SWIPE_THRESHOLD_PX) navigate("prev");
+      }, 120);
+    },
+    [navigate],
+  );
+
+  // ----- actions + library + search overlay state -----------------
+  const [liked, setLiked] = React.useState(false);
+  const [likeCount, setLikeCount] = React.useState<number>(
+    props.entry.likeCount,
+  );
+  const [shareCount, setShareCount] = React.useState<number>(
+    props.entry.shareCount,
+  );
+  const [categorySheetOpen, setCategorySheetOpen] = React.useState(false);
+  const [libraryOpen, setLibraryOpen] = React.useState(false);
+  const [shareSheetOpen, setShareSheetOpen] = React.useState(false);
+  // Owner-authorised 2026-10-30 · the description panel's open state
+  // is lifted to this client so the shell can suppress the Up-Next
+  // banner while the description is up.
+  const [descriptionOpen, setDescriptionOpen] = React.useState(false);
+  // Owner-authorised 2026-10-30 · Up-Next banner surfaces at
+  // ≤ 30 s remaining in the current song. The overlay publishes
+  // position + duration via `onPositionTick`; we store the remaining
+  // ms and let the shell decide whether to render the banner.
+  const NEXT_SONG_CARD_THRESHOLD_MS = 30_000;
+  const [remainingMs, setRemainingMs] = React.useState<number | null>(null);
+  const showUpNextBanner =
+    props.nextOwnerTrack !== null &&
+    remainingMs !== null &&
+    remainingMs <= NEXT_SONG_CARD_THRESHOLD_MS;
+
+  const isSelfViewing =
+    props.viewerAccountId !== null &&
+    props.viewerAccountId === props.entry.ownerAccountId;
+
+  // Prefetch neighbour feed entries so swipe remounts land warm.
+  React.useEffect(() => {
+    if (nextHref) router.prefetch(nextHref);
+    if (prevHref) router.prefetch(prevHref);
+  }, [router, nextHref, prevHref]);
+
+  // Keyboard navigation parity with VideoViewerClient.
+  React.useEffect(() => {
+    function onKey(e: KeyboardEvent): void {
+      if (e.key === "ArrowDown" || e.key === "PageDown" || e.key === " ") {
+        e.preventDefault();
+        navigate("next");
+      } else if (e.key === "ArrowUp" || e.key === "PageUp") {
+        e.preventDefault();
+        navigate("prev");
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [navigate]);
+
+  // The MusicPostShell needs a full NexMusicTrackRow. If the server
+  // shell couldn't resolve the track row we synthesise a minimal
+  // placeholder from the feed entry so the overlay still mounts.
+  const trackForShell: NexMusicTrackRow = React.useMemo(() => {
+    if (props.trackRow) return props.trackRow;
+    const nowIso = new Date().toISOString();
+    return {
+      id: props.entry.trackId,
+      owner_account_id: props.entry.ownerAccountId,
+      title: props.entry.title,
+      artist: props.entry.artist,
+      source_url: props.entry.sourceUrl,
+      media_url: null,
+      cover_image_url: null,
+      background_image_url: null,
+      visibility: "shared_live",
+      rights_declaration: "owner_content",
+      source_type: "uploaded_audio",
+      like_count: props.entry.likeCount,
+      share_count: props.entry.shareCount,
+      view_count: 0,
+      duration_seconds: null,
+      created_at: new Date(props.entry.publishedAtMs).toISOString(),
+      updated_at: nowIso,
+    } as unknown as NexMusicTrackRow;
+  }, [props.trackRow, props.entry]);
+
+  // Preview-page header-right slot shape (search + inbox placeholder +
+  // LiveSideDrawer). The search icon opens CategoryGridSheet (viewer
+  // discovery) rather than the owner's upload-music library.
+  const headerRightSlot = (
+    <>
+      <button
+        type="button"
+        data-nex-music-feed-header-search
+        aria-label="Browse categories"
+        onClick={() => setCategorySheetOpen(true)}
+        style={{
+          width: 44,
+          height: 44,
+          background: "transparent",
+          border: "none",
+          color: "#FFFFFF",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          padding: 0,
+          filter:
+            "drop-shadow(0 1px 1px rgba(0,0,0,0.6)) drop-shadow(0 0 2px rgba(0,0,0,0.4))",
+        }}
+      >
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden
+        >
+          <circle cx="11" cy="11" r="7" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+      </button>
+      <div data-nex-music-feed-menu-trigger>
+        <LiveSideDrawer />
+      </div>
+    </>
+  );
+
+  const currentIndex = props.siblingIds.indexOf(props.feedEntryId);
+
+  return (
+    <>
+      <MusicPostShell
+        track={trackForShell}
+        audioUrl={props.entry.audioSignedUrl}
+        coverUrl={props.entry.coverSignedUrl}
+        backgroundUrl={props.entry.backgroundSignedUrl}
+        broadcasterDisplayName={props.entry.ownerDisplayName}
+        broadcasterNexHandle={props.entry.ownerNexHandle}
+        broadcasterAvatarUrl={props.entry.ownerAvatarUrl}
+        broadcasterPresence="online"
+        broadcasterCountryCode="ID"
+        autoPlayOnMount={true}
+        isLiked={liked}
+        // Owner directive 2026-10-30 · track remaining time so the
+        // Up-Next banner surfaces at ≤ 30 s. Position tick comes
+        // from the player's <audio>.timeupdate.
+        onPositionTick={(positionMs, durationMs) => {
+          if (durationMs > 0) {
+            setRemainingMs(Math.max(0, durationMs - positionMs));
+          }
+        }}
+        upNext={
+          showUpNextBanner && props.nextOwnerTrack
+            ? {
+                track: props.nextOwnerTrack,
+                coverUrl: props.nextOwnerCoverUrl,
+                backgroundUrl: props.nextOwnerBackgroundUrl,
+                remainingMs: remainingMs ?? 0,
+                onOpenPlaylist: () => setLibraryOpen(true),
+              }
+            : undefined
+        }
+        suppressUpNext={descriptionOpen}
+        identityHref={
+          props.entry.ownerNexHandle
+            ? `/nex-native/profile/${encodeURIComponent(
+                props.entry.ownerNexHandle,
+              )}`
+            : null
+        }
+        headerRightSlot={headerRightSlot}
+        // Owner directive 2026-10-30 · the in-player prev/next arrows
+        // walk the CREATOR's music cycle (same chronological order the
+        // preview page uses), not the mixed music+video feed. Vertical
+        // swipe + wheel still move through the full feed. Wrap at
+        // the ends is preserved by the server shell.
+        onPrevTrack={
+          props.prevOwnerTrackId
+            ? () => {
+                if (inFlightNavRef.current) return;
+                inFlightNavRef.current = true;
+                if (inFlightTimerRef.current) {
+                  clearTimeout(inFlightTimerRef.current);
+                }
+                inFlightTimerRef.current = setTimeout(() => {
+                  inFlightNavRef.current = false;
+                  inFlightTimerRef.current = null;
+                }, NAV_LOCK_SAFETY_MS);
+                router.push(
+                  `/nex-native/nex-feed/music-${props.prevOwnerTrackId}`,
+                );
+              }
+            : undefined
+        }
+        onNextTrack={
+          props.nextOwnerTrackId
+            ? () => {
+                if (inFlightNavRef.current) return;
+                inFlightNavRef.current = true;
+                if (inFlightTimerRef.current) {
+                  clearTimeout(inFlightTimerRef.current);
+                }
+                inFlightTimerRef.current = setTimeout(() => {
+                  inFlightNavRef.current = false;
+                  inFlightTimerRef.current = null;
+                }, NAV_LOCK_SAFETY_MS);
+                router.push(
+                  `/nex-native/nex-feed/music-${props.nextOwnerTrackId}`,
+                );
+              }
+            : undefined
+        }
+        library={
+          props.libraryTracks.length > 0
+            ? {
+                isOpen: libraryOpen,
+                onOpenChange: setLibraryOpen,
+                creatorName: props.entry.ownerDisplayName,
+                creatorNexHandle: props.entry.ownerNexHandle,
+                creatorAvatarUrl: props.entry.ownerAvatarUrl,
+                creatorPresence: "online",
+                tracks: props.libraryTracks.map((t) => ({
+                  ...t,
+                  isCurrent: t.id === props.entry.trackId,
+                })),
+                onSelect: (trackId) => {
+                  setLibraryOpen(false);
+                  if (trackId === props.entry.trackId) return;
+                  router.push(`/nex-native/nex-feed/music-${trackId}`);
+                },
+              }
+            : undefined
+        }
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
+        onWheel={handleWheel}
+        touchAction="none"
+        dataAttrs={{
+          "data-nex-music-viewer": true,
+          "data-nex-music-viewer-track-id": props.entry.trackId,
+          "data-nex-music-viewer-swipe-prev": props.prevId ?? "",
+          "data-nex-music-viewer-swipe-next": props.nextId ?? "",
+          "data-nex-music-viewer-index": currentIndex,
+          "data-nex-music-viewer-sibling-count": props.siblingIds.length,
+        }}
+      >
+        {/* Owner-authorised 2026-10-30 · description pill + frosted
+            sheet (parity with the preview page). Self-renders null
+            when the track has no description, so no visual noise on
+            tracks without one. Open state lifted here so the shell
+            can suppress the Up-Next banner while the panel is up. */}
+        <MusicDescriptionAffordance
+          description={trackForShell.description}
+          open={descriptionOpen}
+          onOpenChange={setDescriptionOpen}
+        />
+
+        {/* Right-rail actions · preview-page parity · like + share
+            + optional message. Save + follow are session-only visual
+            stubs (no backend) consistent with the sealed preview
+            behaviour. Message icon hidden when the viewer owns the
+            track (can't message yourself). */}
+        <MusicActionsStack
+          track={trackForShell}
+          initiallyLiked={liked}
+          likeCount={likeCount}
+          shareCount={shareCount}
+          isOwnerView={isSelfViewing}
+          onEdit={
+            isSelfViewing
+              ? () =>
+                  router.push(
+                    `/nex-native/create/upload-music/preview/${encodeURIComponent(
+                      props.entry.trackId,
+                    )}?edit=1`,
+                  )
+              : undefined
+          }
+          onLikeToggle={async () => {
+            const r = await toggleMusicTrackLikeAction({
+              trackId: props.entry.trackId,
+            });
+            if (!r.ok) return null;
+            setLiked(r.data.liked);
+            setLikeCount(r.data.likeCount);
+            return { liked: r.data.liked, likeCount: r.data.likeCount };
+          }}
+          onShare={async () => {
+            // Owner directive 2026-10-30 · Share icon now opens the
+            // sealed VideoShareSheet (NEX contact / WhatsApp / Copy
+            // link). The actual share event + count-bump fires when
+            // the user picks an option (via onShared below), not on
+            // icon tap · aborted shares don't inflate the counter.
+            setShareSheetOpen(true);
+            return null;
+          }}
+        />
+
+        {/* Owner-only inbox slot · HendraMessageInbox portals its
+            💬 trigger + unread-count pill into this slot (sealed
+            selector list). Non-owner viewers never mount this ·
+            they reach the creator via the header avatar →
+            profile → Message button. Positioned above the
+            MusicActionsStack so it reads as part of the right rail. */}
+        {isSelfViewing && (
+          <div
+            data-nex-music-right-rail-inbox-slot
+            style={{
+              position: "absolute",
+              right: 10,
+              // Owner self-view stack = Edit + Share + share-count
+              // starting at bottom 270. Stack height ≈ 116 px · inbox
+              // sits above with a 10 px gap · bottom 400. Keeps all
+              // three owner icons as one visual column.
+              bottom: "calc(env(safe-area-inset-bottom, 0px) + 400px)",
+              zIndex: 24,
+              pointerEvents: "auto",
+            }}
+          />
+        )}
+      </MusicPostShell>
+
+      <CategoryGridSheet
+        open={categorySheetOpen}
+        onClose={() => setCategorySheetOpen(false)}
+        onCategoryPick={(tile) => {
+          router.push(`/nex-native/live-commerce/discover/${tile.slug}`);
+        }}
+      />
+
+      {/* Sealed 3-option share sheet · NEX contact / WhatsApp /
+          Copy link · owner directive 2026-10-30. Share count bumps
+          only when the user picks an option (not on icon tap). */}
+      <VideoShareSheet
+        open={shareSheetOpen}
+        shareUrl={
+          typeof window !== "undefined"
+            ? `${window.location.origin}/nex-native/nex-feed/${props.feedEntryId}`
+            : `/nex-native/nex-feed/${props.feedEntryId}`
+        }
+        shareTitle={props.entry.title}
+        onClose={() => setShareSheetOpen(false)}
+        onShared={async () => {
+          const r = await recordMusicTrackShareAction({
+            trackId: props.entry.trackId,
+          });
+          if (r.ok) setShareCount(r.data.shareCount);
+        }}
+      />
+
+      {props.devViewerBadge && (
+        <DevViewerBadge kind={props.devViewerBadge} />
+      )}
+
+      {/* Owner directive 2026-10-30 · owner-only message center · the
+          inbox 💬 chip + unread-count pill portal into the header's
+          `data-nex-music-feed-header-messages-slot` only when the
+          current viewer owns the track. A non-owner viewer sees the
+          OUTBOUND message icon in the right rail (via MusicActions-
+          Stack); the owner sees the INBOUND inbox in the header. */}
+      {isSelfViewing && (
+        <HendraMessageInbox ownerDisplayName={props.entry.ownerDisplayName} />
+      )}
+
+    </>
+  );
+}

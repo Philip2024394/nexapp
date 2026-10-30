@@ -19,7 +19,7 @@
 // nex_product rows.
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { LiveBroadcastEngine } from "@/lib/nex-native/live-broadcast/broadcast-engine";
 import type {
   LiveBroadcastState,
@@ -54,6 +54,15 @@ import {
   issueJailAction,
 } from "./_actions";
 import { HEARTBEAT_INTERVAL_MS } from "@/lib/nex-native/live-broadcast/stale-session-policy";
+// Owner-authorised 2026-10-29 · NEX Music live overlay wiring.
+import { NexMusicPlayerOverlay } from "@/components/nex-native/music/NexMusicPlayerOverlay";
+import { MusicPlayerDock } from "@/components/nex-native/music/MusicPlayerDock";
+import {
+  createLiveAudioMixer,
+  type LiveAudioMixerHandle,
+} from "@/lib/nex-native/music/live-audio-mixer";
+import type { NexMusicTrackRow } from "@/lib/nex-native/music/types";
+import { getMusicPlayUrlAction } from "@/app/nex-native/create/upload-music/_actions";
 
 /* Phase 2 · G2 · real-catalog entry shape produced by page.tsx.
  * Server component reads nex_product via productService and projects
@@ -114,7 +123,9 @@ export function GoLiveClient({
   realCatalog,
   businessDisplayName,
   selfAvatarUrl,
+  selfDisplayName,
   devMockViewers,
+  musicLibrary,
 }: {
   readonly selfAccountId: string;
   /* Phase 2 · G2 · broadcaster's own nex_product rows, projected
@@ -127,6 +138,17 @@ export function GoLiveClient({
    *  composer pill avatar chip + the Live Finished recap. Null falls
    *  back to the sealed navy-gradient + initial letter. */
   readonly selfAvatarUrl: string | null;
+  /** Owner directive 2026-10-29 (Options C + D) · broadcaster's
+   *  personal `nex_account.display_name` · rendered in the idle
+   *  header identity chip (beside the "Go Live" label) + the
+   *  live-state identity caption above the viewer-footer-pill.
+   *  Null when the account was unresolved (dev-fallback nil UUID). */
+  readonly selfDisplayName: string | null;
+  /** Owner-authorised 2026-10-29 (NEX Music · Live overlay) ·
+   *  server-rendered shared-live tracks for this broadcaster. Empty
+   *  array = no shared tracks yet · the Music right-rail button
+   *  renders a hint-and-link to the upload page. */
+  readonly musicLibrary: readonly NexMusicTrackRow[];
   /** Owner directive 2026-10-28 · dev-only mock viewers injected
    *  into the broadcaster's presence roster so the Jail picker +
    *  viewerCount pill show seeded personas as if they're watching.
@@ -183,6 +205,65 @@ export function GoLiveClient({
     readonly endsAt: number;
   } | null>(null);
   const [jailRemainingSeconds, setJailRemainingSeconds] = React.useState<number>(0);
+
+  /* Owner-authorised 2026-10-29 · NEX Music · Live overlay state.
+     Four UI states + a current-track pointer + the mixer handle.
+     "closed" (no overlay, mic-only), "picking" (choose a track),
+     "open" (full overlay), "minimised" (dock chip). The mixer is
+     constructed lazily on first track selection and torn down on
+     explicit close OR when the Live session ends. */
+  const [musicUiState, setMusicUiState] = React.useState<
+    "closed" | "picking" | "open" | "minimised"
+  >("closed");
+  const [musicTrackIndex, setMusicTrackIndex] = React.useState<number>(-1);
+  const [musicPlayUrl, setMusicPlayUrl] = React.useState<string | null>(null);
+  const [musicCoverUrl, setMusicCoverUrl] = React.useState<string | null>(null);
+  const [musicBackgroundUrl, setMusicBackgroundUrl] = React.useState<string | null>(null);
+  const [musicError, setMusicError] = React.useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const autoPlayMusic = searchParams?.get("autoPlayMusic") ?? null;
+  const autoPlayHandledRef = React.useRef<string | null>(null);
+  const musicMixerRef = React.useRef<LiveAudioMixerHandle | null>(null);
+  const musicMicTrackRef = React.useRef<MediaStreamTrack | null>(null);
+  // Owner-authorised 2026-10-29 (Live analyser exposure) · the
+  // mixer's AnalyserNode is populated after `attachMusicElement`
+  // completes · the overlay reads from this ref each RAF frame to
+  // drive its beat-responsive bars from the one shared audio graph
+  // (no second MediaElementSource).
+  const musicAnalyserRef = React.useRef<AnalyserNode | null>(null);
+  const activeMusicTrack =
+    musicTrackIndex >= 0 && musicTrackIndex < musicLibrary.length
+      ? musicLibrary[musicTrackIndex]!
+      : null;
+
+  /* Owner-authorised 2026-10-29 (preview-first flow) · when the
+     author lands here with ?autoPlayMusic={id}, auto-open the
+     overlay on that track as soon as state === "live". One-shot
+     via `autoPlayHandledRef` so the author can later close the
+     overlay without re-firing. */
+  React.useEffect(() => {
+    if (!autoPlayMusic) return;
+    if (state !== "live") return;
+    if (autoPlayHandledRef.current === autoPlayMusic) return;
+    const idx = musicLibrary.findIndex((t) => t.id === autoPlayMusic);
+    if (idx < 0) {
+      autoPlayHandledRef.current = autoPlayMusic;
+      return;
+    }
+    autoPlayHandledRef.current = autoPlayMusic;
+    void (async () => {
+      const r = await getMusicPlayUrlAction({ trackId: autoPlayMusic });
+      if (!r.ok) {
+        setMusicError(r.message);
+        return;
+      }
+      setMusicTrackIndex(idx);
+      setMusicPlayUrl(r.data.signedUrl);
+      setMusicCoverUrl(r.data.coverUrl);
+      setMusicBackgroundUrl(r.data.backgroundUrl);
+      setMusicUiState("open");
+    })();
+  }, [autoPlayMusic, state, musicLibrary]);
 
   /* Owner directive 2026-10-28 · "the live stream page control page
      for owner is url - go live" · the broadcaster lands at
@@ -471,6 +552,23 @@ export function GoLiveClient({
     setPickerOpen(false);
     setJailPickerOpen(false);
     setPresenceViewers([]);
+    /* Owner-authorised 2026-10-29 · NEX Music teardown. Close the
+       overlay first so the <audio> element unmounts cleanly, then
+       destroy the mixer. The engine will stop every outgoing track
+       in `.leave()` so no explicit replaceAudioTrack is needed here. */
+    setMusicUiState("closed");
+    setMusicPlayUrl(null);
+    setMusicCoverUrl(null); setMusicBackgroundUrl(null);
+    setMusicTrackIndex(-1);
+    if (musicMixerRef.current) {
+      try {
+        musicMixerRef.current.destroy();
+      } catch {
+        /* ignore */
+      }
+      musicMixerRef.current = null;
+    }
+    musicMicTrackRef.current = null;
     if (engine) {
       await engine.leave();
       engineRef.current = null;
@@ -494,6 +592,16 @@ export function GoLiveClient({
       if (featuredChannel) void featuredChannel.close();
       const jailChannel = jailChannelRef.current;
       if (jailChannel) void jailChannel.close();
+      /* Owner-authorised 2026-10-29 · NEX Music mixer cleanup on
+         unmount · AudioContext resources released. */
+      if (musicMixerRef.current) {
+        try {
+          musicMixerRef.current.destroy();
+        } catch {
+          /* ignore */
+        }
+        musicMixerRef.current = null;
+      }
       engineRef.current = null;
       featuredChannelRef.current = null;
       jailChannelRef.current = null;
@@ -900,18 +1008,102 @@ export function GoLiveClient({
                   }
                 `}</style>
               </div>
+              {/* Owner directive 2026-10-29 (Option D · host identity
+                  in idle header) · avatar + personal display_name chip
+                  sits beside the sealed "Go Live" label so the owner
+                  confirms which account is live-ready before the
+                  camera engages. Chip hides gracefully when both
+                  selfAvatarUrl and selfDisplayName are null (guest /
+                  dev-fallback flow). */}
               <div
-                data-nex-go-live-idle-header-label
+                data-nex-go-live-idle-header-right
                 style={{
-                  fontSize: 20,
-                  fontWeight: 900,
-                  color: NEX.red,
-                  letterSpacing: "0.04em",
-                  textShadow: "0 1px 3px rgba(0, 0, 0, 0.72)",
-                  fontFamily: "inherit",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  minWidth: 0,
                 }}
               >
-                Go Live
+                {(selfAvatarUrl || selfDisplayName) && (
+                  <div
+                    data-nex-go-live-idle-identity-chip
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      minWidth: 0,
+                    }}
+                  >
+                    {selfAvatarUrl && (
+                      <span
+                        aria-hidden
+                        style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: 999,
+                          overflow: "hidden",
+                          flexShrink: 0,
+                          background:
+                            "linear-gradient(135deg, #152646 0%, #1E3A6E 100%)",
+                          boxShadow:
+                            "0 0 0 2px rgba(255, 255, 255, 0.18), 0 2px 6px rgba(0, 0, 0, 0.5)",
+                        }}
+                      >
+                        {/* Owner directive 2026-10-27 (sealed) · the
+                            nex-mock-personas PNGs carry 10-15% white
+                            padding on the top + bottom edges · the
+                            sealed scale(1.4) translateY(-2%) crop
+                            matches the viewer-footer-pill chip and
+                            NexLiveFirstVisitSplash::PersonaChip. */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={selfAvatarUrl}
+                          alt=""
+                          draggable={false}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            display: "block",
+                            transform: "scale(1.4) translateY(-2%)",
+                            transformOrigin: "center 48%",
+                          }}
+                        />
+                      </span>
+                    )}
+                    {selfDisplayName && (
+                      <span
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: "#FFFFFF",
+                          letterSpacing: "0.01em",
+                          textShadow: "0 1px 3px rgba(0, 0, 0, 0.7)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          maxWidth: 160,
+                          fontFamily: "inherit",
+                        }}
+                      >
+                        {selfDisplayName}
+                      </span>
+                    )}
+                  </div>
+                )}
+                <div
+                  data-nex-go-live-idle-header-label
+                  style={{
+                    fontSize: 20,
+                    fontWeight: 900,
+                    color: NEX.red,
+                    letterSpacing: "0.04em",
+                    textShadow: "0 1px 3px rgba(0, 0, 0, 0.72)",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  Go Live
+                </div>
               </div>
             </div>
 
@@ -1110,6 +1302,43 @@ export function GoLiveClient({
                 </svg>
               }
             />
+            {/* Owner-authorised 2026-10-29 · NEX Music right-rail
+                button. Opens the picker (if the library has any
+                shared tracks) or links to upload. The music overlay
+                mounts separately below the viewer-footer-pill. */}
+            <OwnerRailButton
+              label="Music"
+              active={musicUiState !== "closed"}
+              activeFill={NEX.cyan}
+              onClick={() => {
+                setMusicError(null);
+                if (musicUiState === "open") {
+                  setMusicUiState("minimised");
+                  return;
+                }
+                if (musicUiState === "minimised") {
+                  setMusicUiState("open");
+                  return;
+                }
+                if (musicLibrary.length === 0) {
+                  router.push("/nex-native/create/upload-music");
+                  return;
+                }
+                setMusicUiState("picking");
+                setPickerOpen(false);
+                setJailPickerOpen(false);
+              }}
+              ariaControls="nex-live-music"
+              ariaExpanded={musicUiState !== "closed"}
+              testid="nex-live-music-button"
+              icon={
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path d="M9 18V5l10-2v13" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                  <circle cx="7" cy="18" r="2.2" stroke="currentColor" strokeWidth="1.8" />
+                  <circle cx="17" cy="16" r="2.2" stroke="currentColor" strokeWidth="1.8" />
+                </svg>
+              }
+            />
             <OwnerRailButton
               label="End"
               active={false}
@@ -1121,6 +1350,273 @@ export function GoLiveClient({
                   <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" />
                 </svg>
               }
+            />
+          </div>
+        )}
+
+        {/* Owner-authorised 2026-10-29 · NEX Music picker sheet.
+            Opens when the Music rail button is tapped and the
+            library has at least one shared track. Mutually
+            exclusive with the Product + Jail pickers. */}
+        {state === "live" && musicUiState === "picking" && (
+          <div
+            id="nex-live-music"
+            role="dialog"
+            aria-label="Choose a track"
+            style={{
+              position: "absolute",
+              left: 10,
+              right: 10,
+              bottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)",
+              zIndex: 26,
+              background: "rgba(7,18,38,0.92)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              border: "1px solid rgba(79,195,255,0.45)",
+              borderRadius: 16,
+              padding: 14,
+              color: "#F0F6FF",
+              fontFamily: "inherit",
+              boxShadow: "0 20px 50px -14px rgba(0,10,30,0.6)",
+              maxHeight: "60%",
+              overflowY: "auto",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.14em", color: "#4FC3FF", textTransform: "uppercase" }}>
+                Choose a track
+              </span>
+              <button
+                type="button"
+                onClick={() => setMusicUiState("closed")}
+                aria-label="Close"
+                style={{
+                  width: 26, height: 26, borderRadius: 8,
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  background: "rgba(255,255,255,0.08)",
+                  color: "#F0F6FF", cursor: "pointer",
+                }}
+              >×</button>
+            </div>
+            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+              {musicLibrary.map((t, i) => (
+                <li key={t.id}>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setMusicError(null);
+                      const r = await getMusicPlayUrlAction({ trackId: t.id });
+                      if (!r.ok) {
+                        setMusicError(r.message);
+                        return;
+                      }
+                      setMusicTrackIndex(i);
+                      setMusicPlayUrl(r.data.signedUrl);
+                      setMusicCoverUrl(r.data.coverUrl); setMusicBackgroundUrl(r.data.backgroundUrl);
+                      setMusicUiState("open");
+                    }}
+                    style={{
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      color: "#F0F6FF",
+                      fontFamily: "inherit",
+                      cursor: "pointer",
+                      fontSize: 13,
+                      fontWeight: 700,
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {t.title}
+                      </span>
+                      <span style={{ color: "#4FC3FF", fontSize: 10, fontWeight: 800, letterSpacing: "0.1em" }}>
+                        {t.source_type === "uploaded_audio" ? "MP3" : t.source_type === "spotify_url" ? "SPOTIFY" : "YOUTUBE"}
+                      </span>
+                    </div>
+                    <small style={{ color: "rgba(240,246,255,0.6)", fontWeight: 500 }}>
+                      {t.artist ?? "Unknown artist"}
+                    </small>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {musicError && (
+              <div style={{ marginTop: 10, color: "#FF3355", fontSize: 12 }}>
+                {musicError}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Owner-authorised 2026-10-29 · NEX Music overlay (full)
+            and minimised dock. The overlay mounts only in the live
+            state. */}
+        {/* Owner-authorised 2026-10-29 (preview-first flow) ·
+            full-bleed background image shown behind the player
+            overlay when the active music track has one. zIndex 1
+            puts it above the camera video (zIndex 0) but below
+            every overlay (identity caption, Stop Live, viewer
+            footer, overlay itself). */}
+        {state === "live" && !showEndedRecap && musicUiState === "open" && musicBackgroundUrl && (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={musicBackgroundUrl}
+            alt=""
+            aria-hidden
+            data-nex-go-live-music-background
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              zIndex: 1,
+              pointerEvents: "none",
+            }}
+          />
+        )}
+
+        {state === "live" && !showEndedRecap && musicUiState === "open" && activeMusicTrack && (
+          <NexMusicPlayerOverlay
+            track={activeMusicTrack}
+            coverUrl={musicCoverUrl}
+            audioSrcUrl={musicPlayUrl}
+            /* Owner-authorised 2026-10-29 (Live analyser exposure) ·
+               passing this ref opts the overlay OUT of its local
+               MediaElementSource path · the mixer owns the one and
+               only audio graph on Live. */
+            externalAnalyserRef={musicAnalyserRef}
+            /* Owner-authorised 2026-10-29 (Stage 5A · volume defect fix) ·
+               route the slider through the mixer so viewers hear the
+               gain change. The mixer's musicGain sits between the
+               MediaElementSource and the MediaStreamDestination that
+               feeds the WebRTC audio sender · and also connects to
+               ctx.destination for the broadcaster's own monitor ·
+               so one slider controls both audible paths. Mic gain
+               is NOT touched here (sealed at 1.0 in the mixer). */
+            onVolumeChange={(v) => {
+              const mixer = musicMixerRef.current;
+              if (mixer) {
+                try {
+                  mixer.setMusicGain(v);
+                } catch {
+                  /* best-effort · don't block the UI on a WebAudio hiccup */
+                }
+              }
+            }}
+            onMinimise={() => setMusicUiState("minimised")}
+            onClose={() => {
+              // Stop playback via the audio element (handled by
+              // onAudioElement cleanup when the overlay unmounts) ·
+              // tear the mixer down and restore the mic-only track.
+              const mixer = musicMixerRef.current;
+              const mic = musicMicTrackRef.current;
+              musicMixerRef.current = null;
+              musicAnalyserRef.current = null;
+              if (mixer) {
+                try {
+                  mixer.destroy();
+                } catch {
+                  /* ignore */
+                }
+              }
+              if (mic) {
+                void engineRef.current?.replaceAudioTrack(mic);
+              }
+              setMusicUiState("closed");
+              setMusicPlayUrl(null);
+              setMusicCoverUrl(null); setMusicBackgroundUrl(null);
+              setMusicTrackIndex(-1);
+            }}
+            onNext={
+              musicLibrary.length > 1
+                ? async () => {
+                    const nextIdx = (musicTrackIndex + 1) % musicLibrary.length;
+                    const next = musicLibrary[nextIdx]!;
+                    const r = await getMusicPlayUrlAction({ trackId: next.id });
+                    if (!r.ok) {
+                      setMusicError(r.message);
+                      return;
+                    }
+                    setMusicTrackIndex(nextIdx);
+                    setMusicPlayUrl(r.data.signedUrl);
+                    setMusicCoverUrl(r.data.coverUrl); setMusicBackgroundUrl(r.data.backgroundUrl);
+                  }
+                : null
+            }
+            onPrev={
+              musicLibrary.length > 1
+                ? async () => {
+                    const prevIdx =
+                      (musicTrackIndex - 1 + musicLibrary.length) %
+                      musicLibrary.length;
+                    const prev = musicLibrary[prevIdx]!;
+                    const r = await getMusicPlayUrlAction({ trackId: prev.id });
+                    if (!r.ok) {
+                      setMusicError(r.message);
+                      return;
+                    }
+                    setMusicTrackIndex(prevIdx);
+                    setMusicPlayUrl(r.data.signedUrl);
+                    setMusicCoverUrl(r.data.coverUrl); setMusicBackgroundUrl(r.data.backgroundUrl);
+                  }
+                : null
+            }
+            onAudioElement={(audio) => {
+              if (!audio) return;
+              if (activeMusicTrack.source_type !== "uploaded_audio") return;
+              try {
+                const engine = engineRef.current;
+                if (!engine) return;
+                const localStream = engine.getLocalStream();
+                if (!localStream) return;
+                const micTrack = localStream.getAudioTracks()[0] ?? null;
+                if (!micTrack) return;
+                if (!musicMixerRef.current) {
+                  // First tap · build mixer, swap audio track.
+                  const mixer = createLiveAudioMixer({
+                    micStream: new MediaStream([micTrack]),
+                    initialMusicGain: 0.8,
+                  });
+                  musicMicTrackRef.current = micTrack;
+                  musicMixerRef.current = mixer;
+                  void engine.replaceAudioTrack(mixer.outputTrack);
+                }
+                musicMixerRef.current.attachMusicElement(audio);
+                // Owner-authorised 2026-10-29 (Live analyser exposure) ·
+                // after attach, the mixer's analyser is connected
+                // downstream of musicGain. Expose it to the overlay
+                // via the ref · the overlay re-reads it each frame.
+                musicAnalyserRef.current =
+                  musicMixerRef.current.getMusicAnalyser();
+              } catch (err) {
+                setMusicError(
+                  err instanceof Error ? err.message : "Audio mixer unavailable",
+                );
+              }
+            }}
+          />
+        )}
+
+        {state === "live" && !showEndedRecap && musicUiState === "minimised" && activeMusicTrack && (
+          <div
+            style={{
+              position: "absolute",
+              right: 14,
+              bottom: "calc(env(safe-area-inset-bottom, 0px) + 72px)",
+              zIndex: 22,
+            }}
+          >
+            <MusicPlayerDock
+              coverUrl={musicCoverUrl}
+              title={activeMusicTrack.title}
+              progress={0}
+              isPlaying={true}
+              onOpen={() => setMusicUiState("open")}
             />
           </div>
         )}
@@ -1309,6 +1805,75 @@ export function GoLiveClient({
                 Stop Live
               </button>
             )}
+
+            {/* Owner directive 2026-10-29 (Option C · host identity
+                while live) · two-line identity caption pinned
+                immediately above the viewer-footer-pill. Line 1 is
+                the broadcaster's personal display_name · line 2 is
+                the businessDisplayName. Preserves the sealed "You are
+                live · viewers see this" status text in the pill
+                below. Left-aligned + max-width constrained so the
+                centred Stop Live button (bottom: safe-area+78px,
+                zIndex: 25) stays visually clear. zIndex sits beneath
+                the pill (24) and the Stop Live button so overlap
+                falls behind, not in front of, the sealed controls.
+                Only mounts during an active live broadcast · the
+                Live Finished recap carries its own identity chrome. */}
+            {state === "live" && !showEndedRecap && musicUiState === "closed" &&
+              (selfDisplayName || businessDisplayName) && (
+                <div
+                  data-nex-go-live-self-identity-caption
+                  aria-hidden
+                  style={{
+                    position: "absolute",
+                    left: 14,
+                    bottom:
+                      "calc(env(safe-area-inset-bottom, 0px) + 64px)",
+                    maxWidth: "calc(50% - 24px)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                    pointerEvents: "none",
+                    zIndex: 23,
+                    fontFamily: "inherit",
+                  }}
+                >
+                  {selfDisplayName && (
+                    <span
+                      style={{
+                        fontSize: 15,
+                        fontWeight: 800,
+                        color: "#FFFFFF",
+                        letterSpacing: "0.01em",
+                        lineHeight: 1.15,
+                        textShadow: "0 1px 3px rgba(0, 0, 0, 0.72)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {selfDisplayName}
+                    </span>
+                  )}
+                  {businessDisplayName && (
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "rgba(255, 255, 255, 0.82)",
+                        letterSpacing: "0.01em",
+                        lineHeight: 1.15,
+                        textShadow: "0 1px 2px rgba(0, 0, 0, 0.65)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {businessDisplayName}
+                    </span>
+                  )}
+                </div>
+              )}
 
             {/* Viewer-style composer pill at the bottom · broadcaster
                 avatar (navy gradient + green rim + outer ping · same
@@ -2094,7 +2659,7 @@ export function GoLiveClient({
           selfDisplayName={businessDisplayName}
           onDismiss={() => {
             setShowEndedRecap(false);
-            router.push("/nex-native/live-commerce/feed");
+            router.push("/nex-native/nex-feed");
           }}
         />
       )}

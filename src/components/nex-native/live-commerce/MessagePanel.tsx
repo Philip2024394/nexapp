@@ -60,6 +60,14 @@ export interface MessagePanelProps {
   /** Full sign-in URL to route guests through · caller passes a URL
    *  with returnTo already encoded. */
   readonly signInHref: string;
+  /** Owner-authorised 2026-10-30 (music post parity) · optional
+   *  context chip rendered above the profile row. On a music post
+   *  the caller passes `headerEyebrow="Music"` + `headerTitle={track
+   *  .title}` so the recipient (Hendra) sees which track the sender
+   *  is reacting to. Omit on existing Live callers · the chip is
+   *  absent by default and the profile-card header is unchanged. */
+  readonly headerEyebrow?: string;
+  readonly headerTitle?: string;
 }
 
 type SubmitState =
@@ -209,6 +217,57 @@ export function MessagePanel(props: MessagePanelProps): React.JSX.Element | null
           margin: "0 auto",
         }}
       >
+        {/* Optional context chip · owner-authorised 2026-10-30 ·
+            music post surfaces pass `headerEyebrow="Music"` +
+            `headerTitle={track.title}` so the recipient sees the
+            track the sender is reacting to. Hidden on Live callers
+            where no header props are supplied. */}
+        {(props.headerEyebrow || props.headerTitle) && (
+          <div
+            data-nex-live-message-context
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+              paddingBottom: 6,
+              borderBottom: `1px solid ${NEX.panelBorder}`,
+              marginBottom: 2,
+            }}
+          >
+            {props.headerEyebrow && (
+              <span
+                data-nex-live-message-context-eyebrow
+                style={{
+                  fontSize: 10,
+                  fontWeight: 800,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  color: NEX.cyan,
+                  lineHeight: 1.2,
+                }}
+              >
+                {props.headerEyebrow}
+              </span>
+            )}
+            {props.headerTitle && (
+              <span
+                data-nex-live-message-context-title
+                style={{
+                  fontSize: 14,
+                  fontWeight: 800,
+                  color: NEX.text,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  lineHeight: 1.3,
+                }}
+              >
+                {props.headerTitle}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Header · profile card */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div

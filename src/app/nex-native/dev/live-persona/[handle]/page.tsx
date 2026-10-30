@@ -31,7 +31,7 @@ import {
   DEV_VIDEO_MANIFEST,
   listDevUploadedVideos,
 } from "@/lib/nex-native/live-broadcast/dev-video-manifest";
-import { VideoViewerClient } from "@/app/nex-native/videos/[videoId]/_video-viewer-client";
+import { VideoViewerClient } from "@/app/nex-native/nex-feed/[videoId]/_video-viewer-client";
 // computePresence intentionally not imported · see "remove green dot"
 // edit below. Re-add when real presence/live wiring returns.
 import type { BroadcasterLibraryVideo } from "@/components/nex-native/live-commerce/BroadcasterLibrarySheet";
