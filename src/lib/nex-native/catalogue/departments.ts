@@ -158,7 +158,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "beauty_personal_care",
     label: "Beauty & Personal Care",
     blurb: "Skincare, makeup, fragrance",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "skincare", label: "Skincare" },
       { id: "makeup", label: "Makeup" },
@@ -174,7 +174,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "health_wellness_medical",
     label: "Health, Wellness & Medical",
     blurb: "Monitoring, mobility, first aid",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "personal_wellness", label: "Personal Wellness" },
       { id: "health_monitoring", label: "Health Monitoring" },
@@ -190,7 +190,7 @@ export const DEPARTMENTS: readonly Department[] = [
     id: "baby_nursery_parenting",
     label: "Baby, Nursery & Parenting",
     blurb: "Feeding, nappies, nursery, travel",
-    enabled: false,
+    enabled: true,
     categories: [
       { id: "baby_clothing", label: "Baby Clothing" },
       { id: "feeding", label: "Feeding" },
