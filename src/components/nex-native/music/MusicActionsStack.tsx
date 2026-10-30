@@ -27,6 +27,10 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import type { NexMusicTrackRow } from "@/lib/nex-native/music/types";
+import {
+  followAction,
+  unfollowAction,
+} from "@/lib/nex-native/follow/follow-actions";
 
 const RED_DARK = "#8B0000";
 // Owner-authorised 2026-10-29 · burst red tuned darker (previous
@@ -51,6 +55,15 @@ export interface MusicActionsStackProps {
   readonly onSave?: () => void;
   /** Optional callback. Follow state currently client-only · no backend. */
   readonly onFollow?: () => void;
+  /** Owner-authorised 2026-10-30 · Stage 1 Follow wiring. When
+   *  `followeeId` is provided the stack calls the real server
+   *  actions (followAction / unfollowAction) on the person-plus
+   *  icon · optimistic UI with rollback on error. When omitted, the
+   *  legacy session-only toggle is used (session-only state carries
+   *  no backend). `initialFollowed` seeds the first render so the
+   *  follow icon matches server truth. */
+  readonly followeeId?: string | null;
+  readonly initialFollowed?: boolean;
   /** Owner-authorised 2026-10-30 · message icon · when provided the
    *  stack renders a 5th button between Share and Follow. Tapping
    *  opens the caller-mounted MessagePanel (same sealed connection-
@@ -81,7 +94,7 @@ export function MusicActionsStack(
   // Owner-authorised 2026-10-29 · save + follow carry no backend yet;
   // these states are session-only and do NOT persist across reloads.
   const [saved, setSaved] = React.useState(false);
-  const [followed, setFollowed] = React.useState(false);
+  const [followed, setFollowed] = React.useState(props.initialFollowed === true);
   // Burst batches · each like tap pushes a new entry; the burst
   // component self-unmounts via setTimeout after its animation ends.
   const [bursts, setBursts] = React.useState<readonly number[]>([]);
@@ -131,9 +144,32 @@ export function MusicActionsStack(
     setSaved((s) => !s);
     props.onSave?.();
   };
-  const handleFollow = () => {
-    setFollowed((f) => !f);
+  const handleFollow = async () => {
+    const prev = followed;
+    const next = !prev;
+    // Optimistic flip · consistent with handleLike pattern above.
+    setFollowed(next);
     props.onFollow?.();
+
+    // Owner-authorised 2026-10-30 · Stage 1 Follow wiring. When
+    // `followeeId` is provided, fire the real server action and
+    // reconcile · otherwise this remains the legacy session-only
+    // toggle for call sites that haven't opted in yet.
+    if (!props.followeeId) return;
+    try {
+      const result = next
+        ? await followAction({
+            followeeId: props.followeeId,
+            source: "music",
+          })
+        : await unfollowAction({ followeeId: props.followeeId });
+      if (!result.ok) {
+        // Roll back on server rejection (rate-limit · blocked · etc.)
+        setFollowed(prev);
+      }
+    } catch {
+      setFollowed(prev);
+    }
   };
 
   const spawnBurst = React.useCallback(() => {

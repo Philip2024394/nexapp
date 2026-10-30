@@ -501,6 +501,16 @@ export function MusicViewerClient(
           likeCount={likeCount}
           shareCount={shareCount}
           isOwnerView={isSelfViewing}
+          // Owner-authorised 2026-10-30 · Stage 1 Follow wiring per
+          // Stage 1 preparation §13.6. Pass the owner account id and
+          // the viewer's initial follow state so the stack's person-
+          // plus icon fires the real followAction / unfollowAction.
+          // Initial state is NOT currently SSR-fetched (Stage 2
+          // enhancement); the stack starts "not followed" and
+          // reconciles on tap. Non-owner viewers only · owner view
+          // suppresses the follow icon entirely per §16 scope.
+          followeeId={isSelfViewing ? null : props.entry.ownerAccountId}
+          initialFollowed={false}
           onEdit={
             isSelfViewing
               ? () =>
