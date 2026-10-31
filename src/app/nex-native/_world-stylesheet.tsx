@@ -27,16 +27,36 @@ import "server-only";
 import * as React from "react";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { resolveWorldForRequest } from "@/lib/nex-worlds/world-resolver";
+import { resolveAppIdentity } from "@/lib/nex-native/app/resolve-app-identity";
 import {
   paletteToCssVars,
   type WorldDefinition,
 } from "@/lib/nex-worlds/world-types";
+import { getWorldDefinition } from "@/lib/nex-worlds/world-registry";
 
-/** Resolve the world for the current request. Memoisable per-render
- *  by Next.js' automatic request-scope caching · but if a page needs
- *  the resolved world AND this stylesheet, two calls still work
- *  (resolveWorldForRequest is idempotent + cheap). */
+/** Resolve the world for the current request.
+ *
+ *  Resolution order (Rev A plan §1 + §3):
+ *    1. Deployment identity (NEX_APP_IDENTITY env). Country deployments
+ *       (ireland, indonesia) force their matching world palette so
+ *       Ireland users ALWAYS see Ireland chrome regardless of DB state.
+ *       This is the source of truth for the country app.
+ *    2. HQ deployment (and local dev with no identity set) falls through
+ *       to the sealed owner-preview + DB-activated world resolver.
+ */
 export async function resolveWorldForLayout(): Promise<WorldDefinition> {
+  // Deployment identity takes precedence. Fail-closed: if the env is
+  // invalid in a country deployment, we do NOT silently fall back to
+  // nex-original (that would leak the wrong country chrome). We let the
+  // resolver throw and the root layout boundary handles it.
+  try {
+    const identity = resolveAppIdentity();
+    if (identity.identity === "ireland") return getWorldDefinition("ireland");
+    if (identity.identity === "indonesia") return getWorldDefinition("indonesia");
+    // identity === "hq" · fall through to the DB-based resolver below.
+  } catch {
+    // Env not set at all in dev · fall through to DB resolver.
+  }
   const session = await resolveSessionWithDevOverride();
   const resolved = await resolveWorldForRequest(session?.account.id ?? null);
   return resolved.world;

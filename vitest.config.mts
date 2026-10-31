@@ -22,6 +22,12 @@ export default defineConfig({
     alias: {
       "@": srcDir,
       "@/": `${srcDir}${path.sep}`,
+      // Stub Next.js `server-only` sentinel so modules annotated with
+      // it can be unit tested. Node runtime does not need the client-
+      // component guard.
+      "server-only": fileURLToPath(
+        new URL("./scripts/vitest-stubs/server-only.ts", import.meta.url),
+      ),
     },
   },
 });
