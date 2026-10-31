@@ -49,45 +49,58 @@ export function HqWorldsClient(props: HqWorldsClientProps): React.JSX.Element {
     }
   };
 
-  // Owner directive 2026-10-31 · HQ Worlds panel docks to the LEFT
-  // of the viewport (fixed · 380 px) so the sealed NEX phone frame
-  // stays visible to the right while the owner reviews worlds. The
-  // phone frame itself continues to render whatever is currently
-  // active in its route tree (home / profile / etc.). On narrow
-  // viewports the panel reverts to a normal in-frame scroller.
+  // Owner directive 2026-10-31 (D-4 · D-5): HQ is desktop-only.
+  // < 900px viewport = render a single "desktop required" card and
+  // stop. ≥ 900px = render the full admin workspace. Phone-frame
+  // preview from commit e0838dc is REMOVED (two-apps architecture
+  // makes global world preview on the user-facing frame meaningless).
   return (
     <>
       <style>{`
-        .nex-hq-worlds-dock {
-          padding: 20px;
-          color: ${INK};
-          font-family: Inter, system-ui, sans-serif;
-        }
+        .nex-hq-worlds-mobile { display: block; }
+        .nex-hq-worlds-desktop { display: none; }
         @media (min-width: 900px) {
-          .nex-hq-worlds-dock {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 380px;
-            height: 100dvh;
-            overflow-y: auto;
-            background: #FFFFFF;
-            border-right: 1.5px solid ${RIM};
-            box-shadow: 2px 0 12px rgba(0, 0, 0, 0.35);
-            z-index: 9000;
-          }
-          .nex-hq-worlds-dock::-webkit-scrollbar { width: 6px; }
-          .nex-hq-worlds-dock::-webkit-scrollbar-thumb {
-            background: ${RIM};
-            border-radius: 3px;
-          }
+          .nex-hq-worlds-mobile  { display: none; }
+          .nex-hq-worlds-desktop { display: block; }
         }
       `}</style>
+
+      {/* MOBILE FALLBACK · no controls · plain copy per directive. */}
       <main
-        className="nex-hq-worlds-dock"
+        className="nex-hq-worlds-mobile"
+        style={{
+          padding: 24,
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+          minHeight: "60dvh",
+          justifyContent: "center",
+          textAlign: "center",
+          fontFamily: "Inter, system-ui, sans-serif",
+          color: INK,
+        }}
+      >
+        <div style={{ fontSize: 32 }}>🖥️</div>
+        <h1 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>
+          NEX HQ is desktop-only
+        </h1>
+        <p style={{ fontSize: 13, color: INK_DIM, lineHeight: 1.55, margin: 0 }}>
+          Open this URL on a desktop or tablet-wide browser (900 px+)
+          to manage worlds, countries, and platform settings. Normal
+          NEX users don&rsquo;t need HQ · it&rsquo;s for platform
+          administrators only.
+        </p>
+      </main>
+
+      {/* DESKTOP WORKSPACE · admin controls. */}
+      <main
+        className="nex-hq-worlds-desktop"
         style={{
           maxWidth: 720,
           margin: "0 auto",
+          padding: 20,
+          color: INK,
+          fontFamily: "Inter, system-ui, sans-serif",
         }}
       >
       <header style={{ marginBottom: 16 }}>
@@ -120,8 +133,11 @@ export function HqWorldsClient(props: HqWorldsClientProps): React.JSX.Element {
             marginBottom: 16,
           }}
         >
-          Migration 243 (nex_world_state) is not applied yet. Preview works,
-          Activate will fail. Apply the migration before using Activate.
+          Architecture update 2026-10-31: Migration 243 was superseded by the
+          two-apps model. There is no global activate · worlds are resolved
+          per deployment env (NEX_APP_IDENTITY). Preview still works for
+          HQ owners. Activate buttons are retained for layout only until
+          the deployment-env resolver lands.
         </div>
       ) : null}
 
@@ -269,92 +285,6 @@ export function HqWorldsClient(props: HqWorldsClientProps): React.JSX.Element {
       ) : null}
     </main>
 
-    {/* Owner directive 2026-10-31 · phone-frame preview card ·
-        renders INSIDE the sealed phone frame on desktop (where the
-        panel is position:fixed and leaves the frame visible). Lets
-        the owner see the previewed world applied to NEX chrome
-        without leaving HQ. On mobile this card hides (the whole
-        screen is already the HQ panel). */}
-    <aside
-      className="nex-hq-worlds-frame-preview"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 14,
-        padding: 20,
-        color: INK,
-        fontFamily: "Inter, system-ui, sans-serif",
-      }}
-    >
-      <style>{`
-        .nex-hq-worlds-frame-preview { display: none; }
-        @media (min-width: 900px) {
-          .nex-hq-worlds-frame-preview { display: flex; }
-        }
-      `}</style>
-      <div
-        style={{
-          fontSize: 11,
-          fontWeight: 700,
-          color: INK_DIM,
-          textTransform: "uppercase",
-          letterSpacing: "0.08em",
-        }}
-      >
-        Live preview
-      </div>
-      <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>
-        {props.previewId
-          ? `Previewing · ${props.previewId}`
-          : props.activatedId
-          ? `Active · ${props.activatedId}`
-          : "Fallback · nex-original"}
-      </h2>
-      <p style={{ fontSize: 13, lineHeight: 1.55, color: INK_DIM, margin: 0 }}>
-        {props.previewId
-          ? "This is a private preview visible only to you. Open any NEX page in a new tab to see the chrome recoloured by this world."
-          : "No preview is active. Tap Preview on a world card to try it out · only you will see the change."}
-      </p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {[
-          { label: "Open NEX home", href: "/nex-native/home" },
-          { label: "Open my profile", href: "/nex-native/profile/me" },
-          { label: "Open NEX chat", href: "/nex-native/chat" },
-          { label: "Open Creator dashboard", href: "/nex-native/creator" },
-        ].map((link) => (
-          <a
-            key={link.href}
-            href={link.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              padding: "9px 12px",
-              borderRadius: 10,
-              border: `1.5px solid ${RIM}`,
-              background: "#fff",
-              color: INK,
-              textDecoration: "none",
-              fontSize: 13,
-              fontWeight: 700,
-            }}
-          >
-            {link.label} ↗
-          </a>
-        ))}
-      </div>
-      <p
-        style={{
-          fontSize: 11,
-          color: INK_DIM,
-          lineHeight: 1.5,
-          margin: 0,
-          fontStyle: "italic",
-        }}
-      >
-        Tip · the preview cookie expires after 1 hour. Tap Stop preview on
-        the left to end it earlier.
-      </p>
-    </aside>
     </>
   );
 }

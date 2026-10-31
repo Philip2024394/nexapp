@@ -1,12 +1,32 @@
 -- ============================================================================
--- NEX-native Migration 243 · nex_world_state (singleton)
+-- NEX-native Migration 243 · nex_world_state (singleton) · SUPERSEDED 2026-10-31
 -- ============================================================================
 --
--- STATUS: AUTHORED · NOT YET APPLIED TO ANY DATABASE.
+-- STATUS: SUPERSEDED · DO NOT APPLY · retained for historical record only.
 --
--- Owner-authorised draft only · DO NOT APPLY to the sealed Supabase project
--- `ijvqdvsvwtwxzcqmoqit` or any staging target without a SEPARATE explicit
--- owner authorisation.
+-- Owner decision 2026-10-31 (D-3 of docs/doctrine/nex-two-apps-architecture-
+-- review-2026-10-31.md): the one-app-globally-switched-world architecture
+-- that this migration proposed is REPLACED by a two-app architecture (NEX
+-- Ireland + NEX Indonesia as separate deployments resolving identity from
+-- deployment env, not DB state). The global singleton this migration
+-- creates would allow one admin toggle to change the colour of every
+-- user's app simultaneously · that is the exact behaviour the new
+-- architecture prohibits.
+--
+-- Retention policy per owner D-3 verbatim: "Preserve the historical
+-- record of why it was superseded. Do not delete or rewrite already-
+-- applied migrations." This file was NEVER applied to any database, so
+-- there is nothing to preserve in migration_history. The .SUPERSEDED.sql
+-- suffix prevents accidental apply by scripts that pattern-match on
+-- `NNN_*.sql`.
+--
+-- Replacement path: deployment env (`NEX_APP_IDENTITY` + `NEX_APP_COUNTRY`)
+-- resolves per-app identity server-side with no runtime toggle. See the
+-- architecture review doc + the country-isolation doctrine doc for the
+-- replacement design.
+--
+-- Original pre-supersession header follows for reference. --
+-- ============================================================================
 --
 -- NEX World Engine · Stage 1 persistence.
 -- Owner directive 2026-10-31: "One NEX application · two selectable visual

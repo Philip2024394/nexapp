@@ -58,13 +58,19 @@ export default async function HqWorldsPage(): Promise<React.JSX.Element> {
 
   const previewId = await readPreviewWorldForOwner(session.account.id);
 
+  // Owner directive 2026-10-31 (D-4 · D-5): HQ is desktop-only. Opt
+  // out of the sealed phone frame via the sealed `nex-admin-root`
+  // marker · the page renders as a full-desktop admin workspace.
+  // Mobile viewports show a desktop-only message, no controls.
   return (
-    <HqWorldsClient
-      worlds={ALL_WORLDS}
-      activatedId={activatedId}
-      previewId={previewId}
-      previousId={previousId}
-      schemaApplied={schemaApplied}
-    />
+    <div className="nex-admin-root">
+      <HqWorldsClient
+        worlds={ALL_WORLDS}
+        activatedId={activatedId}
+        previewId={previewId}
+        previousId={previousId}
+        schemaApplied={schemaApplied}
+      />
+    </div>
   );
 }
