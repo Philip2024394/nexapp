@@ -74,6 +74,22 @@ interface TracksSnapshot {
 }
 
 async function loadTracks(): Promise<readonly NexMusicTrackRow[]> {
+  // 2026-11-01 · owner-authorised DB wiring (NEX country programme ·
+  // shared global feed). The FS adapter was dev-only; on Vercel the
+  // `.dev-music-data/tracks.json` file does not exist so the feed
+  // reader always returned []. In production we now read
+  // `public.nex_music_track` via service_role · dev path keeps the FS
+  // adapter untouched. Only non-removed rows are returned; the caller
+  // filters further on rights + publication.
+  if (process.env.NODE_ENV === "production") {
+    const { nexSupabaseAdmin } = await import("../supabase-admin");
+    const { data, error } = await nexSupabaseAdmin
+      .from("nex_music_track")
+      .select("*")
+      .neq("visibility", "removed");
+    if (error) return [];
+    return (data ?? []) as readonly NexMusicTrackRow[];
+  }
   try {
     const raw = await fs.readFile(TRACKS_FILE, "utf8");
     const parsed = JSON.parse(raw) as TracksSnapshot;

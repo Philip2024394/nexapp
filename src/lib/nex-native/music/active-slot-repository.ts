@@ -415,8 +415,26 @@ export async function getActiveMusicSlot(
 
 /** List every live active slot (unpublished_at IS NULL, track_id IS NOT
  *  NULL) ordered by published_at DESC. Used by the feed reader to
- *  compose music entries. */
+ *  compose music entries.
+ *
+ *  2026-11-01 · owner-authorised DB wiring (NEX country programme ·
+ *  shared global feed). The FS adapter was dev-only; on Vercel the
+ *  `.dev-music-data/active-slots.json` file does not exist so the feed
+ *  returned []. In production we now read `public.nex_creator_active_music`
+ *  via service_role (same table the sealed Migration 236 contract uses).
+ *  Dev path keeps the FS adapter untouched. */
 export async function listActiveMusicSlots(): Promise<readonly NexCreatorActiveMusicRow[]> {
+  if (process.env.NODE_ENV === "production") {
+    const { nexSupabaseAdmin } = await import("../supabase-admin");
+    const { data, error } = await nexSupabaseAdmin
+      .from("nex_creator_active_music")
+      .select("*")
+      .is("unpublished_at", null)
+      .not("track_id", "is", null)
+      .order("published_at", { ascending: false });
+    if (error) return [];
+    return (data ?? []) as readonly NexCreatorActiveMusicRow[];
+  }
   const slots = await loadSlots();
   return slots.slots
     .filter((s) => s.unpublished_at === null && s.track_id !== null)
