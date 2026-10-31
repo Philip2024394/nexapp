@@ -90,7 +90,11 @@ export default async function HarvestDashboardPage() {
   const opsResult = opsSnapshot ? resolveHarvestOpsStatus(opsSnapshot) : null;
 
   return (
-    <>
+    // Owner-authorised 2026-10-31 · harvest explicitly opts out of
+    // the consumer phone frame via nex-admin-root. The parent /hq/
+    // layout no longer applies this wrapper HQ-wide (so /hq/worlds/
+    // can keep the phone frame visible alongside its left-dock panel).
+    <div className="nex-admin-root">
       <style>{`
         html, body { background: ${NEX.bg} !important; }
         html, body { scrollbar-width: none; -ms-overflow-style: none; }
@@ -209,7 +213,7 @@ export default async function HarvestDashboardPage() {
           sealed D:/trades operator.
         </p>
       </main>
-    </>
+    </div>
   );
 }
 

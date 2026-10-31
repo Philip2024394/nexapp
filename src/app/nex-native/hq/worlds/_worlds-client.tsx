@@ -49,16 +49,47 @@ export function HqWorldsClient(props: HqWorldsClientProps): React.JSX.Element {
     }
   };
 
+  // Owner directive 2026-10-31 · HQ Worlds panel docks to the LEFT
+  // of the viewport (fixed · 380 px) so the sealed NEX phone frame
+  // stays visible to the right while the owner reviews worlds. The
+  // phone frame itself continues to render whatever is currently
+  // active in its route tree (home / profile / etc.). On narrow
+  // viewports the panel reverts to a normal in-frame scroller.
   return (
-    <main
-      style={{
-        maxWidth: 720,
-        margin: "0 auto",
-        padding: 20,
-        color: INK,
-        fontFamily: "Inter, system-ui, sans-serif",
-      }}
-    >
+    <>
+      <style>{`
+        .nex-hq-worlds-dock {
+          padding: 20px;
+          color: ${INK};
+          font-family: Inter, system-ui, sans-serif;
+        }
+        @media (min-width: 900px) {
+          .nex-hq-worlds-dock {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 380px;
+            height: 100dvh;
+            overflow-y: auto;
+            background: #FFFFFF;
+            border-right: 1.5px solid ${RIM};
+            box-shadow: 2px 0 12px rgba(0, 0, 0, 0.35);
+            z-index: 9000;
+          }
+          .nex-hq-worlds-dock::-webkit-scrollbar { width: 6px; }
+          .nex-hq-worlds-dock::-webkit-scrollbar-thumb {
+            background: ${RIM};
+            border-radius: 3px;
+          }
+        }
+      `}</style>
+      <main
+        className="nex-hq-worlds-dock"
+        style={{
+          maxWidth: 720,
+          margin: "0 auto",
+        }}
+      >
       <header style={{ marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>
           NEX World Management
@@ -237,6 +268,94 @@ export function HqWorldsClient(props: HqWorldsClientProps): React.JSX.Element {
         </div>
       ) : null}
     </main>
+
+    {/* Owner directive 2026-10-31 · phone-frame preview card ·
+        renders INSIDE the sealed phone frame on desktop (where the
+        panel is position:fixed and leaves the frame visible). Lets
+        the owner see the previewed world applied to NEX chrome
+        without leaving HQ. On mobile this card hides (the whole
+        screen is already the HQ panel). */}
+    <aside
+      className="nex-hq-worlds-frame-preview"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 14,
+        padding: 20,
+        color: INK,
+        fontFamily: "Inter, system-ui, sans-serif",
+      }}
+    >
+      <style>{`
+        .nex-hq-worlds-frame-preview { display: none; }
+        @media (min-width: 900px) {
+          .nex-hq-worlds-frame-preview { display: flex; }
+        }
+      `}</style>
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          color: INK_DIM,
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+        }}
+      >
+        Live preview
+      </div>
+      <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>
+        {props.previewId
+          ? `Previewing · ${props.previewId}`
+          : props.activatedId
+          ? `Active · ${props.activatedId}`
+          : "Fallback · nex-original"}
+      </h2>
+      <p style={{ fontSize: 13, lineHeight: 1.55, color: INK_DIM, margin: 0 }}>
+        {props.previewId
+          ? "This is a private preview visible only to you. Open any NEX page in a new tab to see the chrome recoloured by this world."
+          : "No preview is active. Tap Preview on a world card to try it out · only you will see the change."}
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {[
+          { label: "Open NEX home", href: "/nex-native/home" },
+          { label: "Open my profile", href: "/nex-native/profile/me" },
+          { label: "Open NEX chat", href: "/nex-native/chat" },
+          { label: "Open Creator dashboard", href: "/nex-native/creator" },
+        ].map((link) => (
+          <a
+            key={link.href}
+            href={link.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              padding: "9px 12px",
+              borderRadius: 10,
+              border: `1.5px solid ${RIM}`,
+              background: "#fff",
+              color: INK,
+              textDecoration: "none",
+              fontSize: 13,
+              fontWeight: 700,
+            }}
+          >
+            {link.label} ↗
+          </a>
+        ))}
+      </div>
+      <p
+        style={{
+          fontSize: 11,
+          color: INK_DIM,
+          lineHeight: 1.5,
+          margin: 0,
+          fontStyle: "italic",
+        }}
+      >
+        Tip · the preview cookie expires after 1 hour. Tap Stop preview on
+        the left to end it earlier.
+      </p>
+    </aside>
+    </>
   );
 }
 
