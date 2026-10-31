@@ -76,6 +76,12 @@ const ACCOUNTS = [
     is_mock_persona: true,
     headline: "NEX IE · creator · Irish Pride",
     bio: "Irish folk + traditional covers. Dublin.",
+    // Owner directive 2026-11-01 · +353 phone_country_code so
+    // isIrishAccount(nex-99901) returns true · all 3 Ireland
+    // flare-wire sites fire shamrock bursts for her (profile
+    // FollowButton, nex-feed music viewer, live-commerce viewer).
+    phone_country_code: "+353",
+    phone_national_number: "19012345",
   },
   {
     id: HQ_ADMIN_UUID,
@@ -261,6 +267,15 @@ for (const a of ACCOUNTS) {
       vals.push(a.city);
     }
   }
+  // +353 phone_country_code enables Ireland flare (shamrock bursts).
+  if (a.phone_country_code) {
+    cols.push("phone_country_code");
+    vals.push(a.phone_country_code);
+    if (a.phone_national_number) {
+      cols.push("phone_national_number");
+      vals.push(a.phone_national_number);
+    }
+  }
   const placeholders = vals.map((_, i) => `$${i + 1}`).join(", ");
   const updateCols = cols
     .filter((col) => col !== "id" && col !== "nex_handle")
@@ -281,12 +296,21 @@ for (const a of ACCOUNTS) {
   }
 }
 
-// Irish Pride profile images · same artwork as Hotel California (her
-// signature track). Avatar = cover PNG · banner = background PNG.
+// Irish Pride profile images · reuse the Hotel California artwork but
+// hosted on the PUBLIC nex-avatars bucket so <img src="…"> works
+// directly in the browser (no signed-URL resolution needed).
+// Byte source: nex-music-media/<uuid>/cover-179334… + background-179334…
+// copied over 2026-11-01 (scripts/_tmp/dewi-avatar-fix.mjs).
+const SBX_PUBLIC_URL_BASE =
+  (process.env.NEXT_PUBLIC_NEX_SUPABASE_URL ||
+    process.env.SANDBOX_SUPABASE_URL ||
+    "").replace(/\/$/, "");
 const IRISH_PRIDE_AVATAR_REF =
-  "sb://" + IRISH_PRIDE_UUID + "/cover-1793345575825-ebpnzova.png";
+  SBX_PUBLIC_URL_BASE +
+  "/storage/v1/object/public/nex-avatars/" + IRISH_PRIDE_UUID + "/avatar.png";
 const IRISH_PRIDE_COVER_REF =
-  "sb://" + IRISH_PRIDE_UUID + "/background-1793345575825-ebpnzova.png";
+  SBX_PUBLIC_URL_BASE +
+  "/storage/v1/object/public/nex-avatars/" + IRISH_PRIDE_UUID + "/cover.png";
 
 process.stdout.write(
   `\n[sandbox seed] Writing nex_account_profile rows · is_discoverable=true\n`,
