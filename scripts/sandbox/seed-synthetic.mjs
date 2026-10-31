@@ -55,41 +55,49 @@ function syntheticUuid(seed) {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`;
 }
 
+// Handle format must match CHECK (`^nex-[0-9]{5,}$`). We use the 70xxx
+// range for Ireland synthetics and 80xxx for Indonesia synthetics so
+// they don't collide with the sealed 99901..99905 Indonesia production
+// personas. HQ admin uses 90001.
 const ACCOUNTS = [
   // Ireland (synthetic)
-  { seed: "ie-aoife",   nex_handle: "nex-ie-aoife",   display_name: "Aoife O'Neill (synthetic)", country_hint: "IE" },
-  { seed: "ie-liam",    nex_handle: "nex-ie-liam",    display_name: "Liam Doherty (synthetic)",   country_hint: "IE" },
-  { seed: "ie-niamh",   nex_handle: "nex-ie-niamh",   display_name: "Niamh Walsh (synthetic)",    country_hint: "IE" },
-  { seed: "ie-cillian", nex_handle: "nex-ie-cillian", display_name: "Cillian Byrne (synthetic)",  country_hint: "IE" },
-  // Indonesia (synthetic · distinct from the sealed nex-99901..99905 production personas)
-  { seed: "id-dewi",    nex_handle: "nex-sbx-dewi",   display_name: "Dewi Sandbox (synthetic)",   country_hint: "ID" },
-  { seed: "id-budi",    nex_handle: "nex-sbx-budi",   display_name: "Budi Sandbox (synthetic)",   country_hint: "ID" },
-  { seed: "id-sari",    nex_handle: "nex-sbx-sari",   display_name: "Sari Sandbox (synthetic)",   country_hint: "ID" },
-  { seed: "id-putu",    nex_handle: "nex-sbx-putu",   display_name: "Putu Sandbox (synthetic)",   country_hint: "ID" },
+  { seed: "ie-aoife",   nex_handle: "nex-70001", display_name: "Aoife ONeill",   country_hint: "IE" },
+  { seed: "ie-liam",    nex_handle: "nex-70002", display_name: "Liam Doherty",   country_hint: "IE" },
+  { seed: "ie-niamh",   nex_handle: "nex-70003", display_name: "Niamh Walsh",    country_hint: "IE" },
+  { seed: "ie-cillian", nex_handle: "nex-70004", display_name: "Cillian Byrne",  country_hint: "IE" },
+  // Indonesia (synthetic · distinct from sealed nex-99901..99905)
+  { seed: "id-dewi",    nex_handle: "nex-80001", display_name: "Dewi Sandbox",   country_hint: "ID" },
+  { seed: "id-budi",    nex_handle: "nex-80002", display_name: "Budi Sandbox",   country_hint: "ID" },
+  { seed: "id-sari",    nex_handle: "nex-80003", display_name: "Sari Sandbox",   country_hint: "ID" },
+  { seed: "id-putu",    nex_handle: "nex-80004", display_name: "Putu Sandbox",   country_hint: "ID" },
   // HQ admin
-  { seed: "hq-admin",   nex_handle: "nex-sbx-hqadmin", display_name: "HQ Admin (synthetic)",      country_hint: "HQ", hq_role: "admin" },
+  { seed: "hq-admin",   nex_handle: "nex-90001", display_name: "HQ Admin",       country_hint: "HQ", hq_role: "admin" },
 ];
 
 const BUSINESSES = [
   // Ireland
-  { seed: "ie-biz-tea",      ownerSeed: "ie-aoife",   name: "Aoife's Dublin Tea Room (synthetic)", slug: "aoifes-dublin-tea-room" },
-  { seed: "ie-biz-fitness",  ownerSeed: "ie-liam",    name: "Liam's Galway Fitness (synthetic)",   slug: "liams-galway-fitness" },
+  { seed: "ie-biz-tea",      ownerSeed: "ie-aoife",   display_name: "Aoifes Dublin Tea Room",   slug: "aoifes-dublin-tea-room" },
+  { seed: "ie-biz-fitness",  ownerSeed: "ie-liam",    display_name: "Liams Galway Fitness",     slug: "liams-galway-fitness" },
   // Indonesia
-  { seed: "id-biz-cafe",     ownerSeed: "id-dewi",    name: "Dewi's Yogyakarta Cafe (synthetic)",  slug: "dewis-yogya-cafe" },
-  { seed: "id-biz-bikeshop", ownerSeed: "id-budi",    name: "Budi's Jakarta Bike Shop (synthetic)", slug: "budis-jkt-bike-shop" },
+  { seed: "id-biz-cafe",     ownerSeed: "id-dewi",    display_name: "Dewis Yogyakarta Cafe",    slug: "dewis-yogya-cafe" },
+  { seed: "id-biz-bikeshop", ownerSeed: "id-budi",    display_name: "Budis Jakarta Bike Shop",  slug: "budis-jkt-bike-shop" },
 ];
 
+// price_pence is bigint; currency ISO 4217 3-letter; status default='draft'
+// but we set 'active' so previews show them. department_id must match
+// nex_product_department_valid CHECK (30-value enum). category_id is
+// free-form text NOT NULL.
 const PRODUCTS = [
   // Ireland tea room
-  { seed: "ie-prod-tea1",  bizSeed: "ie-biz-tea",      name: "Irish breakfast loose leaf (synthetic)", price_cents: 1200 },
-  { seed: "ie-prod-tea2",  bizSeed: "ie-biz-tea",      name: "Barmbrack cake slice (synthetic)",        price_cents: 650 },
+  { seed: "ie-prod-tea1",  bizSeed: "ie-biz-tea",      name: "Irish breakfast loose leaf", price_pence: 1200,  currency: "EUR", department_id: "food_grocery_beverages",  category_id: "tea_coffee" },
+  { seed: "ie-prod-tea2",  bizSeed: "ie-biz-tea",      name: "Barmbrack cake slice",       price_pence: 650,   currency: "EUR", department_id: "food_delivery_restaurants", category_id: "bakery" },
   // Ireland fitness
-  { seed: "ie-prod-fit1",  bizSeed: "ie-biz-fitness",  name: "Personal training session (synthetic)",   price_cents: 6500 },
+  { seed: "ie-prod-fit1",  bizSeed: "ie-biz-fitness",  name: "Personal training session",  price_pence: 6500,  currency: "EUR", department_id: "services_marketplace",     category_id: "personal_training" },
   // Indonesia cafe
-  { seed: "id-prod-cafe1", bizSeed: "id-biz-cafe",     name: "Kopi tubruk (synthetic)",                 price_cents: 2500 },
-  { seed: "id-prod-cafe2", bizSeed: "id-biz-cafe",     name: "Nasi gudeg (synthetic)",                  price_cents: 4500 },
+  { seed: "id-prod-cafe1", bizSeed: "id-biz-cafe",     name: "Kopi tubruk",                price_pence: 2500,  currency: "IDR", department_id: "food_delivery_restaurants", category_id: "coffee" },
+  { seed: "id-prod-cafe2", bizSeed: "id-biz-cafe",     name: "Nasi gudeg",                 price_pence: 4500,  currency: "IDR", department_id: "food_delivery_restaurants", category_id: "rice_dishes" },
   // Indonesia bike shop
-  { seed: "id-prod-bike1", bizSeed: "id-biz-bikeshop", name: "Vespa service · regular (synthetic)",     price_cents: 25000 },
+  { seed: "id-prod-bike1", bizSeed: "id-biz-bikeshop", name: "Vespa service regular",      price_pence: 25000, currency: "IDR", department_id: "automotive_motorcycles_transport", category_id: "motorcycle_service" },
 ];
 
 if (DRY_RUN) {
@@ -150,11 +158,9 @@ for (const a of ACCOUNTS) {
 for (const b of BUSINESSES) {
   const id = syntheticUuid(`business:${b.seed}`);
   const ownerId = syntheticUuid(`account:${b.ownerSeed}`);
-  // Minimal viable business row · schema may require more; we try and
-  // log what fails so operator can adjust.
-  const sql = `INSERT INTO public.nex_business (id, owner_account_id, name, slug) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING`;
+  const sql = `INSERT INTO public.nex_business (id, owner_account_id, display_name, slug) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING`;
   try {
-    const r = await client.query(sql, [id, ownerId, b.name, b.slug]);
+    const r = await client.query(sql, [id, ownerId, b.display_name, b.slug]);
     if (r.rowCount > 0) { process.stdout.write(`  + business ${b.slug}\n`); inserted++; }
     else { process.stdout.write(`  = business ${b.slug} already present\n`); skipped++; }
   } catch (err) {
@@ -162,12 +168,20 @@ for (const b of BUSINESSES) {
   }
 }
 
+// nex_product NOT NULL columns: name, price_pence, currency, status
+// (default='draft'), department_id (CHECK enum), category_id (free-form
+// text), spec jsonb (default='{}'). We set status='active' so previews
+// render them.
 for (const p of PRODUCTS) {
   const id = syntheticUuid(`product:${p.seed}`);
   const bizId = syntheticUuid(`business:${p.bizSeed}`);
-  const sql = `INSERT INTO public.nex_product (id, business_id, name, price_cents) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING`;
+  const sql = `
+    INSERT INTO public.nex_product
+      (id, business_id, name, price_pence, currency, status, department_id, category_id, spec)
+    VALUES ($1, $2, $3, $4, $5, 'live', $6, $7, '{}'::jsonb)
+    ON CONFLICT (id) DO NOTHING`;
   try {
-    const r = await client.query(sql, [id, bizId, p.name, p.price_cents]);
+    const r = await client.query(sql, [id, bizId, p.name, p.price_pence, p.currency, p.department_id, p.category_id]);
     if (r.rowCount > 0) { process.stdout.write(`  + product ${p.name}\n`); inserted++; }
     else { process.stdout.write(`  = product ${p.name} already present\n`); skipped++; }
   } catch (err) {

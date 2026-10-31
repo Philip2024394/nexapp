@@ -93,43 +93,102 @@ const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: 
 await client.connect();
 process.stdout.write("[sandbox apply-schema] Connected.\n\n");
 
+// --------------------------------------------------------------------------
+// Script-owned sidecar ledger · keyed by FULL filename
+// --------------------------------------------------------------------------
+// Why not reuse nex_migration_history?
+//   nex_migration_history uses 'version' TEXT PK, and the sealed migration
+//   SQL files write their OWN hardcoded short version strings (e.g. '187',
+//   '224'). The 4 duplicate-prefix files (two with '187', two with '224')
+//   cannot be distinguished by that ledger. Also 0/236 migrations use
+//   ON CONFLICT on their ledger INSERT, so re-running one twice would
+//   PK-violate.
+//
+// Solution: a separate script-owned sidecar table keyed by the full
+// filename. The script reads this to decide skip-already-applied. The
+// sealed migration SQL files continue writing to nex_migration_history
+// unchanged. The two ledgers coexist.
+//
+// This table lives in schema `public` on the sandbox only. It is NEVER
+// created on production (production never runs this script).
+await client.query(`
+  CREATE TABLE IF NOT EXISTS public.nex_sandbox_apply_ledger (
+    filename    text PRIMARY KEY,
+    applied_at  timestamptz NOT NULL DEFAULT now()
+  );
+`);
+process.stdout.write("[sandbox apply-schema] Sidecar ledger ready: public.nex_sandbox_apply_ledger\n\n");
+
+// Multi-pass apply · handles FK/dep ordering mismatches between sealed
+// migrations. We keep looping until a full pass produces zero new
+// successes. Each failure is captured and retried on the next pass.
+// If an entire pass applies nothing, we stop and report remaining
+// failures with their last error.
 let applied = 0;
 let skipped = 0;
-let failed = 0;
-for (const file of files) {
-  const version = file.slice(0, 3);
-  // Check ledger first (idempotency); nex_migration_history exists from 001.
-  let alreadyApplied = false;
-  try {
+const failures = new Map(); // filename -> last error message
+
+async function getRemaining() {
+  const remaining = [];
+  for (const file of files) {
+    const filenameKey = file.replace(/\.sql$/i, "");
     const r = await client.query(
-      "SELECT 1 FROM nex_migration_history WHERE version = $1 LIMIT 1",
-      [version],
+      "SELECT 1 FROM public.nex_sandbox_apply_ledger WHERE filename = $1 LIMIT 1",
+      [filenameKey],
     );
-    alreadyApplied = r.rowCount > 0;
-  } catch {
-    // Ledger doesn't exist yet (true on first run of 001). Proceed.
+    if (r.rowCount === 0) remaining.push(file);
+    else skipped++;
   }
-  if (alreadyApplied) {
-    process.stdout.write(`  SKIP ${file} (version ${version} already in ledger)\n`);
-    skipped++;
-    continue;
-  }
-  const sql = readFileSync(join(MIGRATIONS_DIR, file), "utf8");
-  process.stdout.write(`  APPLY ${file} ... `);
-  try {
-    await client.query(sql);
-    process.stdout.write("ok\n");
-    applied++;
-  } catch (err) {
-    process.stdout.write(`FAILED\n`);
-    process.stderr.write(`\n[sandbox apply-schema] FAILED on ${file}:\n${err.message}\n\n`);
-    failed++;
-    break;
-  }
+  return remaining;
 }
+
+let remaining = await getRemaining();
+// skipped was accumulated for every pre-existing row — but across passes
+// we'd double-count. Snapshot it to the first-pass value only.
+const skippedSnapshot = skipped;
+
+let pass = 0;
+while (true) {
+  pass++;
+  if (!remaining.length) break;
+  process.stdout.write(`\n[sandbox apply-schema] Pass ${pass} · ${remaining.length} remaining\n`);
+  let appliedThisPass = 0;
+  const nextRemaining = [];
+  for (const file of remaining) {
+    const filenameKey = file.replace(/\.sql$/i, "");
+    const sql = readFileSync(join(MIGRATIONS_DIR, file), "utf8");
+    process.stdout.write(`  APPLY ${file} ... `);
+    try {
+      await client.query(sql);
+      await client.query(
+        "INSERT INTO public.nex_sandbox_apply_ledger (filename) VALUES ($1) ON CONFLICT DO NOTHING",
+        [filenameKey],
+      );
+      process.stdout.write("ok\n");
+      applied++;
+      appliedThisPass++;
+      failures.delete(file);
+    } catch (err) {
+      process.stdout.write(`defer (${err.message.split("\n")[0].slice(0, 80)})\n`);
+      failures.set(file, err.message);
+      nextRemaining.push(file);
+      // Transaction may be aborted · issue a ROLLBACK to clear state
+      try { await client.query("ROLLBACK"); } catch { /* no active tx */ }
+    }
+  }
+  remaining = nextRemaining;
+  if (appliedThisPass === 0) break; // no progress · give up
+}
+const failed = remaining.length;
 
 await client.end();
 process.stdout.write(
-  `\n[sandbox apply-schema] Done · applied=${applied} skipped=${skipped} failed=${failed}\n`,
+  `\n[sandbox apply-schema] Done · applied=${applied} skipped=${skippedSnapshot} failed=${failed} passes=${pass}\n`,
 );
+if (failed > 0) {
+  process.stdout.write(`\n[sandbox apply-schema] Permanently failed migrations:\n`);
+  for (const [file, msg] of failures.entries()) {
+    process.stdout.write(`  - ${file}: ${msg.split("\n")[0]}\n`);
+  }
+}
 process.exit(failed > 0 ? 1 : 0);
