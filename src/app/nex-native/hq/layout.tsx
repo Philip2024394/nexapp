@@ -64,9 +64,13 @@ export default function HqLayout({
         <div style={{ fontSize: 42, lineHeight: 1 }} aria-hidden>
           🖥️
         </div>
-        <h1 style={{ fontSize: 22, fontWeight: 900, margin: 0 }}>
+        {/* Mobile fallback uses h2 · the page-level h1 lives in the
+            actual landing page (page.tsx) which is only rendered
+            above 900px. Two h1 per page is an a11y smell · fixed
+            2026-10-31 (round 5 real-browser test). */}
+        <h2 style={{ fontSize: 22, fontWeight: 900, margin: 0 }}>
           NEX HQ is desktop-only
-        </h1>
+        </h2>
         <p
           style={{
             fontSize: 13.5,
