@@ -315,6 +315,17 @@ const YOUR_BUSINESS_ROWS: ReadonlyArray<MenuRow> = [
     href: "/nex-native/settings/tier",
     locked: false, // owner directive 2026-10-28 · drawer links unlocked
   },
+  // Owner-authorised 2026-10-31 · NEX Creator Programme · Stage 1.
+  // Entry point so creators can configure their Support (QR + payment
+  // links) without hunting through profile menus. Always visible ·
+  // qualification happens on the destination page.
+  {
+    key: "creator-support",
+    label: "Creator Support",
+    subtitle: "QR code · payment links · your fans",
+    href: "/nex-native/settings/creator",
+    locked: false,
+  },
 ];
 
 const BUSINESS_VAULT_ROW: MenuRow = {

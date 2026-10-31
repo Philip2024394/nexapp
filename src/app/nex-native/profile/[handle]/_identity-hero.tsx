@@ -41,6 +41,13 @@ import { AvatarCameraPicker } from "./_avatar-camera-picker";
 // Score. Unknown-tier returns null (shield hidden) per owner directive.
 import { TrustShield } from "@/lib/nex-native/trust/trust-shield";
 import type { TrustTier } from "@/lib/nex-native/trust/trust-score-shared";
+// Owner-authorised 2026-10-31 · NEX Creator Programme · Stage 1.
+// Yellow Creator chips reuse the sealed NEX yellow pill visual
+// (same colour / size / treatment as the DevViewerBadge). The chip
+// primitive is independent · DevViewerBadge is NOT modified.
+import { NexYellowChip } from "@/components/nex-native/badge/NexYellowChip";
+import type { SectionProgress } from "@/lib/nex-native/creator/creator-badges";
+import { sectionBadgeLabel } from "@/lib/nex-native/creator/creator-badges";
 
 const NEX = {
   bg: "#020914",
@@ -79,6 +86,11 @@ export interface IdentityHeroProps {
    *  the sealed `uploadAvatarAction` server action. Set by the
    *  parent page when `mode=edit` is on AND the viewer is the owner. */
   readonly showAvatarUploadAffordance?: boolean;
+  /** Owner-authorised 2026-10-31 · NEX Creator Programme · Stage 1.
+   *  Earned per-section Creator badges · rendered as yellow pills
+   *  beneath the avatar + location (per the owner's "under image +
+   *  country" directive). Empty array = no badges · section is hidden. */
+  readonly earnedCreatorBadges?: readonly SectionProgress[];
 }
 
 export function IdentityHero(props: IdentityHeroProps): React.JSX.Element {
@@ -275,6 +287,34 @@ export function IdentityHero(props: IdentityHeroProps): React.JSX.Element {
         >
           <MapIcon color={NEX.textMuted} /> + Add your location
         </Link>
+      ) : null}
+
+      {/* Owner-authorised 2026-10-31 · Creator badges · yellow NEX
+          chips rendered beneath avatar + location (per owner directive:
+          "under image and country"). Each earned section renders one
+          chip · chips wrap when the user has multiple earned sections.
+          Visibility: public (every viewer sees the owner's badges);
+          they signal contribution, not identity. */}
+      {props.earnedCreatorBadges && props.earnedCreatorBadges.length > 0 ? (
+        <div
+          data-nex-profile-creator-badges
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: "center",
+            gap: 6,
+            marginTop: 2,
+          }}
+        >
+          {props.earnedCreatorBadges.map((b) => (
+            <NexYellowChip
+              key={b.section}
+              label={sectionBadgeLabel(b.section)}
+              position="inline"
+              dataAttrs={{ "data-creator-section": b.section }}
+            />
+          ))}
+        </div>
       ) : null}
 
       {professionLine ? (

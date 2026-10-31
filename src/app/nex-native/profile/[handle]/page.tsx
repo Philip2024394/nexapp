@@ -74,6 +74,8 @@ import { readFollowCounts, getFollowState } from "@/lib/nex-native/follow/follow
 import { OwnerEditShell } from "./_owner-edit-shell";
 import { SafeTradeHeroIcon } from "./_safe-trade-hero-icon";
 import { AccountMusicPreloader } from "@/components/nex-native/music/_account-music-preloader";
+import { CreatorWelcomePanel } from "@/components/nex-native/creator/CreatorWelcomePanel";
+import { getCreatorSupportSettings } from "@/lib/nex-native/creator/creator-support-service";
 import { savePersonalProfileAction, submitSafeTradeReportAction } from "./_actions";
 import type {
   TrustAccountTier,
@@ -323,6 +325,25 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
     .then((r) => (r.ok ? r.isIrish : false))
     .catch(() => false);
 
+  // Owner-authorised 2026-10-31 · NEX Creator Programme · Stage 1.
+  // Resolve earned Creator badges (music-only today; shape ready for
+  // shop/video/etc.). Fail-open · a broken resolver can never break
+  // the profile render; the hero simply hides the badge row.
+  const creatorBadgesPromise = (async () => {
+    const { resolveCreatorBadges } = await import(
+      "@/lib/nex-native/creator/creator-badges"
+    );
+    return resolveCreatorBadges(profileAccount.id);
+  })().catch(() => ({ all: [], earned: [] }));
+
+  // Owner-authorised 2026-10-31 · if the owner is viewing their own
+  // profile AND they have earned a Creator badge AND Support is NOT
+  // configured yet, we show the welcome panel. Resolve the settings
+  // row here (fail-open · null = not configured).
+  const creatorSupportPromise = isOwner
+    ? getCreatorSupportSettings(profileAccount.id).catch(() => null)
+    : Promise.resolve(null);
+
   // Owner-authorised 2026-10-31 · world-class "premium app feel" ·
   // warm the viewer's browser cache for the profile owner's music
   // library the moment they land on the account page. If they tap
@@ -346,7 +367,7 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
     libraryCoverUrls: [] as readonly string[],
   }));
 
-  const [profile, businesses, isVerified, connectState, mutualResult, followCounts, viewerFollowState, isIrishOwner, musicPreload] = await Promise.all([
+  const [profile, businesses, isVerified, connectState, mutualResult, followCounts, viewerFollowState, isIrishOwner, musicPreload, creatorBadges, creatorSupportSettings] = await Promise.all([
     profilePromise,
     businessesPromise,
     verifiedPromise,
@@ -356,7 +377,16 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
     viewerFollowStatePromise,
     isIrishOwnerPromise,
     musicPreloadPromise,
+    creatorBadgesPromise,
+    creatorSupportPromise,
   ]);
+
+  // Owner-authorised 2026-10-31 · welcome-panel visibility:
+  // isOwner + has earned badge + Support not yet enabled.
+  const showCreatorWelcome =
+    isOwner &&
+    creatorBadges.earned.length > 0 &&
+    (!creatorSupportSettings || !creatorSupportSettings.enabled);
 
   // Pre-migration-205 shape: cover_image_url + interests may be absent.
   // The service's .select("*") returns undefined for missing columns ·
@@ -557,6 +587,18 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
         topAudioUrl={musicPreload.topAudioUrl}
         libraryCoverUrls={musicPreload.libraryCoverUrls}
       />
+
+      {/* Owner-authorised 2026-10-31 · Creator welcome panel · shown
+          on the owner's own profile when they've earned a Creator
+          badge but haven't set up Support yet. Dismissible client-
+          side (ephemeral · comes back on next profile visit until
+          they configure Support). */}
+      {showCreatorWelcome ? (
+        <CreatorWelcomePanel
+          earnedBadges={creatorBadges.earned}
+          firstName={displayName.split(" ")[0] ?? displayName}
+        />
+      ) : null}
       {/* Owner directive 2026-10-18 · when the viewer arrives from a
           chat theme preview (?themeAccent in URL) · show a theme-
           coloured strip at the top of the page so the continuity
@@ -682,6 +724,7 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
             followingCount={followCounts.followingCount}
             viewerFollowState={viewerFollowState}
             isIrishOwner={isIrishOwner}
+            earnedCreatorBadges={creatorBadges.earned}
           />
         </OwnerEditShell>
       ) : (
@@ -721,6 +764,7 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
           followingCount={followCounts.followingCount}
           viewerFollowState={viewerFollowState}
           isIrishOwner={isIrishOwner}
+          earnedCreatorBadges={creatorBadges.earned}
         />
       )}
     </main>
@@ -788,6 +832,11 @@ function ProfileBody(props: {
    *  only (phone_country_code === '+353') per Phase 1 hard-coded
    *  owner decision. */
   isIrishOwner: boolean;
+  /** Owner-authorised 2026-10-31 · NEX Creator Programme · Stage 1.
+   *  Earned per-section Creator badges rendered beneath avatar +
+   *  location in IdentityHero. Empty array = no badges · badge row
+   *  is hidden. */
+  earnedCreatorBadges: readonly import("@/lib/nex-native/creator/creator-badges").SectionProgress[];
 }) {
   // Avatar + cover camera overlays only when the owner is actively
   // editing · zero footprint for viewers or in view mode.
@@ -845,6 +894,7 @@ function ProfileBody(props: {
         isVerified={props.isVerified}
         showAvatarUploadAffordance={showUploadAffordances}
         trustTier={props.trustScore?.tier ?? "unknown"}
+        earnedCreatorBadges={props.earnedCreatorBadges}
       />
       <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 10 }}>
         <InterestsPills interests={props.interests} isOwner={props.isOwner} />
