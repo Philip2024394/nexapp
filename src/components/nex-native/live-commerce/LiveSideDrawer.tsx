@@ -331,48 +331,11 @@ export function LiveSideDrawer(props: LiveSideDrawerProps): React.JSX.Element {
             </span>
           </div>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            {/* Owner directive 2026-11-01 · Batch A · the removed "Close"
-             *  chip is replaced by a quieter 32×32 ✕ icon paired with
-             *  the Home icon. Both share the same visual weight (solid
-             *  black bg, white stroke) so users read them as a pair:
-             *  Home sends you somewhere, ✕ just dismisses. The
-             *  closeButtonRef is reattached here so the open-focus
-             *  effect at line ~121 restores a11y focus trap behaviour. */}
-            <button
-              ref={closeButtonRef}
-              type="button"
-              onClick={close}
-              aria-label="Close menu"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                background: "#000000",
-                border: `1px solid ${PANEL_BORDER}`,
-                color: TEXT,
-                cursor: "pointer",
-                padding: 0,
-                fontFamily: "inherit",
-              }}
-            >
-              <svg
-                aria-hidden
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M18 6 6 18" />
-                <path d="M6 6l12 12" />
-              </svg>
-            </button>
+            {/* Owner directive 2026-11-01 (follow-up) · ✕ close icon
+             *  removed from the HEADER · close affordance moved to the
+             *  footer as a "Close" text button. closeButtonRef is
+             *  reattached in the footer so a11y focus-on-open still
+             *  works. */}
             {/* Owner directive 2026-11-01 · Home button background
              *  changed from translucent white to solid black. Icon
              *  stroke stays TEXT (near-white) for high-contrast
@@ -462,43 +425,69 @@ export function LiveSideDrawer(props: LiveSideDrawerProps): React.JSX.Element {
           />
         </div>
 
-        {/* Owner directive 2026-11-01 · Ireland-only footer decoration ·
-         *  "Dancing Leprechaun with Headphones" image, flipped to face
-         *  left. Visibility + source URL are both driven by world CSS
-         *  vars emitted in _world-stylesheet.tsx:
-         *    --nex-world-live-drawer-footer-image-display
-         *    --nex-world-live-drawer-footer-image-url
-         *  Non-Ireland worlds leave both unset, so the <img>'s inline
-         *  `display: none` fallback keeps the element out of their
-         *  chrome AND out of the a11y tree. Hardcoded Irish branding
-         *  never leaks into Indonesia / Worldwide / future worlds.
-         *  Flipping is a pure CSS transform (scaleX(-1)) · no second
-         *  image asset needed. aria-hidden="true" since the image is
-         *  decorative; the drawer's primary content is the menu rows
-         *  above. */}
+        {/* Owner directive 2026-11-01 (follow-up) · drawer footer.
+         *  Left · "Close" TEXT button · universal (replaces the ✕
+         *  header icon · present on every world because every drawer
+         *  needs a visible close affordance).
+         *  Right · Ireland-only leprechaun decoration · flipped
+         *  horizontally via scaleX(-1) · visibility gated by the
+         *  --nex-world-live-drawer-footer-image-display CSS var so
+         *  non-Ireland worlds show the Close button on the left and
+         *  nothing on the right (justifyContent space-between still
+         *  works with an empty right slot). */}
         <div
           data-nex-live-side-drawer-footer
           style={{
-            display:
-              "var(--nex-world-live-drawer-footer-image-display, none)",
             marginTop: "auto",
-            padding: "12px 12px 20px 12px",
-            textAlign: "left",
+            padding: "12px 16px 20px 16px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+            gap: 12,
           }}
         >
-          <img
-            src="/nex-brand/ireland-leprechaun-dj.png"
-            alt=""
-            aria-hidden
+          <button
+            ref={closeButtonRef}
+            type="button"
+            onClick={close}
+            aria-label="Close menu"
             style={{
-              width: 96,
-              height: "auto",
-              transform: "scaleX(-1)",
-              pointerEvents: "none",
-              userSelect: "none",
-              display: "block",
+              padding: "10px 14px",
+              background: "transparent",
+              border: `1px solid ${PANEL_BORDER}`,
+              borderRadius: 10,
+              color: TEXT,
+              fontSize: 14,
+              fontWeight: 700,
+              letterSpacing: 0.3,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              lineHeight: 1,
             }}
-          />
+          >
+            Close
+          </button>
+          <div
+            data-nex-live-side-drawer-footer-image
+            style={{
+              display:
+                "var(--nex-world-live-drawer-footer-image-display, none)",
+            }}
+          >
+            <img
+              src="/nex-brand/ireland-leprechaun-dj.png"
+              alt=""
+              aria-hidden
+              style={{
+                width: 96,
+                height: "auto",
+                transform: "scaleX(-1)",
+                pointerEvents: "none",
+                userSelect: "none",
+                display: "block",
+              }}
+            />
+          </div>
         </div>
       </aside>
       <style>{`

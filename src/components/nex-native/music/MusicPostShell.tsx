@@ -549,10 +549,15 @@ function MusicPostHeaderIdentity(props: {
             {props.broadcasterNexHandle}
           </span>
         )}
+        {/* Owner directive 2026-11-01 (follow-up) · the line under the
+         *  broadcaster-name title should be SHORTER + BIGGER + BOLDER:
+         *  dropped the "Live " prefix (text is now just the country
+         *  label or NEX) · bumped fontSize 13 → 16 · bumped fontWeight
+         *  700 → 900 (black) · colour unchanged. */}
         <span
           style={{
-            fontSize: 13,
-            fontWeight: 700,
+            fontSize: 16,
+            fontWeight: 900,
             color: "#D9E6F5",
             lineHeight: 1.2,
             whiteSpace: "nowrap",
@@ -562,7 +567,7 @@ function MusicPostHeaderIdentity(props: {
             display: "block",
           }}
         >
-          Live {countryLabel || props.countryCode || "NEX"}
+          {countryLabel || props.countryCode || "NEX"}
         </span>
       </div>
     </WrapperTag>
