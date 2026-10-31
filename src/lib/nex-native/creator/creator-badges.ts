@@ -25,6 +25,7 @@
 
 import "server-only";
 import { getOwnerTrackCount } from "../music/music-repository";
+import { nexSupabaseAdmin } from "../supabase-admin";
 
 /** Owner-authorised 2026-10-31 · the universal qualification floor.
  *  Changing this is a sealed-doctrine decision · do not vary per-
@@ -70,22 +71,67 @@ export function sectionBadgeLabel(section: CreatorSection): string {
   }
 }
 
-/** Count qualifying posts in each supported section. Music is live;
- *  the others return 0 until each one gets its owner-count helper. */
+/** Count qualifying products the account owns, joined through
+ *  nex_business.owner_account_id. "Qualifying" = non-removed · we
+ *  check `status != 'removed'` on nex_product. Fail-open: on any
+ *  error returns 0. */
+async function countShopForAccount(accountId: string): Promise<number> {
+  try {
+    // Supabase JS does not support joins in count queries directly ·
+    // we do the two-step: list businesses, then count products.
+    const { data: biz, error: bizErr } = await nexSupabaseAdmin
+      .from("nex_business")
+      .select("id")
+      .eq("owner_account_id", accountId);
+    if (bizErr || !biz || biz.length === 0) return 0;
+    const businessIds = biz.map((b: { id: string }) => b.id);
+    const { count, error: pErr } = await nexSupabaseAdmin
+      .from("nex_product")
+      .select("id", { count: "exact", head: true })
+      .in("business_id", businessIds)
+      .neq("status", "removed");
+    if (pErr || typeof count !== "number") return 0;
+    return count;
+  } catch {
+    return 0;
+  }
+}
+
+/** Count non-removed uploaded videos owned by the account. */
+async function countVideoForAccount(accountId: string): Promise<number> {
+  try {
+    const { count, error } = await nexSupabaseAdmin
+      .from("nex_uploaded_video")
+      .select("id", { count: "exact", head: true })
+      .eq("owner_account_id", accountId)
+      .neq("visibility", "removed");
+    if (error || typeof count !== "number") return 0;
+    return count;
+  } catch {
+    return 0;
+  }
+}
+
+/** Count qualifying posts in each supported section. Music / Shop /
+ *  Video are live. Images / Food / Fashion / Property return 0 until
+ *  their content models land in a future migration — do not fabricate
+ *  numbers. */
 async function countBySection(
   accountId: string,
 ): Promise<Record<CreatorSection, number>> {
-  const [musicCount] = await Promise.all([
+  const [musicCount, shopCount, videoCount] = await Promise.all([
     getOwnerTrackCount(accountId).catch(() => 0),
+    countShopForAccount(accountId),
+    countVideoForAccount(accountId),
   ]);
   return {
     music: musicCount,
-    shop: 0,
-    video: 0,
-    images: 0,
-    food: 0,
-    fashion: 0,
-    property: 0,
+    shop: shopCount,
+    video: videoCount,
+    images: 0,   // no content table yet
+    food: 0,     // no content table yet
+    fashion: 0,  // no content table yet
+    property: 0, // no content table yet
   };
 }
 

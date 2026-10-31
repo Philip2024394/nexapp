@@ -45,9 +45,10 @@ import type { TrustTier } from "@/lib/nex-native/trust/trust-score-shared";
 // Yellow Creator chips reuse the sealed NEX yellow pill visual
 // (same colour / size / treatment as the DevViewerBadge). The chip
 // primitive is independent · DevViewerBadge is NOT modified.
-import { NexYellowChip } from "@/components/nex-native/badge/NexYellowChip";
+// Stage 2.1 · tapping a Creator chip opens CreatorSupportSheet.
 import type { SectionProgress } from "@/lib/nex-native/creator/creator-badges";
-import { sectionBadgeLabel } from "@/lib/nex-native/creator/creator-badges";
+import type { CreatorSupportSettings } from "@/lib/nex-native/creator/creator-support-service";
+import { CreatorBadgeStrip } from "@/components/nex-native/creator/CreatorBadgeStrip";
 
 const NEX = {
   bg: "#020914",
@@ -91,6 +92,11 @@ export interface IdentityHeroProps {
    *  beneath the avatar + location (per the owner's "under image +
    *  country" directive). Empty array = no badges · section is hidden. */
   readonly earnedCreatorBadges?: readonly SectionProgress[];
+  /** Owner-authorised 2026-10-31 · Stage 2.1 · the creator's Support
+   *  settings, server-resolved ONLY when settings.enabled === true
+   *  (sealed privacy rule · never leak another creator's drafts).
+   *  Null = support not enabled → sheet renders friendly empty state. */
+  readonly supportSettings?: CreatorSupportSettings | null;
 }
 
 export function IdentityHero(props: IdentityHeroProps): React.JSX.Element {
@@ -290,31 +296,18 @@ export function IdentityHero(props: IdentityHeroProps): React.JSX.Element {
       ) : null}
 
       {/* Owner-authorised 2026-10-31 · Creator badges · yellow NEX
-          chips rendered beneath avatar + location (per owner directive:
-          "under image and country"). Each earned section renders one
-          chip · chips wrap when the user has multiple earned sections.
-          Visibility: public (every viewer sees the owner's badges);
-          they signal contribution, not identity. */}
+          chips rendered beneath avatar + location. Stage 2.1 · each
+          chip is tappable and opens the universal CreatorSupportSheet.
+          Server passes `supportSettings` only when the creator has
+          enabled Support (sealed privacy · never leak drafts). */}
       {props.earnedCreatorBadges && props.earnedCreatorBadges.length > 0 ? (
-        <div
-          data-nex-profile-creator-badges
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            justifyContent: "center",
-            gap: 6,
-            marginTop: 2,
-          }}
-        >
-          {props.earnedCreatorBadges.map((b) => (
-            <NexYellowChip
-              key={b.section}
-              label={sectionBadgeLabel(b.section)}
-              position="inline"
-              dataAttrs={{ "data-creator-section": b.section }}
-            />
-          ))}
-        </div>
+        <CreatorBadgeStrip
+          earnedBadges={props.earnedCreatorBadges}
+          creatorName={props.displayName}
+          creatorAvatarUrl={props.avatarUrl}
+          creatorNexHandle={props.nexHandle}
+          supportSettings={props.supportSettings ?? null}
+        />
       ) : null}
 
       {professionLine ? (

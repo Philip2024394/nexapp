@@ -9,7 +9,11 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { saveCreatorSupportSettingsAction } from "./_actions";
+import {
+  saveCreatorSupportSettingsAction,
+  uploadCreatorQrAction,
+  removeCreatorQrAction,
+} from "./_actions";
 import type { CreatorSupportSettings } from "@/lib/nex-native/creator/creator-support-service";
 import type { SectionProgress } from "@/lib/nex-native/creator/creator-badges";
 import { sectionBadgeLabel } from "@/lib/nex-native/creator/creator-badges";
@@ -43,6 +47,41 @@ export function CreatorSettingsClient(
   const [qrisUrl, setQrisUrl] = React.useState(
     props.initial?.qrisImageUrl ?? "",
   );
+  const [qrStatus, setQrStatus] = React.useState<
+    | { kind: "idle" }
+    | { kind: "uploading" }
+    | { kind: "ok" }
+    | { kind: "error"; message: string }
+  >({ kind: "idle" });
+  const qrInputRef = React.useRef<HTMLInputElement>(null);
+
+  const onPickQr = async (file: File | null) => {
+    if (!file) return;
+    setQrStatus({ kind: "uploading" });
+    const fd = new FormData();
+    fd.append("qris", file);
+    const res = await uploadCreatorQrAction(fd);
+    if (!res.ok) {
+      setQrStatus({ kind: "error", message: res.message });
+      return;
+    }
+    setQrisUrl(res.qrisImageUrl);
+    setQrStatus({ kind: "ok" });
+    router.refresh();
+  };
+
+  const onRemoveQr = async () => {
+    setQrStatus({ kind: "uploading" });
+    const res = await removeCreatorQrAction();
+    if (!res.ok) {
+      setQrStatus({ kind: "error", message: res.message });
+      return;
+    }
+    setQrisUrl("");
+    setQrStatus({ kind: "ok" });
+    router.refresh();
+  };
+
   const [status, setStatus] = React.useState<
     | { kind: "idle" }
     | { kind: "saving" }
@@ -52,6 +91,9 @@ export function CreatorSettingsClient(
 
   const onSave = async () => {
     setStatus({ kind: "saving" });
+    // qrisImageUrl is NOT passed here · it is persisted by
+    // uploadCreatorQrAction / removeCreatorQrAction. This save only
+    // handles the fields the user types directly.
     const res = await saveCreatorSupportSettingsAction({
       enabled,
       qrisImageUrl: qrisUrl.trim() || null,
@@ -124,14 +166,76 @@ export function CreatorSettingsClient(
       ) : null}
 
       <section style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 14 }}>
-        <Field label="QRIS image URL" help="Paste a link to your QR image. In a future update you'll be able to upload directly here. NEX never verifies a QR scan was paid.">
-          <input
-            type="url"
-            value={qrisUrl}
-            onChange={(e) => setQrisUrl(e.target.value)}
-            placeholder="https://…/your-qris.png"
-            style={inputStyle}
-          />
+        <Field label="QR code image" help="Upload your QRIS or any payment-provider QR. PNG / JPEG / WebP, max 2 MB. NEX never verifies a QR scan was paid.">
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {qrisUrl ? (
+              <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={qrisUrl}
+                  alt="Your QR code preview"
+                  style={{
+                    width: 140,
+                    height: 140,
+                    objectFit: "contain",
+                    background: "#fff",
+                    border: `1.5px solid ${RIM}`,
+                    borderRadius: 10,
+                    padding: 6,
+                  }}
+                />
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
+                  <button
+                    type="button"
+                    onClick={() => qrInputRef.current?.click()}
+                    disabled={qrStatus.kind === "uploading"}
+                    style={smallBtn}
+                  >
+                    {qrStatus.kind === "uploading" ? "Working…" : "Replace QR"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onRemoveQr}
+                    disabled={qrStatus.kind === "uploading"}
+                    style={{ ...smallBtn, color: RED, borderColor: "rgba(200,16,46,0.3)" }}
+                  >
+                    Remove QR
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => qrInputRef.current?.click()}
+                disabled={qrStatus.kind === "uploading"}
+                style={{
+                  padding: "16px 14px",
+                  borderRadius: 12,
+                  border: `1.5px dashed ${RIM}`,
+                  background: "rgba(0, 175, 255, 0.04)",
+                  color: INK,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  textAlign: "center",
+                }}
+              >
+                {qrStatus.kind === "uploading" ? "Uploading…" : "📷  Upload QR code"}
+              </button>
+            )}
+            <input
+              ref={qrInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              hidden
+              onChange={(e) => void onPickQr(e.target.files?.[0] ?? null)}
+            />
+            {qrStatus.kind === "error" ? (
+              <div style={{ color: RED, fontSize: 12, fontWeight: 700 }}>
+                {qrStatus.message}
+              </div>
+            ) : null}
+          </div>
         </Field>
 
         <Field label="PayPal link (optional)" help="A paypal.me or paypal.com link your supporters can tap.">
@@ -271,5 +375,17 @@ const inputStyle: React.CSSProperties = {
   outline: "none",
   width: "100%",
   boxSizing: "border-box",
+  fontFamily: "Inter, system-ui, sans-serif",
+};
+
+const smallBtn: React.CSSProperties = {
+  padding: "8px 12px",
+  borderRadius: 999,
+  border: `1.5px solid ${RIM}`,
+  background: "#fff",
+  color: INK,
+  fontWeight: 700,
+  fontSize: 12.5,
+  cursor: "pointer",
   fontFamily: "Inter, system-ui, sans-serif",
 };

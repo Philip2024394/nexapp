@@ -336,13 +336,18 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
     return resolveCreatorBadges(profileAccount.id);
   })().catch(() => ({ all: [], earned: [] }));
 
-  // Owner-authorised 2026-10-31 · if the owner is viewing their own
-  // profile AND they have earned a Creator badge AND Support is NOT
-  // configured yet, we show the welcome panel. Resolve the settings
-  // row here (fail-open · null = not configured).
-  const creatorSupportPromise = isOwner
-    ? getCreatorSupportSettings(profileAccount.id).catch(() => null)
-    : Promise.resolve(null);
+  // Owner-authorised 2026-10-31 · Stage 2.1 ·
+  // Always resolve the creator's Support settings server-side so that:
+  //   · When viewer === owner · we may show the Welcome panel (needs
+  //     to know if Support is configured yet)
+  //   · When viewer !== owner · we expose the settings to the
+  //     IdentityHero → CreatorBadgeStrip → CreatorSupportSheet ONLY
+  //     when `enabled === true` (sealed privacy rule · never leak a
+  //     draft). The gate below enforces that.
+  // Fail-open · null = not configured (or not yet applied migration).
+  const creatorSupportPromise = getCreatorSupportSettings(
+    profileAccount.id,
+  ).catch(() => null);
 
   // Owner-authorised 2026-10-31 · world-class "premium app feel" ·
   // warm the viewer's browser cache for the profile owner's music
@@ -387,6 +392,17 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
     isOwner &&
     creatorBadges.earned.length > 0 &&
     (!creatorSupportSettings || !creatorSupportSettings.enabled);
+
+  // Owner-authorised 2026-10-31 · Stage 2.1 · the public settings
+  // view. A visitor's badge-tap only ever sees settings when the
+  // creator has publicly enabled them · owner always sees their own
+  // (even in draft) so they can preview their Support window.
+  const publicCreatorSupport =
+    isOwner
+      ? creatorSupportSettings
+      : creatorSupportSettings && creatorSupportSettings.enabled
+      ? creatorSupportSettings
+      : null;
 
   // Pre-migration-205 shape: cover_image_url + interests may be absent.
   // The service's .select("*") returns undefined for missing columns ·
@@ -725,6 +741,7 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
             viewerFollowState={viewerFollowState}
             isIrishOwner={isIrishOwner}
             earnedCreatorBadges={creatorBadges.earned}
+            creatorSupportSettings={publicCreatorSupport}
           />
         </OwnerEditShell>
       ) : (
@@ -765,6 +782,7 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
           viewerFollowState={viewerFollowState}
           isIrishOwner={isIrishOwner}
           earnedCreatorBadges={creatorBadges.earned}
+          creatorSupportSettings={publicCreatorSupport}
         />
       )}
     </main>
@@ -837,6 +855,11 @@ function ProfileBody(props: {
    *  location in IdentityHero. Empty array = no badges · badge row
    *  is hidden. */
   earnedCreatorBadges: readonly import("@/lib/nex-native/creator/creator-badges").SectionProgress[];
+  /** Owner-authorised 2026-10-31 · Stage 2.1 · the creator's Support
+   *  settings for the tappable Support sheet. Server already gates
+   *  this prop (null when the viewer is not the owner AND the
+   *  creator has not publicly enabled Support · sealed privacy). */
+  creatorSupportSettings: import("@/lib/nex-native/creator/creator-support-service").CreatorSupportSettings | null;
 }) {
   // Avatar + cover camera overlays only when the owner is actively
   // editing · zero footprint for viewers or in view mode.
@@ -895,6 +918,7 @@ function ProfileBody(props: {
         showAvatarUploadAffordance={showUploadAffordances}
         trustTier={props.trustScore?.tier ?? "unknown"}
         earnedCreatorBadges={props.earnedCreatorBadges}
+        supportSettings={props.creatorSupportSettings}
       />
       <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 10 }}>
         <InterestsPills interests={props.interests} isOwner={props.isOwner} />
