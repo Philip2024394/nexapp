@@ -68,6 +68,14 @@ export interface LiveSideDrawerProps {
   /** Optional style overrides for the trigger · lets callers match the
    *  surrounding button cluster. */
   readonly triggerStyle?: React.CSSProperties;
+  /** Owner-authorised 2026-11-01 · Batch E.1 · My Music row.
+   *  When supplied, the drawer renders a "My Music" row at the top of
+   *  the body (above Go Live) that routes to the signed-in viewer's
+   *  active-slot music track OR their most recent eligible shared_live
+   *  fallback (resolved server-side via resolveMyMusicTargetForOwner).
+   *  Null / omitted → row hidden entirely (owner "no dead buttons"
+   *  rule · the row never appears for viewers without eligible music). */
+  readonly myMusicHref?: string | null;
 }
 
 export function LiveSideDrawer(props: LiveSideDrawerProps): React.JSX.Element {
@@ -406,7 +414,7 @@ export function LiveSideDrawer(props: LiveSideDrawerProps): React.JSX.Element {
           </div>
         </div>
 
-        {/* Body · three menu rows */}
+        {/* Body · three menu rows + optional "My Music" row at top */}
         <div
           style={{
             display: "flex",
@@ -415,6 +423,22 @@ export function LiveSideDrawer(props: LiveSideDrawerProps): React.JSX.Element {
             padding: "12px 12px 24px 12px",
           }}
         >
+          {/* Owner-authorised 2026-11-01 · Batch E.1 · "My Music" row.
+           *  Rendered ONLY when the caller supplies a non-null
+           *  myMusicHref · guaranteed owner-only by the server-side
+           *  resolveMyMusicTargetForOwner resolver which returns null
+           *  for signed-in users without eligible shared_live music
+           *  and null for guests. Opens the owner's active-slot track
+           *  or most recent shared_live fallback · never a dead button. */}
+          {props.myMusicHref ? (
+            <LiveDrawerRow
+              label="My Music"
+              subtitle="Open my active music post · library + chronological cycle"
+              href={props.myMusicHref}
+              dataKey="my-music"
+              onNavigate={close}
+            />
+          ) : null}
           <LiveDrawerRow
             label="Go Live"
             subtitle="Guidelines + agreement before you broadcast"

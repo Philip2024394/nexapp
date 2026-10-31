@@ -38,6 +38,12 @@ import {
 } from "@/lib/nex-native/nex-feed/country-feed-mode";
 import { listCountryFeedEntries } from "@/lib/nex-native/nex-feed/ireland-feed-reader";
 import { CountryFeedSwitcher } from "@/components/nex-native/nex-feed/CountryFeedSwitcher";
+// Owner directive 2026-11-01 · Batch E.1 · My Live Music target.
+// Resolves the signed-in viewer's own active-slot track OR most
+// recent eligible shared_live track · null if neither exists.
+// Consumed by (a) the MusicActionsStack icon on owner self-view and
+// (b) the LiveSideDrawer My Music row (owner-only).
+import { resolveMyMusicTargetForOwner } from "@/lib/nex-native/music/owner-my-music-target";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import {
   getTrackById,
@@ -292,6 +298,20 @@ export default async function NexFeedViewerPage({
   // consumers treat null as "guest / unresolved".
   const session = await resolveSessionWithDevOverride().catch(() => null);
   const viewerAccountId: string | null = session?.account.id ?? null;
+
+  // Owner directive 2026-11-01 · Batch E.1 · resolve the viewer's own
+  // "My Live Music" destination (active-slot track OR most recent
+  // eligible shared_live). Returned as a plain href + trackId · null
+  // when the signed-in viewer has no eligible music (guest, or a
+  // signed-in user with 0 shared_live tracks).
+  //   · MusicActionsStack icon shown only when the viewer is on their
+  //     OWN track (self-view) AND myMusicTarget is non-null.
+  //   · LiveSideDrawer row shown whenever myMusicTarget is non-null,
+  //     regardless of self-view (owner's drawer always surfaces My
+  //     Music when they have music to show).
+  const myMusicTarget = await resolveMyMusicTargetForOwner(
+    viewerAccountId,
+  ).catch(() => null);
 
   // Default sibling pool is every feed entry (music + video).
   let siblingIds: readonly string[] = allEntries.map((e) => e.feedEntryId);
@@ -586,6 +606,7 @@ export default async function NexFeedViewerPage({
           nextOwnerBackgroundUrl={nextOwnerBackgroundUrl}
           nextOwnerAudioUrl={nextOwnerAudioUrl}
           devViewerBadge={devViewerBadge}
+          myMusicHref={myMusicTarget?.href ?? null}
         />
         {/* Owner directive 2026-11-01 · Batch E · country switcher
          *  mounted as a sibling of the viewer client so it floats on

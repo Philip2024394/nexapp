@@ -77,6 +77,15 @@ export interface MusicActionsStackProps {
    *  · internal-error · etc.). Parity with FollowButton.onReject.
    *  Omit to accept the sealed silent-rollback default. */
   readonly onFollowReject?: (reason: NexFollowErrorCode, message: string) => void;
+  /** Owner-authorised 2026-11-01 · Batch E.1 · My Live Music.
+   *  Optional callback fired when the owner (self-view) taps the
+   *  "My Live Music" icon at the TOP of the stack. Routes to the
+   *  owner's active-slot track OR their most recent eligible
+   *  shared_live track · resolved server-side by
+   *  `resolveMyMusicTargetForOwner`. When OMITTED (visitor view, OR
+   *  owner has no eligible shared_live music) the icon is hidden
+   *  entirely (owner "no dead buttons" rule). */
+  readonly onMyLiveMusic?: () => void;
   /** Owner-authorised 2026-10-30 · message icon · when provided the
    *  stack renders a 5th button between Share and Follow. Tapping
    *  opens the caller-mounted MessagePanel (same sealed connection-
@@ -272,6 +281,25 @@ export function MusicActionsStack(
           pointerEvents: "auto",
         }}
       >
+        {/* Owner-authorised 2026-11-01 · Batch E.1 · "My Live Music"
+         *  icon at the TOP of the stack. Owner self-view only (per
+         *  §4 directive · "The My Live Music icon must not appear
+         *  for visitors viewing another creator's music"). Hidden
+         *  entirely when the owner has no eligible shared_live track
+         *  (callback omitted). Taps route to the owner's active-slot
+         *  track OR their most recent shared_live fallback · the
+         *  caller handles the destination resolution via
+         *  `resolveMyMusicTargetForOwner`. */}
+        {props.isOwnerView && props.onMyLiveMusic && (
+          <IconButton
+            ariaLabel="My Live Music · open my active music post"
+            onClick={props.onMyLiveMusic}
+            active={false}
+          >
+            <MyLiveMusicIcon color={SOLID_WHITE} />
+          </IconButton>
+        )}
+
         {!props.isOwnerView && (
           <>
             <IconButton
@@ -577,6 +605,36 @@ function formatCount(n: number): string {
   if (n < 10000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "k";
   if (n < 1_000_000) return Math.floor(n / 1000) + "k";
   return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
+}
+
+// Owner-authorised 2026-11-01 · Batch E.1 · My Live Music glyph.
+// Pure SVG · consistent across devices (emoji musical-note vary). A
+// headphones-shaped icon reads as "live listening" at thumb size
+// without competing visually with the sealed EditIcon (pencil) that
+// sits directly below it on the owner self-view stack.
+function MyLiveMusicIcon(props: {
+  readonly color: string;
+}): React.JSX.Element {
+  return (
+    <svg
+      aria-hidden
+      width="26"
+      height="26"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={props.color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {/* Headband arc */}
+      <path d="M4 15v-3a8 8 0 0 1 16 0v3" />
+      {/* Left earcup */}
+      <path d="M4 15h3a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" fill={props.color} />
+      {/* Right earcup */}
+      <path d="M20 15h-3a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1z" fill={props.color} />
+    </svg>
+  );
 }
 
 function HeartIcon(props: {

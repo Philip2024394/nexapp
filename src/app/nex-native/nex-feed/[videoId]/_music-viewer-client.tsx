@@ -120,6 +120,12 @@ export interface MusicViewerClientProps {
   /** Owner-authorised 2026-10-30 · dev-only session chip. Null in
    *  production. "owner" → yellow · "viewer" → blue. */
   readonly devViewerBadge: "owner" | "viewer" | null;
+  /** Owner-authorised 2026-11-01 · Batch E.1 · My Live Music target.
+   *  Href the owner's "My Live Music" icon (viewer right rail, owner
+   *  self-view only) + "My Music" drawer row (always for owner) route
+   *  to. Null when the signed-in viewer has no eligible shared_live
+   *  track · the icon + row are both hidden. */
+  readonly myMusicHref: string | null;
 }
 
 export function MusicViewerClient(
@@ -409,7 +415,7 @@ export function MusicViewerClient(
         </svg>
       </button>
       <div data-nex-music-feed-menu-trigger>
-        <LiveSideDrawer />
+        <LiveSideDrawer myMusicHref={props.myMusicHref} />
       </div>
     </>
   );
@@ -680,6 +686,15 @@ export function MusicViewerClient(
           // Irish, so these callbacks are no-ops for non-Irish owners.
           onSave={fireShamrockBurst}
           onFollow={fireShamrockBurst}
+          // Owner-authorised 2026-11-01 · Batch E.1 · My Live Music.
+          // Rendered inside MusicActionsStack ONLY when isOwnerView
+          // is true (self-view) AND props.myMusicHref is non-null.
+          // Visitors never see the icon.
+          onMyLiveMusic={
+            isSelfViewing && props.myMusicHref
+              ? () => router.push(props.myMusicHref!)
+              : undefined
+          }
         />
         {/* Owner-authorised 2026-10-30 · hollywood-grade shamrock
             fall on Save/Follow of Irish-attributed tracks. Mounts
