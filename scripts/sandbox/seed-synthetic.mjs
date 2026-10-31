@@ -102,6 +102,8 @@ const IRISH_PRIDE_TRACKS = [
     title: "Dirty Old Town",
     artist: "Traditional (Irish) · cover by The Irish Girls",
     media_path: "audio-1793397897054-7f1bcaf6.mp3",
+    cover_path: "cover-1793397897054-0bdb2ae8.png",
+    background_path: "background-1793397897054-0c099536.png",
     duration_ms: 86988,
     byte_size: 1391849,
     bitrate_kbps: 128,
@@ -115,6 +117,8 @@ const IRISH_PRIDE_TRACKS = [
     title: "Tell Me Ma",
     artist: "Sham Rock (Irish traditional · remastered)",
     media_path: "audio-1793400833060-c9454888.mp3",
+    cover_path: "cover-1793400833060-4c7c488c.png",
+    background_path: "background-1793400833060-5ef77db6.png",
     duration_ms: 231419,
     byte_size: 9257933,
     bitrate_kbps: 320,
@@ -128,6 +132,8 @@ const IRISH_PRIDE_TRACKS = [
     title: "Nosey Bridie",
     artist: "Irish traditional · 18+ parody",
     media_path: "audio-1793401720920-b46ed9f0.mp3",
+    cover_path: "cover-1793401720920-0cc58812.png",
+    background_path: "background-1793401720920-90a3dcfb.png",
     duration_ms: 326609,
     byte_size: 13065541,
     bitrate_kbps: 320,
@@ -141,6 +147,8 @@ const IRISH_PRIDE_TRACKS = [
     title: "Hotel California (Irish Style)",
     artist: "Eagles (Irish rock cover · The Irish Boys)",
     media_path: "audio-1793345575825-ebpnzova.mp3",
+    cover_path: "cover-1793345575825-ebpnzova.png",
+    background_path: "background-1793345575825-ebpnzova.png",
     duration_ms: 390400,
     byte_size: 2846031,
     bitrate_kbps: 128,
@@ -150,10 +158,12 @@ const IRISH_PRIDE_TRACKS = [
     visibility: "shared_live",
   },
   {
-    id: "5ab54fd6-8cb1-4b74-9c62-50e5afc49026",
+    id: "076bab93-6a25-4022-b570-410aca2b75f5",
     title: "Stand By Me Irish Style",
     artist: "Ben E. King (Irish folk cover)",
     media_path: "audio-1793340842898-ptkobfvz.mp3",
+    cover_path: "cover-1793340842898-ptkobfvz.png",
+    background_path: "background-1793340842898-ptkobfvz.png",
     duration_ms: 240000,
     byte_size: 2162667,
     bitrate_kbps: 128,
@@ -163,10 +173,12 @@ const IRISH_PRIDE_TRACKS = [
     visibility: "shared_live",
   },
   {
-    id: "d81d6a0e-83e8-4cfa-a7a0-54c3a9bb3b32",
+    id: "b3c3b592-c4a3-45de-af6d-8b93e79ed4ce",
     title: "Taking One for the Team",
     artist: "Irish pub folk · drinking song",
     media_path: "audio-1793405961958-69d91c74.mp3",
+    cover_path: "cover-1793405961958-ba3ee28b.png",
+    background_path: "background-1793405961958-72c0a990.png",
     duration_ms: 265000,
     byte_size: 9480496,
     bitrate_kbps: 320,
@@ -269,23 +281,34 @@ for (const a of ACCOUNTS) {
   }
 }
 
+// Irish Pride profile images · same artwork as Hotel California (her
+// signature track). Avatar = cover PNG · banner = background PNG.
+const IRISH_PRIDE_AVATAR_REF =
+  "sb://" + IRISH_PRIDE_UUID + "/cover-1793345575825-ebpnzova.png";
+const IRISH_PRIDE_COVER_REF =
+  "sb://" + IRISH_PRIDE_UUID + "/background-1793345575825-ebpnzova.png";
+
 process.stdout.write(
   `\n[sandbox seed] Writing nex_account_profile rows · is_discoverable=true\n`,
 );
 for (const a of ACCOUNTS) {
+  const avatarRef = a.id === IRISH_PRIDE_UUID ? IRISH_PRIDE_AVATAR_REF : null;
+  const coverRef = a.id === IRISH_PRIDE_UUID ? IRISH_PRIDE_COVER_REF : null;
   try {
     await client.query(
       `
       INSERT INTO public.nex_account_profile
-        (account_id, is_discoverable, headline, bio, created_at, updated_at)
-      VALUES ($1, true, $2, $3, now(), now())
+        (account_id, is_discoverable, headline, bio, avatar_url, cover_image_url, created_at, updated_at)
+      VALUES ($1, true, $2, $3, $4, $5, now(), now())
       ON CONFLICT (account_id) DO UPDATE
         SET is_discoverable = EXCLUDED.is_discoverable,
             headline = EXCLUDED.headline,
             bio = EXCLUDED.bio,
+            avatar_url = EXCLUDED.avatar_url,
+            cover_image_url = EXCLUDED.cover_image_url,
             updated_at = now()
     `,
-      [a.id, a.headline, a.bio],
+      [a.id, a.headline, a.bio, avatarRef, coverRef],
     );
     process.stdout.write(`  + profile ${a.nex_handle}\n`);
   } catch (err) {
@@ -299,6 +322,8 @@ process.stdout.write(
 );
 for (const t of IRISH_PRIDE_TRACKS) {
   const mediaUrl = `sb://${IRISH_PRIDE_UUID}/${t.media_path}`;
+  const coverUrl = t.cover_path ? `sb://${IRISH_PRIDE_UUID}/${t.cover_path}` : null;
+  const bgUrl = t.background_path ? `sb://${IRISH_PRIDE_UUID}/${t.background_path}` : null;
   try {
     await client.query(
       `
@@ -308,14 +333,16 @@ for (const t of IRISH_PRIDE_TRACKS) {
          rights_declaration, rights_notes, visibility, view_count, like_count, share_count,
          created_at, updated_at)
       VALUES ($1, $2, NULL, 'uploaded_audio', $3, $4, NULL, $5,
-              $6, NULL, NULL, NULL, $7, 'audio/mpeg', $8,
-              $9, $10, $11, 0, 0, 0,
+              $6, NULL, $7, $8, $9, 'audio/mpeg', $10,
+              $11, $12, $13, 0, 0, 0,
               now(), now())
       ON CONFLICT (id) DO UPDATE SET
         title = EXCLUDED.title,
         artist = EXCLUDED.artist,
         duration_ms = EXCLUDED.duration_ms,
         media_url = EXCLUDED.media_url,
+        cover_image_url = EXCLUDED.cover_image_url,
+        background_image_url = EXCLUDED.background_image_url,
         byte_size = EXCLUDED.byte_size,
         bitrate_kbps = EXCLUDED.bitrate_kbps,
         rights_declaration = EXCLUDED.rights_declaration,
@@ -330,6 +357,8 @@ for (const t of IRISH_PRIDE_TRACKS) {
         t.artist,
         t.duration_ms,
         mediaUrl,
+        coverUrl,
+        bgUrl,
         t.byte_size,
         t.bitrate_kbps,
         t.rights_declaration,
