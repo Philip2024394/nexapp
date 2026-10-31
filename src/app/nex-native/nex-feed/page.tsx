@@ -12,6 +12,15 @@ import Link from "next/link";
 import type * as React from "react";
 import { listNexFeedEntries } from "@/lib/nex-native/nex-feed/nex-feed-entries";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
+// Owner directive 2026-11-01 · Batch E · Stage 3B · country-aware
+// redirector. `?country=IE` resolves against nex_country_registry;
+// invalid / disabled codes fall back to Worldwide. The redirector
+// then preserves the country param so the viewer page knows which
+// pool to list.
+import {
+  resolveCountryFeedMode,
+} from "@/lib/nex-native/nex-feed/country-feed-mode";
+import { listCountryFeedEntries } from "@/lib/nex-native/nex-feed/ireland-feed-reader";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,37 +42,57 @@ const NEX = {
 const SANS =
   "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
-export default async function NexFeedPage(): Promise<React.JSX.Element> {
-  const entries = await listNexFeedEntries({
-    nowMs: Date.now(),
-    accountLookup: async (ids) => {
-      if (ids.length === 0) return [];
-      try {
-        const { data } = await nexSupabaseAdmin
-          .from("nex_account")
-          .select("id, display_name, nex_handle, avatar_url")
-          .in("id", ids);
-        return (
-          (data as Array<{
-            id: string;
-            display_name: string | null;
-            nex_handle: string | null;
-            avatar_url: string | null;
-          }> | null) ?? []
-        ).map((r) => ({
-          id: r.id,
-          displayName: r.display_name ?? "NEX user",
-          nexHandle: r.nex_handle ?? null,
-          avatarUrl: r.avatar_url ?? null,
-        }));
-      } catch {
-        return [];
-      }
-    },
-  });
+export default async function NexFeedPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ country?: string }>;
+}): Promise<React.JSX.Element> {
+  const { country: countryParamRaw } = await searchParams;
+  const countryMode = await resolveCountryFeedMode(countryParamRaw);
+  const accountLookup = async (ids: readonly string[]) => {
+    if (ids.length === 0) return [];
+    try {
+      const { data } = await nexSupabaseAdmin
+        .from("nex_account")
+        .select("id, display_name, nex_handle, avatar_url")
+        .in("id", ids);
+      return (
+        (data as Array<{
+          id: string;
+          display_name: string | null;
+          nex_handle: string | null;
+          avatar_url: string | null;
+        }> | null) ?? []
+      ).map((r) => ({
+        id: r.id,
+        displayName: r.display_name ?? "NEX user",
+        nexHandle: r.nex_handle ?? null,
+        avatarUrl: r.avatar_url ?? null,
+      }));
+    } catch {
+      return [];
+    }
+  };
+
+  // Owner directive 2026-11-01 · Batch E · country-aware pool. Country
+  // mode uses the Ireland reader; Worldwide uses the sealed pool.
+  const entries =
+    countryMode.kind === "country"
+      ? await listCountryFeedEntries({
+          country: countryMode.code,
+          nowMs: Date.now(),
+          accountLookup,
+        })
+      : await listNexFeedEntries({ nowMs: Date.now(), accountLookup });
 
   if (entries.length > 0) {
-    redirect(`/nex-native/nex-feed/${entries[0]!.feedEntryId}`);
+    // Preserve `?country=` on the redirect so the viewer page keeps
+    // showing the right pool after resolution.
+    const q =
+      countryMode.kind === "country"
+        ? `?country=${countryMode.code}`
+        : "";
+    redirect(`/nex-native/nex-feed/${entries[0]!.feedEntryId}${q}`);
   }
 
   return (

@@ -28,6 +28,16 @@ import {
   type NexFeedEntry,
   type MusicFeedEntryWrapped,
 } from "@/lib/nex-native/nex-feed/nex-feed-entries";
+// Owner directive 2026-11-01 · Batch E · Stage 3B country switcher +
+// Ireland feed reader. Default stays Worldwide; `?country=IE` swaps
+// the pool to Ireland's approved placements. Fallback to Worldwide
+// on any invalid / disabled country code (sealed §4 safeguard).
+import {
+  resolveCountryFeedMode,
+  listEligibleFeedCountries,
+} from "@/lib/nex-native/nex-feed/country-feed-mode";
+import { listCountryFeedEntries } from "@/lib/nex-native/nex-feed/ireland-feed-reader";
+import { CountryFeedSwitcher } from "@/components/nex-native/nex-feed/CountryFeedSwitcher";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import {
   getTrackById,
@@ -54,11 +64,45 @@ export default async function NexFeedViewerPage({
   searchParams,
 }: {
   params: Promise<{ videoId: string }>;
-  searchParams: Promise<{ chain?: string }>;
+  searchParams: Promise<{ chain?: string; country?: string }>;
 }): Promise<React.JSX.Element> {
   const { videoId } = await params;
-  const { chain: chainSlugRaw } = await searchParams;
+  const { chain: chainSlugRaw, country: countryParamRaw } = await searchParams;
   const nowMs = Date.now();
+
+  // Owner directive 2026-11-01 · Batch E · resolve country-feed mode
+  // from URL state. Default Worldwide; invalid / disabled codes fall
+  // back to Worldwide. The switcher icon toggles ?country=IE on/off.
+  // Eligible countries read from nex_country_registry · adding a new
+  // country is a data change, not a code change.
+  const [countryMode, eligibleCountries] = await Promise.all([
+    resolveCountryFeedMode(countryParamRaw),
+    listEligibleFeedCountries(),
+  ]);
+  // The switcher toggles between Worldwide and ONE country (Batch E
+  // scope · multi-country toggle deferred to Stage 3B.1). Preference
+  // chain:
+  //   1. If the viewer is ALREADY in a specific country mode, that
+  //      country stays the toggle target (so the globe tap returns
+  //      them to Worldwide and the flag tap returns them to the same
+  //      country · symmetric).
+  //   2. Else prefer Ireland (IE) because it is the only country with
+  //      approved placements at Batch E launch · targeting Indonesia
+  //      first would show "Switch to Indonesia feed" with an empty
+  //      pool, violating the "no dead buttons" rule.
+  //   3. Else fall back to the first eligible country.
+  //   4. Else null (switcher hides).
+  // Future · Stage 3B.1 will replace this preference with a per-
+  // country placement-count query so new active countries surface
+  // automatically as they come online.
+  const switcherTarget =
+    countryMode.kind === "country"
+      ? eligibleCountries.find((c) => c.code === countryMode.code) ??
+        eligibleCountries[0] ??
+        null
+      : eligibleCountries.find((c) => c.code === "IE") ??
+        eligibleCountries[0] ??
+        null;
 
   // Owner directive 2026-10-30 · "it should be hendra post showing his
   // profile image in header yes" + "with nex id". The music slide
@@ -66,45 +110,60 @@ export default async function NexFeedViewerPage({
   // `nex_account` carries display_name + nex_handle; `nex_account_profile`
   // carries avatar_url. The lookup joins both so the shell renders the
   // same identity the preview page shows via `getProfileByAccountId`.
-  const allEntries = await listNexFeedEntries({
-    nowMs,
-    accountLookup: async (ids) => {
-      if (ids.length === 0) return [];
-      try {
-        const [{ data: accountRows }, { data: profileRows }] = await Promise.all([
-          nexSupabaseAdmin
-            .from("nex_account")
-            .select("id, display_name, nex_handle")
-            .in("id", ids),
-          nexSupabaseAdmin
-            .from("nex_account_profile")
-            .select("account_id, avatar_url")
-            .in("account_id", ids),
-        ]);
-        const profileById = new Map<string, string | null>();
-        for (const p of (profileRows as Array<{
-          account_id: string;
-          avatar_url: string | null;
-        }> | null) ?? []) {
-          profileById.set(p.account_id, p.avatar_url ?? null);
-        }
-        return (
-          (accountRows as Array<{
-            id: string;
-            display_name: string | null;
-            nex_handle: string | null;
-          }> | null) ?? []
-        ).map((r) => ({
-          id: r.id,
-          displayName: r.display_name ?? "NEX user",
-          nexHandle: r.nex_handle ?? null,
-          avatarUrl: profileById.get(r.id) ?? null,
-        }));
-      } catch {
-        return [];
+  const accountLookup = async (ids: readonly string[]) => {
+    if (ids.length === 0) return [];
+    try {
+      const [{ data: accountRows }, { data: profileRows }] = await Promise.all([
+        nexSupabaseAdmin
+          .from("nex_account")
+          .select("id, display_name, nex_handle")
+          .in("id", ids),
+        nexSupabaseAdmin
+          .from("nex_account_profile")
+          .select("account_id, avatar_url")
+          .in("account_id", ids),
+      ]);
+      const profileById = new Map<string, string | null>();
+      for (const p of (profileRows as Array<{
+        account_id: string;
+        avatar_url: string | null;
+      }> | null) ?? []) {
+        profileById.set(p.account_id, p.avatar_url ?? null);
       }
-    },
-  });
+      return (
+        (accountRows as Array<{
+          id: string;
+          display_name: string | null;
+          nex_handle: string | null;
+        }> | null) ?? []
+      ).map((r) => ({
+        id: r.id,
+        displayName: r.display_name ?? "NEX user",
+        nexHandle: r.nex_handle ?? null,
+        avatarUrl: profileById.get(r.id) ?? null,
+      }));
+    } catch {
+      return [];
+    }
+  };
+
+  // Owner directive 2026-11-01 · Batch E · pool switch.
+  //   Worldwide (default) → listNexFeedEntries (interleaved music +
+  //   video pool).
+  //   Country mode → listCountryFeedEntries (approved placements for
+  //   that country only; sealed §3 preserves content identity · never
+  //   duplicates records · never mutates visibility).
+  // Both readers return the identical NexFeedEntry shape so every
+  // downstream path (sibling resolution, swipe, in-player arrows)
+  // works unchanged.
+  const allEntries: readonly NexFeedEntry[] =
+    countryMode.kind === "country"
+      ? await listCountryFeedEntries({
+          country: countryMode.code,
+          nowMs,
+          accountLookup,
+        })
+      : await listNexFeedEntries({ nowMs, accountLookup });
 
   let current: NexFeedEntry | null =
     allEntries.find((e) => e.feedEntryId === videoId) ?? null;
@@ -506,27 +565,52 @@ export default async function NexFeedViewerPage({
     const isIrishBroadcaster = broadcasterCountryInfo.isIrish;
 
     return (
-      <MusicViewerClient
-        entry={musicEntry}
-        trackRow={track}
-        libraryTracks={libraryTracks}
-        feedEntryId={current.feedEntryId}
-        siblingIds={siblingIds}
-        nextId={nextId}
-        prevId={prevId}
-        viewerAccountId={viewerAccountId}
-        initialFollowed={initialFollowed}
-        initialFollowerCount={initialFollowerCount}
-        broadcasterCountryCode={broadcasterCountryCode}
-        isIrishBroadcaster={isIrishBroadcaster}
-        prevOwnerTrackId={prevOwnerTrackId}
-        nextOwnerTrackId={nextOwnerTrackId}
-        nextOwnerTrack={nextOwnerTrackRow}
-        nextOwnerCoverUrl={nextOwnerCoverUrl}
-        nextOwnerBackgroundUrl={nextOwnerBackgroundUrl}
-        nextOwnerAudioUrl={nextOwnerAudioUrl}
-        devViewerBadge={devViewerBadge}
-      />
+      <>
+        <MusicViewerClient
+          entry={musicEntry}
+          trackRow={track}
+          libraryTracks={libraryTracks}
+          feedEntryId={current.feedEntryId}
+          siblingIds={siblingIds}
+          nextId={nextId}
+          prevId={prevId}
+          viewerAccountId={viewerAccountId}
+          initialFollowed={initialFollowed}
+          initialFollowerCount={initialFollowerCount}
+          broadcasterCountryCode={broadcasterCountryCode}
+          isIrishBroadcaster={isIrishBroadcaster}
+          prevOwnerTrackId={prevOwnerTrackId}
+          nextOwnerTrackId={nextOwnerTrackId}
+          nextOwnerTrack={nextOwnerTrackRow}
+          nextOwnerCoverUrl={nextOwnerCoverUrl}
+          nextOwnerBackgroundUrl={nextOwnerBackgroundUrl}
+          nextOwnerAudioUrl={nextOwnerAudioUrl}
+          devViewerBadge={devViewerBadge}
+        />
+        {/* Owner directive 2026-11-01 · Batch E · country switcher
+         *  mounted as a sibling of the viewer client so it floats on
+         *  the right action-rail without touching the 766-line viewer
+         *  component. Fixed positioning keeps it in place during
+         *  swipe transitions. Server-resolved mode + target so the
+         *  icon state (globe vs flag) matches URL state on first
+         *  paint. */}
+        <div
+          data-nex-country-feed-switcher-mount="music"
+          style={{
+            position: "fixed",
+            right: 12,
+            top: "50%",
+            transform: "translateY(-50%)",
+            zIndex: 50,
+            pointerEvents: "auto",
+          }}
+        >
+          <CountryFeedSwitcher
+            currentMode={countryMode}
+            toggleTarget={switcherTarget}
+          />
+        </div>
+      </>
     );
   }
 
@@ -546,16 +630,37 @@ export default async function NexFeedViewerPage({
 
   const chain = chainSlugRaw ? getCategoryChain(chainSlugRaw) : null;
   return (
-    <VideoViewerClient
-      video={current.video}
-      publicUrl={current.publicUrl}
-      siblingIds={siblingIds}
-      chainLabel={chainLabel}
-      chainSlug={chain ? chain.slug : null}
-      currentTopicLabel={currentTopicLabel}
-      nextPublicUrl={nextPublicUrl}
-      prevPublicUrl={prevPublicUrl}
-      devViewerBadge={devViewerBadge}
-    />
+    <>
+      <VideoViewerClient
+        video={current.video}
+        publicUrl={current.publicUrl}
+        siblingIds={siblingIds}
+        chainLabel={chainLabel}
+        chainSlug={chain ? chain.slug : null}
+        currentTopicLabel={currentTopicLabel}
+        nextPublicUrl={nextPublicUrl}
+        prevPublicUrl={prevPublicUrl}
+        devViewerBadge={devViewerBadge}
+      />
+      {/* Owner directive 2026-11-01 · Batch E · same switcher mount
+       *  as the music branch above. Zero intrusion into the 1536-line
+       *  video viewer client. */}
+      <div
+        data-nex-country-feed-switcher-mount="video"
+        style={{
+          position: "fixed",
+          right: 12,
+          top: "50%",
+          transform: "translateY(-50%)",
+          zIndex: 50,
+          pointerEvents: "auto",
+        }}
+      >
+        <CountryFeedSwitcher
+          currentMode={countryMode}
+          toggleTarget={switcherTarget}
+        />
+      </div>
+    </>
   );
 }
