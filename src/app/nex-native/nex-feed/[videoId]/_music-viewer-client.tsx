@@ -738,6 +738,12 @@ export function MusicViewerClient(
             trackId: props.entry.trackId,
           });
           if (r.ok) setShareCount(r.data.shareCount);
+          // Owner-authorised 2026-11-01 · Share-completed also fires
+          // the Irish shamrock burst (completes the Save+Follow+Share
+          // Ireland-flare set). fireShamrockBurst() short-circuits
+          // when the broadcaster is not Irish, so this is a no-op for
+          // non-Irish shares.
+          fireShamrockBurst();
         }}
       />
 
