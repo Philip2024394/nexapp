@@ -36,19 +36,27 @@ const NEX = {
 const SANS =
   "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
-/** Section meta · stable section-ids + user-facing hints + the
- *  content-creation route a user should land on. */
+/** Section meta · stable section-ids + user-facing hints. `createHref`
+ *  points at the real creation surface or is `null` when the section
+ *  does not yet have a NEX publishing flow (we show a "Coming to NEX"
+ *  caption instead of a CTA that would land on a non-existent page). */
 const SECTION_META: Record<
   CreatorSection,
-  { readonly icon: string; readonly createHref: string; readonly createLabel: string }
+  {
+    readonly icon: string;
+    readonly createHref: string | null;
+    readonly createLabel: string;
+  }
 > = {
   music:    { icon: "🎵", createHref: "/nex-native/create/upload-music", createLabel: "Upload music" },
-  shop:     { icon: "🛍️", createHref: "/nex-native/create/product/section", createLabel: "Add a product" },
-  video:    { icon: "🎥", createHref: "/nex-native/create", createLabel: "Create a video" },
-  images:   { icon: "📷", createHref: "/nex-native/create", createLabel: "Share images" },
-  food:     { icon: "🍲", createHref: "/nex-native/create", createLabel: "Share a dish" },
-  fashion:  { icon: "👗", createHref: "/nex-native/create", createLabel: "Share fashion" },
-  property: { icon: "🏠", createHref: "/nex-native/create", createLabel: "List a property" },
+  shop:     { icon: "🛍️", createHref: "/nex-native/create/product",     createLabel: "Add a product" },
+  // Video has an owner-countable table (nex_uploaded_video) but the
+  // dedicated create surface is not shipped yet · show counter, no CTA.
+  video:    { icon: "🎥", createHref: null, createLabel: "" },
+  images:   { icon: "📷", createHref: null, createLabel: "" },
+  food:     { icon: "🍲", createHref: null, createLabel: "" },
+  fashion:  { icon: "👗", createHref: null, createLabel: "" },
+  property: { icon: "🏠", createHref: null, createLabel: "" },
 };
 
 export default async function CreatorDashboardPage(): Promise<React.JSX.Element> {
@@ -300,7 +308,7 @@ function SectionRow(props: { progress: SectionProgress }): React.JSX.Element {
             : `${remaining} more to go`}
         </div>
       </div>
-      {!props.progress.earned ? (
+      {!props.progress.earned && meta.createHref ? (
         <Link
           href={meta.createHref}
           style={{
@@ -317,6 +325,19 @@ function SectionRow(props: { progress: SectionProgress }): React.JSX.Element {
         >
           {meta.createLabel}
         </Link>
+      ) : !props.progress.earned && !meta.createHref ? (
+        <span
+          style={{
+            padding: "6px 12px",
+            fontSize: 11,
+            fontWeight: 700,
+            color: NEX.textMuted,
+            whiteSpace: "nowrap",
+            fontStyle: "italic",
+          }}
+        >
+          Coming soon
+        </span>
       ) : null}
     </div>
   );
