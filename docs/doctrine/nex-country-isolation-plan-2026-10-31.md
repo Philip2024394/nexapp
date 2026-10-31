@@ -394,3 +394,51 @@ Owner's directive verbatim: *"Do not proceed beyond the approved doctrine and im
 ---
 
 *Doctrine drafted 2026-10-31 by Claude Code. Awaiting owner responses to CI-1..CI-8.*
+
+---
+
+## ADDENDUM · Owner decisions received 2026-10-31
+
+All eight CI decisions have been returned by the owner. Summary:
+
+| # | Owner's decision | Conditions attached |
+|---|---|---|
+| CI-1 | APPROVE WITH REVIEW | Must provide exact table names + ownership rationale + FK/inheritance implications before classification is final |
+| CI-2 | APPROVE WITH CONDITIONS | Fail-closed · explicitly reject NULL/empty · verify connection-pool safety · prevent context leaking between requests · test every role path · no reliance on client-supplied country |
+| CI-3 | APPROVE | Country prefixes inside `nex-business-assets` · storage policies must enforce prefix + validate user permissions · "a folder name by itself is not security" |
+| CI-4 | APPROVE PROPOSAL ONLY | Each migration presented individually (purpose · tables · backfill · RLS · rollback · risks · verification) · each production apply requires separate authorisation |
+| CI-5 | APPROVE | 12 isolation tests + MORE: storage isolation · service-role country checks · API/server-action isolation · HQ cross-country admin · connection-pool context isolation. All need actual test results before go-live. |
+| CI-6 | APPROVE | Nullable `primary_country` on `nex_account` · user's selected primary country (not current location) · do not force onto existing accounts · distinct from app identity / current location / content origin / selected discovery country |
+| CI-7 | APPROVE | Chat Themes remain GLOBAL · sealed engine untouched |
+| CI-8 | REQUIRE TABLE-BY-TABLE | No blanket rule · each of `nex_profession` / `nex_vertical` / `nex_banner` / moderation routing / Chat Themes needs its own ownership model |
+
+### Companion docs addressing the conditions
+
+- **CI-1** · `nex-99-table-classification-2026-10-31.md` · exact 99-row table with FK inheritance
+- **CI-8** · `nex-mixed-tables-resolution-2026-10-31.md` · explicit per-table decision for the 5 M-tables
+- **CI-4** · `nex-migrations-244-to-248-individually-2026-10-31.md` · one section per migration (purpose · tables · backfill · RLS · rollback · risks · verification)
+- **Technical debt** (owner-flagged separately) · `nex-technical-debt-workstream-2026-10-31.md` · 1,245 TS errors tracked as separate programme
+
+### Reissued Migration 244 scope
+
+The original 37-table scope is REDUCED to 4 anchor tables based on the FK audit:
+1. `nex_business`
+2. `nex_community_zone`
+3. `nex_live_session`
+4. `nex_report`
+
+The other ~32 CO-I tables inherit country via FK join in their RLS policy (Migration 245) · no own column needed · simpler schema · faster writes.
+
+### Correct migration apply order (not filename order)
+
+244 → 246 → 247 → 245 → 248 · each with separate owner authorisation.
+
+### What remains blocked
+
+No application-level work on NEX Ireland / NEX Indonesia begins until:
+- Owner acceptance of the 99-table classification (CI-1 condition met via the companion doc · needs final sign-off)
+- Owner acceptance of the 5 M-tables resolution (CI-8 condition met via the companion doc · needs final sign-off)
+- Owner authorisation to re-draft Migration 244 with the reduced 4-table scope
+- Each subsequent migration (245 · 246 · 247 · 248) gets its own authorisation gate
+
+All six prior commits (`1a1e552` through `6cfd996`) + this addendum commit remain **local only**. No push. No production apply.
