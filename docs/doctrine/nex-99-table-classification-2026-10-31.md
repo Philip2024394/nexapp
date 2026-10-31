@@ -258,3 +258,72 @@ Reissued Migration 244 (country column on 4 tables only · not 37) will be draft
 ---
 
 *Classification 2026-10-31. Awaiting owner acceptance of the 99-row table. Pure analysis · no code · no migration applied.*
+
+---
+
+## Addendum · Which tables receive `content_visibility`? (owner CI-1 safeguard · 2026-10-31)
+
+Owner safeguard 13.1 (`nex-global-content-and-country-discovery-2026-10-31.md`): "Visibility column applies only to tables humans discover or share from. Reference data, transactional records, private account data, peer chat, vault, chat theme internals: NO visibility."
+
+**Rule applied**: a table gets `content_visibility` ONLY if a human AUTHOR explicitly chooses an audience for each record. If the row has no author-chosen audience concept, no column.
+
+### Exact list of tables receiving `content_visibility` (8 total)
+
+| # | Table | Why it needs visibility | Default scope on backfill |
+|---|---|---|---|
+| 1 | `nex_business` | Owner opts into international discovery of their business | `COUNTRY` |
+| 2 | `nex_product` | Author chooses who sees the listing (plus separate `international_sales_enabled` + `allowed_delivery_destinations` per owner CI-10) | `COUNTRY` |
+| 3 | `nex_music_track` | Creator chooses audience per track | `PRIVATE` (owner-authored music starts private · consistent with current library behaviour) |
+| 4 | `nex_uploaded_video` | Creator chooses audience per video | `PRIVATE` |
+| 5 | `nex_live_session` | Broadcaster chooses audience per stream | `COUNTRY` (broadcasts default to local audience) |
+| 6 | `nex_live_post` | Broadcaster-authored posts within a session · inherit session scope (but owner may override per post) | `COUNTRY` |
+| 7 | `nex_community_notice` | Author chooses scope (private family alert · neighbourhood · country · worldwide safety) | `COUNTRY` (community notices default to zone-anchored) |
+| 8 | `nex_community_card` | Author chooses scope | `COUNTRY` |
+
+### Tables that explicitly DO NOT receive `content_visibility` (91 total)
+
+Rationale categories:
+
+| Category | Example tables | Why no visibility |
+|---|---|---|
+| **Identity** | `nex_account`, `nex_account_profile`, `nex_account_notification_prefs`, `nex_account_custom_intro`, `nex_webauthn_credential`, `nex_session`, `nex_sign_in_event` | Visibility applies to CONTENT · accounts have their own `profile_visibility` (sealed existing concept · unchanged) · not re-expressed via this enum |
+| **Reference data** | `nex_profession`, `nex_vertical`, `nex_color_palette`, `nex_migration_history` | Shared global lookups · everyone reads · no author audience to choose |
+| **Transactional** | `nex_order`, `nex_order_event`, `nex_cart`, `nex_ledger_entry`, `nex_ledger_line`, `nex_buyer_tier_progress`, `nex_affiliate_promotion` | Record of a transaction between specific accounts · visibility is "parties to this transaction + HQ" · not an author-chosen scope |
+| **Peer chat / calls** | `nex_message`, `nex_peer_message`, `nex_peer_conversation`, `nex_conversation`, `nex_conversation_participant`, `nex_bridge99_first_send_intent`, `nex_call_log`, `nex_call_link`, `nex_group_call_session`, `nex_group_call_participant` | Peer-to-peer · scope is "the participants" · no public-discovery concept |
+| **Vault (sealed)** | all `nex_vault_*` (8 tables) | Personal encrypted storage · scope is "owner only" · sealed doctrine · no changes |
+| **Chat themes (sealed commerce)** | `nex_chat_theme`, `nex_theme_emoji`, `nex_theme_sticker`, `nex_theme_view_counter`, `nex_theme_intro_seen` | Global marketplace · everyone reads catalogue · ownership is a separate purchase concept · untouched by CI-7 |
+| **Operational infrastructure** | `nex_surface_health_event`, `nex_collection_fetch_errors`, `nex_collection_url_queue`, `nex_welcome_outbox`, `nex_generated_site`, `nex_generation_job`, `nex_handle_counter`, `nex_session_registry`, `nex_banner` (unless explicitly content), `nex_email_*` | Platform ops · internal · no author audience |
+| **Community child tables** | `nex_community_card_photo`, `nex_community_card_report`, `nex_community_card_confirmation`, `nex_community_card_update`, `nex_community_notice_report`, `nex_community_notice_confirmation`, `nex_community_notice_update`, `nex_community_business_welcome_detail`, `nex_community_lost_found_detail`, `nex_community_membership`, `nex_community_zone`, `nex_community_rate_limit` | Visibility inherits from parent `nex_community_card` / `nex_community_notice` · child rows do not re-specify scope |
+| **Business child tables** | `nex_product_variant`, `nex_product_section`, `nex_product_ladder`, `nex_product_share_grant`, `nex_menu_item`, `nex_menu_section`, `nex_service`, `nex_gallery_image`, `nex_affiliate_account` | Visibility inherits from parent (product · business) · never set independently |
+| **Live child tables** | `nex_live_participation`, `nex_live_engagement`, `nex_live_featured_product`, `nex_live_jail` | Participation metadata · scope inherits from `nex_live_session.visibility` |
+| **Music publishing internals** | `nex_music_publish_idempotency`, `nex_creator_active_music`, `nex_creator_support_settings` | Operational / settings · no author-chosen audience |
+| **Relationships / follow / friends** | `nex_friend_edge`, `nex_friend_request`, `nex_account_relationship_prefs`, `nex_account_music_rights_ack`, `nex_account_push_subscription`, `nex_account_device_key`, `nex_account_risk_signal` | Relationship state and signals · scope is "parties involved" / HQ · no author audience |
+| **Moderation / Reports** | `nex_report` | Report is per-incident · scope follows subject jurisdiction (owner CI-8 decision) · never author-published to an audience |
+
+**Totals**: 8 tables receive `content_visibility`. 91 do not.
+
+### Product-specific additional columns (CI-10 explicit separation)
+
+`nex_product` is the only table that needs the full triple:
+
+```sql
+ALTER TABLE public.nex_product
+  ADD COLUMN discovery_visibility content_visibility NOT NULL DEFAULT 'COUNTRY',
+  ADD COLUMN international_sales_enabled boolean NOT NULL DEFAULT false,
+  ADD COLUMN allowed_delivery_destinations text[] NOT NULL DEFAULT ARRAY[]::text[];
+```
+
+Named `discovery_visibility` not `visibility` to make the semantics unmistakable at every call site. The 7 other visibility-receiving tables use the plain `visibility` column name.
+
+### Impact on Migration 247
+
+- Migration 247 adds `content_visibility` enum type (unchanged)
+- Migration 247 adds `visibility` column to 7 tables (business, music, video, live session, live post, community notice, community card)
+- Migration 247 adds `discovery_visibility` + `international_sales_enabled` + `allowed_delivery_destinations` to `nex_product` (the only table that needs all three)
+- All other 91 tables unchanged by Migration 247
+
+Reissued migration 247 content captured in `nex-migrations-244-to-248-individually-2026-10-31.md` (will be updated in follow-up commit).
+
+---
+
+*Visibility-column list recorded 2026-10-31 as a per-table decision · satisfies CI-1 safeguard "do not add visibility indiscriminately". 8 tables receive it · 91 explicitly do not · with reason for each exclusion category.*

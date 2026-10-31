@@ -248,3 +248,125 @@ The prior CI-1..CI-8 are PARTIALLY SUPERSEDED. Reissued below. **No code moves u
 ---
 
 *Doctrine recorded 2026-10-31 from owner's verbatim directive. Awaiting CI-1 (reissued) through CI-12.*
+
+---
+
+## 13 · Owner safeguards · amendment 2026-10-31
+
+Owner reviewed CI-1..CI-12 and APPROVED all 12 with four tightening safeguards. The safeguards are promoted to this doctrine as hard rules.
+
+### 13.1 · Visibility is NOT universal (CI-1 safeguard)
+
+The `content_visibility` enum applies only to tables explicitly listed in the per-table manifest. **Not every table gets a visibility column.** Reference tables, transactional records, private account data, peer chat, vault, and internal operational tables remain visibility-free. The exact per-table list lives in `nex-99-table-classification-2026-10-31.md` with a dedicated column.
+
+**Rule**: a table receives `content_visibility` ONLY IF humans actively DISCOVER or SHARE its records. If owner cannot name the "who shares it, who discovers it" use case, visibility does not apply.
+
+### 13.2 · Cross-country visibility is NOT a general RLS bypass (CI-2 safeguard)
+
+A `visibility = 'WORLDWIDE'` flag does NOT grant cross-country read access on its own. The read is allowed only when ALL of these are simultaneously true:
+
+| Gate | Must be true |
+|---|---|
+| **Content-type scope eligibility** | This content type supports this visibility scope at all (e.g. private messages NEVER have WORLDWIDE option) |
+| **Creator opt-in** | The author explicitly set this visibility scope · default is COUNTRY, never WORLDWIDE |
+| **Publication status** | The record is `is_published = true` (or equivalent lifecycle gate) |
+| **Lifecycle status** | The record has not been archived / withdrawn / soft-deleted |
+| **Moderation status** | The record is not moderation-blocked, flagged pending review, or taken down |
+| **Account privacy** | The author's account is discoverable (`is_discoverable = true`, `profile_visibility = 'public'`) |
+| **Blocking** | The viewer is not blocked by the author · the author is not blocked by the viewer |
+| **Age restriction** | Where content is age-gated, the viewer meets the age bar |
+| **Relationship scope** | If visibility is FRIENDS, the mutual-connection check passes; if FOLLOWERS, the follow edge exists |
+
+The RLS SELECT policy is composed as:
+
+```sql
+USING (
+  ( country = app_country                    -- same-country branch
+    AND lifecycle_published
+    AND NOT moderation_blocked
+    AND NOT viewer_blocked_by_author
+    AND age_eligible )
+  OR
+  ( visibility_permits_cross_country          -- cross-country branch
+    AND content_type_supports_scope
+    AND creator_opted_in
+    AND lifecycle_published
+    AND NOT moderation_blocked
+    AND NOT viewer_blocked_by_author
+    AND age_eligible
+    AND relationship_satisfied )
+)
+```
+
+Both branches require the same safety gates. The OR is between COUNTRY-MATCH and VISIBILITY-PERMITS, not between SAFETY-ON and SAFETY-OFF.
+
+**Rule**: no visibility value, country value, or client-supplied flag may ever bypass the publication, moderation, privacy, blocking, age, or content-type-scope-eligibility gates.
+
+### 13.3 · Product discovery vs international sales (CI-10 safeguard)
+
+Products carry THREE independent fields (not two):
+
+| Field | Purpose | Example |
+|---|---|---|
+| `discovery_visibility content_visibility` | Who can SEE the product in a feed / search / profile | `'WORLDWIDE'` (any country can see it) |
+| `international_sales_enabled boolean` | Whether the SELLER permits international checkout attempts | `false` (buyers outside home country cannot complete checkout) |
+| `allowed_delivery_destinations text[]` | ISO country codes the seller actually ships to | `['ID']` |
+
+An Irish viewer can see an Indonesian seller's product tagged `discovery_visibility='WORLDWIDE'`. They can **tap the product**. They can **read details**. They can **chat with the seller**. But if `international_sales_enabled=false` OR `'IE' NOT IN allowed_delivery_destinations`, the checkout button is **disabled with an honest reason displayed**. The viewer never sees a half-broken checkout flow.
+
+**Checkout gate** (separate from RLS SELECT · validated at order-create time):
+
+```
+Checkout permitted ⟺
+  product.discovery_visibility != 'PRIVATE'
+  AND product.international_sales_enabled = true (if buyer.country ≠ product.country)
+  AND buyer.country ∈ product.allowed_delivery_destinations
+  AND payment-provider supports buyer+seller
+  AND currency pair supported
+  AND taxes resolvable for destination
+  AND no legal restriction blocks shipment
+  AND seller account not suspended
+```
+
+**Rule**: never couple product discoverability to purchasing eligibility. They are two decisions made by the seller at different moments.
+
+### 13.4 · Signup geo-detection is a HINT only (CI-11 safeguard)
+
+IP geolocation and phone-number country-code are **hints**, never **authority**.
+
+**At signup**:
+1. Detect IP country · suggest it as default on the country-select screen
+2. Detect phone country code (if provided) · cross-check against IP · if disagree, highlight for user attention
+3. **The user must explicitly tap "Confirm · my primary country is X" before `nex_account.primary_country` is set**
+4. Default UI: a Submit button next to a country dropdown pre-filled with the detected hint
+5. On agreement, write `primary_country = X`. On disagreement or override, write the user's chosen value.
+
+**Post-signup**:
+- A user travelling to another country keeps their primary country unchanged
+- VPN, SIM swap, dual-country phone numbers, roaming all leave `primary_country` untouched
+- Primary country changes only via an explicit user action in Settings (with secondary confirmation)
+
+**Account identity is set by human intent, never by network conditions.**
+
+**Rule**: no code path writes `nex_account.primary_country` without a user-visible confirmation action by that user. HQ admins may override via audit-logged manual edit; the user is notified when this happens.
+
+### 13.5 · Precedence under this amendment
+
+The four safeguards (13.1 - 13.4) win over any earlier wording in this doctrine or in any companion plan where they conflict. All future RLS, migration, and application-layer code MUST honour them.
+
+### 13.6 · Required pre-code demonstration
+
+Before any migration applies or any Ireland / Indonesia app code is written, Claude must demonstrate the policy evaluation for the six owner-specified scenarios:
+
+1. IE user discovers ID creator's WORLDWIDE post → allowed (all safety gates pass)
+2. IE user tries to discover ID creator's COUNTRY-only post → denied (no cross-country branch · country-match fails)
+3. ID user tries to UPDATE an IE-owned business record → denied (WITH CHECK fails on country match)
+4. IE buyer tries to checkout an ID product that's `discovery_visibility='WORLDWIDE'` but `international_sales_enabled=false` → product visible, checkout button disabled with "Not available in Ireland" copy
+5. Blocked user tries to read blocker's otherwise-public content → denied (blocking gate fires regardless of visibility)
+6. An unpublished post with visibility='WORLDWIDE' → denied (publication gate fires before visibility is consulted)
+
+These scenarios are the pre-code acceptance tests. They live in `nex-rls-policy-matrix-2026-10-31.md` with full policy traces.
+
+---
+
+*Doctrine amendment 2026-10-31 · owner's four safeguards promoted to hard rules. Awaiting review of the RLS matrix + the exact-visibility-table list before any code moves.*
