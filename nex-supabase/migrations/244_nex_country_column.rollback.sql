@@ -35,16 +35,28 @@
 --   · "Run Phase 1" is read-only, safe to run any time.
 --   · "Run Phase 2A" requires owner to name this file AND run
 --     `SET LOCAL app.allow_244_destructive_rollback = 'yes-i-have-no-data'`
---     before the DROP COLUMN block.
+--     before the DROP COLUMN block, AND the current session must be
+--     connected AS a privileged database role (`postgres` or `supabase_admin`).
+--     Owner safeguard 2026-10-31 (W-2 round-3): the GUC alone is NOT
+--     sufficient authorisation.
 --   · "Run Phase 2B" requires owner to name this file AND run
 --     `SET LOCAL app.allow_244_preserving_rollback = 'yes-snapshot-first'`
---     before the DROP COLUMN block.
+--     before the DROP COLUMN block, AND the same privileged role check.
 --
 -- Why two phases:
 --   A single-phase DROP COLUMN with no guard is destructive by default.
 --   Postgres happily accepts `DROP COLUMN country` even when 100% of rows
 --   have populated country values. The two-phase design makes it impossible
 --   to accidentally delete country assignments.
+--
+-- Why a role check in addition to the GUC:
+--   `SET LOCAL app.allow_* = '…'` is a session-local setting that any
+--   connected role can set on themselves. The GUC alone would let an
+--   ordinary application role (connected as `authenticated` or
+--   `anon`) attempt destructive rollback if they could reach the DO
+--   block (they cannot in practice because the role lacks `ALTER TABLE`
+--   privileges, but defence-in-depth is cheap and the explicit role
+--   check documents intent). Owner-requested W-2 safeguard 2026-10-31.
 --
 -- ============================================================================
 
@@ -122,7 +134,22 @@ DO $$
 DECLARE
   guard_setting text;
   populated_count bigint;
+  session_role text;
 BEGIN
+  -- Guard 0 · privileged role (W-2 safeguard 2026-10-31)
+  -- `session_user` reflects the role of the originating connection and
+  -- cannot be changed by SET LOCAL. `authenticated`, `anon`, `service_role`,
+  -- `authenticator`, and the per-user role are all REFUSED. Only
+  -- `postgres` and `supabase_admin` (platform-superuser roles) are
+  -- permitted to execute the destructive path. Ordinary application
+  -- roles that reach this block fail-closed.
+  session_role := session_user;
+  IF session_role NOT IN ('postgres', 'supabase_admin') THEN
+    RAISE EXCEPTION
+      'Migration 244 destructive rollback REFUSED · session_user is % · must be one of (postgres, supabase_admin). GUC alone is NOT sufficient authorisation.',
+      session_role;
+  END IF;
+
   -- Guard 1 · explicit permission string
   guard_setting := current_setting('app.allow_244_destructive_rollback', true);
   IF guard_setting IS DISTINCT FROM 'yes-i-have-no-data' THEN
@@ -145,7 +172,7 @@ BEGIN
       populated_count;
   END IF;
 
-  -- Both guards passed.
+  -- All three guards passed.
   ALTER TABLE public.nex_business       DROP COLUMN IF EXISTS country;
   ALTER TABLE public.nex_community_zone DROP COLUMN IF EXISTS country;
   ALTER TABLE public.nex_live_session   DROP COLUMN IF EXISTS country;
@@ -182,7 +209,16 @@ SET LOCAL app.allow_244_preserving_rollback = 'yes-snapshot-first';
 DO $$
 DECLARE
   guard_setting text;
+  session_role text;
 BEGIN
+  -- Guard 0 · privileged role (W-2 safeguard 2026-10-31)
+  session_role := session_user;
+  IF session_role NOT IN ('postgres', 'supabase_admin') THEN
+    RAISE EXCEPTION
+      'Migration 244 preserving rollback REFUSED · session_user is % · must be one of (postgres, supabase_admin). GUC alone is NOT sufficient authorisation.',
+      session_role;
+  END IF;
+
   guard_setting := current_setting('app.allow_244_preserving_rollback', true);
   IF guard_setting IS DISTINCT FROM 'yes-snapshot-first' THEN
     RAISE EXCEPTION
