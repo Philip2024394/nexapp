@@ -88,6 +88,14 @@ export function getWorldDesktopBackdrop(worldId: string): string {
  *  per-country: `--nex-world-desktop-backdrop` + `--nex-world-page-base`.
  *  These two live on :root (not .nex-native-stage) because the body
  *  background is painted on html/body — ancestors of the stage. */
+// Owner-sealed 2026-11-01 · per-world music/live side-drawer background.
+// Only Ireland overrides to the sealed Irish Green #02AD04. Other worlds
+// fall through to the pre-existing drawer bg (var(--nex-world-background-base)
+// with navy fallback), so nex-original + Indonesia chrome stays unchanged.
+const WORLD_DRAWER_BG: Record<string, string> = {
+  ireland: "#02AD04",
+};
+
 export async function WorldStylesheet(): Promise<React.JSX.Element> {
   const world = await resolveWorldForLayout();
   const vars = paletteToCssVars(world.palette);
@@ -96,10 +104,15 @@ export async function WorldStylesheet(): Promise<React.JSX.Element> {
     .join("\n");
   const backdropUrl = getWorldDesktopBackdrop(world.meta.id);
   const pageBase = world.palette.backgroundBase;
+  const drawerBg = WORLD_DRAWER_BG[world.meta.id];
+  const drawerDecl = drawerBg
+    ? `  --nex-world-drawer-bg: ${drawerBg};\n`
+    : "";
   const css =
     `:root {\n` +
     `  --nex-world-desktop-backdrop: url("${backdropUrl}");\n` +
     `  --nex-world-page-base: ${pageBase};\n` +
+    drawerDecl +
     `}\n` +
     `.nex-native-stage {\n${declarations}\n}`;
   // dangerouslySetInnerHTML is fine here · we control both the var

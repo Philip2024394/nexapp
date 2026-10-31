@@ -53,23 +53,31 @@ const IRELAND: WorldDefinition = {
   meta: {
     id: "ireland",
     displayName: "NEX Ireland",
-    byline: "Emerald · cream · gold",
+    byline: "Irish Green · Golden Orange · White",
     glyph: "☘️",
   },
+  // Owner-sealed 2026-11-01 · NEX Ireland "set colors main":
+  //   Irish Green         #02AD04   (2, 173, 4)
+  //   Golden Irish Orange #F5A623   (245, 166, 35)
+  //   White               #FFFFFF
+  // These three replace the earlier emerald/deep-emerald/gold draft.
+  // Page backgroundBase stays cream (#FAF8F4) per the Trade Centre
+  // match sealed 2026-11-01 (owner directive: pages are cream, chrome
+  // uses the 3 set colors).
   palette: {
-    primary: "#1F8B4C",            // emerald
-    secondary: "#2E7D47",           // deep emerald
-    tertiary: "#C9A24C",            // restrained gold accent
-    backgroundBase: "#FAF8F4",      // Trade Centre cream · owner-matched 2026-11-01
-    surface: "#FFFFFF",
-    surfaceSunken: "#F2EDDE",
-    textPrimary: "#102013",         // near-black with green undertone
+    primary: "#02AD04",             // Irish Green · the brand lead
+    secondary: "#F5A623",            // Golden Irish Orange
+    tertiary: "#F5A623",             // Golden Orange accent
+    backgroundBase: "#FAF8F4",       // Trade Centre cream (page bg)
+    surface: "#FFFFFF",              // White (card / chrome surface)
+    surfaceSunken: "#F2EDDE",        // soft cream for subdued surfaces
+    textPrimary: "#102013",
     textSecondary: "#3F5742",
     textMuted: "#7A8C7E",
-    border: "rgba(31, 139, 76, 0.14)",
-    borderAccent: "rgba(31, 139, 76, 0.4)",
-    success: "#1F8B4C",             // same as primary · earned/confirmed
-    warning: "#B45309",
+    border: "rgba(2, 173, 4, 0.14)",
+    borderAccent: "rgba(2, 173, 4, 0.4)",
+    success: "#02AD04",              // Irish Green · earned/confirmed
+    warning: "#F5A623",               // Golden Orange · attention
     danger: "#9B1C1C",
   },
 };
