@@ -35,7 +35,7 @@
 //   · Gate 2 (minimum wheel safety) · 120 ms settle + descendant guard.
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CategoryGridSheet } from "@/components/nex-native/live-commerce/CategoryGridSheet";
 import { HendraMessageInbox } from "@/components/nex-native/live-commerce/HendraMessageInbox";
 import { LiveSideDrawer } from "@/components/nex-native/live-commerce/LiveSideDrawer";
@@ -142,15 +142,31 @@ export function MusicViewerClient(
     null,
   );
 
+  // Owner directive 2026-11-01 (follow-up) · preserve the current
+  // searchParams on swipe-navigation URLs so Ireland feed users
+  // (?country=IE) keep walking the Ireland pool instead of silently
+  // falling into Worldwide mode on each swipe. Any other query params
+  // (chain, future flags) are preserved too — the current URL state
+  // IS the context, so carrying it forward is correct for every mode.
+  const searchParams = useSearchParams();
+  const searchParamsSuffix = React.useMemo((): string => {
+    if (!searchParams) return "";
+    const s = searchParams.toString();
+    return s.length > 0 ? `?${s}` : "";
+  }, [searchParams]);
   const nextHref = React.useMemo(
     (): string | null =>
-      props.nextId ? `/nex-native/nex-feed/${props.nextId}` : null,
-    [props.nextId],
+      props.nextId
+        ? `/nex-native/nex-feed/${props.nextId}${searchParamsSuffix}`
+        : null,
+    [props.nextId, searchParamsSuffix],
   );
   const prevHref = React.useMemo(
     (): string | null =>
-      props.prevId ? `/nex-native/nex-feed/${props.prevId}` : null,
-    [props.prevId],
+      props.prevId
+        ? `/nex-native/nex-feed/${props.prevId}${searchParamsSuffix}`
+        : null,
+    [props.prevId, searchParamsSuffix],
   );
 
   const navigate = React.useCallback(

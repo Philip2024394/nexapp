@@ -364,11 +364,32 @@ export default async function NexFeedViewerPage({
     }
   }
   const currentIndex = siblingIds.indexOf(feedPositionId);
+  // Owner directive 2026-11-01 (follow-up) · country-mode swipe
+  // wraparound. In country mode the pool is small (6 Ireland tracks
+  // today) · hitting the end should NOT dead-end the swipe. Wrap
+  // modularly so swipe-forward from the last entry → siblings[0] and
+  // swipe-backward from siblings[0] → last entry. Owner called this
+  // "randomly show pages from before"; this ships deterministic
+  // circular (every pass through yields the same order). If owner
+  // wants true shuffled random, that's a follow-up (needs stable
+  // per-session seed OR reshuffled pool composition in the reader).
+  // Worldwide mode keeps the sealed bounded behaviour: Worldwide has
+  // many entries, cycling could feel weird; let the owner opt-in
+  // explicitly if they want Worldwide to wrap too.
+  const siblingsLen = siblingIds.length;
+  const canWrap = countryMode.kind === "country" && siblingsLen > 1;
   const nextId =
-    currentIndex >= 0 && currentIndex < siblingIds.length - 1
+    currentIndex >= 0 && currentIndex < siblingsLen - 1
       ? siblingIds[currentIndex + 1]!
-      : null;
-  const prevId = currentIndex > 0 ? siblingIds[currentIndex - 1]! : null;
+      : canWrap && currentIndex === siblingsLen - 1
+        ? siblingIds[0]!
+        : null;
+  const prevId =
+    currentIndex > 0
+      ? siblingIds[currentIndex - 1]!
+      : canWrap && currentIndex === 0
+        ? siblingIds[siblingsLen - 1]!
+        : null;
 
   // Owner directive 2026-10-30 · dev-only visibility badge · "yellow
   // badge for its hendra viewing and blue for user is viewing so i
