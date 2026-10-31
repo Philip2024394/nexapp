@@ -27,49 +27,22 @@ import "server-only";
 import { getOwnerTrackCount } from "../music/music-repository";
 import { nexSupabaseAdmin } from "../supabase-admin";
 
-/** Owner-authorised 2026-10-31 · the universal qualification floor.
- *  Changing this is a sealed-doctrine decision · do not vary per-
- *  section without owner authorisation. */
-export const CREATOR_QUALIFYING_THRESHOLD = 5;
+// Client-safe types + the pure label helper live in
+// creator-badges-common.ts so client components can import them
+// without pulling the server-only Supabase admin chain into their
+// bundle. Re-exported here for existing server-side callers.
+export {
+  CREATOR_QUALIFYING_THRESHOLD,
+  sectionBadgeLabel,
+} from "./creator-badges-common";
+export type {
+  CreatorSection,
+  SectionProgress,
+  EarnedBadges,
+} from "./creator-badges-common";
 
-/** Section IDs are stable strings. They become URL slugs, badge
- *  labels, and database values if we ever persist earned-badges
- *  materialised state. Keep lowercase + underscored. */
-export type CreatorSection =
-  | "music"
-  | "shop"
-  | "video"
-  | "images"
-  | "food"
-  | "fashion"
-  | "property";
-
-export interface SectionProgress {
-  readonly section: CreatorSection;
-  readonly count: number;
-  readonly threshold: number;
-  readonly earned: boolean;
-}
-
-export interface EarnedBadges {
-  readonly all: readonly SectionProgress[];
-  readonly earned: readonly SectionProgress[];
-}
-
-/** Human-readable label on the yellow chip. Capitalised + spaced so
- *  "MUSIC CREATOR" reads naturally. Preserves the sealed uppercase
- *  styling in `NexYellowChip`. */
-export function sectionBadgeLabel(section: CreatorSection): string {
-  switch (section) {
-    case "music":    return "Music Creator";
-    case "shop":     return "Shop Creator";
-    case "video":    return "Video Creator";
-    case "images":   return "Image Creator";
-    case "food":     return "Food Creator";
-    case "fashion":  return "Fashion Creator";
-    case "property": return "Property Creator";
-  }
-}
+// Local type alias so the rest of this file reads unchanged.
+import type { CreatorSection, SectionProgress } from "./creator-badges-common";
 
 /** Count qualifying products the account owns, joined through
  *  nex_business.owner_account_id. "Qualifying" = non-removed · we

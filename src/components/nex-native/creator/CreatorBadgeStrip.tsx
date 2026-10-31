@@ -19,8 +19,8 @@
 
 import * as React from "react";
 import { NexYellowChip } from "@/components/nex-native/badge/NexYellowChip";
-import type { SectionProgress } from "@/lib/nex-native/creator/creator-badges";
-import { sectionBadgeLabel } from "@/lib/nex-native/creator/creator-badges";
+import type { SectionProgress } from "@/lib/nex-native/creator/creator-badges-common";
+import { sectionBadgeLabel } from "@/lib/nex-native/creator/creator-badges-common";
 import type { CreatorSupportSettings } from "@/lib/nex-native/creator/creator-support-service";
 import { CreatorSupportSheet } from "./CreatorSupportSheet";
 

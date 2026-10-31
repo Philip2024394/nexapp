@@ -17,8 +17,8 @@
 
 import * as React from "react";
 import type { CreatorSupportSettings } from "@/lib/nex-native/creator/creator-support-service";
-import type { SectionProgress } from "@/lib/nex-native/creator/creator-badges";
-import { sectionBadgeLabel } from "@/lib/nex-native/creator/creator-badges";
+import type { SectionProgress } from "@/lib/nex-native/creator/creator-badges-common";
+import { sectionBadgeLabel } from "@/lib/nex-native/creator/creator-badges-common";
 import { NexYellowChip } from "@/components/nex-native/badge/NexYellowChip";
 
 const INK = "#102033";

@@ -15,8 +15,10 @@ import {
   removeCreatorQrAction,
 } from "./_actions";
 import type { CreatorSupportSettings } from "@/lib/nex-native/creator/creator-support-service";
-import type { SectionProgress } from "@/lib/nex-native/creator/creator-badges";
-import { sectionBadgeLabel } from "@/lib/nex-native/creator/creator-badges";
+// Client-safe import · do NOT pull from `creator-badges.ts` which is
+// `server-only`. The pure types + label helper live in -common.
+import type { SectionProgress } from "@/lib/nex-native/creator/creator-badges-common";
+import { sectionBadgeLabel } from "@/lib/nex-native/creator/creator-badges-common";
 import { NexYellowChip } from "@/components/nex-native/badge/NexYellowChip";
 
 const INK = "#102033";

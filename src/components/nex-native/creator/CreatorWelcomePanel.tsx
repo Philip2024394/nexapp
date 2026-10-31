@@ -15,8 +15,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { NexYellowChip } from "@/components/nex-native/badge/NexYellowChip";
-import type { SectionProgress } from "@/lib/nex-native/creator/creator-badges";
-import { sectionBadgeLabel } from "@/lib/nex-native/creator/creator-badges";
+import type { SectionProgress } from "@/lib/nex-native/creator/creator-badges-common";
+import { sectionBadgeLabel } from "@/lib/nex-native/creator/creator-badges-common";
 
 const INK = "#102033";
 const INK_DIM = "#4A6080";
