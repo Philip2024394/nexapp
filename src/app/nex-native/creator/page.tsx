@@ -21,17 +21,19 @@ import {
 } from "@/lib/nex-native/creator/creator-badges";
 import { getCreatorSupportSettings } from "@/lib/nex-native/creator/creator-support-service";
 import { NexYellowChip } from "@/components/nex-native/badge/NexYellowChip";
+// Owner-authorised 2026-10-31 · NEX World Engine · Stage 5 wiring.
+import { NEX_W } from "@/lib/nex-worlds/world-palette-css";
 
 export const dynamic = "force-dynamic";
 
 const NEX = {
-  bg: "#020914",
-  text: "#F2F5F8",
-  textDim: "#B5C3D6",
-  textMuted: "#7D9BC0",
-  cyan: "#00AFFF",
-  cyanFaint: "rgba(0, 175, 255, 0.14)",
-  cyanSoft: "rgba(0, 175, 255, 0.35)",
+  bg: NEX_W.backgroundBase,
+  text: NEX_W.textPrimary,
+  textDim: NEX_W.textSecondary,
+  textMuted: NEX_W.textMuted,
+  cyan: NEX_W.primary,
+  cyanFaint: NEX_W.border,
+  cyanSoft: NEX_W.borderAccent,
 };
 const SANS =
   "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";

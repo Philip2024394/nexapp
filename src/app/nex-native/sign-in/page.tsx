@@ -55,20 +55,27 @@ function safeNext(next: string | undefined): string | null {
   return next;
 }
 
+// Owner-authorised 2026-10-31 · NEX World Engine · Stage 5 wiring.
+// Palette values now reference world CSS variables set at the layout
+// root by <WorldStylesheet />. Fallbacks preserved for the pre-wire
+// nex-original baseline so there is zero visual change until a world
+// is activated.
+import { NEX_W } from "@/lib/nex-worlds/world-palette-css";
+
 const NEX = {
-  bg: "#020914",
-  panel: "rgba(3, 16, 29, 0.78)",
-  panelSolid: "#03101D",
-  fieldBg: "rgba(4, 16, 32, 0.78)",
-  textPrimary: "#F2F5F8",
-  textSecondary: "#B5C3D6",
-  textMuted: "#7D9BC0",
-  cyan: "#00AFFF",
-  cyanLight: "#5AC8FA",
-  cyanSoft: "rgba(0, 175, 255, 0.35)",
-  cyanFaint: "rgba(0, 175, 255, 0.18)",
-  orange: "#FF7200",
-  borderSoft: "rgba(0, 175, 255, 0.25)",
+  bg: NEX_W.backgroundBase,
+  panel: NEX_W.surface,
+  panelSolid: NEX_W.surfaceSunken,
+  fieldBg: NEX_W.surface,
+  textPrimary: NEX_W.textPrimary,
+  textSecondary: NEX_W.textSecondary,
+  textMuted: NEX_W.textMuted,
+  cyan: NEX_W.primary,
+  cyanLight: NEX_W.secondary,
+  cyanSoft: NEX_W.borderAccent,
+  cyanFaint: NEX_W.border,
+  orange: NEX_W.tertiary,
+  borderSoft: NEX_W.borderAccent,
 };
 
 const SANS =

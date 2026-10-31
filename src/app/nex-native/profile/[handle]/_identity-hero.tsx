@@ -49,16 +49,20 @@ import type { TrustTier } from "@/lib/nex-native/trust/trust-score-shared";
 import type { SectionProgress } from "@/lib/nex-native/creator/creator-badges";
 import type { CreatorSupportSettings } from "@/lib/nex-native/creator/creator-support-service";
 import { CreatorBadgeStrip } from "@/components/nex-native/creator/CreatorBadgeStrip";
+// Owner-authorised 2026-10-31 · NEX World Engine · Stage 5 wiring.
+import { NEX_W } from "@/lib/nex-worlds/world-palette-css";
 
 const NEX = {
-  bg: "#020914",
-  cyan: "#00AFFF",
-  cyanSoft: "rgba(0, 175, 255, 0.35)",
-  cyanFaint: "rgba(0, 175, 255, 0.14)",
+  bg: NEX_W.backgroundBase,
+  cyan: NEX_W.primary,
+  cyanSoft: NEX_W.borderAccent,
+  cyanFaint: NEX_W.border,
+  // verifiedBlue is a FIXED semantic colour (not world-tinted · the
+  // blue checkmark is a brand-sealed Safe-Trade signal).
   verifiedBlue: "#1DA1F2",
-  text: "#F2F5F8",
-  textDim: "#B5C3D6",
-  textMuted: "#7D9BC0",
+  text: NEX_W.textPrimary,
+  textDim: NEX_W.textSecondary,
+  textMuted: NEX_W.textMuted,
 };
 
 const SANS =

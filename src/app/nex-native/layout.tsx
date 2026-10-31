@@ -34,6 +34,13 @@ import { IncomingCallHub } from "./_incoming-call-hub";
 import { PushSubscribeHub } from "./_push-subscribe-hub";
 import { AppBadgeSyncClient } from "./_app-badge-sync-client";
 import { DevImpersonationBanner } from "./_dev-impersonation-banner";
+// Owner-authorised 2026-10-31 · NEX World Engine · Stage 5A.
+// Server-resolves the active world + emits CSS vars scoped to
+// .nex-native-stage. Preview cookie takes precedence for owner only.
+import {
+  WorldStylesheet,
+  resolveWorldForLayout,
+} from "./_world-stylesheet";
 import { SwCacheRegister } from "./_sw-cache-register";
 // Owner directive 2026-10-18 · preload the Cover Themes Library +
 // each per-layout preview on idle so the library opens instantly
@@ -152,12 +159,25 @@ export default async function NexNativeLayout({
   const vapidPublicKey =
     process.env.NEXT_PUBLIC_XRATED_VAPID_PUBLIC_KEY ?? null;
 
+  // Owner-authorised 2026-10-31 · NEX World Engine · Stage 5A.
+  // Server-resolve the world ONCE here · we read the meta.id for the
+  // data attribute · the <WorldStylesheet /> component below reads
+  // its own copy (idempotent · same request = same answer) and emits
+  // the <style> block. Scoped to .nex-native-stage · never leaks to
+  // non-NEX route trees.
+  const activeWorld = await resolveWorldForLayout();
+
   return (
     <I18nProvider initialLang={initialLang}>
       {/* Dev-only banner · see _dev-impersonation-banner.tsx. Renders
           `null` in production so there is zero prod footprint. */}
       <DevImpersonationBanner />
-      <div className="nex-native-stage">
+      {/* Owner-authorised 2026-10-31 · World Engine CSS vars. */}
+      <WorldStylesheet />
+      <div
+        className="nex-native-stage"
+        data-nex-world={activeWorld.meta.id}
+      >
         <div className="nex-native-frame">
           {children}
           {/* Owner directive 2026-10-16 · the IncomingCallHub +
