@@ -41,7 +41,7 @@ export function JailPreviewClient(): React.JSX.Element {
         height: "100%",
         width: "100%",
         overflow: "hidden",
-        background: "#020914",
+        background: "var(--nex-world-background-base, #020914)",
         color: "#F2F5F8",
         fontFamily: "Inter, system-ui, sans-serif",
       }}

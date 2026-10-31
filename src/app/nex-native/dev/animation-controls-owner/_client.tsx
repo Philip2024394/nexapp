@@ -67,7 +67,7 @@ const SAMPLE_THEME = {
 };
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panel: "#071525",
   panelHi: "#0A1A2D",
   cyan: "#00AFFF",

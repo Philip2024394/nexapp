@@ -420,7 +420,7 @@ export function UploadClient(props: UploadClientProps = {}): React.JSX.Element {
       data-nex-shop-watch-upload
       style={{
         minHeight: "100dvh",
-        background: "#020914",
+        background: "var(--nex-world-background-base, #020914)",
         color: NEX.text,
         fontFamily:
           "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",

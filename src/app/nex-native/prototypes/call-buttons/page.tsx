@@ -10,7 +10,7 @@ import type * as React from "react";
 export const dynamic = "force-dynamic";
 
 const PAL = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   glow: "rgba(0,175,255,0.09)",
   text: "#F2F5FA",
   textDim: "#A6ADC2",

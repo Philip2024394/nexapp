@@ -142,7 +142,7 @@ function NonParticipantFallback() {
     <main
       style={{
         minHeight: "100dvh",
-        background: "#020914",
+        background: "var(--nex-world-background-base, #020914)",
         color: "#F4F7FC",
         display: "grid",
         placeItems: "center",

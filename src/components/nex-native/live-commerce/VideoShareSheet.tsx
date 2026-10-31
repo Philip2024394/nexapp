@@ -28,14 +28,14 @@ import {
 // Owner directive 2026-10-30 (iteration · reverted) · "change the
 // slider back to color same as chat nex back ground" · palette
 // returns to the dark NEX chat-free page (`src/app/nex-native/free-
-// chat/page.tsx:63 bg: "#020914"`). The message-center light theme
+// chat/page.tsx:63 bg: "var(--nex-world-background-base, #020914)"`). The message-center light theme
 // is retired here; share sheet is dark again. Text + border swap
 // back to the dark-chrome variants (white text, white-at-low-alpha
 // borders).
 const NEX = {
   bgNavy: "#050F1E",
-  bgDeep: "#020914",
-  bgSheet: "#020914",
+  bgDeep: "var(--nex-world-background-base, #020914)",
+  bgSheet: "var(--nex-world-background-base, #020914)",
   text: "#F2F5F8",
   textDim: "#8BA9D1",
   textMute: "#526B89",

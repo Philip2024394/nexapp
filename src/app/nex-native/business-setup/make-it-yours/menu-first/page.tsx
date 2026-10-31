@@ -37,7 +37,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panel: "#071525",
   panelSoft: "rgba(6, 15, 28, 0.72)",
   textPrimary: "#F2F5F8",

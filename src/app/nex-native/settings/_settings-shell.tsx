@@ -24,7 +24,7 @@ import Link from "next/link";
  *  /nex-native/settings/. Any route needing additional colours must
  *  derive from this palette · never introduce new generic hex. */
 export const NEX_SETTINGS = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panel: "#03101D",
   panelAccent: "rgba(0, 175, 255, 0.35)",
   panelFaint: "rgba(0, 175, 255, 0.12)",

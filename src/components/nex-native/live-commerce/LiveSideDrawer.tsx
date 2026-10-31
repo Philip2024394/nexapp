@@ -46,7 +46,7 @@ const HENDRA_HOME_HREF = "/nex-native/contacts";
 
 const TEXT = "#F2F5F8";
 const MUTED = "#7D9BC0";
-const BG = "#020914";
+const BG = "var(--nex-world-background-base, #020914)";
 const PANEL_BORDER = "rgba(0,175,255,0.18)";
 const CYAN = "#00AFFF";
 const ROW_HOVER = "rgba(0,175,255,0.06)";

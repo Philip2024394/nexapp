@@ -39,7 +39,7 @@ const NEX_ORIGINAL: MiniPhonePalette = {
   secondary: "#7D9BC0",
   highlight: "#F2F5F8",
   glow: "rgba(255,114,0,0.45)",
-  deep: "#020914",
+  deep: "var(--nex-world-background-base, #020914)",
 };
 
 const WATERWORLD: MiniPhonePalette = {

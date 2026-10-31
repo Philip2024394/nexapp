@@ -443,7 +443,7 @@ const CATEGORY_REGISTRY: Readonly<Record<string, ThemeCategory>> = {
       secondary: "#4FC3DC",
       highlight: "#F4F7FC",
       glow: "rgba(0,175,255,0.35)",
-      deep: "#020914",
+      deep: "var(--nex-world-background-base, #020914)",
     },
     // Hero · after the Step 1G rename, Ocean became Waterworld and
     // moved out of Explore into its own Waterworld category. Explore

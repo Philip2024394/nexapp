@@ -38,7 +38,7 @@ const NEX = {
   // use this to create "cutout" rings matching the profile page
   // background · same value sourced from the sibling palette at
   // `profile/[handle]/page.tsx:805`.
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
 };
 
 const SANS =

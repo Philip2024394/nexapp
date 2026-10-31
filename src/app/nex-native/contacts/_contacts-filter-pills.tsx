@@ -33,7 +33,7 @@ const NEX = {
   textPrimary: "#F2F5F8",
   textMuted: "#7D9BC0",
   panel: "rgba(3, 16, 29, 0.72)",
-  bgDark: "#020914",
+  bgDark: "var(--nex-world-background-base, #020914)",
 };
 
 interface FilterOption {

@@ -29,7 +29,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const C = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   wallpaper:
     "radial-gradient(1200px 800px at 50% -10%, rgba(0, 175, 255, 0.08), transparent 60%), radial-gradient(900px 700px at 50% 40%, rgba(255, 138, 42, 0.08), transparent 60%), #020914",
   text: "#F2F5F8",

@@ -73,8 +73,8 @@ interface CallsClientProps {
 const PAL = {
   // Base canvas · unchanged · matches /welcome + /directory + Create
   // Account + Phase 1 Call Center preview.
-  bg: "#020914",
-  bg2: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
+  bg2: "var(--nex-world-background-base, #020914)",
   // Container surfaces · NEX panel navy + cyan-tinted border family.
   // Replaces the earlier #121737 (purple-navy) + white-tinted
   // borders that drifted from the rest of the app.

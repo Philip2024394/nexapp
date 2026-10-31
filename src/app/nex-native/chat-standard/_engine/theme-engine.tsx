@@ -49,7 +49,7 @@ const NEX_DEFAULT_COLOURS: ColourSystem = {
   secondary: "#4FC3DC",
   highlight: "#F4F7FC",
   glow: "rgba(0,175,255,0.35)",
-  deep: "#020914",
+  deep: "var(--nex-world-background-base, #020914)",
 };
 
 function resolveColours(c: ColourSystem | undefined): Required<ColourSystem> {

@@ -21,7 +21,7 @@ import { MenuItemSheet } from "./_menu-item-sheet";
 import { formatDispatchLabel, type DispatchKind } from "./_types";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   text: "#F2F5F8",
   textDim: "#B5C3D6",
   textMute: "#7D9BC0",

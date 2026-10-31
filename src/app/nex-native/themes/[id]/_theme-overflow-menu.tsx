@@ -26,7 +26,7 @@ interface Props {
 const NEX = {
   text: "#F4F7FC",
   cyan: "#00AFFF",
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   bgSheet: "rgba(5, 15, 30, 0.98)",
   border: "rgba(255, 255, 255, 0.08)",
   rowHover: "rgba(255, 255, 255, 0.04)",

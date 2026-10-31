@@ -80,7 +80,7 @@ const SAMPLE_MESSAGES: SampleMessage[] = [
 ];
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panel: "#03101D",
   cyan: "#009FEF",
   cyanDeep: "#063B67",
@@ -1171,7 +1171,7 @@ function NeuralBloom({ friend, messages }: PrototypeRenderProps) {
 
 function TimelineBraid({ friend, messages }: PrototypeRenderProps) {
   return (
-    <div style={{ position: "absolute", inset: 0, background: "#020914" }}>
+    <div style={{ position: "absolute", inset: 0, background: "var(--nex-world-background-base, #020914)" }}>
       <MiniHeader friend={friend} />
 
       <div

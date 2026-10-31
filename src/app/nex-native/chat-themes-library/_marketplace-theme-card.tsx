@@ -27,7 +27,7 @@ import type { BrowserThemeRow } from "./_theme-browser-client";
 import { NEX_FONT_SANS } from "@/lib/nex-native/design-tokens";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panel: "rgba(3, 16, 29, 0.72)",
   panelHi: "#0A1A2D",
   text: "#F2F5F8",

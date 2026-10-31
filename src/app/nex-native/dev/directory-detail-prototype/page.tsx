@@ -31,7 +31,7 @@ import { ThumbnailStrip } from "../../directory/[id]/_thumbnail-strip";
 import type { ThumbnailStripResult } from "@/lib/nex-native/directory/media-resolver";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   surface: "#0E1526",
   surfaceHi: "#182540",
   text: "#F2F5F8",

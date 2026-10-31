@@ -19,7 +19,7 @@ import Link from "next/link";
 import { NEX_FONT_SANS } from "@/lib/nex-native/design-tokens";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panel: "rgba(3, 16, 29, 0.96)",
   text: "#F2F5F8",
   textMuted: "#7D9BC0",

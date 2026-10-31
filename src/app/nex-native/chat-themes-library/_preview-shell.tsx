@@ -53,7 +53,7 @@ import {
 } from "./_preview-shell-logic";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   bgSoft: "rgba(2,9,20,0.75)",
   cyan: "#00AFFF",
   cyanBorder: "rgba(0,175,255,0.35)",

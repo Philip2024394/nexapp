@@ -4,7 +4,7 @@
 // sealed NEX palette and glass aesthetic.
 
 export const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panel: "rgba(3, 16, 29, 0.70)",
   panelSolid: "#03101D",
   surfaceHi: "#182540",

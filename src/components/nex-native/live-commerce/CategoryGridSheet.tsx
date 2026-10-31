@@ -261,7 +261,7 @@ export function CategoryGridSheet(
                   // button color same as container back ground color"
                   // · solid #020914 to match the Live Library container
                   // + the chat page bg (sealed earlier).
-                  background: "#020914",
+                  background: "var(--nex-world-background-base, #020914)",
                   backdropFilter: "blur(18px) saturate(140%)",
                   WebkitBackdropFilter: "blur(18px) saturate(140%)",
                   border: "2px solid rgba(0, 175, 255, 0.9)",

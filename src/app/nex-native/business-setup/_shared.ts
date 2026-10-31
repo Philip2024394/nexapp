@@ -5,7 +5,7 @@
 // continuation of the sealed brand language.
 
 export const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panel: "#03101D",
   panelSoft: "rgba(6, 15, 28, 0.72)",
   fieldBg: "#04101F",

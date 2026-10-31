@@ -61,7 +61,7 @@ export const SKIN_NEX: VaultDoorwaySkin = {
     "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
   contentAnchor: "bottom",
   bg: {
-    base: "#020914",
+    base: "var(--nex-world-background-base, #020914)",
     radialOverlay: undefined,
     imageUrl: "/nex-native/vault/nex-doorway.png",
     imageBlend: "normal",

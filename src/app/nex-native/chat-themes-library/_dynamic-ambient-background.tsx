@@ -25,7 +25,7 @@ export function DynamicAmbientBackground({ accentColor }: DynamicAmbientBackgrou
         zIndex: 0,
         overflow: "hidden",
         pointerEvents: "none",
-        background: "#020914",
+        background: "var(--nex-world-background-base, #020914)",
       }}
     >
       <motion.div

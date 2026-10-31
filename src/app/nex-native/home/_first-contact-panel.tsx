@@ -118,7 +118,7 @@ export async function resolveFirstContactSignals(
 
 /* ─── Palette · matches home/page.tsx token set ─────────────────── */
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panelSoft: "rgba(6, 15, 28, 0.72)",
   textPrimary: "#F2F5F8",
   textSecondary: "#B5C3D6",

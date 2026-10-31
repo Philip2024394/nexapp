@@ -67,10 +67,10 @@ const DEMO = {
 // the page is self-contained · variants that want a different accent
 // can still override via inline styles.
 const C = {
-  bgPage: "#020914",
+  bgPage: "var(--nex-world-background-base, #020914)",
   bgPageAlt: "#05101F",
   navy: "#050F1E",
-  deep: "#020914",
+  deep: "var(--nex-world-background-base, #020914)",
   text: "#F2F5F8",
   textMute: "#7D9BC0",
   textFaint: "#526B89",

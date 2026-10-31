@@ -57,7 +57,7 @@ import {
 export type IntroTitlePosition = "hero" | "center" | "footer";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panel: "rgba(2, 9, 20, 0.72)",
   panelBorder: "rgba(0, 175, 255, 0.28)",
   textPrimary: "#F2F5F8",

@@ -94,7 +94,7 @@ import {
 // ═════════════════════════════════════════════════════════════════════
 
 const PALETTE = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   surface: "#0E1526",
   surfaceHi: "#182540",
   text: "#F2F5F8",

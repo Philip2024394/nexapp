@@ -53,7 +53,7 @@ export const dynamic = "force-dynamic";
 // NEX free-theme palette · navy / cyan / orange. No third palette.
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panel: "#071525",
   panelHi: "#0A1A2D",
   textPrimary: "#F2F5F8",

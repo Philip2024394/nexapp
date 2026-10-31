@@ -71,8 +71,8 @@ const CALL_SURFACE = {
   // Mirrors Create Account + Sign In · NEX brand tokens only.
   // If you touch any of these three surfaces, update the other two
   // in the same change (PAL + NEX_BRAND in _calls-client.tsx).
-  bg1: "#020914",
-  bg2: "#020914",
+  bg1: "var(--nex-world-background-base, #020914)",
+  bg2: "var(--nex-world-background-base, #020914)",
   bgGlow: "rgba(0,175,255,0.09)",
   accent: "#FF7200",                   // deep NEX orange
   accentSoft: "rgba(255,114,0,0.16)",

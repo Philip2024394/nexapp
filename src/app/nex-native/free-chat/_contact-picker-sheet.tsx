@@ -41,7 +41,7 @@ const SHEET_ACCENT_HEX = "#00AFFF";
 
 const NEX = {
   bgNavy: "#050F1E",
-  bgDeep: "#020914",
+  bgDeep: "var(--nex-world-background-base, #020914)",
   text: "#F2F5F8",
   textMute: "#7D9BC0",
   cyan: "#00AFFF",

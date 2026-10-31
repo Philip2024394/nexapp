@@ -59,7 +59,7 @@ const DEMO = {
 } as const;
 
 const C = {
-  bgPage: "#020914",
+  bgPage: "var(--nex-world-background-base, #020914)",
   bgPageAlt: "#05101F",
   text: "#F2F5F8",
   textMute: "#7D9BC0",
@@ -70,7 +70,7 @@ const C = {
   green: "#16D66B",
   red: "#B30000",
   gold: "#FFD700",
-  deep: "#020914",
+  deep: "var(--nex-world-background-base, #020914)",
   navy: "#050F1E",
 } as const;
 

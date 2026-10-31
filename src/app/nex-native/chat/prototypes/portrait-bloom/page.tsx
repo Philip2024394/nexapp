@@ -27,7 +27,7 @@ export const dynamic = "force-dynamic";
 const MARIA_ID = "d3e7f000-0001-4a00-b000-000000000001";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   cyan: "#009FEF",
   cyanDeep: "#063B67",
   orange: "#FF7800",

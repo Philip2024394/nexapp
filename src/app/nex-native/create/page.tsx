@@ -55,7 +55,7 @@ const TILE_BG = "linear-gradient(135deg, #152646 0%, #1E3A6E 100%)";
 // background colour (#020914 · src/app/nex-native/free-chat/page.tsx:63
 // `NEX.bg`) so the primary action reads as a solid dark surface that
 // stands apart from the lighter navy gradient on Coming-soon tiles.
-const TILE_BG_GO_LIVE = "#020914";
+const TILE_BG_GO_LIVE = "var(--nex-world-background-base, #020914)";
 const TILE_SHADOW = "0 3px 10px -3px rgba(16, 32, 51, 0.45)";
 const CHIP_ENABLED_BG = "rgba(255, 51, 85, 0.18)";
 const CHIP_ENABLED_FG = RED;

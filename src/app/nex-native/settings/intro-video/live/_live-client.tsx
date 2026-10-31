@@ -38,7 +38,7 @@ import type {
 } from "../_overlay-fonts";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   cyan: "#00AFFF",
   textPrimary: "#F2F5F8",
   textMute: "#7D9BC0",

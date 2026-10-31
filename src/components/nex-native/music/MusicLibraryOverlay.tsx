@@ -622,7 +622,7 @@ function LibraryCard(props: {
           aspectRatio: "1 / 1",
           borderRadius: 10,
           overflow: "hidden",
-          background: "#020914",
+          background: "var(--nex-world-background-base, #020914)",
           border: t.isCurrent
             ? `2px solid ${CYAN}`
             : "1px solid rgba(255, 255, 255, 0.14)",

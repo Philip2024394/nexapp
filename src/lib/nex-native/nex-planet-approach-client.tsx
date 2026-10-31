@@ -50,7 +50,7 @@ export interface NexPlanetApproachClientProps {
 }
 
 export function NexPlanetApproachClient({
-  deep = "#020914",
+  deep = "var(--nex-world-background-base, #020914)",
   accent = "#00AFFF",
   highlight = "#F4F7FC",
 }: NexPlanetApproachClientProps): React.ReactElement {

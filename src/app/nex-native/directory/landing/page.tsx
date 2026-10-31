@@ -56,7 +56,7 @@ const HERO_ART = "/nex-directory/landing-hero.png";
 const RESULTS_HREF = "/nex-native/directory";
 
 // NEX palette (shared with the Vault sealed theme).
-const COLOR_BG = "#020914";
+const COLOR_BG = "var(--nex-world-background-base, #020914)";
 const COLOR_PANEL = "#0A1526";
 const COLOR_PANEL_BORDER = "rgba(0,175,255,0.18)";
 const COLOR_ORANGE = "#FF7200";

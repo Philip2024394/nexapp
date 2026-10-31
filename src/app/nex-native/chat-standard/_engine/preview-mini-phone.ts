@@ -76,7 +76,7 @@ export const NEX_DEFAULT_PALETTE: MiniPhonePalette = {
   secondary: "#4FC3DC",
   highlight: "#F4F7FC",
   glow: "rgba(0,175,255,0.35)",
-  deep: "#020914",
+  deep: "var(--nex-world-background-base, #020914)",
 };
 
 /** Universal avatar presence border · green on every theme. Matches

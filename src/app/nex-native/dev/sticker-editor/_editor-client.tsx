@@ -335,7 +335,7 @@ export default function StickerEditorClient({
       style={{
         position: "fixed",
         inset: 0,
-        background: "#020914",
+        background: "var(--nex-world-background-base, #020914)",
         color: "#F2F5F8",
         fontFamily:
           "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
@@ -482,7 +482,7 @@ export default function StickerEditorClient({
               padding: 8,
               borderRadius: 6,
               border: "1px solid #526B89",
-              background: "#020914",
+              background: "var(--nex-world-background-base, #020914)",
               color: "#F2F5F8",
               fontSize: 13,
             }}
@@ -807,7 +807,7 @@ function NumericGrid({
           padding: 6,
           borderRadius: 4,
           border: "1px solid #526B89",
-          background: "#020914",
+          background: "var(--nex-world-background-base, #020914)",
           color: "#F2F5F8",
           fontSize: 12,
           width: "100%",

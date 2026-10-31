@@ -38,7 +38,7 @@ interface NexLoadingSkeletonProps {
   readonly header?: ReactNode;
 }
 
-const NAVY = "#020914";
+const NAVY = "var(--nex-world-background-base, #020914)";
 const PANEL = "#0A1526";
 const PANEL_BORDER = "rgba(0,175,255,0.18)";
 const CYAN = "#00AFFF";

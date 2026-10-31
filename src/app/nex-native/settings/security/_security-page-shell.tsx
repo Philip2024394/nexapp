@@ -21,7 +21,7 @@ import Link from "next/link";
 import type { SecurityHealthSnapshot } from "@/lib/nex-native/security-service";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   surface: "#0A1424",
   panel: "rgba(16,30,52,0.72)",
   panelAccent: "rgba(0,175,255,0.26)",

@@ -42,7 +42,7 @@ import {
 } from "@/app/nex-native/free-chat/_contact-picker-data";
 
 const NEX = {
-  bgPage: "#020914",
+  bgPage: "var(--nex-world-background-base, #020914)",
   navy: "#050F1E",
   text: "#F2F5F8",
   textMute: "#7D9BC0",

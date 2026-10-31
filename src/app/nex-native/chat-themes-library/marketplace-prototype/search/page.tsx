@@ -26,7 +26,7 @@ import { SearchClient } from "./_search-client";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const NEX_BG = "#020914";
+const NEX_BG = "var(--nex-world-background-base, #020914)";
 const NEX_TEXT = "#F2F5F8";
 const SANS =
   "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";

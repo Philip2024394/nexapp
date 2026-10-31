@@ -61,7 +61,7 @@ const THEME_3 = {
 } as const;
 
 const C = {
-  bgDeep: "#020914",
+  bgDeep: "var(--nex-world-background-base, #020914)",
   text: "#F2F5F8",
   textMute: "#7D9BC0",
   textFaint: "#526B89",

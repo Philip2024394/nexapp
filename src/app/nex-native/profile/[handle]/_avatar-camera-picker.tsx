@@ -22,7 +22,7 @@ import * as React from "react";
 import { uploadAvatarAction } from "../../_actions";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   cyan: "#00AFFF",
   cyanRim: "rgba(0, 175, 255, 0.60)",
 };

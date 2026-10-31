@@ -17,7 +17,7 @@ import * as React from "react";
 import { CUSTOM_INTRO_VIDEO_LIMITS } from "@/lib/nex-native/custom-intro-config";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panel: "rgba(16,30,52,0.72)",
   panelAccent: "rgba(0,175,255,0.26)",
   cyan: "#00AFFF",

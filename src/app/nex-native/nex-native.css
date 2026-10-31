@@ -236,7 +236,12 @@ body::-webkit-scrollbar,
       0 0 0 4px #000000,
       0 24px 60px -14px rgba(0, 0, 0, 0.9),
       0 0 0 1px rgba(255, 255, 255, 0.06);
-    background: #020914;
+    /* 2026-11-01 · frame interior now follows the active world so
+     * Ireland shows cream / Indonesia white / nex-original keeps the
+     * original navy via the fallback. Pages that still hardcode their
+     * own `bg: "#020914"` are being swept to this same var in the
+     * same batch. */
+    background: var(--nex-world-background-base, #020914);
     /* Containing block for position:fixed descendants · see note
      * above. Any CSS transform other than `none` is sufficient. */
     transform: translateZ(0);

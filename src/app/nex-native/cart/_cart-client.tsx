@@ -27,7 +27,7 @@ import { DeliveryEstimator } from "./_delivery-estimator";
 import type { NexCartDeliveryQuote } from "@/lib/nex-native/bike-delivery-service";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panelSoft: "rgba(6, 15, 28, 0.72)",
   border: "rgba(139, 169, 209, 0.14)",
   borderStrong: "rgba(139, 169, 209, 0.24)",

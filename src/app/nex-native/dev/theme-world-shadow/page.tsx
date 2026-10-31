@@ -279,7 +279,7 @@ function ShadowRow({
               height: 720,
               overflow: "hidden",
               borderRadius: 10,
-              background: "#020914",
+              background: "var(--nex-world-background-base, #020914)",
               // transform establishes a new containing block so any
               // position:fixed descendant (MistDrift) resolves to this
               // stage, not the viewport · without this, left + right
@@ -316,7 +316,7 @@ function ShadowRow({
               height: 720,
               overflow: "hidden",
               borderRadius: 10,
-              background: "#020914",
+              background: "var(--nex-world-background-base, #020914)",
               transform: "translateZ(0)",
             }}
           >

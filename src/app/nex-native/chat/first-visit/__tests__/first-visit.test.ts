@@ -192,7 +192,7 @@ describe("first-visit page · structure", () => {
 
   it("uses the sealed NEX design tokens only · no third palette", () => {
     // Must contain the canonical NEX bg; must not introduce new theme-level reds/greens.
-    expect(PAGE).toContain("#020914"); // NEX navy
+    expect(PAGE).toContain("var(--nex-world-background-base, #020914)"); // NEX navy
     expect(PAGE).toContain("#00AFFF"); // NEX cyan
     expect(PAGE).toContain("#FF7200"); // NEX orange
   });

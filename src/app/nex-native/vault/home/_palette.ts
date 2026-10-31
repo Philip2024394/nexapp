@@ -31,7 +31,7 @@ export const NEX = {
   // Matches NEX_SETTINGS.bg · the deep navy every NEX surface uses.
   // Prior value `#06040A` (warm near-black) was Vault-specific and
   // made the surface read as a different app.
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
 
   // Subtle cyan+orange radial glow painted behind the top of the
   // viewport so the dark base doesn't read flat. Cyan dominates

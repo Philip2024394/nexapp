@@ -40,7 +40,7 @@ import {
 
 const INK = "#F0F6FF";
 const INK_DIM = "rgba(240, 246, 255, 0.7)";
-const BG_DARK = "#020914";
+const BG_DARK = "var(--nex-world-background-base, #020914)";
 
 export type MusicPostPresence = "online" | "busy" | "offline" | null;
 
@@ -620,7 +620,7 @@ function MusicPostUpNextBanner(props: {
             height: "100%",
             objectFit: "cover",
             objectPosition: "center 40%",
-            backgroundColor: "#020914",
+            backgroundColor: "var(--nex-world-background-base, #020914)",
           }}
         />
       ) : (

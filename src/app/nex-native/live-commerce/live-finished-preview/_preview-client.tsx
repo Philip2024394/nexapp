@@ -38,7 +38,7 @@ export function LiveFinishedPreviewClient(): React.JSX.Element {
         height: "100%",
         width: "100%",
         overflow: "hidden",
-        background: "#020914",
+        background: "var(--nex-world-background-base, #020914)",
       }}
     >
       <LiveFinishedRecap

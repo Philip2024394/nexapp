@@ -27,7 +27,7 @@ import type { SocialIntent } from "./_actions";
 const BG_URL = "/nex-socials/socials-landing-background.png";
 
 const NEX = {
-  navy: "#020914",
+  navy: "var(--nex-world-background-base, #020914)",
   textPrimary: "#F2F5F8",
   textDim: "rgba(242, 245, 248, 0.72)",
   textMuted: "rgba(242, 245, 248, 0.52)",

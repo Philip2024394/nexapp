@@ -1112,7 +1112,7 @@ function DoorIcon() {
 const CYAN = "#00AFFF";
 const TEXT = "#F2F5F8";
 const MUTED = "#7D9BC0";
-const BG = "#020914";
+const BG = "var(--nex-world-background-base, #020914)";
 const PANEL = "#0A1526";
 const PANEL_BORDER = "rgba(0,175,255,0.18)";
 const DANGER = "#FF4D4F";

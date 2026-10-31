@@ -26,7 +26,7 @@ import { MediaRecorderModal } from "./_media-recorder";
 import { ChatComposerPill } from "@/lib/nex-native/chat-chrome/chat-composer-pill";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panel: "#03101D",
   fieldBg: "rgba(4,20,36,0.90)",
   textPrimary: "#F4F7FC",

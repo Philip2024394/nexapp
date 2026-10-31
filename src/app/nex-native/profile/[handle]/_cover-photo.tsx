@@ -22,7 +22,7 @@ import type * as React from "react";
 import { CoverCameraPicker } from "./_cover-camera-picker";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   cyan: "#00AFFF",
   cyanSoft: "rgba(0, 175, 255, 0.35)",
   cyanFaint: "rgba(0, 175, 255, 0.14)",

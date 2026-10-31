@@ -24,7 +24,7 @@
 //     a functional safety surface · solid NEX palette.
 
 export const FAMILY_SAFETY_PALETTE = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   surface: "#0E1526",
   surfaceHi: "#182540",
   surfaceMuted: "#03101D",

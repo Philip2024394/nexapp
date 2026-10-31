@@ -36,7 +36,7 @@ const NEX = {
   cyan: "#00AFFF",
   cyanSoft: "rgba(0, 175, 255, 0.35)",
   cyanFaint: "rgba(0, 175, 255, 0.14)",
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   text: "#F2F5F8",
   textDim: "#B5C3D6",
   textMuted: "#7D9BC0",

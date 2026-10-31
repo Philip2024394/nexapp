@@ -64,7 +64,7 @@ describe("A · every registered category declares a ColourSystem", () => {
   test("Explore category palette is the NEX default (coherent with its uncategorised-bucket role)", () => {
     const explore = getCategory(EXPLORE_CATEGORY_ID);
     expect(explore?.colours.primary).toBe("#00AFFF");
-    expect(explore?.colours.deep).toBe("#020914");
+    expect(explore?.colours.deep).toBe("var(--nex-world-background-base, #020914)");
   });
 });
 
@@ -80,7 +80,7 @@ describe("B · category showcase page uses the NEX app palette for its wrapper",
   test("source declares a local palette with the NEX navy / cyan / off-white / gray constants", () => {
     // The wrapper atmosphere is a NEX-fixed palette, not a category
     // colour. All four NEX constants must appear verbatim in the file.
-    expect(src).toContain('"#020914"'); // NEX navy · page bg
+    expect(src).toContain('"var(--nex-world-background-base, #020914)"'); // NEX navy · page bg
     expect(src).toContain('"#F4F7FC"'); // NEX off-white · body text
     expect(src).toContain('"#00AFFF"'); // NEX cyan · accent / icon rim
     expect(src).toContain('"#8BA9D1"'); // NEX gray · dim / tagline / back-link

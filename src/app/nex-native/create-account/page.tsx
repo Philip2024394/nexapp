@@ -59,7 +59,7 @@ function sanitisePreservedEmail(raw: string | undefined): string {
 }
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panel: "rgba(3, 16, 29, 0.78)",
   fieldBg: "rgba(4, 16, 32, 0.78)",
   textPrimary: "#F2F5F8",

@@ -30,7 +30,7 @@ import {
 } from "@/lib/nex-native/seller-lanes";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panel: "rgba(6, 15, 28, 0.72)",
   border: "rgba(139, 169, 209, 0.14)",
   borderStrong: "rgba(139, 169, 209, 0.24)",
@@ -808,7 +808,7 @@ function ResellerOptIn({
             height={12}
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#020914"
+            stroke="var(--nex-world-background-base, #020914)"
             strokeWidth={3.5}
             strokeLinecap="round"
             strokeLinejoin="round"

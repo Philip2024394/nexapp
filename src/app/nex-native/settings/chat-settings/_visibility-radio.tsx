@@ -113,7 +113,7 @@ export function VisibilityRadio({
                 padding: "6px 12px",
                 borderRadius: 999,
                 background: selected ? CYAN : CYAN_FAINT,
-                color: selected ? "#020914" : CYAN,
+                color: selected ? "var(--nex-world-background-base, #020914)" : CYAN,
                 border: `1px solid ${selected ? CYAN : BORDER}`,
                 fontSize: 12,
                 fontWeight: 600,

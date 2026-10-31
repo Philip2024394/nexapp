@@ -980,7 +980,7 @@ function NextSongCard(props: {
             height: "100%",
             objectFit: "cover",
             objectPosition: "center 40%",
-            backgroundColor: "#020914",
+            backgroundColor: "var(--nex-world-background-base, #020914)",
           }}
         />
       ) : (

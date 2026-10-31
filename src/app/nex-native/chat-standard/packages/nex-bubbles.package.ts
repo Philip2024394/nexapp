@@ -40,7 +40,7 @@ export const NEX_BUBBLES_PACKAGE: ThemePackage = {
     secondary: "#7D9BC0", // NEX gray · structural secondary
     highlight: "#F2F5F8", // NEX off-white · bubble text + composer text
     glow: "rgba(255, 114, 0, 0.45)", // orange rim glow
-    deep: "#020914", // NEX navy stage
+    deep: "var(--nex-world-background-base, #020914)", // NEX navy stage
   },
   personality: "drift",
 

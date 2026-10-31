@@ -33,7 +33,7 @@ const C = {
   // Owner directive 2026-10-21 (iteration 43) · Joker-chrome parity ·
   // panel background matches the sealed ControlDrawer `BG` exactly so
   // the Call Center drawer reads as the same drawer system.
-  navy: "#020914",
+  navy: "var(--nex-world-background-base, #020914)",
   panel: "rgba(5, 15, 28, 0.96)",
   // Owner directive 2026-10-21 (iteration 43) · `panelBorder` tightened
   // to the sealed ControlDrawer `PANEL_BORDER` value (rgba(0,175,255,0.18))

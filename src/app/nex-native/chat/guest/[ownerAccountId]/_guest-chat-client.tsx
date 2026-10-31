@@ -198,7 +198,7 @@ function GuestChatInner(props: Props): React.JSX.Element {
         // Explicit full-viewport wallpaper so it visibly covers the
         // entire screen regardless of CoverThemeSkin's 0.35-opacity
         // layer. Dark gradient scrim keeps text readable.
-        backgroundColor: "#020914",
+        backgroundColor: "var(--nex-world-background-base, #020914)",
         backgroundImage: theme.wallpaperUrl
           ? `linear-gradient(180deg, rgba(2,9,20,0.35) 0%, rgba(2,9,20,0.65) 100%), url(${theme.wallpaperUrl})`
           : undefined,

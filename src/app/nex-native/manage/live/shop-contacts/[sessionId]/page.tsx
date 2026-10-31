@@ -40,7 +40,7 @@ const UUID_SHAPE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   text: "#F2F5F8",
   textDim: "#8BA9D1",
   cyan: "#00AFFF",

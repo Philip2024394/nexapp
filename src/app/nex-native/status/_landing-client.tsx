@@ -15,7 +15,7 @@ import {
 import type { StoredStatus } from "@/lib/nex-native/status-storage/types";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   text: "#F2F5F8",
   textDim: "#8BA9D1",
   textMute: "#526B89",

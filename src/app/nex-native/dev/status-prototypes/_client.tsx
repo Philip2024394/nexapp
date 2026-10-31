@@ -11,7 +11,7 @@
 import * as React from "react";
 
 const C = {
-  deep: "#020914",
+  deep: "var(--nex-world-background-base, #020914)",
   primary: "#00AFFF",
   secondary: "#4FC3DC",
   highlight: "#F4F7FC",

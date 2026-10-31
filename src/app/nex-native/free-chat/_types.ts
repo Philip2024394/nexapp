@@ -87,7 +87,7 @@ export function resolveFreeChatWallpaperUrl(
  *  stays byte-identical. */
 export function freeChatBackgroundCss(
   wallpaperUrl: string | null,
-  navyFallback: string = "#020914",
+  navyFallback: string = "var(--nex-world-background-base, #020914)",
 ): string {
   if (!wallpaperUrl) return navyFallback;
   return `linear-gradient(rgba(2, 9, 20, 0.35), rgba(2, 9, 20, 0.55)), url("${wallpaperUrl}") center / cover no-repeat, ${navyFallback}`;

@@ -16,7 +16,7 @@ import { useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panel: "#07152A",
   pillBg: "#0E1F39",
   text: "#F2F5F8",

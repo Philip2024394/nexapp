@@ -31,7 +31,7 @@ import type { SafeTradeSnapshot } from "@/lib/nex-native/safe-trade-status";
 import { SafeTradeSheet, type SafeTradeSheetProps } from "./_safe-trade-sheet";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   cyanSoft: "rgba(0, 175, 255, 0.35)",
 };
 

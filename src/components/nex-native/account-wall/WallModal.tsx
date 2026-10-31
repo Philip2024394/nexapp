@@ -33,7 +33,7 @@ import {
 } from "@/lib/nex-native/account-wall/wall-copy";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   overlay: "rgba(2, 9, 20, 0.78)",
   panel: "#071525",
   panelHi: "#0A1A2D",

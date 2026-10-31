@@ -43,7 +43,7 @@ const NEX = {
   cyanSoft: "rgba(0, 175, 255, 0.35)",
   cyanRim: "rgba(0, 175, 255, 0.60)",
   cyanFaint: "rgba(0, 175, 255, 0.14)",
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panel: "rgba(3, 16, 29, 0.72)",
   text: "#F2F5F8",
   textDim: "#B5C3D6",

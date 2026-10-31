@@ -29,7 +29,7 @@ const NEX = {
   cyan: "#00AFFF",
   cyanSoft: "rgba(0, 175, 255, 0.35)",
   cyanFaint: "rgba(0, 175, 255, 0.12)",
-  bgDark: "#020914",
+  bgDark: "var(--nex-world-background-base, #020914)",
   panel: "rgba(3, 16, 29, 0.86)",
   textPrimary: "#F2F5F8",
   textSubtle: "rgba(242, 245, 248, 0.85)",

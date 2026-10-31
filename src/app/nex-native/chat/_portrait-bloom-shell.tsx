@@ -45,7 +45,7 @@ import { ChatIdentityHeader } from "@/lib/nex-native/chat-chrome/chat-identity-h
 import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   cyan: "#009FEF",
   cyanDeep: "#063B67",
   orange: "#FF7800",
@@ -2365,7 +2365,7 @@ function MessageProductShareBanner({
         margin: hasBody ? "-2px -6px 8px" : "-2px -6px 2px",
         borderRadius: 12,
         overflow: "hidden",
-        background: "#020914",
+        background: "var(--nex-world-background-base, #020914)",
         border: "1px solid rgba(0,175,255,0.35)",
         boxShadow: "0 6px 16px rgba(0,0,0,0.45)",
       }}

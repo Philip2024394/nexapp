@@ -15,7 +15,7 @@ import { formatIdrPence } from "@/lib/nex-native/watches/watch-listing-money";
 import type { WatchDirectoryTile } from "@/lib/nex-native/watches/watch-listing-types";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   text: "#F2F5F8",
   textDim: "#C8D4E8",
   textFaint: "#7D9BC0",

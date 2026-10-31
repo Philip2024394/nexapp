@@ -17,7 +17,7 @@ import { ThemeActivationWrapper } from "./_theme-activation-wrapper";
 import type { MiniPhonePalette } from "../chat-standard/_engine/preview-mini-phone";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panel: "#03101D",
   panelSolid: "rgba(3,16,29,0.96)",
   fieldBg: "rgba(4,20,36,0.85)",
@@ -1191,7 +1191,7 @@ function GalleryPreviewArea({
             justifyContent: "center",
             overflow: "hidden",
             borderRadius: 16,
-            background: "#020914",
+            background: "var(--nex-world-background-base, #020914)",
             zIndex: 2,
           }}
         >
@@ -1223,7 +1223,7 @@ function GalleryPreviewArea({
               height: "100%",
               objectFit: "cover",
               objectPosition: "center center",
-              background: "#020914",
+              background: "var(--nex-world-background-base, #020914)",
               display: "block",
               opacity: videoReady ? 1 : 0,
               transition: "opacity 120ms linear",

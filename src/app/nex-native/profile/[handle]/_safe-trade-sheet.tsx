@@ -66,7 +66,7 @@ import { EvidencePanel } from "./_evidence-panel";
 import type { TrustScoreResult } from "@/lib/nex-native/trust/trust-score-shared";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panel: "#071525",
   panelHi: "#0A1A2D",
   text: "#F2F5F8",

@@ -696,7 +696,7 @@ function row(id: string, categoryId: string): BrowserThemeRow {
       secondary: "#000000",
       highlight: "#F4F7FC",
       glow: "rgba(0,0,0,0.4)",
-      deep: "#020914",
+      deep: "var(--nex-world-background-base, #020914)",
     },
     ambient_families: null,
     bubble_material: "glass",

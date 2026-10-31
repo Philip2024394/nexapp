@@ -37,7 +37,7 @@ export const NEX_FLAT_PACKAGE: ThemePackage = {
     secondary: "#5AC8FA", // NEX cyan highlight · rising bubbles
     highlight: "#F2F5F8", // NEX off-white · bubble text
     glow: "rgba(0, 175, 255, 0.55)", // blue centre glow
-    deep: "#020914", // NEX navy stage
+    deep: "var(--nex-world-background-base, #020914)", // NEX navy stage
   },
   personality: "drift",
 

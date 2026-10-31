@@ -22,7 +22,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panel: "rgba(7, 21, 37, 0.72)",
   border: "rgba(0, 175, 255, 0.22)",
   cyan: "#00AFFF",

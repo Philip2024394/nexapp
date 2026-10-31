@@ -37,7 +37,7 @@ const NEX = {
   cyanSoft: "rgba(0, 175, 255, 0.35)",
   panel: "rgba(3, 16, 29, 0.95)",
   panelBorder: "rgba(0, 175, 255, 0.25)",
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
 };
 
 interface Props {

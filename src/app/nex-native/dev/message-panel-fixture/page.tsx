@@ -28,7 +28,7 @@ export default function MessagePanelFixturePage(): React.JSX.Element {
       style={{
         position: "relative",
         minHeight: "100dvh",
-        background: "#020914",
+        background: "var(--nex-world-background-base, #020914)",
         color: "#F2F5F8",
         fontFamily:
           "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",

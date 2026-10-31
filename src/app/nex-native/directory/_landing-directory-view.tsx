@@ -75,7 +75,7 @@ import {
 
 // NEX palette · aligned with the shared theme.
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   text: "#F2F5F8",
   textDim: "#7D9BC0",
   cyan: "#00AFFF",

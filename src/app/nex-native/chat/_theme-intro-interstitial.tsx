@@ -51,7 +51,7 @@ interface ThemeIntroInterstitialProps {
 }
 
 const UI = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   text: "#F2F5F8",
   textDim: "#B5C3D6",
   textMuted: "#7D9BC0",

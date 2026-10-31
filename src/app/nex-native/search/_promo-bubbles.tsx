@@ -25,7 +25,7 @@ import { useState } from "react";
 import type { DiscoverCardPromo } from "@/lib/nex-native/discover-card-context";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panel: "#07152A",
   panelHi: "#0E2140",
   text: "#F2F5F8",

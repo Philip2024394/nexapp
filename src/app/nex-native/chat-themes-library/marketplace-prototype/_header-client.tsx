@@ -40,7 +40,7 @@ const NEX = {
   textMute: "#7D9BC0",
   cyan: "#00AFFF",
   cyanSoft: "rgba(0, 175, 255, 0.35)",
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
 };
 
 export type MarketplaceFilter = "new" | "free" | "premium";

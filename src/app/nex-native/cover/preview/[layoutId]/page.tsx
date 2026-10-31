@@ -108,7 +108,7 @@ export default async function CoverLayoutPreview({
         style={{
           padding: 24,
           color: "#F2F5F8",
-          background: "#020914",
+          background: "var(--nex-world-background-base, #020914)",
           fontFamily: "ui-monospace, monospace",
           minHeight: "100dvh",
           margin: 0,
@@ -129,7 +129,7 @@ export default async function CoverLayoutPreview({
         style={{
           padding: 24,
           color: "#F2F5F8",
-          background: "#020914",
+          background: "var(--nex-world-background-base, #020914)",
           fontFamily: "ui-monospace, monospace",
           minHeight: "100dvh",
           margin: 0,

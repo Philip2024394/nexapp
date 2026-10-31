@@ -34,7 +34,7 @@ import type { MusicFeedEntry } from "@/lib/nex-native/music/active-music-feed-re
 
 const INK = "#F0F6FF";
 const INK_DIM = "rgba(240, 246, 255, 0.72)";
-const BG_DARK = "#020914";
+const BG_DARK = "var(--nex-world-background-base, #020914)";
 const CYAN = "#4FC3FF";
 
 export interface MusicFeedCardProps {

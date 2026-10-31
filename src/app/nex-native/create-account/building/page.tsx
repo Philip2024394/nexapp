@@ -33,7 +33,7 @@ const PICK_COVER_HREF = "/nex-native/cover-themes-library";
 const RETRY_HREF = "/nex-native/create-account/building";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   text: "#F2F5F8",
   textDim: "#7D9BC0",
   textMute: "#526B89",

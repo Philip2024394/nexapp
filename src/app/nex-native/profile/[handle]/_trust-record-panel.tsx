@@ -52,7 +52,7 @@
 import type * as React from "react";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panelHi: "#0A1A2D",
   text: "#F2F5F8",
   textDim: "#B5C3D6",

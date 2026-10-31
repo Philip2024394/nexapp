@@ -25,7 +25,7 @@ import { HqNav } from "./_hq-nav";
 
 const INK = "#F2F5F8";
 const INK_DIM = "#B5C3D6";
-const BG = "#020914";
+const BG = "var(--nex-world-background-base, #020914)";
 
 export default function HqLayout({
   children,

@@ -45,7 +45,7 @@ const JOKER_KEYPAD_THEME_ID = "theme-0";
 
 const NEX_CYAN = "#00AFFF";
 const NEX_SECONDARY = "#4FC3DC";
-const NEX_DEEP = "#020914";
+const NEX_DEEP = "var(--nex-world-background-base, #020914)";
 const NEX_HIGHLIGHT = "#F4F7FC";
 
 export interface UniversalComposerFooterProps {

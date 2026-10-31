@@ -43,7 +43,7 @@ import {
 import { MiniPhoneAmbientLayer } from "./_mini-phone-ambient-layer";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   cyan: "#00AFFF",
   cyanFaint: "rgba(0,175,255,0.14)",
   cyanBorder: "rgba(0,175,255,0.35)",

@@ -302,6 +302,6 @@ describe("D · no per-theme-id branches · no second colour system · universal 
     // comment) · the mirror is permitted but a new palette with
     // different values is not.
     expect(resolverSrc).toContain("#00AFFF"); // NEX cyan = engine default
-    expect(resolverSrc).toContain("#020914"); // NEX deep = engine default
+    expect(resolverSrc).toContain("var(--nex-world-background-base, #020914)"); // NEX deep = engine default
   });
 });

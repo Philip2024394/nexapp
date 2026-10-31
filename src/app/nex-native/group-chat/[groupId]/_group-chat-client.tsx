@@ -32,7 +32,7 @@ import {
 } from "../../contacts/_mock-private-groups";
 
 const NEX = {
-  bgNavy: "#020914",
+  bgNavy: "var(--nex-world-background-base, #020914)",
   bgPanel: "rgba(2,9,20,0.92)",
   bubbleOther: "rgba(12, 32, 58, 0.72)",
   bubbleOtherRim: "rgba(0, 175, 255, 0.22)",

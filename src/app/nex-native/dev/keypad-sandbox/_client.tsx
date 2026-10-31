@@ -64,7 +64,7 @@ export function PhaseZeroKeypadSandboxClient(): React.ReactElement {
     <main
       style={{
         minHeight: "100dvh",
-        background: "#020914",
+        background: "var(--nex-world-background-base, #020914)",
         color: NEX.text,
         padding: "24px 16px 96px",
         fontFamily:

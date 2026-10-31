@@ -37,7 +37,7 @@ import { NexTextarea } from "@/lib/nex-native/nex-keyboard/nex-textarea";
 import { INTRO_NOTE_MAX_LENGTH } from "@/lib/nex-native/friend-request-constants";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panel: "rgba(240, 244, 250, 0.96)",
   panelBorder: "rgba(90, 110, 140, 0.5)",
   text: "#102033",

@@ -1970,7 +1970,7 @@ function GlitchOverlay(): React.JSX.Element {
         style={{
           position: "absolute",
           inset: 0,
-          backgroundColor: "#020914",
+          backgroundColor: "var(--nex-world-background-base, #020914)",
           backgroundImage: "url(/nex-themes/joker-scan-reveal.png?v=3)",
           backgroundSize: "auto 100%",
           backgroundPosition: "center center",

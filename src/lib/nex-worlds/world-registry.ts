@@ -60,7 +60,7 @@ const IRELAND: WorldDefinition = {
     primary: "#1F8B4C",            // emerald
     secondary: "#2E7D47",           // deep emerald
     tertiary: "#C9A24C",            // restrained gold accent
-    backgroundBase: "#FAF6EC",      // warm cream base
+    backgroundBase: "#FAF8F4",      // Trade Centre cream · owner-matched 2026-11-01
     surface: "#FFFFFF",
     surfaceSunken: "#F2EDDE",
     textPrimary: "#102013",         // near-black with green undertone

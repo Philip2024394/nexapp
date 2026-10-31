@@ -59,7 +59,7 @@ import {
 } from "@/app/nex-native/themes/[id]/_joker-motion-data";
 
 const NEX_CYAN = "#00AFFF";
-const NEX_DEEP = "#020914";
+const NEX_DEEP = "var(--nex-world-background-base, #020914)";
 const NEX_HIGHLIGHT = "#F4F7FC";
 
 /** Glyph map · one emoji per sealed JokerMotionVariant. Keyed off

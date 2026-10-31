@@ -22,7 +22,7 @@ import {
 // Pulled byte-equivalent from
 // src/app/nex-native/chat-themes-library/_marketplace-side-drawer.tsx
 const NEX_DRAWER = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   // Owner directive 2026-10-25 · solid dark-navy drawer panel.
   // Opaque so no colour from the Crimson Beacon background bleeds
   // through on the group surface.

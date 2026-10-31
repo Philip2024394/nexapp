@@ -42,7 +42,7 @@ const PALETTE = {
   secondary: "#FF9033",
   highlight: "#F2F5F8",
   glow: "rgba(255,114,0,0.45)",
-  deep: "#020914",
+  deep: "var(--nex-world-background-base, #020914)",
 };
 
 const ANIMATION_BUTTONS: readonly {
@@ -66,7 +66,7 @@ const CALL_ACTIONS: readonly { id: string; glyph: string; label: string }[] = [
 ];
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panel: "#071525",
   panelHi: "#0A1A2D",
   cyan: "#00AFFF",

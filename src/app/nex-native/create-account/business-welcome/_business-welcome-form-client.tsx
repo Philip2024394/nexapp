@@ -445,7 +445,7 @@ export function BusinessWelcomeFormClient(): React.JSX.Element {
                 MozAppearance: "none",
                 width: "100%",
                 padding: "12px 40px 12px 14px",
-                background: "#020914",
+                background: "var(--nex-world-background-base, #020914)",
                 color: pickedSubtype ? NEX.text : NEX.textMute,
                 fontSize: 14,
                 fontWeight: 700,
@@ -457,7 +457,7 @@ export function BusinessWelcomeFormClient(): React.JSX.Element {
                 boxSizing: "border-box",
               }}
             >
-              <option value="" disabled hidden style={{ background: "#020914", color: NEX.textMute }}>
+              <option value="" disabled hidden style={{ background: "var(--nex-world-background-base, #020914)", color: NEX.textMute }}>
                 Choose your accommodation type…
               </option>
               {activeTile.subtypes.map((s) => (
@@ -466,7 +466,7 @@ export function BusinessWelcomeFormClient(): React.JSX.Element {
                   value={s.ready ? s.subtype : ""}
                   disabled={!s.ready}
                   style={{
-                    background: "#020914",
+                    background: "var(--nex-world-background-base, #020914)",
                     color: s.ready ? NEX.text : NEX.textMute,
                   }}
                 >

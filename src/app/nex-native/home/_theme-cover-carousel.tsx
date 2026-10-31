@@ -45,7 +45,7 @@ export interface ThemeCoverSlide {
 }
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panel: "#03101D",
   textPrimary: "#F2F5F8",
   textSecondary: "#7D9BC0",

@@ -48,7 +48,7 @@ export default async function EditRoomPage({
     notFound();
   }
 
-  const bg = "#020914";
+  const bg = "var(--nex-world-background-base, #020914)";
   const panel = "rgba(6, 15, 28, 0.72)";
   const border = "rgba(139, 169, 209, 0.14)";
   const cyan = "#00AFFF";

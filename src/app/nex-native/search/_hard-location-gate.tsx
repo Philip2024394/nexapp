@@ -31,7 +31,7 @@ import { saveUserLocationToAccountAction } from "@/lib/nex-native/user-location/
 import { reverseGeocode } from "@/lib/nex-native/user-location/reverse-geocode";
 
 const NEX = {
-  bg: "#020914",
+  bg: "var(--nex-world-background-base, #020914)",
   panel: "#07152A",
   text: "#F2F5F8",
   textDim: "#8BA9D1",

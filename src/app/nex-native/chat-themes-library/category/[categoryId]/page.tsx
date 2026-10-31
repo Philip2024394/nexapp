@@ -121,7 +121,7 @@ export default async function CategoryShowcasePage({
   // inside ThemeBrowserClient (which still paints each world in its
   // own palette). Founder-sealed 2026-10-11.
   const palette = {
-    deep: "#020914",       // NEX navy · page background
+    deep: "var(--nex-world-background-base, #020914)",       // NEX navy · page background
     highlight: "#F4F7FC",  // NEX off-white · body text
     primary: "#00AFFF",    // NEX cyan · accent / icon rim
     secondary: "#8BA9D1",  // NEX gray · dim / tagline / back-link
