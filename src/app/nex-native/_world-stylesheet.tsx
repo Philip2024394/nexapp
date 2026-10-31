@@ -88,12 +88,65 @@ export function getWorldDesktopBackdrop(worldId: string): string {
  *  per-country: `--nex-world-desktop-backdrop` + `--nex-world-page-base`.
  *  These two live on :root (not .nex-native-stage) because the body
  *  background is painted on html/body — ancestors of the stage. */
-// Owner-sealed 2026-11-01 · per-world music/live side-drawer background.
-// Only Ireland overrides to the sealed Irish Green #02AD04. Other worlds
-// fall through to the pre-existing drawer bg (var(--nex-world-background-base)
-// with navy fallback), so nex-original + Indonesia chrome stays unchanged.
+// Owner-sealed 2026-11-01 (updated · narrow premium palette) · per-world
+// music/live side-drawer background. Ireland uses Emerald #123D2B
+// (supersedes the earlier Irish Green #02AD04 seal from the same date).
+// Other worlds leave this unset and fall through to the pre-existing
+// drawer bg (var(--nex-world-background-base) with navy fallback), so
+// nex-original + Indonesia chrome stays unchanged.
 const WORLD_DRAWER_BG: Record<string, string> = {
-  ireland: "#02AD04",
+  ireland: "#123D2B",
+};
+
+// Owner-sealed 2026-11-01 (narrow premium palette update) · per-world
+// primary-ink colour for button text / primary ink. Ireland uses Sage
+// #AFC5B5 so Forest primary buttons get Sage text. This is NOT a
+// WorldPalette field — country-scoped by design, so it does not ripple
+// across other worlds or require per-palette ink values on Indonesia /
+// nex-original. Consumers opt-in with var(--nex-world-primary-ink, <fallback>).
+const WORLD_PRIMARY_INK: Record<string, string> = {
+  ireland: "#AFC5B5",
+};
+
+// Owner-sealed 2026-11-01 (narrow premium palette update) · per-world
+// Live side-drawer tagline display switch. The "Premium Irish experience"
+// tagline is rendered unconditionally in the drawer markup, but its
+// `display` CSS property is driven by this var — only Ireland sets it to
+// `block`. Other worlds leave this unset → the fallback `display: none`
+// in the drawer keeps the tagline out of their chrome and out of the
+// accessibility tree.
+const WORLD_LIVE_DRAWER_TAGLINE_DISPLAY: Record<string, string> = {
+  ireland: "block",
+};
+
+// Owner-directive 2026-11-01 (unified-drawer architecture · Batch A
+// safeguard) · per-world Live side-drawer running-edge-light display
+// switch. The running Gold light detail is Ireland's premium accent
+// (hardcoded Gold #C6A15B in the overlay element). Indonesia / Worldwide
+// / future worlds leave this map empty, so the overlay inherits the
+// inline `display: none` fallback and renders nothing — Irish Gold is
+// never imposed on other country chromes.
+//   To add a future per-country running light with its own colour:
+//     1. Register the country here with `display: "block"`.
+//     2. Override the inline overlay-gradient colour in LiveSideDrawer
+//        via a new `--nex-world-live-drawer-edge-light-color` CSS var
+//        pattern (not yet needed — Ireland alone uses Gold today).
+const WORLD_LIVE_DRAWER_EDGE_LIGHT_DISPLAY: Record<string, string> = {
+  ireland: "block",
+};
+
+// Owner-directive 2026-11-01 · per-world Live side-drawer footer image.
+// Ireland adds a small flipped "Dancing Leprechaun with Headphones"
+// decoration to the footer area of the drawer. Indonesia / Worldwide
+// leave this unset so no Irish branding leaks into other country
+// chromes. The image path is scoped via a URL CSS var so future
+// countries can register their own decoration without touching
+// LiveSideDrawer.
+const WORLD_LIVE_DRAWER_FOOTER_IMAGE_DISPLAY: Record<string, string> = {
+  ireland: "block",
+};
+const WORLD_LIVE_DRAWER_FOOTER_IMAGE_URL: Record<string, string> = {
+  ireland: "/nex-brand/ireland-leprechaun-dj.png",
 };
 
 export async function WorldStylesheet(): Promise<React.JSX.Element> {
@@ -105,14 +158,39 @@ export async function WorldStylesheet(): Promise<React.JSX.Element> {
   const backdropUrl = getWorldDesktopBackdrop(world.meta.id);
   const pageBase = world.palette.backgroundBase;
   const drawerBg = WORLD_DRAWER_BG[world.meta.id];
+  const primaryInk = WORLD_PRIMARY_INK[world.meta.id];
+  const taglineDisplay = WORLD_LIVE_DRAWER_TAGLINE_DISPLAY[world.meta.id];
+  const edgeLightDisplay =
+    WORLD_LIVE_DRAWER_EDGE_LIGHT_DISPLAY[world.meta.id];
+  const footerImageDisplay =
+    WORLD_LIVE_DRAWER_FOOTER_IMAGE_DISPLAY[world.meta.id];
+  const footerImageUrl = WORLD_LIVE_DRAWER_FOOTER_IMAGE_URL[world.meta.id];
   const drawerDecl = drawerBg
     ? `  --nex-world-drawer-bg: ${drawerBg};\n`
     : "";
+  const primaryInkDecl = primaryInk
+    ? `  --nex-world-primary-ink: ${primaryInk};\n`
+    : "";
+  const taglineDecl = taglineDisplay
+    ? `  --nex-world-live-drawer-tagline-display: ${taglineDisplay};\n`
+    : "";
+  const edgeLightDecl = edgeLightDisplay
+    ? `  --nex-world-live-drawer-edge-light-display: ${edgeLightDisplay};\n`
+    : "";
+  const footerImageDecl =
+    footerImageDisplay && footerImageUrl
+      ? `  --nex-world-live-drawer-footer-image-display: ${footerImageDisplay};\n` +
+        `  --nex-world-live-drawer-footer-image-url: url("${footerImageUrl}");\n`
+      : "";
   const css =
     `:root {\n` +
     `  --nex-world-desktop-backdrop: url("${backdropUrl}");\n` +
     `  --nex-world-page-base: ${pageBase};\n` +
     drawerDecl +
+    primaryInkDecl +
+    taglineDecl +
+    edgeLightDecl +
+    footerImageDecl +
     `}\n` +
     `.nex-native-stage {\n${declarations}\n}`;
   // dangerouslySetInnerHTML is fine here · we control both the var

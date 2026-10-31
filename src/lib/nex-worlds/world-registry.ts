@@ -44,41 +44,54 @@ const NEX_ORIGINAL: WorldDefinition = {
   },
 };
 
-/** NEX Ireland · DRAFT 2026-10-31.
- *  Design direction: emerald green primary · warm cream + complementary
- *  light surfaces · restrained gold accents · premium / polished (NOT
- *  a St Patrick's day pub). Owner approves refinement before marking
- *  this world as final. */
+/** NEX Ireland · owner-sealed 2026-11-01 (narrow premium palette update).
+ *  Design direction: a sophisticated, premium Irish identity — emerald
+ *  chrome, forest buttons, gold premium accent, sage ink — NOT a
+ *  St Patrick's day pub. Cream page background preserved per the
+ *  Trade Centre match. */
 const IRELAND: WorldDefinition = {
   meta: {
     id: "ireland",
     displayName: "NEX Ireland",
-    byline: "Irish Green · Golden Orange · White",
+    byline: "Emerald · Forest · Gold · Sage",
     glyph: "☘️",
   },
-  // Owner-sealed 2026-11-01 · NEX Ireland "set colors main":
-  //   Irish Green         #02AD04   (2, 173, 4)
-  //   Golden Irish Orange #F5A623   (245, 166, 35)
-  //   White               #FFFFFF
-  // These three replace the earlier emerald/deep-emerald/gold draft.
-  // Page backgroundBase stays cream (#FAF8F4) per the Trade Centre
-  // match sealed 2026-11-01 (owner directive: pages are cream, chrome
-  // uses the 3 set colors).
+  // Owner-sealed 2026-11-01 (narrow premium palette update) ·
+  // NEX Ireland "set colors main":
+  //   Emerald #123D2B — drawer background, chrome surface
+  //                     (emitted via WORLD_DRAWER_BG.ireland in
+  //                      _world-stylesheet.tsx)
+  //   Forest  #1B5138 — primary buttons, interactive accents
+  //                     (palette.primary below)
+  //   Gold    #C6A15B — premium accent, "Premium Irish experience"
+  //                     tagline (palette.secondary + palette.tertiary)
+  //   Sage    #AFC5B5 — button text / primary ink
+  //                     (emitted via WORLD_PRIMARY_INK.ireland in
+  //                      _world-stylesheet.tsx — country-scoped,
+  //                      NOT a WorldPalette field)
+  //
+  // Supersedes the earlier 2026-11-01 Irish Green #02AD04 /
+  // Golden Orange #F5A623 / White seal.
+  //
+  // Narrow-update scope · ONLY primary/secondary/tertiary change here.
+  // Preserved as-is per owner directive: cream backgroundBase, white
+  // surfaces, text colours, border rgba (still tinted on the earlier
+  // Irish Green until a wider pass is authorised), success/warning/danger.
   palette: {
-    primary: "#02AD04",             // Irish Green · the brand lead
-    secondary: "#F5A623",            // Golden Irish Orange
-    tertiary: "#F5A623",             // Golden Orange accent
-    backgroundBase: "#FAF8F4",       // Trade Centre cream (page bg)
-    surface: "#FFFFFF",              // White (card / chrome surface)
-    surfaceSunken: "#F2EDDE",        // soft cream for subdued surfaces
-    textPrimary: "#102013",
-    textSecondary: "#3F5742",
-    textMuted: "#7A8C7E",
-    border: "rgba(2, 173, 4, 0.14)",
-    borderAccent: "rgba(2, 173, 4, 0.4)",
-    success: "#02AD04",              // Irish Green · earned/confirmed
-    warning: "#F5A623",               // Golden Orange · attention
-    danger: "#9B1C1C",
+    primary: "#1B5138",              // Forest · primary buttons, interactive accents
+    secondary: "#C6A15B",            // Gold · premium accent (hover/link/secondary CTA)
+    tertiary: "#C6A15B",             // Gold · doubled with secondary (continues the earlier Ireland pattern)
+    backgroundBase: "#FAF8F4",       // Trade Centre cream (page bg · unchanged)
+    surface: "#FFFFFF",              // White (unchanged)
+    surfaceSunken: "#F2EDDE",        // soft cream (unchanged)
+    textPrimary: "#102013",          // unchanged
+    textSecondary: "#3F5742",        // unchanged
+    textMuted: "#7A8C7E",            // unchanged
+    border: "rgba(2, 173, 4, 0.14)", // unchanged per narrow scope (still Irish-Green tinted)
+    borderAccent: "rgba(2, 173, 4, 0.4)", // unchanged per narrow scope (still Irish-Green tinted)
+    success: "#02AD04",              // unchanged per narrow scope (still Irish Green)
+    warning: "#F5A623",              // unchanged per narrow scope (still Golden Orange)
+    danger: "#9B1C1C",               // unchanged
   },
 };
 

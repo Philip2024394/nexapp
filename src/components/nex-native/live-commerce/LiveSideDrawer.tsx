@@ -79,6 +79,15 @@ export function LiveSideDrawer(props: LiveSideDrawerProps): React.JSX.Element {
   const pathname = usePathname();
   const isHendraLiveRoute =
     typeof pathname === "string" && pathname.startsWith(HENDRA_LIVE_ROUTE_PREFIX);
+  // Owner directive 2026-11-01 · when the user opens the drawer from a
+  // music feed slide, the header title should read "Music Live"
+  // (context-specific) instead of the default "Nex Live". Music feed
+  // entry URLs are `/nex-native/nex-feed/music-<trackId>` (prefix
+  // `music-` sealed by MUSIC_FEED_ENTRY_PREFIX in nex-feed-entries.ts).
+  const isMusicFeedContext =
+    typeof pathname === "string" &&
+    pathname.startsWith("/nex-native/nex-feed/music-");
+  const headerTitle = isMusicFeedContext ? "Music Live" : "Nex Live";
 
   const [open, setOpen] = React.useState(false);
   const [rendered, setRendered] = React.useState(false);
@@ -168,7 +177,16 @@ export function LiveSideDrawer(props: LiveSideDrawerProps): React.JSX.Element {
           width: "min(320px, 85%)",
           maxWidth: 360,
           background: BG,
-          borderLeft: `1.5px solid ${PANEL_BORDER}`,
+          // Owner-sealed 2026-11-01 (narrow Ireland premium palette · drawer
+          // edge-light detail) · the heavy 1.5px cyan rim softened to a
+          // 1px low-alpha white hairline so the overlay running-light
+          // (child element, see below) reads cleanly against it on every
+          // world. Edge-light detail: a small Gold blob moves top→bottom
+          // continuously on the LEFT seam. Hardcoded Gold matches the
+          // "Premium Irish experience" tagline; override-friendly via
+          // the --nex-world-live-drawer-edge-light CSS var if a future
+          // world wants a different accent colour.
+          borderLeft: `1px solid rgba(255,255,255,0.08)`,
           boxShadow: "-8px 0 32px rgba(0,0,0,0.6)",
           zIndex: 61,
           display: "flex",
@@ -183,7 +201,69 @@ export function LiveSideDrawer(props: LiveSideDrawerProps): React.JSX.Element {
           willChange: "transform",
         }}
       >
-        {/* Header · "Nex Live" + Home icon + Close chip */}
+        {/* Owner directive 2026-11-01 · thin edge accent + small running
+         *  Gold light on the drawer's left seam. The base hairline is
+         *  set via aside.borderLeft above; this overlay adds the moving
+         *  highlight. Keyframe is scoped by name so it does not collide
+         *  with any other animation in the app. Pointer events are
+         *  disabled so the overlay never intercepts clicks on body rows.
+         *
+         *  2026-11-01 (unified-drawer Batch A safeguard · owner §8):
+         *  Ireland's premium Gold accent must NOT be imposed on
+         *  Indonesia / Worldwide / future worlds. The outer <div>'s
+         *  `display` is driven by `--nex-world-live-drawer-edge-light-
+         *  display`, set to `block` ONLY on Ireland. Other worlds
+         *  inherit the inline `display: none` fallback and the entire
+         *  running-light overlay (including the keyframe animation
+         *  node) is removed from the layout + a11y tree. The hardcoded
+         *  Gold inside the inner element is harmless because the outer
+         *  wrapper gates everything. */}
+        <style>{`
+          @keyframes nex-live-drawer-edge-light {
+            0% { transform: translateY(-100px); opacity: 0; }
+            12% { opacity: 1; }
+            88% { opacity: 1; }
+            100% { transform: translateY(calc(100vh + 20px)); opacity: 0; }
+          }
+        `}</style>
+        <div
+          aria-hidden
+          data-nex-live-side-drawer-edge
+          style={{
+            display:
+              "var(--nex-world-live-drawer-edge-light-display, none)",
+            position: "absolute",
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 1,
+            overflow: "hidden",
+            pointerEvents: "none",
+            zIndex: 1,
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              left: -1,
+              width: 3,
+              height: 90,
+              background:
+                "linear-gradient(180deg, rgba(198,161,91,0) 0%, #C6A15B 50%, rgba(198,161,91,0) 100%)",
+              boxShadow: "0 0 10px rgba(198,161,91,0.6)",
+              animation:
+                "nex-live-drawer-edge-light 3400ms linear infinite",
+              willChange: "transform",
+            }}
+          />
+        </div>
+
+        {/* Header · title (context-aware: "Music Live" on music feed,
+         *  else "Nex Live") + "Premium Irish experience" tagline (Ireland
+         *  only · 1-row) + black Home icon. Owner directive 2026-11-01:
+         *  Close chip removed · users close via Escape, backdrop tap, or
+         *  by choosing a menu row. Focus-on-open ref remains declared for
+         *  back-compat but is now a no-op since the button is gone. */}
         <div
           style={{
             display: "flex",
@@ -194,18 +274,101 @@ export function LiveSideDrawer(props: LiveSideDrawerProps): React.JSX.Element {
             gap: 8,
           }}
         >
-          <h2
+          <div
             style={{
-              margin: 0,
-              color: TEXT,
-              fontSize: 16,
-              fontWeight: 800,
-              letterSpacing: 0.3,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-start",
+              gap: 1,
+              lineHeight: 1,
+              minWidth: 0,
             }}
           >
-            Nex Live
-          </h2>
+            <h2
+              style={{
+                margin: 0,
+                color: TEXT,
+                fontSize: 16,
+                fontWeight: 800,
+                letterSpacing: 0.3,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {headerTitle}
+            </h2>
+            {/* Owner-sealed 2026-11-01 (narrow Ireland premium palette) ·
+             *  "Premium Irish experience" tagline. Rendered in markup
+             *  unconditionally; its `display` is gated on the
+             *  --nex-world-live-drawer-tagline-display CSS var, which
+             *  only Ireland sets (to `block`). Other worlds fall through
+             *  to the inline `none`, which removes it from both the
+             *  visual chrome and the accessibility tree. Gold #C6A15B
+             *  is hardcoded here because the tagline is Ireland-only.
+             *  2026-11-01 (follow-up): `whiteSpace: nowrap` locks the
+             *  tagline to a single row per owner directive. */}
+            <span
+              style={{
+                display:
+                  "var(--nex-world-live-drawer-tagline-display, none)",
+                marginTop: 2,
+                color: "#C6A15B",
+                fontSize: 11,
+                fontWeight: 500,
+                letterSpacing: 0.4,
+                lineHeight: 1,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Premium Irish experience
+            </span>
+          </div>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            {/* Owner directive 2026-11-01 · Batch A · the removed "Close"
+             *  chip is replaced by a quieter 32×32 ✕ icon paired with
+             *  the Home icon. Both share the same visual weight (solid
+             *  black bg, white stroke) so users read them as a pair:
+             *  Home sends you somewhere, ✕ just dismisses. The
+             *  closeButtonRef is reattached here so the open-focus
+             *  effect at line ~121 restores a11y focus trap behaviour. */}
+            <button
+              ref={closeButtonRef}
+              type="button"
+              onClick={close}
+              aria-label="Close menu"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                background: "#000000",
+                border: `1px solid ${PANEL_BORDER}`,
+                color: TEXT,
+                cursor: "pointer",
+                padding: 0,
+                fontFamily: "inherit",
+              }}
+            >
+              <svg
+                aria-hidden
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M18 6 6 18" />
+                <path d="M6 6l12 12" />
+              </svg>
+            </button>
+            {/* Owner directive 2026-11-01 · Home button background
+             *  changed from translucent white to solid black. Icon
+             *  stroke stays TEXT (near-white) for high-contrast
+             *  readability. */}
             <Link
               href="/nex-native/contacts"
               data-nex-live-side-drawer-home
@@ -218,7 +381,7 @@ export function LiveSideDrawer(props: LiveSideDrawerProps): React.JSX.Element {
                 width: 32,
                 height: 32,
                 borderRadius: 8,
-                background: "rgba(255,255,255,0.05)",
+                background: "#000000",
                 border: `1px solid ${PANEL_BORDER}`,
                 color: TEXT,
                 textDecoration: "none",
@@ -240,31 +403,6 @@ export function LiveSideDrawer(props: LiveSideDrawerProps): React.JSX.Element {
                 <path d="M10 20v-5h4v5" />
               </svg>
             </Link>
-            <button
-              ref={closeButtonRef}
-              type="button"
-              onClick={close}
-              aria-label="Close menu"
-              style={{
-                minHeight: 26,
-                padding: "3px 10px",
-                background: CYAN,
-                border: `1px solid ${CYAN}`,
-                color: "#0a0608",
-                fontSize: 12,
-                fontWeight: 700,
-                letterSpacing: 0.4,
-                lineHeight: 1,
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: 6,
-                fontFamily: "inherit",
-              }}
-            >
-              Close
-            </button>
           </div>
         </div>
 
@@ -297,6 +435,45 @@ export function LiveSideDrawer(props: LiveSideDrawerProps): React.JSX.Element {
             href="/nex-native/packages"
             dataKey="wallet"
             onNavigate={close}
+          />
+        </div>
+
+        {/* Owner directive 2026-11-01 · Ireland-only footer decoration ·
+         *  "Dancing Leprechaun with Headphones" image, flipped to face
+         *  left. Visibility + source URL are both driven by world CSS
+         *  vars emitted in _world-stylesheet.tsx:
+         *    --nex-world-live-drawer-footer-image-display
+         *    --nex-world-live-drawer-footer-image-url
+         *  Non-Ireland worlds leave both unset, so the <img>'s inline
+         *  `display: none` fallback keeps the element out of their
+         *  chrome AND out of the a11y tree. Hardcoded Irish branding
+         *  never leaks into Indonesia / Worldwide / future worlds.
+         *  Flipping is a pure CSS transform (scaleX(-1)) · no second
+         *  image asset needed. aria-hidden="true" since the image is
+         *  decorative; the drawer's primary content is the menu rows
+         *  above. */}
+        <div
+          data-nex-live-side-drawer-footer
+          style={{
+            display:
+              "var(--nex-world-live-drawer-footer-image-display, none)",
+            marginTop: "auto",
+            padding: "12px 12px 20px 12px",
+            textAlign: "left",
+          }}
+        >
+          <img
+            src="/nex-brand/ireland-leprechaun-dj.png"
+            alt=""
+            aria-hidden
+            style={{
+              width: 96,
+              height: "auto",
+              transform: "scaleX(-1)",
+              pointerEvents: "none",
+              userSelect: "none",
+              display: "block",
+            }}
           />
         </div>
       </aside>
