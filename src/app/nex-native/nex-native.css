@@ -160,13 +160,23 @@ body::-webkit-scrollbar,
      * image should be set for every single page on desktop and
      * tablet as we are mobile first" · hero image lives on html/body
      * so it blankets EVERY /nex-native/* route (consumer, admin,
-     * dev, prototype — all opt-outs inherit this). background-
-     * attachment:fixed keeps the hero pinned when admin routes
-     * scroll past their natural height. Falls back to solid #020914
-     * if the image fails to load. */
+     * dev, prototype — all opt-outs inherit this).
+     *
+     * 2026-10-31 (country-preview round) · the hero image is now
+     * COUNTRY-SPECIFIC. _world-stylesheet.tsx emits two vars on
+     * :root per deployment identity:
+     *   --nex-world-desktop-backdrop · the country studio PNG
+     *   --nex-world-page-base        · the country backgroundBase
+     *                                  so during image download the
+     *                                  blank area shows the country's
+     *                                  cream/white not generic black
+     * Both have safe fallbacks (nex-original hero + navy base) so
+     * non-NEX surfaces that inherit this rule still work.
+     * background-attachment:fixed keeps the hero pinned when admin
+     * routes scroll past their natural height. */
     background:
-      #020914
-      url("/nex-desktop-hero.png")
+      var(--nex-world-page-base, #020914)
+      var(--nex-world-desktop-backdrop, url("/nex-desktop-hero.png"))
       center center / cover
       no-repeat fixed !important;
     /* Pin the page viewport so content that overshoots the frame

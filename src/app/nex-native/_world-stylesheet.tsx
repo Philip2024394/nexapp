@@ -62,17 +62,46 @@ export async function resolveWorldForLayout(): Promise<WorldDefinition> {
   return resolved.world;
 }
 
+/** Owner-authorised 2026-10-31 (country-preview round) · per-world
+ *  desktop/tablet backdrop image. Country deployments paint the
+ *  matching studio photo behind the phone frame on ≥500px viewports
+ *  (same images as the HQ landing cards). nex-original keeps the
+ *  original neutral hero. The map is kept here (not in the registry)
+ *  because this file is the only consumer. */
+const WORLD_DESKTOP_BACKDROP: Record<string, string> = {
+  "nex-original": "/nex-desktop-hero.png",
+  ireland: "/nex-brand/hq/ireland-studio.png",
+  indonesia: "/nex-brand/hq/indonesia-studio.png",
+};
+
+export function getWorldDesktopBackdrop(worldId: string): string {
+  return WORLD_DESKTOP_BACKDROP[worldId] ?? "/nex-desktop-hero.png";
+}
+
 /** Emits a <style data-nex-world-root> block that scopes the world
  *  palette CSS vars to `.nex-native-stage`. Scoping to the stage
  *  (NOT `:root`) is important: /nex-native is one of several route
- *  trees in this app · we don't leak vars into non-NEX surfaces. */
+ *  trees in this app · we don't leak vars into non-NEX surfaces.
+ *
+ *  Additionally emits two vars on `:root` so the body-level desktop
+ *  hero backdrop (set in nex-native.css ≥500px breakpoint) can swap
+ *  per-country: `--nex-world-desktop-backdrop` + `--nex-world-page-base`.
+ *  These two live on :root (not .nex-native-stage) because the body
+ *  background is painted on html/body — ancestors of the stage. */
 export async function WorldStylesheet(): Promise<React.JSX.Element> {
   const world = await resolveWorldForLayout();
   const vars = paletteToCssVars(world.palette);
   const declarations = Object.entries(vars)
     .map(([name, value]) => `  ${name}: ${value};`)
     .join("\n");
-  const css = `.nex-native-stage {\n${declarations}\n}`;
+  const backdropUrl = getWorldDesktopBackdrop(world.meta.id);
+  const pageBase = world.palette.backgroundBase;
+  const css =
+    `:root {\n` +
+    `  --nex-world-desktop-backdrop: url("${backdropUrl}");\n` +
+    `  --nex-world-page-base: ${pageBase};\n` +
+    `}\n` +
+    `.nex-native-stage {\n${declarations}\n}`;
   // dangerouslySetInnerHTML is fine here · we control both the var
   // names and the CSS values (hex/rgb/gradient literals from our own
   // registry · no user input).

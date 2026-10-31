@@ -35,8 +35,14 @@ type CountryCard = {
   readonly image: string;
   readonly imageAlt: string;
   readonly ringColor: string;
+  readonly appUrl: string;
+  readonly paletteHref: string;
 };
 
+// Owner-authorised 2026-10-31 (country-preview round) · country-card
+// primary action now opens the LIVE deployed app (so founder lands
+// inside Ireland/Indonesia experience auto-signed-in). The World
+// Engine palette workspace remains as a secondary link.
 const CARDS: readonly CountryCard[] = [
   {
     id: "ireland",
@@ -46,6 +52,8 @@ const CARDS: readonly CountryCard[] = [
     image: "/nex-brand/hq/ireland-studio.png",
     imageAlt: "NEX Ireland · emerald + cream studio background",
     ringColor: "#1F8B4C",
+    appUrl: "https://nex-ireland-preview.vercel.app/nex-native/contacts",
+    paletteHref: "/nex-native/hq/worlds?focus=ireland",
   },
   {
     id: "indonesia",
@@ -55,6 +63,8 @@ const CARDS: readonly CountryCard[] = [
     image: "/nex-brand/hq/indonesia-studio.png",
     imageAlt: "NEX Indonesia · red + gold studio background",
     ringColor: "#C8102E",
+    appUrl: "https://nex-indonesia-preview.vercel.app/nex-native/contacts",
+    paletteHref: "/nex-native/hq/worlds?focus=indonesia",
   },
 ];
 
@@ -166,23 +176,16 @@ export default async function HqHomePage(): Promise<React.JSX.Element> {
 }
 
 function CountryCardTile({ card }: { card: CountryCard }): React.JSX.Element {
-  const href = `/nex-native/hq/worlds?focus=${encodeURIComponent(card.worldId)}`;
   return (
-    <Link
-      href={href}
-      aria-label={`Open ${card.displayName} workspace`}
+    <div
       style={{
         position: "relative",
-        display: "block",
-        textDecoration: "none",
-        color: INK,
         borderRadius: 20,
         overflow: "hidden",
         border: `1px solid ${BORDER}`,
         aspectRatio: "4 / 3",
         background: "#061322",
         boxShadow: "0 20px 48px rgba(0,0,0,0.4)",
-        transition: "transform 160ms ease, box-shadow 160ms ease",
       }}
       className="nex-hq-country-card"
     >
@@ -219,7 +222,7 @@ function CountryCardTile({ card }: { card: CountryCard }): React.JSX.Element {
           pointerEvents: "none",
         }}
       />
-      {/* Caption */}
+      {/* Caption + actions */}
       <div
         style={{
           position: "absolute",
@@ -259,28 +262,46 @@ function CountryCardTile({ card }: { card: CountryCard }): React.JSX.Element {
           <div style={{ fontSize: 12.5, color: INK_DIM, marginTop: 2 }}>
             {card.subtitle}
           </div>
+          <Link
+            href={card.paletteHref}
+            style={{
+              display: "inline-block",
+              marginTop: 10,
+              fontSize: 11.5,
+              fontWeight: 700,
+              color: INK_DIM,
+              textDecoration: "underline",
+              textUnderlineOffset: 3,
+            }}
+          >
+            Palette workspace →
+          </Link>
         </div>
-        <span
-          aria-hidden
+        <a
+          href={card.appUrl}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={`Open live ${card.displayName} app in new tab`}
           style={{
-            padding: "8px 14px",
+            padding: "10px 16px",
             borderRadius: 999,
-            fontSize: 12,
+            fontSize: 12.5,
             fontWeight: 900,
             background: card.ringColor,
             color: "#fff",
             textTransform: "uppercase",
             letterSpacing: "0.08em",
             whiteSpace: "nowrap",
+            textDecoration: "none",
           }}
         >
-          Open workspace →
-        </span>
+          Open app ↗
+        </a>
       </div>
       <style>{`
-        .nex-hq-country-card:hover { transform: translateY(-2px); box-shadow: 0 28px 60px rgba(0,0,0,0.55); }
+        .nex-hq-country-card:hover { transform: translateY(-2px); box-shadow: 0 28px 60px rgba(0,0,0,0.55); transition: transform 160ms ease, box-shadow 160ms ease; }
         .nex-hq-country-card:hover .nex-hq-country-card-ring { opacity: 1; }
       `}</style>
-    </Link>
+    </div>
   );
 }

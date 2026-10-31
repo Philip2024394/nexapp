@@ -5,10 +5,5 @@
       "path": "/api/nex-native/harvest/tick",
       "schedule": "0 * * * *"
     }
-  ],
-  "functions": {
-    "src/app/api/nex-native/harvest/tick/route.ts": {
-      "maxDuration": 300
-    }
-  }
+  ]
 }

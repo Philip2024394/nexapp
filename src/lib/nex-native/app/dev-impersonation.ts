@@ -44,10 +44,35 @@ import type { NexAccountRow } from "../types";
 
 const ENV_VAR = "NEX_DEV_IMPERSONATE_HANDLE";
 
+// Owner-authorised 2026-10-31 (country-preview round) · the gate now
+// also allows production-NODE_ENV deployments that are pointed at a
+// NON-production Supabase project. This is the preview-sandbox path:
+// Vercel always sets NODE_ENV=production, but the two country preview
+// deployments (nex-ireland-preview, nex-indonesia-preview) point at
+// the sandbox Supabase project `kdstoyyeygcopkogqsyv`. Blocking those
+// too would mean "no auto-sign-in on previews" — defeating the point.
+//
+// The production guard is tightened: dev impersonation is REFUSED when
+// NEX_SUPABASE_URL contains the sealed production project ref. So
+// even if someone later adds NEX_DEV_IMPERSONATE_HANDLE to the live
+// `nexapp` Vercel project, the gate still denies.
+const PRODUCTION_SUPABASE_PROJECT_REF = "ijvqdvsvwtwxzcqmoqit";
+
 function isDevImpersonationEnabled(): boolean {
-  if (process.env.NODE_ENV === "production") return false;
   const handle = process.env[ENV_VAR];
-  return typeof handle === "string" && handle.trim().length > 0;
+  const hasHandle = typeof handle === "string" && handle.trim().length > 0;
+  if (!hasHandle) return false;
+
+  if (process.env.NODE_ENV !== "production") return true;
+
+  // NODE_ENV=production path · must be a non-production Supabase target.
+  const url =
+    process.env.NEX_SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_NEX_SUPABASE_URL ||
+    "";
+  if (!url) return false; // no URL set · fail closed
+  if (url.includes(PRODUCTION_SUPABASE_PROJECT_REF)) return false;
+  return true;
 }
 
 async function loadPersonaAccount(handle: string): Promise<NexAccountRow | null> {

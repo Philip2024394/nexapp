@@ -40,6 +40,7 @@ import { DevImpersonationBanner } from "./_dev-impersonation-banner";
 import {
   WorldStylesheet,
   resolveWorldForLayout,
+  getWorldDesktopBackdrop,
 } from "./_world-stylesheet";
 import { SwCacheRegister } from "./_sw-cache-register";
 // Owner directive 2026-10-18 · preload the Cover Themes Library +
@@ -166,9 +167,18 @@ export default async function NexNativeLayout({
   // the <style> block. Scoped to .nex-native-stage · never leaks to
   // non-NEX route trees.
   const activeWorld = await resolveWorldForLayout();
+  // Owner-authorised 2026-10-31 (country-preview round) · preload the
+  // country-specific desktop backdrop. Rendering a <link rel="preload">
+  // element inside a server component · Next.js hoists resource hints
+  // into <head> automatically. Minimises the window during which the
+  // viewport paints the solid base colour while the ~2.6 MB PNG is
+  // still downloading.
+  const activeBackdropUrl = getWorldDesktopBackdrop(activeWorld.meta.id);
 
   return (
     <I18nProvider initialLang={initialLang}>
+      {/* Preload the country backdrop. See activeBackdropUrl above. */}
+      <link rel="preload" as="image" href={activeBackdropUrl} />
       {/* Dev-only banner · see _dev-impersonation-banner.tsx. Renders
           `null` in production so there is zero prod footprint. */}
       <DevImpersonationBanner />
