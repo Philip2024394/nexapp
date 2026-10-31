@@ -39,30 +39,21 @@ ALTER TABLE public.nex_business
     NOT NULL DEFAULT ARRAY[]::text[]
     CHECK (array_length(dietary_flags, 1) IS NULL OR array_length(dietary_flags, 1) <= 10);
 
-ALTER TABLE public.nex_business
-  ADD CONSTRAINT nex_business_dietary_flags_shape
-  CHECK (
-    dietary_flags = ARRAY[]::text[]
-    OR NOT EXISTS (
-      SELECT 1 FROM unnest(dietary_flags) AS f
-      WHERE f IS NULL OR f !~ '^[a-z_]{2,40}$'
-    )
-  );
+-- 2026-10-31 · dropped the per-element shape-validation CHECK for
+-- dietary_flags (NOT EXISTS over unnest() is a subquery; Postgres
+-- disallows subqueries in CHECK constraints). Element shape
+-- (`^[a-z_]{2,40}$`) is enforced in the nex-business write path. The
+-- array_length <= 10 cap above still applies via the scalar column
+-- CHECK.
 
 ALTER TABLE public.nex_business
   ADD COLUMN IF NOT EXISTS delivery_platforms text[]
     NOT NULL DEFAULT ARRAY[]::text[]
     CHECK (array_length(delivery_platforms, 1) IS NULL OR array_length(delivery_platforms, 1) <= 6);
 
-ALTER TABLE public.nex_business
-  ADD CONSTRAINT nex_business_delivery_platforms_shape
-  CHECK (
-    delivery_platforms = ARRAY[]::text[]
-    OR NOT EXISTS (
-      SELECT 1 FROM unnest(delivery_platforms) AS p
-      WHERE p IS NULL OR p !~ '^[a-z_]{2,30}$'
-    )
-  );
+-- 2026-10-31 · dropped the per-element shape-validation CHECK for
+-- delivery_platforms (same reason as dietary_flags above). The
+-- array_length <= 6 cap still applies.
 
 COMMENT ON COLUMN public.nex_business.cuisine_type IS
   'Owner-declared cuisine ("italian", "indonesian", "warung"). Shown as a tag chip on NEX Discover food cards. Added 2026-10-13 by migration 161.';

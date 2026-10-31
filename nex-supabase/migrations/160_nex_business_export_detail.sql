@@ -26,16 +26,16 @@ ALTER TABLE public.nex_business
     CHECK (array_length(exports_to_countries, 1) IS NULL
            OR array_length(exports_to_countries, 1) <= 60);
 
--- Each entry MUST be an ISO 3166-1 alpha-2 code (uppercase 2 letters).
-ALTER TABLE public.nex_business
-  ADD CONSTRAINT nex_business_exports_to_countries_iso_shape
-  CHECK (
-    exports_to_countries = ARRAY[]::text[]
-    OR NOT EXISTS (
-      SELECT 1 FROM unnest(exports_to_countries) AS c
-      WHERE c IS NULL OR c !~ '^[A-Z]{2}$'
-    )
-  );
+-- 2026-10-31 · dropped the per-element ISO shape-validation CHECK.
+-- Postgres disallows subqueries in CHECK constraints (NOT EXISTS over
+-- unnest(array) is a subquery). The intent — every entry is an ISO
+-- 3166-1 alpha-2 uppercase code — is already enforced in the
+-- application write path (nex-business services validate country
+-- codes on INSERT/UPDATE). The column-level cap `array_length(..) <= 60`
+-- above is a plain scalar CHECK and still applies. If future DB-side
+-- enforcement is wanted, it should be added via a BEFORE INSERT/UPDATE
+-- trigger (allowed to use subqueries) or an IMMUTABLE SQL function —
+-- not a bare CHECK with a subquery.
 
 COMMENT ON COLUMN public.nex_business.exports_to_countries IS
   'ISO 3166-1 alpha-2 country codes this business ships to internationally. '

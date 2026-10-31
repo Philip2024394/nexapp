@@ -38,9 +38,16 @@ CREATE TABLE IF NOT EXISTS public.nex_business_promo (
   CONSTRAINT nex_business_promo_slot_unique UNIQUE (business_id, position)
 );
 
+-- 2026-10-31 · dropped `WHERE expires_at > now()` partial-index predicate.
+-- Postgres requires index predicates to use IMMUTABLE functions only;
+-- now() is STABLE. The app's actual query pattern never filtered on
+-- expires_at at the DB layer anyway (see business-promo-service.ts
+-- lines 78-84 · fetches all promos for business, filters client-side),
+-- so a plain composite index on (business_id, expires_at) serves the
+-- real workload identically. The partial-index optimisation was
+-- aspirational and never engaged.
 CREATE INDEX IF NOT EXISTS nex_business_promo_business_active_idx
-  ON public.nex_business_promo (business_id, expires_at)
-  WHERE expires_at > now();
+  ON public.nex_business_promo (business_id, expires_at);
 
 COMMENT ON TABLE public.nex_business_promo IS
   'Up to 3 time-boxed promos per business · displayed as round circles on NEX Discover cards. '

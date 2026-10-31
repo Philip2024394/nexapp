@@ -57,8 +57,16 @@ COMMENT ON COLUMN nex.business_canonical.email_lease_expires_at IS
   'crashed without clearing).';
 
 -- Partial index on the "claimable right now" subset. Covers both
--- virgin rows (lease NULL) and expired-lease recovery. Partial so it
--- stays tiny even as the table grows.
+-- virgin rows (lease NULL) and expired-lease recovery.
+--
+-- 2026-10-31 · dropped the `OR email_lease_expires_at < now()` branch
+-- of the WHERE clause. Postgres requires index predicates to be
+-- IMMUTABLE and `now()` is STABLE. The lease-recovery path is now
+-- handled by the worker's query-time WHERE (which is free to use
+-- now()); the index still accelerates the primary virgin-rows claim
+-- path (`email_lease_token IS NULL`), which is the dominant workload.
+-- Expired-lease recovery is rare (only after a crashed walker) and
+-- can tolerate the slightly wider scan.
 CREATE INDEX IF NOT EXISTS idx_bc_email_lease_claimable
   ON nex.business_canonical (email_last_attempted_at NULLS FIRST, canonical_business_id)
   WHERE
@@ -66,10 +74,7 @@ CREATE INDEX IF NOT EXISTS idx_bc_email_lease_claimable
       qualification_status = 'PENDING'
       OR qualification_status = 'UNQUALIFIED'
     )
-    AND (
-      email_lease_token IS NULL
-      OR email_lease_expires_at < now()
-    );
+    AND email_lease_token IS NULL;
 
 -- =========================================================
 -- SECTION B · nex.business_outreach_suppression
@@ -182,14 +187,17 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_boq_active_per_business_template
   WHERE status IN ('pending','running');
 
 -- Worker-claim index. Partial so it only covers claim-eligible rows.
+-- 2026-10-31 · narrowed the WHERE predicate to drop the `lease_expires_at
+-- < now()` branch (now() is STABLE; Postgres requires index predicates
+-- to be IMMUTABLE). The index still covers status='pending' (the
+-- dominant claim path) and status='running' with NULL lease. The
+-- expired-running recovery path falls through to a wider scan on crash
+-- recovery, which is acceptable given recovery is rare.
 CREATE INDEX IF NOT EXISTS idx_boq_claimable
   ON nex.business_outreach_queue (priority ASC, scheduled_for ASC, queue_id)
   WHERE
     status = 'pending'
-    OR (
-      status = 'running'
-      AND (lease_expires_at IS NULL OR lease_expires_at < now())
-    );
+    OR (status = 'running' AND lease_expires_at IS NULL);
 
 -- Dashboard-count index · partial, so counting pending by itself is
 -- O(index) not O(table scan).
