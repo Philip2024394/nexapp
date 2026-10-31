@@ -1,6 +1,7 @@
 # NEX Country Isolation Plan · 2026-10-31
 
-**Status**: DRAFT · awaiting owner review · no migration applied.
+**Status**: DRAFT · **PARTIALLY SUPERSEDED 2026-10-31 by** `nex-global-content-and-country-discovery-2026-10-31.md` + `nex-global-content-system-audit-2026-10-31.md`. The write-side country-lock stands. The hard-match read-side RLS is replaced by visibility-OR-country semantics. See the two superseding docs for the reconciled model. CI-1..CI-8 are REISSUED as CI-1..CI-12 at the end of the global content doctrine.
+---
 **Owner directive**: D-7 of `nex-two-apps-architecture-review-2026-10-31.md`.
 **Hard safeguard (D-2 conditions)**: isolation must be REAL, not a country selector in the interface. A country column alone is NOT security.
 
