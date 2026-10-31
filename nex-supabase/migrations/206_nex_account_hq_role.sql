@@ -134,3 +134,14 @@ create index if not exists idx_nex_account_hq_role_set
 
 comment on column nex_account.hq_role is
   'NEX HQ reviewer role · migration 206 · 2026-10-17. NULL default · granted only through authorised SQL updates by the sealed admin. "reviewer" may read HQ dashboards + future report-review queues; "admin" may additionally make enforcement decisions. Server-side enforcement at src/lib/nex-native/hq-authorization.ts · page gating is not sufficient · each HQ server action re-verifies independently.';
+
+-- Owner-authorised 2026-10-31 · migration ledger insert. Backfilled on
+-- first application · retained in-file so future re-applies against a
+-- reset database remain self-documenting.
+INSERT INTO public.nex_migration_history (version, description, notes)
+VALUES (
+  '206',
+  'nex_account.hq_role · nullable text (reviewer | admin) · HQ governance',
+  'Owner-authorised 2026-10-17 drafted · applied 2026-10-31.'
+)
+ON CONFLICT (version) DO NOTHING;
