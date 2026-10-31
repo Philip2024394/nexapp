@@ -34,10 +34,15 @@
 
 import * as React from "react";
 import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
-import {
-  ControlDrawer,
-  type ControlDrawerSession,
-} from "@/components/nex-native/control-drawer/control-drawer-client";
+// Owner directive 2026-11-01 (unified-drawer architecture · Batch D) ·
+// Contacts is the first surface to adopt UnifiedDrawer. Contacts has
+// no ContextStrip (per the sealed per-surface mapping), so
+// UnifiedDrawer delegates to the sealed ControlDrawer and this
+// migration is a one-line import swap with zero visible change.
+// The ControlDrawerSession type keeps its name to avoid rippling
+// renames across the contacts page's drawerSession resolver.
+import { UnifiedDrawer } from "@/components/nex-native/drawer/UnifiedDrawer";
+import { type ControlDrawerSession } from "@/components/nex-native/control-drawer/control-drawer-client";
 // Shared design tokens · sealed 2026-10-17 · all nex-native surfaces
 // consume these for font + ping-badge size · no local redeclaration.
 import {
@@ -57,9 +62,25 @@ const NEX = {
 
 export interface ContactsHeaderProps {
   readonly drawerSession: ControlDrawerSession | null;
+  // Owner directive 2026-11-01 · Batch D+ · Creator Support auto-gate.
+  // Resolved server-side in contacts/page.tsx and forwarded through
+  // the header to the UnifiedDrawer mount below.
+  readonly viewerEarnedCreatorBadges?: readonly import("@/lib/nex-native/creator/creator-badges-common").SectionProgress[];
+  readonly viewerCreatorSupportConfigured?: boolean;
+  // Owner directive 2026-11-01 · Batch D++ · the full support-settings
+  // object (QR, PayPal, external links, suggested amounts, thank-you
+  // message) so the drawer-mounted CreatorSupportSheet can render the
+  // viewer's own preview on tap. Null = never configured / disabled;
+  // the sheet renders its sealed empty state.
+  readonly viewerSupportSettings?: import("@/lib/nex-native/creator/creator-support-service").CreatorSupportSettings | null;
 }
 
-export function ContactsHeader({ drawerSession }: ContactsHeaderProps) {
+export function ContactsHeader({
+  drawerSession,
+  viewerEarnedCreatorBadges,
+  viewerCreatorSupportConfigured,
+  viewerSupportSettings,
+}: ContactsHeaderProps) {
   // Owner directive 2026-10-23 · header title swaps to "Create
   // Group" while the hero is flipped so the user sees a context-
   // appropriate heading. Subscribes to the same singleton the pills
@@ -118,7 +139,12 @@ export function ContactsHeader({ drawerSession }: ContactsHeaderProps) {
             Directory landing is reachable from the "NEX Directory"
             row inside the ControlDrawer. The three-dots drawer is
             the sole right-side header action. */}
-        <ControlDrawer session={drawerSession} />
+        <UnifiedDrawer
+          session={drawerSession}
+          viewerEarnedCreatorBadges={viewerEarnedCreatorBadges}
+          viewerCreatorSupportConfigured={viewerCreatorSupportConfigured}
+          viewerSupportSettings={viewerSupportSettings}
+        />
       </div>
     </header>
   );

@@ -48,6 +48,19 @@ import * as conversationService from "@/lib/nex-native/conversation-service";
 // parallel · falls back silently to "no profession line" on error.
 import * as accountProfileService from "@/lib/nex-native/account-profile-service";
 import type { ControlDrawerSession } from "@/components/nex-native/control-drawer/control-drawer-client";
+// Owner directive 2026-11-01 · Batch D+ · Creator Support auto-gate.
+// Resolve viewer's earned Creator badges + Support configuration state
+// server-side so the drawer can hide the "Creator Support" row for
+// non-qualified viewers and flip the label to "Set up Creator Support"
+// for qualified-but-not-configured ones. Both resolvers are fail-open:
+// a transient DB error returns empty/null and the drawer falls back to
+// LEGACY "always visible" behaviour so the row doesn't silently vanish
+// on the home surface during an outage.
+import {
+  resolveCreatorBadges,
+  EMPTY_EARNED_BADGES,
+} from "@/lib/nex-native/creator/creator-badges";
+import { getCreatorSupportSettings } from "@/lib/nex-native/creator/creator-support-service";
 // Contacts intentionally does NOT wrap in `NexNativeShell` (and
 // therefore not in `NexHudFrame`). The HUD renders a floating
 // "NEX · ready" console-viewport button that the owner called out
@@ -283,9 +296,27 @@ export default async function ContactsPage({ searchParams }: PageProps) {
     isBisnis: effectiveTier(session.account) === "bisnis",
   };
 
+  // Owner directive 2026-11-01 · Batch D+ Creator-Support auto-gate.
+  // Resolved in parallel · both fail-open to their safe defaults
+  // (empty-badges / null-settings) so a resolver outage falls through
+  // to the drawer's LEGACY always-visible row rather than silently
+  // disappearing. Contacts is NOT a /chat/* conversation surface, so
+  // `hideCreatorSupportRow` stays false (default) here.
+  const [viewerCreatorBadges, viewerCreatorSupportSettings] = await Promise.all([
+    resolveCreatorBadges(session.account.id).catch(() => EMPTY_EARNED_BADGES),
+    getCreatorSupportSettings(session.account.id).catch(() => null),
+  ]);
+
   return (
     <ContactsShell>
-      <ContactsHeader drawerSession={drawerSession} />
+      <ContactsHeader
+        drawerSession={drawerSession}
+        viewerEarnedCreatorBadges={viewerCreatorBadges.earned}
+        viewerCreatorSupportConfigured={
+          viewerCreatorSupportSettings?.enabled === true
+        }
+        viewerSupportSettings={viewerCreatorSupportSettings}
+      />
       <ContactsSearchBar />
       <ContactsFilterPills active={activeFilter} />
       {/* Owner-authorised 2026-10-18 · S4 · NEX1 welcome banner.

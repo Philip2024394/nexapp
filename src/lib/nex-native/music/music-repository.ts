@@ -542,9 +542,34 @@ export async function getOwnerStorageUsageBytes(
     .reduce((sum, t) => sum + (t.byte_size ?? 0), 0);
 }
 
+// Owner directive 2026-11-01 (Batch D+ · Creator-badge-visibility fix) ·
+// Pre-fix: this function only read the dev FS snapshot (TRACKS_FILE)
+// which does not exist on Vercel · therefore `getOwnerTrackCount` always
+// returned 0 in production and every account failed `resolveCreatorBadges`
+// qualification · Irish Pride's Music Creator badge never surfaced.
+// Fix: mirror the sealed production branch already used by
+// `active-music-feed-reader.ts:84-92` · read `public.nex_music_track`
+// through `nexSupabaseAdmin` when NODE_ENV==='production', keep the FS
+// path in dev. Qualification rule (sealed 2026-10-31 §Music) is UNCHANGED:
+// `visibility != 'removed'` with threshold ≥ 5 (threshold enforced upstream
+// in `creator-badges.ts`, not here).
 export async function getOwnerTrackCount(
   ownerAccountId: string,
 ): Promise<number> {
+  if (process.env.NODE_ENV === "production") {
+    try {
+      const { nexSupabaseAdmin } = await import("../supabase-admin");
+      const { count, error } = await nexSupabaseAdmin
+        .from("nex_music_track")
+        .select("id", { count: "exact", head: true })
+        .eq("owner_account_id", ownerAccountId)
+        .neq("visibility", "removed");
+      if (error || typeof count !== "number") return 0;
+      return count;
+    } catch {
+      return 0;
+    }
+  }
   const snap = await loadSnapshot();
   return snap.tracks
     .filter((t) => t.owner_account_id === ownerAccountId)

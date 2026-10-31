@@ -52,6 +52,16 @@ import { signOutAction } from "@/app/nex-native/_actions";
 // keeps the visual language consistent with SettingsHeaderSlot.
 import { LockedSettingsIcon } from "@/components/nex-native/account-gate/LockedSettingsIcon";
 import { hasActivatedEmergency } from "@/lib/nex-native/emergency/emergency-activation";
+// Owner directive 2026-11-01 · Batch D+ · auto-gate Creator Support row
+// by qualification. The type is client-safe (lives in creator-badges-
+// common.ts, no server-only Supabase chain pulled into the bundle).
+import type { SectionProgress } from "@/lib/nex-native/creator/creator-badges-common";
+// Owner directive 2026-11-01 · Batch D++ · tap "Creator Support" opens
+// the sealed CreatorSupportSheet directly from the drawer, honouring the
+// original §4 directive. We re-use the SAME sheet component the profile
+// badge uses · never a second sheet.
+import { CreatorSupportSheet } from "@/components/nex-native/creator/CreatorSupportSheet";
+import type { CreatorSupportSettings } from "@/lib/nex-native/creator/creator-support-service";
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -102,6 +112,38 @@ export interface ControlDrawerProps {
    *  previews pass theme accent. Real chat surfaces omit this and keep
    *  the sealed NEX cyan rims. */
   readonly themeAccent?: string;
+  /** Owner directive 2026-11-01 · Batch D+ Creator-Support auto-gate.
+   *  Earned Creator badges resolved for the VIEWER (signed-in user)
+   *  server-side via `resolveCreatorBadges(session.id)`. The drawer
+   *  uses this to show the "Creator Support" row ONLY when the viewer
+   *  has qualified in at least one eligible section (music / shop /
+   *  video). When `undefined` (caller hasn't opted into the gate yet),
+   *  the drawer preserves the pre-2026-11-01 behaviour of always
+   *  showing the row — this prevents unmigrated surfaces regressing.
+   *  Pass `[]` (empty array) to EXPLICITLY say "viewer is signed-in
+   *  but not qualified — hide the row". */
+  readonly viewerEarnedCreatorBadges?: readonly SectionProgress[];
+  /** Owner directive 2026-11-01 · Batch D+ · when the viewer qualifies
+   *  but has NOT configured their Support settings yet (no QR / no
+   *  bio / enabled=false), the row label flips to "Set up Creator
+   *  Support" so the CTA is honest. True = configured + visible-to-
+   *  visitors. False/undefined = unconfigured. Resolved server-side
+   *  via `getCreatorSupportSettings(session.id)`. */
+  readonly viewerCreatorSupportConfigured?: boolean;
+  /** Owner directive 2026-11-01 · Batch D++ · the viewer's own
+   *  CreatorSupportSettings row. The sheet mounted inside the drawer
+   *  needs the full object (QR, PayPal, external links, suggested
+   *  amounts, thank-you message), not just the boolean above. When
+   *  null (never configured OR disabled) the sheet renders its
+   *  sealed empty state. Resolved server-side alongside
+   *  `viewerCreatorSupportConfigured`. */
+  readonly viewerSupportSettings?: CreatorSupportSettings | null;
+  /** Owner directive 2026-11-01 · Batch D+ § "excluding Chat" · pass
+   *  `true` on chat conversation surfaces (/nex-native/chat/*) to
+   *  hide the Creator Support row even for qualified viewers. The
+   *  rationale: don't solicit support during a conversation. Default
+   *  (undefined / false) = show when qualified. */
+  readonly hideCreatorSupportRow?: boolean;
 }
 
 // ─── Destinations · all verified to exist in the audit ──────────────
@@ -336,6 +378,73 @@ const BUSINESS_VAULT_ROW: MenuRow = {
   locked: false, // owner directive 2026-10-28 · drawer links unlocked
 };
 
+// Owner directive 2026-11-01 · Batch D+ · dynamic YOUR_BUSINESS composition.
+// Pre-fix: the YOUR_BUSINESS slice was hard-coded (bisnis-vs-non-bisnis
+// branch inline at the render site) and the creator-support row was
+// index 5 of YOUR_BUSINESS_ROWS · ALWAYS visible to non-bisnis users,
+// NEVER visible to bisnis users (the sealed bisnis slice only picked
+// indices 0 and 1 + the Business Vault row).
+// Post-fix: this helper is the single composition point. It:
+//   · preserves the existing bisnis slice shape (my-shop + vault + go-live)
+//   · appends a GATED creator-support row to EITHER branch when the
+//     viewer qualifies (so qualified bisnis users also see it, which
+//     was previously impossible)
+//   · applies the label/subtitle override from the component when the
+//     viewer has qualified but not yet configured their Support
+//   · hides the row entirely when `showCreatorSupportRow === false`
+//     (unqualified viewers, chat surfaces)
+// For LEGACY callers (showCreatorSupportRow is always true because
+// viewerEarnedCreatorBadges was undefined), the row still appears
+// where it did pre-fix: at the tail of the non-bisnis slice, with
+// the pre-fix "Creator Support" / default-subtitle labelling. This
+// preserves backward compatibility for any ControlDrawer mount that
+// hasn't yet been updated with the new props.
+function buildBusinessSectionRows(args: {
+  readonly sessionIsBisnis: boolean;
+  readonly showCreatorSupportRow: boolean;
+  readonly creatorSupportLabelOverride: string;
+  readonly creatorSupportSubtitleOverride: string;
+}): ReadonlyArray<MenuRow> {
+  const CREATOR_SUPPORT_IDX = YOUR_BUSINESS_ROWS.findIndex(
+    (r) => r.key === "creator-support",
+  );
+  const creatorSupportBase =
+    CREATOR_SUPPORT_IDX >= 0 ? YOUR_BUSINESS_ROWS[CREATOR_SUPPORT_IDX]! : null;
+  const gatedCreatorSupportRow: MenuRow | null =
+    args.showCreatorSupportRow && creatorSupportBase !== null
+      ? {
+          ...creatorSupportBase,
+          label: args.creatorSupportLabelOverride,
+          subtitle: args.creatorSupportSubtitleOverride,
+        }
+      : null;
+
+  if (args.sessionIsBisnis) {
+    // Sealed bisnis slice preserved: my-shop + vault + go-live. The
+    // optional creator-support row is appended ONLY when qualified.
+    const slice: MenuRow[] = [
+      YOUR_BUSINESS_ROWS[0]!, // my-shop (comment at legacy render site was outdated)
+      BUSINESS_VAULT_ROW,
+      YOUR_BUSINESS_ROWS[1]!, // go-live
+    ];
+    if (gatedCreatorSupportRow) slice.push(gatedCreatorSupportRow);
+    return slice;
+  }
+
+  // Non-bisnis path · preserve pre-fix ordering by excluding the
+  // ORIGINAL creator-support row (index 5) and appending the gated
+  // version at the same position. If gated row is null, the section
+  // just ends after `packages` — the same effect as a user who hasn't
+  // qualified.
+  const withoutCreatorSupport = YOUR_BUSINESS_ROWS.filter(
+    (r) => r.key !== "creator-support",
+  );
+  if (gatedCreatorSupportRow) {
+    return [...withoutCreatorSupport, gatedCreatorSupportRow];
+  }
+  return withoutCreatorSupport;
+}
+
 const PREFERENCES_ROWS: ReadonlyArray<MenuRow> = [
   {
     key: "settings",
@@ -359,7 +468,57 @@ const PREFERENCES_ROWS: ReadonlyArray<MenuRow> = [
 
 // ─── Entry component · trigger + drawer + confirmation modal ────────
 
-export function ControlDrawer({ session, themeAccent, identityNameOverride }: ControlDrawerProps) {
+export function ControlDrawer({
+  session,
+  themeAccent,
+  identityNameOverride,
+  viewerEarnedCreatorBadges,
+  viewerCreatorSupportConfigured,
+  viewerSupportSettings,
+  hideCreatorSupportRow,
+}: ControlDrawerProps) {
+  // Owner directive 2026-11-01 · Batch D++ · Creator-Support sheet
+  // open state. The drawer owns the state; DrawerBody receives the
+  // callback that flips it. Separate from the sealed logout-confirm
+  // state so the two never collide.
+  const [supportSheetOpen, setSupportSheetOpen] = React.useState(false);
+  // Owner directive 2026-11-01 · Batch D+ Creator-Support auto-gate.
+  // Three states for the creator-support drawer row:
+  //
+  //   LEGACY       · caller omits `viewerEarnedCreatorBadges` ·
+  //                  preserves the pre-2026-11-01 "always visible"
+  //                  behaviour so unmigrated surfaces (any surface
+  //                  that still passes bare ControlDrawerProps) do
+  //                  not regress. The row routes to /settings/creator
+  //                  with the generic "Creator Support" label.
+  //   QUALIFIED    · caller passes a non-empty earned-badges array ·
+  //                  row renders with label flipping on configured
+  //                  state. Hidden when hideCreatorSupportRow=true
+  //                  (chat surfaces).
+  //   NOT-QUALIFIED· caller passes `[]` (empty array) ·
+  //                  row is hidden entirely.
+  //
+  // Both qualified-configured and qualified-unconfigured route to
+  // /nex-native/settings/creator for Batch D+. Opening the Support
+  // shade DIRECTLY from the drawer tap (owner §4) is deferred to a
+  // separate batch — see batch report for rationale. Routing to
+  // /settings/creator reaches the sheet via the configured surface
+  // (shared-primitive link + preview button) without requiring a
+  // SectionGroup refactor to intercept clicks.
+  const legacyAlwaysShow = viewerEarnedCreatorBadges === undefined;
+  const qualifiedAndNotHidden =
+    hideCreatorSupportRow !== true &&
+    viewerEarnedCreatorBadges !== undefined &&
+    viewerEarnedCreatorBadges.length > 0;
+  const showCreatorSupportRow = legacyAlwaysShow || qualifiedAndNotHidden;
+  const creatorSupportLabelOverride =
+    viewerCreatorSupportConfigured === true || legacyAlwaysShow
+      ? "Creator Support"
+      : "Set up Creator Support";
+  const creatorSupportSubtitleOverride =
+    viewerCreatorSupportConfigured === true || legacyAlwaysShow
+      ? "QR code · payment links · your fans"
+      : "Enable support · upload your QR + bio";
   const [open, setOpen] = React.useState(false);
   // `rendered` tracks whether the drawer+backdrop are in the DOM at
   // all. It stays true for ~200ms after close so the slide-out
@@ -377,6 +536,16 @@ export function ControlDrawer({ session, themeAccent, identityNameOverride }: Co
     setConfirmLogout(false);
     setOpen(false);
   }, []);
+
+  // Owner directive 2026-11-01 · Batch D++ · the sealed-sheet tap
+  // callback. Opens the shade AND closes the drawer underneath so the
+  // viewer isn't stacking two overlays. The slide-out + sheet fade-in
+  // overlap by ~200 ms which reads as a smooth hand-off. Memoised so
+  // the DrawerBody click-interception stays stable across renders.
+  const onCreatorSupportTap = React.useCallback(() => {
+    setSupportSheetOpen(true);
+    close();
+  }, [close]);
 
   // Resolve the containing `.nex-native-frame` so the drawer can
   // portal INTO it. Owner-approved fix 2026-10-16 (Phase 1 repair) ·
@@ -496,11 +665,36 @@ export function ControlDrawer({ session, themeAccent, identityNameOverride }: Co
           session={session}
           onLogoutClick={() => setConfirmLogout(true)}
           identityNameOverride={identityNameOverride}
+          showCreatorSupportRow={showCreatorSupportRow}
+          creatorSupportLabelOverride={creatorSupportLabelOverride}
+          creatorSupportSubtitleOverride={creatorSupportSubtitleOverride}
+          onCreatorSupportTap={onCreatorSupportTap}
         />
       </aside>
       {confirmLogout ? (
         <LogoutConfirmModal onCancel={() => setConfirmLogout(false)} />
       ) : null}
+      {/* Owner directive 2026-11-01 · Batch D++ · reuse the sealed
+       *  CreatorSupportSheet (same component the profile badge opens).
+       *  Sheet uses its own `position: fixed; zIndex: 9999` chrome so
+       *  it layers above both the drawer backdrop (closed by this
+       *  point) and the host surface. Props mirror the profile mount:
+       *  identity from the drawer session, badges + settings from the
+       *  server-resolved props. `creatorAvatarUrl` passed as null · the
+       *  viewer sees their OWN sheet (preview mode) and the fallback
+       *  letter-avatar is honest; a future micro-batch can extend the
+       *  session type with avatarUrl without changing this contract. */}
+      <CreatorSupportSheet
+        open={supportSheetOpen}
+        onClose={() => setSupportSheetOpen(false)}
+        creatorName={
+          identityNameOverride ?? session?.displayName ?? "NEX creator"
+        }
+        creatorAvatarUrl={null}
+        creatorNexHandle={session?.nexHandle ?? null}
+        earnedBadges={viewerEarnedCreatorBadges ?? []}
+        settings={viewerSupportSettings ?? null}
+      />
       {/* prefers-reduced-motion override · the drawer transitions
           cancel to zero duration so motion-sensitive viewers see an
           instant open/close without the slide.
@@ -582,10 +776,30 @@ function DrawerBody({
   session,
   onLogoutClick,
   identityNameOverride,
+  // Owner directive 2026-11-01 · Batch D+ Creator-Support auto-gate.
+  // Props are optional with legacy-preserving defaults so (a) existing
+  // tests that invoke DrawerBody directly without the new props keep
+  // passing and (b) any future caller that forgets to pass them falls
+  // back to the pre-2026-11-01 "always visible" behaviour rather than
+  // silently losing the row.
+  showCreatorSupportRow = true,
+  creatorSupportLabelOverride = "Creator Support",
+  creatorSupportSubtitleOverride = "QR code · payment links · your fans",
+  // Owner directive 2026-11-01 · Batch D++ · optional click-intercept
+  // callback. When supplied, the YOUR BUSINESS wrapper's onClickCapture
+  // intercepts clicks on the creator-support row's <Link> and invokes
+  // this instead of letting the Link navigate to /settings/creator.
+  // When OMITTED (tests, legacy mounts) the Link navigates normally —
+  // same backward-compat guarantee as the D+ gating props.
+  onCreatorSupportTap,
 }: {
   readonly session: ControlDrawerSession | null;
   readonly onLogoutClick: () => void;
   readonly identityNameOverride?: string;
+  readonly showCreatorSupportRow?: boolean;
+  readonly creatorSupportLabelOverride?: string;
+  readonly creatorSupportSubtitleOverride?: string;
+  readonly onCreatorSupportTap?: () => void;
 }) {
   // Owner directive 2026-10-23 · "unlock them for admin dev entry".
   // Non-production builds · if the URL carries `?dev=1` the drawer
@@ -640,20 +854,43 @@ function DrawerBody({
         devUnlockMode={devUnlock}
       />
 
-      <SectionGroup
-        title="YOUR BUSINESS"
-        rows={
-          session?.isBisnis
-            ? [
-                YOUR_BUSINESS_ROWS[0]!, // My businesses
-                BUSINESS_VAULT_ROW,
-                YOUR_BUSINESS_ROWS[1]!, // Packages and billing
-              ]
-            : YOUR_BUSINESS_ROWS
-        }
-        isGuest={effectiveIsGuest}
-        devUnlockMode={devUnlock}
-      />
+      {/* Owner directive 2026-11-01 · Batch D++ · intercept clicks on
+       *  the creator-support row BEFORE the sealed `<Link>` inside
+       *  SectionGroup fires its client-side navigation. `onClickCapture`
+       *  runs during the capture phase (parent → target), so this
+       *  handler sees the click before next/link's internal onClick.
+       *  Scoped by `closest('[data-nex-control-drawer-row="creator-
+       *  support"]')` so ONLY that one row is intercepted — every
+       *  other row in YOUR BUSINESS keeps its sealed Link-navigation
+       *  behaviour. Fallback when `onCreatorSupportTap` is omitted
+       *  (legacy mount): no interception, the Link navigates to its
+       *  href normally. */}
+      <div
+        onClickCapture={(e) => {
+          if (!onCreatorSupportTap) return;
+          const target = e.target as HTMLElement | null;
+          if (!target) return;
+          const match = target.closest<HTMLElement>(
+            '[data-nex-control-drawer-row="creator-support"]',
+          );
+          if (!match) return;
+          e.preventDefault();
+          e.stopPropagation();
+          onCreatorSupportTap();
+        }}
+      >
+        <SectionGroup
+          title="YOUR BUSINESS"
+          rows={buildBusinessSectionRows({
+            sessionIsBisnis: session?.isBisnis ?? false,
+            showCreatorSupportRow,
+            creatorSupportLabelOverride,
+            creatorSupportSubtitleOverride,
+          })}
+          isGuest={effectiveIsGuest}
+          devUnlockMode={devUnlock}
+        />
+      </div>
 
       <SectionGroup
         title="PREFERENCES & SUPPORT"
