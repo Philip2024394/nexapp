@@ -19,9 +19,23 @@ import { HqWorldsClient } from "./_worlds-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function HqWorldsPage(): Promise<React.JSX.Element> {
+export default async function HqWorldsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ focus?: string | string[] }>;
+}): Promise<React.JSX.Element> {
   const session = await resolveSessionWithDevOverride();
   if (!session) notFound();
+
+  // Owner-authorised 2026-10-31 (round 4) · when the HQ home page's
+  // country card is clicked, we land here with ?focus=ireland or
+  // ?focus=indonesia. Narrow via parseWorldId so an unknown value
+  // falls back to no-focus (safe default).
+  const raw = (await searchParams)?.focus;
+  const focusInput = Array.isArray(raw) ? raw[0] : raw;
+  const focusId: WorldId | null = focusInput
+    ? parseWorldId(focusInput)
+    : null;
   // Owner-authorised 2026-10-31 bug fix · requireHqAdmin returns
   // Promise<void> · we must branch on its throw/no-throw, not on the
   // resolved value (which is always undefined on success).
@@ -70,6 +84,7 @@ export default async function HqWorldsPage(): Promise<React.JSX.Element> {
         previewId={previewId}
         previousId={previousId}
         schemaApplied={schemaApplied}
+        focusId={focusId}
       />
     </div>
   );

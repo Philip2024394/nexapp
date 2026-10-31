@@ -29,11 +29,30 @@ export interface HqWorldsClientProps {
   readonly previewId: WorldId | null;
   readonly previousId: WorldId | null;
   readonly schemaApplied: boolean;
+  readonly focusId?: WorldId | null;
 }
 
 export function HqWorldsClient(props: HqWorldsClientProps): React.JSX.Element {
   const [busy, setBusy] = React.useState<string | null>(null);
   const [status, setStatus] = React.useState<WorldActionResult | null>(null);
+
+  // Owner-authorised 2026-10-31 (round 4) · when the HQ home card
+  // passes ?focus=ireland|indonesia, scroll that world's card into
+  // view and apply a brief visual emphasis.
+  React.useEffect(() => {
+    if (!props.focusId) return;
+    const el = document.getElementById(`world-${props.focusId}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("nex-hq-world-focus");
+    const t = window.setTimeout(() => {
+      el.classList.remove("nex-hq-world-focus");
+    }, 2200);
+    return () => {
+      window.clearTimeout(t);
+      el.classList.remove("nex-hq-world-focus");
+    };
+  }, [props.focusId]);
 
   const run = async (
     label: string,
@@ -62,6 +81,10 @@ export function HqWorldsClient(props: HqWorldsClientProps): React.JSX.Element {
         @media (min-width: 900px) {
           .nex-hq-worlds-mobile  { display: none; }
           .nex-hq-worlds-desktop { display: block; }
+        }
+        .nex-hq-world-focus {
+          box-shadow: 0 0 0 2px ${ACCENT}, 0 0 32px rgba(0, 175, 255, 0.35);
+          transition: box-shadow 220ms ease;
         }
       `}</style>
 
@@ -185,6 +208,7 @@ export function HqWorldsClient(props: HqWorldsClientProps): React.JSX.Element {
           return (
             <section
               key={w.meta.id}
+              id={`world-${w.meta.id}`}
               style={{
                 padding: 14,
                 borderRadius: 14,
