@@ -260,8 +260,19 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
   const isOwner = viewerAccountId === profileAccount.id;
 
   // Phase 3A gate (sealed · do not weaken).
-  const accountAny = profileAccount as unknown as { is_discoverable?: boolean };
-  const isDiscoverable = Boolean(accountAny.is_discoverable);
+  //
+  // 2026-11-01 fix · the gate used to read `is_discoverable` off the
+  // `nex_account` row, but migration 134 only ever added that column
+  // to `nex_account_profile`. The cast silently resolved to `undefined`
+  // → Boolean(undefined) === false → every non-owner viewer 404'd
+  // regardless of the real opt-in state. Now we fetch the authoritative
+  // field directly. Behaviour for existing profiles is strictly better:
+  // discoverable accounts become visible to non-owners (as intended),
+  // non-discoverable accounts stay 404 (unchanged intent).
+  const profileRow = await accountProfileService.getProfileByAccountId(
+    profileAccount.id,
+  );
+  const isDiscoverable = Boolean(profileRow?.is_discoverable);
   if (!isOwner && !isDiscoverable) notFound();
 
   // R10 Stage 5 profile_visibility gate (sealed · migration 200 unapplied).

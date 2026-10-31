@@ -59,19 +59,25 @@ function syntheticUuid(seed) {
 // range for Ireland synthetics and 80xxx for Indonesia synthetics so
 // they don't collide with the sealed 99901..99905 Indonesia production
 // personas. HQ admin uses 90001.
+// Each account record also carries the city label we want written to
+// nex_account.last_known_city_label at insert time. Owner directive
+// 2026-11-01 · Dewi is reassigned to Ireland (Dublin) as a creator who
+// posts across the shared global NEX Feed from the Ireland app.
 const ACCOUNTS = [
   // Ireland (synthetic)
-  { seed: "ie-aoife",   nex_handle: "nex-70001", display_name: "Aoife ONeill",   country_hint: "IE" },
-  { seed: "ie-liam",    nex_handle: "nex-70002", display_name: "Liam Doherty",   country_hint: "IE" },
-  { seed: "ie-niamh",   nex_handle: "nex-70003", display_name: "Niamh Walsh",    country_hint: "IE" },
-  { seed: "ie-cillian", nex_handle: "nex-70004", display_name: "Cillian Byrne",  country_hint: "IE" },
-  // Indonesia (synthetic · distinct from sealed nex-99901..99905)
-  { seed: "id-dewi",    nex_handle: "nex-80001", display_name: "Dewi Sandbox",   country_hint: "ID" },
-  { seed: "id-budi",    nex_handle: "nex-80002", display_name: "Budi Sandbox",   country_hint: "ID" },
-  { seed: "id-sari",    nex_handle: "nex-80003", display_name: "Sari Sandbox",   country_hint: "ID" },
-  { seed: "id-putu",    nex_handle: "nex-80004", display_name: "Putu Sandbox",   country_hint: "ID" },
+  { seed: "ie-aoife",   nex_handle: "nex-70001", display_name: "Aoife ONeill",   country: "IE", city: "Dublin" },
+  { seed: "ie-liam",    nex_handle: "nex-70002", display_name: "Liam Doherty",   country: "IE", city: "Galway" },
+  { seed: "ie-niamh",   nex_handle: "nex-70003", display_name: "Niamh Walsh",    country: "IE", city: "Cork" },
+  { seed: "ie-cillian", nex_handle: "nex-70004", display_name: "Cillian Byrne",  country: "IE", city: "Limerick" },
+  // Owner-directive 2026-11-01 · Dewi Sari lives in Ireland even though
+  // she keeps her name. The feed is one global surface · her location
+  // just influences local relevance ranking on Ireland + Indonesia.
+  { seed: "id-dewi",    nex_handle: "nex-80001", display_name: "Dewi Sari",      country: "IE", city: "Dublin" },
+  { seed: "id-budi",    nex_handle: "nex-80002", display_name: "Budi Sandbox",   country: "ID", city: "Yogyakarta" },
+  { seed: "id-sari",    nex_handle: "nex-80003", display_name: "Sari Sandbox",   country: "ID", city: "Yogyakarta" },
+  { seed: "id-putu",    nex_handle: "nex-80004", display_name: "Putu Sandbox",   country: "ID", city: "Yogyakarta" },
   // HQ admin
-  { seed: "hq-admin",   nex_handle: "nex-90001", display_name: "HQ Admin",       country_hint: "HQ", hq_role: "admin" },
+  { seed: "hq-admin",   nex_handle: "nex-90001", display_name: "HQ Admin",       country: null, city: null, hq_role: "admin" },
 ];
 
 const BUSINESSES = [
@@ -144,15 +150,57 @@ for (const a of ACCOUNTS) {
   if (hasHandle) { cols.push("nex_handle"); vals.push(a.nex_handle); }
   if (hasMock) { cols.push("is_mock_persona"); vals.push(true); }
   if (hasHqRole && a.hq_role) { cols.push("hq_role"); vals.push(a.hq_role); }
+  // Owner-directive 2026-11-01 · bake country/city into the seed so a
+  // re-run doesn't drift the Ireland-vs-Indonesia assignment.
+  if (a.country) { cols.push("last_known_country_iso"); vals.push(a.country); }
+  if (a.city)    { cols.push("last_known_city_label");  vals.push(a.city); }
   const placeholders = vals.map((_, i) => `$${i + 1}`).join(", ");
-  const sql = `INSERT INTO public.nex_account (${cols.join(", ")}) VALUES (${placeholders}) ON CONFLICT (id) DO NOTHING`;
+  // Owner-directive 2026-11-01 · UPSERT the mutable fields so re-seeds
+  // reconcile. nex_handle unique index keeps rows stable; display_name,
+  // country, city, hq_role refresh in place.
+  const updateCols = cols
+    .filter((col) => col !== "id" && col !== "nex_handle")
+    .map((col) => `${col} = EXCLUDED.${col}`)
+    .join(", ");
+  const sql = `
+    INSERT INTO public.nex_account (${cols.join(", ")})
+    VALUES (${placeholders})
+    ON CONFLICT (id) DO UPDATE SET ${updateCols}
+  `;
   try {
     const r = await client.query(sql, vals);
-    if (r.rowCount > 0) { process.stdout.write(`  + account ${a.nex_handle}\n`); inserted++; }
+    if (r.rowCount > 0) { process.stdout.write(`  + account ${a.nex_handle} (${a.country ?? "—"})\n`); inserted++; }
     else { process.stdout.write(`  = account ${a.nex_handle} already present\n`); skipped++; }
   } catch (err) {
     process.stderr.write(`  ! FAILED account ${a.nex_handle}: ${err.message}\n`);
   }
+}
+
+// Owner-directive 2026-11-01 · every mock persona must have a
+// nex_account_profile row with is_discoverable=true so the /profile/
+// [handle] gate (sealed 2026-10-04, migration 134) can succeed for
+// non-owner viewers. Without this row the gate 404s every share URL.
+process.stdout.write(`\n[sandbox seed] Writing nex_account_profile rows for ${ACCOUNTS.length} personas · is_discoverable=true\n`);
+try {
+  const r = await client.query(`
+    INSERT INTO public.nex_account_profile
+      (account_id, is_discoverable, headline, bio, created_at, updated_at)
+    SELECT a.id, true,
+           CASE WHEN a.last_known_country_iso IS NULL THEN 'NEX HQ · reviewer'
+                ELSE 'NEX ' || a.last_known_country_iso || ' · creator' END,
+           'Synthetic persona for Ireland + Indonesia previews. One shared NEX Feed across all countries · 2026-11-01.',
+           now(), now()
+    FROM public.nex_account a
+    WHERE a.is_mock_persona = true
+    ON CONFLICT (account_id) DO UPDATE
+      SET is_discoverable = EXCLUDED.is_discoverable,
+          headline = EXCLUDED.headline,
+          updated_at = now()
+    RETURNING account_id
+  `);
+  process.stdout.write(`  + ${r.rowCount} nex_account_profile rows upserted\n`);
+} catch (err) {
+  process.stderr.write(`  ! FAILED nex_account_profile upsert: ${err.message}\n`);
 }
 
 for (const b of BUSINESSES) {
