@@ -22,8 +22,13 @@ export const dynamic = "force-dynamic";
 export default async function HqWorldsPage(): Promise<React.JSX.Element> {
   const session = await resolveSessionWithDevOverride();
   if (!session) notFound();
-  const admin = await requireHqAdmin(session.account.id).catch(() => null);
-  if (!admin) notFound();
+  // Owner-authorised 2026-10-31 bug fix · requireHqAdmin returns
+  // Promise<void> · we must branch on its throw/no-throw, not on the
+  // resolved value (which is always undefined on success).
+  const authorised = await requireHqAdmin(session.account.id)
+    .then(() => true)
+    .catch(() => false);
+  if (!authorised) notFound();
 
   // Read the world state (fail-open on missing table · UI shows the
   // "schema not applied" warning banner).

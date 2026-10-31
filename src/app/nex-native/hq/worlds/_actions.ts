@@ -44,8 +44,12 @@ async function assertAdmin(): Promise<
       },
     };
   }
-  const admin = await requireHqAdmin(session.account.id).catch(() => null);
-  if (!admin) {
+  // Owner-authorised 2026-10-31 bug fix · requireHqAdmin returns
+  // Promise<void>; branch on throw/no-throw, not the resolved value.
+  const authorised = await requireHqAdmin(session.account.id)
+    .then(() => true)
+    .catch(() => false);
+  if (!authorised) {
     return {
       ok: false,
       result: {
