@@ -301,9 +301,16 @@ export function SellerShopDrawer(
               <ShopHeader
                 broadcaster={props.broadcaster}
                 productCount={props.products.length}
-                shopHref={shopHref}
                 onClose={close}
               />
+              {/* Owner directive 2026-11-01 · "the visit shop badge
+               *  should be in the side drawer left under header".
+               *  Dedicated badge row below the header · left-aligned ·
+               *  sealed gold accent via var(--nex-world-secondary,
+               *  #C6A15B). Null when no handle to route to. */}
+              {shopHref ? (
+                <VisitShopBadgeRow href={shopHref} onNavigate={close} />
+              ) : null}
               <ShopProductList
                 products={props.products}
                 onOpenProduct={setOpenProductId}
@@ -337,7 +344,6 @@ export function SellerShopDrawer(
 function ShopHeader(props: {
   readonly broadcaster: SellerShopDrawerBroadcaster;
   readonly productCount: number;
-  readonly shopHref: string | null;
   readonly onClose: () => void;
 }): React.JSX.Element {
   return (
@@ -447,25 +453,12 @@ function ShopHeader(props: {
           {props.productCount} product{props.productCount === 1 ? "" : "s"}
         </div>
       </div>
-      {props.shopHref ? (
-        <Link
-          href={props.shopHref}
-          onClick={props.onClose}
-          data-nex-seller-shop-visit
-          style={{
-            fontSize: 12,
-            fontWeight: 800,
-            padding: "8px 12px",
-            borderRadius: 999,
-            background: "var(--nex-world-primary, #00AFFF)",
-            color: "#0A1526",
-            textDecoration: "none",
-            flexShrink: 0,
-          }}
-        >
-          Visit Shop
-        </Link>
-      ) : null}
+      {/* Owner directive 2026-11-01 · "the visit shop badge should be
+       *  in the side drawer left under header". The inline right-side
+       *  button is replaced by a left-aligned badge row rendered
+       *  BELOW this header by SellerShopDrawer so the header stays
+       *  reserved for identity · see the <VisitShopBadgeRow /> mount
+       *  after <ShopHeader /> in the drawer panel. */}
       <button
         type="button"
         onClick={props.onClose}
@@ -490,6 +483,73 @@ function ShopHeader(props: {
         ✕
       </button>
     </header>
+  );
+}
+
+/** Owner directive 2026-11-01 · "the visit shop badge should be in
+ *  the side drawer left under header". A left-aligned gold badge
+ *  rendered between the ShopHeader row and the ShopProductList grid.
+ *  Routes to the sealed shop template at /profile/<handle> per
+ *  Doctrine D3. Uses the sealed `--nex-world-secondary` world token
+ *  so Ireland deployment gets Irish gold #C6A15B and Worldwide gets
+ *  #1DA1F2 cyan · identical treatment to the Phase 8 "View details"
+ *  pill in the product cards. */
+function VisitShopBadgeRow(props: {
+  readonly href: string;
+  readonly onNavigate: () => void;
+}): React.JSX.Element {
+  return (
+    <div
+      data-nex-seller-shop-visit-badge-row
+      style={{
+        padding: "10px 12px 2px",
+        display: "flex",
+        justifyContent: "flex-start",
+      }}
+    >
+      <Link
+        href={props.href}
+        onClick={props.onNavigate}
+        data-nex-seller-shop-visit-badge
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "6px 12px",
+          borderRadius: 999,
+          background: "var(--nex-world-secondary, #C6A15B)",
+          color: "#0A1526",
+          textDecoration: "none",
+          fontSize: 12,
+          fontWeight: 900,
+          letterSpacing: 0.2,
+          lineHeight: 1,
+          whiteSpace: "nowrap",
+          boxShadow: "0 0 10px rgba(198, 161, 91, 0.45)",
+          border: "1px solid rgba(255, 255, 255, 0.22)",
+        }}
+      >
+        <svg
+          aria-hidden
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+          <path d="M3 6h18" />
+          <path d="M16 10a4 4 0 0 1-8 0" />
+        </svg>
+        Visit Shop
+        <span aria-hidden style={{ fontSize: 13, lineHeight: 1 }}>
+          ›
+        </span>
+      </Link>
+    </div>
   );
 }
 

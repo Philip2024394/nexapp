@@ -706,15 +706,10 @@ export default async function NexFeedViewerPage({
       musicEntry.ownerAccountId,
     );
 
-    // Owner-authorised 2026-11-01 · Phase 8 follow-up · shop pill in
-    // the music header. Links to the sealed shop template page
-    // (/profile/<handle>) per Doctrine D3 only when the broadcaster
-    // has a nex_business + ≥ 1 live product AND a resolvable handle.
-    // Null hides the pill ("no dead buttons").
-    const broadcasterShopHref =
-      sellerShop && musicEntry.ownerNexHandle
-        ? `/nex-native/profile/${musicEntry.ownerNexHandle}`
-        : null;
+    // Owner-authorised 2026-11-01 · Visit Shop badge moved into the
+    // SellerShopDrawer (left slide-out) itself per owner directive ·
+    // the music header no longer carries the pill. SellerShopDrawer
+    // derives the shop href internally from broadcaster.nexHandle.
 
     return (
       <>
@@ -728,7 +723,6 @@ export default async function NexFeedViewerPage({
           prevId={prevId}
           viewerAccountId={viewerAccountId}
           feedModeLabel={feedModeLabel}
-          shopHref={broadcasterShopHref}
           initialFollowed={initialFollowed}
           initialFollowerCount={initialFollowerCount}
           broadcasterCountryCode={broadcasterCountryCode}
