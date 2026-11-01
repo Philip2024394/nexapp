@@ -351,39 +351,79 @@ function ShopHeader(props: {
         gap: 12,
       }}
     >
-      {props.broadcaster.avatarUrl ? (
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img
-          src={props.broadcaster.avatarUrl}
-          alt=""
-          aria-hidden
+      {/* Owner directive 2026-11-01 · "seller rim in side drawer header
+       *  should be ping". Honours the sealed NEX avatar-presence
+       *  doctrine: presence = RIM (never a dot) · green rim +
+       *  heartbeat pulse signals the seller is active ("shop is open").
+       *  Keyframe scoped locally so it never collides with
+       *  nex-music-header-heartbeat (sealed) or any other animation.
+       *  Shop drawer doesn't carry per-request presence state yet ·
+       *  the heartbeat defaults to "online" since the shop is being
+       *  shown live during an active feed slide. */}
+      <style>{`
+        @keyframes nex-seller-shop-header-ping {
+          0%, 100% { transform: scale(1); opacity: 0.9; }
+          50%      { transform: scale(1.35); opacity: 0; }
+        }
+      `}</style>
+      <span
+        style={{
+          position: "relative",
+          width: 44,
+          height: 44,
+          flexShrink: 0,
+          alignSelf: "center",
+          display: "inline-block",
+        }}
+      >
+        {props.broadcaster.avatarUrl ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={props.broadcaster.avatarUrl}
+            alt=""
+            aria-hidden
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: "50%",
+              objectFit: "cover",
+              border: "1.5px solid rgba(255,255,255,0.6)",
+              display: "block",
+            }}
+          />
+        ) : (
+          <div
+            aria-hidden
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: "50%",
+              background: "rgba(255,255,255,0.1)",
+              border: "1.5px solid rgba(255,255,255,0.6)",
+              display: "grid",
+              placeItems: "center",
+              fontSize: 16,
+              fontWeight: 800,
+              color: "#F2F5F8",
+            }}
+          >
+            {props.broadcaster.displayName.slice(0, 1).toUpperCase()}
+          </div>
+        )}
+        <span
+          aria-label="online"
+          data-nex-seller-shop-header-ping
           style={{
-            width: 44,
-            height: 44,
+            position: "absolute",
+            inset: -3,
             borderRadius: "50%",
-            objectFit: "cover",
-            border: "2px solid var(--nex-world-border-accent, rgba(0,175,255,0.5))",
-            flexShrink: 0,
+            border: "2px solid #16D66B",
+            animation:
+              "nex-seller-shop-header-ping 1200ms cubic-bezier(0.4,0,0.2,1) infinite",
+            pointerEvents: "none",
           }}
         />
-      ) : (
-        <div
-          aria-hidden
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: "50%",
-            background: "rgba(255,255,255,0.1)",
-            display: "grid",
-            placeItems: "center",
-            fontSize: 16,
-            fontWeight: 800,
-            flexShrink: 0,
-          }}
-        >
-          {props.broadcaster.displayName.slice(0, 1).toUpperCase()}
-        </div>
-      )}
+      </span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
