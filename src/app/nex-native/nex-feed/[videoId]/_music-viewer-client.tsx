@@ -36,6 +36,18 @@
 
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+// Owner-authorised 2026-11-01 · P0-1 · NEX Media Engine performance
+// instrumentation. SHARED surface across Worldwide / Ireland /
+// Indonesia / future country feeds. Privacy-safe · marks never record
+// URLs, account IDs, or signed tokens.
+import {
+  startPerfSwipe,
+  markPerfPhase,
+  readSwipeContext,
+  makeInitialLoadContext,
+  type PerfMarkContext,
+} from "@/lib/nex-native/media-engine/perf-marks";
+import { NexPerfOverlay } from "@/components/nex-native/media-engine/NexPerfOverlay";
 import { CategoryGridSheet } from "@/components/nex-native/live-commerce/CategoryGridSheet";
 import { HendraMessageInbox } from "@/components/nex-native/live-commerce/HendraMessageInbox";
 import { LiveSideDrawer } from "@/components/nex-native/live-commerce/LiveSideDrawer";
@@ -154,6 +166,23 @@ export function MusicViewerClient(
     const s = searchParams.toString();
     return s.length > 0 ? `?${s}` : "";
   }, [searchParams]);
+  // Owner-authorised 2026-11-01 · P0-1 · perf marks. Reads the current
+  // feed mode + country from URL state so every mark carries honest
+  // context (worldwide / IE / ID / …). Correlation ID is a per-swipe
+  // random UUID generated in startPerfSwipe · it does NOT reveal
+  // account ID, track ID, or any content identifier (privacy-safe).
+  // Declared BEFORE navigate/handlePointerDown/handlePointerUp so
+  // their useCallback deps arrays can reference it.
+  const swipeCorrelationIdRef = React.useRef<string | null>(null);
+  const currentPerfContext = React.useCallback((): Omit<PerfMarkContext, "swipeCorrelationId"> => {
+    const country = searchParams?.get("country")?.toUpperCase();
+    return {
+      feedKind: "music",
+      feedMode: country ? "country" : "worldwide",
+      countryCode: country || undefined,
+    };
+  }, [searchParams]);
+
   const nextHref = React.useMemo(
     (): string | null =>
       props.nextId
@@ -180,10 +209,135 @@ export function MusicViewerClient(
         inFlightNavRef.current = false;
         inFlightTimerRef.current = null;
       }, NAV_LOCK_SAFETY_MS);
+      // Perf mark · navigation begins (before router.push fires the
+      // client-side route transition). Fires only when a correlation
+      // ID exists (i.e. this nav originated from a swipe · in-player
+      // arrow navigations don't persist a swipe context so skip the
+      // mark · they're measured in a different pipeline).
+      const corr = swipeCorrelationIdRef.current;
+      if (corr) {
+        const ctx = currentPerfContext();
+        markPerfPhase("nav-begin", { ...ctx, swipeCorrelationId: corr });
+      }
       router.push(href);
     },
-    [router, nextHref, prevHref],
+    [router, nextHref, prevHref, currentPerfContext],
   );
+
+  // Owner-authorised 2026-11-01 · P0-1 · post-nav perf marks.
+  // Reads the swipe context persisted by the previous slide's
+  // pointerDown handler, then fires nav-complete + slide-visible on
+  // mount. Also attaches one-shot listeners on the cover <img> + the
+  // music <audio> element so cover-loaded / cover-decoded /
+  // audio-canplay / audio-first-audible marks fire with the SAME
+  // correlation ID as the originating swipe.
+  //
+  // When no swipe context exists (fresh page load, direct URL,
+  // in-player arrow navigation), the effect no-ops · the viewer
+  // still runs normally, we just skip the measurement for that mount.
+  React.useEffect(() => {
+    // Owner-authorised 2026-11-01 (P0-1 amendment) · lifecycle marks
+    // must fire for BOTH swipe-driven navigation AND initial cold
+    // page load. If no swipe context exists, synthesise an
+    // initial-load context so the first slide's visibility + cover +
+    // audio marks are still measurable.
+    let ctx = readSwipeContext();
+    const isInitialLoad = ctx === null;
+    if (!ctx) {
+      ctx = makeInitialLoadContext(
+        "music",
+        searchParams?.get("country")?.toUpperCase() ? "country" : "worldwide",
+        searchParams?.get("country")?.toUpperCase() || undefined,
+      );
+    }
+
+    // Only fire nav-complete for swipe-driven mounts (initial loads
+    // never had a nav-begin to pair with).
+    if (!isInitialLoad) {
+      markPerfPhase("nav-complete", ctx);
+    }
+
+    let slideVisibleFired = false;
+    const slideVisibleRaf = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        slideVisibleFired = true;
+        markPerfPhase("slide-visible", ctx);
+      });
+    });
+
+    // Hook cover <img> load + decode. The cover sits inside the
+    // sealed `[data-nex-music-cover-frame]` wrapper in NexMusicPlayer-
+    // Overlay. We query AFTER mount · if the overlay hasn't rendered
+    // yet, retry a few frames.
+    let coverPollTries = 0;
+    const coverPoll = () => {
+      const coverImg = document.querySelector<HTMLImageElement>(
+        "[data-nex-music-cover-frame] img",
+      );
+      if (coverImg) {
+        if (coverImg.complete && coverImg.naturalWidth > 0) {
+          markPerfPhase("cover-loaded", ctx);
+          coverImg.decode().then(
+            () => markPerfPhase("cover-decoded", ctx),
+            () => {},
+          );
+        } else {
+          const onLoad = () => {
+            markPerfPhase("cover-loaded", ctx);
+            coverImg.decode().then(
+              () => markPerfPhase("cover-decoded", ctx),
+              () => {},
+            );
+            coverImg.removeEventListener("load", onLoad);
+          };
+          coverImg.addEventListener("load", onLoad, { once: true });
+        }
+        return;
+      }
+      if (coverPollTries++ < 60) {
+        requestAnimationFrame(coverPoll);
+      }
+    };
+    requestAnimationFrame(coverPoll);
+
+    // Hook <audio> canplay + first-audible-playback. The sealed
+    // player mounts an <audio> element at the document level · we
+    // poll briefly for it, then attach one-shot listeners.
+    let audioPollTries = 0;
+    const audioListeners: Array<() => void> = [];
+    const audioPoll = () => {
+      const audio = document.querySelector<HTMLAudioElement>("audio");
+      if (audio) {
+        const onCanPlay = () => {
+          markPerfPhase("audio-canplay", ctx);
+          audio.removeEventListener("canplay", onCanPlay);
+        };
+        const onTimeUpdate = () => {
+          if (audio.currentTime > 0 && !audio.muted && !audio.paused) {
+            markPerfPhase("audio-first-audible", ctx);
+            audio.removeEventListener("timeupdate", onTimeUpdate);
+          }
+        };
+        audio.addEventListener("canplay", onCanPlay);
+        audio.addEventListener("timeupdate", onTimeUpdate);
+        audioListeners.push(() => {
+          audio.removeEventListener("canplay", onCanPlay);
+          audio.removeEventListener("timeupdate", onTimeUpdate);
+        });
+        return;
+      }
+      if (audioPollTries++ < 60) {
+        requestAnimationFrame(audioPoll);
+      }
+    };
+    requestAnimationFrame(audioPoll);
+
+    return () => {
+      if (!slideVisibleFired) cancelAnimationFrame(slideVisibleRaf);
+      for (const detach of audioListeners) detach();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.feedEntryId]); // re-run only when the slide changes
 
   React.useEffect(() => {
     return () => {
@@ -216,13 +370,22 @@ export function MusicViewerClient(
         y: e.clientY,
         id: e.pointerId,
       };
+      // Perf mark · swipe gesture begins. Correlation ID stored in
+      // ref AND persisted to sessionStorage (via startPerfSwipe) so
+      // the next slide's mount effect can read it after router.push.
+      const ctx = currentPerfContext();
+      swipeCorrelationIdRef.current = startPerfSwipe(
+        ctx.feedKind,
+        ctx.feedMode,
+        ctx.countryCode,
+      );
       try {
         (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
       } catch {
         /* ignore */
       }
     },
-    [],
+    [currentPerfContext],
   );
 
   const handlePointerUp = React.useCallback(
@@ -239,10 +402,16 @@ export function MusicViewerClient(
       const dy = e.clientY - start.y;
       if (Math.abs(dx) > Math.abs(dy)) return;
       if (Math.abs(dy) < SWIPE_THRESHOLD_PX) return;
+      // Perf mark · pointer released + swipe gesture committed.
+      const corr = swipeCorrelationIdRef.current;
+      if (corr) {
+        const ctx = currentPerfContext();
+        markPerfPhase("pointerup", { ...ctx, swipeCorrelationId: corr });
+      }
       if (dy < 0) navigate("next");
       else navigate("prev");
     },
-    [navigate],
+    [navigate, currentPerfContext],
   );
 
   const handlePointerCancel = React.useCallback(

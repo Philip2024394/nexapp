@@ -44,6 +44,10 @@ import { CountryFeedSwitcher } from "@/components/nex-native/nex-feed/CountryFee
 // Consumed by (a) the MusicActionsStack icon on owner self-view and
 // (b) the LiveSideDrawer My Music row (owner-only).
 import { resolveMyMusicTargetForOwner } from "@/lib/nex-native/music/owner-my-music-target";
+// Owner-authorised 2026-11-01 · P0-1 · NEX Media Engine performance
+// overlay. Dev-only rendering · gated by NODE_ENV inside the
+// component · zero cost in production.
+import { NexPerfOverlay } from "@/components/nex-native/media-engine/NexPerfOverlay";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import {
   getTrackById,
@@ -652,6 +656,8 @@ export default async function NexFeedViewerPage({
             toggleTarget={switcherTarget}
           />
         </div>
+        {/* Owner-authorised 2026-11-01 · P0-1 · perf overlay (dev-only) */}
+        <NexPerfOverlay />
       </>
     );
   }

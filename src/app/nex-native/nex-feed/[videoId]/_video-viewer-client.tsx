@@ -14,7 +14,16 @@
 //     mode · dev manifest doesn't persist to Supabase.
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+// Owner-authorised 2026-11-01 · P0-1 · NEX Media Engine perf marks.
+// Privacy-safe · no URLs / account IDs / tokens recorded.
+import {
+  startPerfSwipe,
+  markPerfPhase,
+  readSwipeContext,
+  makeInitialLoadContext,
+  type PerfMarkContext,
+} from "@/lib/nex-native/media-engine/perf-marks";
 import {
   LiveViewerFooter,
   type ShareEvidence,
@@ -447,6 +456,19 @@ export function VideoViewerClient({
   const pointerStartRef = React.useRef<
     { x: number; y: number; id: number } | null
   >(null);
+  // Owner-authorised 2026-11-01 · P0-1 · video perf marks. Reads
+  // feed mode + country from URL so every mark carries honest context.
+  const videoSearchParams = useSearchParams();
+  const videoSwipeCorrelationIdRef = React.useRef<string | null>(null);
+  const videoPerfContext = React.useCallback((): Omit<PerfMarkContext, "swipeCorrelationId"> => {
+    const country = videoSearchParams?.get("country")?.toUpperCase();
+    return {
+      feedKind: "video",
+      feedMode: country ? "country" : "worldwide",
+      countryCode: country || undefined,
+    };
+  }, [videoSearchParams]);
+
   const handlePointerDown = React.useCallback(
     (e: React.PointerEvent) => {
       // Ignore starts on interactive descendants (buttons, links,
@@ -454,9 +476,16 @@ export function VideoViewerClient({
       const target = e.target as HTMLElement | null;
       if (target && target.closest("button, a, textarea, input")) return;
       pointerStartRef.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+      // Perf mark · swipe gesture begins · correlation ID persisted.
+      const ctx = videoPerfContext();
+      videoSwipeCorrelationIdRef.current = startPerfSwipe(
+        ctx.feedKind,
+        ctx.feedMode,
+        ctx.countryCode,
+      );
       (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
     },
-    [],
+    [videoPerfContext],
   );
   // Owner directive 2026-10-27 · S4-light · "swipe prepaint" ·
   // before `router.push` fires, we imperatively point the current
@@ -487,9 +516,15 @@ export function VideoViewerClient({
           /* non-fatal · router.push below still navigates */
         }
       }
+      // Perf mark · nav-begin · fires just before router.push.
+      const corr = videoSwipeCorrelationIdRef.current;
+      if (corr) {
+        const ctx = videoPerfContext();
+        markPerfPhase("nav-begin", { ...ctx, swipeCorrelationId: corr });
+      }
       router.push(videoHref(targetId));
     },
-    [nextId, prevId, nextPublicUrl, prevPublicUrl, router],
+    [nextId, prevId, nextPublicUrl, prevPublicUrl, router, videoPerfContext],
   );
 
   const handlePointerUp = React.useCallback(
@@ -504,14 +539,126 @@ export function VideoViewerClient({
       if (isMuted) tryUnmute();
       if (Math.abs(dx) > Math.abs(dy)) return;
       if (Math.abs(dy) < 60) return;
+      // Perf mark · pointer released + swipe committed.
+      const corr = videoSwipeCorrelationIdRef.current;
+      if (corr) {
+        const ctx = videoPerfContext();
+        markPerfPhase("pointerup", { ...ctx, swipeCorrelationId: corr });
+      }
       if (dy < 0 && nextId) {
         navigateWithPrepaint("next");
       } else if (dy > 0 && prevId) {
         navigateWithPrepaint("prev");
       }
     },
-    [nextId, prevId, navigateWithPrepaint, isMuted, tryUnmute],
+    [nextId, prevId, navigateWithPrepaint, isMuted, tryUnmute, videoPerfContext],
   );
+
+  // Owner-authorised 2026-11-01 · P0-1 · video post-nav perf marks.
+  // Reads swipe context persisted by the previous slide and fires
+  // nav-complete + slide-visible + poster-loaded + video-loadeddata +
+  // video-first-frame + buffer-stall marks for this mounted slide.
+  // Null-op when no swipe context exists (fresh load / direct URL).
+  React.useEffect(() => {
+    // Owner-authorised 2026-11-01 (P0-1 amendment) · fire video
+    // lifecycle marks for initial load too, using a synthetic context
+    // when no swipe context exists.
+    let ctx = readSwipeContext();
+    const isInitialLoad = ctx === null;
+    if (ctx && ctx.feedKind !== "video") {
+      // Context exists but was persisted by the music viewer (mode
+      // mismatch) · treat as initial load so marks still fire against
+      // a clean video correlation.
+      ctx = null;
+    }
+    if (!ctx) {
+      ctx = makeInitialLoadContext(
+        "video",
+        videoSearchParams?.get("country")?.toUpperCase() ? "country" : "worldwide",
+        videoSearchParams?.get("country")?.toUpperCase() || undefined,
+      );
+    }
+
+    if (!isInitialLoad) {
+      markPerfPhase("nav-complete", ctx);
+    }
+    let slideVisibleFired = false;
+    const slideVisibleRaf = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        slideVisibleFired = true;
+        markPerfPhase("slide-visible", ctx);
+      });
+    });
+
+    // Poster image · video elements can carry `poster` attribute · we
+    // observe its load/decode via a temporary Image() mirror. If the
+    // element doesn't advertise a poster, skip silently.
+    const vid = videoRef.current;
+    if (vid && vid.poster) {
+      const posterImg = new Image();
+      posterImg.src = vid.poster;
+      if (posterImg.complete) {
+        markPerfPhase("poster-loaded", ctx);
+        posterImg
+          .decode()
+          .then(() => markPerfPhase("poster-decoded", ctx))
+          .catch(() => {});
+      } else {
+        posterImg.onload = () => {
+          markPerfPhase("poster-loaded", ctx);
+          posterImg
+            .decode()
+            .then(() => markPerfPhase("poster-decoded", ctx))
+            .catch(() => {});
+        };
+      }
+    }
+
+    // Video media events. Attach as one-shot listeners; the sealed
+    // viewer owns the `<video>` ref so we just read it here.
+    const detaches: Array<() => void> = [];
+    if (vid) {
+      const onLoadedData = () => {
+        markPerfPhase("video-loadeddata", ctx);
+      };
+      const onPlaying = () => {
+        markPerfPhase("video-playback-start", ctx);
+        // First-frame proxy · onPlaying fires AFTER buffered frame is
+        // ready and playback is actually advancing. More portable
+        // than requestVideoFrameCallback (Safari 15.4+ only).
+        markPerfPhase("video-first-frame", ctx);
+      };
+      let stallActive = false;
+      const onWaiting = () => {
+        if (!stallActive) {
+          stallActive = true;
+          markPerfPhase("video-buffer-stall-start", ctx);
+        }
+      };
+      const onPlayingAfterStall = () => {
+        if (stallActive) {
+          stallActive = false;
+          markPerfPhase("video-buffer-stall-end", ctx);
+        }
+      };
+      vid.addEventListener("loadeddata", onLoadedData, { once: true });
+      vid.addEventListener("playing", onPlaying, { once: true });
+      vid.addEventListener("waiting", onWaiting);
+      vid.addEventListener("playing", onPlayingAfterStall);
+      detaches.push(() => {
+        vid.removeEventListener("loadeddata", onLoadedData);
+        vid.removeEventListener("playing", onPlaying);
+        vid.removeEventListener("waiting", onWaiting);
+        vid.removeEventListener("playing", onPlayingAfterStall);
+      });
+    }
+
+    return () => {
+      if (!slideVisibleFired) cancelAnimationFrame(slideVisibleRaf);
+      for (const d of detaches) d();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [video.id]);
   const handlePointerCancel = React.useCallback((e: React.PointerEvent) => {
     if (pointerStartRef.current?.id === e.pointerId) {
       pointerStartRef.current = null;
