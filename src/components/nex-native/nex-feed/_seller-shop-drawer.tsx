@@ -414,20 +414,31 @@ function ShopProductList(props: {
   readonly broadcaster: SellerShopDrawerBroadcaster;
   readonly onClose: () => void;
 }): React.JSX.Element {
+  // Owner directive 2026-11-01 · "product cards and background slider
+  // same style and design as playlist library cards and background".
+  // Mirrors MusicLibraryOverlay's 2-column grid + card frame + dim
+  // wash. See src/components/nex-native/music/MusicLibraryOverlay.tsx
+  // LibraryCard function (~line 589) for the sealed reference.
   return (
     <div
       data-nex-seller-shop-product-list
       style={{
         flex: 1,
         overflowY: "auto",
-        padding: "8px 10px 20px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 8,
+        // Dim wash matching MusicLibraryOverlay card-container
+        // (rgba(0, 0, 0, 0.35) over the drawer's world-themed base) ·
+        // the drawer-bg still shows through at 65% so Ireland green /
+        // Worldwide navy remain perceptible under the wash.
+        background: "rgba(0, 0, 0, 0.35)",
+        padding: "12px 10px 20px",
+        display: "grid",
+        gridTemplateColumns: "repeat(2, 1fr)",
+        gap: 10,
+        alignContent: "start",
       }}
     >
       {props.products.map((p) => (
-        <ShopProductRow
+        <ShopProductCard
           key={p.id}
           product={p}
           broadcaster={props.broadcaster}
@@ -438,7 +449,7 @@ function ShopProductList(props: {
   );
 }
 
-function ShopProductRow(props: {
+function ShopProductCard(props: {
   readonly product: SellerShopDrawerProduct;
   readonly broadcaster: SellerShopDrawerBroadcaster;
   readonly onClose: () => void;
@@ -446,43 +457,52 @@ function ShopProductRow(props: {
   const { product } = props;
   const price = formatPrice(product.pricePence, product.currency);
   // Owner-authorised 2026-11-01 · Phase 10 of Social Commerce roadmap
-  // "Chat About This Product". The sealed peer-chat page already
-  // reads `?pending_product=<id>` (Ask-Seller slice 2 · 2026-10-22):
-  // server-resolves the product snapshot, the composer renders a
-  // product-card chip above the pill, and the first send carries the
-  // sealed product attachment via sendPeerMessageOrShareProductAction.
-  // We use the exact sealed param name used elsewhere (see
-  // src/app/nex-native/cover/primitives.tsx:692).
+  // "Chat About This Product". The sealed peer-chat page reads
+  // ?pending_product=<id> (Ask-Seller slice 2 · 2026-10-22) · server-
+  // resolves the snapshot · composer renders the product chip · first
+  // send attaches the sealed product snapshot via
+  // sendPeerMessageOrShareProductAction. Whole-card tap = ask seller
+  // (library-overlay symmetry · whole-card tap = play track).
   const chatHref = `/nex-native/chat/peer/${props.broadcaster.accountId}?pending_product=${encodeURIComponent(product.id)}`;
-  const detailHref = props.broadcaster.nexHandle
-    ? `/nex-native/profile/${props.broadcaster.nexHandle}#product-${product.id}`
-    : chatHref;
 
   return (
-    <div
-      data-nex-seller-shop-row
+    <Link
+      href={chatHref}
+      onClick={props.onClose}
+      aria-label={`Ask about ${product.name}${price ? " · " + price : ""}`}
+      data-nex-seller-shop-card
       style={{
+        position: "relative",
         display: "flex",
+        flexDirection: "column",
         alignItems: "stretch",
-        gap: 10,
-        padding: 8,
-        borderRadius: 12,
-        background: "var(--nex-world-surface, rgba(255,255,255,0.03))",
-        border: "1px solid var(--nex-world-border, rgba(255,255,255,0.08))",
+        gap: 6,
+        padding: 0,
+        minWidth: 0,
+        maxWidth: "100%",
+        background: "transparent",
+        border: "none",
+        color: "inherit",
+        fontFamily: "inherit",
+        textAlign: "left",
+        textDecoration: "none",
+        cursor: "pointer",
+        boxSizing: "border-box",
       }}
     >
-      <Link
-        href={detailHref}
-        onClick={props.onClose}
-        data-nex-seller-shop-row-tap
+      {/* Cover · square · letterboxed (object-fit contain · Universal
+       *  Image Display Integrity doctrine 2026-10-30 clause 1). */}
+      <div
         style={{
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          textDecoration: "none",
-          color: "inherit",
-          minWidth: 0,
+          position: "relative",
+          width: "100%",
+          aspectRatio: "1 / 1",
+          borderRadius: 10,
+          overflow: "hidden",
+          background: "var(--nex-world-background-base, #020914)",
+          border: "1px solid rgba(255, 255, 255, 0.14)",
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.45)",
+          boxSizing: "border-box",
         }}
       >
         {product.imageUrl ? (
@@ -491,79 +511,79 @@ function ShopProductRow(props: {
             src={product.imageUrl}
             alt=""
             aria-hidden
+            loading="lazy"
+            decoding="async"
             style={{
-              width: 56,
-              height: 56,
-              objectFit: "cover",
-              borderRadius: 10,
-              flexShrink: 0,
-              background: "rgba(255,255,255,0.04)",
+              width: "100%",
+              height: "100%",
+              objectFit: "contain",
             }}
           />
         ) : (
           <div
             aria-hidden
             style={{
-              width: 56,
-              height: 56,
-              borderRadius: 10,
-              background: "rgba(255,255,255,0.06)",
+              width: "100%",
+              height: "100%",
               display: "grid",
               placeItems: "center",
               fontSize: 11,
               color: "var(--nex-world-text-muted, #7D9BC0)",
-              flexShrink: 0,
             }}
           >
             no image
           </div>
         )}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: 14,
-              fontWeight: 700,
-              lineHeight: 1.3,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {product.name}
-          </div>
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 800,
-              color: "var(--nex-world-text-primary, #F2F5F8)",
-              marginTop: 2,
-            }}
-          >
-            {price ?? "—"}
-          </div>
+        {/* Small chat chip in the top-right corner · signals the whole
+         *  card is a tap-to-ask target. Non-interactive (parent Link
+         *  handles the tap) so no nested-link accessibility issue. */}
+        <div
+          aria-hidden
+          data-nex-seller-shop-card-chat-chip
+          style={{
+            position: "absolute",
+            top: 6,
+            right: 6,
+            width: 24,
+            height: 24,
+            borderRadius: 999,
+            background: "rgba(2, 9, 20, 0.72)",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#F2F5F8",
+          }}
+        >
+          <ChatBubbleIcon />
         </div>
-      </Link>
-      <Link
-        href={chatHref}
-        onClick={props.onClose}
-        aria-label={`Chat about ${product.name}`}
-        data-nex-seller-shop-row-chat
-        style={{
-          width: 40,
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          borderRadius: 10,
-          background: "rgba(255,255,255,0.06)",
-          border: "1px solid var(--nex-world-border, rgba(255,255,255,0.1))",
-          color: "inherit",
-          textDecoration: "none",
-          flexShrink: 0,
-        }}
-      >
-        <ChatBubbleIcon />
-      </Link>
-    </div>
+      </div>
+      <div style={{ padding: "0 2px", minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 13,
+            fontWeight: 700,
+            lineHeight: 1.3,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            color: "var(--nex-world-text-primary, #F2F5F8)",
+          }}
+        >
+          {product.name}
+        </div>
+        <div
+          style={{
+            fontSize: 13,
+            fontWeight: 800,
+            marginTop: 1,
+            color: "var(--nex-world-text-primary, #F2F5F8)",
+          }}
+        >
+          {price ?? "—"}
+        </div>
+      </div>
+    </Link>
   );
 }
 
@@ -609,12 +629,12 @@ function ChatBubbleIcon(): React.JSX.Element {
   return (
     <svg
       aria-hidden
-      width="18"
-      height="18"
+      width="14"
+      height="14"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="2.4"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
