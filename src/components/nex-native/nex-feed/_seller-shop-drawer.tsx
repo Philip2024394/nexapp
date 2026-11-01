@@ -502,9 +502,19 @@ function VisitShopBadgeRow(props: {
     <div
       data-nex-seller-shop-visit-badge-row
       style={{
-        padding: "10px 12px 2px",
+        // Owner directive 2026-11-01 refinement · "remove the header
+        // color from behind it and center and move down little from
+        // header edge":
+        //   · background matches the product-list dim wash below
+        //     (rgba(0,0,0,0.35)) so the badge visually belongs to the
+        //     product zone, not the identity header zone.
+        //   · justifyContent: center (was flex-start).
+        //   · top padding bumped 10 → 16 so there's visible breathing
+        //     room between the header's bottom border and the badge.
+        background: "rgba(0, 0, 0, 0.35)",
+        padding: "16px 12px 4px",
         display: "flex",
-        justifyContent: "flex-start",
+        justifyContent: "center",
       }}
     >
       <Link
