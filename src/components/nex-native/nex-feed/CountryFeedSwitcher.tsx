@@ -73,6 +73,12 @@ export function CountryFeedSwitcher(
     } else {
       next.set("country", target.code);
     }
+    // Owner-authorised 2026-11-01 · Batch E.2 · fire the feed-mode
+    // entry overlay once on the destination route. FeedModeEntryOverlay
+    // reads `entering=1`, triggers the country-flavoured burst + pill,
+    // then router.replace strips the flag so refresh / back-forward
+    // never retriggers.
+    next.set("entering", "1");
     const q = next.toString();
     const href = q.length > 0 ? `${pathname}?${q}` : pathname;
     router.push(href);
