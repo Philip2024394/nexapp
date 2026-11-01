@@ -43,6 +43,13 @@ import { CountryFeedSwitcher } from "@/components/nex-native/nex-feed/CountryFee
 // "Live Ireland" / "Live World" pill when the viewer lands on the
 // destination route carrying `?entering=1` (appended by the switcher).
 import { FeedModeEntryOverlay } from "@/components/nex-native/nex-feed/FeedModeEntryOverlay";
+// Owner-authorised 2026-11-01 · Social Commerce Phase 8 · right-rail
+// Seller Shop Drawer. Shows the broadcaster's live products when a
+// shop + ≥1 product exists ("no empty icons"). Reuses sealed
+// nex_product + nex_business + /profile/<handle> per Doctrine D3.
+import { SellerShopDrawer } from "@/components/nex-native/nex-feed/_seller-shop-drawer";
+import { listBusinessesByOwner } from "@/lib/nex-native/business-service";
+import { getProductThumbnailsByBusiness } from "@/lib/nex-native/product-service";
 // Owner directive 2026-11-01 · Batch E.1 · My Live Music target.
 // Resolves the signed-in viewer's own active-slot track OR most
 // recent eligible shared_live track · null if neither exists.
@@ -73,6 +80,46 @@ export const metadata = {
 };
 
 export const dynamic = "force-dynamic";
+
+// Owner-authorised 2026-11-01 · Social Commerce Phase 8 · server-side
+// resolver for the broadcaster's shop + live products. Picks the
+// FIRST business owned by the broadcaster (consistent with existing
+// business-page conventions) and lists up to 24 live-status product
+// thumbnails. Returns null when the broadcaster has no business or
+// no live products · the drawer stays mounted null so the right-rail
+// icon never shows for a shopless creator ("no empty icons").
+async function resolveSellerShopForBroadcaster(
+  ownerAccountId: string | null | undefined,
+): Promise<{
+  readonly products: ReadonlyArray<{
+    readonly id: string;
+    readonly name: string;
+    readonly pricePence: number | null;
+    readonly currency: string | null;
+    readonly imageUrl: string | null;
+  }>;
+} | null> {
+  if (!ownerAccountId) return null;
+  try {
+    const businesses = await listBusinessesByOwner(ownerAccountId);
+    if (businesses.length === 0) return null;
+    const business = businesses[0];
+    if (!business) return null;
+    const thumbnails = await getProductThumbnailsByBusiness(business.id, 24);
+    if (thumbnails.length === 0) return null;
+    return {
+      products: thumbnails.map((p) => ({
+        id: p.id,
+        name: p.name,
+        pricePence: p.price_pence,
+        currency: p.currency,
+        imageUrl: p.image_url,
+      })),
+    };
+  } catch {
+    return null;
+  }
+}
 
 export default async function NexFeedViewerPage({
   params,
@@ -638,6 +685,13 @@ export default async function NexFeedViewerPage({
     const broadcasterCountryCode = broadcasterCountryInfo.iso;
     const isIrishBroadcaster = broadcasterCountryInfo.isIrish;
 
+    // Owner-authorised 2026-11-01 · Social Commerce Phase 8 · resolve
+    // the broadcaster's seller shop + live products so the right-rail
+    // icon only renders when the shop is non-empty.
+    const sellerShop = await resolveSellerShopForBroadcaster(
+      musicEntry.ownerAccountId,
+    );
+
     return (
       <>
         <MusicViewerClient
@@ -686,6 +740,21 @@ export default async function NexFeedViewerPage({
             toggleTarget={switcherTarget}
           />
         </div>
+        {/* Owner-authorised 2026-11-01 · Social Commerce Phase 8 · right-
+         *  rail Seller Shop Drawer · null-safe (hidden when no shop or no
+         *  live products). Positioned 60px above the switcher by the
+         *  component itself. */}
+        {sellerShop ? (
+          <SellerShopDrawer
+            broadcaster={{
+              accountId: musicEntry.ownerAccountId,
+              displayName: musicEntry.ownerDisplayName,
+              avatarUrl: musicEntry.ownerAvatarUrl,
+              nexHandle: musicEntry.ownerNexHandle,
+            }}
+            products={sellerShop.products}
+          />
+        ) : null}
         {/* Owner-authorised 2026-11-01 · Batch E.2.c · feed-mode entry
          *  overlay · fires once when the viewer lands on this route
          *  with `?entering=1` (appended by CountryFeedSwitcher). */}
@@ -711,6 +780,45 @@ export default async function NexFeedViewerPage({
   const [nextPublicUrl, prevPublicUrl] = await Promise.all([
     resolveIfVideo(nextId),
     resolveIfVideo(prevId),
+  ]);
+
+  // Owner-authorised 2026-11-01 · Social Commerce Phase 8 · same
+  // Seller Shop Drawer treatment on the video branch. The video row
+  // carries owner_account_id; broadcaster display name + handle +
+  // avatar come from nex_account + nex_account_profile. Null-safe
+  // throughout · failure or empty shop → no drawer mounted.
+  const videoOwnerId = current.video.owner_account_id ?? null;
+  const [videoBroadcaster, videoSellerShop] = await Promise.all([
+    (async (): Promise<{
+      readonly displayName: string;
+      readonly nexHandle: string | null;
+      readonly avatarUrl: string | null;
+    } | null> => {
+      if (!videoOwnerId) return null;
+      try {
+        const [{ data: acct }, { data: prof }] = await Promise.all([
+          nexSupabaseAdmin
+            .from("nex_account")
+            .select("display_name, nex_handle")
+            .eq("id", videoOwnerId)
+            .maybeSingle<{ display_name: string; nex_handle: string | null }>(),
+          nexSupabaseAdmin
+            .from("nex_account_profile")
+            .select("avatar_url")
+            .eq("account_id", videoOwnerId)
+            .maybeSingle<{ avatar_url: string | null }>(),
+        ]);
+        if (!acct) return null;
+        return {
+          displayName: acct.display_name,
+          nexHandle: acct.nex_handle,
+          avatarUrl: prof?.avatar_url ?? null,
+        };
+      } catch {
+        return null;
+      }
+    })(),
+    resolveSellerShopForBroadcaster(videoOwnerId),
   ]);
 
   const chain = chainSlugRaw ? getCategoryChain(chainSlugRaw) : null;
@@ -747,6 +855,19 @@ export default async function NexFeedViewerPage({
           toggleTarget={switcherTarget}
         />
       </div>
+      {/* Owner-authorised 2026-11-01 · Social Commerce Phase 8 · same
+       *  Seller Shop Drawer mount as the music branch · null-safe. */}
+      {videoBroadcaster && videoSellerShop && videoOwnerId ? (
+        <SellerShopDrawer
+          broadcaster={{
+            accountId: videoOwnerId,
+            displayName: videoBroadcaster.displayName,
+            avatarUrl: videoBroadcaster.avatarUrl,
+            nexHandle: videoBroadcaster.nexHandle,
+          }}
+          products={videoSellerShop.products}
+        />
+      ) : null}
       {/* Owner-authorised 2026-11-01 · Batch E.2.c · same overlay mount
        *  as the music branch above. One component, same semantics. */}
       <FeedModeEntryOverlay
