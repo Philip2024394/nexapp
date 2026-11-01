@@ -52,6 +52,11 @@ function rateLimitedReject(
   };
 }
 import { getMusicStorageAdapter } from "@/lib/nex-native/music/storage-adapter";
+// Owner-authorised 2026-11-01 · signed-URL cache invalidation hook ·
+// Option A fix. Imported directly from the Supabase adapter module
+// (not re-exported via the barrel) because the invalidation is
+// Supabase-specific state; the fs-dev adapter has no cache to flush.
+import { invalidateSignedUrlCache } from "@/lib/nex-native/music/storage-adapter/supabase-storage-adapter";
 import {
   validateSpotifyUrl,
   validateYouTubeUrl,
@@ -518,23 +523,49 @@ export async function hardDeleteMusicTrackAction(input: {
   }
   // Owner-authorised 2026-10-31 (Phase B+): factory routes per
   // reference prefix. Delete handles both fs:// and sb:// cleanly.
+  //
+  // Owner-authorised 2026-11-01 · signed-URL cache invalidation.
+  // After each SUCCESSFUL deleteObject on an `sb://` reference, we
+  // flush the matching cache entry so a future read of the same
+  // (ownerAccountId, reference) key re-mints instead of serving a URL
+  // that now points at a deleted object. Deduplicate against the rare
+  // case where media_url === cover_image_url (defensive · music audio
+  // and image live under distinct objectKeys today). Invalidation is
+  // tied to SUCCESS: a thrown deleteObject keeps the cache intact so
+  // we never advertise invalidation we did not perform.
+  const invalidated = new Set<string>();
+  const invalidateIfSupabase = (reference: string | null): void => {
+    if (!reference) return;
+    if (!reference.startsWith("sb://")) return;
+    if (invalidated.has(reference)) return;
+    invalidated.add(reference);
+    invalidateSignedUrlCache(existing.owner_account_id, reference);
+  };
   try {
     if (existing.media_url) {
-      await getMusicStorageAdapter(existing.media_url).deleteObject({
+      const result = await getMusicStorageAdapter(
+        existing.media_url,
+      ).deleteObject({
         reference: existing.media_url,
       });
+      if (result.deleted) invalidateIfSupabase(existing.media_url);
     }
     if (
       existing.cover_image_url &&
       (existing.cover_image_url.startsWith("fs://") ||
         existing.cover_image_url.startsWith("sb://"))
     ) {
-      await getMusicStorageAdapter(existing.cover_image_url).deleteObject({
+      const result = await getMusicStorageAdapter(
+        existing.cover_image_url,
+      ).deleteObject({
         reference: existing.cover_image_url,
       });
+      if (result.deleted) invalidateIfSupabase(existing.cover_image_url);
     }
   } catch {
-    // Non-fatal · continue to row delete.
+    // Non-fatal · continue to row delete. On throw, no invalidation
+    // is performed; cached entries age out via the 10-min safety
+    // margin on their next read.
   }
   const row = await hardDeleteTrack({
     trackId: input.trackId,

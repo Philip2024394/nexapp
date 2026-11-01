@@ -46,6 +46,107 @@ import { nexSupabaseAdmin } from "../../supabase-admin";
 
 const BUCKET = "nex-music-media";
 
+// ====================================================================
+// Owner-authorised 2026-11-01 · Signed-URL cache (Option A).
+// --------------------------------------------------------------------
+// Problem: `createSignedUrl` is non-idempotent · each call for the
+// same storage object produces a different URL (different `exp` + HMAC
+// signature). Confirmed empirically 2026-11-01 against Ireland
+// localhost: slide N's `nextOwnerCoverUrl` and slide N+1's
+// `coverSignedUrl` for the same object had identical object paths but
+// different `token=` query strings. Browser HTTP cache keys on the
+// full URL · the sibling-cover preload never produced a cache hit.
+//
+// Fix: an in-memory, bounded, LRU cache keyed by
+// `${ownerAccountId}:${reference}`. Both call sites (`mintSigned` for
+// the current slide, `mintUpNext` for the next slide) now share a
+// single mint per key per container, so slide N's preload URL
+// matches slide N+1's img URL on the same container.
+//
+// Important assumption (worth re-reading before any future change):
+// `reference` is treated as a stable identifier for the storage
+// object's identity (owner + objectKey · see parseReference below).
+// Today there is NO same-reference content replacement path for
+// music covers — a new upload creates a new objectKey → new
+// reference → new cache key. If a future feature introduces
+// in-place content replacement under an existing reference, that
+// path MUST call `invalidateSignedUrlCache(ownerAccountId, reference)`
+// or the cache will serve a URL that signs the correct access to the
+// now-stale bytes.
+//
+// Cross-container limitation: Vercel scales horizontally. Each
+// serverless container owns its own cache. Users whose consecutive
+// swipes land on different containers see the pre-fix behaviour for
+// that one transition. Within a warm container, URLs are stable.
+// A shared cache (Vercel KV / Redis) is a follow-up if measurements
+// show instance bouncing dominates — the public API here (one
+// `invalidateSignedUrlCache` function) is swap-ready for that
+// evolution.
+// ====================================================================
+
+const CACHE_SAFETY_MARGIN_MS = 600_000; // 10 min remaining required
+const CACHE_MAX_ENTRIES = 1000;
+
+interface CacheEntry {
+  readonly signedUrl: string;
+  readonly expiresAt: Date;
+}
+
+// Insertion-order Map used as an LRU. On hit, we delete + reinsert
+// so the entry moves to the back. On overflow, Map.keys().next()
+// yields the oldest key, which we evict.
+const signedUrlCache = new Map<string, CacheEntry>();
+
+// In-flight dedupe: concurrent misses for the same key share one
+// Supabase round-trip. The entry is removed in the mint's `finally`
+// so a settled promise never pins memory.
+const inFlightMints = new Map<string, Promise<SignedReadUrlResult>>();
+
+function cacheKey(ownerAccountId: string, reference: string): string {
+  return `${sanitiseKeyPart(ownerAccountId)}:${reference}`;
+}
+
+function hasEnoughValidityLeft(entry: CacheEntry): boolean {
+  return entry.expiresAt.getTime() - Date.now() >= CACHE_SAFETY_MARGIN_MS;
+}
+
+function evictOldestIfOverflow(): void {
+  if (signedUrlCache.size <= CACHE_MAX_ENTRIES) return;
+  const oldest = signedUrlCache.keys().next().value;
+  if (typeof oldest === "string") signedUrlCache.delete(oldest);
+}
+
+/** Public cache-invalidation hook. Call from any flow that deletes
+ *  or (future) replaces the storage object identified by
+ *  (ownerAccountId, reference). Accepts BOTH values so the invalidation
+ *  contract matches the cache's tenant key exactly · passing only
+ *  `reference` would risk accepting a mismatched owner.
+ *
+ *  Idempotent · safe to call multiple times with the same inputs.
+ *  Safe to call for a non-`sb://` reference (no-op) · the caller does
+ *  not need to filter by prefix. */
+export function invalidateSignedUrlCache(
+  ownerAccountId: string,
+  reference: string,
+): void {
+  signedUrlCache.delete(cacheKey(ownerAccountId, reference));
+}
+
+/** Test-only hook. Clears both the cache and in-flight state.
+ *  Named with the `__` prefix + `ForTests` suffix so grep for
+ *  production use at code review surfaces any accidental call. */
+export function __clearSignedUrlCacheForTests(): void {
+  signedUrlCache.clear();
+  inFlightMints.clear();
+}
+
+/** Test-only hook. Returns the current cache size without exposing
+ *  entries · lets a test assert eviction / population without
+ *  revealing signed URLs or tokens. */
+export function __signedUrlCacheSizeForTests(): number {
+  return signedUrlCache.size;
+}
+
 function sanitiseKeyPart(part: string): string {
   // Match the dev adapter's sanitiser so an owner_account_id or
   // object_key from the DB layer is accepted identically.
@@ -97,34 +198,73 @@ export const supabaseMusicStorageAdapter: MusicMediaStorage = {
   async getSignedReadUrl(
     args: SignedReadUrlArgs,
   ): Promise<SignedReadUrlResult> {
+    // Validate + ownership-check BEFORE any cache lookup so a bad
+    // reference or owner-mismatch never shortcuts through the cache.
+    // These checks are cheap pure-string operations.
     const parsed = parseReference(args.reference);
     if (!parsed) {
       throw new Error(
         `supabase-music-storage.getSignedReadUrl: bad reference ${args.reference}`,
       );
     }
-    // Ownership double-check at the adapter boundary. Caller is also
-    // expected to gate — this is defence-in-depth so a leaked
-    // reference can't be read by an unrelated account_id.
     if (parsed.ownerAccountId !== sanitiseKeyPart(args.ownerAccountId)) {
       throw new Error(
         `supabase-music-storage.getSignedReadUrl: reference owner mismatch`,
       );
     }
+
+    // Owner-authorised 2026-11-01 · signed-URL cache lookup.
+    // The key is deliberately (ownerAccountId, reference) · owner
+    // mismatch above already short-circuits, so hits always answer
+    // the owner that minted the entry.
+    const key = cacheKey(args.ownerAccountId, args.reference);
+    const hit = signedUrlCache.get(key);
+    if (hit && hasEnoughValidityLeft(hit)) {
+      // LRU bump: delete + reinsert so the entry becomes "most recently
+      // used" in insertion order · guarantees eviction prefers the
+      // genuinely coldest key.
+      signedUrlCache.delete(key);
+      signedUrlCache.set(key, hit);
+      return hit;
+    }
+    // Stale entry: drop it so a fresh mint replaces it below rather
+    // than returning insufficient validity to the caller.
+    if (hit) signedUrlCache.delete(key);
+
+    // In-flight dedupe: if a concurrent request is already minting
+    // the same key, reuse its promise. Rejection is shared too · the
+    // caller sees the same error, which is semantically correct for
+    // identical inputs.
+    const existingInFlight = inFlightMints.get(key);
+    if (existingInFlight) return existingInFlight;
+
     const ttl = Math.min(Math.max(args.expiresInSeconds, 1), 3600);
     const objectPath = `${parsed.ownerAccountId}/${parsed.objectKey}`;
-    const { data, error } = await nexSupabaseAdmin.storage
-      .from(BUCKET)
-      .createSignedUrl(objectPath, ttl);
-    if (error || !data) {
-      throw new Error(
-        `supabase-music-storage.createSignedUrl(${objectPath}): ${error?.message ?? "no url returned"}`,
-      );
-    }
-    return {
-      signedUrl: data.signedUrl,
-      expiresAt: new Date(Date.now() + ttl * 1000),
-    };
+    const minted = (async (): Promise<SignedReadUrlResult> => {
+      try {
+        const { data, error } = await nexSupabaseAdmin.storage
+          .from(BUCKET)
+          .createSignedUrl(objectPath, ttl);
+        if (error || !data) {
+          throw new Error(
+            `supabase-music-storage.createSignedUrl(${objectPath}): ${error?.message ?? "no url returned"}`,
+          );
+        }
+        const result: SignedReadUrlResult = {
+          signedUrl: data.signedUrl,
+          expiresAt: new Date(Date.now() + ttl * 1000),
+        };
+        // Store the successful mint. Verified-remaining enforcement
+        // happens on NEXT read, so we trust the fresh TTL here.
+        signedUrlCache.set(key, result);
+        evictOldestIfOverflow();
+        return result;
+      } finally {
+        inFlightMints.delete(key);
+      }
+    })();
+    inFlightMints.set(key, minted);
+    return minted;
   },
 
   async deleteObject(args: { reference: string }): Promise<{
