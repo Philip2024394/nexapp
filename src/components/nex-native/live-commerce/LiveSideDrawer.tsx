@@ -416,11 +416,20 @@ export function LiveSideDrawer(props: LiveSideDrawerProps): React.JSX.Element {
             dataKey="shop"
             onNavigate={close}
           />
+          {/* Owner directive 2026-11-01 · Phase 5 of Social Commerce
+           *  roadmap · "the existing NEX membership packages must be
+           *  integrated into the side drawer, not forgotten or
+           *  replaced". The row already pointed at /packages; the
+           *  previous "Wallet" label was misleading (D1 of the
+           *  Social Commerce doctrine decisions · NEX never handles
+           *  cash balances · stored-value wallets explicitly out of
+           *  scope). Renamed to match the destination page's actual
+           *  identity. Sealed /packages page itself is untouched. */}
           <LiveDrawerRow
-            label="Wallet"
-            subtitle="Packages · subscription"
+            label="Membership Packages"
+            subtitle="Compare packages · upgrade or manage membership"
             href="/nex-native/packages"
-            dataKey="wallet"
+            dataKey="membership-packages"
             onNavigate={close}
           />
         </div>
