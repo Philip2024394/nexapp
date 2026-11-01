@@ -385,10 +385,15 @@ function ShopProductRow(props: {
 }): React.JSX.Element {
   const { product } = props;
   const price = formatPrice(product.pricePence, product.currency);
-  // Phase 10 glue · chat href carries `product=<id>` as a hint so the
-  // chat prefill (once wired) can auto-attach the product snapshot.
-  // Current chat route ignores unknown query params gracefully.
-  const chatHref = `/nex-native/chat/peer/${props.broadcaster.accountId}?product=${encodeURIComponent(product.id)}`;
+  // Owner-authorised 2026-11-01 · Phase 10 of Social Commerce roadmap
+  // "Chat About This Product". The sealed peer-chat page already
+  // reads `?pending_product=<id>` (Ask-Seller slice 2 · 2026-10-22):
+  // server-resolves the product snapshot, the composer renders a
+  // product-card chip above the pill, and the first send carries the
+  // sealed product attachment via sendPeerMessageOrShareProductAction.
+  // We use the exact sealed param name used elsewhere (see
+  // src/app/nex-native/cover/primitives.tsx:692).
+  const chatHref = `/nex-native/chat/peer/${props.broadcaster.accountId}?pending_product=${encodeURIComponent(product.id)}`;
   const detailHref = props.broadcaster.nexHandle
     ? `/nex-native/profile/${props.broadcaster.nexHandle}#product-${product.id}`
     : chatHref;
