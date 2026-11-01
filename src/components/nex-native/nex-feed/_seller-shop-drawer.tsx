@@ -794,10 +794,17 @@ function ProductDetailSheet(props: {
         role="dialog"
         aria-label={`${product.name} · details`}
         style={{
+          // Owner directive 2026-11-01 · "view details slider must be
+          // app size width screen" · pin the sheet to both viewport
+          // edges with left:0 + right:0 + width:100vw so the sheet
+          // reads as a full-width panel on any device, regardless of
+          // what desktop CSS might otherwise constrain.
           position: "fixed",
           left: 0,
           right: 0,
           bottom: 0,
+          width: "100vw",
+          maxWidth: "100vw",
           zIndex: 1101,
           height: "85vh",
           maxHeight: "85vh",
