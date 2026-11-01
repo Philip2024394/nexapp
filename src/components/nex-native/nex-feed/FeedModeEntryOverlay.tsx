@@ -49,7 +49,22 @@ export interface FeedModeEntryOverlayProps {
   readonly pillLabel: string;
 }
 
-const AUTO_DISMISS_MS = 1900;
+// Owner directive 2026-11-01 · "slow down the time when notification
+// change to live ireland user should see for 2 seconds and when
+// effect live world with image badge 1 second then image world 2
+// seconds · so user can see". Dismiss duration now per-world:
+//   · Ireland         → 2000 ms (owner-directed 2 s hold)
+//   · Worldwide feed  → 3000 ms (1 s burst + 2 s pill display per
+//                                 owner directive · WorldGlobeSpin's
+//                                 own SPIN_DURATION_MS is 1000 ms so
+//                                 the burst completes at 1 s and the
+//                                 pill stays visible for 2 more s)
+//   · Any other world → 1900 ms default fallback
+const AUTO_DISMISS_BY_WORLD: Record<string, number> = {
+  ireland: 2000,
+  "nex-original": 3000,
+};
+const AUTO_DISMISS_DEFAULT_MS = 1900;
 const PILL_HOLD_START_MS = 350;
 
 /** Trigger-only burst dispatch. Returns a single burst component for
@@ -99,15 +114,18 @@ export function FeedModeEntryOverlay(
     stripEnteringParam();
   }, [stripEnteringParam]);
 
+  const autoDismissMs =
+    AUTO_DISMISS_BY_WORLD[props.worldId] ?? AUTO_DISMISS_DEFAULT_MS;
+
   React.useEffect(() => {
     if (!entering) return;
     if (firedForUrlRef.current === urlKey) return;
     firedForUrlRef.current = urlKey;
     setTrigger(Date.now());
     setVisible(true);
-    const t = window.setTimeout(dismiss, AUTO_DISMISS_MS);
+    const t = window.setTimeout(dismiss, autoDismissMs);
     return () => window.clearTimeout(t);
-  }, [entering, urlKey, dismiss]);
+  }, [entering, urlKey, dismiss, autoDismissMs]);
 
   React.useEffect(() => {
     if (!visible) return;

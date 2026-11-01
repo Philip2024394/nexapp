@@ -25,7 +25,13 @@
 
 import * as React from "react";
 
-const SPIN_DURATION_MS = 1600;
+// Owner directive 2026-11-01 · "effect live world with image badge 1
+// second then image world 2 seconds". Burst duration shortened
+// 1600 → 1000 ms so the globe-spin + rays complete at exactly 1 s ·
+// the FeedModeEntryOverlay's parent dismiss timer (3000 ms total for
+// nex-original) then holds the "Live World" pill alone for the
+// remaining 2 s so the viewer has deliberate time to read it.
+const SPIN_DURATION_MS = 1000;
 const CLEANUP_SAFETY_MS = 400;
 const GLOBE_SIZE_PX = 240;
 

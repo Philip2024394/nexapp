@@ -1091,36 +1091,19 @@ export function VideoViewerClient({
               }}
             >
               {postedLabel ? `Broadcasted ${postedLabel}` : ""}
-              {/* Owner directive 2026-10-25 · Migration 221 · when the
-                  video's authoritative record carries `is_ai_generated
-                  === true` the header appends a compact red "(AI)"
-                  chip IMMEDIATELY after the broadcast date. Absence
-                  of the chip does NOT imply human origin (NEX makes
-                  no claim about unlabelled videos). The `?? false`
-                  normalisation protects pre-migration rows where the
-                  column is missing from the PostgREST read. */}
-              {(video.is_ai_generated ?? false) && (
-                <span
-                  data-nex-video-viewer-ai-chip
-                  aria-label="AI-generated video"
-                  style={{
-                    display: "inline-block",
-                    marginLeft: 6,
-                    padding: "0 5px",
-                    borderRadius: 4,
-                    background: "rgba(255, 51, 85, 0.14)",
-                    border: `1px solid ${NEX.red}`,
-                    color: NEX.red,
-                    fontSize: 10,
-                    fontWeight: 800,
-                    letterSpacing: "0.03em",
-                    lineHeight: 1.4,
-                    verticalAlign: "baseline",
-                  }}
-                >
-                  AI
-                </span>
-              )}
+              {/* Owner directive 2026-11-01 · supersedes Migration 221
+                  2026-10-25 Broadcasted-X chip position. "remove 1 of
+                  the ai badges from header" · the owner's current
+                  single-source AI signal is the chip placed
+                  IMMEDIATELY after the feedModeLabel ("Live Ireland" /
+                  "Live World") at line 1055+ in this file. Keeping two
+                  chips in the header is redundant · this sealed
+                  Broadcasted-X chip is retired. The data attribute
+                  `data-nex-video-viewer-ai-chip-title` on the retained
+                  chip is what the AI-video signal binds to going
+                  forward. Migration 221's `?? false` null-safety and
+                  the doctrine "absence does not imply human origin"
+                  are preserved on the retained chip. */}
               {devRoleBanner && (
                 /* Owner directive 2026-10-25 · "badge must displaying
                    for dev seller and dev user under broadcasting" ·
