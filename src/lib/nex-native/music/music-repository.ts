@@ -434,8 +434,19 @@ export async function listTracksByOwner(
   ownerAccountId: string,
   options?: { readonly includeRemoved?: boolean },
 ): Promise<NexMusicTrackRow[]> {
-  const snap = await loadSnapshot();
   const includeRemoved = options?.includeRemoved === true;
+  if (process.env.NODE_ENV === "production") {
+    const { nexSupabaseAdmin } = await import("../supabase-admin");
+    const base = nexSupabaseAdmin
+      .from("nex_music_track")
+      .select("*")
+      .eq("owner_account_id", ownerAccountId);
+    const q = includeRemoved ? base : base.neq("visibility", "removed");
+    const { data, error } = await q.order("created_at", { ascending: false });
+    if (error) return [];
+    return (data ?? []) as NexMusicTrackRow[];
+  }
+  const snap = await loadSnapshot();
   return snap.tracks
     .filter((t) => t.owner_account_id === ownerAccountId)
     .filter((t) => includeRemoved || t.visibility !== "removed")
