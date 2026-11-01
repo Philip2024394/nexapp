@@ -38,6 +38,11 @@ import {
 } from "@/lib/nex-native/nex-feed/country-feed-mode";
 import { listCountryFeedEntries } from "@/lib/nex-native/nex-feed/ireland-feed-reader";
 import { CountryFeedSwitcher } from "@/components/nex-native/nex-feed/CountryFeedSwitcher";
+// Owner-authorised 2026-11-01 · Batch E.2.c · entry overlay for the
+// feed-mode switch · fires the country-flavoured burst + the large
+// "Live Ireland" / "Live World" pill when the viewer lands on the
+// destination route carrying `?entering=1` (appended by the switcher).
+import { FeedModeEntryOverlay } from "@/components/nex-native/nex-feed/FeedModeEntryOverlay";
 // Owner directive 2026-11-01 · Batch E.1 · My Live Music target.
 // Resolves the signed-in viewer's own active-slot track OR most
 // recent eligible shared_live track · null if neither exists.
@@ -100,6 +105,19 @@ export default async function NexFeedViewerPage({
     countryMode.kind === "worldwide"
       ? "Live World"
       : `Live ${countryMode.displayName}`;
+
+  // Owner-authorised 2026-11-01 · Batch E.2.c · world id for the entry
+  // overlay burst dispatch. Worldwide → the sealed nex-original world
+  // (globe spin). Country mode → lowercase country code mapped to the
+  // world registry key. Ireland is currently the only country with a
+  // dedicated burst (shamrock); future countries register their own
+  // burst in FeedModeEntryOverlay's dispatch map (one-liner).
+  const feedModeWorldId: string =
+    countryMode.kind === "worldwide"
+      ? "nex-original"
+      : countryMode.code === "IE"
+        ? "ireland"
+        : countryMode.code.toLowerCase();
   // The switcher toggles between Worldwide and ONE country (Batch E
   // scope · multi-country toggle deferred to Stage 3B.1). Preference
   // chain:
@@ -668,6 +686,13 @@ export default async function NexFeedViewerPage({
             toggleTarget={switcherTarget}
           />
         </div>
+        {/* Owner-authorised 2026-11-01 · Batch E.2.c · feed-mode entry
+         *  overlay · fires once when the viewer lands on this route
+         *  with `?entering=1` (appended by CountryFeedSwitcher). */}
+        <FeedModeEntryOverlay
+          worldId={feedModeWorldId}
+          pillLabel={feedModeLabel}
+        />
         {/* Owner-authorised 2026-11-01 · P0-1 · perf overlay (dev-only) */}
         <NexPerfOverlay />
       </>
@@ -722,6 +747,12 @@ export default async function NexFeedViewerPage({
           toggleTarget={switcherTarget}
         />
       </div>
+      {/* Owner-authorised 2026-11-01 · Batch E.2.c · same overlay mount
+       *  as the music branch above. One component, same semantics. */}
+      <FeedModeEntryOverlay
+        worldId={feedModeWorldId}
+        pillLabel={feedModeLabel}
+      />
     </>
   );
 }
