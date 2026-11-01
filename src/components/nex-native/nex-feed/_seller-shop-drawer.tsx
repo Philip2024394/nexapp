@@ -201,13 +201,21 @@ export function SellerShopDrawer(
                 // capped at 360px for sanity.
                 width: "min(360px, 70vw)",
                 zIndex: 101,
+                // Owner directive 2026-11-01 · "shop slider should be
+                // same color theme as our slider on the right side".
+                // Mirror LiveSideDrawer's sealed background chain so
+                // Ireland deployment serves the sealed Ireland-green
+                // drawer-bg and Worldwide inherits the sealed navy.
+                // All future worlds opt-in via --nex-world-drawer-bg.
                 background:
-                  "linear-gradient(180deg, var(--nex-world-surface, #061322) 0%, var(--nex-world-surface-sunken, #030B18) 100%)",
-                borderRight:
-                  "1px solid var(--nex-world-border-accent, rgba(0,175,255,0.35))",
+                  "var(--nex-world-drawer-bg, var(--nex-world-background-base, #020914))",
+                // Right seam · hairline matches LiveSideDrawer's left
+                // seam so the two drawers read as one visual family.
+                borderRight: "1px solid rgba(255,255,255,0.08)",
                 boxShadow: "4px 0 32px rgba(0,0,0,0.6)",
                 display: "flex",
                 flexDirection: "column",
+                overflowX: "hidden",
                 color: "var(--nex-world-text-primary, #F2F5F8)",
                 fontFamily: "Inter, system-ui, sans-serif",
                 paddingTop: "env(safe-area-inset-top, 0px)",
@@ -215,6 +223,54 @@ export function SellerShopDrawer(
                 paddingLeft: "env(safe-area-inset-left, 0px)",
               }}
             >
+              {/* Owner directive 2026-11-01 · "edge running small light".
+               *  Mirrors LiveSideDrawer's running-gold accent · same
+               *  3400ms keyframe · same gating on the sealed
+               *  --nex-world-live-drawer-edge-light-display CSS var so
+               *  the overlay only shows where the world opts in
+               *  (Ireland today). Positioned on the RIGHT seam here
+               *  (shop drawer slides from left · meets the viewer at
+               *  its right edge) · the LiveSideDrawer runs its light
+               *  on the LEFT seam (mirror symmetry). */}
+              <style>{`
+                @keyframes nex-seller-shop-drawer-edge-light {
+                  0%   { transform: translateY(-100px); opacity: 0; }
+                  12%  { opacity: 1; }
+                  88%  { opacity: 1; }
+                  100% { transform: translateY(calc(100vh + 20px)); opacity: 0; }
+                }
+              `}</style>
+              <div
+                aria-hidden
+                data-nex-seller-shop-drawer-edge
+                style={{
+                  display:
+                    "var(--nex-world-live-drawer-edge-light-display, none)",
+                  position: "absolute",
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 1,
+                  overflow: "hidden",
+                  pointerEvents: "none",
+                  zIndex: 1,
+                }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    right: -1,
+                    width: 3,
+                    height: 90,
+                    background:
+                      "linear-gradient(180deg, rgba(198,161,91,0) 0%, #C6A15B 50%, rgba(198,161,91,0) 100%)",
+                    boxShadow: "0 0 10px rgba(198,161,91,0.6)",
+                    animation:
+                      "nex-seller-shop-drawer-edge-light 3400ms linear infinite",
+                    willChange: "transform",
+                  }}
+                />
+              </div>
               <ShopHeader
                 broadcaster={props.broadcaster}
                 productCount={props.products.length}
