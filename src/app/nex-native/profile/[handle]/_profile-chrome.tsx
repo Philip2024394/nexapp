@@ -73,19 +73,24 @@ export function ProfileChrome(props: ProfileChromeProps): React.JSX.Element {
   // no longer consumed here.
   const isSignedIn = props.drawerSession !== null;
 
-  // Owner directive 2026-11-02 · the gray header strip (translucent
-  // navy background + blur + cyan rim) is removed from the profile
-  // page. The container stays as a sticky top-level flex wrapper so
-  // the ControlDrawer trigger and the anonymous Sign-in link remain
-  // in position + accessible on scroll · but the bar itself paints
-  // nothing. One less piece of chrome between the viewer and the
-  // profile hero.
+  // Owner directive 2026-11-02 (follow-up · hero-image fills to top) ·
+  // the gray header strip is removed (051f210) AND the container is
+  // now floated out of flow (position: absolute). This lets the
+  // profile cover image start at the very top of the viewport under
+  // the safe-area notch, while the ControlDrawer three-dots and the
+  // anonymous Sign-in link stay in their top-right / top-left
+  // positions floating directly over the cover. The sticky behaviour
+  // is retired · scrolling past the hero removes the chrome from
+  // view, which matches other NEX player surfaces (video/music post
+  // chrome also floats over the surface, not stuck to viewport).
   return (
     <header
       data-nex-profile-chrome
       style={{
-        position: "sticky",
+        position: "absolute",
         top: 0,
+        left: 0,
+        right: 0,
         zIndex: 20,
         display: "flex",
         alignItems: "center",
@@ -95,7 +100,12 @@ export function ProfileChrome(props: ProfileChromeProps): React.JSX.Element {
         // the anonymous Sign-in link path.
         justifyContent: isSignedIn ? "flex-end" : "space-between",
         gap: 10,
-        padding: "10px 12px",
+        // Owner directive 2026-11-02 · chrome now floats over the
+        // cover · give it a safe-area-aware top offset so the three-
+        // dots trigger stays below the notch on devices that have
+        // one, and the standard 10px gutter on everything else.
+        padding:
+          "max(env(safe-area-inset-top, 0px), 10px) 12px 10px 12px",
         background: "transparent",
         borderBottom: "none",
         fontFamily: SANS,
