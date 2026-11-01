@@ -64,12 +64,12 @@ import {
 } from "./_pending-invites-mock";
 
 const NEX = {
-  bgNavy: "#050F1E",
+  bgNavy: "var(--nex-world-drawer-bg, #050F1E)",
   bgPanel: "rgba(2,9,20,0.92)",
   text: "#F2F5F8",
   textMute: "#7D9BC0",
   unreadRed: "#B30000",
-  cyan: "#00AFFF",
+  cyan: "var(--nex-world-secondary, #00AFFF)",
   // Accept-green token · same hex as the sealed online-presence
   // green used in the picker card. Inbound Accept CTA + chip stroke.
   acceptGreen: "#16D66B",

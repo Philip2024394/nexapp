@@ -55,7 +55,7 @@ import {
 } from "./_create-group-flip-state";
 
 const NEX = {
-  cyan: "#00AFFF",
+  cyan: "var(--nex-world-secondary, #00AFFF)",
   textPrimary: "#F2F5F8",
   textSecondary: "#B5C3D6",
 };

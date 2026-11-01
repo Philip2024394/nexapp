@@ -1346,11 +1346,22 @@ function DoorIcon() {
 
 // ─── Styles ────────────────────────────────────────────────────────
 
-const CYAN = "#00AFFF";
+// Owner-authorised 2026-11-01 · Social Commerce palette sweep · Path A ·
+// step 2: ControlDrawer picks up Ireland theming through the sealed
+// world tokens. On Worldwide/Indonesia/any deployment that doesn't
+// override `--nex-world-secondary` or `--nex-world-drawer-bg`, the
+// hex fallbacks preserve byte-identical rendering. On Ireland:
+//   CYAN   → #C6A15B (sealed Irish gold · matches drawer edge-light,
+//                     Visit Shop badge, View Details pill)
+//   PANEL  → #123D2B (sealed Ireland drawer-bg · matches LiveSideDrawer)
+// Universal colours (TEXT · MUTED · DANGER · EMERGENCY_DARK_RED) stay
+// hardcoded because they signal universal legibility / destructive /
+// emergency semantics.
+const CYAN = "var(--nex-world-secondary, #00AFFF)";
 const TEXT = "#F2F5F8";
 const MUTED = "#7D9BC0";
 const BG = "var(--nex-world-background-base, #020914)";
-const PANEL = "#0A1526";
+const PANEL = "var(--nex-world-drawer-bg, #0A1526)";
 const PANEL_BORDER = "rgba(0,175,255,0.18)";
 const DANGER = "#FF4D4F";
 const DANGER_INK = "#1A0505";
@@ -1649,8 +1660,8 @@ const identityCopyBtnStyle: React.CSSProperties = {
   minWidth: 60,
   minHeight: 32,
   padding: "0 12px",
-  background: "#00AFFF",
-  border: "1px solid #00AFFF",
+  background: "var(--nex-world-secondary, #00AFFF)",
+  border: "1px solid var(--nex-world-secondary, #00AFFF)",
   borderRadius: 8,
   color: "#001223",
   fontSize: 11,

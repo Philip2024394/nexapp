@@ -44,11 +44,11 @@
 import * as React from "react";
 
 const NEX = {
-  bgNavy: "#050F1E",
+  bgNavy: "var(--nex-world-drawer-bg, #050F1E)",
   bgPanel: "rgba(2,9,20,0.96)",
   text: "#F2F5F8",
   textMute: "#7D9BC0",
-  cyan: "#00AFFF",
+  cyan: "var(--nex-world-secondary, #00AFFF)",
 };
 
 interface GroupTermsModalProps {

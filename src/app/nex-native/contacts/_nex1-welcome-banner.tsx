@@ -70,7 +70,7 @@ export { NEX1_BANNER_DISMISSED_COOKIE } from "./_banner-visibility";
 const NEX = {
   text: "#F2F5F8",
   textDim: "#B5C3D6",
-  cyan: "#00AFFF",
+  cyan: "var(--nex-world-secondary, #00AFFF)",
   cyanFaint: "rgba(0, 175, 255, 0.14)",
   cyanSoft: "rgba(0, 175, 255, 0.42)",
   orange: "#FF7200",

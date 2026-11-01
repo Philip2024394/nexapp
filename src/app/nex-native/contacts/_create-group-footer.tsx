@@ -50,7 +50,7 @@ const NEX = {
   bgPanel: "rgba(2,9,20,0.96)",
   text: "#F2F5F8",
   textMute: "#7D9BC0",
-  cyan: "#00AFFF",
+  cyan: "var(--nex-world-secondary, #00AFFF)",
 };
 
 /* ─── Footer-height singleton ──────────────────────────────────── */

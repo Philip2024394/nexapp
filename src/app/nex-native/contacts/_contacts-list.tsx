@@ -68,7 +68,7 @@ export interface ContactRowDisplay {
 }
 
 const NEX = {
-  cyan: "#00AFFF",
+  cyan: "var(--nex-world-secondary, #00AFFF)",
   textPrimary: "#F2F5F8",
   textMuted: "#7D9BC0",
 };

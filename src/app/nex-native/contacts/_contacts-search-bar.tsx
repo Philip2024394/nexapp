@@ -16,7 +16,7 @@ import * as React from "react";
 const NEX = {
   textPrimary: "#F2F5F8",
   textSecondary: "#7D9BC0",
-  cyan: "#00AFFF",
+  cyan: "var(--nex-world-secondary, #00AFFF)",
   cyanSoft: "rgba(0, 175, 255, 0.18)",
   panel: "rgba(3, 16, 29, 0.72)",
 };

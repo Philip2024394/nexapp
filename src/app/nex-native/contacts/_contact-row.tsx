@@ -31,7 +31,7 @@ import Link from "next/link";
 import type { ContactRowDisplay } from "./_contacts-list";
 
 const NEX = {
-  bgNavy: "#050F1E",
+  bgNavy: "var(--nex-world-drawer-bg, #050F1E)",
   text: "#F2F5F8",
   textMute: "#7D9BC0",
   // Presence vocabulary — identical palette to the picker.

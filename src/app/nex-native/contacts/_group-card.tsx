@@ -23,7 +23,7 @@ import { formatMinutesAgo } from "./_mock-groups";
 const NEX = {
   bgPanel: "rgba(2,9,20,0.92)",
   pink: "#FF4FD7",
-  cyan: "#00AFFF",
+  cyan: "var(--nex-world-secondary, #00AFFF)",
   orange: "#FF7200",
   text: "#F2F5F8",
   textMute: "#7D9BC0",

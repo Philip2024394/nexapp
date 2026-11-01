@@ -28,7 +28,7 @@ import {
 export type ContactsFilter = "all" | "friends" | "business" | "dating" | "groups";
 
 const NEX = {
-  cyan: "#00AFFF",
+  cyan: "var(--nex-world-secondary, #00AFFF)",
   cyanSoft: "rgba(0, 175, 255, 0.35)",
   textPrimary: "#F2F5F8",
   textMuted: "#7D9BC0",

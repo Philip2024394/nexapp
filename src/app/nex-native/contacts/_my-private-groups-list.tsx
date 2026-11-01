@@ -22,7 +22,7 @@ import type { MockGroup } from "./_mock-groups";
 
 const NEX = {
   textMute: "#7D9BC0",
-  cyan: "#00AFFF",
+  cyan: "var(--nex-world-secondary, #00AFFF)",
 };
 
 interface MyPrivateGroupsListProps {

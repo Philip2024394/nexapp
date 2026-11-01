@@ -55,11 +55,11 @@ const MUTE_STORAGE_KEY = "nex-community-notice-muted-v1";
 const UNREAD_MOCK_COUNT = 7; // mock-only · real count comes from server
 
 const NEX = {
-  cyan: "#00AFFF",
+  cyan: "var(--nex-world-secondary, #00AFFF)",
   text: "#F2F5F8",
   textMute: "#7D9BC0",
   unreadRed: "#B30000",
-  bgNavy: "#050F1E",
+  bgNavy: "var(--nex-world-drawer-bg, #050F1E)",
 };
 
 export function CommunityNoticeCard(): React.ReactElement {

@@ -26,7 +26,7 @@
 import * as React from "react";
 
 const NEX = {
-  cyan: "#00AFFF",
+  cyan: "var(--nex-world-secondary, #00AFFF)",
   cyanSoft: "rgba(0, 175, 255, 0.35)",
   cyanFaint: "rgba(0, 175, 255, 0.12)",
   bgDark: "var(--nex-world-background-base, #020914)",

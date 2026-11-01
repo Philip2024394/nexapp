@@ -33,7 +33,7 @@ import {
 const NEX = {
   text: "#F2F5F8",
   textMute: "#7D9BC0",
-  cyan: "#00AFFF",
+  cyan: "var(--nex-world-secondary, #00AFFF)",
 };
 
 /** Owner directive 2026-10-23 · "the create group page without
