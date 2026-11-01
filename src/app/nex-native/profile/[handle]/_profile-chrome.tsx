@@ -61,14 +61,16 @@ export interface ProfileChromeProps {
 }
 
 export function ProfileChrome(props: ProfileChromeProps): React.JSX.Element {
-  // Owner directive 2026-11-01 · "profile header no nex profile change
-  // to Nex" · uppercase "NEX-" prefix was reading as hard-brand chrome;
-  // owner wants a softer "Nex-" title-case for the viewer identifier
-  // in the profile chrome left-column.
-  const viewerNexId = props.viewerNexHandle
-    ? props.viewerNexHandle.replace(/^nex-/i, "Nex-")
-    : null;
-  const viewerInitials = initialsFromName(props.viewerDisplayName ?? "N");
+  // Owner directive 2026-11-01 (revised) · "remove from user profile
+  // page the header top left profile with ha in it" · the signed-in
+  // viewer's own avatar + Nex-xxxxx badge is retired from the profile
+  // chrome. Anonymous viewers still see a Sign-in link so they have
+  // an entry path. ControlDrawer on the right is unchanged.
+  // Earlier "NEX- → Nex-" rename (b7af5ee) is superseded · the badge
+  // itself no longer renders. viewerDisplayName / viewerNexHandle /
+  // viewerAvatarUrl props stay in the ProfileChromeProps interface
+  // to avoid rippling a type change through callers · they're just
+  // no longer consumed here.
   const isSignedIn = props.drawerSession !== null;
 
   return (
@@ -80,7 +82,11 @@ export function ProfileChrome(props: ProfileChromeProps): React.JSX.Element {
         zIndex: 20,
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
+        // Owner directive 2026-11-01 · left viewer-identity badge
+        // removed · header now right-aligns the ControlDrawer when
+        // the viewer is signed in · falls back to space-between for
+        // the anonymous Sign-in link path.
+        justifyContent: isSignedIn ? "flex-end" : "space-between",
         gap: 10,
         padding: "10px 12px",
         background: NEX.bgTint,
@@ -90,94 +96,12 @@ export function ProfileChrome(props: ProfileChromeProps): React.JSX.Element {
         fontFamily: SANS,
       }}
     >
-      {/* Owner directive 2026-10-17 · "if i am online should my
-          profile image in header ping · yes" · CSS pulse ring around
-          the viewer's own avatar when signed in. Pure CSS keyframe ·
-          zero JS state · battery-friendly. Honest signal · the
-          viewer IS online while viewing the page. Prefers-reduced-
-          motion override honoured below. */}
-      <style>{`
-        @keyframes nex-profile-chrome-ping {
-          0%   { box-shadow: 0 0 0 0 rgba(0, 175, 255, 0.55); }
-          70%  { box-shadow: 0 0 0 10px rgba(0, 175, 255, 0); }
-          100% { box-shadow: 0 0 0 0 rgba(0, 175, 255, 0); }
-        }
-        [data-nex-profile-chrome-ping] {
-          animation: nex-profile-chrome-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
-          will-change: box-shadow;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          [data-nex-profile-chrome-ping] { animation: none; }
-        }
-      `}</style>
-
-      {/* LEFT · viewer avatar + NEX ID. */}
-      {isSignedIn && viewerNexId ? (
-        <Link
-          href="/nex-native/profile/me"
-          data-nex-profile-chrome-identity
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            textDecoration: "none",
-            color: "inherit",
-          }}
-        >
-          {props.viewerAvatarUrl ? (
-            <img
-              src={props.viewerAvatarUrl}
-              alt=""
-              aria-hidden
-              data-nex-profile-chrome-ping
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: "50%",
-                objectFit: "cover",
-                border: `2px solid ${ACCENT}`,
-                background: ACCENT_FAINT,
-              }}
-            />
-          ) : (
-            <div
-              aria-hidden
-              data-nex-profile-chrome-ping
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: "50%",
-                display: "grid",
-                placeItems: "center",
-                border: `2px solid ${ACCENT}`,
-                background: ACCENT_FAINT,
-                color: ACCENT,
-                fontSize: 11,
-                fontWeight: 700,
-              }}
-            >
-              {viewerInitials}
-            </div>
-          )}
-          <span
-            style={{
-              // Owner directive 2026-10-17 (revised) · "nex in header
-              // should be white color · the NEX standard font rule" ·
-              // white text + NEX_FONT_SANS stack (Inter) · drops the
-              // monospace treatment. Still 18px/800 so the identifier
-              // reads strong in the chrome.
-              fontSize: 18,
-              fontWeight: 800,
-              color: NEX.text,
-              letterSpacing: 0.4,
-              fontFamily: NEX_FONT_SANS,
-            }}
-          >
-            {viewerNexId}
-          </span>
-        </Link>
-      ) : (
-        // Anonymous · show generic NEX ping-badge + Sign-in link.
+      {/* Owner directive 2026-11-01 · left viewer-identity badge
+          (avatar + Nex-xxxxx) removed. Anonymous viewers still see
+          the NEX ping badge + Sign-in link so they have a route in.
+          Signed-in viewers: the left column is intentionally empty
+          and the header right-aligns the ControlDrawer trigger. */}
+      {!isSignedIn && (
         <Link
           href="/nex-native/sign-in"
           data-nex-profile-chrome-signin
