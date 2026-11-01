@@ -195,7 +195,11 @@ export function SellerShopDrawer(
                 top: 0,
                 left: 0,
                 bottom: 0,
-                width: "min(360px, 85vw)",
+                // Owner directive 2026-11-01 · drawer opens at 70% of
+                // phone width · leaves 30% of the viewport showing the
+                // feed behind so the viewer stays oriented. Desktop
+                // capped at 360px for sanity.
+                width: "min(360px, 70vw)",
                 zIndex: 101,
                 background:
                   "linear-gradient(180deg, var(--nex-world-surface, #061322) 0%, var(--nex-world-surface-sunken, #030B18) 100%)",
