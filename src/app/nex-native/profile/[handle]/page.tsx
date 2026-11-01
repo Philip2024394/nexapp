@@ -1158,7 +1158,11 @@ function ProfileFooterSection(props: {
   readonly trustReportsOnFile: number;
   readonly displayName: string;
 }): React.JSX.Element | null {
-  if (!props.bio && !props.isSeller) return null;
+  // Owner directive 2026-11-02 · Safe Trade Report panel ALWAYS
+  // renders on every profile (buyer should always be able to see
+  // the account's standing · or clearly see "no shop active" when
+  // the profile is not a seller). Section itself never short-circuits
+  // now · it always has at least the Safe Trade panel.
 
   // Trim bio to a safe single-paragraph footprint. Full bio stays in
   // the data model + edit flow; the footer only shows a short preview.
@@ -1266,12 +1270,15 @@ function ProfileFooterSection(props: {
         ))}
       </div>
 
-      {/* Safe Trade Report facts panel · sellers only. Pop-up card
-       *  style on the profile · three honest facts a buyer needs:
-       *  complaints filed, posts flagged, account status. No reviews. */}
-      {props.isSeller ? (
+      {/* Safe Trade Report facts panel · ALWAYS visible. For sellers
+       *  it shows status + three honest facts (complaints, flagged
+       *  posts, account status). For non-sellers it shows a clear
+       *  "No shop active yet" row so the viewer knows the profile
+       *  is not a seller · same shape, honest emptiness. */}
+      {true ? (
         <div
           data-nex-profile-footer-safe-trade-report
+          data-nex-profile-safe-trade-seller={props.isSeller ? "yes" : "no"}
           style={{
             marginTop: 4,
             borderRadius: 14,
@@ -1305,7 +1312,9 @@ function ProfileFooterSection(props: {
               Safe Trade Report
             </h3>
             <span
-              data-nex-profile-footer-safe-trade-status={statusGroup}
+              data-nex-profile-footer-safe-trade-status={
+                props.isSeller ? statusGroup : "none"
+              }
               style={{
                 fontSize: 11,
                 fontWeight: 800,
@@ -1313,51 +1322,73 @@ function ProfileFooterSection(props: {
                 textTransform: "uppercase",
                 padding: "4px 10px",
                 borderRadius: 999,
-                background: palette.bg,
-                border: `1px solid ${palette.ring}`,
-                color: palette.ink,
+                background: props.isSeller
+                  ? palette.bg
+                  : "rgba(125, 155, 192, 0.14)",
+                border: `1px solid ${
+                  props.isSeller ? palette.ring : "#7D9BC0"
+                }`,
+                color: props.isSeller ? palette.ink : "#7D9BC0",
               }}
             >
-              {statusGroup}
+              {props.isSeller ? statusGroup : "no shop"}
             </span>
           </div>
-          <ul
-            style={{
-              listStyle: "none",
-              margin: 0,
-              padding: 0,
-              display: "flex",
-              flexDirection: "column",
-              gap: 6,
-            }}
-          >
-            <SafeTradeFactRow
-              label="Complaints filed"
-              value={
-                openDisputes === null
-                  ? "No complaints recorded yet"
-                  : openDisputes === 0
-                    ? "0"
-                    : String(openDisputes)
-              }
-            />
-            <SafeTradeFactRow
-              label="Posts flagged"
-              value={
-                reportsOnFile === 0 ? "0" : String(reportsOnFile)
-              }
-            />
-            <SafeTradeFactRow
-              label="Account status"
-              value={
-                statusGroup === "active"
-                  ? "Active · in good standing"
-                  : statusGroup === "moderate"
-                    ? "Moderate · buyer caution advised"
-                    : "Regular · baseline"
-              }
-            />
-          </ul>
+          {props.isSeller ? (
+            <ul
+              style={{
+                listStyle: "none",
+                margin: 0,
+                padding: 0,
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+              }}
+            >
+              <SafeTradeFactRow
+                label="Complaints filed"
+                value={
+                  openDisputes === null
+                    ? "No complaints recorded yet"
+                    : openDisputes === 0
+                      ? "0"
+                      : String(openDisputes)
+                }
+              />
+              <SafeTradeFactRow
+                label="Posts flagged"
+                value={
+                  reportsOnFile === 0 ? "0" : String(reportsOnFile)
+                }
+              />
+              <SafeTradeFactRow
+                label="Account status"
+                value={
+                  statusGroup === "active"
+                    ? "Active · in good standing"
+                    : statusGroup === "moderate"
+                      ? "Moderate · buyer caution advised"
+                      : "Regular · baseline"
+                }
+              />
+            </ul>
+          ) : (
+            <p
+              data-nex-profile-footer-safe-trade-no-shop
+              style={{
+                margin: 0,
+                fontSize: 12,
+                lineHeight: 1.4,
+                color: "#B5C3D6",
+                fontFamily:
+                  "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+              }}
+            >
+              {props.displayName} has no shop active on NEX yet · this
+              profile is not a seller, so there is no trade record
+              to display.
+            </p>
+          )}
           <p
             style={{
               margin: "4px 0 0",
@@ -1368,8 +1399,10 @@ function ProfileFooterSection(props: {
                 "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
             }}
           >
-            Facts only · no reviews. {props.displayName}'s standing on
-            NEX based on actual trade events.
+            Facts only · no reviews.{" "}
+            {props.isSeller
+              ? `${props.displayName}'s standing on NEX based on actual trade events.`
+              : "The Safe Trade Report always shows real trade history, never ratings."}
           </p>
         </div>
       ) : null}
