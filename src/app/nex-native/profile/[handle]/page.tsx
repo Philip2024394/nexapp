@@ -970,6 +970,26 @@ function ProfileBody(props: {
             />
           ) : null}
         </div>
+
+        {/* Owner directive 2026-11-02 · profile footer section · pass 2
+         *  of the hero redesign. Three stacked blocks under the
+         *  followers/following row:
+         *    1. Short description (uses effectiveBio · trimmed to 180
+         *       chars so it fits the hero footprint)
+         *    2. Social-media icons row (placeholder links · owner edit
+         *       flow wires the real URLs; icons stay muted when no URL
+         *       is set so they signal "ready to be configured").
+         *    3. Safe Trade Report facts panel (sellers only · shows
+         *       status badge mapped from SafeTradeSnapshot + the three
+         *       honest facts: complaints filed · posts flagged ·
+         *       account status). No reviews · just facts. */}
+        <ProfileFooterSection
+          bio={props.effectiveBio}
+          isSeller={props.primaryBusiness !== null}
+          safeTradeSnapshot={props.safeTradeSnapshot}
+          trustReportsOnFile={props.trustReportsOnFile}
+          displayName={props.displayName}
+        />
         {/* Footer Safe Trade card RETIRED 2026-10-17 per owner
             directive · the Safe Trade shield icon on the hero top-
             left is now the sole entry point to the 4-state sheet ·
@@ -1120,5 +1140,261 @@ function DemoEmmaRender(): React.JSX.Element {
             the real path · entry is the hero-icon only. */}
       </div>
     </main>
+  );
+}
+
+// ============================================================
+// ProfileFooterSection · owner-authorised 2026-11-02 · pass 2 of
+// the hero redesign. See the mount site above for scope + intent.
+// Three stacked blocks: description · social icons · Safe Trade
+// Report facts panel (sellers only). Pure presentational component;
+// data flows in via props.
+// ============================================================
+
+function ProfileFooterSection(props: {
+  readonly bio: string | null;
+  readonly isSeller: boolean;
+  readonly safeTradeSnapshot: SafeTradeSnapshot | null;
+  readonly trustReportsOnFile: number;
+  readonly displayName: string;
+}): React.JSX.Element | null {
+  if (!props.bio && !props.isSeller) return null;
+
+  // Trim bio to a safe single-paragraph footprint. Full bio stays in
+  // the data model + edit flow; the footer only shows a short preview.
+  const shortBio =
+    props.bio && props.bio.length > 180
+      ? `${props.bio.slice(0, 178).trimEnd()}…`
+      : props.bio;
+
+  // Account status mapping · the three states the owner asked for
+  // (active / moderate / regular) map onto the sealed SafeTradeStatus:
+  //   · active   = VERIFIED (claimed + ≥1 completed trade + 0 open)
+  //                OR NEW (claimed + 0 completed, 0 open · "ready to trade")
+  //   · moderate = FLAGGED (1+ open dispute · buyer caution)
+  //                OR trustReportsOnFile > 0 (reports regardless of trade state)
+  //   · regular  = UNCLAIMED (directory listing · no owner yet)
+  //                OR SUSPENDED (shows as "regular" visually but copy
+  //                differs · the badge below honours the real state).
+  // Honest-null: SafeTradeSnapshot.openDisputes is null when the
+  // dispute schema isn't wired yet · we show "No complaints recorded
+  // yet" instead of fabricating "0".
+  const status = props.safeTradeSnapshot?.status ?? "UNCLAIMED";
+  const openDisputes = props.safeTradeSnapshot?.openDisputes;
+  const reportsOnFile = props.trustReportsOnFile ?? 0;
+  const statusGroup: "active" | "moderate" | "regular" =
+    status === "FLAGGED" || reportsOnFile > 0 || (openDisputes ?? 0) > 0
+      ? "moderate"
+      : status === "VERIFIED" || status === "NEW"
+        ? "active"
+        : "regular";
+  const STATUS_PALETTE = {
+    active: { bg: "rgba(22, 214, 107, 0.14)", ring: "#16D66B", ink: "#16D66B" },
+    moderate: { bg: "rgba(255, 114, 0, 0.14)", ring: "#FF7200", ink: "#FF7200" },
+    regular: { bg: "rgba(125, 155, 192, 0.14)", ring: "#7D9BC0", ink: "#7D9BC0" },
+  } as const;
+  const palette = STATUS_PALETTE[statusGroup];
+
+  return (
+    <section
+      data-nex-profile-footer-section
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+        padding: "16px 14px 0",
+      }}
+    >
+      {shortBio ? (
+        <p
+          data-nex-profile-footer-description
+          style={{
+            margin: 0,
+            fontSize: 13,
+            lineHeight: 1.4,
+            color: "#B5C3D6",
+            fontFamily:
+              "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+            textAlign: "center",
+          }}
+        >
+          {shortBio}
+        </p>
+      ) : null}
+
+      {/* Social media icons row · placeholder empty state. Each icon
+       *  is a muted link stub · owner's edit flow would wire the
+       *  real URLs. Keeping the row visible at low opacity signals
+       *  "ready to be configured" without pretending links exist. */}
+      <div
+        data-nex-profile-footer-socials
+        style={{
+          display: "flex",
+          gap: 14,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        {(
+          [
+            { label: "Instagram", glyph: "📷" },
+            { label: "Facebook", glyph: "ⓕ" },
+            { label: "X / Twitter", glyph: "𝕏" },
+            { label: "YouTube", glyph: "▶" },
+            { label: "TikTok", glyph: "♪" },
+          ] as const
+        ).map((s) => (
+          <span
+            key={s.label}
+            aria-label={s.label}
+            data-nex-profile-footer-social={s.label.toLowerCase()}
+            style={{
+              display: "inline-grid",
+              placeItems: "center",
+              width: 28,
+              height: 28,
+              borderRadius: "50%",
+              background: "rgba(125, 155, 192, 0.10)",
+              color: "#7D9BC0",
+              fontSize: 14,
+              fontWeight: 700,
+              userSelect: "none",
+            }}
+          >
+            {s.glyph}
+          </span>
+        ))}
+      </div>
+
+      {/* Safe Trade Report facts panel · sellers only. Pop-up card
+       *  style on the profile · three honest facts a buyer needs:
+       *  complaints filed, posts flagged, account status. No reviews. */}
+      {props.isSeller ? (
+        <div
+          data-nex-profile-footer-safe-trade-report
+          style={{
+            marginTop: 4,
+            borderRadius: 14,
+            background: "rgba(10, 21, 38, 0.72)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
+            padding: "14px 14px 12px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 10,
+            }}
+          >
+            <h3
+              style={{
+                margin: 0,
+                fontSize: 13,
+                fontWeight: 800,
+                letterSpacing: "0.03em",
+                color: "#F2F5F8",
+                fontFamily:
+                  "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+              }}
+            >
+              Safe Trade Report
+            </h3>
+            <span
+              data-nex-profile-footer-safe-trade-status={statusGroup}
+              style={{
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                padding: "4px 10px",
+                borderRadius: 999,
+                background: palette.bg,
+                border: `1px solid ${palette.ring}`,
+                color: palette.ink,
+              }}
+            >
+              {statusGroup}
+            </span>
+          </div>
+          <ul
+            style={{
+              listStyle: "none",
+              margin: 0,
+              padding: 0,
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+            }}
+          >
+            <SafeTradeFactRow
+              label="Complaints filed"
+              value={
+                openDisputes === null
+                  ? "No complaints recorded yet"
+                  : openDisputes === 0
+                    ? "0"
+                    : String(openDisputes)
+              }
+            />
+            <SafeTradeFactRow
+              label="Posts flagged"
+              value={
+                reportsOnFile === 0 ? "0" : String(reportsOnFile)
+              }
+            />
+            <SafeTradeFactRow
+              label="Account status"
+              value={
+                statusGroup === "active"
+                  ? "Active · in good standing"
+                  : statusGroup === "moderate"
+                    ? "Moderate · buyer caution advised"
+                    : "Regular · baseline"
+              }
+            />
+          </ul>
+          <p
+            style={{
+              margin: "4px 0 0",
+              fontSize: 11,
+              lineHeight: 1.4,
+              color: "#7D9BC0",
+              fontFamily:
+                "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+            }}
+          >
+            Facts only · no reviews. {props.displayName}'s standing on
+            NEX based on actual trade events.
+          </p>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function SafeTradeFactRow(props: {
+  readonly label: string;
+  readonly value: string;
+}): React.JSX.Element {
+  return (
+    <li
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 10,
+        fontSize: 12,
+        fontFamily:
+          "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+      }}
+    >
+      <span style={{ color: "#8BA9D1" }}>{props.label}</span>
+      <span style={{ color: "#F2F5F8", fontWeight: 700 }}>{props.value}</span>
+    </li>
   );
 }
