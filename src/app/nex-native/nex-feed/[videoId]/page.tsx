@@ -162,10 +162,24 @@ export default async function NexFeedViewerPage({
   // mode → "Live {displayName}" (e.g. "Live Ireland", "Live Indonesia").
   // The displayName comes from nex_country_registry so adding a new
   // country is a registry data change · no label hardcoding.
+  // Owner directive 2026-11-02 · unambiguous per-world signal on every
+  // post + the feed-entry overlay. The glyph (🌐 for Worldwide, 🇮🇪
+  // Ireland, 🇮🇩 Indonesia · future countries map by code) prefixes the
+  // feedModeLabel so a viewer always knows which pool they are in · the
+  // satellite tower was retired from the headers in 051f210/80a09c1 so
+  // this is the one visible world-identity signal on the post chrome.
+  const feedModeGlyph =
+    countryMode.kind === "worldwide"
+      ? "🌐"
+      : countryMode.code === "IE"
+        ? "🇮🇪"
+        : countryMode.code === "ID"
+          ? "🇮🇩"
+          : "";
   const feedModeLabel =
     countryMode.kind === "worldwide"
-      ? "Live World"
-      : `Live ${countryMode.displayName}`;
+      ? `${feedModeGlyph} Live World`
+      : `${feedModeGlyph} Live ${countryMode.displayName}`;
 
   // Owner-authorised 2026-11-01 · Batch E.2.c · world id for the entry
   // overlay burst dispatch. Worldwide → the sealed nex-original world
