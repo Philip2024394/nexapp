@@ -89,6 +89,17 @@ export default async function NexFeedViewerPage({
     resolveCountryFeedMode(countryParamRaw),
     listEligibleFeedCountries(),
   ]);
+
+  // Owner-authorised 2026-11-01 · Batch E.2 · header pill label that
+  // reflects the viewer's current feed mode (NOT the broadcaster's or
+  // the video's country of origin). Worldwide → "Live World", country
+  // mode → "Live {displayName}" (e.g. "Live Ireland", "Live Indonesia").
+  // The displayName comes from nex_country_registry so adding a new
+  // country is a registry data change · no label hardcoding.
+  const feedModeLabel =
+    countryMode.kind === "worldwide"
+      ? "Live World"
+      : `Live ${countryMode.displayName}`;
   // The switcher toggles between Worldwide and ONE country (Batch E
   // scope · multi-country toggle deferred to Stage 3B.1). Preference
   // chain:
@@ -620,6 +631,7 @@ export default async function NexFeedViewerPage({
           nextId={nextId}
           prevId={prevId}
           viewerAccountId={viewerAccountId}
+          feedModeLabel={feedModeLabel}
           initialFollowed={initialFollowed}
           initialFollowerCount={initialFollowerCount}
           broadcasterCountryCode={broadcasterCountryCode}
@@ -689,6 +701,7 @@ export default async function NexFeedViewerPage({
         nextPublicUrl={nextPublicUrl}
         prevPublicUrl={prevPublicUrl}
         devViewerBadge={devViewerBadge}
+        feedModeLabel={feedModeLabel}
       />
       {/* Owner directive 2026-11-01 · Batch E · same switcher mount
        *  as the music branch above. Zero intrusion into the 1536-line

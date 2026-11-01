@@ -93,8 +93,17 @@ export interface MusicPostShellProps {
   readonly broadcasterNexHandle: string | null;
   readonly broadcasterAvatarUrl: string | null;
   readonly broadcasterPresence: MusicPostPresence;
-  /** ISO country code used by the sealed "Live {country}" header line. */
+  /** ISO country code used by the broadcaster-country header line.
+   *  Kept in the API for callers that still want to surface it
+   *  (preview page · self-view). When `feedModeLabel` is set it takes
+   *  priority — owner directive 2026-11-01 Batch E.2. */
   readonly broadcasterCountryCode: string | null;
+  /** Owner-authorised 2026-11-01 · Batch E.2 · when present, REPLACES
+   *  the broadcaster-country line under the broadcaster name with the
+   *  viewer's current feed mode (e.g. "Live Ireland", "Live World").
+   *  Null falls back to the broadcaster-country label (preserves
+   *  pre-Batch E.2 behaviour for the preview page). */
+  readonly feedModeLabel?: string | null;
   /** Owner-authorised 2026-10-30 · when set, the top-left identity
    *  block (avatar + name + handle + Live line) is wrapped in an
    *  `<a>` that routes to this href. The swipe pointer handlers
@@ -273,6 +282,7 @@ export function MusicPostShell(props: MusicPostShellProps): React.JSX.Element {
       >
         <MusicPostHeaderIdentity
           countryCode={props.broadcasterCountryCode}
+          feedModeLabel={props.feedModeLabel ?? null}
           broadcasterAvatarUrl={props.broadcasterAvatarUrl}
           broadcasterName={props.broadcasterDisplayName}
           broadcasterNexHandle={props.broadcasterNexHandle}
@@ -370,6 +380,11 @@ export function MusicPostShell(props: MusicPostShellProps): React.JSX.Element {
 
 function MusicPostHeaderIdentity(props: {
   readonly countryCode: string | null;
+  /** Owner-authorised 2026-11-01 · Batch E.2 · when present, overrides
+   *  the broadcaster-country line with the viewer's current feed mode
+   *  label (e.g. "Live Ireland", "Live World"). Null falls back to the
+   *  resolved country label from `countryCode`. */
+  readonly feedModeLabel: string | null;
   readonly broadcasterAvatarUrl: string | null;
   readonly broadcasterName: string;
   readonly broadcasterNexHandle: string | null;
@@ -549,11 +564,15 @@ function MusicPostHeaderIdentity(props: {
             {props.broadcasterNexHandle}
           </span>
         )}
-        {/* Owner directive 2026-11-01 (follow-up) · the line under the
-         *  broadcaster-name title should be SHORTER + BIGGER + BOLDER:
-         *  dropped the "Live " prefix (text is now just the country
-         *  label or NEX) · bumped fontSize 13 → 16 · bumped fontWeight
-         *  700 → 900 (black) · colour unchanged. */}
+        {/* Owner directive 2026-11-01 (Batch E.2 · feed-mode header) ·
+         *  when the viewer is in a specific feed mode, the line under
+         *  the broadcaster-name shows the FEED MODE ("Live Ireland",
+         *  "Live World") instead of the broadcaster's country. This
+         *  tells the viewer which pool they are watching. Falls back
+         *  to the broadcaster-country label on surfaces that don't
+         *  supply a feedModeLabel (preview page · self-view).
+         *  Visual treatment preserved from the 2026-11-01 follow-up
+         *  (16px · fontWeight 900 · #D9E6F5). */}
         <span
           style={{
             fontSize: 16,
@@ -567,7 +586,7 @@ function MusicPostHeaderIdentity(props: {
             display: "block",
           }}
         >
-          {countryLabel || props.countryCode || "NEX"}
+          {props.feedModeLabel || countryLabel || props.countryCode || "NEX"}
         </span>
       </div>
     </WrapperTag>

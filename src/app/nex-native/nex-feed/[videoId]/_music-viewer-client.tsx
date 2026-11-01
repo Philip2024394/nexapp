@@ -89,6 +89,11 @@ export interface MusicViewerClientProps {
    *  or unresolved session · the icon still renders and the invite-
    *  target action handles the honest guest + self cases on submit. */
   readonly viewerAccountId: string | null;
+  /** Owner-authorised 2026-11-01 · Batch E.2 · viewer's current feed
+   *  mode label ("Live Ireland", "Live World"). Replaces the
+   *  broadcaster-country header line under the broadcaster's name.
+   *  Server-resolved from `resolveCountryFeedMode(?country)`. */
+  readonly feedModeLabel: string;
   /** Owner-authorised 2026-10-30 · Stage 1 Follow SSR seed. Server-
    *  resolved from `getFollowState` so the person-plus icon paints
    *  the correct state on first render. Always false for guests
@@ -640,6 +645,7 @@ export function MusicViewerClient(
         broadcasterAvatarUrl={props.entry.ownerAvatarUrl}
         broadcasterPresence="online"
         broadcasterCountryCode={props.broadcasterCountryCode}
+        feedModeLabel={props.feedModeLabel}
         autoPlayOnMount={true}
         isLiked={liked}
         // Owner directive 2026-10-30 · track remaining time so the

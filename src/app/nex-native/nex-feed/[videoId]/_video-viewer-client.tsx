@@ -101,6 +101,7 @@ export function VideoViewerClient({
   libraryVideos,
   broadcasterProductsOverride,
   devViewerBadge,
+  feedModeLabel,
 }: {
   readonly video: UploadedVideoRow;
   readonly publicUrl: string;
@@ -181,6 +182,11 @@ export function VideoViewerClient({
    *  production. "owner" → yellow · "viewer" → blue. Matches the
    *  music surface so dev can tell at a glance who's watching. */
   readonly devViewerBadge?: "owner" | "viewer" | null;
+  /** Owner-authorised 2026-11-01 · Batch E.2 · viewer's current feed
+   *  mode label ("Live Ireland", "Live World"). Replaces the
+   *  "Live {country of origin}" title line so the header reflects the
+   *  POOL the viewer is in, not the video's country of origin. */
+  readonly feedModeLabel: string;
 }): React.JSX.Element {
   const router = useRouter();
   const [isLiked, setIsLiked] = React.useState(false);
@@ -1037,7 +1043,7 @@ export function VideoViewerClient({
                 />
               </span>
               <span data-nex-video-viewer-title-text>
-                Live {countryLabel || video.country_of_origin || "NEX"}
+                {feedModeLabel}
               </span>
             </div>
             <div
