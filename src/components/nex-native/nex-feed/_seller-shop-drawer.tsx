@@ -114,15 +114,21 @@ export function SellerShopDrawer(
 
   return (
     <>
-      {/* Right-rail icon · positioned 60px above the country switcher
-       *  (switcher sits at top:50%, this sits at calc(50% - 60px)). */}
+      {/* Owner directive 2026-11-01 · "fix the side right list of
+       *  icons that they are stacked correctly · remove the back
+       *  ground from world and shop". Right-rail icons now share the
+       *  sealed MusicActionsStack chrome-stripped treatment (sealed
+       *  2026-10-29 · "icons sit over the backdrop with a drop-shadow
+       *  for legibility"). Fixed-position stack: Shop at top:90 ·
+       *  CountryFeedSwitcher at top:142 (52 gap) · MusicActionsStack
+       *  bottom-anchored (sealed). No overlap · same visual language
+       *  as the sealed stack. */}
       <div
         data-nex-seller-shop-icon-mount
         style={{
           position: "fixed",
           right: 12,
-          top: "calc(50% - 60px)",
-          transform: "translateY(-50%)",
+          top: 90,
           zIndex: 50,
           pointerEvents: "auto",
         }}
@@ -139,15 +145,14 @@ export function SellerShopDrawer(
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "rgba(0, 0, 0, 0.55)",
-            backdropFilter: "blur(10px)",
-            WebkitBackdropFilter: "blur(10px)",
-            border: "1px solid rgba(255, 255, 255, 0.2)",
-            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.4)",
+            background: "transparent",
+            border: "none",
             cursor: "pointer",
             padding: 0,
             color: "#F2F5F8",
             position: "relative",
+            filter:
+              "drop-shadow(0 1px 3px rgba(0,0,0,0.75)) drop-shadow(0 0 8px rgba(0,0,0,0.45))",
           }}
         >
           <ShopBagIcon />

@@ -746,10 +746,16 @@ export default async function NexFeedViewerPage({
         <div
           data-nex-country-feed-switcher-mount="music"
           style={{
+            // Owner directive 2026-11-01 · "fix the side right list
+            // of icons that they are stacked correctly · inline and
+            // not covering other icons". Country switcher now sits
+            // 52 px below the Shop icon mount (Shop at top:90) so
+            // they stack cleanly in one right-rail column. The sealed
+            // MusicActionsStack stays bottom-anchored (sealed
+            // 2026-10-29).
             position: "fixed",
             right: 12,
-            top: "50%",
-            transform: "translateY(-50%)",
+            top: 142,
             zIndex: 50,
             pointerEvents: "auto",
           }}

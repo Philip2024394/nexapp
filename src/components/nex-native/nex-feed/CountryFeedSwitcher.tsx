@@ -93,17 +93,18 @@ export function CountryFeedSwitcher(
       data-nex-country-feed-switcher
       data-nex-country-feed-mode={inCountryMode ? props.currentMode.code : "WW"}
       style={{
+        // Owner directive 2026-11-01 · "remove the back ground from
+        // world and shop". Matches the sealed MusicActionsStack
+        // chrome-stripped icon treatment (2026-10-29) · icon sits
+        // over the video backdrop with drop-shadows for legibility.
         width: 44,
         height: 44,
         borderRadius: 999,
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "rgba(0, 0, 0, 0.55)",
-        backdropFilter: "blur(10px)",
-        WebkitBackdropFilter: "blur(10px)",
-        border: "1px solid rgba(255, 255, 255, 0.2)",
-        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.4)",
+        background: "transparent",
+        border: "none",
         cursor: "pointer",
         padding: 0,
         fontSize: 22,
@@ -111,6 +112,8 @@ export function CountryFeedSwitcher(
         color: "#F2F5F8",
         fontFamily: "inherit",
         transition: "transform 150ms ease-out",
+        filter:
+          "drop-shadow(0 1px 3px rgba(0,0,0,0.75)) drop-shadow(0 0 8px rgba(0,0,0,0.45))",
       }}
     >
       {inCountryMode ? (
