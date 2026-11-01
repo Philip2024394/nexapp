@@ -34,7 +34,7 @@ import { uploadCoverPhotoAction } from "./_actions";
 
 const NEX = {
   bg: "var(--nex-world-background-base, #020914)",
-  cyan: "var(--nex-world-secondary, #00AFFF)",
+  cyan: "#00AFFF",
   cyanRim: "rgba(0, 175, 255, 0.60)",
 };
 

@@ -47,7 +47,6 @@ import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 // viewer of his own profile · zero prod risk per sealed module.
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import * as accountService from "@/lib/nex-native/account-service";
-import { ProfileCloseButton } from "./_profile-close-button";
 import * as accountProfileService from "@/lib/nex-native/account-profile-service";
 import { effectiveTier } from "@/lib/nex-native/account-service";
 import * as businessService from "@/lib/nex-native/business-service";
@@ -578,14 +577,6 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
      --nex-profile-accent CSS var so any theme-aware descendant can
      pick it up. Null (no param, bad hex) renders the sealed navy. */
   const themeAccent = parseThemeAccent(sp.themeAccent);
-  // Owner directive 2026-11-01 · "profile page should be container
-  // style with running light around the edge and same color theme as
-  // ireland theme". The main is now a bordered container with a
-  // 2 px Irish-gold border (via sealed --nex-world-secondary token,
-  // falls back to cyan on Worldwide), inner box-shadow glow, and a
-  // margin so the surrounding desktop/mobile frame shows the border.
-  // paddingBottom bumped to 96 so the fixed-position Close button at
-  // the bottom-centre doesn't overlap the last section content.
   const mainStyle: React.CSSProperties = {
     position: "relative",
     minHeight: "100dvh",
@@ -596,14 +587,9 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
     fontFamily: SANS,
     display: "flex",
     flexDirection: "column",
-    paddingBottom: 96,
-    border: "2px solid var(--nex-world-secondary, #00AFFF)",
-    boxShadow:
-      "inset 0 0 24px rgba(198, 161, 91, 0.15), 0 0 32px rgba(198, 161, 91, 0.25)",
-    borderRadius: 14,
-    overflowX: "hidden",
+    paddingBottom: 32,
     ["--nex-profile-accent" as unknown as string]:
-      themeAccent ?? "var(--nex-world-secondary, #00AFFF)",
+      themeAccent ?? "#00AFFF",
   };
 
   return (
@@ -810,10 +796,6 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
           creatorSupportSettings={publicCreatorSupport}
         />
       )}
-      {/* Owner directive 2026-11-01 · bottom-centre close button that
-       *  returns the viewer to the previous page (router.back) when
-       *  they tap a profile image, land here, and want to go back. */}
-      <ProfileCloseButton />
     </main>
   );
 }

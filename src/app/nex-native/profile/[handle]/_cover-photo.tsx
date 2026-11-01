@@ -23,7 +23,7 @@ import { CoverCameraPicker } from "./_cover-camera-picker";
 
 const NEX = {
   bg: "var(--nex-world-background-base, #020914)",
-  cyan: "var(--nex-world-secondary, #00AFFF)",
+  cyan: "#00AFFF",
   cyanSoft: "rgba(0, 175, 255, 0.35)",
   cyanFaint: "rgba(0, 175, 255, 0.14)",
   orange: "#FF7200",

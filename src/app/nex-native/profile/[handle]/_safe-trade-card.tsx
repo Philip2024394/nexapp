@@ -24,7 +24,7 @@ import type { SafeTradeSnapshot } from "@/lib/nex-native/safe-trade-status";
 import { SafeTradeSheet } from "./_safe-trade-sheet";
 
 const NEX = {
-  cyan: "var(--nex-world-secondary, #00AFFF)",
+  cyan: "#00AFFF",
   cyanSoft: "rgba(0, 175, 255, 0.35)",
   cyanFaint: "rgba(0, 175, 255, 0.14)",
   orange: "#FF7200",

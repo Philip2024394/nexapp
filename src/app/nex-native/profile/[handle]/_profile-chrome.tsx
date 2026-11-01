@@ -33,7 +33,7 @@ import { NEX_FONT_SANS } from "@/lib/nex-native/design-tokens";
 const NEX = {
   bg: "var(--nex-world-background-base, #020914)",
   bgTint: "rgba(2, 9, 20, 0.72)",
-  cyan: "var(--nex-world-secondary, #00AFFF)",
+  cyan: "#00AFFF",
   cyanSoft: "rgba(0, 175, 255, 0.35)",
   cyanFaint: "rgba(0, 175, 255, 0.14)",
   text: "#F2F5F8",
