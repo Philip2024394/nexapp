@@ -41,13 +41,24 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import {
+  NEX_CART_STORAGE_KEY,
+  type NexCartItem,
+} from "@/lib/nex-native/cart-types";
 
 export interface SellerShopDrawerBroadcaster {
   readonly accountId: string;
   readonly displayName: string;
   readonly avatarUrl: string | null;
   readonly nexHandle: string | null;
+}
+
+export interface SellerShopDrawerShop {
+  readonly id: string;
+  readonly slug: string | null;
+  readonly displayName: string;
 }
 
 export interface SellerShopDrawerProduct {
@@ -60,6 +71,7 @@ export interface SellerShopDrawerProduct {
 
 export interface SellerShopDrawerProps {
   readonly broadcaster: SellerShopDrawerBroadcaster;
+  readonly shop: SellerShopDrawerShop;
   readonly products: readonly SellerShopDrawerProduct[];
 }
 
@@ -67,20 +79,34 @@ export function SellerShopDrawer(
   props: SellerShopDrawerProps,
 ): React.JSX.Element | null {
   const [open, setOpen] = React.useState(false);
+  // Owner directive 2026-11-01 · sheet-based product detail flow.
+  // Which product's bottom sheet is currently open · null when no
+  // sheet. Esc closes the sheet first, then (on second Esc) the
+  // drawer. Multiple sheets never stack · tapping another View
+  // details just swaps the open id.
+  const [openProductId, setOpenProductId] = React.useState<string | null>(null);
   const prefersReducedMotion = useReducedMotion();
 
   // No dead buttons · if there are no live products the icon hides.
   if (props.products.length === 0) return null;
 
   const close = React.useCallback(() => setOpen(false), []);
+  const closeSheet = React.useCallback(() => setOpenProductId(null), []);
   React.useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") close();
+      if (e.key === "Escape") {
+        if (openProductId) closeSheet();
+        else close();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, close]);
+  }, [open, openProductId, close, closeSheet]);
+
+  const activeProduct = openProductId
+    ? props.products.find((p) => p.id === openProductId) ?? null
+    : null;
 
   const shopHref = props.broadcaster.nexHandle
     ? `/nex-native/profile/${props.broadcaster.nexHandle}`
@@ -195,11 +221,12 @@ export function SellerShopDrawer(
                 top: 0,
                 left: 0,
                 bottom: 0,
-                // Owner directive 2026-11-01 · drawer opens at 70% of
-                // phone width · leaves 30% of the viewport showing the
-                // feed behind so the viewer stays oriented. Desktop
-                // capped at 360px for sanity.
-                width: "min(360px, 70vw)",
+                // Owner directive 2026-11-01 (sheet refactor) · drawer
+                // slides out just one card's width so the viewer keeps
+                // most of the feed visible · product details open in a
+                // separate bottom sheet. Phone: 50vw (one card + gutter).
+                // Desktop capped at 240px for sanity.
+                width: "min(240px, 50vw)",
                 zIndex: 101,
                 // Owner directive 2026-11-01 · "shop slider should be
                 // same color theme as our slider on the right side".
@@ -279,13 +306,30 @@ export function SellerShopDrawer(
               />
               <ShopProductList
                 products={props.products}
-                broadcaster={props.broadcaster}
-                onClose={close}
+                onOpenProduct={setOpenProductId}
               />
             </motion.aside>
           </>
         ) : null}
       </AnimatePresence>
+
+      {/* Owner directive 2026-11-01 · product-detail bottom sheet.
+       *  Portal to document.body so it layers above the drawer. Opens
+       *  with a spring-up animation (prefers-reduced-motion fallback
+       *  to a crossfade). Two CTAs: "Ask seller" routes to the sealed
+       *  pending_product chat flow · "Add to cart" writes to the
+       *  sealed NEX_CART_STORAGE_KEY using the same NexCartItem
+       *  shape as the chat shop sheet (dedupe by shop_id+product_id,
+       *  bump quantity, dispatch nex-cart-changed for header counters). */}
+      {activeProduct ? (
+        <ProductDetailSheet
+          product={activeProduct}
+          broadcaster={props.broadcaster}
+          shop={props.shop}
+          onClose={closeSheet}
+          prefersReducedMotion={prefersReducedMotion}
+        />
+      ) : null}
     </>
   );
 }
@@ -411,28 +455,22 @@ function ShopHeader(props: {
 
 function ShopProductList(props: {
   readonly products: readonly SellerShopDrawerProduct[];
-  readonly broadcaster: SellerShopDrawerBroadcaster;
-  readonly onClose: () => void;
+  readonly onOpenProduct: (id: string) => void;
 }): React.JSX.Element {
-  // Owner directive 2026-11-01 · "product cards and background slider
-  // same style and design as playlist library cards and background".
-  // Mirrors MusicLibraryOverlay's 2-column grid + card frame + dim
-  // wash. See src/components/nex-native/music/MusicLibraryOverlay.tsx
-  // LibraryCard function (~line 589) for the sealed reference.
+  // Owner directive 2026-11-01 (sheet refactor) · 1-column grid at
+  // 50vw drawer width · each card is full width of the drawer. Dim
+  // wash matches MusicLibraryOverlay's card-container (rgba(0,0,0,
+  // 0.35) over the drawer's world-themed base).
   return (
     <div
       data-nex-seller-shop-product-list
       style={{
         flex: 1,
         overflowY: "auto",
-        // Dim wash matching MusicLibraryOverlay card-container
-        // (rgba(0, 0, 0, 0.35) over the drawer's world-themed base) ·
-        // the drawer-bg still shows through at 65% so Ireland green /
-        // Worldwide navy remain perceptible under the wash.
         background: "rgba(0, 0, 0, 0.35)",
         padding: "12px 10px 20px",
         display: "grid",
-        gridTemplateColumns: "repeat(2, 1fr)",
+        gridTemplateColumns: "repeat(1, 1fr)",
         gap: 10,
         alignContent: "start",
       }}
@@ -441,8 +479,7 @@ function ShopProductList(props: {
         <ShopProductCard
           key={p.id}
           product={p}
-          broadcaster={props.broadcaster}
-          onClose={props.onClose}
+          onOpen={props.onOpenProduct}
         />
       ))}
     </div>
@@ -451,26 +488,28 @@ function ShopProductList(props: {
 
 function ShopProductCard(props: {
   readonly product: SellerShopDrawerProduct;
-  readonly broadcaster: SellerShopDrawerBroadcaster;
-  readonly onClose: () => void;
+  readonly onOpen: (id: string) => void;
 }): React.JSX.Element {
   const { product } = props;
   const price = formatPrice(product.pricePence, product.currency);
-  // Owner-authorised 2026-11-01 · Phase 10 of Social Commerce roadmap
-  // "Chat About This Product". The sealed peer-chat page reads
-  // ?pending_product=<id> (Ask-Seller slice 2 · 2026-10-22) · server-
-  // resolves the snapshot · composer renders the product chip · first
-  // send attaches the sealed product snapshot via
-  // sendPeerMessageOrShareProductAction. Whole-card tap = ask seller
-  // (library-overlay symmetry · whole-card tap = play track).
-  const chatHref = `/nex-native/chat/peer/${props.broadcaster.accountId}?pending_product=${encodeURIComponent(product.id)}`;
+  const openSheet = (): void => props.onOpen(product.id);
 
+  // Whole-card tap AND the View details button both open the sheet ·
+  // the button is a visible affordance; the whole-card tap honours
+  // the viewer's "I just tapped the picture" expectation.
   return (
-    <Link
-      href={chatHref}
-      onClick={props.onClose}
-      aria-label={`Ask about ${product.name}${price ? " · " + price : ""}`}
+    <div
       data-nex-seller-shop-card
+      onClick={openSheet}
+      role="button"
+      tabIndex={0}
+      aria-label={`View details · ${product.name}${price ? " · " + price : ""}`}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openSheet();
+        }
+      }}
       style={{
         position: "relative",
         display: "flex",
@@ -485,13 +524,13 @@ function ShopProductCard(props: {
         color: "inherit",
         fontFamily: "inherit",
         textAlign: "left",
-        textDecoration: "none",
         cursor: "pointer",
         boxSizing: "border-box",
       }}
     >
-      {/* Cover · square · letterboxed (object-fit contain · Universal
-       *  Image Display Integrity doctrine 2026-10-30 clause 1). */}
+      {/* Cover · square · letterboxed (Universal Image Display
+       *  Integrity doctrine 2026-10-30 clause 1 "preserve the entire
+       *  image"). */}
       <div
         style={{
           position: "relative",
@@ -534,28 +573,38 @@ function ShopProductCard(props: {
             no image
           </div>
         )}
-        {/* Small chat chip in the top-right corner · signals the whole
-         *  card is a tap-to-ask target. Non-interactive (parent Link
-         *  handles the tap) so no nested-link accessibility issue. */}
+        {/* Owner directive 2026-11-01 (sheet refactor) · "View details
+         *  button lower right on the image". Visible call-to-action
+         *  pill on the bottom-right of the cover · parent card tap
+         *  also triggers the sheet so the pill is a signpost, not the
+         *  only tap target. */}
         <div
+          data-nex-seller-shop-view-details-pill
           aria-hidden
-          data-nex-seller-shop-card-chat-chip
           style={{
             position: "absolute",
-            top: 6,
-            right: 6,
-            width: 24,
-            height: 24,
+            right: 8,
+            bottom: 8,
+            padding: "4px 10px",
             borderRadius: 999,
-            background: "rgba(2, 9, 20, 0.72)",
-            border: "1px solid rgba(255, 255, 255, 0.2)",
+            background: "rgba(2, 9, 20, 0.78)",
+            border: "1px solid rgba(255, 255, 255, 0.22)",
+            color: "#F2F5F8",
+            fontSize: 11,
+            fontWeight: 800,
+            letterSpacing: 0.2,
+            lineHeight: 1,
             display: "inline-flex",
             alignItems: "center",
-            justifyContent: "center",
-            color: "#F2F5F8",
+            gap: 4,
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
           }}
         >
-          <ChatBubbleIcon />
+          View details
+          <span aria-hidden style={{ fontSize: 13, lineHeight: 1 }}>
+            ›
+          </span>
         </div>
       </div>
       <div style={{ padding: "0 2px", minWidth: 0 }}>
@@ -583,7 +632,332 @@ function ShopProductCard(props: {
           {price ?? "—"}
         </div>
       </div>
-    </Link>
+    </div>
+  );
+}
+
+/** Owner-authorised 2026-11-01 · product-detail bottom sheet. Opens
+ *  from the shop drawer's View details button. Two CTAs:
+ *   · Ask seller · routes to the sealed pending_product chat flow.
+ *   · Add to cart · writes to NEX_CART_STORAGE_KEY (sealed shape ·
+ *     see src/lib/nex-native/cart-types.ts). Dedupes on
+ *     (shop_id, product_id) and bumps quantity · mirrors the chat
+ *     sheet's writeItemToCart logic. */
+function ProductDetailSheet(props: {
+  readonly product: SellerShopDrawerProduct;
+  readonly broadcaster: SellerShopDrawerBroadcaster;
+  readonly shop: SellerShopDrawerShop;
+  readonly onClose: () => void;
+  readonly prefersReducedMotion: boolean | null;
+}): React.ReactPortal | null {
+  const [mounted, setMounted] = React.useState(false);
+  const [added, setAdded] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+
+  if (!mounted || typeof document === "undefined") return null;
+
+  const { product, broadcaster, shop } = props;
+  const price = formatPrice(product.pricePence, product.currency);
+  const chatHref = `/nex-native/chat/peer/${broadcaster.accountId}?pending_product=${encodeURIComponent(product.id)}`;
+
+  const handleAddToCart = (): void => {
+    try {
+      const raw = window.localStorage.getItem(NEX_CART_STORAGE_KEY);
+      const arr: NexCartItem[] = raw ? (JSON.parse(raw) as NexCartItem[]) : [];
+      const dedupeKey = `${shop.id}::${product.id}::`;
+      const idx = arr.findIndex(
+        (x) =>
+          x &&
+          `${x.shop_id}::${x.id}::${(x.variants ?? []).slice().sort().join("|")}` ===
+            dedupeKey,
+      );
+      if (idx >= 0) {
+        const existing = arr[idx];
+        if (existing) {
+          arr[idx] = { ...existing, quantity: (existing.quantity || 1) + 1 };
+        }
+      } else {
+        arr.push({
+          key:
+            typeof crypto !== "undefined" && "randomUUID" in crypto
+              ? crypto.randomUUID()
+              : `${dedupeKey}::${Date.now()}`,
+          kind: "product",
+          id: product.id,
+          shop_id: shop.id,
+          shop_slug: shop.slug ?? "",
+          shop_owner_account_id: broadcaster.accountId,
+          shop_display_name: shop.displayName,
+          shop_lat: null,
+          shop_lng: null,
+          name: product.name,
+          price_pence: product.pricePence ?? 0,
+          currency: product.currency ?? "EUR",
+          image_url: product.imageUrl,
+          quantity: 1,
+          variants: [],
+          perks: [],
+          perks_note: null,
+          note: null,
+          added_at: Date.now(),
+        });
+      }
+      window.localStorage.setItem(NEX_CART_STORAGE_KEY, JSON.stringify(arr));
+      try {
+        window.dispatchEvent(new CustomEvent("nex-cart-changed"));
+      } catch {
+        /* best-effort notification · persistence already succeeded */
+      }
+      setAdded(true);
+      window.setTimeout(() => setAdded(false), 1500);
+    } catch {
+      /* localStorage full / blocked · user sees no "Added" confirm */
+    }
+  };
+
+  const useSpring = !props.prefersReducedMotion;
+
+  return createPortal(
+    <AnimatePresence>
+      <motion.div
+        key="product-sheet-backdrop"
+        onClick={props.onClose}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.18 }}
+        data-nex-seller-shop-sheet-backdrop
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 1100,
+          background: "rgba(2, 9, 20, 0.6)",
+          backdropFilter: "blur(4px)",
+          WebkitBackdropFilter: "blur(4px)",
+          cursor: "pointer",
+        }}
+      />
+      <motion.div
+        key="product-sheet-panel"
+        initial={useSpring ? { y: "100%" } : { opacity: 0 }}
+        animate={useSpring ? { y: 0 } : { opacity: 1 }}
+        exit={useSpring ? { y: "100%" } : { opacity: 0 }}
+        transition={
+          useSpring
+            ? { type: "spring", stiffness: 260, damping: 32, mass: 0.9 }
+            : { duration: 0.2 }
+        }
+        data-nex-seller-shop-sheet
+        role="dialog"
+        aria-label={`${product.name} · details`}
+        style={{
+          position: "fixed",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 1101,
+          height: "85vh",
+          maxHeight: "85vh",
+          background:
+            "var(--nex-world-drawer-bg, var(--nex-world-background-base, #020914))",
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          borderTop: "1px solid rgba(255, 255, 255, 0.14)",
+          boxShadow: "0 -8px 32px rgba(0, 0, 0, 0.6)",
+          display: "flex",
+          flexDirection: "column",
+          color: "var(--nex-world-text-primary, #F2F5F8)",
+          fontFamily: "Inter, system-ui, sans-serif",
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        }}
+      >
+        {/* Drag handle */}
+        <div
+          aria-hidden
+          style={{
+            width: 36,
+            height: 4,
+            borderRadius: 999,
+            background: "rgba(255, 255, 255, 0.3)",
+            margin: "8px auto 4px",
+          }}
+        />
+        <button
+          type="button"
+          onClick={props.onClose}
+          aria-label="Close product details"
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 12,
+            width: 32,
+            height: 32,
+            borderRadius: 999,
+            background: "rgba(255, 255, 255, 0.08)",
+            border: "1px solid rgba(255, 255, 255, 0.16)",
+            color: "inherit",
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 14,
+            fontWeight: 700,
+          }}
+        >
+          ✕
+        </button>
+
+        {/* Scrollable body */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "4px 18px 12px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+          }}
+        >
+          {/* Product cover · larger · letterboxed */}
+          <div
+            style={{
+              width: "100%",
+              aspectRatio: "1 / 1",
+              maxHeight: "40vh",
+              borderRadius: 14,
+              overflow: "hidden",
+              background: "var(--nex-world-background-base, #020914)",
+              border: "1px solid rgba(255, 255, 255, 0.12)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {product.imageUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={product.imageUrl}
+                alt=""
+                aria-hidden
+                decoding="async"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                }}
+              />
+            ) : (
+              <div
+                aria-hidden
+                style={{
+                  fontSize: 13,
+                  color: "var(--nex-world-text-muted, #7D9BC0)",
+                }}
+              >
+                no image
+              </div>
+            )}
+          </div>
+          {/* Name · price · seller line */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div
+              style={{
+                fontSize: 18,
+                fontWeight: 800,
+                lineHeight: 1.25,
+              }}
+            >
+              {product.name}
+            </div>
+            <div
+              style={{
+                fontSize: 20,
+                fontWeight: 900,
+                color: "var(--nex-world-text-primary, #F2F5F8)",
+              }}
+            >
+              {price ?? "—"}
+            </div>
+            <div
+              style={{
+                fontSize: 12,
+                color: "var(--nex-world-text-secondary, #B5C3D6)",
+                marginTop: 2,
+              }}
+            >
+              Sold by {shop.displayName}
+            </div>
+          </div>
+        </div>
+
+        {/* Dual CTA footer */}
+        <div
+          data-nex-seller-shop-sheet-ctas
+          style={{
+            padding: "12px 14px 14px",
+            borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+            display: "flex",
+            gap: 10,
+            background:
+              "linear-gradient(0deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 100%)",
+          }}
+        >
+          <Link
+            href={chatHref}
+            onClick={props.onClose}
+            aria-label={`Ask ${shop.displayName} about ${product.name}`}
+            data-nex-seller-shop-sheet-ask
+            style={{
+              flex: 1,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              padding: "12px 14px",
+              borderRadius: 999,
+              background: "rgba(255, 255, 255, 0.08)",
+              border: "1px solid rgba(255, 255, 255, 0.18)",
+              color: "inherit",
+              textDecoration: "none",
+              fontSize: 14,
+              fontWeight: 800,
+            }}
+          >
+            <ChatBubbleIcon />
+            Ask seller
+          </Link>
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            aria-label={`Add ${product.name} to cart`}
+            data-nex-seller-shop-sheet-add-to-cart
+            style={{
+              flex: 1,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              padding: "12px 14px",
+              borderRadius: 999,
+              background: added
+                ? "#16D66B"
+                : "var(--nex-world-primary, #00AFFF)",
+              border: "1px solid rgba(255, 255, 255, 0.2)",
+              color: "#0A1526",
+              cursor: "pointer",
+              fontFamily: "inherit",
+              fontSize: 14,
+              fontWeight: 900,
+              transition: "background 180ms ease-out",
+            }}
+          >
+            <BagIconSmall />
+            {added ? "Added ✓" : "Add to cart"}
+          </button>
+        </div>
+      </motion.div>
+    </AnimatePresence>,
+    document.body,
   );
 }
 
@@ -615,6 +989,26 @@ function ShopBagIcon(): React.JSX.Element {
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+      <path d="M3 6h18" />
+      <path d="M16 10a4 4 0 0 1-8 0" />
+    </svg>
+  );
+}
+
+function BagIconSmall(): React.JSX.Element {
+  return (
+    <svg
+      aria-hidden
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
       strokeLinecap="round"
       strokeLinejoin="round"
     >

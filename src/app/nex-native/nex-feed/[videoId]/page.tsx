@@ -91,6 +91,11 @@ export const dynamic = "force-dynamic";
 async function resolveSellerShopForBroadcaster(
   ownerAccountId: string | null | undefined,
 ): Promise<{
+  readonly shop: {
+    readonly id: string;
+    readonly slug: string | null;
+    readonly displayName: string;
+  };
   readonly products: ReadonlyArray<{
     readonly id: string;
     readonly name: string;
@@ -108,6 +113,15 @@ async function resolveSellerShopForBroadcaster(
     const thumbnails = await getProductThumbnailsByBusiness(business.id, 24);
     if (thumbnails.length === 0) return null;
     return {
+      // Owner-authorised 2026-11-01 · Phase 8 refinement (sheet + cart) ·
+      // broadcast the shop identity so the sealed NEX cart can store
+      // items keyed on (shop_id, product_id) · see cart-types.ts
+      // NexCartItem shape.
+      shop: {
+        id: business.id,
+        slug: business.slug ?? null,
+        displayName: business.display_name,
+      },
       products: thumbnails.map((p) => ({
         id: p.id,
         name: p.name,
@@ -753,6 +767,7 @@ export default async function NexFeedViewerPage({
               nexHandle: musicEntry.ownerNexHandle,
             }}
             products={sellerShop.products}
+            shop={sellerShop.shop}
           />
         ) : null}
         {/* Owner-authorised 2026-11-01 · Batch E.2.c · feed-mode entry
@@ -866,6 +881,7 @@ export default async function NexFeedViewerPage({
             nexHandle: videoBroadcaster.nexHandle,
           }}
           products={videoSellerShop.products}
+          shop={videoSellerShop.shop}
         />
       ) : null}
       {/* Owner-authorised 2026-11-01 · Batch E.2.c · same overlay mount
