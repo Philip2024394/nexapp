@@ -301,28 +301,15 @@ export function MusicActionsStack(
         )}
 
         {!props.isOwnerView && (
-          <>
-            <IconButton
-              ref={heartBtnRef}
-              ariaLabel={liked ? "Unlike this track" : "Like this track"}
-              onClick={handleLike}
-              active={liked}
-              pulse={liked}
-            >
-              <HeartIcon filled color={liked ? RED_DARK : SOLID_WHITE} />
-            </IconButton>
-            <CountLabel value={likeCount} />
-
-            <IconButton
-              ariaLabel={saved ? "Remove from saved" : "Save this track"}
-              onClick={handleSave}
-              active={saved}
-            >
-              <BookmarkIcon filled color={saved ? "#FFD700" : SOLID_WHITE} />
-            </IconButton>
-            <CountLabel value={0} dim />
-          </>
+          <IconButton
+            ariaLabel={saved ? "Remove from saved" : "Save this track"}
+            onClick={handleSave}
+            active={saved}
+          >
+            <BookmarkIcon filled color={saved ? "#FFD700" : SOLID_WHITE} />
+          </IconButton>
         )}
+        {!props.isOwnerView && <CountLabel value={0} dim />}
 
         {props.isOwnerView && props.onEdit && (
           <IconButton
@@ -366,6 +353,32 @@ export function MusicActionsStack(
               <CountLabel value={followerCount} />
             )}
           </div>
+        )}
+
+        {/* Owner directive 2026-11-01 · "heart bottom right footer
+         *  icon". Like moved from top of the stack to the BOTTOM so
+         *  it becomes the last right-rail action the viewer meets
+         *  before the composer. Icon enlarged 24 → 28 ("enlarge
+         *  little"). Fly-to-header + heart-rain burst animations
+         *  untouched · heartBtnRef still drives burstOrigin so the
+         *  fly animation originates from the new position. */}
+        {!props.isOwnerView && (
+          <>
+            <IconButton
+              ref={heartBtnRef}
+              ariaLabel={liked ? "Unlike this track" : "Like this track"}
+              onClick={handleLike}
+              active={liked}
+              pulse={liked}
+            >
+              <HeartIcon
+                filled
+                size={28}
+                color={liked ? RED_DARK : SOLID_WHITE}
+              />
+            </IconButton>
+            <CountLabel value={likeCount} />
+          </>
         )}
       </div>
 

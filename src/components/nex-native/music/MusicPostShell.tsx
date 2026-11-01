@@ -104,6 +104,14 @@ export interface MusicPostShellProps {
    *  Null falls back to the broadcaster-country label (preserves
    *  pre-Batch E.2 behaviour for the preview page). */
   readonly feedModeLabel?: string | null;
+  /** Owner-authorised 2026-11-01 · Social Commerce Phase 8 follow-up ·
+   *  when set, renders a "Visit Shop →" line below the feed-mode
+   *  label linking to the broadcaster's sealed shop template page
+   *  (/profile/<handle>). Non-null only when the broadcaster has an
+   *  active shop with ≥1 live product (same gate as the Phase 8
+   *  right-rail shop drawer · "no dead buttons"). Null hides the row
+   *  entirely. */
+  readonly shopHref?: string | null;
   /** Owner-authorised 2026-10-30 · when set, the top-left identity
    *  block (avatar + name + handle + Live line) is wrapped in an
    *  `<a>` that routes to this href. The swipe pointer handlers
@@ -283,6 +291,7 @@ export function MusicPostShell(props: MusicPostShellProps): React.JSX.Element {
         <MusicPostHeaderIdentity
           countryCode={props.broadcasterCountryCode}
           feedModeLabel={props.feedModeLabel ?? null}
+          shopHref={props.shopHref ?? null}
           broadcasterAvatarUrl={props.broadcasterAvatarUrl}
           broadcasterName={props.broadcasterDisplayName}
           broadcasterNexHandle={props.broadcasterNexHandle}
@@ -385,6 +394,11 @@ function MusicPostHeaderIdentity(props: {
    *  label (e.g. "Live Ireland", "Live World"). Null falls back to the
    *  resolved country label from `countryCode`. */
   readonly feedModeLabel: string | null;
+  /** Owner-authorised 2026-11-01 · Social Commerce Phase 8 follow-up ·
+   *  when set, renders a Gold "Visit Shop →" line below the feed-mode
+   *  label linking to the broadcaster's sealed shop template
+   *  (/profile/<handle>). Null hides the row entirely. */
+  readonly shopHref: string | null;
   readonly broadcasterAvatarUrl: string | null;
   readonly broadcasterName: string;
   readonly broadcasterNexHandle: string | null;
@@ -588,8 +602,76 @@ function MusicPostHeaderIdentity(props: {
         >
           {props.feedModeLabel || countryLabel || props.countryCode || "NEX"}
         </span>
+        {/* Owner directive 2026-11-01 · "visit shop · add text under
+         *  header and icon linked to their shop template if they have
+         *  purchased a shop membership". shopHref is null-safe · the
+         *  server resolver mounts this ONLY when the broadcaster has
+         *  a nex_business + ≥ 1 live product (same gate as the Phase
+         *  8 right-rail shop drawer · "no dead buttons"). Uses the
+         *  sealed `--nex-world-secondary` world token so the gold
+         *  accent appears on Ireland and the cyan equivalent on
+         *  Worldwide · identical treatment to the Phase 8 "View
+         *  details" pill in the shop drawer. Stops propagation so the
+         *  wrapping identity link doesn't eat the tap. */}
+        {props.shopHref && (
+          <a
+            href={props.shopHref}
+            data-nex-music-post-shell-visit-shop
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+            style={{
+              marginTop: 3,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              padding: "2px 10px",
+              borderRadius: 999,
+              background: "var(--nex-world-secondary, #C6A15B)",
+              color: "#0A1526",
+              textDecoration: "none",
+              fontSize: 11,
+              fontWeight: 900,
+              letterSpacing: 0.2,
+              lineHeight: 1,
+              whiteSpace: "nowrap",
+              alignSelf: "flex-start",
+              boxShadow: "0 0 8px rgba(198, 161, 91, 0.4)",
+            }}
+          >
+            <ShopBagMiniIcon />
+            Visit Shop
+            <span aria-hidden style={{ fontSize: 12, lineHeight: 1 }}>
+              ›
+            </span>
+          </a>
+        )}
       </div>
     </WrapperTag>
+  );
+}
+
+/** Owner-authorised 2026-11-01 · tiny shopping-bag glyph for the
+ *  identity's "Visit Shop" pill. Mirrors the ShopBagIcon shape used
+ *  in _seller-shop-drawer.tsx so the two surfaces read as one
+ *  shopping-cue family. 12px to fit inside an 11px-text pill. */
+function ShopBagMiniIcon(): React.JSX.Element {
+  return (
+    <svg
+      aria-hidden
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+      <path d="M3 6h18" />
+      <path d="M16 10a4 4 0 0 1-8 0" />
+    </svg>
   );
 }
 

@@ -94,6 +94,11 @@ export interface MusicViewerClientProps {
    *  broadcaster-country header line under the broadcaster's name.
    *  Server-resolved from `resolveCountryFeedMode(?country)`. */
   readonly feedModeLabel: string;
+  /** Owner-authorised 2026-11-01 · Social Commerce Phase 8 follow-up
+   *  · broadcaster's shop href (/profile/<handle>) when they have an
+   *  active shop (same gate as the Phase 8 right-rail shop drawer).
+   *  Null hides the "Visit Shop" header pill. */
+  readonly shopHref: string | null;
   /** Owner-authorised 2026-10-30 · Stage 1 Follow SSR seed. Server-
    *  resolved from `getFollowState` so the person-plus icon paints
    *  the correct state on first render. Always false for guests
@@ -646,6 +651,7 @@ export function MusicViewerClient(
         broadcasterPresence="online"
         broadcasterCountryCode={props.broadcasterCountryCode}
         feedModeLabel={props.feedModeLabel}
+        shopHref={props.shopHref}
         autoPlayOnMount={true}
         isLiked={liked}
         // Owner directive 2026-10-30 · track remaining time so the
