@@ -402,6 +402,20 @@ export function LiveSideDrawer(props: LiveSideDrawerProps): React.JSX.Element {
               onNavigate={close}
             />
           ) : null}
+          {/* Owner directive 2026-11-01 · Phase 2 of Social Commerce
+           *  roadmap · "A user should be able to open the NEX side
+           *  drawer and select Sell a Product". Entry row for the
+           *  sealed /create/product flow (authored Oct 30 §K · shared
+           *  form + category picker + category-specific validators).
+           *  Routes to the create flow, not the manage flow — the
+           *  manage flow is the row below ("My Shop"). */}
+          <LiveDrawerRow
+            label="Sell a Product"
+            subtitle="List a product for sale · 30 days + 5 listings free"
+            href="/nex-native/create/product"
+            dataKey="sell-a-product"
+            onNavigate={close}
+          />
           <LiveDrawerRow
             label="Go Live"
             subtitle="Guidelines + agreement before you broadcast"
@@ -409,11 +423,16 @@ export function LiveSideDrawer(props: LiveSideDrawerProps): React.JSX.Element {
             dataKey="go-live"
             onNavigate={close}
           />
+          {/* Owner directive 2026-11-01 · Phase 2 follow-up · the row
+           *  previously labelled "Shop" is the MANAGE flow (list, edit,
+           *  cover layout, QR, shipping scope · see /manage/shop). The
+           *  "Sell a Product" row above handles the CREATE flow. Rename
+           *  clarifies the separation so users know where to go. */}
           <LiveDrawerRow
-            label="Shop"
+            label="My Shop"
             subtitle="Your product listings · upload · edit"
             href="/nex-native/manage/shop"
-            dataKey="shop"
+            dataKey="my-shop"
             onNavigate={close}
           />
           {/* Owner directive 2026-11-01 · Phase 5 of Social Commerce
