@@ -39,10 +39,19 @@ import {
 // Worldwide / Indonesia / any deployment that doesn't override keeps
 // byte-identical rendering via the hex fallbacks. Universal tokens
 // (text / textDim / textMute · whatsapp brand) stay hardcoded.
+//
+// Owner-authorised 2026-11-01 (Change A correction) · bgSheet now also
+// routes through the drawer-bg token. Previous version declared bgNavy
+// but still painted the sheet with `--nex-world-background-base`, which
+// Ireland leaves near-dark for the feed canvas — so the slider stayed
+// navy on Ireland. Pointing the sheet at drawer-bg picks up Ireland's
+// forest green `#123D2B` (registered in `_world-stylesheet.tsx:97-99`)
+// and leaves Worldwide/Indonesia byte-identical through the hex
+// fallback `#050F1E` ≈ the prior `#020914`.
 const NEX = {
   bgNavy: "var(--nex-world-drawer-bg, #050F1E)",
   bgDeep: "var(--nex-world-background-base, #020914)",
-  bgSheet: "var(--nex-world-background-base, #020914)",
+  bgSheet: "var(--nex-world-drawer-bg, #050F1E)",
   text: "#F2F5F8",
   textDim: "#8BA9D1",
   textMute: "#526B89",
