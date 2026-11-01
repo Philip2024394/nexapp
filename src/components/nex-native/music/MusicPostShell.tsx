@@ -26,6 +26,10 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { NEX_FONT_SANS } from "@/lib/nex-native/design-tokens";
 import { NexMusicPlayerOverlay } from "@/components/nex-native/music/NexMusicPlayerOverlay";
+// Owner directive 2026-11-01 · satellite tower + ping beside the
+// feedModeLabel on the music header · mirrors the sealed live-video
+// top-header-left mount pattern.
+import { SatelliteIconWithPing } from "@/components/nex-native/live-commerce/LiveSignalBadge";
 import {
   MusicLibraryOverlay,
   type MusicLibraryTrack,
@@ -580,6 +584,13 @@ function MusicPostHeaderIdentity(props: {
          *  supply a feedModeLabel (preview page · self-view).
          *  Visual treatment preserved from the 2026-11-01 follow-up
          *  (16px · fontWeight 900 · #D9E6F5). */}
+        {/* Owner directive 2026-11-01 · "we need the icon pole and
+         *  ping beside the live world and live ireland · same pole
+         *  and ping as on the nex live feed page top header left".
+         *  Mirrors the sealed video-viewer satellite-tower mount at
+         *  _video-viewer-client.tsx:1040. NEX dark red tower +
+         *  white concentric ping rings. inline-flex so the icon sits
+         *  tight against the feedMode text with a 6px gap. */}
         <span
           style={{
             fontSize: 16,
@@ -590,10 +601,25 @@ function MusicPostHeaderIdentity(props: {
             overflow: "hidden",
             textOverflow: "ellipsis",
             maxWidth: "100%",
-            display: "block",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
           }}
         >
-          {props.feedModeLabel || countryLabel || props.countryCode || "NEX"}
+          <span
+            data-nex-music-header-live-icon
+            aria-hidden
+            style={{
+              display: "inline-flex",
+              flexShrink: 0,
+              textShadow: "none",
+            }}
+          >
+            <SatelliteIconWithPing accentColor="#B30000" pingColor="#FFFFFF" />
+          </span>
+          <span>
+            {props.feedModeLabel || countryLabel || props.countryCode || "NEX"}
+          </span>
         </span>
       </div>
     </WrapperTag>
