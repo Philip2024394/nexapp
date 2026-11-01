@@ -1362,7 +1362,12 @@ const TEXT = "#F2F5F8";
 const MUTED = "#7D9BC0";
 const BG = "var(--nex-world-background-base, #020914)";
 const PANEL = "var(--nex-world-drawer-bg, #0A1526)";
-const PANEL_BORDER = "rgba(0,175,255,0.18)";
+// Owner directive 2026-11-02 · panel border routes through the sealed
+// world-secondary token so Ireland's forest-green drawer gets an Irish
+// gold rim instead of global cyan. Worldwide / Indonesia preserve the
+// hex fallback #00AFFF for byte-identical rendering.
+const PANEL_BORDER =
+  "color-mix(in srgb, var(--nex-world-secondary, #00AFFF) 18%, transparent)";
 const DANGER = "#FF4D4F";
 const DANGER_INK = "#1A0505";
 // Owner directive 2026-10-20 · the Emergency Help row inside the drawer

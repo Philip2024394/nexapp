@@ -47,7 +47,7 @@ const HENDRA_HOME_HREF = "/nex-native/contacts";
 const TEXT = "#F2F5F8";
 const MUTED = "#7D9BC0";
 // Owner-sealed 2026-11-01 · music/live side-drawer bg is now per-world.
-// Ireland sets --nex-world-drawer-bg=#02AD04 (Irish Green) via the
+// Ireland sets --nex-world-drawer-bg=#123D2B (forest green) via the
 // WorldStylesheet; other worlds leave it unset and fall through to
 // the pre-existing nex-world-background-base behaviour. Chain:
 //   1. --nex-world-drawer-bg       (set only for Ireland)
@@ -55,9 +55,17 @@ const MUTED = "#7D9BC0";
 //   3. #020914                     (ultimate fallback · nex-original navy)
 const BG =
   "var(--nex-world-drawer-bg, var(--nex-world-background-base, #020914))";
-const PANEL_BORDER = "rgba(0,175,255,0.18)";
-const CYAN = "#00AFFF";
-const ROW_HOVER = "rgba(0,175,255,0.06)";
+// Owner directive 2026-11-02 · drawer accents (rim, icons, title text,
+// nav-row chevrons) route through the sealed world-secondary token so
+// Ireland's forest-green drawer renders with Irish gold accents instead
+// of global cyan. Worldwide/Indonesia keep the hex fallback #00AFFF so
+// their chrome is byte-identical to the pre-token state. Matches the
+// pattern VideoShareSheet uses for its NEX-contact row left-edge.
+const CYAN = "var(--nex-world-secondary, #00AFFF)";
+const PANEL_BORDER =
+  "color-mix(in srgb, var(--nex-world-secondary, #00AFFF) 18%, transparent)";
+const ROW_HOVER =
+  "color-mix(in srgb, var(--nex-world-secondary, #00AFFF) 6%, transparent)";
 
 export interface LiveSideDrawerProps {
   /** Optional portal target · when the trigger has no `.nex-native-frame`
