@@ -934,18 +934,11 @@ function ProfileBody(props: {
       <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 10 }}>
         <InterestsPills interests={props.interests} isOwner={props.isOwner} />
         <MutualFriends count={props.mutualCount} preview={props.mutualPreview} />
-        <ActionButtons
-          // When `previewActions=true` (Philip mock), suppress the
-          // owner-mode gate so Connect/Message render as a preview
-          // of what viewers see · dev-only safeguard.
-          isOwner={props.previewActions ? false : props.isOwner}
-          isSignedIn={props.isSignedIn}
-          profileAccountId={props.profileAccountId}
-          profileHandle={props.profileAccountNexHandle ?? props.handle}
-          displayName={props.displayNameForActions}
-          connectState={props.connectState}
-          sendFriendInviteAction={sendFriendInviteAction}
-        />
+        {/* Owner directive 2026-11-02 · Connect + Message action
+         *  pills retired from the profile hero · Follow-only is the
+         *  new primary action (rendered below in the FollowButton
+         *  row). ActionButtons component kept in the file tree for
+         *  any future surface that needs the connect/invite flow. */}
 
         {/* Owner-authorised 2026-10-30 · Stage 1 Follow surface
             (§13.6). Count chip renders for all viewers (including
@@ -1120,15 +1113,9 @@ function DemoEmmaRender(): React.JSX.Element {
       <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 10 }}>
         <InterestsPills interests={[...d.interests]} isOwner={false} />
         <MutualFriends count={d.mutualCount} preview={[...d.mutualPreview]} />
-        <ActionButtons
-          isOwner={false}
-          isSignedIn={true}
-          profileAccountId="demo-emma-account"
-          profileHandle={d.nexHandle}
-          displayName={d.displayName}
-          connectState="none"
-          sendFriendInviteAction={sendFriendInviteAction}
-        />
+        {/* Owner directive 2026-11-02 · demo Connect + Message pills
+         *  retired to match the main viewer path · Follow-only is
+         *  the primary action across every profile. */}
         {/* Bottom Safe Trade card RETIRED 2026-10-17 · demo mirrors
             the real path · entry is the hero-icon only. */}
       </div>

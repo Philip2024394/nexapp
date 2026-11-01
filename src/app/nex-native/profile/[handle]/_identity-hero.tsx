@@ -280,6 +280,12 @@ export function IdentityHero(props: IdentityHeroProps): React.JSX.Element {
           the owner sets or changes their city/country in Settings.
           Owner mode shows an "+ Add your location" prompt when the
           field is NULL so the field is self-discoverable. */}
+      {/* Owner directive 2026-11-02 · map pin icon is RED and the
+       *  location line shows the county (e.g. "Dublin") pulled from
+       *  nex_account_profile.location_label. Replaces the earlier
+       *  cyan map pin · the bio paragraph has been retired in favour
+       *  of a dedicated description section placed under the
+       *  follower-stats row (follow-up commit). */}
       {props.locationLabel ? (
         <div
           data-nex-profile-location
@@ -293,7 +299,7 @@ export function IdentityHero(props: IdentityHeroProps): React.JSX.Element {
             gap: 6,
           }}
         >
-          <MapIcon color={NEX.cyan} />
+          <MapIcon color="#E31C25" />
           <span>{props.locationLabel}</span>
         </div>
       ) : props.isOwner ? (
@@ -313,7 +319,7 @@ export function IdentityHero(props: IdentityHeroProps): React.JSX.Element {
             border: `1px dashed ${NEX.cyanSoft}`,
           }}
         >
-          <MapIcon color={NEX.textMuted} /> + Add your location
+          <MapIcon color="#E31C25" /> + Add your location
         </Link>
       ) : null}
 
@@ -349,23 +355,12 @@ export function IdentityHero(props: IdentityHeroProps): React.JSX.Element {
         </div>
       ) : null}
 
-      {props.bio ? (
-        <p
-          data-nex-profile-bio
-          style={{
-            margin: "6px 14px 0",
-            maxWidth: 320,
-            fontSize: 13,
-            lineHeight: 1.4,
-            color: NEX.textDim,
-            fontFamily: SANS,
-          }}
-        >
-          {props.bio}
-        </p>
-      ) : props.isOwner ? (
-        <OwnerEmptyHint hint="Tap Edit profile to add your bio." />
-      ) : null}
+      {/* Owner directive 2026-11-02 · bio paragraph in the hero
+       *  retired. A dedicated short description area is coming to
+       *  sit under the follower-stats row (follow-up commit) · the
+       *  hero stays focused on identity + location + profession.
+       *  props.bio stays in the data model (and in the OwnerEditShell
+       *  for editing) · just not rendered here any more. */}
 
       {/* The in-hero "Edit profile" link was retired 2026-10-17 ·
           the OwnerEditShell wraps the whole page and renders exactly
