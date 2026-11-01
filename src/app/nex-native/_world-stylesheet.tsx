@@ -145,6 +145,21 @@ const WORLD_LIVE_DRAWER_EDGE_LIGHT_DISPLAY: Record<string, string> = {
 const WORLD_LIVE_DRAWER_FOOTER_IMAGE_DISPLAY: Record<string, string> = {
   ireland: "block",
 };
+// Owner-authorised 2026-11-01 · Social Commerce palette sweep · Path A ·
+// Keypad theming. The sealed JokerKeypad consumes these when set,
+// falling back to its original dark-navy + Joker-green when not.
+// Ireland registers: forest-green backdrop + Irish gold accent. Other
+// worlds leave this empty and keep the sealed Joker palette.
+const WORLD_KEYPAD_BG_TOP: Record<string, string> = {
+  ireland: "#0A1F15",
+};
+const WORLD_KEYPAD_BG_BOTTOM: Record<string, string> = {
+  ireland: "#123D2B",
+};
+const WORLD_KEYPAD_ACCENT: Record<string, string> = {
+  ireland: "#C6A15B",
+};
+
 const WORLD_LIVE_DRAWER_FOOTER_IMAGE_URL: Record<string, string> = {
   ireland: "/nex-brand/ireland-leprechaun-dj.png",
 };
@@ -165,6 +180,9 @@ export async function WorldStylesheet(): Promise<React.JSX.Element> {
   const footerImageDisplay =
     WORLD_LIVE_DRAWER_FOOTER_IMAGE_DISPLAY[world.meta.id];
   const footerImageUrl = WORLD_LIVE_DRAWER_FOOTER_IMAGE_URL[world.meta.id];
+  const keypadBgTop = WORLD_KEYPAD_BG_TOP[world.meta.id];
+  const keypadBgBottom = WORLD_KEYPAD_BG_BOTTOM[world.meta.id];
+  const keypadAccent = WORLD_KEYPAD_ACCENT[world.meta.id];
   const drawerDecl = drawerBg
     ? `  --nex-world-drawer-bg: ${drawerBg};\n`
     : "";
@@ -182,6 +200,30 @@ export async function WorldStylesheet(): Promise<React.JSX.Element> {
       ? `  --nex-world-live-drawer-footer-image-display: ${footerImageDisplay};\n` +
         `  --nex-world-live-drawer-footer-image-url: url("${footerImageUrl}");\n`
       : "";
+  // Owner-authorised 2026-11-01 · Social Commerce palette sweep · Path A ·
+  // Ireland keypad backdrop + accent. Derive the 5 alpha variants from
+  // the accent hex so the sealed `deriveKeypadVars` behaviour is
+  // preserved without touching the keypad component on every world.
+  const keypadDecl = (() => {
+    const parts: string[] = [];
+    if (keypadBgTop) parts.push(`  --nex-keypad-bg-top: ${keypadBgTop};`);
+    if (keypadBgBottom)
+      parts.push(`  --nex-keypad-bg-bottom: ${keypadBgBottom};`);
+    if (keypadAccent) {
+      const hex = keypadAccent.replace("#", "").trim();
+      if (hex.length === 6) {
+        const r = parseInt(hex.slice(0, 2), 16);
+        const g = parseInt(hex.slice(2, 4), 16);
+        const b = parseInt(hex.slice(4, 6), 16);
+        parts.push(`  --nex-kp-accent: ${keypadAccent};`);
+        parts.push(`  --nex-kp-accent-dim: rgba(${r},${g},${b},0.22);`);
+        parts.push(`  --nex-kp-accent-glow: rgba(${r},${g},${b},0.55);`);
+        parts.push(`  --nex-kp-accent-pressed: rgba(${r},${g},${b},0.25);`);
+        parts.push(`  --nex-kp-accent-border: rgba(${r},${g},${b},0.18);`);
+      }
+    }
+    return parts.length > 0 ? parts.join("\n") + "\n" : "";
+  })();
   const css =
     `:root {\n` +
     `  --nex-world-desktop-backdrop: url("${backdropUrl}");\n` +
@@ -191,6 +233,7 @@ export async function WorldStylesheet(): Promise<React.JSX.Element> {
     taglineDecl +
     edgeLightDecl +
     footerImageDecl +
+    keypadDecl +
     `}\n` +
     `.nex-native-stage {\n${declarations}\n}`;
   // dangerouslySetInnerHTML is fine here · we control both the var

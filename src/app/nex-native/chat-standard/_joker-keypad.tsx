@@ -52,8 +52,15 @@ import {
    `var(--nex-kp-accent-*)` with the Joker-green rgba literals as
    fallbacks. The deriveKeypadVars() helper computes the CSS vars
    from the accentColor prop (defaults to Joker green). */
-const DEEP_1 = "#030308";
-const DEEP_2 = "#0A0F1A";
+// Owner-authorised 2026-11-01 · Social Commerce palette sweep · Path A ·
+// Keypad backdrop now consumes world-aware CSS vars when available;
+// fallbacks preserve the sealed Joker palette on Worldwide / Indonesia
+// / any deployment that doesn't override. Ireland deployment sets
+// `--nex-keypad-bg-top` / `-bg-bottom` via _world-stylesheet.tsx so
+// the keypad reads as Irish forest-green on Ireland; Worldwide stays
+// byte-identical to the previous dark navy backdrop.
+const DEEP_1 = "var(--nex-keypad-bg-top, #030308)";
+const DEEP_2 = "var(--nex-keypad-bg-bottom, #0A0F1A)";
 const KEY_TEXT = "#F4F7FC";
 const KEY_BG_IDLE = "rgba(255,255,255,0.06)";
 /* Owner directive 2026-10-20 · "red line button over the blue return
@@ -232,10 +239,16 @@ export function JokerKeypad({
     return planes.includes(initialPlane) ? initialPlane : planes[0];
   }, [planes, initialPlane]);
   /* Owner directive 2026-10-18 · derive the five CSS vars once per
-     render from accentColor · defaults to Joker acid-green so the
-     Joker theme stays visually identical to the sealed primitive. */
+     render from accentColor. Owner-authorised 2026-11-01 (Social
+     Commerce palette sweep · Path A): when NO accentColor prop is
+     passed, return an empty inline-vars object so the cascade from
+     src/app/nex-native/_world-stylesheet.tsx wins. That lets each
+     world register its own default accent (Ireland = Irish gold ·
+     Worldwide = Joker green via the ultimate fallback in each
+     style property). Callers that pass an explicit accentColor
+     still override as before · byte-identical behaviour. */
   const paletteVars = React.useMemo(
-    () => deriveKeypadVars(accentColor ?? "#8FFF6E"),
+    () => (accentColor ? deriveKeypadVars(accentColor) : {}),
     [accentColor],
   );
   const [shift, setShift] = React.useState<ShiftState>("upper"); // first letter capitalised
