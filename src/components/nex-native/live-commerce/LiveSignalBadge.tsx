@@ -98,6 +98,7 @@ export function LiveSignalBadge(
 export function SatelliteIconWithPing({
   accentColor,
   pingColor,
+  size,
 }: {
   readonly accentColor: string;
   /** Owner directive 2026-10-25 · "the ping in header only ping
@@ -107,8 +108,16 @@ export function SatelliteIconWithPing({
    *  back to `accentColor` for every caller that pre-dates the
    *  split (backwards-compatible). */
   readonly pingColor?: string;
+  /** Owner-authorised 2026-11-01 (Change B) · optional pixel size for
+   *  the icon's wrapper + SVG. Default 20 preserves the sealed badge
+   *  sizing and every existing call-site (LiveSignalBadge pill, video
+   *  viewer top-left mount). Music header passes `28` so the tower
+   *  reads clearly beside the Live World label on mobile. The SVG
+   *  viewBox stays 0 0 20 20 so geometry scales uniformly. */
+  readonly size?: number;
 }): React.JSX.Element {
   const ping = pingColor ?? accentColor;
+  const px = size ?? 20;
 
   return (
     <span
@@ -116,8 +125,8 @@ export function SatelliteIconWithPing({
       data-nex-live-signal-icon
       style={{
         position: "relative",
-        width: 20,
-        height: 20,
+        width: px,
+        height: px,
         display: "inline-block",
         flexShrink: 0,
       }}
@@ -175,8 +184,8 @@ export function SatelliteIconWithPing({
       />
       <svg
         viewBox="0 0 20 20"
-        width={20}
-        height={20}
+        width={px}
+        height={px}
         aria-hidden
         style={{
           position: "absolute",

@@ -615,7 +615,20 @@ function MusicPostHeaderIdentity(props: {
               textShadow: "none",
             }}
           >
-            <SatelliteIconWithPing accentColor="#B30000" pingColor="#FFFFFF" />
+            {/* Owner-authorised 2026-11-01 (Change B) · size 28 so the
+             *  tower reads clearly beside the Live World label on
+             *  mobile. `accentColor` routes through the sealed world
+             *  secondary token — Irish gold `#C6A15B` on Ireland,
+             *  Worldwide / Indonesia / future-world chrome inherits
+             *  via `--nex-world-secondary` with hex fallback #00AFFF.
+             *  No Ireland-specific hardcoded colour on this call-site.
+             *  Ping stays bright red so the pulsing wave reads as a
+             *  live notification signal across every world. */}
+            <SatelliteIconWithPing
+              size={28}
+              accentColor="var(--nex-world-secondary, #00AFFF)"
+              pingColor="#FF3333"
+            />
           </span>
           <span>
             {props.feedModeLabel || countryLabel || props.countryCode || "NEX"}
