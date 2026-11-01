@@ -619,23 +619,11 @@ export function NexMusicPlayerOverlay(
               >
                 {props.broadcasterName}
               </span>
-              {props.broadcasterNexHandle && (
-                <span
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    color: "rgba(240, 246, 255, 0.75)",
-                    letterSpacing: "0.04em",
-                    lineHeight: 1.2,
-                    textShadow: "0 1px 2px rgba(0, 0, 0, 0.6)",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {props.broadcasterNexHandle}
-                </span>
-              )}
+              {/* Owner directive 2026-11-02 · Nex-ID line removed from
+               *  the music-player overlay chrome. The handle remains on
+               *  the profile page only. Prop kept in the component
+               *  contract to avoid rippling a type change through
+               *  every call site. */}
             </span>
             <style>{`
               @keyframes nex-music-broadcaster-heartbeat {

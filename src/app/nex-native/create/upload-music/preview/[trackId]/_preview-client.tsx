@@ -1428,20 +1428,9 @@ function PreviewHeaderLiveCountryBlock(props: {
         >
           {props.broadcasterName}
         </span>
-        {props.broadcasterNexHandle && (
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              color: "rgba(240, 246, 255, 0.75)",
-              letterSpacing: "0.03em",
-              lineHeight: 1.2,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {props.broadcasterNexHandle}
-          </span>
-        )}
+        {/* Owner directive 2026-11-02 · Nex-ID line removed from the
+         *  upload-music preview header chrome. The handle remains on
+         *  the profile page only. */}
         <span
           style={{
             fontSize: 11,

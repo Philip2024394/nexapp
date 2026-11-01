@@ -557,24 +557,11 @@ function MusicPostHeaderIdentity(props: {
         >
           {props.broadcasterName}
         </span>
-        {props.broadcasterNexHandle && (
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: 700,
-              color: "rgba(240, 246, 255, 0.75)",
-              letterSpacing: "0.03em",
-              lineHeight: 1.2,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              maxWidth: "100%",
-              display: "block",
-            }}
-          >
-            {props.broadcasterNexHandle}
-          </span>
-        )}
+        {/* Owner directive 2026-11-02 · Nex-ID line removed from the
+         *  music-post header chrome. The handle remains on the profile
+         *  page only (one dedicated identity surface). The
+         *  broadcasterNexHandle prop stays in the component contract
+         *  so callers don't need a type ripple. */}
         {/* Owner directive 2026-11-01 (Batch E.2 · feed-mode header) ·
          *  when the viewer is in a specific feed mode, the line under
          *  the broadcaster-name shows the FEED MODE ("Live Ireland",
