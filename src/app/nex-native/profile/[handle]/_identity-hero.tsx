@@ -251,10 +251,28 @@ export function IdentityHero(props: IdentityHeroProps): React.JSX.Element {
         ) : null}
       </h1>
 
-      {/* Owner directive 2026-10-17 · the NEX ID row directly under
-          the name has been retired · the viewer's own NEX ID is
-          already shown in the top chrome bar · the profile owner's
-          NEX ID still appears on contacts/ControlDrawer surfaces. */}
+      {/* Owner directive 2026-11-02 · the profile owner's Nex-ID
+          returns as a dedicated row directly under the display name.
+          The chrome-badge version was retired (commit 101ba72) and
+          every other page-header handle rendering is retired too
+          (commit c12cc18) · the profile hero is now the single
+          authoritative identity surface where the Nex-ID appears.
+          Supersedes the earlier 2026-10-17 retirement note. */}
+      {props.nexHandle ? (
+        <div
+          data-nex-profile-nex-id
+          style={{
+            marginTop: 2,
+            fontSize: 14,
+            fontWeight: 700,
+            color: NEX.textMuted,
+            fontFamily: SANS,
+            letterSpacing: "0.03em",
+          }}
+        >
+          {props.nexHandle}
+        </div>
+      ) : null}
 
       {/* Location moved up to sit directly under the name per owner
           directive 2026-10-17 · uses a map icon (not pin) · auto-

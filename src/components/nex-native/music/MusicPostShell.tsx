@@ -593,30 +593,11 @@ function MusicPostHeaderIdentity(props: {
             gap: 6,
           }}
         >
-          <span
-            data-nex-music-header-live-icon
-            aria-hidden
-            style={{
-              display: "inline-flex",
-              flexShrink: 0,
-              textShadow: "none",
-            }}
-          >
-            {/* Owner-authorised 2026-11-01 (Change B) · size 28 so the
-             *  tower reads clearly beside the Live World label on
-             *  mobile. `accentColor` routes through the sealed world
-             *  secondary token — Irish gold `#C6A15B` on Ireland,
-             *  Worldwide / Indonesia / future-world chrome inherits
-             *  via `--nex-world-secondary` with hex fallback #00AFFF.
-             *  No Ireland-specific hardcoded colour on this call-site.
-             *  Ping stays bright red so the pulsing wave reads as a
-             *  live notification signal across every world. */}
-            <SatelliteIconWithPing
-              size={28}
-              accentColor="var(--nex-world-secondary, #00AFFF)"
-              pingColor="#FF3333"
-            />
-          </span>
+          {/* Owner directive 2026-11-02 · satellite tower + ping
+           *  retired from the music-post header. The 28px icon added
+           *  as Change B is no longer rendered beside the feed-mode
+           *  label; the label text ("Live World" / "Live Ireland")
+           *  stands alone. Supersedes Change B (2026-11-01). */}
           <span>
             {props.feedModeLabel || countryLabel || props.countryCode || "NEX"}
           </span>

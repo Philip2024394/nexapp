@@ -1017,36 +1017,13 @@ export function VideoViewerClient({
                   with ping-wave effect inline left of "Live". White
                   monochrome · same organic scan the Live chrome used
                   before the recent header rewrite. */}
-              <span
-                data-nex-video-viewer-live-icon
-                aria-hidden
-                style={{
-                  display: "inline-flex",
-                  flexShrink: 0,
-                  // Owner directive 2026-10-24 · "move tower over 3px
-                  // and text" · nudge the icon 3px right so there's
-                  // breathing room from the left container edge; the
-                  // whole title row inherits the shift via inline-flex
-                  // gap and the span's extra marginRight.
-                  marginLeft: 3,
-                  textShadow: "none",
-                }}
-              >
-                {/* Owner directive 2026-11-02 · global header
-                 *  unification · video viewer header matches the
-                 *  music header's Change B pattern · size 28, accent
-                 *  routes through --nex-world-secondary (Irish gold
-                 *  on Ireland, cyan on Worldwide, turmeric on
-                 *  Indonesia), pulsing ping stays bright red across
-                 *  every world. One satellite-icon visual vocabulary
-                 *  across music + video posts. Supersedes the earlier
-                 *  2026-10-25 red-tower / white-ping split. */}
-                <SatelliteIconWithPing
-                  size={28}
-                  accentColor="var(--nex-world-secondary, #00AFFF)"
-                  pingColor="#FF3333"
-                />
-              </span>
+              {/* Owner directive 2026-11-02 · satellite tower + ping
+               *  retired from the video-viewer header. The icon mount
+               *  (and its earlier Change B unification with the music
+               *  header) are no longer rendered · the feed-mode label
+               *  text ("Live Ireland" / "Live World") stands alone.
+               *  Matches the identical retirement on the music
+               *  header in the same commit. */}
               <span data-nex-video-viewer-title-text>
                 {feedModeLabel}
               </span>
