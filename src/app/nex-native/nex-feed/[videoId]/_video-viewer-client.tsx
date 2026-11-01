@@ -1032,14 +1032,19 @@ export function VideoViewerClient({
                   textShadow: "none",
                 }}
               >
-                {/* Owner directive 2026-10-25 · "ping in header only
-                    ping lines change to white color · tower is red
-                    remain" · split the single accent into tower +
-                    ping. Tower + ball-dot stay in NEX dark red;
-                    the 3 concentric ping-wave rings render WHITE. */}
+                {/* Owner directive 2026-11-02 · global header
+                 *  unification · video viewer header matches the
+                 *  music header's Change B pattern · size 28, accent
+                 *  routes through --nex-world-secondary (Irish gold
+                 *  on Ireland, cyan on Worldwide, turmeric on
+                 *  Indonesia), pulsing ping stays bright red across
+                 *  every world. One satellite-icon visual vocabulary
+                 *  across music + video posts. Supersedes the earlier
+                 *  2026-10-25 red-tower / white-ping split. */}
                 <SatelliteIconWithPing
-                  accentColor="#B30000"
-                  pingColor="#FFFFFF"
+                  size={28}
+                  accentColor="var(--nex-world-secondary, #00AFFF)"
+                  pingColor="#FF3333"
                 />
               </span>
               <span data-nex-video-viewer-title-text>
