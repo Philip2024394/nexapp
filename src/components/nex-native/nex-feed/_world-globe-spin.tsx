@@ -5,11 +5,18 @@
 // Owner-authorised 2026-11-01 · NEX World Feed entry effect.
 // --------------------------------------------------------------------
 // The Worldwide-feed counterpart to IrishShamrockBurst. Fires when the
-// viewer enters the Worldwide feed (globe icon). A single cyan-tinted
-// globe wireframe scales + spins once (720°) while 10 radial light
-// rays sweep outward from centre.
+// viewer selects the Worldwide feed (globe icon).
 //
-// Design mirrors the shamrock-burst primitive:
+// Owner-authorised 2026-11-01 (follow-up · asset supplied):
+// The Worldwide burst now uses the sealed brand asset
+// `/nex-brand/nex-world-orbital-globe.png` (Futuristic NEX Earth
+// Orbital Logo) · a photoreal Earth with cyan orbital rings + chrome
+// NEX wordmark baked into the image. Scales + rotates once (720°)
+// with a cyan drop-shadow glow. The previous SVG wireframe + 10
+// radial light rays are retired — the asset carries both the globe
+// and the orbital-light composition in one layer.
+//
+// Design mirrors the IrishShamrockBurst primitive:
 //   · Pure client · no server · no DB.
 //   · Parent controls firing via `trigger: number` monotonic prop.
 //     `trigger === 0` renders nothing.
@@ -20,7 +27,7 @@ import * as React from "react";
 
 const SPIN_DURATION_MS = 1600;
 const CLEANUP_SAFETY_MS = 400;
-const RAY_COUNT = 10;
+const GLOBE_SIZE_PX = 240;
 
 export interface WorldGlobeSpinProps {
   readonly trigger: number;
@@ -43,8 +50,6 @@ export function WorldGlobeSpin(
 
   if (active === 0) return null;
 
-  const rays = Array.from({ length: RAY_COUNT }, (_, i) => i);
-
   return (
     <>
       <style>{WORLD_GLOBE_KEYFRAMES_CSS}</style>
@@ -62,64 +67,26 @@ export function WorldGlobeSpin(
           overflow: "hidden",
         }}
       >
-        <div
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          key={`globe-${active}`}
+          src="/nex-brand/nex-world-orbital-globe.png"
+          alt=""
+          aria-hidden
+          decoding="async"
           style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            width: 180,
-            height: 180,
-            marginTop: -90,
-            marginLeft: -90,
+            width: GLOBE_SIZE_PX,
+            height: GLOBE_SIZE_PX,
+            display: "block",
+            transformOrigin: "center center",
+            animation: `nex-world-globe-spin ${SPIN_DURATION_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1) both`,
+            // Soft cyan halo matching the asset's own orbital glow ·
+            // smaller blur than the previous wireframe version so the
+            // halo accents the image rather than smearing it.
+            filter: "drop-shadow(0 0 18px rgba(0, 175, 255, 0.55))",
+            willChange: "transform, opacity",
           }}
-        >
-          {rays.map((i) => (
-            <div
-              key={`ray-${active}-${i}`}
-              style={{
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                width: 2,
-                height: 180,
-                marginTop: -90,
-                marginLeft: -1,
-                background:
-                  "linear-gradient(to top, rgba(0, 175, 255, 0) 0%, rgba(0, 175, 255, 0.75) 55%, rgba(0, 175, 255, 0) 100%)",
-                transformOrigin: "center center",
-                transform: `rotate(${(i * 360) / RAY_COUNT}deg) scaleY(0)`,
-                animation: `nex-world-ray ${SPIN_DURATION_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1) both`,
-                animationDelay: `${i * 30}ms`,
-                willChange: "transform, opacity",
-              }}
-            />
-          ))}
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#00AFFF"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              transformOrigin: "center center",
-              animation: `nex-world-globe-spin ${SPIN_DURATION_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1) both`,
-              filter: "drop-shadow(0 0 24px rgba(0, 175, 255, 0.6))",
-              willChange: "transform, opacity",
-            }}
-            aria-hidden
-          >
-            <circle cx="12" cy="12" r="10" />
-            <path d="M2 12h20" />
-            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-            <path d="M4.5 7h15" />
-            <path d="M4.5 17h15" />
-          </svg>
-        </div>
+        />
       </div>
     </>
   );
@@ -131,11 +98,5 @@ const WORLD_GLOBE_KEYFRAMES_CSS = `
   18%  { transform: scale(1.08) rotate(220deg); opacity: 1; }
   70%  { transform: scale(1) rotate(720deg);   opacity: 1; }
   100% { transform: scale(1.4) rotate(760deg); opacity: 0; }
-}
-@keyframes nex-world-ray {
-  0%   { transform: rotate(var(--nex-ray-rot, 0deg)) scaleY(0); opacity: 0; }
-  25%  { opacity: 1; }
-  60%  { transform: rotate(var(--nex-ray-rot, 0deg)) scaleY(1); opacity: 0.9; }
-  100% { transform: rotate(var(--nex-ray-rot, 0deg)) scaleY(1.3); opacity: 0; }
 }
 `;
