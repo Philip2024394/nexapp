@@ -32,14 +32,21 @@ import {
 // is retired here; share sheet is dark again. Text + border swap
 // back to the dark-chrome variants (white text, white-at-low-alpha
 // borders).
+// Owner-authorised 2026-11-01 · Social Commerce palette sweep · Path A ·
+// Share sheet picks up Ireland theming through sealed world tokens:
+//   bgNavy = `var(--nex-world-drawer-bg, #050F1E)` → forest green on Ireland
+//   cyan   = `var(--nex-world-secondary, #00AFFF)` → Irish gold on Ireland
+// Worldwide / Indonesia / any deployment that doesn't override keeps
+// byte-identical rendering via the hex fallbacks. Universal tokens
+// (text / textDim / textMute · whatsapp brand) stay hardcoded.
 const NEX = {
-  bgNavy: "#050F1E",
+  bgNavy: "var(--nex-world-drawer-bg, #050F1E)",
   bgDeep: "var(--nex-world-background-base, #020914)",
   bgSheet: "var(--nex-world-background-base, #020914)",
   text: "#F2F5F8",
   textDim: "#8BA9D1",
   textMute: "#526B89",
-  cyan: "#00AFFF",
+  cyan: "var(--nex-world-secondary, #00AFFF)",
   border: "rgba(255, 255, 255, 0.12)",
   whatsapp: "#25D366",
 } as const;
