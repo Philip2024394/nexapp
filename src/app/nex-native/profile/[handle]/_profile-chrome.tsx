@@ -73,6 +73,13 @@ export function ProfileChrome(props: ProfileChromeProps): React.JSX.Element {
   // no longer consumed here.
   const isSignedIn = props.drawerSession !== null;
 
+  // Owner directive 2026-11-02 · the gray header strip (translucent
+  // navy background + blur + cyan rim) is removed from the profile
+  // page. The container stays as a sticky top-level flex wrapper so
+  // the ControlDrawer trigger and the anonymous Sign-in link remain
+  // in position + accessible on scroll · but the bar itself paints
+  // nothing. One less piece of chrome between the viewer and the
+  // profile hero.
   return (
     <header
       data-nex-profile-chrome
@@ -89,10 +96,8 @@ export function ProfileChrome(props: ProfileChromeProps): React.JSX.Element {
         justifyContent: isSignedIn ? "flex-end" : "space-between",
         gap: 10,
         padding: "10px 12px",
-        background: NEX.bgTint,
-        backdropFilter: "blur(8px)",
-        WebkitBackdropFilter: "blur(8px)",
-        borderBottom: `1px solid ${ACCENT_SOFT}`,
+        background: "transparent",
+        borderBottom: "none",
         fontFamily: SANS,
       }}
     >
