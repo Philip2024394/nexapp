@@ -243,7 +243,7 @@ export function SellerShopDrawer(
                 display: "flex",
                 flexDirection: "column",
                 overflowX: "hidden",
-                color: "var(--nex-world-text-primary, #F2F5F8)",
+                color: "#F2F5F8",
                 fontFamily: "Inter, system-ui, sans-serif",
                 paddingTop: "env(safe-area-inset-top, 0px)",
                 paddingBottom: "env(safe-area-inset-bottom, 0px)",
@@ -400,7 +400,7 @@ function ShopHeader(props: {
         <div
           style={{
             fontSize: 12,
-            color: "var(--nex-world-text-secondary, #B5C3D6)",
+            color: "#B5C3D6",
             marginTop: 2,
           }}
         >
@@ -567,17 +567,21 @@ function ShopProductCard(props: {
               display: "grid",
               placeItems: "center",
               fontSize: 11,
-              color: "var(--nex-world-text-muted, #7D9BC0)",
+              color: "#7D9BC0",
             }}
           >
             no image
           </div>
         )}
-        {/* Owner directive 2026-11-01 (sheet refactor) · "View details
-         *  button lower right on the image". Visible call-to-action
-         *  pill on the bottom-right of the cover · parent card tap
-         *  also triggers the sheet so the pill is a signpost, not the
-         *  only tap target. */}
+        {/* Owner directive 2026-11-01 (sheet refactor + gold accent)
+         *  · "View details button lower right on the image · should
+         *  be like the gold color we have for our theme".
+         *  Uses the sealed `--nex-world-secondary` world token · on
+         *  Ireland deployment it resolves to the Irish gold #C6A15B
+         *  (same gold as the sealed right-seam edge-light) · on
+         *  Worldwide it resolves to #1DA1F2 · future worlds opt-in
+         *  via the registry. Dark text (#0A1526) + subtle glow
+         *  match the sealed accent-chip pattern used elsewhere. */}
         <div
           data-nex-seller-shop-view-details-pill
           aria-hidden
@@ -587,18 +591,17 @@ function ShopProductCard(props: {
             bottom: 8,
             padding: "4px 10px",
             borderRadius: 999,
-            background: "rgba(2, 9, 20, 0.78)",
-            border: "1px solid rgba(255, 255, 255, 0.22)",
-            color: "#F2F5F8",
+            background: "var(--nex-world-secondary, #C6A15B)",
+            border: "1px solid rgba(255, 255, 255, 0.25)",
+            boxShadow: "0 0 12px rgba(198, 161, 91, 0.45)",
+            color: "#0A1526",
             fontSize: 11,
-            fontWeight: 800,
+            fontWeight: 900,
             letterSpacing: 0.2,
             lineHeight: 1,
             display: "inline-flex",
             alignItems: "center",
             gap: 4,
-            backdropFilter: "blur(6px)",
-            WebkitBackdropFilter: "blur(6px)",
           }}
         >
           View details
@@ -616,7 +619,7 @@ function ShopProductCard(props: {
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
-            color: "var(--nex-world-text-primary, #F2F5F8)",
+            color: "#F2F5F8",
           }}
         >
           {product.name}
@@ -626,7 +629,7 @@ function ShopProductCard(props: {
             fontSize: 13,
             fontWeight: 800,
             marginTop: 1,
-            color: "var(--nex-world-text-primary, #F2F5F8)",
+            color: "#F2F5F8",
           }}
         >
           {price ?? "—"}
@@ -766,7 +769,7 @@ function ProductDetailSheet(props: {
           boxShadow: "0 -8px 32px rgba(0, 0, 0, 0.6)",
           display: "flex",
           flexDirection: "column",
-          color: "var(--nex-world-text-primary, #F2F5F8)",
+          color: "#F2F5F8",
           fontFamily: "Inter, system-ui, sans-serif",
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
         }}
@@ -851,7 +854,7 @@ function ProductDetailSheet(props: {
                 aria-hidden
                 style={{
                   fontSize: 13,
-                  color: "var(--nex-world-text-muted, #7D9BC0)",
+                  color: "#7D9BC0",
                 }}
               >
                 no image
@@ -873,7 +876,7 @@ function ProductDetailSheet(props: {
               style={{
                 fontSize: 20,
                 fontWeight: 900,
-                color: "var(--nex-world-text-primary, #F2F5F8)",
+                color: "#F2F5F8",
               }}
             >
               {price ?? "—"}
@@ -881,7 +884,7 @@ function ProductDetailSheet(props: {
             <div
               style={{
                 fontSize: 12,
-                color: "var(--nex-world-text-secondary, #B5C3D6)",
+                color: "#B5C3D6",
                 marginTop: 2,
               }}
             >
