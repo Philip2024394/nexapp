@@ -33,7 +33,7 @@ import { NEX_FONT_SANS } from "@/lib/nex-native/design-tokens";
 const NEX = {
   bg: "var(--nex-world-background-base, #020914)",
   bgTint: "rgba(2, 9, 20, 0.72)",
-  cyan: "#00AFFF",
+  cyan: "var(--nex-world-secondary, #00AFFF)",
   cyanSoft: "rgba(0, 175, 255, 0.35)",
   cyanFaint: "rgba(0, 175, 255, 0.14)",
   text: "#F2F5F8",
@@ -61,8 +61,12 @@ export interface ProfileChromeProps {
 }
 
 export function ProfileChrome(props: ProfileChromeProps): React.JSX.Element {
+  // Owner directive 2026-11-01 · "profile header no nex profile change
+  // to Nex" · uppercase "NEX-" prefix was reading as hard-brand chrome;
+  // owner wants a softer "Nex-" title-case for the viewer identifier
+  // in the profile chrome left-column.
   const viewerNexId = props.viewerNexHandle
-    ? props.viewerNexHandle.replace(/^nex-/i, "NEX-")
+    ? props.viewerNexHandle.replace(/^nex-/i, "Nex-")
     : null;
   const viewerInitials = initialsFromName(props.viewerDisplayName ?? "N");
   const isSignedIn = props.drawerSession !== null;

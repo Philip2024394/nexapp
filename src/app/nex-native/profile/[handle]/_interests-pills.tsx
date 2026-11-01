@@ -23,7 +23,7 @@ import type * as React from "react";
 import Link from "next/link";
 
 const NEX = {
-  cyan: "#00AFFF",
+  cyan: "var(--nex-world-secondary, #00AFFF)",
   cyanSoft: "rgba(0, 175, 255, 0.35)",
   cyanFaint: "rgba(0, 175, 255, 0.14)",
   text: "#F2F5F8",

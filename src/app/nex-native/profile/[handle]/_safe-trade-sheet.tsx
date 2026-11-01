@@ -72,7 +72,7 @@ const NEX = {
   text: "#F2F5F8",
   textDim: "#B5C3D6",
   textMuted: "#7D9BC0",
-  cyan: "#00AFFF",
+  cyan: "var(--nex-world-secondary, #00AFFF)",
   cyanSoft: "rgba(0, 175, 255, 0.35)",
   cyanFaint: "rgba(0, 175, 255, 0.14)",
   cyanRim: "rgba(0, 175, 255, 0.60)",
