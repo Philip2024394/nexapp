@@ -183,20 +183,28 @@ export function FeedModeEntryOverlay(
 }
 
 function pillStyleFor(worldId: string): React.CSSProperties {
+  // Owner directive 2026-11-01 (sizing follow-up) · pill must have
+  // visible gutter from both screen edges. Reduced fontSize 44 → 32,
+  // horizontal padding 36 → 22, and clamped the overall width so
+  // narrow phones always keep ≥ 24px on each side without the text
+  // wrapping (whiteSpace: nowrap preserved).
   const base: React.CSSProperties = {
     position: "relative",
     zIndex: 2,
-    padding: "18px 36px",
+    padding: "12px 22px",
     borderRadius: 999,
-    fontSize: 44,
+    fontSize: 32,
     fontWeight: 900,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
     fontFamily: "Inter, system-ui, sans-serif",
     color: "#F2F5F8",
-    textShadow: "0 2px 24px rgba(0, 0, 0, 0.6)",
+    textShadow: "0 2px 20px rgba(0, 0, 0, 0.6)",
     textAlign: "center",
     userSelect: "none",
     whiteSpace: "nowrap",
+    maxWidth: "calc(100vw - 48px)",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
   };
   if (worldId === "ireland") {
     return {
