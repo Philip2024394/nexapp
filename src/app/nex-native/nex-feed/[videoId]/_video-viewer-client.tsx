@@ -1045,6 +1045,37 @@ export function VideoViewerClient({
               <span data-nex-video-viewer-title-text>
                 {feedModeLabel}
               </span>
+              {/* Owner directive 2026-11-01 · "when video is ai the ai
+                  small badge will show after live world or live
+                  ireland". Second mount of the sealed AI chip (the
+                  first mount after "Broadcasted X" is retained
+                  unchanged) so viewers see the AI signal in the
+                  primary title context too. Same style tokens as the
+                  sealed Migration-221 chip at line 1072+. Reads the
+                  same `video.is_ai_generated` source · same null-safe
+                  normalisation (?? false). */}
+              {(video.is_ai_generated ?? false) && (
+                <span
+                  data-nex-video-viewer-ai-chip-title
+                  aria-label="AI-generated video"
+                  style={{
+                    display: "inline-block",
+                    marginLeft: 6,
+                    padding: "0 5px",
+                    borderRadius: 4,
+                    background: "rgba(255, 51, 85, 0.14)",
+                    border: `1px solid ${NEX.red}`,
+                    color: NEX.red,
+                    fontSize: 10,
+                    fontWeight: 800,
+                    letterSpacing: "0.03em",
+                    lineHeight: 1.4,
+                    verticalAlign: "baseline",
+                  }}
+                >
+                  AI
+                </span>
+              )}
             </div>
             <div
               data-nex-video-viewer-title-secondary
