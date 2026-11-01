@@ -476,6 +476,7 @@ export function ControlDrawer({
   viewerCreatorSupportConfigured,
   viewerSupportSettings,
   hideCreatorSupportRow,
+  triggerStyle,
 }: ControlDrawerProps) {
   // Owner directive 2026-11-01 · Batch D++ · Creator-Support sheet
   // open state. The drawer owns the state; DrawerBody receives the
@@ -734,7 +735,12 @@ export function ControlDrawer({
         aria-label="Open menu"
         aria-haspopup="menu"
         aria-expanded={open}
-        style={triggerButtonStyle}
+        // Owner directive 2026-11-02 · profile-page three-dots gets a
+        // solid black circular backdrop so it reads clearly against
+        // the cover image. Other surfaces that don't pass triggerStyle
+        // keep the sealed transparent trigger (video + music viewers
+        // + other surfaces where the icon lives on dark navy chrome).
+        style={{ ...triggerButtonStyle, ...(triggerStyle ?? {}) }}
         data-nex-control-drawer-trigger
       >
         <ThreeDotIcon />

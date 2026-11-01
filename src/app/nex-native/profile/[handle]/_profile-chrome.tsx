@@ -142,8 +142,23 @@ export function ProfileChrome(props: ProfileChromeProps): React.JSX.Element {
         </Link>
       )}
 
-      {/* RIGHT · ControlDrawer three-dots trigger (sealed shared drawer). */}
-      <ControlDrawer session={props.drawerSession} />
+      {/* RIGHT · ControlDrawer three-dots trigger (sealed shared drawer).
+          Owner directive 2026-11-02 · on the profile page the trigger
+          sits over the cover image · pass a solid black circular
+          backdrop so the three-dots reads clearly against any photo.
+          44x44 round, pure black, white dots. Other surfaces that
+          mount ControlDrawer without triggerStyle keep the sealed
+          transparent trigger. */}
+      <ControlDrawer
+        session={props.drawerSession}
+        triggerStyle={{
+          width: 44,
+          height: 44,
+          borderRadius: "50%",
+          background: "#000000",
+          color: "#FFFFFF",
+        }}
+      />
     </header>
   );
 }
