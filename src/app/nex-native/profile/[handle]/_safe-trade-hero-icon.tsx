@@ -76,11 +76,14 @@ export function SafeTradeHeroIcon(props: SafeTradeHeroIconProps): React.JSX.Elem
           width: 48,
           height: 48,
           borderRadius: "50%",
-          background: "rgba(2, 9, 20, 0.72)",
-          border: `1px solid ${NEX.cyanSoft}`,
+          // Owner directive 2026-11-02 · gray styling on the profile
+          // top area removed to pair with the retired profile-chrome
+          // bar. Button is now fully transparent · the 3D shield
+          // graphic + its own shadow carry the visual weight, no
+          // navy fill or cyan rim behind it.
+          background: "transparent",
+          border: "none",
           zIndex: 10,
-          backdropFilter: "blur(6px)",
-          WebkitBackdropFilter: "blur(6px)",
         }}
       >
         <img
