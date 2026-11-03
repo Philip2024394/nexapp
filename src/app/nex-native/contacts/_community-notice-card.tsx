@@ -35,8 +35,12 @@
 import * as React from "react";
 import Link from "next/link";
 
-// ─── Visual constants matched to _contact-row.tsx ──────────────────────
-const AVATAR_SIZE = 60;
+// ─── Visual constants · mostly matched to _contact-row.tsx ────────────
+// Owner directive 2026-11-03 · "enlarge the profile image little on
+// community card" · avatar bumped from 60 → 68 (ContactRow stays at 60).
+// Right-side action column still min-heights to AVATAR_SIZE so the
+// mute toggle sits visually centered against the larger badge.
+const AVATAR_SIZE = 68;
 const CARD_PADDING_Y = 12;
 const CARD_PADDING_X = 14;
 const CARD_GAP = 12;
@@ -169,7 +173,12 @@ export function CommunityNoticeCard({
             position: "absolute",
             inset: 0,
             borderRadius: "50%",
-            border: `2px solid ${NEX.accentHex}`,
+            // Owner directive 2026-11-03 · "profile community image has
+            // rim on the image so we can remove the rim from container
+            // profile rim". The owner-supplied badge PNG carries its
+            // own rim treatment · the container's 2px Gold rim is
+            // retired so no double-rim appears around the badge.
+            border: "none",
             overflow: "hidden",
             background: `linear-gradient(135deg, var(--nex-world-secondary, #C6A15B)cc 0%, var(--nex-world-drawer-bg, #180012) 65%, var(--nex-world-drawer-bg, #050F1E) 100%)`,
             display: "grid",
@@ -180,7 +189,8 @@ export function CommunityNoticeCard({
           {/* Owner directive 2026-11-03 · "this is the community group
               profile image for community groups" · owner-supplied badge
               at /public/nex-community/ireland-badge.png. Rendered as
-              object-fit: cover so it fills the circular rim cleanly.
+              object-fit: cover so it fills the circular container
+              cleanly · the badge's own rim is now the visual boundary.
               width + height set explicitly so Next.js doesn't CLS the
               row during initial paint (sealed engineering standard).
               loading=lazy + decoding=async consistent with ContactRow. */}
