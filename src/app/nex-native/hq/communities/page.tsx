@@ -23,6 +23,7 @@ import {
 } from "@/lib/nex-native/community/member-service";
 import { getZoneById } from "@/lib/nex-native/community/zone-service";
 import { getAccountById } from "@/lib/nex-native/account-service";
+import { reviewMemberFlagAction } from "../../community/_actions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -223,7 +224,7 @@ export default async function HqCommunitiesPage() {
                     >
                       {flag.reason}
                     </blockquote>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
                       {flagged ? (
                         <Link
                           href={`/nex-native/chat/peer/${flagged.id}`}
@@ -240,6 +241,73 @@ export default async function HqCommunitiesPage() {
                           💬 Message reporter · {flagger.display_name}
                         </Link>
                       ) : null}
+                    </div>
+
+                    {/* Owner directive 2026-11-03 · admin resolves flag.
+                        Upheld deletes membership (member removed from
+                        community) · dismissed restores status active and
+                        clears the flag · reviewMemberFlagAction gated
+                        by requireHqAdmin server-side.  */}
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 8,
+                        paddingTop: 10,
+                        borderTop: `1px solid ${IRELAND.borderSoft}`,
+                      }}
+                    >
+                      <form
+                        action={reviewMemberFlagAction}
+                        style={{ flex: 1 }}
+                      >
+                        <input type="hidden" name="flag_id" value={flag.id} />
+                        <input type="hidden" name="decision" value="upheld" />
+                        <button
+                          type="submit"
+                          aria-label={`Uphold flag · remove ${flagged?.display_name ?? "member"} from community`}
+                          style={{
+                            width: "100%",
+                            padding: "10px 14px",
+                            borderRadius: 10,
+                            background: IRELAND.danger,
+                            color: "#FFF",
+                            border: "none",
+                            fontSize: 13,
+                            fontWeight: 800,
+                            letterSpacing: "0.04em",
+                            textTransform: "uppercase",
+                            cursor: "pointer",
+                          }}
+                        >
+                          ✓ Uphold · remove
+                        </button>
+                      </form>
+                      <form
+                        action={reviewMemberFlagAction}
+                        style={{ flex: 1 }}
+                      >
+                        <input type="hidden" name="flag_id" value={flag.id} />
+                        <input type="hidden" name="decision" value="dismissed" />
+                        <button
+                          type="submit"
+                          aria-label={`Dismiss flag · keep ${flagged?.display_name ?? "member"} in community`}
+                          style={{
+                            width: "100%",
+                            padding: "10px 14px",
+                            borderRadius: 10,
+                            background: "transparent",
+                            color: IRELAND.primaryInk,
+                            border: `1.5px solid ${IRELAND.borderSoft}`,
+                            fontSize: 13,
+                            fontWeight: 800,
+                            letterSpacing: "0.04em",
+                            textTransform: "uppercase",
+                            cursor: "pointer",
+                          }}
+                        >
+                          ✗ Dismiss
+                        </button>
+                      </form>
                     </div>
                   </li>
                 ))}
