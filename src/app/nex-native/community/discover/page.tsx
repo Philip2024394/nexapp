@@ -94,23 +94,37 @@ export default async function DiscoverCommunitiesPage() {
 
   return (
     <>
-      <style>{`html,body{background:${IRELAND.drawerBg} !important;}`}</style>
+      {/* Owner directive 2026-11-03 · desktop-image pattern · uses
+          CSS background-image + media-switched source so sizing is
+          deterministic. Prior <picture>+<source> markup put the inner
+          <img height=100%> inside an inline <picture> which collapsed
+          to zero height on desktop (black screen bug). */}
+      {/* Owner directive 2026-11-03 · "the container must be green".
+          Main container is flat Emerald green on every viewport ·
+          content panels sit on top with their own translucent chrome. */}
+      <style>{`
+        main[data-nex-discover-root] {
+          background: ${IRELAND.drawerBg} !important;
+        }
+      `}</style>
       <main
         data-nex-discover-root
         style={{
+          position: "relative",
           minHeight: "100dvh",
-          background: IRELAND.drawerBg,
           color: IRELAND.textPrimary,
-          padding: "calc(env(safe-area-inset-top,0) + 16px) 20px 48px",
           fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
         }}
       >
-        <div style={{ maxWidth: 720, margin: "0 auto" }}>
-          <NexPageHeader
-            dataScope="community-discover"
-            brandAvatarUrl="/nex-community/ireland-badge.png"
-            brandAccent="#16D66B"
-          />
+
+        <div
+          style={{
+            maxWidth: 720,
+            margin: "0 auto",
+            padding: "calc(env(safe-area-inset-top,0) + 16px) 20px 48px",
+          }}
+        >
+          <NexPageHeader dataScope="community-discover" />
 
           <header style={{ textAlign: "center", margin: "28px 0 20px" }}>
             <h1

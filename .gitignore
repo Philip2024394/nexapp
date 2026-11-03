@@ -11,6 +11,11 @@ node_modules
 scripts/.pexels-results.json
 scripts/.pexels-query-cache.json
 
+# Chat-theme upload report — derivable from Supabase bucket state,
+# not source of truth. Script `upload-chat-theme-wallpapers.mjs`
+# re-emits it on every run.
+scripts/.upload-report-chat-themes.json
+
 .vercel
 
 .env.tools.local

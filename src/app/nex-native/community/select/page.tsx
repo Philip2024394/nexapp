@@ -69,8 +69,29 @@ export default async function SelectZonePage({ searchParams }: PageProps) {
 
   return (
     <>
+      {/* Owner directive 2026-11-03 · "desk top page image back ground
+          is not displaying remove the green from desktop and tablet and
+          confirm our desktop image is active".
+          · Mobile (<768px) keeps the dark Emerald body + heavy blur
+            overlay so the portrait studio photo reads legibly behind
+            the content column.
+          · Desktop + tablet (≥768px) drop the body green AND hide the
+            green overlay so the Golden Hour panorama (public/nex-ireland/
+            village-panorama.png · 3 MB) shows through at full fidelity.
+            A soft neutral bottom-vignette on `[data-nex-overlay]` keeps
+            the content column legible over bright sky without any
+            green tint. */}
+      {/* Owner directive 2026-11-03 · same CSS-background-image pattern
+          as /community/discover · the earlier <picture>+<source>+<img>
+          approach collapsed to 0 height on desktop (inline parent) · the
+          data-nex-backdrop CSS approach is deterministic. */}
+      {/* Owner directive 2026-11-03 · "the container must be green".
+          Main container is flat Emerald green on every viewport ·
+          content panels sit on top with their own translucent
+          chrome. Target <main> because the sealed `.nex-native-frame`
+          has an opaque cream background that would otherwise show. */}
       <style>{`
-        html, body {
+        main[data-nex-community-select-root] {
           background: ${IRELAND.drawerBg} !important;
         }
       `}</style>
@@ -81,91 +102,25 @@ export default async function SelectZonePage({ searchParams }: PageProps) {
           position: "relative",
           minHeight: "100dvh",
           color: IRELAND.textPrimary,
-          overflow: "hidden",
-          isolation: "isolate",
           fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
         }}
       >
-        {/* ===== Layer 1 · Responsive Ireland backdrop =====
-              Owner directive 2026-11-03 · "the back ground desktop image
-              i said". Owner-supplied Golden Hour Irish Village Panorama
-              (landscape · 3MB) ships for desktop/tablet-landscape
-              viewports · the sealed Ireland studio photo (portrait-
-              friendly) stays for mobile. Native <picture> + media
-              sources gives per-breakpoint selection in a single DOM
-              element · browser picks the right source. */}
-        <div
-          aria-hidden
-          style={{
-            position: "absolute",
-            inset: 0,
-            zIndex: 0,
-            pointerEvents: "none",
-            overflow: "hidden",
-          }}
-        >
-          <picture>
-            {/* Desktop + tablet-landscape: Golden Hour Irish Village Panorama */}
-            <source
-              media="(min-width: 768px)"
-              srcSet="/nex-ireland/village-panorama.png"
-            />
-            {/* Mobile fallback: existing Ireland studio photo */}
-            <img
-              src="/nex-brand/hq/ireland-studio.png"
-              alt=""
-              loading="eager"
-              decoding="async"
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                objectPosition: "center",
-                display: "block",
-              }}
-            />
-          </picture>
-        </div>
-
-        {/* ===== Layer 2 · Dark frosted-glass overlay · same recipe as
-              ContactsShell · dark Emerald tint + blur. ===== */}
-        <div
-          aria-hidden
-          style={{
-            position: "absolute",
-            inset: 0,
-            background:
-              "linear-gradient(135deg, rgba(5, 25, 15, 0.60) 0%, rgba(18, 61, 43, 0.72) 100%)",
-            backdropFilter: "blur(22px) saturate(1.25)",
-            WebkitBackdropFilter: "blur(22px) saturate(1.25)",
-            zIndex: 1,
-          }}
-        />
 
         {/* ===== Layer 3 · Content column · responsive maxWidth with
               phone/tablet/desktop breakpoints. 480 phone · 640 small
               tablet · 720 large tablet + desktop. ===== */}
         <div
           style={{
-            position: "relative",
-            zIndex: 2,
             maxWidth: 720,
             margin: "0 auto",
             padding: "calc(env(safe-area-inset-top, 0) + 16px) 20px 48px",
           }}
         >
-          {/* Owner directive 2026-11-03 · "the community page profile
-              image is not loaded in header profile circle and the
-              ping should always be green color". Pass the Ireland
-              Community badge into the ping-badge primitive · pass
-              NEX sealed presence-online green (#16D66B) as the
-              accent so the pulsing halo + ring always read as green
-              on every Community surface. */}
-          <NexPageHeader
-            dataScope="community-select"
-            brandAvatarUrl="/nex-community/ireland-badge.png"
-            brandAccent="#16D66B"
-          />
+          {/* Owner directive 2026-11-03 · "remove the profile image from
+              header http://localhost:3008/nex-native/community/select".
+              Reverts to the sealed default NexPageHeader (plain NEX
+              ping-badge) · no branded avatar on this surface. */}
+          <NexPageHeader dataScope="community-select" />
 
           <header style={{ textAlign: "center", margin: "28px 0 24px" }}>
             <h1

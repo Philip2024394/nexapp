@@ -38,7 +38,7 @@ WITH wexford AS (
   SELECT id FROM nex_community_zone
    WHERE country = 'IE'
      AND level = 'city'
-     AND slug = 'wexford'
+     AND slug = 'county-wexford'  -- migration 266 slug · NOT 'wexford'
      AND parent_zone_id IS NOT NULL
 )
 INSERT INTO nex_community_zone (parent_zone_id, country, level, name, slug)

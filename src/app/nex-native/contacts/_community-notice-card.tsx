@@ -138,9 +138,13 @@ export function CommunityNoticeCard({
   // state hides both.
   const showBadge = hasMembership && !isMuted && UNREAD_MOCK_COUNT > 0;
   const showMuteToggle = hasMembership;
-  const navigateHref = hasMembership
-    ? "/nex-native/community/chat"
-    : "/nex-native/community/select";
+  // Owner directive 2026-11-03 · the community card now routes to
+  // /community/discover for both member and non-member states. Discover
+  // is the hub that surfaces the user's local-area list + "Create your
+  // community" CTA (when they have a county membership) or the national
+  // county browser (when they don't). The old split (/community/chat vs
+  // /community/select) bypassed the discover hub entirely.
+  const navigateHref = "/nex-native/community/discover";
   // Owner directive 2026-11-03 (B+β) · live props displace the mock
   // COMMUNITY_GROUP singleton. When hasMembership=false, the card
   // flips to "join your community" CTA state (navigates to
