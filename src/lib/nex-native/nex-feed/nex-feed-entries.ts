@@ -42,16 +42,46 @@ import { listActiveMusicFeedEntries, type MusicFeedEntry } from "../music/active
 /** The URL slug prefix that marks a feed entry as a music post. */
 export const MUSIC_FEED_ENTRY_PREFIX = "music-";
 
+/** Owner-authorised 2026-11-02 · handle-based alias prefix.
+ *  URL form: `/nex-feed/music-nex-<handle>` · stable per creator,
+ *  resolves at request time to the creator's current active-slot
+ *  track. Backward compat: UUID-form `music-<trackId>` continues to
+ *  work for every existing deep link and share URL. */
+export const MUSIC_FEED_ENTRY_HANDLE_PREFIX = "music-nex-";
+
 export function musicEntryIdForTrack(trackId: string): string {
   return `${MUSIC_FEED_ENTRY_PREFIX}${trackId}`;
+}
+
+/** Mint the handle-based alias URL slug. Expects the full `nex-NNNNN`
+ *  handle (NOT the bare numeric id). Example: `nex-99901` →
+ *  `music-nex-99901`. */
+export function musicEntryIdForHandle(nexHandle: string): string {
+  return `${MUSIC_FEED_ENTRY_PREFIX}${nexHandle}`;
 }
 
 export function isMusicEntryId(id: string): boolean {
   return id.startsWith(MUSIC_FEED_ENTRY_PREFIX);
 }
 
+/** True iff the slug is the handle-form (`music-nex-NNNNN`). */
+export function isMusicHandleEntryId(id: string): boolean {
+  return id.startsWith(MUSIC_FEED_ENTRY_HANDLE_PREFIX);
+}
+
+/** Extract the full `nex-NNNNN` handle from a handle-form slug.
+ *  Returns null for UUID-form slugs or non-music slugs. */
+export function handleFromMusicHandleEntryId(id: string): string | null {
+  if (!isMusicHandleEntryId(id)) return null;
+  // Strip the `music-` prefix (keep the `nex-` prefix as part of the handle)
+  return id.slice(MUSIC_FEED_ENTRY_PREFIX.length);
+}
+
 export function trackIdFromMusicEntryId(id: string): string | null {
   if (!isMusicEntryId(id)) return null;
+  // Handle-form slugs do NOT contain a track UUID; callers should
+  // resolve the handle to an account + active-slot track separately.
+  // This function returns the raw suffix (UUID or `nex-NNNNN` string).
   return id.slice(MUSIC_FEED_ENTRY_PREFIX.length);
 }
 

@@ -136,7 +136,19 @@ export type NexPeerAttachmentKind =
   // nex-theme-sticker bucket; attachment_meta.sticker carries the
   // snapshot so the bubble stays renderable if the sticker is later
   // deleted from the theme.
-  | "sticker";
+  | "sticker"
+  // Stage A · owner-authorised 2026-11-03 · Migration 259 extends the
+  // attachment_type CHECK to allow 'document'. Carries PDFs / Office
+  // docs / zip archives / any non-media file the sender picks via the
+  // Aurora Rail composer's Document attach button or the paperclip
+  // fallback. attachment_url points at the sealed nex-peer-chat-
+  // attachments bucket (bucket already accepts application/octet-
+  // stream per Migration 144); attachment_meta carries filename +
+  // mime + size_bytes which the recipient's bubble chip renders.
+  // Bridge 88 posture unchanged · document bytes route through the
+  // plaintext path in v1 · Stage A2 encrypts all attachment types
+  // together as a single security model change.
+  | "document";
 
 export interface NexPeerAttachmentMeta {
   duration_ms?: number;
@@ -144,6 +156,13 @@ export interface NexPeerAttachmentMeta {
   height?: number;
   size_bytes?: number;
   mime?: string;
+  /** Stage A · owner-authorised 2026-11-03 · original filename as
+   *  chosen by the sender when attachment_type='document'. Rendered
+   *  on the recipient's document chip (truncated with ellipsis if
+   *  long). Optional for image/video/audio · they don't surface a
+   *  filename in the bubble. Max 256 chars enforced server-side at
+   *  insert. */
+  filename?: string;
   /** Bridge 11 · when attachment_type='product', a snapshot of the
    *  product captured at send time. Frozen so the card stays
    *  renderable even if the product is later edited or deleted. */
@@ -870,7 +889,12 @@ const NEX_PEER_ATTACHMENT_BUCKET = "nex-peer-chat-attachments";
 /** Max upload size (bytes) · matches the bucket's file_size_limit. */
 export const NEX_PEER_ATTACHMENT_MAX_BYTES = 25 * 1024 * 1024;
 
-/** MIME → kind classifier · rejects anything outside the whitelist. */
+/** MIME → kind classifier.
+ *  - image/*, video/*, audio/* → sealed attachment kinds (Migration 054)
+ *  - any other non-empty MIME → "document" (Migration 259 · Stage A)
+ *  - empty / missing MIME → null (rejected · the composer requires a
+ *    file.type for upload path routing · an empty type would land in
+ *    the bucket as octet-stream with no way to pick a recipient icon) */
 export function classifyPeerAttachmentMime(
   mime: string,
 ): NexPeerAttachmentKind | null {
@@ -878,7 +902,16 @@ export function classifyPeerAttachmentMime(
   if (m.startsWith("image/")) return "image";
   if (m.startsWith("video/")) return "video";
   if (m.startsWith("audio/")) return "audio";
-  return null;
+  if (m.length === 0) return null;
+  // Stage A · owner-authorised 2026-11-03 · Migration 259 extended
+  // the attachment_type CHECK to allow 'document'. Everything that
+  // isn't image/video/audio but DOES carry a MIME lands here · PDF,
+  // Office docs, zip archives, text files, etc. Upload path coerces
+  // Content-Type to application/octet-stream (bucket migration 144
+  // already allows that MIME) so the bucket doesn't need widening ·
+  // the original MIME is preserved in attachment_meta.mime for the
+  // recipient's document-chip icon selection.
+  return "document";
 }
 
 /** Upload a file to the peer-chat attachments bucket. Returns the
@@ -918,7 +951,21 @@ export async function uploadPeerAttachment(
     "audio/ogg": "ogg",
     "audio/wav": "wav",
   };
-  const ext = extMap[file.type.toLowerCase()] ?? "bin";
+  // For documents, prefer the filename's own extension when available ·
+  // falls back to a MIME-derived extension or 'bin'. Stage A, 2026-11-03.
+  const extFromFilename = (() => {
+    if (kind !== "document") return null;
+    const raw = file.name ?? "";
+    const dot = raw.lastIndexOf(".");
+    if (dot <= 0 || dot === raw.length - 1) return null;
+    const candidate = raw.slice(dot + 1).toLowerCase();
+    // Reject anything that doesn't look like a plain extension (no
+    // slashes, no spaces, bounded length) · keeps the storage path
+    // injection-safe.
+    if (!/^[a-z0-9]{1,8}$/.test(candidate)) return null;
+    return candidate;
+  })();
+  const ext = extFromFilename ?? extMap[file.type.toLowerCase()] ?? "bin";
   // Path layout · senderId/timestamp-randomshort.ext · keeps every
   // sender's uploads in their own prefix (useful for future
   // per-sender cleanup) and avoids collision without a UUID lookup.
@@ -927,8 +974,15 @@ export async function uploadPeerAttachment(
     .slice(2, 8)}.${ext}`;
   const bucket = nexSupabaseAdmin.storage.from(NEX_PEER_ATTACHMENT_BUCKET);
   const bytes = new Uint8Array(await file.arrayBuffer());
+  // Stage A · owner-authorised 2026-11-03 · documents upload with
+  // Content-Type `application/octet-stream` so the bucket's existing
+  // MIME whitelist (Migration 144) accepts them. The original MIME is
+  // retained in attachment_meta.mime for the recipient's chip icon.
+  // image/video/audio keep their original Content-Type (unchanged).
+  const uploadContentType =
+    kind === "document" ? "application/octet-stream" : file.type;
   const { error } = await bucket.upload(objectPath, bytes, {
-    contentType: file.type,
+    contentType: uploadContentType,
     upsert: false,
   });
   if (error) {
@@ -937,10 +991,18 @@ export async function uploadPeerAttachment(
     );
   }
   const { data: pub } = bucket.getPublicUrl(objectPath);
+  // Stage A · when kind === 'document' we preserve the original filename
+  // (truncated to 256 chars to match the Migration 259 server-side cap
+  // noted in NexPeerAttachmentMeta.filename) so the recipient's chip
+  // can show it. Non-document attachments omit the filename to keep
+  // the sealed metadata shape unchanged for them.
   const meta: NexPeerAttachmentMeta = {
     size_bytes: file.size,
-    mime: file.type,
+    mime: file.type || "application/octet-stream",
   };
+  if (kind === "document" && typeof file.name === "string" && file.name.length > 0) {
+    meta.filename = file.name.slice(0, 256);
+  }
   return { url: pub.publicUrl, kind, meta };
 }
 

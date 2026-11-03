@@ -25,9 +25,18 @@ import {
   resolveVideoFeedEntry,
   isMusicEntryId,
   trackIdFromMusicEntryId,
+  isMusicHandleEntryId,
+  handleFromMusicHandleEntryId,
+  musicEntryIdForTrack,
   type NexFeedEntry,
   type MusicFeedEntryWrapped,
 } from "@/lib/nex-native/nex-feed/nex-feed-entries";
+// Owner-authorised 2026-11-02 · handle-based music feed URL (option B).
+// Slug form `music-nex-<handle>` resolves to the creator's current
+// active-slot track · stable URL that follows the creator rather than
+// the specific track. UUID-form `music-<trackId>` continues to work.
+import { getAccountByNexHandle } from "@/lib/nex-native/account-service";
+import { listActiveMusicSlots } from "@/lib/nex-native/music/active-slot-repository";
 // Owner directive 2026-11-01 · Batch E · Stage 3B country switcher +
 // Ireland feed reader. Default stays Worldwide; `?country=IE` swaps
 // the pool to Ireland's approved placements. Fallback to Worldwide
@@ -142,7 +151,28 @@ export default async function NexFeedViewerPage({
   params: Promise<{ videoId: string }>;
   searchParams: Promise<{ chain?: string; country?: string }>;
 }): Promise<React.JSX.Element> {
-  const { videoId } = await params;
+  const { videoId: rawVideoId } = await params;
+
+  // Owner-authorised 2026-11-02 · handle-based alias resolver.
+  // When the slug is `music-nex-<handle>`, resolve to the creator's
+  // current active-slot track UUID and rebind videoId to the UUID-form
+  // slug · the rest of this route handler proceeds unchanged. If the
+  // handle has no account OR no active-slot track, 404 (don't silently
+  // fall back to another creator's feed).
+  let videoId = rawVideoId;
+  if (isMusicHandleEntryId(rawVideoId)) {
+    const handle = handleFromMusicHandleEntryId(rawVideoId);
+    if (!handle) notFound();
+    const ownerAccount = await getAccountByNexHandle(handle);
+    if (!ownerAccount) notFound();
+    const slots = await listActiveMusicSlots();
+    const ownerSlot = slots.find(
+      (s) => s.owner_account_id === ownerAccount.id && s.track_id !== null,
+    );
+    if (!ownerSlot || !ownerSlot.track_id) notFound();
+    videoId = musicEntryIdForTrack(ownerSlot.track_id);
+  }
+
   const { chain: chainSlugRaw, country: countryParamRaw } = await searchParams;
   const nowMs = Date.now();
 

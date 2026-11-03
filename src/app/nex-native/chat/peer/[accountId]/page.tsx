@@ -115,6 +115,14 @@ export default async function PeerChatPage({
     attachment_url?: string;
     attachment_type?: string;
     attachment_encrypted?: string;
+    /** Stage A · owner-authorised 2026-11-03 · document meta forwarded
+     *  by uploadPeerAttachmentAction on the redirect query string so
+     *  the composer can smuggle filename/size/mime through to the
+     *  send form. Only populated when attachment_type === "document";
+     *  image/video/audio continue to omit these fields. */
+    attachment_filename?: string;
+    attachment_size?: string;
+    attachment_mime?: string;
     upload_error?: string;
     lang?: string;
     /** Phase 3 · product id to auto-open the shop sheet focused on.
@@ -380,14 +388,33 @@ export default async function PeerChatPage({
     : null;
 
   // Bridge 8+9 · resolve the pending attachment from URL state.
+  // Stage A · owner-authorised 2026-11-03 · 'document' joins the
+  // accepted kinds + filename / size / mime project through from
+  // uploadPeerAttachmentAction's redirect query string so the
+  // composer can smuggle them into the send form.
   const attachUrl = sp.attachment_url?.trim() || null;
   const attachTypeRaw = sp.attachment_type?.trim() || null;
-  const attachKind: "image" | "video" | "audio" | null =
+  const attachKind: "image" | "video" | "audio" | "document" | null =
     attachTypeRaw === "image" ||
     attachTypeRaw === "video" ||
-    attachTypeRaw === "audio"
+    attachTypeRaw === "audio" ||
+    attachTypeRaw === "document"
       ? attachTypeRaw
       : null;
+  const attachFilename =
+    attachKind === "document" ? sp.attachment_filename?.slice(0, 256) : undefined;
+  const attachSizeBytesRaw =
+    attachKind === "document" ? sp.attachment_size : undefined;
+  const attachSizeBytes = (() => {
+    if (!attachSizeBytesRaw) return undefined;
+    const n = Number.parseInt(attachSizeBytesRaw, 10);
+    if (!Number.isFinite(n) || n < 0 || n > 25 * 1024 * 1024 + 1024) {
+      return undefined;
+    }
+    return n;
+  })();
+  const attachMime =
+    attachKind === "document" ? sp.attachment_mime?.slice(0, 128) : undefined;
   const pendingAttachment =
     attachUrl && attachKind
       ? {
@@ -398,6 +425,9 @@ export default async function PeerChatPage({
           // hidden field and E2eComposerIntercept looks up the
           // stashed content key in sessionStorage.
           encrypted: sp.attachment_encrypted === "1",
+          filename: attachFilename,
+          sizeBytes: attachSizeBytes,
+          mime: attachMime,
         }
       : null;
 

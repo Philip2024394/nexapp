@@ -40,6 +40,13 @@ import { redirect } from "next/navigation";
 import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
 import { resolveNexAppSessionOrGuest } from "@/lib/nex-native/app/session-or-guest";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// Owner-authorised 2026-11-02 · dev-impersonation parity for free-chat.
+// Mirrors the 2026-10-28 parity fix already landed on /profile/[handle].
+// Without this, NEX_DEV_IMPERSONATE_HANDLE=nex-99901 does NOT propagate
+// to the free-chat header + signed-in guard · so the dev persona
+// (Irish Pride) was being treated as a guest here.
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
+import { getProfileByAccountId } from "@/lib/nex-native/account-profile-service";
 import { devPreviewOn } from "@/lib/nex-native/app/dev-preview";
 import { isAdminSession } from "@/lib/nex-native/app/admin";
 import { effectiveTier } from "@/lib/nex-native/account-service";
@@ -50,27 +57,37 @@ import {
 import { FreeChatComposerClient } from "./_composer-client";
 import { FreeChatCallCenterDrawerClient } from "./_call-center-drawer-client";
 import { FreeChatCanvasClient, type SeedMessage } from "./_canvas-client";
+import { HeaderSearch } from "./_header-search";
 import {
   freeChatBackgroundCss,
   resolveFreeChatWallpaperUrl,
+  getDailyFreeChatPicker,
   type OutgoingDeliveryStatus,
 } from "./_types";
+import { readBubbleCustomization } from "./_customize-actions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Owner-authorised 2026-11-02 · Ireland theme routing · the free-chat
+// chrome is a dark surface. Route colour-themed fields through
+// --nex-world-* CSS vars with the current hex as fallback so Ireland
+// (identity-sealed Emerald #123D2B · Forest #1B5138 · Gold #C6A15B)
+// renders without touching the Worldwide / Indonesia experience. Text
+// ink + self-bubble treatment + orangeInk stay universal for legibility
+// on dark surfaces · same pattern as ControlDrawer (sealed 2026-11-01).
 const NEX = {
-  bg: "var(--nex-world-background-base, #020914)",
-  panel: "#071525",
-  panelSoft: "rgba(7, 21, 37, 0.84)",
-  border: "rgba(0, 175, 255, 0.18)",
-  cyan: "#00AFFF",
-  cyanSoft: "rgba(0, 175, 255, 0.35)",
-  cyanBubble: "rgba(0, 175, 255, 0.12)",
+  bg: "var(--nex-world-drawer-bg, #020914)",
+  panel: "color-mix(in srgb, var(--nex-world-drawer-bg, #071525) 92%, white 8%)",
+  panelSoft: "color-mix(in srgb, var(--nex-world-drawer-bg, #071525) 84%, transparent)",
+  border: "color-mix(in srgb, var(--nex-world-secondary, #00AFFF) 25%, transparent)",
+  cyan: "var(--nex-world-secondary, #00AFFF)",
+  cyanSoft: "color-mix(in srgb, var(--nex-world-secondary, #00AFFF) 35%, transparent)",
+  cyanBubble: "color-mix(in srgb, var(--nex-world-secondary, #00AFFF) 15%, transparent)",
   text: "#F2F5F8",
   textDim: "#B5C3D6",
   textMute: "#7D9BC0",
-  orange: "#FF7200",
+  orange: "var(--nex-world-secondary, #FF7200)",
   // Owner directive 2026-10-21 (iteration 47 · V15 adoption) · self
   // bubble now uses the Charcoal glass variant from the prototypes:
   // dark charcoal 35% fill + bright white 65% 1px rim. Reads as a
@@ -78,6 +95,8 @@ const NEX = {
   // Peer bubbles keep their existing cyan-glass + cyan-rim treatment ·
   // so the distinction stays legible: peer reads cyan-dominant, self
   // reads charcoal-with-bright-rim.
+  // The self-bubble charcoal + white rim are UNIVERSAL across themes ·
+  // same hex on Worldwide and Ireland · reads correctly on any backdrop.
   selfGrayGlass: "rgba(55, 65, 81, 0.35)",
   selfCyanHairline: "rgba(255, 255, 255, 0.65)",
   orangeInk: "#1A0808",
@@ -91,16 +110,10 @@ const SANS =
 // canvas can own bubble rendering while the server page stays a thin
 // shell that resolves session + cookies.
 
-const SEED_MESSAGES: readonly SeedMessage[] = [
-  {
-    id: "s1",
-    fromPeer: true,
-    text:
-      "Welcome to NEX Chat 🌎\n\nLet's get your vibe · choose from the themes below or check out the NEX theme library.",
-    time: "15:03",
-    senderName: "Nex",
-  },
-];
+// Owner directive 2026-11-02 (revision 9) · the seeded "Welcome to
+// NEX Chat 🌎" greeting bubble is retired · chat opens empty so the
+// picker row + action bar read as the primary content on first visit.
+const SEED_MESSAGES: readonly SeedMessage[] = [];
 
 export default async function FreeChatPage({
   searchParams,
@@ -120,7 +133,8 @@ export default async function FreeChatPage({
   // the owner can inspect this page while signed in. Production
   // ignores the param. See src/lib/nex-native/app/dev-preview.ts.
   const sp = (await searchParams) ?? {};
-  const signedInSession = await resolveNexAppSessionFromContext().catch(
+  // Dev-impersonation parity · see import comment above.
+  const signedInSession = await resolveSessionWithDevOverride().catch(
     () => null,
   );
   if (signedInSession && !devPreviewOn(sp) && !isAdminSession(signedInSession)) {
@@ -148,8 +162,10 @@ export default async function FreeChatPage({
   let drawerSession: ControlDrawerSession | null = null;
   let headerDisplayName = "NEX";
   let headerSubtitle = "NEX - Guest";
+  let headerAvatarUrl: string | null = null;
   try {
-    const sess = await resolveNexAppSessionFromContext();
+    // Dev-impersonation parity · identical sealed pattern to profile page.
+    const sess = await resolveSessionWithDevOverride();
     if (sess) {
       drawerSession = {
         displayName: sess.account.display_name,
@@ -160,6 +176,15 @@ export default async function FreeChatPage({
       headerSubtitle = sess.account.nex_handle
         ? sess.account.nex_handle.replace(/^nex-/i, "NEX-")
         : "NEX - Guest";
+      // Owner-authorised 2026-11-02 · load avatar_url from account
+      // profile · fail-closed to null (ping badge stays visible with
+      // no overlay) so a missing profile row NEVER breaks the header.
+      try {
+        const profile = await getProfileByAccountId(sess.account.id);
+        headerAvatarUrl = profile?.avatar_url ?? null;
+      } catch {
+        headerAvatarUrl = null;
+      }
     }
   } catch {
     // guest · drawerSession stays null · header strings keep defaults
@@ -192,9 +217,49 @@ export default async function FreeChatPage({
   // picked a wallpaper.
   const initialWallpaperUrl = resolveFreeChatWallpaperUrl(initialThemeId);
 
+  // Owner-authorised 2026-11-02 · identity-scoped theme list for the
+  // first-visit picker. On Ireland, this returns 1 default + 4 Irish
+  // tiles. On Worldwide / Indonesia, this returns 1 default + 4
+  // worldwide tiles. The server reads NEX_APP_IDENTITY directly ·
+  // same read pattern as /nex-native/page.tsx entry router.
+  // Owner-authorised 2026-11-03 · daily spotlight rotation · 2 pinned
+  // Ireland tiles + 3 rotating library picks per UTC day. The
+  // currentThemeId is passed through so the picker always surfaces
+  // the user's active choice even when it falls outside today's rota.
+  const freeChatThemes = getDailyFreeChatPicker(
+    process.env.NEX_APP_IDENTITY,
+    initialThemeId,
+  );
+
+  // Owner-authorised 2026-11-02 · read any saved bubble customization
+  // for the current theme · the canvas applies it instead of the
+  // theme accent defaults when present. Returns null when the cookie
+  // is absent OR malformed · canvas falls back to sealed defaults.
+  const initialBubbleCustomization = initialThemeId
+    ? await readBubbleCustomization(initialThemeId)
+    : null;
+
+  // Owner directive 2026-11-02 (revision 8) · when the plain
+  // `nex-default` tile is active AND a background colour was saved,
+  // use it as the pre-hydration background paint so there is no
+  // flash of navy before the client effect takes over.
+  const initialBackgroundFallback =
+    initialThemeId === "nex-default" &&
+    initialBubbleCustomization?.containerColor
+      ? initialBubbleCustomization.containerColor
+      : NEX.bg;
+
   return (
     <>
-      <style>{`html, body { background: ${NEX.bg} !important; }`}</style>
+      {/* Owner-authorised 2026-11-02 · drop !important so the ≥500px
+          country backdrop rule in nex-native.css (which has its own
+          !important) wins on desktop + tablet · the Ireland sunset
+          studio / Indonesia studio / NEX Original hero paints behind
+          the phone frame. On <500px the <main> below is position:
+          absolute inset:0 and fills the viewport, so the body
+          background is only visible during the brief initial-paint
+          window · keep NEX.bg for that so there is no white flash. */}
+      <style>{`html, body { background: ${NEX.bg}; }`}</style>
       <main
         data-nex-free-chat-root
         style={{
@@ -219,7 +284,10 @@ export default async function FreeChatPage({
           // Server resolves the URL from the cookie so the first paint
           // is correct · client takes over post-hydration (see
           // `_canvas-client.tsx` useEffect).
-          background: freeChatBackgroundCss(initialWallpaperUrl, NEX.bg),
+          background: freeChatBackgroundCss(
+            initialWallpaperUrl,
+            initialBackgroundFallback,
+          ),
           color: NEX.text,
           fontFamily: SANS,
           display: "flex",
@@ -255,6 +323,28 @@ export default async function FreeChatPage({
             style={{ position: "relative", width: 48, height: 48, flexShrink: 0 }}
           >
             <NexPingBadge size={48} accent={NEX.cyan} dataTestId="free-chat-nex" />
+            {/* Owner-authorised 2026-11-02 · signed-in viewer sees their
+                profile image overlaid on the sealed ping badge · the
+                ping remains the ring, the avatar fills the interior.
+                Guest / no-avatar viewers see only the ping badge. */}
+            {headerAvatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={headerAvatarUrl}
+                alt={headerDisplayName}
+                data-nex-free-chat-header-avatar
+                style={{
+                  position: "absolute",
+                  top: 3,
+                  left: 3,
+                  width: 42,
+                  height: 42,
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  pointerEvents: "none",
+                }}
+              />
+            ) : null}
           </div>
           <div
             style={{
@@ -321,23 +411,16 @@ export default async function FreeChatPage({
               flexShrink: 0,
             }}
           >
-            <Link
-              href="/nex-native/directory/landing"
-              aria-label="NEX Directory · shops · services · food · trades"
-              data-nex-free-chat-header-search
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 36,
-                height: 36,
-                color: NEX.cyan,
-                textDecoration: "none",
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              <SearchIcon />
-            </Link>
+            {/* Owner-authorised 2026-11-02 · magnifying glass is now a
+                client trigger that opens an in-place glass-backdrop
+                overlay with round category buttons (Products · Rentals
+                · Stays · Services). Replaces the previous navigation
+                to /directory/landing · the overlay DOES link out to
+                /directory when a category is picked, so the directory
+                landing is still the destination · just reached via one
+                extra discovery step that matches the owner-confirmed
+                category-first search architecture. */}
+            <HeaderSearch />
             {/* Owner directive 2026-10-22 (evening) · 3-dots sealed
                 ControlDrawer trigger reinstated in the header right-
                 cluster. The attach panel's "+" button is the sole
@@ -360,6 +443,8 @@ export default async function FreeChatPage({
           seedMessages={SEED_MESSAGES}
           initialThemeId={initialThemeId}
           initialRowDismissed={initialRowDismissed}
+          themes={freeChatThemes}
+          initialBubbleCustomization={initialBubbleCustomization}
         />
 
         {/* ── Composer · emoji (inside left) + text + send (inside right) ──

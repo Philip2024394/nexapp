@@ -325,6 +325,18 @@ const YOUR_BUSINESS_ROWS: ReadonlyArray<MenuRow> = [
        the Go Live CTA only renders for signed-in users. */
     locked: false,
   },
+  // Owner-authorised 2026-11-02 · NEX Billing · customer-facing
+  // subscription + usage surface. Sits directly under Nex Live per
+  // owner request. Points at /nex-native/billing (new in Master Build)
+  // · NOT /settings/tier (that is the sealed themes-pricing surface,
+  // kept intact as its own row below).
+  {
+    key: "billing",
+    label: "Billing",
+    subtitle: "Shop and Vault subscriptions · usage · invoices",
+    href: "/nex-native/billing",
+    locked: false,
+  },
   {
     key: "my-businesses",
     label: "My businesses",

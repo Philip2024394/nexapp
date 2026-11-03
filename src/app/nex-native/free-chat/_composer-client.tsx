@@ -30,18 +30,22 @@ import { resolveFreeChatAccentHex } from "./_types";
 import { ContactPickerSheet } from "./_contact-picker-sheet";
 import type { MockContact } from "./_contact-picker-data";
 
+// Owner-authorised 2026-11-02 · Ireland theme routing · composer palette
+// mirrors page.tsx + _canvas-client.tsx · all dark-surface and accent
+// fields route through sealed --nex-world-* vars with the current hex
+// as fallback. Universal / orange-ink / text stay hardcoded.
 const NEX = {
-  panel: "rgba(7, 21, 37, 0.9)",
-  border: "rgba(0, 175, 255, 0.28)",
-  cyan: "#00AFFF",
+  panel: "color-mix(in srgb, var(--nex-world-drawer-bg, #071525) 90%, transparent)",
+  border: "color-mix(in srgb, var(--nex-world-secondary, #00AFFF) 35%, transparent)",
+  cyan: "var(--nex-world-secondary, #00AFFF)",
   text: "#F2F5F8",
   textMute: "#7D9BC0",
-  orange: "#FF7200",
+  orange: "var(--nex-world-secondary, #FF7200)",
   orangeInk: "#1A0808",
   // Owner directive 2026-10-22 (afternoon · follow-up pass 4) · solid
   // NEX navy used by the attach-panel action buttons so they read as
   // dark chips against the accent-tinted panel background.
-  bgNavy: "#050F1E",
+  bgNavy: "var(--nex-world-drawer-bg, #050F1E)",
 };
 
 // Owner directive 2026-10-22 (afternoon · follow-up pass 3) · 6-item
@@ -1507,11 +1511,18 @@ export function FreeChatComposerClient({
         picker · opens from the Contact attach button. Shares into
         the composer as a chip (Share CTA) · Invite CTA toasts until
         peer-chat participant service lands. */}
+    {/* Owner directive 2026-11-03 (narrow override) · Free Chat
+        passes the active world accent so Ireland users see Gold
+        inside the Contact Picker sheet (chrome AND per-row rims).
+        Every other caller of ContactPickerSheet omits this prop and
+        keeps the sealed NEX cyan — the 2026-10-23 Chat Master Layout
+        rule still applies there. */}
     <ContactPickerSheet
       open={contactPickerOpen}
       onClose={() => setContactPickerOpen(false)}
       onInvite={handleContactInvite}
       onShopShare={handleContactShopShare}
+      accentHex={accentHex}
     />
 
     {cameraStream && (

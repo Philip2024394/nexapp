@@ -31,7 +31,14 @@ import { uploadEncryptedAttachment } from "@/lib/nex-native/crypto/encrypted-att
 import { stashEncryptedAttachmentKey } from "@/lib/nex-native/crypto/encrypted-attachment-stash";
 import { getMyDataUsagePrefsAction } from "@/app/nex-native/settings/data-usage/_actions";
 
-export type CaptureKind = "camera" | "video" | "voice";
+// Stage A · owner-authorised 2026-11-03 · "document" joins the
+// Capture family so the composer's Add-media modal can route PDFs /
+// Office docs / zip archives / etc. through the same upload pipeline
+// as camera / video / voice. Document uses the plaintext fallback
+// path (Bridge 88 deferral intact in v1 · Stage A2 flips all four
+// to encrypted together) and accepts any MIME so the OS picker is
+// unrestricted.
+export type CaptureKind = "camera" | "video" | "voice" | "document";
 
 export interface MediaCaptureHandle {
   open(kind: CaptureKind): void;
@@ -53,6 +60,7 @@ const KIND_COPY: Record<CaptureKind, { verb: string; icon: string }> = {
   camera: { verb: "Uploading photo", icon: "📸" },
   video: { verb: "Uploading video", icon: "🎥" },
   voice: { verb: "Uploading voice note", icon: "🎙" },
+  document: { verb: "Uploading document", icon: "📄" },
 };
 
 export const MediaCapture = React.forwardRef<MediaCaptureHandle, Props>(
@@ -60,9 +68,15 @@ export const MediaCapture = React.forwardRef<MediaCaptureHandle, Props>(
     const cameraFormRef = React.useRef<HTMLFormElement | null>(null);
     const videoFormRef = React.useRef<HTMLFormElement | null>(null);
     const voiceFormRef = React.useRef<HTMLFormElement | null>(null);
+    // Stage A · owner-authorised 2026-11-03 · dedicated document form
+    // + input · routes through the plaintext path (classifyPeerAttach-
+    // mentMime now returns 'document' for non-media MIMEs) · Bridge 88
+    // posture intact in v1.
+    const documentFormRef = React.useRef<HTMLFormElement | null>(null);
     const cameraInputRef = React.useRef<HTMLInputElement | null>(null);
     const videoInputRef = React.useRef<HTMLInputElement | null>(null);
     const voiceInputRef = React.useRef<HTMLInputElement | null>(null);
+    const documentInputRef = React.useRef<HTMLInputElement | null>(null);
 
     const [uploading, setUploading] = React.useState<CaptureKind | null>(null);
     const [mounted, setMounted] = React.useState(false);
@@ -106,11 +120,21 @@ export const MediaCapture = React.forwardRef<MediaCaptureHandle, Props>(
               ? cameraInputRef
               : kind === "video"
                 ? videoInputRef
-                : voiceInputRef;
+                : kind === "voice"
+                  ? voiceInputRef
+                  : documentInputRef;
           inputRef.current?.click();
         },
       }),
       [],
+    );
+
+    // Stage A · owner-authorised 2026-11-03 · surface a transient
+    // human message when client-side validation rejects a file BEFORE
+    // we burn bandwidth hitting the upload endpoint. Clears on next
+    // file-select so the user never sees a stale error.
+    const [validationError, setValidationError] = React.useState<string | null>(
+      null,
     );
 
     const onFileChosen =
@@ -121,8 +145,74 @@ export const MediaCapture = React.forwardRef<MediaCaptureHandle, Props>(
       (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.currentTarget.files;
         if (!files || files.length === 0) return;
-        setUploading(kind);
+        setValidationError(null);
         const file = files[0]!;
+        // Stage A · client-side size + MIME pre-check · mirrors the
+        // sealed server-side bounds in peer-message-service
+        // (NEX_PEER_ATTACHMENT_MAX_BYTES + classifyPeerAttachmentMime)
+        // so the user sees a human message on the composer surface
+        // instead of waiting for a redirect-with-upload_error.
+        //
+        // Rules:
+        //   · 25 MB hard cap (same as the bucket + encrypted route)
+        //   · empty MIME rejected (classifyPeerAttachmentMime returns
+        //     null for empty · would fail server-side anyway)
+        //   · kind-specific accept hints · "camera" expects image/*,
+        //     "video" expects video/*, "voice" expects audio/* · the
+        //     file input `accept` already filters, this is a
+        //     defence-in-depth check for drag-drop / clipboard paths.
+        const MAX_BYTES = 25 * 1024 * 1024;
+        if (file.size > MAX_BYTES) {
+          const mb = (file.size / (1024 * 1024)).toFixed(1);
+          setValidationError(
+            `File is ${mb} MB. The 25 MB cap applies to every attachment.`,
+          );
+          // Reset the input so re-picking the same file re-fires change.
+          e.currentTarget.value = "";
+          return;
+        }
+        if (!file.type || file.type.length === 0) {
+          setValidationError(
+            "That file doesn't carry a recognised type. Try another file.",
+          );
+          e.currentTarget.value = "";
+          return;
+        }
+        const typeLower = file.type.toLowerCase();
+        const kindMatches = (() => {
+          if (kind === "camera") return typeLower.startsWith("image/");
+          if (kind === "video") return typeLower.startsWith("video/");
+          if (kind === "voice") return typeLower.startsWith("audio/");
+          // Document · anything that isn't image/video/audio is fine ·
+          // this intentionally mirrors classifyPeerAttachmentMime.
+          return !typeLower.startsWith("image/") &&
+            !typeLower.startsWith("video/") &&
+            !typeLower.startsWith("audio/")
+            ? true
+            : // If the user picked an image via the Document tile the
+              // server will classify it as image + render as a photo ·
+              // allow it rather than reject.
+              true;
+        })();
+        if (!kindMatches) {
+          setValidationError(
+            `This file doesn't look like a ${kind === "camera" ? "photo" : kind}. Pick a different file.`,
+          );
+          e.currentTarget.value = "";
+          return;
+        }
+        setUploading(kind);
+        // Stage A · owner-authorised 2026-11-03 · broadcast an upload-
+        // start event so the composer can render an inline indeterminate
+        // progress bar alongside the sealed full-screen overlay. The
+        // Server Action's redirect-based upload path cannot expose
+        // byte-level progress without rework; the inline bar is
+        // honestly indeterminate (no fake percentage ticker).
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("nex-peer-upload-start", { detail: { kind } }),
+          );
+        }
 
         // Bridge 88 · encrypted-upload path when enabled. Reads the
         // file client-side, encrypts with nacl.secretbox + a random
@@ -133,7 +223,14 @@ export const MediaCapture = React.forwardRef<MediaCaptureHandle, Props>(
         //
         // Silent fallback to the plaintext form action on any failure
         // so a hiccup in the encrypted path doesn't block sending.
-        if (encryptedUploadEnabled) {
+        //
+        // Stage A · 2026-11-03 · documents SKIP the encrypted path
+        // entirely · classifyMime inside uploadEncryptedAttachment
+        // rejects non-media MIMEs, so calling it would always throw
+        // and silent-fall-back · routing directly to plaintext saves
+        // one abandoned encryption attempt. Bridge 88 posture
+        // unchanged · Stage A2 will encrypt all four kinds together.
+        if (encryptedUploadEnabled && kind !== "document") {
           void (async () => {
             try {
               const enc = await uploadEncryptedAttachment({
@@ -206,6 +303,23 @@ export const MediaCapture = React.forwardRef<MediaCaptureHandle, Props>(
               style={{ display: "none" }}
             />
           </form>
+          {/* Document · any non-media file (PDF, Office doc, zip, text,
+              etc.). No `capture` attribute · opens the OS file picker
+              on every platform. Routes through the plaintext path
+              because uploadEncryptedAttachment rejects non-media MIMEs
+              (classifyMime returns null for documents). Bridge 88
+              posture intact in v1 · Stage A2 flips all four types
+              together. Stage A · owner-authorised 2026-11-03. */}
+          <form ref={documentFormRef} action={uploadAction}>
+            <input
+              ref={documentInputRef}
+              name="attachment_file"
+              type="file"
+              accept="*/*"
+              onChange={onFileChosen(documentFormRef, "document")}
+              style={{ display: "none" }}
+            />
+          </form>
         </div>
 
         {/* Bridge 65 · full-screen upload overlay · appears the moment
@@ -218,10 +332,67 @@ export const MediaCapture = React.forwardRef<MediaCaptureHandle, Props>(
             <UploadOverlay kind={uploading} />,
             document.body,
           )}
+        {/* Stage A · owner-authorised 2026-11-03 · client-side
+            validation toast · appears for ~4s when a pre-check
+            rejects a file (size cap, missing MIME, kind mismatch).
+            Portal so it sits above the chat composer even when the
+            modal is still fading out. */}
+        {mounted &&
+          validationError &&
+          createPortal(
+            <ValidationErrorToast
+              message={validationError}
+              onDismiss={() => setValidationError(null)}
+            />,
+            document.body,
+          )}
       </>
     );
   },
 );
+
+// Stage A · owner-authorised 2026-11-03 · transient validation toast.
+// Auto-dismisses after 4s so the user isn't blocked, but tappable to
+// clear immediately. Positioned bottom-centre above the composer.
+function ValidationErrorToast({
+  message,
+  onDismiss,
+}: {
+  message: string;
+  onDismiss: () => void;
+}) {
+  React.useEffect(() => {
+    const t = window.setTimeout(onDismiss, 4000);
+    return () => window.clearTimeout(t);
+  }, [onDismiss]);
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      onClick={onDismiss}
+      style={{
+        position: "fixed",
+        bottom: "calc(env(safe-area-inset-bottom, 0px) + 80px)",
+        left: "50%",
+        transform: "translateX(-50%)",
+        maxWidth: "min(92vw, 420px)",
+        padding: "10px 16px",
+        borderRadius: 12,
+        background: "rgba(166, 0, 0, 0.92)",
+        color: "#F2F5F8",
+        fontSize: 13,
+        fontWeight: 600,
+        boxShadow: "0 10px 24px rgba(0, 0, 0, 0.4)",
+        border: "1px solid rgba(255, 255, 255, 0.14)",
+        cursor: "pointer",
+        zIndex: 9999,
+        textAlign: "center",
+      }}
+    >
+      {message}
+    </div>
+  );
+}
 
 function UploadOverlay({ kind }: { kind: CaptureKind }) {
   const { verb, icon } = KIND_COPY[kind];

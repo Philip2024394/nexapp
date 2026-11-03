@@ -1,44 +1,33 @@
 // src/app/nex-native/chat-themes-library/page.tsx
 //
-// NEX Themes Marketplace · PRIMARY ROUTE.
-// Owner-authorised 2026-10-21 · prototype promoted to primary.
+// NEX Chat Themes · PRIMARY ENTRY ROUTE.
+// Owner-authorised 2026-11-02 (revision 4) · entry hero + carousel.
 // -----------------------------------------------------------------------------
-// Owner directive 2026-10-21 · the sealed Neon Marketplace surface
-// has been replaced by the prototype marketplace built under
-// `./marketplace-prototype/`. The prototype is now the primary
-// themes-library experience · the sealed sibling files (`_marketplace-
-// header.tsx`, `_load-library-data.ts`, `_category-grid.tsx` et al.)
-// are left on disk as orphans so this change is cleanly reversible
-// via git. They can be deleted in a follow-up cleanup pass once the
-// prototype has been reviewed in the owner's own browser.
+// Entry surface for the paid chat theme library. Renders a device-mock
+// hero preview of the actively-selected theme + a horizontal carousel
+// of highlighted themes + the "Join Library" subscription CTA +
+// "View full library" that opens the paginated grid at /all.
 //
-// Scope boundaries:
-//   · Zero DB writes.
-//   · Zero migrations.
-//   · The prototype's own route (/chat-themes-library/marketplace-
-//     prototype) is UNCHANGED and still works · lets us A/B the two
-//     surfaces during owner review.
-//   · The free-chat theme-handoff cookie integration (iteration 54 ·
-//     the `nex-free-chat-wallpaper` cookie that paints the previously-
-//     chosen wallpaper on this page) is NOT ported in this swap · the
-//     prototype has its own catalog + routing. If you want the free-
-//     chat wallpaper handoff restored on this surface, say so and I
-//     will wire it in.
-//
-// Not touched:
-//   · The sealed `/nex-native/free-chat` surface.
-//   · The sealed `/nex-native/cover-themes-library/*` surfaces.
-//   · `pricing-config.ts` approval statuses.
-//   · The three-product doctrine draft (still DRAFT · nothing seals
-//     by making this swap).
+// Scope:
+//   · 5 FREE chat theme tiles on /nex-native/free-chat untouched.
+//   · Prior prototype under `marketplace-prototype/` left on disk ·
+//     not rendered from here · reversible via git.
+//   · Zero DB writes · zero migrations.
+//   · Buy / Join buttons open the shared placeholder sheet · no
+//     Stripe calls fire from this surface today.
 
 import type * as React from "react";
-import { MarketplacePrototypeClient } from "./marketplace-prototype/_marketplace-client";
+import { EntryClient } from "./_entry-client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const NEX_BG = "var(--nex-world-background-base, #020914)";
+// Owner directive 2026-11-03 · route through `--nex-world-drawer-bg`
+// so Ireland paints its sealed Emerald #123D2B · Worldwide + Indonesia
+// inherit navy via the fallback. Prior revision used
+// `--nex-world-background-base` which isn't emitted anywhere, so every
+// identity rendered as navy.
+const NEX_BG = "var(--nex-world-drawer-bg, #020914)";
 const NEX_TEXT = "#F2F5F8";
 const SANS =
   "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
@@ -46,9 +35,15 @@ const SANS =
 export default function ChatThemesLibraryPage(): React.ReactElement {
   return (
     <>
-      <style>{`html, body { background: ${NEX_BG} !important; }`}</style>
+      {/* Owner directive 2026-11-03 · drop !important so the ≥500px
+          country-backdrop rule in nex-native.css wins on desktop +
+          tablet · the Ireland sunset studio paints behind the phone
+          frame. On <500px the <main> below is position:absolute
+          inset:0 and fills the viewport, so the body background is
+          only visible during the brief initial-paint window. */}
+      <style>{`html, body { background: ${NEX_BG}; }`}</style>
       <main
-        data-nex-marketplace-prototype
+        data-nex-chat-themes-library
         style={{
           position: "absolute",
           inset: 0,
@@ -58,9 +53,12 @@ export default function ChatThemesLibraryPage(): React.ReactElement {
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
+          padding:
+            "calc(env(safe-area-inset-top, 0px) + 14px) 20px calc(env(safe-area-inset-bottom, 0px) + 14px)",
+          boxSizing: "border-box",
         }}
       >
-        <MarketplacePrototypeClient />
+        <EntryClient />
       </main>
     </>
   );

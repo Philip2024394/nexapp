@@ -82,13 +82,21 @@ interface PeerComposerProps {
    *  URL + type into the send form. */
   pendingAttachment?: {
     url: string;
-    kind: "image" | "video" | "audio";
+    kind: "image" | "video" | "audio" | "document";
     clearHref: string;
     /** Bridge 88 · true when the pending attachment came in through
      *  the encrypted-upload path · composer smuggles this into the
      *  send form so E2eComposerIntercept knows to look up the content
      *  key from sessionStorage. */
     encrypted?: boolean;
+    /** Stage A · owner-authorised 2026-11-03 · document metadata the
+     *  upload action forwarded on the redirect query string so the
+     *  composer can smuggle it into the send form. Projected into
+     *  attachment_meta at insert time by the server action. Only
+     *  present when kind === "document" · image/video/audio omit. */
+    filename?: string;
+    sizeBytes?: number;
+    mime?: string;
   } | null;
   /** Bridge 88 · when true, the media-capture flow routes files
    *  through the client-side encrypted upload path. Disable for
@@ -175,7 +183,14 @@ export function PeerComposer({
   const [text, setText] = React.useState("");
   const [modalOpen, setModalOpen] = React.useState(false);
   const [emojiOpen, setEmojiOpen] = React.useState(false);
-  const [recorderKind, setRecorderKind] = React.useState<CaptureKind | null>(
+  // Stage A · owner-authorised 2026-11-03 · recorderKind stays
+  // narrower than CaptureKind · document files never route through
+  // the in-browser recorder (nothing to record · they come from the
+  // OS file picker). handleCapturePick explicitly bypasses the
+  // recorder path for documents.
+  const [recorderKind, setRecorderKind] = React.useState<
+    "camera" | "video" | "voice" | null
+  >(
     null,
   );
   // Bridge ThemeEmoji-C · sealed 2026-10-01. When the founder taps a
@@ -213,19 +228,68 @@ export function PeerComposer({
   const handleCapturePick = React.useCallback(
     (kind: CaptureKind) => {
       setModalOpen(false);
-      if (preferRecorder()) {
+      // Stage A · documents never route through the in-browser
+      // recorder · nothing to record · always hit the OS file picker.
+      if (kind !== "document" && preferRecorder()) {
         // Desktop · open the in-browser recorder modal.
         setRecorderKind(kind);
         return;
       }
-      // Mobile · trigger the hidden file input · OS opens native
-      // camera / recorder for a higher-fidelity capture.
+      // Mobile · (or document on any device) · trigger the hidden
+      // file input · OS opens native camera / recorder / file picker.
       requestAnimationFrame(() => {
         mediaCaptureRef.current?.open(kind);
       });
     },
     [preferRecorder],
   );
+
+  // Stage A · owner-authorised 2026-11-03 · inline retry listener.
+  // When ChatErrorBanner surfaces an upload failure the user taps
+  // "Try again" · the banner clears the ?upload_error URL param via
+  // a <Link replace> and then dispatches this event. Reopens the
+  // attach modal so the user re-picks a file without losing context.
+  React.useEffect(() => {
+    const onRetry = () => setModalOpen(true);
+    window.addEventListener("nex-peer-upload-retry", onRetry as EventListener);
+    return () => {
+      window.removeEventListener(
+        "nex-peer-upload-retry",
+        onRetry as EventListener,
+      );
+    };
+  }, []);
+
+  // Stage A · owner-authorised 2026-11-03 · inline indeterminate
+  // progress bar · fires when `_media-capture.tsx` broadcasts a
+  // `nex-peer-upload-start` event, clears automatically when the
+  // composer re-renders after the server-action redirect (the Server
+  // Action pattern doesn't expose byte-level progress · the bar is
+  // honestly indeterminate · no fake percentage ticker). The sealed
+  // full-screen overlay continues to fire for cross-surface visibility.
+  const [uploadInflight, setUploadInflight] = React.useState<
+    "camera" | "video" | "voice" | "document" | null
+  >(null);
+  React.useEffect(() => {
+    const onStart = (e: Event) => {
+      const detail = (e as CustomEvent<{ kind?: CaptureKind }>).detail;
+      setUploadInflight(detail?.kind ?? "camera");
+    };
+    window.addEventListener("nex-peer-upload-start", onStart as EventListener);
+    return () => {
+      window.removeEventListener(
+        "nex-peer-upload-start",
+        onStart as EventListener,
+      );
+    };
+  }, []);
+  // When pendingAttachment becomes populated OR an upload_error URL
+  // param lands, the upload lifecycle has completed · clear the
+  // indeterminate bar. The composer always re-mounts after a redirect
+  // so this covers both success + failure paths without a timeout.
+  React.useEffect(() => {
+    if (pendingAttachment) setUploadInflight(null);
+  }, [pendingAttachment]);
 
   // Universal ChatActionDots (bottom-right 3-dots) dispatches these
   // events when the user taps Mic or Camera in the sliding action
@@ -535,6 +599,78 @@ export function PeerComposer({
           </>
         )}
 
+        {/* Stage A · owner-authorised 2026-11-03 · inline upload
+            progress chip · indeterminate (Server-Action redirects
+            can't expose byte-level progress) · reads as a thin
+            animated bar + "Uploading <kind>…" caption. Clears
+            automatically when the composer re-mounts after the
+            server-action redirect lands a pending attachment OR an
+            upload_error. Lives just above the pill so the user
+            doesn't need to look at the full-screen overlay to know
+            something is happening. */}
+        {uploadInflight && !pendingAttachment && (
+          <div
+            data-nex-peer-upload-progress
+            role="status"
+            aria-live="polite"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "8px 12px",
+              borderRadius: 10,
+              background: "rgba(0, 0, 0, 0.42)",
+              border: `1px solid ${
+                themeAccent ? composerRim(themeAccent) : "rgba(0,159,239,0.5)"
+              }`,
+              marginBottom: -12,
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: themeAccent ?? NEX.cyan,
+                }}
+              >
+                Uploading {uploadInflight === "camera" ? "photo" : uploadInflight}…
+              </div>
+              {/* Indeterminate progress stripe · pure CSS, no fake
+                  percentage. Keyframe defined in the sealed <style>
+                  tag at the composer root (added below). */}
+              <div
+                aria-hidden
+                style={{
+                  marginTop: 6,
+                  height: 3,
+                  borderRadius: 999,
+                  background: "rgba(255, 255, 255, 0.08)",
+                  overflow: "hidden",
+                  position: "relative",
+                }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    background: `linear-gradient(90deg, transparent, ${themeAccent ?? NEX.cyan}, transparent)`,
+                    animation: "nex-peer-upload-indeterminate 1200ms linear infinite",
+                  }}
+                />
+              </div>
+            </div>
+            <style>{`
+              @keyframes nex-peer-upload-indeterminate {
+                0%   { transform: translateX(-100%); }
+                100% { transform: translateX(100%); }
+              }
+            `}</style>
+          </div>
+        )}
+
         {/* Bridge 8+9 · pending attachment preview · rendered above
             the pill when the URL carries ?attachment_url. Hidden
             inputs smuggle the URL + kind into the send form. */}
@@ -559,6 +695,33 @@ export function PeerComposer({
                 type="hidden"
                 name="attachment_encrypted"
                 value="1"
+              />
+            )}
+            {/* Stage A · owner-authorised 2026-11-03 · document meta
+                smuggled through hidden inputs so the server action
+                can project it into attachment_meta on insert. Only
+                emitted when kind === "document" · image/video/audio
+                omit these fields and keep the sealed meta shape. */}
+            {pendingAttachment.kind === "document" && pendingAttachment.filename && (
+              <input
+                type="hidden"
+                name="attachment_filename"
+                value={pendingAttachment.filename}
+              />
+            )}
+            {pendingAttachment.kind === "document" &&
+              typeof pendingAttachment.sizeBytes === "number" && (
+                <input
+                  type="hidden"
+                  name="attachment_size"
+                  value={String(pendingAttachment.sizeBytes)}
+                />
+              )}
+            {pendingAttachment.kind === "document" && pendingAttachment.mime && (
+              <input
+                type="hidden"
+                name="attachment_mime"
+                value={pendingAttachment.mime}
               />
             )}
             <div
@@ -595,16 +758,23 @@ export function PeerComposer({
                     ? "Photo ready"
                     : pendingAttachment.kind === "video"
                       ? "Video ready"
-                      : "Voice note ready"}
+                      : pendingAttachment.kind === "audio"
+                        ? "Voice note ready"
+                        : "Document ready"}
                 </div>
                 <div
                   style={{
                     fontSize: 11,
                     color: NEX.textSecondary,
                     marginTop: 2,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
                   }}
                 >
-                  Type a caption or send as-is
+                  {pendingAttachment.kind === "document"
+                    ? pendingAttachment.filename ?? "Type a note or send as-is"
+                    : "Type a caption or send as-is"}
                 </div>
               </div>
               <a
@@ -1202,6 +1372,21 @@ function MediaModal({
             onClose={onClose}
             onActivate={
               captureEnabled ? () => onPickCapture?.("voice") : undefined
+            }
+          />
+          {/* Stage A · owner-authorised 2026-11-03 · "Document" tile
+              routes any non-media file (PDF / Office doc / zip / text)
+              through the sealed `uploadPeerAttachmentAction` plaintext
+              path. Lives in the same modal as camera/video/voice so
+              users have one discovery surface for every attachment
+              kind. Bridge 88 posture intact · Stage A2 encrypts all
+              four kinds together. */}
+          <ModalOption
+            icon={<DocumentIcon size={26} />}
+            label="Document"
+            onClose={onClose}
+            onActivate={
+              captureEnabled ? () => onPickCapture?.("document") : undefined
             }
           />
           <ModalOption
@@ -2093,6 +2278,21 @@ function MicIcon({ size = 20 }: { size?: number }) {
   );
 }
 
+// Stage A · owner-authorised 2026-11-03 · universal document glyph for
+// the MediaModal's new "Document" tile · a sheet of paper with a
+// corner-fold and three content lines · reads instantly as "file" at
+// all MediaModal sizes.
+function DocumentIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden {...strokeProps}>
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="8" y1="13" x2="16" y2="13" />
+      <line x1="8" y1="17" x2="14" y2="17" />
+    </svg>
+  );
+}
+
 function SendIcon() {
   return (
     <svg width={16} height={16} viewBox="0 0 24 24" aria-hidden {...strokeProps} strokeWidth={2.2}>
@@ -2129,7 +2329,7 @@ function AttachmentPreview({
   kind,
 }: {
   url: string;
-  kind: "image" | "video" | "audio";
+  kind: "image" | "video" | "audio" | "document";
 }) {
   const wrap: React.CSSProperties = {
     flexShrink: 0,
@@ -2164,7 +2364,23 @@ function AttachmentPreview({
       </div>
     );
   }
-  // Audio · glyph placeholder · no thumb possible without waveform work.
+  if (kind === "audio") {
+    // Audio · glyph placeholder · no thumb possible without waveform work.
+    return (
+      <div
+        style={{
+          ...wrap,
+          fontSize: 22,
+          color: NEX.cyan,
+        }}
+        aria-hidden
+      >
+        🎙️
+      </div>
+    );
+  }
+  // Document · generic file glyph · the pending-attachment caption
+  // row already surfaces the filename. Stage A · 2026-11-03.
   return (
     <div
       style={{
@@ -2174,7 +2390,7 @@ function AttachmentPreview({
       }}
       aria-hidden
     >
-      🎙️
+      📄
     </div>
   );
 }

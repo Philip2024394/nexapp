@@ -24,6 +24,7 @@ import { PeerComposer } from "./peer/[accountId]/_composer";
 import { ScrollToBottomOnMount } from "./_scroll-to-bottom";
 import { MessageBubbleClient } from "./_message-bubble-client";
 import { ReadTick } from "./_read-tick";
+import { ImageLightbox } from "./_image-lightbox";
 import { ReactionsChipRow, BubbleTopRightReaction } from "./_reactions";
 import {
   SideNavPanel,
@@ -116,7 +117,21 @@ export interface PortraitBloomMessage {
     | "product_share"
     | "sticker"
     | "theme-emoji"
+    // Stage A · owner-authorised 2026-11-03 · Migration 259 extended
+    // the CHECK to include 'document'. Carried through the shell so
+    // the recipient's MessageAttachment branch can render the
+    // document chip with filename + size + MIME icon.
+    | "document"
     | null;
+  /** Stage A · owner-authorised 2026-11-03 · when attachment_type =
+   *  'document' this projects filename + size_bytes + mime from the
+   *  server-side JSONB `attachment_meta` so the recipient's chip can
+   *  paint them without a second fetch. Optional for other kinds. */
+  attachment_meta?: {
+    readonly filename?: string;
+    readonly size_bytes?: number;
+    readonly mime?: string;
+  } | null;
   /** Sealed 2026-10-11 · theme-emoji attachment · emoji that was
    *  picked from the composer's emoji picker and sent as its own
    *  message. Renders LARGER than inline text (~56px) but smaller
@@ -399,12 +414,20 @@ export interface PortraitBloomShellProps {
    *  thumbnail above the pill. */
   pendingAttachment?: {
     url: string;
-    kind: "image" | "video" | "audio";
+    kind: "image" | "video" | "audio" | "document";
     clearHref: string;
     /** Bridge 88 · true when this attachment came in through the
      *  encrypted-upload path · composer smuggles the flag into the
      *  send form so E2eComposerIntercept picks up the stashed key. */
     encrypted?: boolean;
+    /** Stage A · owner-authorised 2026-11-03 · document metadata the
+     *  upload action forwarded via redirect query string. The composer
+     *  smuggles these into the send form so sendPeerMessageAction can
+     *  project them into attachment_meta on insert. Only populated
+     *  when kind === "document" · image/video/audio continue to omit. */
+    filename?: string;
+    sizeBytes?: number;
+    mime?: string;
   } | null;
   /** Owner directive 2026-10-22 · Ask-Seller slice 2 · pending product
    *  attachment resolved server-side from ?pending_product=<id>. When
@@ -716,6 +739,12 @@ export function PortraitBloomShell({
     const id = window.setTimeout(() => setZoomedThemeEmoji(null), 5000);
     return () => window.clearTimeout(id);
   }, [zoomedThemeEmoji]);
+
+  // Stage A · owner-authorised 2026-11-03 · NEX full-screen image
+  // viewer state. Tapping an inline photo attachment opens the
+  // lightbox over the chat; closes on Esc / backdrop tap / × / the
+  // sealed body-overflow lock. Null = closed.
+  const [lightboxUrl, setLightboxUrl] = React.useState<string | null>(null);
 
   return (
     <>
@@ -1827,11 +1856,26 @@ export function PortraitBloomShell({
                       ) : m.attachment_url &&
                         (m.attachment_type === "image" ||
                           m.attachment_type === "video" ||
-                          m.attachment_type === "audio") ? (
+                          m.attachment_type === "audio" ||
+                          m.attachment_type === "document") ? (
                         <MessageAttachment
                           url={m.attachment_url}
                           kind={m.attachment_type}
                           hasBody={!!m.body}
+                          meta={
+                            m.attachment_type === "document"
+                              ? {
+                                  filename: m.attachment_meta?.filename,
+                                  size_bytes: m.attachment_meta?.size_bytes,
+                                  mime: m.attachment_meta?.mime,
+                                }
+                              : undefined
+                          }
+                          onOpenImage={
+                            m.attachment_type === "image"
+                              ? setLightboxUrl
+                              : undefined
+                          }
                         />
                       ) : null}
                       {m.body && (() => {
@@ -2113,6 +2157,15 @@ export function PortraitBloomShell({
           `}</style>
         </div>
       )}
+      {/* Stage A · owner-authorised 2026-11-03 · full-screen image
+          viewer. Rendered unconditionally; the component itself
+          returns null until setLightboxUrl is set to a non-null URL
+          by a MessageAttachment tap. */}
+      <ImageLightbox
+        url={lightboxUrl}
+        alt="Photo"
+        onClose={() => setLightboxUrl(null)}
+      />
     </>
   );
 }
@@ -2254,14 +2307,60 @@ function MessageAttachment({
   url,
   kind,
   hasBody,
+  meta,
+  onOpenImage,
 }: {
   url: string;
-  kind: "image" | "video" | "audio";
+  kind: "image" | "video" | "audio" | "document";
   hasBody: boolean;
+  /** Stage A · owner-authorised 2026-11-03 · the document chip reads
+   *  filename + size_bytes + mime from attachment_meta. Optional for
+   *  image/video/audio · they don't surface a filename in the bubble. */
+  meta?: {
+    readonly filename?: string;
+    readonly size_bytes?: number;
+    readonly mime?: string;
+  };
+  /** Stage A · optional lightbox opener for images · when supplied,
+   *  tapping the image fires this instead of opening a new tab. */
+  onOpenImage?: (url: string) => void;
 }) {
   const rounding = 12;
   const marginBottom = hasBody ? 8 : 0;
   if (kind === "image") {
+    const commonImgStyle: React.CSSProperties = {
+      display: "block",
+      width: "100%",
+      maxHeight: 320,
+      objectFit: "cover",
+    };
+    // Lightbox-aware · when a parent surfaces an onOpenImage callback
+    // we render a button that opens the NEX full-screen viewer in-
+    // place. Falls back to the sealed "open in new tab" link when the
+    // callback is not provided (preserves the Migration 054 UX for
+    // callers that don't yet wire the viewer).
+    if (onOpenImage) {
+      return (
+        <button
+          type="button"
+          onClick={() => onOpenImage(url)}
+          aria-label="Open photo full screen"
+          style={{
+            display: "block",
+            marginBottom,
+            borderRadius: rounding,
+            overflow: "hidden",
+            maxWidth: "100%",
+            background: "rgba(0,0,0,0.35)",
+            border: "none",
+            padding: 0,
+            cursor: "zoom-in",
+          }}
+        >
+          <img src={url} alt="Photo" style={commonImgStyle} />
+        </button>
+      );
+    }
     return (
       <a
         href={url}
@@ -2278,49 +2377,486 @@ function MessageAttachment({
           textDecoration: "none",
         }}
       >
-        <img
-          src={url}
-          alt="Photo"
-          style={{
-            display: "block",
-            width: "100%",
-            maxHeight: 320,
-            objectFit: "cover",
-          }}
-        />
+        <img src={url} alt="Photo" style={commonImgStyle} />
       </a>
     );
   }
   if (kind === "video") {
     return (
-      <div style={{ marginBottom, borderRadius: rounding, overflow: "hidden" }}>
-        <video
-          src={url}
-          controls
-          playsInline
-          preload="metadata"
-          style={{
-            display: "block",
-            width: "100%",
-            maxHeight: 320,
-            background: "#000",
-            borderRadius: rounding,
-          }}
-        />
-      </div>
+      <MessageVideoAttachment
+        url={url}
+        rounding={rounding}
+        marginBottom={marginBottom}
+      />
     );
   }
-  // audio
+  if (kind === "audio") {
+    return (
+      <MessageVoiceAttachment url={url} marginBottom={marginBottom} />
+    );
+  }
+  // Stage A · document chip · owner-authorised 2026-11-03.
+  // Renders filename (truncated), MIME-family icon, formatted size,
+  // and a download/open link. Uses `download` attribute so clicking
+  // triggers a save prompt rather than navigating away from the
+  // chat. target=_blank is a progressive-enhancement fallback for
+  // browsers that reject cross-origin download hints · the recipient
+  // still opens the asset in a new tab worst-case.
+  const filename = meta?.filename ?? "Document";
+  const sizeBytes = meta?.size_bytes;
+  const mime = meta?.mime ?? "application/octet-stream";
+  const sizeLabel = formatDocumentSize(sizeBytes);
+  const mimeIcon = documentIconForMime(mime, filename);
   return (
-    <div style={{ marginBottom, padding: "6px 4px" }}>
+    <a
+      href={url}
+      download={filename}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`Download ${filename}${sizeLabel ? ` (${sizeLabel})` : ""}`}
+      data-nex-peer-document-chip
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        marginBottom,
+        padding: "10px 12px",
+        borderRadius: rounding,
+        background: "rgba(0, 0, 0, 0.35)",
+        border: "1px solid rgba(255, 255, 255, 0.12)",
+        textDecoration: "none",
+        color: "#F2F5F8",
+        maxWidth: "100%",
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          flexShrink: 0,
+          width: 36,
+          height: 36,
+          borderRadius: 8,
+          background: "rgba(255, 255, 255, 0.1)",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 18,
+        }}
+      >
+        {mimeIcon}
+      </span>
+      <span
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          minWidth: 0,
+          flex: 1,
+          gap: 2,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 13,
+            fontWeight: 700,
+            color: "#F2F5F8",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            lineHeight: 1.2,
+          }}
+        >
+          {filename}
+        </span>
+        <span
+          style={{
+            fontSize: 11,
+            color: "#B5C3D6",
+            lineHeight: 1.2,
+          }}
+        >
+          {sizeLabel ? `${sizeLabel} · ` : ""}Download
+        </span>
+      </span>
+    </a>
+  );
+}
+
+/** Stage A · owner-authorised 2026-11-03 · voice-note player with
+ *  custom progress bar + current-time / duration display. Replaces
+ *  the sealed `<audio controls>` native widget whose UX differed
+ *  across browsers and never read as a NEX surface. Uses a hidden
+ *  `<audio>` for playback plumbing and renders our own tappable
+ *  play/pause button + clickable progress bar + mm:ss readout. No
+ *  schema change · no stored waveform peaks · owner directive
+ *  (2026-11-03) · "prefer solutions that work with the existing
+ *  attachment schema." A future A2+ pass can add Web-Audio waveform
+ *  peaks on-demand without touching the message schema. */
+function MessageVoiceAttachment({
+  url,
+  marginBottom,
+}: {
+  url: string;
+  marginBottom: number;
+}) {
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  const [state, setState] = React.useState<"loading" | "ready" | "error">(
+    "loading",
+  );
+  const [playing, setPlaying] = React.useState(false);
+  const [currentTime, setCurrentTime] = React.useState(0);
+  const [duration, setDuration] = React.useState<number | null>(null);
+
+  const togglePlay = React.useCallback(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    if (el.paused) {
+      el.play().catch(() => setState("error"));
+    } else {
+      el.pause();
+    }
+  }, []);
+
+  const seekTo = React.useCallback(
+    (fraction: number) => {
+      const el = audioRef.current;
+      if (!el || !duration || duration <= 0) return;
+      el.currentTime = Math.max(
+        0,
+        Math.min(duration, fraction * duration),
+      );
+    },
+    [duration],
+  );
+
+  const onBarPointer = React.useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      if (rect.width <= 0) return;
+      const f = (e.clientX - rect.left) / rect.width;
+      seekTo(Math.max(0, Math.min(1, f)));
+    },
+    [seekTo],
+  );
+
+  const fmt = (secs: number): string => {
+    if (!Number.isFinite(secs) || secs < 0) return "0:00";
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60);
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
+  const progress =
+    duration && duration > 0 ? Math.min(1, currentTime / duration) : 0;
+
+  return (
+    <div
+      data-nex-peer-voice-player
+      style={{
+        marginBottom,
+        padding: "8px 10px",
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        borderRadius: 12,
+        background: "rgba(0, 0, 0, 0.35)",
+        border: "1px solid rgba(255, 255, 255, 0.08)",
+      }}
+    >
       <audio
+        ref={audioRef}
         src={url}
-        controls
         preload="metadata"
-        style={{ width: "100%", height: 36 }}
+        onLoadedMetadata={() => {
+          const d = audioRef.current?.duration;
+          if (d && Number.isFinite(d)) setDuration(d);
+          setState("ready");
+        }}
+        onTimeUpdate={() => {
+          const t = audioRef.current?.currentTime ?? 0;
+          setCurrentTime(t);
+        }}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => setPlaying(false)}
+        onError={() => setState("error")}
+        style={{ display: "none" }}
       />
+      <button
+        type="button"
+        onClick={togglePlay}
+        disabled={state !== "ready"}
+        aria-label={playing ? "Pause voice note" : "Play voice note"}
+        style={{
+          flexShrink: 0,
+          width: 34,
+          height: 34,
+          borderRadius: "50%",
+          background:
+            state === "error"
+              ? "rgba(166, 0, 0, 0.6)"
+              : "#FF7200",
+          border: "1px solid rgba(0, 0, 0, 0.35)",
+          color: "#1a0a00",
+          cursor: state === "ready" ? "pointer" : "default",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 0,
+          boxShadow:
+            state === "ready"
+              ? "0 2px 6px rgba(255, 114, 0, 0.45)"
+              : "none",
+        }}
+      >
+        {state === "loading" ? (
+          <span
+            aria-hidden
+            style={{
+              width: 12,
+              height: 12,
+              borderRadius: "50%",
+              border: "2px solid rgba(0,0,0,0.25)",
+              borderTopColor: "#1a0a00",
+              animation: "nex-peer-video-spin 900ms linear infinite",
+            }}
+          />
+        ) : state === "error" ? (
+          <span aria-hidden style={{ fontSize: 14, fontWeight: 800 }}>
+            !
+          </span>
+        ) : playing ? (
+          <svg width={13} height={13} viewBox="0 0 24 24" aria-hidden fill="currentColor">
+            <rect x="6" y="4" width="4" height="16" rx="1" />
+            <rect x="14" y="4" width="4" height="16" rx="1" />
+          </svg>
+        ) : (
+          <svg width={13} height={13} viewBox="0 0 24 24" aria-hidden fill="currentColor">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        )}
+      </button>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          role="slider"
+          aria-label="Voice note position"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(progress * 100)}
+          tabIndex={state === "ready" ? 0 : -1}
+          onPointerDown={state === "ready" ? onBarPointer : undefined}
+          onKeyDown={(e) => {
+            if (state !== "ready" || !duration) return;
+            if (e.key === "ArrowRight")
+              seekTo(Math.min(1, (currentTime + 2) / duration));
+            if (e.key === "ArrowLeft")
+              seekTo(Math.max(0, (currentTime - 2) / duration));
+            if (e.key === " " || e.key === "Enter") {
+              e.preventDefault();
+              togglePlay();
+            }
+          }}
+          style={{
+            position: "relative",
+            height: 6,
+            borderRadius: 999,
+            background: "rgba(255, 255, 255, 0.1)",
+            cursor: state === "ready" ? "pointer" : "default",
+            touchAction: "none",
+          }}
+        >
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              inset: 0,
+              right: `${100 - progress * 100}%`,
+              background: "#FF7200",
+              borderRadius: 999,
+              boxShadow: "0 0 6px rgba(255, 114, 0, 0.5)",
+            }}
+          />
+        </div>
+        <div
+          style={{
+            marginTop: 4,
+            fontSize: 11,
+            color: "#B5C3D6",
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          {state === "error"
+            ? "Playback failed"
+            : state === "loading"
+              ? "Loading…"
+              : `${fmt(currentTime)} / ${fmt(duration ?? 0)}`}
+        </div>
+      </div>
     </div>
   );
+}
+
+/** Stage A · owner-authorised 2026-11-03 · video attachment wrapper
+ *  with buffering spinner + error state. The sealed `<video controls
+ *  preload="metadata">` native player already fetches the first frame
+ *  as an implicit poster · we don't persist a dedicated poster URL
+ *  (owner directive · no new schema fields for video metadata). The
+ *  improvement here is honest: show a NEX spinner while the metadata
+ *  is loading, show an error pill if the video fails to decode. No
+ *  attempt to custom-skin the native controls · preserves the sealed
+ *  mobile UX. */
+function MessageVideoAttachment({
+  url,
+  rounding,
+  marginBottom,
+}: {
+  url: string;
+  rounding: number;
+  marginBottom: number;
+}) {
+  const [state, setState] = React.useState<"loading" | "ready" | "error">(
+    "loading",
+  );
+  return (
+    <div
+      style={{
+        position: "relative",
+        marginBottom,
+        borderRadius: rounding,
+        overflow: "hidden",
+        background: "#000",
+      }}
+    >
+      <video
+        src={url}
+        controls
+        playsInline
+        preload="metadata"
+        onLoadedMetadata={() => setState("ready")}
+        onError={() => setState("error")}
+        style={{
+          display: "block",
+          width: "100%",
+          maxHeight: 320,
+          background: "#000",
+          borderRadius: rounding,
+        }}
+      />
+      {state === "loading" && (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
+          }}
+        >
+          <span
+            data-nex-peer-video-spinner
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: "50%",
+              border: "3px solid rgba(255, 255, 255, 0.22)",
+              borderTopColor: "#F2F5F8",
+              animation: "nex-peer-video-spin 900ms linear infinite",
+            }}
+          />
+          <style>{`
+            @keyframes nex-peer-video-spin {
+              to { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+      )}
+      {state === "error" && (
+        <div
+          role="status"
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(0, 0, 0, 0.72)",
+            color: "#F2F5F8",
+            fontSize: 12,
+            fontWeight: 600,
+            textAlign: "center",
+            padding: "0 20px",
+          }}
+        >
+          Video couldn&apos;t load. The file may still be uploading or has been
+          removed.
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Stage A · owner-authorised 2026-11-03 · format a byte count as
+ *  "1.2 MB", "812 KB", "27 bytes". Returns empty string when the
+ *  size is unknown so the chip caption gracefully falls back to just
+ *  "Download". */
+function formatDocumentSize(bytes: number | undefined): string {
+  if (typeof bytes !== "number" || !Number.isFinite(bytes) || bytes < 0) {
+    return "";
+  }
+  if (bytes < 1024) return `${bytes} bytes`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** Stage A · owner-authorised 2026-11-03 · pick a glyph that
+ *  communicates the document family (PDF, Office doc, spreadsheet,
+ *  archive, text) at a glance. Falls back to a neutral document icon
+ *  when the MIME + filename give no signal. */
+function documentIconForMime(mime: string, filename: string): string {
+  const m = mime.toLowerCase();
+  const ext = filename.toLowerCase().split(".").pop() ?? "";
+  if (m.includes("pdf") || ext === "pdf") return "📕";
+  if (
+    m.includes("word") ||
+    m.includes("officedocument.word") ||
+    ext === "doc" ||
+    ext === "docx" ||
+    ext === "rtf" ||
+    ext === "odt"
+  )
+    return "📘";
+  if (
+    m.includes("spreadsheet") ||
+    m.includes("excel") ||
+    ext === "xls" ||
+    ext === "xlsx" ||
+    ext === "csv" ||
+    ext === "ods"
+  )
+    return "📊";
+  if (
+    m.includes("presentation") ||
+    m.includes("powerpoint") ||
+    ext === "ppt" ||
+    ext === "pptx" ||
+    ext === "odp"
+  )
+    return "📙";
+  if (
+    m.includes("zip") ||
+    m.includes("compressed") ||
+    m.includes("archive") ||
+    ext === "zip" ||
+    ext === "rar" ||
+    ext === "7z" ||
+    ext === "tar" ||
+    ext === "gz"
+  )
+    return "🗜️";
+  if (m.startsWith("text/") || ext === "txt" || ext === "md" || ext === "log")
+    return "📝";
+  return "📄";
 }
 
 /** Bridge 49b · B4 Swiss NEX Banner · rendered when a peer sends a

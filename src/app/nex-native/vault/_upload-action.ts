@@ -18,8 +18,30 @@ import { redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import * as vaultFileService from "@/lib/nex-native/vault-file-service";
 import type { VaultFileCategory } from "@/lib/nex-native/vault-file-service";
+import {
+  enforceVaultFileSize,
+  VAULT_FILE_MAX_BYTES,
+} from "@/lib/nex-native/billing/enforcement";
 
-const MAX_BYTES = 100 * 1024 * 1024; // 100 MB · founder revisit if needed
+// Owner-sealed 2026-10-20 (Vault entitlements policy B2) · 50 MB DECIMAL
+// (50,000,000 bytes). Replaces the earlier 100 MiB binary cap. The
+// enforcement helper is the single source of truth · see
+// src/lib/nex-native/billing/enforcement.ts.
+//
+// Vault TOTAL STORAGE QUOTA (per-tier · 5 GB / 25 GB / etc.) is NOT YET
+// enforced here. Owner-recommended D4 requires the quota check + file
+// INSERT to run in the SAME transaction. The current insert path uses
+// vaultFileService.insertVaultFileMetadata which goes through the
+// Supabase JS admin client · a different connection pool than our pg
+// adapter. A non-atomic pre-check would allow two concurrent uploads
+// to both pass the quota and both insert past the cap, which violates
+// the D4 directive. The correct wiring requires either:
+//   (a) porting the nex_vault_file INSERT through the pg adapter so it
+//       lives in the same BEGIN/COMMIT as reserveVaultCap, OR
+//   (b) creating a Supabase RPC function that performs quota-check +
+//       INSERT atomically inside Postgres.
+// Choice is deferred until the owner authorises the vault-persistence
+// refactor · tracked as F-series in MASTER_BUILD_CHECKLIST.md.
 const VALID: ReadonlySet<VaultFileCategory> = new Set(
   vaultFileService.VAULT_FILE_CATEGORIES,
 );
@@ -43,10 +65,12 @@ export async function uploadVaultFileAction(
   if (file.size === 0) {
     return { ok: false, reason: "File is empty" };
   }
-  if (file.size > MAX_BYTES) {
+  // Owner-sealed B2 · 50 MB decimal cap enforced via billing module.
+  const sizeDecision = enforceVaultFileSize(file.size);
+  if (!sizeDecision.ok) {
     return {
       ok: false,
-      reason: `File is too large (max ${Math.floor(MAX_BYTES / (1024 * 1024))} MB in Stage 6)`,
+      reason: `File is too large (max ${Math.floor(VAULT_FILE_MAX_BYTES / 1_000_000)} MB)`,
     };
   }
 

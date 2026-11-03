@@ -223,11 +223,16 @@ export function FreeChatCallCenterDrawerClient(): React.JSX.Element {
             style={{
               minHeight: 26,
               padding: "3px 10px",
-              background: C.cyan,
-              border: `1px solid ${C.cyan}`,
-              color: "#0a0608",
+              // Owner directive 2026-11-03 · unified NEX Orange close
+              // buttons across every modal / sheet / drawer. Rule
+              // applies here too even though the Call Center drawer
+              // was sealed earlier · the orange directive post-dates
+              // the Call Center cyan close.
+              background: "#FF7200",
+              border: "1px solid rgba(0, 0, 0, 0.35)",
+              color: "#1a0a00",
               fontSize: 12,
-              fontWeight: 700,
+              fontWeight: 800,
               letterSpacing: 0.4,
               lineHeight: 1,
               cursor: "pointer",
@@ -236,6 +241,7 @@ export function FreeChatCallCenterDrawerClient(): React.JSX.Element {
               justifyContent: "center",
               borderRadius: 6,
               fontFamily: "inherit",
+              boxShadow: "0 2px 6px rgba(255, 114, 0, 0.45)",
             }}
           >
             Close

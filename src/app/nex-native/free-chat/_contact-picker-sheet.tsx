@@ -37,15 +37,29 @@ import { NEX_FONT_SANS } from "@/lib/nex-native/design-tokens";
 // The prior `accentHex` prop is retired below so no caller can tint
 // the sheet by accident. The chat behind the sheet still shows its
 // theme · the sheet itself is neutral chrome.
+//
+// Owner directive 2026-11-03 (narrow override) · Free Chat on Ireland
+// explicitly re-authorises accent-tinting the chrome so the Ireland
+// Gold palette carries through to the Contact Picker on that surface
+// ONLY. The optional `accentHex` prop is reintroduced below · callers
+// that OMIT the prop still receive the sealed cyan chrome (no behaviour
+// change for /chat, /contacts, etc.). Only /free-chat on Ireland
+// passes the override. See `_composer-client.tsx` caller.
 const SHEET_ACCENT_HEX = "#00AFFF";
 
+// Owner-authorised 2026-11-02 · Ireland theme routing · dark-surface
+// + cyan accent route through --nex-world-* vars with the current hex
+// as fallback. Presence vocab (online/busy/offline) + shopOrange
+// (brand-neutral commerce, sealed pass 21) + unreadRed (urgency)
+// stay hardcoded by owner directive · they are semantic signals, not
+// theme accents.
 const NEX = {
-  bgNavy: "#050F1E",
-  bgDeep: "var(--nex-world-background-base, #020914)",
+  bgNavy: "var(--nex-world-drawer-bg, #050F1E)",
+  bgDeep: "var(--nex-world-drawer-bg, #020914)",
   text: "#F2F5F8",
   textMute: "#7D9BC0",
-  cyan: "#00AFFF",
-  // Presence vocabulary (owner directive pass 19).
+  cyan: "var(--nex-world-secondary, #00AFFF)",
+  // Presence vocabulary (owner directive pass 19 · UNIVERSAL).
   // Owner directive 2026-10-23 (revised) · online green · busy
   // ORANGE (not yellow) · offline dark red. Busy reverts from the
   // earlier yellow (#FFD700) back to the sealed orange (#FF7200).
@@ -77,6 +91,12 @@ export interface ContactPickerSheetProps {
    *  renders MOCK_CONTACTS (the sealed /free-chat demo). Signed-in
    *  surfaces pass real rows loaded via fetchContactPickerRowsAction. */
   readonly contacts?: ReadonlyArray<MockContact>;
+  /** Owner directive 2026-11-03 (narrow override) · optional accent
+   *  hex that tints the sheet's chrome (header dash, action buttons,
+   *  pill borders, send-progress ring). Default = sealed NEX cyan
+   *  `#00AFFF`. ONLY /free-chat on Ireland passes an override · every
+   *  other caller omits this prop and gets the sealed cyan unchanged. */
+  readonly accentHex?: string;
 }
 
 // Owner directive 2026-10-22 (evening · pass 18) · hold-to-send
@@ -91,9 +111,11 @@ export function ContactPickerSheet({
   onInvite,
   onShopShare,
   contacts,
+  accentHex: accentHexProp,
 }: ContactPickerSheetProps): React.JSX.Element | null {
-  // Chrome-locked accent · see SHEET_ACCENT_HEX note above.
-  const accentHex = SHEET_ACCENT_HEX;
+  // Owner directive 2026-11-03 · chrome accent · default = sealed
+  // cyan, caller may override (only /free-chat on Ireland does today).
+  const accentHex = accentHexProp ?? SHEET_ACCENT_HEX;
   // Resolve the source of truth for which rows this instance renders.
   // Free-chat composer (default · contacts omitted) → MOCK_CONTACTS.
   // Signed-in wrapper → real rows loaded from the server.
@@ -435,6 +457,7 @@ export function ContactPickerSheet({
               holdProgress={
                 holding && holding.contactId === c.id ? holdProgress : 0
               }
+              accentHex={accentHex}
             />
           ))}
         </div>
@@ -453,6 +476,7 @@ function ContactCard({
   onHoldStart,
   onHoldEnd,
   holdProgress,
+  accentHex,
 }: {
   readonly contact: MockContact;
   readonly onInvite: () => void;
@@ -460,9 +484,11 @@ function ContactCard({
   readonly onHoldStart: () => void;
   readonly onHoldEnd: () => void;
   readonly holdProgress: number;
+  /** Chrome accent · threaded from the parent sheet so the per-row
+   *  rims + buttons share the sheet's active colour. Owner directive
+   *  2026-11-03 (narrow override). */
+  readonly accentHex: string;
 }): React.JSX.Element {
-  // Chrome-locked accent · see SHEET_ACCENT_HEX note above.
-  const accentHex = SHEET_ACCENT_HEX;
   const ringColor =
     contact.presence === "online"
       ? NEX.presenceOnline

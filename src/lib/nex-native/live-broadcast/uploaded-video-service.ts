@@ -135,6 +135,28 @@ export async function publishUploadedVideo(
     );
   }
 
+  /* Owner-authorised 2026-11-02 · NEX Shop video length cap · 20s max.
+     See src/lib/nex-native/billing/enforcement.ts · SHOP_VIDEO_MAX_
+     SECONDS. Enforced at the SERVICE boundary so every caller must pass
+     the check, regardless of client-side UI. Legacy callers that omit
+     durationSeconds (seed path, imports with missing probe data) fail
+     OPEN · the real client-facing path probes the file + supplies the
+     duration. */
+  if (
+    typeof input.durationSeconds === "number" &&
+    Number.isFinite(input.durationSeconds)
+  ) {
+    const { enforceVideoLengthLimit } = await import(
+      "@/lib/nex-native/billing/enforcement"
+    );
+    const dec = enforceVideoLengthLimit(input.durationSeconds);
+    if (!dec.ok) {
+      throw new Error(
+        `uploaded-video-service.publishUploadedVideo: ${dec.code}:${dec.reason}`,
+      );
+    }
+  }
+
   /* Owner directive 2026-10-29 · portrait-only video uploads. NEX
      Live surfaces render video at full-bleed 9:16 · landscape or
      square uploads would letterbox against the viewport. We reject

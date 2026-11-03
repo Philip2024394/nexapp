@@ -116,7 +116,10 @@ describe("ChatErrorBanner · severity + known codes", () => {
   it("upload_error=unsupported_type maps to type-specific copy", () => {
     const html = render({ uploadError: "unsupported_type" });
     expect(html).toContain("not supported");
-    expect(html).toContain("photos, videos, and voice notes");
+    // Stage A · owner-authorised 2026-11-03 · copy updated so the
+    // banner also mentions documents (Migration 259 extends the
+    // allowed attachment_type set).
+    expect(html).toContain("photos, videos, voice notes, and documents");
   });
 
   it("delete_error=not_allowed is BLOCKING (sender-only rule)", () => {

@@ -22,14 +22,19 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { HowItWorksSheet } from "./_how-it-works-sheet";
 import {
   FREE_CHAT_THEMES,
   freeChatBackgroundCss,
   hexWithAlpha,
   resolveFreeChatAccentHex,
   resolveFreeChatWallpaperUrl,
+  resolveBubbleFillAndRim,
+  defaultBubbleCustomizationForTheme,
   type FreeChatTheme,
   type OutgoingDeliveryStatus,
+  type BubbleCustomization,
 } from "./_types";
 
 export interface SeedMessage {
@@ -47,19 +52,38 @@ export interface FreeChatCanvasClientProps {
   readonly initialThemeId: string | null;
   /** Server-resolved from cookie · true means hide the row. */
   readonly initialRowDismissed: boolean;
+  /** Owner-authorised 2026-11-02 · identity-scoped tile list for the
+   *  first-visit picker. Server page passes this based on
+   *  NEX_APP_IDENTITY so Ireland sees 1 default + 4 Irish tiles while
+   *  Worldwide / Indonesia keep the sealed 1 default + 4 Theme tiles.
+   *  Optional for backward compat · defaults to the full worldwide
+   *  list when absent. */
+  readonly themes?: ReadonlyArray<FreeChatTheme>;
+  /** Owner-authorised 2026-11-02 · per-theme bubble customization
+   *  resolved server-side from the saved cookie. When present, OVERRIDES
+   *  the sealed theme-accent-based bubble fill/rim with the user's
+   *  chosen hue + opacity for peer AND self independently. When null,
+   *  the sealed iteration-47 renderer is used (theme accent, same hue
+   *  for peer and self). */
+  readonly initialBubbleCustomization?: BubbleCustomization | null;
 }
 
+// Owner-authorised 2026-11-02 · Ireland theme routing · mirrors the
+// page.tsx NEX palette so the free-chat chrome paints the Ireland
+// Emerald/Gold palette on Ireland and preserves Worldwide/Indonesia
+// navy/cyan via the fallbacks. Self-bubble + text ink stay universal
+// (dark-surface legibility).
 const NEX = {
-  bg: "var(--nex-world-background-base, #020914)",
+  bg: "var(--nex-world-drawer-bg, #020914)",
   text: "#F2F5F8",
   textDim: "#B5C3D6",
   textMute: "#7D9BC0",
-  cyan: "#00AFFF",
-  cyanSoft: "rgba(0, 175, 255, 0.35)",
-  cyanBubble: "rgba(0, 175, 255, 0.12)",
+  cyan: "var(--nex-world-secondary, #00AFFF)",
+  cyanSoft: "color-mix(in srgb, var(--nex-world-secondary, #00AFFF) 35%, transparent)",
+  cyanBubble: "color-mix(in srgb, var(--nex-world-secondary, #00AFFF) 15%, transparent)",
   selfGrayGlass: "rgba(55, 65, 81, 0.35)",
   selfCyanHairline: "rgba(255, 255, 255, 0.65)",
-  orange: "#FF7200",
+  orange: "var(--nex-world-secondary, #FF7200)",
   orangeInk: "#1A0808",
 };
 
@@ -127,7 +151,14 @@ export function FreeChatCanvasClient({
   seedMessages,
   initialThemeId,
   initialRowDismissed,
+  themes: themesProp,
+  initialBubbleCustomization = null,
 }: FreeChatCanvasClientProps): React.JSX.Element {
+  // Owner-authorised 2026-11-02 · identity-scoped tile list for the
+  // first-visit picker. Falls back to the full worldwide list for
+  // callers that don't yet supply themes (preserves back-compat).
+  const themes = themesProp ?? FREE_CHAT_THEMES;
+  const router = useRouter();
   // Owner directive 2026-10-22 (afternoon) · when the server resolver
   // couldn't find a saved wallpaper cookie, pre-seed the picker to the
   // NEX default tile ("nex-default", isDefault:true) so the user lands
@@ -143,6 +174,9 @@ export function FreeChatCanvasClient({
     initialRowDismissed ? "done" : "picker",
   );
   const rowDismissed = stage === "done";
+  // Owner directive 2026-11-03 · "How It Works" sheet state · opens
+  // from the ⓘ button next to the "Choose 1 Free Theme" header.
+  const [howItWorksOpen, setHowItWorksOpen] = React.useState<boolean>(false);
 
   const activeWallpaperUrl = React.useMemo(
     () => resolveFreeChatWallpaperUrl(themeId),
@@ -157,22 +191,39 @@ export function FreeChatCanvasClient({
     () => resolveFreeChatAccentHex(themeId),
     [themeId],
   );
-  const peerFill = React.useMemo(
-    () => hexWithAlpha(activeAccentHex, 0.12),
-    [activeAccentHex],
-  );
-  const peerRim = React.useMemo(
-    () => hexWithAlpha(activeAccentHex, 0.42),
-    [activeAccentHex],
-  );
-  const selfFill = React.useMemo(
-    () => hexWithAlpha(activeAccentHex, 0.16),
-    [activeAccentHex],
-  );
-  const selfRim = React.useMemo(
-    () => hexWithAlpha(activeAccentHex, 0.72),
-    [activeAccentHex],
-  );
+
+  // Owner-authorised 2026-11-02 · per-theme bubble customization. When
+  // the user has saved choices for this theme (via /bubble-customize),
+  // honour them · independent peer + self hue and opacity. Otherwise
+  // fall back to the sealed single-accent renderer for byte-identical
+  // behaviour on themes without any customization.
+  const bubbleCustomization = React.useMemo<BubbleCustomization | null>(() => {
+    // When the user picks a NEW tile in this session, forget prior
+    // customization because it was keyed to the previous theme. Owner
+    // overrides persist via the server-side cookie lookup, which is
+    // read once at hydration time and seeded as `initialBubble-
+    // Customization`. The customize page writes the cookie + revalidates
+    // this route so a subsequent navigation reads the fresh payload.
+    if (initialBubbleCustomization && initialThemeId === themeId) {
+      return initialBubbleCustomization;
+    }
+    return null;
+  }, [initialBubbleCustomization, initialThemeId, themeId]);
+
+  const resolvedBubbleStyle = React.useMemo(() => {
+    if (bubbleCustomization) {
+      return resolveBubbleFillAndRim(bubbleCustomization);
+    }
+    // Legacy path · theme accent, same hue, sealed alphas.
+    return resolveBubbleFillAndRim(
+      defaultBubbleCustomizationForTheme(themeId),
+    );
+  }, [bubbleCustomization, themeId]);
+
+  const peerFill = resolvedBubbleStyle.peerFill;
+  const peerRim = resolvedBubbleStyle.peerRim;
+  const selfFill = resolvedBubbleStyle.selfFill;
+  const selfRim = resolvedBubbleStyle.selfRim;
 
   // Owner directive 2026-10-21 (iteration 54) · wallpaper paints the
   // ENTIRE phone frame (header + canvas + composer), not just the
@@ -181,13 +232,32 @@ export function FreeChatCanvasClient({
   // hydration flash). This effect takes over post-hydration whenever
   // the user picks a different tile, writing the new background to
   // the same <main> element.
+  // Owner directive 2026-11-02 (revision 8) · the plain `nex-default`
+  // tile exposes a user-picked background colour via /bubble-customize.
+  // When the active theme is nex-default AND the saved customization
+  // carries a containerColor, use that as the fallback paint. Every
+  // other tile (wallpaper themes) ignores containerColor.
+  const activeBackgroundFallback = React.useMemo<string>(() => {
+    if (activeWallpaperUrl) return NEX.bg;
+    if (
+      bubbleCustomization?.containerColor &&
+      initialThemeId === "nex-default"
+    ) {
+      return bubbleCustomization.containerColor;
+    }
+    return NEX.bg;
+  }, [activeWallpaperUrl, bubbleCustomization, initialThemeId]);
+
   React.useEffect(() => {
     const main = document.querySelector<HTMLElement>(
       "[data-nex-free-chat-root]",
     );
     if (!main) return;
-    main.style.background = freeChatBackgroundCss(activeWallpaperUrl, NEX.bg);
-  }, [activeWallpaperUrl]);
+    main.style.background = freeChatBackgroundCss(
+      activeWallpaperUrl,
+      activeBackgroundFallback,
+    );
+  }, [activeWallpaperUrl, activeBackgroundFallback]);
 
   // Owner directive 2026-10-21 (iteration 62) · auto-scroll the chat
   // canvas to the BOTTOM on mount so the first-visit picker row (and
@@ -224,14 +294,19 @@ export function FreeChatCanvasClient({
     }
   }, []);
 
-  // Owner directive 2026-10-21 (iteration 66) · Keep Theme no longer
-  // dismisses the row immediately · it transitions the picker
-  // container into the chat-setup form (name + location). The dismiss
-  // cookie is written only after the user saves the setup OR routes
-  // to View Themes.
+  // Owner-authorised 2026-11-02 · Keep Theme diverts STRAIGHT to the
+  // bubble-customize surface. Prior revisions flipped stage="setup"
+  // before navigating · that briefly rendered the chat-setup form
+  // ("name + Use my location") during the slow `window.location.href`
+  // transition. Owner reported a 1-2s flash of that form between tap
+  // and the customize page. Fix · skip the stage flip entirely + use
+  // Next.js router.push for an instant SPA transition.
   const handleKeepTheme = React.useCallback(() => {
-    setStage("setup");
-  }, []);
+    if (!themeId) return;
+    router.push(
+      `/nex-native/free-chat/bubble-customize?themeId=${encodeURIComponent(themeId)}`,
+    );
+  }, [themeId, router]);
 
   const handleViewAll = React.useCallback(() => {
     setStage("done");
@@ -366,12 +441,16 @@ export function FreeChatCanvasClient({
           visible even after the user picks a tile so they can swap. */}
       {stage === "picker" && (
         <FirstVisitThemeGrid
-          themes={FREE_CHAT_THEMES}
+          themes={themes}
           activeThemeId={themeId}
           onPick={handlePickTheme}
           onViewAll={handleViewAll}
+          onInfo={() => setHowItWorksOpen(true)}
         />
       )}
+      {howItWorksOpen ? (
+        <HowItWorksSheet onClose={() => setHowItWorksOpen(false)} />
+      ) : null}
 
       {/* Keep Theme / View Themes action bar · owner directive
           2026-10-21 (iteration 60) · visible only during the picker
@@ -1907,7 +1986,12 @@ function PickedThemeActionBar({
           borderRadius: 10,
           background: "transparent",
           color: NEX.text,
-          border: `1px solid rgba(0, 175, 255, 0.42)`,
+          // Owner directive 2026-11-03 · View Themes rim swapped from
+          // NEX cyan to NEX Orange so the browse CTA reads with the
+          // same orange language as the "Today's featured picks"
+          // urgency dot above and the sealed close buttons across
+          // modals.
+          border: `1px solid rgba(255, 114, 0, 0.72)`,
           fontSize: 13,
           fontWeight: 700,
           letterSpacing: 0.3,
@@ -2108,11 +2192,13 @@ function FirstVisitThemeGrid({
   activeThemeId,
   onPick,
   onViewAll,
+  onInfo,
 }: {
   readonly themes: ReadonlyArray<FreeChatTheme>;
   readonly activeThemeId: string | null;
   readonly onPick: (theme: FreeChatTheme) => void;
   readonly onViewAll: () => void;
+  readonly onInfo: () => void;
 }): React.JSX.Element {
   return (
     <div
@@ -2128,25 +2214,91 @@ function FirstVisitThemeGrid({
         WebkitBackdropFilter: "blur(8px)",
       }}
     >
-      {/* Owner directive 2026-10-21 (iteration 64) · "Choose Theme"
-          header sits above the 5-tile grid so the picker reads as a
-          deliberate call to action, not an orphaned row. Styled as a
-          small eyebrow label (uppercase · cyan · tracked) matching
-          the section-title convention used elsewhere in NEX chrome. */}
-      <h3
-        data-nex-free-chat-first-visit-title
+      {/* Owner directive 2026-11-03 · header row holds the title +
+          sub-urgency line + ⓘ info button. Sub-urgency reads
+          "Today's featured picks · refreshed daily" · honest to the
+          daily rotation we built (not a fake countdown). Users
+          understand ⓘ = tell me more. */}
+      <div
         style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
           margin: "0 2px 10px",
-          fontSize: 11,
-          fontWeight: 800,
-          letterSpacing: 1.2,
-          textTransform: "uppercase",
-          color: NEX.cyan,
-          lineHeight: 1,
         }}
       >
-        Choose Theme
-      </h3>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <h3
+            data-nex-free-chat-first-visit-title
+            style={{
+              margin: 0,
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: 1.2,
+              textTransform: "uppercase",
+              color: NEX.cyan,
+              lineHeight: 1,
+            }}
+          >
+            Choose 1 Free Theme
+          </h3>
+          <p
+            data-nex-free-chat-first-visit-urgency
+            style={{
+              margin: 0,
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: 0.4,
+              color: "#FF7200",
+              lineHeight: 1,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                display: "inline-block",
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: "#FF7200",
+                boxShadow: "0 0 6px rgba(255, 114, 0, 0.8)",
+              }}
+            />
+            Today&apos;s featured picks · refreshed daily
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onInfo}
+          aria-label="How theme picking works"
+          data-nex-free-chat-first-visit-info
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: "50%",
+            background: "rgba(0, 175, 255, 0.14)",
+            border: `1px solid ${NEX.cyan}`,
+            color: NEX.cyan,
+            cursor: "pointer",
+            fontSize: 12,
+            fontWeight: 800,
+            lineHeight: 1,
+            padding: 0,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontStyle: "italic",
+            fontFamily: "'Times New Roman', Georgia, serif",
+            flexShrink: 0,
+          }}
+        >
+          i
+        </button>
+      </div>
       <div
         style={{
           display: "grid",
@@ -2176,6 +2328,21 @@ function FirstVisitThemeGrid({
         [data-nex-free-chat-first-visit-tile-active="true"] {
           animation: nex-free-chat-tile-heartbeat 1400ms ease-in-out infinite;
         }
+        /* Owner directive 2026-11-03 · gentle breathing pulse on the
+           "Today's featured picks" sub-urgency dot · reads as "live"
+           without the dark-pattern energy of a countdown timer. */
+        @keyframes nex-free-chat-urgency-pulse {
+          0%, 100% { opacity: 0.85; transform: scale(1); }
+          50%      { opacity: 1;    transform: scale(1.25); }
+        }
+        [data-nex-free-chat-first-visit-urgency] > span[aria-hidden] {
+          animation: nex-free-chat-urgency-pulse 2000ms ease-in-out infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          [data-nex-free-chat-first-visit-urgency] > span[aria-hidden] {
+            animation: none;
+          }
+        }
       `}</style>
       {themes.map((t) => (
         <ThemeTile
@@ -2194,34 +2361,12 @@ function FirstVisitThemeGrid({
           onPress={() => onPick(t)}
         />
       ))}
-      <Link
-        href="/nex-native/chat-themes-library"
-        aria-label="View all chat themes"
-        data-nex-free-chat-first-visit-view-all
-        onClick={onViewAll}
-        style={{
-          width: "100%",
-          aspectRatio: "1 / 1",
-          borderRadius: 10,
-          background: "rgba(0, 175, 255, 0.14)",
-          border: `1px solid rgba(0, 175, 255, 0.42)`,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 3,
-          textDecoration: "none",
-          color: NEX.cyan,
-          fontSize: 10,
-          fontWeight: 800,
-          letterSpacing: 0.3,
-          textTransform: "uppercase",
-          WebkitTapHighlightColor: "transparent",
-        }}
-      >
-        <span style={{ fontSize: 22, lineHeight: 1 }}>⊞</span>
-        <span>View</span>
-      </Link>
+      {/* Owner-authorised 2026-11-02 · the in-grid "View" tile has been
+          removed · the picked-theme action bar immediately below the
+          grid already surfaces "View all themes" as a dedicated CTA,
+          so the sixth grid slot is reclaimed for a real theme tile
+          (6 themes total · 2×3 grid). The onViewAll handler is still
+          routed through the action bar · see PickedThemeActionBar. */}
       </div>
     </div>
   );
@@ -2268,6 +2413,7 @@ function ThemeTile({
       data-nex-free-chat-first-visit-tile-default={isDefault ? "true" : "false"}
       data-nex-free-chat-first-visit-tile-active={isActive ? "true" : "false"}
       style={{
+        position: "relative",
         width: "100%",
         aspectRatio: "1 / 1",
         padding: 0,
@@ -2294,6 +2440,41 @@ function ThemeTile({
           {theme.placeholderLabel}
         </span>
       )}
+      {/* Owner directive 2026-11-03 · spotlight tiles pulled from the
+          paid Theme Library carry a €3.99 badge with a RED STRIKE
+          line through the price · reads as "this would normally cost
+          €3.99 but it's included as your free first pick". After the
+          user picks + creates account + hits Live, subsequent library
+          buys render at full price (no strike) on the Theme Library
+          page. Pinned plain tiles never render this badge. */}
+      {theme.isSpotlight ? (
+        <span
+          data-nex-free-chat-tile-spotlight-badge
+          aria-hidden
+          style={{
+            position: "absolute",
+            top: 4,
+            right: 4,
+            padding: "2px 6px",
+            borderRadius: 999,
+            background: "rgba(0, 0, 0, 0.72)",
+            border: `1px solid rgba(198, 161, 91, 0.9)`,
+            color: "#F2F5F8",
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: 0.3,
+            lineHeight: 1,
+            backdropFilter: "blur(4px)",
+            WebkitBackdropFilter: "blur(4px)",
+            textDecoration: "line-through",
+            textDecorationColor: "#FF4F70",
+            textDecorationThickness: 2,
+            textDecorationSkipInk: "none",
+          }}
+        >
+          €3.99
+        </span>
+      ) : null}
     </button>
   );
 }

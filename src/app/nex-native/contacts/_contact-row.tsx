@@ -1,69 +1,94 @@
 // src/app/nex-native/contacts/_contact-row.tsx
 //
-// Owner directive 2026-10-23 · "the contacts cards on the contact
-// page should be the same cards on the contact slider same design
-// style text exactly same and should follow the chat theme color
-// from home page chat screen".
+// NEX contact card · owner-directive layout rewrite 2026-11-03.
+// -----------------------------------------------------------------------
+// Owner directive 2026-11-03 (exact):
+//   "I want the user's profile image positioned at the far-left edge
+//    of the contact card, as the leading element.
+//    Layout order:
+//      1. Profile image at the far left.
+//      2. Contact name and relevant details immediately to the right.
+//      3. Any existing action icons or buttons remain on the right-hand side.
+//    Design requirements:
+//      - Vertically centre the profile image within the card.
+//      - Use a consistent image size across all contact cards.
+//      - Keep the image neatly cropped using object-fit: cover.
+//      - Use a clean circular or softly rounded-square image frame.
+//      - Keep consistent spacing between the image and contact information.
+//      - Ensure the layout works on mobile and desktop.
+//      - Do not move the profile image to the right or place it after
+//        the contact details.
+//      - Preserve existing contact-card functionality, data, actions
+//        and styling."
 //
-// Mirrors `/free-chat` ContactPickerSheet > ContactCard verbatim:
-//   · Chip overlapping container top-left (round, accent gradient)
-//   · Container accent-rim, navy fill, name on the rim (translateY)
-//   · Presence heartbeat ring (online/busy only · offline is static)
-//   · Unread badge · verified pill · shop 🛒 marker
-//   · Profession · city with red map-pin · last-online text
+// Preserved from the prior-sealed revisions:
+//   · Sealed presence-RIM pattern (2026-10-29) · green/orange/dark-red
+//     ring on the AVATAR, heartbeat animation when online or away,
+//     static when offline, honest neutral when null. Never dots or
+//     corner lamps or badges elsewhere.
+//   · Shop marker 🛒 shown on the right side when hasShop === true.
+//   · Unread badge (red pill) · now attached to the avatar's top-right
+//     corner so it still reads at a glance without competing with the
+//     right-side action area.
+//   · Verified pill inline with the name.
+//   · Profession + city with map pin, honest absence (omit when null).
+//   · Last-online label when presence is non-online and timestamp known.
+//   · Theme styling: Emerald card bg, Gold rim via accentHex prop,
+//     orange name text, Sage secondary ink.
+//   · `data-nex-contacts-row*` markers for analytics / tests.
 //
-// Differences from the picker:
-//   · No hold-to-send ritual · the whole card is a <Link> to chatHref
-//   · No invite/share CTAs · tap = open chat
-//   · Fields are OPTIONAL on the real contact rows · the card omits
-//     anything that's null (honest absence, no fabrication)
-//
-// Server Component · no hooks.
-//
-// The visual tokens below MUST stay byte-identical to the picker's
-// ContactCard so the two surfaces read as one vocabulary. If the
-// picker evolves, port the diff here deliberately.
-//
-// Data model is `ContactRowDisplay` from _contacts-list.ts.
+// Supersedes:
+//   · The 2026-10-23 "chip-overlapping-the-rim · translate-Y onto rim"
+//     treatment · retired in favour of the owner's explicit "image on
+//     the far-left · vertically centred" directive. The sealed presence
+//     rim is preserved; only the chip's POSITION changes.
 
 import type * as React from "react";
 import Link from "next/link";
 import type { ContactRowDisplay } from "./_contacts-list";
 
+/** Sealed presence vocabulary · universal across worlds · 2026-10-29. */
+const PRESENCE = {
+  online: "#16D66B",
+  busy: "#FF7200",
+  offline: "#A60000",
+} as const;
+
 const NEX = {
-  bgNavy: "var(--nex-world-drawer-bg, #050F1E)",
   text: "#F2F5F8",
-  textMute: "#7D9BC0",
-  // Presence vocabulary — identical palette to the picker.
-  presenceOnline: "#16D66B",
-  presenceBusy: "#FF7200",
-  presenceOffline: "#A60000",
+  textMute: "var(--nex-world-text-muted, #7D9BC0)",
   unreadRed: "#B30000",
 };
 
+/** Avatar visual sizing · consistent across every row.
+ *  Owner directive 2026-11-03 · "enlarge the profile image 25%" ·
+ *  base 48 × 1.25 = 60. Card min-height bumped from 76 → 90 so the
+ *  larger avatar has room without crowding the metadata rows. */
+const AVATAR_SIZE = 60;
+const CARD_PADDING_Y = 12;
+const CARD_PADDING_X = 14;
+const CARD_GAP = 12;
+const CARD_MIN_HEIGHT = 90;
+
 interface ContactRowProps {
   readonly row: ContactRowDisplay;
-  /**
-   * Owner directive 2026-10-23 · chat-theme accent · resolved on
-   * the server from the nex-free-chat-wallpaper cookie. Applied to
-   * the rim, chip gradient, name text-shadow and heartbeat ring so
-   * the contacts list reads as part of the same chat vocabulary.
-   */
+  /** Owner directive 2026-10-23 · chat-theme accent · passed from the
+   *  caller (chat-wallpaper cookie on production, Irish Gold in Ireland
+   *  prototypes). Drives the card rim, verified-pill ring and avatar
+   *  initials gradient so the row reads as part of the same chat
+   *  vocabulary. */
   readonly accentHex: string;
 }
 
-export function ContactRow({ row, accentHex }: ContactRowProps) {
+export function ContactRow({ row, accentHex }: ContactRowProps): React.JSX.Element {
   const initials =
     row.initials && row.initials.trim().length > 0
       ? row.initials.toUpperCase()
       : initialsFromName(row.displayName);
   const presence = row.presence ?? null;
-  const ringColor =
-    presence === "online"
-      ? NEX.presenceOnline
-      : presence === "away"
-        ? NEX.presenceBusy
-        : NEX.presenceOffline;
+  const rimColor = resolveRimColor(presence);
+  const neutralRim = "rgba(255,255,255,0.55)";
+  const hasHeartbeat = presence === "online" || presence === "away";
   const hasShop = row.hasShop === true;
   const lastOnlineLabel = presenceLabel(row);
 
@@ -76,35 +101,31 @@ export function ContactRow({ row, accentHex }: ContactRowProps) {
       style={{
         position: "relative",
         display: "flex",
-        flexDirection: "row",
         alignItems: "center",
-        gap: 10,
-        padding: "2px 48px 2px 70px",
+        gap: CARD_GAP,
+        padding: `${CARD_PADDING_Y}px ${CARD_PADDING_X}px`,
+        minHeight: CARD_MIN_HEIGHT,
         width: "100%",
+        maxWidth: "100%",
         boxSizing: "border-box",
-        background: "rgba(2,9,20,0.92)",
+        background: "var(--nex-world-drawer-bg, rgba(2,9,20,0.92))",
         border: `1.5px solid ${accentHex}`,
-        borderRadius: 10,
-        boxShadow: "0 2px 10px rgba(0,0,0,0.4)",
+        borderRadius: 12,
+        boxShadow: "0 4px 12px rgba(0,0,0,0.35)",
         textDecoration: "none",
         color: NEX.text,
-        overflow: "visible",
         WebkitTapHighlightColor: "transparent",
-        marginTop: 14,
       }}
     >
-      {/* Chip · overlapping top-left · round · accent gradient. */}
+      {/* ===== AVATAR · far-left, vertically centred, consistent 48px ===== */}
       <div
         aria-hidden
         data-nex-contacts-row-chip
         style={{
-          position: "absolute",
-          top: -24,
-          left: 12,
-          width: 48,
-          height: 48,
+          position: "relative",
+          width: AVATAR_SIZE,
+          height: AVATAR_SIZE,
           flexShrink: 0,
-          zIndex: 2,
         }}
       >
         <div
@@ -112,9 +133,9 @@ export function ContactRow({ row, accentHex }: ContactRowProps) {
             position: "absolute",
             inset: 0,
             borderRadius: "50%",
-            border: `2px solid ${accentHex}`,
+            border: `2px solid ${rimColor ?? neutralRim}`,
             overflow: "hidden",
-            background: `linear-gradient(135deg, ${accentHex}cc 0%, #180012 65%, #050F1E 100%)`,
+            background: `linear-gradient(135deg, ${accentHex}cc 0%, var(--nex-world-drawer-bg, #180012) 65%, var(--nex-world-drawer-bg, #050F1E) 100%)`,
             display: "grid",
             placeItems: "center",
             boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
@@ -124,8 +145,16 @@ export function ContactRow({ row, accentHex }: ContactRowProps) {
             <img
               src={row.avatarUrl}
               alt=""
-              aria-hidden
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              width={AVATAR_SIZE}
+              height={AVATAR_SIZE}
+              loading="lazy"
+              decoding="async"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: "block",
+              }}
             />
           ) : (
             <span
@@ -141,38 +170,37 @@ export function ContactRow({ row, accentHex }: ContactRowProps) {
             </span>
           )}
         </div>
-        {/* Heartbeat ring — only when presence is known and non-offline.
-            Picker: offline renders a static dark-red rim with no ping.
-            Honest absence: when presence is null, no ring at all. */}
-        {presence === "online" || presence === "away" ? (
+
+        {/* Sealed heartbeat ring · identical to the 2026-10-29 master. */}
+        {hasHeartbeat ? (
           <div
-            aria-hidden
             style={{
               position: "absolute",
               inset: -3,
               borderRadius: "50%",
-              border: `2px solid ${ringColor}`,
+              border: `2px solid ${rimColor ?? neutralRim}`,
               animation:
                 "nex-contact-row-heartbeat 1200ms cubic-bezier(0.4,0,0.2,1) infinite",
               pointerEvents: "none",
             }}
           />
         ) : null}
-        {/* Unread badge · top-right of chip. */}
+
+        {/* Unread badge · top-right corner of the avatar. */}
         {row.unreadCount && row.unreadCount > 0 ? (
           <div
             aria-label={`${row.unreadCount} unread`}
             data-nex-contacts-row-unread-badge
             style={{
               position: "absolute",
-              top: -6,
-              right: -6,
-              minWidth: 20,
-              height: 20,
+              top: -4,
+              right: -4,
+              minWidth: 18,
+              height: 18,
               padding: "0 5px",
               borderRadius: 999,
               background: NEX.unreadRed,
-              border: `2px solid ${NEX.bgNavy}`,
+              border: `2px solid var(--nex-world-drawer-bg, #050F1E)`,
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
@@ -188,110 +216,42 @@ export function ContactRow({ row, accentHex }: ContactRowProps) {
         ) : null}
       </div>
 
-      {/* Shop 🛒 marker · same conditional positioning as the picker:
-          centred vertically on online cards (no last-online text), pinned
-          to the top on non-online cards (last-online text occupies the
-          bottom-right). */}
-      {hasShop ? (
-        <span
-          aria-label={`Has shop · ${row.displayName}`}
-          data-nex-contacts-row-shop-marker
-          data-nex-contacts-row-shop-position={
-            presence === "online" ? "centre" : "top"
-          }
-          style={
-            presence === "online"
-              ? {
-                  position: "absolute",
-                  top: "50%",
-                  right: 10,
-                  transform: "translateY(-50%)",
-                  width: 32,
-                  height: 32,
-                  display: "grid",
-                  placeItems: "center",
-                  fontSize: 26,
-                  lineHeight: 1,
-                  zIndex: 2,
-                  pointerEvents: "none",
-                  filter: `drop-shadow(0 2px 4px rgba(0,0,0,0.6))`,
-                }
-              : {
-                  position: "absolute",
-                  top: 4,
-                  right: 10,
-                  width: 32,
-                  height: 32,
-                  display: "grid",
-                  placeItems: "center",
-                  fontSize: 26,
-                  lineHeight: 1,
-                  zIndex: 2,
-                  pointerEvents: "none",
-                  filter: `drop-shadow(0 2px 4px rgba(0,0,0,0.6))`,
-                }
-          }
-        >
-          🛒
-        </span>
-      ) : null}
-
-      {/* Identity text · translateY lifts the whole block up so the
-          name sits visually on the container's rim · matches the picker
-          sheet treatment byte-for-byte. */}
+      {/* ===== IDENTITY TEXT · immediately to the right of avatar ===== */}
       <div
         style={{
           flex: 1,
           minWidth: 0,
+          maxWidth: "100%",
+          boxSizing: "border-box",
           display: "flex",
           flexDirection: "column",
-          gap: 4,
-          position: "relative",
-          zIndex: 1,
-          transform: "translateY(-12px)",
+          gap: 3,
         }}
       >
-        {/* Name + verified pill. */}
+        {/* Name + verified pill */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 4,
+            gap: 6,
             minWidth: 0,
           }}
         >
-          <div
+          <span
             data-nex-contacts-row-name
             style={{
-              /* Owner directive 2026-10-24 · span-mask treatment ·
-                 inner <span> carries the shell-navy background so
-                 the cyan rim line at the top of the card is MASKED
-                 behind the name text (same pattern applied to the
-                 inbound invite rows + outbound pending row). */
               fontSize: 15,
               fontWeight: 800,
               lineHeight: 1.2,
+              color: "#F5A623",
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
+              minWidth: 0,
             }}
           >
-            <span
-              style={{
-                display: "inline-block",
-                background: NEX.bgNavy,
-                color: NEX.text,
-                padding: "0 6px",
-                lineHeight: 1.2,
-                maxWidth: "100%",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {row.displayName}
-            </span>
-          </div>
+            {row.displayName}
+          </span>
           {row.isVerified ? (
             <span
               aria-label="Verified"
@@ -303,8 +263,8 @@ export function ContactRow({ row, accentHex }: ContactRowProps) {
                 width: 14,
                 height: 14,
                 borderRadius: "50%",
-                background: "#FFD700",
-                color: NEX.bgNavy,
+                background: "var(--nex-world-secondary, #FFD700)",
+                color: "var(--nex-world-drawer-bg, #050F1E)",
                 fontSize: 9,
                 fontWeight: 900,
                 flexShrink: 0,
@@ -314,8 +274,12 @@ export function ContactRow({ row, accentHex }: ContactRowProps) {
             </span>
           ) : null}
         </div>
-        {/* Profession on its own line · null = omit (honest absence). */}
-        {row.professionLine ? (
+
+        {/* Profession on its own line · owner directive 2026-11-03 ·
+            "the skill for user is just 1 word" · we strip the headline
+            (everything after the middle-dot separator) and show only
+            the leading profession token. Honest absence when null. */}
+        {skillOnly(row.professionLine) ? (
           <div
             data-nex-contacts-row-profession
             style={{
@@ -327,62 +291,119 @@ export function ContactRow({ row, accentHex }: ContactRowProps) {
               textOverflow: "ellipsis",
             }}
           >
-            {row.professionLine}
+            {skillOnly(row.professionLine)}
           </div>
         ) : null}
-        {/* City row · red map-pin + text · stacks under profession. */}
-        {row.city ? (
+
+        {/* Location + last-online row · owner directive 2026-11-03
+            (re-confirmed) · "online time or offline time should be
+            the same row as location line" · city on the left (with
+            map-pin), last-online on the right of the same row.
+            Honest absence: when neither city nor last-online exists,
+            the row is omitted entirely. */}
+        {(row.city || lastOnlineLabel) ? (
           <div
             data-nex-contacts-row-location
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 4,
+              justifyContent: "space-between",
+              gap: 8,
               fontSize: 11,
               color: NEX.textMute,
               lineHeight: 1.2,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
+              minWidth: 0,
             }}
           >
-            <MapPinIcon color={NEX.unreadRed} />
-            <span>{row.city}</span>
+            {row.city ? (
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  minWidth: 0,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                <MapPinIcon color={NEX.unreadRed} />
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {row.city}
+                </span>
+              </span>
+            ) : (
+              <span aria-hidden />
+            )}
+            {lastOnlineLabel ? (
+              <span
+                data-nex-contacts-row-last-online
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: 0.2,
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                }}
+              >
+                {lastOnlineLabel}
+              </span>
+            ) : null}
           </div>
         ) : null}
       </div>
 
-      {/* Last-online text · bottom-right · only for non-online with a
-          known timestamp. Same slot as the picker. */}
-      {lastOnlineLabel ? (
+      {/* ===== RIGHT-HAND ACTIONS · shop marker only (last-online
+            lives in the location row per the owner's directive). ===== */}
+      {hasShop ? (
         <div
-          data-nex-contacts-row-last-online
           style={{
-            position: "absolute",
-            right: 10,
-            bottom: 8,
-            fontSize: 10,
-            fontWeight: 700,
-            color: NEX.textMute,
-            letterSpacing: 0.2,
-            pointerEvents: "none",
-            zIndex: 1,
-            whiteSpace: "nowrap",
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: AVATAR_SIZE,
           }}
         >
-          {lastOnlineLabel}
+          <span
+            aria-label={`Has shop · ${row.displayName}`}
+            data-nex-contacts-row-shop-marker
+            style={{
+              fontSize: 22,
+              lineHeight: 1,
+              filter: `drop-shadow(0 2px 4px rgba(0,0,0,0.6))`,
+            }}
+          >
+            🛒
+          </span>
         </div>
       ) : null}
 
-      <style>{`
-        @keyframes nex-contact-row-heartbeat {
-          0% { transform: scale(1); opacity: 0.9; }
-          75% { transform: scale(1.35); opacity: 0; }
-          100% { transform: scale(1.35); opacity: 0; }
-        }
-      `}</style>
     </Link>
   );
+}
+
+/** P0 engineering pass 2026-11-03 · hoist the heartbeat keyframes out
+ *  of each row so a list of N contacts emits ONE style block, not N.
+ *  Mounted once by `_contacts-shell.tsx` at the top of the content
+ *  column; the `.contactRow` ref markers above resolve to this single
+ *  shared keyframe definition. Visual behaviour is unchanged (same
+ *  1200ms cubic-bezier timing · same scale/opacity curve). */
+export const CONTACT_ROW_HEARTBEAT_KEYFRAMES = `
+  @keyframes nex-contact-row-heartbeat {
+    0% { transform: scale(1); opacity: 0.9; }
+    75% { transform: scale(1.35); opacity: 0; }
+    100% { transform: scale(1.35); opacity: 0; }
+  }
+`;
+
+function resolveRimColor(
+  presence: ContactRowDisplay["presence"] | null,
+): string | null {
+  if (presence === "online") return PRESENCE.online;
+  if (presence === "away") return PRESENCE.busy;
+  if (presence === "offline") return PRESENCE.offline;
+  return null;
 }
 
 function initialsFromName(name: string): string {
@@ -392,24 +413,35 @@ function initialsFromName(name: string): string {
   return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
 }
 
-/** Mirrors formatContactPresenceLabel from _contact-picker-data so the
- *  two surfaces say the same thing. Returns null when there's nothing
- *  honest to show (online → no label needed · presence or timestamp
- *  unknown → omit rather than fabricate). */
+/** Owner directive 2026-11-03 · "the skill for user is just 1 word" ·
+ *  extract the profession token (everything before the middle-dot
+ *  separator) from a composed professionLine like "Electrician ·
+ *  Residential rewires". Returns null when input is null/empty. */
+function skillOnly(line: string | null | undefined): string | null {
+  if (!line) return null;
+  const [first] = line.split(/\s*·\s*/);
+  const trimmed = (first ?? "").trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+/** Mirrors formatContactPresenceLabel from _contact-picker-data · null
+ *  means "nothing honest to show" (online · unknown · no timestamp).
+ *  Owner directive 2026-11-03 · "remove the ago" · labels are now
+ *  tight: `23m` / `3h` / `Offline · 3m` / `Offline · 2d`. */
 function presenceLabel(row: ContactRowDisplay): string | null {
   if (row.presence === "online") return null;
   const mins = row.lastSeenMinsAgo;
   if (mins === null || mins === undefined) return null;
   if (row.presence === "away") {
-    if (mins < 60) return `${mins}m ago`;
-    return `${Math.round(mins / 60)}h ago`;
+    if (mins < 60) return `${mins}m`;
+    return `${Math.round(mins / 60)}h`;
   }
-  if (mins < 60) return `Offline · ${mins}m ago`;
-  if (mins < 60 * 24) return `Offline · ${Math.round(mins / 60)}h ago`;
-  return `Offline · ${Math.round(mins / (60 * 24))}d ago`;
+  if (mins < 60) return `Offline · ${mins}m`;
+  if (mins < 60 * 24) return `Offline · ${Math.round(mins / 60)}h`;
+  return `Offline · ${Math.round(mins / (60 * 24))}d`;
 }
 
-function MapPinIcon({ color }: { readonly color: string }) {
+function MapPinIcon({ color }: { readonly color: string }): React.JSX.Element {
   return (
     <svg
       aria-hidden

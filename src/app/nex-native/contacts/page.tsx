@@ -70,24 +70,28 @@ import { getCreatorSupportSettings } from "@/lib/nex-native/creator/creator-supp
 import { NEX_CONTACTS_V2_ENABLED } from "@/lib/nex-native/launch-flags";
 import { ContactsShell } from "./_contacts-shell";
 import { ContactsHeader } from "./_contacts-header";
-import { ContactsSearchBar } from "./_contacts-search-bar";
-import { ContactsFilterPills, type ContactsFilter } from "./_contacts-filter-pills";
-// Owner directive 2026-10-17 (revised later same day) · the Invite
-// Friends banner card is restored to the top of /contacts. The NEX
-// Community card has been moved INSIDE the Groups filter tab (under
-// the Groups button) · see `_contacts-list.tsx` → GroupsPlaceholderGrid.
-import { InviteFriendsCard } from "./_invite-friends-card";
-// Owner directive 2026-10-17 · the stand-alone My Groups card is
-// retired · the Groups filter pill in the header is the sole entry
-// point for the Groups surface. `_my-groups-card.tsx` is kept on
-// disk for history but has no live consumer.
-import { ContactsList, type ContactRowDisplay } from "./_contacts-list";
-// Owner-authorised 2026-10-18 · S4 · minimal NEX1 welcome banner.
-// Rendered above the sealed InviteFriendsCard · uses the sealed
-// first-contact predicate, dismissible without touching the
-// underlying conversation. Zero changes to the sealed D9
-// friend/business contacts list.
-import { Nex1WelcomeBanner } from "./_nex1-welcome-banner";
+import { type ContactsFilter } from "./_contacts-filter-pills";
+import { type ContactRowDisplay } from "./_contacts-list";
+import { ContactRow } from "./_contact-row";
+import Link from "next/link";
+import { ContactsPlusDrawer } from "./_contacts-plus-drawer";
+import { ContactsLiveWorldTrigger } from "./_contacts-live-world-trigger";
+// Owner directive 2026-11-03 · "can i see some mock contact cards on
+// our new contacts page" · when running outside production AND the
+// signed-in user has no real friends, swap in the full prototype mock
+// dataset (6 contacts with varied presence / shop / verified / city
+// states) so the new tile-grid design can be reviewed with populated
+// rows. In production (NODE_ENV === "production") the mock injection
+// is skipped entirely so real users never see fabricated contacts.
+import { PROTOTYPE_MOCK_ROWS } from "./_prototype-shared";
+// Owner directive 2026-11-03 · "update the new page design for contacts
+// C · Card-grid page design" · the sealed SearchBar / FilterPills /
+// Nex1WelcomeBanner / InviteFriendsCard imports are retired in favour
+// of a tile grid matching prototype-c. ContactsHeader (sealed drawer)
+// is preserved so the control drawer menu, creator badges, and
+// impersonation banner continue to work. The files are not deleted
+// (`_contacts-search-bar.tsx` etc. remain on disk · available if the
+// owner wants to re-mount them in future).
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -166,19 +170,46 @@ export default async function ContactsPage({ searchParams }: PageProps) {
   // friend-service.listFriends() returns NexUuid[] of accepted-edge
   // partner ids · we hydrate explicitly via account-service rather
   // than inheriting data from a business-conversation side-effect.
-  const friendIds = await friendService.listFriends(session.account.id);
-  const friendAccounts = await Promise.all(
+  //
+  // P0 engineering pass 2026-11-03 · each data source is now
+  // independently fault-tolerant. A failure in friends must not blank
+  // business contacts and vice versa. Per-source try/catch returns the
+  // empty baseline on error · the UI then shows an honest empty
+  // section rather than a 500. Errors are logged so they still surface
+  // in server logs / Vercel runtime panels.
+  let friendIds: Awaited<ReturnType<typeof friendService.listFriends>> = [];
+  try {
+    friendIds = await friendService.listFriends(session.account.id);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("contacts · friendService.listFriends failed:", err);
+  }
+  const friendAccountsSettled = await Promise.allSettled(
     friendIds.map((id) => accountService.getAccountById(id)),
+  );
+  const friendAccounts = friendAccountsSettled.map((r) =>
+    r.status === "fulfilled" ? r.value : null,
   );
 
   // Business contacts · derive from conversation-service · dedup
   // by business_id so one business with multiple conversations
   // counts as one contact. side === "customer" means the viewer
   // is the shopper, so the business shows as the contact.
-  const conversations = await conversationService.listConversationsForAccount(
-    session.account.id,
-    { limit: 200 },
-  );
+  let conversations: Awaited<
+    ReturnType<typeof conversationService.listConversationsForAccount>
+  > = [];
+  try {
+    conversations = await conversationService.listConversationsForAccount(
+      session.account.id,
+      { limit: 200 },
+    );
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "contacts · conversationService.listConversationsForAccount failed:",
+      err,
+    );
+  }
   const businessContactsByBusinessId = new Map<string, { name: string; slug: string | null; conversationId: string }>();
   for (const c of conversations) {
     if (c.my_side === "customer" && !businessContactsByBusinessId.has(c.business.id)) {
@@ -194,6 +225,10 @@ export default async function ContactsPage({ searchParams }: PageProps) {
   // profession + headline for each friend in parallel. getProfileByAccountId
   // returns null when the account hasn't filled out a profile · we honour
   // that by leaving professionLine null (card omits the line entirely).
+  //
+  // P0 engineering pass 2026-11-03 · profile hydration already had
+  // per-call `.catch(() => null)` · preserved as-is (one bad profile
+  // doesn't drop the row).
   const liveFriendAccounts = friendAccounts.filter(
     (a): a is NonNullable<typeof a> => a !== null,
   );
@@ -226,29 +261,32 @@ export default async function ContactsPage({ searchParams }: PageProps) {
     };
   });
 
-  // Dev-only mock contact · owner directive 2026-10-17 · "see 1 mock
-  // contact seeded". Appears ONLY when:
-  //   · NODE_ENV !== "production" (never in prod)
-  //   · AND the current viewer has zero real friends (so we don't
-  //     overlay a fake name on real data in dev with real friends)
-  // The row carries data-nex-contacts-row-kind="friend-mock" so it
-  // is visually indistinguishable from a real row but mock-greppable.
+  // Dev-only mock contacts · owner directive 2026-11-03 · "can i see
+  // some mock contact cards on our new contacts page" · when running
+  // outside production AND the signed-in user has no real friends,
+  // seed the full 6-contact prototype mock dataset so the new tile-
+  // grid design has populated rows to look at.
+  //
+  // NODE_ENV === "production" skips the injection entirely so real
+  // users never see fabricated contacts.
   if (process.env.NODE_ENV !== "production" && friendRows.length === 0) {
-    friendRows.push({
-      id: "00000000-0000-0000-0000-000000000mock",
-      kind: "friend",
-      displayName: "Daniel Carter",
-      handle: "nex-00042",
-      avatarUrl: null,
-      chatHref: "/nex-native/chat/peer/00000000-0000-0000-0000-000000000mock",
-      profileHref: "/nex-native/u/nex-00042",
-      // Dev mock · matches the owner's spec example verbatim so the
-      // identity-card layout can be visually verified in dev before
-      // a real friend fills in their profile. Dev-only · prod is
-      // gated by NODE_ENV !== "production" above.
-      professionLine: "Electrician · Electrical Services",
-    });
+    for (const mock of PROTOTYPE_MOCK_ROWS) {
+      friendRows.push({ ...mock });
+    }
   }
+
+  // Owner directive 2026-11-03 · "online cards show first then busy
+  // and offline last" · stable sort of rows by presence bucket.
+  // Null-presence rows group at the end alongside offline. Within
+  // each bucket the original order is preserved so the sort is
+  // deterministic between renders.
+  const presenceRank = (p: ContactRowDisplay["presence"] | null | undefined): number => {
+    if (p === "online") return 0;
+    if (p === "away") return 1;
+    if (p === "offline") return 2;
+    return 3;
+  };
+  friendRows.sort((a, b) => presenceRank(a.presence ?? null) - presenceRank(b.presence ?? null));
 
   const businessRows: ContactRowDisplay[] = Array.from(businessContactsByBusinessId.entries()).map(
     ([businessId, b]) => ({
@@ -265,6 +303,7 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       profileHref: b.slug ? `/nex-native/${b.slug}` : null,
     }),
   );
+  businessRows.sort((a, b) => presenceRank(a.presence ?? null) - presenceRank(b.presence ?? null));
 
   // D7 filter · All = merged + sorted by displayName
   // Friends = friends only · Business = businesses only
@@ -307,37 +346,411 @@ export default async function ContactsPage({ searchParams }: PageProps) {
     getCreatorSupportSettings(session.account.id).catch(() => null),
   ]);
 
+  // Owner directive 2026-11-03 (revised) · structural rework ·
+  //   1. Top row = THREE fixed category buttons · Friends · Groups ·
+  //      Business · equal width · no horizontal scroll · no Socials pill
+  //      in this row (Socials functionality + its own route stay intact
+  //      elsewhere, intentionally not surfaced here).
+  //   2. Row 2 = ONE full-width WhatsApp invite card (no Connect row,
+  //      no duplicate invite buttons).
+  //   3. Section label + contact list underneath.
+  // P1 engineering pass 2026-11-03 · Groups uses `countLabel` instead
+  // of a numeric count so we can honestly surface "Soon" without
+  // misleading the user with "0". Friends/Business still render their
+  // real integer total; Groups renders the string literal and keeps
+  // the pill chrome so the three buttons remain visually balanced.
+  const categoryButtons: ReadonlyArray<{
+    readonly id: string;
+    readonly label: string;
+    readonly countLabel: string;
+    readonly active: boolean;
+    readonly href: string;
+    readonly icon: React.ReactNode;
+  }> = [
+    {
+      id: "friends",
+      label: "Friends",
+      countLabel: String(friendRows.length),
+      active: activeFilter === "friends",
+      href: "/nex-native/contacts?tab=friends",
+      icon: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+      ),
+    },
+    {
+      id: "groups",
+      label: "Groups",
+      countLabel: "Soon",
+      active: activeFilter === "groups",
+      href: "/nex-native/contacts?tab=groups",
+      icon: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M12 2 2 7l10 5 10-5-10-5Z" />
+          <path d="m2 17 10 5 10-5" />
+          <path d="m2 12 10 5 10-5" />
+        </svg>
+      ),
+    },
+    {
+      id: "business",
+      label: "Business",
+      countLabel: String(businessRows.length),
+      active: activeFilter === "business",
+      href: "/nex-native/contacts?tab=business",
+      icon: (
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M3 7h18l-1.5 11a2 2 0 0 1-2 1.75H6.5a2 2 0 0 1-2-1.75L3 7Z" />
+          <path d="M8 7V5a4 4 0 0 1 8 0v2" />
+        </svg>
+      ),
+    },
+  ];
+
+  // WhatsApp invitation · uses the viewer's own NEX profile URL
+  // computed above (`inviteUrl`) · falls back to the honest `https://
+  // nex.app` root when the viewer has no handle. Deep-link uses the
+  // universal `https://wa.me/?text=…` scheme so the OS opens whichever
+  // WhatsApp install is present (mobile app · desktop · or web).
+  const inviteMessage = `Join me on NEX · ${inviteUrl}`;
+  const whatsappShareHref = `https://wa.me/?text=${encodeURIComponent(inviteMessage)}`;
+
+
+  const sectionLabel =
+    activeFilter === "business"
+      ? `Business · ${businessRows.length}`
+      : activeFilter === "groups"
+        ? "Groups · Soon"
+        : activeFilter === "dating"
+          ? "Dating · Soon"
+          : activeFilter === "all"
+            ? `All · ${allRows.length}`
+            : `Friends · ${friendRows.length}`;
+
+  const IRISH_GOLD = "#C6A15B";
+
   return (
     <ContactsShell>
-      <ContactsHeader
-        drawerSession={drawerSession}
-        viewerEarnedCreatorBadges={viewerCreatorBadges.earned}
-        viewerCreatorSupportConfigured={
-          viewerCreatorSupportSettings?.enabled === true
+      {/* Owner directive 2026-11-03 · "another green that is not same as
+          page background green ... so user can see the contact cards
+          but we still have that rim color" · card body switches from
+          Gold → Forest green (`--nex-world-primary` · lighter and
+          distinct from the Emerald page bg) · the Gold rim passed
+          through the sealed `accentHex` prop stays (we no longer
+          override border-color) · text colours lift to Orange (name)
+          and Sage (secondary) for contrast on the Forest body. */}
+      <style>{`
+        [data-nex-contacts-root] [data-nex-contacts-row] {
+          background: var(--nex-world-primary, #1B5138) !important;
         }
-        viewerSupportSettings={viewerCreatorSupportSettings}
-      />
-      <ContactsSearchBar />
-      <ContactsFilterPills active={activeFilter} />
-      {/* Owner-authorised 2026-10-18 · S4 · NEX1 welcome banner.
-          Server-rendered · returns null when the sealed first-contact
-          predicate says the user has already acted (replied), OR when
-          the user dismissed the banner. Lives above the sealed
-          InviteFriendsCard · never a synthetic contacts row. */}
-      <Nex1WelcomeBanner
-        accountId={session.account.id}
-        firstName={
-          session.account.display_name?.split(/\s+/)[0] ??
-          session.account.display_name ??
-          null
+        [data-nex-contacts-root] [data-nex-contacts-row-name] {
+          color: #F5A623 !important;
         }
-      />
-      <InviteFriendsCard inviteUrl={inviteUrl} ownHandle={ownHandle} />
-      <ContactsList
-        rows={visibleRows}
-        totalCount={totalCount}
-        activeFilter={activeFilter}
-      />
+        [data-nex-contacts-root] [data-nex-contacts-row-profession],
+        [data-nex-contacts-root] [data-nex-contacts-row-location],
+        [data-nex-contacts-root] [data-nex-contacts-row-last-online] {
+          color: var(--nex-world-primary-ink, #AFC5B5) !important;
+          opacity: 0.9;
+        }
+      `}</style>
+
+      {/* Owner directive 2026-11-03 · "remove the text from header
+          NEX and remove the green header back ground and line" ·
+          header is now a transparent icon strip · no title text, no
+          Emerald background, no gold border-bottom · just the shamrock
+          glyph on the left and the Search/Add icons on the right. */}
+      <header
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "calc(env(safe-area-inset-top, 0) + 16px) 16px 14px",
+          background: "transparent",
+          color: "var(--nex-world-primary-ink, #AFC5B5)",
+          borderBottom: "none",
+          margin: "calc(0px - env(safe-area-inset-top, 0) - 28px) -14px 10px",
+        }}
+      >
+        {/* Owner directive 2026-11-03 · "shamrock in header enlarge
+            and header text enlarge and buttons" · shamrock 20 → 28 ·
+            title 17 → 22 · buttons stay in their own components
+            with their own enlarged sizes. */}
+        <span style={{ fontSize: 28, lineHeight: 1 }} aria-hidden>
+          ☘️
+        </span>
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 22,
+            fontWeight: 800,
+            letterSpacing: "0.03em",
+            color: "var(--nex-world-primary-ink, #AFC5B5)",
+            flex: 1,
+          }}
+        >
+          Contacts
+        </h1>
+        {/* Owner directive 2026-11-03 (revised) · "the category page
+            that should be connected is the page with world live
+            buttons · Ireland Live · Live Music etc" · Gold-circle grid
+            icon now opens the 6-tile overlay (Live World · Live
+            Ireland · Live Music · Live Food · Live Stays · Live Trades)
+            via the ContactsLiveWorldTrigger component. */}
+        <ContactsLiveWorldTrigger />
+        <ContactsPlusDrawer />
+      </header>
+
+      {/* ===== ROW 1 · THREE FIXED CATEGORY BUTTONS =====
+            Owner directive 2026-11-03 (revised) · three equal-width
+            buttons · Friends · Groups · Business · fit mobile viewport
+            without horizontal scroll · active = Gold with Emerald rim ·
+            inactive = Forest green with Gold rim · icon above label +
+            count. Socials intentionally NOT rendered here (its
+            functionality + route remain intact elsewhere). */}
+      <nav
+        aria-label="Contact categories"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+          gap: 8,
+          width: "100%",
+        }}
+      >
+        {categoryButtons.map((btn) => {
+          const bg = btn.active
+            ? "var(--nex-world-secondary, #C6A15B)"
+            : "var(--nex-world-primary, #1B5138)";
+          const fg = btn.active
+            ? "var(--nex-world-drawer-bg, #123D2B)"
+            : "var(--nex-world-primary-ink, #AFC5B5)";
+          const countBg = btn.active
+            ? "rgba(18, 61, 43, 0.18)"
+            : "rgba(198, 161, 91, 0.22)";
+          const countFg = btn.active
+            ? "var(--nex-world-drawer-bg, #123D2B)"
+            : "var(--nex-world-secondary, #C6A15B)";
+          return (
+            <Link
+              key={btn.id}
+              href={btn.href}
+              aria-label={`Filter by ${btn.label}`}
+              aria-current={btn.active ? "page" : undefined}
+              style={{
+                boxSizing: "border-box",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                padding: "14px 6px",
+                minHeight: 92,
+                borderRadius: 14,
+                background: bg,
+                color: fg,
+                border: btn.active
+                  ? "2.5px solid var(--nex-world-drawer-bg, #123D2B)"
+                  : "1.5px solid var(--nex-world-secondary, #C6A15B)",
+                boxShadow: btn.active
+                  ? "0 6px 18px rgba(10, 31, 21, 0.35)"
+                  : "0 2px 6px rgba(10, 31, 21, 0.18)",
+                textDecoration: "none",
+                fontFamily: "inherit",
+                textAlign: "center",
+                minWidth: 0,
+              }}
+            >
+              <span aria-hidden style={{ lineHeight: 0 }}>
+                {btn.icon}
+              </span>
+              <span
+                style={{
+                  fontSize: 13,
+                  fontWeight: btn.active ? 800 : 700,
+                  letterSpacing: "0.02em",
+                  lineHeight: 1,
+                }}
+              >
+                {btn.label}
+              </span>
+              <span
+                aria-hidden
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  minWidth: 24,
+                  height: 20,
+                  padding: "0 8px",
+                  borderRadius: 999,
+                  fontSize: 11,
+                  fontWeight: 800,
+                  letterSpacing: "0.04em",
+                  background: countBg,
+                  color: countFg,
+                }}
+              >
+                {btn.countLabel}
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* ===== ROW 2 · WHATSAPP INVITATION CARD =====
+            Owner directive 2026-11-03 (approved intended design) · one
+            wide landscape card beneath the three category buttons ·
+            WhatsApp brand icon (left) + "INVITE A FRIEND" heading +
+            supporting line + chevron right · opens WhatsApp with the
+            viewer's own NEX profile URL pre-filled via the universal
+            wa.me scheme (mobile app · desktop · or web — OS resolves).
+            `target="_blank" rel="noopener noreferrer"` so WhatsApp opens
+            without unmounting the Contacts page. */}
+      <a
+        href={whatsappShareHref}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Invite a friend to NEX using WhatsApp"
+        style={{
+          boxSizing: "border-box",
+          display: "flex",
+          alignItems: "center",
+          gap: 14,
+          padding: "16px 18px",
+          borderRadius: 16,
+          background: "var(--nex-world-secondary, #C6A15B)",
+          color: "var(--nex-world-drawer-bg, #123D2B)",
+          border: "2px solid var(--nex-world-drawer-bg, #123D2B)",
+          boxShadow: "0 6px 20px rgba(10, 31, 21, 0.35)",
+          textDecoration: "none",
+          marginTop: 4,
+        }}
+      >
+        {/* WhatsApp brand mark · official green #25D366 · white glyph */}
+        <span
+          aria-hidden
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: "50%",
+            background: "#25D366",
+            color: "#FFFFFF",
+            display: "grid",
+            placeItems: "center",
+            flexShrink: 0,
+            boxShadow: "0 2px 6px rgba(10, 31, 21, 0.25)",
+          }}
+        >
+          <svg viewBox="0 0 32 32" width="26" height="26" fill="currentColor" aria-hidden>
+            <path d="M16.004 3C8.82 3 3 8.82 3 16a12.9 12.9 0 0 0 1.87 6.713L3 29l6.49-1.838A12.95 12.95 0 0 0 16.004 29C23.18 29 29 23.177 29 16c0-7.18-5.82-13-12.996-13Zm0 23.68a10.68 10.68 0 0 1-5.646-1.616l-.405-.247-3.853 1.09 1.07-3.75-.265-.42A10.65 10.65 0 1 1 16.004 26.68Zm6.168-7.979c-.336-.168-1.99-.98-2.299-1.09-.308-.113-.533-.168-.758.168-.224.336-.868 1.09-1.065 1.316-.197.224-.392.253-.728.084-.336-.168-1.418-.52-2.7-1.66-.996-.887-1.668-1.982-1.864-2.318-.197-.336-.021-.517.147-.685.15-.148.336-.392.504-.588.168-.197.224-.336.336-.56.113-.224.056-.42-.028-.588-.084-.168-.758-1.828-1.038-2.503-.274-.657-.552-.57-.76-.58l-.645-.012c-.224 0-.588.084-.896.42-.308.336-1.176 1.148-1.176 2.8s1.204 3.247 1.372 3.471c.168.224 2.37 3.619 5.74 5.077.802.347 1.428.555 1.916.71.804.254 1.536.218 2.115.133.645-.096 1.99-.812 2.272-1.597.28-.785.28-1.456.197-1.597-.084-.14-.308-.224-.645-.392Z"/>
+          </svg>
+        </span>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0, flex: 1 }}>
+          <span style={{ fontSize: 15, fontWeight: 900, letterSpacing: "0.06em", textTransform: "uppercase", lineHeight: 1.1 }}>
+            Invite a friend
+          </span>
+          <span style={{ fontSize: 12, fontWeight: 600, opacity: 0.78, lineHeight: 1.3 }}>
+            Invite someone to NEX using WhatsApp.
+          </span>
+        </div>
+
+        <span
+          aria-hidden
+          style={{
+            fontSize: 24,
+            lineHeight: 1,
+            fontWeight: 900,
+            flexShrink: 0,
+          }}
+        >
+          ›
+        </span>
+      </a>
+
+      {/* ===== Section Label ·  Owner directive 2026-11-03 · "the
+            friends text enlarge and move down little" · fontSize 11 →
+            16 · marginTop 12 adds breathing room below the tile grid. ===== */}
+      {sectionLabel ? (
+        <div
+          style={{
+            fontSize: 16,
+            fontWeight: 800,
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
+            color: "var(--nex-world-primary-ink, #AFC5B5)",
+            opacity: 0.95,
+            padding: "0 4px",
+            marginTop: 12,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              display: "inline-block",
+              width: 10,
+              height: 10,
+              borderRadius: "50%",
+              background: "var(--nex-world-secondary, #C6A15B)",
+            }}
+          />
+          {sectionLabel}
+        </div>
+      ) : null}
+
+      {/* ===== Contact rows · sealed component · Gold applied via scoped
+            CSS override above =====
+            P1 engineering pass 2026-11-03 · Groups and Dating render
+            honest "coming soon" copy. All other filters keep the
+            one-line empty-state copy. No invented buttons or dead
+            affordances. */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {visibleRows.length === 0 ? (
+          <div
+            style={{
+              padding: "32px 14px",
+              textAlign: "center",
+              color: "var(--nex-world-primary-ink, #AFC5B5)",
+              opacity: 0.85,
+              fontSize: 13,
+              lineHeight: 1.5,
+            }}
+          >
+            {activeFilter === "groups" ? (
+              <>
+                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
+                  Groups are on the way.
+                </div>
+                <div style={{ opacity: 0.75 }}>
+                  Group chats, shared boards and collaborative spaces will
+                  land here when they ship.
+                </div>
+              </>
+            ) : activeFilter === "dating" ? (
+              <>
+                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
+                  Dating is on the way.
+                </div>
+                <div style={{ opacity: 0.75 }}>
+                  We'll surface Dating here once it's ready.
+                </div>
+              </>
+            ) : (
+              `No ${activeFilter === "all" ? "contacts" : activeFilter} yet.`
+            )}
+          </div>
+        ) : (
+          visibleRows.map((row: ContactRowDisplay) => (
+            <ContactRow key={row.id} row={row} accentHex={IRISH_GOLD} />
+          ))
+        )}
+      </div>
     </ContactsShell>
   );
 }

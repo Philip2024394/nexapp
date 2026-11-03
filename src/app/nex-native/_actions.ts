@@ -763,16 +763,53 @@ export async function sendPeerMessageAction(
 ): Promise<never> {
   const body = String(formData.get("body") ?? "").trim();
   // Bridge 8+9 · optional attachment carried on the form. When set,
-  // an empty body is allowed (image/video/voice-only messages).
+  // an empty body is allowed (image/video/voice-only/document-only
+  // messages). Stage A · owner-authorised 2026-11-03 · 'document'
+  // joins the accepted kinds and document metadata (filename / size /
+  // mime) rides on three extra form fields when the composer hands
+  // off a paperclip/Document-tile upload.
   const attachmentUrl =
     String(formData.get("attachment_url") ?? "").trim() || null;
   const attachmentTypeRaw =
     String(formData.get("attachment_type") ?? "").trim() || null;
-  const attachmentType: "image" | "video" | "audio" | null =
+  const attachmentType: "image" | "video" | "audio" | "document" | null =
     attachmentTypeRaw === "image" ||
     attachmentTypeRaw === "video" ||
-    attachmentTypeRaw === "audio"
+    attachmentTypeRaw === "audio" ||
+    attachmentTypeRaw === "document"
       ? attachmentTypeRaw
+      : null;
+  // Document meta · only consulted when attachmentType === "document".
+  // Server-side revalidation of the client-visible bounds (filename
+  // capped at 256 chars per NexPeerAttachmentMeta.filename, size
+  // bounded by the sealed 25 MB bucket cap + 1 KB envelope slack to
+  // match the encrypted route, mime capped at 128 chars to match the
+  // bucket's reasonable MIME length).
+  const attachmentDocFilenameRaw = String(formData.get("attachment_filename") ?? "").trim();
+  const attachmentDocSizeRaw = String(formData.get("attachment_size") ?? "").trim();
+  const attachmentDocMimeRaw = String(formData.get("attachment_mime") ?? "").trim();
+  const attachmentDocFilename =
+    attachmentType === "document" && attachmentDocFilenameRaw.length > 0
+      ? attachmentDocFilenameRaw.slice(0, 256)
+      : null;
+  const attachmentDocSize = (() => {
+    if (attachmentType !== "document" || !attachmentDocSizeRaw) return null;
+    const n = Number.parseInt(attachmentDocSizeRaw, 10);
+    if (!Number.isFinite(n) || n < 0 || n > 25 * 1024 * 1024 + 1024) return null;
+    return n;
+  })();
+  const attachmentDocMime =
+    attachmentType === "document" && attachmentDocMimeRaw.length > 0
+      ? attachmentDocMimeRaw.slice(0, 128)
+      : null;
+  const attachmentMeta =
+    attachmentType === "document" &&
+    (attachmentDocFilename || attachmentDocSize || attachmentDocMime)
+      ? ({
+          filename: attachmentDocFilename ?? undefined,
+          size_bytes: attachmentDocSize ?? undefined,
+          mime: attachmentDocMime ?? undefined,
+        } as const)
       : null;
   if (!body && !attachmentUrl) {
     redirect(`/nex-native/chat/peer/${peerAccountId}`);
@@ -835,6 +872,11 @@ export async function sendPeerMessageAction(
     reply_to_id: replyToId,
     attachment_url: attachmentUrl,
     attachment_type: attachmentType,
+    // Stage A · owner-authorised 2026-11-03 · attachment_meta
+    // populated only for 'document' kinds so recipients see the
+    // chip with filename + size + MIME. image/video/audio continue
+    // to omit meta (sealed shape preserved).
+    attachment_meta: attachmentMeta,
   });
 
   // R1 · universal live-messaging arrival nudge. Plaintext send has no
@@ -1191,14 +1233,26 @@ export async function uploadPeerAttachmentAction(
     redirect(`/nex-native/chat/peer/${peerAccountId}`);
   }
 
-  let successUrl: { url: string; kind: string } | null = null;
+  let successUrl: {
+    url: string;
+    kind: string;
+    filename?: string;
+    sizeBytes?: number;
+    mime?: string;
+  } | null = null;
   let failureRaw: string | null = null;
   try {
-    const { url, kind } = await peerMessageService.uploadPeerAttachment(
+    const { url, kind, meta } = await peerMessageService.uploadPeerAttachment(
       session.account.id,
       file,
     );
-    successUrl = { url, kind };
+    successUrl = {
+      url,
+      kind,
+      filename: meta.filename,
+      sizeBytes: meta.size_bytes,
+      mime: meta.mime,
+    };
   } catch (e) {
     failureRaw = e instanceof Error ? e.message : String(e);
     console.warn("[peer-message] uploadPeerAttachment failed", failureRaw);
@@ -1211,6 +1265,22 @@ export async function uploadPeerAttachmentAction(
       attachment_url: successUrl.url,
       attachment_type: successUrl.kind,
     });
+    // Stage A · owner-authorised 2026-11-03 · forward the document
+    // metadata on the query string so the composer can project it
+    // into attachment_meta at send time (recipient's chip reads
+    // filename + size + mime). image/video/audio continue without
+    // these fields · they're sealed to omit filename metadata.
+    if (successUrl.kind === "document") {
+      if (successUrl.filename) {
+        qs.set("attachment_filename", successUrl.filename);
+      }
+      if (typeof successUrl.sizeBytes === "number") {
+        qs.set("attachment_size", String(successUrl.sizeBytes));
+      }
+      if (successUrl.mime) {
+        qs.set("attachment_mime", successUrl.mime);
+      }
+    }
     redirect(`/nex-native/chat/peer/${peerAccountId}?${qs.toString()}`);
   }
   // Classify to a safe enum before carrying through the URL · raw

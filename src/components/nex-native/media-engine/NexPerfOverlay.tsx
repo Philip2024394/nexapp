@@ -14,8 +14,10 @@
 //   · dev-mode ONLY · the component unmounts itself in production
 //     (`process.env.NODE_ENV === "production"` → returns null)
 //   · toggle visibility via `Alt+P` key chord
-//   · initial state: visible in dev · once dismissed, stays dismissed
-//     for the session (sessionStorage key `nex-perf-overlay-hidden`)
+//   · initial state: HIDDEN by default (owner-authorised 2026-11-02 ·
+//     overlay was obscuring music + video feed chrome during normal
+//     dev viewing · opt-in via Alt+P when timing data is actively
+//     needed). Shown state persists for the session once revealed.
 //
 // Privacy:
 //   · does NOT log URLs, track IDs, account IDs
@@ -69,9 +71,14 @@ export function NexPerfOverlay(): React.JSX.Element | null {
   // this short-circuit means zero cost at render time.
   if (!DEV_ONLY) return null;
 
+  // Owner-authorised 2026-11-02 · hidden by default. Opt-in via Alt+P.
+  // The sessionStorage flag now records the SHOWN state (not hidden),
+  // so once a dev presses Alt+P the overlay stays visible for the
+  // session until they press Alt+P again. Older `nex-perf-overlay-hidden`
+  // flags are ignored.
   const [visible, setVisible] = React.useState<boolean>(() => {
-    if (typeof window === "undefined") return true;
-    return window.sessionStorage.getItem("nex-perf-overlay-hidden") !== "true";
+    if (typeof window === "undefined") return false;
+    return window.sessionStorage.getItem("nex-perf-overlay-shown") === "true";
   });
 
   const [, forceRender] = React.useReducer((x: number) => x + 1, 0);
@@ -90,9 +97,9 @@ export function NexPerfOverlay(): React.JSX.Element | null {
           const next = !v;
           if (typeof window !== "undefined") {
             if (next) {
-              window.sessionStorage.removeItem("nex-perf-overlay-hidden");
+              window.sessionStorage.setItem("nex-perf-overlay-shown", "true");
             } else {
-              window.sessionStorage.setItem("nex-perf-overlay-hidden", "true");
+              window.sessionStorage.removeItem("nex-perf-overlay-shown");
             }
           }
           return next;

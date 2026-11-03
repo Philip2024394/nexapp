@@ -1,0 +1,75 @@
+{
+  "commit": "ddfcc42",
+  "baseUrl": "http://localhost:3008",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "verdict": "PASS",
+  "pass": 12,
+  "fail": 0,
+  "results": [
+    {
+      "step": "1. /nex-native/hq loads for admin",
+      "verdict": "PASS",
+      "note": "HTTP 200 · h1=\"NEX HEADQUARTERS\""
+    },
+    {
+      "step": "2. Country artwork visible + loaded",
+      "verdict": "PASS",
+      "note": "IE 530.5x397.875 (natural 559x314) · ID 530.5x397.875 (natural 559x314)"
+    },
+    {
+      "step": "3. Ireland click → navigate + highlight + scroll",
+      "verdict": "PASS",
+      "note": "URL=http://localhost:3008/nex-native/hq/worlds?focus=ireland · focus-class=true · in-viewport=true"
+    },
+    {
+      "step": "4. Return to HQ Home via sidebar",
+      "verdict": "PASS",
+      "note": "URL=http://localhost:3008/nex-native/hq"
+    },
+    {
+      "step": "5. Indonesia click → navigate + highlight + scroll",
+      "verdict": "PASS",
+      "note": "URL=http://localhost:3008/nex-native/hq/worlds?focus=indonesia · focus-class=true · in-viewport=true"
+    },
+    {
+      "step": "6. Sidebar nav Home/Worlds/Harvest + active state",
+      "verdict": "PASS",
+      "note": "home-active=/nex-native/hq · worlds-active=/nex-native/hq/worlds · harvest→http://localhost:3008/nex-native/hq/harvest"
+    },
+    {
+      "step": "7. Refresh /nex-native/hq preserves layout",
+      "verdict": "PASS",
+      "note": "HTTP 200 · sidebar=visible"
+    },
+    {
+      "step": "7. Refresh /nex-native/hq/worlds preserves layout",
+      "verdict": "PASS",
+      "note": "HTTP 200 · sidebar=visible"
+    },
+    {
+      "step": "7. Refresh /nex-native/hq/worlds?focus=ireland preserves layout",
+      "verdict": "PASS",
+      "note": "HTTP 200 · sidebar=visible"
+    },
+    {
+      "step": "8. Desktop-only boundary (899 vs 900)",
+      "verdict": "PASS",
+      "note": "899: mobile-msg=true sidebar=false · 900: mobile-msg=false sidebar=true"
+    },
+    {
+      "step": "9. No console errors or failed requests",
+      "verdict": "PASS",
+      "note": "clean"
+    },
+    {
+      "step": "10. Admin session preserved · no bypass",
+      "verdict": "PASS",
+      "note": "h1=\"NEX HEADQUARTERS\" · impersonation=\"Impersonating nex-99901\""
+    }
+  ],
+  "consoleErrors": [],
+  "failedRequests": []
+}

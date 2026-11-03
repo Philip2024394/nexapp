@@ -53,6 +53,11 @@ interface BannerContent {
   readonly severity: "blocking" | "non_blocking";
   readonly title: string;
   readonly body: string;
+  /** Stage A · owner-authorised 2026-11-03 · when "retry", the
+   *  banner renders a secondary CTA that dispatches a window event
+   *  the composer picks up to reopen its attach modal. Non-upload
+   *  errors omit this field · existing Dismiss-only UX preserved. */
+  readonly action?: "retry";
 }
 
 function narrow<T extends string>(
@@ -110,19 +115,29 @@ function copyForUpload(code: ReturnType<typeof narrow>): BannerContent | null {
       severity: "non_blocking",
       title: "File too large",
       body: "That file is bigger than the chat limit. Pick a smaller version and try again.",
+      // Stage A · owner-authorised 2026-11-03 · retryable upload
+      // errors surface a "Try again" affordance that reopens the
+      // attach modal via the composer's `nex-peer-upload-retry`
+      // event listener.
+      action: "retry",
     };
   }
   if (code === "unsupported_type") {
     return {
       severity: "non_blocking",
       title: "File type not supported",
-      body: "This chat accepts photos, videos, and voice notes. Pick a different file and try again.",
+      // Stage A · copy updated to cover documents now that the
+      // paperclip + Document tile route arbitrary files through
+      // the plaintext upload path.
+      body: "This chat accepts photos, videos, voice notes, and documents. Pick a different file and try again.",
+      action: "retry",
     };
   }
   return {
     severity: "non_blocking",
     title: "Upload didn't finish",
     body: "The file didn't finish uploading. Check your connection and try again.",
+    action: "retry",
   };
 }
 
@@ -229,25 +244,74 @@ export function ChatErrorBanner({
         </div>
       </div>
       {!isBlocking && (
-        <Link
-          href={baseHref}
-          replace
-          aria-label="Dismiss notice"
-          data-nex-chat-error-dismiss
+        <div
           style={{
             flexShrink: 0,
-            fontSize: 11,
-            fontWeight: 600,
-            color: C.dismiss,
-            textDecoration: "none",
-            padding: "4px 6px",
-            borderRadius: 6,
-            lineHeight: 1,
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
             marginTop: 1,
           }}
         >
-          Dismiss
-        </Link>
+          {content.action === "retry" && (
+            <Link
+              href={baseHref}
+              replace
+              aria-label="Try the upload again"
+              data-nex-chat-error-retry
+              onClick={(e) => {
+                // Dismiss the URL state first (Next replaces), then
+                // dispatch a window event the composer picks up to
+                // reopen its attach modal. Fire-and-forget · if the
+                // composer isn't mounted the event is harmless.
+                if (typeof window !== "undefined") {
+                  // The <Link replace> navigates in the next tick, so
+                  // dispatching here lands AFTER the URL settles and
+                  // the composer re-reads sp.upload_error as null.
+                  // requestAnimationFrame gives Next a frame to flush.
+                  const w = window;
+                  w.requestAnimationFrame(() => {
+                    w.dispatchEvent(new CustomEvent("nex-peer-upload-retry"));
+                  });
+                }
+                // Don't preventDefault · let <Link replace> do its job
+                // of clearing the ?upload_error param from the URL.
+                void e;
+              }}
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: C.title,
+                textDecoration: "none",
+                padding: "4px 10px",
+                borderRadius: 999,
+                lineHeight: 1,
+                background: "#FF7200",
+                border: "1px solid rgba(0, 0, 0, 0.35)",
+                boxShadow: "0 2px 6px rgba(255, 114, 0, 0.45)",
+              }}
+            >
+              Try again
+            </Link>
+          )}
+          <Link
+            href={baseHref}
+            replace
+            aria-label="Dismiss notice"
+            data-nex-chat-error-dismiss
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: C.dismiss,
+              textDecoration: "none",
+              padding: "4px 6px",
+              borderRadius: 6,
+              lineHeight: 1,
+            }}
+          >
+            Dismiss
+          </Link>
+        </div>
       )}
     </div>
   );
