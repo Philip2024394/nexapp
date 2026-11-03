@@ -316,3 +316,98 @@ export async function reviewMemberFlagAction(formData: FormData): Promise<void> 
   revalidatePath("/nex-native/hq/communities");
   redirect(`/nex-native/hq/communities?m=flag_${decision}`);
 }
+
+// ─── HQ-direct community operations (owner directive 2026-11-03) ─────
+import {
+  hqRemoveMember,
+  hqDeleteCommunity,
+  hqCreateCommunity,
+} from "@/lib/nex-native/community/member-service";
+
+export async function hqRemoveMemberAction(formData: FormData): Promise<void> {
+  const accountId = await requireAccountId();
+  try {
+    await requireHqAdmin(accountId);
+  } catch (err) {
+    if (err instanceof HqAuthorizationError) redirect("/nex-native?e=not_hq");
+    throw err;
+  }
+
+  const memberAccountId = String(formData.get("member_account_id") ?? "").trim();
+  const communityZoneId = String(formData.get("community_zone_id") ?? "").trim();
+  const note = String(formData.get("note") ?? "");
+  if (!memberAccountId || !communityZoneId) {
+    redirect("/nex-native/hq/communities?e=bad_input");
+  }
+
+  const result = await hqRemoveMember({
+    actorAccountId: accountId,
+    memberAccountId,
+    communityZoneId,
+    note,
+  });
+  if (!result.ok) {
+    redirect(`/nex-native/hq/communities/${communityZoneId}?e=${result.reason}`);
+  }
+  revalidatePath(`/nex-native/hq/communities/${communityZoneId}`);
+  revalidatePath("/nex-native/hq/communities");
+  redirect(`/nex-native/hq/communities/${communityZoneId}?m=member_removed`);
+}
+
+export async function hqDeleteCommunityAction(formData: FormData): Promise<void> {
+  const accountId = await requireAccountId();
+  try {
+    await requireHqAdmin(accountId);
+  } catch (err) {
+    if (err instanceof HqAuthorizationError) redirect("/nex-native?e=not_hq");
+    throw err;
+  }
+
+  const communityZoneId = String(formData.get("community_zone_id") ?? "").trim();
+  const note = String(formData.get("note") ?? "");
+  if (!communityZoneId) redirect("/nex-native/hq/communities?e=bad_input");
+
+  const result = await hqDeleteCommunity({
+    actorAccountId: accountId,
+    communityZoneId,
+    note,
+  });
+  if (!result.ok) {
+    redirect(`/nex-native/hq/communities?e=${result.reason}`);
+  }
+  revalidatePath("/nex-native/hq/communities");
+  redirect("/nex-native/hq/communities?m=community_archived");
+}
+
+export async function hqCreateCommunityAction(formData: FormData): Promise<void> {
+  const accountId = await requireAccountId();
+  try {
+    await requireHqAdmin(accountId);
+  } catch (err) {
+    if (err instanceof HqAuthorizationError) redirect("/nex-native?e=not_hq");
+    throw err;
+  }
+
+  const name = String(formData.get("name") ?? "").trim();
+  const parentZoneId = String(formData.get("parent_zone_id") ?? "").trim();
+  const levelRaw = String(formData.get("level") ?? "district").trim();
+  const level =
+    levelRaw === "neighbourhood" || levelRaw === "ward" || levelRaw === "district"
+      ? (levelRaw as "district" | "neighbourhood" | "ward")
+      : "district";
+  if (!name || !parentZoneId) {
+    redirect("/nex-native/hq/communities?e=bad_input");
+  }
+
+  const result = await hqCreateCommunity({
+    actorAccountId: accountId,
+    name,
+    parentZoneId,
+    level,
+  });
+  if (!result.ok) {
+    redirect(`/nex-native/hq/communities?e=${result.reason}`);
+  }
+  revalidatePath("/nex-native/hq/communities");
+  redirect(`/nex-native/hq/communities?m=community_created`);
+}

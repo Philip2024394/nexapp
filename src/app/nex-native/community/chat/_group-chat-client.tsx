@@ -598,14 +598,47 @@ function MessageBubble({
         {!isSelf ? (
           <div
             style={{
-              fontSize: 11,
-              fontWeight: 800,
-              color: NEX.cyan,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
               marginBottom: 4,
-              letterSpacing: 0.2,
             }}
           >
-            {message.authorName}
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 800,
+                color: NEX.cyan,
+                letterSpacing: 0.2,
+              }}
+            >
+              {message.authorName}
+            </span>
+            {/* Owner directive 2026-11-03 · ⚠ Flag author link next to
+                the message author name · opens the dedicated flag form
+                with mandatory reason textarea. Only renders for real
+                member authors (not SELF, not the "nex-community" system
+                account). stopPropagation prevents the bubble's own
+                onClick post-flag flow from firing. */}
+            {message.authorId !== "nex-community" ? (
+              <a
+                href={`/nex-native/community/flag-member/${message.authorId}`}
+                onClick={(e) => e.stopPropagation()}
+                aria-label={`Flag ${message.authorName}`}
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: "#FF4D5E",
+                  textDecoration: "none",
+                  padding: "2px 6px",
+                  borderRadius: 999,
+                  border: "1px solid rgba(255,77,94,0.35)",
+                  letterSpacing: "0.04em",
+                }}
+              >
+                ⚠ Flag
+              </a>
+            ) : null}
           </div>
         ) : null}
         <div>{message.body}</div>

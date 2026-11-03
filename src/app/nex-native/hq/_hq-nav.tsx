@@ -43,6 +43,14 @@ const NAV_ITEMS: ReadonlyArray<{
     glyph: "⚙",
     match: (p) => p.startsWith("/nex-native/hq/harvest"),
   },
+  // Owner directive 2026-11-03 · "we need 1 side menu for communities
+  // in hq where admin can add a community or delete a community".
+  {
+    href: "/nex-native/hq/communities",
+    label: "Communities",
+    glyph: "☘",
+    match: (p) => p.startsWith("/nex-native/hq/communities"),
+  },
 ];
 
 export function HqNav(): React.JSX.Element {

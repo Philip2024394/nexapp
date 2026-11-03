@@ -23,7 +23,11 @@ import {
 } from "@/lib/nex-native/community/member-service";
 import { getZoneById } from "@/lib/nex-native/community/zone-service";
 import { getAccountById } from "@/lib/nex-native/account-service";
-import { reviewMemberFlagAction } from "../../community/_actions";
+import {
+  reviewMemberFlagAction,
+  hqCreateCommunityAction,
+  hqDeleteCommunityAction,
+} from "../../community/_actions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -73,7 +77,17 @@ export default async function HqCommunitiesPage() {
     .select("id, name, country, level")
     .is("archived_at", null)
     .eq("country", "IE")
-    .in("level", ["city"])
+    .in("level", ["city", "district", "neighbourhood", "ward"])
+    .order("name", { ascending: true });
+
+  // Ireland county zones · used by the Create-Community form as parent
+  // options (new sub-community pods sit under a county).
+  const { data: countyParents } = await nexSupabaseAdmin
+    .from("nex_community_zone")
+    .select("id, name")
+    .is("archived_at", null)
+    .eq("country", "IE")
+    .eq("level", "city")
     .order("name", { ascending: true });
 
   // Per-community member counts (one query, group by zone)
@@ -315,6 +329,115 @@ export default async function HqCommunitiesPage() {
             )}
           </section>
 
+          {/* Create community · owner-authorised 2026-11-03 */}
+          <section
+            style={{
+              marginBottom: 32,
+              padding: 20,
+              borderRadius: 16,
+              background: IRELAND.panel,
+              border: `1px solid ${IRELAND.borderSoft}`,
+            }}
+          >
+            <h2
+              style={{
+                margin: "0 0 14px",
+                fontSize: 14,
+                fontWeight: 800,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: IRELAND.secondary,
+              }}
+            >
+              + Create sub-community
+            </h2>
+            <form
+              action={hqCreateCommunityAction}
+              style={{ display: "flex", gap: 8, flexWrap: "wrap" }}
+            >
+              <input
+                type="text"
+                name="name"
+                required
+                minLength={2}
+                maxLength={80}
+                placeholder="Name (e.g. Lacken Village)"
+                style={{
+                  flex: "2 1 180px",
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  background: "rgba(0,0,0,0.25)",
+                  color: IRELAND.textPrimary,
+                  border: `1px solid ${IRELAND.borderSoft}`,
+                  fontSize: 13,
+                  outline: "none",
+                }}
+              />
+              <select
+                name="parent_zone_id"
+                required
+                defaultValue=""
+                style={{
+                  flex: "1 1 160px",
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  background: "rgba(0,0,0,0.25)",
+                  color: IRELAND.textPrimary,
+                  border: `1px solid ${IRELAND.borderSoft}`,
+                  fontSize: 13,
+                  outline: "none",
+                  appearance: "none",
+                }}
+              >
+                <option value="" disabled>Parent county…</option>
+                {(countyParents ?? []).map((p) => {
+                  const r = p as { id: string; name: string };
+                  return (
+                    <option key={r.id} value={r.id} style={{ color: "#000" }}>
+                      {r.name}
+                    </option>
+                  );
+                })}
+              </select>
+              <select
+                name="level"
+                defaultValue="district"
+                style={{
+                  flex: "0 1 140px",
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  background: "rgba(0,0,0,0.25)",
+                  color: IRELAND.textPrimary,
+                  border: `1px solid ${IRELAND.borderSoft}`,
+                  fontSize: 13,
+                  outline: "none",
+                  appearance: "none",
+                }}
+              >
+                <option value="district" style={{ color: "#000" }}>district</option>
+                <option value="neighbourhood" style={{ color: "#000" }}>neighbourhood</option>
+                <option value="ward" style={{ color: "#000" }}>ward</option>
+              </select>
+              <button
+                type="submit"
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: 999,
+                  background: IRELAND.secondary,
+                  color: IRELAND.drawerBg,
+                  border: "none",
+                  fontSize: 13,
+                  fontWeight: 800,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  cursor: "pointer",
+                }}
+              >
+                Create
+              </button>
+            </form>
+          </section>
+
           {/* Community list */}
           <section>
             <h2
@@ -335,7 +458,7 @@ export default async function HqCommunitiesPage() {
                 margin: 0,
                 padding: 0,
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
                 gap: 10,
               }}
             >
@@ -350,13 +473,75 @@ export default async function HqCommunitiesPage() {
                         borderRadius: 12,
                         background: IRELAND.panel,
                         border: `1px solid ${IRELAND.borderSoft}`,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 10,
                       }}
                     >
-                      <div style={{ fontSize: 15, fontWeight: 800, color: IRELAND.textPrimary }}>
-                        {row.name}
+                      <div>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: IRELAND.textPrimary }}>
+                          {row.name}
+                        </div>
+                        <div
+                          style={{
+                            marginTop: 6,
+                            fontSize: 11,
+                            color: IRELAND.textMuted,
+                            letterSpacing: "0.04em",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          {count} member{count === 1 ? "" : "s"} · {row.level}
+                        </div>
                       </div>
-                      <div style={{ marginTop: 6, fontSize: 11, color: IRELAND.textMuted, letterSpacing: "0.04em", textTransform: "uppercase" }}>
-                        {count} member{count === 1 ? "" : "s"}
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <Link
+                          href={`/nex-native/hq/communities/${row.id}`}
+                          style={{
+                            flex: 1,
+                            padding: "8px 10px",
+                            borderRadius: 8,
+                            background: "transparent",
+                            border: `1px solid ${IRELAND.borderSoft}`,
+                            color: IRELAND.primaryInk,
+                            textDecoration: "none",
+                            fontSize: 11,
+                            fontWeight: 800,
+                            textAlign: "center",
+                            letterSpacing: "0.04em",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          View / Remove
+                        </Link>
+                        {count === 0 ? (
+                          <form action={hqDeleteCommunityAction} style={{ flex: 1 }}>
+                            <input type="hidden" name="community_zone_id" value={row.id} />
+                            <input
+                              type="hidden"
+                              name="note"
+                              value={`archived · empty community ${row.name}`}
+                            />
+                            <button
+                              type="submit"
+                              style={{
+                                width: "100%",
+                                padding: "8px 10px",
+                                borderRadius: 8,
+                                background: IRELAND.danger,
+                                color: "#FFF",
+                                border: "none",
+                                fontSize: 11,
+                                fontWeight: 800,
+                                letterSpacing: "0.04em",
+                                textTransform: "uppercase",
+                                cursor: "pointer",
+                              }}
+                            >
+                              Archive
+                            </button>
+                          </form>
+                        ) : null}
                       </div>
                     </div>
                   </li>

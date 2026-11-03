@@ -282,7 +282,9 @@ export async function countPendingFlags(): Promise<number> {
   return count ?? 0;
 }
 
-/** HQ review action · upheld (remove member) OR dismissed (clear flag). */
+/** HQ review action · upheld (remove member) OR dismissed (clear flag).
+ *  Also writes to nex_hq_action_log (migration 254) for audit trail
+ *  per owner-sealed admin discipline. */
 export async function reviewFlag(input: {
   readonly flagId: NexUuid;
   readonly reviewerAccountId: NexUuid;
@@ -294,7 +296,7 @@ export async function reviewFlag(input: {
 > {
   const { data: flag, error: readErr } = await nexSupabaseAdmin
     .from("nex_community_member_flag")
-    .select("id, status, flagged_account_id, community_zone_id")
+    .select("id, status, flagged_account_id, community_zone_id, flagger_account_id")
     .eq("id", input.flagId)
     .maybeSingle();
   if (readErr) {
@@ -314,16 +316,13 @@ export async function reviewFlag(input: {
     })
     .eq("id", flag.id);
 
-  // Transition membership status based on decision
   if (input.decision === "upheld") {
-    // Remove member from community
     await nexSupabaseAdmin
       .from("nex_community_membership")
       .delete()
       .eq("account_id", flag.flagged_account_id)
       .eq("hyperlocal_zone_id", flag.community_zone_id);
   } else {
-    // Dismissed · clear the 'flagged' status back to 'active'
     await nexSupabaseAdmin
       .from("nex_community_membership")
       .update({ status: "active", updated_at: now })
@@ -331,5 +330,196 @@ export async function reviewFlag(input: {
       .eq("hyperlocal_zone_id", flag.community_zone_id);
   }
 
+  // Audit log · best-effort, non-fatal
+  await writeHqActionLog({
+    actorAccountId: input.reviewerAccountId,
+    action:
+      input.decision === "upheld"
+        ? "community_member_flag_upheld"
+        : "community_member_flag_dismissed",
+    subjectAccountId: flag.flagged_account_id,
+    communityZoneId: flag.community_zone_id,
+    note: input.adminNote ?? null,
+  }).catch(() => {
+    /* non-fatal · review already committed */
+  });
+
   return { ok: true };
+}
+
+/** HQ-direct remove · admin can remove a member without a pending flag.
+ *  Logs to nex_hq_action_log with the admin note (required · explains why). */
+export async function hqRemoveMember(input: {
+  readonly actorAccountId: NexUuid;
+  readonly memberAccountId: NexUuid;
+  readonly communityZoneId: NexUuid;
+  readonly note: string;
+}): Promise<
+  | { readonly ok: true }
+  | { readonly ok: false; readonly reason: "member_not_found" | "note_too_short" }
+> {
+  const trimmed = input.note.trim();
+  if (trimmed.length < 10) return { ok: false, reason: "note_too_short" };
+
+  const { data: mem, error: readErr } = await nexSupabaseAdmin
+    .from("nex_community_membership")
+    .select("id")
+    .eq("account_id", input.memberAccountId)
+    .eq("hyperlocal_zone_id", input.communityZoneId)
+    .maybeSingle();
+  if (readErr) throw new Error(`member-service.hqRemoveMember.read · ${readErr.message}`);
+  if (!mem) return { ok: false, reason: "member_not_found" };
+
+  await nexSupabaseAdmin
+    .from("nex_community_membership")
+    .delete()
+    .eq("id", mem.id);
+
+  await writeHqActionLog({
+    actorAccountId: input.actorAccountId,
+    action: "community_member_removed_by_hq",
+    subjectAccountId: input.memberAccountId,
+    communityZoneId: input.communityZoneId,
+    note: trimmed,
+  }).catch(() => {
+    /* non-fatal */
+  });
+
+  return { ok: true };
+}
+
+/** HQ-direct delete community · soft action · just removes the zone
+ *  row (seeded reference data stays protected via FK RESTRICT when
+ *  members exist · HQ must remove all members first OR a future
+ *  cascade-safe variant). For now hard-DELETE only if member count is 0. */
+export async function hqDeleteCommunity(input: {
+  readonly actorAccountId: NexUuid;
+  readonly communityZoneId: NexUuid;
+  readonly note: string;
+}): Promise<
+  | { readonly ok: true }
+  | { readonly ok: false; readonly reason: "zone_not_found" | "has_members" | "note_too_short" }
+> {
+  const trimmed = input.note.trim();
+  if (trimmed.length < 10) return { ok: false, reason: "note_too_short" };
+
+  const { count, error: countErr } = await nexSupabaseAdmin
+    .from("nex_community_membership")
+    .select("*", { count: "exact", head: true })
+    .eq("hyperlocal_zone_id", input.communityZoneId);
+  if (countErr) throw new Error(`member-service.hqDeleteCommunity.count · ${countErr.message}`);
+  if ((count ?? 0) > 0) return { ok: false, reason: "has_members" };
+
+  // Soft-archive · set archived_at rather than DELETE so audit joins
+  // can still resolve the zone name post-removal.
+  const now = new Date().toISOString();
+  const { data: updated, error: updateErr } = await nexSupabaseAdmin
+    .from("nex_community_zone")
+    .update({ archived_at: now })
+    .eq("id", input.communityZoneId)
+    .is("archived_at", null)
+    .select("id")
+    .maybeSingle();
+  if (updateErr) throw new Error(`member-service.hqDeleteCommunity.update · ${updateErr.message}`);
+  if (!updated) return { ok: false, reason: "zone_not_found" };
+
+  await writeHqActionLog({
+    actorAccountId: input.actorAccountId,
+    action: "community_zone_archived_by_hq",
+    communityZoneId: input.communityZoneId,
+    note: trimmed,
+  }).catch(() => {
+    /* non-fatal */
+  });
+
+  return { ok: true };
+}
+
+/** HQ-direct create community · admin can add a new zone (future scope
+ *  for user-defined pods · currently just creates a hyperlocal under
+ *  Ireland country). */
+export async function hqCreateCommunity(input: {
+  readonly actorAccountId: NexUuid;
+  readonly name: string;
+  readonly parentZoneId: NexUuid;
+  readonly level: "district" | "neighbourhood" | "ward";
+}): Promise<
+  | { readonly ok: true; readonly zoneId: NexUuid }
+  | { readonly ok: false; readonly reason: "parent_not_found" | "name_too_short" | "name_too_long" }
+> {
+  const name = input.name.trim();
+  if (name.length < 2) return { ok: false, reason: "name_too_short" };
+  if (name.length > 80) return { ok: false, reason: "name_too_long" };
+
+  const { data: parent, error: parentErr } = await nexSupabaseAdmin
+    .from("nex_community_zone")
+    .select("id, country")
+    .eq("id", input.parentZoneId)
+    .is("archived_at", null)
+    .maybeSingle();
+  if (parentErr) throw new Error(`member-service.hqCreateCommunity.parent · ${parentErr.message}`);
+  if (!parent) return { ok: false, reason: "parent_not_found" };
+
+  const slug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+
+  const { data: inserted, error: insErr } = await nexSupabaseAdmin
+    .from("nex_community_zone")
+    .insert({
+      parent_zone_id: input.parentZoneId,
+      country: (parent as { country: string }).country,
+      level: input.level,
+      name,
+      slug,
+    })
+    .select("id")
+    .single();
+  if (insErr) throw new Error(`member-service.hqCreateCommunity.insert · ${insErr.message}`);
+
+  await writeHqActionLog({
+    actorAccountId: input.actorAccountId,
+    action: "community_zone_created_by_hq",
+    communityZoneId: inserted.id as NexUuid,
+    note: `created "${name}" under parent ${input.parentZoneId} (level=${input.level})`,
+  }).catch(() => {
+    /* non-fatal */
+  });
+
+  return { ok: true, zoneId: inserted.id as NexUuid };
+}
+
+// ─── nex_hq_action_log writer · owner-sealed audit trail ─────────────
+// Uses the actual migration 254 schema:
+//   actor_account_id · action · reason · metadata (jsonb) · created_at
+// Fire-and-forget · a missing table (254 unapplied) or CHECK violation
+// (269 action enum unapplied) logs a warn but never propagates up to
+// break the primary action.
+async function writeHqActionLog(input: {
+  readonly actorAccountId: NexUuid;
+  readonly action: string;
+  readonly subjectAccountId?: NexUuid | null;
+  readonly communityZoneId?: NexUuid | null;
+  readonly note?: string | null;
+}): Promise<void> {
+  const payload = {
+    actor_account_id: input.actorAccountId,
+    action: input.action,
+    reason: input.note ?? null,
+    metadata: {
+      subject_account_id: input.subjectAccountId ?? null,
+      community_zone_id: input.communityZoneId ?? null,
+    },
+  };
+  const { error } = await nexSupabaseAdmin
+    .from("nex_hq_action_log")
+    .insert(payload);
+  if (error) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[hq-action-log] write failed · non-fatal · ${error.message}`,
+    );
+  }
 }
