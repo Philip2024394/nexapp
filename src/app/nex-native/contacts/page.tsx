@@ -536,12 +536,46 @@ export default async function ContactsPage({ searchParams }: PageProps) {
         >
           Contacts
         </h1>
-        {/* Owner directive 2026-11-03 (revised) · "the category page
-            that should be connected is the page with world live
-            buttons · Ireland Live · Live Music etc" · Gold-circle grid
-            icon now opens the 6-tile overlay (Live World · Live
-            Ireland · Live Music · Live Food · Live Stays · Live Trades)
-            via the ContactsLiveWorldTrigger component. */}
+        {/* Owner directive 2026-11-03 · "little ireland map icon in
+            header · when they select the little ireland map icon it
+            opens cover page with search field for area with auto
+            suggest field". Gold-circle Ireland-map silhouette →
+            /nex-native/community/discover. Sits alongside the sealed
+            grid-icon (live worlds) and + drawer. */}
+        <Link
+          href="/nex-native/community/discover"
+          aria-label="Discover Ireland communities"
+          data-nex-contacts-ireland-map
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 40,
+            height: 40,
+            borderRadius: "50%",
+            background: "var(--nex-world-secondary, #C6A15B)",
+            color: "var(--nex-world-drawer-bg, #123D2B)",
+            border: "none",
+            textDecoration: "none",
+            flexShrink: 0,
+            marginRight: 8,
+          }}
+        >
+          {/* Minimal Ireland-shape SVG · recognisable silhouette · stroke
+              matches the Gold-on-Emerald palette already in play on the
+              other header buttons. */}
+          <svg
+            aria-hidden
+            width="22"
+            height="22"
+            viewBox="0 0 32 32"
+            fill="currentColor"
+          >
+            {/* Simplified Ireland-island path · west coast indentations
+                left, east coast smoother right · 32x32 bounding box. */}
+            <path d="M11.5 3.8c1.1-0.6 2.3-0.9 3.5-1 1.3-0.1 2.6 0.1 3.8 0.6 1 0.4 1.9 1 2.6 1.8l1.6 2 1.5 1.4c1 0.8 1.8 1.9 2.4 3 0.5 1 0.9 2 1 3.1 0.1 1.1 0 2.2-0.3 3.3l-0.8 2.6c-0.4 1.4-1.2 2.7-2.3 3.7l-2 1.8c-0.7 0.6-1.4 1.2-2.3 1.6-1 0.5-2.1 0.7-3.2 0.8l-2.9 0.3c-1.5 0.1-2.9-0.2-4.3-0.8l-2.1-1-2-0.7c-1.1-0.4-2.1-1-3-1.8-0.8-0.8-1.4-1.7-1.9-2.7-0.4-0.9-0.6-1.8-0.6-2.8l0.1-2.5c0-1.3 0.3-2.6 0.9-3.8l1.2-2.4c0.5-1 1.1-1.8 1.9-2.5l2.1-1.9c0.9-0.8 2-1.4 3.1-1.8 0.3-0.1 0.6-0.2 1-0.3Z"/>
+          </svg>
+        </Link>
         <ContactsLiveWorldTrigger />
         <ContactsPlusDrawer />
       </header>
@@ -650,11 +684,60 @@ export default async function ContactsPage({ searchParams }: PageProps) {
             active. All sealed rules + ContactRow-family styling
             preserved by the component itself. */}
       {activeFilter === "groups" ? (
-        <div style={{ marginTop: 4 }}>
+        <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 8 }}>
           <CommunityNoticeCard
             zoneName={communityZoneName}
             hasMembership={communityHasMembership}
           />
+          {/* Owner directive 2026-11-03 · "a nex user should be able
+              to add another nex contact to the community". Entry
+              point sits directly beneath the Community card so the
+              adder can see the group and the add-action together.
+              Only rendered when the viewer has an active membership. */}
+          {communityHasMembership ? (
+            <div style={{ display: "flex", gap: 8 }}>
+              <Link
+                href="/nex-native/community/add-contact"
+                aria-label="Add a NEX contact to this community"
+                style={{
+                  flex: 1,
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  background: "transparent",
+                  border: "1.5px solid var(--nex-world-secondary, #C6A15B)",
+                  color: "var(--nex-world-secondary, #C6A15B)",
+                  textDecoration: "none",
+                  fontSize: 12,
+                  fontWeight: 800,
+                  textAlign: "center",
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                }}
+              >
+                + Add contact
+              </Link>
+              <Link
+                href="/nex-native/community/discover"
+                aria-label="Discover more Ireland communities"
+                style={{
+                  flex: 1,
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  background: "transparent",
+                  border: "1.5px solid var(--nex-world-primary-ink, #AFC5B5)",
+                  color: "var(--nex-world-primary-ink, #AFC5B5)",
+                  textDecoration: "none",
+                  fontSize: 12,
+                  fontWeight: 800,
+                  textAlign: "center",
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                }}
+              >
+                Discover
+              </Link>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
