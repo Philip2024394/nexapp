@@ -35,12 +35,25 @@ import type { BrowserThemeRow } from "./_theme-browser-client";
  *  The ordering here IS the fallback display order. Only ids that
  *  resolve against the live theme collection paint; missing ids
  *  silently drop so a kill-switch on a theme doesn't crash the row. */
+// Owner directive 2026-11-03 · "add all chat themes to the library for
+// chat theme simple" · the 97 owner-supplied wallpaper themes
+// (theme-o1..theme-o97) seeded by migration 272 are appended to the
+// Popular fallback so they appear on the entry landing carousel
+// immediately. Once real view counts accumulate in
+// nex_theme_view_counter, the organic ordering takes over and this
+// fallback stops being read.
+const OWNER_O_THEME_IDS: readonly string[] = Array.from(
+  { length: 97 },
+  (_, i) => `theme-o${i + 1}`,
+);
+
 export const POPULAR_THEME_IDS: readonly string[] = [
   "nex-bubbles",
   "nex-flat",
   "coffee",
   "waterworld",
   "food",
+  ...OWNER_O_THEME_IDS,
 ];
 
 /** Map business_category to the theme that best represents it as the

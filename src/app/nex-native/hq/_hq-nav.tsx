@@ -51,6 +51,14 @@ const NAV_ITEMS: ReadonlyArray<{
     glyph: "☘",
     match: (p) => p.startsWith("/nex-native/hq/communities"),
   },
+  // Owner directive 2026-11-03 · "yes add menu link to page where
+  // owner can rename each theme".
+  {
+    href: "/nex-native/hq/chat-themes",
+    label: "Chat Themes",
+    glyph: "🎨",
+    match: (p) => p.startsWith("/nex-native/hq/chat-themes"),
+  },
 ];
 
 export function HqNav(): React.JSX.Element {
