@@ -1,0 +1,320 @@
+// src/app/nex-native/hq/communities/page.tsx
+//
+// HQ · NEX Community Admin.
+// Owner-authorised 2026-11-03 · "we need 1 side menu for communities
+// in hq where admin can add a community or delete a community" + "admin
+// will get pill notification of the person that flagged and the
+// explanation of why flagged · admin can direct connect with the
+// person being flagged or the person that reported".
+//
+// Phase 1 ships: list all communities · count of pending member flags ·
+// drill into pending flags with reporter + reason + flagged identity +
+// direct-chat buttons for either party.
+
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { requireHqAdmin, HqAuthorizationError } from "@/lib/nex-native/hq-authorization";
+import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
+import {
+  listPendingFlags,
+  countPendingFlags,
+  type NexCommunityMemberFlagRow,
+} from "@/lib/nex-native/community/member-service";
+import { getZoneById } from "@/lib/nex-native/community/zone-service";
+import { getAccountById } from "@/lib/nex-native/account-service";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const IRELAND = {
+  drawerBg: "var(--nex-world-drawer-bg, #123D2B)",
+  primary: "var(--nex-world-primary, #1B5138)",
+  secondary: "var(--nex-world-secondary, #C6A15B)",
+  primaryInk: "var(--nex-world-primary-ink, #AFC5B5)",
+  textPrimary: "#F2F5F8",
+  textMuted: "rgba(175, 197, 181, 0.72)",
+  panel: "rgba(27, 81, 56, 0.55)",
+  borderSoft: "rgba(198, 161, 91, 0.35)",
+  danger: "#FF4D5E",
+  pill: "#B30000",
+};
+
+export default async function HqCommunitiesPage() {
+  const session = await resolveNexAppSessionFromContext();
+  if (!session) redirect("/nex-native/sign-in");
+  try {
+    await requireHqAdmin(session.account.id);
+  } catch (err) {
+    if (err instanceof HqAuthorizationError) redirect("/nex-native");
+    throw err;
+  }
+
+  // Pending flag count · the owner's "pill notification"
+  const pendingFlagCount = await countPendingFlags();
+  const pendingFlags = await listPendingFlags();
+
+  // Resolve flag details · zone names + both parties' accounts
+  const resolvedFlags = await Promise.all(
+    pendingFlags.map(async (flag) => {
+      const [zone, flagged, flagger] = await Promise.all([
+        getZoneById(flag.community_zone_id),
+        getAccountById(flag.flagged_account_id).catch(() => null),
+        getAccountById(flag.flagger_account_id).catch(() => null),
+      ]);
+      return { flag, zone, flagged, flagger };
+    }),
+  );
+
+  // Community list · all seeded zones (country level + their member counts)
+  const { data: communities } = await nexSupabaseAdmin
+    .from("nex_community_zone")
+    .select("id, name, country, level")
+    .is("archived_at", null)
+    .eq("country", "IE")
+    .in("level", ["city"])
+    .order("name", { ascending: true });
+
+  // Per-community member counts (one query, group by zone)
+  const { data: memberCounts } = await nexSupabaseAdmin
+    .from("nex_community_membership")
+    .select("hyperlocal_zone_id");
+  const countsByZone = new Map<string, number>();
+  for (const row of memberCounts ?? []) {
+    const z = (row as { hyperlocal_zone_id: string }).hyperlocal_zone_id;
+    countsByZone.set(z, (countsByZone.get(z) ?? 0) + 1);
+  }
+
+  return (
+    <>
+      <style>{`html,body{background:${IRELAND.drawerBg} !important;}`}</style>
+      <main
+        style={{
+          minHeight: "100dvh",
+          background: IRELAND.drawerBg,
+          color: IRELAND.textPrimary,
+          padding: "calc(env(safe-area-inset-top,0) + 20px) 20px 48px",
+          fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+        }}
+      >
+        <div style={{ maxWidth: 960, margin: "0 auto" }}>
+          <header style={{ marginBottom: 24 }}>
+            <h1
+              style={{
+                margin: 0,
+                fontSize: 24,
+                fontWeight: 800,
+                letterSpacing: "-0.01em",
+              }}
+            >
+              <span style={{ color: IRELAND.secondary }}>HQ</span> · Communities
+            </h1>
+            <p
+              style={{
+                margin: "8px 0 0",
+                fontSize: 13,
+                color: IRELAND.primaryInk,
+                opacity: 0.8,
+              }}
+            >
+              Admin view of all NEX Ireland Community zones · pending member
+              flags listed below with reporter · reason · direct-chat links.
+            </p>
+          </header>
+
+          {/* Pending flags · pill + list */}
+          <section
+            style={{
+              marginBottom: 32,
+              padding: 20,
+              borderRadius: 16,
+              background: IRELAND.panel,
+              border: `1px solid ${IRELAND.borderSoft}`,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                marginBottom: 14,
+              }}
+            >
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: 16,
+                  fontWeight: 800,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  color: IRELAND.secondary,
+                }}
+              >
+                Pending flags
+              </h2>
+              {pendingFlagCount > 0 ? (
+                <span
+                  aria-label={`${pendingFlagCount} pending flags`}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minWidth: 24,
+                    height: 24,
+                    padding: "0 8px",
+                    borderRadius: 999,
+                    background: IRELAND.pill,
+                    color: "#FFF",
+                    fontSize: 12,
+                    fontWeight: 900,
+                    boxShadow: `0 2px 6px ${IRELAND.pill}99`,
+                  }}
+                >
+                  {pendingFlagCount > 99 ? "99+" : pendingFlagCount}
+                </span>
+              ) : null}
+            </div>
+
+            {resolvedFlags.length === 0 ? (
+              <p style={{ margin: 0, fontSize: 13, color: IRELAND.primaryInk, opacity: 0.75 }}>
+                No pending flags · all clear.
+              </p>
+            ) : (
+              <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 12 }}>
+                {resolvedFlags.map(({ flag, zone, flagged, flagger }) => (
+                  <li
+                    key={flag.id}
+                    style={{
+                      padding: 14,
+                      borderRadius: 12,
+                      background: `${IRELAND.primary}aa`,
+                      border: `1px solid ${IRELAND.borderSoft}`,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: IRELAND.textPrimary }}>
+                        {zone?.name ?? "unknown community"}
+                      </div>
+                      <div style={{ fontSize: 11, color: IRELAND.textMuted, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                        {new Date(flag.created_at).toLocaleString()}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 13, lineHeight: 1.5, color: IRELAND.primaryInk, marginBottom: 10 }}>
+                      <strong style={{ color: IRELAND.textPrimary }}>
+                        {flagged?.display_name ?? "unknown"}
+                      </strong>{" "}
+                      flagged by{" "}
+                      <strong style={{ color: IRELAND.textPrimary }}>
+                        {flagger?.display_name ?? "unknown"}
+                      </strong>
+                    </div>
+                    <blockquote
+                      style={{
+                        margin: "0 0 12px",
+                        padding: "10px 12px",
+                        borderLeft: `3px solid ${IRELAND.secondary}`,
+                        background: "rgba(0,0,0,0.18)",
+                        borderRadius: 6,
+                        fontSize: 13,
+                        lineHeight: 1.55,
+                        color: IRELAND.textPrimary,
+                        fontStyle: "italic",
+                      }}
+                    >
+                      {flag.reason}
+                    </blockquote>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {flagged ? (
+                        <Link
+                          href={`/nex-native/chat/peer/${flagged.id}`}
+                          style={adminActionBtn(IRELAND.secondary, IRELAND.drawerBg)}
+                        >
+                          💬 Message flagged · {flagged.display_name}
+                        </Link>
+                      ) : null}
+                      {flagger ? (
+                        <Link
+                          href={`/nex-native/chat/peer/${flagger.id}`}
+                          style={adminActionBtn("transparent", IRELAND.secondary, IRELAND.secondary)}
+                        >
+                          💬 Message reporter · {flagger.display_name}
+                        </Link>
+                      ) : null}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {/* Community list */}
+          <section>
+            <h2
+              style={{
+                margin: "0 0 14px",
+                fontSize: 16,
+                fontWeight: 800,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                color: IRELAND.secondary,
+              }}
+            >
+              Communities · {communities?.length ?? 0}
+            </h2>
+            <ul
+              style={{
+                listStyle: "none",
+                margin: 0,
+                padding: 0,
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                gap: 10,
+              }}
+            >
+              {(communities ?? []).map((c) => {
+                const row = c as { id: string; name: string; country: string; level: string };
+                const count = countsByZone.get(row.id) ?? 0;
+                return (
+                  <li key={row.id}>
+                    <div
+                      style={{
+                        padding: 14,
+                        borderRadius: 12,
+                        background: IRELAND.panel,
+                        border: `1px solid ${IRELAND.borderSoft}`,
+                      }}
+                    >
+                      <div style={{ fontSize: 15, fontWeight: 800, color: IRELAND.textPrimary }}>
+                        {row.name}
+                      </div>
+                      <div style={{ marginTop: 6, fontSize: 11, color: IRELAND.textMuted, letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                        {count} member{count === 1 ? "" : "s"}
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        </div>
+      </main>
+    </>
+  );
+}
+
+function adminActionBtn(bg: string, fg: string, borderOverride?: string): React.CSSProperties {
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "8px 14px",
+    borderRadius: 999,
+    background: bg,
+    color: fg,
+    border: `1.5px solid ${borderOverride ?? bg}`,
+    fontSize: 13,
+    fontWeight: 700,
+    textDecoration: "none",
+    cursor: "pointer",
+  };
+}

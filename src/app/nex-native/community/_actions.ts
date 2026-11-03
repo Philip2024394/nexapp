@@ -205,3 +205,114 @@ export async function reportNoticeAction(formData: FormData): Promise<void> {
     throw err;
   }
 }
+
+// ─── Owner directive 2026-11-03 · member-level flow ────────────────
+//   addContactToCommunityAction · adds a NEX contact to this user's
+//                                 community (contact must have no
+//                                 existing membership in THIS zone)
+//   removeContactFromCommunityAction · adder-only · unless flagged
+//   flagMemberAction · mandatory reason text (10-500 chars)
+//   reviewMemberFlagAction · HQ-only · upheld (remove) or dismissed
+
+import {
+  addMemberByContact,
+  removeMemberIfAuthorised,
+  flagMember,
+  reviewFlag,
+} from "@/lib/nex-native/community/member-service";
+import { requireHqAdmin, HqAuthorizationError } from "@/lib/nex-native/hq-authorization";
+
+export async function addContactToCommunityAction(formData: FormData): Promise<void> {
+  const accountId = await requireAccountId();
+  const contactAccountId = String(formData.get("contact_account_id") ?? "").trim();
+  const communityZoneId = String(formData.get("community_zone_id") ?? "").trim();
+  if (!contactAccountId || !communityZoneId) {
+    redirect("/nex-native/contacts?tab=groups&e=bad_input");
+  }
+
+  const result = await addMemberByContact({
+    adderAccountId: accountId,
+    contactAccountId,
+    communityZoneId,
+  });
+  if (!result.ok) {
+    redirect(`/nex-native/contacts?tab=groups&e=${result.reason}`);
+  }
+  revalidatePath("/nex-native/contacts");
+  revalidatePath("/nex-native/community/chat");
+  redirect("/nex-native/contacts?tab=groups&m=contact_added");
+}
+
+export async function removeContactFromCommunityAction(formData: FormData): Promise<void> {
+  const accountId = await requireAccountId();
+  const memberAccountId = String(formData.get("member_account_id") ?? "").trim();
+  const communityZoneId = String(formData.get("community_zone_id") ?? "").trim();
+  if (!memberAccountId || !communityZoneId) {
+    redirect("/nex-native/contacts?tab=groups&e=bad_input");
+  }
+
+  const result = await removeMemberIfAuthorised({
+    actorAccountId: accountId,
+    memberAccountId,
+    communityZoneId,
+  });
+  if (!result.ok) {
+    redirect(`/nex-native/contacts?tab=groups&e=${result.reason}`);
+  }
+  revalidatePath("/nex-native/contacts");
+  revalidatePath("/nex-native/community/chat");
+  redirect("/nex-native/contacts?tab=groups&m=contact_removed");
+}
+
+export async function flagMemberAction(formData: FormData): Promise<void> {
+  const accountId = await requireAccountId();
+  const flaggedAccountId = String(formData.get("flagged_account_id") ?? "").trim();
+  const communityZoneId = String(formData.get("community_zone_id") ?? "").trim();
+  const reason = String(formData.get("reason") ?? "");
+  if (!flaggedAccountId || !communityZoneId) {
+    redirect("/nex-native/community/chat?e=bad_input");
+  }
+
+  const result = await flagMember({
+    flaggerAccountId: accountId,
+    flaggedAccountId,
+    communityZoneId,
+    reason,
+  });
+  if (!result.ok) {
+    redirect(`/nex-native/community/chat?e=${result.reason}`);
+  }
+  revalidatePath("/nex-native/community/chat");
+  redirect("/nex-native/community/chat?m=flag_submitted");
+}
+
+export async function reviewMemberFlagAction(formData: FormData): Promise<void> {
+  const accountId = await requireAccountId();
+  try {
+    await requireHqAdmin(accountId);
+  } catch (err) {
+    if (err instanceof HqAuthorizationError) {
+      redirect("/nex-native?e=not_hq");
+    }
+    throw err;
+  }
+
+  const flagId = String(formData.get("flag_id") ?? "").trim();
+  const decision = String(formData.get("decision") ?? "").trim() as "upheld" | "dismissed";
+  const adminNote = String(formData.get("admin_note") ?? "").trim();
+  if (!flagId || (decision !== "upheld" && decision !== "dismissed")) {
+    redirect("/nex-native/hq/communities?e=bad_input");
+  }
+
+  const result = await reviewFlag({
+    flagId,
+    reviewerAccountId: accountId,
+    decision,
+    adminNote: adminNote.length > 0 ? adminNote : null,
+  });
+  if (!result.ok) {
+    redirect(`/nex-native/hq/communities?e=${result.reason}`);
+  }
+  revalidatePath("/nex-native/hq/communities");
+  redirect(`/nex-native/hq/communities?m=flag_${decision}`);
+}
