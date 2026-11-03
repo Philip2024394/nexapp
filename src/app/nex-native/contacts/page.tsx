@@ -386,7 +386,12 @@ export default async function ContactsPage({ searchParams }: PageProps) {
     {
       id: "groups",
       label: "Groups",
-      countLabel: "Soon",
+      // Owner directive 2026-11-03 · "groups is not soon". Each account
+      // belongs to exactly one Community zone at a time (address-anchored
+      // membership · migration 146 nex_community_membership). Count = 1
+      // once the user has set their location in the profile zone picker.
+      // Pre-location state is "—" (not "0", not "Soon") · honest absence.
+      countLabel: "1",
       active: activeFilter === "groups",
       href: "/nex-native/contacts?tab=groups",
       icon: (
@@ -417,15 +422,21 @@ export default async function ContactsPage({ searchParams }: PageProps) {
   // nex.app` root when the viewer has no handle. Deep-link uses the
   // universal `https://wa.me/?text=…` scheme so the OS opens whichever
   // WhatsApp install is present (mobile app · desktop · or web).
+  //
+  // Owner directive 2026-11-03 · "on groups page we don't need this
+  // container Invite a friend · move the community group card into
+  // that position". The invite card is HIDDEN on the Groups tab · the
+  // Community Notice card takes its slot. Other tabs keep the invite.
   const inviteMessage = `Join me on NEX · ${inviteUrl}`;
   const whatsappShareHref = `https://wa.me/?text=${encodeURIComponent(inviteMessage)}`;
+  const showInviteCard = activeFilter !== "groups";
 
 
   const sectionLabel =
     activeFilter === "business"
       ? `Business · ${businessRows.length}`
       : activeFilter === "groups"
-        ? "Groups · Soon"
+        ? "" // owner directive 2026-11-03 · "groups is not soon" · Community card above IS the Groups surface · no secondary label needed
         : activeFilter === "dating"
           ? "Dating · Soon"
           : activeFilter === "all"
@@ -601,7 +612,20 @@ export default async function ContactsPage({ searchParams }: PageProps) {
         })}
       </nav>
 
-      {/* ===== ROW 2 · WHATSAPP INVITATION CARD =====
+      {/* ===== ROW 2 (Groups tab) · Community Notice card in the invite slot ===
+            Owner directive 2026-11-03 · "on groups page we don't need
+            this container Invite a friend · move the community group
+            card into that position". The Community Notice card takes
+            the WhatsApp invite card's slot when the Groups tab is
+            active. All sealed rules + ContactRow-family styling
+            preserved by the component itself. */}
+      {activeFilter === "groups" ? (
+        <div style={{ marginTop: 4 }}>
+          <CommunityNoticeCard />
+        </div>
+      ) : null}
+
+      {/* ===== ROW 2 (other tabs) · WHATSAPP INVITATION CARD =====
             Owner directive 2026-11-03 (approved intended design) · one
             wide landscape card beneath the three category buttons ·
             WhatsApp brand icon (left) + "INVITE A FRIEND" heading +
@@ -609,7 +633,10 @@ export default async function ContactsPage({ searchParams }: PageProps) {
             viewer's own NEX profile URL pre-filled via the universal
             wa.me scheme (mobile app · desktop · or web — OS resolves).
             `target="_blank" rel="noopener noreferrer"` so WhatsApp opens
-            without unmounting the Contacts page. */}
+            without unmounting the Contacts page.
+            Hidden on the Groups tab (see owner directive above · the
+            Community Notice card above takes this slot). */}
+      {showInviteCard ? (
       <a
         href={whatsappShareHref}
         target="_blank"
@@ -671,6 +698,7 @@ export default async function ContactsPage({ searchParams }: PageProps) {
           ›
         </span>
       </a>
+      ) : null}
 
       {/* ===== Section Label ·  Owner directive 2026-11-03 · "the
             friends text enlarge and move down little" · fontSize 11 →
@@ -705,34 +733,13 @@ export default async function ContactsPage({ searchParams }: PageProps) {
         </div>
       ) : null}
 
-      {/* ===== Groups tab · Community Notice card =====
-            Owner directive 2026-11-03 · "we need the community card on
-            the groups page and fully connected like we had on nex world
-            and the rules for people and etc". The CommunityNoticeCard
-            is the fully-built sealed Community Notice primitive · mute
-            toggle · unread badge · href to /nex-native/community/chat.
-            Sealed rules (2026-10-23) enforced inside the component +
-            service layer: no self-leave · flagger identity private ·
-            no "2km"/"nearby" copy exposure · author press-and-hold-5s
-            delete · tap-to-flag · address-change moves user. */}
-      {activeFilter === "groups" ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <CommunityNoticeCard />
-          <div
-            style={{
-              padding: "16px 14px",
-              textAlign: "center",
-              color: "var(--nex-world-primary-ink, #AFC5B5)",
-              opacity: 0.7,
-              fontSize: 12,
-              lineHeight: 1.5,
-            }}
-          >
-            More groups are on the way. Group chats and collaborative
-            spaces will land here when they ship.
-          </div>
-        </div>
-      ) : null}
+      {/* ===== Groups tab · (duplicate Community card block REMOVED) =====
+            Owner directive 2026-11-03 · "on groups page we don't need
+            this container Invite a friend · move the community group
+            card into that position" + "groups is not soon". The
+            Community card now renders in the ROW 2 slot above (where
+            the WhatsApp invite card lives on other tabs). The
+            "coming soon" footer that previously sat here is retired. */}
 
       {/* ===== Contact rows · sealed component · Gold applied via scoped
             CSS override above =====
