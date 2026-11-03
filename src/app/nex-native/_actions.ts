@@ -129,6 +129,18 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
   // Migration 204 · optional user-chosen NEX display name. Non-unique by
   // design. Empty submission is permitted (chosen_handle stays null).
   const nexNameRaw = String(formData.get("nex_name") ?? "");
+  // Owner directive 2026-11-03 · "on the create account page they must
+  // select a country of their address · for now we add users to that
+  // country community". UUID of the nex_community_zone row the user
+  // picked (26 Ireland counties). Optional at the server-action level
+  // so a resumed signup without the field doesn't 500 · but the UI
+  // marks the <select> required so new signups always pass it.
+  const countyZoneIdRaw = String(formData.get("county_zone_id") ?? "").trim();
+  const countyZoneId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    countyZoneIdRaw,
+  )
+    ? countyZoneIdRaw
+    : null;
 
   if (!fullName) redirectToCreateAccountWithError("missing_name", "Enter your full name");
   if (!email) redirectToCreateAccountWithError("missing_email", "Enter your email");
@@ -266,6 +278,34 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
             .update({ zero_knowledge_ack_at: new Date().toISOString() })
             .eq("id", acc.id);
         } catch { /* non-fatal · signup already succeeded */ }
+      }
+
+      // Owner directive 2026-11-03 · "on the create account page they
+      // must select a country of their address · for now we add users
+      // to that country community". When the signup form submitted a
+      // valid county_zone_id (26 Ireland counties sourced from
+      // nex_community_zone), confirm their membership so the new user
+      // is already in their county's Community Noticeboard when they
+      // land in the app. Best-effort · a failure here does NOT block
+      // signup · the user can still pick/confirm via /community/select.
+      if (acc?.id && countyZoneId) {
+        try {
+          const { confirmMembership } = await import(
+            "@/lib/nex-native/community/membership-service"
+          );
+          await confirmMembership({
+            accountId: acc.id,
+            hyperlocalZoneId: countyZoneId,
+            // Sensible default · user can retune via /community/settings.
+            notificationPreference: "urgent_only",
+          });
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            "[createNexAccountAction] community membership write failed · signup still succeeded · user can set via /community/select:",
+            err,
+          );
+        }
       }
       // Bridge 62 · welcome message from NEX1 · sealed 2026-09-29.
       // Fires once per account · new signups land on /chat with NEX1

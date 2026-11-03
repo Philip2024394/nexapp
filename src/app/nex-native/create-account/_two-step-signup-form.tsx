@@ -42,10 +42,17 @@ export interface TwoStepSignupFormProps {
    *  have to retype it. Pre-sanitised server-side. Password is NEVER
    *  preserved · it must be re-entered after any server-side error. */
   readonly initialEmail?: string;
+  /** Owner directive 2026-11-03 · 26 Ireland counties the signup form
+   *  surfaces as a required picker. Server-fetched from
+   *  nex_community_zone (country=IE, level=city) and passed in by
+   *  the parent page. Empty list means the service query failed · the
+   *  form still renders but the picker shows a disabled placeholder. */
+  readonly counties?: ReadonlyArray<{ readonly id: string; readonly name: string }>;
 }
 
 export function TwoStepSignupForm({
   initialEmail,
+  counties = [],
 }: TwoStepSignupFormProps): React.ReactElement {
   const [email, setEmail] = React.useState(initialEmail ?? "");
   const [password, setPassword] = React.useState("");
@@ -111,6 +118,7 @@ export function TwoStepSignupForm({
           onEmailChange={setEmail}
           onPasswordChange={setPassword}
           onTogglePassword={() => setShowPassword((v) => !v)}
+          counties={counties}
           error={attemptedSubmit ? formError : null}
         />
       </form>
@@ -151,11 +159,13 @@ function StepOnePanel({
   onEmailChange,
   onPasswordChange,
   onTogglePassword,
+  counties,
   error,
 }: {
   email: string;
   password: string;
   showPassword: boolean;
+  counties: ReadonlyArray<{ readonly id: string; readonly name: string }>;
   onEmailChange: (v: string) => void;
   onPasswordChange: (v: string) => void;
   onTogglePassword: () => void;
@@ -219,6 +229,46 @@ function StepOnePanel({
               <EyeIcon shown={showPassword} color={NEX.cyan} />
             </button>
           </>
+        }
+      />
+
+      {/* Owner directive 2026-11-03 · "on the create account page they
+          must select a country of their address · for now we add users
+          to that country community". Required county picker · 26
+          Ireland counties sourced from nex_community_zone via the
+          parent page. Server reads this on submit and writes a
+          nex_community_membership row so the new user is already in
+          their Community when they land in the app. */}
+      <IconInput
+        label="Your county in Ireland"
+        icon={<PinIcon color={NEX.cyan} />}
+        input={
+          <select
+            required
+            name="county_zone_id"
+            defaultValue=""
+            aria-label="Your county in Ireland"
+            style={{
+              ...textInputStyle,
+              appearance: "none",
+              WebkitAppearance: "none",
+              MozAppearance: "none",
+              cursor: counties.length === 0 ? "not-allowed" : "pointer",
+              opacity: counties.length === 0 ? 0.6 : 1,
+            }}
+            disabled={counties.length === 0}
+          >
+            <option value="" disabled>
+              {counties.length === 0
+                ? "Counties loading…"
+                : "Select your county"}
+            </option>
+            {counties.map((c) => (
+              <option key={c.id} value={c.id} style={{ color: "#000" }}>
+                {c.name}
+              </option>
+            ))}
+          </select>
         }
       />
 
@@ -377,6 +427,15 @@ function ShieldIcon({ color }: { color: string }): React.ReactElement {
   return (
     <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+    </svg>
+  );
+}
+
+function PinIcon({ color }: { color: string }): React.ReactElement {
+  return (
+    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7Z" />
+      <circle cx={12} cy={9} r={2.5} />
     </svg>
   );
 }

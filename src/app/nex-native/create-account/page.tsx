@@ -25,6 +25,14 @@ import { devPreviewOn } from "@/lib/nex-native/app/dev-preview";
 import { isAdminSession } from "@/lib/nex-native/app/admin";
 import { TwoStepSignupForm } from "./_two-step-signup-form";
 import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
+// Owner directive 2026-11-03 · "on the create account page they must
+// select a country of their address with in · and for now we add users
+// to that country community". Fetch Ireland's 26 counties server-side
+// and pass them into the signup form as a required picker. On submit,
+// createNexAccountAction writes a nex_community_membership row for the
+// chosen county so the new user is already in their Community when
+// they land in the app.
+import { suggestZonesForOnboarding } from "@/lib/nex-native/community/zone-service";
 
 function readCountryHint(hdrs: Headers): string | undefined {
   const geo =
@@ -96,6 +104,18 @@ export default async function CreateAccountPage({ searchParams }: PageProps) {
   }
   const authError = params.e && params.m ? { code: params.e, message: params.m } : null;
   const initialIso2 = readCountryHint(await headers());
+  // Owner directive 2026-11-03 · fetch Ireland counties for the
+  // required picker on the signup form. Fail-open: if the service
+  // query errors, we ship an empty list and the form's picker renders
+  // a disabled placeholder rather than crashing the whole signup
+  // page. Signup proceeds without a membership write in that case.
+  let counties: Awaited<ReturnType<typeof suggestZonesForOnboarding>> = [];
+  try {
+    counties = await suggestZonesForOnboarding();
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("create-account · county list fetch failed:", err);
+  }
   // 2026-10-15 · preserve_email echoes the user's step-1 email across
   // the server-action round-trip on recoverable failures so they don't
   // have to re-type it. Password is NEVER preserved · the user re-
@@ -412,6 +432,7 @@ export default async function CreateAccountPage({ searchParams }: PageProps) {
           <TwoStepSignupForm
             initialIso2={initialIso2}
             initialEmail={initialEmail}
+            counties={counties.map((z) => ({ id: z.id, name: z.name }))}
           />
         </div>
       </main>
