@@ -80,6 +80,32 @@ function mockSeed(now: Date): ReadonlyArray<GroupMessage> {
   const h = (hoursAgo: number) =>
     new Date(now.getTime() - hoursAgo * 60 * 60 * 1000).toISOString();
   return [
+    // Owner directive 2026-11-03 · "first bubble is welcome and
+    // explains the group is for community updates and free for all
+    // members ... to post and make other community members aware of
+    // events or suspicious activity ... reword - share url to group
+    // page chat". System-authored intro pinned at the top of the
+    // feed · reworded so the copy honours the sealed 2026-10-23
+    // security rule (no "2km" / no "radius" / no "nearby" / no
+    // "auto-assigned" · city-level framing only).
+    {
+      id: "msg-welcome",
+      authorId: "nex-community",
+      authorName: "Community Notice",
+      authorAvatarUrl: null,
+      body:
+        "👋 Welcome to Community Notice.\n\n" +
+        "This is a free, shared space for everyone in your community. " +
+        "Post local updates — community events, local services, lost " +
+        "and found items, or anything suspicious the community should " +
+        "be aware of.\n\n" +
+        "All members can post. Please keep posts honest, respectful " +
+        "and focused on genuine community matters.\n\n" +
+        "Share with a neighbour · https://nex.app/nex-native/community/chat",
+      attachmentImageUrl: null,
+      createdAt: h(168), // 1 week ago · pinned at top of feed
+      status: "active",
+    },
     {
       id: "msg-1",
       authorId: "nex-91205",
