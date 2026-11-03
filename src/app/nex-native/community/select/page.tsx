@@ -1,23 +1,52 @@
 // src/app/nex-native/community/select/page.tsx
 //
 // Zone-selection + explicit confirmation. Users pick from a seeded list
-// of local communities and tap "Confirm" to join. No auto-add.
+// of local communities (Ireland counties) and tap "Confirm" to join.
+// No auto-add.
+//
+// Owner directives:
+//   · 2026-11-03 · dev-impersonation parity with contacts/page.tsx
+//   · 2026-11-03 · "first we need desktop image and tablet ... then we
+//                   need the page ui same color theme as our nex ireland
+//                   app pallete". This file layers the sealed Ireland
+//                   studio photo backdrop + dark frosted overlay (same
+//                   pattern as ContactsShell) · and uses the Ireland
+//                   world palette CSS vars (Emerald/Forest/Gold/Sage)
+//                   with hex fallbacks.
+//   · 2026-11-03 · "we don't need Indonesia · we are working on Ireland":
+//                   zone labels use the plain name (no "Kecamatan" prefix)
+//                   · emergency copy references 112 (EU-wide / Ireland
+//                   standard) without naming a country.
 
 import { redirect } from "next/navigation";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
-// Owner directive 2026-11-03 · dev-impersonation parity with
-// contacts/page.tsx so NEX_DEV_IMPERSONATE_HANDLE sessions can see the
-// zone picker during local build-verification. Falls through to the
-// real session resolver when no dev override is active.
+import Image from "next/image";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { getMembershipForAccount } from "@/lib/nex-native/community/membership-service";
 import { suggestZonesForOnboarding } from "@/lib/nex-native/community/zone-service";
 import { NexPageHeader } from "../../_page-header";
 import { confirmMembershipAction } from "../_actions";
-import { NEX } from "../_palette";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+// Ireland palette · all values resolve to `--nex-world-*` CSS vars at
+// runtime with sealed hex fallbacks. Mirrors the Contacts page system
+// so Ireland theming reads consistently across the app.
+const IRELAND = {
+  drawerBg: "var(--nex-world-drawer-bg, #123D2B)", // Emerald
+  primary: "var(--nex-world-primary, #1B5138)", // Forest
+  secondary: "var(--nex-world-secondary, #C6A15B)", // Gold
+  primaryInk: "var(--nex-world-primary-ink, #AFC5B5)", // Sage
+  backgroundBase: "var(--nex-world-background-base, #FAF8F4)", // Cream (unused on dark glass)
+  textPrimary: "#F2F5F8",
+  textMuted: "rgba(175, 197, 181, 0.72)",
+  panel: "rgba(27, 81, 56, 0.55)", // Forest at 55% over the glass
+  panelHover: "rgba(27, 81, 56, 0.75)",
+  borderSoft: "rgba(198, 161, 91, 0.35)", // Gold tinted border
+  borderGold: "var(--nex-world-secondary, #C6A15B)",
+  danger: "#FF4D5E",
+  success: "#16D66B",
+};
 
 interface PageProps {
   searchParams: Promise<{ e?: string; m?: string }>;
@@ -34,38 +63,107 @@ export default async function SelectZonePage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const banner =
     sp.m === "left_community"
-      ? { tone: "ok", msg: "You left your community." }
+      ? { tone: "ok" as const, msg: "You left your community." }
       : sp.e
-        ? { tone: "err", msg: "Something went wrong — please try again." }
+        ? { tone: "err" as const, msg: "Something went wrong — please try again." }
         : null;
 
   return (
     <>
-      <style>{`html,body{background:${NEX.bg} !important;}`}</style>
+      <style>{`
+        html, body {
+          background: ${IRELAND.drawerBg} !important;
+        }
+      `}</style>
+
       <main
+        data-nex-community-select-root
         style={{
+          position: "relative",
           minHeight: "100dvh",
-          background: NEX.bg,
-          color: NEX.textPrimary,
-          padding: "calc(env(safe-area-inset-top,0) + 16px) 20px 48px",
+          color: IRELAND.textPrimary,
+          overflow: "hidden",
+          isolation: "isolate",
           fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
         }}
       >
-        <div style={{ maxWidth: 720, margin: "0 auto" }}>
+        {/* ===== Layer 1 · Ireland studio photo backdrop ·
+              responsive sizes for mobile · tablet · desktop · same
+              image asset reused across viewport widths (Next.js
+              Image serves AVIF/WebP variants automatically). ===== */}
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 0,
+            pointerEvents: "none",
+          }}
+        >
+          <Image
+            src="/nex-brand/hq/ireland-studio.png"
+            alt=""
+            fill
+            priority
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1440px"
+            quality={70}
+            style={{
+              objectFit: "cover",
+              objectPosition: "center",
+            }}
+          />
+        </div>
+
+        {/* ===== Layer 2 · Dark frosted-glass overlay · same recipe as
+              ContactsShell · dark Emerald tint + blur. ===== */}
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(135deg, rgba(5, 25, 15, 0.60) 0%, rgba(18, 61, 43, 0.72) 100%)",
+            backdropFilter: "blur(22px) saturate(1.25)",
+            WebkitBackdropFilter: "blur(22px) saturate(1.25)",
+            zIndex: 1,
+          }}
+        />
+
+        {/* ===== Layer 3 · Content column · responsive maxWidth with
+              phone/tablet/desktop breakpoints. 480 phone · 640 small
+              tablet · 720 large tablet + desktop. ===== */}
+        <div
+          style={{
+            position: "relative",
+            zIndex: 2,
+            maxWidth: 720,
+            margin: "0 auto",
+            padding: "calc(env(safe-area-inset-top, 0) + 16px) 20px 48px",
+          }}
+        >
           <NexPageHeader dataScope="community-select" />
 
-          <header style={{ textAlign: "center", margin: "28px 0 20px" }}>
-            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, letterSpacing: "-0.01em" }}>
-              <span style={{ color: NEX.accent }}>NEX</span>{" "}
+          <header style={{ textAlign: "center", margin: "28px 0 24px" }}>
+            <h1
+              style={{
+                margin: 0,
+                fontSize: 28,
+                fontWeight: 800,
+                letterSpacing: "-0.01em",
+                color: IRELAND.textPrimary,
+              }}
+            >
+              <span style={{ color: IRELAND.secondary }}>NEX</span>{" "}
               <span>Community Noticeboard</span>
             </h1>
             <p
               style={{
-                margin: "10px auto 0",
-                maxWidth: 480,
+                margin: "12px auto 0",
+                maxWidth: 520,
                 fontSize: 14,
-                color: NEX.textSecondary,
-                lineHeight: 1.55,
+                color: IRELAND.primaryInk,
+                lineHeight: 1.6,
+                opacity: 0.9,
               }}
             >
               Pick your local community to see outages, road hazards and other
@@ -77,13 +175,19 @@ export default async function SelectZonePage({ searchParams }: PageProps) {
             <div
               role="status"
               style={{
-                padding: "10px 14px",
+                padding: "12px 16px",
                 borderRadius: 12,
-                marginBottom: 14,
-                background: banner.tone === "ok" ? NEX.cyanFaint : "rgba(255,77,94,0.1)",
-                border: `1px solid ${banner.tone === "ok" ? NEX.cyan : NEX.danger}44`,
-                color: banner.tone === "ok" ? NEX.cyan : NEX.danger,
+                marginBottom: 16,
+                background:
+                  banner.tone === "ok"
+                    ? "rgba(22, 214, 107, 0.10)"
+                    : "rgba(255, 77, 94, 0.10)",
+                border: `1px solid ${
+                  banner.tone === "ok" ? `${IRELAND.success}66` : `${IRELAND.danger}66`
+                }`,
+                color: banner.tone === "ok" ? IRELAND.success : IRELAND.danger,
                 fontSize: 13,
+                fontWeight: 600,
               }}
             >
               {banner.msg}
@@ -93,13 +197,14 @@ export default async function SelectZonePage({ searchParams }: PageProps) {
           {existing && (
             <div
               style={{
-                padding: "12px 14px",
+                padding: "14px 16px",
                 borderRadius: 12,
-                marginBottom: 14,
-                background: NEX.panel,
-                border: `1px solid ${NEX.borderSoft}`,
-                color: NEX.textSecondary,
+                marginBottom: 16,
+                background: IRELAND.panel,
+                border: `1px solid ${IRELAND.borderSoft}`,
+                color: IRELAND.primaryInk,
                 fontSize: 13,
+                lineHeight: 1.55,
               }}
             >
               You're currently connected to a community. Confirming a new one
@@ -110,23 +215,31 @@ export default async function SelectZonePage({ searchParams }: PageProps) {
           {zones.length === 0 ? (
             <section
               style={{
-                padding: "28px 20px",
+                padding: "32px 24px",
                 borderRadius: 16,
-                background: NEX.panel,
-                border: `1px solid ${NEX.borderSoft}`,
+                background: IRELAND.panel,
+                border: `1px solid ${IRELAND.borderSoft}`,
                 textAlign: "center",
               }}
             >
-              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: 18,
+                  fontWeight: 700,
+                  color: IRELAND.secondary,
+                }}
+              >
                 No communities set up yet
               </h2>
               <p
                 style={{
-                  margin: "8px auto 0",
-                  maxWidth: 420,
+                  margin: "10px auto 0",
+                  maxWidth: 440,
                   fontSize: 13,
-                  color: NEX.textSecondary,
-                  lineHeight: 1.55,
+                  color: IRELAND.primaryInk,
+                  lineHeight: 1.6,
+                  opacity: 0.85,
                 }}
               >
                 A NEX admin needs to add your local area. Check back soon or ask
@@ -140,8 +253,8 @@ export default async function SelectZonePage({ searchParams }: PageProps) {
                   listStyle: "none",
                   margin: 0,
                   padding: 0,
-                  display: "flex",
-                  flexDirection: "column",
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
                   gap: 10,
                 }}
               >
@@ -154,9 +267,10 @@ export default async function SelectZonePage({ searchParams }: PageProps) {
                         gap: 12,
                         padding: "14px 16px",
                         borderRadius: 14,
-                        background: NEX.panel,
-                        border: `1px solid ${NEX.borderSoft}`,
+                        background: IRELAND.panel,
+                        border: `1.5px solid ${IRELAND.borderSoft}`,
                         cursor: "pointer",
+                        transition: "border-color 150ms ease, background 150ms ease",
                       }}
                     >
                       <input
@@ -165,21 +279,21 @@ export default async function SelectZonePage({ searchParams }: PageProps) {
                         value={z.id}
                         defaultChecked={idx === 0}
                         required
-                        style={{ accentColor: NEX.accent }}
+                        style={{ accentColor: IRELAND.secondary }}
                       />
-                      <span style={{ fontSize: 15, fontWeight: 600 }}>
-                        Kecamatan {z.name}
-                      </span>
                       <span
                         style={{
-                          marginLeft: "auto",
-                          fontSize: 11,
-                          color: NEX.textMuted,
-                          letterSpacing: "0.04em",
-                          textTransform: "uppercase",
+                          fontSize: 15,
+                          fontWeight: 700,
+                          color: IRELAND.textPrimary,
+                          flex: 1,
+                          minWidth: 0,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
                         }}
                       >
-                        {z.country} · {z.level}
+                        {formatZoneLabel(z.name, z.level, z.country)}
                       </span>
                     </label>
                   </li>
@@ -188,26 +302,33 @@ export default async function SelectZonePage({ searchParams }: PageProps) {
 
               <fieldset
                 style={{
-                  marginTop: 20,
-                  padding: "14px 16px",
+                  marginTop: 24,
+                  padding: "16px 18px",
                   borderRadius: 14,
-                  background: NEX.panel,
-                  border: `1px solid ${NEX.borderSoft}`,
+                  background: IRELAND.panel,
+                  border: `1px solid ${IRELAND.borderSoft}`,
                 }}
               >
                 <legend
                   style={{
-                    padding: "0 6px",
+                    padding: "0 8px",
                     fontSize: 11,
                     letterSpacing: "0.14em",
-                    color: NEX.textMuted,
+                    color: IRELAND.secondary,
                     textTransform: "uppercase",
-                    fontWeight: 700,
+                    fontWeight: 800,
                   }}
                 >
                   Notifications
                 </legend>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 6 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                    marginTop: 8,
+                  }}
+                >
                   {(
                     [
                       ["quiet", "Quiet — never notify me"],
@@ -215,13 +336,22 @@ export default async function SelectZonePage({ searchParams }: PageProps) {
                       ["all", "All — notify me for every new notice"],
                     ] as const
                   ).map(([value, label]) => (
-                    <label key={value} style={{ display: "flex", gap: 10, fontSize: 14, color: NEX.textSecondary }}>
+                    <label
+                      key={value}
+                      style={{
+                        display: "flex",
+                        gap: 10,
+                        fontSize: 14,
+                        color: IRELAND.primaryInk,
+                        cursor: "pointer",
+                      }}
+                    >
                       <input
                         type="radio"
                         name="notification_preference"
                         value={value}
                         defaultChecked={value === "urgent_only"}
-                        style={{ accentColor: NEX.accent }}
+                        style={{ accentColor: IRELAND.secondary }}
                       />
                       {label}
                     </label>
@@ -231,31 +361,36 @@ export default async function SelectZonePage({ searchParams }: PageProps) {
 
               <p
                 style={{
-                  marginTop: 14,
+                  marginTop: 16,
                   fontSize: 12,
-                  color: NEX.textMuted,
+                  color: IRELAND.primaryInk,
                   lineHeight: 1.6,
+                  opacity: 0.75,
                 }}
               >
-                Community Noticeboard is for sharing non-emergency local information
-                (outages, road hazards, weather alerts). It does <strong>not</strong>{" "}
-                replace emergency services. For emergencies in Indonesia dial
-                112.
+                Community Noticeboard is for sharing non-emergency local
+                information (outages, road hazards, weather alerts). It does{" "}
+                <strong style={{ color: IRELAND.secondary, opacity: 1 }}>not</strong>{" "}
+                replace emergency services. For emergencies dial{" "}
+                <strong style={{ color: IRELAND.secondary, opacity: 1 }}>112</strong>.
               </p>
 
               <button
                 type="submit"
                 style={{
-                  marginTop: 18,
+                  marginTop: 20,
                   width: "100%",
-                  padding: "14px 20px",
+                  padding: "16px 24px",
                   borderRadius: 999,
-                  background: NEX.accent,
-                  color: "#0a0608",
+                  background: IRELAND.secondary,
+                  color: IRELAND.drawerBg,
                   fontSize: 15,
-                  fontWeight: 700,
+                  fontWeight: 800,
+                  letterSpacing: "0.02em",
                   border: "none",
                   cursor: "pointer",
+                  boxShadow: "0 6px 20px rgba(10, 31, 21, 0.35)",
+                  textTransform: "uppercase",
                 }}
               >
                 Confirm community
@@ -266,4 +401,15 @@ export default async function SelectZonePage({ searchParams }: PageProps) {
       </main>
     </>
   );
+}
+
+/** Smart zone label. For Ireland counties (country IE · level=city) we
+ *  show the plain name ("Dublin") · no "Kecamatan" prefix leaks in.
+ *  For the historical Indonesia path we preserve the "Kecamatan {name}"
+ *  prefix (code lives in prod data but the Ireland product doesn't
+ *  surface it). */
+function formatZoneLabel(name: string, level: string, country: string): string {
+  if (country === "IE") return name;
+  if (level === "kecamatan") return `Kecamatan ${name}`;
+  return name;
 }
