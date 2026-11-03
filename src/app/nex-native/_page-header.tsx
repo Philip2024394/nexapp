@@ -58,9 +58,21 @@ const NEX = {
 interface NexPageHeaderProps {
   /** Optional data-attr for tests / analytics. */
   dataScope?: string;
+  /** Owner directive 2026-11-03 · scope-specific brand image inside
+   *  the ping badge (e.g. Community badge on /community/* surfaces).
+   *  Falls back to the sealed "NEX" wordmark when null/undefined. */
+  brandAvatarUrl?: string | null;
+  /** Owner directive 2026-11-03 · scope-specific accent colour for
+   *  the ping ring + halo. Defaults to NEX cyan. Community surfaces
+   *  pass green so the ping always reads as presence-online. */
+  brandAccent?: string;
 }
 
-export function NexPageHeader({ dataScope }: NexPageHeaderProps) {
+export function NexPageHeader({
+  dataScope,
+  brandAvatarUrl,
+  brandAccent,
+}: NexPageHeaderProps) {
   return (
     <header
       data-nex-page-header
@@ -86,7 +98,12 @@ export function NexPageHeader({ dataScope }: NexPageHeaderProps) {
           WebkitTapHighlightColor: "transparent",
         }}
       >
-        <NexPingBadge size={56} accent={NEX.cyan} dataTestId="page-header-nex" />
+        <NexPingBadge
+          size={56}
+          accent={brandAccent ?? NEX.cyan}
+          avatarUrl={brandAvatarUrl ?? null}
+          dataTestId="page-header-nex"
+        />
       </Link>
 
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

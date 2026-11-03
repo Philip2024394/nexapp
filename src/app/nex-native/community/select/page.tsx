@@ -19,7 +19,6 @@
 //                   standard) without naming a country.
 
 import { redirect } from "next/navigation";
-import Image from "next/image";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { getMembershipForAccount } from "@/lib/nex-native/community/membership-service";
 import { suggestZonesForOnboarding } from "@/lib/nex-native/community/zone-service";
@@ -87,10 +86,14 @@ export default async function SelectZonePage({ searchParams }: PageProps) {
           fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
         }}
       >
-        {/* ===== Layer 1 · Ireland studio photo backdrop ·
-              responsive sizes for mobile · tablet · desktop · same
-              image asset reused across viewport widths (Next.js
-              Image serves AVIF/WebP variants automatically). ===== */}
+        {/* ===== Layer 1 · Responsive Ireland backdrop =====
+              Owner directive 2026-11-03 · "the back ground desktop image
+              i said". Owner-supplied Golden Hour Irish Village Panorama
+              (landscape · 3MB) ships for desktop/tablet-landscape
+              viewports · the sealed Ireland studio photo (portrait-
+              friendly) stays for mobile. Native <picture> + media
+              sources gives per-breakpoint selection in a single DOM
+              element · browser picks the right source. */}
         <div
           aria-hidden
           style={{
@@ -98,20 +101,30 @@ export default async function SelectZonePage({ searchParams }: PageProps) {
             inset: 0,
             zIndex: 0,
             pointerEvents: "none",
+            overflow: "hidden",
           }}
         >
-          <Image
-            src="/nex-brand/hq/ireland-studio.png"
-            alt=""
-            fill
-            priority
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1440px"
-            quality={70}
-            style={{
-              objectFit: "cover",
-              objectPosition: "center",
-            }}
-          />
+          <picture>
+            {/* Desktop + tablet-landscape: Golden Hour Irish Village Panorama */}
+            <source
+              media="(min-width: 768px)"
+              srcSet="/nex-ireland/village-panorama.png"
+            />
+            {/* Mobile fallback: existing Ireland studio photo */}
+            <img
+              src="/nex-brand/hq/ireland-studio.png"
+              alt=""
+              loading="eager"
+              decoding="async"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                objectPosition: "center",
+                display: "block",
+              }}
+            />
+          </picture>
         </div>
 
         {/* ===== Layer 2 · Dark frosted-glass overlay · same recipe as
@@ -141,7 +154,18 @@ export default async function SelectZonePage({ searchParams }: PageProps) {
             padding: "calc(env(safe-area-inset-top, 0) + 16px) 20px 48px",
           }}
         >
-          <NexPageHeader dataScope="community-select" />
+          {/* Owner directive 2026-11-03 · "the community page profile
+              image is not loaded in header profile circle and the
+              ping should always be green color". Pass the Ireland
+              Community badge into the ping-badge primitive · pass
+              NEX sealed presence-online green (#16D66B) as the
+              accent so the pulsing halo + ring always read as green
+              on every Community surface. */}
+          <NexPageHeader
+            dataScope="community-select"
+            brandAvatarUrl="/nex-community/ireland-badge.png"
+            brandAccent="#16D66B"
+          />
 
           <header style={{ textAlign: "center", margin: "28px 0 24px" }}>
             <h1
