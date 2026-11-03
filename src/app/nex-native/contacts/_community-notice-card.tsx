@@ -65,8 +65,13 @@ const NEX = {
 // When the viewer has a confirmed membership, we show their REAL zone
 // name (district level · city). When they do NOT, we render a "join
 // your community" CTA linking to /nex-native/community/select.
-const DEFAULT_LOCATION = "Yogyakarta"; // fallback only · never surfaced to a logged-in no-membership user
-const DEFAULT_MEMBER_COUNT_LABEL = "1,248 members"; // mock until nex_community_membership count query ships
+// Owner directive 2026-11-03 · "we don't need Indonesia · we are
+// working on Ireland". NEX Ireland is the active product · defaults
+// reflect that. These fallbacks only render if someone with a
+// membership has somehow lost their district zone data · in the
+// common path the server-resolved zoneName is used.
+const DEFAULT_LOCATION = "Ireland";
+const DEFAULT_MEMBER_COUNT_LABEL = "Local noticeboard"; // honest · member-count query ships separately
 
 const MUTE_STORAGE_KEY = "nex-community-notice-muted-v1";
 const UNREAD_MOCK_COUNT = 7; // mock-only · real count = unread posts since last visit
@@ -172,17 +177,27 @@ export function CommunityNoticeCard({
             boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
           }}
         >
-          <span
+          {/* Owner directive 2026-11-03 · "this is the community group
+              profile image for community groups" · owner-supplied badge
+              at /public/nex-community/ireland-badge.png. Rendered as
+              object-fit: cover so it fills the circular rim cleanly.
+              width + height set explicitly so Next.js doesn't CLS the
+              row during initial paint (sealed engineering standard).
+              loading=lazy + decoding=async consistent with ContactRow. */}
+          <img
+            src="/nex-community/ireland-badge.png"
+            alt=""
+            width={AVATAR_SIZE}
+            height={AVATAR_SIZE}
+            loading="lazy"
+            decoding="async"
             style={{
-              color: "#FFF",
-              fontSize: 15,
-              fontWeight: 900,
-              letterSpacing: "0.04em",
-              textShadow: "0 1px 3px rgba(0,0,0,0.6)",
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
             }}
-          >
-            CN
-          </span>
+          />
         </div>
 
         {/* Unread badge · top-right of avatar · matches ContactRow pattern

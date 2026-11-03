@@ -5,6 +5,11 @@
 
 import { redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// Owner directive 2026-11-03 · dev-impersonation parity with
+// contacts/page.tsx so NEX_DEV_IMPERSONATE_HANDLE sessions can see the
+// zone picker during local build-verification. Falls through to the
+// real session resolver when no dev override is active.
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { getMembershipForAccount } from "@/lib/nex-native/community/membership-service";
 import { suggestZonesForOnboarding } from "@/lib/nex-native/community/zone-service";
 import { NexPageHeader } from "../../_page-header";
@@ -19,7 +24,7 @@ interface PageProps {
 }
 
 export default async function SelectZonePage({ searchParams }: PageProps) {
-  const session = await resolveNexAppSessionFromContext();
+  const session = await resolveSessionWithDevOverride();
   if (!session) redirect("/nex-native/sign-in");
 
   const [existing, zones] = await Promise.all([

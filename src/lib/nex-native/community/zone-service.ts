@@ -88,6 +88,13 @@ export async function getAncestorChain(
 export async function resolveDistrictFor(
   hyperlocalZone: NexCommunityZoneRow,
 ): Promise<NexCommunityZoneRow> {
+  // Owner directive 2026-11-03 (NEX Ireland) · for Ireland, the user
+  // picks a county (level='city') and the county IS the natural
+  // district · don't walk up to province (would show "Leinster" when
+  // the user actually joined "Dublin"). Return hyperlocal unchanged.
+  if (hyperlocalZone.country === "IE" && hyperlocalZone.level === "city") {
+    return hyperlocalZone;
+  }
   if (hyperlocalZone.level === "kecamatan") return hyperlocalZone;
   if (hyperlocalZone.country !== "ID") {
     // Walk until we find a non-country ancestor (province/city/etc.).
@@ -100,25 +107,28 @@ export async function resolveDistrictFor(
   return kecamatan ?? hyperlocalZone;
 }
 
-/** Suggest an initial zone set during onboarding. For Phase 1 we return
- *  the kecamatan-level zones under Kota Yogyakarta. Future revisions
- *  can take a geoip hint or an account country prefix. */
+/** Suggest an initial zone set during onboarding.
+ *
+ *  Owner directive 2026-11-03 · "we don't need Indonesia · we are
+ *  working on Ireland". NEX Ireland is the active product · return
+ *  the 26 Republic of Ireland counties seeded by migration 266 as
+ *  the pickable zone set. The counties live at level='city' under
+ *  the four provinces, so we list all level='city' zones for
+ *  country='IE'. */
 export async function suggestZonesForOnboarding(): Promise<
   NexCommunityZoneRow[]
 > {
-  const { data: city, error: cityErr } = await nexSupabaseAdmin
+  const { data, error } = await nexSupabaseAdmin
     .from("nex_community_zone")
-    .select("id")
-    .eq("country", "ID")
+    .select("*")
+    .eq("country", "IE")
     .eq("level", "city")
-    .eq("slug", "kota-yogyakarta")
     .is("archived_at", null)
-    .maybeSingle();
-  if (cityErr) {
+    .order("name", { ascending: true });
+  if (error) {
     throw new Error(
-      `community-zone-service.suggestZonesForOnboarding · ${cityErr.message}`,
+      `community-zone-service.suggestZonesForOnboarding · ${error.message}`,
     );
   }
-  if (!city) return [];
-  return listChildren(city.id as NexUuid, "kecamatan");
+  return (data as NexCommunityZoneRow[]) ?? [];
 }
