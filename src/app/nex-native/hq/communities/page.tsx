@@ -27,7 +27,11 @@ import {
   reviewMemberFlagAction,
   hqCreateCommunityAction,
   hqDeleteCommunityAction,
+  hqApprovePendingAreaAction,
+  hqRejectPendingAreaAction,
+  hqMergePendingAreaAction,
 } from "../../community/_actions";
+import { listPendingAreas, listAreasForCounty } from "@/lib/nex-native/community/zone-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -58,6 +62,35 @@ export default async function HqCommunitiesPage() {
   // Pending flag count · the owner's "pill notification"
   const pendingFlagCount = await countPendingFlags();
   const pendingFlags = await listPendingFlags();
+
+  // Pending user-created communities · owner-authorised 2026-11-03 (D3b)
+  // The queue drains FIFO by created_at ascending.
+  const pendingAreas = await listPendingAreas("IE");
+  const resolvedPending = await Promise.all(
+    pendingAreas.map(async (zone) => {
+      const [creator, parent] = await Promise.all([
+        zone.created_by_account_id
+          ? getAccountById(zone.created_by_account_id).catch(() => null)
+          : Promise.resolve(null),
+        zone.parent_zone_id
+          ? (async () => {
+              const { data } = await nexSupabaseAdmin
+                .from("nex_community_zone")
+                .select("id, name")
+                .eq("id", zone.parent_zone_id)
+                .maybeSingle();
+              return data as { id: string; name: string } | null;
+            })()
+          : Promise.resolve(null),
+      ]);
+      const mergeTargets = parent
+        ? (await listAreasForCounty(parent.id)).filter(
+            (a) => a.id !== zone.id && a.moderation_status === "approved",
+          )
+        : [];
+      return { zone, creator, parent, mergeTargets };
+    }),
+  );
 
   // Resolve flag details · zone names + both parties' accounts
   const resolvedFlags = await Promise.all(
@@ -322,6 +355,189 @@ export default async function HqCommunitiesPage() {
                           ✗ Dismiss
                         </button>
                       </form>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {/* Pending user-created communities · owner-authorised 2026-11-03 (D3b)
+              Each row has three actions:
+                · Approve  → flips moderation_status to 'approved'
+                · Reject   → hard-deletes zone + creator's membership
+                · Merge    → moves creator's membership to picked existing
+                              approved area, then hard-deletes the pending zone */}
+          <section
+            style={{
+              marginBottom: 32,
+              padding: 20,
+              borderRadius: 16,
+              background: IRELAND.panel,
+              border: `1px solid ${IRELAND.borderSoft}`,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: 16,
+                  fontWeight: 800,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  color: IRELAND.secondary,
+                }}
+              >
+                Pending user-created
+              </h2>
+              {resolvedPending.length > 0 ? (
+                <span
+                  aria-label={`${resolvedPending.length} pending communities`}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minWidth: 24,
+                    height: 24,
+                    padding: "0 8px",
+                    borderRadius: 999,
+                    background: IRELAND.pill,
+                    color: "#FFF",
+                    fontSize: 12,
+                    fontWeight: 800,
+                  }}
+                >
+                  {resolvedPending.length}
+                </span>
+              ) : null}
+            </div>
+
+            {resolvedPending.length === 0 ? (
+              <p style={{ margin: 0, fontSize: 13, color: IRELAND.textMuted, opacity: 0.85 }}>
+                No pending community submissions right now.
+              </p>
+            ) : (
+              <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+                {resolvedPending.map(({ zone, creator, parent, mergeTargets }) => (
+                  <li
+                    key={zone.id}
+                    style={{
+                      padding: 14,
+                      borderRadius: 10,
+                      background: "rgba(10,31,21,0.35)",
+                      border: `1px solid ${IRELAND.borderSoft}`,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+                      <strong style={{ fontSize: 15, color: IRELAND.textPrimary }}>
+                        {zone.name}
+                      </strong>
+                      {parent ? (
+                        <span style={{ fontSize: 11, color: IRELAND.textMuted }}>
+                          · in {parent.name}
+                        </span>
+                      ) : null}
+                      {creator ? (
+                        <span style={{ fontSize: 11, color: IRELAND.primaryInk }}>
+                          · submitted by {creator.display_name}
+                          {creator.nex_handle ? ` (${creator.nex_handle})` : ""}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                      {/* Approve */}
+                      <form action={hqApprovePendingAreaAction} style={{ display: "inline-flex" }}>
+                        <input type="hidden" name="pending_zone_id" value={zone.id} />
+                        <button
+                          type="submit"
+                          style={{
+                            padding: "6px 14px",
+                            borderRadius: 999,
+                            background: "#16D66B",
+                            color: "#0A1F15",
+                            border: "none",
+                            fontSize: 12,
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            letterSpacing: "0.04em",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          ✓ Approve
+                        </button>
+                      </form>
+
+                      {/* Reject */}
+                      <form action={hqRejectPendingAreaAction} style={{ display: "inline-flex" }}>
+                        <input type="hidden" name="pending_zone_id" value={zone.id} />
+                        <button
+                          type="submit"
+                          style={{
+                            padding: "6px 14px",
+                            borderRadius: 999,
+                            background: "transparent",
+                            color: IRELAND.danger,
+                            border: `1.5px solid ${IRELAND.danger}66`,
+                            fontSize: 12,
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            letterSpacing: "0.04em",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          ✗ Reject
+                        </button>
+                      </form>
+
+                      {/* Merge · inline target picker · only if there are
+                          existing approved siblings to merge into */}
+                      {mergeTargets.length > 0 ? (
+                        <form
+                          action={hqMergePendingAreaAction}
+                          style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+                        >
+                          <input type="hidden" name="pending_zone_id" value={zone.id} />
+                          <select
+                            name="target_zone_id"
+                            required
+                            defaultValue=""
+                            style={{
+                              padding: "6px 10px",
+                              borderRadius: 8,
+                              background: "rgba(0,0,0,0.25)",
+                              color: IRELAND.textPrimary,
+                              border: `1px solid ${IRELAND.borderSoft}`,
+                              fontSize: 12,
+                              outline: "none",
+                            }}
+                          >
+                            <option value="" disabled>Merge into…</option>
+                            {mergeTargets.map((t) => (
+                              <option key={t.id} value={t.id} style={{ color: "#000" }}>
+                                {t.name}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="submit"
+                            style={{
+                              padding: "6px 12px",
+                              borderRadius: 999,
+                              background: "transparent",
+                              color: IRELAND.secondary,
+                              border: `1.5px solid ${IRELAND.secondary}66`,
+                              fontSize: 12,
+                              fontWeight: 800,
+                              cursor: "pointer",
+                              letterSpacing: "0.04em",
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            ⇆ Merge
+                          </button>
+                        </form>
+                      ) : null}
                     </div>
                   </li>
                 ))}

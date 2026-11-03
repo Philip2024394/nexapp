@@ -221,6 +221,12 @@ import {
   reviewFlag,
 } from "@/lib/nex-native/community/member-service";
 import { requireHqAdmin, HqAuthorizationError } from "@/lib/nex-native/hq-authorization";
+import {
+  createPendingArea,
+  approvePendingArea,
+  rejectPendingArea,
+  mergePendingArea,
+} from "@/lib/nex-native/community/zone-service";
 
 export async function addContactToCommunityAction(formData: FormData): Promise<void> {
   const accountId = await requireAccountId();
@@ -410,4 +416,113 @@ export async function hqCreateCommunityAction(formData: FormData): Promise<void>
   }
   revalidatePath("/nex-native/hq/communities");
   redirect(`/nex-native/hq/communities?m=community_created`);
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// User-created community moderation surface · migration 270.
+// Owner-authorised 2026-11-03 (D3b flow).
+// ─────────────────────────────────────────────────────────────────────
+
+/** User submits a new community name under their county.
+ *  Auto-joins the submitter so they can post straight away ·
+ *  the row is 'pending' until HQ approves/rejects/merges. */
+export async function createUserCommunityAction(formData: FormData): Promise<void> {
+  const accountId = await requireAccountId();
+  const countyZoneId = String(formData.get("county_zone_id") ?? "").trim();
+  const rawName = String(formData.get("name") ?? "").trim();
+
+  if (!countyZoneId || !rawName) {
+    redirect(toBanner("create", { county: countyZoneId, e: "bad_input" }));
+  }
+
+  const result = await createPendingArea({
+    countyZoneId,
+    creatorAccountId: accountId,
+    rawName,
+  });
+
+  if (!result.ok) {
+    redirect(toBanner("create", { county: countyZoneId, e: result.kind }));
+  }
+
+  // Auto-join the creator to their new pending community so they can
+  // post immediately · they still have their county membership too.
+  try {
+    await confirmMembership({
+      accountId,
+      hyperlocalZoneId: result.zone.id,
+      notificationPreference: "all",
+    });
+  } catch (err) {
+    // Non-fatal · the zone exists · user can join from discover.
+    console.warn(
+      `[create-community] auto-join failed · ${err instanceof Error ? err.message : "unknown"}`,
+    );
+  }
+
+  revalidatePath("/nex-native/community/discover");
+  revalidatePath("/nex-native/hq/communities");
+  redirect("/nex-native/community/discover?m=submitted_for_review");
+}
+
+export async function hqApprovePendingAreaAction(formData: FormData): Promise<void> {
+  const accountId = await requireAccountId();
+  try {
+    await requireHqAdmin(accountId);
+  } catch (err) {
+    if (err instanceof HqAuthorizationError) redirect("/nex-native?e=not_hq");
+    throw err;
+  }
+  const pendingZoneId = String(formData.get("pending_zone_id") ?? "").trim();
+  if (!pendingZoneId) redirect("/nex-native/hq/communities?e=bad_input");
+
+  const result = await approvePendingArea(pendingZoneId);
+  if (!result.ok) {
+    redirect(`/nex-native/hq/communities?e=approve_failed`);
+  }
+  revalidatePath("/nex-native/hq/communities");
+  redirect("/nex-native/hq/communities?m=community_approved");
+}
+
+export async function hqRejectPendingAreaAction(formData: FormData): Promise<void> {
+  const accountId = await requireAccountId();
+  try {
+    await requireHqAdmin(accountId);
+  } catch (err) {
+    if (err instanceof HqAuthorizationError) redirect("/nex-native?e=not_hq");
+    throw err;
+  }
+  const pendingZoneId = String(formData.get("pending_zone_id") ?? "").trim();
+  // Reason is captured but currently only logged · the user's creator
+  // membership on this pending zone is removed by rejectPendingArea.
+  if (!pendingZoneId) redirect("/nex-native/hq/communities?e=bad_input");
+
+  const result = await rejectPendingArea(pendingZoneId);
+  if (!result.ok) {
+    redirect(`/nex-native/hq/communities?e=reject_failed`);
+  }
+  revalidatePath("/nex-native/hq/communities");
+  redirect("/nex-native/hq/communities?m=community_rejected");
+}
+
+export async function hqMergePendingAreaAction(formData: FormData): Promise<void> {
+  const accountId = await requireAccountId();
+  try {
+    await requireHqAdmin(accountId);
+  } catch (err) {
+    if (err instanceof HqAuthorizationError) redirect("/nex-native?e=not_hq");
+    throw err;
+  }
+  const pendingZoneId = String(formData.get("pending_zone_id") ?? "").trim();
+  const targetZoneId = String(formData.get("target_zone_id") ?? "").trim();
+  if (!pendingZoneId || !targetZoneId) {
+    redirect("/nex-native/hq/communities?e=bad_input");
+  }
+
+  const result = await mergePendingArea({ pendingZoneId, targetZoneId });
+  if (!result.ok) {
+    redirect(`/nex-native/hq/communities?e=merge_failed`);
+  }
+  revalidatePath("/nex-native/hq/communities");
+  redirect("/nex-native/hq/communities?m=community_merged");
 }

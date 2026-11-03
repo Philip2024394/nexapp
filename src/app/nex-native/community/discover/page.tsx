@@ -12,6 +12,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
+import { getMembershipForAccount } from "@/lib/nex-native/community/membership-service";
+import { getZoneById, listAreasForCounty } from "@/lib/nex-native/community/zone-service";
 import { NexPageHeader } from "../../_page-header";
 import { DiscoverCommunitiesClient } from "./_discover-client";
 
@@ -66,6 +68,30 @@ export default async function DiscoverCommunitiesPage() {
     };
   });
 
+  // Owner directive 2026-11-03 (D3b) · if the user already has a
+  // county membership, drill one level deeper and list the local
+  // communities (level='neighbourhood') seeded under that county plus
+  // any pending user-submitted ones. Includes a "Create your
+  // community" link when the user doesn't recognise any of the seeded
+  // names. New users without a membership still see the county browser
+  // below so nothing regresses.
+  const myMembership = await getMembershipForAccount(session.account.id);
+  const myCountyZone = myMembership
+    ? await getZoneById(myMembership.hyperlocal_zone_id)
+    : null;
+  const isCountyLevel =
+    myCountyZone?.level === "city" && myCountyZone.country === "IE";
+  const localAreas = isCountyLevel && myCountyZone
+    ? await listAreasForCounty(myCountyZone.id)
+    : [];
+  const localAreasForClient = localAreas.map((z) => ({
+    id: z.id,
+    name: z.name,
+    moderationStatus: z.moderation_status,
+    memberCount: countsByZone.get(z.id) ?? 0,
+    isMember: myZones.has(z.id),
+  }));
+
   return (
     <>
       <style>{`html,body{background:${IRELAND.drawerBg} !important;}`}</style>
@@ -112,6 +138,155 @@ export default async function DiscoverCommunitiesPage() {
               see local notices and share with your neighbours.
             </p>
           </header>
+
+          {isCountyLevel && myCountyZone ? (
+            <section
+              aria-label={`Local communities in ${myCountyZone.name}`}
+              style={{
+                marginBottom: 28,
+                padding: 20,
+                borderRadius: 16,
+                background: IRELAND.panel,
+                border: `1.5px solid ${IRELAND.borderSoft}`,
+              }}
+            >
+              <h2
+                style={{
+                  margin: "0 0 12px",
+                  fontSize: 13,
+                  fontWeight: 800,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: IRELAND.secondary,
+                }}
+              >
+                Your local area · {myCountyZone.name}
+              </h2>
+
+              {localAreasForClient.length === 0 ? (
+                <p
+                  style={{
+                    margin: "0 0 16px",
+                    fontSize: 13,
+                    color: IRELAND.primaryInk,
+                    opacity: 0.85,
+                    lineHeight: 1.55,
+                  }}
+                >
+                  No local communities seeded yet for {myCountyZone.name}. You
+                  can create the first one.
+                </p>
+              ) : (
+                <ul
+                  style={{
+                    listStyle: "none",
+                    margin: "0 0 16px",
+                    padding: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                  }}
+                >
+                  {localAreasForClient.map((a) => (
+                    <li
+                      key={a.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "10px 12px",
+                        borderRadius: 10,
+                        background: "rgba(10,31,21,0.35)",
+                        border: `1px solid ${IRELAND.borderSoft}`,
+                      }}
+                    >
+                      <span
+                        style={{
+                          flex: 1,
+                          fontSize: 14,
+                          fontWeight: 700,
+                          color: IRELAND.textPrimary,
+                        }}
+                      >
+                        {a.name}
+                        {a.moderationStatus === "pending" ? (
+                          <span
+                            style={{
+                              marginLeft: 8,
+                              fontSize: 10,
+                              fontWeight: 800,
+                              letterSpacing: "0.08em",
+                              textTransform: "uppercase",
+                              color: "#FFB020",
+                            }}
+                          >
+                            · pending approval
+                          </span>
+                        ) : null}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: IRELAND.textMuted,
+                        }}
+                      >
+                        {a.memberCount} member{a.memberCount === 1 ? "" : "s"}
+                      </span>
+                      {a.isMember ? (
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 800,
+                            color: "#16D66B",
+                            letterSpacing: "0.08em",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          joined
+                        </span>
+                      ) : (
+                        <Link
+                          href={`/nex-native/community/discover?join=${a.id}`}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: 999,
+                            background: IRELAND.secondary,
+                            color: IRELAND.drawerBg,
+                            textDecoration: "none",
+                            fontSize: 11,
+                            fontWeight: 800,
+                            letterSpacing: "0.04em",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          Join
+                        </Link>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <Link
+                href={`/nex-native/community/create?county=${myCountyZone.id}`}
+                style={{
+                  display: "block",
+                  padding: "12px 16px",
+                  borderRadius: 999,
+                  background: "transparent",
+                  border: `1.5px dashed ${IRELAND.secondary}`,
+                  color: IRELAND.secondary,
+                  textDecoration: "none",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  textAlign: "center",
+                  letterSpacing: "0.02em",
+                }}
+              >
+                Can't see yours? Create your community →
+              </Link>
+            </section>
+          ) : null}
 
           <DiscoverCommunitiesClient communities={communities} />
 
