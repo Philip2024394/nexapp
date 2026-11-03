@@ -76,6 +76,7 @@ import { ContactRow } from "./_contact-row";
 import Link from "next/link";
 import { ContactsPlusDrawer } from "./_contacts-plus-drawer";
 import { ContactsLiveWorldTrigger } from "./_contacts-live-world-trigger";
+import { CommunityNoticeCard } from "./_community-notice-card";
 // Owner directive 2026-11-03 · "can i see some mock contact cards on
 // our new contacts page" · when running outside production AND the
 // signed-in user has no real friends, swap in the full prototype mock
@@ -704,14 +705,43 @@ export default async function ContactsPage({ searchParams }: PageProps) {
         </div>
       ) : null}
 
+      {/* ===== Groups tab · Community Notice card =====
+            Owner directive 2026-11-03 · "we need the community card on
+            the groups page and fully connected like we had on nex world
+            and the rules for people and etc". The CommunityNoticeCard
+            is the fully-built sealed Community Notice primitive · mute
+            toggle · unread badge · href to /nex-native/community/chat.
+            Sealed rules (2026-10-23) enforced inside the component +
+            service layer: no self-leave · flagger identity private ·
+            no "2km"/"nearby" copy exposure · author press-and-hold-5s
+            delete · tap-to-flag · address-change moves user. */}
+      {activeFilter === "groups" ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <CommunityNoticeCard />
+          <div
+            style={{
+              padding: "16px 14px",
+              textAlign: "center",
+              color: "var(--nex-world-primary-ink, #AFC5B5)",
+              opacity: 0.7,
+              fontSize: 12,
+              lineHeight: 1.5,
+            }}
+          >
+            More groups are on the way. Group chats and collaborative
+            spaces will land here when they ship.
+          </div>
+        </div>
+      ) : null}
+
       {/* ===== Contact rows · sealed component · Gold applied via scoped
             CSS override above =====
-            P1 engineering pass 2026-11-03 · Groups and Dating render
-            honest "coming soon" copy. All other filters keep the
-            one-line empty-state copy. No invented buttons or dead
-            affordances. */}
+            P1 engineering pass 2026-11-03 · Dating renders honest
+            "coming soon" copy. All other filters keep the one-line
+            empty-state copy. Groups is handled by the dedicated
+            Community-card block above. */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {visibleRows.length === 0 ? (
+        {visibleRows.length === 0 && activeFilter !== "groups" ? (
           <div
             style={{
               padding: "32px 14px",
@@ -722,17 +752,7 @@ export default async function ContactsPage({ searchParams }: PageProps) {
               lineHeight: 1.5,
             }}
           >
-            {activeFilter === "groups" ? (
-              <>
-                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
-                  Groups are on the way.
-                </div>
-                <div style={{ opacity: 0.75 }}>
-                  Group chats, shared boards and collaborative spaces will
-                  land here when they ship.
-                </div>
-              </>
-            ) : activeFilter === "dating" ? (
+            {activeFilter === "dating" ? (
               <>
                 <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
                   Dating is on the way.

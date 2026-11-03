@@ -2,65 +2,80 @@
 
 // src/app/nex-native/contacts/_community-notice-card.tsx
 //
-// Owner directive 2026-10-23 · the Community card in the Groups tab
-// is renamed to "Community Notice" and carries a mute toggle in the
-// top-right. The full sealed spec (locked over the design conversation
-// 2026-10-23):
+// Owner directive 2026-11-03 · "design the card like it was family
+// design of the contacts card design style". The Community Notice card
+// now mirrors the sealed `_contact-row.tsx` chrome:
 //
-//   · Name            · Community Notice
-//   · Membership      · auto-assigned by address · 2km radius
-//                       · address change moves the user
-//   · Toggle          · default ON · OFF = muted
-//   · Muted state     · badge HIDDEN (respects the mute) · tap-to-open
-//                       blocked · re-enable required
-//   · Active state    · red unread counter · tap opens group chat
-//   · Re-enable       · "Welcome back · N posts since you muted" marker
-//   · Self-leave      · impossible · address change / full account
-//                       deletion are the exits
+//   · Same 60px avatar on the far-left with Gold rim + gradient fill
+//   · Same card dimensions: minHeight 90 · padding 12/14 · gap 12 ·
+//     border-radius 12 · border 1.5px Gold · drawer-bg background
+//     (overridden to Forest green by the scoped CSS in page.tsx when
+//     the card renders inside `[data-nex-contacts-root]`)
+//   · Same 3-row identity text column: name · one-line descriptor ·
+//     location + last-active
+//   · Same unread badge pattern: top-right of avatar · 18px red pill ·
+//     hidden when muted (sealed 2026-10-23 rule)
+//   · Mute toggle sits in the right-side action column where ContactRow
+//     renders the shop marker · stopPropagation so clicking the toggle
+//     does NOT trigger the card's navigation
 //
-// This component wraps the sealed `GroupCard` chrome · the toggle +
-// badge sit as absolute-positioned overlays. Mute state persists in
-// localStorage so refresh preserves it. When the real nex_community_
-// membership.notification_preference column lands, swap the
-// localStorage read/write for server actions · the UI stays.
+// Preserved from the 2026-10-23 sealed Community Notice spec:
+//   · Toggle default ON · OFF = muted
+//   · Muted state · badge HIDDEN · tap-to-open blocked (card renders
+//     as a <div> not <Link>) · re-enable required
+//   · Active state · red unread counter · tap opens /community/chat
+//   · Mute state persists in localStorage until the real
+//     nex_community_membership.notification_preference column lands
+//     (migration 149 · DRAFT · not applied)
+//   · Self-leave impossible · no "Leave" button
+//   · Flagger identity private · owned by the service layer not the UI
+//   · Location copy shows ONLY the general area name (sealed security
+//     rule: no "2km" · no "radius" · no "auto-assigned" · no "near you")
 
 import * as React from "react";
-import { GroupCard } from "./_group-card";
-import type { MockGroup } from "./_mock-groups";
+import Link from "next/link";
 
-// Owner directive 2026-10-23 · "remove the auto assign and the 2km
-// dont tell them · location area example jogja · we dont want people
-// to know the location they've been added into · so naughty robbers
-// don't have system to monitor". Security-by-obscurity on the
-// user-facing surface · the mechanism (address-anchored 2km radius)
-// remains in the SEALED doctrine memory + the service layer, but
-// NO user-facing copy exposes "2km", "radius", or "auto-assigned".
-// Users see only the general area name (city/kabupaten level), not
-// the technical rule. Prevents reconnaissance by bad actors.
-const COMMUNITY_GROUP: MockGroup = {
-  id: "nex-community-notice",
+// ─── Visual constants matched to _contact-row.tsx ──────────────────────
+const AVATAR_SIZE = 60;
+const CARD_PADDING_Y = 12;
+const CARD_PADDING_X = 14;
+const CARD_GAP = 12;
+const CARD_MIN_HEIGHT = 90;
+
+const NEX = {
+  text: "#F2F5F8",
+  textMute: "var(--nex-world-text-muted, #7D9BC0)",
+  unreadRed: "#B30000",
+  // Toggle active colour · falls back to brand cyan but on Ireland
+  // resolves to Gold via --nex-world-secondary.
+  toggleActive: "var(--nex-world-secondary, #00AFFF)",
+  // Card accent · Gold on Ireland · same as ContactRow accentHex.
+  accentHex: "var(--nex-world-secondary, #C6A15B)",
+};
+
+// Owner directive 2026-10-23 · "we don't want people to know the
+// location they've been added into so naughty robbers don't have system
+// to monitor". Security-by-obscurity on the USER-FACING surface. The
+// mechanism (address-anchored 2km radius) stays in the sealed doctrine
+// + the service layer. No user-facing copy exposes "2km" · "radius" ·
+// "auto-assigned" · or "near you". City/kabupaten-level name only.
+const COMMUNITY_GROUP = {
   name: "Community Notice",
   location: "Yogyakarta",
-  memberCount: 1248,
-  members: [
-    { id: "c1", initials: "OR" },
-    { id: "c2", initials: "MD" },
-    { id: "c3", initials: "PP" },
-    { id: "c4", initials: "JO" },
-  ],
-  minutesSinceLastPost: 12, // 12m ago
+  memberCountLabel: "1,248 members",
+  minutesSinceLastPost: 12,
 };
 
 const MUTE_STORAGE_KEY = "nex-community-notice-muted-v1";
-const UNREAD_MOCK_COUNT = 7; // mock-only · real count comes from server
+const UNREAD_MOCK_COUNT = 7; // mock-only · real count comes from server once migration 146 applies
 
-const NEX = {
-  cyan: "var(--nex-world-secondary, #00AFFF)",
-  text: "#F2F5F8",
-  textMute: "#7D9BC0",
-  unreadRed: "#B30000",
-  bgNavy: "var(--nex-world-drawer-bg, #050F1E)",
-};
+function formatLastActive(mins: number): string {
+  if (mins < 60) return `Active ${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `Active ${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `Active ${days}d`;
+}
 
 export function CommunityNoticeCard(): React.ReactElement {
   const [muted, setMuted] = React.useState<boolean | null>(null);
@@ -74,125 +89,322 @@ export function CommunityNoticeCard(): React.ReactElement {
     }
   }, []);
 
-  const handleToggle = React.useCallback((e: React.MouseEvent | React.PointerEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setMuted((prev) => {
-      const next = !(prev ?? false);
-      try {
-        window.localStorage.setItem(MUTE_STORAGE_KEY, next ? "1" : "0");
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
-  }, []);
+  const handleToggle = React.useCallback(
+    (e: React.MouseEvent | React.PointerEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setMuted((prev) => {
+        const next = !(prev ?? false);
+        try {
+          window.localStorage.setItem(MUTE_STORAGE_KEY, next ? "1" : "0");
+        } catch {
+          /* ignore */
+        }
+        return next;
+      });
+    },
+    [],
+  );
 
-  // SSR + first hydration · render as active default (ON · unmuted).
-  // After the mount useEffect loads from localStorage, state updates.
+  // SSR + first hydration · render as active (ON · unmuted) default.
+  // After mount useEffect loads from localStorage.
   const isMuted = muted === true;
   const showBadge = !isMuted && UNREAD_MOCK_COUNT > 0;
+  const lastActiveLabel = formatLastActive(COMMUNITY_GROUP.minutesSinceLastPost);
 
-  return (
-    <div style={{ position: "relative" }}>
-      <GroupCard
-        group={COMMUNITY_GROUP}
-        // When muted the card is NOT a tappable link · entry is
-        // blocked. User must flip the toggle back ON to re-enter.
-        href={isMuted ? undefined : "/nex-native/community/chat"}
-        accent="cyan"
-      />
-
-      {/* Unread badge · owner directive 2026-10-23 revised again ·
-          "move to top rim area" · badge now sits on the chip's
-          TOP-LEFT rim (symmetric to the bottom-left previously ·
-          clear of the name column at left:70+). Chip (48×48 at
-          left:12, top:-24) top-left corner is (left:12, top:-24) ·
-          badge 22-wide · offset by -6/-6 lands it at (left:6,
-          top:-30) sticking 6px past the chip's top-left corner.
-          Only visible when NOT muted · hidden by the mute rule. */}
-      {showBadge ? (
-        <div
-          aria-label={`${UNREAD_MOCK_COUNT} unread community posts`}
-          data-nex-community-notice-unread-badge
-          style={{
-            position: "absolute",
-            // Owner directive 2026-10-23 · nudged down thrice (−5px each) ·
-            // top −30 → −25 → −20 → −15. Then nudged left 5px · left
-            // 6 → 1 so the badge sits closer to the card's left edge.
-            top: -15,
-            left: 1,
-            minWidth: 22,
-            height: 22,
-            padding: "0 6px",
-            borderRadius: 999,
-            background: NEX.unreadRed,
-            border: `2px solid ${NEX.bgNavy}`,
-            color: "#FFF",
-            fontSize: 11,
-            fontWeight: 900,
-            lineHeight: 1,
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: `0 2px 6px ${NEX.unreadRed}99`,
-            zIndex: 3,
-            pointerEvents: "none",
-          }}
-        >
-          {UNREAD_MOCK_COUNT > 99 ? "99+" : UNREAD_MOCK_COUNT}
-        </div>
-      ) : null}
-
-      {/* Mute toggle · top-right · stopPropagation so clicking the
-          switch doesn't fire the GroupCard's own Link navigation. */}
-      <button
-        type="button"
-        onClick={handleToggle}
-        onPointerDown={(e) => e.stopPropagation()}
-        aria-pressed={!isMuted}
-        aria-label={isMuted ? "Unmute Community Notice" : "Mute Community Notice"}
-        data-nex-community-notice-toggle
-        data-nex-community-notice-muted={isMuted ? "true" : "false"}
+  // ─── Shared card contents · identical to ContactRow structure ──────
+  const cardContents = (
+    <>
+      {/* ===== AVATAR · far-left · vertically centred · same 60px as ContactRow ===== */}
+      <div
+        aria-hidden
+        data-nex-contacts-row-chip
         style={{
-          position: "absolute",
-          top: 8,
-          right: 8,
-          width: 44,
-          height: 24,
-          padding: "2px",
-          borderRadius: 999,
-          // Owner directive 2026-10-23 · "mute group must show toggle
-          // red" · muted-state track flips to NEX unreadRed so it reads
-          // as an explicit "notifications off" signal · cyan for the
-          // live/active state keeps the brand palette.
-          background: isMuted ? NEX.unreadRed : NEX.cyan,
-          border: `1px solid ${isMuted ? NEX.unreadRed : NEX.cyan}`,
-          cursor: "pointer",
-          display: "inline-flex",
-          alignItems: "center",
-          transition: "background 180ms ease, border-color 180ms ease",
-          zIndex: 4,
-          WebkitTapHighlightColor: "transparent",
-          boxShadow: isMuted
-            ? `0 2px 6px ${NEX.unreadRed}66`
-            : `0 2px 6px ${NEX.cyan}55`,
+          position: "relative",
+          width: AVATAR_SIZE,
+          height: AVATAR_SIZE,
+          flexShrink: 0,
         }}
       >
-        <span
-          aria-hidden
+        <div
           style={{
-            display: "block",
-            width: 18,
-            height: 18,
+            position: "absolute",
+            inset: 0,
             borderRadius: "50%",
-            background: "#FFF",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.35)",
-            transform: isMuted ? "translateX(0)" : "translateX(20px)",
-            transition: "transform 180ms ease",
+            border: `2px solid ${NEX.accentHex}`,
+            overflow: "hidden",
+            background: `linear-gradient(135deg, var(--nex-world-secondary, #C6A15B)cc 0%, var(--nex-world-drawer-bg, #180012) 65%, var(--nex-world-drawer-bg, #050F1E) 100%)`,
+            display: "grid",
+            placeItems: "center",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
           }}
-        />
-      </button>
-    </div>
+        >
+          <span
+            style={{
+              color: "#FFF",
+              fontSize: 15,
+              fontWeight: 900,
+              letterSpacing: "0.04em",
+              textShadow: "0 1px 3px rgba(0,0,0,0.6)",
+            }}
+          >
+            CN
+          </span>
+        </div>
+
+        {/* Unread badge · top-right of avatar · matches ContactRow pattern
+            exactly · hidden when muted per sealed 2026-10-23 rule. */}
+        {showBadge ? (
+          <div
+            aria-label={`${UNREAD_MOCK_COUNT} unread community posts`}
+            data-nex-community-notice-unread-badge
+            style={{
+              position: "absolute",
+              top: -4,
+              right: -4,
+              minWidth: 18,
+              height: 18,
+              padding: "0 5px",
+              borderRadius: 999,
+              background: NEX.unreadRed,
+              border: `2px solid var(--nex-world-drawer-bg, #050F1E)`,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 10,
+              color: "#FFFFFF",
+              fontWeight: 900,
+              lineHeight: 1,
+              boxShadow: `0 2px 6px ${NEX.unreadRed}99`,
+            }}
+          >
+            {UNREAD_MOCK_COUNT > 99 ? "99+" : UNREAD_MOCK_COUNT}
+          </div>
+        ) : null}
+      </div>
+
+      {/* ===== IDENTITY TEXT · 3-row structure matching ContactRow ===== */}
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          maxWidth: "100%",
+          boxSizing: "border-box",
+          display: "flex",
+          flexDirection: "column",
+          gap: 3,
+        }}
+      >
+        {/* Row 1 · Name · orange text matches ContactRow name slot. */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            minWidth: 0,
+          }}
+        >
+          <span
+            data-nex-contacts-row-name
+            style={{
+              fontSize: 15,
+              fontWeight: 800,
+              lineHeight: 1.2,
+              color: "#F5A623",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              minWidth: 0,
+            }}
+          >
+            {COMMUNITY_GROUP.name}
+          </span>
+        </div>
+
+        {/* Row 2 · One-line descriptor (member count) · profession slot. */}
+        <div
+          data-nex-contacts-row-profession
+          style={{
+            fontSize: 11,
+            color: NEX.textMute,
+            lineHeight: 1.2,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {COMMUNITY_GROUP.memberCountLabel}
+        </div>
+
+        {/* Row 3 · Location (left) + last-active (right) · same row. */}
+        <div
+          data-nex-contacts-row-location
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+            fontSize: 11,
+            color: NEX.textMute,
+            lineHeight: 1.2,
+            minWidth: 0,
+          }}
+        >
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              minWidth: 0,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            <MapPinIcon color={NEX.unreadRed} />
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+              {COMMUNITY_GROUP.location}
+            </span>
+          </span>
+          <span
+            data-nex-contacts-row-last-online
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: 0.2,
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+            }}
+          >
+            {lastActiveLabel}
+          </span>
+        </div>
+      </div>
+
+      {/* ===== RIGHT-SIDE ACTION · mute toggle · replaces ContactRow's
+            shop marker slot · stopPropagation prevents navigation. ===== */}
+      <div
+        style={{
+          flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: AVATAR_SIZE,
+        }}
+      >
+        <button
+          type="button"
+          onClick={handleToggle}
+          onPointerDown={(e) => e.stopPropagation()}
+          aria-pressed={!isMuted}
+          aria-label={
+            isMuted ? "Unmute Community Notice" : "Mute Community Notice"
+          }
+          data-nex-community-notice-toggle
+          data-nex-community-notice-muted={isMuted ? "true" : "false"}
+          style={{
+            width: 44,
+            height: 24,
+            padding: "2px",
+            borderRadius: 999,
+            background: isMuted ? NEX.unreadRed : NEX.toggleActive,
+            border: `1px solid ${isMuted ? NEX.unreadRed : NEX.toggleActive}`,
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            transition: "background 180ms ease, border-color 180ms ease",
+            WebkitTapHighlightColor: "transparent",
+            boxShadow: isMuted
+              ? `0 2px 6px ${NEX.unreadRed}66`
+              : `0 2px 6px rgba(198,161,91,0.4)`,
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              display: "block",
+              width: 18,
+              height: 18,
+              borderRadius: "50%",
+              background: "#FFF",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.35)",
+              transform: isMuted ? "translateX(0)" : "translateX(20px)",
+              transition: "transform 180ms ease",
+            }}
+          />
+        </button>
+      </div>
+    </>
+  );
+
+  // Card chrome · matches ContactRow exactly. When this card renders
+  // inside `[data-nex-contacts-root]` on `/nex-native/contacts`, the
+  // scoped CSS override in page.tsx swaps the drawer-bg for Forest
+  // green `--nex-world-primary` so the Community card picks up the
+  // tab's green card body automatically.
+  const cardStyle: React.CSSProperties = {
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    gap: CARD_GAP,
+    padding: `${CARD_PADDING_Y}px ${CARD_PADDING_X}px`,
+    minHeight: CARD_MIN_HEIGHT,
+    width: "100%",
+    maxWidth: "100%",
+    boxSizing: "border-box",
+    background: "var(--nex-world-drawer-bg, rgba(2,9,20,0.92))",
+    border: `1.5px solid ${NEX.accentHex}`,
+    borderRadius: 12,
+    boxShadow: "0 4px 12px rgba(0,0,0,0.35)",
+    textDecoration: "none",
+    color: NEX.text,
+    WebkitTapHighlightColor: "transparent",
+  };
+
+  // Mute discipline · when muted, the card is NOT a tappable link. The
+  // toggle inside still works (own onClick + stopPropagation). Owner
+  // must flip the toggle back ON to re-enter /community/chat.
+  if (isMuted) {
+    return (
+      <div
+        data-nex-contacts-row
+        data-nex-contacts-row-kind="community"
+        aria-label="Community Notice · muted · unmute to open"
+        style={cardStyle}
+      >
+        {cardContents}
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href="/nex-native/community/chat"
+      data-nex-contacts-row
+      data-nex-contacts-row-kind="community"
+      aria-label="Open Community Notice chat"
+      style={cardStyle}
+    >
+      {cardContents}
+    </Link>
+  );
+}
+
+// Local copy of ContactRow's MapPinIcon · same SVG · keeps this card
+// self-contained without crossing the sealed component boundary.
+function MapPinIcon({ color }: { readonly color: string }): React.ReactElement {
+  return (
+    <svg
+      aria-hidden
+      width={10}
+      height={10}
+      viewBox="0 0 24 24"
+      style={{ flexShrink: 0, display: "block" }}
+    >
+      <path
+        fill={color}
+        d="M12 2c-4.418 0-8 3.582-8 8 0 5.25 7 12 7.4 12.3a1 1 0 0 0 1.2 0C13 22 20 15.25 20 10c0-4.418-3.582-8-8-8zm0 10.75a2.75 2.75 0 1 1 0-5.5 2.75 2.75 0 0 1 0 5.5z"
+      />
+    </svg>
   );
 }
