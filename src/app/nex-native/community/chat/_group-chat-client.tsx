@@ -604,16 +604,38 @@ function MessageBubble({
               marginBottom: 4,
             }}
           >
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 800,
-                color: NEX.cyan,
-                letterSpacing: 0.2,
-              }}
-            >
-              {message.authorName}
-            </span>
+            {/* Owner directive 2026-11-03 (#6) · tap on author name
+                opens /community/profile/[accountId] (member profile
+                card). stopPropagation keeps the bubble's onClick-to-flag
+                flow from firing on the same tap. System "nex-community"
+                account stays non-clickable. */}
+            {message.authorId !== "nex-community" ? (
+              <a
+                href={`/nex-native/community/profile/${message.authorId}`}
+                onClick={(e) => e.stopPropagation()}
+                aria-label={`Open ${message.authorName}'s profile`}
+                style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  color: NEX.cyan,
+                  letterSpacing: 0.2,
+                  textDecoration: "none",
+                }}
+              >
+                {message.authorName}
+              </a>
+            ) : (
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  color: NEX.cyan,
+                  letterSpacing: 0.2,
+                }}
+              >
+                {message.authorName}
+              </span>
+            )}
             {/* Owner directive 2026-11-03 · ⚠ Flag author link next to
                 the message author name · opens the dedicated flag form
                 with mandatory reason textarea. Only renders for real

@@ -138,23 +138,38 @@ export default async function CommunityMembersPage() {
                       }}
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: IRELAND.textPrimary }}>
-                          {isSelf ? "You" : acc?.display_name ?? "unknown"}
-                          {isFlagged ? (
-                            <span
-                              style={{
-                                marginLeft: 8,
-                                fontSize: 10,
-                                fontWeight: 800,
-                                letterSpacing: "0.08em",
-                                textTransform: "uppercase",
-                                color: IRELAND.warn,
-                              }}
-                            >
-                              · under review
-                            </span>
-                          ) : null}
-                        </div>
+                        {isSelf ? (
+                          <div style={{ fontSize: 14, fontWeight: 700, color: IRELAND.textPrimary }}>
+                            You
+                          </div>
+                        ) : (
+                          <Link
+                            href={`/nex-native/community/profile/${m.account_id}`}
+                            style={{
+                              display: "block",
+                              fontSize: 14,
+                              fontWeight: 700,
+                              color: IRELAND.textPrimary,
+                              textDecoration: "none",
+                            }}
+                          >
+                            {acc?.display_name ?? "unknown"}
+                            {isFlagged ? (
+                              <span
+                                style={{
+                                  marginLeft: 8,
+                                  fontSize: 10,
+                                  fontWeight: 800,
+                                  letterSpacing: "0.08em",
+                                  textTransform: "uppercase",
+                                  color: IRELAND.warn,
+                                }}
+                              >
+                                · under review
+                              </span>
+                            ) : null}
+                          </Link>
+                        )}
                         {acc?.nex_handle ? (
                           <div style={{ fontSize: 11, color: IRELAND.textMuted, marginTop: 2 }}>
                             {acc.nex_handle}
