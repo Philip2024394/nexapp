@@ -77,6 +77,13 @@ import Link from "next/link";
 import { ContactsPlusDrawer } from "./_contacts-plus-drawer";
 import { ContactsLiveWorldTrigger } from "./_contacts-live-world-trigger";
 import { CommunityNoticeCard } from "./_community-notice-card";
+// Owner directive 2026-11-03 (B+β · full build) · "we want full build
+// and connected to create profile page so we know where the user is
+// from and where to add to the group". Resolve the viewer's actual
+// Community membership + district zone server-side so the Community
+// card shows real zone data, not a hardcoded Yogyakarta mock.
+import { getMembershipForAccount } from "@/lib/nex-native/community/membership-service";
+import { getZoneById } from "@/lib/nex-native/community/zone-service";
 // Owner directive 2026-11-03 · "can i see some mock contact cards on
 // our new contacts page" · when running outside production AND the
 // signed-in user has no real friends, swap in the full prototype mock
@@ -326,6 +333,29 @@ export default async function ContactsPage({ searchParams }: PageProps) {
   const inviteUrl = ownHandle
     ? `https://nex.app/nex-native/u/${ownHandle}` // production URL for share
     : "https://nex.app"; // honest fallback · never fabricate a handle
+
+  // Owner directive 2026-11-03 (B+β · full build Supabase + fully
+  // connected) · resolve the viewer's actual Community membership so
+  // the Groups-tab card shows their REAL zone name (city-level only
+  // per sealed 2026-10-23 security copy rule · no "2km" / no "nearby"
+  // etc.). Fail-open: on error, the Community card renders its
+  // "join your community" CTA state so the UI never crashes on a
+  // transient service outage.
+  let communityZoneName: string | null = null;
+  let communityHasMembership = false;
+  try {
+    const membership = await getMembershipForAccount(session.account.id);
+    if (membership) {
+      communityHasMembership = true;
+      // Prefer the district zone name (city-level · owner-safe) over
+      // the hyperlocal zone (kecamatan-level · could over-expose).
+      const districtZone = await getZoneById(membership.district_zone_id);
+      communityZoneName = districtZone?.name ?? null;
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("contacts · community membership read failed · falling back to CTA state:", err);
+  }
 
   // Owner directive 2026-10-17 · ControlDrawer session · same shape
   // mounted on Welcome + /directory/landing · drawer renders the NEX
@@ -621,7 +651,10 @@ export default async function ContactsPage({ searchParams }: PageProps) {
             preserved by the component itself. */}
       {activeFilter === "groups" ? (
         <div style={{ marginTop: 4 }}>
-          <CommunityNoticeCard />
+          <CommunityNoticeCard
+            zoneName={communityZoneName}
+            hasMembership={communityHasMembership}
+          />
         </div>
       ) : null}
 

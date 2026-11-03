@@ -59,15 +59,17 @@ const NEX = {
 // mechanism (address-anchored 2km radius) stays in the sealed doctrine
 // + the service layer. No user-facing copy exposes "2km" · "radius" ·
 // "auto-assigned" · or "near you". City/kabupaten-level name only.
-const COMMUNITY_GROUP = {
-  name: "Community Notice",
-  location: "Yogyakarta",
-  memberCountLabel: "1,248 members",
-  minutesSinceLastPost: 12,
-};
+//
+// Owner directive 2026-11-03 (B+β · full build) · zoneName + hasMembership
+// props now come from server-side resolution in contacts/page.tsx.
+// When the viewer has a confirmed membership, we show their REAL zone
+// name (district level · city). When they do NOT, we render a "join
+// your community" CTA linking to /nex-native/community/select.
+const DEFAULT_LOCATION = "Yogyakarta"; // fallback only · never surfaced to a logged-in no-membership user
+const DEFAULT_MEMBER_COUNT_LABEL = "1,248 members"; // mock until nex_community_membership count query ships
 
 const MUTE_STORAGE_KEY = "nex-community-notice-muted-v1";
-const UNREAD_MOCK_COUNT = 7; // mock-only · real count comes from server once migration 146 applies
+const UNREAD_MOCK_COUNT = 7; // mock-only · real count = unread posts since last visit
 
 function formatLastActive(mins: number): string {
   if (mins < 60) return `Active ${mins}m`;
@@ -77,7 +79,20 @@ function formatLastActive(mins: number): string {
   return `Active ${days}d`;
 }
 
-export function CommunityNoticeCard(): React.ReactElement {
+interface CommunityNoticeCardProps {
+  /** Server-resolved district zone name (city-level · safe copy). Null
+   *  means the viewer has no confirmed membership · the card renders
+   *  the "join your community" CTA state. */
+  readonly zoneName?: string | null;
+  /** Explicit flag so a logged-in-but-no-membership user is never
+   *  mistaken for a "unknown zone" render. */
+  readonly hasMembership?: boolean;
+}
+
+export function CommunityNoticeCard({
+  zoneName = null,
+  hasMembership = false,
+}: CommunityNoticeCardProps = {}): React.ReactElement {
   const [muted, setMuted] = React.useState<boolean | null>(null);
 
   React.useEffect(() => {
@@ -109,8 +124,26 @@ export function CommunityNoticeCard(): React.ReactElement {
   // SSR + first hydration · render as active (ON · unmuted) default.
   // After mount useEffect loads from localStorage.
   const isMuted = muted === true;
-  const showBadge = !isMuted && UNREAD_MOCK_COUNT > 0;
-  const lastActiveLabel = formatLastActive(COMMUNITY_GROUP.minutesSinceLastPost);
+  // Owner directive 2026-11-03 (B+β) · unread badge + mute toggle only
+  // apply when the user actually HAS a membership. Pre-membership CTA
+  // state hides both.
+  const showBadge = hasMembership && !isMuted && UNREAD_MOCK_COUNT > 0;
+  const showMuteToggle = hasMembership;
+  const navigateHref = hasMembership
+    ? "/nex-native/community/chat"
+    : "/nex-native/community/select";
+  // Owner directive 2026-11-03 (B+β) · live props displace the mock
+  // COMMUNITY_GROUP singleton. When hasMembership=false, the card
+  // flips to "join your community" CTA state (navigates to
+  // /community/select instead of /community/chat, mute toggle hidden,
+  // unread badge hidden).
+  const displayName = hasMembership ? "Community Notice" : "Join Community Notice";
+  const displayLocation = hasMembership
+    ? (zoneName ?? DEFAULT_LOCATION)
+    : "Set your area to join";
+  const displayMemberCount = hasMembership ? DEFAULT_MEMBER_COUNT_LABEL : "Local noticeboard";
+  const minutesSinceLastPost = 12; // mock · last-active value replaced with real server data when ready
+  const lastActiveLabel = hasMembership ? formatLastActive(minutesSinceLastPost) : "Tap to set up";
 
   // ─── Shared card contents · identical to ContactRow structure ──────
   const cardContents = (
@@ -217,7 +250,7 @@ export function CommunityNoticeCard(): React.ReactElement {
               minWidth: 0,
             }}
           >
-            {COMMUNITY_GROUP.name}
+            {displayName}
           </span>
         </div>
 
@@ -233,7 +266,7 @@ export function CommunityNoticeCard(): React.ReactElement {
             textOverflow: "ellipsis",
           }}
         >
-          {COMMUNITY_GROUP.memberCountLabel}
+          {displayMemberCount}
         </div>
 
         {/* Row 3 · Location (left) + last-active (right) · same row. */}
@@ -263,7 +296,7 @@ export function CommunityNoticeCard(): React.ReactElement {
           >
             <MapPinIcon color={NEX.unreadRed} />
             <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-              {COMMUNITY_GROUP.location}
+              {displayLocation}
             </span>
           </span>
           <span
@@ -281,8 +314,8 @@ export function CommunityNoticeCard(): React.ReactElement {
         </div>
       </div>
 
-      {/* ===== RIGHT-SIDE ACTION · mute toggle · replaces ContactRow's
-            shop marker slot · stopPropagation prevents navigation. ===== */}
+      {/* ===== RIGHT-SIDE ACTION · mute toggle (hasMembership only) OR
+            chevron CTA (no membership · points at /community/select) ===== */}
       <div
         style={{
           flexShrink: 0,
@@ -292,47 +325,64 @@ export function CommunityNoticeCard(): React.ReactElement {
           minHeight: AVATAR_SIZE,
         }}
       >
-        <button
-          type="button"
-          onClick={handleToggle}
-          onPointerDown={(e) => e.stopPropagation()}
-          aria-pressed={!isMuted}
-          aria-label={
-            isMuted ? "Unmute Community Notice" : "Mute Community Notice"
-          }
-          data-nex-community-notice-toggle
-          data-nex-community-notice-muted={isMuted ? "true" : "false"}
-          style={{
-            width: 44,
-            height: 24,
-            padding: "2px",
-            borderRadius: 999,
-            background: isMuted ? NEX.unreadRed : NEX.toggleActive,
-            border: `1px solid ${isMuted ? NEX.unreadRed : NEX.toggleActive}`,
-            cursor: "pointer",
-            display: "inline-flex",
-            alignItems: "center",
-            transition: "background 180ms ease, border-color 180ms ease",
-            WebkitTapHighlightColor: "transparent",
-            boxShadow: isMuted
-              ? `0 2px 6px ${NEX.unreadRed}66`
-              : `0 2px 6px rgba(198,161,91,0.4)`,
-          }}
-        >
+        {showMuteToggle ? (
+          <button
+            type="button"
+            onClick={handleToggle}
+            onPointerDown={(e) => e.stopPropagation()}
+            aria-pressed={!isMuted}
+            aria-label={
+              isMuted ? "Unmute Community Notice" : "Mute Community Notice"
+            }
+            data-nex-community-notice-toggle
+            data-nex-community-notice-muted={isMuted ? "true" : "false"}
+            style={{
+              width: 44,
+              height: 24,
+              padding: "2px",
+              borderRadius: 999,
+              background: isMuted ? NEX.unreadRed : NEX.toggleActive,
+              border: `1px solid ${isMuted ? NEX.unreadRed : NEX.toggleActive}`,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              transition: "background 180ms ease, border-color 180ms ease",
+              WebkitTapHighlightColor: "transparent",
+              boxShadow: isMuted
+                ? `0 2px 6px ${NEX.unreadRed}66`
+                : `0 2px 6px rgba(198,161,91,0.4)`,
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                display: "block",
+                width: 18,
+                height: 18,
+                borderRadius: "50%",
+                background: "#FFF",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.35)",
+                transform: isMuted ? "translateX(0)" : "translateX(20px)",
+                transition: "transform 180ms ease",
+              }}
+            />
+          </button>
+        ) : (
+          // Pre-membership state · right-side action is a visual chevron
+          // (not a button · the parent Link navigates on tap).
           <span
             aria-hidden
+            data-nex-community-notice-cta-chevron
             style={{
-              display: "block",
-              width: 18,
-              height: 18,
-              borderRadius: "50%",
-              background: "#FFF",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.35)",
-              transform: isMuted ? "translateX(0)" : "translateX(20px)",
-              transition: "transform 180ms ease",
+              fontSize: 22,
+              lineHeight: 1,
+              fontWeight: 900,
+              color: NEX.toggleActive,
             }}
-          />
-        </button>
+          >
+            ›
+          </span>
+        )}
       </div>
     </>
   );
@@ -361,10 +411,13 @@ export function CommunityNoticeCard(): React.ReactElement {
     WebkitTapHighlightColor: "transparent",
   };
 
-  // Mute discipline · when muted, the card is NOT a tappable link. The
-  // toggle inside still works (own onClick + stopPropagation). Owner
-  // must flip the toggle back ON to re-enter /community/chat.
-  if (isMuted) {
+  // Mute discipline · when the viewer has a membership AND the card is
+  // muted, the card is NOT a tappable link (toggle still works via its
+  // own onClick + stopPropagation). Owner must flip the toggle back ON
+  // to re-enter /community/chat. The muted-non-interactive rule only
+  // applies to members · the pre-membership CTA state is ALWAYS a Link
+  // (points at /community/select so the user can finish setup).
+  if (hasMembership && isMuted) {
     return (
       <div
         data-nex-contacts-row
@@ -379,7 +432,7 @@ export function CommunityNoticeCard(): React.ReactElement {
 
   return (
     <Link
-      href="/nex-native/community/chat"
+      href={navigateHref}
       data-nex-contacts-row
       data-nex-contacts-row-kind="community"
       aria-label="Open Community Notice chat"
