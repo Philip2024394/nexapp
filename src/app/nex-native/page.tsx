@@ -32,16 +32,20 @@ export const runtime = "nodejs";
 
 export default async function Page() {
   const session = await resolveNexAppSessionFromContext();
-  if (session) {
-    redirect("/nex-native/contacts");
-  }
-  // Country-scoped signed-out landing · Ireland sees the free-chat theme
-  // picker as its guest home; other worlds keep the sealed create-account
-  // landing. Read directly from the server-side env var set per Vercel
-  // project · fast, no DB call on the entry router.
   const identity = (process.env.NEX_APP_IDENTITY ?? "").trim().toLowerCase();
+
+  // Owner directive 2026-11-03 · "change this url to nex ireland home
+  // http://localhost:3008/nex-native/free-chat?show-themes=1&preview=1"
+  // Ireland home = the sealed 5-theme picker on /free-chat. BOTH
+  // signed-in and signed-out Ireland visitors land here. Other worlds
+  // keep the prior 2026-10-22 behaviour (signed-in → /contacts ·
+  // signed-out → /create-account).
   if (identity === "ireland") {
     redirect("/nex-native/free-chat?show-themes=1");
+  }
+
+  if (session) {
+    redirect("/nex-native/contacts");
   }
   redirect("/nex-native/create-account");
 }

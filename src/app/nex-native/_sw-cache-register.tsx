@@ -23,31 +23,41 @@ export function SwCacheRegister(): null {
     if (typeof window === "undefined") return;
     if (!("serviceWorker" in navigator)) return;
 
-    // Dev-mode guard · Turbopack serves /_next/static/* at non-hashed
-    // paths that update via HMR. The SW's cache-first strategy would
-    // pin stale JS modules and HMR would silently fail. In dev we
-    // UNREGISTER any previously-installed SW and skip registration so
-    // every reload is a fresh compile.
-    if (process.env.NODE_ENV !== "production") {
-      navigator.serviceWorker.getRegistrations().then((regs) => {
-        regs.forEach((reg) => {
-          if (reg.scope.includes("/nex-native/")) {
-            reg.unregister().catch(() => { /* ignore */ });
-          }
-        });
-        // Also purge the caches so no stale assets linger.
-        if ("caches" in window) {
-          caches.keys().then((names) => {
-            names.forEach((name) => {
-              if (name.startsWith("nex-native-")) {
-                caches.delete(name).catch(() => { /* ignore */ });
-              }
-            });
-          }).catch(() => { /* ignore */ });
-        }
-      }).catch(() => { /* ignore */ });
-      return;
-    }
+    // Owner directive 2026-11-03 · "updates are refreshing live
+     // working hosting dev" · aggressive dev-mode cleanup. Prior
+     // version scope-filtered to "/nex-native/" + prefix "nex-native-"
+     // so legacy SW registrations with different scope / cache names
+     // leaked through. Dev now UNCONDITIONALLY: unregisters EVERY
+     // service worker + deletes EVERY cache + reloads once if any
+     // cleanup actually happened (one-shot per session so the fresh
+     // compile boots without the SW still intercepting).
+     if (process.env.NODE_ENV !== "production") {
+       (async () => {
+         let didCleanup = false;
+         try {
+           const regs = await navigator.serviceWorker.getRegistrations();
+           for (const reg of regs) {
+             const ok = await reg.unregister().catch(() => false);
+             if (ok) didCleanup = true;
+           }
+         } catch { /* ignore */ }
+         try {
+           if ("caches" in window) {
+             const names = await caches.keys();
+             for (const name of names) {
+               const ok = await caches.delete(name).catch(() => false);
+               if (ok) didCleanup = true;
+             }
+           }
+         } catch { /* ignore */ }
+         // One-shot reload · gated on sessionStorage so we never loop.
+         if (didCleanup && !sessionStorage.getItem("nex-sw-dev-reloaded")) {
+           sessionStorage.setItem("nex-sw-dev-reloaded", "1");
+           window.location.reload();
+         }
+       })();
+       return;
+     }
 
     // Respect user intent: if the page is served over HTTP (local dev
     // on 127.0.0.1 is fine; prod HTTP is a misconfiguration), skip.

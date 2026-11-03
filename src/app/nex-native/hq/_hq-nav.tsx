@@ -31,12 +31,17 @@ const NAV_ITEMS: ReadonlyArray<{
     glyph: "⌂",
     match: (p) => p === "/nex-native/hq",
   },
-  {
-    href: "/nex-native/hq/worlds",
-    label: "Worlds",
-    glyph: "◉",
-    match: (p) => p.startsWith("/nex-native/hq/worlds"),
-  },
+  // Owner directive 2026-11-03 · Ireland-first phase · the Worlds
+  // switcher is retained at /nex-native/hq/worlds (reachable by direct
+  // URL) but hidden from the HQ sidebar so everyday development stops
+  // switching between Ireland, Worldwide and Indonesia. Re-enable this
+  // entry when inactive worlds become active again.
+  // {
+  //   href: "/nex-native/hq/worlds",
+  //   label: "Worlds",
+  //   glyph: "◉",
+  //   match: (p) => p.startsWith("/nex-native/hq/worlds"),
+  // },
   {
     href: "/nex-native/hq/harvest",
     label: "Harvest",

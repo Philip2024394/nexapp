@@ -27,8 +27,10 @@
 
 import "server-only";
 
-export type AppIdentityId = "ireland" | "indonesia" | "hq";
-export type AppCountryCode = "IE" | "ID";
+// Owner directive 2026-11-03 · Ireland-only consolidation ·
+// Indonesia removed as a registered deployment identity.
+export type AppIdentityId = "ireland" | "hq";
+export type AppCountryCode = "IE";
 
 export interface AppIdentity {
   readonly identity: AppIdentityId;
@@ -52,22 +54,19 @@ export class AppIdentityError extends Error {
 
 const REGISTERED_IDENTITIES: ReadonlySet<AppIdentityId> = new Set([
   "ireland",
-  "indonesia",
   "hq",
 ]);
-const REGISTERED_COUNTRIES: ReadonlySet<AppCountryCode> = new Set(["IE", "ID"]);
+const REGISTERED_COUNTRIES: ReadonlySet<AppCountryCode> = new Set(["IE"]);
 
 const COUNTRY_FOR_IDENTITY: Readonly<
   Record<AppIdentityId, AppCountryCode | null>
 > = {
   ireland: "IE",
-  indonesia: "ID",
   hq: null,
 };
 
 const DISPLAY_NAME: Readonly<Record<AppIdentityId, string>> = {
   ireland: "NEX Ireland",
-  indonesia: "NEX Indonesia",
   hq: "NEX HQ",
 };
 
@@ -97,14 +96,14 @@ export function resolveAppIdentity(): AppIdentity {
     }
     throw new AppIdentityError(
       "missing-identity",
-      "NEX_APP_IDENTITY is not set. Each production deployment MUST set this env var to one of: ireland, indonesia, hq.",
+      "NEX_APP_IDENTITY is not set. Each production deployment MUST set this env var to one of: ireland, hq.",
     );
   }
 
   if (!REGISTERED_IDENTITIES.has(rawIdentity as AppIdentityId)) {
     throw new AppIdentityError(
       "invalid-identity",
-      `NEX_APP_IDENTITY=${JSON.stringify(rawIdentity)} is not a registered identity. Valid values: ireland, indonesia, hq.`,
+      `NEX_APP_IDENTITY=${JSON.stringify(rawIdentity)} is not a registered identity. Valid values: ireland, hq.`,
     );
   }
 

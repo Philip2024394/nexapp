@@ -193,7 +193,13 @@ export function NexInput({
           mode="single-line"
           planes={planes}
           initialPlane={initialPlane}
-          accentColor={accentColor ?? "#00AFFF"}
+          // Owner directive 2026-11-03 · do NOT fall back to #00AFFF here ·
+          // that inline override wins over the `:root` CSS vars emitted
+          // by _world-stylesheet.tsx so Ireland's `WORLD_KEYPAD_ACCENT`
+          // (Orange) was being masked by a hard-coded blue. Passing
+          // undefined lets the keypad's paletteVars=={} branch fire so
+          // the Ireland :root cascade applies.
+          accentColor={accentColor}
           maxLength={maxLength}
         />
       ) : null}

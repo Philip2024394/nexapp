@@ -23,20 +23,12 @@ import { BOTANICAL_CAFE_PACKAGE } from "./packages/botanical-cafe.package";
 import { MIDNIGHT_CAFE_PACKAGE } from "./packages/midnight-cafe.package";
 import { FRENCH_CAFE_PACKAGE } from "./packages/french-cafe.package";
 import { FOOD_PACKAGE } from "./packages/food.package";
-import { PIZZA_PACKAGE } from "./packages/pizza.package";
 import { BIKE_RENTAL_PACKAGE } from "./packages/bike-rental.package";
 import { AC_SERVICE_PACKAGE } from "./packages/ac-service.package";
 import { NEX_BUBBLES_PACKAGE } from "./packages/nex-bubbles.package";
 import { NEX_FLAT_PACKAGE } from "./packages/nex-flat.package";
-import { PROPERTY1_PACKAGE } from "./packages/property1.package";
-import { CRISPY_CHICKEN_PACKAGE } from "./packages/crispy-chicken.package";
-import { TEDDY_PLAY_PACKAGE } from "./packages/teddy-play.package";
-import { LULU_PACKAGE } from "./packages/lulu.package";
-import { PINK_DREAM_PACKAGE } from "./packages/pink-dream.package";
 import { HOLLYWOOD_PACKAGE } from "./packages/hollywood.package";
 import { VITAMIN_FRUIT_PACKAGE } from "./packages/vitamin-fruit.package";
-import { WATCHES_ROLEX_PACKAGE } from "./packages/watches-rolex.package";
-import { WATCHES_HENDRA_PACKAGE } from "./packages/watches-hendra.package";
 // Pink Dream registration note (2026-10-11):
 //   · Registered here so the Theme Library shows it under Teddy
 //     with the authentic pink/plum palette.
@@ -61,18 +53,10 @@ export const LIVE_WORLD_PACKAGES = {
   "midnight-cafe": MIDNIGHT_CAFE_PACKAGE,
   "french-cafe": FRENCH_CAFE_PACKAGE,
   food: FOOD_PACKAGE,
-  pizza: PIZZA_PACKAGE,
-  "crispy-chicken": CRISPY_CHICKEN_PACKAGE,
   "bike-rental": BIKE_RENTAL_PACKAGE,
   "ac-service": AC_SERVICE_PACKAGE,
-  property1: PROPERTY1_PACKAGE,
-  "teddy-play": TEDDY_PLAY_PACKAGE,
-  lulu: LULU_PACKAGE,
-  "pink-dream": PINK_DREAM_PACKAGE,
   hollywood: HOLLYWOOD_PACKAGE,
   "vitamin-fruit": VITAMIN_FRUIT_PACKAGE,
-  "watches-rolex": WATCHES_ROLEX_PACKAGE,
-  "watches-hendra": WATCHES_HENDRA_PACKAGE,
 } as const satisfies Record<string, ThemePackage>;
 
 export type LiveWorldId = keyof typeof LIVE_WORLD_PACKAGES;

@@ -40,6 +40,10 @@ const MIGRATIONS_DIR = path.join(REPO_ROOT, "nex-supabase/migrations");
 // ─── A · adapter output ──────────────────────────────────────────────
 
 describe("A · live-worlds adapter · every world appears in the Library collection", () => {
+  // Owner directive 2026-11-03 · Ireland-only consolidation ·
+  // retired packages removed from this test fixture:
+  // pizza · crispy-chicken · property1 · teddy-play · pink-dream ·
+  // watches-rolex · watches-hendra · lulu.
   const EXPECTED_WORLDS = [
     "nex-bubbles",
     "nex-flat",
@@ -49,16 +53,10 @@ describe("A · live-worlds adapter · every world appears in the Library collect
     "midnight-cafe",
     "french-cafe",
     "food",
-    "pizza",
-    "crispy-chicken",
     "bike-rental",
     "ac-service",
-    "property1",
-    "teddy-play",
-    "pink-dream",
     "hollywood",
     "vitamin-fruit",
-    "watches-rolex",
   ] as const;
 
   test("listLiveWorldsAsBrowserRows returns a row for every registered live-world", () => {
@@ -216,13 +214,14 @@ describe("C2 · category_id is populated on every live-world row (Step 1C re-sea
     expect(row.category_id).toBe("waterworld");
   });
 
+  // Owner directive 2026-11-03 · Ireland-only · pizza removed with
+  // the retired package.
   const FOOD_WORLDS = [
     "coffee",
     "botanical-cafe",
     "midnight-cafe",
     "french-cafe",
     "food",
-    "pizza",
   ] as const;
   for (const id of FOOD_WORLDS) {
     test(`${id} row carries category_id = 'food'`, () => {

@@ -25,8 +25,6 @@
 
 import "server-only";
 import * as React from "react";
-import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
-import { resolveWorldForRequest } from "@/lib/nex-worlds/world-resolver";
 import { resolveAppIdentity } from "@/lib/nex-native/app/resolve-app-identity";
 import {
   paletteToCssVars,
@@ -45,33 +43,44 @@ import { getWorldDefinition } from "@/lib/nex-worlds/world-registry";
  *       to the sealed owner-preview + DB-activated world resolver.
  */
 export async function resolveWorldForLayout(): Promise<WorldDefinition> {
-  // Deployment identity takes precedence. Fail-closed: if the env is
-  // invalid in a country deployment, we do NOT silently fall back to
-  // nex-original (that would leak the wrong country chrome). We let the
-  // resolver throw and the root layout boundary handles it.
-  try {
-    const identity = resolveAppIdentity();
-    if (identity.identity === "ireland") return getWorldDefinition("ireland");
-    if (identity.identity === "indonesia") return getWorldDefinition("indonesia");
-    // identity === "hq" · fall through to the DB-based resolver below.
-  } catch {
-    // Env not set at all in dev · fall through to DB resolver.
+  // Owner directive 2026-11-03 · Ireland is the sole active product.
+  // Resolution order (correctness-first · no broad catch):
+  //
+  //   1. If NEX_APP_IDENTITY env is GENUINELY ABSENT in dev → Ireland.
+  //      ONLY this exact case (empty string + NODE_ENV=development)
+  //      silently defaults to Ireland. Everything else must use the
+  //      sealed resolver so invalid env or prod misconfig fails closed.
+  //
+  //   2. Otherwise call resolveAppIdentity() which throws typed
+  //      AppIdentityError on invalid/missing-in-prod · let those
+  //      errors propagate (do NOT catch).
+  //        · ireland   → Ireland world
+  //        · indonesia → Indonesia world (inactive but retained)
+  //        · hq        → DB-based resolver (admin can preview any world)
+  //
+  // Prior revision used a broad `try { ... } catch { return ireland }`
+  // which masked invalid-identity + prod-missing errors by silently
+  // painting Ireland chrome. Owner-corrected 2026-11-03.
+  // Owner directive 2026-11-03 · Ireland-only · the resolver always
+  // returns Ireland. The identity env var is still read for its
+  // other roles (validation + country gates in resolveAppIdentity)
+  // but world selection is now a constant. The sealed fail-closed
+  // behaviour of resolveAppIdentity() is preserved: an invalid env
+  // in production still throws.
+  const rawIdentity = (process.env.NEX_APP_IDENTITY ?? "").trim();
+  if (rawIdentity.length > 0) {
+    // Honour the sealed identity validator · invalid values still throw.
+    resolveAppIdentity();
   }
-  const session = await resolveSessionWithDevOverride();
-  const resolved = await resolveWorldForRequest(session?.account.id ?? null);
-  return resolved.world;
+  return getWorldDefinition("ireland");
 }
 
-/** Owner-authorised 2026-10-31 (country-preview round) · per-world
- *  desktop/tablet backdrop image. Country deployments paint the
- *  matching studio photo behind the phone frame on ≥500px viewports
- *  (same images as the HQ landing cards). nex-original keeps the
- *  original neutral hero. The map is kept here (not in the registry)
- *  because this file is the only consumer. */
+/** Owner-authorised 2026-11-03 · Ireland-only consolidation ·
+ *  Ireland is the single supported world · the nex-original neutral
+ *  hero and the Indonesia studio photo were retired alongside the
+ *  world registry pruning. */
 const WORLD_DESKTOP_BACKDROP: Record<string, string> = {
-  "nex-original": "/nex-desktop-hero.png",
   ireland: "/nex-brand/hq/ireland-studio.png",
-  indonesia: "/nex-brand/hq/indonesia-studio.png",
 };
 
 export function getWorldDesktopBackdrop(worldId: string): string {
@@ -157,7 +166,20 @@ const WORLD_KEYPAD_BG_BOTTOM: Record<string, string> = {
   ireland: "#123D2B",
 };
 const WORLD_KEYPAD_ACCENT: Record<string, string> = {
-  ireland: "#C6A15B",
+  // Owner directive 2026-11-03 · "kepad is global on nex chat ireland
+  // and the blue keys change to orange color" · Ireland keypad accent
+  // flips to NEX Orange #FF7200 (supersedes the earlier 2026-11-01
+  // Social-Commerce-sweep Gold #C6A15B assignment).
+  //
+  // Non-Ireland worlds (nex-original · indonesia) intentionally leave
+  // this map empty · the sealed 2026-11-01 memory note is explicit:
+  // "Other worlds leave this empty and keep the sealed Joker palette."
+  // Removing the hard-coded #00AFFF fallback in nex-input/nex-textarea
+  // RESTORES this sealed behaviour on Worldwide + Indonesia (they had
+  // been painting blue by accident due to that fallback). If the owner
+  // later wants Worldwide blue specifically, re-add
+  // `"nex-original": "#00AFFF"` here.
+  ireland: "#FF7200",
 };
 
 const WORLD_LIVE_DRAWER_FOOTER_IMAGE_URL: Record<string, string> = {

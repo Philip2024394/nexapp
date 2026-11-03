@@ -30,7 +30,21 @@ const CACHEABLE_GET_PATHS = [
   "/nex/gaps",
 ];
 
+// Owner directive 2026-11-03 · dev self-destruct · localhost / 127.0.0.1
+// MUST NEVER cache. If this SW ever activates against a dev host, it
+// unregisters itself + clears every cache + forces each attached client
+// to reload once · breaks the stale-SW chicken-and-egg that was hiding
+// dev HMR updates behind cached chunks.
+const IS_DEV_HOST =
+  self.location.hostname === "localhost" ||
+  self.location.hostname === "127.0.0.1" ||
+  self.location.hostname.endsWith(".local");
+
 self.addEventListener("install", (event) => {
+  if (IS_DEV_HOST) {
+    event.waitUntil(self.skipWaiting());
+    return;
+  }
   event.waitUntil((async () => {
     // Prime the cache with the attribution endpoint on install.
     const cache = await caches.open(CACHE_NAME);
@@ -40,6 +54,23 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
+  if (IS_DEV_HOST) {
+    event.waitUntil((async () => {
+      // Dev self-destruct: purge EVERY cache, unregister self, force
+      // each attached client to reload once so the fresh dev compile
+      // boots without an SW intercepting.
+      try {
+        const names = await caches.keys();
+        await Promise.all(names.map((n) => caches.delete(n)));
+      } catch { /* ignore */ }
+      try { await self.registration.unregister(); } catch { /* ignore */ }
+      try {
+        const cs = await self.clients.matchAll({ type: "window" });
+        cs.forEach((c) => { try { c.navigate(c.url); } catch { /* ignore */ } });
+      } catch { /* ignore */ }
+    })());
+    return;
+  }
   event.waitUntil((async () => {
     // Purge older versions.
     const names = await caches.keys();
@@ -83,6 +114,9 @@ async function freshCached(request) {
 }
 
 self.addEventListener("fetch", (event) => {
+  // Dev self-destruct · never intercept localhost traffic even if the
+  // SW is still active before activate() finishes unregistering.
+  if (IS_DEV_HOST) return;
   const req = event.request;
   if (!isCacheableGet(req)) return; // let the browser handle normally
 

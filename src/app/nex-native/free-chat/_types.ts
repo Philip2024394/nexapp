@@ -365,10 +365,12 @@ export function defaultBubbleCustomizationForTheme(
   themeId: string | null | undefined,
 ): BubbleCustomization {
   const accent = resolveFreeChatAccentHex(themeId);
-  // Owner directive 2026-11-02 (revision 9) · the plain `nex-default`
-  // tile exposes a background-colour picker since it has no wallpaper
-  // to deliver the backdrop. Default to pure black so the first paint
-  // reads as a clean canvas before the user picks their own hue.
+  // Owner directive 2026-11-03 · "page back ground is not displaying
+  // the nex green global color" · default container colour for the
+  // nex-default tile is the sealed Ireland Emerald #123D2B so the
+  // page matches the global --nex-world-drawer-bg instead of pure
+  // black. Users can still pick any other hue · this is just the
+  // first-paint default. Prior default (#000000) retired.
   // Every other theme defaults containerColor to null (ignored).
   const theme = themeId
     ? FREE_CHAT_THEMES.find((t) => t.id === themeId)
@@ -379,7 +381,7 @@ export function defaultBubbleCustomizationForTheme(
     peerDarken: 0,
     selfColor: accent,
     selfDarken: 0,
-    containerColor: supportsBackgroundPicker ? "#000000" : null,
+    containerColor: supportsBackgroundPicker ? "#123D2B" : null,
   };
 }
 
@@ -478,8 +480,10 @@ export const BUBBLE_PALETTE: readonly {
   { hex: "#00AFFF", label: "NEX Cyan" },
   { hex: "#FF7200", label: "NEX Orange" },
   // ── Ireland sealed ───────────────────────
+  // Owner directive 2026-11-03 · "we need 1 color per button choice ·
+  // remove duplicates" · Forest #1B5138 retired (near-duplicate of
+  // Emerald #123D2B · same Irish deep-green family).
   { hex: "#123D2B", label: "Emerald" },
-  { hex: "#1B5138", label: "Forest" },
   { hex: "#C6A15B", label: "Gold" },
   { hex: "#AFC5B5", label: "Sage" },
   { hex: "#FAF8F4", label: "Cream" },
@@ -495,12 +499,13 @@ export const BUBBLE_PALETTE: readonly {
   { hex: "#D9480F", label: "Burnt Orange" },
   // ── Cool hues ────────────────────────────
   { hex: "#1DA1F2", label: "Twilight Blue" },
+  // Owner directive 2026-11-03 · "remove duplicates" · Lilac #A78BFA
+  // retired (near-duplicate of Lavender #8B5CF6) · Fresh #4ADE80
+  // retired (near-duplicate of Mint #16D66B).
   { hex: "#8B5CF6", label: "Lavender" },
-  { hex: "#A78BFA", label: "Lilac" },
   { hex: "#6D28D9", label: "Plum" },
   { hex: "#2EC4B6", label: "Teal" },
   { hex: "#16D66B", label: "Mint" },
-  { hex: "#4ADE80", label: "Fresh" },
   { hex: "#FF4FD7", label: "Magenta" },
   // ── Neutrals ─────────────────────────────
   { hex: "#FFFFFF", label: "White" },

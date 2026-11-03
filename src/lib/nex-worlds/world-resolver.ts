@@ -1,81 +1,46 @@
 // src/lib/nex-worlds/world-resolver.ts
 //
-// Owner-authorised 2026-10-31 · NEX World Engine · server-side resolver.
+// Owner-authorised 2026-11-03 · Ireland-only consolidation.
+// --------------------------------------------------------
+// The resolver always returns the Ireland world. The nex-original and
+// Indonesia worlds that were resolved from `nex_world_state` and the
+// owner-preview cookie are retired. The DB-backed state table + the
+// preview cookie layer are left in place server-side (no migration in
+// this pass) · they are simply no longer consulted. If a second world
+// is ever added back, re-wire this file to its earlier shape.
 //
-// Resolution order (per request):
-//   1. Owner preview cookie (nex_preview_world) · HMAC-verified
-//      against the signed-in owner's account id. Owner-only · never
-//      visible to other users.
-//   2. Globally activated world in `nex_world_state` (singleton).
-//   3. DEFAULT_WORLD_ID ('nex-original') · fallback when no row OR
-//      the stored id is unknown (migration drift).
-//
-// Fail-open: any DB error during step 2 returns the default world
-// (never crashes the layout render). An honest log is emitted.
+// Call sites preserved:
+//   · `resolveWorldForRequest(viewerAccountId)` still returns a
+//     ResolvedWorld shape so existing callers compile.
 
 import "server-only";
-import { nexSupabaseAdmin } from "../nex-native/supabase-admin";
-import {
-  getDefaultWorld,
-  getWorldDefinition,
-  parseWorldId,
-} from "./world-registry";
-import { readPreviewWorldForOwner } from "./world-cookie";
+import { getDefaultWorld } from "./world-registry";
 import type { WorldDefinition, WorldId } from "./world-types";
 
 export interface ResolvedWorld {
   readonly world: WorldDefinition;
-  /** How we arrived here · useful for the HQ "currently showing" chip. */
+  /** How we arrived here. In Ireland-only mode this is always
+   *  "default". The field is retained for call-site compatibility. */
   readonly source: "preview" | "activated" | "default";
   /** The activated world id (regardless of preview). Null when the DB
-   *  has no row yet (pre-apply state). */
+   *  has no row yet. Always null in Ireland-only mode. */
   readonly activatedId: WorldId | null;
-  /** The previewed world id, if any (and the viewer is the owner). */
+  /** The previewed world id, if any. Always null in Ireland-only mode. */
   readonly previewId: WorldId | null;
 }
 
-/** Read the globally activated world · fail-open. */
+/** Read the globally activated world · fail-open.
+ *  Ireland-only mode: always returns null (nex_world_state is no
+ *  longer consulted). */
 export async function readActivatedWorldId(): Promise<WorldId | null> {
-  try {
-    const { data, error } = await nexSupabaseAdmin
-      .from("nex_world_state")
-      .select("active_world_id")
-      .eq("id", 1)
-      .maybeSingle<{ active_world_id: string }>();
-    if (error || !data) return null;
-    return parseWorldId(data.active_world_id);
-  } catch {
-    return null;
-  }
+  return null;
 }
 
-/** Resolve the world to render for the current request. Pass the
- *  signed-in account id when known (so the owner's preview cookie
- *  can activate for them · others see the activated world). */
+/** Resolve the world to render for the current request.
+ *  Ireland-only mode: always returns the Ireland world. */
 export async function resolveWorldForRequest(
-  viewerAccountId: string | null,
+  _viewerAccountId: string | null,
 ): Promise<ResolvedWorld> {
-  const [previewId, activatedId] = await Promise.all([
-    readPreviewWorldForOwner(viewerAccountId),
-    readActivatedWorldId(),
-  ]);
-
-  if (previewId) {
-    return {
-      world: getWorldDefinition(previewId),
-      source: "preview",
-      activatedId,
-      previewId,
-    };
-  }
-  if (activatedId) {
-    return {
-      world: getWorldDefinition(activatedId),
-      source: "activated",
-      activatedId,
-      previewId: null,
-    };
-  }
   return {
     world: getDefaultWorld(),
     source: "default",

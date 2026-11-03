@@ -1,21 +1,17 @@
 // src/app/nex-native/hq/page.tsx
 //
 // Owner-authorised 2026-10-31 (round 4 · HQ repair task).
-// NEX HQ landing · central desktop entry presenting the two country
-// applications as selectable cards.
+// Owner-authorised 2026-11-03 · Ireland-only consolidation ·
+// Indonesia country card retired · worlds switcher deleted · the
+// Ireland card's palette workspace link also retired (route gone).
+// Preserved: Ireland card · appUrl deep-link to the live Ireland
+// preview.
 //
 // - Server-rendered; `requireHqAdmin` gate (non-revealing 404 on deny).
 // - Uses the sealed sidebar via hq/layout.tsx.
-// - Two country cards use the actual supplied images at
-//   /nex-brand/hq/ireland-studio.png and /nex-brand/hq/indonesia-studio.png
-// - Clicking a card navigates to the existing World Engine workspace
-//   with a focus query param so that world's section is highlighted.
-// - No duplicate World Engine; no runtime global switch; identity
-//   remains deployment-derived (D-6 doctrine).
 
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { requireHqAdmin } from "@/lib/nex-native/hq-authorization";
 
@@ -28,15 +24,14 @@ const ACCENT = "#00AFFF";
 const BORDER = "rgba(0,175,255,0.14)";
 
 type CountryCard = {
-  readonly id: "ireland" | "indonesia";
+  readonly id: "ireland";
   readonly displayName: string;
   readonly subtitle: string;
-  readonly worldId: "ireland" | "indonesia";
+  readonly worldId: "ireland";
   readonly image: string;
   readonly imageAlt: string;
   readonly ringColor: string;
   readonly appUrl: string;
-  readonly paletteHref: string;
 };
 
 // Owner-authorised 2026-10-31 (country-preview round) · country-card
@@ -53,18 +48,6 @@ const CARDS: readonly CountryCard[] = [
     imageAlt: "NEX Ireland · emerald + cream studio background",
     ringColor: "#1F8B4C",
     appUrl: "https://nex-ireland-preview.vercel.app/nex-native/contacts",
-    paletteHref: "/nex-native/hq/worlds?focus=ireland",
-  },
-  {
-    id: "indonesia",
-    displayName: "NEX INDONESIA",
-    subtitle: "Garuda red · gold · indigo",
-    worldId: "indonesia",
-    image: "/nex-brand/hq/indonesia-studio.png",
-    imageAlt: "NEX Indonesia · red + gold studio background",
-    ringColor: "#C8102E",
-    appUrl: "https://nex-indonesia-preview.vercel.app/nex-native/contacts",
-    paletteHref: "/nex-native/hq/worlds?focus=indonesia",
   },
 ];
 
@@ -262,20 +245,9 @@ function CountryCardTile({ card }: { card: CountryCard }): React.JSX.Element {
           <div style={{ fontSize: 12.5, color: INK_DIM, marginTop: 2 }}>
             {card.subtitle}
           </div>
-          <Link
-            href={card.paletteHref}
-            style={{
-              display: "inline-block",
-              marginTop: 10,
-              fontSize: 11.5,
-              fontWeight: 700,
-              color: INK_DIM,
-              textDecoration: "underline",
-              textUnderlineOffset: 3,
-            }}
-          >
-            Palette workspace →
-          </Link>
+          {/* Owner directive 2026-11-03 · Ireland-only consolidation ·
+              retired "Palette workspace →" link because the /hq/worlds
+              switcher route was removed in the same pass. */}
         </div>
         <a
           href={card.appUrl}

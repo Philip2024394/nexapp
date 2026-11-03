@@ -344,21 +344,11 @@ const YOUR_BUSINESS_ROWS: ReadonlyArray<MenuRow> = [
     href: "/nex-native/manage",
     locked: false, // owner directive 2026-10-28 · drawer links unlocked
   },
-  // Owner directive 2026-10-22 · Delivery pricing · routes to the
-  // prototype surface at /nex-native/delivery-prototype. Per the
-  // Delivery Pricing Doctrine 2026-10-22, this will move to
-  // /nex-native/manage/delivery when Phase C is authorised with
-  // real DB schema + server actions. Today the drawer link brings
-  // the owner straight to the policy editor (localStorage-backed)
-  // so the three-surface integration (drawer → page) is reviewable
-  // without a schema commitment.
-  {
-    key: "delivery-pricing",
-    label: "Delivery pricing",
-    subtitle: "Bike · cargo · pickup rules per order",
-    href: "/nex-native/delivery-prototype",
-    locked: false, // owner directive 2026-10-28 · drawer links unlocked
-  },
+  // Owner directive 2026-11-03 · Ireland-only consolidation · the
+  // /nex-native/delivery-prototype route was retired (used
+  // Indonesia-only data). The drawer entry is removed · the delivery-
+  // pricing flow will land as a separate Ireland-authorised build.
+  //
   // Business Vault is CONDITIONAL · rendered only when isBisnis is true.
   // The row itself lives in a separate const below so the gate stays
   // explicit at the render site.

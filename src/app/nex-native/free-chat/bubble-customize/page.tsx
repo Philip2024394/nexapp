@@ -18,6 +18,7 @@ import {
   defaultBubbleCustomizationForTheme,
 } from "../_types";
 import { readBubbleCustomization } from "../_customize-actions";
+import { LIBRARY_THEMES } from "../../chat-themes-library/_catalog";
 import { CustomizeClient } from "./_customize-client";
 
 export const runtime = "nodejs";
@@ -45,8 +46,16 @@ export default async function BubbleCustomizePage({
     redirect("/nex-native/free-chat?show-themes=1");
   }
 
-  const theme = FREE_CHAT_THEMES.find((t) => t.id === themeId);
-  if (!theme) {
+  // Owner directive 2026-11-03 · the Ireland picker now mixes
+  // FREE_CHAT_THEMES (nex-default, theme-1..5, ireland-1..5) with daily
+  // LIBRARY_THEMES spotlights (library-*, theme-o*). Previously only
+  // the FREE_CHAT lookup fired · spotlight picks 404'd. Resolve from
+  // either pool · label falls back to the LIBRARY entry.
+  const freeTheme = FREE_CHAT_THEMES.find((t) => t.id === themeId);
+  const libraryTheme = freeTheme
+    ? null
+    : LIBRARY_THEMES.find((t) => t.id === themeId);
+  if (!freeTheme && !libraryTheme) {
     notFound();
   }
 
@@ -55,14 +64,15 @@ export default async function BubbleCustomizePage({
   const saved = await readBubbleCustomization(themeId);
   const initial = saved ?? defaults;
   // Only the plain `nex-default` tile exposes the Background picker ·
-  // every wallpaper tile already carries its own backdrop.
-  const supportsBackgroundPicker = theme.isDefault === true;
+  // every wallpaper tile (free or library) already carries its own backdrop.
+  const supportsBackgroundPicker = freeTheme?.isDefault === true;
+  const themeLabel = freeTheme?.label ?? libraryTheme?.label ?? "Theme";
 
   return (
     <CustomizeClient
       themeId={themeId}
       wallpaperUrl={wallpaperUrl}
-      themeLabel={theme.label}
+      themeLabel={themeLabel}
       initial={initial}
       defaults={defaults}
       supportsBackgroundPicker={supportsBackgroundPicker}

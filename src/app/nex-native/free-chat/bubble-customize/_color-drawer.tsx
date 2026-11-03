@@ -108,6 +108,12 @@ export function ColorDrawer({
           to 72% so the glass reads as a true dark panel at every
           viewport width, with the 24px blur still softening whatever
           content sits behind it. Tapping dismisses. */}
+      {/* Owner directive 2026-11-03 · "back ground page is same as
+          contacts page page back ground" · lighten the overlay from
+          radial-gradient dark navy to a subtle translucent dim so the
+          sealed Ireland world backdrop (ireland-studio.png · painted
+          on body at ≥500px per nex-native.css) shows through the
+          glass · matches the contacts page look-and-feel. */}
       <button
         type="button"
         aria-label="Close color picker"
@@ -115,10 +121,9 @@ export function ColorDrawer({
         style={{
           position: "absolute",
           inset: 0,
-          background:
-            "radial-gradient(ellipse at center, rgba(2, 9, 20, 0.72) 0%, rgba(2, 9, 20, 0.92) 100%)",
-          backdropFilter: "blur(24px) saturate(140%)",
-          WebkitBackdropFilter: "blur(24px) saturate(140%)",
+          background: "rgba(2, 9, 20, 0.35)",
+          backdropFilter: "blur(14px) saturate(130%)",
+          WebkitBackdropFilter: "blur(14px) saturate(130%)",
           border: "none",
           padding: 0,
           cursor: "pointer",
@@ -159,7 +164,14 @@ export function ColorDrawer({
       </button>
 
       {/* Centered content · title + swatch grid · no inner container ·
-          just floating on the glass. Fits viewport without scrolling. */}
+          just floating on the glass.
+          Owner directive 2026-11-03 · "does not scrolling · and side
+          right and left side remove the cut colors" · overflow was
+          `hidden` which clipped the edge swatches on narrow phone-
+          frame viewports and prevented vertical scroll when the
+          palette had too many rows. Now `overflow-y: auto` lets the
+          user scroll · outer padding bumped so left/right edges keep
+          their breathing room so no swatch is cut off. */}
       <div
         style={{
           position: "absolute",
@@ -167,14 +179,16 @@ export function ColorDrawer({
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          justifyContent: "center",
+          justifyContent: "flex-start",
           padding:
-            "calc(env(safe-area-inset-top, 0px) + 70px) 16px calc(env(safe-area-inset-bottom, 0px) + 20px)",
+            "calc(env(safe-area-inset-top, 0px) + 70px) 24px calc(env(safe-area-inset-bottom, 0px) + 20px)",
           gap: 20,
           color: INK,
           fontFamily:
             "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-          overflow: "hidden",
+          overflowY: "auto",
+          overflowX: "hidden",
+          WebkitOverflowScrolling: "touch",
         }}
       >
         <div style={{ textAlign: "center" }}>
@@ -207,13 +221,19 @@ export function ColorDrawer({
             data-nex-color-drawer-grid
             style={{
               margin: 0,
-              padding: 0,
+              padding: "0 4px",
               listStyle: "none",
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(52px, 60px))",
-              gap: "10px 10px",
+              // Owner directive 2026-11-03 · "should be 4 wide" · fixed
+              // 4-column grid at every viewport. Was auto-fit · it
+              // dropped to 3 columns on narrow phone frames. Now 4
+              // equal tracks via `repeat(4, 1fr)` with a tight gap so
+              // 29 swatches fill ~8 rows + the overflow scrolls.
+              gridTemplateColumns: "repeat(4, 1fr)",
+              gap: "12px 10px",
               justifyContent: "center",
-              maxWidth: "min(96vw, 520px)",
+              maxWidth: "min(88vw, 520px)",
+              width: "100%",
             }}
           >
             {BUBBLE_PALETTE.map((p) => {

@@ -157,13 +157,31 @@ export function CustomizeClient({
           : PAGE_BG_FALLBACK,
       };
 
+  // Owner directive 2026-11-03 · "must show the theme back ground
+   // from the chat home free page" · the SAME wallpaper the user picked
+   // on /free-chat?show-themes=1 paints the full-page background here.
+   // For the plain `nex-default` tile (no wallpaper · supportsBackgroundPicker)
+   // the user's picked containerColor fills the page instead. Fallback
+   // to the sealed drawer-bg while the image loads.
+   const pageBg: React.CSSProperties = wallpaperUrl
+     ? {
+         backgroundImage: `url("${wallpaperUrl}")`,
+         backgroundSize: "cover",
+         backgroundPosition: "center",
+         backgroundRepeat: "no-repeat",
+         backgroundColor: PAGE_BG_FALLBACK,
+       }
+     : {
+         backgroundColor: supportsBackgroundPicker ? backgroundColor : PAGE_BG_FALLBACK,
+       };
+
   return (
     <div
       style={{
         height: "100vh",
         maxHeight: "100vh",
         overflow: "hidden",
-        background: PAGE_BG_FALLBACK,
+        ...pageBg,
         color: TEXT_INK,
         fontFamily: SANS,
         padding:
@@ -590,6 +608,11 @@ function ControlColumn({
               {Math.round(darken * 100)}%
             </strong>
           </span>
+          {/* Owner directive 2026-11-03 · "the darken scale bar should
+              0 to the color of the selected color" · track paints a
+              gradient from the live-picked colour (at 0 · left) to black
+              (at 1 · right) so the slider visually telegraphs what
+              darken does to the chosen hue. Thumb stays accent-tinted. */}
           <input
             type="range"
             min={0}
@@ -600,6 +623,13 @@ function ControlColumn({
             style={{
               width: "100%",
               accentColor: color,
+              appearance: "none",
+              WebkitAppearance: "none",
+              height: 10,
+              borderRadius: 999,
+              background: `linear-gradient(to right, ${color} 0%, #000000 100%)`,
+              outline: "none",
+              cursor: "pointer",
             }}
           />
         </label>

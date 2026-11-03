@@ -15,9 +15,12 @@
 //     legal settings. Those live elsewhere.
 //   · Worlds do NOT modify or compete with the chat-theme system.
 
-/** Stable world identifier. Keep lowercase · underscored. New worlds
- *  land by adding to this union AND to WORLD_REGISTRY. */
-export type WorldId = "nex-original" | "ireland" | "indonesia";
+/** Stable world identifier · Owner directive 2026-11-03 · Ireland is
+ *  the sole supported world. The nex-original + indonesia options
+ *  were retired in this pass. The type is retained as a single-member
+ *  union rather than a plain string literal so every call site keeps
+ *  its typed guarantee. */
+export type WorldId = "ireland";
 
 /** The subset of a world a renderer actually consumes. Each colour is
  *  a CSS value (hex, rgb(), rgba(), or a gradient). CSS custom

@@ -722,14 +722,14 @@ export function MyShopClient({
           </button>
         </div>
         {offersDelivery ? (
-          <Link
-            href="/nex-native/delivery-prototype"
+          // Owner directive 2026-11-03 · Ireland-only consolidation ·
+          // delivery-prototype route retired · placeholder copy kept
+          // so the shop prototype surface still renders when the owner
+          // toggles "Offers delivery" on. Future delivery-pricing flow
+          // ships as a separate authorised build.
+          <div
             data-nex-mp-my-shop-delivery-cta
             style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 8,
               padding: "10px 12px",
               borderRadius: 10,
               background: "rgba(0, 175, 255, 0.14)",
@@ -738,14 +738,11 @@ export function MyShopClient({
               fontSize: 12,
               fontWeight: 800,
               letterSpacing: 0.3,
-              textDecoration: "none",
               fontFamily: "inherit",
-              WebkitTapHighlightColor: "transparent",
             }}
           >
-            <span>⚡ Set up delivery pricing · 2 min</span>
-            <span aria-hidden style={{ fontSize: 16 }}>→</span>
-          </Link>
+            Delivery pricing coming soon.
+          </div>
         ) : (
           <div
             style={{

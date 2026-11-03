@@ -137,7 +137,19 @@ export default async function FreeChatPage({
   const signedInSession = await resolveSessionWithDevOverride().catch(
     () => null,
   );
-  if (signedInSession && !devPreviewOn(sp) && !isAdminSession(signedInSession)) {
+  // Owner directive 2026-11-03 · Ireland identity = /free-chat IS the
+  // home. Signed-in Ireland visitors must NOT be bounced to /contacts
+  // (that was the 2026-10-22 default for all worlds · now scoped by
+  // NEX_APP_IDENTITY). Other worlds retain the sealed guest-only
+  // guard. Dev-preview + admin bypasses still apply.
+  const freeChatIdentity = (process.env.NEX_APP_IDENTITY ?? "").trim().toLowerCase();
+  const isIrelandDeployment = freeChatIdentity === "ireland";
+  if (
+    signedInSession &&
+    !devPreviewOn(sp) &&
+    !isAdminSession(signedInSession) &&
+    !isIrelandDeployment
+  ) {
     redirect("/nex-native/contacts");
   }
 

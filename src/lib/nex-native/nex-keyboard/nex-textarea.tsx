@@ -169,7 +169,12 @@ export function NexTextarea({
           mode={resolvedMode}
           planes={planes}
           initialPlane={initialPlane}
-          accentColor={accentColor ?? "#00AFFF"}
+          // Owner directive 2026-11-03 · drop the hard-coded blue
+          // fallback · it masked the Ireland `:root --nex-kp-accent`
+          // orange emitted by _world-stylesheet.tsx. Passing undefined
+          // lets the keypad's paletteVars=={} branch fire so the
+          // :root CSS cascade applies.
+          accentColor={accentColor}
           maxLength={maxLength}
         />
       ) : null}
