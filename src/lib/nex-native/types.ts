@@ -320,6 +320,22 @@ export interface NexAccountProfileRow {
    *  40, deferred). Combined with a completed daily_activity, drives
    *  the Verified Personal ✓ tick. File-upload paths leave false. */
   avatar_face_verified: boolean;
+  /** Migration 273 · Ireland fields · 2026-11-04.
+   *  country_code · ISO2 (IE, US, GB, …) · nullable · drives the
+   *  country-of-residence badge on the profile card. */
+  country_code: string | null;
+  /** Migration 273 · street address · nullable · max 200 chars.
+   *  Diaspora users may leave this empty. */
+  address: string | null;
+  /** Migration 273 · pick-2 interests from `interests-registry.ts`.
+   *  CHECK-constrained to max 2 entries at the DB level. */
+  interests: string[];
+  /** Migration 273 · social handles · bare handle, no leading @ / URL. */
+  instagram_handle: string | null;
+  tiktok_handle: string | null;
+  facebook_handle: string | null;
+  x_handle: string | null;
+  youtube_handle: string | null;
   created_at: NexTimestamp;
   updated_at: NexTimestamp;
 }
@@ -342,6 +358,15 @@ export interface NexAccountProfileInsert {
   daily_activity?: NexDailyActivity | null;
   daily_activity_detail?: NexDailyActivityDetail;
   avatar_face_verified?: boolean;
+  // Migration 273 · Ireland fields · all optional on Insert.
+  country_code?: string | null;
+  address?: string | null;
+  interests?: string[];
+  instagram_handle?: string | null;
+  tiktok_handle?: string | null;
+  facebook_handle?: string | null;
+  x_handle?: string | null;
+  youtube_handle?: string | null;
 }
 
 /** Patch shape · every field optional · empty string is normalised to null
@@ -361,6 +386,15 @@ export interface NexAccountProfilePatch {
   daily_activity?: NexDailyActivity | null;
   daily_activity_detail?: NexDailyActivityDetail;
   avatar_face_verified?: boolean;
+  // Migration 273 · Ireland fields · patchable individually.
+  country_code?: string | null;
+  address?: string | null;
+  interests?: string[];
+  instagram_handle?: string | null;
+  tiktok_handle?: string | null;
+  facebook_handle?: string | null;
+  x_handle?: string | null;
+  youtube_handle?: string | null;
 }
 
 /** Bridge 41 · derived predicate · pure function so any surface can

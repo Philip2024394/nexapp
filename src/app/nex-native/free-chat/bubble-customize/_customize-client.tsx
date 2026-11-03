@@ -119,7 +119,12 @@ export function CustomizeClient({
         },
       });
       if (res.ok) {
-        router.push("/nex-native/free-chat");
+        // Owner directive 2026-11-04 · post-bubble-save flow routes to
+        // the redesigned profile editor (first-fill for new users ·
+        // from=signup lands them in /free-chat after save). Edit-from-
+        // drawer users hit the same route and return to /profile/me on
+        // save. Prior revision bounced straight to /free-chat.
+        router.push("/nex-native/settings/profile/edit?from=signup");
         router.refresh();
       } else {
         setFeedback(`Save failed: ${res.code}`);

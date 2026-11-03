@@ -24,18 +24,27 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { signOutAction } from "../_actions";
 
 interface MenuRow {
   readonly href: string;
   readonly icon: string;
   readonly label: string;
+  readonly sub?: string;
 }
 
+// Owner directive 2026-11-03 · drawer menu for the "+" button in the
+// Contacts/Chat header. No HQ admin row (shipped via /hq nav). No
+// My Community row (already a card on the Groups tab).
 const MENU: readonly MenuRow[] = [
-  { href: "/nex-native/contacts?action=add", icon: "👤", label: "Add contact" },
-  { href: "/nex-native/contacts?action=invite", icon: "✉", label: "Invite friends" },
-  { href: "/nex-native/settings", icon: "⚙", label: "Settings" },
-  { href: "/nex-native/home", icon: "🏠", label: "Home" },
+  { href: "/nex-native/settings/profile/edit", icon: "👤", label: "Profile", sub: "Edit name · country · interests · socials" },
+  { href: "/nex-native/chat-themes-library", icon: "🎨", label: "Chat themes", sub: "Wallpapers · bubbles · intros" },
+  { href: "/nex-native/settings/privacy", icon: "🔒", label: "Privacy", sub: "Presence · blocked · read receipts" },
+  { href: "/nex-native/settings/notifications", icon: "🔔", label: "Notifications", sub: "Chat · community · live" },
+  { href: "/nex-native/vault", icon: "💾", label: "Vault", sub: "Secure storage · 5 GB" },
+  { href: "/nex-native/live-commerce/go-live", icon: "📺", label: "Live", sub: "Broadcast to your contacts" },
+  { href: "/nex-native/settings/tier", icon: "💳", label: "Package & billing", sub: "Your plan · trial · invoices" },
+  { href: "/nex-native/help", icon: "💬", label: "Help · NEX1", sub: "Chat with the NEX team" },
 ];
 
 export function ContactsPlusDrawer(): React.JSX.Element {
@@ -162,6 +171,39 @@ export function ContactsPlusDrawer(): React.JSX.Element {
                 </button>
               </div>
 
+              {/* Emergency help button · owner directive 2026-11-03
+                  "we need the emergcey button for user help" · prominent
+                  red CTA at the top of the drawer · dials 112 (EU-wide
+                  emergency number · Ireland standard). Separate from
+                  the "Help · NEX1" row below which is non-emergency
+                  team chat. */}
+              <a
+                href="tel:112"
+                onClick={close}
+                aria-label="Emergency help · dial 112"
+                data-nex-drawer-emergency
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  margin: "12px 14px 6px",
+                  padding: "14px 16px",
+                  borderRadius: 12,
+                  background: "#9B1C1C",
+                  color: "#FFF",
+                  textDecoration: "none",
+                  fontSize: 15,
+                  fontWeight: 800,
+                  letterSpacing: "0.03em",
+                  boxShadow: "0 4px 14px rgba(155,28,28,0.45)",
+                  border: "1px solid rgba(255,255,255,0.18)",
+                }}
+              >
+                <span style={{ fontSize: 22, lineHeight: 1 }} aria-hidden>🚨</span>
+                <span style={{ flex: 1 }}>Emergency help</span>
+                <span style={{ fontSize: 13, fontWeight: 700, opacity: 0.9 }}>112</span>
+              </a>
+
               {/* Menu rows */}
               <nav
                 style={{
@@ -181,7 +223,7 @@ export function ContactsPlusDrawer(): React.JSX.Element {
                       display: "flex",
                       alignItems: "center",
                       gap: 14,
-                      padding: "14px 20px",
+                      padding: "12px 20px",
                       color: "#F2F5F8",
                       textDecoration: "none",
                       fontSize: 15,
@@ -190,18 +232,64 @@ export function ContactsPlusDrawer(): React.JSX.Element {
                       transition: "background 150ms ease-out",
                     }}
                   >
-                    <span style={{ fontSize: 20, lineHeight: 1 }} aria-hidden>
+                    <span style={{ fontSize: 20, lineHeight: 1, width: 24, textAlign: "center" }} aria-hidden>
                       {row.icon}
                     </span>
-                    <span>{row.label}</span>
+                    <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+                      <span>{row.label}</span>
+                      {row.sub ? (
+                        <span style={{ fontSize: 11, fontWeight: 500, color: "var(--nex-world-primary-ink, #AFC5B5)", opacity: 0.75 }}>
+                          {row.sub}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span aria-hidden style={{ fontSize: 14, color: "var(--nex-world-secondary, #C6A15B)", opacity: 0.5 }}>›</span>
                   </Link>
                 ))}
+
+                {/* Sign out · server action · clears the sealed Supabase
+                    session (nexAppSsrServerClient) + redirects to /sign-in.
+                    Rendered as a form button (not a Link) so the action
+                    actually fires server-side. */}
+                <form action={signOutAction} style={{ margin: 0 }}>
+                  <button
+                    type="submit"
+                    onClick={close}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 14,
+                      padding: "12px 20px",
+                      width: "100%",
+                      background: "transparent",
+                      color: "#F2F5F8",
+                      border: "none",
+                      borderLeft: "3px solid transparent",
+                      fontSize: 15,
+                      fontWeight: 600,
+                      fontFamily: "inherit",
+                      textAlign: "left",
+                      cursor: "pointer",
+                      transition: "background 150ms ease-out",
+                    }}
+                  >
+                    <span style={{ fontSize: 20, lineHeight: 1, width: 24, textAlign: "center" }} aria-hidden>
+                      🚪
+                    </span>
+                    <span style={{ flex: 1 }}>Sign out</span>
+                    <span aria-hidden style={{ fontSize: 14, color: "var(--nex-world-secondary, #C6A15B)", opacity: 0.5 }}>›</span>
+                  </button>
+                </form>
               </nav>
             </aside>
             <style>{`
-              [role="dialog"][aria-label="Contacts menu"] a:hover {
+              [role="dialog"][aria-label="Contacts menu"] a:hover,
+              [role="dialog"][aria-label="Contacts menu"] button[type="submit"]:hover {
                 background: color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 8%, transparent);
                 border-left-color: var(--nex-world-secondary, #C6A15B) !important;
+              }
+              [role="dialog"][aria-label="Contacts menu"] [data-nex-drawer-emergency]:hover {
+                filter: brightness(1.12);
               }
             `}</style>
           </>,

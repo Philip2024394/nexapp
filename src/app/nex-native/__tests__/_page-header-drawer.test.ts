@@ -51,31 +51,37 @@ describe("shared page-header drawer · client-component shape", () => {
   });
 });
 
-describe("shared page-header drawer · seven sealed destinations", () => {
-  it("drawer links array holds exactly the six Link items + the sign-out form", () => {
-    expect(DRAWER).toMatch(/label:\s*["']Home["']/);
-    expect(DRAWER).toMatch(/label:\s*["']Contacts["']/);
-    expect(DRAWER).toMatch(/label:\s*["']Chat["']/);
-    expect(DRAWER).toMatch(/label:\s*["']Calls["']/);
-    expect(DRAWER).toMatch(/label:\s*["']Search["']/);
-    expect(DRAWER).toMatch(/label:\s*["']Settings["']/);
+describe("shared page-header drawer · owner-sealed 2026-11-03 destinations", () => {
+  // Owner directive 2026-11-03 · "the side drawer is active on the
+  // plus button in header · this is global for chat app". Prior
+  // sealed destinations (Home · Contacts · Chat · Calls · Search ·
+  // Settings · Sign out) retired. New 10-row drawer below.
+  it("drawer rows carry the sealed owner-approved labels", () => {
+    expect(DRAWER).toMatch(/label:\s*["']Profile["']/);
+    expect(DRAWER).toMatch(/label:\s*["']Chat themes["']/);
+    expect(DRAWER).toMatch(/label:\s*["']Privacy["']/);
+    expect(DRAWER).toMatch(/label:\s*["']Notifications["']/);
+    expect(DRAWER).toMatch(/label:\s*["']Vault["']/);
+    expect(DRAWER).toMatch(/label:\s*["']Live["']/);
+    expect(DRAWER).toMatch(/label:\s*["']Package & billing["']/);
+    expect(DRAWER).toMatch(/label:\s*["']Help · NEX1["']/);
     // Sign out is a <button type="submit"> inside the form.
     expect(DRAWER).toMatch(/Sign out/);
+    // Emergency help CTA (red · tel:112) is a separate row above the menu.
+    expect(DRAWER).toMatch(/Emergency help/);
   });
 
-  it("every drawer destination routes to its sealed /nex-native path", () => {
-    expect(DRAWER).toMatch(/href:\s*["']\/nex-native\/home["']/);
-    // Owner-authorised 2026-10-17 Phase 1 · /contacts is a dedicated
-    // Contacts hub when NEX_CONTACTS_V2_ENABLED is on; otherwise it
-    // server-side redirects to /chat?tab=friends. Drawer links direct
-    // to /contacts either way.
-    expect(DRAWER).toMatch(/href:\s*["']\/nex-native\/contacts["']/);
-    expect(DRAWER).toMatch(/href:\s*["']\/nex-native\/chat["']/);
-    expect(DRAWER).toMatch(/href:\s*["']\/nex-native\/calls["']/);
-    // Canonical-directory doctrine 2026-10-17 · /search retired as
-    // competing surface · drawer nav lands on /directory/landing.
-    expect(DRAWER).toMatch(/href:\s*["']\/nex-native\/directory\/landing["']/);
-    expect(DRAWER).toMatch(/href:\s*["']\/nex-native\/settings["']/);
+  it("every drawer destination routes to its sealed Ireland path", () => {
+    expect(DRAWER).toMatch(/href:\s*["']\/nex-native\/settings\/profile\/edit["']/);
+    expect(DRAWER).toMatch(/href:\s*["']\/nex-native\/chat-themes-library["']/);
+    expect(DRAWER).toMatch(/href:\s*["']\/nex-native\/settings\/privacy["']/);
+    expect(DRAWER).toMatch(/href:\s*["']\/nex-native\/settings\/notifications["']/);
+    expect(DRAWER).toMatch(/href:\s*["']\/nex-native\/vault["']/);
+    expect(DRAWER).toMatch(/href:\s*["']\/nex-native\/live-commerce\/go-live["']/);
+    expect(DRAWER).toMatch(/href:\s*["']\/nex-native\/settings\/tier["']/);
+    expect(DRAWER).toMatch(/href:\s*["']\/nex-native\/help["']/);
+    // Emergency row is tel:112 (EU-wide · Ireland standard).
+    expect(DRAWER).toMatch(/href=["']tel:112["']/);
   });
 
   it("drawer uses scoped data attributes so it does not collide with the Welcome bespoke drawer", () => {
@@ -99,24 +105,28 @@ describe("shared page-header drawer · accessibility + close affordances", () =>
   });
 
   it("overlay click closes the drawer", () => {
-    // The overlay <div> carries BOTH an onClick that calls setOpen(false)
-    // AND the data-nex-page-header-drawer-overlay attribute · JSX
-    // declaration order is not deterministic between the two so match
-    // both near-together.
+    // The overlay <div> carries BOTH an onClick that closes AND the
+    // data-nex-page-header-drawer-overlay attribute · 2026-11-03 the
+    // close handler is a `close` callback (reused by rows) · the
+    // assertion matches either shape.
     expect(DRAWER).toMatch(
-      /onClick=\{\(\)\s*=>\s*setOpen\(\s*false\s*\)\}[\s\S]{0,200}data-nex-page-header-drawer-overlay/,
+      /onClick=\{(close|\(\)\s*=>\s*setOpen\(\s*false\s*\))\}[\s\S]{0,200}data-nex-page-header-drawer-overlay/,
     );
   });
 
   it("drawer trigger carries proper menu semantics", () => {
-    expect(DRAWER).toMatch(/aria-label="Open navigation menu"/);
+    // Owner directive 2026-11-03 · trigger renamed from "Open navigation
+    // menu" to "Open menu" (shorter · reflects the Settings-and-Services
+    // scope of the new drawer).
+    expect(DRAWER).toMatch(/aria-label="Open menu"/);
     expect(DRAWER).toMatch(/aria-haspopup="menu"/);
     expect(DRAWER).toMatch(/aria-expanded=\{open\}/);
   });
 
   it("drawer panel is a role=menu with an aria-label", () => {
     expect(DRAWER).toMatch(/role="menu"/);
-    expect(DRAWER).toMatch(/aria-label="NEX navigation"/);
+    // Owner directive 2026-11-03 · panel aria-label renamed to "NEX menu".
+    expect(DRAWER).toMatch(/aria-label="NEX menu"/);
   });
 
   it("first drawer link gets focus on open", () => {

@@ -14,7 +14,18 @@
 // `showAvatarUploadAffordance=true` (owner mode + edit mode active).
 // Zero footprint in view mode or when the viewer is not the owner.
 //
-// Client Component · needs `useRef` + `onChange` auto-submit.
+// Owner-fix 2026-11-04 · HYDRATION BUG · the prior revision wrapped
+// the input + button in a `<form action={uploadAvatarAction}>`. On
+// the Profile page this component mounts INSIDE OwnerEditShell's
+// outer `<form action={savePersonalProfileAction}>` · HTML forbids
+// nested <form> elements · React threw "cannot be a descendant of
+// <form>" during hydration. Fix · drop the inner `<form>` entirely ·
+// call `uploadAvatarAction(formData)` directly from the file-change
+// handler via `startTransition`. Zero wire change to the server
+// action (still receives multipart/form-data via the FormData the
+// handler constructs).
+//
+// Client Component · needs `useRef` + `onChange` + `useTransition`.
 
 "use client";
 
@@ -29,18 +40,14 @@ const NEX = {
 
 export function AvatarCameraPicker(): React.JSX.Element {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
-  const formRef = React.useRef<HTMLFormElement | null>(null);
+  const [isPending, startTransition] = React.useTransition();
   return (
-    <form
-      ref={formRef}
-      action={uploadAvatarAction}
-      encType="multipart/form-data"
-      data-nex-profile-avatar-upload-form
+    <div
+      data-nex-profile-avatar-upload-wrap
       style={{
         position: "absolute",
         right: 2,
         bottom: 2,
-        margin: 0,
       }}
     >
       <input
@@ -48,11 +55,19 @@ export function AvatarCameraPicker(): React.JSX.Element {
         type="file"
         name="avatar"
         accept="image/jpeg,image/png,image/webp"
-        onChange={() => {
-          // Auto-submit as soon as a file is picked · same UX as the
-          // sealed face-camera-uploader. If the user cancels the
-          // picker, no change event fires and the form stays idle.
-          formRef.current?.requestSubmit();
+        onChange={(e) => {
+          const file = e.currentTarget.files?.[0];
+          if (!file) return;
+          const formData = new FormData();
+          formData.append("avatar", file);
+          startTransition(() => {
+            // Fire the sealed server action directly · no inner <form>
+            // so this component is safe to render inside OwnerEditShell's
+            // outer <form>.
+            void uploadAvatarAction(formData);
+          });
+          // Reset the input value so re-selecting the same file still fires.
+          e.currentTarget.value = "";
         }}
         style={{
           position: "absolute",
@@ -67,10 +82,11 @@ export function AvatarCameraPicker(): React.JSX.Element {
         type="button"
         onClick={() => inputRef.current?.click()}
         aria-label="Change profile image"
+        disabled={isPending}
         data-nex-profile-avatar-camera
         style={{
           all: "unset",
-          cursor: "pointer",
+          cursor: isPending ? "wait" : "pointer",
           display: "grid",
           placeItems: "center",
           width: 36,
@@ -80,11 +96,12 @@ export function AvatarCameraPicker(): React.JSX.Element {
           color: NEX.bg,
           border: `3px solid ${NEX.bg}`,
           boxShadow: `0 0 0 1px ${NEX.cyanRim}`,
+          opacity: isPending ? 0.6 : 1,
         }}
       >
         <CameraIcon />
       </button>
-    </form>
+    </div>
   );
 }
 

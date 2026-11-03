@@ -2,66 +2,60 @@
 
 // src/app/nex-native/_page-header-drawer-button-client.tsx
 //
-// Owner-authorised 2026-10-17 · shared three-dots drawer for the
-// NEX shared page header. Mounted at the end of the right cluster
-// inside `NexPageHeader` so every nex-native surface that uses the
-// shared header picks up the same drawer for free.
+// Owner directive 2026-11-03 · "the side drawer is active on the plus
+// button in header · this is global for chat app" · the sealed shared
+// NEX side-drawer. Mounts automatically on every surface that uses
+// `NexPageHeader`. Opened by the Gold "+" trigger in the header right
+// cluster.
+//
+// Menu (10 rows + Emergency CTA):
+//   🚨 Emergency help     tel:112
+//   👤 Profile            /profile/me
+//   🎨 Chat themes        /chat-themes-library
+//   🔒 Privacy            /settings/privacy
+//   🔔 Notifications      /settings/notifications
+//   💾 Vault              /vault
+//   📺 Live               /live-commerce/go-live
+//   💳 Package & billing  /settings/tier
+//   💬 Help · NEX1        /help
+//   🚪 Sign out           server action
 //
 // Load-bearing invariants:
-//   · The seven links are the sealed NEX surfaces: Home, Contacts,
-//     Chat, Calls, Search, Settings, Sign out. Sign out posts to
-//     the sealed `signOutAction` server action · it never simulates
-//     sign-out and never introduces a second auth mechanism.
-//   · Search routes to `/nex-native/search` · the HardLocationGate
-//     on that route still runs · this drawer does not bypass it.
-//   · Settings routes to `/nex-native/settings` · the shared
-//     SettingsHeaderSlot (lock + probe + modal) still owns the
-//     gear/lock behaviour from the header itself · this drawer is a
-//     secondary navigation surface, not a gate replacement.
-//   · The drawer button and panel use scoped data attributes under
-//     `data-nex-page-header-drawer-*` so tests + analytics can
-//     address them without colliding with the Welcome bespoke drawer
-//     which uses `data-nex-welcome-drawer-*`.
-//   · Esc closes · overlay click closes · first link gets focus on
-//     open. No cookies, no persistence, no DB writes.
+//   · Sign out posts to the sealed `signOutAction` server action ·
+//     never simulates sign-out · never introduces a second auth path.
+//   · Emergency row is `tel:112` (EU-wide · Ireland standard).
+//   · Ireland palette throughout (--nex-world-drawer-bg · secondary ·
+//     primary-ink CSS vars emitted by _world-stylesheet.tsx).
+//   · Scoped data attributes `data-nex-page-header-drawer-*` so tests
+//     + analytics can address rows without collision.
+//
+// Owner-authorised 2026-10-17 sealed revision retired · the earlier
+// seven-link navigation (Home · Contacts · Chat · Calls · Search ·
+// Settings · Sign out) is superseded by the new 10-row drawer. The
+// retired links still exist as separate routes · they're just no
+// longer surfaced through this drawer.
 
 import * as React from "react";
 import Link from "next/link";
 import { signOutAction } from "./_actions";
 
-const NEX = {
-  panel: "#071525",
-  textPrimary: "#F2F5F8",
-  textMuted: "#7D9BC0",
-  cyan: "#00AFFF",
-  cyanBorder: "rgba(0, 175, 255, 0.35)",
-  borderStrong: "rgba(139, 169, 209, 0.18)",
-};
+interface MenuRow {
+  readonly href: string;
+  readonly icon: string;
+  readonly label: string;
+  readonly sub?: string;
+  readonly testid: string;
+}
 
-type DrawerLink = {
-  label: string;
-  href: string;
-  testid: string;
-};
-
-const DRAWER_LINKS: ReadonlyArray<DrawerLink> = [
-  { label: "Home", href: "/nex-native/home", testid: "home" },
-  // Owner-authorised 2026-10-17 Phase 1 · /nex-native/contacts is a
-  // dedicated Contacts hub again (NEX CONTACTS redesign). When the
-  // NEX_CONTACTS_V2_ENABLED flag is OFF, that route server-side
-  // redirects to /chat?tab=friends (preserved fallback). Link direct
-  // either way · the redirect handles the flag-off case.
-  { label: "Contacts", href: "/nex-native/contacts", testid: "contacts" },
-  { label: "Chat", href: "/nex-native/chat", testid: "chat" },
-  { label: "Calls", href: "/nex-native/calls", testid: "calls" },
-  // Owner-authorised 2026-10-17 canonical-directory doctrine · the
-  // competing /nex-native/search surface is retired in favour of
-  // /nex-native/directory/landing (the one canonical NEX Directory
-  // entry point). Two product-tag flows still use /search?q=
-  // temporarily · they're an explicit retirement blocker, not a
-  // permanent exception. Drawer nav always lands on the canonical.
-  { label: "Search", href: "/nex-native/directory/landing", testid: "search" },
-  { label: "Settings", href: "/nex-native/settings", testid: "settings" },
+const MENU: readonly MenuRow[] = [
+  { href: "/nex-native/settings/profile/edit", icon: "👤", label: "Profile", sub: "Edit name · country · interests · socials", testid: "profile" },
+  { href: "/nex-native/chat-themes-library", icon: "🎨", label: "Chat themes", sub: "Wallpapers · bubbles · intros", testid: "chat-themes" },
+  { href: "/nex-native/settings/privacy", icon: "🔒", label: "Privacy", sub: "Presence · blocked · read receipts", testid: "privacy" },
+  { href: "/nex-native/settings/notifications", icon: "🔔", label: "Notifications", sub: "Chat · community · live", testid: "notifications" },
+  { href: "/nex-native/vault", icon: "💾", label: "Vault", sub: "Secure storage · 5 GB", testid: "vault" },
+  { href: "/nex-native/live-commerce/go-live", icon: "📺", label: "Live", sub: "Broadcast to your contacts", testid: "live" },
+  { href: "/nex-native/settings/tier", icon: "💳", label: "Package & billing", sub: "Your plan · trial · invoices", testid: "tier" },
+  { href: "/nex-native/help", icon: "💬", label: "Help · NEX1", sub: "Chat with the NEX team", testid: "help" },
 ];
 
 export function PageHeaderDrawerButtonClient(): React.ReactElement {
@@ -78,11 +72,13 @@ export function PageHeaderDrawerButtonClient(): React.ReactElement {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
+  const close = React.useCallback(() => setOpen(false), []);
+
   return (
     <>
       <button
         type="button"
-        aria-label="Open navigation menu"
+        aria-label="Open menu"
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen(true)}
@@ -96,30 +92,23 @@ export function PageHeaderDrawerButtonClient(): React.ReactElement {
           height: 40,
           borderRadius: "50%",
           cursor: "pointer",
-          border: `1px solid ${NEX.cyanBorder}`,
-          background: "transparent",
-          color: NEX.cyan,
+          background: "var(--nex-world-secondary, #C6A15B)",
+          color: "var(--nex-world-drawer-bg, #123D2B)",
+          fontSize: 26,
+          fontWeight: 900,
+          lineHeight: 1,
           WebkitTapHighlightColor: "transparent",
+          boxShadow: "0 2px 8px rgba(10, 31, 21, 0.35)",
         }}
       >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 20 20"
-          fill="none"
-          aria-hidden="true"
-        >
-          <circle cx="10" cy="4" r="1.7" fill="currentColor" />
-          <circle cx="10" cy="10" r="1.7" fill="currentColor" />
-          <circle cx="10" cy="16" r="1.7" fill="currentColor" />
-        </svg>
+        +
       </button>
 
       {open ? (
         <>
           <div
             role="presentation"
-            onClick={() => setOpen(false)}
+            onClick={close}
             data-nex-page-header-drawer-overlay
             style={{
               position: "fixed",
@@ -130,7 +119,7 @@ export function PageHeaderDrawerButtonClient(): React.ReactElement {
           />
           <aside
             role="menu"
-            aria-label="NEX navigation"
+            aria-label="NEX menu"
             data-nex-page-header-drawer-panel
             style={{
               position: "fixed",
@@ -138,108 +127,178 @@ export function PageHeaderDrawerButtonClient(): React.ReactElement {
               right: 0,
               bottom: 0,
               width: "min(84vw, 320px)",
-              background: NEX.panel,
-              borderLeft: `1px solid ${NEX.borderStrong}`,
-              boxShadow: "0 0 48px rgba(0, 0, 0, 0.6)",
-              padding: "calc(env(safe-area-inset-top, 0) + 16px) 14px 14px 14px",
+              background: "var(--nex-world-drawer-bg, #123D2B)",
+              borderLeft: "1px solid rgba(255,255,255,0.08)",
+              boxShadow: "-8px 0 32px rgba(0, 0, 0, 0.6)",
+              padding: "calc(env(safe-area-inset-top, 0) + 16px) 0 14px",
               zIndex: 91,
               display: "flex",
               flexDirection: "column",
-              gap: 8,
+              color: "#F2F5F8",
+              overflowY: "auto",
             }}
           >
+            {/* Header */}
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                marginBottom: 6,
+                padding: "0 18px 14px",
+                borderBottom: "1px solid rgba(255,255,255,0.08)",
               }}
             >
-              <span
+              <h2
                 style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: NEX.textMuted,
+                  margin: 0,
+                  fontSize: 15,
+                  fontWeight: 800,
+                  letterSpacing: "0.03em",
+                  color: "var(--nex-world-secondary, #C6A15B)",
                 }}
               >
-                Navigation
-              </span>
+                Menu
+              </h2>
               <button
                 type="button"
+                onClick={close}
                 aria-label="Close menu"
-                onClick={() => setOpen(false)}
                 data-nex-page-header-drawer-close
                 style={{
-                  all: "unset",
-                  cursor: "pointer",
                   width: 32,
                   height: 32,
-                  borderRadius: 8,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: NEX.textMuted,
-                  border: `1px solid ${NEX.borderStrong}`,
+                  borderRadius: "50%",
+                  background: "transparent",
+                  color: "#F2F5F8",
+                  border: "1px solid rgba(255,255,255,0.2)",
+                  fontSize: 16,
+                  cursor: "pointer",
+                  display: "grid",
+                  placeItems: "center",
                 }}
               >
                 ×
               </button>
             </div>
 
-            {DRAWER_LINKS.map((item, idx) => (
-              <Link
-                key={item.testid}
-                href={item.href}
-                role="menuitem"
-                ref={idx === 0 ? firstLinkRef : undefined}
-                data-nex-page-header-drawer-link={item.testid}
-                onClick={() => setOpen(false)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  minHeight: 44,
-                  padding: "0 12px",
-                  borderRadius: 10,
-                  color: NEX.textPrimary,
-                  textDecoration: "none",
-                  fontSize: 15,
-                  fontWeight: 600,
-                  border: `1px solid ${NEX.borderStrong}`,
-                  background: "transparent",
-                }}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {/* Emergency help · red CTA · tel:112 (EU-wide + Ireland). */}
+            <a
+              href="tel:112"
+              onClick={close}
+              aria-label="Emergency help · dial 112"
+              data-nex-page-header-drawer-emergency
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                margin: "12px 14px 6px",
+                padding: "14px 16px",
+                borderRadius: 12,
+                background: "#9B1C1C",
+                color: "#FFF",
+                textDecoration: "none",
+                fontSize: 15,
+                fontWeight: 800,
+                letterSpacing: "0.03em",
+                boxShadow: "0 4px 14px rgba(155,28,28,0.45)",
+                border: "1px solid rgba(255,255,255,0.18)",
+              }}
+            >
+              <span style={{ fontSize: 22, lineHeight: 1 }} aria-hidden>🚨</span>
+              <span style={{ flex: 1 }}>Emergency help</span>
+              <span style={{ fontSize: 13, fontWeight: 700, opacity: 0.9 }}>112</span>
+            </a>
 
-            <form action={signOutAction} style={{ marginTop: 6 }}>
-              <button
-                type="submit"
-                role="menuitem"
-                data-nex-page-header-drawer-link="sign-out"
-                style={{
-                  all: "unset",
-                  display: "flex",
-                  alignItems: "center",
-                  width: "100%",
-                  minHeight: 44,
-                  padding: "0 12px",
-                  borderRadius: 10,
-                  color: NEX.cyan,
-                  fontSize: 15,
-                  fontWeight: 700,
-                  border: `1px solid ${NEX.cyanBorder}`,
-                  background: "rgba(0, 175, 255, 0.08)",
-                  cursor: "pointer",
-                  boxSizing: "border-box",
-                }}
-              >
-                Sign out
-              </button>
-            </form>
+            {/* Menu rows */}
+            <nav
+              style={{
+                flex: 1,
+                padding: "8px 0 0",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              {MENU.map((row, idx) => (
+                <Link
+                  key={row.testid}
+                  href={row.href}
+                  role="menuitem"
+                  ref={idx === 0 ? firstLinkRef : undefined}
+                  onClick={close}
+                  data-nex-page-header-drawer-link={row.testid}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 14,
+                    padding: "12px 20px",
+                    color: "#F2F5F8",
+                    textDecoration: "none",
+                    fontSize: 15,
+                    fontWeight: 600,
+                    borderLeft: "3px solid transparent",
+                    transition: "background 150ms ease-out",
+                  }}
+                >
+                  <span style={{ fontSize: 20, lineHeight: 1, width: 24, textAlign: "center" }} aria-hidden>
+                    {row.icon}
+                  </span>
+                  <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+                    <span>{row.label}</span>
+                    {row.sub ? (
+                      <span style={{ fontSize: 11, fontWeight: 500, color: "var(--nex-world-primary-ink, #AFC5B5)", opacity: 0.75 }}>
+                        {row.sub}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span aria-hidden style={{ fontSize: 14, color: "var(--nex-world-secondary, #C6A15B)", opacity: 0.5 }}>›</span>
+                </Link>
+              ))}
+
+              {/* Sign out · server action · clears the sealed Supabase
+                  session + redirects to /sign-in. */}
+              <form action={signOutAction} style={{ margin: 0 }}>
+                <button
+                  type="submit"
+                  role="menuitem"
+                  data-nex-page-header-drawer-link="sign-out"
+                  onClick={close}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 14,
+                    padding: "12px 20px",
+                    width: "100%",
+                    background: "transparent",
+                    color: "#F2F5F8",
+                    border: "none",
+                    borderLeft: "3px solid transparent",
+                    fontSize: 15,
+                    fontWeight: 600,
+                    fontFamily: "inherit",
+                    textAlign: "left",
+                    cursor: "pointer",
+                    transition: "background 150ms ease-out",
+                  }}
+                >
+                  <span style={{ fontSize: 20, lineHeight: 1, width: 24, textAlign: "center" }} aria-hidden>
+                    🚪
+                  </span>
+                  <span style={{ flex: 1 }}>Sign out</span>
+                  <span aria-hidden style={{ fontSize: 14, color: "var(--nex-world-secondary, #C6A15B)", opacity: 0.5 }}>›</span>
+                </button>
+              </form>
+            </nav>
+
+            <style>{`
+              [data-nex-page-header-drawer-panel] a:hover,
+              [data-nex-page-header-drawer-panel] button[type="submit"]:hover {
+                background: color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 8%, transparent);
+                border-left-color: var(--nex-world-secondary, #C6A15B) !important;
+              }
+              [data-nex-page-header-drawer-emergency]:hover {
+                filter: brightness(1.12);
+              }
+            `}</style>
           </aside>
         </>
       ) : null}
