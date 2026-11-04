@@ -226,6 +226,48 @@ export function PeerComposer({
   // least one pinned theme-emoji chip.
   const canSend = hasText || !!pendingAttachment || hasPendingEmojis;
 
+  // Owner-authored 2026-11-05 · draft preservation · world-class chat
+  // parity. If the viewer types a message then navigates away without
+  // sending (back to contacts, swaps peer, backgrounds the tab), the
+  // typed body is restored next time they open the same peer chat.
+  // Scoped by peer account id read from the URL path so there's no
+  // cross-contact leakage. Cleared on successful submit (see form
+  // onSubmit below). localStorage only · not synced across devices ·
+  // honours E2E doctrine (never sent to server, never logged).
+  const draftKey = React.useMemo(() => {
+    if (typeof window === "undefined") return null;
+    const m = window.location.pathname.match(/\/chat\/peer\/([^/?#]+)/);
+    return m ? `nex-peer-draft:${m[1]}` : null;
+  }, []);
+  const draftRestoredRef = React.useRef(false);
+  React.useEffect(() => {
+    if (draftRestoredRef.current) return;
+    if (!draftKey) return;
+    try {
+      const saved = window.localStorage.getItem(draftKey);
+      if (saved && saved.length > 0 && text.length === 0) {
+        setText(saved);
+      }
+    } catch {
+      // localStorage unavailable (private mode, etc.) · silent drop.
+    }
+    draftRestoredRef.current = true;
+
+  }, [draftKey]);
+  React.useEffect(() => {
+    if (!draftKey) return;
+    if (!draftRestoredRef.current) return;
+    try {
+      if (text.length === 0) {
+        window.localStorage.removeItem(draftKey);
+      } else {
+        window.localStorage.setItem(draftKey, text);
+      }
+    } catch {
+      // ignore quota / private-mode failures
+    }
+  }, [draftKey, text]);
+
   /** Desktop check · true when we should prefer the in-browser
    *  recorder (getUserMedia + MediaRecorder) over the native
    *  camera app that mobile OSes launch via the file input's
@@ -533,6 +575,16 @@ export function PeerComposer({
           // submitter, so this only resets what the founder sees.
           setText("");
           setPendingThemeEmojis([]);
+          // Owner-authored 2026-11-05 · drop the preserved draft on
+          // successful submit so the next open of this chat starts
+          // fresh. Safe no-op if key unresolved or storage missing.
+          if (draftKey && typeof window !== "undefined") {
+            try {
+              window.localStorage.removeItem(draftKey);
+            } catch {
+              /* ignore */
+            }
+          }
           // Theme-aware broadcast · lets ambient controllers (e.g. the
           // Joker-theme bats-on-send burst) react to a send without
           // being coupled to the composer internals.
