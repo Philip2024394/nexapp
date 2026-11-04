@@ -39,15 +39,21 @@ interface GroupCallClientProps {
   participantAccounts: Participant[];
 }
 
+// Owner directive 2026-11-04 later-same-day · NEX Ireland palette ·
+// group-call palette routes through sealed --nex-world-* vars with
+// the existing hex values preserved as fallback (same approach the
+// composer and ireland-entry surfaces use). Under Ireland identity
+// the accent flips to #FF7200 and the drawer bg to #123D2B · under
+// HQ identity the fallbacks hold.
 const PAL = {
-  bg: "#06091A",
-  bg2: "#0B1024",
-  card: "#121737",
+  bg: "var(--nex-world-background-base, #06091A)",
+  bg2: "var(--nex-world-drawer-bg, #0B1024)",
+  card: "var(--nex-world-panel-bg, #121737)",
   cardBorder: "rgba(255,255,255,0.08)",
   text: "#F2F5FA",
   textDim: "#A6ADC2",
   textMuted: "#6B7490",
-  orange: "#FF8A2A",
+  orange: "var(--nex-world-secondary, #FF8A2A)",
   green: "#22C55E",
   greenSoft: "rgba(34,197,94,0.18)",
   blue: "#3B82F6",

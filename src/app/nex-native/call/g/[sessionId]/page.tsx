@@ -9,6 +9,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// Owner directive 2026-11-04 later-same-day · dev-impersonation shim
+// so NEX_DEV_IMPERSONATE_HANDLE-based testing of the group-call
+// surface works end-to-end. Production behaviour unchanged: the dev
+// resolver returns null when the env var is absent, and we fall
+// through to resolveNexAppSessionFromContext.
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { getAccountById } from "@/lib/nex-native/account-service";
 import { getProfileByAccountId } from "@/lib/nex-native/account-profile-service";
 import {
@@ -26,7 +32,8 @@ interface PageProps {
 
 export default async function GroupCallPage({ params }: PageProps) {
   const { sessionId } = await params;
-  const session = await resolveNexAppSessionFromContext();
+  const devSession = await resolveSessionWithDevOverride();
+  const session = devSession ?? (await resolveNexAppSessionFromContext());
   if (!session) {
     const next = `/nex-native/call/g/${encodeURIComponent(sessionId)}`;
     redirect(`/nex-native/sign-in?next=${encodeURIComponent(next)}`);

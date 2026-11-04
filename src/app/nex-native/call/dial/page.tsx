@@ -1,22 +1,26 @@
 // src/app/nex-native/call/dial/page.tsx
 //
-// NEX · Call · Dial pad surface.
-// Owner-authorised 2026-10-21 (iteration 40).
+// NEX Ireland · Dial pad surface · world-class rewrite.
+// Owner-authorised 2026-11-04 later-same-day · retired the prior
+// cyan/navy chrome in favour of the sealed Ireland world palette.
 // -----------------------------------------------------------------------------
-// Minimal dial-pad entry point reached from the free-chat Call Center
-// drawer. Guest-safe · no DB connections · no actual outbound dialling
-// wired (the dial action is a visual placeholder today).
+// Visual language (Ireland):
+//   · Background  · desktop/tablet inherits the sealed Ireland studio
+//                   PNG via the global --nex-world-desktop-backdrop
+//                   rule in nex-native.css:156-187 · DO NOT override
+//                   html/body background here (sealed 2026-10-26).
+//   · Inner stage · deep emerald (--nex-world-drawer-bg · #123D2B)
+//   · Headings    · cream (#F2F5F8)
+//   · Primary ink · sage (--nex-world-primary-ink · #AFC5B5)
+//   · Accent      · NEX gold (--nex-world-secondary · #C6A15B)
+//   · Call button · NEX orange (--nex-kp-accent · #FF7200)
 //
-// Scope boundaries:
-//   · No sealed-primitive change (no Chat Master Layout touches).
-//   · No new peer-message types.
-//   · No DB reads / writes.
-//   · Phase A1 release hold unaffected.
-//
-// Future work would wire the Dial button to the existing call-engine
-// surfaces (currently exposed via `/nex-native/call/preview` and
-// `/nex-native/call/voice-preview`). For now the UI exists so the
-// Call Center row doesn't dead-end on a 404.
+// Scope boundaries unchanged:
+//   · Guest-safe · no DB · no outbound-call wiring.
+//   · Dial button toasts honestly ("preview · no outbound call wired").
+//   · Reached from the free-chat Call Center drawer, the attach panel,
+//     and the /call-centre decision page (Keypad tile inside the free-
+//     chat call surface also routes here).
 
 import type * as React from "react";
 import Link from "next/link";
@@ -25,14 +29,15 @@ import { DialPadClient } from "./_dial-pad-client";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const NEX = {
-  bg: "var(--nex-world-background-base, #020914)",
+const IRELAND = {
+  drawerBg: "var(--nex-world-drawer-bg, #123D2B)",
+  secondary: "var(--nex-world-secondary, #C6A15B)",
+  primaryInk: "var(--nex-world-primary-ink, #AFC5B5)",
+  heatRim: "var(--nex-kp-accent, #FF7200)",
+  heatRimFaint: "rgba(255, 114, 0, 0.14)",
+  secondaryFaint: "rgba(198, 161, 91, 0.14)",
   text: "#F2F5F8",
-  textDim: "#B5C3D6",
-  textMute: "#7D9BC0",
-  cyan: "#00AFFF",
-  cyanSoft: "rgba(0, 175, 255, 0.35)",
-  green: "#16D66B",
+  panelBorder: "rgba(198, 161, 91, 0.3)",
 };
 
 const SANS =
@@ -41,14 +46,30 @@ const SANS =
 export default function DialPadPage(): React.ReactElement {
   return (
     <>
-      <style>{`html, body { background: ${NEX.bg} !important; }`}</style>
+      {/* Scroll-lock only · NEVER override html/body background ·
+          the sealed Ireland desktop backdrop must flow through on
+          viewports ≥500px (nex-native.css:156-187). */}
+      <style>{`
+        html, body {
+          margin: 0;
+          padding: 0;
+          height: 100%;
+          overflow: hidden;
+          overscroll-behavior: none;
+        }
+      `}</style>
+
       <main
         data-nex-call-dial-root
         style={{
           position: "absolute",
           inset: 0,
-          background: NEX.bg,
-          color: NEX.text,
+          background: `
+            radial-gradient(900px 600px at 50% -10%, ${IRELAND.secondaryFaint}, transparent 55%),
+            radial-gradient(800px 600px at 50% 110%, ${IRELAND.heatRimFaint}, transparent 55%),
+            ${IRELAND.drawerBg}
+          `,
+          color: IRELAND.text,
           fontFamily: SANS,
           display: "flex",
           flexDirection: "column",
@@ -56,51 +77,58 @@ export default function DialPadPage(): React.ReactElement {
         }}
       >
         <header
+          data-nex-call-dial-header
           style={{
             padding:
-              "calc(env(safe-area-inset-top, 0px) + 14px) 14px 12px",
+              "calc(env(safe-area-inset-top, 0px) + 14px) 18px 10px",
             display: "flex",
             alignItems: "center",
+            justifyContent: "space-between",
             gap: 10,
-            borderBottom: `1px solid rgba(0, 175, 255, 0.14)`,
           }}
         >
           <Link
-            href="/nex-native/free-chat"
-            aria-label="Back"
+            href="/nex-native/call-centre"
+            aria-label="Back to Call Centre"
             style={{
-              color: NEX.text,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "6px 10px",
+              borderRadius: 999,
+              background: "rgba(2, 9, 20, 0.35)",
+              border: `1px solid ${IRELAND.panelBorder}`,
+              color: IRELAND.secondary,
+              fontSize: 12,
+              fontWeight: 700,
               textDecoration: "none",
-              fontSize: 20,
               lineHeight: 1,
             }}
           >
-            ←
+            <span aria-hidden>←</span>
+            <span>Back</span>
           </Link>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: 9,
-                letterSpacing: "0.22em",
-                textTransform: "uppercase",
-                color: NEX.cyan,
-                fontWeight: 800,
-              }}
-            >
-              NEX
-            </div>
-            <h1
-              style={{
-                margin: "2px 0 0",
-                fontSize: 18,
-                fontWeight: 800,
-                color: NEX.text,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              Dial pad
-            </h1>
+
+          <div
+            aria-hidden
+            style={{
+              fontSize: 10,
+              fontWeight: 800,
+              color: IRELAND.secondary,
+              letterSpacing: "0.22em",
+              textTransform: "uppercase",
+              opacity: 0.85,
+            }}
+          >
+            Dial pad
           </div>
+
+          <span
+            aria-hidden
+            style={{ fontSize: 22, lineHeight: 1, color: IRELAND.secondary, opacity: 0.9 }}
+          >
+            ☘
+          </span>
         </header>
 
         <DialPadClient />

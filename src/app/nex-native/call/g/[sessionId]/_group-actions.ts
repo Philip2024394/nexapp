@@ -1,8 +1,15 @@
 "use server";
 
 // Server actions scoped to a group-call session · join / leave / end.
+//
+// Owner directive 2026-11-04 later-same-day · dev-impersonation shim
+// so NEX_DEV_IMPERSONATE_HANDLE-based testing of the group-call flow
+// works end-to-end. Production behaviour unchanged: the dev resolver
+// returns null when the env var is absent, and we fall through to
+// resolveNexAppSessionFromContext.
 
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import {
   endGroupCallSession,
   getGroupCallSession,
@@ -11,12 +18,17 @@ import {
   listParticipants,
 } from "@/lib/nex-native/calls/group-call-service";
 
+async function resolveSession() {
+  const dev = await resolveSessionWithDevOverride();
+  return dev ?? (await resolveNexAppSessionFromContext());
+}
+
 export async function joinGroupCallAction(sessionId: string): Promise<
   | { ok: true; mediaType: "audio" | "video" }
   | { ok: false; reason: string }
 > {
   try {
-    const session = await resolveNexAppSessionFromContext();
+    const session = await resolveSession();
     if (!session) return { ok: false, reason: "unauthenticated" };
     const row = await getGroupCallSession(sessionId);
     if (!row) return { ok: false, reason: "session not found" };
@@ -43,7 +55,7 @@ export async function leaveGroupCallAction(
   sessionId: string,
 ): Promise<{ ok: true } | { ok: false; reason: string }> {
   try {
-    const session = await resolveNexAppSessionFromContext();
+    const session = await resolveSession();
     if (!session) return { ok: false, reason: "unauthenticated" };
     await leaveGroupCallSession({ sessionId, accountId: session.account.id });
     return { ok: true };
@@ -56,7 +68,7 @@ export async function endGroupCallAction(
   sessionId: string,
 ): Promise<{ ok: true } | { ok: false; reason: string }> {
   try {
-    const session = await resolveNexAppSessionFromContext();
+    const session = await resolveSession();
     if (!session) return { ok: false, reason: "unauthenticated" };
     await endGroupCallSession(sessionId, session.account.id);
     return { ok: true };
