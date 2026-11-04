@@ -63,6 +63,12 @@ import {
 } from "@/components/nex-native/control-drawer/control-drawer-client";
 import { FreeChatComposerClient } from "./_composer-client";
 import { FreeChatCallCenterDrawerClient } from "./_call-center-drawer-client";
+// Owner directive 2026-11-05 later-same-day iter 14 · parity with peer
+// chat · ShopDrawer FAB mounted on /free-chat. Share action is a stub
+// that stashes the picked product id in a short-lived cookie and
+// bounces to /contacts (home chat has no peer to send to).
+import { ShopDrawer } from "@/components/nex-native/shop-drawer/shop-drawer-client";
+import { freeChatShopSharePendingAction } from "./_shop-share-pending-action";
 import { FreeChatCanvasClient, type SeedMessage } from "./_canvas-client";
 // Owner directive 2026-11-05 later-same-day iter 6 · parity with peer
 // chat · mount the inline NotificationsDrawer bell + feed it the same
@@ -480,8 +486,26 @@ export default async function FreeChatPage({
             Owner directive 2026-10-21 (iteration 38) · bottom-right
             floating action button, opens a left-sliding Call Center
             panel with voice/video/dial-pad/recent/contacts rows. All
-            visual placeholders · no call-engine wiring. */}
+            visual placeholders · no call-engine wiring.
+
+            Owner directive 2026-11-05 later-same-day iter 14 · Shop
+            drawer now owns the "lower-right 3-dot" slot that matches
+            peer chat. Call Centre stacks ABOVE Shop via its own FAB
+            offset (sealed inside _call-center-drawer-client.tsx). */}
         <FreeChatCallCenterDrawerClient />
+
+        {/* ── Shop drawer · parity with peer chat ──
+            Owner directive 2026-11-05 later-same-day iter 14 · Shop
+            FAB + left-slide drawer added to /free-chat. shareAction
+            stashes the chosen product id in a short-lived cookie +
+            bounces to /contacts (no peer on home chat). viewerHasShop
+            is always true so founders without a nex_business row
+            still see the empty state (prototype UX fix). */}
+        <ShopDrawer
+          viewerHasShop={true}
+          peerDisplayName="your pick"
+          shareAction={freeChatShopSharePendingAction}
+        />
       </main>
     </>
   );

@@ -103,8 +103,13 @@ export function FreeChatCallCenterDrawerClient(): React.JSX.Element {
         data-nex-free-chat-call-center-trigger-open={open ? "true" : "false"}
         style={{
           position: "absolute",
-          bottom: "calc(env(safe-area-inset-bottom, 0px) + 76px)",
-          right: 10,
+          // Owner directive 2026-11-05 later-same-day iter 14 · Shop
+          // FAB now owns the standard "lower-right 3-dot" slot at
+          // ~90px (matches peer chat). Call Centre stacks ABOVE Shop
+          // with ~56px separation so both buttons sit side-by-side
+          // vertically along the right edge without overlap.
+          bottom: "calc(env(safe-area-inset-bottom, 0px) + 150px)",
+          right: 16,
           width: 36,
           height: 36,
           borderRadius: "50%",
