@@ -923,10 +923,67 @@ export default async function PeerChatPage({
       err,
     );
   }
-  // Merge · real invites replace mock follows · all other mock sections stay.
+  // Owner-authored 2026-11-05 · real unread-chat source for the
+  // NotificationsDrawer's "chats" section. Queries every peer-
+  // conversation the viewer is part of, counts unread messages per
+  // conversation, and emits one NotificationItem per conversation
+  // with unread > 0. The CURRENT peer's conversation is excluded
+  // because the viewer is already looking at it (would be weird to
+  // notify them about a chat they have open).
+  //
+  // Privacy: subtitle is a metadata string ("3 unread messages"), NEVER
+  // the plaintext body. Honours the sealed Phase 1 E2E posture.
+  let unreadChatNotifs: NotificationItem[] = [];
+  try {
+    const myConversations =
+      await peerConversationService.listPeerConversationsForAccount(
+        session.account.id,
+      );
+    const unreadRaw = await Promise.all(
+      myConversations
+        .filter((c) => c.id !== conversation.id)
+        .map(async (c) => {
+          const n = await peerMessageService.countUnreadPeerMessages(
+            c.id,
+            session.account.id,
+          );
+          if (n === 0) return null;
+          const otherId =
+            c.participant_a_id === session.account.id
+              ? c.participant_b_id
+              : c.participant_a_id;
+          const other = await accountService.getAccountById(otherId);
+          if (!other) return null;
+          return {
+            id: `unread-${c.id}`,
+            section: "chats" as const,
+            title: other.display_name,
+            subtitle: n === 1 ? "1 new message" : `${n} new messages`,
+            href: other.nex_handle
+              ? `/chat/${other.nex_handle}`
+              : `/nex-native/chat/peer/${other.id}`,
+            createdAt: c.last_message_at ?? c.created_at,
+            unread: true,
+            thumbnailUrl: null,
+          };
+        }),
+    );
+    unreadChatNotifs = unreadRaw.filter(
+      (x): x is NonNullable<typeof x> => x !== null,
+    );
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("peer-chat · unread-chats build failed:", err);
+  }
+
+  // Merge · real invites replace mock follows · real unread chats replace
+  // mock chats · all other mock sections stay until a real source lands.
   const notifications: NotificationItem[] = [
     ...incomingInviteNotifs,
-    ...MOCK_NOTIFICATIONS.filter((n) => n.section !== "follows"),
+    ...unreadChatNotifs,
+    ...MOCK_NOTIFICATIONS.filter(
+      (n) => n.section !== "follows" && n.section !== "chats",
+    ),
   ];
   const peerFirstName =
     peer.display_name.split(/\s+/)[0] ?? peer.display_name;
