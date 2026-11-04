@@ -64,7 +64,9 @@ import {
 import { FreeChatComposerClient } from "./_composer-client";
 import { FreeChatCallCenterDrawerClient } from "./_call-center-drawer-client";
 import { FreeChatCanvasClient, type SeedMessage } from "./_canvas-client";
-import { HeaderSearch } from "@/components/nex-native/chat-chrome/header-search";
+// Owner directive 2026-11-05 · HeaderSearch retired from FreeChatHeader
+// (Discovery moved into the right-side ControlDrawer) · this page no
+// longer renders it directly; the import is dropped.
 import {
   freeChatBackgroundCss,
   resolveFreeChatWallpaperUrl,

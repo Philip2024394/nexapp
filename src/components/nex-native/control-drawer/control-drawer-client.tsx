@@ -231,6 +231,17 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
     href: "/nex-native/chat-themes-library",
     locked: false,
   },
+  // Owner directive 2026-11-05 · Discovery moves OUT of the chat header
+  // (freeing room for a less cramped [ bell · + ] right-nav) and INTO
+  // the right-side drawer where it belongs with other app-level
+  // destinations. Same target as the retired HeaderSearch icon.
+  {
+    key: "discovery",
+    label: "Discovery",
+    subtitle: "Explore the live NEX feed",
+    href: "/nex-native/nex-feed",
+    locked: false,
+  },
 ];
 
 // Owner directive 2026-11-05 · YOUR_BUSINESS_ROWS, BUSINESS_VAULT_ROW,

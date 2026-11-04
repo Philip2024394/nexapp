@@ -29,7 +29,10 @@ import {
   ControlDrawer,
   type ControlDrawerSession,
 } from "@/components/nex-native/control-drawer/control-drawer-client";
-import { HeaderSearch } from "@/components/nex-native/chat-chrome/header-search";
+// Owner directive 2026-11-05 · HeaderSearch (Discovery icon) retired
+// from the chat header right-nav. Discovery destination moved into the
+// right-side ControlDrawer (YOUR_NEX_ROWS) so the header runs cleaner
+// with just [ bell · + ].
 
 export interface FreeChatHeaderProps {
   /** Wordmark line · "NEX" for guests, display_name for signed-in,
@@ -165,7 +168,6 @@ export function FreeChatHeader({
         }}
       >
         {notificationsSlot}
-        <HeaderSearch />
         <div style={{ display: "inline-flex" }}>
           <ControlDrawer
             session={drawerSession}
