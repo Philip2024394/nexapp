@@ -149,13 +149,18 @@ export function Chat9001Pill({
             zIndex: 1,
           }}
         />
+        {/* Owner directive 2026-11-05 iter 19 · do NOT forward the
+            cyan default `accent` as `accentColor` · that override was
+            winning against Ireland's sealed WORLD_KEYPAD_ACCENT
+            (#FF7200 orange) emitted by _world-stylesheet.tsx. Only
+            forward when the caller passed an EXPLICIT accentHex. */}
         <NexInput
           value={value}
           onChange={onChange}
           onEnter={() => {
             if (canSend) onSend();
           }}
-          accentColor={accent}
+          {...(accentHex ? { accentColor: accentHex } : {})}
           forceKeypadActive={true}
           maxLength={maxLength}
           placeholder={placeholder}

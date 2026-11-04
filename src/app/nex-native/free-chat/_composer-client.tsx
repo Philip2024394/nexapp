@@ -1341,13 +1341,18 @@ export function FreeChatComposerClient({
           server-side cookie read in page.tsx · live updates via the
           `nex-free-chat-theme` custom event). Composer owns `value`
           + handlers · keypad is a presentation surface. */}
+      {/* Owner directive 2026-11-05 iter 19 · only pass accentColor
+          when the viewer has actively picked a theme · without a theme
+          the default accentHex is cyan #00AFFF which was overriding
+          Ireland's sealed WORLD_KEYPAD_ACCENT (orange #FF7200). Letting
+          the CSS var win on no-theme restores the sealed world behaviour. */}
       <JokerKeypad
         open={keypadOpen}
         value={value}
         onChange={setValue}
         onSend={handleSend}
         onClose={() => setKeypadOpen(false)}
-        accentColor={accentHex}
+        {...(themeId ? { accentColor: accentHex } : {})}
       />
 
       {/* Owner directive 2026-10-21 (iteration 50) · the sealed
