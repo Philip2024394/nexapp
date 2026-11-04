@@ -323,15 +323,22 @@ export function NotificationsDrawer({
               <span
                 data-nex-notifications-unread-pill
                 style={{
-                  marginLeft: 2,
-                  padding: "2px 8px",
+                  marginLeft: 4,
+                  padding: "4px 12px",
                   borderRadius: 999,
-                  background: CYAN,
-                  color: "#0a0608",
-                  fontSize: 11,
-                  fontWeight: 700,
+                  // Owner directive 2026-11-05 iter 18 · drawer-header
+                  // unread pill goes dark red + slightly larger so the
+                  // "N unread" count reads at a glance from the top of
+                  // the panel.
+                  background: NOTIF_RED,
+                  color: "#FFFFFF",
+                  fontSize: 13,
+                  fontWeight: 800,
                   letterSpacing: "0.02em",
                   lineHeight: 1,
+                  minWidth: 26,
+                  textAlign: "center",
+                  boxShadow: "0 0 10px rgba(166,0,0,0.45)",
                 }}
               >
                 {unreadCount}
