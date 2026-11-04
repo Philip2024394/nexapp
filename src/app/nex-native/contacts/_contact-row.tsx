@@ -98,6 +98,7 @@ export function ContactRow({ row, accentHex }: ContactRowProps): React.JSX.Eleme
       aria-label={`Open chat with ${row.displayName}`}
       data-nex-contacts-row
       data-nex-contacts-row-kind={row.kind}
+      data-nex-contacts-row-pending={row.pending ? "true" : undefined}
       style={{
         position: "relative",
         display: "flex",
@@ -108,15 +109,41 @@ export function ContactRow({ row, accentHex }: ContactRowProps): React.JSX.Eleme
         width: "100%",
         maxWidth: "100%",
         boxSizing: "border-box",
-        background: "var(--nex-world-drawer-bg, rgba(2,9,20,0.92))",
-        border: `1.5px solid ${accentHex}`,
+        background: row.pending
+          ? "color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 10%, var(--nex-world-drawer-bg, rgba(2,9,20,0.92)))"
+          : "var(--nex-world-drawer-bg, rgba(2,9,20,0.92))",
+        border: `1.5px solid ${row.pending ? "var(--nex-world-secondary, #C6A15B)" : accentHex}`,
         borderRadius: 12,
-        boxShadow: "0 4px 12px rgba(0,0,0,0.35)",
+        boxShadow: row.pending
+          ? "0 4px 12px rgba(198,161,91,0.25)"
+          : "0 4px 12px rgba(0,0,0,0.35)",
         textDecoration: "none",
         color: NEX.text,
         WebkitTapHighlightColor: "transparent",
       }}
     >
+      {row.pending ? (
+        <span
+          aria-hidden
+          data-nex-contacts-row-invited-chip
+          style={{
+            position: "absolute",
+            top: 6,
+            right: 10,
+            padding: "2px 8px",
+            borderRadius: 999,
+            background: "var(--nex-world-secondary, #C6A15B)",
+            color: "var(--nex-world-drawer-bg, #0A1526)",
+            fontSize: 9,
+            fontWeight: 800,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            lineHeight: 1,
+          }}
+        >
+          Invited · waiting
+        </span>
+      ) : null}
       {/* ===== AVATAR · far-left, vertically centred, consistent 48px ===== */}
       <div
         aria-hidden

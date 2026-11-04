@@ -62,6 +62,13 @@ import { FreeChatCallCenterDrawerClient } from "../../../free-chat/_call-center-
 // bubbles + composer + theme wallpaper + all production features.
 import { FreeChatHeader } from "@/components/nex-native/chat-chrome/free-chat-header";
 import { NotificationsDrawer } from "@/components/nex-native/notifications-drawer/notifications-drawer-client";
+// Owner-authored 2026-11-05 · real incoming-invite notifications ·
+// replaces the mock "follows" section with live pending-incoming
+// friend-edges so the viewer sees who's inviting them.
+import {
+  MOCK_NOTIFICATIONS,
+  type NotificationItem,
+} from "@/lib/nex-native/notifications/mock-notifications-data";
 import { ShopDrawer } from "@/components/nex-native/shop-drawer/shop-drawer-client";
 import { ScrollToBottomButton } from "@/components/nex-native/chat-chrome/scroll-to-bottom-button";
 import { effectiveTier } from "@/lib/nex-native/account-service";
@@ -78,6 +85,11 @@ import { FocusedShopSheet } from "./_focused-shop-sheet";
 // Owner-authored 2026-11-05 · fresh-conversation welcome pill (Option B)
 // with time + delivery ticks + peer presence dot.
 import { WelcomePillClient } from "./_welcome-pill-client";
+// Shared action-toast host · owner-authored 2026-11-05 · catches
+// `nex-action-toast` window events dispatched by any component
+// (invite sent · copied · removed · etc.) and renders a fixed-top
+// pill for 2 s. Zero wiring at call sites · showActionToast() helper.
+import { ActionToastHost } from "@/components/nex-native/ui/action-toast";
 import type {
   SideNavContact,
   PendingInvite,
@@ -867,6 +879,59 @@ export default async function PeerChatPage({
     nexHandle: session.account.nex_handle,
     isBisnis: effectiveTier(session.account) === "bisnis",
   };
+
+  // Owner-authored 2026-11-05 · incoming invites feed · pending-edges
+  // where b_account_id === viewer AND requested_by !== viewer. Rendered
+  // in the NotificationsDrawer's "follows" section. Other sections
+  // keep mock data until the owner authorises wiring each real source
+  // (chats · live · shop · orders).
+  let incomingInviteNotifs: NotificationItem[] = [];
+  try {
+    const incomingEdges = await friendService.listPendingIncoming(
+      session.account.id,
+    );
+    const inviterAccountsSettled = await Promise.allSettled(
+      incomingEdges.map((edge) => {
+        const inviterId =
+          edge.a_account_id === session.account.id
+            ? edge.b_account_id
+            : edge.a_account_id;
+        return accountService.getAccountById(inviterId);
+      }),
+    );
+    incomingInviteNotifs = inviterAccountsSettled
+      .map((r, i) => ({
+        account: r.status === "fulfilled" ? r.value : null,
+        edge: incomingEdges[i]!,
+      }))
+      .filter(
+        (x): x is { account: NonNullable<typeof x.account>; edge: typeof x.edge } =>
+          x.account !== null,
+      )
+      .map((x) => ({
+        id: `invite-${x.edge.a_account_id}-${x.edge.b_account_id}`,
+        section: "follows" as const,
+        title: x.account.display_name,
+        subtitle: "invited you to connect",
+        href: x.account.nex_handle
+          ? `/chat/${x.account.nex_handle}`
+          : `/nex-native/chat/peer/${x.account.id}`,
+        createdAt: x.edge.created_at ?? new Date().toISOString(),
+        unread: true,
+        thumbnailUrl: null,
+      }));
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "peer-chat · friendService.listPendingIncoming failed:",
+      err,
+    );
+  }
+  // Merge · real invites replace mock follows · all other mock sections stay.
+  const notifications: NotificationItem[] = [
+    ...incomingInviteNotifs,
+    ...MOCK_NOTIFICATIONS.filter((n) => n.section !== "follows"),
+  ];
   const peerFirstName =
     peer.display_name.split(/\s+/)[0] ?? peer.display_name;
   const headerSubtitle = profile?.profession ?? presenceLabel ?? "Online";
@@ -1182,7 +1247,7 @@ export default async function PeerChatPage({
           newest. The existing FreeChatCallCenterDrawerClient (3-dot
           FAB, Call Centre entry) stays mounted for now · Call Centre
           is also reachable via the + attach panel's Call Centre tile. */}
-      <NotificationsDrawer />
+      <NotificationsDrawer initialNotifications={notifications} />
       {/* Owner fix 2026-11-05 · prototype UX expects the shop 3-dot FAB
           visible for every viewer (empty state renders cleanly when
           the viewer has no products). Earlier gate `viewerHasBusiness`
@@ -1193,6 +1258,10 @@ export default async function PeerChatPage({
         shareAction={bind}
       />
       <ScrollToBottomButton />
+
+      {/* Shared toast surface · listens for nex-action-toast window
+          events dispatched by any component in the chat. 2 s default. */}
+      <ActionToastHost />
     </div>
   );
 }

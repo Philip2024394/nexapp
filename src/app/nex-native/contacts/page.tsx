@@ -192,6 +192,34 @@ export default async function ContactsPage({ searchParams }: PageProps) {
     // eslint-disable-next-line no-console
     console.warn("contacts · friendService.listFriends failed:", err);
   }
+
+  // Owner-authored 2026-11-05 · pending-outgoing invites (invites the
+  // viewer sent that the recipient hasn't accepted yet). Rendered at
+  // the TOP of the contacts list with a gold "Invited · waiting" chip
+  // so the sender can track their own pending outreach at a glance.
+  // Empty on error · UI falls back to normal contacts.
+  let pendingOutgoingEdges: Awaited<
+    ReturnType<typeof friendService.listPendingOutgoing>
+  > = [];
+  try {
+    pendingOutgoingEdges = await friendService.listPendingOutgoing(
+      session.account.id,
+    );
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("contacts · friendService.listPendingOutgoing failed:", err);
+  }
+  const pendingPeerIds = pendingOutgoingEdges.map((edge) =>
+    edge.a_account_id === session.account.id
+      ? edge.b_account_id
+      : edge.a_account_id,
+  );
+  const pendingPeerAccountsSettled = await Promise.allSettled(
+    pendingPeerIds.map((id) => accountService.getAccountById(id)),
+  );
+  const pendingPeerAccounts = pendingPeerAccountsSettled.map((r) =>
+    r.status === "fulfilled" ? r.value : null,
+  );
   const friendAccountsSettled = await Promise.allSettled(
     friendIds.map((id) => accountService.getAccountById(id)),
   );
@@ -318,15 +346,38 @@ export default async function ContactsPage({ searchParams }: PageProps) {
   );
   businessRows.sort((a, b) => presenceRank(a.presence ?? null) - presenceRank(b.presence ?? null));
 
+  // Owner-authored 2026-11-05 · pending-outgoing invite rows built
+  // from listPendingOutgoing edges + fetched peer accounts. Each row
+  // carries pending:true so ContactRow renders the gold "Invited ·
+  // waiting" chip and surrounding highlighted border.
+  const pendingRows: ContactRowDisplay[] = pendingPeerAccounts
+    .filter((a): a is NonNullable<typeof a> => a !== null)
+    .map((a) => ({
+      id: a.id,
+      kind: "friend" as const,
+      displayName: a.display_name,
+      handle: a.nex_handle,
+      avatarUrl: null,
+      chatHref: a.nex_handle
+        ? `/chat/${a.nex_handle}`
+        : `/nex-native/chat/peer/${a.id}`,
+      profileHref: null,
+      professionLine: "Invited · waiting for them to accept",
+      pending: true,
+    }));
+
   // D7 filter · All = merged + sorted by displayName
   // Friends = friends only · Business = businesses only
   // Dating + Groups are visually present but return empty rows (D5/D6)
-  const allRows: ContactRowDisplay[] = [...friendRows, ...businessRows].sort((a, b) =>
-    a.displayName.localeCompare(b.displayName),
-  );
+  // Pending rows always render at the TOP · owner directive 2026-11-05.
+  const nonPendingRows: ContactRowDisplay[] = [
+    ...friendRows,
+    ...businessRows,
+  ].sort((a, b) => a.displayName.localeCompare(b.displayName));
+  const allRows: ContactRowDisplay[] = [...pendingRows, ...nonPendingRows];
   const visibleRows: ContactRowDisplay[] =
     activeFilter === "friends"
-      ? friendRows
+      ? [...pendingRows, ...friendRows]
       : activeFilter === "business"
         ? businessRows
         : activeFilter === "dating" || activeFilter === "groups"

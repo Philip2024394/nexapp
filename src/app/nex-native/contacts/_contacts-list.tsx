@@ -65,6 +65,11 @@ export interface ContactRowDisplay {
   readonly unreadCount?: number;
   readonly city?: string | null;
   readonly initials?: string | null;
+  /** Owner-authored 2026-11-05 · when true, the row renders at the top
+   *  of the list with a gold "Invited · waiting" chip · the chat href
+   *  still works (lands on the peer's chat page which shows the welcome
+   *  pill until they accept). */
+  readonly pending?: boolean;
 }
 
 const NEX = {
