@@ -37,6 +37,9 @@ import { redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import * as friendService from "@/lib/nex-native/friend-service";
+// Owner-authored 2026-11-05 · unread-chat badges on contact cards.
+import * as peerConversationServiceForUnread from "@/lib/nex-native/peer-conversation-service";
+import * as peerMessageServiceForUnread from "@/lib/nex-native/peer-message-service";
 import * as accountService from "@/lib/nex-native/account-service";
 import { effectiveTier } from "@/lib/nex-native/account-service";
 import * as conversationService from "@/lib/nex-native/conversation-service";
@@ -274,6 +277,31 @@ export default async function ContactsPage({ searchParams }: PageProps) {
     ),
   );
 
+  // Owner-authored 2026-11-05 · real unread-chat counts per friend row.
+  // For each friend, locate the peer-conversation (if one exists) and
+  // count unread messages the viewer hasn't read. Populates
+  // ContactRowDisplay.unreadCount so the sealed ContactRow red badge
+  // renders · at-a-glance "who has sent me something" in the contacts
+  // grid. Each failure is swallowed and the badge drops to 0 so a
+  // transient DB error never breaks the contact list render.
+  const friendUnreadCounts = await Promise.all(
+    liveFriendAccounts.map(async (a) => {
+      try {
+        const conv = await peerConversationServiceForUnread.findPeerConversation(
+          session.account.id,
+          a.id,
+        );
+        if (!conv) return 0;
+        return await peerMessageServiceForUnread.countUnreadPeerMessages(
+          conv.id,
+          session.account.id,
+        );
+      } catch {
+        return 0;
+      }
+    }),
+  );
+
   // Hydrate into the row-shape the UI consumes.
   const friendRows: ContactRowDisplay[] = liveFriendAccounts.map((a, i) => {
     const profile = friendProfiles[i];
@@ -282,6 +310,7 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       kind: "friend" as const,
       displayName: a.display_name ?? "friend",
       handle: a.nex_handle,
+      unreadCount: friendUnreadCounts[i] ?? 0,
       // avatar_url lives on nex_account_profile (not nex_account). Phase 1
       // wiring complete 2026-10-28 · profile fetched in parallel above at
       // friendProfiles[i] · hand the real URL through; the UI falls back
