@@ -37,7 +37,15 @@ import { getLiveInviteTargetAction } from "@/app/nex-native/live-commerce/_invit
 import type { InviteTarget } from "@/lib/nex-native/live-broadcast/invite-target";
 import { VideoShareSheet } from "@/components/nex-native/live-commerce/VideoShareSheet";
 import { CategoryGridSheet } from "@/components/nex-native/live-commerce/CategoryGridSheet";
-import { LiveSideDrawer } from "@/components/nex-native/live-commerce/LiveSideDrawer";
+// Owner directive 2026-11-05 iter 23 · retire LiveSideDrawer · the
+// NEX Live viewer now mounts the global ControlDrawer (same `+`
+// trigger + right-side slide panel as the chat header) so every
+// NEX surface uses ONE drawer vocabulary. LiveSideDrawer source
+// file is left intact for any other caller.
+import {
+  ControlDrawer,
+  type ControlDrawerSession,
+} from "@/components/nex-native/control-drawer/control-drawer-client";
 import {
   VideoCommentsOverlay,
   type VideoComment,
@@ -102,6 +110,7 @@ export function VideoViewerClient({
   broadcasterProductsOverride,
   devViewerBadge,
   feedModeLabel,
+  drawerSession,
 }: {
   readonly video: UploadedVideoRow;
   readonly publicUrl: string;
@@ -187,6 +196,14 @@ export function VideoViewerClient({
    *  "Live {country of origin}" title line so the header reflects the
    *  POOL the viewer is in, not the video's country of origin. */
   readonly feedModeLabel: string;
+  /** Owner directive 2026-11-05 iter 23 · drives the new `+` control
+   *  drawer that replaces the retired LiveSideDrawer. Null when the
+   *  viewer is a guest · drawer renders the sealed sign-in prompt. */
+  readonly drawerSession?: {
+    readonly displayName: string;
+    readonly nexHandle: string | null;
+    readonly isBisnis: boolean;
+  } | null;
 }): React.JSX.Element {
   const router = useRouter();
   const [isLiked, setIsLiked] = React.useState(false);
@@ -1357,14 +1374,27 @@ export function VideoViewerClient({
                 </svg>
               )}
             </button>
-            {/* Owner directive 2026-10-25 · Live surfaces now mount
-                their own `LiveSideDrawer` (same visual chrome as the
-                sealed ControlDrawer, but Nex-Live header + 3 nav rows
-                + home icon that routes to /contacts). The viewer's
-                `data-nex-video-viewer-menu-trigger` marker stays as a
-                wrapper data-attribute for test selectors. */}
+            {/* Owner directive 2026-11-05 iter 23 · the retired
+                LiveSideDrawer is replaced by the global ControlDrawer
+                (same `+` trigger and right-slide panel as the chat
+                header) so every NEX surface uses ONE drawer vocab.
+                `data-nex-video-viewer-menu-trigger` wrapper preserved
+                for sealed test selectors. */}
             <div data-nex-video-viewer-menu-trigger>
-              <LiveSideDrawer />
+              <ControlDrawer
+                session={(drawerSession ?? null) as ControlDrawerSession | null}
+                triggerIcon="plus"
+                triggerStyle={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  background: "#000000",
+                  border: "1px solid rgba(255, 255, 255, 0.14)",
+                  color: "#FFFFFF",
+                  boxShadow:
+                    "0 6px 18px rgba(0,0,0,0.55), inset 0 0 0 1px color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 24%, transparent)",
+                }}
+              />
             </div>
           </div>
         </div>

@@ -437,6 +437,21 @@ export default async function NexFeedViewerPage({
   const session = await resolveSessionWithDevOverride().catch(() => null);
   const viewerAccountId: string | null = session?.account.id ?? null;
 
+  // Owner directive 2026-11-05 iter 23 · ControlDrawer session for the
+  // NEX Live viewer's new `+` button in the top-right (replaces the
+  // sealed LiveSideDrawer per owner directive). Guest viewers get
+  // null · drawer shows the sealed sign-in prompt.
+  const { effectiveTier: nexLiveEffectiveTier } = await import(
+    "@/lib/nex-native/account-service"
+  );
+  const nexLiveDrawerSession = session
+    ? {
+        displayName: session.account.display_name,
+        nexHandle: session.account.nex_handle,
+        isBisnis: nexLiveEffectiveTier(session.account) === "bisnis",
+      }
+    : null;
+
   // Owner directive 2026-11-01 · Batch E.1 · resolve the viewer's own
   // "My Live Music" destination (active-slot track OR most recent
   // eligible shared_live). Returned as a plain href + trackId · null
@@ -771,6 +786,7 @@ export default async function NexFeedViewerPage({
           initialFollowerCount={initialFollowerCount}
           broadcasterCountryCode={broadcasterCountryCode}
           isIrishBroadcaster={isIrishBroadcaster}
+          drawerSession={nexLiveDrawerSession}
           prevOwnerTrackId={prevOwnerTrackId}
           nextOwnerTrackId={nextOwnerTrackId}
           nextOwnerTrack={nextOwnerTrackRow}
@@ -905,6 +921,7 @@ export default async function NexFeedViewerPage({
         prevPublicUrl={prevPublicUrl}
         devViewerBadge={devViewerBadge}
         feedModeLabel={feedModeLabel}
+        drawerSession={nexLiveDrawerSession}
       />
       {/* Owner directive 2026-11-01 · Batch E · same switcher mount
        *  as the music branch above. Zero intrusion into the 1536-line

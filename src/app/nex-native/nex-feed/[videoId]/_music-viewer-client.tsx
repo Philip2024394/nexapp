@@ -50,7 +50,13 @@ import {
 import { NexPerfOverlay } from "@/components/nex-native/media-engine/NexPerfOverlay";
 import { CategoryGridSheet } from "@/components/nex-native/live-commerce/CategoryGridSheet";
 import { HendraMessageInbox } from "@/components/nex-native/live-commerce/HendraMessageInbox";
-import { LiveSideDrawer } from "@/components/nex-native/live-commerce/LiveSideDrawer";
+// Owner directive 2026-11-05 iter 23 · LiveSideDrawer retired on the
+// music viewer too · ControlDrawer takes over so NEX Live shares the
+// chat header's `+` drawer vocabulary.
+import {
+  ControlDrawer,
+  type ControlDrawerSession,
+} from "@/components/nex-native/control-drawer/control-drawer-client";
 import { VideoShareSheet } from "@/components/nex-native/live-commerce/VideoShareSheet";
 import { DevViewerBadge } from "@/components/nex-native/music/DevViewerBadge";
 import { MusicActionsStack } from "@/components/nex-native/music/MusicActionsStack";
@@ -143,6 +149,14 @@ export interface MusicViewerClientProps {
    *  to. Null when the signed-in viewer has no eligible shared_live
    *  track · the icon + row are both hidden. */
   readonly myMusicHref: string | null;
+  /** Owner directive 2026-11-05 iter 23 · drives the new `+` control
+   *  drawer that replaces the retired LiveSideDrawer. Null when the
+   *  viewer is a guest · drawer renders the sealed sign-in prompt. */
+  readonly drawerSession?: {
+    readonly displayName: string;
+    readonly nexHandle: string | null;
+    readonly isBisnis: boolean;
+  } | null;
 }
 
 export function MusicViewerClient(
@@ -604,8 +618,25 @@ export function MusicViewerClient(
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
       </button>
+      {/* Owner directive 2026-11-05 iter 23 · global ControlDrawer
+          replaces LiveSideDrawer · the per-track "My Music" row
+          becomes a follow-up (drawer currently shows the sealed
+          global YOUR NEX rows only). */}
       <div data-nex-music-feed-menu-trigger>
-        <LiveSideDrawer myMusicHref={props.myMusicHref} />
+        <ControlDrawer
+          session={(props.drawerSession ?? null) as ControlDrawerSession | null}
+          triggerIcon="plus"
+          triggerStyle={{
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            background: "#000000",
+            border: "1px solid rgba(255, 255, 255, 0.14)",
+            color: "#FFFFFF",
+            boxShadow:
+              "0 6px 18px rgba(0,0,0,0.55), inset 0 0 0 1px color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 24%, transparent)",
+          }}
+        />
       </div>
     </>
   );
