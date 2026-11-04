@@ -96,6 +96,9 @@ import { BubbleActionMenuClient } from "./_bubble-action-menu-client";
 // Owner-authored 2026-11-05 later-same-day iter 10 · edit sent message
 // server action · depends on migration 279 (DRAFT · not yet applied).
 import { editPeerMessageAction } from "./_edit-actions";
+// Owner-authored 2026-11-05 later-same-day iter 11 · in-chat search ·
+// pure client overlay · Cmd/Ctrl+K · zero Shell edit.
+import { SearchClient } from "./_search-client";
 import type {
   SideNavContact,
   PendingInvite,
@@ -1095,6 +1098,12 @@ export default async function PeerChatPage({
           menu above it · pure overlay, no Shell edit · uses the sealed
           data-nex-msg-id + data-nex-bloom-msg-mine anchors. */}
       <BubbleActionMenuClient editAction={editPeerMessageAction} />
+
+      {/* 2026-11-05 iter 11 · in-chat search overlay. Cmd/Ctrl+K opens
+          the top-anchored bar · matches highlight with gold ring,
+          non-matches dim to opacity 0.25 · ↑/↓ or Enter/Shift+Enter
+          cycle · Esc or × closes. */}
+      <SearchClient />
 
       {needsSafeTradeConsent && (
         <SafeTradeConsentModal
