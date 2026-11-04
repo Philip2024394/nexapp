@@ -176,9 +176,12 @@ export function composeEmergencyEmailBody(args: {
   readonly simulated: boolean;
 }): { subject: string; textBody: string; htmlBody: string } {
   const simTag = args.simulated ? " [SIMULATED · v1 pilot]" : "";
+  // Owner directive 2026-11-04 · softened the hard fallback. In an
+  // emergency email a non-empty sender label is critical, so the
+  // fallback stays non-empty — just worded more personally.
   const nameSafe = args.requesterLabel.trim().length > 0
     ? args.requesterLabel.trim()
-    : "A NEX user";
+    : "Your NEX contact";
   switch (args.transition) {
     case "pending_confirmation": {
       const subject = `NEX safety alert · ${nameSafe} may need help${simTag}`;

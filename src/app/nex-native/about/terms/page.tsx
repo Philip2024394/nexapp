@@ -742,6 +742,67 @@ export default function TermsOfUsePage(): React.JSX.Element {
           </p>
         </Section>
 
+        <Section num={23} title="NEX Creator membership">
+          <p style={paraStyle}>
+            NEX offers an optional NEX Creator membership giving eligible
+            users access to monetisation features, including fan support,
+            track and video usage income, and sponsorship income.
+          </p>
+          <p style={paraStyle}>
+            NEX charges 0% commission on Creator earnings. Payment
+            processing fees from Stripe or PayPal are charged by the
+            payment provider and not by NEX.
+          </p>
+
+          <h3
+            style={{
+              margin: "20px 0 10px",
+              fontSize: 13,
+              fontWeight: 700,
+              color: NEX.text,
+              letterSpacing: "-0.005em",
+            }}
+          >
+            Cancellation at a glance
+          </h3>
+          <p style={paraStyle}>
+            <strong style={{ color: NEX.text }}>Monthly:</strong> cancel
+            renewal at any time · Creator benefits remain active until
+            the end of your paid billing period.
+          </p>
+          <p style={paraStyle}>
+            <strong style={{ color: NEX.text }}>Annual:</strong> paid
+            upfront for 12 months · the applicable 14-day EU/Irish
+            withdrawal rights apply · after that period, payments are
+            non-refundable except where required by law.
+          </p>
+          <p style={paraStyle}>
+            <strong style={{ color: NEX.text }}>Your earnings:</strong>{" "}
+            fan support, track and video usage, and sponsorship income
+            already earned remain yours · they are not forfeited when
+            membership ends.
+          </p>
+          <p style={paraStyle}>
+            <strong style={{ color: NEX.text }}>Paid sponsorships:</strong>{" "}
+            continue until their booked end date, even if your Creator
+            membership ends, subject to NEX&rsquo;s safety and content
+            policies.
+          </p>
+
+          <p style={paraStyle}>
+            Sponsored content is subject to NEX&rsquo;s Creator and
+            Community Standards. Pornographic content, child exploitation
+            or endangerment, illegal activity and other harmful content
+            cannot be sponsored on NEX.
+          </p>
+          <p style={paraStyle}>
+            Sponsorship prices are standardised by NEX so that
+            opportunities remain consistent and fair for Creators.
+            Published rates are subject to final approval and may change
+            from time to time, subject to applicable law and these Terms.
+          </p>
+        </Section>
+
         {/* ─── Privacy Policy pointer ─────────────────────────────── */}
         <section style={{ marginTop: 36, marginBottom: 32 }}>
           <h2 style={h2Style}>Privacy Policy</h2>

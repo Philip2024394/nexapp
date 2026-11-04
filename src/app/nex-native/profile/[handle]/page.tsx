@@ -535,7 +535,10 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
     .countPendingReportsAgainst(profileAccount.id)
     .catch(() => 0);
 
-  const displayName = profileAccount.display_name ?? "NEX member";
+  // Owner directive 2026-11-04 · prefer the account's own handle
+  // over the generic "NEX member" fallback.
+  const displayName =
+    profileAccount.display_name ?? profileAccount.nex_handle ?? "NEX user";
   const chatHref = session
     ? `/nex-native/chat/peer/${profileAccount.id}`
     : `/nex-native/sign-in?return_to=${encodeURIComponent(`/nex-native/chat/peer/${profileAccount.id}`)}`;

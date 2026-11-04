@@ -73,12 +73,17 @@ export async function listContactPickerRowsForViewer(
     const a = accounts[i];
     if (!a) continue;
     const p = profiles[i] ?? null;
-    const displayName = a.display_name ?? "friend";
+    // Owner directive 2026-11-04 · prefer the account's own handle
+    // over a presumptuous "friend" fallback. Final fallback stays
+    // non-empty so UI layouts never collapse on a null name.
+    const displayName = a.display_name ?? a.nex_handle ?? "NEX user";
     rows.push({
       id: a.id,
       nexHandle: a.nex_handle ?? "nex-?????",
       displayName,
-      profession: (p?.profession ?? "").trim() || "NEX member",
+      // Empty string when no profession is set · callers hide the
+      // profession line rather than show a fake "NEX member" badge.
+      profession: (p?.profession ?? "").trim(),
       city: null,
       presence: "offline",
       lastSeenMinsAgo: null,
