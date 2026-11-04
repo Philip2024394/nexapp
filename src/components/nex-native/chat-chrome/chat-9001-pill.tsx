@@ -125,16 +125,38 @@ export function Chat9001Pill({
           minWidth: 0,
         }}
       >
-        {/* Owner directive 2026-11-05 later-same-day iter 5 · 3D emoji
-            PNG restored inside the pill on the left · matches the
-            sealed Chat 9001 inline composer shape exactly. */}
+        {/* Owner directive 2026-11-05 iter 20 · tapping the emoji PNG
+            focuses the input (opens the NEX keypad via NexInput's
+            onFocus → openKeypad) AND dispatches a plane-swap event
+            so the keypad lands on the emoji plane · user can then
+            swap to sticker/giphy tabs or go back to letters for text.
+            Replaces the previous `onEmoji` modal-open behaviour on
+            every caller that uses Chat9001Pill. `onEmoji` prop is
+            left in the API for backward compat but ignored in favour
+            of the universal keypad path. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/nex-free-chat/composer-emoji.png"
           alt=""
           aria-hidden
           data-nex-free-chat-composer-emoji
-          onClick={onEmoji}
+          onClick={() => {
+            const el = document.querySelector<HTMLInputElement>(
+              "[data-nex-free-chat-composer-input]",
+            );
+            if (el) {
+              el.focus();
+            }
+            // Defer one frame so the keypad has mounted on focus
+            // before we tell it which plane to land on.
+            requestAnimationFrame(() => {
+              window.dispatchEvent(
+                new CustomEvent("nex-joker-keypad-swap-plane", {
+                  detail: { plane: "emoji" },
+                }),
+              );
+            });
+          }}
           style={{
             position: "absolute",
             left: 6,
@@ -144,8 +166,8 @@ export function Chat9001Pill({
             height: 32,
             objectFit: "contain",
             userSelect: "none",
-            cursor: onEmoji ? "pointer" : "default",
-            pointerEvents: onEmoji ? "auto" : "none",
+            cursor: "pointer",
+            pointerEvents: "auto",
             zIndex: 1,
           }}
         />

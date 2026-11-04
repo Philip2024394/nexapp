@@ -261,6 +261,31 @@ export function JokerKeypad({
     if (open) setPlane(resolvedInitialPlane);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+  /* Owner directive 2026-11-05 iter 20 · "the imoji icon in text field
+     footer should open the keypad to allow user to post imoji or
+     sticker or jig". Listen for a window event
+     `nex-joker-keypad-swap-plane` that composer emoji icons dispatch
+     to flip the keypad to a specific plane (typically "emoji"). If the
+     `planes` allow-list is set and the requested plane isn't in it,
+     the event is a no-op (never overrides the caller's gate). */
+  React.useEffect(() => {
+    const onSwap = (e: Event) => {
+      const custom = e as CustomEvent<{ plane?: Plane }>;
+      const target = custom.detail?.plane;
+      if (!target) return;
+      if (planes && planes.length > 0 && !planes.includes(target)) return;
+      setPlane(target);
+    };
+    window.addEventListener(
+      "nex-joker-keypad-swap-plane",
+      onSwap as EventListener,
+    );
+    return () =>
+      window.removeEventListener(
+        "nex-joker-keypad-swap-plane",
+        onSwap as EventListener,
+      );
+  }, [planes]);
   const [pressed, setPressed] = React.useState<string | null>(null);
 
   /* Owner directive 2026-10-20 · "update the emoji library on the

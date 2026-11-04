@@ -1211,12 +1211,28 @@ export function FreeChatComposerClient({
           minWidth: 0,
         }}
       >
+        {/* Owner directive 2026-11-05 iter 20 · emoji icon opens the
+            sealed JokerKeypad on the emoji plane · user can then swap
+            to sticker/giphy tabs or go back to letters to add text.
+            Dispatches `nex-joker-keypad-swap-plane` which the keypad
+            listens for · the keypad's own setKeypadOpen path already
+            runs on tap since the icon is now interactive. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/nex-free-chat/composer-emoji.png"
           alt=""
           aria-hidden
           data-nex-free-chat-composer-emoji
+          onClick={() => {
+            setKeypadOpen(true);
+            requestAnimationFrame(() => {
+              window.dispatchEvent(
+                new CustomEvent("nex-joker-keypad-swap-plane", {
+                  detail: { plane: "emoji" },
+                }),
+              );
+            });
+          }}
           style={{
             position: "absolute",
             left: 6,
@@ -1225,8 +1241,10 @@ export function FreeChatComposerClient({
             width: 32,
             height: 32,
             objectFit: "contain",
-            pointerEvents: "none",
+            pointerEvents: "auto",
+            cursor: "pointer",
             userSelect: "none",
+            zIndex: 1,
           }}
         />
         <input
