@@ -75,6 +75,9 @@ import { E2eComposerIntercept } from "./_e2e-composer-intercept";
 import { ArchivePanel } from "./_archive-panel";
 import { FocusedShopSheet } from "./_focused-shop-sheet";
 // Owner fix 2026-11-05 · ContactPickerLauncher retired · import removed.
+// Owner-authored 2026-11-05 · fresh-conversation welcome pill (Option B)
+// with time + delivery ticks + peer presence dot.
+import { WelcomePillClient } from "./_welcome-pill-client";
 import type {
   SideNavContact,
   PendingInvite,
@@ -929,52 +932,11 @@ export default async function PeerChatPage({
           Pure client-side · no DB write · see Option B in the design
           decision 2026-11-05. */}
       {messages.length === 0 ? (
-        <div
-          aria-hidden
-          data-nex-peer-chat-prototype-empty-state
-          style={{
-            position: "fixed",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            zIndex: 5,
-            padding: "14px 22px",
-            maxWidth: 320,
-            borderRadius: 18,
-            background: "rgba(0, 0, 0, 0.42)",
-            backdropFilter: "blur(14px) saturate(140%)",
-            WebkitBackdropFilter: "blur(14px) saturate(140%)",
-            border: "1px solid rgba(255, 255, 255, 0.14)",
-            boxShadow:
-              "0 10px 28px rgba(0,0,0,0.55), inset 0 0 0 1px color-mix(in srgb, var(--nex-world-secondary, #00AFFF) 20%, transparent)",
-            textAlign: "center",
-            color: "var(--nex-world-primary-ink, #F2F5F8)",
-            fontFamily:
-              "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-            pointerEvents: "none",
-          }}
-        >
-          <div
-            style={{
-              fontSize: 15,
-              fontWeight: 700,
-              lineHeight: 1.3,
-              letterSpacing: "-0.005em",
-            }}
-          >
-            You and {peerFirstName} are connected
-          </div>
-          <div
-            style={{
-              marginTop: 4,
-              fontSize: 12,
-              fontWeight: 500,
-              color: "var(--nex-world-muted-ink, #B5C3D6)",
-            }}
-          >
-            Say hi 👋
-          </div>
-        </div>
+        <WelcomePillClient
+          peerFirstName={peerFirstName}
+          peerAccountId={peer.id}
+          conversationCreatedAt={conversation.created_at ?? new Date().toISOString()}
+        />
       ) : null}
 
       {needsSafeTradeConsent && (
