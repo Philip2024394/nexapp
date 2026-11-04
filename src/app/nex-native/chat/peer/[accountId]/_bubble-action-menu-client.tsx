@@ -31,6 +31,7 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
+import type { EditPeerMessageResult } from "@/lib/nex-native/peer-message-service";
 
 const LONG_PRESS_MS = 500;
 
@@ -38,10 +39,26 @@ interface MenuState {
   readonly msgId: string;
   readonly rect: DOMRect;
   readonly bodyText: string;
+  readonly mine: boolean;
 }
 
-export function BubbleActionMenuClient(): React.JSX.Element | null {
+export interface BubbleActionMenuClientProps {
+  /** Server action bound to the viewer session · called when Save
+   *  is pressed in the edit modal. When omitted, the Edit entry is
+   *  hidden (surfaces not yet wired to the edit action). */
+  readonly editAction?: (
+    messageId: string,
+    newBody: string,
+  ) => Promise<EditPeerMessageResult>;
+}
+
+export function BubbleActionMenuClient({
+  editAction,
+}: BubbleActionMenuClientProps = {}): React.JSX.Element | null {
   const [menu, setMenu] = React.useState<MenuState | null>(null);
+  const [editingBody, setEditingBody] = React.useState<string | null>(null);
+  const [editingMsgId, setEditingMsgId] = React.useState<string | null>(null);
+  const [savingEdit, setSavingEdit] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
   const longPressTimerRef = React.useRef<number | null>(null);
   const longPressTargetRef = React.useRef<HTMLElement | null>(null);
@@ -55,7 +72,8 @@ export function BubbleActionMenuClient(): React.JSX.Element | null {
     // Use innerText so hidden ticks/timestamps that use display:none
     // or absolute-positioning don't leak into the copy. Best-effort.
     const bodyText = (el.innerText ?? el.textContent ?? "").trim();
-    setMenu({ msgId, rect, bodyText });
+    const mine = el.getAttribute("data-nex-bloom-msg-mine") === "true";
+    setMenu({ msgId, rect, bodyText, mine });
   }, []);
 
   const closeMenu = React.useCallback(() => setMenu(null), []);
@@ -149,12 +167,184 @@ export function BubbleActionMenuClient(): React.JSX.Element | null {
     closeMenu();
   }, [menu, closeMenu]);
 
-  if (!mounted || !menu) return null;
+  const handleEditOpen = React.useCallback(() => {
+    if (!menu) return;
+    setEditingMsgId(menu.msgId);
+    setEditingBody(menu.bodyText);
+    closeMenu();
+  }, [menu, closeMenu]);
+
+  const handleEditSave = React.useCallback(async () => {
+    if (!editAction || !editingMsgId || editingBody === null) return;
+    setSavingEdit(true);
+    const result = await editAction(editingMsgId, editingBody);
+    setSavingEdit(false);
+    if (result.ok) {
+      window.dispatchEvent(
+        new CustomEvent("nex-action-toast", {
+          detail: { message: "Message edited", kind: "success" },
+        }),
+      );
+      setEditingMsgId(null);
+      setEditingBody(null);
+      // Reload so the edited body + "edited" marker appear.
+      window.location.reload();
+      return;
+    }
+    const msg =
+      result.reason === "window-expired"
+        ? "Can't edit · over 15 min old"
+        : result.reason === "schema-unapplied"
+          ? "Edit not yet available"
+          : result.reason === "not-sender"
+            ? "You can only edit your own messages"
+            : result.reason === "deleted"
+              ? "This message was deleted"
+              : result.reason === "empty-body"
+                ? "Message can't be empty"
+                : "Edit failed";
+    window.dispatchEvent(
+      new CustomEvent("nex-action-toast", {
+        detail: { message: msg, kind: "error" },
+      }),
+    );
+  }, [editAction, editingMsgId, editingBody]);
+
+  const handleEditCancel = React.useCallback(() => {
+    setEditingMsgId(null);
+    setEditingBody(null);
+  }, []);
+
+  if (!mounted) return null;
+
+  // Edit modal takes precedence when open.
+  if (editingMsgId !== null && editingBody !== null) {
+    const modal = (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Edit message"
+        data-nex-bubble-edit-modal
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 9100,
+          background: "rgba(0,0,0,0.55)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 20,
+        }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget && !savingEdit) handleEditCancel();
+        }}
+      >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: 420,
+            background: "#000000",
+            border: "1px solid rgba(255,255,255,0.14)",
+            borderRadius: 16,
+            boxShadow:
+              "0 18px 48px rgba(0,0,0,0.7), inset 0 0 0 1px color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 24%, transparent)",
+            padding: 16,
+            color: "#F2F5F8",
+            fontFamily:
+              "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 15,
+              fontWeight: 700,
+              marginBottom: 10,
+              color: "var(--nex-world-secondary, #C6A15B)",
+            }}
+          >
+            Edit message
+          </div>
+          <textarea
+            value={editingBody}
+            onChange={(e) => setEditingBody(e.currentTarget.value)}
+            rows={4}
+            disabled={savingEdit}
+            style={{
+              width: "100%",
+              padding: "10px 12px",
+              background: "rgba(2,9,20,0.6)",
+              border: "1px solid rgba(255,255,255,0.14)",
+              borderRadius: 10,
+              color: "#F2F5F8",
+              fontSize: 14,
+              fontFamily: "inherit",
+              outline: "none",
+              resize: "vertical",
+              boxSizing: "border-box",
+            }}
+          />
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              justifyContent: "flex-end",
+              marginTop: 12,
+            }}
+          >
+            <button
+              type="button"
+              onClick={handleEditCancel}
+              disabled={savingEdit}
+              style={{
+                padding: "9px 14px",
+                borderRadius: 999,
+                background: "transparent",
+                border: "1px solid rgba(255,255,255,0.22)",
+                color: "#F2F5F8",
+                fontWeight: 600,
+                cursor: savingEdit ? "default" : "pointer",
+                opacity: savingEdit ? 0.5 : 1,
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleEditSave}
+              disabled={savingEdit || editingBody.trim().length === 0}
+              style={{
+                padding: "9px 16px",
+                borderRadius: 999,
+                background: "#FF7200",
+                color: "#1A0808",
+                fontWeight: 700,
+                border: "none",
+                cursor:
+                  savingEdit || editingBody.trim().length === 0
+                    ? "default"
+                    : "pointer",
+                opacity:
+                  savingEdit || editingBody.trim().length === 0 ? 0.5 : 1,
+              }}
+            >
+              {savingEdit ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+    return createPortal(modal, document.body);
+  }
+
+  if (!menu) return null;
 
   // Menu position · hug above the bubble by 8px · clamp to viewport.
   const MENU_WIDTH = 180;
-  // Height grew when Forward was added · 3 rows × ~44px + 12px padding.
-  const MENU_HEIGHT = 144;
+  // Height varies with row count · 4 rows when Edit is shown + action
+  // is bound, else 3. Plus 12px padding.
+  const canEdit = menu.mine && typeof editAction === "function";
+  const rowCount = canEdit ? 4 : 3;
+  const MENU_HEIGHT = 12 + rowCount * 44;
   const viewportW = window.innerWidth;
   const viewportH = window.innerHeight;
   const gap = 8;
@@ -233,6 +423,17 @@ export function BubbleActionMenuClient(): React.JSX.Element | null {
           <span aria-hidden style={glyphStyle}>↪</span>
           <span>Forward</span>
         </button>
+        {canEdit ? (
+          <button
+            type="button"
+            onClick={handleEditOpen}
+            style={rowStyle}
+            data-nex-bubble-action-menu-edit
+          >
+            <span aria-hidden style={glyphStyle}>✎</span>
+            <span>Edit</span>
+          </button>
+        ) : null}
       </div>
     </>
   );

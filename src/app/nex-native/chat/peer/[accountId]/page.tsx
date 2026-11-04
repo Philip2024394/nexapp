@@ -93,6 +93,9 @@ import { JumpToUnreadClient } from "./_jump-to-unread-client";
 // parity · long-press / right-click bubble action menu (Reply + Copy)
 // as an external overlay · zero Shell modification.
 import { BubbleActionMenuClient } from "./_bubble-action-menu-client";
+// Owner-authored 2026-11-05 later-same-day iter 10 · edit sent message
+// server action · depends on migration 279 (DRAFT · not yet applied).
+import { editPeerMessageAction } from "./_edit-actions";
 import type {
   SideNavContact,
   PendingInvite,
@@ -1087,10 +1090,11 @@ export default async function PeerChatPage({
           left off. No-op when firstUnreadMessageId is null. */}
       <JumpToUnreadClient firstUnreadMessageId={firstUnreadMessageId} />
 
-      {/* 2026-11-05 iter 7 · long-press / right-click a bubble opens
-          a small Reply + Copy menu above it · pure overlay, no Shell
-          edit · uses the sealed data-nex-msg-id anchor. */}
-      <BubbleActionMenuClient />
+      {/* 2026-11-05 iter 7-10 · long-press / right-click a bubble opens
+          a small Reply + Copy + Forward (+ Edit for own, sender-only)
+          menu above it · pure overlay, no Shell edit · uses the sealed
+          data-nex-msg-id + data-nex-bloom-msg-mine anchors. */}
+      <BubbleActionMenuClient editAction={editPeerMessageAction} />
 
       {needsSafeTradeConsent && (
         <SafeTradeConsentModal

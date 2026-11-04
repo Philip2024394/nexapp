@@ -584,6 +584,105 @@ export async function getLastPeerMessageInConversation(
  *  resolves to PRIVACY-MAXIMUM (receipts suppressed) via
  *  getChatPreferencesSafe. This is the primary server-side
  *  enforcement for reciprocal read-receipt privacy. */
+/** Owner-authorised 2026-11-05 later-same-day iter 10 · edit a sent
+ *  peer message. Sender-only · within 15-minute edit window. Appends
+ *  the pre-edit body to `edit_history` and sets `edited_at`. Returns a
+ *  typed result union so callers can report friendly errors.
+ *
+ *  Migration 279 (nex-supabase/migrations/279_peer_message_edit.sql)
+ *  must be applied before this function returns ok; until then every
+ *  call returns { ok: false, reason: "schema-unapplied" } because the
+ *  update targets columns that don't exist. The service is defensive:
+ *  the Supabase client will surface a column-does-not-exist error and
+ *  we map that to the schema-unapplied reason.
+ */
+export const EDIT_WINDOW_MS = 15 * 60 * 1000;
+
+export type EditPeerMessageResult =
+  | { readonly ok: true }
+  | {
+      readonly ok: false;
+      readonly reason:
+        | "not-found"
+        | "not-sender"
+        | "deleted"
+        | "window-expired"
+        | "empty-body"
+        | "schema-unapplied"
+        | "db-error";
+      readonly detail?: string;
+    };
+
+export async function editPeerMessage(args: {
+  readonly messageId: NexUuid;
+  readonly senderAccountId: NexUuid;
+  readonly newBody: string;
+}): Promise<EditPeerMessageResult> {
+  const trimmed = args.newBody.trim();
+  if (trimmed.length === 0) return { ok: false, reason: "empty-body" };
+
+  // Fetch current row · enforce ownership + window + deleted gate in
+  // app code so we can return a friendly reason for each path.
+  const { data: row, error: fetchErr } = await nexSupabaseAdmin
+    .from("nex_peer_message")
+    .select("id, sender_account_id, sent_at, body, deleted_for_everyone")
+    .eq("id", args.messageId)
+    .maybeSingle();
+  if (fetchErr) return { ok: false, reason: "db-error", detail: fetchErr.message };
+  if (!row) return { ok: false, reason: "not-found" };
+  if (row.sender_account_id !== args.senderAccountId) {
+    return { ok: false, reason: "not-sender" };
+  }
+  if (row.deleted_for_everyone) return { ok: false, reason: "deleted" };
+  const sentMs = new Date(row.sent_at).getTime();
+  if (Number.isNaN(sentMs) || Date.now() - sentMs > EDIT_WINDOW_MS) {
+    return { ok: false, reason: "window-expired" };
+  }
+
+  const now = new Date().toISOString();
+  // First read existing edit_history so we can append (Supabase has no
+  // native JSONB append · race window here is 1-sender-only edit so
+  // low risk).
+  const { data: historyRow, error: historyErr } = await nexSupabaseAdmin
+    .from("nex_peer_message")
+    .select("edit_history")
+    .eq("id", args.messageId)
+    .maybeSingle();
+  if (historyErr) {
+    const msg = historyErr.message ?? "";
+    if (/column .*edit_history.* does not exist/i.test(msg)) {
+      return { ok: false, reason: "schema-unapplied" };
+    }
+    return { ok: false, reason: "db-error", detail: msg };
+  }
+  const prior = Array.isArray(
+    (historyRow as { edit_history?: unknown } | null)?.edit_history,
+  )
+    ? ((historyRow as { edit_history: unknown[] }).edit_history as Array<{
+        body: string;
+        edited_at: string;
+      }>)
+    : [];
+  const nextHistory = [...prior, { body: row.body, edited_at: now }];
+
+  const { error: updateErr } = await nexSupabaseAdmin
+    .from("nex_peer_message")
+    .update({
+      body: trimmed,
+      edited_at: now,
+      edit_history: nextHistory,
+    })
+    .eq("id", args.messageId);
+  if (updateErr) {
+    const msg = updateErr.message ?? "";
+    if (/column .*edited_at.* does not exist/i.test(msg)) {
+      return { ok: false, reason: "schema-unapplied" };
+    }
+    return { ok: false, reason: "db-error", detail: msg };
+  }
+  return { ok: true };
+}
+
 export async function markPeerMessagesRead(
   conversationId: NexUuid,
   viewerAccountId: NexUuid,
