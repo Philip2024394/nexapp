@@ -622,12 +622,12 @@ function EmptyState({
         <ShopGlyph accent={CYAN} />
       </div>
       <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: TEXT }}>
-        {hasQuery ? "No products match" : "No products yet"}
+        {hasQuery ? "No products match" : "Your shop is empty"}
       </p>
-      <p style={{ margin: 0, fontSize: 11, color: MUTED, maxWidth: 220 }}>
+      <p style={{ margin: 0, fontSize: 11.5, lineHeight: 1.45, color: MUTED, maxWidth: 240 }}>
         {hasQuery
           ? "Try a different term, or clear the search to see everything."
-          : "Add products to your shop and they'll appear here for sharing."}
+          : "Products you list for sale will appear here · tap any one to share it in this chat for instant selling."}
       </p>
     </div>
   );
