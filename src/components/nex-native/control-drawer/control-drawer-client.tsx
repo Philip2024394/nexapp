@@ -149,6 +149,12 @@ export interface ControlDrawerProps {
    *  rationale: don't solicit support during a conversation. Default
    *  (undefined / false) = show when qualified. */
   readonly hideCreatorSupportRow?: boolean;
+  /** Owner directive 2026-11-05 later-same-day iter 8 · when set, the
+   *  drawer renders a "Shared media" row above the Discovery row so
+   *  peer-chat viewers can jump to the per-conversation media gallery.
+   *  Non-peer surfaces (free-chat home, profile, etc.) omit this prop
+   *  and the row doesn't render. Value is the full href. */
+  readonly peerSharedMediaHref?: string;
 }
 
 // ─── Destinations · all verified to exist in the audit ──────────────
@@ -274,6 +280,7 @@ export function ControlDrawer({
   hideCreatorSupportRow,
   triggerStyle,
   triggerIcon = "plus",
+  peerSharedMediaHref,
 }: ControlDrawerProps) {
   // Owner directive 2026-11-01 · Batch D++ · Creator-Support sheet
   // open state. The drawer owns the state; DrawerBody receives the
@@ -517,6 +524,7 @@ export function ControlDrawer({
           creatorSupportLabelOverride={creatorSupportLabelOverride}
           creatorSupportSubtitleOverride={creatorSupportSubtitleOverride}
           onCreatorSupportTap={onCreatorSupportTap}
+          peerSharedMediaHref={peerSharedMediaHref}
         />
       </aside>
       {confirmLogout ? (
@@ -646,6 +654,7 @@ function DrawerBody({
   // When OMITTED (tests, legacy mounts) the Link navigates normally —
   // same backward-compat guarantee as the D+ gating props.
   onCreatorSupportTap,
+  peerSharedMediaHref,
 }: {
   readonly session: ControlDrawerSession | null;
   readonly onLogoutClick: () => void;
@@ -654,6 +663,7 @@ function DrawerBody({
   readonly creatorSupportLabelOverride?: string;
   readonly creatorSupportSubtitleOverride?: string;
   readonly onCreatorSupportTap?: () => void;
+  readonly peerSharedMediaHref?: string;
 }) {
   // Owner directive 2026-10-23 · "unlock them for admin dev entry".
   // Non-production builds · if the URL carries `?dev=1` the drawer
@@ -708,7 +718,24 @@ function DrawerBody({
           user lands back on the exact feature after they sign in. */}
       <SectionGroup
         title="YOUR NEX"
-        rows={YOUR_NEX_ROWS}
+        rows={
+          peerSharedMediaHref
+            ? [
+                // Owner directive 2026-11-05 iter 8 · Shared media row
+                // injected only on peer-chat surfaces (caller passes
+                // peerSharedMediaHref). Appended after the sealed rows
+                // so stable ordering is preserved on non-peer surfaces.
+                ...YOUR_NEX_ROWS,
+                {
+                  key: "shared-media",
+                  label: "Shared media",
+                  subtitle: "Photos · videos · voice · docs in this chat",
+                  href: peerSharedMediaHref,
+                  locked: false,
+                } as const,
+              ]
+            : YOUR_NEX_ROWS
+        }
         isGuest={effectiveIsGuest}
         devUnlockMode={devUnlock}
       />

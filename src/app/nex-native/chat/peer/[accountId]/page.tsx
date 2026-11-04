@@ -1056,6 +1056,7 @@ export default async function PeerChatPage({
           avatarUrl={profile?.avatar_url ?? null}
           drawerSession={drawerSession}
           peerAccountId={peer.id}
+          peerSharedMediaHref={`/nex-native/chat/peer/${peer.id}/media`}
           notificationsSlot={
             <NotificationsDrawer
               inline

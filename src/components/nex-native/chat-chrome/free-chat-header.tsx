@@ -67,6 +67,10 @@ export interface FreeChatHeaderProps {
    *  dispatched by PeerPresenceClient. Non-peer surfaces (free-chat
    *  home) omit this prop and keep the plain avatar. */
   readonly peerAccountId?: string;
+  /** Owner directive 2026-11-05 later-same-day iter 8 · when set, the
+   *  inline ControlDrawer surfaces a "Shared media" row routed to this
+   *  href. Peer chat passes `/nex-native/chat/peer/<id>/media`. */
+  readonly peerSharedMediaHref?: string;
 }
 
 const DEFAULT_PING_ACCENT = "var(--nex-world-secondary, #00AFFF)";
@@ -83,6 +87,7 @@ export function FreeChatHeader({
   subtitleColor = DEFAULT_SUBTITLE,
   notificationsSlot,
   peerAccountId,
+  peerSharedMediaHref,
 }: FreeChatHeaderProps): React.JSX.Element {
   // Owner directive 2026-11-05 later-same-day iter 5 · sealed
   // NexPingBadge is restored on peer chat · colored rim retired. The
@@ -244,6 +249,7 @@ export function FreeChatHeader({
           <ControlDrawer
             session={drawerSession}
             triggerIcon="plus"
+            peerSharedMediaHref={peerSharedMediaHref}
             /* Owner directive 2026-11-05 later-same-day iter 2 ·
                header buttons go SOLID BLACK (no translucency, no
                blur). Hairline white border + gold inner ring kept
