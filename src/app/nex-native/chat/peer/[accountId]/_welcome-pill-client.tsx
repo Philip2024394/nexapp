@@ -95,18 +95,64 @@ export function WelcomePillClient({
         fontFamily:
           "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
         pointerEvents: "none",
-        textAlign: "center",
+        textAlign: "left",
       }}
     >
+      {/* Top row · connected copy on the left · HH:MM + presence dot on
+          the right · owner directive 2026-11-05. Reads exactly like a
+          chat-bubble header where sender name + timestamp share one line. */}
       <div
         style={{
-          fontSize: 15,
-          fontWeight: 700,
-          lineHeight: 1.3,
-          letterSpacing: "-0.005em",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          justifyContent: "space-between",
         }}
       >
-        You and {peerFirstName} are connected
+        <div
+          style={{
+            fontSize: 15,
+            fontWeight: 700,
+            lineHeight: 1.3,
+            letterSpacing: "-0.005em",
+            flex: 1,
+            minWidth: 0,
+          }}
+        >
+          You and {peerFirstName} are connected
+        </div>
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            flexShrink: 0,
+            fontSize: 10,
+            fontWeight: 600,
+            letterSpacing: "0.02em",
+            color: "rgba(255,255,255,0.65)",
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          <span>{formatHM(conversationCreatedAt)}</span>
+          <span
+            aria-hidden
+            data-nex-peer-chat-prototype-empty-dot={peerKind}
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: dotColor,
+              boxShadow:
+                peerKind === "online"
+                  ? "0 0 6px rgba(22,214,107,0.55)"
+                  : peerKind === "offline"
+                    ? "0 0 6px rgba(166,0,0,0.45)"
+                    : undefined,
+              transition: "background 220ms ease-out",
+            }}
+          />
+        </div>
       </div>
       <div
         style={{
@@ -117,53 +163,6 @@ export function WelcomePillClient({
         }}
       >
         Say hi 👋
-      </div>
-      {/* Chat-bubble meta row · time + delivery ticks + presence dot ·
-          sits under the welcome copy to mimic the sealed message
-          footer vocabulary. Right-aligned so the structure reads
-          exactly like a sender bubble. */}
-      <div
-        style={{
-          marginTop: 10,
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-          fontSize: 10,
-          fontWeight: 600,
-          letterSpacing: "0.02em",
-          color: "rgba(255,255,255,0.65)",
-          fontVariantNumeric: "tabular-nums",
-        }}
-      >
-        <span>{formatHM(conversationCreatedAt)}</span>
-        <span
-          aria-hidden
-          style={{
-            fontSize: 11,
-            letterSpacing: "-0.08em",
-            color: "rgba(255,255,255,0.6)",
-            fontWeight: 800,
-          }}
-        >
-          ✓✓
-        </span>
-        <span
-          aria-hidden
-          data-nex-peer-chat-prototype-empty-dot={peerKind}
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: "50%",
-            background: dotColor,
-            boxShadow:
-              peerKind === "online"
-                ? "0 0 6px rgba(22,214,107,0.55)"
-                : peerKind === "offline"
-                  ? "0 0 6px rgba(166,0,0,0.45)"
-                  : undefined,
-            transition: "background 220ms ease-out",
-          }}
-        />
       </div>
     </div>
   );
