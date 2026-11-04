@@ -1,26 +1,26 @@
 "use client";
 
-// src/app/nex-native/chat-9001/[accountId]/_scroll-to-bottom-client.tsx
+// src/components/nex-native/chat-chrome/scroll-to-bottom-button.tsx
 //
-// Parity item 4 · floating scroll-to-bottom button.
-// Appears when the user is more than 120 px from the bottom of the
-// message list. Tapping it smooth-scrolls the list to the newest
-// bubble.
+// Floating scroll-to-bottom button for any chat surface whose scroll
+// container carries either `data-nex-message-scroll` (sealed Shell)
+// or `data-nex-chat-9001-messages` (retired prototype · kept for the
+// deprecation window).
 
 import * as React from "react";
 
 const CYAN = "var(--nex-world-secondary, #00AFFF)";
 const PANEL = "var(--nex-world-drawer-bg, #0A1526)";
 const THRESHOLD_PX = 120;
+const SCROLL_SELECTOR =
+  "[data-nex-message-scroll], [data-nex-chat-9001-messages]";
 
 export function ScrollToBottomButton(): React.JSX.Element | null {
   const [visible, setVisible] = React.useState(false);
   const scrollerRef = React.useRef<HTMLElement | null>(null);
 
   React.useEffect(() => {
-    const scroller = document.querySelector<HTMLElement>(
-      "[data-nex-chat-9001-messages]",
-    );
+    const scroller = document.querySelector<HTMLElement>(SCROLL_SELECTOR);
     if (!scroller) return;
     scrollerRef.current = scroller;
     const check = () => {

@@ -48,6 +48,23 @@ import {
 import { type PortraitBloomPresenceKind } from "../../_portrait-bloom-shell";
 import { resolveChromeSet } from "@/lib/nex-native/chat-render/registry";
 import { PeerCallLauncher } from "./_call-launcher";
+// Owner directive 2026-11-04 later-same-day · NEX Global Chat UI
+// Standard (Chat 9001) · the 3-dots Call Center drawer FAB from
+// free-chat is also mounted on peer-chat so every chat surface
+// carries the same bottom-right floating action button.
+import { FreeChatCallCenterDrawerClient } from "../../../free-chat/_call-center-drawer-client";
+// Owner-authorised 2026-11-05 · prototype UX promoted to production.
+// FreeChatHeader (shared Chat 9001 identity row + grid + "+" drawer),
+// NotificationsDrawer, ShopDrawer, and the floating scroll-to-bottom
+// button are layered on top of the sealed PortraitBloomShell · Shell's
+// internal ChatIdentityHeader + HeaderRightCluster are hidden via
+// scoped CSS so only ONE top chrome shows. Shell keeps rendering
+// bubbles + composer + theme wallpaper + all production features.
+import { FreeChatHeader } from "@/components/nex-native/chat-chrome/free-chat-header";
+import { NotificationsDrawer } from "@/components/nex-native/notifications-drawer/notifications-drawer-client";
+import { ShopDrawer } from "@/components/nex-native/shop-drawer/shop-drawer-client";
+import { ScrollToBottomButton } from "@/components/nex-native/chat-chrome/scroll-to-bottom-button";
+import { effectiveTier } from "@/lib/nex-native/account-service";
 import { ChatErrorBanner } from "./_error-banner";
 import { PeerTypingClient } from "./_typing-client";
 import { PeerPresenceClient } from "./_presence-client";
@@ -838,8 +855,51 @@ export default async function PeerChatPage({
     };
   });
 
+  // Owner-authorised 2026-11-05 · drawer identity for the shared "+"
+  // ControlDrawer rendered inside FreeChatHeader. Sourced from the
+  // server-resolved session · null if session resolution failed (would
+  // have redirected earlier, so this is defensive).
+  const drawerSession = {
+    displayName: session.account.display_name,
+    nexHandle: session.account.nex_handle,
+    isBisnis: effectiveTier(session.account) === "bisnis",
+  };
+  const peerFirstName =
+    peer.display_name.split(/\s+/)[0] ?? peer.display_name;
+  const headerSubtitle = profile?.profession ?? presenceLabel ?? "Online";
+
   return (
-    <>
+    <div data-nex-peer-chat-prototype-wrap>
+      {/* Owner-authorised 2026-11-05 · scoped CSS hides the sealed
+          PortraitBloomShell native identity header + home/cart/shop
+          right cluster so only the layered FreeChatHeader renders.
+          Shell internals stay mounted (preserving hook order + theme
+          wallpaper + bubble renderer) · they are visually hidden only. */}
+      <style>{`
+        [data-nex-peer-chat-prototype-wrap] [data-nex-chat-identity-header],
+        [data-nex-peer-chat-prototype-wrap] [data-nex-header-cluster] {
+          display: none !important;
+        }
+      `}</style>
+      {/* Chat 9001 header · fixed top · overlays Shell's hidden header. */}
+      <div
+        data-nex-peer-chat-prototype-header-slot
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 10,
+        }}
+      >
+        <FreeChatHeader
+          displayName={peerFirstName}
+          subtitle={headerSubtitle}
+          avatarUrl={profile?.avatar_url ?? null}
+          drawerSession={drawerSession}
+        />
+      </div>
+
       {needsSafeTradeConsent && (
         <SafeTradeConsentModal
           action={acknowledgeSafeTradeAction}
@@ -958,10 +1018,17 @@ export default async function PeerChatPage({
         themeId={peerThemeRow?.id ?? null}
         subjectId={peer.id}
       />
-      {/* Bridge 68 · voice-call launcher · disabled for NEX1 support so
-          ops isn't paged through WebRTC. Own signalling channel keyed on
-          conversation.id. */}
-      <PeerCallLauncher
+      {/* Owner directive 2026-11-04 later-same-day · NEX Global Chat
+          UI Standard (Chat 9001) · the floating PeerCallLauncher is
+          retired from peer-chat so the header matches the free-chat
+          2-button cluster. Voice / video calls remain fully reachable
+          via the + attach panel's Call Centre tile → /nex-native/
+          call-centre decision page (sealed PeerCall engine still
+          mounts there · zero WebRTC code lost · add-to-call wiring
+          test unaffected · the launcher component file is retained
+          for direct deep-links at /chat/peer/<id>?start_call=voice
+          if any surface needs that entry). */}
+      {/* <PeerCallLauncher
         conversationId={conversation.id}
         selfAccountId={session.account.id}
         selfDisplayName={session.account.display_name}
@@ -969,7 +1036,13 @@ export default async function PeerChatPage({
         peerDisplayName={peer.display_name}
         peerAvatarUrl={profile?.avatar_url ?? null}
         disabled={isNexOfficialAccount(peer.id)}
-      />
+      /> */}
+      {/* Owner directive 2026-11-04 later-same-day · NEX Global Chat
+          UI Standard (Chat 9001) · the shared 3-dots Call Center
+          drawer FAB. Same component free-chat mounts · absolute-
+          positioned bottom-right · opens left-slide Call Center
+          panel with Voice/Video/Dial/Recent/Contacts rows. */}
+      <FreeChatCallCenterDrawerClient />
       {/* Bridge 70 · typing indicator · disabled for NEX1 (support
           agents typing is not a signal buyers need). Same conversation
           channel keyed on conversation.id.
@@ -1069,7 +1142,21 @@ export default async function PeerChatPage({
           }))}
         />
       ) : null}
-    </>
+
+      {/* Owner-authorised 2026-11-05 · prototype UX siblings.
+          Notifications bell top-left · ShopDrawer FAB bottom-right ·
+          floating scroll-to-bottom pill when scrolled > 120 px above
+          newest. The existing FreeChatCallCenterDrawerClient (3-dot
+          FAB, Call Centre entry) stays mounted for now · Call Centre
+          is also reachable via the + attach panel's Call Centre tile. */}
+      <NotificationsDrawer />
+      <ShopDrawer
+        viewerHasShop={viewerHasBusiness}
+        peerDisplayName={peer.display_name}
+        shareAction={bind}
+      />
+      <ScrollToBottomButton />
+    </div>
   );
 }
 
