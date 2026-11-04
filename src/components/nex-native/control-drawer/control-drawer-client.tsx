@@ -249,20 +249,17 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
   // the right-side drawer where it belongs with other app-level
   // destinations.
   //
-  // Owner directive 2026-11-05 later-same-day iter 12 · fix · the row
-  // must OPEN the sealed SearchOverlay (6 live-feed tile buttons · Live
-  // World / Live Ireland / Live Music / Live Food / Live Stays / Live
-  // Trades), NOT jump straight to /nex-feed. Dispatches a window event
-  // · DiscoveryOverlayHost (mounted in /nex-native/layout.tsx) listens
-  // and mounts the sealed overlay. The `href` fallback stays so
-  // right-click / cmd+click / middle-click open the feed in a new tab.
+  // Owner directive 2026-11-05 iter 22 · Discovery row now routes
+  // DIRECTLY to /nex-native/nex-feed · the 6-tile overlay collapsed to
+  // a single NEX Live destination (Music / Food / Stays / Trades
+  // merged into the one feed). Content search moved to the new
+  // magnifier dropdown in the chat header.
   {
     key: "discovery",
     label: "Discovery",
-    subtitle: "Explore the live NEX feed",
+    subtitle: "Explore the NEX Live feed",
     href: "/nex-native/nex-feed",
     locked: false,
-    dispatchEvent: "nex-discovery-overlay-open",
   },
 ];
 

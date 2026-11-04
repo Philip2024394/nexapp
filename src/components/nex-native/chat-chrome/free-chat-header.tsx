@@ -33,6 +33,9 @@ import {
 // from the chat header right-nav. Discovery destination moved into the
 // right-side ControlDrawer (YOUR_NEX_ROWS) so the header runs cleaner
 // with just [ bell · + ].
+// Owner directive 2026-11-05 iter 22 · magnifier added to the header
+// right-nav · opens a search dropdown that submits to /nex-feed?q=.
+import { NexLiveSearchButton } from "@/components/nex-native/chat-chrome/nex-live-search-button";
 
 export interface FreeChatHeaderProps {
   /** Wordmark line · "NEX" for guests, display_name for signed-in,
@@ -245,6 +248,7 @@ export function FreeChatHeader({
         }}
       >
         {notificationsSlot}
+        <NexLiveSearchButton />
         <div style={{ display: "inline-flex" }}>
           <ControlDrawer
             session={drawerSession}
