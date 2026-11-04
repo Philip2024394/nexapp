@@ -982,6 +982,12 @@ export default async function PeerChatPage({
           subtitle={headerSubtitle}
           avatarUrl={profile?.avatar_url ?? null}
           drawerSession={drawerSession}
+          notificationsSlot={
+            <NotificationsDrawer
+              inline
+              initialNotifications={notifications}
+            />
+          }
         />
       </div>
 
@@ -1243,7 +1249,10 @@ export default async function PeerChatPage({
           newest. The existing FreeChatCallCenterDrawerClient (3-dot
           FAB, Call Centre entry) stays mounted for now · Call Centre
           is also reachable via the + attach panel's Call Centre tile. */}
-      <NotificationsDrawer initialNotifications={notifications} />
+      {/* NotificationsDrawer bell moved into FreeChatHeader's right nav
+          (notificationsSlot prop) · owner fix 2026-11-05 · prevents the
+          standalone absolute-positioned trigger from sitting over the
+          ping-badge avatar. Drawer panel still portals globally. */}
       {/* Owner fix 2026-11-05 · prototype UX expects the shop 3-dot FAB
           visible for every viewer (empty state renders cleanly when
           the viewer has no products). Earlier gate `viewerHasBusiness`

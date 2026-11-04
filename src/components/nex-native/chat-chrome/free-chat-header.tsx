@@ -50,6 +50,13 @@ export interface FreeChatHeaderProps {
   readonly textColor?: string;
   /** Subtitle text colour. Defaults to the sealed free-chat #B5C3D6 dim. */
   readonly subtitleColor?: string;
+  /** Owner-authored 2026-11-05 · optional slot rendered FIRST in the
+   *  right-nav cluster (before HeaderSearch and the "+" ControlDrawer)
+   *  so chat surfaces can attach a NotificationsDrawer bell inline
+   *  rather than as a standalone absolute-positioned overlay that
+   *  clashes with the ping-badge avatar. Pass an inline-friendly
+   *  element (e.g. `<NotificationsDrawer inline />`). */
+  readonly notificationsSlot?: React.ReactNode;
 }
 
 const DEFAULT_PING_ACCENT = "var(--nex-world-secondary, #00AFFF)";
@@ -64,6 +71,7 @@ export function FreeChatHeader({
   pingBadgeAccent = DEFAULT_PING_ACCENT,
   textColor = DEFAULT_TEXT,
   subtitleColor = DEFAULT_SUBTITLE,
+  notificationsSlot,
 }: FreeChatHeaderProps): React.JSX.Element {
   return (
     <header
@@ -156,6 +164,7 @@ export function FreeChatHeader({
           flexShrink: 0,
         }}
       >
+        {notificationsSlot}
         <HeaderSearch />
         <div style={{ display: "inline-flex" }}>
           <ControlDrawer

@@ -52,12 +52,18 @@ export interface NotificationsDrawerProps {
   /** Optional override of the notifications source. Phase 2 will pass a
    *  server-resolved array here; Phase 1 defaults to the mock data. */
   readonly initialNotifications?: ReadonlyArray<NotificationItem>;
+  /** Owner-authored 2026-11-05 · when true, the trigger button renders
+   *  as a plain inline element (no position:absolute) so it can sit
+   *  inside a flex-row header nav alongside grid + "+". Default
+   *  false preserves the standalone floating-bell behaviour. */
+  readonly inline?: boolean;
 }
 
 type FilterKey = "all" | "unread" | NotificationSectionKey;
 
 export function NotificationsDrawer({
   initialNotifications,
+  inline = false,
 }: NotificationsDrawerProps = {}): React.JSX.Element {
   const [open, setOpen] = React.useState(false);
   const [rendered, setRendered] = React.useState(false);
@@ -520,10 +526,11 @@ export function NotificationsDrawer({
         aria-expanded={open}
         onClick={openDrawer}
         data-nex-notifications-trigger
+        data-nex-notifications-trigger-inline={inline ? "true" : undefined}
         style={{
-          position: "absolute",
-          top: "calc(env(safe-area-inset-top, 0px) + 20px)",
-          left: 16,
+          position: inline ? "relative" : "absolute",
+          top: inline ? undefined : "calc(env(safe-area-inset-top, 0px) + 20px)",
+          left: inline ? undefined : 16,
           width: 36,
           height: 36,
           borderRadius: "50%",
