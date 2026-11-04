@@ -13,11 +13,16 @@
 // src/app/nex-native/free-chat/_composer-client.tsx is the reference
 // · this is a verbatim port into a reusable component.
 //
-// Shape:
-//   [ + button outside pill | pill(emoji PNG · input · orange send) ]
+// Shape (owner directive 2026-11-05):
+//   [ pill( + button · input · orange send ) ]
+//
+// The outside-left `+` button and the emoji glyph are retired · the `+`
+// moves INTO the pill's left slot where the emoji used to live, so the
+// pill consolidates into a single visual unit. `onEmoji` is removed
+// from the prop surface · theme-emoji entry lives behind the `+` sheet.
 //
 // Purely presentational · no state owned. Callers pass value/onChange/
-// onSend/accentHex/onPlusAction/onEmoji/textareaRef/placeholder/etc.
+// onSend/accentHex/onPlusAction/placeholder/etc.
 
 import * as React from "react";
 
@@ -31,7 +36,6 @@ export interface Chat9001PillProps {
   readonly disabled?: boolean;
   readonly maxLength?: number;
   readonly onPlusAction?: () => void;
-  readonly onEmoji?: () => void;
   readonly plusOpen?: boolean;
   readonly textareaDataAttr?: string;
   readonly inputRef?: React.Ref<HTMLInputElement>;
@@ -50,7 +54,6 @@ export function Chat9001Pill({
   disabled,
   maxLength = 4000,
   onPlusAction,
-  onEmoji,
   plusOpen = false,
   textareaDataAttr,
   inputRef,
@@ -73,38 +76,6 @@ export function Chat9001Pill({
         position: "relative",
       }}
     >
-      {onPlusAction ? (
-        <button
-          type="button"
-          onClick={onPlusAction}
-          aria-label={plusOpen ? "Close attachments" : "Open attachments"}
-          aria-expanded={plusOpen}
-          data-nex-free-chat-composer-attach
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 32,
-            height: 32,
-            borderRadius: "50%",
-            background: "rgba(2,9,20,0.6)",
-            border: `1px solid ${accent}6B`,
-            color: accent,
-            fontSize: 20,
-            fontWeight: 300,
-            cursor: "pointer",
-            flexShrink: 0,
-            padding: 0,
-            lineHeight: 1,
-            fontFamily: "inherit",
-            transition: "transform 180ms ease, background 180ms ease",
-            transform: plusOpen ? "rotate(45deg)" : "rotate(0deg)",
-          }}
-        >
-          +
-        </button>
-      ) : null}
-
       <div
         data-nex-free-chat-composer-pill
         style={{
@@ -113,26 +84,45 @@ export function Chat9001Pill({
           minWidth: 0,
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/nex-free-chat/composer-emoji.png"
-          alt=""
-          aria-hidden
-          data-nex-free-chat-composer-emoji
-          onClick={onEmoji}
-          style={{
-            position: "absolute",
-            left: 6,
-            top: "50%",
-            transform: "translateY(-50%)",
-            width: 32,
-            height: 32,
-            objectFit: "contain",
-            userSelect: "none",
-            cursor: onEmoji ? "pointer" : "default",
-            pointerEvents: onEmoji ? "auto" : "none",
-          }}
-        />
+        {/* Owner directive 2026-11-05 · the `+` button now lives INSIDE
+            the pill where the emoji previously sat · consolidates
+            composer chrome into one visual unit · rotates 45° when the
+            attach sheet is open to echo the open/close affordance. */}
+        {onPlusAction ? (
+          <button
+            type="button"
+            onClick={onPlusAction}
+            aria-label={plusOpen ? "Close attachments" : "Open attachments"}
+            aria-expanded={plusOpen}
+            data-nex-free-chat-composer-attach
+            style={{
+              position: "absolute",
+              left: 4,
+              top: "50%",
+              transform: plusOpen
+                ? "translateY(-50%) rotate(45deg)"
+                : "translateY(-50%) rotate(0deg)",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 32,
+              height: 32,
+              borderRadius: "50%",
+              background: "rgba(2,9,20,0.6)",
+              border: `1px solid ${accent}6B`,
+              color: accent,
+              fontSize: 20,
+              fontWeight: 300,
+              cursor: "pointer",
+              padding: 0,
+              lineHeight: 1,
+              fontFamily: "inherit",
+              transition: "transform 180ms ease, background 180ms ease",
+            }}
+          >
+            +
+          </button>
+        ) : null}
         <input
           ref={inputRef}
           type="text"

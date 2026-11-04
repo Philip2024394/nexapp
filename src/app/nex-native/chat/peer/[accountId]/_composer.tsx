@@ -1086,7 +1086,6 @@ export function PeerComposer({
           armed={canSend}
           maxLength={4000}
           onPlusAction={() => setModalOpen(true)}
-          onEmoji={() => setEmojiOpen(true)}
           plusOpen={modalOpen}
           textareaDataAttr="data-nex-composer-textarea"
         />
