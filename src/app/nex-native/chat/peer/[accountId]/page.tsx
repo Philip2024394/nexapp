@@ -86,6 +86,9 @@ import { FocusedShopSheet } from "./_focused-shop-sheet";
 // with time + delivery ticks + peer presence dot.
 import { WelcomePillClient } from "./_welcome-pill-client";
 // Toast host moved to /nex-native/layout.tsx (global) · owner-authored 2026-11-05.
+// Owner-authored 2026-11-05 · world-class chat parity · jump the viewer
+// to the first unread message when they open a chat with unread history.
+import { JumpToUnreadClient } from "./_jump-to-unread-client";
 import type {
   SideNavContact,
   PendingInvite,
@@ -263,6 +266,15 @@ export default async function PeerChatPage({
     peerMessageService.listPeerMessages(conversation.id),
     peerMessageService.markPeerMessagesRead(conversation.id, session.account.id),
   ]);
+
+  // Owner-authored 2026-11-05 · first-unread id computed BEFORE the mark
+  // flips read_at · passed to <JumpToUnreadClient> so the viewer lands
+  // on the first message they haven't seen yet. Null when every message
+  // is already read or the viewer is the sole sender.
+  const firstUnreadMessageId: string | null =
+    messages.find(
+      (m) => m.sender_account_id !== session.account.id && !m.read_at,
+    )?.id ?? null;
 
   // Owner directive 2026-10-22 · Ask-Seller slice 3 · composer-send
   // uses the dispatcher so a form carrying `product_id` (the pending-
@@ -1062,6 +1074,12 @@ export default async function PeerChatPage({
           conversationCreatedAt={conversation.created_at ?? new Date().toISOString()}
         />
       ) : null}
+
+      {/* 2026-11-05 · world-class chat parity · if the viewer opens a
+          chat with unread messages, scroll the first unread bubble
+          into view + brief gold-ring flash so they land where they
+          left off. No-op when firstUnreadMessageId is null. */}
+      <JumpToUnreadClient firstUnreadMessageId={firstUnreadMessageId} />
 
       {needsSafeTradeConsent && (
         <SafeTradeConsentModal
