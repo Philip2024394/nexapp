@@ -370,6 +370,28 @@ const YOUR_BUSINESS_ROWS: ReadonlyArray<MenuRow> = [
     href: "/nex-native/settings/creator",
     locked: false,
   },
+  // Owner directive 2026-11-04 · Phase U Option A · entry point to the
+  // Creator membership funnel. Routes to /creator/join which shows
+  // pricing + "Choose your plan". The sealed /nex-native/creator
+  // dashboard is the destination AFTER someone subscribes (Phase 1A)
+  // · the join page is the entry BEFORE subscribing.
+  {
+    key: "creator-membership",
+    label: "Creator membership",
+    subtitle: "€4.99/month · 0% NEX commission",
+    href: "/nex-native/creator/join",
+    locked: false,
+  },
+  // Owner directive 2026-11-04 · Phase U Option A · payment-provider
+  // connection page shared by creators + shop owners. Phase U shows
+  // Connect buttons that route to /coming-soon pending §G.1 + §G.8.
+  {
+    key: "payments",
+    label: "Payments",
+    subtitle: "Connect Stripe or PayPal",
+    href: "/nex-native/settings/payments",
+    locked: false,
+  },
 ];
 
 const BUSINESS_VAULT_ROW: MenuRow = {
