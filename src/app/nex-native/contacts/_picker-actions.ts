@@ -22,7 +22,11 @@
 //     is not a friend" case · returns { ok:false, reason } so the UI
 //     can show a localised explanation.
 
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// Owner fix 2026-11-05 · dev-impersonation parity · the enclosing page
+// uses resolveSessionWithDevOverride so the picker action must honour
+// the same NEX_DEV_IMPERSONATE_HANDLE path · otherwise founder (nex-99901)
+// sees "Sign in to see your NEX contacts" on their OWN picker.
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import {
   listContactPickerRowsForViewer,
   type ContactPickerRow,
@@ -36,7 +40,7 @@ export interface FetchContactPickerRowsResult {
 }
 
 export async function fetchContactPickerRowsAction(): Promise<FetchContactPickerRowsResult> {
-  const session = await resolveNexAppSessionFromContext();
+  const session = await resolveSessionWithDevOverride();
   if (!session) {
     return { ok: false, reason: "unauthenticated", rows: [] };
   }
@@ -73,7 +77,7 @@ export async function startPeerChatWithContactAction(
       redirectTo: null,
     };
   }
-  const session = await resolveNexAppSessionFromContext();
+  const session = await resolveSessionWithDevOverride();
   if (!session) {
     return {
       ok: false,

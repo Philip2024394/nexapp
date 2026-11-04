@@ -890,6 +890,17 @@ export default async function PeerChatPage({
         [data-nex-peer-chat-prototype-wrap] [data-nex-free-chat-call-center-backdrop] {
           display: none !important;
         }
+        /* Owner fix 2026-11-05 · composer-off-screen report. Shell's
+           composer wrapper uses padding-bottom: calc(safe-area-inset-
+           bottom + 10px). On browsers where safe-area-inset-bottom is
+           not applied (desktop Chrome in device-mode, some Android
+           webviews, PWAs not configured for the gesture bar), the
+           input sits only 10 px above the viewport edge · with keyboard
+           chrome it reads as "off screen". Forcing a floor of 32 px
+           keeps the composer safely visible regardless. */
+        [data-nex-peer-chat-prototype-wrap] div:has(> [data-nex-peer-composer]) {
+          padding-bottom: max(env(safe-area-inset-bottom, 0), 32px) !important;
+        }
       `}</style>
       {/* Chat 9001 header · fixed top · overlays Shell's hidden header. */}
       <div
