@@ -42,6 +42,12 @@ import {
 const CYAN = "var(--nex-world-secondary, #00AFFF)";
 const TEXT = "var(--nex-world-primary-ink, #F2F5F8)";
 const MUTED = "var(--nex-world-muted-ink, #7D9BC0)";
+// Owner directive 2026-11-05 later-same-day iter 13 · notification
+// urgency = sealed dark red (#A60000 · same as the avatar-rim offline
+// doctrine). Section glyphs use NEX orange (bigger + solid-fill) so
+// each category reads instantly. Attention pulse uses dark red too.
+const NOTIF_RED = "#A60000";
+const NOTIF_ORANGE = "#FF7800";
 const PANEL = "var(--nex-world-drawer-bg, #0A1526)";
 const PANEL_BORDER =
   "color-mix(in srgb, var(--nex-world-secondary, #00AFFF) 18%, transparent)";
@@ -425,7 +431,7 @@ export function NotificationsDrawer({
                         gap: 8,
                       }}
                     >
-                      <SectionGlyph glyph={section.glyph} accent={CYAN} />
+                      <SectionGlyph glyph={section.glyph} accent={NOTIF_ORANGE} />
                       <span
                         style={{
                           fontSize: 11,
@@ -441,13 +447,19 @@ export function NotificationsDrawer({
                     {sectionUnread > 0 ? (
                       <span
                         style={{
-                          color: CYAN,
-                          fontSize: 11,
-                          fontWeight: 700,
+                          background: NOTIF_RED,
+                          color: "#FFFFFF",
+                          fontSize: 10,
+                          fontWeight: 800,
                           letterSpacing: "0.02em",
+                          borderRadius: 999,
+                          padding: "2px 8px",
+                          minWidth: 22,
+                          textAlign: "center",
+                          boxShadow: "0 0 10px rgba(166,0,0,0.45)",
                         }}
                       >
-                        · {sectionUnread}
+                        {sectionUnread}
                       </span>
                     ) : null}
                   </div>
@@ -567,11 +579,10 @@ export function NotificationsDrawer({
               height: 16,
               padding: "0 4px",
               borderRadius: 999,
-              // Owner directive 2026-11-05 · unread badge on the trigger
-              // next to the profile image reads as a classic dark-red
-              // notification pill rather than the brand gold, so the
-              // "something new" semantic is universally obvious.
-              background: "#B00020",
+              // Owner directive 2026-11-05 iter 13 · trigger badge
+              // adopts the sealed #A60000 dark-red used throughout
+              // the drawer's urgency vocabulary.
+              background: NOTIF_RED,
               color: "#FFFFFF",
               fontSize: 10,
               fontWeight: 800,
@@ -579,7 +590,7 @@ export function NotificationsDrawer({
               textAlign: "center",
               letterSpacing: "0.02em",
               boxShadow:
-                "0 0 0 2px var(--nex-world-drawer-bg, #0A1526), 0 0 8px rgba(176,0,32,0.5)",
+                "0 0 0 2px var(--nex-world-drawer-bg, #0A1526), 0 0 8px rgba(166,0,0,0.5)",
             }}
           >
             {unreadCount > 9 ? "9+" : unreadCount}
@@ -647,41 +658,88 @@ function NotificationRow({
         padding: "12px 16px",
         textDecoration: "none",
         color: TEXT,
-        borderLeft: `3px solid ${row.unread ? CYAN : "transparent"}`,
+        // Owner directive 2026-11-05 iter 13 · unread rows get a
+        // sealed dark-red attention strip + subtle red tint so the
+        // "new, needs attention" signal is universally obvious.
+        borderLeft: `3px solid ${row.unread ? NOTIF_RED : "transparent"}`,
+        background: row.unread ? "rgba(166,0,0,0.06)" : "transparent",
         transition: "background 120ms ease-out",
       }}
     >
       <div
         style={{
+          position: "relative",
           flexShrink: 0,
           width: 36,
           height: 36,
-          borderRadius: "50%",
-          background: "rgba(255,255,255,0.06)",
-          border: `1px solid ${PANEL_BORDER}`,
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: CYAN,
-          fontSize: 14,
-          fontWeight: 700,
         }}
       >
-        {row.thumbnailUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={row.thumbnailUrl}
-            alt=""
-            style={{
-              width: "100%",
-              height: "100%",
-              borderRadius: "50%",
-              objectFit: "cover",
-            }}
-          />
-        ) : (
-          row.title.charAt(0).toUpperCase()
-        )}
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            borderRadius: "50%",
+            background: "rgba(255,255,255,0.06)",
+            border: `1px solid ${row.unread ? NOTIF_RED : PANEL_BORDER}`,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: row.unread ? NOTIF_ORANGE : CYAN,
+            fontSize: 14,
+            fontWeight: 700,
+            overflow: "hidden",
+          }}
+        >
+          {row.thumbnailUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={row.thumbnailUrl}
+              alt=""
+              style={{
+                width: "100%",
+                height: "100%",
+                borderRadius: "50%",
+                objectFit: "cover",
+              }}
+            />
+          ) : (
+            row.title.charAt(0).toUpperCase()
+          )}
+        </div>
+        {/* Owner directive 2026-11-05 later-same-day iter 13 ·
+            heartbeat pulse on UNREAD rows · "attention needed" visual.
+            Honest naming: not a real-time presence signal (sealed
+            per-conversation scale guarantee prevents that here) · it
+            reads as "they just contacted you" which is what unread
+            on these sections means. Uses the sealed 1200ms
+            cubic-bezier(0.4,0,0.2,1) rhythm from the avatar-rim
+            doctrine. */}
+        {row.unread ? (
+          <>
+            <span
+              aria-hidden
+              data-nex-notifications-row-pulse
+              style={{
+                position: "absolute",
+                top: -3,
+                left: -3,
+                width: 42,
+                height: 42,
+                borderRadius: "50%",
+                border: `2px solid ${NOTIF_RED}`,
+                animation:
+                  "nex-notif-row-pulse 1200ms cubic-bezier(0.4,0,0.2,1) infinite",
+                pointerEvents: "none",
+              }}
+            />
+            <style>{`
+              @keyframes nex-notif-row-pulse {
+                0% { transform: scale(1); opacity: 0.85; }
+                100% { transform: scale(1.35); opacity: 0; }
+              }
+            `}</style>
+          </>
+        ) : null}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
@@ -840,12 +898,15 @@ function SectionGlyph({
   readonly glyph: "chat" | "live" | "shop" | "order" | "follow";
   readonly accent: string;
 }): React.JSX.Element {
+  // Owner directive 2026-11-05 later-same-day iter 13 · section
+  // glyphs go BIGGER (14 → 22) + SOLID FILL + BOLDER stroke ·
+  // orange accent so each section header reads instantly.
   const common = {
-    width: 14,
-    height: 14,
-    fill: "none" as const,
+    width: 22,
+    height: 22,
+    fill: accent,
     stroke: accent,
-    strokeWidth: 1.8,
+    strokeWidth: 1.4,
     strokeLinecap: "round" as const,
     strokeLinejoin: "round" as const,
     "aria-hidden": true,
@@ -860,32 +921,34 @@ function SectionGlyph({
     case "live":
       return (
         <svg viewBox="0 0 24 24" {...common}>
-          <circle cx="12" cy="12" r="3" fill={accent} stroke="none" />
-          <circle cx="12" cy="12" r="7" />
+          <circle cx="12" cy="12" r="10" />
         </svg>
       );
     case "shop":
       return (
         <svg viewBox="0 0 24 24" {...common}>
           <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-          <path d="M3 6h18" />
-          <path d="M16 10a4 4 0 0 1-8 0" />
         </svg>
       );
     case "order":
       return (
         <svg viewBox="0 0 24 24" {...common}>
-          <path d="M9 11l3 3 7-7" />
-          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+          <rect x="3" y="4" width="18" height="17" rx="2" />
+          <path
+            d="M8 12l2.5 2.5L16 9"
+            stroke="#FFF"
+            strokeWidth={2.4}
+            fill="none"
+          />
         </svg>
       );
     case "follow":
       return (
         <svg viewBox="0 0 24 24" {...common}>
-          <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-          <circle cx="8.5" cy="7" r="4" />
-          <line x1="20" y1="8" x2="20" y2="14" />
-          <line x1="17" y1="11" x2="23" y2="11" />
+          <circle cx="9" cy="8" r="4" />
+          <path d="M1 22c0-4.5 3.5-8 8-8s8 3.5 8 8" />
+          <circle cx="19" cy="8" r="3" fill="#FFF" stroke={accent} strokeWidth={1.4} />
+          <path d="M19 6v4M17 8h4" stroke={accent} strokeWidth={2} />
         </svg>
       );
     default:
