@@ -64,6 +64,18 @@ import {
 import { FreeChatComposerClient } from "./_composer-client";
 import { FreeChatCallCenterDrawerClient } from "./_call-center-drawer-client";
 import { FreeChatCanvasClient, type SeedMessage } from "./_canvas-client";
+// Owner directive 2026-11-05 later-same-day iter 6 · parity with peer
+// chat · mount the inline NotificationsDrawer bell + feed it the same
+// real data sources (pending invites + unread chats).
+import { NotificationsDrawer } from "@/components/nex-native/notifications-drawer/notifications-drawer-client";
+import {
+  MOCK_NOTIFICATIONS,
+  type NotificationItem,
+} from "@/lib/nex-native/notifications/mock-notifications-data";
+import * as friendService from "@/lib/nex-native/friend-service";
+import * as peerConversationServiceForNotifs from "@/lib/nex-native/peer-conversation-service";
+import * as peerMessageServiceForNotifs from "@/lib/nex-native/peer-message-service";
+import * as accountServiceForNotifs from "@/lib/nex-native/account-service";
 // Owner directive 2026-11-05 · HeaderSearch retired from FreeChatHeader
 // (Discovery moved into the right-side ControlDrawer) · this page no
 // longer renders it directly; the import is dropped.
@@ -211,6 +223,96 @@ export default async function FreeChatPage({
     // guest · drawerSession stays null · header strings keep defaults
   }
 
+  // Owner directive 2026-11-05 later-same-day iter 6 · parity with peer
+  // chat · build the notifications feed on the server so the inline
+  // bell sees real pending invites + real unread chats on first render.
+  // Guests see the mock sections only (no session → no invites/unread).
+  let incomingInviteNotifsFC: NotificationItem[] = [];
+  let unreadChatNotifsFC: NotificationItem[] = [];
+  const notifySessionAccountId = signedInSession?.account?.id ?? null;
+  if (notifySessionAccountId) {
+    try {
+      const edges = await friendService.listPendingIncoming(notifySessionAccountId);
+      const inviters = await Promise.allSettled(
+        edges.map((edge) => {
+          const inviterId =
+            edge.a_account_id === notifySessionAccountId
+              ? edge.b_account_id
+              : edge.a_account_id;
+          return accountServiceForNotifs.getAccountById(inviterId);
+        }),
+      );
+      incomingInviteNotifsFC = inviters
+        .map((r, i) => ({
+          account: r.status === "fulfilled" ? r.value : null,
+          edge: edges[i]!,
+        }))
+        .filter(
+          (x): x is { account: NonNullable<typeof x.account>; edge: typeof x.edge } =>
+            x.account !== null,
+        )
+        .map((x) => ({
+          id: `invite-${x.edge.a_account_id}-${x.edge.b_account_id}`,
+          section: "follows" as const,
+          title: x.account.display_name,
+          subtitle: "invited you to connect",
+          href: x.account.nex_handle
+            ? `/chat/${x.account.nex_handle}`
+            : `/nex-native/chat/peer/${x.account.id}`,
+          createdAt: x.edge.created_at ?? new Date().toISOString(),
+          unread: true,
+          thumbnailUrl: null,
+        }));
+    } catch {
+      // soft-fail · guest path or DB hiccup should never break the chat shell
+    }
+    try {
+      const myConvos =
+        await peerConversationServiceForNotifs.listPeerConversationsForAccount(
+          notifySessionAccountId,
+        );
+      const raw = await Promise.all(
+        myConvos.map(async (c) => {
+          const n = await peerMessageServiceForNotifs.countUnreadPeerMessages(
+            c.id,
+            notifySessionAccountId,
+          );
+          if (n === 0) return null;
+          const otherId =
+            c.participant_a_id === notifySessionAccountId
+              ? c.participant_b_id
+              : c.participant_a_id;
+          const other = await accountServiceForNotifs.getAccountById(otherId);
+          if (!other) return null;
+          return {
+            id: `unread-${c.id}`,
+            section: "chats" as const,
+            title: other.display_name,
+            subtitle: n === 1 ? "1 new message" : `${n} new messages`,
+            href: other.nex_handle
+              ? `/chat/${other.nex_handle}`
+              : `/nex-native/chat/peer/${other.id}`,
+            createdAt: c.last_message_at ?? c.created_at,
+            unread: true,
+            thumbnailUrl: null,
+          };
+        }),
+      );
+      unreadChatNotifsFC = raw.filter(
+        (x): x is NonNullable<typeof x> => x !== null,
+      );
+    } catch {
+      // soft-fail · same rationale as above
+    }
+  }
+  const freeChatNotifications: NotificationItem[] = [
+    ...incomingInviteNotifsFC,
+    ...unreadChatNotifsFC,
+    ...MOCK_NOTIFICATIONS.filter(
+      (n) => n.section !== "follows" && n.section !== "chats",
+    ),
+  ];
+
   // Owner directive 2026-10-21 (iteration 53) · read the first-visit
   // theme row cookies server-side so returning visitors see no flash
   // of the row. Both cookies are JS-writable (set from the client when
@@ -340,6 +442,12 @@ export default async function FreeChatPage({
           pingBadgeAccent={NEX.cyan}
           textColor={NEX.text}
           subtitleColor={NEX.textDim}
+          notificationsSlot={
+            <NotificationsDrawer
+              inline
+              initialNotifications={freeChatNotifications}
+            />
+          }
         />
 
         {/* ── Chat canvas · bubbles + first-visit theme row ──

@@ -1183,9 +1183,12 @@ export function FreeChatComposerClient({
           width: 32,
           height: 32,
           borderRadius: "50%",
-          background: "rgba(2,9,20,0.6)",
-          border: `1px solid ${NEX.border}`,
-          color: accentHex,
+          // Owner directive 2026-11-05 later-same-day iter 6 · solid
+          // black + white glyph matching peer chat composer's `+`
+          // button and all other floating chat chrome buttons.
+          background: "#000000",
+          border: "1px solid rgba(255, 255, 255, 0.14)",
+          color: "#FFFFFF",
           fontSize: 20,
           fontWeight: 300,
           cursor: "pointer",

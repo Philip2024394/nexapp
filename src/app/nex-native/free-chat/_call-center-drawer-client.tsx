@@ -108,11 +108,15 @@ export function FreeChatCallCenterDrawerClient(): React.JSX.Element {
           width: 36,
           height: 36,
           borderRadius: "50%",
-          background: open
-            ? "rgba(0, 175, 255, 0.14)"
-            : "rgba(2, 9, 20, 0.55)",
-          color: open ? C.cyan : C.text,
-          border: "none",
+          // Owner directive 2026-11-05 later-same-day iter 6 · solid
+          // black + white glyph matching peer chat's ShopDrawer FAB
+          // and the header buttons. White hairline + gold inner ring
+          // preserved for definition over the chat wallpaper.
+          background: "#000000",
+          color: "#FFFFFF",
+          border: "1px solid rgba(255, 255, 255, 0.14)",
+          boxShadow:
+            "0 6px 18px rgba(0,0,0,0.55), inset 0 0 0 1px color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 24%, transparent)",
           cursor: "pointer",
           display: "inline-flex",
           alignItems: "center",
@@ -120,13 +124,11 @@ export function FreeChatCallCenterDrawerClient(): React.JSX.Element {
           lineHeight: 1,
           padding: 0,
           zIndex: 400,
-          backdropFilter: "blur(10px)",
-          WebkitBackdropFilter: "blur(10px)",
           transition: "background 180ms ease, color 180ms ease",
           WebkitTapHighlightColor: "transparent",
         }}
       >
-        <ThreeDotsIcon color={open ? C.cyan : C.text} />
+        <ThreeDotsIcon color="#FFFFFF" />
       </button>
 
       {/* Backdrop · same shape as the sealed ControlDrawer backdrop ·
