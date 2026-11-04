@@ -12,15 +12,12 @@ import Link from "next/link";
 import type * as React from "react";
 import { listNexFeedEntries } from "@/lib/nex-native/nex-feed/nex-feed-entries";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
-// Owner directive 2026-11-01 · Batch E · Stage 3B · country-aware
-// redirector. `?country=IE` resolves against nex_country_registry;
-// invalid / disabled codes fall back to Worldwide. The redirector
-// then preserves the country param so the viewer page knows which
-// pool to list.
-import {
-  resolveCountryFeedMode,
-} from "@/lib/nex-native/nex-feed/country-feed-mode";
-import { listCountryFeedEntries } from "@/lib/nex-native/nex-feed/ireland-feed-reader";
+// Owner directive 2026-11-05 iter 21 · public Live collapsed to one
+// worldwide feed. The country-aware branch (`?country=IE` → Ireland
+// pool) is retired from the public redirector. nex_country_placement
+// + listCountryFeedEntries + resolveCountryFeedMode stay in the
+// codebase for the sealed future HQ country-moderation surface (see
+// project_nex_hq_countries_future_section_2026_11_01.md).
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,13 +39,12 @@ const NEX = {
 const SANS =
   "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
-export default async function NexFeedPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ country?: string }>;
+export default async function NexFeedPage(_props: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }): Promise<React.JSX.Element> {
-  const { country: countryParamRaw } = await searchParams;
-  const countryMode = await resolveCountryFeedMode(countryParamRaw);
+  // Owner directive 2026-11-05 iter 21 · the `?country=…` param is
+  // intentionally ignored on the public feed · any bookmark that
+  // carried it just lands on the single worldwide pool.
   const accountLookup = async (ids: readonly string[]) => {
     if (ids.length === 0) return [];
     try {
@@ -74,25 +70,14 @@ export default async function NexFeedPage({
     }
   };
 
-  // Owner directive 2026-11-01 · Batch E · country-aware pool. Country
-  // mode uses the Ireland reader; Worldwide uses the sealed pool.
-  const entries =
-    countryMode.kind === "country"
-      ? await listCountryFeedEntries({
-          country: countryMode.code,
-          nowMs: Date.now(),
-          accountLookup,
-        })
-      : await listNexFeedEntries({ nowMs: Date.now(), accountLookup });
+  // Owner directive 2026-11-05 iter 21 · one worldwide pool only.
+  const entries = await listNexFeedEntries({
+    nowMs: Date.now(),
+    accountLookup,
+  });
 
   if (entries.length > 0) {
-    // Preserve `?country=` on the redirect so the viewer page keeps
-    // showing the right pool after resolution.
-    const q =
-      countryMode.kind === "country"
-        ? `?country=${countryMode.code}`
-        : "";
-    redirect(`/nex-native/nex-feed/${entries[0]!.feedEntryId}${q}`);
+    redirect(`/nex-native/nex-feed/${entries[0]!.feedEntryId}`);
   }
 
   return (

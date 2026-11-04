@@ -61,27 +61,22 @@ interface LiveTileDef {
 }
 
 const LIVE_TILES: readonly LiveTileDef[] = [
+  // Owner directive 2026-11-05 iter 21 · "Live World" + "Live Ireland"
+  // collapsed to a SINGLE "NEX Live" tile. Ireland was a country-
+  // curated subset of the same base pool · end users now see the
+  // full worldwide pool from one entry. nex_country_placement table +
+  // the Ireland feed reader are kept intact for the sealed future HQ
+  // country-moderation surface (see sealed memory
+  // project_nex_hq_countries_future_section_2026_11_01.md).
   {
-    key: "live-world",
-    label: "Live World",
+    key: "live",
+    label: "NEX Live",
     href: "/nex-native/nex-feed",
     icon: (
       <svg viewBox="0 0 24 24" width={28} height={28} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <circle cx="12" cy="12" r="10" />
         <path d="M2 12h20" />
         <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-      </svg>
-    ),
-  },
-  {
-    key: "live-ireland",
-    label: "Live Ireland",
-    href: "/nex-native/nex-feed?country=IE",
-    icon: (
-      <svg viewBox="0 0 24 24" width={28} height={28} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <path d="M12 2C8 6 7 10 12 14c5-4 4-8 0-12z" />
-        <path d="M12 14v8" />
-        <path d="M8 20h8" />
       </svg>
     ),
   },
