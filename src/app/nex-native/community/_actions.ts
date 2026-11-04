@@ -7,7 +7,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// Owner fix 2026-11-05 · select-page uses resolveSessionWithDevOverride
+// for its page-level session (matches contacts/free-chat/etc). The
+// action must honour the same dev-impersonation path · otherwise forms
+// submitted from the page throw "unauthenticated" even though the page
+// itself rendered with a resolved session.
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import {
   confirmMembership,
   leaveCommunity,
@@ -32,7 +37,7 @@ import {
 type ActionResult = { status: "ok" } | { status: "error"; code: string; message?: string };
 
 async function requireAccountId(): Promise<string> {
-  const session = await resolveNexAppSessionFromContext();
+  const session = await resolveSessionWithDevOverride();
   if (!session) throw new Error("unauthenticated");
   return session.account.id;
 }

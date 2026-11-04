@@ -24,6 +24,9 @@ import { getMembershipForAccount } from "@/lib/nex-native/community/membership-s
 import { suggestZonesForOnboarding } from "@/lib/nex-native/community/zone-service";
 import { NexPageHeader } from "../../_page-header";
 import { confirmMembershipAction } from "../_actions";
+// Owner fix 2026-11-05 · drawer unification · resolve tier for the
+// shared ControlDrawer identity bar.
+import { effectiveTier } from "@/lib/nex-native/account-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -118,9 +121,20 @@ export default async function SelectZonePage({ searchParams }: PageProps) {
         >
           {/* Owner directive 2026-11-03 · "remove the profile image from
               header http://localhost:3008/nex-native/community/select".
-              Reverts to the sealed default NexPageHeader (plain NEX
-              ping-badge) · no branded avatar on this surface. */}
-          <NexPageHeader dataScope="community-select" />
+              Owner fix 2026-11-05 · hideBrand now hides the ping-badge
+              entirely (not just the avatar) · searchStyle="grid" swaps
+              the magnifying glass for the sealed free-chat grid button
+              so Community navigation matches Chat 9001 header. */}
+          <NexPageHeader
+            dataScope="community-select"
+            hideBrand
+            searchStyle="grid"
+            drawerSession={{
+              displayName: session.account.display_name,
+              nexHandle: session.account.nex_handle,
+              isBisnis: effectiveTier(session.account) === "bisnis",
+            }}
+          />
 
           <header style={{ textAlign: "center", margin: "28px 0 24px" }}>
             <h1

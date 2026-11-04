@@ -106,66 +106,44 @@ describe("DrawerBody · identity bar", () => {
   });
 });
 
-describe("DrawerBody · entitlement gate on Business Vault (owner decision #1)", () => {
-  it("non-Bisnis viewer sees My businesses + Packages but NOT Business Vault", () => {
-    const html = renderToStaticMarkup(
-      <__internal.DrawerBody session={SIGNED_IN} onLogoutClick={() => {}} />,
-    );
-    expect(html).toContain("My businesses");
-    expect(html).toContain("Packages and billing");
-    expect(html).not.toContain("Business Vault");
-    expect(html).not.toContain('data-nex-control-drawer-row="business-vault"');
-  });
-
-  it("Bisnis viewer sees Business Vault slot between My businesses + Packages", () => {
-    const html = renderToStaticMarkup(
-      <__internal.DrawerBody session={BISNIS} onLogoutClick={() => {}} />,
-    );
-    expect(html).toContain("My businesses");
-    expect(html).toContain("Business Vault");
-    expect(html).toContain("Packages and billing");
-    expect(html).toContain('data-nex-control-drawer-row="business-vault"');
-
-    const idxBusinesses = html.indexOf("My businesses");
-    const idxVault = html.indexOf("Business Vault");
-    const idxPackages = html.indexOf("Packages and billing");
-    expect(idxBusinesses).toBeLessThan(idxVault);
-    expect(idxVault).toBeLessThan(idxPackages);
-  });
-});
+// Owner directive 2026-11-05 · global drawer unification · the sealed
+// Bisnis-gated Business Vault slot + the YOUR BUSINESS section (My
+// shop · Creator · Payments · Membership + billing) are REMOVED from
+// the drawer surface. Tests that asserted on those rows have been
+// retired alongside the code. The destinations remain reachable by
+// direct URL · they are just no longer surfaced through the drawer.
 
 describe("DrawerBody · section groups + rows", () => {
-  it("renders the three sealed section titles in order", () => {
+  it("renders the two sealed section titles in order (YOUR NEX before PREFERENCES)", () => {
     const html = renderToStaticMarkup(
       <__internal.DrawerBody session={SIGNED_IN} onLogoutClick={() => {}} />,
     );
     const i1 = html.indexOf("YOUR NEX");
-    const i2 = html.indexOf("YOUR BUSINESS");
-    const i3 = html.indexOf("PREFERENCES &amp; SUPPORT");
+    const i2 = html.indexOf("PREFERENCES &amp; SUPPORT");
     expect(i1).toBeGreaterThan(-1);
     expect(i2).toBeGreaterThan(-1);
-    expect(i3).toBeGreaterThan(-1);
     expect(i1).toBeLessThan(i2);
-    expect(i2).toBeLessThan(i3);
+    // YOUR BUSINESS retired · must NOT render.
+    expect(html).not.toContain("YOUR BUSINESS");
+    expect(html).not.toContain("Business Vault");
   });
 
   it("every destination row renders a verified route (no new routes invented)", () => {
     const html = renderToStaticMarkup(
-      <__internal.DrawerBody session={BISNIS} onLogoutClick={() => {}} />,
+      <__internal.DrawerBody session={SIGNED_IN} onLogoutClick={() => {}} />,
     );
-    const expectedHrefs = [
-      "/nex-native/settings/profile",
-      "/nex-native/chat",
+    // YOUR_NEX_ROWS + PREFERENCES_ROWS only · YOUR BUSINESS retired.
+    // Note: the Chats-and-contacts row's CONTACTS_HREF has a "?dev=1"
+    // suffix outside production (see src · explicit dev-impersonation
+    // affordance), so the test asserts a partial match on the path.
+    const expectedHrefPaths = [
+      "/nex-native/profile/me",
+      "/nex-native/contacts",
       "/nex-native/chat-themes-library",
-      "/nex-native/manage",
-      "/nex-native/vault",
-      "/nex-native/settings/tier",
-      "/nex-native/settings",
-      "/nex-native/settings/security",
       "/nex-native/settings/help",
     ];
-    for (const href of expectedHrefs) {
-      expect(html).toContain(`href="${href}"`);
+    for (const path of expectedHrefPaths) {
+      expect(html).toContain(`href="${path}`);
     }
   });
 });
@@ -221,26 +199,19 @@ describe("ControlDrawer · architectural guards", () => {
   });
 
   it("row list exports stay stable (regression guard against silent re-ordering)", () => {
+    // Owner directive 2026-11-04 later-same-day · NEX Ireland drawer
+    // trim · drawer reduced to 11 rows (Emergency + 9 menu rows +
+    // Sign out). The YOUR_NEX / YOUR_BUSINESS / PREFERENCES arrays
+    // below reflect the trimmed set.
+    // Owner directive 2026-11-05 · global drawer unification · the
+    // YOUR_BUSINESS rows + BUSINESS_VAULT row are REMOVED from the
+    // drawer surface · only YOUR_NEX + PREFERENCES remain.
     expect(__internal.YOUR_NEX_ROWS.map((r) => r.key)).toEqual([
-      // Owner directive 2026-10-19 · Home row inserted at the top of
-      // YOUR NEX · routes to /nex-native/contacts so the drawer is
-      // the one-tap escape from any consumer surface.
-      "home-contacts",
       "profile",
       "chats-contacts",
       "chat-appearance",
-      // Owner directive 2026-10-19 · Intro Video row · settings page
-      // for the user's own 8s intro + title overlay.
-      "intro-video",
     ]);
-    expect(__internal.YOUR_BUSINESS_ROWS.map((r) => r.key)).toEqual([
-      "my-businesses",
-      "packages",
-    ]);
-    expect(__internal.BUSINESS_VAULT_ROW.key).toBe("business-vault");
     expect(__internal.PREFERENCES_ROWS.map((r) => r.key)).toEqual([
-      "settings",
-      "security",
       "help",
     ]);
   });

@@ -59,6 +59,20 @@ import { ShopDrawer } from "@/components/nex-native/shop-drawer/shop-drawer-clie
 // Replaces PeerComposer on the prototype only · production peer-chat
 // pages continue to mount PeerComposer unchanged.
 import { PrototypeComposer } from "./_prototype-composer-client";
+// Owner-authorised 2026-11-05 · chat-feature pass · Slice 1 · message
+// list extracted to its own client component · adds day separators +
+// per-bubble timestamp. Future slices layer tick marks, reactions,
+// reply quotes and realtime arrival into the same file.
+import { MessageList } from "./_message-list-client";
+// Slice 6 · realtime wiring · mount the existing production clients so
+// the prototype receives new messages without reload (PeerMessageEventsClient
+// + emitMessageArrival) and shows "Aoife is typing…" when the peer is
+// composing (PeerTypingClient). Both are drop-in · no Shell dependency ·
+// no new infrastructure.
+import { PeerMessageEventsClient } from "../../chat/peer/[accountId]/_message-events-client";
+import { PeerTypingClient } from "../../chat/peer/[accountId]/_typing-client";
+// Parity item 4 · floating scroll-to-bottom button.
+import { ScrollToBottomButton } from "./_scroll-to-bottom-client";
 
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import * as accountService from "@/lib/nex-native/account-service";
@@ -67,7 +81,11 @@ import { getProfileByAccountId } from "@/lib/nex-native/account-profile-service"
 import * as peerConversationService from "@/lib/nex-native/peer-conversation-service";
 import * as peerMessageService from "@/lib/nex-native/peer-message-service";
 
-import { sendPeerMessageOrShareProductAction } from "../../_actions";
+import {
+  deletePeerMessageAction,
+  sendPeerMessageOrShareProductAction,
+  toggleMessageReactionAction,
+} from "../../_actions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -112,6 +130,8 @@ export default async function Chat9001PrototypePage({
   };
 
   const boundSend = sendPeerMessageOrShareProductAction.bind(null, peer.id);
+  const boundToggleReaction = toggleMessageReactionAction.bind(null, peer.id);
+  const boundDeleteMessage = deletePeerMessageAction.bind(null, peer.id);
 
   const peerFirstName =
     peer.display_name.split(/\s+/)[0] ?? peer.display_name;
@@ -146,57 +166,12 @@ export default async function Chat9001PrototypePage({
           gap: 8,
         }}
       >
-        {messages.length === 0 ? (
-          <p
-            style={{
-              margin: "auto",
-              color: "#7D9BC0",
-              fontSize: 13,
-              textAlign: "center",
-            }}
-          >
-            No messages yet. Say hi 👋
-          </p>
-        ) : (
-          messages.map((m) => {
-            const mine = m.sender_account_id === session.account.id;
-            const isDeleted = m.deleted_for_everyone;
-            const isEncrypted = m.encrypted === true;
-            const bodyText = isDeleted
-              ? "🚫 deleted"
-              : isEncrypted
-                ? "(encrypted · decrypt on this device is wired in Phase 1b)"
-                : m.body;
-            return (
-              <div
-                key={m.id}
-                data-nex-chat-9001-bubble
-                data-nex-chat-9001-bubble-mine={mine ? "true" : "false"}
-                style={{
-                  alignSelf: mine ? "flex-end" : "flex-start",
-                  maxWidth: "76%",
-                  padding: "10px 14px",
-                  borderRadius: 18,
-                  background: mine
-                    ? "var(--nex-world-secondary, #00AFFF)"
-                    : "rgba(255,255,255,0.08)",
-                  color: "#F2F5F8",
-                  fontSize: 15,
-                  lineHeight: 1.35,
-                  whiteSpace: "pre-wrap",
-                  wordBreak: "break-word",
-                  fontStyle: isDeleted || isEncrypted ? "italic" : "normal",
-                  opacity: isDeleted || isEncrypted ? 0.75 : 1,
-                  border: mine
-                    ? "none"
-                    : "1px solid rgba(255,255,255,0.08)",
-                }}
-              >
-                {bodyText}
-              </div>
-            );
-          })
-        )}
+        <MessageList
+          messages={messages}
+          viewerAccountId={session.account.id}
+          toggleReactionAction={boundToggleReaction}
+          deleteMessageAction={boundDeleteMessage}
+        />
       </div>
 
       <PrototypeComposer
@@ -211,6 +186,30 @@ export default async function Chat9001PrototypePage({
            the composer reads from NEXT_PUBLIC_NEX_LOCATION_ALLOW_FIXTURE. */
         areaDataset={null}
       />
+
+      {/* Slice 6 · realtime message arrival · subscribes to the sealed
+          Supabase Realtime channel for this conversation · router.refresh()
+          fires on inbound broadcast so new bubbles land without reload.
+          Zero UI · zero session dep · pure client plumbing. */}
+      <PeerMessageEventsClient
+        conversationId={conversation.id}
+        selfAccountId={session.account.id}
+      />
+
+      {/* Slice 6 · typing indicator · fixed-position pill renders near
+          the bottom of the surface when the peer is actively composing.
+          Honours sealed R9-Stage-4 typing-enabled preference · prototype
+          lets the prop default to TRUE. */}
+      <PeerTypingClient
+        conversationId={conversation.id}
+        selfAccountId={session.account.id}
+        selfDisplayName={session.account.display_name}
+        peerDisplayName={peer.display_name}
+      />
+
+      {/* Parity item 4 · floating scroll-to-bottom pill · auto-visible
+          when the viewer is scrolled > 120 px above the newest bubble. */}
+      <ScrollToBottomButton />
 
       {/* Owner-authorised 2026-11-04 later-same-day · Phase 1 Notifications
           drawer · trigger at top-left · drawer slides from the left ·

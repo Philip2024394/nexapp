@@ -46,6 +46,12 @@ import Link from "next/link";
 // SettingsHeaderSlot.tsx` for any future surface that needs it.
 import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
 import { PageHeaderDrawerButtonClient } from "./_page-header-drawer-button-client";
+import type { ControlDrawerSession } from "@/components/nex-native/control-drawer/control-drawer-client";
+// Owner fix 2026-11-05 · page-section grid button for Community etc ·
+// reuses the sealed free-chat HeaderSearch overlay (6 Live tiles).
+// Opt-in via `searchStyle="grid"` · default remains the magnifying
+// glass → /directory/landing.
+import { HeaderSearch } from "@/components/nex-native/chat-chrome/header-search";
 
 const NEX = {
   textPrimary: "#F2F5F8",
@@ -75,6 +81,23 @@ interface NexPageHeaderProps {
    *  icon on surfaces that provide their own in-page navigation
    *  grid (e.g. create-profile). Default false → icon stays. */
   hideSearch?: boolean;
+  /** Owner fix 2026-11-05 · hide the left ping-badge brand entirely
+   *  (overrides brandSlot + brandAvatarUrl + brandAccent). Used on
+   *  Community surfaces where the owner removed the profile image
+   *  and promoted the page title to primary identity. Default false → badge stays. */
+  hideBrand?: boolean;
+  /** Owner fix 2026-11-05 · swap the magnifying glass for the sealed
+   *  free-chat HeaderSearch grid button (opens the 6-tile Live overlay
+   *  for page-section navigation). Opt-in only · all existing callers
+   *  default to "search" and keep byte-identical behaviour.
+   *  Ignored when `hideSearch === true`. */
+  searchStyle?: "search" | "grid";
+  /** Owner fix 2026-11-05 · drawer unification · session identity for
+   *  the shared ControlDrawer's identity bar. Page resolves server-side
+   *  and passes through. Null (default) renders the drawer in anonymous
+   *  mode with a sign-in prompt in the identity slot · nav rows still
+   *  render. Non-signed-in pages (welcome · sign-in) can omit. */
+  drawerSession?: ControlDrawerSession | null;
 }
 
 export function NexPageHeader({
@@ -83,7 +106,11 @@ export function NexPageHeader({
   brandAccent,
   brandSlot,
   hideSearch,
+  hideBrand,
+  searchStyle,
+  drawerSession,
 }: NexPageHeaderProps) {
+  const useGrid = searchStyle === "grid";
   return (
     <header
       data-nex-page-header
@@ -92,31 +119,33 @@ export function NexPageHeader({
         paddingTop: "max(env(safe-area-inset-top, 0px), 8px)",
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
+        justifyContent: hideBrand ? "flex-end" : "space-between",
         gap: 12,
       }}
     >
-      {brandSlot ?? (
-        <Link
-          href="/nex-native"
-          aria-label="NEX home"
-          data-nex-page-header-brand
-          style={{
-            textDecoration: "none",
-            display: "inline-flex",
-            alignItems: "center",
-            lineHeight: 0,
-            borderRadius: "50%",
-            WebkitTapHighlightColor: "transparent",
-          }}
-        >
-          <NexPingBadge
-            size={56}
-            accent={brandAccent ?? NEX.cyan}
-            avatarUrl={brandAvatarUrl ?? null}
-            dataTestId="page-header-nex"
-          />
-        </Link>
+      {hideBrand ? null : (
+        brandSlot ?? (
+          <Link
+            href="/nex-native"
+            aria-label="NEX home"
+            data-nex-page-header-brand
+            style={{
+              textDecoration: "none",
+              display: "inline-flex",
+              alignItems: "center",
+              lineHeight: 0,
+              borderRadius: "50%",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            <NexPingBadge
+              size={56}
+              accent={brandAccent ?? NEX.cyan}
+              avatarUrl={brandAvatarUrl ?? null}
+              dataTestId="page-header-nex"
+            />
+          </Link>
+        )
       )}
 
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -128,8 +157,14 @@ export function NexPageHeader({
             users (the CreateAccountPrompt + 3D-lock behaviour is
             inside SettingsHeaderSlot which lives at
             src/components/nex-native/account-gate/SettingsHeaderSlot.tsx
-            · still mountable from other surfaces if needed). */}
-        {hideSearch ? null : (
+            · still mountable from other surfaces if needed).
+            Owner fix 2026-11-05 · when searchStyle==="grid" we mount
+            the sealed free-chat HeaderSearch button here instead of the
+            magnifying-glass Link · same overlay, same 6 Live tiles,
+            same keyboard controls. */}
+        {hideSearch ? null : useGrid ? (
+          <HeaderSearch />
+        ) : (
           <Link
             href="/nex-native/directory/landing"
             aria-label="NEX Directory · shops · services · food · trades"
@@ -139,7 +174,7 @@ export function NexPageHeader({
             <SearchIcon />
           </Link>
         )}
-        <PageHeaderDrawerButtonClient />
+        <PageHeaderDrawerButtonClient session={drawerSession ?? null} />
       </div>
     </header>
   );

@@ -16,6 +16,10 @@ import { getMembershipForAccount } from "@/lib/nex-native/community/membership-s
 import { getZoneById, listAreasForCounty } from "@/lib/nex-native/community/zone-service";
 import { NexPageHeader } from "../../_page-header";
 import { DiscoverCommunitiesClient } from "./_discover-client";
+// Owner fix 2026-11-05 · drawer unification · resolve tier so the
+// shared ControlDrawer's identity bar shows the right display name /
+// nex-handle / bisnis chip for the viewer.
+import { effectiveTier } from "@/lib/nex-native/account-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -124,7 +128,16 @@ export default async function DiscoverCommunitiesPage() {
             padding: "calc(env(safe-area-inset-top,0) + 16px) 20px 48px",
           }}
         >
-          <NexPageHeader dataScope="community-discover" />
+          <NexPageHeader
+            dataScope="community-discover"
+            hideBrand
+            searchStyle="grid"
+            drawerSession={{
+              displayName: session.account.display_name,
+              nexHandle: session.account.nex_handle,
+              isBisnis: effectiveTier(session.account) === "bisnis",
+            }}
+          />
 
           <header style={{ textAlign: "center", margin: "28px 0 20px" }}>
             <h1

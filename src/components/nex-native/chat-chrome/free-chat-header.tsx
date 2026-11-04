@@ -158,7 +158,24 @@ export function FreeChatHeader({
       >
         <HeaderSearch />
         <div style={{ display: "inline-flex" }}>
-          <ControlDrawer session={drawerSession} />
+          <ControlDrawer
+            session={drawerSession}
+            triggerIcon="plus"
+            /* Owner directive 2026-11-05 · the "+" trigger reads as a
+               round button matching the page-header styling · gold
+               circle · dark emerald glyph. Consistent across every
+               chat surface that mounts FreeChatHeader (prototype +
+               Chat Header 99901). */
+            triggerStyle={{
+              width: 36,
+              height: 36,
+              borderRadius: "50%",
+              background: "var(--nex-world-secondary, #C6A15B)",
+              color: "var(--nex-world-drawer-bg, #123D2B)",
+              boxShadow: "0 2px 8px rgba(10, 31, 21, 0.35)",
+              border: "none",
+            }}
+          />
         </div>
       </nav>
     </header>

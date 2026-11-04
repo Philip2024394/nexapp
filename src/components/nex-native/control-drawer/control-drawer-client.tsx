@@ -97,6 +97,11 @@ export interface ControlDrawerProps {
    *  (preview surfaces, custom chrome) can match the surrounding button
    *  cluster's size + colour. */
   readonly triggerStyle?: React.CSSProperties;
+  /** Owner directive 2026-11-05 · global drawer unification · the +
+   *  glyph is now the default on every surface that mounts ControlDrawer.
+   *  Legacy surfaces that still want the sealed three-dot glyph can opt
+   *  in with `triggerIcon="dots"` · no caller currently does. */
+  readonly triggerIcon?: "dots" | "plus";
   /** Owner directive 2026-10-19 · "side menu should be the same name
    *  in chat header as on the side drawer". When present, the drawer's
    *  identity-bar primary name renders this string INSTEAD of
@@ -199,294 +204,50 @@ const CONTACTS_HREF: string =
 // explicit `locked` flag so the gate decision is visible at the
 // source of truth. Rows that are legitimately public for guests
 // (help docs) leave `locked` undefined.
+// Owner directive 2026-11-04 later-same-day · NEX Ireland drawer trim.
+// Previous rows retired from the drawer surface (still reachable via
+// direct URL) · home-contacts (duplicate of chats-contacts) ·
+// shop-appearance (consolidated into chat-appearance) · intro-video
+// (deferred) · status (deferred).
 const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
-  {
-    key: "home-contacts",
-    label: "Home",
-    subtitle: "Back to contacts",
-    /* Owner directive 2026-10-19 · "home icon in side drawer that
-       will bring user back to contacts page" · the Home row is the
-       primary escape from any chat-theme preview (or other consumer
-       surface) · routes to /nex-native/contacts. Shown at the top of
-       YOUR NEX so it reads as the first/primary action. */
-    href: CONTACTS_HREF,
-    locked: false, // owner directive 2026-10-28 · drawer links unlocked
-  },
   {
     key: "profile",
     label: "My profile",
     subtitle: "Identity and personal details",
-    // Owner directive 2026-10-17 · the canonical NEX user profile
-    // lives at /nex-native/profile/[handle] · /profile/me resolves
-    // the signed-in viewer and redirects to their own canonical
-    // profile. The retired /settings/profile route also now
-    // redirects to /profile/me?mode=edit for backward compat.
     href: "/nex-native/profile/me",
-    locked: false, // owner directive 2026-10-28 · drawer links unlocked
+    locked: false,
   },
   {
     key: "chats-contacts",
     label: "Chats and contacts",
     subtitle: "Return to your conversations",
-    // Owner directive 2026-10-23 · "chat and contacts link side
-    // drawer unlock and link without contacts page [gate]" ·
-    // row UNLOCKED (locked: false) so the drawer always navigates
-    // direct to /nex-native/contacts · no 3D lock, no /sign-in
-    // redirect from the drawer side. The contacts page itself still
-    // enforces its own auth gate for guests · that's its concern,
-    // not the drawer's.
     href: CONTACTS_HREF,
     locked: false,
   },
   {
     key: "chat-appearance",
-    label: "Chat appearance",
+    label: "Chat themes",
     subtitle: "Themes and personalisation",
     href: "/nex-native/chat-themes-library",
-    locked: false, // owner directive 2026-10-28 · drawer links unlocked
-  },
-  {
-    /* Owner directive 2026-10-20 · shop face cover themes · browse
-       the NEX Face / Cover Library at /nex-native/cover-themes-library
-       and pick the layout + skin that renders on your public shop
-       page face cover. Companion to Chat appearance (which skins the
-       chat surface) · this skins the shop surface. */
-    key: "shop-appearance",
-    label: "Shop appearance",
-    subtitle: "Face cover and layouts",
-    href: "/nex-native/cover-themes-library",
-    locked: false, // owner directive 2026-10-28 · drawer links unlocked
-  },
-  {
-    key: "intro-video",
-    label: "Intro Video",
-    subtitle: "Record your own · 8 seconds max",
-    /* Owner directive 2026-10-19 · settings surface for the user's
-       own intro video + a title overlay (hero · center · footer
-       position). Full UI flow is preview-honest; the server upload
-       action + Supabase bucket + nex_account column migration land
-       separately per the Safety Constitution deployment gate. */
-    href: "/nex-native/settings/intro-video",
-    locked: false, // owner directive 2026-10-28 · drawer links unlocked
-  },
-  // Status + Go Live now require sign-in · owner directive 2026-10-22
-  // identity-sealing · the Status surface persists owner id into
-  // IndexedDB and the P2P presence/fetch layer uses the signed-in
-  // account id so viewers see a stable, real identity. Device-local
-  // storage still applies to the media itself; the id is what we
-  // sealed to the real NEX account.
-  {
-    key: "status",
-    label: "Status",
-    subtitle: "Share for 24h · stays on your device",
-    href: "/nex-native/status",
-    locked: false, // owner directive 2026-10-28 · drawer links unlocked
-  },
-];
-
-const YOUR_BUSINESS_ROWS: ReadonlyArray<MenuRow> = [
-  // Owner directive 2026-10-22 · My Shop · primary owner-admin
-  // entry for the per-business product management surface
-  // (upload / edit / turn off / delete products). Sits at the
-  // top of the Business group because it's the most frequent
-  // owner action. Routes to the prototype My Shop surface today
-  // (Crispy Chicken brand); production will resolve the
-  // owner's actual brand id from the session.
-  {
-    key: "my-shop",
-    label: "My Shop",
-    subtitle: "Upload products · edit · turn off · delete",
-    href: "/nex-native/chat-themes-library/marketplace-prototype/my-shop/crispy-chicken",
-    locked: false, // owner directive 2026-10-28 · drawer links unlocked
-  },
-  // Status + Go Live now require sign-in · owner directive 2026-10-22
-  // identity-sealing · the broadcaster id is now the signed-in NEX
-  // account id (not a `prototype-broadcaster` literal) so viewers see
-  // the broadcaster's real NEX identity on the live-commerce overlay.
-  {
-    key: "go-live",
-    label: "Nex Live",
-    subtitle: "Watch live · tap for full-screen video with controls",
-    /* Owner directive 2026-10-30 · "this is the only nex feed on the
-       app". The drawer entry routes to /nex-native/nex-feed · the
-       single central NEX feed (full-bleed vertical-swipe reel). The
-       former forks (/live, /live-commerce/feed, /videos/) have been
-       deleted. Direct broadcaster/viewer routes still exist:
-         /live-commerce/enter-broadcast-room  → broadcaster surface
-         /live-commerce/[sessionId]           → open Live viewer */
-    href: "/nex-native/nex-feed",
-    /* Owner directive 2026-10-24 · "unlock go live in side drawer".
-       The drawer no longer renders a lock icon on this row. The
-       underlying page at /nex-native/live-commerce/enter-broadcast-room keeps its
-       OWN sealed sign-in gate (sealed 2026-10-22 identity-sealing · the
-       broadcaster id is the signed-in NEX account id · guests still
-       land on sign-in before the broadcaster surface renders). The
-       feed route is public · guests see the empty-state / list but
-       the Go Live CTA only renders for signed-in users. */
-    locked: false,
-  },
-  // Owner-authorised 2026-11-02 · NEX Billing · customer-facing
-  // subscription + usage surface. Sits directly under Nex Live per
-  // owner request. Points at /nex-native/billing (new in Master Build)
-  // · NOT /settings/tier (that is the sealed themes-pricing surface,
-  // kept intact as its own row below).
-  {
-    key: "billing",
-    label: "Billing",
-    subtitle: "Shop and Vault subscriptions · usage · invoices",
-    href: "/nex-native/billing",
-    locked: false,
-  },
-  {
-    key: "my-businesses",
-    label: "My businesses",
-    subtitle: "Business profiles and management",
-    href: "/nex-native/manage",
-    locked: false, // owner directive 2026-10-28 · drawer links unlocked
-  },
-  // Owner directive 2026-11-03 · Ireland-only consolidation · the
-  // /nex-native/delivery-prototype route was retired (used
-  // Indonesia-only data). The drawer entry is removed · the delivery-
-  // pricing flow will land as a separate Ireland-authorised build.
-  //
-  // Business Vault is CONDITIONAL · rendered only when isBisnis is true.
-  // The row itself lives in a separate const below so the gate stays
-  // explicit at the render site.
-  {
-    key: "packages",
-    label: "Packages and billing",
-    subtitle: "Your plan and entitlements",
-    href: "/nex-native/settings/tier",
-    locked: false, // owner directive 2026-10-28 · drawer links unlocked
-  },
-  // Owner-authorised 2026-10-31 · NEX Creator Programme · Stage 1.
-  // Entry point so creators can configure their Support (QR + payment
-  // links) without hunting through profile menus. Always visible ·
-  // qualification happens on the destination page.
-  {
-    key: "creator-support",
-    label: "Creator Support",
-    subtitle: "QR code · payment links · your fans",
-    href: "/nex-native/settings/creator",
-    locked: false,
-  },
-  // Owner directive 2026-11-04 · Phase U Option A · entry point to the
-  // Creator membership funnel. Routes to /creator/join which shows
-  // pricing + "Choose your plan". The sealed /nex-native/creator
-  // dashboard is the destination AFTER someone subscribes (Phase 1A)
-  // · the join page is the entry BEFORE subscribing.
-  {
-    key: "creator-membership",
-    label: "Creator membership",
-    subtitle: "€4.99/month · 0% NEX commission",
-    href: "/nex-native/creator/join",
-    locked: false,
-  },
-  // Owner directive 2026-11-04 · Phase U Option A · payment-provider
-  // connection page shared by creators + shop owners. Phase U shows
-  // Connect buttons that route to /coming-soon pending §G.1 + §G.8.
-  {
-    key: "payments",
-    label: "Payments",
-    subtitle: "Connect Stripe or PayPal",
-    href: "/nex-native/settings/payments",
     locked: false,
   },
 ];
 
-const BUSINESS_VAULT_ROW: MenuRow = {
-  key: "business-vault",
-  label: "Business Vault",
-  subtitle: "For eligible business accounts",
-  href: "/nex-native/vault",
-  locked: false, // owner directive 2026-10-28 · drawer links unlocked
-};
+// Owner directive 2026-11-05 · YOUR_BUSINESS_ROWS, BUSINESS_VAULT_ROW,
+// buildBusinessSectionRows all REMOVED. The drawer renders exactly one
+// row set globally (see YOUR_NEX_ROWS + PREFERENCES_ROWS). My shop,
+// Creator, Payments, Membership + billing, Business Vault destinations
+// remain reachable by direct URL · they are no longer surfaced through
+// this drawer.
 
-// Owner directive 2026-11-01 · Batch D+ · dynamic YOUR_BUSINESS composition.
-// Pre-fix: the YOUR_BUSINESS slice was hard-coded (bisnis-vs-non-bisnis
-// branch inline at the render site) and the creator-support row was
-// index 5 of YOUR_BUSINESS_ROWS · ALWAYS visible to non-bisnis users,
-// NEVER visible to bisnis users (the sealed bisnis slice only picked
-// indices 0 and 1 + the Business Vault row).
-// Post-fix: this helper is the single composition point. It:
-//   · preserves the existing bisnis slice shape (my-shop + vault + go-live)
-//   · appends a GATED creator-support row to EITHER branch when the
-//     viewer qualifies (so qualified bisnis users also see it, which
-//     was previously impossible)
-//   · applies the label/subtitle override from the component when the
-//     viewer has qualified but not yet configured their Support
-//   · hides the row entirely when `showCreatorSupportRow === false`
-//     (unqualified viewers, chat surfaces)
-// For LEGACY callers (showCreatorSupportRow is always true because
-// viewerEarnedCreatorBadges was undefined), the row still appears
-// where it did pre-fix: at the tail of the non-bisnis slice, with
-// the pre-fix "Creator Support" / default-subtitle labelling. This
-// preserves backward compatibility for any ControlDrawer mount that
-// hasn't yet been updated with the new props.
-function buildBusinessSectionRows(args: {
-  readonly sessionIsBisnis: boolean;
-  readonly showCreatorSupportRow: boolean;
-  readonly creatorSupportLabelOverride: string;
-  readonly creatorSupportSubtitleOverride: string;
-}): ReadonlyArray<MenuRow> {
-  const CREATOR_SUPPORT_IDX = YOUR_BUSINESS_ROWS.findIndex(
-    (r) => r.key === "creator-support",
-  );
-  const creatorSupportBase =
-    CREATOR_SUPPORT_IDX >= 0 ? YOUR_BUSINESS_ROWS[CREATOR_SUPPORT_IDX]! : null;
-  const gatedCreatorSupportRow: MenuRow | null =
-    args.showCreatorSupportRow && creatorSupportBase !== null
-      ? {
-          ...creatorSupportBase,
-          label: args.creatorSupportLabelOverride,
-          subtitle: args.creatorSupportSubtitleOverride,
-        }
-      : null;
-
-  if (args.sessionIsBisnis) {
-    // Sealed bisnis slice preserved: my-shop + vault + go-live. The
-    // optional creator-support row is appended ONLY when qualified.
-    const slice: MenuRow[] = [
-      YOUR_BUSINESS_ROWS[0]!, // my-shop (comment at legacy render site was outdated)
-      BUSINESS_VAULT_ROW,
-      YOUR_BUSINESS_ROWS[1]!, // go-live
-    ];
-    if (gatedCreatorSupportRow) slice.push(gatedCreatorSupportRow);
-    return slice;
-  }
-
-  // Non-bisnis path · preserve pre-fix ordering by excluding the
-  // ORIGINAL creator-support row (index 5) and appending the gated
-  // version at the same position. If gated row is null, the section
-  // just ends after `packages` — the same effect as a user who hasn't
-  // qualified.
-  const withoutCreatorSupport = YOUR_BUSINESS_ROWS.filter(
-    (r) => r.key !== "creator-support",
-  );
-  if (gatedCreatorSupportRow) {
-    return [...withoutCreatorSupport, gatedCreatorSupportRow];
-  }
-  return withoutCreatorSupport;
-}
-
+// Owner directive 2026-11-04 later-same-day · Ireland drawer trim.
+// Retired from drawer (still reachable by URL): settings-and-privacy,
+// security. Only Help · NEX1 remains in PREFERENCES.
 const PREFERENCES_ROWS: ReadonlyArray<MenuRow> = [
   {
-    key: "settings",
-    label: "Settings and privacy",
-    href: "/nex-native/settings",
-    locked: false, // owner directive 2026-10-28 · drawer links unlocked
-  },
-  {
-    key: "security",
-    label: "Security",
-    href: "/nex-native/settings/security",
-    locked: false, // owner directive 2026-10-28 · drawer links unlocked
-  },
-  {
     key: "help",
-    label: "Help and feedback",
+    label: "Help · NEX1",
     href: "/nex-native/settings/help",
-    // Not locked · help/support should be accessible without an account.
   },
 ];
 
@@ -501,6 +262,7 @@ export function ControlDrawer({
   viewerSupportSettings,
   hideCreatorSupportRow,
   triggerStyle,
+  triggerIcon = "plus",
 }: ControlDrawerProps) {
   // Owner directive 2026-11-01 · Batch D++ · Creator-Support sheet
   // open state. The drawer owns the state; DrawerBody receives the
@@ -685,6 +447,56 @@ export function ControlDrawer({
         data-nex-control-drawer-themed={themeAccent ? "true" : "false"}
         data-nex-control-drawer-visible={visible ? "true" : "false"}
       >
+        {/* Owner-authorised 2026-11-04 later-same-day · NEX Ireland
+            drawer trim · running-edge-light · 3 px gold streak travels
+            top → bottom down the drawer's interior (left) edge on a
+            3400 ms infinite loop. Ireland-only · gated by
+            `--nex-world-control-drawer-edge-light-display` which the
+            world stylesheet sets to `block` on Ireland and leaves
+            unset on Worldwide / Indonesia / future worlds (fallback
+            `display: none` keeps the overlay out of their chrome and
+            out of the a11y tree). Mirrors the sealed LiveSideDrawer
+            pattern byte-for-byte so both drawers share one visual
+            vocabulary on Ireland. */}
+        <style>{`
+          @keyframes nex-control-drawer-edge-light {
+            0% { transform: translateY(-100px); opacity: 0; }
+            12% { opacity: 1; }
+            88% { opacity: 1; }
+            100% { transform: translateY(calc(100vh + 20px)); opacity: 0; }
+          }
+        `}</style>
+        <div
+          aria-hidden
+          data-nex-control-drawer-edge
+          style={{
+            display:
+              "var(--nex-world-control-drawer-edge-light-display, none)",
+            position: "absolute",
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 1,
+            overflow: "hidden",
+            pointerEvents: "none",
+            zIndex: 1,
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              left: -1,
+              width: 3,
+              height: 90,
+              background:
+                "linear-gradient(180deg, rgba(198,161,91,0) 0%, #C6A15B 50%, rgba(198,161,91,0) 100%)",
+              boxShadow: "0 0 10px rgba(198,161,91,0.6)",
+              animation:
+                "nex-control-drawer-edge-light 3400ms linear infinite",
+              willChange: "transform",
+            }}
+          />
+        </div>
         <DrawerHeader onClose={close} closeRef={closeButtonRef} />
         <DrawerBody
           session={session}
@@ -766,8 +578,9 @@ export function ControlDrawer({
         // + other surfaces where the icon lives on dark navy chrome).
         style={{ ...triggerButtonStyle, ...(triggerStyle ?? {}) }}
         data-nex-control-drawer-trigger
+        data-nex-control-drawer-trigger-icon={triggerIcon}
       >
-        <ThreeDotIcon />
+        {triggerIcon === "plus" ? <PlusGlyph /> : <ThreeDotIcon />}
       </button>
 
       {rendered && frameNode ? createPortal(overlay, frameNode) : null}
@@ -857,8 +670,13 @@ function DrawerBody({
           YOUR_BUSINESS_ROWS · `business-vault` conditional row ·
           and the Socials entry) are kept intact until the owner
           confirms the quick-access buttons work and asks for them
-          to be removed. */}
-      <QuickAccessRow />
+          to be removed.
+
+          Owner-authorised 2026-11-04 later-same-day · NEX Ireland
+          drawer trim · QuickAccessRow render removed. Live / Vault /
+          Socials destinations remain reachable via direct URL. The
+          QuickAccessRow + QUICK_ACCESS_ROWS definitions below are
+          retained for future reuse (tree-shaken when unused). */}
 
       <IdentityBar session={session} identityNameOverride={identityNameOverride} />
 
@@ -884,43 +702,14 @@ function DrawerBody({
         devUnlockMode={devUnlock}
       />
 
-      {/* Owner directive 2026-11-01 · Batch D++ · intercept clicks on
-       *  the creator-support row BEFORE the sealed `<Link>` inside
-       *  SectionGroup fires its client-side navigation. `onClickCapture`
-       *  runs during the capture phase (parent → target), so this
-       *  handler sees the click before next/link's internal onClick.
-       *  Scoped by `closest('[data-nex-control-drawer-row="creator-
-       *  support"]')` so ONLY that one row is intercepted — every
-       *  other row in YOUR BUSINESS keeps its sealed Link-navigation
-       *  behaviour. Fallback when `onCreatorSupportTap` is omitted
-       *  (legacy mount): no interception, the Link navigates to its
-       *  href normally. */}
-      <div
-        onClickCapture={(e) => {
-          if (!onCreatorSupportTap) return;
-          const target = e.target as HTMLElement | null;
-          if (!target) return;
-          const match = target.closest<HTMLElement>(
-            '[data-nex-control-drawer-row="creator-support"]',
-          );
-          if (!match) return;
-          e.preventDefault();
-          e.stopPropagation();
-          onCreatorSupportTap();
-        }}
-      >
-        <SectionGroup
-          title="YOUR BUSINESS"
-          rows={buildBusinessSectionRows({
-            sessionIsBisnis: session?.isBisnis ?? false,
-            showCreatorSupportRow,
-            creatorSupportLabelOverride,
-            creatorSupportSubtitleOverride,
-          })}
-          isGuest={effectiveIsGuest}
-          devUnlockMode={devUnlock}
-        />
-      </div>
+      {/* Owner-authorised 2026-11-04 later-same-day · NEX Ireland drawer
+       *  trim · YOUR BUSINESS section removed from the drawer surface.
+       *  My shop · Business Vault · Creator · Payments · Membership +
+       *  billing destinations remain reachable via direct URL + the
+       *  dedicated /manage + /settings pages. The onClickCapture
+       *  creator-support interception is retired together with the
+       *  section · the `onCreatorSupportTap` + creator-support override
+       *  props stay in the component signature for API stability. */}
 
       <SectionGroup
         title="PREFERENCES & SUPPORT"
@@ -1002,47 +791,10 @@ function CopyIdentityButton({
   );
 }
 
-// ─── Quick-access row · Live · Vault · Socials ────────────────────
-//
-// Owner directive 2026-10-24 · three cyan-rimmed buttons rendered at
-// the very top of the drawer body (above the sign-in / identity bar).
-// Each routes directly to the sealed destination page. The downstream
-// section rows (`go-live` in YOUR_BUSINESS_ROWS · `business-vault` ·
-// Socials entry) are intentionally left intact until the owner
-// confirms the quick-access row is working as intended · at which
-// point they will be removed in a follow-up pass.
-
-const QUICK_ACCESS_ROWS: ReadonlyArray<{
-  readonly key: "live" | "vault" | "socials";
-  readonly label: string;
-  readonly href: string;
-  readonly glyph: string;
-}> = [
-  { key: "live",    label: "Live",    href: "/nex-native/nex-feed",      glyph: "●" },
-  { key: "vault",   label: "Vault",   href: "/nex-native/vault",         glyph: "🔒" },
-  { key: "socials", label: "Socials", href: "/nex-native/nex-socials/intro",   glyph: "👥" },
-];
-
-function QuickAccessRow(): React.JSX.Element {
-  return (
-    <div style={quickAccessRowStyle} data-nex-control-drawer-quick-access>
-      {QUICK_ACCESS_ROWS.map((row) => (
-        <Link
-          key={row.key}
-          href={row.href}
-          data-nex-control-drawer-quick-access-button={row.key}
-          aria-label={`Open ${row.label}`}
-          style={quickAccessButtonStyle}
-        >
-          <span aria-hidden style={quickAccessGlyphStyle}>
-            {row.glyph}
-          </span>
-          <span style={quickAccessLabelStyle}>{row.label}</span>
-        </Link>
-      ))}
-    </div>
-  );
-}
+// Owner directive 2026-11-05 · QUICK_ACCESS_ROWS + QuickAccessRow
+// REMOVED. Live / Vault / Socials chips are retired from the drawer ·
+// destinations still reachable via /nex-native/nex-feed, /vault, and
+// /nex-native/nex-socials/intro respectively.
 
 // ─── Identity bar · name + NEX ID (or sign-in prompt) ──────────────
 
@@ -1351,6 +1103,29 @@ function ThreeDotIcon() {
   );
 }
 
+// Owner directive 2026-11-05 · chat + page-header surfaces use a "+"
+// trigger glyph in the drawer button. Crisp SVG strokes so the glyph
+// stays sharp regardless of pixel ratio. Uses currentColor so the
+// caller's triggerStyle.color flows through (e.g. gold glyph on dark
+// panel for chat 9001, dark glyph on gold button for page header).
+function PlusGlyph() {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.8}
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  );
+}
+
 // Owner directive 2026-10-18 · door glyph for the Log out row.
 // Open-door shape with an arrow pointing out · universally reads as
 // "exit / sign out" without a danger-red badge.
@@ -1388,8 +1163,13 @@ function DoorIcon() {
 // hardcoded because they signal universal legibility / destructive /
 // emergency semantics.
 const CYAN = "var(--nex-world-secondary, #00AFFF)";
-const TEXT = "#F2F5F8";
-const MUTED = "#7D9BC0";
+// Owner-authorised 2026-11-04 later-same-day · NEX Ireland drawer trim +
+// palette alignment. TEXT + MUTED route through world-palette vars so the
+// drawer ink belongs to the active world (Ireland → Sage #AFC5B5 / dim
+// Sage #8FA69A). Other worlds leave the vars unset → fallback renders the
+// sealed cool-white / cool-grey byte-identical to the previous surface.
+const TEXT = "var(--nex-world-primary-ink, #F2F5F8)";
+const MUTED = "var(--nex-world-muted-ink, #7D9BC0)";
 const BG = "var(--nex-world-background-base, #020914)";
 const PANEL = "var(--nex-world-drawer-bg, #0A1526)";
 // Owner directive 2026-11-02 · panel border routes through the sealed
@@ -1458,7 +1238,13 @@ const drawerStyle: React.CSSProperties = {
   maxHeight: "100%",
   width: "min(320px, 85%)",
   maxWidth: 360,
-  background: BG,
+  // Owner-authorised 2026-11-04 later-same-day · NEX Ireland drawer trim.
+  // Was `background: BG` which resolves to `--nex-world-background-base`
+  // → Ireland's cream page base #FAF8F4 (correct for the page body,
+  // wrong for the drawer shell · made the drawer read as a white panel).
+  // Swapped to PANEL → `--nex-world-drawer-bg` → Ireland's deep emerald
+  // #123D2B. Worldwide/Indonesia unchanged (both vars fall back to navy).
+  background: PANEL,
   borderLeft: `1.5px solid ${PANEL_BORDER}`,
   boxShadow: "-8px 0 32px rgba(0,0,0,0.6)",
   zIndex: 61,
@@ -1524,47 +1310,9 @@ const drawerBodyStyle: React.CSSProperties = {
   padding: "12px 12px 24px 12px",
 };
 
-// Owner directive 2026-10-24 · 3-column quick-access row (Live · Vault
-// · Socials) · each button is a frosted cyan tile matching the Live
-// category-sheet aesthetic so the three nav primitives read as one
-// unified cluster above the sign-in / identity bar.
-const quickAccessRowStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(3, 1fr)",
-  gap: 8,
-  marginBottom: 2,
-};
-const quickAccessButtonStyle: React.CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 4,
-  minHeight: 60,
-  padding: "8px 6px",
-  borderRadius: 12,
-  background:
-    "linear-gradient(135deg, rgba(0, 175, 255, 0.22) 0%, rgba(0, 116, 255, 0.08) 100%)",
-  border: `1.5px solid ${CYAN}`,
-  color: TEXT,
-  textDecoration: "none",
-  boxShadow:
-    "inset 0 0 0 1px rgba(0, 175, 255, 0.28), 0 4px 10px -6px rgba(0, 20, 50, 0.45)",
-  textAlign: "center",
-  cursor: "pointer",
-  WebkitTapHighlightColor: "transparent",
-  touchAction: "manipulation",
-};
-const quickAccessGlyphStyle: React.CSSProperties = {
-  fontSize: 20,
-  lineHeight: 1,
-};
-const quickAccessLabelStyle: React.CSSProperties = {
-  fontSize: 12,
-  fontWeight: 800,
-  letterSpacing: 0.2,
-  color: TEXT,
-};
+// Owner directive 2026-11-05 · quick-access row style constants REMOVED
+// together with the QuickAccessRow component · Live / Vault / Socials
+// chips are no longer surfaced in the drawer.
 
 // Owner directive 2026-10-20 · dark red Emergency Help CTA at the
 // top of the drawer. Dark red fill (not NEX's bright DANGER) so the
@@ -1867,7 +1615,10 @@ const confirmBackdropStyle: React.CSSProperties = {
 const confirmPanelStyle: React.CSSProperties = {
   width: "100%",
   maxWidth: 320,
-  background: BG,
+  // Owner-authorised 2026-11-04 later-same-day · NEX Ireland drawer trim.
+  // Same BG → PANEL swap as the drawer shell above · the log-out confirm
+  // modal should sit on the drawer-bg colour, not the cream page base.
+  background: PANEL,
   border: `1.5px solid ${PANEL_BORDER}`,
   borderRadius: 16,
   padding: 20,
@@ -1925,8 +1676,6 @@ const confirmLogoutStyle: React.CSSProperties = {
 
 export const __internal = {
   YOUR_NEX_ROWS,
-  YOUR_BUSINESS_ROWS,
-  BUSINESS_VAULT_ROW,
   PREFERENCES_ROWS,
   DrawerBody,
   LogoutConfirmModal,
