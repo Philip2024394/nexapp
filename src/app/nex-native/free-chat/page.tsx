@@ -62,7 +62,10 @@ import {
   type ControlDrawerSession,
 } from "@/components/nex-native/control-drawer/control-drawer-client";
 import { FreeChatComposerClient } from "./_composer-client";
-import { FreeChatCallCenterDrawerClient } from "./_call-center-drawer-client";
+// Owner directive 2026-11-05 iter 17 · FreeChatCallCenterDrawerClient
+// import removed · the component is retired from /free-chat (the old
+// lower-right 3-dot FAB · Call Centre scaffolding). Component source
+// retained so a future surface can mount it.
 // Owner directive 2026-11-05 later-same-day iter 14 · parity with peer
 // chat · ShopDrawer FAB mounted on /free-chat. Share action is a stub
 // that stashes the picked product id in a short-lived cookie and
@@ -482,17 +485,13 @@ export default async function FreeChatPage({
           initialThemeId={initialThemeId}
         />
 
-        {/* ── Call-Center floating 3-dots trigger + left-slide panel ──
-            Owner directive 2026-10-21 (iteration 38) · bottom-right
-            floating action button, opens a left-sliding Call Center
-            panel with voice/video/dial-pad/recent/contacts rows. All
-            visual placeholders · no call-engine wiring.
-
-            Owner directive 2026-11-05 later-same-day iter 14 · Shop
-            drawer now owns the "lower-right 3-dot" slot that matches
-            peer chat. Call Centre stacks ABOVE Shop via its own FAB
-            offset (sealed inside _call-center-drawer-client.tsx). */}
-        <FreeChatCallCenterDrawerClient />
+        {/* ── Call-Centre FAB RETIRED 2026-11-05 iter 17 ──
+            Owner directive · "remove the old button with 3 dots lower
+            right side". The sealed FreeChatCallCenterDrawerClient
+            mount is gone from this surface · the component still
+            exists (unused) so a future surface can re-enable it
+            without reinstating code. The lower-right slot now belongs
+            exclusively to the Shop drawer FAB. */}
 
         {/* ── Shop drawer · parity with peer chat ──
             Owner directive 2026-11-05 later-same-day iter 14 · Shop
