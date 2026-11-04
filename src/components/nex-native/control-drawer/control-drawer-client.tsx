@@ -766,6 +766,18 @@ function CopyIdentityButton({
           setCopied(true);
           if (timeoutRef.current) clearTimeout(timeoutRef.current);
           timeoutRef.current = setTimeout(() => setCopied(false), 1400);
+          // Owner-authored 2026-11-05 · global action-toast integration ·
+          // dynamic import keeps the toast module out of the drawer's
+          // initial bundle for viewers who never tap Copy.
+          void (async () => {
+            const mod = await import(
+              "@/components/nex-native/ui/action-toast"
+            );
+            mod.showActionToast({
+              message: "Copied to clipboard",
+              kind: "info",
+            });
+          })();
         })
         .catch(() => {
           /* best-effort · older browsers / permissions denied */

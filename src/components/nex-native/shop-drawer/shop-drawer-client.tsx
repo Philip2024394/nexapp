@@ -469,6 +469,18 @@ function ProductCard({
       action={shareAction}
       onSubmit={() => {
         startTransition(() => {});
+        // Owner-authored 2026-11-05 · action toast · fires on card tap
+        // so the seller sees "Product shared" instantly rather than
+        // waiting for the chat round-trip.
+        void (async () => {
+          const mod = await import(
+            "@/components/nex-native/ui/action-toast"
+          );
+          mod.showActionToast({
+            message: `Shared ${product.name}`,
+            kind: "success",
+          });
+        })();
         setTimeout(onSent, 120);
       }}
       style={{
