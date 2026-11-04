@@ -680,7 +680,10 @@ function NotificationRow({
             height: "100%",
             borderRadius: "50%",
             background: "rgba(255,255,255,0.06)",
-            border: `1px solid ${row.unread ? NOTIF_RED : PANEL_BORDER}`,
+            // Owner directive 2026-11-05 iter 16 · avatar rim stays
+            // sealed neutral cream · urgency signalled via the row
+            // strip + section pill, not the avatar itself.
+            border: `1px solid ${PANEL_BORDER}`,
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
@@ -706,13 +709,13 @@ function NotificationRow({
             row.title.charAt(0).toUpperCase()
           )}
         </div>
-        {/* Owner directive 2026-11-05 later-same-day iter 13 ·
-            heartbeat pulse on UNREAD rows · "attention needed" visual.
-            Honest naming: not a real-time presence signal (sealed
-            per-conversation scale guarantee prevents that here) · it
-            reads as "they just contacted you" which is what unread
-            on these sections means. Uses the sealed 1200ms
-            cubic-bezier(0.4,0,0.2,1) rhythm from the avatar-rim
+        {/* Owner directive 2026-11-05 iter 16 · heartbeat pulse on
+            UNREAD rows reads as "they just contacted you" · ring
+            colour reverted from red (too urgent, duplicated the row
+            strip signal) to neutral cream so the pulse signals
+            "present / active" without alarming. Red stays on the
+            row left strip for urgency semantic. Sealed 1200ms
+            cubic-bezier(0.4,0,0.2,1) rhythm matches the avatar-rim
             doctrine. */}
         {row.unread ? (
           <>
@@ -726,7 +729,7 @@ function NotificationRow({
                 width: 42,
                 height: 42,
                 borderRadius: "50%",
-                border: `2px solid ${NOTIF_RED}`,
+                border: "2px solid rgba(255,255,255,0.6)",
                 animation:
                   "nex-notif-row-pulse 1200ms cubic-bezier(0.4,0,0.2,1) infinite",
                 pointerEvents: "none",
@@ -898,15 +901,15 @@ function SectionGlyph({
   readonly glyph: "chat" | "live" | "shop" | "order" | "follow";
   readonly accent: string;
 }): React.JSX.Element {
-  // Owner directive 2026-11-05 later-same-day iter 13 · section
-  // glyphs go BIGGER (14 → 22) + SOLID FILL + BOLDER stroke ·
-  // orange accent so each section header reads instantly.
+  // Owner directive 2026-11-05 iter 16 · section glyphs are OUTLINED
+  // ICONS · fill=none · bold 2.2 stroke · orange accent · 22px.
+  // Previous solid-fill rendering read as orange squares, not icons.
   const common = {
     width: 22,
     height: 22,
-    fill: accent,
+    fill: "none" as const,
     stroke: accent,
-    strokeWidth: 1.4,
+    strokeWidth: 2.2,
     strokeLinecap: "round" as const,
     strokeLinejoin: "round" as const,
     "aria-hidden": true,
@@ -921,34 +924,32 @@ function SectionGlyph({
     case "live":
       return (
         <svg viewBox="0 0 24 24" {...common}>
-          <circle cx="12" cy="12" r="10" />
+          <circle cx="12" cy="12" r="3" fill={accent} stroke="none" />
+          <circle cx="12" cy="12" r="7" />
         </svg>
       );
     case "shop":
       return (
         <svg viewBox="0 0 24 24" {...common}>
           <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+          <path d="M3 6h18" />
+          <path d="M16 10a4 4 0 0 1-8 0" />
         </svg>
       );
     case "order":
       return (
         <svg viewBox="0 0 24 24" {...common}>
-          <rect x="3" y="4" width="18" height="17" rx="2" />
-          <path
-            d="M8 12l2.5 2.5L16 9"
-            stroke="#FFF"
-            strokeWidth={2.4}
-            fill="none"
-          />
+          <path d="M9 11l3 3 7-7" />
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
         </svg>
       );
     case "follow":
       return (
         <svg viewBox="0 0 24 24" {...common}>
-          <circle cx="9" cy="8" r="4" />
-          <path d="M1 22c0-4.5 3.5-8 8-8s8 3.5 8 8" />
-          <circle cx="19" cy="8" r="3" fill="#FFF" stroke={accent} strokeWidth={1.4} />
-          <path d="M19 6v4M17 8h4" stroke={accent} strokeWidth={2} />
+          <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+          <circle cx="8.5" cy="7" r="4" />
+          <line x1="20" y1="8" x2="20" y2="14" />
+          <line x1="17" y1="11" x2="23" y2="11" />
         </svg>
       );
     default:

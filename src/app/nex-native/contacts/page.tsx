@@ -108,7 +108,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; share?: string }>;
 }
 
 export default async function ContactsPage({ searchParams }: PageProps) {
@@ -176,6 +176,24 @@ export default async function ContactsPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const requestedTab = (sp.tab ?? "all") as string;
   const activeFilter: ContactsFilter = isValidFilter(requestedTab) ? requestedTab : "all";
+
+  // Owner directive 2026-11-05 later-same-day iter 15 · pending-share
+  // flow · when /free-chat's ShopDrawer bounces the viewer here with
+  // ?share=pending, read the sealed `nex-shop-share-pending-product-id`
+  // cookie and append it to every contact's chatHref so tapping any
+  // row opens the destination chat with the product pre-queued in the
+  // composer. Follow-up to iter 14. Cookie is cleared after read so
+  // it doesn't linger across unrelated contacts visits.
+  const { cookies: cookieJarFn } = await import("next/headers");
+  const pendingShareJar = await cookieJarFn();
+  const pendingShareProductId =
+    sp.share === "pending"
+      ? (pendingShareJar.get("nex-shop-share-pending-product-id")?.value ??
+        null)
+      : null;
+  // Note: Next 16 server components can't delete cookies mid-render ·
+  // the cookie will expire in 15 min on its own (maxAge set by the
+  // producer). Short-lived ok.
 
   // Safeguard #1 · contact data contract.
   // friend-service.listFriends() returns NexUuid[] of accepted-edge
@@ -404,6 +422,26 @@ export default async function ContactsPage({ searchParams }: PageProps) {
     ...businessRows,
   ].sort((a, b) => a.displayName.localeCompare(b.displayName));
   const allRows: ContactRowDisplay[] = [...pendingRows, ...nonPendingRows];
+
+  // Owner directive 2026-11-05 iter 15 · pending-share follow-up ·
+  // when a product-share bounce landed us here with the cookie set,
+  // tack `?pending_product=<id>` onto every chatHref so tapping any
+  // contact routes to /chat/peer/<id>?pending_product=<id> · the
+  // peer-chat page already consumes this param (sealed Bridge 49b).
+  const withPendingShare = (href: string): string => {
+    if (!pendingShareProductId) return href;
+    const [path, hash] = href.split("#");
+    if (path === undefined) return href;
+    const sep = path.includes("?") ? "&" : "?";
+    const withParam = `${path}${sep}pending_product=${encodeURIComponent(pendingShareProductId)}`;
+    return hash === undefined ? withParam : `${withParam}#${hash}`;
+  };
+  if (pendingShareProductId) {
+    for (const r of allRows) {
+      (r as { chatHref: string }).chatHref = withPendingShare(r.chatHref);
+    }
+  }
+
   const visibleRows: ContactRowDisplay[] =
     activeFilter === "friends"
       ? [...pendingRows, ...friendRows]
