@@ -84,17 +84,12 @@ export function FreeChatHeader({
   notificationsSlot,
   peerAccountId,
 }: FreeChatHeaderProps): React.JSX.Element {
-  // Owner directive 2026-11-05 later-same-day · sealed presence rim on
-  // the peer avatar · subscribes to the `nex-peer-presence` window
-  // event dispatched by PeerPresenceClient. States follow the sealed
-  // avatar-rim doctrine (feedback_nex_avatar_presence_rim_not_dot.md):
-  //   online  → #16D66B green rim + 1200ms heartbeat pulse
-  //   busy    → #FF7200 orange rim + 1200ms heartbeat pulse
-  //   offline → #A60000 dark-red static rim
-  //   unknown → honest neutral white rim
-  const [peerKind, setPeerKind] = React.useState<
-    "online" | "busy" | "offline" | "unknown"
-  >("unknown");
+  // Owner directive 2026-11-05 later-same-day iter 5 · sealed
+  // NexPingBadge is restored on peer chat · colored rim retired. The
+  // only presence signal is a PULSE animation on the sealed rim when
+  // the peer is online. Offline / busy / unknown → no pulse, static
+  // rim. Subscription to `nex-peer-presence` kept for the pulse gate.
+  const [peerOnline, setPeerOnline] = React.useState<boolean>(false);
   React.useEffect(() => {
     if (!peerAccountId) return;
     const handler = (e: Event) => {
@@ -107,26 +102,12 @@ export function FreeChatHeader({
       const roster = custom.detail?.roster;
       if (!Array.isArray(roster)) return;
       const peer = roster.find((r) => r.accountId === peerAccountId);
-      setPeerKind(peer ? peer.kind : "offline");
+      setPeerOnline(peer?.kind === "online");
     };
     window.addEventListener("nex-peer-presence", handler as EventListener);
     return () =>
       window.removeEventListener("nex-peer-presence", handler as EventListener);
   }, [peerAccountId]);
-  const rimColor =
-    peerKind === "online"
-      ? "#16D66B"
-      : peerKind === "busy"
-        ? "#FF7200"
-        : peerKind === "offline"
-          ? "#A60000"
-          // Owner directive 2026-11-05 later-same-day iter 3 · "unknown"
-          // = no presence signal received yet · transparent rim so the
-          // avatar reads clean until the roster arrives, rather than
-          // showing a cream semi-transparent ring that competes with
-          // the Ireland palette.
-          : "transparent";
-  const hasRimPulse = peerKind === "online" || peerKind === "busy";
   return (
     <header
       data-nex-free-chat-header
@@ -141,22 +122,18 @@ export function FreeChatHeader({
     >
       <div
         data-nex-free-chat-header-avatar-slot
-        data-nex-free-chat-header-peer-kind={peerAccountId ? peerKind : undefined}
+        data-nex-free-chat-header-peer-online={
+          peerAccountId ? (peerOnline ? "true" : "false") : undefined
+        }
         style={{ position: "relative", width: 48, height: 48, flexShrink: 0 }}
       >
-        {/* Owner directive 2026-11-05 later-same-day iter 3 · on peer
-            chat surfaces the avatar represents the peer, not NEX, so
-            the NexPingBadge brand mark steps aside and the sealed
-            presence rim (green/orange/dark-red) owns the avatar
-            decoration. Non-peer surfaces (free-chat home where the
-            avatar IS NEX) keep the ping badge. */}
-        {peerAccountId ? null : (
-          <NexPingBadge
-            size={48}
-            accent={pingBadgeAccent}
-            dataTestId="free-chat-nex"
-          />
-        )}
+        {/* Owner directive 2026-11-05 later-same-day iter 5 · sealed
+            NexPingBadge always renders · colored rim retired. */}
+        <NexPingBadge
+          size={48}
+          accent={pingBadgeAccent}
+          dataTestId="free-chat-nex"
+        />
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -175,55 +152,35 @@ export function FreeChatHeader({
             }}
           />
         ) : null}
-        {peerAccountId ? (
+        {/* Owner directive 2026-11-05 later-same-day iter 5 · when the
+            peer is online, a single pulse ring expands outward from
+            the sealed rim using its own accent colour so the ping
+            visually belongs to the NexPingBadge. Offline / busy /
+            unknown → no pulse (static sealed rim only). */}
+        {peerAccountId && peerOnline ? (
           <>
-            {/* Sealed presence rim · owner directive 2026-11-05 ·
-                sits just outside the avatar circle. Static for offline,
-                heartbeat pulse for online/busy. */}
             <div
               aria-hidden
-              data-nex-free-chat-header-peer-rim
+              data-nex-free-chat-header-peer-online-pulse
               style={{
                 position: "absolute",
-                top: 0,
-                left: 0,
-                width: 48,
-                height: 48,
+                top: -2,
+                left: -2,
+                width: 52,
+                height: 52,
                 borderRadius: "50%",
-                // Owner directive 2026-11-05 later-same-day iter 4 ·
-                // rim thickness bumped 2px → 3px so the presence
-                // signal reads more deliberately against the dark
-                // Ireland chat palette.
-                border: `3px solid ${rimColor}`,
+                border: `2px solid ${pingBadgeAccent}`,
+                animation:
+                  "nex-free-chat-header-peer-online-pulse 1200ms cubic-bezier(0.4,0,0.2,1) infinite",
                 pointerEvents: "none",
               }}
             />
-            {hasRimPulse ? (
-              <>
-                <div
-                  aria-hidden
-                  data-nex-free-chat-header-peer-rim-pulse
-                  style={{
-                    position: "absolute",
-                    top: -3,
-                    left: -3,
-                    width: 54,
-                    height: 54,
-                    borderRadius: "50%",
-                    border: `3px solid ${rimColor}`,
-                    animation:
-                      "nex-free-chat-header-peer-rim-pulse 1200ms cubic-bezier(0.4,0,0.2,1) infinite",
-                    pointerEvents: "none",
-                  }}
-                />
-                <style>{`
-                  @keyframes nex-free-chat-header-peer-rim-pulse {
-                    0% { transform: scale(1); opacity: 0.9; }
-                    100% { transform: scale(1.35); opacity: 0; }
-                  }
-                `}</style>
-              </>
-            ) : null}
+            <style>{`
+              @keyframes nex-free-chat-header-peer-online-pulse {
+                0% { transform: scale(1); opacity: 0.85; }
+                100% { transform: scale(1.35); opacity: 0; }
+              }
+            `}</style>
           </>
         ) : null}
       </div>

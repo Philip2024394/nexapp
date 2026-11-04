@@ -13,16 +13,16 @@
 // src/app/nex-native/free-chat/_composer-client.tsx is the reference
 // · this is a verbatim port into a reusable component.
 //
-// Shape (owner directive 2026-11-05):
-//   [ pill( + button · input · orange send ) ]
+// Shape (restored 2026-11-05 later-same-day iter 5 to match the sealed
+// /free-chat inline reference pill):
+//   [ + button outside pill | pill(emoji PNG · input · orange send) ]
 //
-// The outside-left `+` button and the emoji glyph are retired · the `+`
-// moves INTO the pill's left slot where the emoji used to live, so the
-// pill consolidates into a single visual unit. `onEmoji` is removed
-// from the prop surface · theme-emoji entry lives behind the `+` sheet.
+// The outside-left `+` button and the 3D emoji glyph are reinstated.
+// `onEmoji` prop restored so callers can open their emoji picker
+// (theme-emoji picker or the universal keypad's emoji plane).
 //
 // Purely presentational · no state owned. Callers pass value/onChange/
-// onSend/accentHex/onPlusAction/placeholder/etc.
+// onSend/accentHex/onPlusAction/onEmoji/placeholder/etc.
 
 import * as React from "react";
 // Owner directive 2026-11-05 · sealed doctrine
@@ -42,6 +42,7 @@ export interface Chat9001PillProps {
   readonly disabled?: boolean;
   readonly maxLength?: number;
   readonly onPlusAction?: () => void;
+  readonly onEmoji?: () => void;
   readonly plusOpen?: boolean;
   readonly textareaDataAttr?: string;
 }
@@ -59,6 +60,7 @@ export function Chat9001Pill({
   disabled,
   maxLength = 4000,
   onPlusAction,
+  onEmoji,
   plusOpen = false,
   textareaDataAttr,
 }: Chat9001PillProps): React.JSX.Element {
@@ -80,6 +82,41 @@ export function Chat9001Pill({
         position: "relative",
       }}
     >
+      {/* Owner directive 2026-11-05 later-same-day iter 5 · `+` button
+          restored OUTSIDE the pill on the left · solid black fill to
+          match the lower 3-dot FAB and header buttons. */}
+      {onPlusAction ? (
+        <button
+          type="button"
+          onClick={onPlusAction}
+          aria-label={plusOpen ? "Close attachments" : "Open attachments"}
+          aria-expanded={plusOpen}
+          data-nex-free-chat-composer-attach
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 32,
+            height: 32,
+            borderRadius: "50%",
+            background: "#000000",
+            border: "1px solid rgba(255, 255, 255, 0.14)",
+            color: "#FFFFFF",
+            fontSize: 20,
+            fontWeight: 300,
+            cursor: "pointer",
+            flexShrink: 0,
+            padding: 0,
+            lineHeight: 1,
+            fontFamily: "inherit",
+            transition: "transform 180ms ease, background 180ms ease",
+            transform: plusOpen ? "rotate(45deg)" : "rotate(0deg)",
+          }}
+        >
+          +
+        </button>
+      ) : null}
+
       <div
         data-nex-free-chat-composer-pill
         style={{
@@ -88,48 +125,30 @@ export function Chat9001Pill({
           minWidth: 0,
         }}
       >
-        {/* Owner directive 2026-11-05 · the `+` button now lives INSIDE
-            the pill where the emoji previously sat · consolidates
-            composer chrome into one visual unit · rotates 45° when the
-            attach sheet is open to echo the open/close affordance. */}
-        {onPlusAction ? (
-          <button
-            type="button"
-            onClick={onPlusAction}
-            aria-label={plusOpen ? "Close attachments" : "Open attachments"}
-            aria-expanded={plusOpen}
-            data-nex-free-chat-composer-attach
-            style={{
-              position: "absolute",
-              left: 4,
-              top: "50%",
-              transform: plusOpen
-                ? "translateY(-50%) rotate(45deg)"
-                : "translateY(-50%) rotate(0deg)",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 32,
-              height: 32,
-              borderRadius: "50%",
-              // Owner directive 2026-11-05 later-same-day iter 2 ·
-              // SOLID BLACK + white glyph · matches the header
-              // buttons and lower 3-dot FAB.
-              background: "#000000",
-              border: "1px solid rgba(255, 255, 255, 0.14)",
-              color: "#FFFFFF",
-              fontSize: 20,
-              fontWeight: 300,
-              cursor: "pointer",
-              padding: 0,
-              lineHeight: 1,
-              fontFamily: "inherit",
-              transition: "transform 180ms ease, background 180ms ease",
-            }}
-          >
-            +
-          </button>
-        ) : null}
+        {/* Owner directive 2026-11-05 later-same-day iter 5 · 3D emoji
+            PNG restored inside the pill on the left · matches the
+            sealed Chat 9001 inline composer shape exactly. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/nex-free-chat/composer-emoji.png"
+          alt=""
+          aria-hidden
+          data-nex-free-chat-composer-emoji
+          onClick={onEmoji}
+          style={{
+            position: "absolute",
+            left: 6,
+            top: "50%",
+            transform: "translateY(-50%)",
+            width: 32,
+            height: 32,
+            objectFit: "contain",
+            userSelect: "none",
+            cursor: onEmoji ? "pointer" : "default",
+            pointerEvents: onEmoji ? "auto" : "none",
+            zIndex: 1,
+          }}
+        />
         <NexInput
           value={value}
           onChange={onChange}
