@@ -85,7 +85,14 @@ export async function saveProfileFieldsAction(formData: FormData): Promise<void>
   const countryCode = countryRaw && /^[A-Z]{2}$/.test(countryRaw.toUpperCase())
     ? countryRaw.toUpperCase()
     : null;
-  const address = textOrNull(formData.get("address"), 200);
+  const address = textOrNull(formData.get("address"), 300);
+  const profession = textOrNull(formData.get("profession"), 80);
+  // about_me · owner directive 2026-11-04 · 500-char hard cap.
+  // Column added by migration 274 (DRAFT at time of this change).
+  // When 274 is not yet applied, the UPSERT below will error on the
+  // unknown column and the user is redirected to ?e=profile_upsert_
+  // failed. Apply migration 274 to activate the field end-to-end.
+  const aboutMe = textOrNull(formData.get("about_me"), 500);
 
   // Interests · pick-2 · validated against the sealed registry.
   const rawInterests = formData.getAll("interests");
@@ -106,35 +113,70 @@ export async function saveProfileFieldsAction(formData: FormData): Promise<void>
   const youtube = cleanHandle(formData.get("youtube_handle"));
 
   // Upsert so first-time users (no profile row yet) get one created.
-  const { error: profileErr } = await nexSupabaseAdmin
-    .from("nex_account_profile")
-    .upsert(
-      {
-        account_id: accountId,
-        country_code: countryCode,
-        address,
-        interests,
-        instagram_handle: instagram,
-        tiktok_handle: tiktok,
-        facebook_handle: facebook,
-        x_handle: xHandle,
-        youtube_handle: youtube,
-      },
-      { onConflict: "account_id" },
-    );
+  // about_me is included only when migration 274 is applied. We try
+  // the full upsert first; on "column not found" error we retry
+  // without about_me so saves keep working until the migration lands.
+  const basePatch = {
+    account_id: accountId,
+    country_code: countryCode,
+    address,
+    profession,
+    interests,
+    instagram_handle: instagram,
+    tiktok_handle: tiktok,
+    facebook_handle: facebook,
+    x_handle: xHandle,
+    youtube_handle: youtube,
+  };
+  let profileErr = (
+    await nexSupabaseAdmin
+      .from("nex_account_profile")
+      .upsert({ ...basePatch, about_me: aboutMe }, { onConflict: "account_id" })
+  ).error;
+  if (profileErr && /column.*about_me/i.test(profileErr.message)) {
+    // Migration 274 not yet applied · retry without about_me.
+    profileErr = (
+      await nexSupabaseAdmin
+        .from("nex_account_profile")
+        .upsert(basePatch, { onConflict: "account_id" })
+    ).error;
+  }
   if (profileErr) {
     console.error("[profile-edit] nex_account_profile upsert failed", profileErr);
     redirect("/nex-native/settings/profile/edit?e=profile_upsert_failed");
   }
 
+  // Owner directive 2026-11-04 · propagate the save across every
+  // surface that reads nex_account / nex_account_profile so the
+  // user's new chat name / avatar / profession / socials show up
+  // everywhere immediately, not after cache expiry.
+  revalidatePath("/nex-native");
   revalidatePath("/nex-native/profile/me");
   revalidatePath("/nex-native/settings/profile/edit");
+  revalidatePath("/nex-native/contacts");
+  revalidatePath("/nex-native/free-chat");
+  revalidatePath("/nex-native/nex-feed");
+  revalidatePath("/nex-native/community/chat");
+  revalidatePath("/nex-native/community/feed");
+  revalidatePath("/nex-native/directory/landing");
+  revalidatePath("/nex-native/chat-themes-library");
+  revalidatePath("/nex-native/music");
+  // Dynamic routes · revalidate the whole pattern so every [handle]
+  // / [accountId] render refreshes.
+  revalidatePath("/nex-native/profile/[handle]", "page");
+  revalidatePath("/nex-native/chat/peer/[accountId]", "page");
 
-  // Post-signup flow lands on the chat home · edit-from-drawer lands
-  // back on the profile view.
+  // Owner directive 2026-11-04 later-same-day · unified post-save redirect
+  // to /creator/join so every user who completes their profile sees the
+  // NEX Creator programme. The page honours "Set up later" so users who
+  // don't want Creator features aren't trapped. The `from` param tells
+  // the landing where to send a Set up later tap:
+  //   · from=signup-saved      → /free-chat  (new user's natural home)
+  //   · from=profile-saved     → /free-chat  (already in the app · home)
   const from = formData.get("from");
-  if (typeof from === "string" && from === "signup") {
-    redirect("/nex-native/free-chat");
-  }
-  redirect("/nex-native/profile/me?m=profile_saved");
+  const fromParam =
+    typeof from === "string" && from === "signup"
+      ? "signup-saved"
+      : "profile-saved";
+  redirect(`/nex-native/creator/join?from=${fromParam}`);
 }

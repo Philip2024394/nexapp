@@ -66,12 +66,23 @@ interface NexPageHeaderProps {
    *  the ping ring + halo. Defaults to NEX cyan. Community surfaces
    *  pass green so the ping always reads as presence-online. */
   brandAccent?: string;
+  /** Owner directive 2026-11-04 · replaces the left ping-badge slot
+   *  entirely with custom content. Used on the create-profile page
+   *  to show the user's NEX ID in place of the cyan brand badge.
+   *  All other callers leave this unset and keep the sealed badge. */
+  brandSlot?: React.ReactNode;
+  /** Owner directive 2026-11-04 · hide the magnifying-glass search
+   *  icon on surfaces that provide their own in-page navigation
+   *  grid (e.g. create-profile). Default false → icon stays. */
+  hideSearch?: boolean;
 }
 
 export function NexPageHeader({
   dataScope,
   brandAvatarUrl,
   brandAccent,
+  brandSlot,
+  hideSearch,
 }: NexPageHeaderProps) {
   return (
     <header
@@ -85,26 +96,28 @@ export function NexPageHeader({
         gap: 12,
       }}
     >
-      <Link
-        href="/nex-native"
-        aria-label="NEX home"
-        data-nex-page-header-brand
-        style={{
-          textDecoration: "none",
-          display: "inline-flex",
-          alignItems: "center",
-          lineHeight: 0,
-          borderRadius: "50%",
-          WebkitTapHighlightColor: "transparent",
-        }}
-      >
-        <NexPingBadge
-          size={56}
-          accent={brandAccent ?? NEX.cyan}
-          avatarUrl={brandAvatarUrl ?? null}
-          dataTestId="page-header-nex"
-        />
-      </Link>
+      {brandSlot ?? (
+        <Link
+          href="/nex-native"
+          aria-label="NEX home"
+          data-nex-page-header-brand
+          style={{
+            textDecoration: "none",
+            display: "inline-flex",
+            alignItems: "center",
+            lineHeight: 0,
+            borderRadius: "50%",
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <NexPingBadge
+            size={56}
+            accent={brandAccent ?? NEX.cyan}
+            avatarUrl={brandAvatarUrl ?? null}
+            dataTestId="page-header-nex"
+          />
+        </Link>
+      )}
 
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         {/* Owner-authorised 2026-10-17 · Home + Settings icons
@@ -116,14 +129,16 @@ export function NexPageHeader({
             inside SettingsHeaderSlot which lives at
             src/components/nex-native/account-gate/SettingsHeaderSlot.tsx
             · still mountable from other surfaces if needed). */}
-        <Link
-          href="/nex-native/directory/landing"
-          aria-label="NEX Directory · shops · services · food · trades"
-          data-nex-page-header-search
-          style={iconLinkStyle}
-        >
-          <SearchIcon />
-        </Link>
+        {hideSearch ? null : (
+          <Link
+            href="/nex-native/directory/landing"
+            aria-label="NEX Directory · shops · services · food · trades"
+            data-nex-page-header-search
+            style={iconLinkStyle}
+          >
+            <SearchIcon />
+          </Link>
+        )}
         <PageHeaderDrawerButtonClient />
       </div>
     </header>
