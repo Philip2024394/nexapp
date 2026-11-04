@@ -417,8 +417,15 @@ export function ShopDrawer({
           width: 44,
           height: 44,
           borderRadius: "50%",
-          background: PANEL,
-          border: `1.5px solid ${PANEL_BORDER}`,
+          // Owner directive 2026-11-05 · black-glass FAB style.
+          // Deep translucent black + backdrop blur + saturate gives a
+          // frosted-glass read over any chat wallpaper. Subtle white
+          // hairline + gold inner ring preserve the NEX Ireland accent
+          // without flattening to a solid panel.
+          background: "rgba(0, 0, 0, 0.55)",
+          backdropFilter: "blur(14px) saturate(140%)",
+          WebkitBackdropFilter: "blur(14px) saturate(140%)",
+          border: "1px solid rgba(255, 255, 255, 0.14)",
           color: CYAN,
           cursor: "pointer",
           padding: 0,
@@ -427,7 +434,7 @@ export function ShopDrawer({
           justifyContent: "center",
           zIndex: 50,
           boxShadow:
-            "0 4px 14px rgba(0,0,0,0.45), 0 0 0 1px color-mix(in srgb, var(--nex-world-secondary, #00AFFF) 22%, transparent)",
+            "0 6px 18px rgba(0,0,0,0.55), inset 0 0 0 1px color-mix(in srgb, var(--nex-world-secondary, #00AFFF) 24%, transparent)",
           WebkitTapHighlightColor: "transparent",
         }}
       >
