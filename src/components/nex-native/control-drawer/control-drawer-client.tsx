@@ -171,6 +171,13 @@ interface MenuRow {
    *  that are safe for guests (Help & feedback, etc.) leave this
    *  undefined. */
   readonly locked?: boolean;
+  /** Owner directive 2026-11-05 later-same-day iter 12 · when set,
+   *  tapping the row dispatches this window event name INSTEAD of
+   *  navigating to `href`. Lets the drawer trigger in-page overlays
+   *  (e.g. the Discovery live-feed picker) without leaving the chat.
+   *  The row still carries an `href` for right-click/open-in-new-tab
+   *  parity · the primary tap just prevents default + fires the event. */
+  readonly dispatchEvent?: string;
 }
 
 /** Build a /sign-in URL that returns the visitor to the row's intended
@@ -240,13 +247,22 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
   // Owner directive 2026-11-05 · Discovery moves OUT of the chat header
   // (freeing room for a less cramped [ bell · + ] right-nav) and INTO
   // the right-side drawer where it belongs with other app-level
-  // destinations. Same target as the retired HeaderSearch icon.
+  // destinations.
+  //
+  // Owner directive 2026-11-05 later-same-day iter 12 · fix · the row
+  // must OPEN the sealed SearchOverlay (6 live-feed tile buttons · Live
+  // World / Live Ireland / Live Music / Live Food / Live Stays / Live
+  // Trades), NOT jump straight to /nex-feed. Dispatches a window event
+  // · DiscoveryOverlayHost (mounted in /nex-native/layout.tsx) listens
+  // and mounts the sealed overlay. The `href` fallback stays so
+  // right-click / cmd+click / middle-click open the feed in a new tab.
   {
     key: "discovery",
     label: "Discovery",
     subtitle: "Explore the live NEX feed",
     href: "/nex-native/nex-feed",
     locked: false,
+    dispatchEvent: "nex-discovery-overlay-open",
   },
 ];
 
@@ -1070,6 +1086,14 @@ function SectionGroup({
                     ? `${row.label} · requires NEX account · tap to sign in`
                     : undefined
                 }
+                onClick={(e) => {
+                  if (row.dispatchEvent && !showLock) {
+                    e.preventDefault();
+                    if (typeof window !== "undefined") {
+                      window.dispatchEvent(new CustomEvent(row.dispatchEvent));
+                    }
+                  }
+                }}
               >
                 <div style={rowTextColumnStyle}>
                   <span style={rowLabelStyle}>{row.label}</span>

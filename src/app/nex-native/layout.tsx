@@ -35,6 +35,10 @@ import { PushSubscribeHub } from "./_push-subscribe-hub";
 import { AppBadgeSyncClient } from "./_app-badge-sync-client";
 // Owner-authored 2026-11-05 · global action-toast surface.
 import { ActionToastHost } from "@/components/nex-native/ui/action-toast";
+// Owner-authored 2026-11-05 later-same-day iter 12 · Discovery row in
+// the ControlDrawer dispatches `nex-discovery-overlay-open` · this host
+// listens globally and mounts the sealed 6-tile SearchOverlay.
+import { DiscoveryOverlayHost } from "@/components/nex-native/chat-chrome/discovery-overlay-host";
 import { DevImpersonationBanner } from "./_dev-impersonation-banner";
 // Owner-authorised 2026-10-31 · NEX World Engine · Stage 5A.
 // Server-resolves the active world + emits CSS vars scoped to
@@ -197,6 +201,12 @@ export default async function NexNativeLayout({
               fixed-top black-glass pill for 2 s. One mount per surface
               is sufficient · zero caller wiring. */}
           <ActionToastHost />
+          {/* Owner-authored 2026-11-05 later-same-day iter 12 · global
+              Discovery overlay listener · opens the sealed SearchOverlay
+              (6 round Live-feed tiles) when the drawer's Discovery row
+              dispatches `nex-discovery-overlay-open`. Mounts no DOM
+              until the event fires · zero runtime cost. */}
+          <DiscoveryOverlayHost />
           {children}
           {/* Owner directive 2026-10-16 · the IncomingCallHub +
               PushSubscribeHub are mounted INSIDE the frame (not as
