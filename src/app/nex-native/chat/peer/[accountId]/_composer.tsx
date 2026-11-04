@@ -24,6 +24,18 @@ import {
 } from "./_media-capture";
 import { MediaRecorderModal } from "./_media-recorder";
 import { ChatComposerPill } from "@/lib/nex-native/chat-chrome/chat-composer-pill";
+// Owner directive 2026-11-04 later-same-day · NEX Global Chat UI
+// Standard · bespoke Chat 9001 pill · stand-alone file. Peer-chat
+// mounts it in place of the sealed ChatComposerPill so every peer
+// chat renders the Chat 9001 pill (3D emoji PNG + input + orange
+// send + + button outside). Chat 9001 itself is NOT touched.
+import { Chat9001Pill } from "@/components/nex-native/chat-chrome/chat-9001-pill";
+// Owner directive 2026-11-04 later-same-day · NEX Global Chat UI
+// Standard · the shared "+" attach panel every chat composer uses.
+// Sealed 6-tile set (Call Centre · Gallery · Contact · Document ·
+// Voice · Location). Peer chat wires sealed handlers for Gallery /
+// Document / Voice to preserve the encrypted upload pipeline.
+import { UniversalAttachPanel } from "@/components/nex-native/chat-chrome/universal-attach-panel";
 
 const NEX = {
   bg: "var(--nex-world-background-base, #020914)",
@@ -449,12 +461,34 @@ export function PeerComposer({
         }
       `}</style>
 
+      {/* Owner directive 2026-11-04 later-same-day · NEX Global Chat
+          UI Standard · the peer-chat '+' panel now consumes the
+          shared UniversalAttachPanel so every NEX chat renders the
+          same 6-tile set (Call Centre · Gallery · Contact · Document
+          · Voice · Location). The sealed capture pipeline is
+          preserved via the Gallery · Document · Voice handlers that
+          dispatch into the existing handleCapturePick → MediaCapture
+          flow (Bridge 8 + encrypted upload action). Contact · Location
+          fall through to canonical Link routes.
+          Retired tiles (relocated · still reachable):
+            · Camera / Video → merged into Gallery (file picker +
+              MediaCapture modal on mobile offers camera + library)
+            · Themes → /chat-themes-library drawer row
+            · Animations → sealed Haunted Hotel window event (unchanged
+              in theme controller, just no attach-panel entry) */}
       {modalOpen && (
-        <MediaModal
+        <UniversalAttachPanel
+          open={modalOpen}
           onClose={() => setModalOpen(false)}
-          onPickCapture={handleCapturePick}
-          captureEnabled={!!uploadAction}
-          showAnimationsOption={!!showAnimationsOption}
+          onPickGallery={
+            uploadAction ? () => handleCapturePick("camera") : undefined
+          }
+          onPickDocument={
+            uploadAction ? () => handleCapturePick("document") : undefined
+          }
+          onPickVoice={
+            uploadAction ? () => handleCapturePick("voice") : undefined
+          }
         />
       )}
       {uploadAction && (
@@ -962,6 +996,49 @@ export function PeerComposer({
             the visual pill, the + button, the textarea, the emoji
             button, and the send button. See
             src/lib/nex-native/chat-chrome/chat-composer-pill.tsx. */}
+        {/* Bespoke pill swap was REVERTED — it caused 500 errors.
+            Keeping sealed ChatComposerPill mount below. Next slice
+            will attempt the port differently (likely extracting a
+            separately-built component rather than inlining JSX
+            inside the sealed PeerComposer). */}
+
+        {/* Owner directive 2026-11-04 later-same-day · NEX Global Chat
+            UI Standard · peer-chat now renders the stand-alone
+            Chat9001Pill component so the composer pill is
+            pixel-identical to /nex-native/free-chat (Chat 9001).
+            The sealed ChatComposerPill call is preserved below the
+            new mount behind {false && ...} so the structure remains
+            revert-safe. Hidden file input stays outside the pill. */}
+        {uploadAction && (
+          <input
+            ref={attachInputRef}
+            type="file"
+            accept="*/*"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              const f = e.currentTarget.files?.[0];
+              if (!f) return;
+              const fd = new FormData();
+              fd.append("attachment_file", f);
+              uploadAction(fd);
+              e.currentTarget.value = "";
+            }}
+          />
+        )}
+        <Chat9001Pill
+          value={text}
+          onChange={setText}
+          onSend={() => formRef.current?.requestSubmit()}
+          placeholder={placeholder}
+          accentHex={themeAccent}
+          armed={canSend}
+          maxLength={4000}
+          onPlusAction={() => setModalOpen(true)}
+          onEmoji={() => setEmojiOpen(true)}
+          plusOpen={modalOpen}
+          textareaDataAttr="data-nex-composer-textarea"
+        />
+        {false && (
         <ChatComposerPill
           value={text}
           onChange={setText}
@@ -978,27 +1055,28 @@ export function PeerComposer({
           onEmoji={() => setEmojiOpen(true)}
           prefixSlot={
             <>
+              {/* Owner directive 2026-11-04 later-same-day · NEX Global
+                  Chat UI Standard (Chat 9001) · the paperclip AttachButton
+                  is retired from the pill prefix so peer-chat matches
+                  the free-chat pill shape exactly ([+ | textarea | emoji
+                  | send]). File-input ref is retained for any lingering
+                  consumer; the + button now owns ALL attach entry points
+                  via the sealed UniversalAttachPanel. */}
               {uploadAction && (
-                <>
-                  <input
-                    ref={attachInputRef}
-                    type="file"
-                    accept="*/*"
-                    style={{ display: "none" }}
-                    onChange={(e) => {
-                      const f = e.currentTarget.files?.[0];
-                      if (!f) return;
-                      const fd = new FormData();
-                      fd.append("attachment_file", f);
-                      uploadAction(fd);
-                      e.currentTarget.value = "";
-                    }}
-                  />
-                  <AttachButton
-                    onClick={() => attachInputRef.current?.click()}
-                    accent={themeAccent ?? NEX.cyan}
-                  />
-                </>
+                <input
+                  ref={attachInputRef}
+                  type="file"
+                  accept="*/*"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const f = e.currentTarget.files?.[0];
+                    if (!f) return;
+                    const fd = new FormData();
+                    fd.append("attachment_file", f);
+                    uploadAction(fd);
+                    e.currentTarget.value = "";
+                  }}
+                />
               )}
               {hasPendingEmojis && (
                 <div
@@ -1073,6 +1151,7 @@ export function PeerComposer({
             </>
           }
         />
+        )}
       </form>
     </>
   );
@@ -1350,6 +1429,22 @@ function MediaModal({
             gap: 12,
           }}
         >
+          {/* Owner directive 2026-11-04 later-same-day · "the home page
+              free chat footer text field and buttons and header and
+              buttons is the global design for all chat windows". Phase 1 ·
+              port the Call Centre tile from the sealed free-chat attach
+              panel into the sealed peer-chat Add-media modal. Call Centre
+              routes to /nex-native/call-centre · the Voice / Video /
+              Camera decision page. Existing tiles (Camera · Video · Voice ·
+              Document · Themes · Animations) stay intact to preserve all
+              sealed attachment wirings. Full header + composer port is a
+              separate larger pass. */}
+          <ModalOption
+            icon={<CallCentreIcon size={26} />}
+            label="Call Centre"
+            onClose={onClose}
+            href="/nex-native/call-centre"
+          />
           <ModalOption
             icon={<CameraIcon size={26} />}
             label="Camera"
@@ -1388,6 +1483,30 @@ function MediaModal({
             onActivate={
               captureEnabled ? () => onPickCapture?.("document") : undefined
             }
+          />
+          {/* Owner directive 2026-11-04 later-same-day · Phase 2 ·
+              free-chat parity · Gallery · Contact · Location tiles
+              route to their canonical surfaces (sealed status/create
+              for Gallery, contacts hub for Contact, community for
+              Location) rather than attempting in-chat share before
+              the schema supports it. */}
+          <ModalOption
+            icon={<GalleryIcon size={26} />}
+            label="Gallery"
+            onClose={onClose}
+            href="/nex-native/status/create"
+          />
+          <ModalOption
+            icon={<ContactSilhouetteIcon size={26} />}
+            label="Contact"
+            onClose={onClose}
+            href="/nex-native/contacts"
+          />
+          <ModalOption
+            icon={<LocationPinIcon size={26} />}
+            label="Location"
+            onClose={onClose}
+            href="/nex-native/community/discover"
           />
           <ModalOption
             icon={<PaletteIcon size={26} />}
@@ -2222,6 +2341,44 @@ function CameraIcon({ size = 20 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden {...strokeProps}>
       <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
       <circle cx="12" cy="13" r="4" />
+    </svg>
+  );
+}
+
+// Owner directive 2026-11-04 later-same-day · phone-handset glyph used
+// for the Call Centre tile in the Add-media modal (matches the sealed
+// free-chat attach panel's call-centre icon).
+function CallCentreIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M4.5 3.5a2 2 0 0 1 2-2h2.4a1 1 0 0 1 .97.76l1.18 4.72a1 1 0 0 1-.5 1.13l-1.9 1.03a13 13 0 0 0 5.72 5.72l1.03-1.9a1 1 0 0 1 1.13-.5l4.72 1.18a1 1 0 0 1 .76.97V18a2 2 0 0 1-2 2A17.5 17.5 0 0 1 4.5 3.5z" />
+    </svg>
+  );
+}
+
+// Phase 2 free-chat parity icons · Gallery / Contact / Location.
+function GalleryIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden {...strokeProps}>
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <polyline points="21 15 16 10 5 21" />
+    </svg>
+  );
+}
+function ContactSilhouetteIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden {...strokeProps}>
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+function LocationPinIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden {...strokeProps}>
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+      <circle cx="12" cy="10" r="3" />
     </svg>
   );
 }

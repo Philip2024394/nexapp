@@ -149,11 +149,16 @@ export function CustomizeClient({
   // (no overlay) so the user sees the SAME image they picked on the
   // theme tile. The plain `nex-default` tile paints the user-picked
   // background colour so the preview matches the live chat.
+  //
+  // Owner directive 2026-11-04 later-same-day · "why image cut at
+  // header" · preview is anchored to TOP CENTER so the header portion
+  // of the wallpaper (where the theme's primary illustration usually
+  // sits) is visible inside the preview panel, not cropped off above.
   const previewContainerStyle: React.CSSProperties = wallpaperUrl
     ? {
         backgroundImage: `url("${wallpaperUrl}")`,
         backgroundSize: "cover",
-        backgroundPosition: "center",
+        backgroundPosition: "top center",
         backgroundColor: PAGE_BG_FALLBACK,
       }
     : {
@@ -386,6 +391,11 @@ export function CustomizeClient({
             flexShrink: 0,
           }}
         >
+          {/* Owner directive 2026-11-04 later-same-day · Reset button
+              rendered in NEX green (sealed online-presence #16D66B) so
+              it reads as an action on the Pub Country / wallpaper
+              themes where transparent-on-dark was washed-out. Save
+              remains the world accent. */}
           <button
             type="button"
             onClick={handleReset}
@@ -394,11 +404,11 @@ export function CustomizeClient({
               minHeight: 44,
               padding: "0 20px",
               borderRadius: 999,
-              background: "transparent",
-              color: TEXT_DIM,
-              border: `1px solid rgba(255, 255, 255, 0.22)`,
+              background: "#16D66B",
+              color: "#0a1a0a",
+              border: `1px solid #16D66B`,
               fontSize: 14,
-              fontWeight: 700,
+              fontWeight: 800,
               cursor: isPending ? "wait" : "pointer",
               opacity: isPending ? 0.6 : 1,
             }}

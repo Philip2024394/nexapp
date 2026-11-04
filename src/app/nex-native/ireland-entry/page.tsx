@@ -134,7 +134,7 @@ export default async function IrelandEntryPage() {
           }}
         >
           <Link
-            href="/nex-native/free-chat?show-themes=1"
+            href="/nex-native/sign-in"
             data-nex-ireland-entry-cta
             aria-label="Enter Ireland · continue to NEX"
             style={{

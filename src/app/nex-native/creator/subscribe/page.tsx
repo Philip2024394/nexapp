@@ -10,6 +10,7 @@
 
 import Link from "next/link";
 import { NexPageHeader } from "../../_page-header";
+import { BackLink } from "../../_back-link";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { getAccountById } from "@/lib/nex-native/account-service";
 
@@ -69,17 +70,16 @@ export default async function CreatorSubscribePage() {
         />
 
         <div style={{ margin: "16px 0 8px" }}>
-          <Link
-            href="/nex-native/creator/join"
+          <BackLink
+            fallbackHref="/nex-native/creator/join"
             style={{
               color: IRELAND.secondary,
-              textDecoration: "none",
               fontSize: 13,
               fontWeight: 700,
             }}
           >
-            ← Back to Creator
-          </Link>
+            ← Back
+          </BackLink>
         </div>
 
         <header style={{ margin: "20px 0 24px" }}>

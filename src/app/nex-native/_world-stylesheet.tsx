@@ -117,6 +117,28 @@ const WORLD_PRIMARY_INK: Record<string, string> = {
   ireland: "#AFC5B5",
 };
 
+// Owner-authorised 2026-11-04 later-same-day · NEX Ireland drawer trim +
+// palette alignment. Per-world dim ink used for subtitles / supporting
+// copy on the sealed ControlDrawer. Ireland uses a slightly cooler Sage
+// derivative so section titles and subtitles belong to the emerald
+// chrome rather than the universal cool-grey (#7D9BC0) default. Other
+// worlds leave this unset → consumers fall back to the sealed
+// cool-grey, unchanged.
+const WORLD_MUTED_INK: Record<string, string> = {
+  ireland: "#8FA69A",
+};
+
+// Owner-authorised 2026-11-04 later-same-day · NEX Ireland drawer trim.
+// Per-world ControlDrawer running-edge-light display switch. Mirrors
+// the sealed LiveSideDrawer gating (same component shape · narrower
+// 3px gold streak travelling top→bottom down the drawer's interior
+// edge). Ireland sets this to `block` · all other worlds leave it
+// unset so the overlay inherits its inline `display: none` fallback
+// and renders nothing.
+const WORLD_CONTROL_DRAWER_EDGE_LIGHT_DISPLAY: Record<string, string> = {
+  ireland: "block",
+};
+
 // Owner-sealed 2026-11-01 (narrow premium palette update) · per-world
 // Live side-drawer tagline display switch. The "Premium Irish experience"
 // tagline is rendered unconditionally in the drawer markup, but its
@@ -196,6 +218,9 @@ export async function WorldStylesheet(): Promise<React.JSX.Element> {
   const pageBase = world.palette.backgroundBase;
   const drawerBg = WORLD_DRAWER_BG[world.meta.id];
   const primaryInk = WORLD_PRIMARY_INK[world.meta.id];
+  const mutedInk = WORLD_MUTED_INK[world.meta.id];
+  const controlDrawerEdgeLightDisplay =
+    WORLD_CONTROL_DRAWER_EDGE_LIGHT_DISPLAY[world.meta.id];
   const taglineDisplay = WORLD_LIVE_DRAWER_TAGLINE_DISPLAY[world.meta.id];
   const edgeLightDisplay =
     WORLD_LIVE_DRAWER_EDGE_LIGHT_DISPLAY[world.meta.id];
@@ -210,6 +235,12 @@ export async function WorldStylesheet(): Promise<React.JSX.Element> {
     : "";
   const primaryInkDecl = primaryInk
     ? `  --nex-world-primary-ink: ${primaryInk};\n`
+    : "";
+  const mutedInkDecl = mutedInk
+    ? `  --nex-world-muted-ink: ${mutedInk};\n`
+    : "";
+  const controlDrawerEdgeLightDecl = controlDrawerEdgeLightDisplay
+    ? `  --nex-world-control-drawer-edge-light-display: ${controlDrawerEdgeLightDisplay};\n`
     : "";
   const taglineDecl = taglineDisplay
     ? `  --nex-world-live-drawer-tagline-display: ${taglineDisplay};\n`
@@ -252,8 +283,10 @@ export async function WorldStylesheet(): Promise<React.JSX.Element> {
     `  --nex-world-page-base: ${pageBase};\n` +
     drawerDecl +
     primaryInkDecl +
+    mutedInkDecl +
     taglineDecl +
     edgeLightDecl +
+    controlDrawerEdgeLightDecl +
     footerImageDecl +
     keypadDecl +
     `}\n` +

@@ -142,7 +142,7 @@ export function ContactsList({ rows, totalCount, activeFilter, accentHex, viewer
       displayName: c.displayName,
       handle: c.nexId,
       avatarUrl: c.avatarUrl,
-      chatHref: `/nex-native/chat/peer/${c.nexId}`,
+      chatHref: `/chat/${c.nexId}`,
       profileHref: `/nex-native/u/${c.nexId}`,
       professionLine: c.profession ?? null,
       presence: null,

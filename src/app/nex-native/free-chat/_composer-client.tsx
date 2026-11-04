@@ -25,7 +25,16 @@
 //     NEX brand on this free-chat surface
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { JokerKeypad } from "@/app/nex-native/chat-standard/_joker-keypad";
+// Owner directive 2026-11-04 later-same-day · NEX Global Chat UI
+// Standard · free-chat is the reference surface but its bespoke
+// attach panel is retired in favour of the shared UniversalAttachPanel
+// so every NEX chat composer (free-chat · peer-chat · community-chat)
+// renders the same 6-tile set. Sealed free-chat wirings (openFilePicker
+// · startVoiceRecording · requestLocation · ContactPickerSheet) are
+// passed through as handlers.
+import { UniversalAttachPanel } from "@/components/nex-native/chat-chrome/universal-attach-panel";
 import { resolveFreeChatAccentHex } from "./_types";
 import { ContactPickerSheet } from "./_contact-picker-sheet";
 import type { MockContact } from "./_contact-picker-data";
@@ -103,16 +112,23 @@ type LiveAttachment =
     };
 
 // Owner directive 2026-10-22 (afternoon · follow-up pass 6) · each
-// button now carries a dedicated gold-on-navy PNG icon, split from
-// the owner-supplied "Futuristic Gold App Icon Collection" strip
-// and served from public/nex-free-chat/attach-icons/{key}.png. The
-// `key` is stable so test selectors don't drift when icons evolve.
+// button carries a dedicated gold-on-navy PNG icon (unused in current
+// render · AttachBallIcon switches on `key` for an inline SVG line
+// icon instead · see AttachBallIcon below). The `key` is stable so
+// test selectors don't drift when icons evolve.
+//
+// Owner directive 2026-11-04 later-same-day · the first tile is now
+// "Call Centre" (replacing the previous "Camera" tile). Tapping it
+// navigates to /nex-native/call-centre · the 3-tile decision page
+// where Voice / Video / Camera live. Camera-attachment capture via
+// getUserMedia is still reachable inside the Call Centre → Camera
+// tile, so no functionality is lost · it's one step deeper.
 const ATTACH_ITEMS: ReadonlyArray<{
   readonly key: string;
   readonly label: string;
   readonly iconUrl: string;
 }> = [
-  { key: "camera", label: "Camera", iconUrl: "/nex-free-chat/attach-icons/camera.png" },
+  { key: "call-centre", label: "Call Centre", iconUrl: "/nex-free-chat/attach-icons/camera.png" },
   { key: "gallery", label: "Gallery", iconUrl: "/nex-free-chat/attach-icons/gallery.png" },
   // ⇡ Contact lives in the top-right corner per owner directive.
   { key: "contact", label: "Contact", iconUrl: "/nex-free-chat/attach-icons/contact.png" },
@@ -140,6 +156,16 @@ function AttachBallIcon({ k }: { readonly k: string }): React.JSX.Element {
     style: { display: "block", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.6))" },
   };
   switch (k) {
+    // Owner directive 2026-11-04 later-same-day · Call Centre icon ·
+    // phone handset glyph + radiating signal arc so it reads as "voice
+    // + video + camera entry" at a glance. Replaces the previous
+    // Camera icon on the attach panel's first tile.
+    case "call-centre":
+      return (
+        <svg {...common}>
+          <path d="M4.5 3.5a2 2 0 0 1 2-2h2.4a1 1 0 0 1 .97.76l1.18 4.72a1 1 0 0 1-.5 1.13l-1.9 1.03a13 13 0 0 0 5.72 5.72l1.03-1.9a1 1 0 0 1 1.13-.5l4.72 1.18a1 1 0 0 1 .76.97V18a2 2 0 0 1-2 2A17.5 17.5 0 0 1 4.5 3.5z" />
+        </svg>
+      );
     case "camera":
       return (
         <svg {...common}>
@@ -205,6 +231,9 @@ export function FreeChatComposerClient({
    *  sibling canvas client when the user picks a new tile. */
   readonly initialThemeId?: string | null;
 }): React.JSX.Element {
+  // Owner directive 2026-11-04 later-same-day · router handle for the
+  // Call Centre attach tile · navigates to /nex-native/call-centre.
+  const router = useRouter();
   const [value, setValue] = React.useState("");
   const [toast, setToast] = React.useState<string | null>(null);
   const [keypadOpen, setKeypadOpen] = React.useState(false);
@@ -652,6 +681,14 @@ export function FreeChatComposerClient({
     (itemKey: string) => {
       setAttachOpen(false);
       switch (itemKey) {
+        // Owner directive 2026-11-04 later-same-day · the first tile
+        // now navigates to the Ireland Call Centre decision page
+        // (Voice · Video · Camera). getUserMedia camera capture still
+        // exists on the "camera" case below in case any surface pins
+        // the old key, but the attach panel surfaces Call Centre.
+        case "call-centre":
+          router.push("/nex-native/call-centre");
+          return;
         case "camera":
           void openLiveCamera();
           return;
@@ -674,7 +711,7 @@ export function FreeChatComposerClient({
           flashToast("Unknown attachment");
       }
     },
-    [openFilePicker, requestLocation, startVoiceRecording, flashToast],
+    [router, openFilePicker, openLiveCamera, requestLocation, startVoiceRecording, flashToast],
   );
 
   // Owner directive 2026-10-22 (afternoon · follow-up) · when the
@@ -1113,14 +1150,18 @@ export function FreeChatComposerClient({
       </div>
     )}
 
+    {/* Owner directive 2026-11-04 later-same-day · REVERTED to
+        bespoke pill per owner "i did not say to change 99901 revert
+        chat footer or header". The sealed ChatComposerPill migration
+        was reverted; Chat 9001 keeps its original bespoke pill with
+        3D emoji PNG + readonly input + orange send button. Peer
+        chats continue to render ChatComposerPill (sealed primitive)
+        via their own PeerComposer wrapper. The UniversalAttachPanel
+        mount below is retained · it's the shared + attach panel the
+        bespoke + button opens. */}
     <div
       data-nex-free-chat-composer
       style={{
-        /* Owner directive 2026-10-21 (iteration 32 follow-up) · footer
-           container (background panel + top border + backdrop blur)
-           removed · composer now sits directly on the chat background.
-           Only the inner input pill + send button keep their own
-           chrome. */
         padding: "10px 12px",
         display: "flex",
         alignItems: "center",
@@ -1129,12 +1170,6 @@ export function FreeChatComposerClient({
         position: "relative",
       }}
     >
-      {/* Owner directive 2026-10-22 (afternoon · follow-up) · "+"
-          attach button sits OUTSIDE the pill on the LEFT. Tap opens
-          a centred 2×3 attachment panel floating above the composer
-          with 6 options (camera, gallery, document, audio, location,
-          share product). All are stubs for now · each closes the
-          panel + shows a toast "Coming soon". */}
       <button
         type="button"
         onClick={() => setAttachOpen((v) => !v)}
@@ -1165,15 +1200,6 @@ export function FreeChatComposerClient({
         +
       </button>
 
-      {/* Owner directive 2026-10-22 (afternoon · follow-up) · the
-          emoji glyph is now a glossy 3D PNG (public/nex-free-chat/
-          composer-emoji.png) and lives INSIDE the input pill on the
-          LEFT · absolutely positioned so the pill reads as one
-          tappable surface with the emoji and send glyphs bracketing
-          the message text. The input gains both left + right padding
-          so typed text + placeholder sit cleanly between the two
-          icons. Native keyboard still suppressed (readOnly +
-          inputMode none) · tap opens the sealed JokerKeypad. */}
       <div
         data-nex-free-chat-composer-pill
         style={{
@@ -1213,10 +1239,6 @@ export function FreeChatComposerClient({
           data-nex-free-chat-composer-input
           style={{
             width: "100%",
-            // Left padding reserved for the embedded 3D emoji icon
-            // (32px wide + 6px left offset + 6px breathing room).
-            // Right padding reserved for the embedded send button
-            // (36px wide + 4px right offset + 4px breathing room).
             padding: "10px 50px 10px 48px",
             background: "rgba(2,9,20,0.6)",
             color: NEX.text,
@@ -1229,13 +1251,6 @@ export function FreeChatComposerClient({
             boxSizing: "border-box",
           }}
         />
-        {/* Owner directive 2026-10-22 (afternoon) · send button is a
-            SOLID orange circle at full opacity ALWAYS (even on empty
-            input · the user asked for persistent solid colour so the
-            button never reads as disabled). When the input has
-            content it picks up a subtle cyan-tinged glow via the
-            boxShadow so the user sees "this is ready to fire" without
-            the button changing its base colour. */}
         <button
           type="button"
           onClick={handleSend}
@@ -1251,10 +1266,6 @@ export function FreeChatComposerClient({
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            // Owner directive 2026-10-22 (afternoon · follow-up) ·
-            // disc shrunk from 36 → 30 so it reads as a compact
-            // send chip rather than a bold CTA. Icon viewBox stays
-            // at 24 so the paper-plane visually scales proportionally.
             width: 30,
             height: 30,
             borderRadius: "50%",
@@ -1263,9 +1274,6 @@ export function FreeChatComposerClient({
             border: "none",
             cursor: canSend ? "pointer" : "default",
             opacity: 1,
-            // Base shadow: subtle lift so the circle reads as elevated
-            // even when inactive. Active state adds a theme-accent
-            // outer glow to signal "ready to send" without recolouring.
             boxShadow: canSend
               ? `0 0 0 2px ${accentHex}55, 0 6px 18px -6px ${accentHex}, 0 2px 6px -2px ${NEX.orange}`
               : `0 2px 6px -2px ${NEX.orange}`,
@@ -1276,13 +1284,6 @@ export function FreeChatComposerClient({
           <SendArrowIcon />
         </button>
       </div>
-      {/* Owner directive 2026-10-22 (afternoon · follow-up) · the
-          3-dots ControlDrawer trigger has been RETIRED from this
-          composer row. The drawer still exists in the ControlDrawer
-          primitive and mounts on every other NEX surface (/home,
-          /contacts, /chat/peer, etc.) · it just doesn't surface on
-          /free-chat. The composer now reads as a two-glyph pill
-          (emoji left, send right) with nothing to the right of it. */}
 
       {/* ─── Attachment panel · 2×3 grid of 6 buttons · owner directive
             2026-10-22 (afternoon · follow-up). Floats above the composer,
@@ -1290,111 +1291,22 @@ export function FreeChatComposerClient({
             button closes the panel and shows the "Coming soon" toast.
             All six are visual stubs for now · wire each up when the
             backing feature is ready. */}
-      {attachOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Attach to message"
-          data-nex-free-chat-composer-attach-panel
-          style={{
-            position: "absolute",
-            bottom: "calc(100% + 10px)",
-            left: "50%",
-            transform: "translateX(-50%)",
-            // Owner directive 2026-10-23 · symmetric vertical padding
-            // so the two-row grid of chrome balls + labels centers
-            // vertically in the panel (previous asymmetric 2px/12px
-            // pushed the content up and off-centre).
-            width: "min(300px, calc(100% - 32px))",
-            padding: "10px 4px",
-            // Welcome-bubble chrome: accent @ 12% bg, @ 42% rim.
-            background: `${accentHex}1F`,
-            border: `1px solid ${accentHex}6B`,
-            borderRadius: 14,
-            backdropFilter: "blur(10px) saturate(140%)",
-            WebkitBackdropFilter: "blur(10px) saturate(140%)",
-            boxShadow: "0 6px 14px -8px rgba(0,0,0,0.6)",
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            // Owner directive 2026-10-22 (evening · pass 9) · gap 4 →
-            // 0 so the top row's labels sit flush against the bottom
-            // row's icon tops. Column gap also 0 since the buttons are
-            // transparent · no visible seam.
-            gap: 0,
-            // Owner directive 2026-10-23 · center each button inside
-            // its grid cell · horizontally via justifyItems, vertically
-            // via alignItems. Without alignItems the cells only size
-            // to their content and the button sits at the top of
-            // the cell row-box.
-            justifyItems: "center",
-            alignItems: "center",
-            zIndex: 20,
-          }}
-        >
-          {/* Owner directive 2026-10-23 (revised) · chrome ball =
-              SAME SIZE as the former PNG icon (60×60), ICON inside
-              the ball, LONG-FORM text label UNDER the ball. Same
-              variant-10 chrome treatment (radial gradient, 2px rim,
-              inset highlight, outer glow). The 6 attach icons stay
-              identifiable at a glance while gaining the glowing
-              chrome vocabulary the owner picked for the picker. */}
-          {/* Owner directive 2026-10-23 (revised) · "icon not image
-              icon · reduce size back to size like image circle". SVG
-              line icons (not emoji) sit inside a 48×48 chrome ball ·
-              matches the visible-circle size of the original PNG
-              image. Label stays under the ball. */}
-          {ATTACH_ITEMS.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              onClick={() => handleAttachClick(item.key)}
-              aria-label={item.label}
-              title={item.label}
-              data-nex-free-chat-composer-attach-item={item.key}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 4,
-                padding: "4px 2px",
-                background: "transparent",
-                border: "none",
-                color: NEX.text,
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: 0.2,
-                cursor: "pointer",
-                fontFamily: "inherit",
-                textAlign: "center",
-              }}
-            >
-              <span
-                aria-hidden
-                style={{
-                  // Owner directive 2026-10-23 · ball shrunk a touch
-                  // more · 48 → 42 (−12.5%). Icon follows in
-                  // AttachBallIcon · 22 → 18 (−18%) for proportional
-                  // breathing room inside the smaller ball.
-                  width: 42,
-                  height: 42,
-                  borderRadius: "50%",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  lineHeight: 1,
-                  background: `radial-gradient(circle at 30% 30%, ${accentHex}, #000a1a)`,
-                  border: `2px solid ${accentHex}`,
-                  boxShadow: `0 2px 10px ${accentHex}66, inset 0 1px 2px #FFFFFF55`,
-                }}
-              >
-                <AttachBallIcon k={item.key} />
-              </span>
-              <span style={{ lineHeight: 1.1 }}>{item.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Owner directive 2026-11-04 later-same-day · NEX Global Chat
+          UI Standard · free-chat's attach panel now consumes the
+          shared UniversalAttachPanel so free-chat and every peer /
+          community chat render the IDENTICAL 6-tile set. Sealed
+          free-chat wirings are preserved by passing handlers.
+          Previous bespoke inline panel (ATTACH_ITEMS grid +
+          AttachBallIcon) is retired. */}
+      <UniversalAttachPanel
+        open={attachOpen}
+        onClose={() => setAttachOpen(false)}
+        onPickGallery={() => openFilePicker("gallery")}
+        onPickContact={() => setContactPickerOpen(true)}
+        onPickDocument={() => openFilePicker("document")}
+        onPickVoice={() => void startVoiceRecording()}
+        onPickLocation={() => requestLocation()}
+      />
       {toast && (
         <div
           role="status"

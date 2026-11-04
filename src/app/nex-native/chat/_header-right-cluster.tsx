@@ -189,7 +189,15 @@ export function HeaderRightCluster({
 
   // Bridge 55 · Phase 1 launch · commerce hidden by default.
   // Cart + Shop icons only render when NEX_COMMERCE_ENABLED is on.
-  const showCart = NEX_COMMERCE_ENABLED || forceShowCart;
+  // Owner directive 2026-11-04 later-same-day · hydration fix ·
+  // NEX_COMMERCE_ENABLED is a server-only env var (no NEXT_PUBLIC_
+  // prefix) · server reads it from process.env but the client bundle
+  // has no value for it, so the server renders the Cart link while
+  // the client omits it → hydration mismatch. Gate the decision on
+  // `hydrated` so server + initial client render MATCH (both omit)
+  // and the Cart link surfaces only after a client-side useEffect
+  // flips `hydrated=true`. forceShowCart still works on both.
+  const showCart = forceShowCart || (hydrated && NEX_COMMERCE_ENABLED);
   const showShop = (NEX_COMMERCE_ENABLED || forceShowCart) && !!shop;
   const hasShopProducts = !!shop && shop.products.length > 0;
   const shopAriaLabel = shop

@@ -1,481 +1,607 @@
 // src/app/nex-native/free-chat/call/page.tsx
 //
-// NEX · Free Chat · Call screen (voice call in progress).
-// Owner-authorised 2026-10-21 (iteration 42 · design-matched build).
+// NEX Ireland · Voice-call surface · LIVE WIRING · Phase 1.
+// Owner-authorised 2026-11-04 later-same-day · the surface is now
+// sign-in-gated and loads a real peer from the DB via the sealed
+// peer-conversation-service. The Ireland UI I built earlier is
+// preserved · a thin client component mounts the sealed PeerCall
+// 1:1 WebRTC engine inside it.
 // -----------------------------------------------------------------------------
-// Built to match the owner-supplied design reference at
-// /public/nex-native/free-chat-call-reference.png — "Futuristic NEX
-// Call Interface". Elements:
-//   · Status / header row: NEX wordmark + End-to-End Encrypted
-//     indicator (left) · Ni (Intelligence) shield badge (right).
-//   · Hero: large circular avatar with concentric amber audio-
-//     reactive rings.
-//   · Peer identity: "Maria Santos" + ringing status line.
-//   · 2×3 call controls grid: Mute · Speaker · Keypad on top row ·
-//     Add · Record · End (red) on bottom row.
+// Entry:
+//   /nex-native/free-chat/call?peer=<nex-handle | account-uuid>
 //
-// Scope boundaries:
-//   · Guest-safe · no DB connection · no WebRTC wiring (visual).
-//   · Does NOT reuse sealed Chat Master Layout chrome.
-//   · Does NOT change /nex-native/call/voice-preview (sealed · for
-//     the signed-in call engine).
-//   · Call Center "Voice call" row rewired to this new destination.
+// Flow:
+//   1. resolveNexAppSessionFromContext() + resolveSessionWithDevOverride()
+//      resolve the signed-in viewer (dev-impersonation respected).
+//   2. If guest → redirect to /sign-in?next=<this page>.
+//   3. ?peer= is parsed. Handle form (nex-99912) or UUID form.
+//      · Not provided → render a soft empty state with a CTA back to
+//        /nex-native/calls (contact picker).
+//      · Not found    → 404.
+//      · Not a friend → still render (the engine will enforce its
+//        own participant checks) but we show the peer as-is.
+//   4. getOrCreatePeerConversation(viewer, peer) returns conversationId.
+//   5. We pass {viewer, peer, conversationId} to <LiveCallClient>
+//      which mounts the sealed PeerCall engine inside the Ireland UI.
+//
+// Scope (Phase 1):
+//   · Caller-side wiring only. Callee (incoming-call) UI is a Phase 2
+//     concern — the sealed peer-chat inbox handles incoming today.
+//   · Record stays UI-only — no storage/retention wired (legal gate).
+//   · Speaker is best-effort via setSinkId where the browser supports it.
+//   · Mute · End · Add are wired to real engine methods / server action.
 
 import type * as React from "react";
 import Link from "next/link";
-import { FreeChatCallEndClient } from "./_end-client";
+import { redirect } from "next/navigation";
+import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
+import * as accountService from "@/lib/nex-native/account-service";
+import * as accountProfileService from "@/lib/nex-native/account-profile-service";
+import * as peerConversationService from "@/lib/nex-native/peer-conversation-service";
+import * as friendService from "@/lib/nex-native/friend-service";
+import { LiveCallClient } from "./_live-call-client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const C = {
-  bg: "var(--nex-world-background-base, #020914)",
-  wallpaper:
-    "radial-gradient(1200px 800px at 50% -10%, rgba(0, 175, 255, 0.08), transparent 60%), radial-gradient(900px 700px at 50% 40%, rgba(255, 138, 42, 0.08), transparent 60%), #020914",
+const IRELAND = {
+  bgBase: "var(--nex-world-background-base, #06130C)",
+  drawerBg: "var(--nex-world-drawer-bg, #123D2B)",
+  primary: "var(--nex-world-primary, #1B5138)",
+  secondary: "var(--nex-world-secondary, #C6A15B)",
+  secondarySoft:
+    "color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 35%, transparent)",
+  secondaryFaint:
+    "color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 18%, transparent)",
+  primaryInk: "var(--nex-world-primary-ink, #AFC5B5)",
+  heatRim: "var(--nex-kp-accent, #FF7200)",
+  heatRimSoft: "rgba(255, 114, 0, 0.42)",
+  heatRimFaint: "rgba(255, 114, 0, 0.18)",
   text: "#F2F5F8",
-  textDim: "#B5C3D6",
-  textMute: "#7D9BC0",
-  cyan: "#00AFFF",
-  cyanSoft: "rgba(0, 175, 255, 0.35)",
-  amber: "#FF8A2A",
-  amberSoft: "rgba(255, 138, 42, 0.55)",
-  amberFaint: "rgba(255, 138, 42, 0.18)",
-  danger: "#F23A4F",
-  dangerDeep: "#C21F32",
-  btnBg: "rgba(5, 15, 28, 0.72)",
-  btnBorder: "rgba(0, 175, 255, 0.22)",
-  btnIcon: "#E9EEF3",
+  textDim: "#CFDCD3",
+  textMute: "rgba(175, 197, 181, 0.72)",
+  panel:
+    "color-mix(in srgb, var(--nex-world-drawer-bg, #123D2B) 85%, transparent)",
+  panelBorder: "rgba(198, 161, 91, 0.3)",
 };
 
 const SANS =
   "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
-export default function FreeChatCallPage(): React.ReactElement {
+interface PageProps {
+  readonly searchParams: Promise<{ peer?: string }>;
+}
+
+// Resolve a peer by handle (nex-99912) OR UUID. Handles are the owner-
+// facing identifier · UUIDs are acceptable from internal callers. Both
+// paths go through the same accountService.
+async function resolvePeerArg(arg: string) {
+  const trimmed = arg.trim();
+  if (trimmed.length === 0) return null;
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed);
+  if (isUuid) {
+    return accountService.getAccountById(trimmed);
+  }
+  return accountService.getAccountByNexHandle(trimmed);
+}
+
+export default async function FreeChatCallPage({
+  searchParams,
+}: PageProps): Promise<React.ReactElement> {
+  const sp = await searchParams;
+  const peerArg = sp.peer ?? "";
+
+  // Resolve viewer · dev impersonation wins when set, otherwise the
+  // production session resolver runs. Guests redirect to /sign-in.
+  const devSession = await resolveSessionWithDevOverride();
+  const prodSession = devSession ? null : await resolveNexAppSessionFromContext();
+  const session = devSession ?? prodSession;
+
+  if (!session) {
+    const next = `/nex-native/free-chat/call${peerArg ? `?peer=${encodeURIComponent(peerArg)}` : ""}`;
+    redirect(`/nex-native/sign-in?next=${encodeURIComponent(next)}`);
+  }
+
+  // No peer specified · render the inline friend picker so the user
+  // never lands on a dead screen. Resolves the viewer's accepted
+  // friends via the sealed friend-service, hydrates each with name +
+  // location, and renders a tile grid where each card routes to
+  // /free-chat/call?peer=<handle>.
+  if (peerArg.length === 0) {
+    const friendIds = await friendService.listFriends(session.account.id);
+    const friends = await Promise.all(
+      friendIds.map(async (id) => {
+        const acc = await accountService.getAccountById(id).catch(() => null);
+        if (!acc) return null;
+        const prof = await accountProfileService
+          .getProfileByAccountId(id)
+          .catch(() => null);
+        return {
+          accountId: id,
+          handle: acc.nex_handle ?? null,
+          displayName: acc.display_name ?? "NEX friend",
+          initials: computeInitials(acc.display_name ?? ""),
+          location: prof?.location_label ?? null,
+          profession: prof?.profession ?? null,
+        };
+      }),
+    );
+    const resolved = friends.filter(
+      (f): f is NonNullable<typeof f> => f !== null && f.handle !== null,
+    );
+    return <FriendPickerShell friends={resolved} />;
+  }
+
+  const peer = await resolvePeerArg(peerArg);
+  if (!peer) {
+    return (
+      <EmptyPeerShell
+        note={`Couldn't find ${peerArg}. They may have left NEX.`}
+        ctaHref="/nex-native/free-chat/call"
+        ctaLabel="Pick a different contact"
+      />
+    );
+  }
+
+  // Can't call yourself.
+  if (peer.id === session.account.id) {
+    return (
+      <EmptyPeerShell
+        note="You can't call yourself."
+        ctaHref="/nex-native/free-chat/call"
+        ctaLabel="Pick a different contact"
+      />
+    );
+  }
+
+  // Peer profile for the hero (location, initials, chat_theme).
+  const profile = await accountProfileService.getProfileByAccountId(peer.id);
+
+  // Get/create the 1:1 conversation · this is the same service peer-
+  // chat uses, so the conversationId returned is the one the signalling
+  // channel (nex:signal:{conversationId}) will key on.
+  const conversation =
+    await peerConversationService.getOrCreatePeerConversation(
+      session.account.id,
+      peer.id,
+    );
+
+  const peerDisplayName = peer.display_name ?? "NEX friend";
+  const peerInitials = computeInitials(peerDisplayName);
+
+  // Owner directive 2026-11-04 later-same-day · the Add-to-call modal
+  // uses the viewer's REAL friend graph · resolved here server-side so
+  // the client component doesn't need to round-trip a server action for
+  // the modal content. The current peer is filtered out (they're
+  // already on the call).
+  const friendIds = await friendService.listFriends(session.account.id);
+  const addableFriendsResolved = await Promise.all(
+    friendIds
+      .filter((id) => id !== peer.id)
+      .map(async (id) => {
+        const acc = await accountService.getAccountById(id).catch(() => null);
+        if (!acc) return null;
+        const prof = await accountProfileService
+          .getProfileByAccountId(id)
+          .catch(() => null);
+        return {
+          accountId: id,
+          handle: acc.nex_handle ?? "",
+          name: acc.display_name ?? "NEX friend",
+          initials: computeInitials(acc.display_name ?? ""),
+          profession: prof?.profession ?? null,
+          location: prof?.location_label ?? null,
+        };
+      }),
+  );
+  const addableFriends = addableFriendsResolved
+    .filter((f): f is NonNullable<typeof f> => f !== null && f.handle.length > 0);
+
   return (
     <>
       <style>{`
-        html, body { background: ${C.bg} !important; }
-        @keyframes nex-call-ring-pulse-slow {
-          0%   { transform: scale(1);    opacity: 0.55; }
-          100% { transform: scale(1.22); opacity: 0;    }
+        /* Scroll-lock only · NEVER override html/body background ·
+           the sealed Ireland desktop backdrop must flow through on
+           viewports ≥500px (nex-native.css:156-187). */
+        html, body {
+          margin: 0;
+          padding: 0;
+          height: 100%;
+          overflow: hidden;
+          overscroll-behavior: none;
         }
-        @keyframes nex-call-ring-pulse-fast {
-          0%   { transform: scale(1);    opacity: 0.9;  }
-          100% { transform: scale(1.35); opacity: 0;    }
+        @keyframes nex-ie-call-ring-slow {
+          0%   { transform: scale(1);    opacity: 0.6; }
+          100% { transform: scale(1.28); opacity: 0;   }
         }
-        @keyframes nex-call-ring-breathe {
-          0%, 100% { transform: scale(1);     opacity: 0.95; }
-          50%      { transform: scale(1.015); opacity: 1;    }
+        @keyframes nex-ie-call-rim-breathe {
+          0%, 100% { box-shadow: 0 0 20px ${IRELAND.heatRimSoft}, inset 0 0 10px ${IRELAND.heatRimFaint}; }
+          50%      { box-shadow: 0 0 36px ${IRELAND.heatRim}, inset 0 0 14px ${IRELAND.heatRimSoft}; }
+        }
+        [data-nex-ie-call-rim] {
+          animation: nex-ie-call-rim-breathe 2200ms ease-in-out infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          [data-nex-ie-call-rim],
+          [data-nex-ie-call-ring] {
+            animation: none !important;
+          }
+        }
+      `}</style>
+
+      <LiveCallClient
+        viewer={{
+          accountId: session.account.id,
+          displayName: (session.account as { display_name?: string | null }).display_name ?? "You",
+        }}
+        peer={{
+          accountId: peer.id,
+          displayName: peerDisplayName,
+          initials: peerInitials,
+          location: profile?.location_label ?? null,
+          handle: peer.nex_handle ?? null,
+        }}
+        conversationId={conversation.id}
+        addableFriends={addableFriends}
+      />
+    </>
+  );
+}
+
+// ─── Friend picker (no peer specified) ────────────────────────────
+
+interface PickerFriend {
+  accountId: string;
+  handle: string | null;
+  displayName: string;
+  initials: string;
+  location: string | null;
+  profession: string | null;
+}
+
+function FriendPickerShell({ friends }: { friends: PickerFriend[] }): React.ReactElement {
+  return (
+    <>
+      <style>{`
+        html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
+        [data-nex-ireland-pick-friend]:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 14px 26px -10px ${IRELAND.heatRimSoft};
+          border-color: ${IRELAND.secondary};
+        }
+        @media (prefers-reduced-motion: reduce) {
+          [data-nex-ireland-pick-friend]:hover { transform: none; }
         }
       `}</style>
       <main
-        data-nex-free-chat-call-root
+        data-nex-ireland-call-picker
         style={{
           position: "absolute",
           inset: 0,
-          background: C.wallpaper,
-          color: C.text,
+          background: `
+            radial-gradient(900px 600px at 50% -10%, ${IRELAND.secondaryFaint}, transparent 55%),
+            radial-gradient(800px 600px at 50% 110%, ${IRELAND.heatRimFaint}, transparent 55%),
+            ${IRELAND.drawerBg}
+          `,
+          color: IRELAND.text,
           fontFamily: SANS,
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
+          padding: "calc(env(safe-area-inset-top, 0px) + 14px) 18px calc(env(safe-area-inset-bottom, 0px) + 20px)",
         }}
       >
-        {/* ─── Header · NEX wordmark + encrypted + Ni badge ─── */}
         <header
-          data-nex-free-chat-call-header
           style={{
-            padding:
-              "calc(env(safe-area-inset-top, 0px) + 14px) 16px 10px",
             display: "flex",
-            alignItems: "flex-start",
+            alignItems: "center",
             justifyContent: "space-between",
             gap: 10,
+            marginBottom: 10,
           }}
         >
-          <div>
-            <div
-              style={{
-                fontSize: 22,
-                fontWeight: 900,
-                letterSpacing: "0.12em",
-                color: C.text,
-                lineHeight: 1,
-              }}
-            >
-              NEX
-            </div>
-            <div
-              style={{
-                marginTop: 4,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 5,
-                fontSize: 9,
-                letterSpacing: "0.1em",
-                color: C.cyan,
-                textTransform: "uppercase",
-                fontWeight: 700,
-              }}
-            >
-              <LockIcon size={10} /> End-to-End Encrypted
-            </div>
-          </div>
-          <div
-            data-nex-free-chat-call-ni-badge
+          <Link
+            href="/nex-native/call-centre"
+            aria-label="Back to Call Centre"
             style={{
               display: "inline-flex",
               alignItems: "center",
               gap: 6,
-              padding: "4px 8px 4px 6px",
-              background: "rgba(0, 175, 255, 0.08)",
-              border: `1px solid ${C.cyanSoft}`,
-              borderRadius: 10,
+              padding: "6px 10px",
+              borderRadius: 999,
+              background: "rgba(2, 9, 20, 0.35)",
+              border: `1px solid ${IRELAND.panelBorder}`,
+              color: IRELAND.secondary,
+              fontSize: 12,
+              fontWeight: 700,
+              textDecoration: "none",
+              lineHeight: 1,
             }}
           >
-            <ShieldIcon size={16} />
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", color: C.text }}>
-                NEX Ni
-              </span>
-              <span style={{ fontSize: 8, color: C.textMute, letterSpacing: "0.04em" }}>
-                Intelligence you can trust
-              </span>
-            </div>
+            <span aria-hidden>←</span>
+            <span>Back</span>
+          </Link>
+          <div
+            aria-hidden
+            style={{
+              fontSize: 10,
+              fontWeight: 800,
+              color: IRELAND.secondary,
+              letterSpacing: "0.22em",
+              textTransform: "uppercase",
+              opacity: 0.85,
+            }}
+          >
+            Voice call
           </div>
+          <span aria-hidden style={{ fontSize: 22, lineHeight: 1, color: IRELAND.secondary, opacity: 0.9 }}>
+            ☘
+          </span>
         </header>
 
-        {/* ─── Hero · avatar + amber rings ─── */}
-        <section
-          style={{
-            flex: 1,
-            minHeight: 0,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            padding: "6px 20px 0",
-          }}
-        >
-          <div
-            data-nex-free-chat-call-avatar-rings
+        <div style={{ textAlign: "center", marginTop: 6, marginBottom: 14 }}>
+          <h1
             style={{
-              position: "relative",
-              width: 184,
-              height: 184,
+              margin: 0,
+              fontSize: 22,
+              fontWeight: 800,
+              color: IRELAND.text,
+              letterSpacing: "-0.01em",
             }}
           >
-            {/* Outer slow pulse */}
-            {[0, 900, 1800].map((delay) => (
-              <div
-                key={delay}
-                aria-hidden
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  borderRadius: "50%",
-                  border: `1.5px solid ${C.amberSoft}`,
-                  animation: `nex-call-ring-pulse-slow 2700ms cubic-bezier(0.4, 0, 0.2, 1) infinite`,
-                  animationDelay: `${delay}ms`,
-                }}
-              />
-            ))}
-            {/* Static breathing rim */}
-            <div
-              aria-hidden
-              style={{
-                position: "absolute",
-                inset: 2,
-                borderRadius: "50%",
-                border: `2px solid ${C.amber}`,
-                boxShadow:
-                  "0 0 24px rgba(255,138,42,0.65), inset 0 0 12px rgba(255,138,42,0.4)",
-                animation: "nex-call-ring-breathe 2200ms ease-in-out infinite",
-              }}
-            />
-            {/* Avatar inner (placeholder gradient — real avatar lands here) */}
-            <div
-              aria-label="Maria Santos avatar"
-              data-nex-free-chat-call-avatar
-              style={{
-                position: "absolute",
-                inset: 10,
-                borderRadius: "50%",
-                background:
-                  "linear-gradient(140deg, #4A1F2E 0%, #8B2D3F 45%, #D9405B 100%)",
-                boxShadow: "0 10px 36px rgba(0, 0, 0, 0.55)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#FFE8EA",
-                fontSize: 44,
-                fontWeight: 800,
-                letterSpacing: "-0.02em",
-              }}
-            >
-              MS
-            </div>
-          </div>
+            Call a friend
+          </h1>
+          <p
+            style={{
+              margin: "6px auto 0",
+              maxWidth: 380,
+              fontSize: 13,
+              color: IRELAND.primaryInk,
+              lineHeight: 1.5,
+              opacity: 0.92,
+            }}
+          >
+            Pick anyone from your contacts.
+          </p>
+        </div>
 
-          <div style={{ textAlign: "center", marginTop: 8 }}>
-            <h1
+        {friends.length === 0 ? (
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 14,
+              padding: "0 24px",
+              textAlign: "center",
+            }}
+          >
+            <div aria-hidden style={{ fontSize: 48, color: IRELAND.secondary, opacity: 0.85 }}>
+              ☘
+            </div>
+            <p style={{ margin: 0, fontSize: 14, color: IRELAND.primaryInk, maxWidth: 320, lineHeight: 1.5 }}>
+              You don't have any contacts yet. Add a friend and they'll show up here.
+            </p>
+            <Link
+              href="/nex-native/contacts"
               style={{
-                margin: 0,
-                fontSize: 28,
-                fontWeight: 700,
-                color: C.text,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              Maria Santos
-            </h1>
-            <div
-              style={{
-                marginTop: 8,
+                marginTop: 4,
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 6,
+                padding: "10px 20px",
+                borderRadius: 999,
+                background: `radial-gradient(circle at 32% 28%, ${IRELAND.heatRim} 0%, color-mix(in srgb, ${IRELAND.heatRim} 68%, #1A0808) 100%)`,
+                color: "#FFFFFF",
                 fontSize: 13,
-                color: C.textDim,
+                fontWeight: 800,
+                textDecoration: "none",
+                letterSpacing: "0.02em",
+                boxShadow: `0 10px 24px -10px ${IRELAND.heatRimSoft}`,
               }}
             >
-              <span style={{ color: C.amber }}>
-                <PhoneGlyph size={13} />
-              </span>
-              Ringing…
-            </div>
+              Open contacts
+            </Link>
           </div>
-        </section>
-
-        {/* ─── Controls · 2 × 3 grid ─── */}
-        <section
-          data-nex-free-chat-call-controls
-          style={{
-            padding: "0 24px calc(env(safe-area-inset-bottom, 0px) + 28px)",
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gridTemplateRows: "repeat(2, auto)",
-            gap: "18px 16px",
-            flexShrink: 0,
-          }}
-        >
-          {/* C-06 2026-10-28 · Mute / Speaker / Add / Record have no
-              backend wiring yet · marked unavailable with honest
-              aria-disabled + title tooltip instead of pretending to
-              work. Keypad routes to a real dialler so stays active.
-              End is a working action via FreeChatCallEndClient. */}
-          <CallButton
-            kind="mute"
-            label="Mute"
-            icon={<MicIcon />}
-            unavailableReason="Mute isn't wired up on calls yet."
-          />
-          <CallButton
-            kind="speaker"
-            label="Speaker"
-            icon={<SpeakerIcon />}
-            unavailableReason="Speaker switching isn't wired up on calls yet."
-          />
-          <CallButton kind="keypad" label="Keypad" icon={<KeypadGridIcon />} href="/nex-native/call/dial" />
-          <CallButton
-            kind="add"
-            label="Add"
-            icon={<PersonPlusIcon />}
-            unavailableReason="Adding a second participant isn't wired up on calls yet."
-          />
-          <CallButton
-            kind="record"
-            label="Record"
-            icon={<RecordIcon />}
-            unavailableReason="Call recording isn't wired up on calls yet."
-          />
-          {/* End · wrapped in a small client component so tap routes
-              back to the free chat (ending the call). */}
-          <FreeChatCallEndClient>
-            <CallButton kind="end" label="End" icon={<PhoneDownIcon />} isDanger />
-          </FreeChatCallEndClient>
-        </section>
+        ) : (
+          <ul
+            role="list"
+            aria-label="Pick a contact to call"
+            style={{
+              flex: 1,
+              minHeight: 0,
+              overflowY: "auto",
+              margin: 0,
+              padding: 0,
+              listStyle: "none",
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+            }}
+          >
+            {friends.map((f) => (
+              <li key={f.accountId}>
+                <Link
+                  href={`/nex-native/free-chat/call?peer=${encodeURIComponent(f.handle ?? f.accountId)}`}
+                  aria-label={`Call ${f.displayName}`}
+                  data-nex-ireland-pick-friend={f.handle ?? f.accountId}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "12px 14px",
+                    background: IRELAND.panel,
+                    border: `1.5px solid ${IRELAND.panelBorder}`,
+                    borderRadius: 16,
+                    color: IRELAND.text,
+                    textDecoration: "none",
+                    minHeight: 76,
+                    transition:
+                      "transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease",
+                    WebkitTapHighlightColor: "transparent",
+                    boxShadow:
+                      "0 4px 12px -8px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04)",
+                  }}
+                >
+                  <span
+                    aria-hidden
+                    style={{
+                      width: 48,
+                      height: 48,
+                      flexShrink: 0,
+                      borderRadius: "50%",
+                      display: "grid",
+                      placeItems: "center",
+                      background: `radial-gradient(circle at 32% 28%, ${IRELAND.primary} 0%, #0A2A1C 85%)`,
+                      color: IRELAND.secondary,
+                      fontSize: 16,
+                      fontWeight: 800,
+                      letterSpacing: "-0.01em",
+                      border: `1.5px solid ${IRELAND.secondary}`,
+                    }}
+                  >
+                    {f.initials}
+                  </span>
+                  <span style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
+                    <span
+                      style={{
+                        fontSize: 15,
+                        fontWeight: 800,
+                        color: IRELAND.text,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {f.displayName}
+                    </span>
+                    {(f.profession || f.location) && (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: IRELAND.textMute,
+                          marginTop: 2,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {[f.profession, f.location].filter(Boolean).join(" · ")}
+                      </span>
+                    )}
+                  </span>
+                  <span
+                    aria-hidden
+                    style={{
+                      width: 42,
+                      height: 42,
+                      flexShrink: 0,
+                      borderRadius: "50%",
+                      display: "grid",
+                      placeItems: "center",
+                      background: `radial-gradient(circle at 32% 28%, ${IRELAND.heatRim} 0%, color-mix(in srgb, ${IRELAND.heatRim} 68%, #1A0808) 100%)`,
+                      color: "#FFFFFF",
+                      boxShadow: `0 6px 14px -6px ${IRELAND.heatRimSoft}, inset 0 2px 4px rgba(255, 255, 255, 0.25)`,
+                    }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                      <path d="M20 15.5c-1.25 0-2.45-.2-3.57-.57a1 1 0 0 0-1.02.24l-2.2 2.2a15.15 15.15 0 0 1-6.59-6.59l2.2-2.2a1 1 0 0 0 .24-1.02A11.7 11.7 0 0 1 8.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1z" />
+                    </svg>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </main>
     </>
   );
 }
 
-// ─── Reusable call button ────────────────────────────────────────
+// ─── Empty / error shell (peer not found · self-call) ─────────────
 
-function CallButton({
-  label,
-  icon,
-  isDanger,
-  href,
-  unavailableReason,
+function EmptyPeerShell({
+  note,
+  ctaHref,
+  ctaLabel = "Pick a contact",
 }: {
-  kind: string;
-  label: string;
-  icon: React.ReactNode;
-  isDanger?: boolean;
-  href?: string;
-  /** C-06 2026-10-28 · when set, the button renders as honestly
-   *  disabled · native `disabled` attribute · aria-disabled="true" ·
-   *  `title` tooltip · dimmed. Keyboard-focus still lands on the
-   *  control so screen readers can read the reason. We do NOT swap
-   *  the icon or hide the control · the user sees the feature exists
-   *  but isn't live yet. */
-  unavailableReason?: string;
+  note: string;
+  ctaHref: string;
+  ctaLabel?: string;
 }): React.ReactElement {
-  const isUnavailable = !href && !!unavailableReason;
-  const base: React.CSSProperties = {
-    width: 60,
-    height: 60,
-    borderRadius: "50%",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: isDanger
-      ? `radial-gradient(circle at 32% 28%, ${C.danger} 0%, ${C.dangerDeep} 100%)`
-      : C.btnBg,
-    border: isDanger ? "none" : `1px solid ${C.btnBorder}`,
-    color: isDanger ? "#FFFFFF" : C.btnIcon,
-    cursor: isUnavailable ? "not-allowed" : "pointer",
-    opacity: isUnavailable ? 0.52 : 1,
-    boxShadow: isDanger
-      ? `0 10px 24px -8px ${C.danger}, inset 0 2px 6px rgba(255, 255, 255, 0.3)`
-      : "0 6px 18px -10px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06)",
-    textDecoration: "none",
-    WebkitTapHighlightColor: "transparent",
-  };
-  const Content = (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 6,
-      }}
-    >
-      {href ? (
-        <Link
-          href={href}
-          aria-label={label}
-          data-nex-free-chat-call-btn={label.toLowerCase()}
-          style={base}
-        >
-          {icon}
-        </Link>
-      ) : (
-        <button
-          type="button"
-          aria-label={
-            isUnavailable
-              ? `${label} · ${unavailableReason ?? "not available yet"}`
-              : label
-          }
-          aria-disabled={isUnavailable || undefined}
-          disabled={isUnavailable}
-          title={isUnavailable ? unavailableReason : undefined}
-          data-nex-free-chat-call-btn={label.toLowerCase()}
-          data-nex-call-btn-unavailable={isUnavailable ? "true" : undefined}
-          style={{ ...base, padding: 0 }}
-        >
-          {icon}
-        </button>
-      )}
-      <span
+  return (
+    <>
+      <style>{`
+        html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
+      `}</style>
+      <main
+        data-nex-ireland-call-empty
         style={{
-          fontSize: 11,
-          color: isDanger ? C.text : C.textDim,
-          fontWeight: 600,
-          letterSpacing: "0.02em",
+          position: "absolute",
+          inset: 0,
+          background: `
+            radial-gradient(900px 600px at 50% -10%, ${IRELAND.secondaryFaint}, transparent 55%),
+            ${IRELAND.drawerBg}
+          `,
+          color: IRELAND.text,
+          fontFamily: SANS,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "0 32px",
+          textAlign: "center",
+          gap: 14,
         }}
       >
-        {label}
-      </span>
-    </div>
+        <div
+          aria-hidden
+          style={{
+            fontSize: 64,
+            lineHeight: 1,
+            color: IRELAND.secondary,
+            opacity: 0.85,
+          }}
+        >
+          ☘
+        </div>
+        <p style={{ margin: 0, fontSize: 15, color: IRELAND.primaryInk, maxWidth: 360, lineHeight: 1.5 }}>
+          {note}
+        </p>
+        <Link
+          href={ctaHref}
+          style={{
+            marginTop: 8,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "10px 20px",
+            borderRadius: 999,
+            background: `radial-gradient(circle at 32% 28%, ${IRELAND.heatRim} 0%, color-mix(in srgb, ${IRELAND.heatRim} 68%, #1A0808) 100%)`,
+            color: "#FFFFFF",
+            fontSize: 13,
+            fontWeight: 800,
+            textDecoration: "none",
+            letterSpacing: "0.02em",
+            boxShadow: `0 10px 24px -10px ${IRELAND.heatRimSoft}`,
+          }}
+        >
+          {ctaLabel}
+        </Link>
+      </main>
+    </>
   );
-  return Content;
 }
 
-// ─── Icons (inline SVG · no external deps) ───────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────
 
-function LockIcon({ size = 12 }: { size?: number }): React.ReactElement {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <rect x="4" y="11" width="16" height="10" rx="2" />
-      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-    </svg>
-  );
-}
-function ShieldIcon({ size = 16 }: { size?: number }): React.ReactElement {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={C.cyan} strokeWidth={1.8} strokeLinejoin="round" aria-hidden>
-      <path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z" />
-      <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeWidth={2} />
-    </svg>
-  );
-}
-function PhoneGlyph({ size = 14 }: { size?: number }): React.ReactElement {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <path d="M20 15.5c-1.25 0-2.45-.2-3.57-.57a1 1 0 0 0-1.02.24l-2.2 2.2a15.15 15.15 0 0 1-6.59-6.59l2.2-2.2a1 1 0 0 0 .24-1.02A11.7 11.7 0 0 1 8.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1z" />
-    </svg>
-  );
-}
-function MicIcon(): React.ReactElement {
-  return (
-    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <rect x="9" y="3" width="6" height="12" rx="3" />
-      <path d="M5 11a7 7 0 0 0 14 0" />
-      <line x1="12" y1="18" x2="12" y2="22" />
-    </svg>
-  );
-}
-function SpeakerIcon(): React.ReactElement {
-  return (
-    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <polygon points="4,9 8,9 13,5 13,19 8,15 4,15" />
-      <path d="M16 9a5 5 0 0 1 0 6" />
-      <path d="M19 7a9 9 0 0 1 0 10" />
-    </svg>
-  );
-}
-function KeypadGridIcon(): React.ReactElement {
-  return (
-    <svg width={22} height={22} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      {[0, 1, 2].flatMap((row) =>
-        [0, 1, 2].map((col) => (
-          <circle
-            key={`${row}-${col}`}
-            cx={6 + col * 6}
-            cy={6 + row * 6}
-            r={1.4}
-          />
-        )),
-      )}
-    </svg>
-  );
-}
-function PersonPlusIcon(): React.ReactElement {
-  return (
-    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <circle cx="9" cy="8" r="3.5" />
-      <path d="M2.5 20c0-3.5 2.9-6.3 6.5-6.3S15.5 16.5 15.5 20" />
-      <line x1="19" y1="7" x2="19" y2="13" />
-      <line x1="16" y1="10" x2="22" y2="10" />
-    </svg>
-  );
-}
-function RecordIcon(): React.ReactElement {
-  return (
-    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth={1.6} />
-      <circle cx="12" cy="12" r="3.5" fill="#F23A4F" />
-    </svg>
-  );
-}
-function PhoneDownIcon(): React.ReactElement {
-  return (
-    <svg width={22} height={22} viewBox="0 0 24 24" fill="currentColor" aria-hidden transform="rotate(135)">
-      <path d="M20 15.5c-1.25 0-2.45-.2-3.57-.57a1 1 0 0 0-1.02.24l-2.2 2.2a15.15 15.15 0 0 1-6.59-6.59l2.2-2.2a1 1 0 0 0 .24-1.02A11.7 11.7 0 0 1 8.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.5c0-.55-.45-1-1-1z" />
-    </svg>
-  );
+function computeInitials(displayName: string | null | undefined): string {
+  if (!displayName) return "·";
+  const parts = displayName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "·";
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
+  return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
 }

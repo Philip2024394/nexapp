@@ -9,8 +9,8 @@
 // a live ○/✓ status list. When a milestone resolves, flipping the booleans
 // here updates every /coming-soon landing simultaneously.
 
-import Link from "next/link";
 import { NexPageHeader } from "../_page-header";
+import { BackLink } from "../_back-link";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -188,17 +188,16 @@ export default async function ComingSoonPage({ searchParams }: PageProps) {
         </section>
 
         <div style={{ margin: "32px 0 0", textAlign: "center" }}>
-          <Link
-            href="/nex-native/creator"
+          <BackLink
+            fallbackHref="/nex-native/creator"
             style={{
               color: IRELAND.secondary,
-              textDecoration: "none",
               fontWeight: 700,
               fontSize: 13,
             }}
           >
-            ← Back to Creator
-          </Link>
+            ← Back
+          </BackLink>
         </div>
       </div>
     </main>
