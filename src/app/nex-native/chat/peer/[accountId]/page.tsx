@@ -89,6 +89,10 @@ import { WelcomePillClient } from "./_welcome-pill-client";
 // Owner-authored 2026-11-05 · world-class chat parity · jump the viewer
 // to the first unread message when they open a chat with unread history.
 import { JumpToUnreadClient } from "./_jump-to-unread-client";
+// Owner-authored 2026-11-05 later-same-day iter 7 · world-class chat
+// parity · long-press / right-click bubble action menu (Reply + Copy)
+// as an external overlay · zero Shell modification.
+import { BubbleActionMenuClient } from "./_bubble-action-menu-client";
 import type {
   SideNavContact,
   PendingInvite,
@@ -1081,6 +1085,11 @@ export default async function PeerChatPage({
           into view + brief gold-ring flash so they land where they
           left off. No-op when firstUnreadMessageId is null. */}
       <JumpToUnreadClient firstUnreadMessageId={firstUnreadMessageId} />
+
+      {/* 2026-11-05 iter 7 · long-press / right-click a bubble opens
+          a small Reply + Copy menu above it · pure overlay, no Shell
+          edit · uses the sealed data-nex-msg-id anchor. */}
+      <BubbleActionMenuClient />
 
       {needsSafeTradeConsent && (
         <SafeTradeConsentModal
