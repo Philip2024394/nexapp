@@ -874,10 +874,20 @@ export default async function PeerChatPage({
           PortraitBloomShell native identity header + home/cart/shop
           right cluster so only the layered FreeChatHeader renders.
           Shell internals stay mounted (preserving hook order + theme
-          wallpaper + bubble renderer) · they are visually hidden only. */}
+          wallpaper + bubble renderer) · they are visually hidden only.
+          The :has() selector also collapses the padding-containing
+          parent wrapper so bubbles start from the top of the viewport
+          rather than leaving a ~80 px blank strip where Shell's
+          native header used to pad its space. Owner fix 2026-11-05 · full
+          height viewport. */}
       <style>{`
         [data-nex-peer-chat-prototype-wrap] [data-nex-chat-identity-header],
-        [data-nex-peer-chat-prototype-wrap] [data-nex-header-cluster] {
+        [data-nex-peer-chat-prototype-wrap] [data-nex-header-cluster],
+        [data-nex-peer-chat-prototype-wrap] div:has(> [data-nex-chat-identity-header]),
+        [data-nex-peer-chat-prototype-wrap] [data-nex-universal-chat-controls],
+        [data-nex-peer-chat-prototype-wrap] [data-nex-free-chat-call-center-trigger],
+        [data-nex-peer-chat-prototype-wrap] [data-nex-free-chat-call-center-panel],
+        [data-nex-peer-chat-prototype-wrap] [data-nex-free-chat-call-center-backdrop] {
           display: none !important;
         }
       `}</style>
