@@ -60,6 +60,13 @@ export interface FreeChatHeaderProps {
    *  clashes with the ping-badge avatar. Pass an inline-friendly
    *  element (e.g. `<NotificationsDrawer inline />`). */
   readonly notificationsSlot?: React.ReactNode;
+  /** Owner directive 2026-11-05 later-same-day · when set to a peer
+   *  account id, the avatar renders the sealed presence rim (green
+   *  pulse = online · orange pulse = busy · dark red static = offline)
+   *  by subscribing to the `nex-peer-presence` window event already
+   *  dispatched by PeerPresenceClient. Non-peer surfaces (free-chat
+   *  home) omit this prop and keep the plain avatar. */
+  readonly peerAccountId?: string;
 }
 
 const DEFAULT_PING_ACCENT = "var(--nex-world-secondary, #00AFFF)";
@@ -75,7 +82,46 @@ export function FreeChatHeader({
   textColor = DEFAULT_TEXT,
   subtitleColor = DEFAULT_SUBTITLE,
   notificationsSlot,
+  peerAccountId,
 }: FreeChatHeaderProps): React.JSX.Element {
+  // Owner directive 2026-11-05 later-same-day · sealed presence rim on
+  // the peer avatar · subscribes to the `nex-peer-presence` window
+  // event dispatched by PeerPresenceClient. States follow the sealed
+  // avatar-rim doctrine (feedback_nex_avatar_presence_rim_not_dot.md):
+  //   online  → #16D66B green rim + 1200ms heartbeat pulse
+  //   busy    → #FF7200 orange rim + 1200ms heartbeat pulse
+  //   offline → #A60000 dark-red static rim
+  //   unknown → honest neutral white rim
+  const [peerKind, setPeerKind] = React.useState<
+    "online" | "busy" | "offline" | "unknown"
+  >("unknown");
+  React.useEffect(() => {
+    if (!peerAccountId) return;
+    const handler = (e: Event) => {
+      const custom = e as CustomEvent<{
+        roster?: Array<{
+          accountId: string;
+          kind: "online" | "busy" | "offline";
+        }>;
+      }>;
+      const roster = custom.detail?.roster;
+      if (!Array.isArray(roster)) return;
+      const peer = roster.find((r) => r.accountId === peerAccountId);
+      setPeerKind(peer ? peer.kind : "offline");
+    };
+    window.addEventListener("nex-peer-presence", handler as EventListener);
+    return () =>
+      window.removeEventListener("nex-peer-presence", handler as EventListener);
+  }, [peerAccountId]);
+  const rimColor =
+    peerKind === "online"
+      ? "#16D66B"
+      : peerKind === "busy"
+        ? "#FF7200"
+        : peerKind === "offline"
+          ? "#A60000"
+          : "rgba(255,255,255,0.55)";
+  const hasRimPulse = peerKind === "online" || peerKind === "busy";
   return (
     <header
       data-nex-free-chat-header
@@ -90,6 +136,7 @@ export function FreeChatHeader({
     >
       <div
         data-nex-free-chat-header-avatar-slot
+        data-nex-free-chat-header-peer-kind={peerAccountId ? peerKind : undefined}
         style={{ position: "relative", width: 48, height: 48, flexShrink: 0 }}
       >
         <NexPingBadge
@@ -114,6 +161,53 @@ export function FreeChatHeader({
               pointerEvents: "none",
             }}
           />
+        ) : null}
+        {peerAccountId ? (
+          <>
+            {/* Sealed presence rim · owner directive 2026-11-05 ·
+                sits just outside the avatar circle. Static for offline,
+                heartbeat pulse for online/busy. */}
+            <div
+              aria-hidden
+              data-nex-free-chat-header-peer-rim
+              style={{
+                position: "absolute",
+                top: 1,
+                left: 1,
+                width: 46,
+                height: 46,
+                borderRadius: "50%",
+                border: `2px solid ${rimColor}`,
+                pointerEvents: "none",
+              }}
+            />
+            {hasRimPulse ? (
+              <>
+                <div
+                  aria-hidden
+                  data-nex-free-chat-header-peer-rim-pulse
+                  style={{
+                    position: "absolute",
+                    top: -2,
+                    left: -2,
+                    width: 52,
+                    height: 52,
+                    borderRadius: "50%",
+                    border: `2px solid ${rimColor}`,
+                    animation:
+                      "nex-free-chat-header-peer-rim-pulse 1200ms cubic-bezier(0.4,0,0.2,1) infinite",
+                    pointerEvents: "none",
+                  }}
+                />
+                <style>{`
+                  @keyframes nex-free-chat-header-peer-rim-pulse {
+                    0% { transform: scale(1); opacity: 0.9; }
+                    100% { transform: scale(1.35); opacity: 0; }
+                  }
+                `}</style>
+              </>
+            ) : null}
+          </>
         ) : null}
       </div>
       <div
@@ -176,19 +270,22 @@ export function FreeChatHeader({
           <ControlDrawer
             session={drawerSession}
             triggerIcon="plus"
-            /* Owner directive 2026-11-05 · the "+" trigger reads as a
-               round button matching the page-header styling · gold
-               circle · dark emerald glyph. Consistent across every
-               chat surface that mounts FreeChatHeader (prototype +
-               Chat Header 99901). */
+            /* Owner directive 2026-11-05 later-same-day · header
+               buttons match the sealed lower 3-dot FAB · deep
+               translucent black + 14px backdrop blur + saturate +
+               hairline white border + gold inner ring. Same vocabulary
+               across every floating chat chrome button. */
             triggerStyle={{
               width: 36,
               height: 36,
               borderRadius: "50%",
-              background: "var(--nex-world-secondary, #C6A15B)",
-              color: "var(--nex-world-drawer-bg, #123D2B)",
-              boxShadow: "0 2px 8px rgba(10, 31, 21, 0.35)",
-              border: "none",
+              background: "rgba(0, 0, 0, 0.55)",
+              backdropFilter: "blur(14px) saturate(140%)",
+              WebkitBackdropFilter: "blur(14px) saturate(140%)",
+              border: "1px solid rgba(255, 255, 255, 0.14)",
+              color: "#FFFFFF",
+              boxShadow:
+                "0 6px 18px rgba(0,0,0,0.55), inset 0 0 0 1px color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 24%, transparent)",
             }}
           />
         </div>

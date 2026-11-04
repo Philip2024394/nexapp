@@ -534,17 +534,19 @@ export function NotificationsDrawer({
           width: 36,
           height: 36,
           borderRadius: "50%",
-          // Owner directive 2026-11-05 · when mounted inline in the chat
-          // header the bell adopts the same gold-pill / emerald-glyph
-          // styling as the `+` trigger · reads as a matched pair.
-          // Floating (non-inline) surfaces keep the sealed transparent
-          // cyan look.
-          background: inline
-            ? "var(--nex-world-secondary, #C6A15B)"
-            : "transparent",
-          border: "none",
-          color: inline ? "var(--nex-world-drawer-bg, #123D2B)" : CYAN,
-          boxShadow: inline ? "0 2px 8px rgba(10, 31, 21, 0.35)" : undefined,
+          // Owner directive 2026-11-05 later-same-day · when mounted
+          // inline in the chat header the bell adopts the sealed
+          // black-glass vocabulary (same as lower 3-dot FAB and new
+          // `+` trigger) · reads as a matched pair. Floating
+          // (non-inline) surfaces keep the sealed transparent cyan look.
+          background: inline ? "rgba(0, 0, 0, 0.55)" : "transparent",
+          backdropFilter: inline ? "blur(14px) saturate(140%)" : undefined,
+          WebkitBackdropFilter: inline ? "blur(14px) saturate(140%)" : undefined,
+          border: inline ? "1px solid rgba(255, 255, 255, 0.14)" : "none",
+          color: inline ? "#FFFFFF" : CYAN,
+          boxShadow: inline
+            ? "0 6px 18px rgba(0,0,0,0.55), inset 0 0 0 1px color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 24%, transparent)"
+            : undefined,
           cursor: "pointer",
           padding: 0,
           display: "inline-flex",
@@ -554,7 +556,7 @@ export function NotificationsDrawer({
           WebkitTapHighlightColor: "transparent",
         }}
       >
-        <BellGlyph accent={inline ? "var(--nex-world-drawer-bg, #123D2B)" : CYAN} />
+        <BellGlyph accent={inline ? "#FFFFFF" : CYAN} />
         {unreadCount > 0 ? (
           <span
             data-nex-notifications-trigger-badge

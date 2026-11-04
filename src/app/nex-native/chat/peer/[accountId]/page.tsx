@@ -1051,6 +1051,7 @@ export default async function PeerChatPage({
           subtitle={headerSubtitle}
           avatarUrl={profile?.avatar_url ?? null}
           drawerSession={drawerSession}
+          peerAccountId={peer.id}
           notificationsSlot={
             <NotificationsDrawer
               inline

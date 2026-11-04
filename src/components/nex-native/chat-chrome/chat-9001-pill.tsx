@@ -25,6 +25,12 @@
 // onSend/accentHex/onPlusAction/placeholder/etc.
 
 import * as React from "react";
+// Owner directive 2026-11-05 · sealed doctrine
+// `feedback_nex_keypad_universal_text_rule.md` · EVERY text input in
+// NEX must use the sealed NEX keypad with `forceKeypadActive={true}`.
+// Replaces the previous bare <input> which was falling through to the
+// OS keyboard on mobile.
+import { NexInput } from "@/lib/nex-native/nex-keyboard/nex-input";
 
 export interface Chat9001PillProps {
   readonly value: string;
@@ -38,7 +44,6 @@ export interface Chat9001PillProps {
   readonly onPlusAction?: () => void;
   readonly plusOpen?: boolean;
   readonly textareaDataAttr?: string;
-  readonly inputRef?: React.Ref<HTMLInputElement>;
 }
 
 const TEXT = "#F2F5F8";
@@ -56,7 +61,6 @@ export function Chat9001Pill({
   onPlusAction,
   plusOpen = false,
   textareaDataAttr,
-  inputRef,
 }: Chat9001PillProps): React.JSX.Element {
   const accent = accentHex ?? "#00AFFF";
   const canSend = (armed ?? value.trim().length > 0) && !disabled;
@@ -123,17 +127,14 @@ export function Chat9001Pill({
             +
           </button>
         ) : null}
-        <input
-          ref={inputRef}
-          type="text"
+        <NexInput
           value={value}
-          onChange={(e) => onChange(e.currentTarget.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey && canSend) {
-              e.preventDefault();
-              onSend();
-            }
+          onChange={onChange}
+          onEnter={() => {
+            if (canSend) onSend();
           }}
+          accentColor={accent}
+          forceKeypadActive={true}
           maxLength={maxLength}
           placeholder={placeholder}
           aria-label="Message"
