@@ -134,11 +134,27 @@ export function BubbleActionMenuClient(): React.JSX.Element | null {
     closeMenu();
   }, [menu, closeMenu]);
 
+  const handleForward = React.useCallback(() => {
+    if (!menu) return;
+    // Source peer id is in the URL path: /nex-native/chat/peer/<srcId>
+    const match = window.location.pathname.match(/\/chat\/peer\/([^/?#]+)/);
+    const srcPeerId = match?.[1];
+    if (!srcPeerId) {
+      closeMenu();
+      return;
+    }
+    window.location.assign(
+      `/nex-native/chat/peer/${srcPeerId}/forward/${menu.msgId}`,
+    );
+    closeMenu();
+  }, [menu, closeMenu]);
+
   if (!mounted || !menu) return null;
 
   // Menu position · hug above the bubble by 8px · clamp to viewport.
   const MENU_WIDTH = 180;
-  const MENU_HEIGHT = 88;
+  // Height grew when Forward was added · 3 rows × ~44px + 12px padding.
+  const MENU_HEIGHT = 144;
   const viewportW = window.innerWidth;
   const viewportH = window.innerHeight;
   const gap = 8;
@@ -207,6 +223,15 @@ export function BubbleActionMenuClient(): React.JSX.Element | null {
         >
           <span aria-hidden style={glyphStyle}>⧉</span>
           <span>Copy</span>
+        </button>
+        <button
+          type="button"
+          onClick={handleForward}
+          style={rowStyle}
+          data-nex-bubble-action-menu-forward
+        >
+          <span aria-hidden style={glyphStyle}>↪</span>
+          <span>Forward</span>
         </button>
       </div>
     </>
