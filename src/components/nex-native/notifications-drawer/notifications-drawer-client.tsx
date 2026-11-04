@@ -534,14 +534,12 @@ export function NotificationsDrawer({
           width: 36,
           height: 36,
           borderRadius: "50%",
-          // Owner directive 2026-11-05 later-same-day · when mounted
-          // inline in the chat header the bell adopts the sealed
-          // black-glass vocabulary (same as lower 3-dot FAB and new
-          // `+` trigger) · reads as a matched pair. Floating
-          // (non-inline) surfaces keep the sealed transparent cyan look.
-          background: inline ? "rgba(0, 0, 0, 0.55)" : "transparent",
-          backdropFilter: inline ? "blur(14px) saturate(140%)" : undefined,
-          WebkitBackdropFilter: inline ? "blur(14px) saturate(140%)" : undefined,
+          // Owner directive 2026-11-05 later-same-day iter 2 · when
+          // mounted inline in the chat header the bell is SOLID BLACK
+          // (no translucency, no blur) matching the new `+` trigger
+          // and lower 3-dot FAB. Floating (non-inline) surfaces keep
+          // the sealed transparent cyan look.
+          background: inline ? "#000000" : "transparent",
           border: inline ? "1px solid rgba(255, 255, 255, 0.14)" : "none",
           color: inline ? "#FFFFFF" : CYAN,
           boxShadow: inline

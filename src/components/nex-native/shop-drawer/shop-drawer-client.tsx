@@ -417,14 +417,11 @@ export function ShopDrawer({
           width: 44,
           height: 44,
           borderRadius: "50%",
-          // Owner directive 2026-11-05 · black-glass FAB style.
-          // Deep translucent black + backdrop blur + saturate gives a
-          // frosted-glass read over any chat wallpaper. Subtle white
-          // hairline + gold inner ring preserve the NEX Ireland accent
-          // without flattening to a solid panel.
-          background: "rgba(0, 0, 0, 0.55)",
-          backdropFilter: "blur(14px) saturate(140%)",
-          WebkitBackdropFilter: "blur(14px) saturate(140%)",
+          // Owner directive 2026-11-05 later-same-day iter 2 · SOLID
+          // BLACK FAB (no translucency, no blur) matching the new
+          // header `+` + bell styling. White hairline + gold inner
+          // ring kept for definition over the chat wallpaper.
+          background: "#000000",
           border: "1px solid rgba(255, 255, 255, 0.14)",
           color: CYAN,
           cursor: "pointer",

@@ -270,18 +270,15 @@ export function FreeChatHeader({
           <ControlDrawer
             session={drawerSession}
             triggerIcon="plus"
-            /* Owner directive 2026-11-05 later-same-day · header
-               buttons match the sealed lower 3-dot FAB · deep
-               translucent black + 14px backdrop blur + saturate +
-               hairline white border + gold inner ring. Same vocabulary
-               across every floating chat chrome button. */
+            /* Owner directive 2026-11-05 later-same-day iter 2 ·
+               header buttons go SOLID BLACK (no translucency, no
+               blur). Hairline white border + gold inner ring kept
+               for definition against the chat wallpaper. */
             triggerStyle={{
               width: 36,
               height: 36,
               borderRadius: "50%",
-              background: "rgba(0, 0, 0, 0.55)",
-              backdropFilter: "blur(14px) saturate(140%)",
-              WebkitBackdropFilter: "blur(14px) saturate(140%)",
+              background: "#000000",
               border: "1px solid rgba(255, 255, 255, 0.14)",
               color: "#FFFFFF",
               boxShadow:

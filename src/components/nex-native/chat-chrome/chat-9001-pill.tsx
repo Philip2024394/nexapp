@@ -112,9 +112,12 @@ export function Chat9001Pill({
               width: 32,
               height: 32,
               borderRadius: "50%",
-              background: "rgba(2,9,20,0.6)",
-              border: `1px solid ${accent}6B`,
-              color: accent,
+              // Owner directive 2026-11-05 later-same-day iter 2 ·
+              // SOLID BLACK + white glyph · matches the header
+              // buttons and lower 3-dot FAB.
+              background: "#000000",
+              border: "1px solid rgba(255, 255, 255, 0.14)",
+              color: "#FFFFFF",
               fontSize: 20,
               fontWeight: 300,
               cursor: "pointer",
