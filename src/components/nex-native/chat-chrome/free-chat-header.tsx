@@ -120,7 +120,12 @@ export function FreeChatHeader({
         ? "#FF7200"
         : peerKind === "offline"
           ? "#A60000"
-          : "rgba(255,255,255,0.55)";
+          // Owner directive 2026-11-05 later-same-day iter 3 · "unknown"
+          // = no presence signal received yet · transparent rim so the
+          // avatar reads clean until the roster arrives, rather than
+          // showing a cream semi-transparent ring that competes with
+          // the Ireland palette.
+          : "transparent";
   const hasRimPulse = peerKind === "online" || peerKind === "busy";
   return (
     <header
@@ -139,11 +144,19 @@ export function FreeChatHeader({
         data-nex-free-chat-header-peer-kind={peerAccountId ? peerKind : undefined}
         style={{ position: "relative", width: 48, height: 48, flexShrink: 0 }}
       >
-        <NexPingBadge
-          size={48}
-          accent={pingBadgeAccent}
-          dataTestId="free-chat-nex"
-        />
+        {/* Owner directive 2026-11-05 later-same-day iter 3 · on peer
+            chat surfaces the avatar represents the peer, not NEX, so
+            the NexPingBadge brand mark steps aside and the sealed
+            presence rim (green/orange/dark-red) owns the avatar
+            decoration. Non-peer surfaces (free-chat home where the
+            avatar IS NEX) keep the ping badge. */}
+        {peerAccountId ? null : (
+          <NexPingBadge
+            size={48}
+            accent={pingBadgeAccent}
+            dataTestId="free-chat-nex"
+          />
+        )}
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -172,12 +185,16 @@ export function FreeChatHeader({
               data-nex-free-chat-header-peer-rim
               style={{
                 position: "absolute",
-                top: 1,
-                left: 1,
-                width: 46,
-                height: 46,
+                top: 0,
+                left: 0,
+                width: 48,
+                height: 48,
                 borderRadius: "50%",
-                border: `2px solid ${rimColor}`,
+                // Owner directive 2026-11-05 later-same-day iter 4 ·
+                // rim thickness bumped 2px → 3px so the presence
+                // signal reads more deliberately against the dark
+                // Ireland chat palette.
+                border: `3px solid ${rimColor}`,
                 pointerEvents: "none",
               }}
             />
@@ -188,12 +205,12 @@ export function FreeChatHeader({
                   data-nex-free-chat-header-peer-rim-pulse
                   style={{
                     position: "absolute",
-                    top: -2,
-                    left: -2,
-                    width: 52,
-                    height: 52,
+                    top: -3,
+                    left: -3,
+                    width: 54,
+                    height: 54,
                     borderRadius: "50%",
-                    border: `2px solid ${rimColor}`,
+                    border: `3px solid ${rimColor}`,
                     animation:
                       "nex-free-chat-header-peer-rim-pulse 1200ms cubic-bezier(0.4,0,0.2,1) infinite",
                     pointerEvents: "none",
