@@ -33,6 +33,8 @@ import { resolveServerLocale } from "@/lib/nex/i18n/server";
 import { IncomingCallHub } from "./_incoming-call-hub";
 import { PushSubscribeHub } from "./_push-subscribe-hub";
 import { AppBadgeSyncClient } from "./_app-badge-sync-client";
+// Owner-authored 2026-11-05 · global action-toast surface.
+import { ActionToastHost } from "@/components/nex-native/ui/action-toast";
 import { DevImpersonationBanner } from "./_dev-impersonation-banner";
 // Owner-authorised 2026-10-31 · NEX World Engine · Stage 5A.
 // Server-resolves the active world + emits CSS vars scoped to
@@ -189,6 +191,12 @@ export default async function NexNativeLayout({
         data-nex-world={activeWorld.meta.id}
       >
         <div className="nex-native-frame">
+          {/* Owner-authored 2026-11-05 · global action-toast host.
+              Catches `nex-action-toast` window events dispatched by
+              `showActionToast()` from anywhere in the app · renders a
+              fixed-top black-glass pill for 2 s. One mount per surface
+              is sufficient · zero caller wiring. */}
+          <ActionToastHost />
           {children}
           {/* Owner directive 2026-10-16 · the IncomingCallHub +
               PushSubscribeHub are mounted INSIDE the frame (not as

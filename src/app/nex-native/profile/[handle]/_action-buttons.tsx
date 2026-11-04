@@ -198,6 +198,25 @@ function ConnectButton({
   return (
     <form
       action={sendFriendInviteAction}
+      onSubmit={() => {
+        // Owner-authored 2026-11-05 · optimistic action-toast fired on
+        // submit · the user gets instant "Invite sent" feedback
+        // instead of waiting for the server redirect. The toast API
+        // is dynamically imported so a non-signed-in caller that
+        // never triggers submit doesn't drag the module in.
+        void (async () => {
+          const mod = await import(
+            "@/components/nex-native/ui/action-toast"
+          );
+          mod.showActionToast({
+            message:
+              state === "pending-incoming"
+                ? "Invite accepted"
+                : "Invite sent",
+            kind: "success",
+          });
+        })();
+      }}
       style={{ flex: 1, minWidth: 0, display: "flex" }}
       data-nex-profile-connect-form
     >

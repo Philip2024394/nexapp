@@ -85,11 +85,7 @@ import { FocusedShopSheet } from "./_focused-shop-sheet";
 // Owner-authored 2026-11-05 · fresh-conversation welcome pill (Option B)
 // with time + delivery ticks + peer presence dot.
 import { WelcomePillClient } from "./_welcome-pill-client";
-// Shared action-toast host · owner-authored 2026-11-05 · catches
-// `nex-action-toast` window events dispatched by any component
-// (invite sent · copied · removed · etc.) and renders a fixed-top
-// pill for 2 s. Zero wiring at call sites · showActionToast() helper.
-import { ActionToastHost } from "@/components/nex-native/ui/action-toast";
+// Toast host moved to /nex-native/layout.tsx (global) · owner-authored 2026-11-05.
 import type {
   SideNavContact,
   PendingInvite,
@@ -1258,10 +1254,6 @@ export default async function PeerChatPage({
         shareAction={bind}
       />
       <ScrollToBottomButton />
-
-      {/* Shared toast surface · listens for nex-action-toast window
-          events dispatched by any component in the chat. 2 s default. */}
-      <ActionToastHost />
     </div>
   );
 }
