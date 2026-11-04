@@ -1,24 +1,25 @@
 // src/app/page.tsx
 //
-// NEX root entry · session-aware · owner-approved 2026-10-22 (final).
+// NEX root entry · session-aware · owner-approved 2026-11-04.
 // --------------------------------------------------------------------
-//   · signed-in  → /nex-native/contacts (session cookie survives app
-//                  close/reopen · only explicit log-out invalidates)
-//   · signed-out → /nex-native/create-account (owner directive
-//                  2026-10-22 afternoon · the landing page for every
-//                  account-less visitor is the email+password form.
-//                  On submit, fresh signups divert to the free-chat
-//                  5-theme picker · see _actions.ts post-signup redirect)
+//   · signed-in                                → /nex-native/contacts
+//   · signed-out                               → /nex-native (delegated
+//                  to /nex-native/page.tsx which does identity-aware
+//                  routing · Ireland → /ireland-entry hero · others →
+//                  /sign-in)
 //
 // Prior history:
-//   · pre-2026-10-16 · unconditional redirect to /nex-native/home ·
-//     anon users cascaded through /sign-in with no first-visit page
-//   · 2026-10-16 · signed-out → /nex-native/directory/landing
 //   · 2026-10-17 · signed-out → /nex-native/welcome
 //   · 2026-10-18 · signed-out → /nex-native/create-account (gate-first)
-//   · 2026-10-22 · signed-out → /nex-native/free-chat?show-themes=1
-//     (picker-first · aligns with the fresh-signup landing so signed-
-//     in / signed-up / anon all converge on the same chat surface)
+//   · 2026-10-22 · signed-out → /nex-native/create-account (sealed)
+//   · 2026-11-04 · signed-out → /nex-native (delegate to identity-aware
+//                  nested entry · Ireland shows hero landing with
+//                  orange "Enter Ireland" button · owner directive
+//                  "nex ireland has no sign up at entry")
+//
+// The sealed /nex-native/create-account route was retired to the
+// Recycle Bin by owner directive 2026-11-04; the root no longer
+// references it directly.
 
 import { redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
@@ -31,5 +32,7 @@ export default async function RootPage(): Promise<never> {
   if (session) {
     redirect("/nex-native/contacts");
   }
-  redirect("/nex-native/create-account");
+  // Delegate to the identity-aware nested entry so Ireland vs other
+  // identities route correctly from a single source of truth.
+  redirect("/nex-native");
 }
