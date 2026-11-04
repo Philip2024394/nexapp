@@ -8,17 +8,18 @@
 // ticks + peer presence dot so the surface feels like a real
 // conversation surface rather than a dead empty state.
 //
-// Presence:
-//   Subscribes to the sealed `nex-peer-presence` window event already
-//   dispatched by PeerPresenceClient (mounted on the same page).
-//   Default state is "unknown" (grey dot) · flips to green on "online"
-//   or dark-red on "offline" / "busy" (busy reads as not-available).
-//
-// Delivery ticks:
-//   Shows two grey ticks (✓✓) by default · purely decorative since
-//   the welcome pill is not a real message row · but visually matches
-//   the sealed WhatsApp-style message pattern so the bubble reads as
-//   part of the chat vocabulary.
+// Delivery/read dot (owner directive 2026-11-05):
+//   The dot on the lower-right confirms whether the peer has seen the
+//   welcome state · it is NOT presence. Semantic:
+//     · red   — peer has not opened this conversation yet (unseen)
+//     · green — peer has opened this conversation (seen)
+//   Proxy signal: the welcome pill is not a real message row in the
+//   DB, so "seen" maps to "peer appears in the sealed per-conversation
+//   presence roster at least once." Once PeerPresenceClient dispatches
+//   a roster containing the peer, we flip red → green and keep it
+//   green for the lifetime of the mount. Real message bubbles will
+//   use `peer_message.read_at` directly when this pattern is extended
+//   to the bubble footer.
 
 import * as React from "react";
 import type { PresenceKind } from "@/lib/nex-native/realtime/presence";
@@ -38,9 +39,12 @@ export function WelcomePillClient({
   peerAccountId,
   conversationCreatedAt,
 }: WelcomePillClientProps): React.JSX.Element {
-  const [peerKind, setPeerKind] = React.useState<PresenceKind | "unknown">(
-    "unknown",
-  );
+  // Owner directive 2026-11-05 · the dot tracks delivery/seen status ·
+  // red = peer has not opened this conversation yet · green = peer has
+  // opened it (we observe them in the presence roster). Once green, we
+  // keep it green for the lifetime of the mount so the signal doesn't
+  // flicker if the peer backgrounds the tab.
+  const [peerSeen, setPeerSeen] = React.useState<boolean>(false);
 
   React.useEffect(() => {
     const handler = (e: Event) => {
@@ -49,33 +53,22 @@ export function WelcomePillClient({
       }>;
       const roster = custom.detail?.roster;
       if (!Array.isArray(roster)) return;
-      const peer = roster.find((r) => r.accountId === peerAccountId);
-      if (!peer) {
-        // Roster sync received but peer not in it · they're offline.
-        setPeerKind("offline");
-        return;
+      if (roster.some((r) => r.accountId === peerAccountId)) {
+        setPeerSeen(true);
       }
-      setPeerKind(peer.kind);
     };
     window.addEventListener(PRESENCE_EVENT, handler as EventListener);
     return () =>
       window.removeEventListener(PRESENCE_EVENT, handler as EventListener);
   }, [peerAccountId]);
 
-  const dotColor =
-    peerKind === "online"
-      ? "#16D66B"
-      : peerKind === "busy"
-        ? "#F59E0B"
-        : peerKind === "offline"
-          ? "#A60000"
-          : "rgba(255,255,255,0.35)";
+  const dotColor = peerSeen ? "#16D66B" : "#A60000";
 
   return (
     <div
       aria-hidden
       data-nex-peer-chat-prototype-empty-state
-      data-nex-peer-chat-prototype-empty-presence={peerKind}
+      data-nex-peer-chat-prototype-empty-seen={peerSeen ? "true" : "false"}
       style={{
         position: "fixed",
         top: "50%",
@@ -98,61 +91,15 @@ export function WelcomePillClient({
         textAlign: "left",
       }}
     >
-      {/* Top row · connected copy on the left · HH:MM + presence dot on
-          the right · owner directive 2026-11-05. Reads exactly like a
-          chat-bubble header where sender name + timestamp share one line. */}
       <div
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          justifyContent: "space-between",
+          fontSize: 15,
+          fontWeight: 700,
+          lineHeight: 1.3,
+          letterSpacing: "-0.005em",
         }}
       >
-        <div
-          style={{
-            fontSize: 15,
-            fontWeight: 700,
-            lineHeight: 1.3,
-            letterSpacing: "-0.005em",
-            flex: 1,
-            minWidth: 0,
-          }}
-        >
-          You and {peerFirstName} are connected
-        </div>
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            flexShrink: 0,
-            fontSize: 10,
-            fontWeight: 600,
-            letterSpacing: "0.02em",
-            color: "rgba(255,255,255,0.65)",
-            fontVariantNumeric: "tabular-nums",
-          }}
-        >
-          <span>{formatHM(conversationCreatedAt)}</span>
-          <span
-            aria-hidden
-            data-nex-peer-chat-prototype-empty-dot={peerKind}
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: dotColor,
-              boxShadow:
-                peerKind === "online"
-                  ? "0 0 6px rgba(22,214,107,0.55)"
-                  : peerKind === "offline"
-                    ? "0 0 6px rgba(166,0,0,0.45)"
-                    : undefined,
-              transition: "background 220ms ease-out",
-            }}
-          />
-        </div>
+        You and {peerFirstName} are connected
       </div>
       <div
         style={{
@@ -163,6 +110,40 @@ export function WelcomePillClient({
         }}
       >
         Say hi 👋
+      </div>
+      {/* Owner directive 2026-11-05 · lower-right time + delivery/seen
+          dot · reads exactly like a chat-bubble footer. Dot is RED when
+          the peer has not yet opened the conversation and flips GREEN
+          once observed in the presence roster (seen). */}
+      <div
+        style={{
+          marginTop: 10,
+          display: "flex",
+          justifyContent: "flex-end",
+          alignItems: "center",
+          gap: 6,
+          fontSize: 10,
+          fontWeight: 600,
+          letterSpacing: "0.02em",
+          color: "rgba(255,255,255,0.65)",
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
+        <span>{formatHM(conversationCreatedAt)}</span>
+        <span
+          aria-hidden
+          data-nex-peer-chat-prototype-empty-dot={peerSeen ? "seen" : "unseen"}
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: "50%",
+            background: dotColor,
+            boxShadow: peerSeen
+              ? "0 0 6px rgba(22,214,107,0.55)"
+              : "0 0 6px rgba(166,0,0,0.45)",
+            transition: "background 220ms ease-out, box-shadow 220ms ease-out",
+          }}
+        />
       </div>
     </div>
   );

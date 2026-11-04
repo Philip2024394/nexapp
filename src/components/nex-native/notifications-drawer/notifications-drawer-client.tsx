@@ -534,9 +534,17 @@ export function NotificationsDrawer({
           width: 36,
           height: 36,
           borderRadius: "50%",
-          background: "transparent",
+          // Owner directive 2026-11-05 · when mounted inline in the chat
+          // header the bell adopts the same gold-pill / emerald-glyph
+          // styling as the `+` trigger · reads as a matched pair.
+          // Floating (non-inline) surfaces keep the sealed transparent
+          // cyan look.
+          background: inline
+            ? "var(--nex-world-secondary, #C6A15B)"
+            : "transparent",
           border: "none",
-          color: CYAN,
+          color: inline ? "var(--nex-world-drawer-bg, #123D2B)" : CYAN,
+          boxShadow: inline ? "0 2px 8px rgba(10, 31, 21, 0.35)" : undefined,
           cursor: "pointer",
           padding: 0,
           display: "inline-flex",
@@ -546,7 +554,7 @@ export function NotificationsDrawer({
           WebkitTapHighlightColor: "transparent",
         }}
       >
-        <BellGlyph accent={CYAN} />
+        <BellGlyph accent={inline ? "var(--nex-world-drawer-bg, #123D2B)" : CYAN} />
         {unreadCount > 0 ? (
           <span
             data-nex-notifications-trigger-badge

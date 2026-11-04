@@ -163,7 +163,11 @@ export function FreeChatHeader({
         style={{
           display: "inline-flex",
           alignItems: "center",
-          gap: 2,
+          // Owner directive 2026-11-05 · breathing room between the
+          // gold notifications pill and the gold "+" pill so they read
+          // as two deliberate buttons, not a single stuck-together
+          // chip. Bumped from 2 → 10.
+          gap: 10,
           flexShrink: 0,
         }}
       >
