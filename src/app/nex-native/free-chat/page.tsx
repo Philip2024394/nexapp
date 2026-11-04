@@ -38,6 +38,13 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
+// Owner directive 2026-11-04 later-same-day · Option B refactor · the
+// inline header JSX that previously lived below was extracted verbatim
+// into FreeChatHeader so Chat 9001 and peer chats render from ONE
+// source. Zero visual/behavioural change · the sealed primitives
+// (NexPingBadge · ControlDrawer · HeaderSearch) still mount inside
+// the component · props flow through unchanged.
+import { FreeChatHeader } from "@/components/nex-native/chat-chrome/free-chat-header";
 import { resolveNexAppSessionOrGuest } from "@/lib/nex-native/app/session-or-guest";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 // Owner-authorised 2026-11-02 · dev-impersonation parity for free-chat.
@@ -57,7 +64,7 @@ import {
 import { FreeChatComposerClient } from "./_composer-client";
 import { FreeChatCallCenterDrawerClient } from "./_call-center-drawer-client";
 import { FreeChatCanvasClient, type SeedMessage } from "./_canvas-client";
-import { HeaderSearch } from "./_header-search";
+import { HeaderSearch } from "@/components/nex-native/chat-chrome/header-search";
 import {
   freeChatBackgroundCss,
   resolveFreeChatWallpaperUrl,
@@ -314,137 +321,24 @@ export default async function FreeChatPage({
             buttons added on the right for side-drawer triggers
             (handlers wired as placeholders · tell me what each should
             open and I'll bind them). */}
-        <header
-          data-nex-free-chat-header
-          style={{
-            padding:
-              "calc(env(safe-area-inset-top, 0px) + 20px) 12px 14px 16px",
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            flexShrink: 0,
-          }}
-        >
-          {/* Owner directive 2026-10-21 (iteration 75) · wrapped so the
-              client setup container can inject a round avatar overlay
-              on top of the sealed NEX ping badge when the user uploads
-              a profile image. position: relative gives the overlay its
-              coordinate space. */}
-          <div
-            data-nex-free-chat-header-avatar-slot
-            style={{ position: "relative", width: 48, height: 48, flexShrink: 0 }}
-          >
-            <NexPingBadge size={48} accent={NEX.cyan} dataTestId="free-chat-nex" />
-            {/* Owner-authorised 2026-11-02 · signed-in viewer sees their
-                profile image overlaid on the sealed ping badge · the
-                ping remains the ring, the avatar fills the interior.
-                Guest / no-avatar viewers see only the ping badge. */}
-            {headerAvatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={headerAvatarUrl}
-                alt={headerDisplayName}
-                data-nex-free-chat-header-avatar
-                style={{
-                  position: "absolute",
-                  top: 3,
-                  left: 3,
-                  width: 42,
-                  height: 42,
-                  borderRadius: "50%",
-                  objectFit: "cover",
-                  pointerEvents: "none",
-                }}
-              />
-            ) : null}
-          </div>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 2,
-              minWidth: 0,
-              flex: 1,
-            }}
-          >
-            {/* Owner directive 2026-10-21 (iteration 71→72) · wordmark
-                sized to WhatsApp header convention (17px / 600 weight).
-                Overflow uses clip (not ellipsis) · owner doesn't want
-                the "…" character. Chat name maxLength=20 + available
-                width ~260px at 17px semi-bold means 20 typical chars
-                comfortably fits, so clipping is a safety net only. */}
-            <span
-              data-nex-free-chat-header-wordmark
-              style={{
-                fontSize: 17,
-                fontWeight: 600,
-                letterSpacing: "-0.005em",
-                color: NEX.text,
-                lineHeight: 1.1,
-                textShadow: "0 1px 3px rgba(0,0,0,0.5)",
-                overflow: "hidden",
-                whiteSpace: "nowrap",
-                display: "block",
-              }}
-            >
-              {headerDisplayName}
-            </span>
-            <span
-              data-nex-free-chat-header-subtitle
-              style={{
-                fontSize: 12,
-                fontWeight: 500,
-                color: NEX.textDim,
-                lineHeight: 1.2,
-                textShadow: "0 1px 2px rgba(0,0,0,0.45)",
-                overflow: "hidden",
-                whiteSpace: "nowrap",
-                display: "block",
-              }}
-            >
-              {headerSubtitle}
-            </span>
-          </div>
-          {/* Right-side header cluster · owner directive 2026-10-21
-              (iteration 33) · retired the generic 3rd icon · now only
-              Search + 3-dots menu.
-                · Search → routes to NEX Directory landing (matches
-                  the welcome page's magnifying-glass pattern).
-                · 3-dots → mounts the sealed ControlDrawer so the free
-                  chat uses the SAME menu primitive every other NEX
-                  surface uses (Sign-In prompt for guests). */}
-          <nav
-            data-nex-free-chat-header-drawers
-            aria-label="Chat header actions"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 2,
-              flexShrink: 0,
-            }}
-          >
-            {/* Owner-authorised 2026-11-02 · magnifying glass is now a
-                client trigger that opens an in-place glass-backdrop
-                overlay with round category buttons (Products · Rentals
-                · Stays · Services). Replaces the previous navigation
-                to /directory/landing · the overlay DOES link out to
-                /directory when a category is picked, so the directory
-                landing is still the destination · just reached via one
-                extra discovery step that matches the owner-confirmed
-                category-first search architecture. */}
-            <HeaderSearch />
-            {/* Owner directive 2026-10-22 (evening) · 3-dots sealed
-                ControlDrawer trigger reinstated in the header right-
-                cluster. The attach panel's "+" button is the sole
-                composer-level trigger · the header 3-dots gives
-                access to the full sealed drawer (identity, Status,
-                Vault, log-out, etc) without affecting the composer
-                attach flow. */}
-            <div style={{ display: "inline-flex" }}>
-              <ControlDrawer session={drawerSession} />
-            </div>
-          </nav>
-        </header>
+        {/* Owner directive 2026-11-04 later-same-day · Option B
+            refactor · the inline header JSX (ping badge + avatar
+            overlay + wordmark + subtitle + HeaderSearch +
+            ControlDrawer) was extracted verbatim into
+            @/components/nex-native/chat-chrome/free-chat-header.
+            Zero visual/behavioural change · same data-attributes ·
+            same sealed primitives · same props. Peer chats now
+            mount the SAME component so Chat 9001 is the source of
+            truth for every NEX chat header. */}
+        <FreeChatHeader
+          displayName={headerDisplayName}
+          subtitle={headerSubtitle}
+          avatarUrl={headerAvatarUrl}
+          drawerSession={drawerSession}
+          pingBadgeAccent={NEX.cyan}
+          textColor={NEX.text}
+          subtitleColor={NEX.textDim}
+        />
 
         {/* ── Chat canvas · bubbles + first-visit theme row ──
             Owner directive 2026-10-21 (iteration 53) · bubble rendering

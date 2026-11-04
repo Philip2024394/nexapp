@@ -1,7 +1,12 @@
-// src/app/nex-native/free-chat/_header-search.tsx
+// src/components/nex-native/chat-chrome/header-search.tsx
 //
-// NEX · Free Chat · header search trigger + glass category overlay.
+// NEX · Shared header search trigger + glass category overlay.
 // Owner-authorised 2026-11-02 (revision 2 · no-container floating buttons).
+// Relocated 2026-11-04 later-same-day · owner-authorised architectural
+// cleanup · from /app/nex-native/free-chat/_header-search.tsx to this
+// shared components path. Shared-component callers (FreeChatHeader,
+// peer-chat future integration, Call Centre grid trigger, Contacts
+// live-world trigger) no longer reach into an /app/ private module.
 // -----------------------------------------------------------------------------
 // Tapping the magnifying glass in the free-chat header opens a full-page
 // glass-backdrop overlay. The overlay carries no inner panel · just the

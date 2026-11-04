@@ -18,7 +18,7 @@
 // trigger inherits the change for free.
 
 import * as React from "react";
-import { SearchOverlay } from "../free-chat/_header-search";
+import { SearchOverlay } from "@/components/nex-native/chat-chrome/header-search";
 
 export function ContactsLiveWorldTrigger(): React.JSX.Element {
   const [open, setOpen] = React.useState(false);
