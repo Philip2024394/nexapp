@@ -14,6 +14,7 @@
 import { notFound } from "next/navigation";
 import * as React from "react";
 import type { BrowserThemeRow } from "../../chat-themes-library/_theme-browser-client";
+import { NEX_DEFAULT_PALETTE } from "../../chat-standard/_engine/preview-mini-phone";
 import { PhoneGalleryFixtureBody } from "./_fixture-client";
 
 export const runtime = "nodejs";
@@ -22,8 +23,23 @@ export const dynamic = "force-dynamic";
 const WALLPAPER_PX =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mO8rPr0PwAG5wLU/EMB7gAAAABJRU5ErkJggg==";
 
+/** Parity-pass fields added to BrowserThemeRow after this fixture was
+ *  authored · the mini-phone renderer consumes these so every fixture
+ *  entry must supply them. The fixture is dev-only · neutral defaults
+ *  are fine. Individual entries may override via spread merge. */
+const FIXTURE_PARITY_DEFAULTS = {
+  category_id: "explore",
+  palette: NEX_DEFAULT_PALETTE,
+  ambient_families: null,
+  bubble_material: null,
+} as const satisfies Pick<
+  BrowserThemeRow,
+  "category_id" | "palette" | "ambient_families" | "bubble_material"
+>;
+
 const FIXTURE_THEMES: BrowserThemeRow[] = [
   {
+    ...FIXTURE_PARITY_DEFAULTS,
     id: "fx-free-classic",
     name: "Free · Classic",
     tagline: "Default pink-dream fallback",
@@ -39,6 +55,7 @@ const FIXTURE_THEMES: BrowserThemeRow[] = [
     wallpaper_config: { bubbleStyle: { preset: "classic" } },
   },
   {
+    ...FIXTURE_PARITY_DEFAULTS,
     id: "fx-free-pill",
     name: "Free · Pill",
     tagline: "Rounded pill bubbles",
@@ -54,6 +71,7 @@ const FIXTURE_THEMES: BrowserThemeRow[] = [
     wallpaper_config: { bubbleStyle: { preset: "pill" } },
   },
   {
+    ...FIXTURE_PARITY_DEFAULTS,
     id: "fx-bisnis-sparkle",
     name: "Bisnis · Sparkle",
     tagline: "Twinkling stars overlay",
@@ -72,6 +90,7 @@ const FIXTURE_THEMES: BrowserThemeRow[] = [
     },
   },
   {
+    ...FIXTURE_PARITY_DEFAULTS,
     id: "fx-bisnis-particles",
     name: "Bisnis · Particles",
     tagline: "Ember-style upward drift",
@@ -95,6 +114,7 @@ const FIXTURE_THEMES: BrowserThemeRow[] = [
     },
   },
   {
+    ...FIXTURE_PARITY_DEFAULTS,
     id: "fx-bisnis-gradient",
     name: "Bisnis · Gradient",
     tagline: "Accent-tinted gradient bubbles",
@@ -110,6 +130,7 @@ const FIXTURE_THEMES: BrowserThemeRow[] = [
     wallpaper_config: { bubbleStyle: { preset: "gradient" } },
   },
   {
+    ...FIXTURE_PARITY_DEFAULTS,
     id: "fx-bisnis-square",
     name: "Bisnis · Square",
     tagline: "Sharp geometric bubbles",
@@ -125,6 +146,7 @@ const FIXTURE_THEMES: BrowserThemeRow[] = [
     wallpaper_config: { bubbleStyle: { preset: "square" } },
   },
   {
+    ...FIXTURE_PARITY_DEFAULTS,
     id: "fx-free-active",
     name: "Free · Active sample",
     tagline: "Shows the Active chip state",
@@ -140,6 +162,7 @@ const FIXTURE_THEMES: BrowserThemeRow[] = [
     wallpaper_config: { bubbleStyle: { preset: "classic" } },
   },
   {
+    ...FIXTURE_PARITY_DEFAULTS,
     id: "fx-locked",
     name: "Bisnis · Locked",
     tagline: "Shows the lock state for gratis viewers",

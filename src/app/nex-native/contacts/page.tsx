@@ -318,7 +318,16 @@ export default async function ContactsPage({ searchParams }: PageProps) {
         viewerSupportSettings={viewerCreatorSupportSettings}
       />
       <ContactsSearchBar />
-      <ContactsFilterPills active={activeFilter} />
+      <ContactsFilterPills
+        active={activeFilter}
+        counts={{
+          friends: friendRows.length,
+          business: businessRows.length,
+          // Groups surface returns empty rows today (D5) · the count is
+          // honest zero rather than a fabricated value.
+          groups: 0,
+        }}
+      />
       {/* Owner-authorised 2026-10-18 · S4 · NEX1 welcome banner.
           Server-rendered · returns null when the sealed first-contact
           predicate says the user has already acted (replied), OR when
@@ -337,6 +346,9 @@ export default async function ContactsPage({ searchParams }: PageProps) {
         rows={visibleRows}
         totalCount={totalCount}
         activeFilter={activeFilter}
+        accentHex="#00AFFF"
+        viewerDisplayName={session.account.display_name ?? ""}
+        viewerNexHandle={session.account.nex_handle ?? ""}
       />
     </ContactsShell>
   );

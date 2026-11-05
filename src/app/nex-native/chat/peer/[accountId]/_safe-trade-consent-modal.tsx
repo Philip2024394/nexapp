@@ -26,6 +26,17 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import type { SafeTradeStrings } from "@/lib/nex-native/i18n/safe-trade-strings";
 
+/** Accepts either locale variant · the exported `SafeTradeStrings` type is
+ *  literal-pinned to the "id" locale but the i18n map has "en" too (each
+ *  with its own literal-type shape under `as const`). The modal renders
+ *  the same structural fields on both, so this widening lets either land
+ *  without a @ts-* suppression at the server-page call site. */
+type SafeTradeStringsEither =
+  | SafeTradeStrings
+  | (typeof import("@/lib/nex-native/i18n/safe-trade-strings"))["SAFE_TRADE_STRINGS"][
+      keyof (typeof import("@/lib/nex-native/i18n/safe-trade-strings"))["SAFE_TRADE_STRINGS"]
+    ];
+
 export function SafeTradeConsentModal({
   action,
   nextHref,
@@ -40,7 +51,7 @@ export function SafeTradeConsentModal({
   /** Current terms version · shown in the modal footer. */
   termsVersion: string;
   /** Locale-aware copy · resolved server-side by resolveLocale(). */
-  strings: SafeTradeStrings;
+  strings: SafeTradeStringsEither;
 }) {
   const [mounted, setMounted] = useState(false);
   const [checked, setChecked] = useState(false);

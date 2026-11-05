@@ -296,6 +296,9 @@ const MOTION_GLYPH: Record<JokerMotionVariant, string> = {
   smoke: "💨",
   embers: "🔥",
   glitch: "🌀",
+  lamp: "💡",
+  kiss: "💋",
+  congrats: "🎊",
 };
 
 function FloatingAnimationColumn({

@@ -59,6 +59,12 @@ function resolveColours(c: ColourSystem | undefined): Required<ColourSystem> {
     highlight: c?.highlight ?? NEX_DEFAULT_COLOURS.highlight!,
     glow: c?.glow ?? `${c?.primary ?? NEX_DEFAULT_COLOURS.primary}55`,
     deep: c?.deep ?? NEX_DEFAULT_COLOURS.deep!,
+    // Owner directive 2026-10-19 · optional on ColourSystem but Required<>
+    // in the resolved engine. Fall back to primary so consumers can read
+    // `engine.colours.deliveryTickColor` unconditionally; package-level
+    // override (e.g. Crispy Chicken dark red) wins when set.
+    deliveryTickColor:
+      c?.deliveryTickColor ?? c?.primary ?? NEX_DEFAULT_COLOURS.primary!,
   };
 }
 

@@ -142,16 +142,22 @@ export async function optOutServerAction() {
 }
 
 export async function addTrustedContactServerAction(args: {
-  contactAccountId: string;
+  contactAccountId?: string | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
   contactLabel: string | null;
 }) {
   return mock.addTrustedContactAction(args);
 }
 
 export async function removeTrustedContactServerAction(args: {
-  contactAccountId: string;
-}) {
-  return mock.removeTrustedContactAction(args);
+  trustedContactId?: string | null;
+  contactAccountId?: string | null;
+}): Promise<{ ok: true }> {
+  // Drop the mock-only diagnostic fields · the consumer contract is
+  // `Promise<{ ok: true }>` so we normalise to that shape.
+  await mock.removeTrustedContactAction(args);
+  return { ok: true };
 }
 
 export async function loadActiveIncidentServerAction() {

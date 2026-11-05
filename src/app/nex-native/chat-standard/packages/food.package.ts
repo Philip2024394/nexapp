@@ -71,8 +71,8 @@ export const FOOD_PACKAGE: ThemePackage = {
     shape: "domed",
     material: "warm-liquid",
     motion: {
-      entrance: "rise-in",
-      idle: "warm-breath",
+      entrance: "warm-rise-in",
+      idle: "warm-pulse",
       reaction: "ripple-in",
       departure: "dissolve",
     },

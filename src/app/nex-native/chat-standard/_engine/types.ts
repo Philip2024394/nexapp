@@ -43,8 +43,25 @@ export type {
   IntroResolverInput,
   ThemeIdentity,
   TypographyPackage,
-  ThemePackage,
 } from "@/lib/nex-native/theme-package/types";
+
+// `ThemePackage` from the core layer declares `ambient.families` as a
+// closed literal union · the live engine actually accepts more families
+// (steam-rising, warm-glow-pulse) plus theme-authored fallbacks (embers,
+// smoke, warm-glow) that the renderer handles via its default branch.
+// Re-declare the surface here with a widened `families` type so package
+// authors in this layer can express the full engine vocabulary without
+// a @ts-* suppression. Core-layer consumers still see the strict union
+// via the direct import path.
+import type {
+  ThemePackage as CoreThemePackage,
+  AmbientLayer as CoreAmbientLayer,
+} from "@/lib/nex-native/theme-package/types";
+export type ThemePackage = Omit<CoreThemePackage, "ambient"> & {
+  ambient?: Omit<CoreAmbientLayer, "families"> & {
+    families?: ReadonlyArray<string>;
+  };
+};
 
 // ─── Resolved treatments (what the engine returns to surfaces) ──────
 //
@@ -124,7 +141,13 @@ export interface ShopTreatmentResolved {
   cardStyle: React.CSSProperties;
   cardAccentStyle: React.CSSProperties;
   scrollSnap: "mandatory" | "proximity" | "none";
-  productFraming: "card" | "float" | "buoy";
+  productFraming:
+    | "card"
+    | "float"
+    | "buoy"
+    | "coaster"
+    | "mug"
+    | "saucer-under-glass";
 }
 
 export interface ReactionTreatmentResolved {

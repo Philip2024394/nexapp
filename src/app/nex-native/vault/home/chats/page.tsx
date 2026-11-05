@@ -245,10 +245,9 @@ function previewFor(msg: peerMsgService.NexPeerMessageRow | null): string {
       case "image":          return "📷 Photo";
       case "video":          return "🎬 Video";
       case "audio":          return "🎤 Voice note";
-      case "theme_sticker":  return "🎨 Sticker";
+      case "sticker":        return "🎨 Sticker";
       case "product_share":  return "🛍 Shared a product";
       case "cart_order":     return "🧾 Order";
-      case "link_preview":   return msg.link_title ?? msg.link_source_domain ?? "🔗 Link";
       default:               return "📎 Attachment";
     }
   }

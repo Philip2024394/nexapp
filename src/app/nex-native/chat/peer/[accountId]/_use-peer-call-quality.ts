@@ -95,7 +95,17 @@ export function usePeerCallQuality(
         }
         try {
           const [stats, pktReceived] = await Promise.all([
-            collectStats(pc, peerAccountId),
+            // `collectStats` meta is used for stats-telemetry labelling
+            // only · the hook caller does not surface the labels. For
+            // the 1:1 peer surface we pass the peer account id as
+            // `peer` and leave the other fields blank so the shared
+            // group-call pipeline can still shape the snapshot.
+            collectStats(pc, {
+              callId: "",
+              identity: "",
+              peer: peerAccountId,
+              role: "caller",
+            }),
             collectReceivedPackets(pc),
           ]);
           if (cancelled || !mountedRef.current) return;

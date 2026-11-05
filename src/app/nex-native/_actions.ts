@@ -75,6 +75,7 @@ import * as bannerService from "@/lib/nex-native/banner-service";
 import * as relationshipService from "@/lib/nex-native/relationship-service";
 import * as emailService from "@/lib/nex-native/email-service";
 import * as siteService from "@/lib/nex-native/site-service";
+import * as siteSpec from "@/lib/nex-native/site-spec";
 import { DEFAULT_SITE_GEN_ADAPTER } from "@/lib/nex-native/site-gen-adapter";
 import type { NexBannerPalette, NexBannerStatus } from "@/lib/nex-native/banner-service";
 import { NEX_BANNER_PALETTES, NEX_BANNER_STATUSES } from "@/lib/nex-native/banner-service";
@@ -6202,11 +6203,21 @@ export async function startTemplateBuildAction(formData: FormData): Promise<neve
     const qs = new URLSearchParams({ e: "unknown_template", m: `template '${templateId}' not in registry` });
     redirect(`/nex-native/manage/site/new?${qs.toString()}`);
   }
-  const spec = templates.buildSpecFromTemplate(template, {
+  const rawSpec = templates.buildSpecFromTemplate(template, {
     business_id: business.id,
     display_name: business.display_name,
     description: business.description,
   });
+  // applySpec runs validateSiteSpec internally, so validate here first to
+  // narrow the broad `string` return of buildSpecFromTemplate into the
+  // `NexSiteSpec` branded unions `applySpec` accepts. Any mismatch is
+  // surfaced to the user via the same coherence-failure banner.
+  const specValidation = siteSpec.validateSiteSpec(rawSpec);
+  if (!specValidation.ok) {
+    const qs = new URLSearchParams({ e: "coherence_or_shape_failure", m: specValidation.message });
+    redirect(`/nex-native/manage/site/new?${qs.toString()}`);
+  }
+  const spec = specValidation.spec;
   let created;
   try {
     created = await siteService.applySpec(spec, {

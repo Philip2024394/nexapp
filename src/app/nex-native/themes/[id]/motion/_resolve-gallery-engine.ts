@@ -44,6 +44,10 @@ const NEX_DEFAULT_COLOURS: Required<ColourSystem> = {
   highlight: "#F4F7FC",
   glow: "rgba(0,175,255,0.35)",
   deep: "var(--nex-world-background-base, #020914)",
+  // Owner directive 2026-10-19 · optional on ColourSystem but Required<>
+  // here. Falls back to primary · packages that override (e.g. Crispy
+  // Chicken dark red) supply their own value.
+  deliveryTickColor: "#00AFFF",
 };
 
 /** Fill in every slot of a (possibly partial) ColourSystem · same
@@ -56,6 +60,8 @@ function resolveColours(c: ColourSystem | undefined): Required<ColourSystem> {
     highlight: c?.highlight ?? NEX_DEFAULT_COLOURS.highlight,
     glow: c?.glow ?? `${c?.primary ?? NEX_DEFAULT_COLOURS.primary}55`,
     deep: c?.deep ?? NEX_DEFAULT_COLOURS.deep,
+    deliveryTickColor:
+      c?.deliveryTickColor ?? c?.primary ?? NEX_DEFAULT_COLOURS.primary,
   };
 }
 
