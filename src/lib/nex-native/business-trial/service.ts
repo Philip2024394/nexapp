@@ -58,13 +58,18 @@ function pool(): Pool {
 }
 
 // ---------------------------------------------------------------------------
-// Feature flag · Q3 approved · NEX_BUSINESS_TRIAL_ENABLED=false by default
+// Feature flag · owner-sealed 2026-11-06 scope-reduction LOCK · default TRUE
 // ---------------------------------------------------------------------------
+// Original Q3 approval (2026-10-18) set default FALSE as a deliberate hold
+// at signup. Shop Entitlement Contract § K-3 LOCK (2026-11-06) retires that
+// hold: "7-day trial auto-fires on first business signup. No card required."
+// Phase 4 flag flip aligns the runtime default with the locked contract.
+// Env var remains an opt-out escape hatch (set to "false" to disable).
 
-/** Returns true only when the env var is explicitly set to 'true'. All
+/** Returns true unless the env var is explicitly set to 'false'. All
  *  state-changing endpoints MUST call this and 403 when false. */
 export function isBusinessTrialEnabled(): boolean {
-  return process.env.NEX_BUSINESS_TRIAL_ENABLED === "true";
+  return process.env.NEX_BUSINESS_TRIAL_ENABLED !== "false";
 }
 
 // ---------------------------------------------------------------------------

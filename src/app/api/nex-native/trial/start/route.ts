@@ -8,8 +8,8 @@
 // This endpoint does NOT elevate `effectiveTier()` to bisnis. See K14 Option β.
 // This endpoint does NOT grant Vault / premium Themes / premium Intros / P1/P2/P3.
 //
-// Preconditions (K1 · D1 · Q3):
-//   · `NEX_BUSINESS_TRIAL_ENABLED === 'true'` env flag · 403 if false
+// Preconditions (K1 · D1 · § K-3 LOCK 2026-11-06):
+//   · `NEX_BUSINESS_TRIAL_ENABLED !== 'false'` (default-TRUE opt-out) · 403 if explicitly disabled
 //   · `business_trial_status IS NULL` · 409 `already_used` if not
 //   · themes-trial not active (within 168h) · 409 `themes_trial_still_active`
 

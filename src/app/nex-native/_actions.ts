@@ -4575,11 +4575,11 @@ export async function createBusinessAction(formData: FormData): Promise<never> {
   //   · Trial is a privilege, not a precondition for shop existence ·
   //     ANY failure here is logged and swallowed so the business create
   //     succeeds. The user can retry later via `/api/nex-native/trial/start`.
-  //   · Feature-flag gated: when `NEX_BUSINESS_TRIAL_ENABLED !== 'true'`
-  //     the service throws `business_trial_not_available` which falls
-  //     through the catch · the shop still activates, just without the
-  //     trial grant. Flipping the flag later activates the wiring
-  //     without any code change.
+  //   · Feature-flag gated: § K-3 LOCK 2026-11-06 flipped the default to
+  //     TRUE; the service only throws `business_trial_not_available` when
+  //     `NEX_BUSINESS_TRIAL_ENABLED === 'false'` is explicitly set as an
+  //     opt-out. In that opt-out case the shop still activates, just
+  //     without the trial grant.
   try {
     const { startBusinessTrial } = await import(
       "@/lib/nex-native/business-trial/service"

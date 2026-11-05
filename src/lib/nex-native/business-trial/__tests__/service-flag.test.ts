@@ -1,14 +1,17 @@
 // src/lib/nex-native/business-trial/__tests__/service-flag.test.ts
 //
-// G1 regression tests · T26 feature-flag enforcement at service layer.
-// Separate from DB-touching tests so vitest can run this in isolation.
+// Shop Entitlement Contract § K-3 LOCK 2026-11-06 · default-TRUE feature flag.
+// Replaces the earlier Q3 2026-10-18 default-FALSE posture, which was itself
+// retired by the K-3 LOCK ("7-day trial auto-fires on first business signup.
+// No card required."). The env var remains an opt-out escape hatch — explicit
+// "false" disables; anything else (absent, empty, "true", "1", etc.) enables.
 
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 import { isBusinessTrialEnabled } from "../service";
 
-describe("isBusinessTrialEnabled · Q3 feature flag", () => {
+describe("isBusinessTrialEnabled · § K-3 LOCK feature flag · default TRUE", () => {
   const originalFlag = process.env.NEX_BUSINESS_TRIAL_ENABLED;
 
   beforeEach(() => {
@@ -23,41 +26,46 @@ describe("isBusinessTrialEnabled · Q3 feature flag", () => {
     }
   });
 
-  it("T26 · absent env var → disabled (false)", () => {
-    expect(isBusinessTrialEnabled()).toBe(false);
+  it("absent env var → enabled (true) · default aligned with § K-3 LOCK", () => {
+    expect(isBusinessTrialEnabled()).toBe(true);
   });
 
-  it("T26 · 'false' → disabled", () => {
+  it("exact 'false' → disabled (opt-out escape hatch)", () => {
     process.env.NEX_BUSINESS_TRIAL_ENABLED = "false";
     expect(isBusinessTrialEnabled()).toBe(false);
   });
 
-  it("T26 · 'TRUE' (wrong case) → disabled (strict equality)", () => {
-    process.env.NEX_BUSINESS_TRIAL_ENABLED = "TRUE";
-    expect(isBusinessTrialEnabled()).toBe(false);
+  it("'FALSE' (wrong case) → enabled (strict equality · only lowercase 'false' disables)", () => {
+    process.env.NEX_BUSINESS_TRIAL_ENABLED = "FALSE";
+    expect(isBusinessTrialEnabled()).toBe(true);
   });
 
-  it("T26 · 'yes' → disabled (strict equality)", () => {
-    process.env.NEX_BUSINESS_TRIAL_ENABLED = "yes";
-    expect(isBusinessTrialEnabled()).toBe(false);
+  it("'no' → enabled (strict equality)", () => {
+    process.env.NEX_BUSINESS_TRIAL_ENABLED = "no";
+    expect(isBusinessTrialEnabled()).toBe(true);
   });
 
-  it("T26 · '1' → disabled (strict equality)", () => {
-    process.env.NEX_BUSINESS_TRIAL_ENABLED = "1";
-    expect(isBusinessTrialEnabled()).toBe(false);
+  it("'0' → enabled (strict equality)", () => {
+    process.env.NEX_BUSINESS_TRIAL_ENABLED = "0";
+    expect(isBusinessTrialEnabled()).toBe(true);
   });
 
-  it("T26 · exact 'true' → enabled", () => {
+  it("empty string → enabled (not strictly 'false')", () => {
+    process.env.NEX_BUSINESS_TRIAL_ENABLED = "";
+    expect(isBusinessTrialEnabled()).toBe(true);
+  });
+
+  it("exact 'true' → enabled (explicit opt-in still works)", () => {
     process.env.NEX_BUSINESS_TRIAL_ENABLED = "true";
     expect(isBusinessTrialEnabled()).toBe(true);
   });
 
-  it("default-closed is the honest security posture · pilot never activates by accident", () => {
-    // Even with 10 near-truthy values · only exact 'true' flips the gate
-    const nearTruthy = ["True", "truE", " true", "true ", "True ", "1", "y", "yes", "on", ""];
-    for (const v of nearTruthy) {
+  it("default-open is the § K-3 LOCK posture · only an explicit 'false' disables", () => {
+    // Nine near-falsy values that must NOT accidentally disable the trial
+    const nearFalsy = ["False", "falsE", " false", "false ", "0", "no", "off", "N", "n"];
+    for (const v of nearFalsy) {
       process.env.NEX_BUSINESS_TRIAL_ENABLED = v;
-      expect(isBusinessTrialEnabled()).toBe(false);
+      expect(isBusinessTrialEnabled()).toBe(true);
     }
   });
 });
