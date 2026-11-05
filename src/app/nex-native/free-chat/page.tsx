@@ -451,6 +451,7 @@ export default async function FreeChatPage({
           pingBadgeAccent={NEX.cyan}
           textColor={NEX.text}
           subtitleColor={NEX.textDim}
+          hideMagnifier={true}
           notificationsSlot={
             <NotificationsDrawer
               inline

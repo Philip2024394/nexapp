@@ -74,6 +74,10 @@ export interface FreeChatHeaderProps {
    *  inline ControlDrawer surfaces a "Shared media" row routed to this
    *  href. Peer chat passes `/nex-native/chat/peer/<id>/media`. */
   readonly peerSharedMediaHref?: string;
+  /** Owner directive 2026-11-05 iter 24 · hides the NEX Live magnifier
+   *  search button. Non-feed surfaces (peer chat · free-chat home)
+   *  pass `true` so the magnifier is live ONLY on feed surfaces. */
+  readonly hideMagnifier?: boolean;
 }
 
 const DEFAULT_PING_ACCENT = "var(--nex-world-secondary, #00AFFF)";
@@ -91,6 +95,7 @@ export function FreeChatHeader({
   notificationsSlot,
   peerAccountId,
   peerSharedMediaHref,
+  hideMagnifier,
 }: FreeChatHeaderProps): React.JSX.Element {
   // Owner directive 2026-11-05 later-same-day iter 5 · sealed
   // NexPingBadge is restored on peer chat · colored rim retired. The
@@ -248,7 +253,7 @@ export function FreeChatHeader({
         }}
       >
         {notificationsSlot}
-        <NexLiveSearchButton />
+        {hideMagnifier ? null : <NexLiveSearchButton />}
         <div style={{ display: "inline-flex" }}>
           <ControlDrawer
             session={drawerSession}

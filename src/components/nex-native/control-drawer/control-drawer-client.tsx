@@ -261,6 +261,34 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
     href: "/nex-native/nex-feed",
     locked: false,
   },
+  // Owner directive 2026-11-05 iter 24 · three NEX Live upload entries
+  // surfaced directly in the drawer. Three async content types: video
+  // · music · product. Real-time live-streaming retired · product posts
+  // can carry an optional looped video OR image background (follow-up
+  // migration adds the FK fields). Video upload route is a stub today
+  // (/nex-native/create/upload-video 404s) · the drawer row makes the
+  // intent visible · the route gets built next.
+  {
+    key: "upload-video",
+    label: "Upload video",
+    subtitle: "Post a short video to NEX Live",
+    href: "/nex-native/create/upload-video",
+    locked: false,
+  },
+  {
+    key: "upload-music",
+    label: "Upload music",
+    subtitle: "Share a track to NEX Live",
+    href: "/nex-native/create/upload-music",
+    locked: false,
+  },
+  {
+    key: "create-product",
+    label: "List a product",
+    subtitle: "Shoppable card · optional video background",
+    href: "/nex-native/create/product",
+    locked: false,
+  },
 ];
 
 // Owner directive 2026-11-05 · YOUR_BUSINESS_ROWS, BUSINESS_VAULT_ROW,
