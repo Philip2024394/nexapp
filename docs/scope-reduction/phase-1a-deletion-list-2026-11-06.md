@@ -397,7 +397,23 @@ Move or delete the following from `docs/doctrine/` (owner picks disposition; rec
 
 ## 7 · Owner decisions (RESOLVED 2026-11-06 in-session)
 
-All Q1–Q8 resolved. Phase 1c may proceed per §8 batch plan.
+### SCOPE CORRECTION · 2026-11-06 after Batch 4 landed
+
+Owner reversed Community Notice removal mid-flight: **"we hold onto community notice"**. Batch 5 (Community deletion commit `4096601`) was reverted at `624c85f`. Community Notice is now KEPT — all 37 files + 2 rewires restored.
+
+**Effect on this doc:**
+- § 1.3 (Community Notice file list) — RETAINED, do not delete any of those files
+- § 3.1 (chat guest rate-limit) — The Batch 1 inline to `lib/nex-native/chat/chat-rate-limit.ts` is left in place (chat is now architecturally independent of community/rate-limit, which is a KEEP architectural improvement regardless)
+- § 3.7 (contacts list Community notice/card) — RETAINED, contacts list continues to render `_community-notice-card.tsx` + `_community-card.tsx`
+- § 2.3 (Community migrations 146–152/197) — NOT SCHEDULED for reversal. Batch 10 scope reduced accordingly.
+- § 4 Community (doctrine) — RETAINED, not archived
+- Batch 5 effectively CANCELLED; subsequent batch numbering unchanged for traceability (there is no new Batch 5).
+
+**Scope now:** Chat + Chat Themes + Shop (bundles Vault) + **Community Notice** + Directory. Removed: Live, Music, nex-feed, Starter Pack, Power Tokens, Sponsorship, Trade Centre, staircase, non-shop Daily Discovery, Dev-live diagnostics.
+
+---
+
+All Q1–Q8 resolved. Phase 1c may proceed per §8 batch plan (skipping cancelled Batch 5).
 
 - **Q1 WatchOverlayCaption** → **MOVE** (default accepted). Batch 1 relocates it to `components/nex-native/watches/`.
 - **Q2 shop-contacts-dedup** → **MOVE** (default accepted). Batch 1 relocates it to `lib/nex-native/shop-contacts/dedup.ts`.
