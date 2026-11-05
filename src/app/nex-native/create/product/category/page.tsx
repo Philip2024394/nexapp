@@ -29,14 +29,22 @@ const DISABLED_INK = "#8BA9D1";
 export default async function CreateProductCategoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ business?: string; dept?: string }>;
+  searchParams: Promise<{
+    business?: string;
+    dept?: string;
+    freshly_provisioned?: string;
+  }>;
 }): Promise<React.JSX.Element> {
   const session = await resolveSessionWithDevOverride();
   if (!session) {
     redirect("/nex-native/sign-in?next=" + encodeURIComponent("/nex-native/create/product"));
   }
 
-  const { business, dept } = await searchParams;
+  const { business, dept, freshly_provisioned } = await searchParams;
+  // Owner directive 2026-11-05 iter 29 · Ship A commit 3 · banner
+  // shows only on the first visit (when auto-provision just happened)
+  // · subsequent navigation drops the param · the banner self-hides.
+  const showFreshlyProvisionedBanner = freshly_provisioned === "1" && !dept;
   if (!business) {
     redirect("/nex-native/create/product");
   }
@@ -103,6 +111,9 @@ export default async function CreateProductCategoryPage({
   return (
     <main style={pageStyle}>
       <div style={containerStyle}>
+        {showFreshlyProvisionedBanner ? (
+          <FreshlyProvisionedBanner />
+        ) : null}
         <Link href="/nex-native/create/product" style={backLink}>
           ← Change shop
         </Link>
@@ -213,3 +224,100 @@ const tileLabelStyle: React.CSSProperties = {
   fontSize: 15,
   fontWeight: 700,
 };
+
+// ─── Freshly-provisioned welcome banner · iter 29 Ship A commit 3 ────
+//
+// Rendered once when a first-time seller lands here straight after
+// auto-provisioning their shop (iter 29 commit 1). Sets the value
+// anchor BEFORE they hit the free-tier cap · lower abandonment later.
+// Honours sealed "NEX never takes commission" doctrine · benefits list
+// omits every claim that isn't production-ready today (see sealed
+// Package Contract DRAFT 2026-10-20).
+function FreshlyProvisionedBanner(): React.JSX.Element {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      data-nex-freshly-provisioned-banner
+      style={{
+        background:
+          "linear-gradient(135deg, #0A1F14 0%, #123D2B 60%, #0A1F14 100%)",
+        border: "1px solid color-mix(in srgb, #C6A15B 55%, transparent)",
+        borderRadius: 14,
+        padding: 16,
+        marginBottom: 20,
+        color: "#F2F5F8",
+        boxShadow:
+          "0 10px 28px rgba(0,0,0,0.35), inset 0 0 0 1px color-mix(in srgb, #C6A15B 22%, transparent)",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          color: "#C6A15B",
+          marginBottom: 6,
+        }}
+      >
+        Shop ready · welcome
+      </div>
+      <div
+        style={{
+          fontSize: 16,
+          fontWeight: 800,
+          lineHeight: 1.3,
+          marginBottom: 6,
+        }}
+      >
+        Your NEX shop is live
+      </div>
+      <p
+        style={{
+          fontSize: 13,
+          lineHeight: 1.45,
+          color: "#B5C3D6",
+          margin: "0 0 10px 0",
+        }}
+      >
+        List your first product below · 10 free · no commission · ever.
+      </p>
+      <ul
+        style={{
+          listStyle: "none",
+          padding: 0,
+          margin: 0,
+          display: "flex",
+          flexDirection: "column",
+          gap: 4,
+        }}
+      >
+        {[
+          "Shareable shop URL to post on socials",
+          "Chat shop drawer for sharing to your customers",
+          "Rename your shop any time in Settings",
+        ].map((line) => (
+          <li
+            key={line}
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 8,
+              fontSize: 12.5,
+              color: "#F2F5F8",
+            }}
+          >
+            <span
+              aria-hidden
+              style={{ color: "#C6A15B", fontWeight: 800 }}
+            >
+              ✓
+            </span>
+            <span style={{ lineHeight: 1.4 }}>{line}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
