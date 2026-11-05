@@ -264,6 +264,18 @@ export const SETTINGS_GROUPS: readonly SettingsGroupDef[] = [
     label: "Payments & NEX Wallet",
     rows: [
       {
+        // Phase V · P4 · 2026-11-05 · seller shop-payment providers
+        // settings · lets the seller see which gateways they can connect
+        // for their shop checkout. Direct-to-seller · NEX takes 0% ·
+        // separate from the NEX membership billing below.
+        key: "shop-payments",
+        href: "/nex-native/settings/shop-payments",
+        emoji: "💳",
+        title: "Shop payment providers",
+        subtitle:
+          "Connect Stripe · PayPal · regional providers to accept buyer payments · NEX takes 0%",
+      },
+      {
         key: "wallet",
         href: null,
         emoji: "⚡",

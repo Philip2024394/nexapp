@@ -1191,6 +1191,61 @@ export default async function ShopSettingsPage({
           </form>
         </SectionCard>
 
+        {/* --- Shop payment providers (Phase V · P4 · 2026-11-05) --- */}
+        {/* The provider connection surface lives at a dedicated route
+            under /settings/shop-payments so it can evolve independently
+            of this page as the Stripe Connect Express / PayPal Partner
+            Referrals / Xendit / Midtrans integrations graduate from
+            beta-waitlist to live wiring. No duplication of status · one
+            source of truth there. */}
+        <SectionCard>
+          <SectionEyebrow color={NEX.cyan}>Checkout</SectionEyebrow>
+          <h2
+            style={{
+              margin: "6px 0 6px",
+              fontSize: 18,
+              fontWeight: 700,
+              letterSpacing: "-0.005em",
+            }}
+          >
+            Shop payment providers
+          </h2>
+          <p
+            style={{
+              margin: "0 0 14px",
+              fontSize: 13,
+              lineHeight: 1.55,
+              color: NEX.textDim,
+            }}
+          >
+            Connect Stripe, PayPal or a regional provider so buyers can
+            pay you directly for shop orders. NEX never handles the
+            money and takes <strong style={{ color: NEX.text }}>0%</strong>{" "}
+            commission on shop sales — you keep the merchant
+            relationship with the provider you connect.
+          </p>
+          <Link
+            href="/nex-native/settings/shop-payments"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "10px 14px",
+              borderRadius: 10,
+              background: "rgba(0,175,255,0.12)",
+              border: `1px solid ${NEX.cyanSoft}`,
+              color: NEX.text,
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              textDecoration: "none",
+            }}
+          >
+            Manage shop payment providers →
+          </Link>
+        </SectionCard>
+
         {/* --- Accepted payment methods (Bridge 16a) --------------- */}
         <SectionCard>
           <SectionEyebrow color={NEX.green}>Safe trade</SectionEyebrow>
