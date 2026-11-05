@@ -777,6 +777,16 @@ function ProductDetailSheet(props: {
   const { product, broadcaster, shop } = props;
   const price = formatPrice(product.pricePence, product.currency);
   const chatHref = `/nex-native/chat/peer/${broadcaster.accountId}?pending_product=${encodeURIComponent(product.id)}`;
+  // Phase V · P16 · 2026-11-05 · Social-to-Shop Discovery. Resolve
+  // both public URLs from the sealed slug · fall back to a safe no-op
+  // href if slug is somehow null (defensive · nex_business.slug is
+  // NOT NULL per migration 002 so this should never fire).
+  const shopHref =
+    shop.slug && shop.slug.length > 0 ? `/nex-native/${shop.slug}` : "";
+  const productPageHref =
+    shop.slug && shop.slug.length > 0
+      ? `/nex-native/${shop.slug}/${product.id}`
+      : "";
 
   const handleAddToCart = (): void => {
     try {
@@ -1003,16 +1013,147 @@ function ProductDetailSheet(props: {
             >
               {price ?? "—"}
             </div>
-            <div
+          </div>
+          {/* Phase V · P16 · 2026-11-05 · Social-to-Shop Discovery.
+           *  Clickable seller row with avatar + shop name + "Visit
+           *  shop →" arrow. Replaces the old plain-text "Sold by X"
+           *  line. Deep-links to the real /nex-native/{slug} shop
+           *  page, never a generic directory · honours the sealed
+           *  rule "always link to the actual owner's shop". */}
+          {shopHref ? (
+            <Link
+              href={shopHref}
+              onClick={props.onClose}
+              aria-label={`Visit ${shop.displayName} shop`}
+              data-nex-seller-shop-sheet-visit-shop
               style={{
-                fontSize: 12,
-                color: "#B5C3D6",
-                marginTop: 2,
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "10px 12px",
+                borderRadius: 12,
+                background: "rgba(255, 255, 255, 0.05)",
+                border: "1px solid rgba(255, 255, 255, 0.10)",
+                color: "inherit",
+                textDecoration: "none",
               }}
             >
-              Sold by {shop.displayName}
-            </div>
-          </div>
+              <span
+                aria-hidden
+                style={{
+                  flexShrink: 0,
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                  background: "#0A1120",
+                  border: "1px solid rgba(255,255,255,0.14)",
+                  display: "grid",
+                  placeItems: "center",
+                }}
+              >
+                {broadcaster.avatarUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={broadcaster.avatarUrl}
+                    alt=""
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      display: "block",
+                    }}
+                  />
+                ) : (
+                  <span
+                    style={{
+                      color: "#00AFFF",
+                      fontWeight: 900,
+                      fontSize: 14,
+                    }}
+                  >
+                    {shop.displayName.slice(0, 1).toUpperCase()}
+                  </span>
+                )}
+              </span>
+              <span
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  minWidth: 0,
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 10,
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    color: "#8BA9D1",
+                    fontWeight: 700,
+                  }}
+                >
+                  Sold by
+                </span>
+                <span
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: "#F2F5F8",
+                    lineHeight: 1.2,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {shop.displayName}
+                </span>
+              </span>
+              <span
+                aria-hidden
+                style={{
+                  fontSize: 11,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  color: "#00AFFF",
+                  fontWeight: 700,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Visit shop →
+              </span>
+            </Link>
+          ) : null}
+          {/* Phase V · P16 · 2026-11-05 · "View full product page"
+           *  secondary link. Opens the sealed /nex-native/{slug}/{id}
+           *  surface where buyers get the gallery, variants, return
+           *  policy and full description. Uses the real nex_product
+           *  id · never a duplicate record. */}
+          {productPageHref ? (
+            <Link
+              href={productPageHref}
+              onClick={props.onClose}
+              data-nex-seller-shop-sheet-view-product
+              style={{
+                display: "inline-flex",
+                alignSelf: "flex-start",
+                alignItems: "center",
+                gap: 6,
+                padding: "8px 12px",
+                borderRadius: 999,
+                background: "rgba(0, 175, 255, 0.10)",
+                border: "1px solid rgba(0, 175, 255, 0.4)",
+                color: "#00AFFF",
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                textDecoration: "none",
+              }}
+            >
+              View full product page →
+            </Link>
+          ) : null}
         </div>
 
         {/* Dual CTA footer */}
