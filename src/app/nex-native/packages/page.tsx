@@ -10,13 +10,26 @@
 // existing create-account / upgrade flows.
 //
 // Sealed 2026-09-27.
+//
+// Phase 2 Batch 4 · 2026-11-06 · the page now consumes `?intent=bisnis`
+// (set by `/manage/shop` unauth redirect in Batch 3 and by the welcome
+// card "Business Chat" CTA). When present, the Business (Bisnis)
+// package card renders with `data-highlighted="true"` + anchor `id`
+// so an in-page CSS rule scrolls it into view. No other card is
+// touched. Reading searchParams forces the page to render dynamically
+// so `force-static` was swapped to `force-dynamic` (still SSR-only ·
+// no client JS added).
 
 import type * as React from "react";
 import Link from "next/link";
 import { NEX_OFFICIAL_CHAT_HREF } from "@/lib/nex-native/nex-official";
 import { NexPageHeader } from "../_page-header";
 
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
+
+interface PackagesPageProps {
+  readonly searchParams: Promise<{ intent?: string }>;
+}
 
 const NEX = {
   bg: "var(--nex-world-background-base, #020914)",
@@ -39,7 +52,17 @@ const SERIF =
 const SANS =
   "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
-export default function PackagesPage() {
+export default async function PackagesPage({
+  searchParams,
+}: PackagesPageProps) {
+  // Phase 2 Batch 4 · 2026-11-06 · `?intent=bisnis` highlights the
+  // Business card. Any other value falls back to the default layout.
+  // Trimmed + case-insensitive match keeps "Bisnis" / " bisnis "
+  // URLs honest.
+  const params = await searchParams;
+  const intent = (params.intent ?? "").trim().toLowerCase();
+  const bisnisHighlighted = intent === "bisnis";
+
   return (
     <div
       style={{
@@ -53,6 +76,19 @@ export default function PackagesPage() {
       <div style={{ padding: "0 14px" }}>
         <NexPageHeader dataScope="packages" />
       </div>
+
+      {/* Phase 2 Batch 4 · in-page scroll-anchor + highlight rim for
+          the Bisnis card when ?intent=bisnis arrives. CSS-only · no
+          client JS · the anchor is the `id="pkg-bisnis"` on the card
+          wrapper rendered below. scroll-margin-top keeps the sticky
+          page header from occluding the top of the card. */}
+      <style>{`
+        #pkg-bisnis { scroll-margin-top: 64px; }
+        [data-nex-package="bisnis"][data-highlighted="true"] {
+          outline: 2px solid ${NEX.orange};
+          outline-offset: 4px;
+        }
+      `}</style>
 
       {/* --- HERO --------------------------------------------------- */}
       <section
@@ -183,6 +219,10 @@ export default function PackagesPage() {
             }}
             highlight
             badge="Recommended for exporters"
+            // Phase 2 Batch 4 · in-bound `?intent=bisnis` scrolls here.
+            anchorId="pkg-bisnis"
+            dataPackage="bisnis"
+            intentHighlighted={bisnisHighlighted}
           />
         </div>
       </section>
@@ -503,6 +543,9 @@ function PackageCard({
   secondaryCta,
   highlight,
   badge,
+  anchorId,
+  dataPackage,
+  intentHighlighted,
 }: {
   eyebrow: string;
   title: string;
@@ -518,9 +561,23 @@ function PackageCard({
   secondaryCta?: { href: string; label: string };
   highlight: boolean;
   badge?: string;
+  /** Phase 2 Batch 4 · in-page anchor for the `?intent=<name>` deep link.
+   *  Only set on cards that participate in the welcome-card routing
+   *  (today: Bisnis). */
+  anchorId?: string;
+  /** Phase 2 Batch 4 · `data-nex-package` attribute so CSS + tests can
+   *  target the card without colliding with the sealed highlight styling. */
+  dataPackage?: string;
+  /** Phase 2 Batch 4 · true when the matching `?intent=` was received.
+   *  Drives the `data-highlighted` attribute the in-page `<style>` block
+   *  hooks on. */
+  intentHighlighted?: boolean;
 }) {
   return (
     <div
+      id={anchorId}
+      data-nex-package={dataPackage}
+      data-highlighted={intentHighlighted ? "true" : undefined}
       style={{
         position: "relative",
         padding: "22px 20px 22px",

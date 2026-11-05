@@ -14,7 +14,7 @@
 // by the Reality Check scripts in scripts/nex-*-reality-check.mts.
 
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import {
   nexAppSsrServerClient,
@@ -216,6 +216,34 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
   }
 
   if (data.user?.id) {
+    // Phase 2 Batch 4 · 2026-11-06 · persist the country hint read at
+    // /create-account render time (geo-IP header → Accept-Language
+    // fallback) into a long-lived cookie so post-signup surfaces
+    // (/packages, Shop upgrade) can resolve a regional price without a
+    // second lookup. Column persistence (nex_account.country_iso2) is
+    // flagged in the Phase 2a audit § 3.D and awaits § H gate B3
+    // (schema migration authorisation) · the cookie is the pragmatic
+    // bridge until then. Best-effort · never fails signup.
+    try {
+      const { persistCountryHintCookie } = await import(
+        "@/lib/nex-native/country/country-hint-cookie"
+      );
+      const hdrs = await headers();
+      const geo =
+        hdrs.get("x-vercel-ip-country") ||
+        hdrs.get("cf-ipcountry") ||
+        hdrs.get("x-nex-ip-country");
+      let iso2: string | null = null;
+      if (geo && /^[A-Za-z]{2}$/.test(geo)) iso2 = geo.toUpperCase();
+      if (!iso2) {
+        const al = hdrs.get("accept-language");
+        const m = al?.match(/-([A-Za-z]{2})\b/);
+        if (m) iso2 = m[1]!.toUpperCase();
+      }
+      await persistCountryHintCookie(iso2);
+    } catch {
+      /* non-fatal · signup success is not blocked on cookie write */
+    }
     try {
       const existing = await accountService.getAccountBySupabaseUserId(data.user.id);
       let acc = existing;
