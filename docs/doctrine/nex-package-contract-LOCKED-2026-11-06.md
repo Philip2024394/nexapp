@@ -1,22 +1,24 @@
-# NEX Package Contract · DRAFT
+# NEX Package Contract · LOCKED 2026-11-06
 
-**Status:** 📝 DRAFT · owner-recorded 2026-10-20 (DECISIONS only · implementation NOT authorised)
+**Status:** 🔒 LOCKED · owner-recorded 2026-10-20 · owner-promoted DRAFT → LOCKED 2026-11-06 alongside the Shop Entitlement Contract LOCK in the same review cycle.
 **Author:** Claude (recording owner-authored decisions)
-**Date:** 2026-10-20
-**Blocks:** Any public package copy change without separate authorisation
-**Supersedes:** nothing (first package contract draft)
+**Date opened:** 2026-10-20 · **Date locked:** 2026-11-06
+**Blocks:** Any public package copy change without separate authorisation. Any amendment to D1–D6 or P1–P3 now requires a new owner-authored change + separate LOCK promotion.
+**Supersedes:** nothing (first package contract)
 
-> **What this draft means:** The nine decisions below are the
-> owner-recorded direction for how NEX packages describe themselves
-> to customers. Future revisions require a new owner-authored
-> change.
+> **What this LOCK means:** the nine decisions below (D1–D6 + P1–P3) are the owner-recorded, owner-locked direction for how NEX packages describe themselves to customers. All nine were re-reviewed under the scope-reduction cycle on 2026-11-06 and confirmed to still apply (owner answered "Lock all 9 as-is — they already align with new scope + sealed Vault/Shop contract").
 >
-> **What this draft does NOT mean:** no implementation is scheduled
+> **What this LOCK does NOT mean:** no implementation is scheduled
 > or authorised. No W-item is unblocked. No public copy on
-> `/packages`, `/settings/tier`, or `/admin/tier` is changed. The
-> Vault Entitlements Policy stays LOCKED. Phase A1 release stays
-> on hold. S1 / S2 / S3 await separate authorisation. W1–W12
+> `/packages`, `/settings/tier`, or `/admin/tier` is changed yet. The
+> Vault Entitlements Policy stays LOCKED. S1 / S2 / S3 await separate authorisation. W1–W12
 > remain unscheduled. Migration 213 remains unauthorised.
+>
+> **Scope-reduction lineage:** this LOCK was promoted under the sealed 2026-11-06 Scope Reduction (Chat + Chat Themes + Shop bundles Vault only). Under the new scope:
+> - D1 "Both routes" applies to **Chat Themes** (kept as $3.99 one-time standalone product) + **Shop Themes** (bundled with Shop membership · phase-v P2/P7/P8); Chat Themes and Shop Themes are DISTINCT product lines.
+> - D5 "Full Business trial" is honoured by Shop contract §E-1 + §K-3 (7-day auto-fire on first business signup).
+> - D6 "Defer Vault public promotion" is honoured by Shop contract §C-9 + §J-2 + §H-B6 (Vault omitted from public Shop copy until Vault W-items ship).
+> - P1 / P2 / P3 remain deferred; Shop contract §C-10 lists them as unimplemented entitlements. Each unblocks when owner separately authorises the wiring.
 
 ---
 

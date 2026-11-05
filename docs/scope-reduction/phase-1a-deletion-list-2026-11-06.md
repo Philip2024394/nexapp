@@ -395,7 +395,22 @@ Move or delete the following from `docs/doctrine/` (owner picks disposition; rec
 
 ---
 
-## 7 · Remaining owner decisions (short list)
+## 7 · Owner decisions (RESOLVED 2026-11-06 in-session)
+
+All Q1–Q8 resolved. Phase 1c may proceed per §8 batch plan.
+
+- **Q1 WatchOverlayCaption** → **MOVE** (default accepted). Batch 1 relocates it to `components/nex-native/watches/`.
+- **Q2 shop-contacts-dedup** → **MOVE** (default accepted). Batch 1 relocates it to `lib/nex-native/shop-contacts/dedup.ts`.
+- **Q3 uploaded-video-service + dev-video-manifest + stale-session-policy + types.ts** → **MOVE** (default accepted). Batch 1 relocates all four to `lib/nex-native/product-video/`.
+- **Q4 country-feed-mode.ts** → **DELETE with nex-feed** (Batch 2) (default accepted). Shop country-switcher rebuilt fresh if/when needed.
+- **Q5 Harvester (urlQueueProcessor + candidateExtractor)** → **DELETE entire** (default accepted). Batch 7 removes alongside Trade Centre. Directory canonical rows already in Supabase from earlier harvests; new business intake post-launch via create-shop flow (phase-v P1).
+- **Q6 authoring health + coverage** → **STUB returning empty state** (default accepted). Batch 8 replaces with empty-state returns. API shape preserved for future knowledge-base plumbing.
+- **Q7 create-page Go-Live card** → **REMOVE** (default accepted). Batch 4 removes the card. Layout drops to 4 cards.
+- **Q8 creator-badges.ts** → **KEEP STUBBED** (default accepted). Batch 3 replaces body with empty badges array; CreatorBadgeStrip on profile continues to render (empty).
+
+---
+
+### Original 7 · Remaining owner decisions (now historical)
 
 - **Q1. `WatchOverlayCaption.tsx`** lives under `src/components/nex-native/live-commerce/` but is consumed by the KEPT `manage/watches/new` upload surface. Decision: (a) move the file to `components/nex-native/watches/`, OR (b) remove the watches upload feature. Default proposed: (a).
 - **Q2. `shop-contacts-dedup.ts`** lives under `src/lib/nex-native/live-broadcast/`. If any shop-contacts surface consumes it, move to `src/lib/nex-native/shop-contacts/`. Needs one more grep in Phase 1c against `shop-contacts/`. Default proposed: move.

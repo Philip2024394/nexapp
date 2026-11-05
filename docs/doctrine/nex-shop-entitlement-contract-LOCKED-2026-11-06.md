@@ -1,15 +1,15 @@
-# NEX Shop Entitlement Contract — DRAFT
+# NEX Shop Entitlement Contract — LOCKED 2026-11-06
 
-**Status:** DRAFT — AWAITING OWNER SIGN-OFF 2026-11-06
+**Status:** LOCKED — owner-sealed 2026-11-06 (walked through §A–§J in review cycle; all §I-1..§I-6 answered; §J-1 + §J-6 resolved; Package Contract DRAFT 2026-10-20 promoted to LOCKED in same cycle)
 **Author:** Claude (compiled from sealed memory + on-disk doctrine + phase-v P1–P24 commit history)
 **Branch:** `phase-x/scope-reduction-chat-themes-shop-vault-2026-11-06`
-**Date:** 2026-11-06
-**Blocks:** Any Stripe code touching the repo for Shop membership · any Phase 2 flow work on `/nex-native/shop/*` · any public Shop package copy
-**Supersedes:** nothing (first Shop-specific entitlement contract; references Package Contract DRAFT 2026-10-20 and Vault Entitlements Policy LOCKED 2026-10-20)
+**Date opened:** 2026-11-06 · **Date locked:** 2026-11-06
+**Blocks removed:** This contract now UNBLOCKS Phase 2 flow work on `/nex-native/shop/*` and future Stripe wiring, subject to the §H enforcement checklist still being satisfied gate-by-gate.
+**Supersedes:** nothing (first Shop-specific entitlement contract; honours Package Contract LOCKED 2026-11-06 + Vault Entitlements Policy LOCKED 2026-10-20 verbatim)
 
-> **What this draft IS:** a proposal defining exactly what the Shop monthly membership unlocks, how post-payment behaves, and what happens on trial / cancel / grace, so the owner can sign off BEFORE Phase 2 flow work or Stripe code ships.
+> **What this LOCK means:** the contract's *terms* are now permanent. Pricing proposals, trial semantics, grace semantics, entitlement descriptions, closure behaviour — these are the decisions this contract codifies. Nothing in this file authorises a migration, a Stripe integration, a schema write, a flow change, or a customer-facing claim; §H enforcement gates remain gate-by-gate and each one is a SEPARATE AUTHORISATION. A locked contract tells Phase 2 *what to build*; owner authorises *when to build it* separately.
 >
-> **What this draft is NOT:** a lock. Nothing in this file authorises a migration, a Stripe integration, a schema write, a flow change, or any customer-facing claim. Every § header carries the DRAFT marker so the owner can accept, amend, or reject row-by-row.
+> **Decisions applied in this LOCK are summarised in the new § K at the end of this file.** The DRAFT annotations in §A–§J headers remain for traceability of the question-trail, but the top-level contract is sealed.
 
 ---
 
@@ -417,13 +417,41 @@ Sealed doctrine this contract touches, with reconciliation notes.
 
 ---
 
-## Approval checkpoint
+## Approval checkpoint — RESOLVED 2026-11-06
 
-Owner reviews section-by-section. For each §, the owner may:
+Owner walked through §A–§J in-session on 2026-11-06. All §I open questions answered. §J-1 resolved by LOCKING Package Contract DRAFT in the same cycle. §J-6 resolved by reserving Daily Discovery C-8 internally only (not in public copy until Phase B migration authorised separately). Contract promoted DRAFT → LOCKED.
 
-- Accept as-is.
-- Amend specific rows with owner-authored text.
-- Reject and request Claude re-draft with new direction.
-- Promote the DRAFT to LOCKED (parallel to the Vault policy lock on 2026-10-20) under a separately signed authorisation message.
+---
 
-No downstream Phase 2 Stripe wiring, no migration application, no public Shop copy change may proceed until the owner explicitly signs off this contract.
+## § K · Decisions applied at LOCK · 2026-11-06
+
+The following answers to open §I + §J items are now PART OF this contract. Where they refine §A–§J language, they take precedence.
+
+### K-1 · Price scope (§ B, §I-1)
+**LOCKED:** Launch with **core four markets only** — USD (anchor 9.99/mo · 99/yr), GBP, IDR, EUR. The remaining eight regions from the launch pricing 2026-10-20 memory (AUD · CAD · SGD · MYR · INR · PHP · THB · JPY) extend post-launch in waves as per-market signal warrants. Rationale: 3× validation burden avoided; four markets is enough signal to iterate.
+
+### K-2 · Shop tier model (§ A, §I-2)
+**LOCKED:** **Pay-only Shop** — no free Shop tier. `/nex-native/shop/create` renders a pricing-preview wall + "Start 7-day free trial" CTA + sign-in for unauthenticated visitors. All §C entitlements gate on active Shop membership (trial counts as active). Rationale: clean entitlement enforcement; simpler funnel; preserves the paid-shop value proposition.
+
+### K-3 · Trial activation (§ E-1, §I-3)
+**LOCKED:** **7-day trial auto-fires on first business signup.** No card required to start trial. Shop membership activates immediately; day-7 transitions to paid (or to lapsed + 30-day read-only grace if payment fails/not configured).
+
+> **RETIRES SEALED HOLD:** The 2026-10-18 `startThemesTrial deliberately-untouched-at-signup` hold is explicitly RETIRED by this decision. Phase 2 work removes the deliberate no-op from `signUpAction` + wires `startBusinessTrial` on successful business signup. Welcome-card copy updates to "7 days free, then [price]" per sealed 2026-10-21 "same story" principle — all three unlocks (price approved, trial auto-fires, copy aligned) are satisfied by this lock + Phase 2 wiring together.
+
+### K-4 · Closed-shop URL behaviour (§ E-4, §I-4)
+**LOCKED:** On day 30+ after grace expires (never resubscribed), `/nex-native/{slug}` renders **"This shop is no longer active" soft-landing + chat CTA**. Shop data retained internally for audit + possible resubscription; not published. Soft-landing preserves SEO + social-share dignity. Buyer landing from stale WhatsApp/Instagram share sees option to message the former seller via chat (sellers keep their chat account independent of Shop membership).
+
+### K-5 · 0% commission copy (§ C-10, §I-6)
+**LOCKED:** The public Shop membership card SAYS **"NEX takes 0% commission on your sales · ever"** at launch. Honest today — phase-v P10 made the NEX-membership-vs-shop-payment boundary STRUCTURAL in code; no buyer money flows through NEX by design. Copy lands cleanly whether or not a buyer→seller cart surface exists (the commission promise is a property of the payment architecture, not a specific surface).
+
+### K-6 · Daily Discovery (§ C-8, §I-5, §J-6)
+**LOCKED:** C-8 **reserved internally** as a Shop entitlement (so the contract knows what Shop includes). **NOT listed in public Shop copy** until Phase B migration is separately authorised (per sealed 2026-11-05 Daily Discovery doctrine). Shop contract may reference "a daily product spotlight" internally; public packages page + welcome card + marketing material MUST NOT list this benefit until Phase B migration lands.
+
+### K-7 · Package Contract DRAFT → LOCKED (§J-1)
+**LOCKED:** The Package Contract DRAFT 2026-10-20 (nine decisions D1–D6 + P1–P3) is promoted to LOCKED **as-recorded 2026-10-20**. File renamed to `nex-package-contract-LOCKED-2026-11-06.md`. All nine decisions align with the new scope and with this Shop contract. See that file for authoritative text of D1–D6 + P1–P3.
+
+### K-8 · Enforcement gates still in force
+Every §H gate (B1–B10, including B7's seven Vault W-item sub-checks) REMAINS a prerequisite for Phase 2 Stripe wiring. The LOCK does not satisfy these gates — it just makes the terms permanent so the gates can be worked against. The W5 download-everything endpoint remains a hard release blocker for any public Vault-bundled claim.
+
+### K-9 · Scope-reduction lineage
+This contract was authored and locked under the sealed 2026-11-06 Scope Reduction (Chat + Chat Themes + Shop bundles Vault only; Live/Music/Community Notice/Starter Pack/Power Tokens/Sponsorship/Trade Centre/staircase/non-shop Daily Discovery removed). No contract clause assumes any removed surface. If the scope reduction is ever rolled back, this contract requires owner review.
