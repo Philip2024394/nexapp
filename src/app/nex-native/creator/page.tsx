@@ -50,7 +50,12 @@ const SECTION_META: Record<
     readonly createLabel: string;
   }
 > = {
-  music:    { icon: "🎵", createHref: "/nex-native/create/upload-music", createLabel: "Upload music" },
+  // 2026-11-06 · Phase 1c Batch 3 · Music upload surface deleted ·
+  // createHref null so the dashboard falls back to "Coming to NEX"
+  // instead of linking to a removed route. Section row stays because
+  // CreatorSection union still includes "music" (creator-badges is
+  // stubbed to return empty badges per Q8 KEEP STUBBED).
+  music:    { icon: "🎵", createHref: null, createLabel: "" },
   shop:     { icon: "🛍️", createHref: "/nex-native/create/product",     createLabel: "Add a product" },
   // Video has an owner-countable table (nex_uploaded_video) but the
   // dedicated create surface is not shipped yet · show counter, no CTA.

@@ -1,36 +1,24 @@
 // src/lib/nex-native/creator/creator-badges.ts
 //
-// Owner-authorised 2026-10-31 · NEX Creator Programme · Stage 1.
+// Phase 1c Batch 3 · Music surface deleted · Q8 KEEP STUBBED
+// (phase-1a-deletion-list-2026-11-06 §7 Q8).
 //
-// Per-section qualification resolver. 5+ qualifying posts in a section
-// earns that section's Creator badge. Each section's "qualifying post"
-// definition is the section's own rule (not a one-size-fits-all).
+// Owner-authorised 2026-10-31 origin of this module (Creator Programme
+// Stage 1) is preserved · the public API (`resolveCreatorBadges` +
+// re-exported client-safe types from `creator-badges-common`) is
+// unchanged so CreatorBadgeStrip, CreatorWelcomePanel, and the creator
+// dashboard continue to type-check and render.
 //
-// Current scope: music only. Shape generalised so future sections
-// (shop, video, images, food, fashion, property) can plug in by
-// adding a counter without touching the resolver signature.
-//
-// Qualification rule for Music (owner-authorised 2026-10-31):
-//   · visibility != 'removed' · a user's non-removed library tracks
-//   · threshold ≥ 5
-//
-// This matches the owner's "library content I own" mental model. It
-// does NOT require the sealed M-2 Live Feed publish path (private
-// tracks still count because the owner has "put them on the site").
-// If/when a stricter rule is wanted (e.g. shared_live only), the
-// counter below is the single place to change it.
-//
-// Shape is defensive · failures return `{} as EarnedBadges` so one
-// broken section never breaks the rest of the profile render.
+// Body now returns an empty EarnedBadges on every call. The music
+// section counter (which was the only live section counter in this
+// release) is removed because `src/lib/nex-native/music/*` is
+// deleted. Shop + Video counters had `createHref` entries in the
+// dashboard but no earned-badge gate had shipped — they're folded
+// into the stub so the full tree deletes cleanly. When a future
+// section earns a counter, reinstate the resolver body.
 
 import "server-only";
-import { getOwnerTrackCount } from "../music/music-repository";
-import { nexSupabaseAdmin } from "../supabase-admin";
 
-// Client-safe types + the pure label helper live in
-// creator-badges-common.ts so client components can import them
-// without pulling the server-only Supabase admin chain into their
-// bundle. Re-exported here for existing server-side callers.
 export {
   CREATOR_QUALIFYING_THRESHOLD,
   sectionBadgeLabel,
@@ -41,102 +29,17 @@ export type {
   EarnedBadges,
 } from "./creator-badges-common";
 
-// Local type alias so the rest of this file reads unchanged.
-import type { CreatorSection, SectionProgress } from "./creator-badges-common";
+import type { EarnedBadges } from "./creator-badges-common";
 
-/** Count qualifying products the account owns, joined through
- *  nex_business.owner_account_id. "Qualifying" = non-removed · we
- *  check `status != 'removed'` on nex_product. Fail-open: on any
- *  error returns 0. */
-async function countShopForAccount(accountId: string): Promise<number> {
-  try {
-    // Supabase JS does not support joins in count queries directly ·
-    // we do the two-step: list businesses, then count products.
-    const { data: biz, error: bizErr } = await nexSupabaseAdmin
-      .from("nex_business")
-      .select("id")
-      .eq("owner_account_id", accountId);
-    if (bizErr || !biz || biz.length === 0) return 0;
-    const businessIds = biz.map((b: { id: string }) => b.id);
-    const { count, error: pErr } = await nexSupabaseAdmin
-      .from("nex_product")
-      .select("id", { count: "exact", head: true })
-      .in("business_id", businessIds)
-      .neq("status", "removed");
-    if (pErr || typeof count !== "number") return 0;
-    return count;
-  } catch {
-    return 0;
-  }
-}
-
-/** Count non-removed uploaded videos owned by the account. */
-async function countVideoForAccount(accountId: string): Promise<number> {
-  try {
-    const { count, error } = await nexSupabaseAdmin
-      .from("nex_uploaded_video")
-      .select("id", { count: "exact", head: true })
-      .eq("owner_account_id", accountId)
-      .neq("visibility", "removed");
-    if (error || typeof count !== "number") return 0;
-    return count;
-  } catch {
-    return 0;
-  }
-}
-
-/** Count qualifying posts in each supported section. Music / Shop /
- *  Video are live. Images / Food / Fashion / Property return 0 until
- *  their content models land in a future migration — do not fabricate
- *  numbers. */
-async function countBySection(
-  accountId: string,
-): Promise<Record<CreatorSection, number>> {
-  const [musicCount, shopCount, videoCount] = await Promise.all([
-    getOwnerTrackCount(accountId).catch(() => 0),
-    countShopForAccount(accountId),
-    countVideoForAccount(accountId),
-  ]);
-  return {
-    music: musicCount,
-    shop: shopCount,
-    video: videoCount,
-    images: 0,   // no content table yet
-    food: 0,     // no content table yet
-    fashion: 0,  // no content table yet
-    property: 0, // no content table yet
-  };
-}
-
-/** Resolve earned Creator badges for an account. Pure server-side ·
- *  no caching · callers memoise upstream if needed (e.g. profile
- *  Promise.all). */
+/** Phase 1c Batch 3 stub · always returns an empty badges set. The
+ *  signature matches the pre-stub resolver so every caller keeps
+ *  compiling. `_accountId` is retained (and prefixed `_` so the
+ *  linter accepts it) to preserve the public shape for when a real
+ *  resolver reinstates. */
 export async function resolveCreatorBadges(
-  accountId: string,
+  _accountId: string,
 ): Promise<EarnedBadges> {
-  const counts = await countBySection(accountId);
-  const sections: readonly CreatorSection[] = [
-    "music",
-    "shop",
-    "video",
-    "images",
-    "food",
-    "fashion",
-    "property",
-  ];
-  const all = sections.map<SectionProgress>((section) => {
-    const count = counts[section];
-    return {
-      section,
-      count,
-      threshold: CREATOR_QUALIFYING_THRESHOLD,
-      earned: count >= CREATOR_QUALIFYING_THRESHOLD,
-    };
-  });
-  return {
-    all,
-    earned: all.filter((p) => p.earned),
-  };
+  return { all: [], earned: [] };
 }
 
 export const EMPTY_EARNED_BADGES: EarnedBadges = { all: [], earned: [] };

@@ -13,14 +13,13 @@
 //     radius 12 · colour #FFFFFF · fontSize 12.5 · fontWeight 800 ·
 //     shadow 0 3px 10px -3px rgba(16,32,51,0.45) · disabled opacity 0.4
 //
-// Five cards:
+// Cards (Music retired 2026-11-06 · Phase 1c Batch 3):
 //   A · Go Live               · functional · /nex-native/live-commerce/welcome
 //   B · Upload Product Video  · Coming soon · no handler
 //   C · Upload Entertainment Video · Coming soon · no handler
 //   D · Upload Image          · Coming soon · no handler
-//   E · Upload Music          · Coming soon · no handler
 //
-// Layout: 2-column grid at every width · 2+2+1 · Music centred on row 3.
+// Layout: single-column stack.
 //
 // Scope sealed by founder (2026-10-28):
 //   · Only Card A functional. B-E are Coming soon · no handler, no route.
@@ -63,7 +62,7 @@ const CHIP_DISABLED_BG = "rgba(255, 255, 255, 0.1)";
 const CHIP_DISABLED_FG = "#8BA9D1";
 
 interface CreateCard {
-  readonly id: "go-live" | "product" | "product-video" | "entertainment-video" | "image" | "music";
+  readonly id: "go-live" | "product" | "product-video" | "entertainment-video" | "image";
   readonly label: string;
   readonly blurb: string;
   readonly glyph: string;
@@ -74,13 +73,15 @@ interface CreateCard {
 // sealed Product System Implementation Contract (§K owner-resolved).
 // Routes to the shared Create Product flow with business picker →
 // category picker → shared form.
+// 2026-11-06 · Phase 1c Batch 3 · Music card removed (scope-reduction
+// phase-1a §3.3). The Go-Live card is still present pending Batch 4
+// (Live surface deletion); it will be removed or redirected then.
 const CARDS: readonly CreateCard[] = [
   { id: "go-live",             label: "Go Live",            blurb: "Stream now",    glyph: "LIVE_DOT", href: "/nex-native/live-commerce/library" },
   { id: "product",             label: "Product",            blurb: "Create & sell", glyph: "🛍️", href: "/nex-native/create/product" },
   { id: "product-video",       label: "Product Video",      blurb: "Add to shop",   glyph: "🛒", href: null },
   { id: "entertainment-video", label: "Entertainment Video", blurb: "Video post",   glyph: "🎥", href: null },
   { id: "image",               label: "Image",              blurb: "Photo post",    glyph: "🖼️", href: null },
-  { id: "music",               label: "Music",              blurb: "Upload tracks", glyph: "🎵", href: "/nex-native/create/upload-music" },
 ] as const;
 
 // Owner directive 2026-10-28 · "golive red dark dot with ping". Dark

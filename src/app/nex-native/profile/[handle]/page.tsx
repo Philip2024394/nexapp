@@ -73,7 +73,8 @@ import { readFollowCounts, getFollowState } from "@/lib/nex-native/follow/follow
 // the sole entry to the Safe Trade sheet · bottom card removed.
 import { OwnerEditShell } from "./_owner-edit-shell";
 import { SafeTradeHeroIcon } from "./_safe-trade-hero-icon";
-import { AccountMusicPreloader } from "@/components/nex-native/music/_account-music-preloader";
+// AccountMusicPreloader import retired 2026-11-06 · Phase 1c Batch 3 ·
+// Music surface deleted (scope-reduction phase-1a §3.2).
 import { CreatorWelcomePanel } from "@/components/nex-native/creator/CreatorWelcomePanel";
 import { getCreatorSupportSettings } from "@/lib/nex-native/creator/creator-support-service";
 import { savePersonalProfileAction, submitSafeTradeReportAction } from "./_actions";
@@ -360,30 +361,11 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
     profileAccount.id,
   ).catch(() => null);
 
-  // Owner-authorised 2026-10-31 · world-class "premium app feel" ·
-  // warm the viewer's browser cache for the profile owner's music
-  // library the moment they land on the account page. If they tap
-  // music / an avatar / anywhere that deep-links to the music feed,
-  // the first slide loads from cache instead of blocking on a cold
-  // signed-URL fetch. Fail-open: resolver returns an empty bundle on
-  // any error so a music outage never breaks the profile page.
-  const musicPreloadPromise = (async () => {
-    const { resolveAccountMusicPreload } = await import(
-      "@/lib/nex-native/music/account-music-preload"
-    );
-    return resolveAccountMusicPreload({
-      ownerAccountId: profileAccount.id,
-      viewerIsOwner: isOwner,
-    });
-  })().catch(() => ({
-    topTrackHref: null,
-    topCoverUrl: null,
-    topBackgroundUrl: null,
-    topAudioUrl: null,
-    libraryCoverUrls: [] as readonly string[],
-  }));
+  // 2026-11-06 · Phase 1c Batch 3 · musicPreloadPromise retired with
+  // the Music surface (scope-reduction phase-1a §3.2). The preloader
+  // component is deleted; no stand-in replacement.
 
-  const [profile, businesses, isVerified, connectState, mutualResult, followCounts, viewerFollowState, isIrishOwner, musicPreload, creatorBadges, creatorSupportSettings] = await Promise.all([
+  const [profile, businesses, isVerified, connectState, mutualResult, followCounts, viewerFollowState, isIrishOwner, creatorBadges, creatorSupportSettings] = await Promise.all([
     profilePromise,
     businessesPromise,
     verifiedPromise,
@@ -392,7 +374,6 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
     followCountsPromise,
     viewerFollowStatePromise,
     isIrishOwnerPromise,
-    musicPreloadPromise,
     creatorBadgesPromise,
     creatorSupportPromise,
   ]);
@@ -600,20 +581,9 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
       data-nex-profile-themed={themeAccent ? "true" : "false"}
       style={mainStyle}
     >
-      {/* Owner-authorised 2026-10-31 · world-class premium app feel.
-          Invisible: warms the browser cache for the profile owner's
-          top music track + library row thumbnails + the music-feed
-          route payload. If the viewer taps anything that deep-links
-          to /nex-native/nex-feed/music-{trackId}, the slide loads
-          from cache instead of a cold start. Save-Data / 2G guards
-          live inside the component. */}
-      <AccountMusicPreloader
-        topTrackHref={musicPreload.topTrackHref}
-        topCoverUrl={musicPreload.topCoverUrl}
-        topBackgroundUrl={musicPreload.topBackgroundUrl}
-        topAudioUrl={musicPreload.topAudioUrl}
-        libraryCoverUrls={musicPreload.libraryCoverUrls}
-      />
+      {/* 2026-11-06 · Phase 1c Batch 3 · AccountMusicPreloader JSX
+          removed with the Music surface. The creator-dashboard music
+          deep-link path no longer exists. */}
 
       {/* Owner-authorised 2026-10-31 · Creator welcome panel · shown
           on the owner's own profile when they've earned a Creator
