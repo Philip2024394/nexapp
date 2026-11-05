@@ -16,7 +16,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import * as businessService from "@/lib/nex-native/business-service";
 import * as productService from "@/lib/nex-native/product-service";
 import { sendProductInquiryAction } from "../../_actions";
@@ -164,6 +164,15 @@ export default async function Page({
   const { businessSlug, productId } = await params;
   const business = await businessService.getBusinessBySlug(businessSlug);
   if (!business) notFound();
+
+  // Phase 2 Batch 3 · 2026-11-06 · NEX Shop Entitlement Contract § K-4.
+  // Deep-linked product pages on an archived shop redirect up to the
+  // shop landing · the parent renders the "no longer active" soft-
+  // landing + chat CTA. Avoids showing a stand-alone product on a
+  // closed shop, which would contradict the K-4 dignity contract.
+  if (business.archived_at) {
+    redirect(`/nex-native/${business.slug}`);
+  }
 
   const product = await productService.getProductById(productId);
   if (!product || product.business_id !== business.id) notFound();

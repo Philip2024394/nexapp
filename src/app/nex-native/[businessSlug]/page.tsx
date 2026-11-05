@@ -240,6 +240,35 @@ export default async function Page({
   const business = await businessService.getBusinessBySlug(businessSlug);
   if (!business) notFound();
 
+  // Phase 2 Batch 3 · 2026-11-06 · NEX Shop Entitlement Contract § K-4.
+  // --------------------------------------------------------------
+  // When the seller's Shop membership has lapsed into permanent-
+  // closure state, render a dignified "This shop is no longer
+  // active" soft-landing + chat CTA instead of the full shop
+  // surface. Preserves SEO + social-share dignity for buyers who
+  // follow stale WhatsApp / Instagram shop links.
+  //
+  // Placeholder signal (sealed 2026-11-06): the § G membership
+  // schema (`nex_business.membership_active` + `membership_period_end`)
+  // is NOT yet authorised. Until that migration lands, closure
+  // is detected via the existing `archived_at` column (Bridge 13 ·
+  // migration 063) set by `seller-responsiveness-service` when a
+  // shop crosses the 30-day inactivity floor. This is the BEST
+  // AVAILABLE signal without adding new schema. When § G lands,
+  // this branch extends to read `membership_active=false AND
+  // membership_period_end > 30 days ago` per § E-4.
+  if (business.archived_at) {
+    const { ClosedShopSoftLanding } = await import(
+      "@/components/nex-native/shop/closed-shop-soft-landing"
+    );
+    return (
+      <ClosedShopSoftLanding
+        sellerChatHref={`/nex-native/chat/peer/${business.owner_account_id}`}
+        displayName={business.display_name}
+      />
+    );
+  }
+
   // Track B · 2026-10-14 · setup-complete banner · owner-only.
   // When the owner lands here with `?setup=complete` after finishing
   // the Phase 2 two-step setup, show an honest 3-state visibility

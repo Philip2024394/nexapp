@@ -116,7 +116,16 @@ export default async function ShopSettingsPage({
   searchParams: Promise<{ e?: string; m?: string }>;
 }) {
   const session = await resolveNexAppSessionFromContext();
-  if (!session) redirect("/nex-native/sign-in");
+  // Phase 2 Batch 3 · 2026-11-06 · NEX Shop Entitlement Contract § K-2
+  // (pay-only Shop · no free tier). Unauthenticated visitors who
+  // reach the shop-management surface see the pricing-preview wall
+  // on /packages (Bisnis card · sign-in path) instead of a blank
+  // sign-in redirect. `/packages` already renders the Bisnis card
+  // publicly with its own CTA chain (phase-v P1 · `/packages:171-186`)
+  // — the `?intent=bisnis` hint is carried forward so a future
+  // packages-page enhancement can scroll / focus the Bisnis card on
+  // arrival without a new route being invented here.
+  if (!session) redirect("/nex-native/packages?intent=bisnis");
 
   const sp = await searchParams;
   const banner =
