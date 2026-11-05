@@ -33,11 +33,15 @@ export default async function CreateProductFormPage({
     redirect("/nex-native/create/product");
   }
 
-  // Ownership gate (defence-in-depth · server action re-checks)
-  let owned: Array<{ id: string; name: string }>;
+  // Ownership gate (defence-in-depth · server action re-checks).
+  // Phase V · 2026-11-05 · Also carry the slug through so the client
+  // can redirect the seller to the LIVE product URL after Publish
+  // (/nex-native/{slug}/{productId}) rather than the edit page ·
+  // closes the "see your product live in your shop" gap.
+  let owned: Array<{ id: string; name: string; slug: string }>;
   try {
     const raw = await listBusinessesByOwner(session.account.id);
-    owned = raw.map((b) => ({ id: b.id, name: b.display_name }));
+    owned = raw.map((b) => ({ id: b.id, name: b.display_name, slug: b.slug }));
   } catch {
     owned = [];
   }
@@ -57,6 +61,7 @@ export default async function CreateProductFormPage({
     <CreateProductFormClient
       businessId={business!}
       businessName={biz!.name}
+      businessSlug={biz!.slug}
       departmentId={dept as DepartmentId}
       departmentLabel={department?.label ?? dept!}
       categoryId={cat!}

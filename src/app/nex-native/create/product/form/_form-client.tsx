@@ -89,6 +89,11 @@ const COMMON_INPUT: React.CSSProperties = {
 export interface CreateProductFormClientProps {
   readonly businessId: string;
   readonly businessName: string;
+  // Phase V · 2026-11-05 · slug of the owning business · needed so
+  // that after a successful Publish Live we redirect to the public
+  // product URL (/nex-native/{slug}/{productId}) rather than the
+  // edit page. Draft saves keep landing on the edit page.
+  readonly businessSlug: string;
   readonly departmentId: DepartmentId;
   readonly departmentLabel: string;
   readonly categoryId: string;
@@ -178,7 +183,17 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
         setSubmitting(null);
         return;
       }
-      router.push(`/nex-native/manage/products/${result.data.productId}`);
+      // Phase V · 2026-11-05 · Publish Live → land on the public
+      // product URL so the seller SEES their product live in their
+      // shop (closes the "see the product live" gap in the directive).
+      // Draft Save → stay on the edit page as before.
+      if (publishLive) {
+        router.push(
+          `/nex-native/${props.businessSlug}/${result.data.productId}`,
+        );
+      } else {
+        router.push(`/nex-native/manage/products/${result.data.productId}`);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setSubmitting(null);
