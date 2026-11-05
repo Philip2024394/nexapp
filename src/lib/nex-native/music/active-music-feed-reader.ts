@@ -148,9 +148,125 @@ async function mintSignedUrlIfReference(
   }
 }
 
+/**
+ * Phase V · owner-sealed 2026-11-05 · supersedes the sealed mig 236
+ * "one active slot per creator" rule. Reads every `nex_music_track`
+ * with `visibility='shared_live'` and `rights_declaration` permitting
+ * publish, synthesises MusicFeedEntry rows without consulting
+ * `nex_creator_active_music`. Multiple tracks per creator ALL surface.
+ * The caller (`listNexFeedEntries`) is responsible for the owner-sealed
+ * "same creator never adjacent" scatter rule.
+ *
+ * Why not change `listActiveMusicFeedEntries` in place: the sealed
+ * active-slot read path is kept callable (table + RPC + idempotency
+ * are still in the schema) per the memory note
+ * `project_nex_music_feed_fairness_2026_11_05.md`. Live callers
+ * migrate to this reader; the old one becomes dead-read in the feed
+ * path but remains available for any surface still relying on the
+ * slot-level publish_generation metadata.
+ *
+ * Fail-open on per-entry errors · a single bad row is skipped rather
+ * than erroring the whole feed (same contract as the slot reader).
+ */
+export async function listSharedLiveMusicFeedEntries(args: {
+  readonly limit?: number;
+  readonly nowMs: number;
+  readonly accountLookup?: (
+    ids: readonly string[],
+  ) => Promise<readonly AccountLookup[]>;
+}): Promise<readonly MusicFeedEntry[]> {
+  const tracks = await loadTracks();
+  if (tracks.length === 0) return [];
+
+  const permittedRights = new Set([
+    "owner_content",
+    "licensed",
+    "public_domain",
+  ]);
+  const eligible: NexMusicTrackRow[] = [];
+  for (const track of tracks) {
+    if (track.visibility !== "shared_live") continue;
+    if (!permittedRights.has(track.rights_declaration)) continue;
+    eligible.push(track);
+  }
+  if (eligible.length === 0) return [];
+
+  const limit =
+    typeof args.limit === "number" && args.limit > 0 ? args.limit : 50;
+
+  // Sort by updated_at DESC (recently flipped to shared_live surfaces
+  // first) with a stable tie-break on id. The nex-feed-entries
+  // scatter layer may reorder further to enforce the "same creator
+  // never adjacent" rule.
+  const sorted = eligible
+    .slice()
+    .sort((a, b) => {
+      const at = Date.parse(a.updated_at ?? a.created_at);
+      const bt = Date.parse(b.updated_at ?? b.created_at);
+      if (bt !== at) return bt - at;
+      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+    })
+    .slice(0, limit);
+
+  const accountIds = Array.from(new Set(sorted.map((t) => t.owner_account_id)));
+  const accountMap = await fetchAccountDetails(accountIds, args.accountLookup);
+
+  const entries: MusicFeedEntry[] = [];
+  for (const track of sorted) {
+    const account = accountMap.get(track.owner_account_id);
+    const [coverSignedUrl, backgroundSignedUrl, audioSignedUrl] =
+      await Promise.all([
+        mintSignedUrlIfReference(track.cover_image_url, track.owner_account_id, 3600),
+        mintSignedUrlIfReference(track.background_image_url, track.owner_account_id, 3600),
+        track.source_type === "uploaded_audio"
+          ? mintSignedUrlIfReference(track.media_url, track.owner_account_id, 3600)
+          : Promise.resolve<string | null>(null),
+      ]);
+
+    // publishedAtMs falls back through updated_at → created_at so
+    // "newest in feed" means "most recently flipped to shared_live"
+    // in the common case.
+    const publishedAtMs = Date.parse(track.updated_at ?? track.created_at);
+    if (!Number.isFinite(publishedAtMs)) continue;
+
+    entries.push({
+      activeSlotOwnerId: track.owner_account_id,
+      ownerAccountId: track.owner_account_id,
+      ownerDisplayName: account?.displayName ?? "NEX user",
+      ownerNexHandle: account?.nexHandle ?? null,
+      ownerAvatarUrl: account?.avatarUrl ?? null,
+      trackId: track.id,
+      title: track.title,
+      artist: track.artist,
+      // External sources (spotify/youtube) render as music_video style
+      // on the viewer. Uploaded audio renders as cover_audio. This
+      // mirrors the sealed `nex_music_publish_as_active_slot()`
+      // publish_as_mode derivation without requiring a slot row.
+      publishAsMode:
+        track.source_type === "uploaded_audio" ? "cover_audio" : "music_video",
+      coverSignedUrl,
+      backgroundSignedUrl,
+      audioSignedUrl,
+      sourceUrl: track.source_url,
+      publishedAtMs,
+      publishGeneration: 1,
+      likeCount: track.like_count,
+      shareCount: track.share_count,
+    });
+  }
+
+  return entries;
+}
+
 /** Compose music feed entries from the active-slot table. Fail-open on
  *  per-entry errors (missing track, failed URL signing) · a single bad
- *  row is skipped rather than erroring the whole feed. */
+ *  row is skipped rather than erroring the whole feed.
+ *
+ *  Phase V 2026-11-05 note: this function is NO LONGER consumed by
+ *  `listNexFeedEntries`; callers have migrated to
+ *  `listSharedLiveMusicFeedEntries` above per the owner-sealed music
+ *  feed fairness doctrine. Kept callable so any surface still relying
+ *  on `publish_generation` metadata continues to work. */
 export async function listActiveMusicFeedEntries(args: {
   readonly limit?: number;
   readonly nowMs: number;

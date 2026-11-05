@@ -37,7 +37,10 @@ import {
   devVideoPublicUrl,
   DEV_VIDEO_MANIFEST,
 } from "../live-broadcast/dev-video-manifest";
-import { listActiveMusicFeedEntries, type MusicFeedEntry } from "../music/active-music-feed-reader";
+// Phase V · owner-sealed 2026-11-05 · supersedes sealed mig 236
+// one-slot-per-creator. Feed now reads every shared_live track, not
+// one-per-creator. See memory: project_nex_music_feed_fairness_2026_11_05.md.
+import { listSharedLiveMusicFeedEntries, type MusicFeedEntry } from "../music/active-music-feed-reader";
 // Owner-authorised 2026-11-05 iter 25 · join nex_product on
 // background_video_id so a video feed entry carries its shoppable-card
 // overlay data directly. Migration 280 applied the FK columns.
@@ -231,7 +234,7 @@ export async function listNexFeedEntries(
   args: ListNexFeedEntriesArgs,
 ): Promise<readonly NexFeedEntry[]> {
   const [musicEntries, videoRows] = await Promise.all([
-    listActiveMusicFeedEntries({
+    listSharedLiveMusicFeedEntries({
       limit: 50,
       nowMs: args.nowMs,
       accountLookup: args.accountLookup,
@@ -282,22 +285,39 @@ export async function listNexFeedEntries(
 }
 
 /** Interleave music posts into the video pool at evenly-spaced positions.
- *  Deterministic given the same inputs. Exposed for testing. */
+ *  Deterministic given the same inputs. Exposed for testing.
+ *
+ *  Phase V · owner-sealed 2026-11-05 · scatter rule.
+ *  Multiple music tracks per creator may now appear in one feed window
+ *  (shared_live union · supersedes mig 236 one-slot-per-creator). This
+ *  function enforces the owner rule "same creator never adjacent" by:
+ *    1. Pre-shuffling the music queue with a round-robin per owner so
+ *       consecutive music entries come from different creators.
+ *    2. Placing music at evenly-spaced video-pool slots (unchanged).
+ *  Same creator items may still neighbour across the music/video
+ *  boundary if video pool is thin, but the music→music adjacency is
+ *  the primary case owner called out.
+ */
 export function interleaveMusicIntoVideos(
   music: readonly MusicFeedEntryWrapped[],
   videos: readonly VideoFeedEntry[],
 ): readonly NexFeedEntry[] {
   if (music.length === 0) return videos;
-  if (videos.length === 0) return music;
-  const total = music.length + videos.length;
+  if (videos.length === 0) return scatterSameOwner(music) as NexFeedEntry[];
+
+  // Phase V · 2026-11-05 · scatter by owner BEFORE interleaving so the
+  // music queue hands out tracks from different owners in rotation.
+  const scatteredMusic = scatterSameOwner(music);
+
+  const total = scatteredMusic.length + videos.length;
   // Position of music post `i` in the FINAL ordered list.
   const musicSlots = new Set<number>();
-  for (let i = 0; i < music.length; i++) {
+  for (let i = 0; i < scatteredMusic.length; i++) {
     // Even spacing · 1-based half-steps so no music lands at slot 0 when
     // there are enough videos to push it later.
     const slot = Math.min(
       total - 1,
-      Math.floor(((i + 0.5) * total) / music.length),
+      Math.floor(((i + 0.5) * total) / scatteredMusic.length),
     );
     // If a slot collides (dense ratio), nudge forward to the next free slot.
     let s = slot;
@@ -308,7 +328,7 @@ export function interleaveMusicIntoVideos(
   // Build the final list by stepping through positions, pulling music
   // from the queue when the position is a music slot, else pulling a
   // video.
-  const musicQueue = [...music];
+  const musicQueue = [...scatteredMusic];
   const videoQueue = [...videos];
   const result: NexFeedEntry[] = [];
   for (let pos = 0; pos < total; pos++) {
@@ -320,6 +340,60 @@ export function interleaveMusicIntoVideos(
       // Ran out of videos — tail with remaining music.
       result.push(musicQueue.shift()!);
     }
+  }
+  return result;
+}
+
+/**
+ * Round-robin shuffle: group music by owner, then pull one from each
+ * owner in rotation. The effect is that consecutive music entries
+ * come from different creators whenever possible. If a single creator
+ * has more tracks than every other creator combined, the tail will
+ * necessarily include multiple of theirs in a row; that honest
+ * imbalance is preferred over fabricating gaps.
+ *
+ * Deterministic for a given input order. The input's `publishedAtMs
+ * DESC` order from `listSharedLiveMusicFeedEntries` is preserved
+ * within each owner's queue, so the newest track from each creator
+ * still surfaces first in that creator's rotation.
+ *
+ * Phase V · owner-sealed 2026-11-05 · music feed fairness.
+ */
+function scatterSameOwner(
+  music: readonly MusicFeedEntryWrapped[],
+): readonly MusicFeedEntryWrapped[] {
+  if (music.length <= 1) return music;
+  // Group by owner · preserve input order within each group.
+  const groups = new Map<string, MusicFeedEntryWrapped[]>();
+  const orderOfFirstSeen: string[] = [];
+  for (const m of music) {
+    const ownerId = m.entry.ownerAccountId;
+    const existing = groups.get(ownerId);
+    if (existing) {
+      existing.push(m);
+    } else {
+      groups.set(ownerId, [m]);
+      orderOfFirstSeen.push(ownerId);
+    }
+  }
+  if (groups.size === music.length) {
+    // Every entry is from a distinct creator · nothing to scatter.
+    return music;
+  }
+  // Round-robin pull. Each pass takes one from every non-empty group
+  // in the order of first-seen. This preserves determinism while
+  // guaranteeing neighbouring music comes from different creators
+  // until we exhaust all-but-one group.
+  const result: MusicFeedEntryWrapped[] = [];
+  while (result.length < music.length) {
+    let pulled = 0;
+    for (const ownerId of orderOfFirstSeen) {
+      const q = groups.get(ownerId);
+      if (!q || q.length === 0) continue;
+      result.push(q.shift()!);
+      pulled += 1;
+    }
+    if (pulled === 0) break;
   }
   return result;
 }
