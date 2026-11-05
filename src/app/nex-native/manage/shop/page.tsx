@@ -61,6 +61,11 @@ import {
 // previews the seller sees in /cover-themes-library · one component,
 // one visual grammar.
 import { MiniPhoneFrame } from "../../cover-themes-library/_mini-phone-frame";
+// Phase V · P5 · 2026-11-05 · share-shop URL button (Web Share API +
+// clipboard fallback) · mounted in the Shop identity card so the
+// seller can post their shareable /nex-native/{slug} link to social
+// media straight from the settings surface.
+import { ShareShopButton } from "./_share-shop-button";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -372,6 +377,70 @@ export default async function ShopSettingsPage({
             </FormRow>
             <SubmitButton label="Save shop name" tone="primary" />
           </form>
+          {/* --- Share shop URL (Phase V · P5 · 2026-11-05) --------- */}
+          {/* Lives inside the Shop identity card so the shareable link
+              sits beside the name it belongs to. On mobile, the Web
+              Share API opens the native sheet (WhatsApp, Instagram,
+              Messages). On desktop, the button copies the URL to the
+              clipboard with a 1.8s confirmation. The href is the
+              sealed /nex-native/{slug} public shop URL. */}
+          <div
+            style={{
+              marginTop: 16,
+              paddingTop: 16,
+              borderTop: `1px solid ${NEX.border}`,
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 11,
+                color: NEX.textDim,
+                lineHeight: 1.55,
+              }}
+            >
+              Share your shop link with buyers. Post it on Instagram,
+              WhatsApp, TikTok or anywhere else. The link always points
+              at your live shop even after you rename.
+            </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                flexWrap: "wrap",
+              }}
+            >
+              <ShareShopButton
+                shopName={business.display_name}
+                shopHref={`/nex-native/${business.slug}`}
+              />
+              <Link
+                href={`/nex-native/${business.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  background: "rgba(0,0,0,0.35)",
+                  border: `1px solid ${NEX.borderStrong}`,
+                  color: NEX.text,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  textDecoration: "none",
+                }}
+              >
+                View my shop ↗
+              </Link>
+            </div>
+          </div>
         </SectionCard>
 
         {isVenueCategory(business.business_category) && (
