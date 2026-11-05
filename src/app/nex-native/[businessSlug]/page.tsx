@@ -218,6 +218,16 @@ export default async function Page({
           businessOverrides.shop_cover_image_url ?? theme.hero_image_url;
         const effectiveAccentHex =
           businessOverrides.shop_cover_tint_hex ?? theme.accent_hex;
+        // Phase V · P7 · 2026-11-05 · when the seller has explicitly
+        // chosen a shop cover image (migration 212 column populated),
+        // paint the skin in frosted-glass mode so the buyer sees the
+        // image clearly under a blur + accent tint. When only the
+        // chat theme is driving the backdrop, keep the sealed
+        // theme-substrate look.
+        const isShopCoverOverride =
+          businessOverrides.shop_cover_image_url !== null &&
+          businessOverrides.shop_cover_image_url !== undefined &&
+          businessOverrides.shop_cover_image_url.trim().length > 0;
         return (
           <>
             {setupBanner}
@@ -229,6 +239,7 @@ export default async function Page({
               wallpaperConfig={theme.wallpaper_config}
               themeId={theme.id}
               layoutId={bundle.layoutId}
+              coverMode={isShopCoverOverride ? "shop-cover" : "theme"}
             >
               <CoverLayoutSwitch
                 layoutId={bundle.layoutId}

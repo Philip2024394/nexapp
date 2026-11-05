@@ -81,6 +81,20 @@ export interface CoverThemeSkinProps {
   /** The rendered layout id · so the wrapper can data-attribute the
    *  root for telemetry ("cover_layout=cafe theme=pink-dream"). */
   layoutId: string | null;
+  /** Phase V · P7 · 2026-11-05 · cover painting mode.
+   *  `"theme"` (default · sealed look · backwards-compatible) renders
+   *  the wallpaper at opacity 0.35 + scrim + accent glow. This is the
+   *  one-NEX-identity substrate used by every chat theme.
+   *  `"shop-cover"` is applied when the seller explicitly saved a
+   *  shop cover image at nex_business.shop_cover_image_url · the
+   *  wallpaper renders at near-full opacity and a frosted-glass
+   *  backdrop-filter blur + accent-tinted gradient overlay sit on
+   *  top. Matches the sealed contacts-shell frosted-glass grammar
+   *  (_contacts-shell.tsx:97-101) · owner-authored 2026-11-05: "shop
+   *  themes open in the app like example the contacts page
+   *  background where its like blurr but still see's color effect
+   *  under it". */
+  coverMode?: "theme" | "shop-cover";
   children: React.ReactNode;
 }
 
@@ -151,8 +165,10 @@ export function CoverThemeSkin(props: CoverThemeSkinProps): React.JSX.Element {
     wallpaperConfig,
     themeId,
     layoutId,
+    coverMode = "theme",
     children,
   } = props;
+  const isShopCover = coverMode === "shop-cover" && !!wallpaperUrl;
 
   const bubbleRim = bubbleRimHex ?? accentHex;
   const composerRim = composerRimHex ?? accentHex;
@@ -279,19 +295,19 @@ export function CoverThemeSkin(props: CoverThemeSkinProps): React.JSX.Element {
         }}
       >
         {/* Wallpaper composition · fixed to the phone-screen containing
-            block (this root sets transform:translateZ(0) so fixed
-            descendants scope to it on BOTH preview and production ·
-            was previously only true inside preview iframes). Low opacity so
-            copy stays legible but the image is part of the visual
-            language, not a stock backdrop. Ken Burns slow drift adds
-            life without stealing attention. */}
+            block. In the sealed "theme" mode the wallpaper renders at
+            opacity 0.35 (chat-identity substrate). In "shop-cover"
+            mode the seller's chosen cover image renders at near-full
+            opacity so it reads as identity · the frosted-glass layer
+            below diffuses it without burying it. Ken Burns slow drift
+            adds life without stealing attention. */}
         <div
           aria-hidden
           style={{
             position: "fixed",
             inset: 0,
             zIndex: 0,
-            opacity: wallpaperUrl ? 0.35 : 1,
+            opacity: isShopCover ? 1 : wallpaperUrl ? 0.35 : 1,
             animation: wallpaperUrl
               ? "nex-cover-kenburns 26s ease-in-out infinite alternate"
               : undefined,
@@ -300,16 +316,39 @@ export function CoverThemeSkin(props: CoverThemeSkinProps): React.JSX.Element {
           }}
         />
 
+        {/* Phase V · P7 · 2026-11-05 · frosted-glass diffuser · only in
+            shop-cover mode · mirrors the sealed contacts-shell grammar
+            (_contacts-shell.tsx:97-101). The buyer SEES the seller's
+            cover image through the blur with an accent-tinted colour
+            effect underneath · the content still reads cleanly. */}
+        {isShopCover && (
+          <div
+            aria-hidden
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 0,
+              background: `linear-gradient(135deg, ${hexAlpha(accentHex, 0.22)} 0%, rgba(5, 15, 25, 0.48) 50%, ${hexAlpha(accentHex, 0.28)} 100%)`,
+              backdropFilter: "blur(14px) saturate(1.15)",
+              WebkitBackdropFilter: "blur(14px) saturate(1.15)",
+              pointerEvents: "none",
+            }}
+          />
+        )}
+
         {/* Legibility scrim · deeper at top and bottom so header and
-            sticky bar always read cleanly regardless of wallpaper. */}
+            sticky bar always read cleanly regardless of wallpaper.
+            In shop-cover mode the scrim is lighter because the
+            frosted-glass layer already carries most of the tint. */}
         <div
           aria-hidden
           style={{
             position: "fixed",
             inset: 0,
             zIndex: 0,
-            background:
-              "linear-gradient(180deg, rgba(3,8,20,0.50) 0%, rgba(3,8,20,0.18) 22%, rgba(3,8,20,0.18) 78%, rgba(3,8,20,0.58) 100%)",
+            background: isShopCover
+              ? "linear-gradient(180deg, rgba(3,8,20,0.38) 0%, rgba(3,8,20,0.06) 22%, rgba(3,8,20,0.06) 78%, rgba(3,8,20,0.42) 100%)"
+              : "linear-gradient(180deg, rgba(3,8,20,0.50) 0%, rgba(3,8,20,0.18) 22%, rgba(3,8,20,0.18) 78%, rgba(3,8,20,0.58) 100%)",
             pointerEvents: "none",
           }}
         />
