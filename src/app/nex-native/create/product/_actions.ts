@@ -128,6 +128,16 @@ export interface CreateProductInput {
   readonly status?: Extract<NexProductStatus, "draft" | "live">;
   /** Optional · zero variants means a flat non-variant product. */
   readonly variants?: readonly CreateProductVariantPayload[];
+  /** Owner-authorised 2026-11-05 iter 25 · Migration 280 applied ·
+   *  when set, the product renders as a shoppable card overlay on the
+   *  referenced video in the NEX Live feed. Accepts null to clear. */
+  readonly backgroundVideoId?: string | null;
+  /** Owner-authorised 2026-11-05 iter 25 · plain-URL fallback for the
+   *  background-image slot. */
+  readonly backgroundImageUrl?: string | null;
+  /** Owner-authorised 2026-11-05 iter 25 · looped audio behind the
+   *  product card (optional). */
+  readonly backgroundMusicId?: string | null;
 }
 
 function err(code: CreateProductErrorCode, message: string): CreateProductResult {
@@ -282,6 +292,11 @@ export async function createProductAction(
       department_id: input.departmentId,
       category_id: input.categoryId,
       spec: specFinal,
+      // Owner-authorised 2026-11-05 iter 25 · migration 280 applied ·
+      // optional background-media FKs for shoppable-card overlay.
+      background_video_id: input.backgroundVideoId ?? null,
+      background_image_url: input.backgroundImageUrl ?? null,
+      background_music_id: input.backgroundMusicId ?? null,
     });
     // 9 · Variant sync (fail-soft · bad variants surface a diagnostic
     // but DO NOT revoke the parent product. The seller can finish the

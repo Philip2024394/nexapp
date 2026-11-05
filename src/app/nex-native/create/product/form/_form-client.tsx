@@ -94,6 +94,15 @@ export interface CreateProductFormClientProps {
   readonly categoryId: string;
   readonly categoryLabel: string;
   readonly fields: readonly SpecFieldConfig[];
+  /** Owner-authorised 2026-11-05 iter 25 · owner's recent uploaded
+   *  videos · when non-empty the form renders a "NEX Live background"
+   *  picker so the merchant can attach a looped video behind the
+   *  shoppable-card overlay. */
+  readonly myVideos?: ReadonlyArray<{
+    readonly id: string;
+    readonly title: string;
+    readonly publicUrl: string;
+  }>;
 }
 
 export function CreateProductFormClient(props: CreateProductFormClientProps): React.JSX.Element {
@@ -116,6 +125,10 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
   const [returns, setReturns] = React.useState<ReturnsDraft>(EMPTY_RETURNS);
   const [colors, setColors] = React.useState<ColorsEditorValue>(EMPTY_COLORS);
   const [coverVideo, setCoverVideo] = React.useState<CoverVideoDraft>(EMPTY_COVER_VIDEO);
+  // Owner-authorised 2026-11-05 iter 25 · NEX Live shoppable-card
+  // background video id. null = no attached background (product card
+  // renders on plain gradient when posted to NEX Live).
+  const [backgroundVideoId, setBackgroundVideoId] = React.useState<string | null>(null);
   const [variantType, setVariantType] = React.useState<
     "none" | "colour" | "size" | "material" | "style" | "pack_size" | "fit" | "other"
   >("none");
@@ -167,6 +180,10 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
             ? toColorsPayload(colors)
             : { entries: [] },
         coverVideo: toCoverVideoPayload(coverVideo),
+        // Owner-authorised 2026-11-05 iter 25 · attach the picked
+        // NEX Live background video if one is selected. null = no
+        // background · product card renders on plain gradient.
+        backgroundVideoId: backgroundVideoId,
         status: publishLive ? "live" : "draft",
         variants:
           variantType !== "none" && variantType !== "colour"
@@ -315,6 +332,89 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
             onChange={setCoverVideo}
             businessId={props.businessId}
           />
+
+          {/* ── NEX Live background · optional shoppable-card overlay ──
+              Owner-authorised 2026-11-05 iter 25 · migration 280
+              applied. When set, the product renders as a clickable
+              card on top of the chosen video in the NEX Live feed. */}
+          {props.myVideos && props.myVideos.length > 0 ? (
+            <section
+              style={{
+                marginTop: 4,
+                paddingTop: 14,
+                borderTop: `1px solid ${RIM}`,
+              }}
+            >
+              <h2
+                style={{
+                  fontSize: 15,
+                  fontWeight: 800,
+                  margin: 0,
+                  color: INK,
+                }}
+              >
+                NEX Live background
+              </h2>
+              <p
+                style={{
+                  fontSize: 11.5,
+                  color: INK_DIM,
+                  margin: "4px 0 10px",
+                  lineHeight: 1.5,
+                }}
+              >
+                Attach one of your uploaded videos · it loops behind
+                your product card when viewers scroll past in NEX Live.
+                Skip for a card on plain gradient.
+              </p>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(104px, 1fr))",
+                  gap: 8,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setBackgroundVideoId(null)}
+                  aria-pressed={backgroundVideoId === null}
+                  data-nex-bg-video-pick="none"
+                  style={bgTileStyle(backgroundVideoId === null)}
+                >
+                  <div style={bgTileNoneGlyph}>⊘</div>
+                  <div style={bgTileLabel}>No video</div>
+                </button>
+                {props.myVideos.map((v) => (
+                  <button
+                    key={v.id}
+                    type="button"
+                    onClick={() => setBackgroundVideoId(v.id)}
+                    aria-pressed={backgroundVideoId === v.id}
+                    data-nex-bg-video-pick={v.id}
+                    title={v.title}
+                    style={bgTileStyle(backgroundVideoId === v.id)}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <video
+                      src={v.publicUrl}
+                      muted
+                      playsInline
+                      preload="metadata"
+                      style={{
+                        width: "100%",
+                        aspectRatio: "9 / 16",
+                        objectFit: "cover",
+                        display: "block",
+                        background: "#111",
+                        borderRadius: 8,
+                      }}
+                    />
+                    <div style={bgTileLabel}>{v.title}</div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          ) : null}
 
           {/* ── VARIANTS · one type at a time ──────────────────── */}
           <div style={{ marginTop: 4, paddingTop: 14, borderTop: `1px solid ${RIM}` }}>
@@ -681,3 +781,46 @@ function Field(props: { label: string; required?: boolean; children: React.React
     </label>
   );
 }
+
+// ─── NEX Live background-video tile styles (iter 25) ─────────────────
+function bgTileStyle(active: boolean): React.CSSProperties {
+  return {
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+    padding: 4,
+    borderRadius: 10,
+    background: active
+      ? "color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 18%, transparent)"
+      : "rgba(2,9,20,0.6)",
+    border: active
+      ? "2px solid var(--nex-world-secondary, #C6A15B)"
+      : "1px solid rgba(255,255,255,0.14)",
+    color: "#F2F5F8",
+    cursor: "pointer",
+    fontFamily: "inherit",
+    fontSize: 11,
+    textAlign: "left",
+    overflow: "hidden",
+  };
+}
+const bgTileNoneGlyph: React.CSSProperties = {
+  width: "100%",
+  aspectRatio: "9 / 16",
+  background: "linear-gradient(135deg, #1a0a0a 0%, #0a1526 100%)",
+  borderRadius: 8,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: "rgba(255,255,255,0.5)",
+  fontSize: 28,
+};
+const bgTileLabel: React.CSSProperties = {
+  fontSize: 10,
+  fontWeight: 700,
+  color: "#B5C3D6",
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  padding: "0 2px",
+};

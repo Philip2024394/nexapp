@@ -922,6 +922,7 @@ export default async function NexFeedViewerPage({
         devViewerBadge={devViewerBadge}
         feedModeLabel={feedModeLabel}
         drawerSession={nexLiveDrawerSession}
+        product={current.product ?? null}
       />
       {/* Owner directive 2026-11-01 · Batch E · same switcher mount
        *  as the music branch above. Zero intrusion into the 1536-line

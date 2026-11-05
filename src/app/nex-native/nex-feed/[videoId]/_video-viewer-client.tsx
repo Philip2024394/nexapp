@@ -51,6 +51,11 @@ import {
 // surfaces · iter 24). Feed viewers mount the same component next
 // to the `+` drawer so search is reachable from inside the reel.
 import { NexLiveSearchButton } from "@/components/nex-native/chat-chrome/nex-live-search-button";
+// Owner directive 2026-11-05 iter 25 · shoppable-card overlay · when
+// a nex_product row references this video via background_video_id,
+// a floating product card renders above the video chrome. Portaled
+// so the sealed viewer tree is untouched.
+import { ProductCardOverlayClient } from "./_product-card-overlay-client";
 import {
   VideoCommentsOverlay,
   type VideoComment,
@@ -116,6 +121,7 @@ export function VideoViewerClient({
   devViewerBadge,
   feedModeLabel,
   drawerSession,
+  product,
 }: {
   readonly video: UploadedVideoRow;
   readonly publicUrl: string;
@@ -208,6 +214,19 @@ export function VideoViewerClient({
     readonly displayName: string;
     readonly nexHandle: string | null;
     readonly isBisnis: boolean;
+  } | null;
+  /** Owner directive 2026-11-05 iter 25 · shoppable-card overlay.
+   *  When a `nex_product` row references this video via
+   *  background_video_id (migration 280), the overlay renders on top
+   *  of the video as a clickable product card. */
+  readonly product?: {
+    readonly productId: string;
+    readonly businessId: string;
+    readonly title: string;
+    readonly pricePence: number | null;
+    readonly currency: string | null;
+    readonly imageUrl: string | null;
+    readonly shopSlug: string | null;
   } | null;
 }): React.JSX.Element {
   const router = useRouter();
@@ -1719,6 +1738,11 @@ export function VideoViewerClient({
       )}
     </main>
     {devViewerBadge && <DevViewerBadge kind={devViewerBadge} />}
+    {/* Owner directive 2026-11-05 iter 25 · shoppable-card overlay ·
+        null-safe · renders a fixed-bottom-left card above the viewer
+        when a nex_product row references this video as its
+        background. Zero intrusion into the sealed viewer tree. */}
+    <ProductCardOverlayClient product={product ?? null} />
     </>
   );
 }

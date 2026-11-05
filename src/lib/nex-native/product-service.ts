@@ -520,6 +520,18 @@ export async function createProduct(input: NexProductInsert): Promise<NexProduct
   if (input.department_id) insertPayload.department_id = input.department_id;
   if (input.category_id) insertPayload.category_id = input.category_id;
   if (input.spec) insertPayload.spec = input.spec;
+  // Owner-authorised 2026-11-05 iter 25 · migration 280 applied ·
+  // optional background-media FKs for shoppable-card overlay rendering
+  // on NEX Live. null is a legitimate value (clearing a prior background).
+  if (input.background_video_id !== undefined) {
+    insertPayload.background_video_id = input.background_video_id;
+  }
+  if (input.background_image_url !== undefined) {
+    insertPayload.background_image_url = input.background_image_url;
+  }
+  if (input.background_music_id !== undefined) {
+    insertPayload.background_music_id = input.background_music_id;
+  }
   const { data, error } = await nexSupabaseAdmin
     .from("nex_product")
     .insert(insertPayload)

@@ -16,6 +16,10 @@ import { resolveCategorySpec } from "@/lib/nex-native/catalogue/specs";
 import { DEPARTMENTS } from "@/lib/nex-native/catalogue/departments";
 import type { DepartmentId } from "@/lib/nex-native/catalogue/departments";
 import { CreateProductFormClient } from "./_form-client";
+// Owner-authorised 2026-11-05 iter 25 · fetch the owner's uploaded
+// videos so the product form can offer a background-video picker for
+// the NEX Live shoppable-card overlay (migration 280 applied).
+import { listMyUploadedVideos } from "@/lib/nex-native/live-broadcast/uploaded-video-service";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +57,26 @@ export default async function CreateProductFormPage({
   }
   const department = DEPARTMENTS.find((d) => d.id === (dept as DepartmentId));
 
+  // Owner-authorised 2026-11-05 iter 25 · owner's recent uploaded
+  // videos · passed to the form so the merchant can pick one as the
+  // NEX Live background. Fail-open: empty list just hides the picker.
+  let myVideos: ReadonlyArray<{
+    id: string;
+    title: string;
+    publicUrl: string;
+  }> = [];
+  try {
+    const raw = await listMyUploadedVideos(session.account.id, { limit: 20 });
+    const base = process.env.NEXT_PUBLIC_NEX_SUPABASE_URL ?? "";
+    myVideos = raw.map((v) => ({
+      id: v.id,
+      title: v.title,
+      publicUrl: `${base}/storage/v1/object/public/${v.storage_bucket}/${v.storage_object_path}`,
+    }));
+  } catch {
+    myVideos = [];
+  }
+
   return (
     <CreateProductFormClient
       businessId={business!}
@@ -62,6 +86,7 @@ export default async function CreateProductFormPage({
       categoryId={cat!}
       categoryLabel={spec!.label}
       fields={spec!.fields}
+      myVideos={myVideos}
     />
   );
 }

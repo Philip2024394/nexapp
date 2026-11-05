@@ -882,6 +882,18 @@ export interface NexProductInsert {
   category_id?: string;
   /** Category-specific validated spec payload. jsonb column. */
   spec?: Record<string, unknown>;
+  /** Owner-authorised 2026-11-05 iter 25 · Migration 280 applied.
+   *  When set, the product renders as a shoppable card overlay on top
+   *  of the referenced video in the NEX Live feed. ON DELETE SET NULL
+   *  at the FK level · the product survives the video being removed. */
+  background_video_id?: NexUuid | null;
+  /** Owner-authorised 2026-11-05 iter 25 · plain URL fallback for the
+   *  background image slot. The image_id variant is reserved for a
+   *  future NEX-owned image table. */
+  background_image_url?: string | null;
+  /** Owner-authorised 2026-11-05 iter 25 · looped audio track behind
+   *  the product card. ON DELETE SET NULL. */
+  background_music_id?: NexUuid | null;
 }
 
 // ---------------------------------------------------------------------------

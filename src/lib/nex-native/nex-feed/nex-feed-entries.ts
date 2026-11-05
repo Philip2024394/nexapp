@@ -38,6 +38,76 @@ import {
   DEV_VIDEO_MANIFEST,
 } from "../live-broadcast/dev-video-manifest";
 import { listActiveMusicFeedEntries, type MusicFeedEntry } from "../music/active-music-feed-reader";
+// Owner-authorised 2026-11-05 iter 25 · join nex_product on
+// background_video_id so a video feed entry carries its shoppable-card
+// overlay data directly. Migration 280 applied the FK columns.
+import { nexSupabaseAdmin } from "../supabase-admin";
+
+/** Owner-authorised 2026-11-05 iter 25 · product-overlay fields that
+ *  the video viewer needs to render the shoppable card on top of a
+ *  looped background video. Null when the video has no attached
+ *  product (product.background_video_id doesn't reference it). */
+export interface ProductOverlay {
+  readonly productId: string;
+  readonly businessId: string;
+  readonly title: string;
+  readonly pricePence: number | null;
+  readonly currency: string | null;
+  readonly imageUrl: string | null;
+  readonly shopSlug: string | null;
+}
+
+/** Internal · fetch product-overlay rows keyed by the video id each
+ *  product references via background_video_id. Returns an empty Map
+ *  on any error (fail-open · the feed still renders without the
+ *  overlay). */
+async function fetchProductOverlaysByVideoId(
+  videoIds: readonly string[],
+): Promise<Map<string, ProductOverlay>> {
+  const out = new Map<string, ProductOverlay>();
+  if (videoIds.length === 0) return out;
+  try {
+    const { data, error } = await nexSupabaseAdmin
+      .from("nex_product")
+      .select(
+        "id, business_id, title, price_pence, currency, image_url, background_video_id, nex_business(slug)",
+      )
+      .in("background_video_id", videoIds as string[]);
+    if (error || !Array.isArray(data)) return out;
+    for (const row of data as unknown as Array<{
+      id: string;
+      business_id: string;
+      title: string | null;
+      price_pence: number | null;
+      currency: string | null;
+      image_url: string | null;
+      background_video_id: string | null;
+      // Supabase returns FK-joined relationships as an array even for
+      // a single-FK lookup · we take the first element.
+      nex_business?: ReadonlyArray<{ slug: string | null }> | null;
+    }>) {
+      if (!row.background_video_id) continue;
+      // If two products reference the same video, the first-fetched
+      // wins (deterministic by Postgres ordering · deliberate; we
+      // decide "one video = one product overlay" at the render layer).
+      if (out.has(row.background_video_id)) continue;
+      out.set(row.background_video_id, {
+        productId: row.id,
+        businessId: row.business_id,
+        title: row.title ?? "Product",
+        pricePence: row.price_pence,
+        currency: row.currency,
+        imageUrl: row.image_url,
+        shopSlug: Array.isArray(row.nex_business)
+          ? (row.nex_business[0]?.slug ?? null)
+          : null,
+      });
+    }
+  } catch {
+    /* fail-open · overlays are purely decorative */
+  }
+  return out;
+}
 
 /** The URL slug prefix that marks a feed entry as a music post. */
 export const MUSIC_FEED_ENTRY_PREFIX = "music-";
@@ -90,6 +160,10 @@ export interface VideoFeedEntry {
   readonly feedEntryId: string;
   readonly video: UploadedVideoRow;
   readonly publicUrl: string;
+  /** Owner-authorised 2026-11-05 iter 25 · optional shoppable-card
+   *  overlay · populated when a `nex_product` row references this
+   *  video via background_video_id (migration 280). Null otherwise. */
+  readonly product?: ProductOverlay | null;
 }
 
 export interface MusicFeedEntryWrapped {
@@ -123,11 +197,16 @@ export async function resolveVideoFeedEntry(
   const row = rows.find((r) => r.id === videoId);
   if (!row) return null;
   const url = `${process.env.NEXT_PUBLIC_NEX_SUPABASE_URL ?? ""}/storage/v1/object/public/${row.storage_bucket}/${row.storage_object_path}`;
+  // Fetch the shoppable-card overlay if a product references this
+  // video as its background. Fail-open: null overlay just means the
+  // viewer renders the plain video.
+  const overlays = await fetchProductOverlaysByVideoId([videoId]);
   return {
     kind: "video",
     feedEntryId: videoId,
     video: row,
     publicUrl: url,
+    product: overlays.get(videoId) ?? null,
   };
 }
 
@@ -171,6 +250,13 @@ export async function listNexFeedEntries(
     entry: e,
   }));
 
+  // Fetch product overlays for every video in the pool in ONE round-
+  // trip · keyed by video id. Fail-open · empty Map = videos render
+  // without overlay (sealed behaviour before migration 280).
+  const overlayMap = await fetchProductOverlaysByVideoId(
+    videoRows.map((r) => r.id),
+  );
+
   const videoWrapped: VideoFeedEntry[] = [];
   for (const row of videoRows) {
     let publicUrl: string;
@@ -186,6 +272,7 @@ export async function listNexFeedEntries(
       feedEntryId: row.id,
       video: row,
       publicUrl,
+      product: overlayMap.get(row.id) ?? null,
     });
   }
 
