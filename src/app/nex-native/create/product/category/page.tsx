@@ -34,6 +34,45 @@ const PAGE_BG = "var(--nex-world-drawer-bg, #123D2B)";
 const TILE_BG = "rgba(2, 20, 12, 0.55)";
 const TILE_BG_DISABLED = "rgba(2, 20, 12, 0.28)";
 
+// Owner directive 2026-11-05 iter 29 · Ship B2 follow-up · emoji
+// glyph per department. Lives in the UI layer (not the sealed
+// departments.ts taxonomy) · purely cosmetic · no DB/API impact.
+// Universal + culturally safe emoji that read instantly across
+// locales. Easy to swap for custom SVGs later without touching the
+// taxonomy source.
+const DEPARTMENT_ICONS: Record<string, string> = {
+  electronics_technology: "📱",
+  home_furniture_living: "🛋️",
+  kitchen_dining: "🍽️",
+  fashion_clothing: "👗",
+  jewellery_watches: "💎",
+  beauty_personal_care: "💄",
+  health_wellness_medical: "🩺",
+  baby_nursery_parenting: "👶",
+  toys_games_hobbies: "🎲",
+  sports_fitness_outdoors: "⚽",
+  garden_outdoor_agriculture: "🌱",
+  tools_diy_construction: "🔧",
+  automotive_motorcycles_transport: "🚗",
+  food_grocery_beverages: "🛒",
+  pet_supplies_animals: "🐾",
+  books_education_stationery: "📚",
+  office_business_industrial: "🏢",
+  arts_crafts_handmade: "🎨",
+  music_film_entertainment: "🎬",
+  travel_luggage_outdoor: "🧳",
+  digital_products_software: "💻",
+  accommodation_property: "🏠",
+  food_delivery_restaurants: "🍔",
+  services_marketplace: "🤝",
+  experiences_activities_tickets: "🎟️",
+  second_hand_refurbished: "♻️",
+  luxury_premium_collectibles: "✨",
+  gifts_celebrations_seasonal: "🎁",
+  renewable_energy_utilities: "☀️",
+  everything_else: "📦",
+};
+
 export default async function CreateProductCategoryPage({
   searchParams,
 }: {
@@ -83,7 +122,12 @@ export default async function CreateProductCategoryPage({
           >
             ← Change department
           </Link>
-          <h1 style={h1Style}>{department!.label}</h1>
+          <h1 style={h1Style}>
+            <span aria-hidden style={{ marginRight: 10 }}>
+              {DEPARTMENT_ICONS[department!.id] ?? "📦"}
+            </span>
+            {department!.label}
+          </h1>
           <p style={subStyle}>{department!.blurb}</p>
           <div style={gridStyle}>
             {department!.categories.map((c) => {
@@ -135,13 +179,17 @@ export default async function CreateProductCategoryPage({
             const anyCategoryEnabled = d.categories.some((c) =>
               isCategorySpecRegistered(d.id, c.id),
             );
+            const icon = DEPARTMENT_ICONS[d.id] ?? "📦";
             return anyCategoryEnabled ? (
               <Link
                 key={d.id}
                 href={`/nex-native/create/product/category?business=${encodeURIComponent(business!)}&dept=${encodeURIComponent(d.id)}`}
                 style={tileEnabledStyle}
               >
-                <span style={tileLabelStyle}>{d.label}</span>
+                <div style={tileHeaderRow}>
+                  <span style={tileIconStyle} aria-hidden>{icon}</span>
+                  <span style={tileLabelStyle}>{d.label}</span>
+                </div>
                 <span style={{ fontSize: 11, color: INK_DIM, fontWeight: 600 }}>{d.blurb}</span>
                 <span style={{ color: ACCENT, alignSelf: "flex-end" }}>→</span>
               </Link>
@@ -152,7 +200,10 @@ export default async function CreateProductCategoryPage({
                 style={tileDisabledStyle}
                 title="Coming in a future batch"
               >
-                <span style={{ ...tileLabelStyle, color: DISABLED_INK }}>{d.label}</span>
+                <div style={tileHeaderRow}>
+                  <span style={{ ...tileIconStyle, opacity: 0.45 }} aria-hidden>{icon}</span>
+                  <span style={{ ...tileLabelStyle, color: DISABLED_INK }}>{d.label}</span>
+                </div>
                 <span style={{ fontSize: 11, color: DISABLED_INK, fontWeight: 600 }}>{d.blurb}</span>
                 <span style={{ color: DISABLED_INK, fontSize: 11, fontWeight: 700, alignSelf: "flex-end" }}>
                   Soon
@@ -232,6 +283,27 @@ const tileDisabledStyle: React.CSSProperties = {
 const tileLabelStyle: React.CSSProperties = {
   fontSize: 15,
   fontWeight: 700,
+};
+
+// Owner directive 2026-11-05 iter 29 · Ship B2 follow-up · icon +
+// label on one row at the top of each department tile.
+const tileHeaderRow: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  marginBottom: 2,
+};
+const tileIconStyle: React.CSSProperties = {
+  fontSize: 22,
+  lineHeight: 1,
+  flexShrink: 0,
+  // Emoji glyphs vary wildly by platform · give them a fixed 32px
+  // box so tile labels line up regardless of glyph width.
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 32,
+  height: 32,
 };
 
 // ─── Freshly-provisioned welcome banner · iter 29 Ship A commit 3 ────
