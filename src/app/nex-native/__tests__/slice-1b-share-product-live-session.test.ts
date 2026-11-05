@@ -3,7 +3,7 @@
 // Phase 1 · Slice 1B · owner-authorised 2026-10-24.
 // -------------------------------------------------------------------
 // Closes R5 from the Risk Register of
-// docs/doctrine/nex-commerce-live-relationship-plan-2026-10-24.md:
+// docs/doctrine/_retired/nex-commerce-live-relationship-plan-2026-10-24.md (retired 2026-11-06):
 // `shareProductToContactAction` previously dropped the composer-
 // supplied `live_session_id` on write. The viewer-side "Order now"
 // CTA on a NEX Live broadcast lost its originating-session context

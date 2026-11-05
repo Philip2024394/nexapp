@@ -10,7 +10,7 @@
 //
 // Doctrine
 //   · Payment doctrine amendment 2026-10-26 ·
-//     docs/doctrine/nex-commerce-live-relationship-plan-2026-10-24.md §2.4a
+//     docs/doctrine/_retired/nex-commerce-live-relationship-plan-2026-10-24.md §2.4a (retired 2026-11-06)
 //     (NEX collects its own listing fee only · never intermediates
 //     buyer-seller marketplace payments.)
 //   · G3 tile uniqueness amendment 2026-10-26 ·

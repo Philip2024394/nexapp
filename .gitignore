@@ -387,7 +387,7 @@ data/nex-page-fetcher-allowlist.backup-*.json
 data/nex-brain/*.tmp
 build.log
 
-# Dev-only live videos — not committed · see docs/doctrine/nex-live-uploaded-video-contract-2026-10-24.md
+# Dev-only live videos — not committed · see docs/doctrine/_retired/nex-live-uploaded-video-contract-2026-10-24.md (retired 2026-11-06)
 public/dev/live-videos/
 
 # Dev-only music filesystem adapter data — tracks.json, active-slots.json,

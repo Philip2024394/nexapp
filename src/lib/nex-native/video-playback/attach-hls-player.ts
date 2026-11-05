@@ -12,7 +12,7 @@
 // This utility is INFRASTRUCTURE-READY · it will route HLS traffic
 // through hls.js the moment HLS content exists in the sealed Supabase
 // bucket. Until then every video served is MP4 and this utility is a
-// no-op · see docs/doctrine/nex-live-video-streaming-roadmap-2026-10-27
+// no-op · see docs/doctrine/_retired/nex-live-video-streaming-roadmap-2026-10-27.md (retired 2026-11-06)
 // for the encoding + storage pipeline that lands HLS content.
 //
 // Return value is a `detach()` callback. Callers (useEffect in the

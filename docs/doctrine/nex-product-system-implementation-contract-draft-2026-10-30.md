@@ -19,14 +19,18 @@ Philip O'Farrell (owner).
 **Source audit:** section-by-section findings produced earlier the
 same day; agent reports preserved in the conversation record.
 **Companion doctrines (binding, unchanged by this contract):**
-- `docs/doctrine/nex-music-directory-architecture-draft-2026-10-30.md`
-  (owner-accepted architectural direction · includes the Portrait-First
-  Screen and Media Constitution + the Active-Slot Rotation Rule)
-- `docs/doctrine/nex-music-directory-phase-1-build-plan-draft-2026-10-30.md`
-  (unauthorised implementation gate example that this contract parallels
-  in structure)
-- `docs/doctrine/nex-music-upload-contract-DRAFT-2026-10-29.md`
-- Sealed R9 Live-eligibility contract (2026-10-27)
+- `docs/doctrine/_retired/nex-music-directory-architecture-draft-2026-10-30.md`
+  (RETIRED 2026-11-06 — scope reduction removed Music surface · historical
+  reference only)
+- `docs/doctrine/_retired/nex-music-directory-phase-1-build-plan-draft-2026-10-30.md`
+  (RETIRED 2026-11-06 — scope reduction removed Music surface · historical
+  reference only)
+- `docs/doctrine/_retired/nex-music-upload-contract-DRAFT-2026-10-29.md`
+  (RETIRED 2026-11-06 — scope reduction removed Music surface · historical
+  reference only)
+- `docs/doctrine/_retired/nex-live-eligibility-contract-2026-10-27.md`
+  (RETIRED 2026-11-06 — scope reduction removed Live surface · historical
+  reference only)
 - Sealed Community Notice doctrine (2026-10-23)
 - Sealed "NEX never handles payments" rule
 
