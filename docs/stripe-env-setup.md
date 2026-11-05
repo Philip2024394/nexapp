@@ -37,6 +37,17 @@ STRIPE_PRICE_SHOP_STANDARD_IE=price_...
 STRIPE_PRICE_SHOP_UNLIMITED_IE=price_...
 ```
 
+**Starter Pack (€5 one-time, +10 products, 60-day window · Ship B3b):**
+
+```
+STRIPE_PRICE_STARTER_PACK=price_...
+# Optional Ireland override · VAT-inclusive
+STRIPE_PRICE_STARTER_PACK_IE=price_...
+```
+
+Create this in Stripe as a **one-time** price (not recurring) on a
+Product named "NEX Starter Pack". Price: €5.00. Currency: EUR.
+
 When `NEX_APP_IDENTITY=ireland`, the registry prefers the `_IE` suffix
 and falls back to the unsuffixed names.
 
@@ -80,12 +91,15 @@ curl -s http://localhost:3009/api/nex-native/billing/health | head
 ```
 (Health route exists at `src/app/api/nex-native/billing/health/route.ts`.)
 
-## What's NOT configured yet
+## What's NOT fully wired yet
 
-- One-time **Starter Pack** (€5 for 10 products) · sealed system is
-  subscription-only · B3b will extend `NexProduct` with a new
-  `"starter_pack"` type + `mode: "payment"` code path in the
-  checkout endpoint.
+- **Webhook starter-pack grant** · B3b ships the checkout endpoint ·
+  the webhook extension that stamps `starter_pack_quota_remaining
+  = 10` on `checkout.session.completed` is a follow-up when
+  migration 281 is applied.
+- Migration 281 (`starter_pack_quota_remaining` + expiry columns on
+  `nex_account`) is a DRAFT · needs owner authorisation per CLAUDE.md
+  §5 before application against Supabase `ijvqdvsvwtwxzcqmoqit`.
 - Per-country VAT via Stripe Tax · enable in the Stripe dashboard
   under Tax settings when going live.
 

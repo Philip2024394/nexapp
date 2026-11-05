@@ -17,6 +17,10 @@ import Link from "next/link";
 // client helper · wraps the sealed /api/nex-native/billing/checkout
 // endpoint + redirects to the Stripe-hosted session URL.
 import { StartCheckoutButton } from "@/components/nex-native/billing/start-checkout-client";
+// Owner directive 2026-11-05 iter 29 · Ship B3b · parallel client
+// helper for the ONE-TIME Starter Pack purchase. Different endpoint,
+// different flow, same fail-safe toast vocabulary.
+import { StarterPackCheckoutButton } from "@/components/nex-native/billing/starter-pack-checkout-client";
 import { NEX_OFFICIAL_CHAT_HREF } from "@/lib/nex-native/nex-official";
 import { NexPageHeader } from "../_page-header";
 
@@ -190,6 +194,11 @@ export default function PackagesPage() {
             ctaHref="/nex-native/create-account?intent=starter_pack"
             ctaLabel="Buy Starter Pack"
             ctaVariant="secondary"
+            // Owner directive 2026-11-05 iter 29 · Ship B3b · routes
+            // through /api/nex-native/billing/starter-pack-checkout
+            // when env is configured · fail-soft "not available yet"
+            // toast otherwise.
+            starterPack
             highlight={false}
           />
           <PackageCard
@@ -657,6 +666,7 @@ function PackageCard({
   highlight,
   badge,
   checkoutTier,
+  starterPack,
 }: {
   eyebrow: string;
   title: string;
@@ -676,8 +686,14 @@ function PackageCard({
    *  primary CTA POSTs to the sealed billing checkout endpoint and
    *  redirects to Stripe instead of a plain Link navigation. Null
    *  (or omitted) keeps the sealed Link behaviour (used by Free
-   *  tier and by Starter Pack until B3b wires the one-time flow). */
+   *  tier until B3b wires Starter Pack). Mutually exclusive with
+   *  `starterPack` below. */
   checkoutTier?: "standard" | "unlimited" | null;
+  /** Owner directive 2026-11-05 iter 29 · Ship B3b · when true, the
+   *  primary CTA POSTs to /api/nex-native/billing/starter-pack-
+   *  checkout for the one-time €5 top-up. Mutually exclusive with
+   *  `checkoutTier` by convention. */
+  starterPack?: boolean;
 }) {
   return (
     <div
@@ -791,7 +807,37 @@ function PackageCard({
         ))}
       </ul>
 
-      {checkoutTier ? (
+      {starterPack ? (
+        <StarterPackCheckoutButton
+          style={{
+            display: "block",
+            width: "100%",
+            marginTop: 22,
+            padding: "14px 16px",
+            borderRadius: 12,
+            background:
+              ctaVariant === "primary"
+                ? "linear-gradient(180deg, #FF9033 0%, #FF7200 100%)"
+                : "rgba(0,175,255,0.14)",
+            border:
+              ctaVariant === "primary"
+                ? `1px solid ${NEX.orangeSoft}`
+                : `1px solid ${NEX.cyanSoft}`,
+            color: ctaVariant === "primary" ? "#0B0F1A" : NEX.text,
+            fontSize: 13,
+            fontWeight: 800,
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
+            textAlign: "center",
+            boxShadow:
+              ctaVariant === "primary"
+                ? "0 10px 26px rgba(255,114,0,0.4), inset 0 1px 0 rgba(255,255,255,0.28)"
+                : "none",
+          }}
+        >
+          {ctaLabel}
+        </StarterPackCheckoutButton>
+      ) : checkoutTier ? (
         <StartCheckoutButton
           tier={checkoutTier}
           style={{
