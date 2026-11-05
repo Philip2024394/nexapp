@@ -214,7 +214,7 @@ export function Theme1Composer() {
               <PlusTile href="/nex-native/manage/products" icon={<TagIcon />} label="Share product" onClose={() => setPlusOpen(false)} />
               <PlusTile href="/nex-native/manage/menu" icon={<MenuIcon />} label="Menu" onClose={() => setPlusOpen(false)} />
               <PlusTile href="/nex-native/manage/banners" icon={<MegaphoneIcon />} label="Marketing" onClose={() => setPlusOpen(false)} />
-              <PlusTile href="/nex-native/nex-feed" icon={<LiveIcon />} label="Live post" onClose={() => setPlusOpen(false)} />
+              {/* Phase 2 Batch 1 · 2026-11-06 · "Live post" PlusTile removed · /nex-native/nex-feed deleted in Phase 1c. */}
               <PlusTile href="/nex-native/manage/email" icon={<EmailIcon />} label="Email blast" onClose={() => setPlusOpen(false)} />
             </div>
           </div>

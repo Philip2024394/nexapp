@@ -518,12 +518,7 @@ export default async function Page({ searchParams }: PageProps) {
             <Link href="/nex-native/manage/analytics" className="text-neutral-700 underline">
               analytics →
             </Link>
-            <Link
-              href="/nex-native/manage/community-discovery"
-              className="text-neutral-700 underline"
-            >
-              community discovery →
-            </Link>
+            {/* Phase 2 Batch 1 · 2026-11-06 · "community discovery" link removed · owner-reconfirmed delete 2026-11-06 — sealed Daily Discovery doctrine 2026-11-05 supersedes the per-shop welcome-card lever. */}
           </div>
         </div>
         {products.length === 0 ? (

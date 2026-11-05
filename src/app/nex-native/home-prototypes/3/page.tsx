@@ -15,7 +15,7 @@ const STATS = [
 const QUICK = [
   { href: "/nex-native/manage/products/new", emoji: "➕", title: "Add product" },
   { href: "/nex-native/manage/banners", emoji: "📣", title: "New banner" },
-  { href: "/nex-native/manage/live", emoji: "🔴", title: "Go live" },
+  // Phase 2 Batch 1 · 2026-11-06 · "Go live" tile removed · /nex-native/manage/live deleted in Phase 1c.
   { href: "/nex-native/manage/analytics", emoji: "📊", title: "Analytics" },
 ];
 

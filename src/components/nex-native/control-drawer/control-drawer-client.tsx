@@ -299,32 +299,10 @@ const YOUR_BUSINESS_ROWS: ReadonlyArray<MenuRow> = [
     href: "/nex-native/chat-themes-library/marketplace-prototype/my-shop/crispy-chicken",
     locked: false, // owner directive 2026-10-28 · drawer links unlocked
   },
-  // Status + Go Live now require sign-in · owner directive 2026-10-22
-  // identity-sealing · the broadcaster id is now the signed-in NEX
-  // account id (not a `prototype-broadcaster` literal) so viewers see
-  // the broadcaster's real NEX identity on the live-commerce overlay.
-  {
-    key: "go-live",
-    label: "Nex Live",
-    subtitle: "Watch live · tap for full-screen video with controls",
-    /* Owner directive 2026-10-30 · "this is the only nex feed on the
-       app". The drawer entry routes to /nex-native/nex-feed · the
-       single central NEX feed (full-bleed vertical-swipe reel). The
-       former forks (/live, /live-commerce/feed, /videos/) have been
-       deleted. Direct broadcaster/viewer routes still exist:
-         /live-commerce/enter-broadcast-room  → broadcaster surface
-         /live-commerce/[sessionId]           → open Live viewer */
-    href: "/nex-native/nex-feed",
-    /* Owner directive 2026-10-24 · "unlock go live in side drawer".
-       The drawer no longer renders a lock icon on this row. The
-       underlying page at /nex-native/live-commerce/enter-broadcast-room keeps its
-       OWN sealed sign-in gate (sealed 2026-10-22 identity-sealing · the
-       broadcaster id is the signed-in NEX account id · guests still
-       land on sign-in before the broadcaster surface renders). The
-       feed route is public · guests see the empty-state / list but
-       the Go Live CTA only renders for signed-in users. */
-    locked: false,
-  },
+  // Phase 2 Batch 1 · 2026-11-06 · "Nex Live" / go-live row removed
+  // after Phase 1c dead-code sweep — the /nex-native/nex-feed route
+  // was deleted and nex-live-commerce is out of scope for the current
+  // Chat Themes · Shop · Vault scope-reduction programme.
   {
     key: "my-businesses",
     label: "My businesses",
@@ -989,12 +967,14 @@ function CopyIdentityButton({
 // point they will be removed in a follow-up pass.
 
 const QUICK_ACCESS_ROWS: ReadonlyArray<{
-  readonly key: "live" | "vault" | "socials";
+  readonly key: "vault" | "socials";
   readonly label: string;
   readonly href: string;
   readonly glyph: string;
 }> = [
-  { key: "live",    label: "Live",    href: "/nex-native/nex-feed",      glyph: "●" },
+  // Phase 2 Batch 1 · 2026-11-06 · "Live" quick-access row removed
+  // (routed to the deleted /nex-native/nex-feed · out of scope for
+  // Chat Themes · Shop · Vault). Vault + Socials rows unchanged.
   { key: "vault",   label: "Vault",   href: "/nex-native/vault",         glyph: "🔒" },
   { key: "socials", label: "Socials", href: "/nex-native/nex-socials/intro",   glyph: "👥" },
 ];

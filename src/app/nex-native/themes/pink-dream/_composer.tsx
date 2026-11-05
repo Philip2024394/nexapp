@@ -358,12 +358,7 @@ function PlusPanel({ onClose }: { onClose: () => void }) {
             label="Marketing"
             onClose={onClose}
           />
-          <PlusTile
-            href="/nex-native/nex-feed"
-            icon={<LiveIcon />}
-            label="Live post"
-            onClose={onClose}
-          />
+          {/* Phase 2 Batch 1 · 2026-11-06 · "Live post" PlusTile removed · /nex-native/nex-feed deleted in Phase 1c. */}
           <PlusTile
             href="/nex-native/manage/email"
             icon={<EmailIcon />}

@@ -78,7 +78,6 @@ import * as siteService from "@/lib/nex-native/site-service";
 import { DEFAULT_SITE_GEN_ADAPTER } from "@/lib/nex-native/site-gen-adapter";
 import type { NexBannerPalette, NexBannerStatus } from "@/lib/nex-native/banner-service";
 import { NEX_BANNER_PALETTES, NEX_BANNER_STATUSES } from "@/lib/nex-native/banner-service";
-import * as liveService from "@/lib/nex-native/live-service";
 import { NEX_ACCOUNT_KINDS, NEX_ACCOUNT_TIERS, NEX_CHAT_THEMES, NEX_PRODUCT_STOCK_STATUSES, type NexAccountKind, type NexAccountTier, type NexChatTheme, type NexDailyActivity, type NexProductStockStatus } from "@/lib/nex-native/types";
 import { enqueueNexReply } from "@/lib/nex-native/intelligence/enqueue-nex-reply";
 
@@ -425,11 +424,10 @@ function redirectToManageBannersWithBanner(code: string, message: string): never
   redirect(`/nex-native/manage/banners?${qs.toString()}`);
 }
 
-// Live-page (merchant surface) equivalent · same pattern for /nex-native/manage/live.
-function redirectToManageLiveWithBanner(code: string, message: string): never {
-  const qs = new URLSearchParams({ e: code, m: message });
-  redirect(`/nex-native/manage/live?${qs.toString()}`);
-}
+// Phase 2 Batch 1 · 2026-11-06 · redirectToManageLiveWithBanner helper
+// removed · the 4 LivePost actions that consumed it are deleted (closed
+// dead loop · the /nex-native/manage/live surface no longer exists).
+// Migration 029 (nex_live_post) table reversal lives in Batch 10.
 
 // Contacts-page equivalent · Wave B Slice 3f-b.
 function redirectToContactsWithBanner(code: string, message: string): never {
@@ -5823,124 +5821,17 @@ export async function updateBannerStatusAction(formData: FormData): Promise<neve
 }
 
 // ---------------------------------------------------------------------------
-// Live actions (Wave B Slice 13a · phase-1 business announcements)
+// Phase 2 Batch 1 · 2026-11-06 · Live actions deleted (closed dead loop)
+//
+// Wave B Slice 13a's createLivePostAction / expireLivePostAction /
+// updateLivePostBodyAction / extendLivePostExpiryAction + the
+// resolveOwnerAndLivePost helper + revalidatePath calls to the deleted
+// /nex-native/nex-feed and /nex-native/manage/live surfaces + the
+// liveService import have been removed. All four actions only
+// redirected to pages deleted in Phase 1c · no KEPT surface references
+// them. The nex_live_post DB table (migration 029) remains in place
+// pending Batch 10 migration reversal.
 // ---------------------------------------------------------------------------
-
-export async function createLivePostAction(formData: FormData): Promise<never> {
-  const body = String(formData.get("body") ?? "").trim();
-  const expiresInHoursRaw = String(formData.get("expires_in_hours") ?? "").trim();
-
-  const session = await resolveNexAppSessionFromContext();
-  if (!session) redirectToInboxWithError("unauthenticated", "sign in to post live");
-  const owned = await businessService.listBusinessesByOwner(session.account.id);
-  const business = owned[0];
-  if (!business) redirectToOnboardingWithError("no_business", "create a business before posting live");
-
-  if (!body) redirectToManageLiveWithBanner("missing_body", "announcement body required");
-  if (body.length > 280) redirectToManageLiveWithBanner("long_body", "announcement max 280 chars");
-
-  let expiresAt: string | null = null;
-  if (expiresInHoursRaw) {
-    const hours = Number(expiresInHoursRaw);
-    if (!Number.isFinite(hours) || hours <= 0 || hours > 168) {
-      redirectToManageLiveWithBanner("invalid_expiry", "expiry must be 1..168 hours");
-    }
-    expiresAt = new Date(Date.now() + hours * 3600 * 1000).toISOString();
-  }
-
-  try {
-    await liveService.createLivePost({
-      business_id: business.id,
-      body,
-      expires_at: expiresAt,
-    });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    redirectToManageLiveWithBanner("live_create_failed", msg);
-  }
-  revalidatePath("/nex-native/manage/live");
-  revalidatePath("/nex-native/nex-feed");
-  revalidatePath(`/nex-native/${business.slug}`);
-  redirectToManageLiveWithBanner("live_created", body.slice(0, 60));
-}
-
-export async function expireLivePostAction(formData: FormData): Promise<never> {
-  const postId = String(formData.get("post_id") ?? "").trim();
-  const session = await resolveNexAppSessionFromContext();
-  if (!session) redirectToInboxWithError("unauthenticated", "sign in to manage live posts");
-  if (!postId) redirectToManageLiveWithBanner("missing_post_id", "post id required");
-
-  const post = await liveService.getLivePostById(postId);
-  if (!post) redirectToManageLiveWithBanner("post_not_found", "live post not found");
-
-  const owned = await businessService.listBusinessesByOwner(session.account.id);
-  const ownedIds = new Set(owned.map((b) => b.id));
-  if (!ownedIds.has(post.business_id)) {
-    redirectToManageLiveWithBanner("not_owner", "you do not own this business's live posts");
-  }
-
-  try {
-    await liveService.expireLivePost(post.id);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    redirectToManageLiveWithBanner("live_expire_failed", msg);
-  }
-  revalidatePath("/nex-native/manage/live");
-  revalidatePath("/nex-native/nex-feed");
-  const business = owned.find((b) => b.id === post.business_id);
-  if (business) revalidatePath(`/nex-native/${business.slug}`);
-  redirectToManageLiveWithBanner("live_expired", "post retired");
-}
-
-// Slice 13b · Live polish
-async function resolveOwnerAndLivePost(postId: string) {
-  const session = await resolveNexAppSessionFromContext();
-  if (!session) redirectToInboxWithError("unauthenticated", "sign in to edit live posts");
-  if (!postId) redirectToManageLiveWithBanner("missing_post_id", "post id required");
-  const post = await liveService.getLivePostById(postId);
-  if (!post) redirectToManageLiveWithBanner("post_not_found", "live post not found");
-  const owned = await businessService.listBusinessesByOwner(session.account.id);
-  const ownedIds = new Set(owned.map((b) => b.id));
-  if (!ownedIds.has(post.business_id)) {
-    redirectToManageLiveWithBanner("not_owner", "you do not own this business's live posts");
-  }
-  return { session, post, owned };
-}
-
-export async function updateLivePostBodyAction(formData: FormData): Promise<never> {
-  const postId = String(formData.get("post_id") ?? "").trim();
-  const body = String(formData.get("body") ?? "");
-  const { post, owned } = await resolveOwnerAndLivePost(postId);
-  try {
-    await liveService.updateLivePostBody(post.id, body);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    redirectToManageLiveWithBanner("live_body_update_failed", msg);
-  }
-  revalidatePath("/nex-native/manage/live");
-  revalidatePath("/nex-native/nex-feed");
-  const business = owned.find((b) => b.id === post.business_id);
-  if (business) revalidatePath(`/nex-native/${business.slug}`);
-  redirectToManageLiveWithBanner("live_body_updated", post.id.slice(0, 8));
-}
-
-export async function extendLivePostExpiryAction(formData: FormData): Promise<never> {
-  const postId = String(formData.get("post_id") ?? "").trim();
-  const hoursRaw = String(formData.get("hours") ?? "").trim();
-  const hours = Number(hoursRaw);
-  const { post, owned } = await resolveOwnerAndLivePost(postId);
-  try {
-    await liveService.extendLivePostExpiry(post.id, hours);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    redirectToManageLiveWithBanner("live_extend_failed", msg);
-  }
-  revalidatePath("/nex-native/manage/live");
-  revalidatePath("/nex-native/nex-feed");
-  const business = owned.find((b) => b.id === post.business_id);
-  if (business) revalidatePath(`/nex-native/${business.slug}`);
-  redirectToManageLiveWithBanner("live_expiry_extended", `+${hours}h`);
-}
 
 // Slice 3f-b · Theme-share toggle
 export async function setThemeShareAction(formData: FormData): Promise<never> {
