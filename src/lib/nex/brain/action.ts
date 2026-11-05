@@ -71,8 +71,8 @@ export type ActionExecution =
 function directoryUrl(target: ActionTarget): string {
   // Deterministic · uses refId when present, canonical name as fallback
   // query parameter. Never fabricates a URL for a target with no id.
-  if (target.refId) return `/nex-app/centre?ref=${encodeURIComponent(target.refId)}`;
-  return `/nex-app/centre?q=${encodeURIComponent(target.raw)}`;
+  if (target.refId) return `/nex-native/directory?ref=${encodeURIComponent(target.refId)}`;
+  return `/nex-native/directory?q=${encodeURIComponent(target.raw)}`;
 }
 
 // ─── Proposal ────────────────────────────────────────────────────────

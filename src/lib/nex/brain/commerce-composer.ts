@@ -103,7 +103,7 @@ export function composeCommerceReply(input: CommerceComposerInput): CommerceComp
     return {
       reply:
         `I don't have any product listings${catNote} in my commerce world yet · the pipeline is ready but no sellers or products have been onboarded yet. When we acquire real Indonesian sellers and their inventory, this'll surface real options here. In the meantime, try the marketplace directory or a broader web search.`,
-      suggestions: [{ label: "Open marketplace", href: "/nex-app/centre" }],
+      suggestions: [{ label: "Open marketplace", href: "/nex-native/directory" }],
       card: {
         kind: "commerce_discovery",
         payload: { category: detectedCategory, offers: [], corpusSize },
@@ -118,7 +118,7 @@ export function composeCommerceReply(input: CommerceComposerInput): CommerceComp
     return {
       reply:
         `I have ${corpusSize.products} products and ${corpusSize.offers} offers in my commerce world${detectedCategory ? `, but none in ${detectedCategory}` : ""}. Want to broaden the search, or shall I list what's available?`,
-      suggestions: [{ label: "Browse all", href: "/nex-app/centre" }],
+      suggestions: [{ label: "Browse all", href: "/nex-native/directory" }],
       card: {
         kind: "commerce_discovery",
         payload: { category: detectedCategory, offers: [], corpusSize },
@@ -137,7 +137,7 @@ export function composeCommerceReply(input: CommerceComposerInput): CommerceComp
   return {
     reply:
       `I have ${joined.length} real offers${catNote} — ${names.join(", ")}${joined.length > 3 ? ", and more" : ""}.${priceNote} Want me to compare them, or open the marketplace for one?`,
-    suggestions: [{ label: "Open marketplace", href: "/nex-app/centre" }],
+    suggestions: [{ label: "Open marketplace", href: "/nex-native/directory" }],
     card: {
       kind: "commerce_discovery",
       payload: {

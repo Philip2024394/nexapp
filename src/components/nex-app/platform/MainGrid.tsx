@@ -28,7 +28,9 @@ type Tile = {
 const TILES: Tile[] = [
   { label: "NEX AI",           subtitle: "Your AI assistant",     icon: Sparkles,          route: "/nex-app/brains/staircase" },
   { label: "NEX Discover",     subtitle: "Meet people nearby",    icon: Compass,           route: "/nex-app/discover" },
-  { label: "NEX Business",     subtitle: "Find businesses",       icon: Store,             route: "/nex-app/centre" },
+  // Trade Centre retired 2026-11-06 (phase-x scope-reduction Batch 7) ·
+  // tile now points at the canonical NEX Directory surface.
+  { label: "NEX Business",     subtitle: "Find businesses",       icon: Store,             route: "/nex-native/directory" },
   { label: "NEX Marketplace",  subtitle: "Buy & sell",            icon: ShoppingBag,       route: "/nex-app/marketplace" },
   { label: "NEX Quotes",       subtitle: "Quotes & invoices",     icon: FileText,          route: "/nex-app/quotes" },
 

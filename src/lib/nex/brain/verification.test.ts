@@ -15,7 +15,7 @@ function proposalOpenDir(name = "Hotel Trim Tiga", refId = "place:accommodation:
     target: target(name, refId),
     availability: "available",
     reason: "generatable",
-    linkPreview: `/nex-app/centre?ref=${encodeURIComponent(refId)}`,
+    linkPreview: `/nex-native/directory?ref=${encodeURIComponent(refId)}`,
     consentRequired: false,
   };
 }
@@ -112,7 +112,7 @@ describe("verifyAction · individual check failures", () => {
     const p = proposalOpenDir("H", "correct-id");
     const e: ActionExecution = {
       executed: true, kind: "open_directory", target: target("H", "correct-id"),
-      result: { url: "/nex-app/centre?ref=WRONG-ID", message: "" },
+      result: { url: "/nex-native/directory?ref=WRONG-ID", message: "" },
     };
     const r = verifyAction({ proposal: p, execution: e });
     expect(r.applicable).toBe(true);

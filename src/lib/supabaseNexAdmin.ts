@@ -5,14 +5,16 @@
 // This import path is a legacy artefact of the pre-fork
 // thenetworkers/hammerev multi-product monorepo. The 2026-10-10
 // nexapp fork extraction did not bring across a real
-// `src/lib/supabaseNexAdmin.ts` file, but five callers under
+// `src/lib/supabaseNexAdmin.ts` file, but several callers under
 // `src/lib/nex/*` still import `supabaseNexAdmin` from this path:
 //
 //   · src/lib/nex/brain-metrics/index.ts
-//   · src/lib/nex/centre-publishing/directorySeedsDb.ts
 //   · src/lib/nex/collection/urlQueueDb.ts
 //   · src/lib/nex/friend-edge/friend-edge.ts
 //   · src/lib/nex/private/private-store.ts
+//
+// (Trade Centre centre-publishing/directorySeedsDb.ts caller removed
+//  2026-11-06 · phase-x scope-reduction Batch 7.)
 //
 // Each of those callers resolves to five TS2307 diagnostics plus a
 // cluster of cascading TS2345 / TS18046 / TS7006 downstream. The

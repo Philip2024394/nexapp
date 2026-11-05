@@ -11,8 +11,8 @@
 import type { ActionAdapter, AdapterOutcome, ActionChainTarget } from "../action-audit";
 
 function directoryUrl(target: ActionChainTarget): string {
-  if (target.refId) return `/nex-app/centre?ref=${encodeURIComponent(target.refId)}`;
-  return `/nex-app/centre?q=${encodeURIComponent(target.canonical)}`;
+  if (target.refId) return `/nex-native/directory?ref=${encodeURIComponent(target.refId)}`;
+  return `/nex-native/directory?q=${encodeURIComponent(target.canonical)}`;
 }
 
 export const openDirectoryAdapter: ActionAdapter = {

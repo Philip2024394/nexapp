@@ -330,7 +330,7 @@ function buildActions(r: WorldRecord): readonly CardAction[] {
   actions.push({
     kind: "view",
     label: "View",
-    href: `/nex-app/centre?ref=${encodeURIComponent(r.id)}`,
+    href: `/nex-native/directory?ref=${encodeURIComponent(r.id)}`,
   });
 
   // WhatsApp · only when the record actually has a whatsapp number.

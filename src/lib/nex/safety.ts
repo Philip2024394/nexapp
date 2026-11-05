@@ -135,7 +135,7 @@ export function composeSafetyResponse(signal: SafetyClassification): {
         reply:
           `This sounds like an emergency. **Call 112 now**, or ambulance 118/119. If you're in Bali, BIMC Hospital Kuta or Nusa Dua has 24/7 emergency (English-speaking staff). In Jakarta, International SOS Clinic (Mega Kuningan) or Siloam TB Simatupang. In Yogyakarta, RS Panti Rapih or Siloam. Stay with the person. ${embassy}`,
         suggestions: [
-          { label: "Nearby hospitals", href: "/nex-app/centre?q=hospital" },
+          { label: "Nearby hospitals", href: "/nex-native/directory?q=hospital" },
         ],
       };
     case "medical_illness":
@@ -143,7 +143,7 @@ export function composeSafetyResponse(signal: SafetyClassification): {
         reply:
           `Sorry you're not feeling well. For minor illness (upset stomach, mild fever) — rehydrate with oralit (oral rehydration salts, available at every apotek) and rest. If symptoms are severe (high fever above 39°C, unable to keep fluids down, blood in stools) or last more than 24 hours, see a doctor. In Bali: BIMC Kuta / Nusa Dua or Siloam Denpasar. In Jakarta: International SOS Clinic or Siloam TB Simatupang. In Yogyakarta: RS Panti Rapih or Siloam. ${nex112}`,
         suggestions: [
-          { label: "Nearby hospitals", href: "/nex-app/centre?q=hospital" },
+          { label: "Nearby hospitals", href: "/nex-native/directory?q=hospital" },
         ],
       };
     case "medical_injury":
@@ -151,7 +151,7 @@ export function composeSafetyResponse(signal: SafetyClassification): {
         reply:
           `For an injury: apply pressure to bleeding wounds, rinse cuts with clean bottled water (not tap), and get to a clinic. Motorbike accidents in Bali should go to BIMC Kuta or Siloam Denpasar. Snake bites and jellyfish stings — go to hospital immediately, do NOT try to suck out venom. For anything serious call **112**. ${embassy}`,
         suggestions: [
-          { label: "Nearby hospitals", href: "/nex-app/centre?q=hospital" },
+          { label: "Nearby hospitals", href: "/nex-native/directory?q=hospital" },
         ],
       };
     case "lost":

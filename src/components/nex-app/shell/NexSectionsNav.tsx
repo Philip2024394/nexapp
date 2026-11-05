@@ -44,7 +44,9 @@ const SECTIONS: Section[] = [
   { href: "/nex-app/discover",               label: "Discover",             description: "Meet new people nearby",             icon: Search },
   // Messages entry removed 2026-09-06 · /nex-app/messages deleted.
   { href: "/nex-app/contacts",               label: "Contacts",             description: "Your saved connections + groups",    icon: Users },
-  { href: "/nex-app/centre",                 label: "Trade Centre",         description: "Marketplace: products · services",   icon: Store },
+  // Trade Centre entry removed 2026-11-06 · phase-x scope-reduction Batch 7 ·
+  // Trade Centre lives in the trades monorepo, not nexapp. NEX Directory at
+  // /nex-native/directory is the canonical merchant-discovery surface.
   { href: "/nex-market",                     label: "NEX Market · Yogyakarta", description: "Marketplace · buy from local sellers", icon: Store },
   { href: "/nex-head-quarters/comms-social", label: "Nex Marketing",        description: "Get your business seen",             icon: Share2 },
   // Phase 12.4 · Dedicated Knowledge Factory page. Physical hierarchy

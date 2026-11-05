@@ -32,7 +32,7 @@ describe("proposeAction · open_directory (v1 wired)", () => {
   it("available when target has refId", () => {
     const p = proposeAction({ requestedKind: "open_directory", target: T, governance: govAllow() });
     expect(p.availability).toBe("available");
-    expect(p.linkPreview).toContain("/nex-app/centre?ref=");
+    expect(p.linkPreview).toContain("/nex-native/directory?ref=");
     expect(p.linkPreview).toContain(encodeURIComponent(T.refId!));
     expect(p.consentRequired).toBe(false);
   });
@@ -40,7 +40,7 @@ describe("proposeAction · open_directory (v1 wired)", () => {
   it("available when target has raw name but no refId · falls back to q= query", () => {
     const p = proposeAction({ requestedKind: "open_directory", target: { canonical: "griya", raw: "Griya Sentana" }, governance: govAllow() });
     expect(p.availability).toBe("available");
-    expect(p.linkPreview).toContain("/nex-app/centre?q=");
+    expect(p.linkPreview).toContain("/nex-native/directory?q=");
     expect(p.linkPreview).toContain(encodeURIComponent("Griya Sentana"));
   });
 
@@ -74,7 +74,7 @@ describe("executeAction · v1 semantics", () => {
     const e = executeAction(p);
     expect(e.executed).toBe(true);
     if (e.executed) {
-      expect(e.result.url).toContain("/nex-app/centre");
+      expect(e.result.url).toContain("/nex-native/directory");
       expect(e.result.message).toContain(T.raw);
     }
   });

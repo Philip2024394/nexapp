@@ -751,7 +751,7 @@ function composeGatedReply(
           reply:
             "I don't have that in my grounded knowledge yet — I'd rather say so than guess. If you tell me a specific city or area, I can point you at real places from NEX's directory.",
           suggestions: [
-            { label: "Browse businesses", href: "/nex-app/centre" },
+            { label: "Browse businesses", href: "/nex-native/directory" },
           ],
         };
       }
@@ -766,7 +766,7 @@ function composeGatedReply(
       return {
         reply: `${primary.content}${secondaryFacts}${liveNudge}${provenance}`,
         suggestions: wantsLiveNudge
-          ? [{ label: "Find nearby", href: "/nex-app/centre" }]
+          ? [{ label: "Find nearby", href: "/nex-native/directory" }]
           : [],
         card: {
           kind: "knowledge",
@@ -784,7 +784,7 @@ function composeGatedReply(
         reply:
           "I can help you find businesses through NEX's directory. Tell me the type of place and the neighbourhood — e.g. 'coffee shop in Ubud' or 'clinic near Canggu'.",
         suggestions: [
-          { label: "Open directory", href: "/nex-app/centre" },
+          { label: "Open directory", href: "/nex-native/directory" },
         ],
       };
 
@@ -793,7 +793,7 @@ function composeGatedReply(
         reply:
           "The NEX marketplace surface is where I list items and services. Tell me what you're looking to buy or sell and I'll point you at the right filter.",
         suggestions: [
-          { label: "Open marketplace", href: "/nex-app/centre" },
+          { label: "Open marketplace", href: "/nex-native/directory" },
         ],
       };
 
@@ -802,7 +802,7 @@ function composeGatedReply(
         reply:
           "Booking flows (hotels, tables, drivers) are handled through NEX's directory partners rather than by me directly — I won't invent an availability or a price. Tell me what you're trying to book and where, and I'll surface the right partner surface.",
         suggestions: [
-          { label: "Open directory", href: "/nex-app/centre" },
+          { label: "Open directory", href: "/nex-native/directory" },
         ],
       };
 
@@ -1004,7 +1004,7 @@ function composeAccommodationReply(
       : "";
     return {
       reply: `${primary.content}${provenance}${resumeHint}`,
-      suggestions: [{ label: "Find nearby", href: "/nex-app/centre" }],
+      suggestions: [{ label: "Find nearby", href: "/nex-native/directory" }],
       card: {
         kind: "knowledge",
         payload: {
@@ -1103,7 +1103,7 @@ function composeAccommodationReply(
       : "";
     return {
       reply: `${insight.question}${suffix}`,
-      suggestions: [{ label: "Open directory", href: "/nex-app/centre" }],
+      suggestions: [{ label: "Open directory", href: "/nex-native/directory" }],
       updatedSlots: mergedSlots,
     };
   }
@@ -1117,7 +1117,7 @@ function composeAccommodationReply(
       : "";
     return {
       reply: `${insight.question}${suffix}`,
-      suggestions: [{ label: "Open directory", href: "/nex-app/centre" }],
+      suggestions: [{ label: "Open directory", href: "/nex-native/directory" }],
       updatedSlots: mergedSlots,
     };
   }
@@ -1131,7 +1131,7 @@ function composeAccommodationReply(
       : "";
     return {
       reply: `${insight.question}${suffix}`,
-      suggestions: [{ label: "Open directory", href: "/nex-app/centre" }],
+      suggestions: [{ label: "Open directory", href: "/nex-native/directory" }],
       updatedSlots: mergedSlots,
     };
   }
@@ -1167,7 +1167,7 @@ function composeAccommodationReply(
     const reply = `${opener}${body}${boundary}${trailingQuestion}`;
     return {
       reply,
-      suggestions: [{ label: "Open directory", href: "/nex-app/centre" }],
+      suggestions: [{ label: "Open directory", href: "/nex-native/directory" }],
       card: {
         kind: "accommodation_discovery",
         payload: {
@@ -1203,7 +1203,7 @@ function composeAccommodationReply(
     : L("Tell me more about what you're after and I'll try again.", "Ceritakan lebih detail apa yang kamu cari, saya coba lagi.");
   return {
     reply: `${prefix}${tail}`,
-    suggestions: [{ label: "Open directory", href: "/nex-app/centre" }],
+    suggestions: [{ label: "Open directory", href: "/nex-native/directory" }],
     updatedSlots: mergedSlots,
   };
 }
@@ -1512,7 +1512,7 @@ export function orchestrateChatTurn(message: string, opts: OrchestrateOptions = 
       status_label: "Coming Soon",
       actions: [
         { kind: "coming_soon", label: "Notify me when ready", toast: "I'll surface this the moment image creation ships. No sign-up needed." },
-        { kind: "link", label: "Find a designer", href: "/nex-app/centre" },
+        { kind: "link", label: "Find a designer", href: "/nex-native/directory" },
         { kind: "dismiss", label: "Cancel" },
       ],
     };
@@ -2041,7 +2041,7 @@ export function orchestrateChatTurn(message: string, opts: OrchestrateOptions = 
           "The Staircase Library is where I keep the designs I know best — plenty of oak, walnut, glass and modern styles. Tap through and anything that catches your eye can start a project.",
         suggestions: [
           { label: "Open Staircase Library", href: "/nex-app/staircase-library" },
-          { label: "Browse Trade Centre", href: "/nex-app/centre" },
+          { label: "Browse Directory", href: "/nex-native/directory" },
         ],
         intent: intent.intent,
         intent_reason: intent.reason,
@@ -2049,10 +2049,10 @@ export function orchestrateChatTurn(message: string, opts: OrchestrateOptions = 
     }
     return {
       reply:
-        "The Staircase Library has the deepest image collection today. Trade Centre also shows real project photos from verified merchants. I'll add more trade libraries as Nex grows.",
+        "The Staircase Library has the deepest image collection today. The Directory also shows real project photos from verified merchants. I'll add more trade libraries as Nex grows.",
       suggestions: [
         { label: "Staircase Library", href: "/nex-app/staircase-library" },
-        { label: "Trade Centre", href: "/nex-app/centre" },
+        { label: "Directory", href: "/nex-native/directory" },
       ],
       intent: intent.intent,
       intent_reason: intent.reason,
@@ -2069,7 +2069,7 @@ export function orchestrateChatTurn(message: string, opts: OrchestrateOptions = 
       reply:
         "Staircases are where I know most today. I can help you find companies, compare materials, and understand what's involved before you commit to anything.",
       suggestions: [
-        { label: "Browse staircase companies", href: "/nex-app/centre?q=staircase" },
+        { label: "Browse staircase companies", href: "/nex-native/directory?q=staircase" },
         { label: "Staircase Library", href: "/nex-app/staircase-library" },
       ],
       intent: intent.intent,
@@ -2080,9 +2080,9 @@ export function orchestrateChatTurn(message: string, opts: OrchestrateOptions = 
   if (/plumber|plumbing|leak(ing)?|boiler|radiator|drain/.test(lower)) {
     return {
       reply:
-        "For plumbing work, the Trade Centre lists verified professionals near you. I don't have deep plumbing knowledge yet, so I'll get you to real people faster.",
+        "For plumbing work, the Directory lists verified professionals near you. I don't have deep plumbing knowledge yet, so I'll get you to real people faster.",
       suggestions: [
-        { label: "Find a plumber", href: "/nex-app/centre?q=plumber" },
+        { label: "Find a plumber", href: "/nex-native/directory?q=plumber" },
       ],
       intent: intent.intent,
       intent_reason: intent.reason,
@@ -2092,9 +2092,9 @@ export function orchestrateChatTurn(message: string, opts: OrchestrateOptions = 
   if (/electric(al|ian)?|wiring|socket|fuse|rewire/.test(lower)) {
     return {
       reply:
-        "For electrical work, the Trade Centre is the fastest way to a real professional. I'll add deeper electrical knowledge to Nex as it earns its place.",
+        "For electrical work, the Directory is the fastest way to a real professional. I'll add deeper electrical knowledge to Nex as it earns its place.",
       suggestions: [
-        { label: "Find an electrician", href: "/nex-app/centre?q=electrician" },
+        { label: "Find an electrician", href: "/nex-native/directory?q=electrician" },
       ],
       intent: intent.intent,
       intent_reason: intent.reason,
@@ -2104,9 +2104,9 @@ export function orchestrateChatTurn(message: string, opts: OrchestrateOptions = 
   if (/kitchen|renovation|extension|loft|bathroom|refurb/.test(lower)) {
     return {
       reply:
-        "That sounds like a home project. The Trade Centre is where you can find companies for it, and I'll help you keep everything organised in one place as you go.",
+        "That sounds like a home project. the Directory is where you can find companies for it, and I'll help you keep everything organised in one place as you go.",
       suggestions: [
-        { label: "Browse Trade Centre", href: "/nex-app/centre" },
+        { label: "Browse Directory", href: "/nex-native/directory" },
         { label: "My Projects", href: "/nex-app/projects" },
       ],
       intent: intent.intent,
@@ -2117,9 +2117,9 @@ export function orchestrateChatTurn(message: string, opts: OrchestrateOptions = 
   if (/find|looking for|need (someone|a )/.test(lower)) {
     return {
       reply:
-        "The Trade Centre is where you can browse and connect with verified professionals. Tell me the kind of work you need and I'll help you get to the right people.",
+        "the Directory is where you can browse and connect with verified professionals. Tell me the kind of work you need and I'll help you get to the right people.",
       suggestions: [
-        { label: "Open Trade Centre", href: "/nex-app/centre" },
+        { label: "Open Directory", href: "/nex-native/directory" },
       ],
       intent: intent.intent,
       intent_reason: intent.reason,
@@ -2142,7 +2142,7 @@ export function orchestrateChatTurn(message: string, opts: OrchestrateOptions = 
     reply:
       "I can help you find trusted professionals, manage projects, and understand what to do next. Tell me what you're working on and I'll point you the right way.",
     suggestions: [
-      { label: "Trade Centre", href: "/nex-app/centre" },
+      { label: "Directory", href: "/nex-native/directory" },
       { label: "My Projects", href: "/nex-app/projects" },
     ],
     intent: intent.intent,

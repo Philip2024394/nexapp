@@ -1,8 +1,9 @@
 // src/lib/nex/__tests__/r2e-supabase-returns-pattern.test.ts
 //
 // R2-E · focused tests for the Supabase .returns<T>() type-override
-// pattern used by the fixes in src/lib/nex/business-context/database.ts
-// and src/lib/nex/centre-publishing/indexForSearch.ts.
+// pattern used by the fix in src/lib/nex/business-context/database.ts.
+// (centre-publishing/indexForSearch.ts deleted 2026-11-06 ·
+//  phase-x scope-reduction Batch 7 · Trade Centre retired.)
 //
 // Scope: document the three response shapes (success / error / malformed)
 // and confirm that `.returns<T[]>().maybeSingle()` behaves as documented
