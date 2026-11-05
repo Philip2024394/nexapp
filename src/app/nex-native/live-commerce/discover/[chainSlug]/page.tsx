@@ -26,11 +26,11 @@
 import { redirect } from "next/navigation";
 import {
   listPublishedUploadedVideos,
-} from "@/lib/nex-native/live-broadcast/uploaded-video-service";
+} from "@/lib/nex-native/product-video/uploaded-video-service";
 import {
   listDevUploadedVideos,
   isDevManifestActive,
-} from "@/lib/nex-native/live-broadcast/dev-video-manifest";
+} from "@/lib/nex-native/product-video/dev-video-manifest";
 import {
   getCategoryChain,
   buildCategoryQueue,

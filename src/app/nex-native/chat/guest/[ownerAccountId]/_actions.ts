@@ -9,8 +9,7 @@
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import { resolveNexAppOrProvisionalSession } from "@/lib/nex-native/first-conversation/provisional-session";
 import * as peerConversationService from "@/lib/nex-native/peer-conversation-service";
-import { recordIfAllowed } from "@/lib/nex-native/community/rate-limit";
-import { NexCommunityRateLimitError } from "@/lib/nex-native/community/types";
+import { recordIfAllowed, NexChatRateLimitError } from "@/lib/nex-native/chat/chat-rate-limit";
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 
@@ -77,9 +76,11 @@ export async function sendGuestMessageAction(
   }
 
   // Stage 1.1 · frequency rate limit (design-contract G1 fix).
-  // Uses the sealed community rate-limit primitive on the provisional
-  // nex_account.id. Hard enforcement once migration 197 is applied.
-  // Known limitation (sealed in community/rate-limit.ts): "not atomic
+  // Uses the chat-owned rate-limit primitive (ported from the
+  // sealed community primitive in Phase 1c Batch 1 · 2026-11-06)
+  // on the provisional nex_account.id. Hard enforcement once
+  // migration 197 is applied.
+  // Known limitation (sealed in chat/chat-rate-limit.ts): "not atomic
   // in the strict sense — two concurrent calls at a cold bucket could
   // both pass." Acceptable for the current guest-chat volume; the
   // adversarial burst test for this PR characterises the overshoot
@@ -88,7 +89,7 @@ export async function sendGuestMessageAction(
   try {
     await recordIfAllowed(guestAccount.id, "peer_message_guest");
   } catch (err) {
-    if (err instanceof NexCommunityRateLimitError) {
+    if (err instanceof NexChatRateLimitError) {
       return {
         ok: false,
         reason: "rate_limited",

@@ -1,4 +1,4 @@
-// src/lib/nex-native/live-broadcast/shop-contacts-dedup.ts
+// src/lib/nex-native/shop-contacts/dedup.ts
 //
 // Phase 2 · Live interaction · Shop Contacts dedup against the
 // existing Contacts system.

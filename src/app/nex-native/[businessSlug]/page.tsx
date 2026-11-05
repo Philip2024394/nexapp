@@ -34,7 +34,7 @@ import {
   getActiveSessionForBroadcaster,
   getFeaturedProductForSession,
 } from "@/lib/nex-native/live-broadcast/live-session-service";
-import { evaluateLiveness } from "@/lib/nex-native/live-broadcast/stale-session-policy";
+import { evaluateLiveness } from "@/lib/nex-native/product-video/stale-session-policy";
 import { ShopLiveStrip } from "@/components/nex-native/live-commerce/ShopLiveStrip";
 import * as accountService from "@/lib/nex-native/account-service";
 import {

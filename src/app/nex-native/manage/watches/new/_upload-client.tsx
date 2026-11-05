@@ -20,7 +20,7 @@ import { NexTextarea } from "@/lib/nex-native/nex-keyboard/nex-textarea";
 import {
   WatchOverlayCaption,
   type WatchSpecs,
-} from "@/components/nex-native/live-commerce/WatchOverlayCaption";
+} from "@/components/nex-native/watches/WatchOverlayCaption";
 import { BrandPicker } from "./_brand-picker";
 import { CategoryPicker, type VerticalId } from "./_category-picker";
 import { VariantImageRow, type Variant } from "./_variant-image-row";

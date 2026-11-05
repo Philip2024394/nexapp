@@ -1,4 +1,4 @@
-// src/lib/nex-native/live-broadcast/__tests__/shop-contacts-dedup.test.ts
+// src/lib/nex-native/shop-contacts/__tests__/dedup.test.ts
 
 import { describe, test, expect, vi, beforeEach } from "vitest";
 
@@ -59,7 +59,7 @@ beforeEach(() => {
 
 describe("dedupShopContactsCohort", () => {
   test("empty participants · empty Map · no DB call", async () => {
-    const svc = await import("../shop-contacts-dedup");
+    const svc = await import("../dedup");
     const r = await svc.dedupShopContactsCohort({
       broadcasterAccountId: BROADCASTER,
       participantAccountIds: [],
@@ -69,7 +69,7 @@ describe("dedupShopContactsCohort", () => {
   });
 
   test("empty broadcaster · all participants pass through as not-suppressed", async () => {
-    const svc = await import("../shop-contacts-dedup");
+    const svc = await import("../dedup");
     const r = await svc.dedupShopContactsCohort({
       broadcasterAccountId: "",
       participantAccountIds: [P_CLEAN],
@@ -88,7 +88,7 @@ describe("dedupShopContactsCohort", () => {
       ],
       error: null,
     }));
-    const svc = await import("../shop-contacts-dedup");
+    const svc = await import("../dedup");
     const r = await svc.dedupShopContactsCohort({
       broadcasterAccountId: BROADCASTER,
       participantAccountIds: [P_ACCEPTED, P_CLEAN],
@@ -108,7 +108,7 @@ describe("dedupShopContactsCohort", () => {
       ],
       error: null,
     }));
-    const svc = await import("../shop-contacts-dedup");
+    const svc = await import("../dedup");
     const r = await svc.dedupShopContactsCohort({
       broadcasterAccountId: BROADCASTER,
       participantAccountIds: [P_ACCEPTED],
@@ -129,7 +129,7 @@ describe("dedupShopContactsCohort", () => {
       ],
       error: null,
     }));
-    const svc = await import("../shop-contacts-dedup");
+    const svc = await import("../dedup");
     const r = await svc.dedupShopContactsCohort({
       broadcasterAccountId: BROADCASTER,
       participantAccountIds: [P_PENDING, P_CLEAN],
@@ -151,7 +151,7 @@ describe("dedupShopContactsCohort", () => {
       ],
       error: null,
     }));
-    const svc = await import("../shop-contacts-dedup");
+    const svc = await import("../dedup");
     const r = await svc.dedupShopContactsCohort({
       broadcasterAccountId: BROADCASTER,
       participantAccountIds: [P_COOLDOWN],
@@ -172,7 +172,7 @@ describe("dedupShopContactsCohort", () => {
       ],
       error: null,
     }));
-    const svc = await import("../shop-contacts-dedup");
+    const svc = await import("../dedup");
     const r = await svc.dedupShopContactsCohort({
       broadcasterAccountId: BROADCASTER,
       participantAccountIds: [P_CLEAN],
@@ -203,7 +203,7 @@ describe("dedupShopContactsCohort", () => {
       ],
       error: null,
     }));
-    const svc = await import("../shop-contacts-dedup");
+    const svc = await import("../dedup");
     const r = await svc.dedupShopContactsCohort({
       broadcasterAccountId: BROADCASTER,
       participantAccountIds: [P_ACCEPTED],
@@ -217,7 +217,7 @@ describe("dedupShopContactsCohort", () => {
       data: null,
       error: { message: "boom" },
     }));
-    const svc = await import("../shop-contacts-dedup");
+    const svc = await import("../dedup");
     const r = await svc.dedupShopContactsCohort({
       broadcasterAccountId: BROADCASTER,
       participantAccountIds: [P_ACCEPTED],
@@ -234,7 +234,7 @@ describe("dedupShopContactsCohort", () => {
       return edgeBuilder;
     });
     setEdgeResolver(async () => ({ data: [], error: null }));
-    const svc = await import("../shop-contacts-dedup");
+    const svc = await import("../dedup");
     await svc.dedupShopContactsCohort({
       broadcasterAccountId: BROADCASTER,
       participantAccountIds: [P_CLEAN, P_CLEAN, "", P_ACCEPTED],
@@ -245,7 +245,7 @@ describe("dedupShopContactsCohort", () => {
   });
 
   test("budget · ≤ 2 round trips regardless of participant count", async () => {
-    const svc = await import("../shop-contacts-dedup");
+    const svc = await import("../dedup");
     const participants = Array.from({ length: 30 }, (_, i) =>
       `11111111-1111-1111-1111-${(i + 100).toString().padStart(12, "0")}`,
     );

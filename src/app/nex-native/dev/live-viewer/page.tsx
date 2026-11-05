@@ -19,7 +19,7 @@ import {
   devVideoPublicUrl,
   DEV_VIDEO_MANIFEST,
   listDevUploadedVideos,
-} from "@/lib/nex-native/live-broadcast/dev-video-manifest";
+} from "@/lib/nex-native/product-video/dev-video-manifest";
 import { VideoViewerClient } from "@/app/nex-native/nex-feed/[videoId]/_video-viewer-client";
 
 const DEV_VIEWER_VIDEO_ID = "dev-video-3";

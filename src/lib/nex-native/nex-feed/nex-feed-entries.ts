@@ -30,13 +30,13 @@ import "server-only";
 import {
   listPublishedUploadedVideos,
   type UploadedVideoRow,
-} from "../live-broadcast/uploaded-video-service";
+} from "../product-video/uploaded-video-service";
 import {
   listDevUploadedVideos,
   isDevManifestActive,
   devVideoPublicUrl,
   DEV_VIDEO_MANIFEST,
-} from "../live-broadcast/dev-video-manifest";
+} from "../product-video/dev-video-manifest";
 import { listActiveMusicFeedEntries, type MusicFeedEntry } from "../music/active-music-feed-reader";
 
 /** The URL slug prefix that marks a feed entry as a music post. */

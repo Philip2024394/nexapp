@@ -26,7 +26,7 @@ import {
   listShopContactsCards,
   shuffleCards,
 } from "@/lib/nex-native/live-broadcast/participation-ledger-service";
-import { dedupShopContactsCohort } from "@/lib/nex-native/live-broadcast/shop-contacts-dedup";
+import { dedupShopContactsCohort } from "@/lib/nex-native/shop-contacts/dedup";
 import { getActiveSessionForBroadcaster } from "@/lib/nex-native/live-broadcast/live-session-service";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import { ShopContactsCard } from "./_shop-contacts-card";

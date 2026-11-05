@@ -30,7 +30,7 @@ import {
   getActiveSessionForBroadcaster,
   getFeaturedProductForSession,
 } from "@/lib/nex-native/live-broadcast/live-session-service";
-import { evaluateLiveness } from "@/lib/nex-native/live-broadcast/stale-session-policy";
+import { evaluateLiveness } from "@/lib/nex-native/product-video/stale-session-policy";
 import { LiveHeartbeatRing } from "@/components/nex-native/live-commerce/LiveHeartbeatRing";
 import { LiveProductIndicator } from "@/components/nex-native/live-commerce/LiveProductIndicator";
 

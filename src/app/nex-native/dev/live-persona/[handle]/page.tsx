@@ -30,7 +30,7 @@ import {
   devVideoPublicUrl,
   DEV_VIDEO_MANIFEST,
   listDevUploadedVideos,
-} from "@/lib/nex-native/live-broadcast/dev-video-manifest";
+} from "@/lib/nex-native/product-video/dev-video-manifest";
 import { VideoViewerClient } from "@/app/nex-native/nex-feed/[videoId]/_video-viewer-client";
 // computePresence intentionally not imported · see "remove green dot"
 // edit below. Re-add when real presence/live wiring returns.
@@ -40,7 +40,7 @@ import type { BroadcasterLibraryVideo } from "@/components/nex-native/live-comme
 // current DEV_VIDEO_MANIFEST entry (watchBrand / watchHeadline /
 // watchDescription). Mounted as a sibling of VideoViewerClient so
 // VideoViewerClient itself is untouched.
-import { WatchOverlayCaption } from "@/components/nex-native/live-commerce/WatchOverlayCaption";
+import { WatchOverlayCaption } from "@/components/nex-native/watches/WatchOverlayCaption";
 // Owner directive 2026-10-26 (Round 3e) · broadcaster-only message
 // inbox · dev mock · persists in sessionStorage only. Flagged as such
 // in the panel. Production wire-up is Amendment 2 §12 Live Message

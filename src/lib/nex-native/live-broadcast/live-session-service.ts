@@ -58,7 +58,7 @@
 
 import "server-only";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
-import { isSessionCurrentlyLive } from "./stale-session-policy";
+import { isSessionCurrentlyLive } from "@/lib/nex-native/product-video/stale-session-policy";
 
 /* ─── Types ──────────────────────────────────────────────────── */
 

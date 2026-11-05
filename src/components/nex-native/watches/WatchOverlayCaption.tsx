@@ -1,6 +1,6 @@
 "use client";
 
-// src/components/nex-native/live-commerce/WatchOverlayCaption.tsx
+// src/components/nex-native/watches/WatchOverlayCaption.tsx
 //
 // Owner directive 2026-10-26 (Round 3e):
 //   · Collapsed: icon + headline + 2-line description (ellipsis).

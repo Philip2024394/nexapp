@@ -34,7 +34,7 @@ import {
   listActiveFeaturedProductsForSessions,
   listOpenSessionsForBroadcasters,
 } from "./live-session-service";
-import { evaluateLiveness } from "./stale-session-policy";
+import { evaluateLiveness } from "@/lib/nex-native/product-video/stale-session-policy";
 import type { DirectoryDestination } from "@/lib/nex-native/directory";
 
 /** Plan v4 · AC-3 · discriminated union for every DB-heartbeat-

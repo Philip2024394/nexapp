@@ -7,7 +7,7 @@
 // Scope of these tests:
 //   · config entry is present (type-level + runtime)
 //   · result enum carries the new `rate_limited` branch
-//   · NexCommunityRateLimitError is translated to `{ ok: false,
+//   · NexChatRateLimitError is translated to `{ ok: false,
 //     reason: "rate_limited", ... }` with the window + cap surfaced
 //     for honest UI copy
 //   · non-rate-limit primitive failures fall through (fail-open)
@@ -37,10 +37,9 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// `community/types.ts` imports "server-only" (line 14) which refuses
-// to load in a vitest context. Same escape hatch the sibling
-// community/__tests__/types.test.ts uses · must be declared BEFORE
-// the imports it governs.
+// `chat/chat-rate-limit.ts` imports "server-only" which refuses
+// to load in a vitest context. Must be declared BEFORE the imports
+// it governs.
 vi.mock("server-only", () => ({}));
 
 // ─── Hoisted mock bodies for every module boundary the action touches ──
@@ -55,9 +54,15 @@ const H = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
 }));
 
-vi.mock("@/lib/nex-native/community/rate-limit", () => ({
-  recordIfAllowed: H.recordIfAllowed,
-}));
+vi.mock("@/lib/nex-native/chat/chat-rate-limit", async () => {
+  const actual = await vi.importActual<
+    typeof import("@/lib/nex-native/chat/chat-rate-limit")
+  >("@/lib/nex-native/chat/chat-rate-limit");
+  return {
+    ...actual,
+    recordIfAllowed: H.recordIfAllowed,
+  };
+});
 
 vi.mock("@/lib/nex-native/first-conversation/provisional-session", () => ({
   resolveNexAppOrProvisionalSession: H.resolveSession,
@@ -80,10 +85,10 @@ vi.mock("next/cache", () => ({
 }));
 
 import {
-  NEX_COMMUNITY_RATE_LIMITS,
-  NexCommunityRateLimitError,
-  type NexCommunityRateLimitAction,
-} from "@/lib/nex-native/community/types";
+  NEX_CHAT_RATE_LIMITS,
+  NexChatRateLimitError,
+  type NexChatRateLimitAction,
+} from "@/lib/nex-native/chat/chat-rate-limit";
 
 // Imported AFTER the vi.mock calls above so its own imports resolve to
 // the mocks. The "use server" directive at the top of _actions.ts is a
@@ -92,78 +97,69 @@ import {
 import { sendGuestMessageAction } from "../_actions";
 
 describe("Stage 1.1 · peer_message_guest · rate-limit config", () => {
-  it("is a member of the sealed NexCommunityRateLimitAction union", () => {
+  it("is a member of the sealed NexChatRateLimitAction union", () => {
     // Type-level check masquerading as a runtime assertion: if the
     // union loses `peer_message_guest` in a future refactor, this
     // assignment errors at compile time.
-    const key: NexCommunityRateLimitAction = "peer_message_guest";
+    const key: NexChatRateLimitAction = "peer_message_guest";
     expect(key).toBe("peer_message_guest");
   });
 
-  it("has a config entry at NEX_COMMUNITY_RATE_LIMITS", () => {
-    expect(NEX_COMMUNITY_RATE_LIMITS.peer_message_guest).toBeDefined();
+  it("has a config entry at NEX_CHAT_RATE_LIMITS", () => {
+    expect(NEX_CHAT_RATE_LIMITS.peer_message_guest).toBeDefined();
   });
 
   it("configures 10 messages per rolling 60-minute window · starting hypothesis per design contract §4.2", () => {
-    expect(NEX_COMMUNITY_RATE_LIMITS.peer_message_guest).toEqual({
+    expect(NEX_CHAT_RATE_LIMITS.peer_message_guest).toEqual({
       windowMinutes: 60,
       maxPerWindow: 10,
     });
   });
 
   it("window + cap values are positive integers · guards against a future zero/negative misconfig", () => {
-    const cfg = NEX_COMMUNITY_RATE_LIMITS.peer_message_guest;
+    const cfg = NEX_CHAT_RATE_LIMITS.peer_message_guest;
     expect(Number.isInteger(cfg.windowMinutes)).toBe(true);
     expect(Number.isInteger(cfg.maxPerWindow)).toBe(true);
     expect(cfg.windowMinutes).toBeGreaterThan(0);
     expect(cfg.maxPerWindow).toBeGreaterThan(0);
   });
 
-  it("coexists with every pre-existing action key · exhaustive-matrix guard", () => {
-    const expected: readonly NexCommunityRateLimitAction[] = [
-      "notice_create",
-      "notice_update",
-      "notice_confirm",
-      "notice_resolve",
-      "notice_report",
-      "card_create",
-      "card_update",
-      "card_confirm",
-      "card_resolve",
-      "card_report",
-      "card_photo_upload",
-      "business_welcome_publish",
-      "business_welcome_retract",
+  it("chat-owned action set is exactly the chat-owned keys · exhaustive-matrix guard", () => {
+    // Phase 1c Batch 1 · the community surface is being removed.
+    // The chat-owned rate limiter only ports the one key the chat
+    // surface actually consumes · future chat-surface additions
+    // extend this union in src/lib/nex-native/chat/chat-rate-limit.ts.
+    const expected: readonly NexChatRateLimitAction[] = [
       "peer_message_guest",
     ];
     for (const k of expected) {
       expect(
-        NEX_COMMUNITY_RATE_LIMITS[k],
+        NEX_CHAT_RATE_LIMITS[k],
         `missing config for action key: ${k}`,
       ).toBeDefined();
     }
-    expect(Object.keys(NEX_COMMUNITY_RATE_LIMITS).sort()).toEqual(
+    expect(Object.keys(NEX_CHAT_RATE_LIMITS).sort()).toEqual(
       [...expected].sort(),
     );
   });
 });
 
-describe("Stage 1.1 · NexCommunityRateLimitError · translation to SendGuestMessageResult", () => {
+describe("Stage 1.1 · NexChatRateLimitError · translation to SendGuestMessageResult", () => {
   // Pure translation logic · the action maps the sealed error into
   // the result enum with the config surfaced. These tests pin that
   // contract without touching the live DB or the primitive.
 
   it("constructor stores action + window + cap verbatim", () => {
-    const err = new NexCommunityRateLimitError("peer_message_guest", 60, 10);
+    const err = new NexChatRateLimitError("peer_message_guest", 60, 10);
     expect(err.action).toBe("peer_message_guest");
     expect(err.windowMinutes).toBe(60);
     expect(err.maxPerWindow).toBe(10);
     expect(err.code).toBe("rate_limited");
-    expect(err.name).toBe("NexCommunityRateLimitError");
+    expect(err.name).toBe("NexChatRateLimitError");
   });
 
   it("message is honest · action name + numeric limits · no PII · no fingerprint hash leaked", () => {
-    const err = new NexCommunityRateLimitError("peer_message_guest", 60, 10);
+    const err = new NexChatRateLimitError("peer_message_guest", 60, 10);
     expect(err.message).toContain("peer_message_guest");
     expect(err.message).toContain("10");
     expect(err.message).toContain("60");
@@ -173,11 +169,11 @@ describe("Stage 1.1 · NexCommunityRateLimitError · translation to SendGuestMes
   });
 
   it("is distinguishable from a generic Error via instanceof · the action's catch depends on this", () => {
-    const err = new NexCommunityRateLimitError("peer_message_guest", 60, 10);
-    expect(err instanceof NexCommunityRateLimitError).toBe(true);
+    const err = new NexChatRateLimitError("peer_message_guest", 60, 10);
+    expect(err instanceof NexChatRateLimitError).toBe(true);
     expect(err instanceof Error).toBe(true);
     const notRL: unknown = new Error("some other failure");
-    expect(notRL instanceof NexCommunityRateLimitError).toBe(false);
+    expect(notRL instanceof NexChatRateLimitError).toBe(false);
   });
 });
 
@@ -202,15 +198,9 @@ describe("Stage 1.1 · guest-chat action · source-shape invariants", () => {
   );
   const SOURCE = readFileSync(ACTION_PATH, "utf8");
 
-  it("imports recordIfAllowed from the sealed community primitive", () => {
+  it("imports recordIfAllowed + NexChatRateLimitError from the chat-owned primitive", () => {
     expect(SOURCE).toContain(
-      'import { recordIfAllowed } from "@/lib/nex-native/community/rate-limit";',
-    );
-  });
-
-  it("imports NexCommunityRateLimitError for sealed-error translation", () => {
-    expect(SOURCE).toContain(
-      'import { NexCommunityRateLimitError } from "@/lib/nex-native/community/types";',
+      'import { recordIfAllowed, NexChatRateLimitError } from "@/lib/nex-native/chat/chat-rate-limit";',
     );
   });
 
@@ -230,8 +220,8 @@ describe("Stage 1.1 · guest-chat action · source-shape invariants", () => {
     expect(rateIdx).toBeLessThan(insertIdx);
   });
 
-  it("translates NexCommunityRateLimitError into { ok: false, reason: 'rate_limited' } with window + cap surfaced", () => {
-    expect(SOURCE).toMatch(/err instanceof NexCommunityRateLimitError/);
+  it("translates NexChatRateLimitError into { ok: false, reason: 'rate_limited' } with window + cap surfaced", () => {
+    expect(SOURCE).toMatch(/err instanceof NexChatRateLimitError/);
     expect(SOURCE).toContain('reason: "rate_limited"');
     expect(SOURCE).toContain("rate_limited_window_minutes:");
     expect(SOURCE).toContain("rate_limited_max_per_window:");
@@ -239,14 +229,14 @@ describe("Stage 1.1 · guest-chat action · source-shape invariants", () => {
 
   it("fails open on non-rate-limit errors (preserves current behaviour pre-migration-197)", () => {
     // The catch block must warn-and-fall-through for any error that
-    // is NOT a NexCommunityRateLimitError · otherwise the live DB
+    // is NOT a NexChatRateLimitError · otherwise the live DB
     // CHECK violation would break guest-chat during the deploy
     // window between code ship and migration apply.
     expect(SOURCE).toContain("console.warn(");
     // Guard against a future refactor that silently reverts to
     // fail-closed by throwing / returning db_error from the catch.
     const catchIdx = SOURCE.indexOf(
-      "if (err instanceof NexCommunityRateLimitError)",
+      "if (err instanceof NexChatRateLimitError)",
     );
     const afterCatch = SOURCE.slice(catchIdx);
     expect(afterCatch).not.toMatch(/return[^;]*reason:\s*"db_error"[^;]*;[^}]*}\s*catch/);
@@ -356,7 +346,7 @@ describe("Stage 1.1 · guest-chat action · behavioural tests · mocked primitiv
     // Inject the sealed error class · the only error type the action's
     // catch should translate to `rate_limited`.
     H.recordIfAllowed.mockRejectedValueOnce(
-      new NexCommunityRateLimitError("peer_message_guest", 60, 10),
+      new NexChatRateLimitError("peer_message_guest", 60, 10),
     );
 
     const result = await sendGuestMessageAction(OWNER_ID, "hello");

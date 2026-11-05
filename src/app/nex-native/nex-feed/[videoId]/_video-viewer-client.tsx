@@ -44,7 +44,7 @@ import {
 } from "@/components/nex-native/live-commerce/VideoCommentsOverlay";
 import { SatelliteIconWithPing } from "@/components/nex-native/live-commerce/LiveSignalBadge";
 import { resolveMarketCta } from "@/lib/nex-native/live-broadcast/market-cta-resolver";
-import type { UploadedVideoRow } from "@/lib/nex-native/live-broadcast/uploaded-video-service";
+import type { UploadedVideoRow } from "@/lib/nex-native/product-video/uploaded-video-service";
 import {
   attachHlsPlayer,
   isHlsSource,

@@ -53,7 +53,7 @@ import {
   touchLiveHeartbeatAction,
   issueJailAction,
 } from "./_actions";
-import { HEARTBEAT_INTERVAL_MS } from "@/lib/nex-native/live-broadcast/stale-session-policy";
+import { HEARTBEAT_INTERVAL_MS } from "@/lib/nex-native/product-video/stale-session-policy";
 // Owner-authorised 2026-10-29 · NEX Music live overlay wiring.
 import { NexMusicPlayerOverlay } from "@/components/nex-native/music/NexMusicPlayerOverlay";
 import { MusicPlayerDock } from "@/components/nex-native/music/MusicPlayerDock";
