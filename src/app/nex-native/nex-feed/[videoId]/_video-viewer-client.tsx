@@ -296,6 +296,23 @@ export function VideoViewerClient({
     setPostedLabel(formatPostedDate(video.published_at ?? video.created_at));
   }, [video.published_at, video.created_at]);
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  // Phase V · P24 · 2026-11-05 · Explicit pause-on-unmount belt-and-
+  // braces. Mirrors the music viewer's explicit teardown so a snappy
+  // swipe between a video entry and the next entry never leaves two
+  // audio tracks playing in parallel during the ~200ms when both
+  // clients are briefly mounted.
+  React.useEffect(() => {
+    return () => {
+      const el = videoRef.current;
+      if (el && !el.paused) {
+        try {
+          el.pause();
+        } catch {
+          /* best-effort · browser may already be tearing it down */
+        }
+      }
+    };
+  }, []);
   // Owner directive 2026-10-27 · S5 streaming foundation · attach
   // hls.js when the source is an HLS manifest. No-op for MP4 · so
   // existing content is unaffected until the HLS pipeline lands.

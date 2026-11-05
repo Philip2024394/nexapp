@@ -353,6 +353,28 @@ export function MusicViewerClient(
     };
   }, []);
 
+  // Phase V · P24 · 2026-11-05 · Explicit pause-on-unmount belt-and-
+  // braces. DOM unmount already stops the <audio> element naturally
+  // when this viewer's route transitions away, but when both this
+  // viewer AND a sibling music/video viewer mount briefly in parallel
+  // during a snappy swipe, the old audio element can keep streaming
+  // for ~200ms. Pausing it explicitly on cleanup eliminates overlap.
+  // Scope: this is the ONLY <audio> on the feed route per sealed
+  // MusicPostShell contract · a top-level querySelector is safe.
+  React.useEffect(() => {
+    return () => {
+      if (typeof document === "undefined") return;
+      const audio = document.querySelector<HTMLAudioElement>("audio");
+      if (audio && !audio.paused) {
+        try {
+          audio.pause();
+        } catch {
+          /* best-effort · browser may already be tearing it down */
+        }
+      }
+    };
+  }, [props.feedEntryId]);
+
   const handlePointerDown = React.useCallback(
     (e: React.PointerEvent<HTMLElement>): void => {
       const target = e.target as HTMLElement | null;
