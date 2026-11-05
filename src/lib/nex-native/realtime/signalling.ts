@@ -104,7 +104,7 @@ export function openSignallingChannel(opts: {
     onSubscribed: h.onSubscribed,
     onError: h.onError,
     onBroadcast: (event, envelope) => {
-      const s = envelope.payload as CallSignal;
+      const s = envelope.payload as unknown as CallSignal;
       if (!s || typeof s !== "object" || s.kind !== event) return;
       switch (s.kind) {
         case "ring":       h.onRing?.(s);   return;

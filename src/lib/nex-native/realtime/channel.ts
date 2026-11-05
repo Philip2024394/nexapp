@@ -46,7 +46,9 @@ export interface NexChannelHandle {
    *  or after subscribe — Supabase re-syncs on subscribe.  */
   trackPresence(state: BroadcastPayload): Promise<void>;
   /** Snapshot of current presence roster keyed by presence_ref. */
-  getPresenceState<T = BroadcastPayload>(): RealtimePresenceState<T>;
+  getPresenceState<
+    T extends { [key: string]: any } = BroadcastPayload,
+  >(): RealtimePresenceState<T>;
   /** Unsubscribe + release the channel. Safe to call multiple times. */
   close(): Promise<void>;
 }
@@ -146,7 +148,9 @@ export function openNexChannel<T extends BroadcastPayload = BroadcastPayload>(
     async trackPresence(state: BroadcastPayload): Promise<void> {
       await channel.track(state);
     },
-    getPresenceState<TState = BroadcastPayload>(): RealtimePresenceState<TState> {
+    getPresenceState<
+      TState extends { [key: string]: any } = BroadcastPayload,
+    >(): RealtimePresenceState<TState> {
       return channel.presenceState<TState>();
     },
     async close(): Promise<void> {

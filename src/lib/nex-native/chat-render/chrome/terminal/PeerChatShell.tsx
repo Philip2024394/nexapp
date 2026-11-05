@@ -389,7 +389,15 @@ export function TerminalPeerChatShell(
         {shopOpen && props.peerShop && (
           <TerminalShopModal
             title={props.peerShop.name}
-            products={props.peerShop.products}
+            products={props.peerShop.products.map((p) => ({
+              product_id: p.id,
+              name: p.name,
+              price_pence: p.price_pence,
+              currency: p.currency,
+              stock_status: p.stock_status,
+              image_url: p.image_url,
+              slug: null,
+            }))}
             isVenue={props.peerShop.isVenue}
             onClose={() => setShopOpen(false)}
           />
@@ -1052,6 +1060,26 @@ function iconButtonStyle(): React.CSSProperties {
     fontSize: 14,
     cursor: "pointer",
     boxShadow: `0 0 8px rgba(76,255,122,0.08)`,
+    padding: 0,
+  };
+}
+
+function composerIconStyle(): React.CSSProperties {
+  // Terminal-flavoured icon slot for the composer's + / 😀 buttons.
+  // Mirrors the helper in src/app/nex-native/themes/cyber-grid/page.tsx
+  // so the shell renders the same composer affordance when rehosted.
+  return {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    display: "grid",
+    placeItems: "center",
+    color: P.mariaName,
+    background: "transparent",
+    border: `1px dashed rgba(76,255,122,0.3)`,
+    cursor: "pointer",
+    fontFamily: MONO,
+    fontSize: 13,
     padding: 0,
   };
 }

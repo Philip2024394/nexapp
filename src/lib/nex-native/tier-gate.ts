@@ -70,24 +70,34 @@ async function getBusinessOwnerTier(businessId: NexUuid): Promise<{
   const ownerAccountId = (biz.data as { owner_account_id: string }).owner_account_id;
   const owner = await nexSupabaseAdmin
     .from("nex_account")
-    .select("tier, bisnis_expires_at")
+    .select("tier, bisnis_expires_at, themes_trial_used_at")
     .eq("id", ownerAccountId)
     .maybeSingle();
   if (owner.error || !owner.data) return null;
   return {
     ownerAccountId,
-    tier: effectiveTier(owner.data as Pick<NexAccountRow, "tier" | "bisnis_expires_at">),
+    tier: effectiveTier(
+      owner.data as Pick<
+        NexAccountRow,
+        "tier" | "bisnis_expires_at" | "themes_trial_used_at"
+      >,
+    ),
   };
 }
 
 async function getAccountTier(accountId: NexUuid): Promise<ReturnType<typeof effectiveTier> | null> {
   const row = await nexSupabaseAdmin
     .from("nex_account")
-    .select("tier, bisnis_expires_at")
+    .select("tier, bisnis_expires_at, themes_trial_used_at")
     .eq("id", accountId)
     .maybeSingle();
   if (row.error || !row.data) return null;
-  return effectiveTier(row.data as Pick<NexAccountRow, "tier" | "bisnis_expires_at">);
+  return effectiveTier(
+    row.data as Pick<
+      NexAccountRow,
+      "tier" | "bisnis_expires_at" | "themes_trial_used_at"
+    >,
+  );
 }
 
 // ---------------------------------------------------------------------------

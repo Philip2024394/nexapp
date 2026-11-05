@@ -415,6 +415,10 @@ const CATEGORY_KEYWORDS: Readonly<Record<NexBusinessCategory, readonly string[]>
   event:                ["event", "tickets", "line-up"],
   creator:              ["creator", "podcast", "newsletter"],
   "professional-service": ["law-firm", "accountant", "solicitor", "advisor"],
+  "ice-cream":          ["ice-cream", "gelato", "sorbet", "scoop", "sundae"],
+  "dessert-shop":       ["dessert", "patisserie", "sweets", "pudding", "cake"],
+  "drinks-shop":        ["drinks", "beverage", "smoothie", "boba", "bubble-tea"],
+  "juice-bar":          ["juice", "smoothie", "cold-pressed", "fresh-squeezed"],
 });
 
 function isKnownCategory(x: string): x is NexBusinessCategory {

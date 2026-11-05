@@ -4,7 +4,23 @@
 // --------------------------------------------------------------------------
 
 import "server-only";
-import type { NexAccountRow } from "../types";
+
+/**
+ * Shape of the Vault-entitlement fields this service expects on an
+ * account row.
+ *
+ * Note (2026-11-06 · scope reduction Phase 4): the Vault Entitlements
+ * Policy is LOCKED decisions-only and the `vault_tier` /
+ * `vault_trial_used_at` columns are NOT yet present on `nex_account`.
+ * This local shape makes the file typecheck without asserting that
+ * the columns live on `NexAccountRow` — once the migration lands and
+ * `NexAccountRow` is updated, callers can pass a `Pick<NexAccountRow,
+ * "vault_tier" | "vault_trial_used_at">` here directly.
+ */
+export interface VaultEntitlementRow {
+  vault_tier?: string | null;
+  vault_trial_used_at?: string | null;
+}
 
 /** The length of the Vault free trial window in milliseconds. */
 const VAULT_TRIAL_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
@@ -15,10 +31,7 @@ const VAULT_TRIAL_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
  * Uses the "Lazy Downgrade" pattern: checks for a paid tier first,
  * then falls back to checking if the 7-day trial is still active.
  */
-export function effectiveVaultAccess(account: Pick<
-  NexAccountRow,
-  "vault_tier" | "vault_trial_used_at"
->): boolean {
+export function effectiveVaultAccess(account: VaultEntitlementRow): boolean {
   // 1. Paid access (any tier other than 'gratis')
   if (account.vault_tier && account.vault_tier !== "gratis") {
     return true;
@@ -39,7 +52,7 @@ export function effectiveVaultAccess(account: Pick<
  * Returns the expiry timestamp if successful.
  */
 export async function activateVaultTrial(
-  account: NexAccountRow
+  account: VaultEntitlementRow
 ): Promise<{ ok: true; expiresAt: string } | { ok: false; reason: string }> {
   if (account.vault_trial_used_at) {
     return { ok: false, reason: "trial_already_used" };

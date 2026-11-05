@@ -50,7 +50,13 @@ function bytesToHex(bytes: Uint8Array): string {
 }
 
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
-  const hashBuf = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+  // Cast via BufferSource · TS 5.7+ narrows Uint8Array to
+  // `Uint8Array<ArrayBufferLike>` which the lib.dom WebCrypto
+  // overload doesn't accept directly.
+  const hashBuf = await globalThis.crypto.subtle.digest(
+    "SHA-256",
+    bytes as BufferSource,
+  );
   return bytesToHex(new Uint8Array(hashBuf));
 }
 
@@ -187,7 +193,9 @@ export async function migrateFile(input: {
     form.set("generation", String(file.rotation_generation));
     form.set(
       "ciphertext_file",
-      new Blob([ciphertext], { type: "application/x-nex-vault-ciphertext" }),
+      new Blob([ciphertext as BlobPart], {
+        type: "application/x-nex-vault-ciphertext",
+      }),
       `${file.id}.ciphertext`,
     );
     const uploadRes = await fetch("/api/nex-native/vault/migration/upload", {

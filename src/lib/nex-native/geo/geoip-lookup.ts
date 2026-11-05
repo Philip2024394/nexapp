@@ -29,6 +29,7 @@
 
 import * as path from "node:path";
 import * as fs from "node:fs";
+import type { CityResponse } from "mmdb-lib";
 
 export interface ApproxLocation {
   city: string | null;
@@ -63,11 +64,11 @@ interface MaxMindReader {
   get(ip: string): MaxMindCityResponse | null;
 }
 
-interface MaxMindCityResponse {
-  city?: { names?: { en?: string } };
-  country?: { names?: { en?: string }; iso_code?: string };
-  // Many more fields exist · we only care about city + country for UI.
-}
+// mmdb-lib constrains the reader generic to the sealed `Response`
+// union (CityResponse | CountryResponse | …). We only need city +
+// country info · alias `CityResponse` directly so the shape
+// satisfies the constraint.
+type MaxMindCityResponse = CityResponse;
 
 async function loadReader(): Promise<MaxMindReader | null> {
   const dbPath = resolveDbPath();

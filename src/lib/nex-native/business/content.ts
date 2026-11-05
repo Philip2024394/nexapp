@@ -87,6 +87,7 @@ const R: Record<BusinessSubtype, readonly ContentTypeKey[]> = {
   wholesale:          ["product", "portfolio_item", "testimonial", "offer"],
   local_artisan:      ["product", "portfolio_item", "testimonial", "offer"],
   exporter:           ["product", "portfolio_item", "testimonial", "offer"],
+  motorbike_shop:     ["product", "portfolio_item", "testimonial", "offer"],
   // Services
   beauty:             ["service", "portfolio_item", "testimonial", "offer"],
   health_wellness:    ["service", "portfolio_item", "testimonial", "offer"],

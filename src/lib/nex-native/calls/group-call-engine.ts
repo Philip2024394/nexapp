@@ -67,6 +67,9 @@ interface PresenceTrackState {
   displayName: string;
   presenceState: "ringing" | "live";
   joinedAt: number;
+  // openNexChannel's generic constraint (BroadcastPayload =
+  // Record<string, unknown>) requires an index signature.
+  [key: string]: unknown;
 }
 
 export class GroupCallEngine {

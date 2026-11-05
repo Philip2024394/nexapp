@@ -199,7 +199,7 @@ export async function updateSiteField(
     if (trimmed.length > 240) {
       throw new Error(`site-service.updateSiteField: '${field}' max 240 chars`);
     }
-    (newParams as Record<string, string>)[field] = trimmed;
+    (newParams as unknown as Record<string, string>)[field] = trimmed;
   }
   const { data, error } = await nexSupabaseAdmin
     .from("nex_generated_site")

@@ -39,6 +39,13 @@ export type EnqueueNexReplyResult =
       queued_global: number;
       queued_for_account: number;
       retry_after_seconds: number;
+    }
+  | {
+      admit: false;
+      // Tier-gate path · reason carries the gate detail as
+      // `nex-tier · <msg>` so operators can see which gate fired.
+      reason: `nex-tier · ${string}`;
+      retry_after_seconds: number;
     };
 
 export interface EnqueueNexReplyInput {
@@ -64,7 +71,12 @@ export async function enqueueNexReply(
   // shape rather than surprising callers with an exception.
   try {
     const { assertAIReplyUnderCap } = await import("../tier-gate");
-    await assertAIReplyUnderCap(input.requester_account_id);
+    // The tier-gate only applies to authenticated callers · anonymous
+    // visitor sessions (`null` requester) are gated elsewhere and must
+    // skip this per-account check.
+    if (input.requester_account_id) {
+      await assertAIReplyUnderCap(input.requester_account_id);
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return {

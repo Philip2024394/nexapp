@@ -39,10 +39,35 @@
 //   · If migration 167 ever renames or removes a column, the Directory
 //     types + projector must be updated in the same wave.
 
-import type { EntityType } from "../../../../scripts/nex-canonical/generate-candidates";
-import type { LifecycleState } from "../../../../scripts/nex-canonical/canonical-row";
+// Canonical-pipeline enums (previously imported from
+// `scripts/nex-canonical/*`, which is not part of this nexapp fork —
+// the pipeline lives in the `D:/trades` monorepo). Kept in sync with
+// the sealed source via the migration 167 CHECK constraint; any change
+// to the server-side enum must land here in the same wave.
 
-export type { EntityType, LifecycleState };
+/** Canonical entity kinds. Mirrors `scripts/nex-canonical/
+ *  generate-candidates.ts` in the monorepo. */
+export type EntityType =
+  | "food"
+  | "accommodation"
+  | "service"
+  | "vehicle_rental"
+  | "marketplace_seller"
+  | "transport_operator"
+  | "professional"
+  | "transport_driver"
+  | "place";
+
+/** Canonical lifecycle states. Mirrors `scripts/nex-canonical/
+ *  canonical-row.ts` in the monorepo. */
+export type LifecycleState =
+  | "DISCOVERED"
+  | "ENRICHED"
+  | "VERIFIED"
+  | "OWNER_CLAIMED"
+  | "OWNER_VERIFIED"
+  | "DORMANT"
+  | "SUPERSEDED";
 
 // ═════════════════════════════════════════════════════════════════════
 // §1 · Classification · derived from entity_type

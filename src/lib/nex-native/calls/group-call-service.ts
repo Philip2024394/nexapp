@@ -78,20 +78,27 @@ export async function createGroupCallSession(
 
   // Host always joins · joined_at marks "actually in the room".
   const nowIso = new Date().toISOString();
-  const participantsToInsert = [
+  type ParticipantInsert = {
+    session_id: string;
+    account_id: string;
+    role: "host" | "guest";
+    joined_at: string | null;
+  };
+  const participantsToInsert: ParticipantInsert[] = [
     {
       session_id: session.id,
       account_id: input.hostAccountId,
-      role: "host" as const,
+      role: "host",
       joined_at: nowIso,
     },
     ...(input.inviteeAccountIds ?? [])
       .filter((id) => id !== input.hostAccountId)
       .slice(0, 3) // host + 3 guests = 4 cap
-      .map((id) => ({
+      .map<ParticipantInsert>((id) => ({
         session_id: session.id,
         account_id: id,
-        role: "guest" as const,
+        role: "guest",
+        joined_at: null,
       })),
   ];
   const rejectedCount =

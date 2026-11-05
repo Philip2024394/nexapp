@@ -94,10 +94,17 @@ export async function consumeOpenShopSliderCookie(): Promise<boolean> {
     // Clear whether valid or tampered · the one-shot contract
     // means a bad cookie never gets a second chance to fire.
     try {
-      store.delete({
+      // Next's `cookies().delete` has two overloads · string key OR
+      // the options-shape `{ name, path, domain?, ... }`. The union
+      // of overload parameter lists is `[string] | [options]`, but
+      // Parameters<> narrows to only the first overload. Cast via
+      // the options-overload shape directly to pick the right one.
+      (store.delete as (
+        options: { name: string; path?: string; domain?: string },
+      ) => void)({
         name: OPEN_SHOP_SLIDER_COOKIE,
         path: "/",
-      } as unknown as Parameters<typeof store.delete>[0]);
+      });
     } catch {
       // delete() can throw if we're in a non-mutable cookie scope
       // (e.g. a pure Server Component before any dynamic render).

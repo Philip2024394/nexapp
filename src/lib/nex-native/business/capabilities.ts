@@ -215,6 +215,10 @@ const R: Record<BusinessSubtype, readonly CapabilityKey[]> = {
     "international_shipping", "national_shipping", "moq_wholesale",
     "quote_request", "enquiry_contact", "virtual_consultation",
   ],
+  motorbike_shop: [
+    "physical_venue", "pickup", "local_delivery", "quote_request",
+    "enquiry_contact",
+  ],
   // Services
   beauty: [
     "appointments", "at_customer_location", "at_business_location",

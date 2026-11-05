@@ -811,7 +811,13 @@ export async function sendEncryptedPeerMessages(
   }
 
   // Bump last_message_at so conversation lists sort correctly.
-  await touchPeerConversation(rows[0]!.conversation_id);
+  // Encrypted send has no per-row `sent_at` to pass through (the
+  // server-generated created_at on nex_peer_message is what the
+  // bubble consumes); use the batch wall-clock as the touch time.
+  await touchPeerConversation(
+    rows[0]!.conversation_id,
+    new Date().toISOString(),
+  );
 
   return (data as Array<{ id: NexUuid }>).map((r) => r.id);
 }

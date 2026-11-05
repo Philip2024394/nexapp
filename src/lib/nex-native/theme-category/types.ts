@@ -63,13 +63,17 @@ export interface ThemeCategory {
    *  ThemePackage colours · the category palette is for the wrapper
    *  only.
    *
-   *  Required field · `Required<ColourSystem>` means every slot
-   *  (primary · secondary · highlight · glow · deep) must be declared
-   *  by the category · the showcase page can then read any slot
-   *  without needing a generic-NEX fallback. This closes the loophole
-   *  where a `??` fallback would silently re-introduce the generic
-   *  palette the rule forbids. */
-  readonly colours: Required<ColourSystem>;
+   *  Required field · every slot (primary · secondary · highlight ·
+   *  glow · deep) must be declared by the category · the showcase page
+   *  can then read any slot without needing a generic-NEX fallback.
+   *  This closes the loophole where a `??` fallback would silently
+   *  re-introduce the generic palette the rule forbids.
+   *
+   *  `deliveryTickColor` remains optional (per ColourSystem) · it is
+   *  an opt-in tint for the mine-side delivery ticks ✓✓, not part
+   *  of the universal five-slot showcase palette. */
+  readonly colours: Required<Omit<ColourSystem, "deliveryTickColor">> &
+    Pick<ColourSystem, "deliveryTickColor">;
   /** Hero World · which Theme World represents this category on the
    *  Library landing phone-frame tile. The id references a
    *  `ThemePackage.identity.id` · the Library's merged theme collection

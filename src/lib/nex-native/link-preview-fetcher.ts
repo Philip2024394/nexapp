@@ -241,17 +241,25 @@ export async function pinnedRawFetch(
       //   - options.all=false → cb(null, address, family)
       // undici / net.connect sometimes requests the all-form, so we
       // branch on options.all and return the matching shape.
-      lookup: (
+      // The Node `net.LookupFunction` type is strict about both
+      // argument nullability and the error subtype; cast through the
+      // dispatcher's expected shape with a narrower local signature
+      // rather than hand-rolling a `NodeJS.ErrnoException`.
+      lookup: ((
         _hostname: string,
         opts: { all?: boolean } | undefined,
-        cb: (err: Error | null, addressOrList?: string | Array<{ address: string; family: number }>, family?: number) => void,
+        cb: (
+          err: Error | null,
+          addressOrList?: string | Array<{ address: string; family: number }>,
+          family?: number,
+        ) => void,
       ) => {
         if (opts && opts.all) {
           cb(null, [{ address, family }]);
         } else {
           cb(null, address, family);
         }
-      },
+      }) as unknown as import("node:net").LookupFunction,
       servername: url.hostname,
     },
   });

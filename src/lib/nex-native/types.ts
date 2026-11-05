@@ -128,6 +128,14 @@ export interface NexAccountRow {
    * settings page server action.
    */
   world_intro_enabled: boolean;
+  /**
+   * Migration 207 · onboarding progress tracker. Values written by the
+   * create-account + theme-setup flows: `chat_theme` (default on new
+   * accounts) → `shop_theme` → `completed`. NULL/unknown = pre-207
+   * account or seed row · callers treat these as "completed" implicitly
+   * to avoid nagging legacy users.
+   */
+  onboarding_step: string | null;
   created_at: NexTimestamp;
 }
 

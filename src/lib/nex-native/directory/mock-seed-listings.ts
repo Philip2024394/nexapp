@@ -48,8 +48,15 @@ import type { ListingCardViewModel } from "./landing-feed-service";
  *  genuine supporting data". Prices are now shown as single
  *  authoritative seller-currency lines with the seller country flag
  *  (ID · Indonesia · the Phase A preview locale). */
+// TS note · each entry is frozen with `as const`-friendly literals
+// (`categoryIconCol: 0 as const`, `source: "mock_seed" as const`) which
+// makes the tuple type narrower than the mutable `ListingCardViewModel`
+// interface. The one-line cast through `unknown` preserves the deep
+// readonliness while coercing to the interface the card consumer
+// expects · cf. the TS2322 "type ... is not assignable" surfaced when
+// the deep literal types were compared slot-by-slot.
 const MOCK_SEEDS: ReadonlyArray<ListingCardViewModel> = Object.freeze([
-  Object.freeze({
+  Object.freeze<ListingCardViewModel>({
     id: "mock-seed-earbuds-1",
     slug: "sample-wireless-earbuds",
     // Owner directive 2026-10-18 (iteration) · `title` is the ONE
@@ -81,8 +88,9 @@ const MOCK_SEEDS: ReadonlyArray<ListingCardViewModel> = Object.freeze([
     priceCurrency: "IDR",
     sellerCountryIso: "ID",
     buyerLocalPrice: null,
+    marketScope: null,
   }),
-  Object.freeze({
+  Object.freeze<ListingCardViewModel>({
     id: "mock-seed-resort-1",
     slug: "sample-luxury-beach-resort",
     // Owner directive 2026-10-18 (iteration) · title is the room /
@@ -108,6 +116,7 @@ const MOCK_SEEDS: ReadonlyArray<ListingCardViewModel> = Object.freeze([
     priceCurrency: "IDR",
     sellerCountryIso: "ID",
     buyerLocalPrice: null,
+    marketScope: null,
   }),
 ] as const);
 

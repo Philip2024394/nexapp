@@ -256,8 +256,11 @@ function toHex(input: string | Buffer | Uint8Array): string {
     // Fallback: assume hex.
     return input.toLowerCase();
   }
-  if (input instanceof Uint8Array) return bytesToHex(input);
+  // Check Buffer BEFORE Uint8Array · in Node Buffer extends Uint8Array,
+  // so the opposite order makes the Buffer branch unreachable (and TS
+  // narrows `input` to `never` on the dead `.toString("hex")` call).
   if (Buffer.isBuffer(input)) return input.toString("hex");
+  if (input instanceof Uint8Array) return bytesToHex(input);
   return "";
 }
 

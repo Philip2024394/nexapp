@@ -162,7 +162,10 @@ export async function uploadEncryptedAttachment(
       "content-type": "application/octet-stream",
       "x-nex-enc-ext": ext,
     },
-    body: enc.ciphertext,
+    // Cast via BodyInit · TS 5.7+ narrows Uint8Array to
+    // `Uint8Array<ArrayBufferLike>` which the lib.dom RequestInit
+    // overload does not accept directly.
+    body: enc.ciphertext as BodyInit,
   });
   opts.onProgress?.(0.95);
   if (!resp.ok) {

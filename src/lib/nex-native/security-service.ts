@@ -48,7 +48,12 @@ export type SignInEventType =
   | "magic_link"
   | "remote_sign_out"
   | "password_change"
-  | "failure";
+  | "failure"
+  // Vault migration events (see vault/migration-service.ts). Audited
+  // through the same append-only event log so forensic review has one
+  // chronological stream per account.
+  | "legacy_file_migrated"
+  | "legacy_file_migration_failed";
 
 export interface NexSignInEventRow {
   id: NexUuid;
