@@ -28,6 +28,10 @@ import { redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import * as businessService from "@/lib/nex-native/business-service";
 import { resolveAppIdentity } from "@/lib/nex-native/app/resolve-app-identity";
+import {
+  isBusinessCheckoutReady,
+  listPaymentConnectionsForBusiness,
+} from "@/lib/nex-native/payment-connection-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -151,6 +155,24 @@ export default async function ShopPaymentsPage({
 
   const identity = resolveAppIdentity();
   const country = identity.country; // "IE" | "ID" | null (hq)
+
+  // Phase V · P9 · 2026-11-05 · read checkout readiness from the
+  // authoritative service · today it returns `ready: false, reason:
+  // no-provider-wired` for every business because no gateway Connect
+  // flow is wired yet. When the next authorised stage lands with
+  // real gateway onboarding, this surface will light up without a
+  // copy change.
+  const readiness = business
+    ? await isBusinessCheckoutReady(business.id)
+    : null;
+  const connections = business
+    ? await listPaymentConnectionsForBusiness(business.id)
+    : [];
+  const connectedProviderIds = new Set(
+    connections
+      .filter((c) => c.status === "connected")
+      .map((c) => c.providerId as string),
+  );
 
   const relevantProviders = PROVIDERS.filter((p) => {
     if (identity.identity === "hq") return true;
@@ -312,9 +334,14 @@ export default async function ShopPaymentsPage({
 
         {/* --- Provider list ----------------------------------------- */}
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {relevantProviders.map((p) => (
-            <ProviderCard key={p.id} provider={p} />
-          ))}
+          {relevantProviders.map((p) => {
+            // Phase V · P9 · once the next stage persists connection
+            // rows the "Connected" chip will flip automatically.
+            const effective: PaymentProvider = connectedProviderIds.has(p.id)
+              ? { ...p, status: "connected" }
+              : p;
+            return <ProviderCard key={p.id} provider={effective} />;
+          })}
         </div>
 
         {/* --- Honest status note ------------------------------------ */}
@@ -396,21 +423,39 @@ export default async function ShopPaymentsPage({
               }}
             >
               <span>Checkout ready to accept payments</span>
-              <span
-                style={{
-                  padding: "4px 10px",
-                  borderRadius: 999,
-                  background: "rgba(255, 51, 85, 0.12)",
-                  border: `1px solid ${NEX.red}`,
-                  color: NEX.red,
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: "0.06em",
-                  textTransform: "uppercase",
-                }}
-              >
-                No · no provider connected
-              </span>
+              {readiness?.ready ? (
+                <span
+                  style={{
+                    padding: "4px 10px",
+                    borderRadius: 999,
+                    background: "rgba(22, 214, 107, 0.12)",
+                    border: `1px solid ${NEX.green}`,
+                    color: NEX.green,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Yes · {readiness.providers.map((p) => p).join(" · ")}
+                </span>
+              ) : (
+                <span
+                  style={{
+                    padding: "4px 10px",
+                    borderRadius: 999,
+                    background: "rgba(255, 51, 85, 0.12)",
+                    border: `1px solid ${NEX.red}`,
+                    color: NEX.red,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  No · no provider connected
+                </span>
+              )}
             </div>
           </section>
         )}
