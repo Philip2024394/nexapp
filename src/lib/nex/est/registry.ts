@@ -10,14 +10,15 @@ import { plasteringAdapter } from "./trades/plastering";
 import { concretingAdapter } from "./trades/concreting";
 import { pavingAdapter } from "./trades/paving";
 import { paintingAdapter } from "./trades/painting";
-import { staircaseAdapter } from "./trades/staircase";
+
+// Phase 1c Batch 8 · 2026-11-06: staircase trade adapter removed as part
+// of scope reduction (staircase lives in the trades repo now).
 
 export const ADAPTERS: TradeAdapter[] = [
   plasteringAdapter,
   concretingAdapter,
   pavingAdapter,
-  paintingAdapter,
-  staircaseAdapter
+  paintingAdapter
 ];
 
 export function findAdapter(brief: string, tradeHint?: string): TradeAdapter | null {
