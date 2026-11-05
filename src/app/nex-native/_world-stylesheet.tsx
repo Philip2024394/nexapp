@@ -78,13 +78,22 @@ export async function resolveWorldForLayout(): Promise<WorldDefinition> {
 /** Owner-authorised 2026-11-03 · Ireland-only consolidation ·
  *  Ireland is the single supported world · the nex-original neutral
  *  hero and the Indonesia studio photo were retired alongside the
- *  world registry pruning. */
+ *  world registry pruning.
+ *
+ *  Owner directive 2026-11-05 iter 28 · "global back ground image
+ *  all pages that app will be displaying on desktop of tablet" ·
+ *  the sealed Ireland studio PNG is superseded by the new NEX Global
+ *  Community Banner · every world + the fallback point at the same
+ *  image so desktop/tablet (≥500px per nex-native.css) renders one
+ *  consistent branded backdrop across the entire app. */
+const GLOBAL_DESKTOP_BACKDROP = "/nex-brand/nex-global-community-banner.png";
+
 const WORLD_DESKTOP_BACKDROP: Record<string, string> = {
-  ireland: "/nex-brand/hq/ireland-studio.png",
+  ireland: GLOBAL_DESKTOP_BACKDROP,
 };
 
 export function getWorldDesktopBackdrop(worldId: string): string {
-  return WORLD_DESKTOP_BACKDROP[worldId] ?? "/nex-desktop-hero.png";
+  return WORLD_DESKTOP_BACKDROP[worldId] ?? GLOBAL_DESKTOP_BACKDROP;
 }
 
 /** Emits a <style data-nex-world-root> block that scopes the world
