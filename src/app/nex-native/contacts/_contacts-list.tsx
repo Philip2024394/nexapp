@@ -13,10 +13,12 @@
 
 import * as React from "react";
 import { ContactRow } from "./_contact-row";
-// Scope reduction 2026-11-06 · Community Notice surface deleted
-// (Phase 1c Batch 5). CommunityNoticeCard + the retired CommunityCard
-// both removed from disk. Contacts list renders without a community
-// row at the top.
+// Owner directive 2026-10-23 · the sealed CommunityCard is retired
+// in favour of the new client-side `CommunityNoticeCard` which
+// carries the mute toggle + unread badge + conditional-tap behaviour
+// per the full Community Notice doctrine. The old file stays on
+// disk for history.
+import { CommunityNoticeCard } from "./_community-notice-card";
 import { MyPrivateGroupsList, MyPrivateGroupsBadge } from "./_my-private-groups-list";
 import { OpenGroupsDiscovery } from "./_open-groups-discovery";
 import {
@@ -386,8 +388,10 @@ function GroupsPlaceholderGrid({
       {/* Owner directive 2026-10-23 · "move up - my private group" ·
           count badge for viewer's own joined private groups. */}
       <MyPrivateGroupsBadge viewerNexHandle={viewerNexHandle} />
-      {/* Scope reduction 2026-11-06 · CommunityNoticeCard removed with
-          the rest of the Community Notice surface (Phase 1c Batch 5). */}
+      {/* Owner directive 2026-10-23 · "community notice should be the
+          first card on groups page always" · NEX Community sits
+          above viewer's private groups + the illustrative mock groups. */}
+      <CommunityNoticeCard />
       {/* Viewer's private groups · rendered as GroupCards. */}
       <MyPrivateGroupsList
         viewerDisplayName={viewerDisplayName}
