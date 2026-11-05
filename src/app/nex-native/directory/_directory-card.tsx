@@ -62,7 +62,8 @@ import {
 } from "@/lib/nex-native/directory/category-image-resolver";
 import type { AreaIntelligence } from "@/lib/nex-native/directory/area-intelligence-types";
 import { OsmAttributionBadge } from "@/components/nex-native/directory/OsmAttributionBadge";
-import { LiveProductIndicator } from "@/components/nex-native/live-commerce/LiveProductIndicator";
+// Phase 1c Batch 4 · 2026-11-06 · LiveProductIndicator removed with
+// the Live Commerce surface deletion (scope reduction).
 
 const PALETTE = {
   surface: "#0E1526",
@@ -116,23 +117,9 @@ export interface DirectoryCardProps {
    *  not been researched yet · no chip is shown rather than
    *  fabricating one. */
   readonly areaIntel?: AreaIntelligence | null;
-  /** Phase 2 · G2 · the owner of this directory listing is currently
-   *  broadcasting on NEX Live. Minimal visual addition: a small dot-
-   *  pulse "LIVE" chip in the title row. Default `false` (no visual
-   *  change). The caller resolves this server-side from
-   *  `getActiveSessionForBroadcaster(owner_account_id)` and threads it
-   *  in; the card never fetches by itself. */
-  readonly isOwnerLive?: boolean;
-  /** When present AND isOwnerLive, the chip renders as a Link to the
-   *  broadcast. When null/undefined the chip is a span (non-interactive,
-   *  non-navigational) so the surrounding card-level <Link> is still
-   *  the primary tap target. */
-  readonly liveWatchHref?: string | null;
-  /** Plan v4 · AC-3 · server-computed relative TTL (ms) threaded in
-   *  from the directory-live-state resolver. Required when
-   *  isOwnerLive === true · the chip decays client-side via
-   *  `useLiveClockTick` and hides at expiry. */
-  readonly liveExpiresInMs?: number;
+  // Phase 1c Batch 4 · 2026-11-06 · `isOwnerLive` / `liveWatchHref` /
+  // `liveExpiresInMs` props removed with the Live Commerce surface
+  // deletion (scope reduction).
 }
 
 export function DirectoryCard(props: DirectoryCardProps): React.ReactElement {
@@ -144,9 +131,6 @@ export function DirectoryCard(props: DirectoryCardProps): React.ReactElement {
     onOpenChat,
     categoryImageLibrary,
     areaIntel,
-    isOwnerLive,
-    liveWatchHref,
-    liveExpiresInMs,
   } = props;
 
   const distanceKm = haversineKmOrNull(userCoords, listing.coordinates);
@@ -287,13 +271,8 @@ export function DirectoryCard(props: DirectoryCardProps): React.ReactElement {
           >
             {listing.name}
           </h3>
-          {isOwnerLive === true ? (
-            <DirectoryCardLiveChip
-              watchHref={liveWatchHref ?? null}
-              ownerLabel={listing.name}
-              liveExpiresInMs={liveExpiresInMs}
-            />
-          ) : null}
+          {/* Phase 1c Batch 4 · 2026-11-06 · DirectoryCardLiveChip
+              removed with Live Commerce surface deletion. */}
           <span
             data-nex-directory-card-chip="distance"
             data-nex-directory-card-distance-kind={distanceChipKind}
@@ -632,49 +611,8 @@ function truncateSnippet(value: string, maxChars: number): string {
  *  Owner-claimed destinations route to their existing NEX cover /
  *  profile. Everything else routes to the Directory-side detail page.
  *  No destination kind is a dead card. */
-// ═════════════════════════════════════════════════════════════════════
-// §3 · Live indicator chip · Phase 2 · G2
-// ═════════════════════════════════════════════════════════════════════
-
-// Plan v4 · AC-6 + AC-8 · the directory card's LIVE pill reuses the
-// shared `LiveProductIndicator` so server-computed TTL decays
-// client-side consistently with the product-page + shop-strip +
-// listing-card variants. This adapter preserves the inline flex
-// placement + Link wrapping that the directory card already relies on.
-function DirectoryCardLiveChip(props: {
-  readonly watchHref: string | null;
-  readonly ownerLabel: string;
-  readonly liveExpiresInMs?: number;
-}): React.ReactElement {
-  const indicator = (
-    <LiveProductIndicator
-      isFeaturedLive={true}
-      liveExpiresInMs={props.liveExpiresInMs}
-      label={`${props.ownerLabel} is live now`}
-    />
-  );
-  if (props.watchHref !== null) {
-    return (
-      <Link
-        href={props.watchHref}
-        data-nex-directory-card-live-link
-        aria-label={`Watch ${props.ownerLabel} on NEX Live`}
-        style={{ textDecoration: "none", flexShrink: 0 }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {indicator}
-      </Link>
-    );
-  }
-  return (
-    <span
-      data-nex-directory-card-chip="live"
-      style={{ flexShrink: 0 }}
-    >
-      {indicator}
-    </span>
-  );
-}
+// Phase 1c Batch 4 · 2026-11-06 · DirectoryCardLiveChip removed with
+// the Live Commerce surface deletion (scope reduction).
 
 function buildHref(destination: DirectoryDestination): string | null {
   if (destination.kind === "nex_business") return destination.path;

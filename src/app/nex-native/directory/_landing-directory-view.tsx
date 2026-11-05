@@ -30,10 +30,9 @@ import type * as React from "react";
 import Link from "next/link";
 
 import { ListingCard } from "@/components/nex-native/directory/listing-card";
-import {
-  resolveLiveStateByBusinessIds,
-  type DirectoryLiveState,
-} from "@/lib/nex-native/live-broadcast/directory-live-state";
+// Phase 1c Batch 4 · 2026-11-06 · Live Commerce surface deleted in
+// the scope reduction. Directory landing no longer resolves per-card
+// Live state · the ListingCard renders without the LIVE pill.
 // Owner directive 2026-10-18 · every card must display a location
 // row · we need the sealed ISO lookup to convert the directory's
 // active country code into a human label used as the fallback.
@@ -216,21 +215,9 @@ export async function LandingDirectoryView({
     }),
   );
 
-  // Phase 2 · G2 · resolve server-side Live state for the subset of
-  // listings whose source is `nex_business`. Round-trip budget: ≤ 3
-  // queries · fail-open on any error (empty Map → cards render
-  // without the LIVE chip).
-  const liveBusinessIds = augmentedCombined
-    .filter((c) => c.source === "nex_business")
-    .map((c) => c.id);
-  // Plan v4 · AC-1 · request-scoped nowMs.
-  const nowMs = Date.now();
-  const liveStateByListingId: ReadonlyMap<string, DirectoryLiveState> =
-    liveBusinessIds.length > 0
-      ? await resolveLiveStateByBusinessIds(liveBusinessIds, nowMs).catch(
-          () => new Map<string, DirectoryLiveState>(),
-        )
-      : new Map();
+  // Phase 1c Batch 4 · 2026-11-06 · Live Commerce surface deleted in
+  // the scope reduction. Per-card Live state resolution removed ·
+  // cards render without the LIVE chip.
 
   return (
     <main
@@ -312,14 +299,12 @@ export async function LandingDirectoryView({
         <div data-nex-directory-currency-row style={currencyRowStyle}>
           <CurrencyPickerClient currentCode={preferredCurrency.code} />
         </div>
-        {/* Phase 2 · G2 · Live state resolved above (liveStateByListingId).
-            Fail-open: Map is empty when migrations are unapplied or the
-            resolver throws · cards render without the LIVE chip. */}
+        {/* Phase 1c Batch 4 · 2026-11-06 · liveStateByListingId prop
+            removed with Live Commerce surface deletion. */}
         <DirectoryResultsGrid
           listings={augmentedCombined}
           feed={feed}
           directoryCountry={country}
-          liveStateByListingId={liveStateByListingId}
         />
         {(() => {
           // Owner directive 2026-10-16 (second pass) · hide the
@@ -693,7 +678,6 @@ function DirectoryResultsGrid({
   listings,
   feed,
   directoryCountry,
-  liveStateByListingId,
 }: {
   readonly listings: readonly ListingCardViewModel[];
   readonly feed: LandingFeedOutcomeShape;
@@ -704,11 +688,8 @@ function DirectoryResultsGrid({
    *  Honest default · not fabricated · the directory IS filtered
    *  by this country, so attributing listings to it is accurate. */
   readonly directoryCountry: string;
-  /** Phase 2 · G2 · optional server-resolved live state keyed by
-   *  listing id (which equals `nex_business.id` for the subset we
-   *  can resolve). Undefined / empty Map = no LIVE chips render.
-   *  Honest fail-open: unknown ids simply get no chip. */
-  readonly liveStateByListingId?: ReadonlyMap<string, DirectoryLiveState>;
+  // Phase 1c Batch 4 · 2026-11-06 · liveStateByListingId prop
+  // removed with Live Commerce surface deletion.
 }) {
   if (listings.length === 0) {
     if (feed.reducedState === "slug_unsupported") {
@@ -762,7 +743,6 @@ function DirectoryResultsGrid({
           size={pickCardVariant(card.id)}
           fallbackLocationLabel={fallbackLocationLabel}
           fallbackCountryIso={directoryCountry}
-          liveState={liveStateByListingId?.get(card.id) ?? null}
         />
       ))}
     </div>

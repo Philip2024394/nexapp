@@ -26,13 +26,11 @@ import { VariantPicker } from "./_variant-picker";
 // Phase V · P11 · 2026-11-05 · Share-product button + "More from this
 // shop" rail bring the product page up to marketplace quality.
 import { ShareProductButton } from "./_share-product-button";
-import {
-  getActiveSessionForBroadcaster,
-  getFeaturedProductForSession,
-} from "@/lib/nex-native/live-broadcast/live-session-service";
-import { evaluateLiveness } from "@/lib/nex-native/product-video/stale-session-policy";
-import { LiveHeartbeatRing } from "@/components/nex-native/live-commerce/LiveHeartbeatRing";
-import { LiveProductIndicator } from "@/components/nex-native/live-commerce/LiveProductIndicator";
+// Phase 1c Batch 4 · 2026-11-06 · Live Commerce surface deleted in
+// the scope reduction. Product page no longer reads Live session
+// state nor renders LiveHeartbeatRing / LiveProductIndicator. The
+// avatar renders without a heartbeat ring; the product has no
+// "featured live" chip.
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -188,45 +186,12 @@ export default async function Page({
     .then((rows) => rows.filter((r) => r.id !== product.id).slice(0, 8))
     .catch(() => [] as Awaited<ReturnType<typeof productService.listProductsByBusiness>>);
 
-  /* Phase 2 · G2 · Live indicators resolution. Both reads are fail-
-     open (service returns null/false on query error) so a Live
-     outage never breaks the product page. Two derived values:
-       · ownerLiveSession  · the broadcaster's active session row,
-                             or null. Powers the §5.2 heartbeat ring
-                             on the seller avatar.
-       · productIsFeatured · true iff THIS product is the one
-                             currently pinned on that session.
-                             Powers the §5.3 product-level indicator.
-     Cross-session leakage is impossible: we only consult the owner-
-     of-this-product's own session, so a different seller's broadcast
-     can never show up here. */
-  // Plan v4 · AC-1 · one nowMs per request flows through every
-  // DB-heartbeat-derived resolver on this page.
-  const nowMs = Date.now();
-  const ownerLiveSession = await getActiveSessionForBroadcaster(
-    business.owner_account_id,
-    nowMs,
-  );
-  // Plan v4 · AC-2 + AC-3 · derive the authoritative liveness verdict
-  // using the SAME nowMs so the LIVE chip + heartbeat ring can decay
-  // client-side via `useLiveClockTick`. `evaluateLiveness` fail-closes
-  // internally; if it returns `{ isLive: false }` we DO NOT render the
-  // live chrome.
-  const ownerLiveness = ownerLiveSession
-    ? evaluateLiveness(ownerLiveSession, nowMs)
-    : ({ isLive: false } as const);
-  let productIsFeatured = false;
-  if (ownerLiveSession && ownerLiveness.isLive) {
-    const activePin = await getFeaturedProductForSession(ownerLiveSession.id);
-    productIsFeatured = activePin?.product_id === product.id;
-  }
-  const liveWatchHref =
-    ownerLiveSession && ownerLiveness.isLive
-      ? `/nex-native/live-commerce/${ownerLiveSession.id}?product=${encodeURIComponent(product.id)}`
-      : null;
-  const liveExpiresInMs = ownerLiveness.isLive
-    ? ownerLiveness.liveExpiresInMs
-    : undefined;
+  // Phase 1c Batch 4 · 2026-11-06 · Live Commerce surface deleted in
+  // the scope reduction. Previous Live-indicator resolution block
+  // (getActiveSessionForBroadcaster + getFeaturedProductForSession +
+  // evaluateLiveness) is removed · product page no longer renders
+  // the LIVE chip above the title nor the heartbeat ring on the
+  // seller avatar.
 
   return (
     <div
@@ -413,21 +378,8 @@ export default async function Page({
           </div>
         )}
 
-        {/* Phase 2 · G2 · §5.3 · product-level Live indicator.
-           Renders ONLY when this specific product is the pin on the
-           owner's current open session. Links to the broadcast with
-           the product id as a query param so the viewer surface
-           opens with the correct pin highlighted. */}
-        {productIsFeatured && liveWatchHref && (
-          <div style={{ marginBottom: 12 }}>
-            <LiveProductIndicator
-              isFeaturedLive={true}
-              watchHref={liveWatchHref}
-              label={`${business.display_name} is demonstrating this product live now · tap to watch`}
-              liveExpiresInMs={liveExpiresInMs}
-            />
-          </div>
-        )}
+        {/* Phase 1c Batch 4 · 2026-11-06 · product-level Live
+           indicator removed with Live Commerce surface deletion. */}
         {/* --- NAME + PRICE ---------------------------------------- */}
         <h1
           style={{
@@ -651,54 +603,49 @@ export default async function Page({
                fail-open isBroadcasterLive() lookup above. When the
                broadcaster is NOT live the component passes children
                through unchanged. */}
-            <LiveHeartbeatRing
-              isLive={ownerLiveness.isLive}
-              size={52}
-              ariaLabel={`${business.display_name} is live now · tap to watch`}
-              onTapHref={liveWatchHref}
-              liveExpiresInMs={liveExpiresInMs}
+            {/* Phase 1c Batch 4 · 2026-11-06 · LiveHeartbeatRing
+               removed with Live Commerce surface deletion. Avatar
+               renders standalone without the pulsing ring. */}
+            <div
+              style={{
+                flexShrink: 0,
+                width: 52,
+                height: 52,
+                borderRadius: "50%",
+                overflow: "hidden",
+                background: NEX.panel,
+                border: `1px solid ${NEX.borderStrong}`,
+              }}
             >
-              <div
-                style={{
-                  flexShrink: 0,
-                  width: 52,
-                  height: 52,
-                  borderRadius: "50%",
-                  overflow: "hidden",
-                  background: NEX.panel,
-                  border: `1px solid ${NEX.borderStrong}`,
-                }}
-              >
-                {business.logo_url ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={business.logo_url}
-                    alt=""
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                      display: "block",
-                    }}
-                  />
-                ) : (
-                  <div
-                    aria-hidden
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      display: "grid",
-                      placeItems: "center",
-                      color: NEX.cyan,
-                      fontSize: 18,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {business.display_name.slice(0, 1)}
-                  </div>
-                )}
-              </div>
-            </LiveHeartbeatRing>
+              {business.logo_url ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={business.logo_url}
+                  alt=""
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    display: "block",
+                  }}
+                />
+              ) : (
+                <div
+                  aria-hidden
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    display: "grid",
+                    placeItems: "center",
+                    color: NEX.cyan,
+                    fontSize: 18,
+                    fontWeight: 700,
+                  }}
+                >
+                  {business.display_name.slice(0, 1)}
+                </div>
+              )}
+            </div>
             <div style={{ minWidth: 0, flex: 1 }}>
               <div
                 style={{

@@ -34,7 +34,14 @@ import "server-only";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import { getAccountById } from "@/lib/nex-native/account-service";
 import * as businessService from "@/lib/nex-native/business-service";
-import { resolveLiveEligibility } from "@/lib/nex-native/live-broadcast/live-eligibility";
+// Phase 1c Batch 4 · 2026-11-06 · Live Commerce surface deleted in
+// the scope reduction. The sealed R9 Live-eligibility wrapper
+// (`resolveLiveEligibility`) was a thin wrapper around the sealed
+// `hasShopAccess` helper; with Live gone, product-video public
+// publication uses `hasShopAccess` directly so Shop membership
+// (paid Bisnis / Pro, active Business trial, or active themes trial)
+// remains the gate for public video upload.
+import { hasShopAccess } from "@/lib/nex-native/business-trial/entitlements";
 
 export type NexUuid = string;
 
@@ -178,10 +185,16 @@ export async function publishUploadedVideo(
     const account = await getAccountById(input.ownerAccountId).catch(
       () => null,
     );
-    const eligibility = resolveLiveEligibility(account);
-    if (!eligibility.ok) {
+    // Phase 1c Batch 4 · 2026-11-06 · direct Shop-access check
+    // (replaces the retired `resolveLiveEligibility` wrapper).
+    if (!account) {
       throw new Error(
-        `uploaded-video-service.publishUploadedVideo: not-eligible:${eligibility.reason}`,
+        "uploaded-video-service.publishUploadedVideo: not-eligible:not-signed-in",
+      );
+    }
+    if (!hasShopAccess(account)) {
+      throw new Error(
+        "uploaded-video-service.publishUploadedVideo: not-eligible:no-shop-access",
       );
     }
     if (input.businessId) {
