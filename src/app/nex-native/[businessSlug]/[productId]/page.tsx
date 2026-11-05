@@ -23,6 +23,9 @@ import { sendProductInquiryAction } from "../../_actions";
 import { OrderBar } from "./_order-bar";
 import { IdentityShareNote } from "./_identity-share-note";
 import { VariantPicker } from "./_variant-picker";
+// Phase V · P11 · 2026-11-05 · Share-product button + "More from this
+// shop" rail bring the product page up to marketplace quality.
+import { ShareProductButton } from "./_share-product-button";
 import {
   getActiveSessionForBroadcaster,
   getFeaturedProductForSession,
@@ -74,6 +77,16 @@ export default async function Page({
   const price = formatPrice(product.price_pence, product.currency);
   const galleryUrls = product.gallery_urls ?? [];
   const hasGallery = galleryUrls.length > 0;
+
+  // Phase V · P11 · 2026-11-05 · "More from this shop" rail · fail-
+  // soft read of other live products on the same business, excluding
+  // the one being viewed. Capped at 8 so the rail stays snappy and
+  // the extra Supabase read is bounded. On error the rail silently
+  // omits itself · never breaks the product page.
+  const sameShopOthers = await productService
+    .listProductsByBusiness(business.id, "live")
+    .then((rows) => rows.filter((r) => r.id !== product.id).slice(0, 8))
+    .catch(() => [] as Awaited<ReturnType<typeof productService.listProductsByBusiness>>);
 
   /* Phase 2 · G2 · Live indicators resolution. Both reads are fail-
      open (service returns null/false on query error) so a Live
@@ -331,14 +344,33 @@ export default async function Page({
         </h1>
         <div
           style={{
-            fontSize: 24,
-            fontWeight: 700,
-            color: NEX.orange,
-            letterSpacing: "0.01em",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
             marginBottom: 16,
+            flexWrap: "wrap",
           }}
         >
-          {price}
+          <div
+            style={{
+              fontSize: 24,
+              fontWeight: 700,
+              color: NEX.orange,
+              letterSpacing: "0.01em",
+            }}
+          >
+            {price}
+          </div>
+          {/* Phase V · P11 · 2026-11-05 · share the product URL via
+              Web Share API (mobile sheet) or clipboard (desktop) ·
+              sits next to the price so the share affordance is
+              visible in the viewer's first eye-path. */}
+          <ShareProductButton
+            productName={product.name}
+            productHref={`/nex-native/${business.slug}/${product.id}`}
+            shopName={business.display_name}
+          />
         </div>
 
         {/* --- TAGS ------------------------------------------------- */}
@@ -592,6 +624,143 @@ export default async function Page({
             </div>
           </Link>
         </section>
+
+        {/* --- MORE FROM THIS SHOP (Phase V · P11 · 2026-11-05) ----- */}
+        {sameShopOthers.length > 0 && (
+          <section style={{ marginBottom: 32 }}>
+            <SectionHeading eyebrow="More from this shop" />
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+                gap: 10,
+                marginTop: 4,
+              }}
+            >
+              {sameShopOthers.map((sibling) => {
+                const siblingHref = `/nex-native/${business.slug}/${sibling.id}`;
+                const siblingPrice = formatPrice(
+                  sibling.price_pence,
+                  sibling.currency,
+                );
+                return (
+                  <Link
+                    key={sibling.id}
+                    href={siblingHref}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      borderRadius: 12,
+                      overflow: "hidden",
+                      background: NEX.panelSoft,
+                      border: `1px solid ${NEX.border}`,
+                      color: NEX.text,
+                      textDecoration: "none",
+                      transition: "transform 160ms ease, border-color 160ms ease",
+                    }}
+                  >
+                    <div
+                      style={{
+                        aspectRatio: "1 / 1",
+                        width: "100%",
+                        background: NEX.panel,
+                        position: "relative",
+                      }}
+                    >
+                      {sibling.image_url ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={sibling.image_url}
+                          alt=""
+                          loading="lazy"
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            display: "block",
+                          }}
+                        />
+                      ) : (
+                        <div
+                          aria-hidden
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            display: "grid",
+                            placeItems: "center",
+                            color: NEX.textMute,
+                            fontSize: 24,
+                          }}
+                        >
+                          ◆
+                        </div>
+                      )}
+                    </div>
+                    <div
+                      style={{
+                        padding: "10px 12px 12px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 4,
+                        minHeight: 72,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontFamily: SERIF,
+                          fontSize: 15,
+                          fontWeight: 500,
+                          lineHeight: 1.2,
+                          letterSpacing: "-0.005em",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {sibling.name}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: NEX.orange,
+                          letterSpacing: "0.01em",
+                        }}
+                      >
+                        {siblingPrice}
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <Link
+                href={shopHref}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "8px 14px",
+                  borderRadius: 999,
+                  background: "rgba(0,175,255,0.10)",
+                  border: `1px solid ${NEX.cyanSoft}`,
+                  color: NEX.cyan,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  textDecoration: "none",
+                }}
+              >
+                See all from {business.display_name} →
+              </Link>
+            </div>
+          </section>
+        )}
       </main>
 
       {/* --- STICKY BOTTOM ACTION BAR ------------------------------ */}
