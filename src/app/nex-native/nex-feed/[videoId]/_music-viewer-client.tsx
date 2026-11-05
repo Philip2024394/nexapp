@@ -521,8 +521,22 @@ export function MusicViewerClient(
   }, [router, nextHref, prevHref]);
 
   // Keyboard navigation parity with VideoViewerClient.
+  // Phase V · P23 · 2026-11-05 · Suppress feed navigation when the
+  // user is typing in a text field, text-area or contentEditable
+  // surface. Prevents Arrow/PageUp/PageDown/Space from hijacking
+  // chat composers, search boxes or any focused text input that
+  // happens to share the page with the feed.
   React.useEffect(() => {
     function onKey(e: KeyboardEvent): void {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
       if (e.key === "ArrowDown" || e.key === "PageDown" || e.key === " ") {
         e.preventDefault();
         navigate("next");

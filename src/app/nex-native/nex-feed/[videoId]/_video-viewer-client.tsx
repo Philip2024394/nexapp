@@ -697,8 +697,18 @@ export function VideoViewerClient({
   // a composer textarea/input is focused.
   React.useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
+      // Phase V · P23 · 2026-11-05 · extend the existing INPUT/TEXTAREA
+      // guard with a contentEditable check so rich-text surfaces
+      // (chat composers, rich description fields, any ProseMirror /
+      // Lexical editor that may share the page) also suppress feed
+      // navigation while the user is typing.
       const target = ev.target as HTMLElement | null;
-      if (target && (target.tagName === "TEXTAREA" || target.tagName === "INPUT")) {
+      if (
+        target &&
+        (target.tagName === "TEXTAREA" ||
+          target.tagName === "INPUT" ||
+          target.isContentEditable)
+      ) {
         return;
       }
       if ((ev.key === "ArrowDown" || ev.key === "PageDown") && nextId) {
