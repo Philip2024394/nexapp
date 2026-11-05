@@ -98,9 +98,9 @@ export default function PackagesPage() {
           }}
         >
           NEX doesn&apos;t take a percentage of what you sell.
-          <b> Ever.</b> Stay on Gratis forever, or upgrade to Bisnis
-          when you&apos;re ready for international reach and unlimited
-          local market capacity.
+          <b> Ever.</b> List 10 products free, top up with a one-time
+          pack when you need more, or open a NEX Shop for unlimited
+          listings with a 7-day free trial.
         </p>
         {/* Bridge 16a · Safe-trade doctrine callout · the reason we
             can charge 0% is because NEX never touches payments.
@@ -139,13 +139,22 @@ export default function PackagesPage() {
           gap: 16,
         }}
       >
-        {/* Two-column at ≥ 640px via inline @media substitute using
-            CSS grid-template-columns · falls back to single column
-            for smaller viewports. */}
+        {/* Owner directive 2026-11-05 iter 29 · Ship B1 · NEX Ireland
+            three-tier model. Grid: 1-col mobile · 2-col tablet · 3-col
+            desktop. Sealed PackageCard primitive · zero design drift.
+            Stripe wiring is Ship B3-B5 (separate authorised commits) ·
+            today the CTAs route through the existing create-account
+            with ?intent=* params that the signup flow can read when
+            B3 wires checkout session URLs. */}
         <style>{`
           @media (min-width: 640px) {
             [data-nex-package-grid] {
               grid-template-columns: 1fr 1fr !important;
+            }
+          }
+          @media (min-width: 960px) {
+            [data-nex-package-grid] {
+              grid-template-columns: 1fr 1fr 1fr !important;
             }
           }
         `}</style>
@@ -159,30 +168,41 @@ export default function PackagesPage() {
         >
           <PackageCard
             eyebrow="Free forever"
-            title="Gratis"
-            priceLabel="Rp 0"
+            title="NEX Free"
+            priceLabel="€0"
             priceSubline="No card required"
-            features={GRATIS_FEATURES}
-            ctaHref="/nex-native/create-account"
+            features={FREE_FEATURES_IE}
+            ctaHref="/nex-native/create-account?intent=free"
             ctaLabel="Start free"
             ctaVariant="secondary"
             highlight={false}
           />
           <PackageCard
+            eyebrow="One-time top-up"
+            title="Starter Pack"
+            priceLabel="€5"
+            priceSubline="one-time · 10 products · 60 days"
+            features={STARTER_PACK_FEATURES_IE}
+            ctaHref="/nex-native/create-account?intent=starter_pack"
+            ctaLabel="Buy Starter Pack"
+            ctaVariant="secondary"
+            highlight={false}
+          />
+          <PackageCard
             eyebrow="Full power"
-            title="Bisnis"
-            priceLabel="Rp 99,000"
-            priceSubline="per month · IDR 990k / year"
-            features={BISNIS_FEATURES}
-            ctaHref="/nex-native/create-account?intent=bisnis"
-            ctaLabel="Upgrade to Bisnis"
+            title="NEX Shop"
+            priceLabel="€19.99"
+            priceSubline="per month · 7-day free trial · €99 / year"
+            features={SHOP_FEATURES_IE}
+            ctaHref="/nex-native/create-account?intent=shop_trial"
+            ctaLabel="Start 7-day free trial"
             ctaVariant="primary"
             secondaryCta={{
               href: NEX_OFFICIAL_CHAT_HREF,
               label: "💬 Already have an account · chat with NEX",
             }}
             highlight
-            badge="Recommended for exporters"
+            badge="Most popular"
           />
         </div>
       </section>
@@ -338,6 +358,127 @@ interface FeatureRow {
    *  gives them. Sealed 2026-09-28. */
   explain?: string;
 }
+
+// Owner directive 2026-11-05 iter 29 · Ship B1 · NEX Ireland three
+// tier content. Sealed GRATIS_FEATURES + BISNIS_FEATURES below are
+// retained (Indonesia market · nex-original · future unlock). Only
+// the CARD GRID above uses these three Ireland lists.
+//
+// Doctrine honoured:
+//   · Sealed "NEX never takes commission" called out on every tier.
+//   · Sealed Package Contract DRAFT 2026-10-20 · 3 unimplemented
+//     claims (verified badge · 20 boosted messages · cancel-any-
+//     time) are NOT listed anywhere.
+//   · 10-product cap on Free tier = sealed tier-gate.ts Gratis cap.
+//   · 7-day trial on Shop tier = sealed trial doctrine pattern.
+//
+// Stripe wiring + real purchase flow = Ship B3-B5 (separate commits).
+
+const FREE_FEATURES_IE: FeatureRow[] = [
+  {
+    label: "0% commission on every sale",
+    on: true,
+    explain: "NEX never takes a percentage of what you sell · ever.",
+  },
+  {
+    label: "List up to 10 products",
+    on: true,
+    explain:
+      "Enough to try NEX Live, find your first customers, and decide if a Shop is right for you.",
+  },
+  {
+    label: "Shareable shop URL (nex.com/your-shop)",
+    on: true,
+    explain:
+      "Your public shop cover · post the link on socials or share into chats.",
+  },
+  {
+    label: "Chat shop drawer",
+    on: true,
+    explain:
+      "Share any product into a chat in one tap · customers tap to view + checkout with you directly.",
+  },
+  {
+    label: "NEX Live feed placement",
+    on: true,
+    explain:
+      "Your products can appear in the NEX Live feed as shoppable-card overlays on your videos.",
+  },
+  {
+    label: "Analytics + priority placement",
+    on: false,
+    explain: "Unlock these by opening a NEX Shop below.",
+  },
+];
+
+const STARTER_PACK_FEATURES_IE: FeatureRow[] = [
+  {
+    label: "0% commission on every sale",
+    on: true,
+    explain: "Same no-cut promise as every tier · forever.",
+  },
+  {
+    label: "10 more products (20 total)",
+    on: true,
+    explain:
+      "One-time top-up · no subscription · lasts 60 days from purchase.",
+  },
+  {
+    label: "Everything in NEX Free",
+    on: true,
+    explain:
+      "Shareable shop URL · chat shop drawer · NEX Live placement.",
+  },
+  {
+    label: "Perfect for Christmas markets, event sellers, hobby stock",
+    on: true,
+    explain:
+      "No commitment · if you're not posting regularly, you pay nothing after day 60.",
+  },
+  {
+    label: "Analytics + priority placement",
+    on: false,
+    explain: "Unlock these by opening a NEX Shop below.",
+  },
+];
+
+const SHOP_FEATURES_IE: FeatureRow[] = [
+  {
+    label: "0% commission on every sale",
+    on: true,
+    explain:
+      "Still no-cut · your €19.99/mo is the only thing NEX ever charges.",
+  },
+  {
+    label: "Unlimited product listings",
+    on: true,
+    explain: "List as many products as you can ship · no caps.",
+  },
+  {
+    label: "7-day free trial",
+    on: true,
+    explain:
+      "Try everything · cancel any time in Settings before day 8 · no charge.",
+  },
+  {
+    label: "Shop analytics + CSV export",
+    on: true,
+    explain:
+      "Visitor + chat + order stats · last 90 days · export for your accountant.",
+  },
+  {
+    label: "Priority placement in NEX Live",
+    on: true,
+    explain:
+      "Your shoppable videos surface earlier in the feed vs. Free-tier sellers.",
+  },
+  {
+    label: "Cancel any time · clear monthly or yearly",
+    on: true,
+    explain:
+      "Monthly €19.99 or yearly €99 (17% saving). Self-serve cancel in /settings/billing.",
+  },
+];
 
 const GRATIS_FEATURES: FeatureRow[] = [
   {
