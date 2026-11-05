@@ -10,7 +10,11 @@ import { updateShopTheme } from "@/lib/nex-native/account-service";
 
 export async function selectShopThemeAction(formData: FormData) {
   const viewer = await resolveNexAppSessionOrGuest();
-  if (viewer.kind === "guest") {
+  // Owner directive 2026-11-05 iter 27 · resolver now returns a
+  // third state `kind: "visitor"` for provisional cookie-only
+  // viewers · they can't select a shop theme (write action) · gate
+  // with the sealed "must be a real signed-in account" rule.
+  if (viewer.kind !== "session") {
     throw new Error("Authentication required");
   }
 

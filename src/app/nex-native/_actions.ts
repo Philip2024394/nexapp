@@ -126,6 +126,18 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
   const password = String(formData.get("password") ?? "");
   const phoneCountryCodeRaw = String(formData.get("phone_country_code") ?? "").trim();
   const phoneNationalNumberRaw = String(formData.get("phone_national_number") ?? "").trim();
+  // Owner directive 2026-11-05 iter 27 · commit 5 · optional
+  // provisional-account id from the visitor cookie. When present AND
+  // the row is still unclaimed, claimProvisionalAccount() upgrades
+  // it in-place (preserves nex-id + any view history / likes
+  // accumulated as a visitor). Falls through to the normal create
+  // path on any mismatch.
+  const claimAccountIdRaw = String(formData.get("claim_account_id") ?? "").trim();
+  const claimAccountId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    claimAccountIdRaw,
+  )
+    ? claimAccountIdRaw
+    : null;
   // Migration 204 · optional user-chosen NEX display name. Non-unique by
   // design. Empty submission is permitted (chosen_handle stays null).
   const nexNameRaw = String(formData.get("nex_name") ?? "");
@@ -233,13 +245,32 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
       const existing = await accountService.getAccountBySupabaseUserId(data.user.id);
       let acc = existing;
       if (!existing) {
-        acc = await accountService.createAccount({
-          supabase_user_id: data.user.id,
-          display_name: fullName,
-          phone_country_code: phoneCountryCode,
-          phone_national_number: phoneNationalNumber,
-          chosen_handle: nexName,
-        });
+        // Owner directive 2026-11-05 iter 27 · commit 5 · try to
+        // CLAIM the visitor's provisional row first. Falls through
+        // to the normal createAccount() path if the row doesn't
+        // exist / is already claimed / is a collision.
+        if (claimAccountId) {
+          const claimed = await accountService.claimProvisionalAccount({
+            provisionalAccountId: claimAccountId,
+            supabaseUserId: data.user.id,
+            displayName: fullName,
+            phoneCountryCode,
+            phoneNationalNumber,
+            chosenHandle: nexName,
+          });
+          if (claimed) {
+            acc = claimed;
+          }
+        }
+        if (!acc) {
+          acc = await accountService.createAccount({
+            supabase_user_id: data.user.id,
+            display_name: fullName,
+            phone_country_code: phoneCountryCode,
+            phone_national_number: phoneNationalNumber,
+            chosen_handle: nexName,
+          });
+        }
       } else if (
         nexName !== null &&
         existing.chosen_handle === null

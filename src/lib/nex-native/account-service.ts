@@ -115,6 +115,86 @@ export async function createAccount(input: NexAccountInsert): Promise<NexAccount
 }
 
 /**
+ * Owner-authorised 2026-11-05 iter 27 · commit 5 · claim a
+ * provisional nex_account into a real signed-in account. On signup
+ * success, if the viewer had a `?claim=<provisional_id>` URL param
+ * AND the row is genuinely unclaimed (supabase_user_id IS NULL AND
+ * claimed_at IS NULL), we UPDATE the existing provisional row rather
+ * than INSERTing a brand-new one. This preserves the viewer's:
+ *   - nex-id (same NEX-XXXXXX handle they saw as a visitor)
+ *   - Any view history / likes / follows / content accumulated
+ *     while they were a provisional visitor (schema permitting)
+ *
+ * Fail-closed · returns null when:
+ *   · provisional row doesn't exist
+ *   · provisional row is already claimed (supabase_user_id !== null
+ *     OR claimed_at !== null)
+ *   · another account already has this supabase_user_id
+ *   · DB error
+ *
+ * Callers should fall back to the normal createAccount path on null.
+ */
+export async function claimProvisionalAccount(args: {
+  readonly provisionalAccountId: NexUuid;
+  readonly supabaseUserId: NexUuid;
+  readonly displayName: string;
+  readonly phoneCountryCode: string | null;
+  readonly phoneNationalNumber: string | null;
+  readonly chosenHandle: string | null;
+}): Promise<NexAccountRow | null> {
+  // Pre-check · the row must be genuinely unclaimed.
+  const { data: existing, error: fetchErr } = await nexSupabaseAdmin
+    .from("nex_account")
+    .select("id, supabase_user_id, claimed_at, nex_handle")
+    .eq("id", args.provisionalAccountId)
+    .maybeSingle();
+  if (fetchErr || !existing) return null;
+  if (existing.supabase_user_id !== null) return null;
+  if ((existing as { claimed_at: string | null }).claimed_at !== null) {
+    return null;
+  }
+
+  // Validate inputs via the sealed assertions (same gates as createAccount).
+  if (args.phoneCountryCode !== null && !/^\+[0-9]{1,4}$/.test(args.phoneCountryCode)) {
+    return null;
+  }
+  if (args.phoneNationalNumber !== null && !/^[0-9]{5,15}$/.test(args.phoneNationalNumber)) {
+    return null;
+  }
+  assertValidChosenHandle(args.chosenHandle, isReservedHandle);
+
+  // Collision guard · ensure no other account already holds this
+  // supabase_user_id (would violate a unique constraint).
+  const { data: collision } = await nexSupabaseAdmin
+    .from("nex_account")
+    .select("id")
+    .eq("supabase_user_id", args.supabaseUserId)
+    .maybeSingle();
+  if (collision) return null;
+
+  const now = new Date().toISOString();
+  const { data, error } = await nexSupabaseAdmin
+    .from("nex_account")
+    .update({
+      supabase_user_id: args.supabaseUserId,
+      display_name: args.displayName,
+      phone_country_code: args.phoneCountryCode,
+      phone_national_number: args.phoneNationalNumber,
+      chosen_handle: args.chosenHandle,
+      claimed_at: now,
+    })
+    .eq("id", args.provisionalAccountId)
+    .select("*")
+    .single();
+  if (error || !data) return null;
+  const row = data as NexAccountRow;
+  if (!row.nex_handle) {
+    return await ensureNexHandle(row.id);
+  }
+  return row;
+}
+
+/**
  * Update the account's user-chosen NEX display name · migration 204.
  * Caller MUST pre-validate the handle via validateChosenHandle() from
  * handle-normalise.ts. This function re-asserts at runtime via
