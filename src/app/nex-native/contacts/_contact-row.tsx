@@ -29,6 +29,11 @@
 import type * as React from "react";
 import Link from "next/link";
 import type { ContactRowDisplay } from "./_contacts-list";
+// Phase V · P15 · 2026-11-05 · Social-to-Shop Discovery · clickable
+// Shop button on the bottom-right of the avatar when the contact has
+// a published shop. Honest condition: only renders when shopHref is
+// resolved server-side.
+import { AvatarShopBadge } from "@/components/nex-native/shop/AvatarShopBadge";
 
 const NEX = {
   bgNavy: "var(--nex-world-drawer-bg, #050F1E)",
@@ -156,6 +161,18 @@ export function ContactRow({ row, accentHex }: ContactRowProps) {
                 "nex-contact-row-heartbeat 1200ms cubic-bezier(0.4,0,0.2,1) infinite",
               pointerEvents: "none",
             }}
+          />
+        ) : null}
+        {/* Phase V · P15 · 2026-11-05 · AvatarShopBadge · bottom-right
+            of the 48×48 avatar chip. Isolated tap target · stopPropagation
+            keeps the parent card <Link> (open-chat) from firing when the
+            badge is tapped. Only mounts when hasShop + shopHref resolve. */}
+        {hasShop && row.shopHref ? (
+          <AvatarShopBadge
+            shopHref={row.shopHref}
+            sellerName={row.displayName}
+            avatarPx={48}
+            accentHex={accentHex}
           />
         ) : null}
         {/* Unread badge · top-right of chip. */}
