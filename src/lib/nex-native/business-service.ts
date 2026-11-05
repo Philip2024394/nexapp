@@ -167,6 +167,67 @@ export async function createBusiness(input: NexBusinessInsert): Promise<NexBusin
 }
 
 /**
+ * Owner-authorised 2026-11-05 iter 29 · auto-provision a minimal
+ * `nex_business` row for a signed-in user who tries to list their
+ * first product WITHOUT having a shop set up yet. Removes the sealed
+ * "Create a shop first" dead-end · the merchant lands straight on
+ * the product form with a default shop they can rename in Settings
+ * later.
+ *
+ * Defaults:
+ *   · display_name = chat display_name (prefilled · editable later)
+ *   · slug         = kebab-slug from display_name + 4-char suffix for
+ *                    uniqueness · regenerates on collision (retries 3x)
+ *
+ * Idempotency: callers should check `listBusinessesByOwner` FIRST and
+ * only call this when the user has zero businesses. If called with an
+ * owner who already has one, the tier gate throws NexTierLimitError
+ * (Gratis cap = 1 business) · caller treats that as success and uses
+ * the existing business.
+ */
+export async function provisionDefaultBusiness(args: {
+  readonly ownerAccountId: NexUuid;
+  readonly preferredName: string;
+}): Promise<NexBusinessRow> {
+  const nameTrimmed = args.preferredName.trim();
+  const base = nameTrimmed.length > 0 ? nameTrimmed : "My Shop";
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const slug = generateBusinessSlug(base, attempt);
+    try {
+      return await createBusiness({
+        owner_account_id: args.ownerAccountId,
+        display_name: base,
+        slug,
+      });
+    } catch (err) {
+      // Slug collision · retry with a different suffix.
+      const msg = err instanceof Error ? err.message : String(err);
+      if (/slug/i.test(msg) && /unique|duplicate/i.test(msg)) continue;
+      throw err;
+    }
+  }
+  // All 3 attempts collided · extremely unlikely with random suffix.
+  throw new Error(
+    "business-service.provisionDefaultBusiness: 3 slug collisions in a row · aborting",
+  );
+}
+
+function generateBusinessSlug(displayName: string, attempt: number): string {
+  const base = displayName
+    .replace(/^@/, "")
+    .replace(/^nex-/i, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40);
+  const safe = base.length > 0 ? base : "shop";
+  // First attempt: bare slug. Retries: append 4-char random suffix.
+  if (attempt === 0) return safe;
+  const suffix = Math.random().toString(36).slice(2, 6);
+  return `${safe}-${suffix}`;
+}
+
+/**
  * Update merchant-editable profile fields · idempotent · partial patch.
  * Empty string clears (== null). Length caps enforced app-side plus DB
  * CHECK. URL fields require http(s):// prefix. public_email requires a

@@ -13,7 +13,10 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
-import { listBusinessesByOwner } from "@/lib/nex-native/business-service";
+import {
+  listBusinessesByOwner,
+  provisionDefaultBusiness,
+} from "@/lib/nex-native/business-service";
 
 export const dynamic = "force-dynamic";
 
@@ -35,38 +38,63 @@ export default async function CreateProductEntryPage(): Promise<React.JSX.Elemen
     businesses = [];
   }
 
-  // Zero businesses → onboarding
+  // Owner directive 2026-11-05 iter 29 · Ship A commit 1 · zero
+  // businesses means FIRST-TIME SELLER. Instead of blocking on the
+  // sealed "Create a shop first" dead-end, auto-provision a minimal
+  // nex_business row named after the viewer's chat handle so they
+  // land straight on the product form. Shop name editable in
+  // Settings later. Keeps conversion velocity high (removes the
+  // 2-commit friction of "set up shop AND create product").
   if (businesses.length === 0) {
-    return (
-      <main
-        style={{
-          minHeight: "100dvh",
-          background: "#F7F9FC",
-          color: INK,
-          fontFamily: "Inter, system-ui, sans-serif",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: 24,
-          gap: 20,
-        }}
-      >
-        <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>Create a shop first</h1>
-        <p style={{ fontSize: 14, color: INK_DIM, maxWidth: 420, textAlign: "center", lineHeight: 1.5 }}>
-          You need a NEX business before you can create products. The onboarding will set one up and bring you back here.
-        </p>
-        <Link
-          href="/nex-native/onboarding"
+    try {
+      const preferred =
+        (session.account.chosen_handle?.trim() ||
+          session.account.display_name?.trim() ||
+          "My Shop");
+      const provisioned = await provisionDefaultBusiness({
+        ownerAccountId: session.account.id,
+        preferredName: preferred,
+      });
+      redirect(
+        `/nex-native/create/product/category?business=${encodeURIComponent(provisioned.id)}&freshly_provisioned=1`,
+      );
+    } catch (err) {
+      // Honest fallback · surface the shop-setup page if auto-
+      // provision fails (collision storm · tier-gate · DB hiccup).
+      const msg = err instanceof Error ? err.message : String(err);
+      // Re-raise Next redirect signals so navigation still happens.
+      if (/NEXT_REDIRECT/.test(msg)) throw err;
+      return (
+        <main
           style={{
-            background: ACCENT, color: "#031018", padding: "12px 24px", borderRadius: 999,
-            fontWeight: 800, fontSize: 14, textDecoration: "none",
+            minHeight: "100dvh",
+            background: "#F7F9FC",
+            color: INK,
+            fontFamily: "Inter, system-ui, sans-serif",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+            gap: 20,
           }}
         >
-          Start onboarding
-        </Link>
-      </main>
-    );
+          <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>Shop setup needed</h1>
+          <p style={{ fontSize: 14, color: INK_DIM, maxWidth: 420, textAlign: "center", lineHeight: 1.5 }}>
+            We couldn&apos;t auto-create a shop for you right now. The onboarding will set one up and bring you back here.
+          </p>
+          <Link
+            href="/nex-native/onboarding"
+            style={{
+              background: ACCENT, color: "#031018", padding: "12px 24px", borderRadius: 999,
+              fontWeight: 800, fontSize: 14, textDecoration: "none",
+            }}
+          >
+            Start onboarding
+          </Link>
+        </main>
+      );
+    }
   }
 
   // Single business → auto-forward to category picker
