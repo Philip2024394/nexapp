@@ -37,6 +37,106 @@ import { LiveProductIndicator } from "@/components/nex-native/live-commerce/Live
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+// Phase V · P22 · 2026-11-05 · social preview metadata for products.
+// --------------------------------------------------------------------
+// Product pages prefer the product's own image so a social unfurl
+// shows the actual item for sale. Fallback order (owner-sealed
+// 2026-11-05):
+//   1. nex_product.image_url                 (the product photo)
+//   2. nex_business.shop_cover_image_url     (seller's cover)
+//   3. nex_business.logo_url                 (seller's logo)
+//   4. /brand/nex-logo.png                   (sealed NEX wordmark)
+// We deliberately SKIP the chat_theme hero at the product level —
+// a product preview should look like a product, not like a theme.
+// Price is NOT written into the OG description (prevents stale
+// unfurls when the price changes on the seller's end · the product
+// page itself always shows current price).
+const SEALED_NEX_FALLBACK_IMAGE_PRODUCT = "/brand/nex-logo.png";
+
+function pickFirstProductImage(
+  candidates: ReadonlyArray<string | null | undefined>,
+): string {
+  for (const c of candidates) {
+    if (typeof c === "string") {
+      const t = c.trim();
+      if (t.length > 0) return t;
+    }
+  }
+  return SEALED_NEX_FALLBACK_IMAGE_PRODUCT;
+}
+
+function trimProductMetaDescription(
+  raw: string | null | undefined,
+  cap: number = 160,
+): string | undefined {
+  if (!raw) return undefined;
+  const t = raw.trim().replace(/\s+/g, " ");
+  if (t.length === 0) return undefined;
+  if (t.length <= cap) return t;
+  return t.slice(0, cap - 1).trimEnd() + "…";
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ businessSlug: string; productId: string }>;
+}): Promise<import("next").Metadata> {
+  const { businessSlug, productId } = await params;
+  const business = await businessService
+    .getBusinessBySlug(businessSlug)
+    .catch(() => null);
+  const product = await productService
+    .getProductById(productId)
+    .catch(() => null);
+  if (!business || !product || product.business_id !== business.id) {
+    return {
+      title: "Product not found",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const biz = business as typeof business & {
+    shop_cover_image_url?: string | null;
+  };
+  const imageUrl = pickFirstProductImage([
+    product.image_url,
+    biz.shop_cover_image_url,
+    business.logo_url,
+    SEALED_NEX_FALLBACK_IMAGE_PRODUCT,
+  ]);
+
+  const title = `${product.name} · ${business.display_name}`;
+  const description =
+    trimProductMetaDescription(product.description) ??
+    `See ${product.name} on NEX · from ${business.display_name}. Shop direct · NEX takes 0% commission · buyers pay sellers directly.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      type: "website",
+      siteName: "NEX",
+      title,
+      description,
+      images: [
+        {
+          url: imageUrl,
+          alt: `${product.name} by ${business.display_name}`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [imageUrl],
+    },
+    alternates: {
+      canonical: `/nex-native/${business.slug}/${product.id}`,
+    },
+  };
+}
+
 const NEX = {
   bg: "var(--nex-world-background-base, #020914)",
   panel: "#050f1e",

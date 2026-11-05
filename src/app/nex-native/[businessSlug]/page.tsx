@@ -75,6 +75,132 @@ import { listingAddRouteFor } from "@/lib/nex-native/business/listing-add-route"
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+// Phase V · P22 · 2026-11-05 · social preview metadata.
+// --------------------------------------------------------------------
+// When a shop URL is pasted into WhatsApp / Instagram / Facebook /
+// X / Discord etc., the platform fetches this page server-side and
+// reads its Open Graph + Twitter meta tags to build a preview card.
+// Without per-page generateMetadata the social unfurl falls back to
+// the sealed global NEX tags in src/app/nex-native/layout.tsx and
+// every shop link previews identically ("NEX · Chat that's yours").
+//
+// Owner-sealed 2026-11-05 OG image fallback order:
+//   1. nex_business.shop_cover_image_url  (seller's own cover)
+//   2. nex_business.logo_url              (seller's own logo)
+//   3. nex_chat_theme.hero_image_url      (owner's live-world theme)
+//   4. /brand/nex-logo.png                (sealed NEX wordmark)
+//
+// Each candidate must be a non-empty URL. We stop at the first one
+// that qualifies. The theme fetch is lazy (only when the cover and
+// logo are both missing) to keep the common-case metadata resolve
+// cheap. Unknown slugs return a minimal noindex metadata so stale
+// shares from renamed shops don't get indexed.
+//
+// Rules preserved:
+//   · No new DB fields · no new service writes · reuses sealed
+//     businessService.getBusinessBySlug + accountService.getById +
+//     chatThemeService.getThemeById already on this page's hot path
+//   · No cost to the page render (Next 16 dedupes the business read
+//     between generateMetadata and the default export via its
+//     request-scoped cache)
+//   · 0% commission untouched · copy stays honest · no price in the
+//     description (a product's own page carries price metadata)
+const SEALED_NEX_FALLBACK_IMAGE = "/brand/nex-logo.png";
+
+function pickFirstImageUrl(candidates: ReadonlyArray<string | null | undefined>): string {
+  for (const c of candidates) {
+    if (typeof c === "string") {
+      const trimmed = c.trim();
+      if (trimmed.length > 0) return trimmed;
+    }
+  }
+  return SEALED_NEX_FALLBACK_IMAGE;
+}
+
+function trimForMetaDescription(raw: string | null | undefined, cap: number = 160): string | undefined {
+  if (!raw) return undefined;
+  const t = raw.trim().replace(/\s+/g, " ");
+  if (t.length === 0) return undefined;
+  if (t.length <= cap) return t;
+  return t.slice(0, cap - 1).trimEnd() + "…";
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ businessSlug: string }>;
+}): Promise<import("next").Metadata> {
+  const { businessSlug } = await params;
+  const business = await businessService
+    .getBusinessBySlug(businessSlug)
+    .catch(() => null);
+  if (!business) {
+    // Stale link or renamed shop · don't let the unfurl show a stale
+    // preview and don't let the URL get indexed. The page itself will
+    // render notFound() on its own path.
+    return {
+      title: "Shop not found",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  // Step 1 · cheap candidates from the business row itself.
+  let heroImage: string | null = null;
+  const biz = business as typeof business & {
+    shop_cover_image_url?: string | null;
+  };
+  const coverOverride = biz.shop_cover_image_url;
+  if (typeof coverOverride === "string" && coverOverride.trim().length > 0) {
+    heroImage = coverOverride.trim();
+  } else if (business.logo_url && business.logo_url.trim().length > 0) {
+    heroImage = business.logo_url.trim();
+  } else {
+    // Step 2 · only now do we pay for the theme fetch. Fail-soft: if
+    // the owner has no chat theme or the theme can't resolve, we just
+    // drop through to the sealed NEX banner.
+    try {
+      const ownerAccount = await accountService.getAccountById(business.owner_account_id).catch(() => null);
+      const themeId = ownerAccount?.chat_theme ?? null;
+      if (themeId) {
+        const chatThemeService = await import("@/lib/nex-native/chat-theme-service");
+        const theme = await chatThemeService.getThemeById(themeId).catch(() => null);
+        if (theme?.hero_image_url && theme.hero_image_url.trim().length > 0) {
+          heroImage = theme.hero_image_url.trim();
+        }
+      }
+    } catch {
+      /* fail-soft · fall through to sealed banner */
+    }
+  }
+  const imageUrl = pickFirstImageUrl([heroImage, SEALED_NEX_FALLBACK_IMAGE]);
+
+  const title = `${business.display_name} on NEX`;
+  const description =
+    trimForMetaDescription(business.description) ??
+    `Visit ${business.display_name} on NEX. Shop direct · 0% commission to NEX · buyers pay sellers directly.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      type: "website",
+      siteName: "NEX",
+      title,
+      description,
+      images: [{ url: imageUrl, alt: `${business.display_name} shop cover` }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [imageUrl],
+    },
+    alternates: {
+      canonical: `/nex-native/${business.slug}`,
+    },
+  };
+}
+
 const NEX = {
   bg: "var(--nex-world-background-base, #020914)",
   panel: "#050f1e",
