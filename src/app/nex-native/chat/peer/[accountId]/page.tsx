@@ -1064,6 +1064,7 @@ export default async function PeerChatPage({
           peerAccountId={peer.id}
           peerSharedMediaHref={`/nex-native/chat/peer/${peer.id}/media`}
           hideMagnifier={true}
+          currentSurface="chat"
           notificationsSlot={
             <NotificationsDrawer
               inline

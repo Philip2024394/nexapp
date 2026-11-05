@@ -78,6 +78,12 @@ export interface FreeChatHeaderProps {
    *  search button. Non-feed surfaces (peer chat · free-chat home)
    *  pass `true` so the magnifier is live ONLY on feed surfaces. */
   readonly hideMagnifier?: boolean;
+  /** Owner directive 2026-11-05 iter 26 · forwarded to the inline
+   *  ControlDrawer so Discovery can self-hide on "live" and future
+   *  surfaces can apply their own tiny context tweaks. Chat surfaces
+   *  pass "chat" · live surfaces pass "live" via their own ControlDrawer
+   *  mount, not through this header. */
+  readonly currentSurface?: "live" | "chat" | "profile" | null;
 }
 
 const DEFAULT_PING_ACCENT = "var(--nex-world-secondary, #00AFFF)";
@@ -96,6 +102,7 @@ export function FreeChatHeader({
   peerAccountId,
   peerSharedMediaHref,
   hideMagnifier,
+  currentSurface,
 }: FreeChatHeaderProps): React.JSX.Element {
   // Owner directive 2026-11-05 later-same-day iter 5 · sealed
   // NexPingBadge is restored on peer chat · colored rim retired. The
@@ -259,6 +266,7 @@ export function FreeChatHeader({
             session={drawerSession}
             triggerIcon="plus"
             peerSharedMediaHref={peerSharedMediaHref}
+            currentSurface={currentSurface}
             /* Owner directive 2026-11-05 later-same-day iter 2 ·
                header buttons go SOLID BLACK (no translucency, no
                blur). Hairline white border + gold inner ring kept

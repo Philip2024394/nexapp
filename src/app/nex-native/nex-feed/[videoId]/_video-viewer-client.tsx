@@ -1412,6 +1412,7 @@ export function VideoViewerClient({
               <ControlDrawer
                 session={(drawerSession ?? null) as ControlDrawerSession | null}
                 triggerIcon="plus"
+                currentSurface="live"
                 triggerStyle={{
                   width: 36,
                   height: 36,

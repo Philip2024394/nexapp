@@ -452,6 +452,7 @@ export default async function FreeChatPage({
           textColor={NEX.text}
           subtitleColor={NEX.textDim}
           hideMagnifier={true}
+          currentSurface="chat"
           notificationsSlot={
             <NotificationsDrawer
               inline

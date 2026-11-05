@@ -155,6 +155,12 @@ export interface ControlDrawerProps {
    *  Non-peer surfaces (free-chat home, profile, etc.) omit this prop
    *  and the row doesn't render. Value is the full href. */
   readonly peerSharedMediaHref?: string;
+  /** Owner directive 2026-11-05 iter 26 · which surface the drawer is
+   *  being rendered from. Used for tiny context-aware tweaks (e.g. the
+   *  Discovery row self-hides when the viewer is already on
+   *  /nex-feed). Not a full context-aware drawer · the vast majority
+   *  of rows stay identical across surfaces (muscle-memory principle). */
+  readonly currentSurface?: "live" | "chat" | "profile" | null;
 }
 
 // ─── Destinations · all verified to exist in the audit ──────────────
@@ -222,6 +228,37 @@ const CONTACTS_HREF: string =
 // direct URL) · home-contacts (duplicate of chats-contacts) ·
 // shop-appearance (consolidated into chat-appearance) · intro-video
 // (deferred) · status (deferred).
+// Owner directive 2026-11-05 iter 26 · drawer reorganised into two
+// labelled sections: CREATE (upload video / upload music / list
+// product) sits ABOVE YOUR NEX (profile / chats / themes / discovery).
+// Same drawer on every surface · zero muscle-memory cost · context-
+// relevant ordering (Create is the primary action on NEX Live, while
+// still useful everywhere else).
+
+const CREATE_ROWS: ReadonlyArray<MenuRow> = [
+  {
+    key: "upload-video",
+    label: "Upload video",
+    subtitle: "Post a short video to NEX Live",
+    href: "/nex-native/create/upload-video",
+    locked: false,
+  },
+  {
+    key: "upload-music",
+    label: "Upload music",
+    subtitle: "Share a track to NEX Live",
+    href: "/nex-native/create/upload-music",
+    locked: false,
+  },
+  {
+    key: "create-product",
+    label: "List a product",
+    subtitle: "Shoppable card · optional video background",
+    href: "/nex-native/create/product",
+    locked: false,
+  },
+];
+
 const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
   {
     key: "profile",
@@ -254,39 +291,14 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
   // a single NEX Live destination (Music / Food / Stays / Trades
   // merged into the one feed). Content search moved to the new
   // magnifier dropdown in the chat header.
+  //
+  // Owner directive 2026-11-05 iter 26 · self-hides when
+  // currentSurface === "live" because the viewer is already there.
   {
     key: "discovery",
     label: "Discovery",
     subtitle: "Explore the NEX Live feed",
     href: "/nex-native/nex-feed",
-    locked: false,
-  },
-  // Owner directive 2026-11-05 iter 24 · three NEX Live upload entries
-  // surfaced directly in the drawer. Three async content types: video
-  // · music · product. Real-time live-streaming retired · product posts
-  // can carry an optional looped video OR image background (follow-up
-  // migration adds the FK fields). Video upload route is a stub today
-  // (/nex-native/create/upload-video 404s) · the drawer row makes the
-  // intent visible · the route gets built next.
-  {
-    key: "upload-video",
-    label: "Upload video",
-    subtitle: "Post a short video to NEX Live",
-    href: "/nex-native/create/upload-video",
-    locked: false,
-  },
-  {
-    key: "upload-music",
-    label: "Upload music",
-    subtitle: "Share a track to NEX Live",
-    href: "/nex-native/create/upload-music",
-    locked: false,
-  },
-  {
-    key: "create-product",
-    label: "List a product",
-    subtitle: "Shoppable card · optional video background",
-    href: "/nex-native/create/product",
     locked: false,
   },
 ];
@@ -322,6 +334,7 @@ export function ControlDrawer({
   triggerStyle,
   triggerIcon = "plus",
   peerSharedMediaHref,
+  currentSurface,
 }: ControlDrawerProps) {
   // Owner directive 2026-11-01 · Batch D++ · Creator-Support sheet
   // open state. The drawer owns the state; DrawerBody receives the
@@ -566,6 +579,7 @@ export function ControlDrawer({
           creatorSupportSubtitleOverride={creatorSupportSubtitleOverride}
           onCreatorSupportTap={onCreatorSupportTap}
           peerSharedMediaHref={peerSharedMediaHref}
+          currentSurface={currentSurface}
         />
       </aside>
       {confirmLogout ? (
@@ -696,6 +710,7 @@ function DrawerBody({
   // same backward-compat guarantee as the D+ gating props.
   onCreatorSupportTap,
   peerSharedMediaHref,
+  currentSurface,
 }: {
   readonly session: ControlDrawerSession | null;
   readonly onLogoutClick: () => void;
@@ -705,6 +720,7 @@ function DrawerBody({
   readonly creatorSupportSubtitleOverride?: string;
   readonly onCreatorSupportTap?: () => void;
   readonly peerSharedMediaHref?: string;
+  readonly currentSurface?: "live" | "chat" | "profile" | null;
 }) {
   // Owner directive 2026-10-23 · "unlock them for admin dev entry".
   // Non-production builds · if the URL carries `?dev=1` the drawer
@@ -757,26 +773,43 @@ function DrawerBody({
           on every account-gated row. The row stays tappable · tap
           routes through /sign-in with next=<destination> so the
           user lands back on the exact feature after they sign in. */}
+      {/* Owner directive 2026-11-05 iter 26 · CREATE section sits
+          ABOVE YOUR NEX · upload-video · upload-music · list-product.
+          Context-relevant on NEX Live, still useful everywhere else. */}
+      <SectionGroup
+        title="CREATE"
+        rows={CREATE_ROWS}
+        isGuest={effectiveIsGuest}
+        devUnlockMode={devUnlock}
+      />
+
       <SectionGroup
         title="YOUR NEX"
-        rows={
-          peerSharedMediaHref
-            ? [
-                // Owner directive 2026-11-05 iter 8 · Shared media row
-                // injected only on peer-chat surfaces (caller passes
-                // peerSharedMediaHref). Appended after the sealed rows
-                // so stable ordering is preserved on non-peer surfaces.
-                ...YOUR_NEX_ROWS,
-                {
-                  key: "shared-media",
-                  label: "Shared media",
-                  subtitle: "Photos · videos · voice · docs in this chat",
-                  href: peerSharedMediaHref,
-                  locked: false,
-                } as const,
-              ]
-            : YOUR_NEX_ROWS
-        }
+        rows={(() => {
+          // Owner directive 2026-11-05 iter 26 · on NEX Live surfaces
+          // the Discovery row self-hides · the viewer is already on
+          // the feed the row would navigate them to. Zero mental-
+          // model cost · one row omitted, section intact.
+          const base =
+            currentSurface === "live"
+              ? YOUR_NEX_ROWS.filter((r) => r.key !== "discovery")
+              : YOUR_NEX_ROWS;
+          if (!peerSharedMediaHref) return base;
+          return [
+            // Owner directive 2026-11-05 iter 8 · Shared media row
+            // injected only on peer-chat surfaces (caller passes
+            // peerSharedMediaHref). Appended after the sealed rows
+            // so stable ordering is preserved on non-peer surfaces.
+            ...base,
+            {
+              key: "shared-media",
+              label: "Shared media",
+              subtitle: "Photos · videos · voice · docs in this chat",
+              href: peerSharedMediaHref,
+              locked: false,
+            } as const,
+          ];
+        })()}
         isGuest={effectiveIsGuest}
         devUnlockMode={devUnlock}
       />
