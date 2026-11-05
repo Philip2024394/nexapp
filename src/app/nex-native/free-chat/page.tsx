@@ -232,6 +232,33 @@ export default async function FreeChatPage({
     // guest · drawerSession stays null · header strings keep defaults
   }
 
+  // Owner directive 2026-11-05 iter 27 · commit 3 · when no real
+  // session resolved, try the provisional visitor cookie so the
+  // drawer's IdentityBar shows the visitor's nex-id instead of the
+  // "Sign in to NEX" prompt. Fail-silent fallback = plain guest.
+  let drawerVisitor: {
+    accountId: string;
+    nexHandle: string;
+    displayName: string;
+  } | null = null;
+  if (!drawerSession) {
+    try {
+      const { resolveNexAppSessionOrGuest: resolveWithVisitor } = await import(
+        "@/lib/nex-native/app/session-or-guest"
+      );
+      const viewerState = await resolveWithVisitor();
+      if (viewerState.kind === "visitor") {
+        drawerVisitor = {
+          accountId: viewerState.visitor.accountId,
+          nexHandle: viewerState.visitor.nexHandle,
+          displayName: viewerState.visitor.displayName,
+        };
+      }
+    } catch {
+      /* fall-through · plain guest */
+    }
+  }
+
   // Owner directive 2026-11-05 later-same-day iter 6 · parity with peer
   // chat · build the notifications feed on the server so the inline
   // bell sees real pending invites + real unread chats on first render.
@@ -453,6 +480,7 @@ export default async function FreeChatPage({
           subtitleColor={NEX.textDim}
           hideMagnifier={true}
           currentSurface="chat"
+          drawerVisitor={drawerVisitor}
           notificationsSlot={
             <NotificationsDrawer
               inline

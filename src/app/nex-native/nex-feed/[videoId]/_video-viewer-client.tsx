@@ -121,6 +121,7 @@ export function VideoViewerClient({
   devViewerBadge,
   feedModeLabel,
   drawerSession,
+  drawerVisitor,
   product,
 }: {
   readonly video: UploadedVideoRow;
@@ -214,6 +215,14 @@ export function VideoViewerClient({
     readonly displayName: string;
     readonly nexHandle: string | null;
     readonly isBisnis: boolean;
+  } | null;
+  /** Owner directive 2026-11-05 iter 27 · commit 3 · provisional
+   *  visitor identity · shown by the drawer's IdentityBar when
+   *  drawerSession is null but a nex_session cookie resolved. */
+  readonly drawerVisitor?: {
+    readonly accountId: string;
+    readonly nexHandle: string;
+    readonly displayName: string;
   } | null;
   /** Owner directive 2026-11-05 iter 25 · shoppable-card overlay.
    *  When a `nex_product` row references this video via
@@ -1413,6 +1422,7 @@ export function VideoViewerClient({
                 session={(drawerSession ?? null) as ControlDrawerSession | null}
                 triggerIcon="plus"
                 currentSurface="live"
+                drawerVisitor={drawerVisitor ?? null}
                 triggerStyle={{
                   width: 36,
                   height: 36,

@@ -161,6 +161,18 @@ export interface ControlDrawerProps {
    *  /nex-feed). Not a full context-aware drawer · the vast majority
    *  of rows stay identical across surfaces (muscle-memory principle). */
   readonly currentSurface?: "live" | "chat" | "profile" | null;
+  /** Owner directive 2026-11-05 iter 27 · commit 3 of the visitor
+   *  identity model · when session is null AND a provisional visitor
+   *  was resolved from the sealed nex_session cookie, the IdentityBar
+   *  surfaces the visitor's nex-id and a "Create account to connect"
+   *  chip (replaces the sealed "Sign in to NEX" prompt). Mutually
+   *  exclusive with `session` by convention (if both are passed,
+   *  session wins · visitor state is pre-signup). */
+  readonly drawerVisitor?: {
+    readonly accountId: string;
+    readonly nexHandle: string;
+    readonly displayName: string;
+  } | null;
 }
 
 // ─── Destinations · all verified to exist in the audit ──────────────
@@ -335,6 +347,7 @@ export function ControlDrawer({
   triggerIcon = "plus",
   peerSharedMediaHref,
   currentSurface,
+  drawerVisitor,
 }: ControlDrawerProps) {
   // Owner directive 2026-11-01 · Batch D++ · Creator-Support sheet
   // open state. The drawer owns the state; DrawerBody receives the
@@ -580,6 +593,7 @@ export function ControlDrawer({
           onCreatorSupportTap={onCreatorSupportTap}
           peerSharedMediaHref={peerSharedMediaHref}
           currentSurface={currentSurface}
+          drawerVisitor={drawerVisitor}
         />
       </aside>
       {confirmLogout ? (
@@ -711,6 +725,7 @@ function DrawerBody({
   onCreatorSupportTap,
   peerSharedMediaHref,
   currentSurface,
+  drawerVisitor,
 }: {
   readonly session: ControlDrawerSession | null;
   readonly onLogoutClick: () => void;
@@ -721,6 +736,11 @@ function DrawerBody({
   readonly onCreatorSupportTap?: () => void;
   readonly peerSharedMediaHref?: string;
   readonly currentSurface?: "live" | "chat" | "profile" | null;
+  readonly drawerVisitor?: {
+    readonly accountId: string;
+    readonly nexHandle: string;
+    readonly displayName: string;
+  } | null;
 }) {
   // Owner directive 2026-10-23 · "unlock them for admin dev entry".
   // Non-production builds · if the URL carries `?dev=1` the drawer
@@ -756,7 +776,11 @@ function DrawerBody({
           QuickAccessRow + QUICK_ACCESS_ROWS definitions below are
           retained for future reuse (tree-shaken when unused). */}
 
-      <IdentityBar session={session} identityNameOverride={identityNameOverride} />
+      <IdentityBar
+        session={session}
+        identityNameOverride={identityNameOverride}
+        drawerVisitor={drawerVisitor ?? null}
+      />
 
       {/* Owner directive 2026-10-20 · the Emergency Help row is a
           dark-red CTA at the top of the drawer so safety help is
@@ -925,11 +949,52 @@ function CopyIdentityButton({
 function IdentityBar({
   session,
   identityNameOverride,
+  drawerVisitor,
 }: {
   readonly session: ControlDrawerSession | null;
   readonly identityNameOverride?: string;
+  readonly drawerVisitor?: {
+    readonly accountId: string;
+    readonly nexHandle: string;
+    readonly displayName: string;
+  } | null;
 }) {
   if (!session) {
+    // Owner directive 2026-11-05 iter 27 · commit 3 · when the viewer
+    // is a provisional visitor (nex_session cookie set but no
+    // Supabase auth link yet), surface their nex-id + "Create account
+    // to connect" chip. Falls back to the sealed "Sign in to NEX"
+    // prompt when there's no visitor state either.
+    if (drawerVisitor && drawerVisitor.nexHandle) {
+      const handleDisplay = drawerVisitor.nexHandle.replace(/^nex-/i, "NEX-");
+      // Pre-load the provisional nex-id on the create-account URL so
+      // commit 5 can claim it atomically on signup success (preserve
+      // view history / likes). Query-string param only · the cookie
+      // is still the source of truth.
+      const claimHref = `/nex-native/create-account?claim=${encodeURIComponent(drawerVisitor.accountId)}`;
+      return (
+        <Link
+          href={claimHref}
+          style={identityBarAnonStyle}
+          data-nex-control-drawer-visitor
+          data-nex-control-drawer-visitor-handle={drawerVisitor.nexHandle}
+        >
+          <div style={identityBarAnonTextColumnStyle}>
+            <span style={identityBarAnonLabelStyle}>Visiting as {handleDisplay}</span>
+            <span style={identityBarAnonHintStyle}>
+              Create account to connect
+            </span>
+          </div>
+          <span
+            aria-hidden
+            data-nex-control-drawer-visitor-chip
+            style={identityBarAnonChipStyle}
+          >
+            Create →
+          </span>
+        </Link>
+      );
+    }
     return (
       <Link
         href="/nex-native/sign-in"

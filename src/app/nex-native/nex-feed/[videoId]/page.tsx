@@ -452,6 +452,33 @@ export default async function NexFeedViewerPage({
       }
     : null;
 
+  // Owner directive 2026-11-05 iter 27 · commit 3 · when no real
+  // session, try the provisional visitor cookie so the NEX Live
+  // drawer's IdentityBar shows "Visiting as NEX-XXXXXX · Create
+  // account to connect" instead of the sealed sign-in prompt.
+  let nexLiveDrawerVisitor: {
+    accountId: string;
+    nexHandle: string;
+    displayName: string;
+  } | null = null;
+  if (!nexLiveDrawerSession) {
+    try {
+      const { resolveNexAppSessionOrGuest: resolveWithVisitor } = await import(
+        "@/lib/nex-native/app/session-or-guest"
+      );
+      const viewerState = await resolveWithVisitor();
+      if (viewerState.kind === "visitor") {
+        nexLiveDrawerVisitor = {
+          accountId: viewerState.visitor.accountId,
+          nexHandle: viewerState.visitor.nexHandle,
+          displayName: viewerState.visitor.displayName,
+        };
+      }
+    } catch {
+      /* fall-through · plain guest */
+    }
+  }
+
   // Owner directive 2026-11-01 · Batch E.1 · resolve the viewer's own
   // "My Live Music" destination (active-slot track OR most recent
   // eligible shared_live). Returned as a plain href + trackId · null
@@ -787,6 +814,7 @@ export default async function NexFeedViewerPage({
           broadcasterCountryCode={broadcasterCountryCode}
           isIrishBroadcaster={isIrishBroadcaster}
           drawerSession={nexLiveDrawerSession}
+          drawerVisitor={nexLiveDrawerVisitor}
           prevOwnerTrackId={prevOwnerTrackId}
           nextOwnerTrackId={nextOwnerTrackId}
           nextOwnerTrack={nextOwnerTrackRow}
@@ -922,6 +950,7 @@ export default async function NexFeedViewerPage({
         devViewerBadge={devViewerBadge}
         feedModeLabel={feedModeLabel}
         drawerSession={nexLiveDrawerSession}
+        drawerVisitor={nexLiveDrawerVisitor}
         product={current.product ?? null}
       />
       {/* Owner directive 2026-11-01 · Batch E · same switcher mount

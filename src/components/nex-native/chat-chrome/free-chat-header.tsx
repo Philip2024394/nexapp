@@ -84,6 +84,15 @@ export interface FreeChatHeaderProps {
    *  pass "chat" · live surfaces pass "live" via their own ControlDrawer
    *  mount, not through this header. */
   readonly currentSurface?: "live" | "chat" | "profile" | null;
+  /** Owner directive 2026-11-05 iter 27 · commit 3 · forwarded to the
+   *  inline ControlDrawer so the IdentityBar can render the visitor's
+   *  provisional nex-id when the viewer isn't signed in but has a
+   *  valid nex_session cookie. */
+  readonly drawerVisitor?: {
+    readonly accountId: string;
+    readonly nexHandle: string;
+    readonly displayName: string;
+  } | null;
 }
 
 const DEFAULT_PING_ACCENT = "var(--nex-world-secondary, #00AFFF)";
@@ -103,6 +112,7 @@ export function FreeChatHeader({
   peerSharedMediaHref,
   hideMagnifier,
   currentSurface,
+  drawerVisitor,
 }: FreeChatHeaderProps): React.JSX.Element {
   // Owner directive 2026-11-05 later-same-day iter 5 · sealed
   // NexPingBadge is restored on peer chat · colored rim retired. The
@@ -267,6 +277,7 @@ export function FreeChatHeader({
             triggerIcon="plus"
             peerSharedMediaHref={peerSharedMediaHref}
             currentSurface={currentSurface}
+            drawerVisitor={drawerVisitor}
             /* Owner directive 2026-11-05 later-same-day iter 2 ·
                header buttons go SOLID BLACK (no translucency, no
                blur). Hairline white border + gold inner ring kept

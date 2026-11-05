@@ -160,6 +160,14 @@ export interface MusicViewerClientProps {
     readonly nexHandle: string | null;
     readonly isBisnis: boolean;
   } | null;
+  /** Owner directive 2026-11-05 iter 27 · commit 3 · provisional
+   *  visitor identity · surfaced by the IdentityBar when
+   *  drawerSession is null but a nex_session cookie is valid. */
+  readonly drawerVisitor?: {
+    readonly accountId: string;
+    readonly nexHandle: string;
+    readonly displayName: string;
+  } | null;
 }
 
 export function MusicViewerClient(
@@ -634,6 +642,7 @@ export function MusicViewerClient(
           session={(props.drawerSession ?? null) as ControlDrawerSession | null}
           triggerIcon="plus"
           currentSurface="live"
+          drawerVisitor={props.drawerVisitor ?? null}
           triggerStyle={{
             width: 36,
             height: 36,
