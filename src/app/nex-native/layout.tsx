@@ -39,6 +39,11 @@ import { ActionToastHost } from "@/components/nex-native/ui/action-toast";
 // the ControlDrawer dispatches `nex-discovery-overlay-open` · this host
 // listens globally and mounts the sealed 6-tile SearchOverlay.
 import { DiscoveryOverlayHost } from "@/components/nex-native/chat-chrome/discovery-overlay-host";
+// Owner-authored 2026-11-05 iter 27 · commit 1 of the visitor identity
+// model · every first-time /nex-native visitor gets a provisional
+// nex_account + signed nex_session cookie minted on mount. Fire-and-
+// forget · idempotent per session · zero visible UI.
+import { VisitorSessionBootstrap } from "@/components/nex-native/visitor-session/visitor-session-bootstrap";
 import { DevImpersonationBanner } from "./_dev-impersonation-banner";
 // Owner-authorised 2026-10-31 · NEX World Engine · Stage 5A.
 // Server-resolves the active world + emits CSS vars scoped to
@@ -207,6 +212,11 @@ export default async function NexNativeLayout({
               dispatches `nex-discovery-overlay-open`. Mounts no DOM
               until the event fires · zero runtime cost. */}
           <DiscoveryOverlayHost />
+          {/* Owner-authored 2026-11-05 iter 27 · visitor-identity
+              bootstrap. Fires once per session · mints provisional
+              nex_account + nex_session cookie on first visit · no-ops
+              for returning visitors. Zero visible UI. */}
+          <VisitorSessionBootstrap />
           {children}
           {/* Owner directive 2026-10-16 · the IncomingCallHub +
               PushSubscribeHub are mounted INSIDE the frame (not as
