@@ -21,10 +21,18 @@ import { isCategorySpecRegistered } from "@/lib/nex-native/catalogue/specs";
 
 export const dynamic = "force-dynamic";
 
-const INK = "#102033";
-const INK_DIM = "#4A6080";
-const ACCENT = "#00AFFF";
-const DISABLED_INK = "#8BA9D1";
+// Owner directive 2026-11-05 iter 29 · Ship A commit 4 · category
+// picker goes NEX Ireland palette. Sealed world CSS vars (set by
+// _world-stylesheet.tsx) with safe fallbacks for the Ireland hex
+// values so local dev without env-set world identity still renders
+// correctly.
+const INK = "var(--nex-world-primary-ink, #F2F5F8)";
+const INK_DIM = "var(--nex-world-muted-ink, #AFC5B5)";
+const ACCENT = "var(--nex-world-secondary, #C6A15B)";
+const DISABLED_INK = "rgba(175, 197, 181, 0.55)";
+const PAGE_BG = "var(--nex-world-drawer-bg, #123D2B)";
+const TILE_BG = "rgba(2, 20, 12, 0.55)";
+const TILE_BG_DISABLED = "rgba(2, 20, 12, 0.28)";
 
 export default async function CreateProductCategoryPage({
   searchParams,
@@ -160,7 +168,7 @@ export default async function CreateProductCategoryPage({
 
 const pageStyle: React.CSSProperties = {
   minHeight: "100dvh",
-  background: "#F7F9FC",
+  background: PAGE_BG,
   color: INK,
   fontFamily: "Inter, system-ui, sans-serif",
   padding: 24,
@@ -200,12 +208,13 @@ const tileEnabledStyle: React.CSSProperties = {
   flexDirection: "column",
   gap: 4,
   padding: "16px 18px",
-  background: "#FFFFFF",
-  border: `1.5px solid ${ACCENT}22`,
+  background: TILE_BG,
+  border: "1.5px solid color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 42%, transparent)",
   borderRadius: 14,
   color: INK,
   textDecoration: "none",
   minHeight: 72,
+  boxShadow: "0 6px 14px rgba(0,0,0,0.25)",
 };
 
 const tileDisabledStyle: React.CSSProperties = {
@@ -213,8 +222,8 @@ const tileDisabledStyle: React.CSSProperties = {
   flexDirection: "column",
   gap: 4,
   padding: "16px 18px",
-  background: "#F0F3F8",
-  border: `1.5px solid ${DISABLED_INK}22`,
+  background: TILE_BG_DISABLED,
+  border: "1.5px solid rgba(255,255,255,0.08)",
   borderRadius: 14,
   color: DISABLED_INK,
   minHeight: 72,

@@ -20,9 +20,13 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const INK = "#102033";
-const INK_DIM = "#4A6080";
-const ACCENT = "#00AFFF";
+// Owner directive 2026-11-05 iter 29 · Ship A commit 4 · entry page
+// goes NEX Ireland palette (sealed world CSS vars + safe hex fallbacks).
+const INK = "var(--nex-world-primary-ink, #F2F5F8)";
+const INK_DIM = "var(--nex-world-muted-ink, #AFC5B5)";
+const ACCENT = "var(--nex-world-secondary, #C6A15B)";
+const PAGE_BG = "var(--nex-world-drawer-bg, #123D2B)";
+const TILE_BG = "rgba(2, 20, 12, 0.55)";
 
 export default async function CreateProductEntryPage(): Promise<React.JSX.Element> {
   const session = await resolveSessionWithDevOverride();
@@ -68,7 +72,7 @@ export default async function CreateProductEntryPage(): Promise<React.JSX.Elemen
         <main
           style={{
             minHeight: "100dvh",
-            background: "#F7F9FC",
+            background: PAGE_BG,
             color: INK,
             fontFamily: "Inter, system-ui, sans-serif",
             display: "flex",
@@ -107,7 +111,7 @@ export default async function CreateProductEntryPage(): Promise<React.JSX.Elemen
     <main
       style={{
         minHeight: "100dvh",
-        background: "#F7F9FC",
+        background: PAGE_BG,
         color: INK,
         fontFamily: "Inter, system-ui, sans-serif",
         padding: 24,
@@ -128,13 +132,14 @@ export default async function CreateProductEntryPage(): Promise<React.JSX.Elemen
                 alignItems: "center",
                 justifyContent: "space-between",
                 padding: "16px 20px",
-                background: "#FFFFFF",
-                border: `1.5px solid ${ACCENT}22`,
+                background: TILE_BG,
+                border: "1.5px solid color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 42%, transparent)",
                 borderRadius: 14,
                 color: INK,
                 textDecoration: "none",
                 fontSize: 15,
                 fontWeight: 700,
+                boxShadow: "0 6px 14px rgba(0,0,0,0.25)",
               }}
             >
               <span>{b.name}</span>
