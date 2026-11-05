@@ -56,6 +56,11 @@ import {
   COVER_LAYOUT_IDS,
   COVER_LAYOUT_LABELS,
 } from "../../cover/layout-ids";
+// Phase V · 2026-11-05 · reuse the sealed mini phone-frame from the
+// Cover Themes Library so this picker shows the SAME live mini-phone
+// previews the seller sees in /cover-themes-library · one component,
+// one visual grammar.
+import { MiniPhoneFrame } from "../../cover-themes-library/_mini-phone-frame";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -919,34 +924,57 @@ export default async function ShopSettingsPage({
           </p>
           <form
             action={coverLayoutBound}
-            style={{ display: "grid", gap: 10 }}
+            style={{ display: "grid", gap: 14 }}
           >
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-                gap: 10,
+                // Phase V · 2026-11-05 · mini-phone tiles need a
+                // predictable 240px width · the grid column matches
+                // so tiles sit in a clean responsive wrap. On mobile
+                // the single-column auto-fit gives one centred tile
+                // per row.
+                gridTemplateColumns:
+                  "repeat(auto-fill, minmax(260px, 1fr))",
+                gap: 14,
+                justifyItems: "center",
               }}
             >
               {COVER_LAYOUT_IDS.map((id, i) => {
                 const num = String(i + 1).padStart(2, "0");
                 const isChecked = currentCoverLayout === id;
+                // Phase V · 2026-11-05 · live mini-phone preview ·
+                // reuse the sealed /cover/preview route with embed=1
+                // so the chrome doesn't render inside the tile. The
+                // seller's chat theme is passed through so every tile
+                // shows how the template looks painted in the
+                // seller's own visual identity.
+                const previewBase = `/nex-native/cover/preview/${id}`;
+                const embedHref = session.account.chat_theme
+                  ? `${previewBase}?theme=${encodeURIComponent(session.account.chat_theme)}&embed=1`
+                  : `${previewBase}?embed=1`;
+                const openHref = `${previewBase}${previewThemeParam}`;
                 return (
                   <label
                     key={id}
                     style={{
                       position: "relative",
                       display: "grid",
-                      gap: 6,
-                      padding: "12px 12px 40px",
-                      borderRadius: 12,
+                      gap: 10,
+                      padding: "12px 12px 44px",
+                      borderRadius: 14,
                       background: isChecked
                         ? "rgba(0,175,255,0.10)"
                         : "rgba(0,0,0,0.28)",
                       border: isChecked
-                        ? `1px solid ${NEX.cyanSoft}`
+                        ? `1.5px solid ${NEX.cyan}`
                         : `1px solid ${NEX.border}`,
                       cursor: "pointer",
+                      width: "100%",
+                      maxWidth: 280,
+                      boxShadow: isChecked
+                        ? "0 10px 28px rgba(0,175,255,0.22)"
+                        : "0 6px 14px rgba(0,0,0,0.25)",
                     }}
                   >
                     <input
@@ -959,10 +987,24 @@ export default async function ShopSettingsPage({
                         top: 12,
                         right: 12,
                         accentColor: NEX.cyan,
-                        width: 16,
-                        height: 16,
+                        width: 18,
+                        height: 18,
+                        zIndex: 2,
                       }}
                     />
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "center",
+                        marginTop: 2,
+                      }}
+                    >
+                      <MiniPhoneFrame
+                        previewHref={embedHref}
+                        frameWidth={220}
+                        label={`Preview · ${COVER_LAYOUT_LABELS[id]}`}
+                      />
+                    </div>
                     <div
                       style={{
                         fontSize: 10,
@@ -985,7 +1027,7 @@ export default async function ShopSettingsPage({
                       {COVER_LAYOUT_LABELS[id]}
                     </div>
                     <Link
-                      href={`/nex-native/cover/preview/${id}${previewThemeParam}`}
+                      href={openHref}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
@@ -1000,7 +1042,7 @@ export default async function ShopSettingsPage({
                         textDecoration: "none",
                       }}
                     >
-                      Preview ↗
+                      Full preview ↗
                     </Link>
                   </label>
                 );
