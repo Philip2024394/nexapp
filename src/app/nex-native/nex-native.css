@@ -174,10 +174,16 @@ body::-webkit-scrollbar,
      * non-NEX surfaces that inherit this rule still work.
      * background-attachment:fixed keeps the hero pinned when admin
      * routes scroll past their natural height. */
+    /* Owner directive 2026-11-05 iter 28 · "desktop image and tablet
+     * image must fit height and width correctly" · switched from
+     * `cover` (crops to fill, hid banner edges) to `contain` (shows
+     * the whole banner, letterbox fills with --nex-world-page-base).
+     * Clean fit on both landscape desktop (16:9+) and portrait
+     * tablet (3:4). */
     background:
       var(--nex-world-page-base, #020914)
       var(--nex-world-desktop-backdrop, url("/nex-desktop-hero.png"))
-      center center / cover
+      center center / contain
       no-repeat fixed !important;
     /* Pin the page viewport so content that overshoots the frame
      * can't scroll the whole document. The frame handles its own
