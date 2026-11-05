@@ -493,6 +493,98 @@ export async function getProductThumbnailsByBusiness(
   return (data as ProductThumbnail[]) ?? [];
 }
 
+/** Cross-shop product discovery row · thin shape for the Discover
+ *  feed. Joins the owning business's slug + display_name so the
+ *  consumer can build the public product URL
+ *  (/nex-native/{slug}/{productId}) and show the shop name on the
+ *  tile WITHOUT a second round-trip per row.
+ *
+ *  Phase V · P13 · 2026-11-05. */
+export interface RecentLiveProductCard {
+  readonly id: string;
+  readonly name: string;
+  readonly price_pence: number | null;
+  readonly currency: string | null;
+  readonly image_url: string | null;
+  readonly created_at: string;
+  readonly business_id: string;
+  readonly business_slug: string;
+  readonly business_display_name: string;
+}
+
+/** List the most-recently published live products across every
+ *  business · for the cross-shop Discover feed. Only `status='live'`
+ *  rows are returned · never drafts or archived. `limit` caps the
+ *  fetched set so this SELECT stays fast as the catalogue grows.
+ *
+ *  Ordering · `created_at DESC, id ASC`. Newest first (owner's
+ *  natural curation signal for "what's new on NEX"). Stable tie-break
+ *  on id so repeated renders of the same window never reorder.
+ *
+ *  Phase V · P13 · 2026-11-05. */
+export async function listRecentLiveProducts(opts?: {
+  readonly limit?: number;
+  readonly excludeBusinessId?: string;
+}): Promise<RecentLiveProductCard[]> {
+  const limit = opts?.limit ?? 48;
+  let q = nexSupabaseAdmin
+    .from("nex_product")
+    .select(
+      "id, name, price_pence, currency, image_url, created_at, business_id, " +
+        "nex_business!inner ( slug, display_name )",
+    )
+    .eq("status", "live")
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: true })
+    .limit(limit);
+  if (opts?.excludeBusinessId) {
+    q = q.neq("business_id", opts.excludeBusinessId);
+  }
+  const { data, error } = await q;
+  if (error) {
+    throw new Error(
+      `product-service.listRecentLiveProducts: ${error.message}`,
+    );
+  }
+  type Row = {
+    id: string;
+    name: string;
+    price_pence: number | null;
+    currency: string | null;
+    image_url: string | null;
+    created_at: string;
+    business_id: string;
+    // PostgREST returns joined-single as an object; be tolerant of
+    // either shape (object or array) for forward-compat.
+    nex_business:
+      | { slug: string; display_name: string }
+      | ReadonlyArray<{ slug: string; display_name: string }>
+      | null;
+  };
+  // PostgREST joined-select strict type is a conservative error
+  // union; narrow through unknown so we can project onto our shape.
+  const rows = ((data as unknown) as Row[] | null) ?? [];
+  return rows
+    .map<RecentLiveProductCard | null>((r) => {
+      const biz = Array.isArray(r.nex_business)
+        ? r.nex_business[0]
+        : r.nex_business;
+      if (!biz) return null;
+      return {
+        id: r.id,
+        name: r.name,
+        price_pence: r.price_pence,
+        currency: r.currency,
+        image_url: r.image_url,
+        created_at: r.created_at,
+        business_id: r.business_id,
+        business_slug: biz.slug,
+        business_display_name: biz.display_name,
+      };
+    })
+    .filter((r): r is RecentLiveProductCard => r !== null);
+}
+
 /** Create a new product. Fails if business doesn't exist (FK). */
 export async function createProduct(input: NexProductInsert): Promise<NexProductRow> {
   // Tier gate · Gratis owners capped at 10 live/draft products per business.
