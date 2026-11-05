@@ -179,6 +179,10 @@ export default async function Page({
     if (bundle) {
       const { CoverThemeSkin } = await import("../cover/theme-skin");
       const { CoverLayoutSwitch } = await import("../cover/layout-switch");
+      // Phase V · P12 · 2026-11-05 · floating share-shop chip · top-
+      // right overlay on every cover layout · fixed position so it
+      // works across all 11 templates without per-layout edits.
+      const { FloatingShareChip } = await import("./_floating-share-chip");
       const chatThemeService = await import(
         "@/lib/nex-native/chat-theme-service"
       );
@@ -247,6 +251,10 @@ export default async function Page({
                 themeId={theme.id}
               />
             </CoverThemeSkin>
+            <FloatingShareChip
+              shopName={business.display_name}
+              shopHref={`/nex-native/${business.slug}`}
+            />
           </>
         );
       }
