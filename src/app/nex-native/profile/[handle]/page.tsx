@@ -930,6 +930,12 @@ function ProfileBody(props: {
         trustTier={props.trustScore?.tier ?? "unknown"}
         earnedCreatorBadges={props.earnedCreatorBadges}
         supportSettings={props.creatorSupportSettings}
+        shopHref={
+          props.primaryBusiness?.slug
+            ? `/nex-native/${props.primaryBusiness.slug}`
+            : null
+        }
+        shopName={props.primaryBusiness?.display_name ?? null}
       />
       <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 10 }}>
         <InterestsPills interests={props.interests} isOwner={props.isOwner} />

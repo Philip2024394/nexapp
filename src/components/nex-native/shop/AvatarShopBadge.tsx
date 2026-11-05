@@ -43,6 +43,12 @@ export interface AvatarShopBadgeProps {
    *  template with a specific accent. Falls back to the sealed NEX
    *  cyan. */
   readonly accentHex?: string;
+  /** Corner anchor on the avatar · default "bottom-right" matches
+   *  the contact-row mount. Switch to "bottom-left" on surfaces
+   *  where the bottom-right corner already carries another overlay
+   *  (verified checkmark on profile hero, camera-upload affordance
+   *  during edit mode, etc). Never overlap sealed corner elements. */
+  readonly position?: "bottom-right" | "bottom-left";
 }
 
 export function AvatarShopBadge({
@@ -50,6 +56,7 @@ export function AvatarShopBadge({
   sellerName,
   avatarPx,
   accentHex,
+  position = "bottom-right",
 }: AvatarShopBadgeProps): React.JSX.Element | null {
   const router = useRouter();
   if (!shopHref) return null;
@@ -58,6 +65,10 @@ export function AvatarShopBadge({
   // without covering more than a quadrant.
   const badgePx = Math.max(18, Math.round(avatarPx * 0.36));
   const accent = accentHex ?? "#00AFFF";
+  const anchor =
+    position === "bottom-left"
+      ? ({ left: -2 } as const)
+      : ({ right: -2 } as const);
 
   function handleTap(e: React.MouseEvent<HTMLButtonElement>) {
     // Isolate from any parent <Link> or clickable row wrapping the
@@ -77,7 +88,7 @@ export function AvatarShopBadge({
       style={{
         position: "absolute",
         bottom: -2,
-        right: -2,
+        ...anchor,
         width: badgePx,
         height: badgePx,
         borderRadius: "50%",

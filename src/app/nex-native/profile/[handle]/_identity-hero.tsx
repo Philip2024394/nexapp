@@ -49,6 +49,12 @@ import type { TrustTier } from "@/lib/nex-native/trust/trust-score-shared";
 import type { SectionProgress } from "@/lib/nex-native/creator/creator-badges-common";
 import type { CreatorSupportSettings } from "@/lib/nex-native/creator/creator-support-service";
 import { CreatorBadgeStrip } from "@/components/nex-native/creator/CreatorBadgeStrip";
+// Phase V · P18 · 2026-11-05 · Social-to-Shop Discovery · clickable
+// Shop button on the profile hero avatar when the profile owner has
+// a published shop. Bottom-LEFT anchor so it never collides with the
+// sealed verified-check / camera-upload overlay in the bottom-right
+// corner.
+import { AvatarShopBadge } from "@/components/nex-native/shop/AvatarShopBadge";
 // Owner-authorised 2026-10-31 · NEX World Engine · Stage 5 wiring.
 import { NEX_W } from "@/lib/nex-worlds/world-palette-css";
 
@@ -101,6 +107,16 @@ export interface IdentityHeroProps {
    *  (sealed privacy rule · never leak another creator's drafts).
    *  Null = support not enabled → sheet renders friendly empty state. */
   readonly supportSettings?: CreatorSupportSettings | null;
+  /** Phase V · P18 · 2026-11-05 · public shop URL for the profile
+   *  owner's primary business, when they have one. Null for profiles
+   *  without a published shop. Drives AvatarShopBadge · bottom-LEFT
+   *  anchor so it doesn't collide with the sealed verified-check /
+   *  camera-upload corner at bottom-right. */
+  readonly shopHref?: string | null;
+  /** Phase V · P18 · 2026-11-05 · display name of the owner's shop,
+   *  used for the badge aria-label. Falls back to displayName when
+   *  not supplied. */
+  readonly shopName?: string | null;
 }
 
 export function IdentityHero(props: IdentityHeroProps): React.JSX.Element {
@@ -207,6 +223,18 @@ export function IdentityHero(props: IdentityHeroProps): React.JSX.Element {
             everywhere else). */}
         {props.showAvatarUploadAffordance ? (
           <AvatarCameraPicker />
+        ) : null}
+        {/* Phase V · P18 · 2026-11-05 · AvatarShopBadge · only when
+            the profile owner has a published shop. Anchored bottom-LEFT
+            to preserve the sealed verified-check + camera-upload
+            bottom-right corner. */}
+        {props.shopHref ? (
+          <AvatarShopBadge
+            shopHref={props.shopHref}
+            sellerName={props.shopName ?? props.displayName}
+            avatarPx={128}
+            position="bottom-left"
+          />
         ) : null}
       </div>
 
