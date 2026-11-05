@@ -262,6 +262,48 @@ export async function LandingDirectoryView({
           query={query}
         />
         <DirectoryCategoryDropdown activeSlug={category} />
+        {/* Phase V · P14 · 2026-11-05 · entry to the cross-shop
+            product-first discovery feed. Sealed canonical directory
+            stays business-first; this is a thin complementary link
+            so the product-discovery surface at /directory/new is
+            reachable from the natural discovery landing. Mobile-
+            width-aware · uses NEX accent + border grammar matching
+            the sibling category dropdown. */}
+        <Link
+          href="/nex-native/directory/new"
+          data-nex-directory-discover-new
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+            padding: "10px 14px",
+            marginTop: 8,
+            borderRadius: 12,
+            background: "rgba(0,175,255,0.08)",
+            border: `1px solid ${NEX.panelBorder}`,
+            color: NEX.text,
+            textDecoration: "none",
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span aria-hidden style={{ fontSize: 16 }}>✨</span>
+            <span>What&rsquo;s new on NEX</span>
+          </span>
+          <span
+            style={{
+              fontSize: 10,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: NEX.cyan,
+              fontWeight: 700,
+            }}
+          >
+            Products →
+          </span>
+        </Link>
         {/* Owner directive 2026-10-18 · Slice 1 of the directory
             currency picker. Lives directly under the "All" category
             dropdown · writes a persistent cookie · does NOT yet
