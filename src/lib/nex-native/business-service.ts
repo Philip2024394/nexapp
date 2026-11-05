@@ -166,6 +166,40 @@ export async function createBusiness(input: NexBusinessInsert): Promise<NexBusin
   return data as NexBusinessRow;
 }
 
+// Phase V · 2026-11-05 · display_name is required NOT NULL (migration
+// 002) and must stay separate from the owner's chat name on nex_account
+// so the shop can be renamed without touching the account identity. Also
+// separate from updateBusinessProfile because that function tolerates
+// nulls for every field it handles · display_name cannot be cleared.
+export async function updateBusinessDisplayName(
+  id: NexUuid,
+  newName: string,
+): Promise<NexBusinessRow> {
+  const trimmed = newName.trim();
+  if (trimmed.length === 0) {
+    throw new Error(
+      "business-service.updateBusinessDisplayName: display_name required",
+    );
+  }
+  if (trimmed.length > 200) {
+    throw new Error(
+      `business-service.updateBusinessDisplayName: display_name max 200 chars · got ${trimmed.length}`,
+    );
+  }
+  const { data, error } = await nexSupabaseAdmin
+    .from("nex_business")
+    .update({ display_name: trimmed })
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error || !data) {
+    throw new Error(
+      `business-service.updateBusinessDisplayName(${id}): ${error?.message ?? "no row returned"}`,
+    );
+  }
+  return data as NexBusinessRow;
+}
+
 /**
  * Update merchant-editable profile fields · idempotent · partial patch.
  * Empty string clears (== null). Length caps enforced app-side plus DB

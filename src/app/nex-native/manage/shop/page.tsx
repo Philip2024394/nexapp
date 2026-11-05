@@ -28,6 +28,7 @@ import {
   updateBusinessLocationAction,
   setBusinessSafeTradeActivatedAction,
   updateReturnPolicyAction,
+  updateBusinessDisplayNameAction,
 } from "../../_actions";
 import {
   NEX_RETURN_REASONS,
@@ -186,6 +187,10 @@ export default async function ShopSettingsPage({
 
   const setAwayBound = setBusinessAwayModeAction.bind(null, business.id);
   const endAwayBound = endBusinessAwayModeAction.bind(null, business.id);
+  const displayNameBound = updateBusinessDisplayNameAction.bind(
+    null,
+    business.id,
+  );
   const categoryBound = updateBusinessCategoryAndKeywordsAction.bind(
     null,
     business.id,
@@ -310,6 +315,59 @@ export default async function ShopSettingsPage({
         </h1>
 
         {banner && <Banner code={banner.code} message={banner.message} />}
+
+        {/* --- Shop name (Phase V · 2026-11-05) --------------------- */}
+        {/* nex_business.display_name is independent of the owner's
+            chat name (nex_account.display_name). Same NEX ID, two
+            display names: personal in chat, shop on contact cards +
+            public shop page. Renaming does NOT change the slug /
+            shareable URL — that stays stable at
+            /nex-native/{business.slug}. */}
+        <SectionCard>
+          <SectionEyebrow color={NEX.cyan}>
+            Shop identity
+          </SectionEyebrow>
+          <h2
+            style={{
+              margin: "6px 0 6px",
+              fontSize: 18,
+              fontWeight: 700,
+              letterSpacing: "-0.005em",
+            }}
+          >
+            Shop name
+          </h2>
+          <p
+            style={{
+              margin: "0 0 16px",
+              fontSize: 13,
+              lineHeight: 1.55,
+              color: NEX.textDim,
+            }}
+          >
+            The name buyers see on your public shop page and on your
+            business contact card. Independent of your private chat
+            name · same NEX ID. Up to 200 characters. Your shareable
+            link <span style={{ color: NEX.text, fontWeight: 600 }}>/nex-native/{business.slug}</span> does not change when you rename.
+          </p>
+          <form
+            action={displayNameBound}
+            style={{ display: "flex", flexDirection: "column", gap: 12 }}
+          >
+            <FormRow label="Shop name">
+              <input
+                name="display_name"
+                type="text"
+                required
+                maxLength={200}
+                defaultValue={business.display_name}
+                placeholder="e.g. Grafton Vintage Cameras"
+                style={inputStyle}
+              />
+            </FormRow>
+            <SubmitButton label="Save shop name" tone="primary" />
+          </form>
+        </SectionCard>
 
         {isVenueCategory(business.business_category) && (
           <Link

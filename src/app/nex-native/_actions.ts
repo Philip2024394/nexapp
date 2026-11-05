@@ -1374,6 +1374,65 @@ export async function updateProductStockStatusAction(
   );
 }
 
+/** Phase V · 2026-11-05 · rename a business · owner-only. The shop
+ *  name (nex_business.display_name) is independent of the owner's
+ *  chat name (nex_account.display_name) — same NEX ID, two display
+ *  names. Slug / public URL is NOT touched · the shop keeps its
+ *  shareable `/nex-native/{slug}` URL across renames. */
+export async function updateBusinessDisplayNameAction(
+  businessId: string,
+  formData: FormData,
+): Promise<never> {
+  const session = await resolveNexAppSessionFromContext();
+  if (!session) redirect("/nex-native/sign-in");
+
+  const business = await businessService.getBusinessById(businessId);
+  if (!business || business.owner_account_id !== session.account.id) {
+    redirect(
+      "/nex-native/manage/shop?e=shop_name_forbidden&m=" +
+        encodeURIComponent("You don't own this shop"),
+    );
+  }
+
+  const raw = String(formData.get("display_name") ?? "");
+  const trimmed = raw.trim();
+  if (trimmed.length === 0) {
+    redirect(
+      "/nex-native/manage/shop?e=shop_name_empty&m=" +
+        encodeURIComponent("Shop name is required"),
+    );
+  }
+  if (trimmed.length > 200) {
+    redirect(
+      "/nex-native/manage/shop?e=shop_name_long&m=" +
+        encodeURIComponent("Shop name must be 200 characters or fewer"),
+    );
+  }
+  if (trimmed === business.display_name) {
+    // Idempotent no-op · don't write a changed_at tick for a non-change
+    redirect("/nex-native/manage/shop?e=shop_name_unchanged&m=" + encodeURIComponent("Shop name is unchanged"));
+  }
+
+  try {
+    await businessService.updateBusinessDisplayName(businessId, trimmed);
+    await sellerResponsivenessService
+      .markBusinessOwnerActive(session.account.id)
+      .catch(() => {});
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "unknown";
+    redirect(
+      "/nex-native/manage/shop?e=shop_name_failed&m=" + encodeURIComponent(msg),
+    );
+  }
+  revalidatePath("/nex-native/manage/shop");
+  revalidatePath(`/nex-native/${business.slug}`);
+  revalidatePath("/nex-native/search");
+  redirect(
+    "/nex-native/manage/shop?e=shop_name_ok&m=" +
+      encodeURIComponent("Shop name updated"),
+  );
+}
+
 /** Bridge 14 · update a business's category + search keywords ·
  *  owner-only. Keywords come in as a comma-separated string from
  *  the /manage/shop form. */
