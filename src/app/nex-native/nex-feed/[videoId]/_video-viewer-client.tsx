@@ -46,6 +46,11 @@ import {
   ControlDrawer,
   type ControlDrawerSession,
 } from "@/components/nex-native/control-drawer/control-drawer-client";
+// Owner directive 2026-11-05 iter 24 · magnifier scope correction ·
+// the NEX Live search dropdown is a FEED affordance (hidden on chat
+// surfaces · iter 24). Feed viewers mount the same component next
+// to the `+` drawer so search is reachable from inside the reel.
+import { NexLiveSearchButton } from "@/components/nex-native/chat-chrome/nex-live-search-button";
 import {
   VideoCommentsOverlay,
   type VideoComment,
@@ -1380,7 +1385,11 @@ export function VideoViewerClient({
                 header) so every NEX surface uses ONE drawer vocab.
                 `data-nex-video-viewer-menu-trigger` wrapper preserved
                 for sealed test selectors. */}
-            <div data-nex-video-viewer-menu-trigger>
+            <div
+              data-nex-video-viewer-menu-trigger
+              style={{ display: "inline-flex", alignItems: "center", gap: 10 }}
+            >
+              <NexLiveSearchButton />
               <ControlDrawer
                 session={(drawerSession ?? null) as ControlDrawerSession | null}
                 triggerIcon="plus"

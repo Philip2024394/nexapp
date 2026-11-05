@@ -57,6 +57,9 @@ import {
   ControlDrawer,
   type ControlDrawerSession,
 } from "@/components/nex-native/control-drawer/control-drawer-client";
+// Owner directive 2026-11-05 iter 24 · magnifier scope correction ·
+// feed viewers mount the NexLiveSearchButton next to the `+` drawer.
+import { NexLiveSearchButton } from "@/components/nex-native/chat-chrome/nex-live-search-button";
 import { VideoShareSheet } from "@/components/nex-native/live-commerce/VideoShareSheet";
 import { DevViewerBadge } from "@/components/nex-native/music/DevViewerBadge";
 import { MusicActionsStack } from "@/components/nex-native/music/MusicActionsStack";
@@ -622,7 +625,11 @@ export function MusicViewerClient(
           replaces LiveSideDrawer · the per-track "My Music" row
           becomes a follow-up (drawer currently shows the sealed
           global YOUR NEX rows only). */}
-      <div data-nex-music-feed-menu-trigger>
+      <div
+        data-nex-music-feed-menu-trigger
+        style={{ display: "inline-flex", alignItems: "center", gap: 10 }}
+      >
+        <NexLiveSearchButton />
         <ControlDrawer
           session={(props.drawerSession ?? null) as ControlDrawerSession | null}
           triggerIcon="plus"
