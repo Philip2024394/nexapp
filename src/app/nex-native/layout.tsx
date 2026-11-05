@@ -44,6 +44,12 @@ import { DiscoveryOverlayHost } from "@/components/nex-native/chat-chrome/discov
 // nex_account + signed nex_session cookie minted on mount. Fire-and-
 // forget · idempotent per session · zero visible UI.
 import { VisitorSessionBootstrap } from "@/components/nex-native/visitor-session/visitor-session-bootstrap";
+// Owner-authored 2026-11-05 iter 27 · commit 4 · global popup that
+// fires when a visitor taps an interact button (comment / like /
+// follow / etc.). Listens for `nex-visitor-interact-required` window
+// events dispatched by useVisitorInteractGate(). Zero DOM until
+// fired.
+import { VisitorInteractPopup } from "@/components/nex-native/visitor-session/visitor-interact-popup";
 import { DevImpersonationBanner } from "./_dev-impersonation-banner";
 // Owner-authorised 2026-10-31 · NEX World Engine · Stage 5A.
 // Server-resolves the active world + emits CSS vars scoped to
@@ -217,6 +223,12 @@ export default async function NexNativeLayout({
               nex_account + nex_session cookie on first visit · no-ops
               for returning visitors. Zero visible UI. */}
           <VisitorSessionBootstrap />
+          {/* Owner-authored 2026-11-05 iter 27 · commit 4 · global
+              visitor-interact popup · fires when any client interact
+              button uses useVisitorInteractGate() and the viewer is
+              a visitor. Routes "Create account" to /create-account?
+              claim=<provisional_id> for commit 5's atomic claim. */}
+          <VisitorInteractPopup />
           {children}
           {/* Owner directive 2026-10-16 · the IncomingCallHub +
               PushSubscribeHub are mounted INSIDE the frame (not as

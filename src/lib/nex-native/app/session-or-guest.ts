@@ -137,3 +137,36 @@ export async function isGuestViewer(): Promise<boolean> {
   const v = await resolveNexAppSessionOrGuest();
   return v.kind !== "session";
 }
+
+/** Owner-authorised 2026-11-05 iter 27 · commit 4 · the CONNECT-gate
+ *  server-side enforcement. Returns the real NexAppSession OR null.
+ *  Visitors (kind: "visitor") return null · they cannot perform
+ *  write actions · they must claim a real account first.
+ *
+ *  Pattern for server actions that mutate state (send message,
+ *  create post, upload, follow, like):
+ *
+ *      "use server";
+ *      import { requireRealSession } from "@/lib/nex-native/app/session-or-guest";
+ *
+ *      export async function sendMessageAction(input: X) {
+ *        const session = await requireRealSession();
+ *        if (!session) {
+ *          return { ok: false, reason: "visitor-must-claim-account" };
+ *        }
+ *        // ... use session.account.id for the write
+ *      }
+ *
+ *  Pattern for client components:
+ *      1. Resolve viewerKind server-side (page passes it as prop)
+ *      2. useVisitorInteractGate({ viewerKind, visitorAccountId })
+ *      3. On tap: `if (!requireAccount()) return;` · hook fires the
+ *         popup event · returns false so the write path aborts.
+ *
+ *  Why BOTH layers are needed · the popup is UX (nice message +
+ *  claim link), the server helper is SECURITY (visitor can't bypass
+ *  the UI by calling the action directly from the console / a
+ *  third-party tool). Never rely on the popup alone for a mutation. */
+export async function requireRealSession(): Promise<NexAppSession | null> {
+  return await resolveNexAppSessionFromContext();
+}
