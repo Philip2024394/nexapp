@@ -1119,6 +1119,105 @@ export default async function ShopSettingsPage({
             </div>
             <SubmitButton label="Save cover template" tone="primary" />
           </form>
+          {/* --- Customise cover (Phase V · P8 · 2026-11-05) -------- */}
+          {/* Surfaces the existing shop-cover upload + tint edit flow
+              at /cover-themes-library/edit/{currentLayoutId} so the
+              seller can override shop_cover_image_url and/or
+              shop_cover_tint_hex for their chosen template. The
+              uploader + tint picker are sealed and live at that route
+              (migration 212 override columns + nex-user-wallpapers
+              bucket) · this is a pure navigation surfacing. Frosted-
+              glass backdrop (P7) activates automatically when a cover
+              image is uploaded. */}
+          {currentCoverLayout && (
+            <div
+              style={{
+                marginTop: 16,
+                paddingTop: 16,
+                borderTop: `1px solid ${NEX.border}`,
+                display: "flex",
+                flexDirection: "column",
+                gap: 10,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  flexWrap: "wrap",
+                }}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: NEX.text,
+                    }}
+                  >
+                    Make it your own
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: NEX.textDim,
+                      lineHeight: 1.5,
+                      maxWidth: 420,
+                    }}
+                  >
+                    Upload your own cover image and pick your accent
+                    colour. Buyers will see the image through a
+                    frosted-glass blur · your accent tints the whole
+                    page. Reset any time to go back to the template
+                    default.
+                  </div>
+                </div>
+                <div
+                  style={{
+                    padding: "4px 10px",
+                    borderRadius: 999,
+                    background: business.shop_cover_image_url
+                      ? "rgba(22, 214, 107, 0.12)"
+                      : "rgba(139, 169, 209, 0.12)",
+                    border: `1px solid ${business.shop_cover_image_url ? NEX.green : NEX.textDim}`,
+                    color: business.shop_cover_image_url ? NEX.green : NEX.textDim,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {business.shop_cover_image_url
+                    ? "Custom cover · active"
+                    : "Using template default"}
+                </div>
+              </div>
+              <Link
+                href={`/nex-native/cover-themes-library/edit/${currentCoverLayout}`}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  background: "rgba(0,175,255,0.12)",
+                  border: `1px solid ${NEX.cyanSoft}`,
+                  color: NEX.text,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  textDecoration: "none",
+                  alignSelf: "flex-start",
+                }}
+              >
+                Customise cover image + accent →
+              </Link>
+            </div>
+          )}
         </SectionCard>
 
         {/* --- Shipping scope (Migration 108 · sealed 2026-09-30) --- */}
