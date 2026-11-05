@@ -292,6 +292,17 @@ export default async function WelcomePage() {
       // Anti-dishonesty guards (G-D4-1, G-D4-3, G-D4-4, G-D4-5) and
       // the honesty negative-guard "no theme-shop / buy-premium"
       // remain.
+      //
+      // Note · retired 2026-11-06 per Shop contract §K-3 LOCK · the
+      // separate 7-day BUSINESS trial (startBusinessTrial, writes
+      // nex_account.business_trial_*) now auto-fires on FIRST business
+      // signup via createBusinessAction. The Chat Themes card itself
+      // does NOT start any trial · the G-D4-5 guard below still forbids
+      // welcome from calling startThemesTrial. These are two distinct
+      // trial systems: themes-trial (one-shot, this card's territory,
+      // not auto-fired) vs business-trial (one-shot, fires in
+      // createBusinessAction only). See docs/doctrine/nex-shop-
+      // entitlement-contract-LOCKED-2026-11-06.md §K-3.
       blurb: "",
       chip: "Explore Chat Themes",
       // Sealed destination · see card 1 comment for rationale on
@@ -835,10 +846,12 @@ function LandscapeCard({ card }: { card: ChatNexCard }): React.ReactElement {
   // string for this card. Today this returns:
   //   · "FREE" for nex_chat_free
   //   · "See all plans" for chat_themes_premium (price PROPOSAL)
-  //   · "See all plans" for nex_business (price + trial both PROPOSAL,
-  //     neither autoFiresOnSignup nor manualStartAvailable are wired)
-  // When the owner approves pricing AND wires the business trial, the
-  // chip flips automatically to "7 days free, then $9.99/month" (or
+  //   · "See all plans" for nex_business (price PROPOSAL · trial is now
+  //     wired per Shop contract §K-3 LOCK 2026-11-06 · autoFiresOnSignup
+  //     + manualStartAvailable are true but price-approval remains
+  //     pending, so the three-unlocks guard still falls back).
+  // When the owner approves pricing (§B-1 price-validation), the chip
+  // flips automatically to "7 days free, then $9.99/month" (or
   // equivalent approved value + currency).
   const pricingPackage = pricingPackageId
     ? getPricingPackage(pricingPackageId)

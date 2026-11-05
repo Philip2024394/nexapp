@@ -4532,6 +4532,39 @@ export async function createBusinessAction(formData: FormData): Promise<never> {
     }
   }
 
+  // Shop Entitlement Contract §K-3 LOCK 2026-11-06 · 7-day Shop trial
+  // auto-fires on FIRST business signup. Retires the sealed 2026-10-18
+  // `startThemesTrial deliberately-untouched-at-signup` hold.
+  //
+  // Design:
+  //   · This is the "first business signup" point per §K-3: the
+  //     one-shop-per-account guard above (`existing.length > 0`) has
+  //     already redirected any account that owns a shop, so reaching
+  //     here means `business` is the account's FIRST shop.
+  //   · `startBusinessTrial` enforces K1 lifetime-one-shot via row lock
+  //     + CHECK + trigger (see business-trial/service.ts). Double-calling
+  //     it on a retry is idempotently a no-op (409 `already_used`).
+  //   · Trial is a privilege, not a precondition for shop existence ·
+  //     ANY failure here is logged and swallowed so the business create
+  //     succeeds. The user can retry later via `/api/nex-native/trial/start`.
+  //   · Feature-flag gated: when `NEX_BUSINESS_TRIAL_ENABLED !== 'true'`
+  //     the service throws `business_trial_not_available` which falls
+  //     through the catch · the shop still activates, just without the
+  //     trial grant. Flipping the flag later activates the wiring
+  //     without any code change.
+  try {
+    const { startBusinessTrial } = await import(
+      "@/lib/nex-native/business-trial/service"
+    );
+    await startBusinessTrial(session.account.id);
+  } catch (trialErr) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "createBusinessAction · startBusinessTrial soft-fail (shop still created):",
+      trialErr instanceof Error ? trialErr.message : String(trialErr),
+    );
+  }
+
   revalidatePath(`/nex-native/${business.slug}`);
   revalidatePath("/nex-native/conversations");
   // Sealed 2026-10-01 · Seller Central wizard · after shop creation,

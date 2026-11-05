@@ -26,10 +26,10 @@
 //
 // What this module DOES NOT do
 //   · It does NOT fire a trial. Trial activation lives in the account-
-//     service layer (see `startThemesTrial` for the themes-trial path).
-//     A separate `startBusinessTrial` service does not currently exist ·
-//     this module exposes that gap via `trial.manualStartAvailable=false`
-//     + `trial.autoFiresOnSignup=false` on the Business package.
+//     service layer (see `startThemesTrial` for the themes-trial path)
+//     and the business-trial service layer (see `startBusinessTrial` ·
+//     wired into createBusinessAction 2026-11-06 per Shop Entitlement
+//     Contract §K-3 LOCK · retires the sealed 2026-10-18 hold).
 //   · It does NOT charge users. There is no billing provider wired to
 //     this configuration today · hence `trial.convertsAutomatically`
 //     stays `false` for every package until billing is proven.
@@ -184,22 +184,29 @@ export const NEX_PRICING_PACKAGES: readonly PricingPackage[] = [
     },
     trial: {
       durationDays: 7,
-      // CRITICAL · the sealed `startThemesTrial` service writes to
-      // `nex_account.themes_trial_used_at` and is a THEMES-SHOP trial,
-      // NOT a Business-subscription trial. No service currently activates
-      // Business entitlements for 7 days. Memory 2026-10-18 explicitly
-      // says signup leaves the (themes) trial UNTOUCHED. Both flags
-      // stay `false` until a dedicated `startBusinessTrial` service +
-      // its persistence (likely `nex_account.business_trial_used_at`)
-      // + its activation path (either auto on business signup OR a
-      // visible "Start 7-day trial" button post-signup) are shipped
-      // and tested.
-      autoFiresOnSignup: false,
-      manualStartAvailable: false,
+      // 2026-11-06 · Shop Entitlement Contract §K-3 LOCK retires the
+      // sealed 2026-10-18 "signup leaves the trial UNTOUCHED" hold.
+      // `startBusinessTrial` service exists (business-trial/service.ts
+      // · writes nex_account.business_trial_status + _start_at + _end_at
+      // · migration 214 schema) AND is now wired into
+      // createBusinessAction (first business signup auto-fires). The
+      // runtime wiring is gated by the `NEX_BUSINESS_TRIAL_ENABLED`
+      // env flag · when the flag is off the service short-circuits
+      // honestly rather than silently granting the trial, so this
+      // module can reflect the CODE path truthfully.
+      //
+      // `manualStartAvailable` is also true: `/api/nex-native/trial/start`
+      // (POST) exists as an idempotent manual-start path.
+      autoFiresOnSignup: true,
+      manualStartAvailable: true,
       // No billing provider is wired. Setting this true without
       // integration tested would be an unsupported auto-conversion
       // claim. Memory doctrine: "no surprise charges".
       convertsAutomatically: false,
+      // Status stays PROPOSAL until §B-1 price-validation gate opens ·
+      // the three-unlocks rule (price APPROVED + trial wired + copy
+      // aligned) requires all three. Only the trial-wired leg is
+      // satisfied by this LOCK.
       status: "PROPOSAL",
     },
     entitlements: [

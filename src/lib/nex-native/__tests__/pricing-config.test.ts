@@ -84,10 +84,16 @@ describe("B · initial status · the catalogue ships with unapproved pricing", (
     expect(pkg.trial?.status).toBe("PROPOSAL");
   });
 
-  test("nex_business trial advertises no auto-fire + no manual-start · signalling that no activation path is wired yet", () => {
+  test("nex_business trial advertises auto-fire + manual-start · activation paths are wired (Shop contract §K-3 LOCK 2026-11-06 retires sealed 2026-10-18 hold)", () => {
+    // 2026-11-06 · the sealed 2026-10-18 "signup leaves trial UNTOUCHED"
+    // hold is retired by Shop Entitlement Contract §K-3. The business
+    // trial now auto-fires on first business signup (createBusinessAction
+    // calls startBusinessTrial) AND /api/nex-native/trial/start remains
+    // available as a manual-start path. convertsAutomatically stays
+    // false until billing is wired (no surprise charges).
     const pkg = getPricingPackage("nex_business")!;
-    expect(pkg.trial?.autoFiresOnSignup).toBe(false);
-    expect(pkg.trial?.manualStartAvailable).toBe(false);
+    expect(pkg.trial?.autoFiresOnSignup).toBe(true);
+    expect(pkg.trial?.manualStartAvailable).toBe(true);
     expect(pkg.trial?.convertsAutomatically).toBe(false);
   });
 });
@@ -105,7 +111,14 @@ describe("C · isPackageReadyForLive · guards against showing unapproved pricin
     expect(isPackageReadyForLive(pkg)).toBe(false);
   });
 
-  test("business package today (PROPOSAL + no trial wiring) is NOT ready", () => {
+  test("business package today (PROPOSAL price · trial wiring active) is NOT ready · price gate still blocks", () => {
+    // 2026-11-06 · Shop Entitlement Contract §K-3 retired the trial-
+    // wiring hold, so `autoFiresOnSignup` + `manualStartAvailable` are
+    // now true. The package STILL returns false because §B-1 (price
+    // validation with real customers) remains OPEN · the price stays
+    // PROPOSAL until the owner records validation. The same-story
+    // principle (three unlocks together) is enforced by the readiness
+    // guard: trial wired alone is insufficient.
     const pkg = getPricingPackage("nex_business")!;
     expect(isPackageReadyForLive(pkg)).toBe(false);
   });
