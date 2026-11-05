@@ -14,6 +14,7 @@
 // swap in the sealed image uploader primitive.
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SpecFormBuilder } from "@/components/nex-native/product-create/SpecFormBuilder";
 import {
@@ -139,6 +140,11 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
   );
   const [submitting, setSubmitting] = React.useState<null | "draft" | "live">(null);
   const [error, setError] = React.useState<string | null>(null);
+  // Owner directive 2026-11-05 iter 29 · Ship A commit 2 · tier-limit
+  // paywall state. Separate from plain `error` so the UI can render a
+  // branded "upgrade your shop" card instead of a red error banner
+  // when the seller hits the free-tier cap of 10 products.
+  const [tierLimitMessage, setTierLimitMessage] = React.useState<string | null>(null);
 
   const canSubmit = name.trim().length > 0 && price.trim().length > 0 && !Number.isNaN(Number(price));
 
@@ -191,7 +197,16 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
             : [],
       });
       if (!result.ok) {
-        setError(`${result.code}: ${result.message}`);
+        // Owner directive 2026-11-05 iter 29 · Ship A commit 2 ·
+        // tier-limit gets its own paywall card (branded upgrade CTA)
+        // instead of the plain error banner · every other failure
+        // continues to surface as inline text so the seller knows
+        // what to fix.
+        if (result.code === "tier-limit") {
+          setTierLimitMessage(result.message);
+        } else {
+          setError(`${result.code}: ${result.message}`);
+        }
         setSubmitting(null);
         return;
       }
@@ -551,7 +566,178 @@ export function CreateProductFormClient(props: CreateProductFormClientProps): Re
           </div>
         </div>
       </div>
+      {/* Owner directive 2026-11-05 iter 29 · Ship A commit 2 ·
+          tier-limit paywall overlay. Fires when the sealed
+          assertCanCreateProduct gate returns NexTierLimitError (10
+          products on Gratis). Sealed doctrine "NEX never takes
+          commission" preserved · the paywall promotes the shop
+          subscription / listing pack, not a transaction fee. */}
+      {tierLimitMessage !== null ? (
+        <TierLimitPaywallCard
+          message={tierLimitMessage}
+          onDismiss={() => setTierLimitMessage(null)}
+        />
+      ) : null}
     </main>
+  );
+}
+
+// ─── Tier-limit paywall card ─────────────────────────────────────────
+function TierLimitPaywallCard({
+  message,
+  onDismiss,
+}: {
+  readonly message: string;
+  readonly onDismiss: () => void;
+}): React.JSX.Element {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Upgrade your shop"
+      data-nex-tier-limit-paywall
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9400,
+        background: "rgba(0,0,0,0.55)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onDismiss();
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 420,
+          background: "#000000",
+          color: "#F2F5F8",
+          border: "1px solid rgba(255,255,255,0.14)",
+          borderRadius: 16,
+          padding: 22,
+          boxShadow:
+            "0 20px 50px rgba(0,0,0,0.7), inset 0 0 0 1px color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 24%, transparent)",
+          fontFamily: "Inter, system-ui, sans-serif",
+        }}
+      >
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            color: "var(--nex-world-secondary, #C6A15B)",
+            marginBottom: 8,
+          }}
+        >
+          Free tier reached
+        </div>
+        <div
+          style={{
+            fontSize: 18,
+            fontWeight: 800,
+            lineHeight: 1.25,
+            marginBottom: 10,
+          }}
+        >
+          You&apos;ve listed your 10 free products
+        </div>
+        <div
+          style={{
+            fontSize: 13,
+            lineHeight: 1.5,
+            color: "#B5C3D6",
+            marginBottom: 14,
+          }}
+        >
+          {message.length > 0
+            ? message
+            : "Open a NEX Shop to list unlimited products, get a shareable shop URL, your own chat shop drawer for sharing to customers, and 10 shop templates to choose from."}
+        </div>
+        {/* Benefits list · sealed no-commission doctrine honoured */}
+        <ul
+          style={{
+            listStyle: "none",
+            padding: 0,
+            margin: "0 0 16px 0",
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+          }}
+        >
+          {[
+            "Unlimited product listings",
+            "Shareable shop URL (nex.com/your-shop)",
+            "Chat shop drawer for instant customer sharing",
+            "10 shop templates to choose from",
+            "NEX never takes commission on your sales",
+          ].map((line) => (
+            <li
+              key={line}
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 8,
+                fontSize: 13,
+                color: "#F2F5F8",
+              }}
+            >
+              <span
+                aria-hidden
+                style={{
+                  color: "var(--nex-world-secondary, #C6A15B)",
+                  fontWeight: 800,
+                  lineHeight: 1.4,
+                }}
+              >
+                ✓
+              </span>
+              <span style={{ lineHeight: 1.4 }}>{line}</span>
+            </li>
+          ))}
+        </ul>
+        <Link
+          href="/nex-native/packages"
+          onClick={onDismiss}
+          data-nex-tier-limit-cta
+          style={{
+            display: "block",
+            padding: "13px 16px",
+            borderRadius: 999,
+            background: "#FF7200",
+            color: "#1A0808",
+            fontWeight: 800,
+            fontSize: 14,
+            textDecoration: "none",
+            textAlign: "center",
+            marginBottom: 8,
+          }}
+        >
+          See tiers
+        </Link>
+        <button
+          type="button"
+          onClick={onDismiss}
+          style={{
+            width: "100%",
+            padding: "10px 16px",
+            borderRadius: 999,
+            background: "transparent",
+            border: "1px solid rgba(255,255,255,0.22)",
+            color: "#B5C3D6",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          Not now
+        </button>
+      </div>
+    </div>
   );
 }
 
