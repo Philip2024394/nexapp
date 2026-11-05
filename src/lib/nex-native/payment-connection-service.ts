@@ -1,27 +1,49 @@
 // src/lib/nex-native/payment-connection-service.ts
 //
-// Direct-to-seller payment connection service · Phase V · P9 scaffold
+// SELLER SHOP-PAYMENT connection service · Phase V · P9/P10 scaffold
 // 2026-11-05.
-// --------------------------------------------------------------------
-// Prepares the ARCHITECTURE for seller-owned gateway connections
-// without wiring any live gateway API. When the sealed doctrine D1
-// (Social Commerce 2026-11-01) is re-opened to allow multi-gateway
-// AND the D4 legal brief covering Ireland + Indonesia + DAC7 / PSD2
-// / DSA / consumer protection / GDPR is complete, this module becomes
-// the authority for:
+// =====================================================================
+// This module is the authority for seller-owned gateway connections.
+// Every row represents a seller's merchant relationship with a
+// provider (Stripe · PayPal · Xendit · Midtrans). Buyer money flows
+// DIRECTLY to the seller's account at the provider · NEX is never in
+// the money path.
+//
+// MUTUAL EXCLUSION (doctrine-sealed 2026-11-05 · P10):
+//
+//   · This module MUST NOT read, write, derive from, or route via
+//     any NEX membership subscription state
+//     (nex-membership-billing-service.ts owns that).
+//
+//   · NEX MUST NEVER take a percentage, split, commission, or fee
+//     from money that flows through this module. The type system
+//     and the physical split from nex-membership-billing-service
+//     encode that rule. Any future change that tries to add a
+//     commission field, a NEX-held balance, or a "NEX fee" column
+//     must be rejected at review.
+//
+//   · The two modules exchange NO data. There is no "shared payment
+//     service" and there will not be one. The physical separation of
+//     modules + types is the enforcement.
+//
+// When the sealed Social Commerce D1 (2026-11-01) is re-opened to
+// allow multi-gateway AND the D4 legal brief covering Ireland +
+// Indonesia + DAC7 / PSD2 / DSA / consumer protection / GDPR is
+// complete, this module becomes the authority for:
 //
 //   · which providers a business has connected
 //   · what each connection's status is
 //   · whether a business is checkout-ready
 //   · which provider should be used for a given transaction
 //
-// Sealed rules enforced at the type level:
+// Sealed rules enforced at the type level + module boundary:
 //   · NEX takes 0% commission on shop sales
 //   · NEX never holds customer-to-seller funds
 //   · The seller owns the merchant relationship with the provider
 //   · The external_account_id is OPAQUE to NEX (we store a reference,
 //     the provider owns KYC + payouts)
-//   · NEX membership billing is separate (not represented here)
+//   · NEX membership billing is a SEPARATE module
+//     (nex-membership-billing-service.ts) · the two never share state
 //
 // What this module does NOT do yet (deliberately · deferred pending
 // doctrine re-open):
@@ -81,14 +103,42 @@ export type PaymentConnectionStatus =
  * gateway (e.g. Stripe `acct_…`, PayPal merchant id, Xendit business
  * id). NEX treats it as an opaque string. Payouts never flow through
  * NEX · they settle to the seller's own balance at the provider.
+ *
+ * The `kind` discriminant is deliberate: it makes it IMPOSSIBLE for a
+ * PaymentConnection value to be accidentally fed into any NEX
+ * membership code path · they look nothing alike at the type level.
+ * Sealed 2026-11-05 · P10 boundary enforcement.
  */
 export interface PaymentConnection {
+  readonly kind: "shop-payment-connection";
   readonly businessId: string;
   readonly providerId: PaymentProviderId;
   readonly externalAccountId: string | null;
   readonly status: PaymentConnectionStatus;
   readonly createdAt: string;
   readonly updatedAt: string;
+}
+
+/**
+ * Doctrine assertion · callable at the start of any shop-commerce
+ * handler (buyer checkout, webhook, order writer) to make the
+ * boundary explicit at runtime as well as in the type system.
+ * Rejects anything that looks like a NEX membership charge.
+ * Belt-and-braces · the physical module split is the primary
+ * guarantee · this is the alarm bell for regressions.
+ */
+export function assertShopPaymentScope(value: {
+  readonly kind: string;
+}): void {
+  if (value.kind !== "shop-payment-connection") {
+    throw new Error(
+      "payment-connection-service: received non-shop-payment value · " +
+        "this module MUST NOT process NEX membership billing. " +
+        "Sealed doctrine 2026-11-05: NEX takes 0% commission on shop " +
+        "sales · NEX membership billing lives in a SEPARATE module " +
+        "(nex-membership-billing-service.ts).",
+    );
+  }
 }
 
 /**
