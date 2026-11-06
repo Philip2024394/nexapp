@@ -866,44 +866,59 @@ function PreviewPopover({
               </div>
             ) : null}
             {isDynamic ? (
+              // Dynamic routes with [slug] segments can't be previewed
+              // live · loading the literal `[accountId]` into the
+              // iframe triggers server-side crashes (e.g.
+              // account-service.getAccountById throwing on non-UUID).
+              // So we skip the iframe entirely and show the file lists
+              // only. Use "Open ↗" with a real slug for a live view.
               <div
                 style={{
                   margin: "10px 10px 0",
-                  padding: "6px 10px",
+                  padding: "12px 14px",
                   background: "rgba(255,114,0,0.12)",
                   border: `1px solid ${ORANGE}66`,
                   borderRadius: 8,
-                  fontSize: 11,
+                  fontSize: 12,
                   color: ORANGE,
+                  lineHeight: 1.5,
                 }}
               >
-                Dynamic route · preview will likely 404 (slug segments
-                aren&rsquo;t filled in). Use “Open ↗” with a real slug.
+                <strong>Dynamic route · preview skipped.</strong>
+                <br />
+                The{" "}
+                <code style={{ fontSize: 11 }}>[slug]</code>{" "}
+                segments aren&rsquo;t filled in, so loading the iframe
+                would crash the underlying server handler. Click
+                &ldquo;Open ↗&rdquo; with a real slug in the URL bar to
+                view a live instance. The file lists below still show
+                exactly what Claude would delete / clean for this
+                route pattern.
               </div>
-            ) : null}
-
-            {/* Small live iframe · auto-centred inside its padding */}
-            <div
-              style={{
-                padding: 10,
-                display: "flex",
-                justifyContent: "center",
-              }}
-            >
-              <iframe
-                key={selectedUrl}
-                src={selectedUrl}
-                title={selectedUrl}
+            ) : (
+              // Small live iframe · auto-centred inside its padding.
+              <div
                 style={{
-                  width: 340,
-                  height: 440,
-                  border: `1px solid ${BORDER_HI}`,
-                  borderRadius: 16,
-                  background: "#000",
-                  boxShadow: "0 12px 28px rgba(0,0,0,0.55)",
+                  padding: 10,
+                  display: "flex",
+                  justifyContent: "center",
                 }}
-              />
-            </div>
+              >
+                <iframe
+                  key={selectedUrl}
+                  src={selectedUrl}
+                  title={selectedUrl}
+                  style={{
+                    width: 340,
+                    height: 440,
+                    border: `1px solid ${BORDER_HI}`,
+                    borderRadius: 16,
+                    background: "#000",
+                    boxShadow: "0 12px 28px rgba(0,0,0,0.55)",
+                  }}
+                />
+              </div>
+            )}
 
             {/* URL + file lists */}
             <div style={{ padding: "6px 14px 18px" }}>
