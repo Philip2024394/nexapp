@@ -12,7 +12,13 @@
 // JSONL under `data/` so a human (or a follow-up "process queue"
 // tool) can audit + apply the deletes outside of a hot path.
 
-import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import {
+  appendFile,
+  mkdir,
+  readdir,
+  readFile,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
@@ -97,6 +103,60 @@ export interface CallerInfo {
   readonly count: number;
   readonly files: readonly string[];
   readonly truncated: boolean;
+}
+
+export interface RouteInspection {
+  readonly ownFiles: readonly string[];
+  readonly callers: CallerInfo;
+}
+
+/** Walks the route's folder (src/app${url}/) recursively and returns
+ *  every file path · tells the founder exactly what Claude would
+ *  remove from the repo if this route is deleted. Paths are rooted
+ *  at the repo root (e.g. `src/app/nex-native/foo/page.tsx`). */
+async function listRouteOwnFiles(url: string): Promise<string[]> {
+  const segments = url.replace(/^\//, "").split("/");
+  const root = path.join(process.cwd(), "src", "app", ...segments);
+  const results: string[] = [];
+  async function walk(dir: string, rel: string) {
+    let entries;
+    try {
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      const r = `${rel}/${entry.name}`;
+      if (entry.isDirectory()) {
+        await walk(full, r);
+      } else {
+        results.push(`src/app${r}`);
+      }
+    }
+  }
+  await walk(root, url);
+  return results.sort();
+}
+
+/** Combined inspection for a route · own-folder files + external
+ *  callers · used by the HQ Pages dashboard right-side panel to
+ *  show the founder what Claude will delete vs. what Claude will
+ *  edit on the next deletion run. */
+export async function inspectRouteAction(url: string): Promise<RouteInspection> {
+  try {
+    await assertHqAdmin();
+  } catch {
+    return {
+      ownFiles: [],
+      callers: { count: 0, files: [], truncated: false },
+    };
+  }
+  const [ownFiles, callers] = await Promise.all([
+    listRouteOwnFiles(url),
+    countCallersAction(url),
+  ]);
+  return { ownFiles, callers };
 }
 
 /** External-caller count for a route. Greps ts/tsx for the URL

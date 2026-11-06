@@ -19,10 +19,12 @@
 import * as React from "react";
 import {
   countCallersAction,
+  inspectRouteAction,
   queueDeletionAction,
   unqueueDeletionAction,
   type CallerInfo,
   type DeletionQueueEntry,
+  type RouteInspection,
 } from "./_actions";
 
 // ─── Colours (match sealed HQ chrome in _hq-nav.tsx) ──────────────
@@ -68,6 +70,28 @@ export function HqPagesClient({ routes, initialQueue, kept }: Props): React.JSX.
   const [modal1, setModal1] = React.useState<Modal1>(null);
   const [modal2, setModal2] = React.useState<Modal2>(null);
   const [pending, startTransition] = React.useTransition();
+
+  // Side-panel inspection data for the selected route · own folder
+  // files + external callers. Refreshed whenever selectedUrl changes
+  // and discarded on close.
+  const [inspect, setInspect] = React.useState<
+    null | "loading" | RouteInspection
+  >(null);
+  React.useEffect(() => {
+    if (!selectedUrl) {
+      setInspect(null);
+      return;
+    }
+    setInspect("loading");
+    let cancelled = false;
+    (async () => {
+      const data = await inspectRouteAction(selectedUrl);
+      if (!cancelled) setInspect(data);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedUrl]);
 
   const filteredRoutes = React.useMemo(() => {
     if (!filter.trim()) return routes;
@@ -141,16 +165,14 @@ export function HqPagesClient({ routes, initialQueue, kept }: Props): React.JSX.
       className="nex-admin-root"
       style={{
         display: "flex",
-        flexDirection: "column",
+        flexDirection: "row",
         gap: 16,
         minHeight: "calc(100dvh - 56px)",
         color: INK,
         fontFamily: "Inter, system-ui, sans-serif",
       }}
     >
-      {/* ── Single full-width route table · preview + modals are
-          overlays so they're always visible regardless of viewport
-          width. */}
+      {/* ── LEFT PANE · route table ────────────────────────────── */}
       <section
         aria-label="Route list"
         style={{
@@ -324,14 +346,14 @@ export function HqPagesClient({ routes, initialQueue, kept }: Props): React.JSX.
         </div>
       </section>
 
-      {/* ── PREVIEW OVERLAY · fullscreen iframe when a row is picked ── */}
-      {selectedUrl ? (
-        <PreviewOverlay
-          url={selectedUrl}
-          isDynamic={isDynamic(selectedUrl)}
-          onClose={() => setSelectedUrl(null)}
-        />
-      ) : null}
+      {/* ── RIGHT PANE · persistent small preview + deletion-impact
+          file lists for the selected route ───────────────────── */}
+      <RightPane
+        selectedUrl={selectedUrl}
+        isDynamic={selectedUrl ? isDynamic(selectedUrl) : false}
+        inspect={inspect}
+        onClose={() => setSelectedUrl(null)}
+      />
 
       {/* ── MODAL #1 · first confirm ───────────────────────────── */}
       {modal1 ? (
@@ -518,163 +540,306 @@ function buttonStyle(accent: string): React.CSSProperties {
   };
 }
 
-function PreviewOverlay({
-  url,
+function RightPane({
+  selectedUrl,
   isDynamic,
+  inspect,
   onClose,
 }: {
-  url: string;
+  selectedUrl: string | null;
   isDynamic: boolean;
+  inspect: null | "loading" | RouteInspection;
   onClose: () => void;
 }) {
-  // Escape key closes the overlay.
-  React.useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
-
   return (
-    <>
-      <div
-        aria-hidden
-        onClick={onClose}
+    <aside
+      aria-label="Route inspector"
+      style={{
+        flex: "0 0 400px",
+        display: "flex",
+        flexDirection: "column",
+        minWidth: 0,
+        border: `1px solid ${BORDER}`,
+        borderRadius: 14,
+        background: SURFACE,
+        overflow: "hidden",
+      }}
+    >
+      {/* ── Header · PREVIEW label + URL + Open/Close ──────────── */}
+      <header
         style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(0,0,0,0.78)",
-          zIndex: 900,
-        }}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Preview ${url}`}
-        style={{
-          position: "fixed",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: "min(460px, 95vw)",
-          maxHeight: "95vh",
+          padding: "12px 14px",
+          borderBottom: `1px solid ${BORDER}`,
           display: "flex",
-          flexDirection: "column",
-          background: SURFACE,
-          border: `1px solid ${BORDER_HI}`,
-          borderRadius: 18,
-          overflow: "hidden",
-          boxShadow: "0 32px 80px rgba(0,0,0,0.7)",
-          zIndex: 901,
+          alignItems: "center",
+          gap: 8,
+          background: SURFACE_HI,
+          minHeight: 48,
         }}
       >
-        <header
-          style={{
-            padding: "12px 16px",
-            borderBottom: `1px solid ${BORDER}`,
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            background: SURFACE_HI,
-          }}
+        <strong
+          style={{ fontSize: 11, color: INK_MUTED, letterSpacing: "0.1em" }}
         >
-          <strong style={{ fontSize: 12, color: INK_MUTED, letterSpacing: "0.1em" }}>
-            PREVIEW
-          </strong>
-          <code
-            title={url}
-            style={{
-              flex: 1,
-              minWidth: 0,
-              fontSize: 12,
-              color: ACCENT,
-              fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {url}
-          </code>
-          <a
-            href={url}
-            target="_blank"
-            rel="noreferrer"
-            style={{
-              fontSize: 11,
-              color: ACCENT,
-              textDecoration: "none",
-              border: `1px solid ${BORDER_HI}`,
-              borderRadius: 6,
-              padding: "4px 8px",
-              whiteSpace: "nowrap",
-            }}
-          >
-            Open ↗
-          </a>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close preview"
-            style={{
-              width: 30,
-              height: 30,
-              background: "transparent",
-              color: INK,
-              border: `1px solid ${BORDER}`,
-              borderRadius: 6,
-              fontSize: 18,
-              cursor: "pointer",
-              lineHeight: 1,
-            }}
-          >
-            ×
-          </button>
-        </header>
-        {isDynamic ? (
+          PREVIEW
+        </strong>
+        {selectedUrl ? (
+          <>
+            <code
+              title={selectedUrl}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                fontSize: 11,
+                color: ACCENT,
+                fontFamily:
+                  "ui-monospace, SFMono-Regular, Menlo, monospace",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {selectedUrl}
+            </code>
+            <a
+              href={selectedUrl}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                fontSize: 10,
+                color: ACCENT,
+                textDecoration: "none",
+                border: `1px solid ${BORDER_HI}`,
+                borderRadius: 6,
+                padding: "3px 6px",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Open ↗
+            </a>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close preview"
+              style={{
+                width: 26,
+                height: 26,
+                background: "transparent",
+                color: INK,
+                border: `1px solid ${BORDER}`,
+                borderRadius: 6,
+                fontSize: 16,
+                cursor: "pointer",
+                lineHeight: 1,
+              }}
+            >
+              ×
+            </button>
+          </>
+        ) : (
+          <span style={{ fontSize: 11, color: INK_MUTED }}>
+            Click 👁 on any row to load the live page here.
+          </span>
+        )}
+      </header>
+
+      {/* ── Body · scrollable (small iframe + file lists) ──────── */}
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
+          background: "#020914",
+        }}
+      >
+        {selectedUrl ? (
+          <>
+            {isDynamic ? (
+              <div
+                style={{
+                  margin: "10px 10px 0",
+                  padding: "6px 10px",
+                  background: "rgba(255,114,0,0.12)",
+                  border: `1px solid ${ORANGE}66`,
+                  borderRadius: 8,
+                  fontSize: 11,
+                  color: ORANGE,
+                }}
+              >
+                Dynamic route · preview will likely 404 (slug segments
+                aren&rsquo;t filled in). Use “Open ↗” with a real slug.
+              </div>
+            ) : null}
+
+            {/* Small live iframe · auto-centred inside its padding */}
+            <div
+              style={{
+                padding: 10,
+                display: "flex",
+                justifyContent: "center",
+              }}
+            >
+              <iframe
+                key={selectedUrl}
+                src={selectedUrl}
+                title={selectedUrl}
+                style={{
+                  width: 340,
+                  height: 440,
+                  border: `1px solid ${BORDER_HI}`,
+                  borderRadius: 16,
+                  background: "#000",
+                  boxShadow: "0 12px 28px rgba(0,0,0,0.55)",
+                }}
+              />
+            </div>
+
+            {/* URL + file lists */}
+            <div style={{ padding: "6px 14px 18px" }}>
+              <FilesSection
+                title="URL"
+                mono
+                items={[selectedUrl]}
+                emptyLabel=""
+              />
+              <FilesSection
+                title={`Files Claude will delete${
+                  inspect === "loading"
+                    ? " · loading…"
+                    : inspect && inspect !== "loading"
+                      ? ` (${inspect.ownFiles.length})`
+                      : ""
+                }`}
+                mono
+                items={
+                  inspect && inspect !== "loading" ? inspect.ownFiles : []
+                }
+                emptyLabel={
+                  inspect === "loading"
+                    ? ""
+                    : "No files under this route folder."
+                }
+              />
+              <FilesSection
+                title={`Files Claude will clean${
+                  inspect === "loading"
+                    ? " · loading…"
+                    : inspect && inspect !== "loading"
+                      ? ` (${inspect.callers.count}${inspect.callers.truncated ? "+" : ""})`
+                      : ""
+                }`}
+                mono
+                items={
+                  inspect && inspect !== "loading" ? inspect.callers.files : []
+                }
+                emptyLabel={
+                  inspect === "loading"
+                    ? ""
+                    : "No external files reference this route."
+                }
+                footer={
+                  inspect && inspect !== "loading" && inspect.callers.truncated
+                    ? "Showing first 50 of more."
+                    : undefined
+                }
+              />
+            </div>
+          </>
+        ) : (
           <div
             style={{
-              padding: "8px 16px",
-              background: "rgba(255,114,0,0.12)",
-              borderBottom: `1px solid ${ORANGE}66`,
+              padding: 20,
               fontSize: 12,
-              color: ORANGE,
+              color: INK_MUTED,
+              textAlign: "center",
             }}
           >
-            Dynamic route · the preview will likely 404 because{" "}
-            <code style={{ fontSize: 11 }}>[slug]</code> segments aren&rsquo;t
-            filled in. Use “Open ↗” with a real slug.
+            No page selected.
           </div>
-        ) : null}
-        <div
+        )}
+      </div>
+    </aside>
+  );
+}
+
+function FilesSection({
+  title,
+  items,
+  emptyLabel,
+  mono,
+  footer,
+}: {
+  title: string;
+  items: readonly string[];
+  emptyLabel: string;
+  mono?: boolean;
+  footer?: string;
+}) {
+  return (
+    <section style={{ marginTop: 12 }}>
+      <h3
+        style={{
+          margin: 0,
+          padding: "4px 0",
+          fontSize: 10,
+          fontWeight: 800,
+          color: INK_MUTED,
+          textTransform: "uppercase",
+          letterSpacing: "0.1em",
+        }}
+      >
+        {title}
+      </h3>
+      {items.length > 0 ? (
+        <ul
           style={{
-            flex: 1,
-            display: "flex",
-            alignItems: "stretch",
-            justifyContent: "center",
-            padding: 12,
-            background: "#020914",
-            overflow: "auto",
+            margin: "4px 0 0",
+            padding: 0,
+            listStyle: "none",
+            fontFamily: mono
+              ? "ui-monospace, SFMono-Regular, Menlo, monospace"
+              : "inherit",
+            fontSize: 11,
+            color: INK_DIM,
+            maxHeight: 180,
+            overflowY: "auto",
+            background: "#030B18",
+            border: `1px solid ${BORDER}`,
+            borderRadius: 8,
+            padding: "6px 10px",
           }}
         >
-          <iframe
-            key={url}
-            src={url}
-            title={url}
-            style={{
-              width: "100%",
-              maxWidth: 430,
-              height: 780,
-              border: `1px solid ${BORDER_HI}`,
-              borderRadius: 18,
-              background: "#000",
-              boxShadow: "0 18px 40px rgba(0,0,0,0.6)",
-            }}
-          />
+          {items.map((f) => (
+            <li
+              key={f}
+              style={{ padding: "2px 0", wordBreak: "break-all" }}
+            >
+              {f}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div
+          style={{
+            margin: "4px 0 0",
+            padding: "6px 10px",
+            background: "#030B18",
+            border: `1px solid ${BORDER}`,
+            borderRadius: 8,
+            fontSize: 11,
+            color: INK_MUTED,
+          }}
+        >
+          {emptyLabel}
         </div>
-      </div>
-    </>
+      )}
+      {footer ? (
+        <div
+          style={{ fontSize: 10, color: INK_MUTED, marginTop: 4 }}
+        >
+          {footer}
+        </div>
+      ) : null}
+    </section>
   );
 }
 
