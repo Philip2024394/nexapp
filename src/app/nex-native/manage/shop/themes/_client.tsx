@@ -19,6 +19,7 @@
 //     three sealed server actions and shows an inline confirmation.
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import {
   applyShopLayoutAction,
   applyShopTintAction,
@@ -549,6 +550,7 @@ function TemplateCarousel({
   imageUrl: string | null;
   onPick: (id: CoverLayoutId) => void;
 }) {
+  const [fullscreen, setFullscreen] = React.useState(false);
   const index = Math.max(
     0,
     layoutIds.findIndex((id) => id === selectedLayout),
@@ -565,14 +567,16 @@ function TemplateCarousel({
   }, [index, last, layoutIds, onPick]);
 
   // Keyboard · arrow keys when the preview is focused / hovered.
+  // Escape closes the fullscreen overlay when it's open.
   React.useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "ArrowLeft") goPrev();
       else if (e.key === "ArrowRight") goNext();
+      else if (e.key === "Escape" && fullscreen) setFullscreen(false);
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [goPrev, goNext]);
+  }, [goPrev, goNext, fullscreen]);
 
   // Touch swipe · horizontal drag ≥ 40px triggers nav.
   const touchStartX = React.useRef<number | null>(null);
@@ -668,7 +672,56 @@ function TemplateCarousel({
             background: "transparent",
           }}
         />
+
+        {/* Centre tap · opens the template in a fullscreen overlay. */}
+        <button
+          type="button"
+          onClick={() => setFullscreen(true)}
+          aria-label="Open template fullscreen"
+          title="Open fullscreen"
+          data-nex-shop-template-fullscreen-trigger
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 68,
+            height: 68,
+            borderRadius: "50%",
+            background: "rgba(0, 0, 0, 0.55)",
+            border: `2px solid ${GOLD}`,
+            color: CREAM,
+            fontSize: 28,
+            lineHeight: 1,
+            display: "grid",
+            placeItems: "center",
+            cursor: "pointer",
+            boxShadow:
+              "0 10px 30px rgba(0,0,0,0.55), 0 0 0 6px rgba(198,161,91,0.14)",
+            backdropFilter: "blur(10px)",
+            WebkitTapHighlightColor: "transparent",
+            transition: "transform 160ms ease",
+          }}
+        >
+          <span aria-hidden>👆</span>
+        </button>
       </div>
+
+      {/* Fullscreen overlay · portaled to document.body so it escapes
+          the sealed phone-frame transform. Shows the template at
+          full viewport width + height. */}
+      {fullscreen && typeof document !== "undefined"
+        ? createPortal(
+            <FullscreenTemplate
+              layoutId={selectedLayout}
+              layoutLabel={layoutLabels[selectedLayout]}
+              tintHex={tintHex}
+              imageUrl={imageUrl}
+              onClose={() => setFullscreen(false)}
+            />,
+            document.body,
+          )
+        : null}
 
       {/* Position dots · tap any to jump directly. */}
       <div
@@ -700,6 +753,105 @@ function TemplateCarousel({
         ))}
       </div>
     </section>
+  );
+}
+
+/** Fullscreen overlay rendering the template at the full viewport.
+ *  Portaled to document.body so `position: fixed` escapes the
+ *  sealed phone-frame transform. Close via × button or Escape. */
+function FullscreenTemplate({
+  layoutId,
+  layoutLabel,
+  tintHex,
+  imageUrl,
+  onClose,
+}: {
+  layoutId: CoverLayoutId;
+  layoutLabel: string;
+  tintHex: string;
+  imageUrl: string | null;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${layoutLabel} template fullscreen`}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "#020914",
+        zIndex: 9999,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <header
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "10px 14px",
+          background: "rgba(0,0,0,0.55)",
+          borderBottom: `1px solid ${BORDER_HI}`,
+          color: CREAM,
+          flexShrink: 0,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 800,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            color: GOLD,
+          }}
+        >
+          Template
+        </span>
+        <span style={{ flex: 1, fontSize: 13, fontWeight: 700 }}>
+          {layoutLabel}
+        </span>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close fullscreen"
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            background: "transparent",
+            color: CREAM,
+            border: `1px solid ${BORDER_HI}`,
+            fontSize: 20,
+            lineHeight: 1,
+            cursor: "pointer",
+            display: "grid",
+            placeItems: "center",
+          }}
+        >
+          ×
+        </button>
+      </header>
+      <iframe
+        key={`fs:${layoutId}:${imageUrl ?? "none"}:${tintHex}`}
+        src={`/nex-native/cover/preview/${layoutId}?embed=1${
+          imageUrl ? `&bg=${encodeURIComponent(imageUrl)}` : ""
+        }${
+          /^#[0-9A-Fa-f]{6}$/.test(tintHex)
+            ? `&tint=${encodeURIComponent(tintHex)}`
+            : ""
+        }`}
+        title={`${layoutLabel} template fullscreen`}
+        style={{
+          flex: 1,
+          width: "100%",
+          height: "100%",
+          border: "none",
+          background: "transparent",
+        }}
+      />
+    </div>
   );
 }
 
