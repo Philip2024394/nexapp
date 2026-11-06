@@ -74,8 +74,8 @@ const CONVERGED_CONSUMERS: Array<{ file: string; mustImport: string[] }> = [
 const KNOWN_DRIFT: Record<string, string> = {
   "src/app/nex-native/vault/home/chats/[conversationId]/_vault-chat-client.tsx":
     "Vault chat scope-locked per founder sealed memory 2026-10-07 · requires separate authorisation to touch",
-  "src/app/nex-native/[businessSlug]/chat-client.tsx":
-    "Legacy NexNativeChatClient (Wave 4N 2026-09-25) · mounted at /product/[productId] · retire requires auth-path audit (anonymous Supabase vs provisional cookie) · deferred by owner",
+  // Legacy NexNativeChatClient entry removed 2026-11-06 together with
+  // the [businessSlug] subtree deletion.
   // Phase 3A entries removed 2026-10-14 (Standard Experience +
   // cyber-grid + theme-1 + pink-dream now consume ChatIdentityHeader).
   // See CONVERGED_CONSUMERS above.

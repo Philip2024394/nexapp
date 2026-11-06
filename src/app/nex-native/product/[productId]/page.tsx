@@ -16,7 +16,9 @@ import { notFound } from "next/navigation";
 import "../../nex-native.css";
 import * as productService from "@/lib/nex-native/product-service";
 import * as businessService from "@/lib/nex-native/business-service";
-import { NexNativeChatClient } from "../../[businessSlug]/chat-client";
+// NexNativeChatClient import retired 2026-11-06 · the [businessSlug]
+// subtree (its source) was deleted per owner directive. The chat
+// section on this page is stubbed below until a replacement is wired.
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -144,20 +146,11 @@ export default async function Page({
           {business.address && <> · {business.address.split("\n")[0]}</>}
         </section>
 
-        <section id="chat" data-nex-product-chat>
-          <h2 className="mb-2 text-xs font-medium uppercase tracking-wider text-[var(--nex-accent-600)]">
-            💬 Chat about {product.name}
-          </h2>
-          <p className="mb-3 text-[11px] text-[var(--nex-neutral-500)]">
-            Your message reaches {business.display_name} · no account needed to start.
-          </p>
-          <NexNativeChatClient
-            businessSlug={business.slug}
-            businessDisplayName={business.display_name}
-            products={[chatProduct]}
-            initialSelectedProductId={product.id}
-          />
-        </section>
+        {/* Chat section retired 2026-11-06 · NexNativeChatClient
+            source (src/app/nex-native/[businessSlug]/chat-client.tsx)
+            was deleted together with the [businessSlug] route tree.
+            Re-wire this section when a replacement chat primitive is
+            chosen. */}
 
         <footer className="mx-auto max-w-2xl px-4 pb-8 pt-6 text-center text-[10px] text-[var(--nex-neutral-500)]">
           Powered by NEX
