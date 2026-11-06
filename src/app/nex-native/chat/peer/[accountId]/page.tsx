@@ -74,6 +74,10 @@ import {
   MOCK_NOTIFICATIONS,
   type NotificationItem,
 } from "@/lib/nex-native/notifications/mock-notifications-data";
+// Owner directive 2026-11-06 · feed real shop-side conversations
+// into the drawer's "orders" section so the owner sees customer
+// orders in the same slide-down inbox as every other NEX notif.
+import { buildShopOrderNotifications } from "@/lib/nex-native/notifications/shop-order-notifications";
 import { ShopDrawer } from "@/components/nex-native/shop-drawer/shop-drawer-client";
 import { ScrollToBottomButton } from "@/components/nex-native/chat-chrome/scroll-to-bottom-button";
 import { effectiveTier } from "@/lib/nex-native/account-service";
@@ -1003,13 +1007,27 @@ export default async function PeerChatPage({
     console.warn("peer-chat · unread-chats build failed:", err);
   }
 
-  // Merge · real invites replace mock follows · real unread chats replace
-  // mock chats · all other mock sections stay until a real source lands.
+  // Owner directive 2026-11-06 · buildShopOrderNotifications joins
+  // nex_conversation + nex_message for conversations where the viewer
+  // participates as side='business' and emits NotificationItem rows
+  // for the "orders" section. Fail-soft: empty array if any service
+  // blips so the drawer still renders with the remaining sections.
+  const shopOrderNotifs = await buildShopOrderNotifications(
+    session.account.id,
+  ).catch(() => [] as NotificationItem[]);
+
+  // Merge · real invites replace mock follows · real unread chats
+  // replace mock chats · real shop orders replace mock orders · all
+  // other mock sections stay until a real source lands.
   const notifications: NotificationItem[] = [
     ...incomingInviteNotifs,
     ...unreadChatNotifs,
+    ...shopOrderNotifs,
     ...MOCK_NOTIFICATIONS.filter(
-      (n) => n.section !== "follows" && n.section !== "chats",
+      (n) =>
+        n.section !== "follows" &&
+        n.section !== "chats" &&
+        n.section !== "orders",
     ),
   ];
   const peerFirstName =

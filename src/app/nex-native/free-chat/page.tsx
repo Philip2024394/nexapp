@@ -77,6 +77,11 @@ import { FreeChatCanvasClient, type SeedMessage } from "./_canvas-client";
 // chat · mount the inline NotificationsDrawer bell + feed it the same
 // real data sources (pending invites + unread chats).
 import { NotificationsDrawer } from "@/components/nex-native/notifications-drawer/notifications-drawer-client";
+// Owner directive 2026-11-06 · feed real shop-side conversations into
+// the drawer's "orders" section so the free-chat home surfaces
+// customer orders in the same slide-down inbox as every other NEX
+// notification. Same helper is used on the peer chat page.
+import { buildShopOrderNotifications } from "@/lib/nex-native/notifications/shop-order-notifications";
 import {
   MOCK_NOTIFICATIONS,
   type NotificationItem,
@@ -341,11 +346,25 @@ export default async function FreeChatPage({
       // soft-fail · same rationale as above
     }
   }
+  // Owner directive 2026-11-06 · real shop-side conversations as the
+  // "orders" section (replacing mock) · fail-soft on any error so the
+  // drawer still renders with the rest of the sections. Only fires
+  // for signed-in viewers · guests get an empty orders section (no
+  // business to inbox).
+  const shopOrderNotifsFC = signedInSession
+    ? await buildShopOrderNotifications(
+        signedInSession.account.id,
+      ).catch(() => [] as NotificationItem[])
+    : [];
   const freeChatNotifications: NotificationItem[] = [
     ...incomingInviteNotifsFC,
     ...unreadChatNotifsFC,
+    ...shopOrderNotifsFC,
     ...MOCK_NOTIFICATIONS.filter(
-      (n) => n.section !== "follows" && n.section !== "chats",
+      (n) =>
+        n.section !== "follows" &&
+        n.section !== "chats" &&
+        n.section !== "orders",
     ),
   ];
 
