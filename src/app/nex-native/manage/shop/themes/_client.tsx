@@ -645,10 +645,18 @@ function TemplateCarousel({
         {/* Real template render · iframes the sealed cover/preview
             /[layoutId]?embed=1 route · ?embed=1 hides the preview's
             own action bar + chrome so only the shop cover itself
-            renders inside the carousel. */}
+            renders inside the carousel. `&bg=<url>` threads the
+            owner's chosen preset / uploaded background so it paints
+            inside the preview as the template's backdrop. */}
         <iframe
-          key={selectedLayout}
-          src={`/nex-native/cover/preview/${selectedLayout}?embed=1`}
+          key={`${selectedLayout}:${imageUrl ?? "none"}:${tintHex}`}
+          src={`/nex-native/cover/preview/${selectedLayout}?embed=1${
+            imageUrl ? `&bg=${encodeURIComponent(imageUrl)}` : ""
+          }${
+            /^#[0-9A-Fa-f]{6}$/.test(tintHex)
+              ? `&tint=${encodeURIComponent(tintHex)}`
+              : ""
+          }`}
           title={`${layoutLabels[selectedLayout]} template preview`}
           loading="lazy"
           style={{
