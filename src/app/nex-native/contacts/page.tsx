@@ -344,23 +344,48 @@ export default async function ContactsPage({ searchParams }: PageProps) {
   // renders · at-a-glance "who has sent me something" in the contacts
   // grid. Each failure is swallowed and the badge drops to 0 so a
   // transient DB error never breaks the contact list render.
-  const friendUnreadCounts = await Promise.all(
+  // Owner directive 2026-11-06 · also surface last_message_at per
+  // friend so cold-chat friends (> 21 days without a message) get a
+  // subtle "⏳ N weeks quiet" nudge in their professionLine. Keeps
+  // the fetch cheap by combining the unread query + lastMessageAt
+  // lookup in a single findPeerConversation round-trip per friend.
+  const friendConvoStats = await Promise.all(
     liveFriendAccounts.map(async (a) => {
       try {
         const conv = await peerConversationServiceForUnread.findPeerConversation(
           session.account.id,
           a.id,
         );
-        if (!conv) return 0;
-        return await peerMessageServiceForUnread.countUnreadPeerMessages(
-          conv.id,
-          session.account.id,
-        );
+        if (!conv) return { unread: 0, lastMessageAt: null };
+        const unread =
+          await peerMessageServiceForUnread.countUnreadPeerMessages(
+            conv.id,
+            session.account.id,
+          );
+        return {
+          unread,
+          lastMessageAt: conv.last_message_at ?? conv.created_at ?? null,
+        };
       } catch {
-        return 0;
+        return { unread: 0, lastMessageAt: null };
       }
     }),
   );
+  const friendUnreadCounts = friendConvoStats.map((s) => s.unread);
+  const friendLastMessageAts = friendConvoStats.map((s) => s.lastMessageAt);
+
+  // Compute stale-days per friend · threshold 21 days (3 weeks)
+  // chosen to feel human ("you haven't chatted in a while") without
+  // triggering on normal quiet weeks.
+  const STALE_THRESHOLD_DAYS = 21;
+  const now = Date.now();
+  const friendStaleDays: ReadonlyArray<number | null> =
+    friendLastMessageAts.map((iso) => {
+      if (!iso) return null;
+      const t = new Date(iso).getTime();
+      if (!Number.isFinite(t)) return null;
+      return Math.floor((now - t) / (1000 * 60 * 60 * 24));
+    });
 
   // Owner directive 2026-11-06 · resolve the shop badge for every
   // friend in one batched query so the contacts cards show a real
@@ -371,10 +396,38 @@ export default async function ContactsPage({ searchParams }: PageProps) {
     liveFriendAccounts.map((a) => a.id),
   );
 
+  // Owner directive 2026-11-06 · format staleness as a human line
+  // and prepend it to the profession line when the friend hasn't
+  // chatted for >= STALE_THRESHOLD_DAYS days · soft nudge so the
+  // owner can decide to move them to Business when the chat has
+  // cooled naturally. The Move-to-Business button lives in
+  // _move-to-business-button.tsx and can be mounted on any surface
+  // that needs the action (follow-up wire).
+  function stalenessLabel(days: number | null): string | null {
+    if (days === null) return null;
+    if (days < STALE_THRESHOLD_DAYS) return null;
+    if (days < 60) {
+      const weeks = Math.floor(days / 7);
+      return `⏳ ${weeks} ${weeks === 1 ? "week" : "weeks"} quiet`;
+    }
+    const months = Math.floor(days / 30);
+    return `⏳ ${months} ${months === 1 ? "month" : "months"} quiet`;
+  }
+
   // Hydrate into the row-shape the UI consumes.
   const friendRows: ContactRowDisplay[] = liveFriendAccounts.map((a, i) => {
     const profile = friendProfiles[i];
     const badge = shopBadges.get(a.id);
+    const stale = stalenessLabel(friendStaleDays[i] ?? null);
+    const baseProfession = buildProfessionLine(
+      profile?.profession,
+      profile?.headline,
+    );
+    const professionLine = stale
+      ? baseProfession
+        ? `${stale} · ${baseProfession}`
+        : stale
+      : baseProfession;
     return {
       id: a.id,
       kind: "friend" as const,
@@ -397,7 +450,10 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       // middle-dot · profession is required, headline optional ·
       // if profession is NULL/empty, the line is omitted entirely
       // (never fabricated).
-      professionLine: buildProfessionLine(profile?.profession, profile?.headline),
+      // Owner directive 2026-11-06 · when staleness crossed the 21d
+      // threshold, "⏳ N weeks quiet · <profession>" prepends so the
+      // soft nudge rides along with existing profession context.
+      professionLine,
       // Owner directive 2026-11-06 · shop badge data flows from the
       // batched resolveShopBadges call above · variants that already
       // read hasShop / shopHref (card-v1 · card-v4 · card-g3 · card-g4)
