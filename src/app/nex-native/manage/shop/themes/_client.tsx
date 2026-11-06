@@ -479,29 +479,29 @@ function TemplateCarousel({
         <Link
           href="/nex-native/manage/shop/backgrounds"
           data-nex-template-library
-          /* Owner directive 2026-11-06 · "small button for Library
-             with magnaftying glass" · gold-outlined pill with 🔍
-             glyph · routes to the backgrounds library (the browse-
-             all-presets surface) · a dedicated templates grid-view
-             library can replace the href in a follow-up. */
+          /* Owner directive 2026-11-06 (refined) · "libary make
+             solid button with icon". Solid gold pill with warm ink
+             text + magnifier glyph · matches the Choose Background
+             CTA pattern on this page so the two libraries read as
+             the same primary-action family. */
           style={{
             display: "inline-flex",
             alignItems: "center",
-            gap: 4,
-            padding: "5px 10px",
-            fontSize: 10.5,
+            gap: 5,
+            padding: "6px 12px",
+            fontSize: 11,
             fontWeight: 800,
             letterSpacing: "0.08em",
             textTransform: "uppercase",
-            color: GOLD,
-            background: "transparent",
+            color: "#1A120A",
+            background: GOLD,
             textDecoration: "none",
-            border: `1px solid ${GOLD}`,
+            border: "none",
             borderRadius: 999,
             flexShrink: 0,
           }}
         >
-          <span aria-hidden style={{ fontSize: 12 }}>🔍</span>
+          <span aria-hidden style={{ fontSize: 13 }}>🔍</span>
           Library
         </Link>
       </div>
