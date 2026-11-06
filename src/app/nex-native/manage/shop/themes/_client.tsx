@@ -514,29 +514,59 @@ function TemplateCarousel({
           aspectRatio: "9 / 16",
           maxHeight: "60vh",
           borderRadius: 18,
-          background: imageUrl
-            ? `url(${imageUrl}) center/cover`
-            : `linear-gradient(135deg, ${EMERALD}, ${FOREST})`,
+          background: `linear-gradient(135deg, ${EMERALD}, ${FOREST})`,
           border: `1px solid ${BORDER_HI}`,
           overflow: "hidden",
           boxShadow: "0 20px 48px rgba(0,0,0,0.55)",
-          margin: "8px auto 0",
-          maxWidth: 360,
           cursor: "grab",
           touchAction: "pan-y",
+          boxSizing: "border-box",
         }}
       >
+        {/* Real template render · iframes the sealed cover/preview
+            /[layoutId] route so the owner sees the actual shop
+            layout under the chosen theme, not a stand-in glyph. */}
+        <iframe
+          key={selectedLayout}
+          src={`/nex-native/cover/preview/${selectedLayout}`}
+          title={`${layoutLabels[selectedLayout]} template preview`}
+          loading="lazy"
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            border: "none",
+            background: "transparent",
+            pointerEvents: "none",
+          }}
+        />
+        {/* Custom background overlay · renders on top of the iframe
+            at low opacity so the owner sees how their uploaded image
+            lands on the chosen layout. */}
+        {imageUrl ? (
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: `url(${imageUrl}) center/cover`,
+              opacity: 0.35,
+              mixBlendMode: "overlay",
+              pointerEvents: "none",
+            }}
+          />
+        ) : null}
         {/* Tint overlay · reflects selected hex. */}
         <div
           aria-hidden
           style={{
             position: "absolute",
             inset: 0,
-            background: `linear-gradient(180deg, transparent 45%, ${tintHex}80 100%)`,
+            background: `linear-gradient(180deg, transparent 45%, ${tintHex}66 100%)`,
+            pointerEvents: "none",
           }}
         />
-        {/* Layout family glyph · visual cue of the layout family. */}
-        <TemplateGlyph layoutId={selectedLayout} />
         {/* Label pill · bottom. */}
         <div
           style={{
@@ -545,7 +575,7 @@ function TemplateCarousel({
             left: "50%",
             transform: "translateX(-50%)",
             padding: "6px 14px",
-            background: "rgba(0,0,0,0.6)",
+            background: "rgba(0,0,0,0.65)",
             backdropFilter: "blur(8px)",
             color: CREAM,
             fontSize: 12,
@@ -555,6 +585,7 @@ function TemplateCarousel({
             borderRadius: 999,
             border: `1px solid ${BORDER_HI}`,
             whiteSpace: "nowrap",
+            pointerEvents: "none",
           }}
         >
           {layoutLabels[selectedLayout]}
