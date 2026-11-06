@@ -721,66 +721,9 @@ function ContactCard({
         )}
       </div>
 
-      {/* Owner directive 2026-10-23 · "center the cart icon for cards
-          that is not displaying last online time" · the shop marker
-          is pinned at top:4 for NON-online contacts (last-online
-          text occupies the bottom-right · shop stays at the top) ·
-          and vertically CENTRED for online contacts (no last-online
-          text below, so centring fills the right-side column
-          cleanly). Uses a per-card conditional on contact.presence. */}
-      {contact.hasShop && (
-        <a
-          href={`/nex-native/shop-share-demo/${contact.id}`}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-          aria-label={`Open ${contact.shopName ?? contact.displayName} shop`}
-          title={`Open ${contact.shopName ?? contact.displayName} shop`}
-          data-nex-contact-card-shop-marker
-          data-nex-contact-card-shop-position={
-            contact.presence === "online" ? "centre" : "top"
-          }
-          style={
-            contact.presence === "online"
-              ? {
-                  position: "absolute",
-                  top: "50%",
-                  right: 10,
-                  transform: "translateY(-50%)",
-                  width: 32,
-                  height: 32,
-                  display: "grid",
-                  placeItems: "center",
-                  fontSize: 26,
-                  lineHeight: 1,
-                  zIndex: 2,
-                  cursor: "pointer",
-                  color: "inherit",
-                  textDecoration: "none",
-                  WebkitTapHighlightColor: "transparent",
-                  filter: `drop-shadow(0 2px 4px rgba(0,0,0,0.6))`,
-                }
-              : {
-                  position: "absolute",
-                  top: 4,
-                  right: 10,
-                  width: 32,
-                  height: 32,
-                  display: "grid",
-                  placeItems: "center",
-                  fontSize: 26,
-                  lineHeight: 1,
-                  zIndex: 2,
-                  cursor: "pointer",
-                  color: "inherit",
-                  textDecoration: "none",
-                  WebkitTapHighlightColor: "transparent",
-                  filter: `drop-shadow(0 2px 4px rgba(0,0,0,0.6))`,
-                }
-          }
-        >
-          🛒
-        </a>
-      )}
+      {/* Shop marker removed 2026-11-06 per owner directive · wire
+          this back only once a real per-contact business-slug route
+          is available as the destination. */}
 
       {/* Centre column · name + profession·city. flex:1 absorbs the
           width beside the overlapping chip. Owner directive 2026-10-23

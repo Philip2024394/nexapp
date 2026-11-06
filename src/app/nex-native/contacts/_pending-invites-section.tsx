@@ -1567,8 +1567,9 @@ function InboundInviteRow({
           same 32×32 chrome as the 🛒 marker on accepted contact rows
           but positioned lower on the card (top:65%, translateY(-50%))
           so the floating Confirm button at the top-right rim has
-          clear breathing room above. Tap routes to the sender's
-          shop at `/nex-native/shop-share-demo/[nexId]`. */}
+          clear breathing room above. Href is driven by the seed data
+          (`identity.shopHref`) and skipped when null, so the marker
+          only renders when a real destination is wired. */}
       {identity?.hasShop && identity.shopHref ? (
         <a
           href={identity.shopHref}

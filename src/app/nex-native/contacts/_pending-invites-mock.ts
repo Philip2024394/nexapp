@@ -213,11 +213,12 @@ export const MOCK_PENDING_INVITE_SEEDS: ReadonlyArray<PendingInviteSeed> = [
       city: "Jakarta",
       isVerified: false,
       avatarUrl: "https://i.pravatar.cc/96?u=nex-40011",
-      // Mike's Delivery is a business account · shop marker renders
-      // on the inbound card so the recipient can preview the shop
-      // before tapping Confirm.
+      // Mike's Delivery is a business account · the `hasShop` flag
+      // stays true but there is no preview destination today · wire a
+      // real business URL here when the mock sender maps to a seeded
+      // nex_business row.
       hasShop: true,
-      shopHref: "/nex-native/shop-share-demo/nex-40011",
+      shopHref: null,
     },
     note: "🤝 Delivery driver on your Jl Malioboro route — happy to help if you ever need rush delivery.",
     sticker: null,
