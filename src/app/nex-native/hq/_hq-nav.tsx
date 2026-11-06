@@ -64,6 +64,24 @@ const NAV_ITEMS: ReadonlyArray<{
     glyph: "🎨",
     match: (p) => p.startsWith("/nex-native/hq/chat-themes"),
   },
+  // Owner directive 2026-11-06 · quick jump to the Free Chat preview
+  // surface from HQ so admins can inspect the user-facing experience
+  // without typing the URL.
+  {
+    href: "/nex-native/free-chat",
+    label: "Free Chat",
+    glyph: "💬",
+    match: (p) => p.startsWith("/nex-native/free-chat"),
+  },
+  // Owner directive 2026-11-06 · Contacts preview from HQ · the
+  // ?dev=1 query enables the dev-impersonation / preview flag so the
+  // seeded contacts render for the admin viewer.
+  {
+    href: "/nex-native/contacts?dev=1",
+    label: "Contacts",
+    glyph: "👥",
+    match: (p) => p.startsWith("/nex-native/contacts"),
+  },
 ];
 
 export function HqNav(): React.JSX.Element {
