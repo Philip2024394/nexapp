@@ -111,85 +111,40 @@ describe("shouldShowFirstVisitInvitation · pure predicate", () => {
 
 // ─── Layer B · home page integration (source-shape) ──────────────
 
-describe("home/page.tsx · integration with the first-visit invitation", () => {
-  it("imports the peer-conversation-service namespace", () => {
+describe("home/page.tsx · retired-redirect contract (no integration left)", () => {
+  // Owner directive 2026-10-19 · /nex-native/home as a standalone
+  // surface is retired. page.tsx is now a thin permanentRedirect to
+  // /nex-native/contacts. The sealed `shouldShowFirstVisitInvitation`
+  // predicate + `_first-visit-invitation.tsx` component continue to
+  // live as reusable modules consumed by /contacts (covered by the
+  // pure-predicate block above + the component block below). The
+  // tests here just lock the retired-redirect contract so the shim
+  // does not silently rot.
+
+  it("uses permanentRedirect from next/navigation", () => {
     expect(HOME_SRC).toMatch(
-      /import \* as peerConversationService from ["']@\/lib\/nex-native\/peer-conversation-service["']/,
+      /import\s*\{\s*permanentRedirect\s*\}\s*from\s*["']next\/navigation["']/,
     );
+    expect(HOME_SRC).toContain("permanentRedirect(");
   });
 
-  it("imports both the component and the predicate from the local file", () => {
-    expect(HOME_SRC).toContain("FirstVisitInvitation");
-    expect(HOME_SRC).toContain("shouldShowFirstVisitInvitation");
-    expect(HOME_SRC).toMatch(/from ["']\.\/_first-visit-invitation["']/);
+  it("redirects to /nex-native/contacts (not /chat/first-visit, not any new surface)", () => {
+    expect(HOME_SRC).toContain('permanentRedirect("/nex-native/contacts")');
+    expect(HOME_SRC).not.toMatch(/permanentRedirect\(["']\/nex-native\/chat/);
   });
 
-  it("adds listPeerConversationsForAccount to the Promise.all tuple", () => {
-    expect(HOME_SRC).toContain(
-      "peerConversationService",
-    );
-    expect(HOME_SRC).toContain(
-      ".listPeerConversationsForAccount(session.account.id)",
-    );
-  });
-
-  it("destructures the fourth tuple position as `conversationCount`", () => {
-    expect(HOME_SRC).toMatch(
-      /\[\s*profile\s*,\s*ownedBusinesses\s*,\s*themes\s*,\s*conversationCount\s*\]/,
-    );
-  });
-
-  it("catches query failure and maps to null (fail-safe)", () => {
-    // The .catch must return `null` (coerced by the inline annotation).
-    // A rejected promise MUST NOT fall through to `0` or hide the
-    // predicate failure.
-    expect(HOME_SRC).toMatch(/\.catch\(\(\):\s*number\s*\|\s*null\s*=>\s*null\s*\)/);
-  });
-
-  it("derives the gate from the shared predicate (no inline duplicated check)", () => {
-    expect(HOME_SRC).toContain(
-      "shouldShowFirstVisitInvitation(conversationCount)",
-    );
-    expect(HOME_SRC).toContain(
-      "const showFirstVisitInvitation = shouldShowFirstVisitInvitation",
-    );
-  });
-
-  it("renders FirstVisitInvitation ONLY under the gate", () => {
-    // The JSX must guard the component with `{showFirstVisitInvitation && ...}`
-    // and never render it unconditionally.
-    expect(HOME_SRC).toMatch(
-      /\{showFirstVisitInvitation\s*&&\s*\(\s*<FirstVisitInvitation/,
-    );
-    // No other `<FirstVisitInvitation` without the guard.
-    const unguarded = HOME_SRC.match(/<FirstVisitInvitation/g) ?? [];
-    expect(unguarded).toHaveLength(1);
-  });
-
-  it("passes the sealed themeAccent variable to the invitation", () => {
-    expect(HOME_SRC).toMatch(/<FirstVisitInvitation\s+accent=\{themeAccent\}/);
-  });
-
-  it("does NOT introduce an automatic redirect to /chat/first-visit", () => {
-    // A redirect would say `redirect("/nex-native/chat/first-visit")`.
-    // The only `redirect(` call in home.page.tsx remains the sign-in
-    // bounce for signed-out viewers.
-    expect(HOME_SRC).not.toMatch(/redirect\(["']\/nex-native\/chat\/first-visit/);
+  it("does NOT re-introduce the retired FirstVisitInvitation render path", () => {
+    expect(HOME_SRC).not.toContain("FirstVisitInvitation");
+    expect(HOME_SRC).not.toContain("shouldShowFirstVisitInvitation");
+    expect(HOME_SRC).not.toContain("listPeerConversationsForAccount");
   });
 
   it("does NOT introduce a new cookie set, DB write, or RPC call", () => {
-    // Confirm the integration is read-only.
     expect(HOME_SRC).not.toMatch(/cookies\(\)\.set\(/);
     expect(HOME_SRC).not.toMatch(/\.insert\(/);
     expect(HOME_SRC).not.toMatch(/\.update\(/);
     expect(HOME_SRC).not.toMatch(/\.upsert\(/);
     expect(HOME_SRC).not.toMatch(/\.rpc\(/);
-  });
-
-  it("preserves the sealed sign-in redirect for signed-out viewers", () => {
-    expect(HOME_SRC).toMatch(
-      /if \(!session\) redirect\(["']\/nex-native\/sign-in["']\)/,
-    );
   });
 
   it("preserves the force-dynamic + nodejs runtime", () => {

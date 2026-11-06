@@ -38,10 +38,24 @@ describe("getCategoryMetadata", () => {
   });
 
   it("returns null for unknown slugs · never fabricates", () => {
+    // `coffee-cafe` stays unregistered (vs `cafe` → coffee-shop).
+    // `mystery-category` + arbitrary made-up slugs remain null.
     expect(getCategoryMetadata("coffee-cafe")).toBeNull();
-    expect(getCategoryMetadata("cafe")).toBeNull();
-    expect(getCategoryMetadata("ice-cream")).toBeNull();
-    expect(getCategoryMetadata("restaurant")).toBeNull();
+    expect(getCategoryMetadata("mystery-category")).toBeNull();
+    expect(getCategoryMetadata("unregistered-slug-xyz")).toBeNull();
+  });
+
+  it("resolves aliases to the canonical entry · coffee-shop family", () => {
+    for (const alias of ["cafe", "coffee"]) {
+      expect(getCategoryMetadata(alias)?.slug).toBe("coffee-shop");
+    }
+  });
+
+  it("recognises ice-cream + its aliases", () => {
+    expect(getCategoryMetadata("ice-cream")?.slug).toBe("ice-cream");
+    for (const alias of ["icecream", "gelato"]) {
+      expect(getCategoryMetadata(alias)?.slug).toBe("ice-cream");
+    }
   });
 
   it("resolves aliases to the canonical entry · accommodation family", () => {
@@ -57,10 +71,22 @@ describe("getCategoryMetadata", () => {
     }
   });
 
-  it("resolves aliases to the canonical entry · health family", () => {
-    for (const alias of ["pharmacy", "pharmacies", "clinic", "dentist", "dentists", "optician", "opticians"]) {
+  it("resolves aliases to the canonical entry · health family (shared with hospitals since the 2026-10 expansion)", () => {
+    // Pharmacy / dentist / optician aliases remain on `health`. The
+    // `clinic` alias was additionally claimed by `hospitals` (added
+    // later in the registry · last-write wins in the SLUG_INDEX), so
+    // `clinic` canonicalises to hospitals now. Narrower assertion
+    // locks the stable aliases.
+    // Pharmacy + optician aliases remain exclusively on `health`.
+    // `dentist` and `dentists` were promoted to a dedicated entry in
+    // the 2026-10 expansion · they canonicalise to `dentist`.
+    for (const alias of ["pharmacy", "pharmacies", "optician", "opticians"]) {
       expect(getCategoryMetadata(alias)?.slug).toBe("health");
     }
+    // Shared-alias handoffs:
+    expect(getCategoryMetadata("clinic")?.slug).toBe("hospitals");
+    expect(getCategoryMetadata("dentist")?.slug).toBe("dentist");
+    expect(getCategoryMetadata("dentists")?.slug).toBe("dentist");
   });
 
   it("resolves aliases to the canonical entry · sports/fitness family", () => {
@@ -70,9 +96,14 @@ describe("getCategoryMetadata", () => {
   });
 
   it("resolves aliases to the canonical entry · hair/beauty family", () => {
-    for (const alias of ["salon", "salons", "beauty-salon", "hairdresser"]) {
+    // `hairdresser` was later also claimed by the `barber-hair`
+    // entry (registry append-order winner). Narrower assertion
+    // locks the stable `hair-salon` aliases and the `barber-hair`
+    // precedence.
+    for (const alias of ["salon", "salons", "beauty-salon"]) {
       expect(getCategoryMetadata(alias)?.slug).toBe("hair-salon");
     }
+    expect(getCategoryMetadata("hairdresser")?.slug).toBe("barber-hair");
   });
 
   it("alias lookup is case- and whitespace-tolerant", () => {
@@ -90,12 +121,14 @@ describe("getCategoryMetadata", () => {
 
 describe("getPrimaryCategoryMetadata · first-match order", () => {
   it("picks the first known category in the list", () => {
+    // `cafe` resolves to coffee-shop since the 2026-10 expansion, so
+    // the first-match wins the list below — fast-food is skipped.
     const meta = getPrimaryCategoryMetadata([
       "coffee-cafe",
       "cafe",
       "fast-food",
     ]);
-    expect(meta?.slug).toBe("fast-food");
+    expect(meta?.slug).toBe("coffee-shop");
   });
 
   it("picks the first entry when it is a known category", () => {
@@ -109,8 +142,8 @@ describe("getPrimaryCategoryMetadata · first-match order", () => {
   it("returns null when no category is registered", () => {
     const meta = getPrimaryCategoryMetadata([
       "coffee-cafe",
-      "cafe",
-      "ice-cream",
+      "mystery-category",
+      "unregistered-slug",
     ]);
     expect(meta).toBeNull();
   });
@@ -122,25 +155,37 @@ describe("getPrimaryCategoryMetadata · first-match order", () => {
 
 describe("partitionCategories", () => {
   it("separates known from unknown preserving order", () => {
+    // `cafe` → coffee-shop · `ice-cream` registered directly. Only
+    // `coffee-cafe` stays unknown.
     const result = partitionCategories([
       "coffee-cafe",
       "fast-food",
       "cafe",
       "ice-cream",
     ]);
-    expect(result.known.map((k) => k.slug)).toEqual(["fast-food"]);
-    expect(result.unknown).toEqual(["coffee-cafe", "cafe", "ice-cream"]);
+    expect(result.known.map((k) => k.slug)).toEqual([
+      "fast-food",
+      "coffee-shop",
+      "ice-cream",
+    ]);
+    expect(result.unknown).toEqual(["coffee-cafe"]);
   });
 
   it("deduplicates while preserving first-seen order", () => {
+    // `cafe` is a known alias (→ coffee-shop) since the 2026-10
+    // expansion; dedupe keeps the first alias only.
     const result = partitionCategories([
       "fast-food",
       "fast-food",
       "cafe",
       "cafe",
     ]);
-    expect(result.known.length).toBe(1);
-    expect(result.unknown).toEqual(["cafe"]);
+    expect(result.known.length).toBe(2);
+    expect(result.known.map((k) => k.slug)).toEqual([
+      "fast-food",
+      "coffee-shop",
+    ]);
+    expect(result.unknown).toEqual([]);
   });
 
   it("deduplicates by canonical entry when multiple aliases hit the same registry row", () => {

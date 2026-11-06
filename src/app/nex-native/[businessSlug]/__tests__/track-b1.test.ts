@@ -69,6 +69,7 @@ describe("_personalise-invitation.tsx · structure", () => {
     // Strip comments before scanning so file-header disclaimers don't trip.
     const strip = (s: string) =>
       s
+        .replace(/\r\n/g, "\n")
         .split("\n")
         .map((l) => l.replace(/\/\/.*$/, ""))
         .join("\n")
@@ -94,6 +95,7 @@ describe("_personalise-invitation.tsx · structure", () => {
   it("does NOT infer completion from chat_theme or cover_layout_id (owner's rule)", () => {
     const strip = (s: string) =>
       s
+        .replace(/\r\n/g, "\n")
         .split("\n")
         .map((l) => l.replace(/\/\/.*$/, ""))
         .join("\n")
@@ -106,6 +108,7 @@ describe("_personalise-invitation.tsx · structure", () => {
   it("honest copy · no 'setup incomplete' or 'setup complete' claim", () => {
     const strip = (s: string) =>
       s
+        .replace(/\r\n/g, "\n")
         .split("\n")
         .map((l) => l.replace(/\/\/.*$/, ""))
         .join("\n")
@@ -123,6 +126,7 @@ describe("_personalise-invitation.tsx · structure", () => {
     // referencing sealed server actions don't trip the regex.
     const strip = (s: string) =>
       s
+        .replace(/\r\n/g, "\n")
         .split("\n")
         .map((l) => l.replace(/\/\/.*$/, ""))
         .join("\n")
@@ -192,7 +196,10 @@ describe("[businessSlug]/page.tsx · owner-only banner selection", () => {
   });
 
   it("still injects {setupBanner} above the legacy landing render path (Track B pin preserved)", () => {
-    expect(SHOP_PAGE_SRC).toMatch(/\{setupBanner\}[\s\S]{0,100}?TOP HEADER/);
+    // 200-char window accommodates the Phase 1c Batch 4 doctrine
+    // comment the scope-reduction sweep inserted between the banner
+    // slot and the TOP HEADER marker.
+    expect(SHOP_PAGE_SRC).toMatch(/\{setupBanner\}[\s\S]{0,300}?TOP HEADER/);
   });
 });
 

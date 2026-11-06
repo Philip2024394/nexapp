@@ -62,9 +62,11 @@ describe("ListingCard · required field rendering", () => {
     expect(canon).not.toContain("Directory");
   });
 
-  it("mock_seed listings STILL render the SAMPLE chip (honest-labelling of preview data)", () => {
+  // Owner directive 2026-10-18 (iteration) · SAMPLE chip retired ·
+  // provenance now carried by the seller-country flag + aria label.
+  it("mock_seed listings DO NOT render the retired SAMPLE chip", () => {
     const mock = renderToStaticMarkup(<ListingCard listing={vm({ source: "mock_seed" })} />);
-    expect(mock).toContain("SAMPLE");
+    expect(mock).not.toContain("SAMPLE");
   });
 
   // Owner-approved repair pass 2026-10-16 · mock cards must NOT be
@@ -83,13 +85,16 @@ describe("ListingCard · required field rendering", () => {
     expect(mock).toMatch(/<article[^>]*aria-disabled="true"/);
   });
 
-  it("mock_seed cards expose aria-label flagging them as SAMPLE previews", () => {
+  // Owner directive 2026-10-18 (iteration) · aria-label copy updated
+  // from "SAMPLE preview, not clickable" → "preview, not clickable"
+  // when SAMPLE chip retired. Assertion follows current source.
+  it("mock_seed cards expose aria-label flagging them as non-clickable previews", () => {
     const mock = renderToStaticMarkup(
       <ListingCard
         listing={vm({ source: "mock_seed", title: "Preview Beans" })}
       />,
     );
-    expect(mock).toMatch(/aria-label="Preview Beans — SAMPLE preview, not clickable"/);
+    expect(mock).toMatch(/aria-label="Preview Beans — preview, not clickable"/);
   });
 
   it("real listings (nex_business / canonical) STILL render as navigable <Link>", () => {
@@ -113,37 +118,32 @@ describe("ListingCard · required field rendering", () => {
     expect(canon).not.toMatch(/aria-disabled="true"/);
   });
 
-  it("ALWAYS renders the category footer (divider + icon + label + chevron)", () => {
+  // Owner directive 2026-10-18 · CategoryFooter retired · replaced
+  // by the Safe Trade footer. Divider + chevron still render; the
+  // sprite + category label + icon coords no longer anchor the
+  // footer. Sealed ViewModel fields (categoryLabel / categoryAccent
+  // / iconCol / iconRow) stay on the type for other consumers
+  // (filter UIs upstream).
+  it("ALWAYS renders the Safe Trade footer (divider + chevron)", () => {
     const html = renderToStaticMarkup(<ListingCard listing={vm()} />);
-    // Divider: border-top on the footer div. Serialised style string
-    // contains the border declaration.
+    // Divider: border-top on the footer button.
     expect(html).toMatch(/border-top:\s*1px solid/);
     // Chevron
     expect(html).toContain("›");
-    // Icon · the sprite URL
-    expect(html).toContain("/nex-directory/icons/category-grid.png");
-    // Label
-    expect(html).toContain("Food");
+    // Safe Trade label (replaces the per-category label).
+    expect(html).toMatch(/Safe Trade/);
+    // Safe Trade footer anchor attribute present.
+    expect(html).toContain("data-nex-safe-trade-footer");
   });
 
-  it("category label text picks up the categoryAccent colour", () => {
+  it("Safe Trade footer uses the cyan accent (not the per-listing categoryAccent)", () => {
     const html = renderToStaticMarkup(
       <ListingCard listing={vm({ categoryAccent: "#FF8A2A", categoryLabel: "Products" })} />,
     );
-    // The accent appears as both the colour on the label and the glow
-    // on the icon's filter.
-    expect(html).toContain("#FF8A2A");
-    expect(html).toContain("Products");
-  });
-
-  it("category icon uses the correct sprite coordinates", () => {
-    // col=2, row=0 → (2*100)/3 = 66.666...% × 1 row 0 → 0%
-    // JS floating-point may render as 66.66666666666667% so we match
-    // tolerantly.
-    const html = renderToStaticMarkup(
-      <ListingCard listing={vm({ categoryIconCol: 2, categoryIconRow: 0 })} />,
-    );
-    expect(html).toMatch(/background-position:\s*66\.6\d*%\s*0%/);
+    // Cyan #00AFFF is the sealed Safe Trade colour · the per-listing
+    // categoryAccent is intentionally NOT applied to the footer
+    // anymore (retired 2026-10-18).
+    expect(html).toContain("#00AFFF");
   });
 });
 
@@ -156,11 +156,15 @@ describe("ListingCard · optional field rendering (present)", () => {
     expect(html).toContain("<img");
   });
 
-  it("renders the description when present", () => {
+  // Owner directive 2026-10-18 (iteration) · description slot
+  // retired from the body. The card body now carries (name, location
+  // row, price row) · no free-form description. Field stays on the
+  // view-model type for future reuse but is NOT rendered.
+  it("description is NOT rendered (retired from card body 2026-10-18)", () => {
     const html = renderToStaticMarkup(
       <ListingCard listing={vm({ description: "Fresh bread daily." })} />,
     );
-    expect(html).toContain("Fresh bread daily.");
+    expect(html).not.toContain("Fresh bread daily.");
   });
 
   it("renders the city when present", () => {
@@ -242,7 +246,10 @@ describe("ListingCard · fabrication guard (owner rule #6)", () => {
       path.join(__dirname, "..", "listing-card.tsx"),
       "utf8",
     );
+    // Normalise CRLF → LF before splitting so the `//.*$` strip
+    // matches on both Windows- and Unix-checked-out working trees.
     const src = raw
+      .replace(/\r\n/g, "\n")
       .replace(/\/\*[\s\S]*?\*\//g, "")
       .split("\n")
       .map((line) => line.replace(/\/\/.*$/, ""))
@@ -330,7 +337,13 @@ describe("ListingCard · price row · owner directive 2026-10-16", () => {
     expect(html).not.toContain("~Rp");
   });
 
-  it("buyerLocalPrice populated (future Phase 1.5 wire-up) → second line + second flag render", () => {
+  // Owner directive 2026-10-18 (iteration) · the price row now shows
+  // ONE price line only · priority: buyerLocalPrice > seller priceNow
+  // > Ask-seller placeholder. The country flag on the image top-left
+  // (SellerCountryFlagChip) still reflects the seller country ISO.
+  // Buyer ISO is retained on the component props for a future design
+  // pass but not rendered inline on the price line.
+  it("buyerLocalPrice populated → only the buyer line renders (seller line collapsed, single provenance flag from image chip)", () => {
     const html = renderToStaticMarkup(
       <ListingCard
         listing={vm({
@@ -344,10 +357,13 @@ describe("ListingCard · price row · owner directive 2026-10-16", () => {
         })}
       />,
     );
-    expect(html).toContain("Rp 950,000");
+    // Buyer-currency estimate is shown.
     expect(html).toContain("~£47.80");
+    // Seller price is NOT shown · the price row collapsed to one line.
+    expect(html).not.toContain("Rp 950,000");
+    // The seller-country flag chip (top-left of image) uses the ID
+    // flag code from `CountryFlag`'s fallback.
     expect(html).toContain(">ID<");
-    expect(html).toContain(">GB<");
   });
 
   it("price row has a data attribute anchor so e2e can target it", () => {

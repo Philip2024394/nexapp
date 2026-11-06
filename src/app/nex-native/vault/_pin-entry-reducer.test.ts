@@ -1,7 +1,12 @@
 // src/app/nex-native/vault/_pin-entry-reducer.test.ts
 //
 // Pure reducer coverage for the Vault PIN entry state machine.
-// Node-env vitest · no DOM required.
+// Founder-locked policy 2026-10-06 · 8-12 digit PINs ONLY (6-digit
+// PINs are impossible). The reducer therefore enters `ready` once
+// digit count reaches PIN_MIN_LENGTH · caps at PIN_MAX_LENGTH · and
+// uses a SEPARATE `wrong` state (no digits retained) + an independent
+// `rate_limited` terminal state. There is no `unavailable` state in
+// the current production reducer.
 
 import { describe, expect, it } from "vitest";
 import {
@@ -9,7 +14,8 @@ import {
   reducePinState,
   isSubmittable,
   digitCount,
-  PIN_LENGTH,
+  PIN_MIN_LENGTH,
+  PIN_MAX_LENGTH,
 } from "./_pin-entry-reducer";
 
 describe("initialPinState", () => {
@@ -31,10 +37,21 @@ describe("reducePinState · digit input", () => {
     expect(s).toEqual({ kind: "entering", digits: "1234" });
   });
 
-  it("caps digits at PIN_LENGTH", () => {
+  it("flips to `ready` when PIN_MIN_LENGTH digits are entered", () => {
     let s = initialPinState();
-    for (const d of "1234567890") s = reducePinState(s, { kind: "digit", value: d });
-    expect(digitCount(s)).toBe(PIN_LENGTH);
+    const seed = "1".repeat(PIN_MIN_LENGTH);
+    for (const d of seed) s = reducePinState(s, { kind: "digit", value: d });
+    expect(s.kind).toBe("ready");
+    expect(digitCount(s)).toBe(PIN_MIN_LENGTH);
+  });
+
+  it("caps digits at PIN_MAX_LENGTH", () => {
+    let s = initialPinState();
+    // Push PIN_MAX_LENGTH + 5 digits · cap applies.
+    for (let i = 0; i < PIN_MAX_LENGTH + 5; i++) {
+      s = reducePinState(s, { kind: "digit", value: "1" });
+    }
+    expect(digitCount(s)).toBe(PIN_MAX_LENGTH);
   });
 
   it("ignores non-digit input", () => {
@@ -60,9 +77,18 @@ describe("reducePinState · digit input", () => {
   });
 
   it("does not accept digits while submitting", () => {
-    const s0 = { kind: "submitting" as const, digits: "123456" };
+    const s0 = {
+      kind: "submitting" as const,
+      digits: "1".repeat(PIN_MIN_LENGTH),
+    };
     const s1 = reducePinState(s0, { kind: "digit", value: "7" });
     expect(s1).toEqual(s0);
+  });
+
+  it("from `wrong` state, typing a digit restarts entry from empty", () => {
+    const s0 = { kind: "wrong" as const, digits: "" as const };
+    const s1 = reducePinState(s0, { kind: "digit", value: "5" });
+    expect(s1).toEqual({ kind: "entering", digits: "5" });
   });
 });
 
@@ -80,9 +106,21 @@ describe("reducePinState · backspace", () => {
   });
 
   it("does not alter state while submitting", () => {
-    const s0 = { kind: "submitting" as const, digits: "123456" };
+    const s0 = {
+      kind: "submitting" as const,
+      digits: "1".repeat(PIN_MIN_LENGTH),
+    };
     const s1 = reducePinState(s0, { kind: "backspace" });
     expect(s1).toEqual(s0);
+  });
+
+  it("stepping `ready` back below min returns to `entering`", () => {
+    const s0 = {
+      kind: "ready" as const,
+      digits: "1".repeat(PIN_MIN_LENGTH),
+    };
+    const s1 = reducePinState(s0, { kind: "backspace" });
+    expect(s1.kind).toBe("entering");
   });
 });
 
@@ -93,10 +131,11 @@ describe("reducePinState · setDigits", () => {
     expect(s1).toEqual({ kind: "entering", digits: "123" });
   });
 
-  it("truncates to PIN_LENGTH", () => {
+  it("truncates to PIN_MAX_LENGTH", () => {
     const s0 = initialPinState();
-    const s1 = reducePinState(s0, { kind: "setDigits", digits: "1234567890" });
-    expect(s1).toEqual({ kind: "entering", digits: "123456" });
+    const long = "123456789012345";
+    const s1 = reducePinState(s0, { kind: "setDigits", digits: long });
+    expect(digitCount(s1)).toBe(PIN_MAX_LENGTH);
   });
 
   it("clears when provided an all-non-digit string", () => {
@@ -104,72 +143,99 @@ describe("reducePinState · setDigits", () => {
     const s1 = reducePinState(s0, { kind: "setDigits", digits: "abc" });
     expect(s1).toEqual({ kind: "entering", digits: "" });
   });
+
+  it("flips to `ready` when setDigits lands at min length", () => {
+    const s0 = initialPinState();
+    const s1 = reducePinState(s0, {
+      kind: "setDigits",
+      digits: "1".repeat(PIN_MIN_LENGTH),
+    });
+    expect(s1.kind).toBe("ready");
+  });
 });
 
 describe("reducePinState · submit", () => {
-  it("transitions to submitting when exactly PIN_LENGTH digits are entered", () => {
-    const s0 = { kind: "entering" as const, digits: "123456" };
+  it("transitions `ready` to `submitting`", () => {
+    const s0 = {
+      kind: "ready" as const,
+      digits: "1".repeat(PIN_MIN_LENGTH),
+    };
     const s1 = reducePinState(s0, { kind: "submit" });
-    expect(s1).toEqual({ kind: "submitting", digits: "123456" });
+    expect(s1).toEqual({
+      kind: "submitting",
+      digits: "1".repeat(PIN_MIN_LENGTH),
+    });
   });
 
-  it("ignores submit when fewer than PIN_LENGTH digits are entered", () => {
-    const s0 = { kind: "entering" as const, digits: "12345" };
+  it("ignores submit when state is `entering` (digits below min)", () => {
+    const s0 = { kind: "entering" as const, digits: "1234" };
     const s1 = reducePinState(s0, { kind: "submit" });
     expect(s1).toEqual(s0);
   });
 
-  it("ignores submit when state is already submitting", () => {
-    const s0 = { kind: "submitting" as const, digits: "123456" };
-    const s1 = reducePinState(s0, { kind: "submit" });
-    expect(s1).toEqual(s0);
-  });
-
-  it("ignores submit when state is incorrect (post-reject)", () => {
-    const s0 = { kind: "incorrect" as const, digits: "" };
+  it("ignores submit when state is already `submitting`", () => {
+    const s0 = {
+      kind: "submitting" as const,
+      digits: "1".repeat(PIN_MIN_LENGTH),
+    };
     const s1 = reducePinState(s0, { kind: "submit" });
     expect(s1).toEqual(s0);
   });
 });
 
-describe("reducePinState · reject", () => {
-  it("incorrect rejection clears digits and shows incorrect state", () => {
-    const s0 = { kind: "submitting" as const, digits: "123456" };
-    const s1 = reducePinState(s0, { kind: "reject", reason: "incorrect" });
-    expect(s1).toEqual({ kind: "incorrect", digits: "" });
+describe("reducePinState · rejectWrong + rejectRateLimited", () => {
+  it("rejectWrong from `submitting` clears digits and enters `wrong` state", () => {
+    const s0 = {
+      kind: "submitting" as const,
+      digits: "1".repeat(PIN_MIN_LENGTH),
+    };
+    const s1 = reducePinState(s0, { kind: "rejectWrong" });
+    expect(s1).toEqual({ kind: "wrong", digits: "" });
   });
 
-  it("unavailable rejection enters terminal unavailable state", () => {
-    const s0 = { kind: "submitting" as const, digits: "123456" };
-    const s1 = reducePinState(s0, { kind: "reject", reason: "unavailable" });
-    expect(s1).toEqual({ kind: "unavailable" });
+  it("rejectRateLimited enters the rate-limited terminal state", () => {
+    const s0 = {
+      kind: "submitting" as const,
+      digits: "1".repeat(PIN_MIN_LENGTH),
+    };
+    const s1 = reducePinState(s0, {
+      kind: "rejectRateLimited",
+      retryAfterSeconds: 60,
+    });
+    expect(s1).toEqual({ kind: "rate_limited", retryAfterSeconds: 60 });
   });
 });
 
-describe("reducePinState · unavailable terminal state", () => {
-  it("ignores digit, backspace, submit, reject events", () => {
-    const s0: ReturnType<typeof initialPinState> = { kind: "unavailable" };
+describe("reducePinState · rate_limited terminal state", () => {
+  it("ignores digit/backspace/submit while rate-limited", () => {
+    const s0 = {
+      kind: "rate_limited" as const,
+      retryAfterSeconds: 30,
+    };
     expect(reducePinState(s0, { kind: "digit", value: "1" })).toEqual(s0);
     expect(reducePinState(s0, { kind: "backspace" })).toEqual(s0);
     expect(reducePinState(s0, { kind: "submit" })).toEqual(s0);
-    expect(reducePinState(s0, { kind: "reject", reason: "incorrect" })).toEqual(s0);
-    expect(
-      reducePinState(s0, { kind: "setDigits", digits: "123456" }),
-    ).toEqual(s0);
+    expect(reducePinState(s0, { kind: "rejectWrong" })).toEqual(s0);
   });
 
-  it("allows reset to return to initial state", () => {
-    const s0: ReturnType<typeof initialPinState> = { kind: "unavailable" };
+  it("`reset` returns to initial state from rate_limited", () => {
+    const s0 = {
+      kind: "rate_limited" as const,
+      retryAfterSeconds: 30,
+    };
     expect(reducePinState(s0, { kind: "reset" })).toEqual(initialPinState());
   });
 });
 
 describe("reducePinState · reset", () => {
-  it("returns to initial state from any non-unavailable state", () => {
+  it("returns to initial state from `entering` / `submitting` / `wrong`", () => {
     const states = [
       { kind: "entering" as const, digits: "123" },
-      { kind: "submitting" as const, digits: "123456" },
-      { kind: "incorrect" as const, digits: "" },
+      {
+        kind: "submitting" as const,
+        digits: "1".repeat(PIN_MIN_LENGTH),
+      },
+      { kind: "wrong" as const, digits: "" as const },
     ];
     for (const s of states) {
       expect(reducePinState(s, { kind: "reset" })).toEqual(initialPinState());
@@ -178,30 +244,43 @@ describe("reducePinState · reset", () => {
 });
 
 describe("isSubmittable", () => {
-  it("returns true only for entering with exactly PIN_LENGTH digits", () => {
-    expect(isSubmittable({ kind: "entering", digits: "123456" })).toBe(true);
+  it("returns true only for `ready`", () => {
+    expect(
+      isSubmittable({
+        kind: "ready",
+        digits: "1".repeat(PIN_MIN_LENGTH),
+      }),
+    ).toBe(true);
   });
 
-  it("returns false for shorter digit counts", () => {
-    expect(isSubmittable({ kind: "entering", digits: "12345" })).toBe(false);
-    expect(isSubmittable({ kind: "entering", digits: "" })).toBe(false);
-  });
-
-  it("returns false for non-entering states", () => {
-    expect(isSubmittable({ kind: "submitting", digits: "123456" })).toBe(false);
-    expect(isSubmittable({ kind: "incorrect", digits: "" })).toBe(false);
-    expect(isSubmittable({ kind: "unavailable" })).toBe(false);
+  it("returns false for other states", () => {
+    expect(isSubmittable({ kind: "entering", digits: "1234" })).toBe(false);
+    expect(
+      isSubmittable({
+        kind: "submitting",
+        digits: "1".repeat(PIN_MIN_LENGTH),
+      }),
+    ).toBe(false);
+    expect(isSubmittable({ kind: "wrong", digits: "" })).toBe(false);
+    expect(
+      isSubmittable({ kind: "rate_limited", retryAfterSeconds: 30 }),
+    ).toBe(false);
   });
 });
 
 describe("digitCount", () => {
   it("reports the current digit length for digit-bearing states", () => {
     expect(digitCount({ kind: "entering", digits: "123" })).toBe(3);
-    expect(digitCount({ kind: "submitting", digits: "123456" })).toBe(6);
-    expect(digitCount({ kind: "incorrect", digits: "" })).toBe(0);
+    expect(
+      digitCount({
+        kind: "submitting",
+        digits: "1".repeat(PIN_MIN_LENGTH),
+      }),
+    ).toBe(PIN_MIN_LENGTH);
   });
 
-  it("reports 0 for terminal unavailable state", () => {
-    expect(digitCount({ kind: "unavailable" })).toBe(0);
+  it("reports 0 for `wrong` and `rate_limited` states", () => {
+    expect(digitCount({ kind: "wrong", digits: "" })).toBe(0);
+    expect(digitCount({ kind: "rate_limited", retryAfterSeconds: 60 })).toBe(0);
   });
 });

@@ -117,20 +117,32 @@ describe("DrawerBody · entitlement gate on Business Vault (owner decision #1)",
     expect(html).not.toContain('data-nex-control-drawer-row="business-vault"');
   });
 
-  it("Bisnis viewer sees Business Vault slot between My businesses + Packages", () => {
+  // Owner directive 2026-11-01 (Batch D+) · the bisnis slice is a
+  // tighter: [my-shop · Business Vault · my-businesses] (plus the
+  // optional creator-support tail). The "packages" row is now part
+  // of the non-bisnis slice only · bisnis viewers reach billing
+  // through a separate surface and don't see the drawer packages
+  // row. This spec locks the tighter contract.
+  it("Bisnis viewer sees Business Vault slot inside the bisnis slice", () => {
     const html = renderToStaticMarkup(
       <__internal.DrawerBody session={BISNIS} onLogoutClick={() => {}} />,
     );
-    expect(html).toContain("My businesses");
+    // Bisnis slice required rows:
+    expect(html).toContain("My Shop");
     expect(html).toContain("Business Vault");
-    expect(html).toContain("Packages and billing");
+    expect(html).toContain("My businesses");
     expect(html).toContain('data-nex-control-drawer-row="business-vault"');
 
-    const idxBusinesses = html.indexOf("My businesses");
+    // Business Vault sits BETWEEN my-shop and my-businesses in the slice.
+    const idxShop = html.indexOf("My Shop");
     const idxVault = html.indexOf("Business Vault");
-    const idxPackages = html.indexOf("Packages and billing");
-    expect(idxBusinesses).toBeLessThan(idxVault);
-    expect(idxVault).toBeLessThan(idxPackages);
+    const idxBusinesses = html.indexOf("My businesses");
+    expect(idxShop).toBeLessThan(idxVault);
+    expect(idxVault).toBeLessThan(idxBusinesses);
+
+    // "Packages and billing" row is a non-bisnis row · not rendered
+    // inside the bisnis slice.
+    expect(html).not.toContain("Packages and billing");
   });
 });
 
@@ -153,13 +165,15 @@ describe("DrawerBody · section groups + rows", () => {
     const html = renderToStaticMarkup(
       <__internal.DrawerBody session={BISNIS} onLogoutClick={() => {}} />,
     );
+    // Rows actually rendered for a Bisnis session. The profile row
+    // moved to `/nex-native/profile/me` and the drawer no longer
+    // emits a top-level /chat route (replaced by contacts). These are
+    // the hrefs that MUST appear in the rendered drawer body.
     const expectedHrefs = [
-      "/nex-native/settings/profile",
-      "/nex-native/chat",
+      "/nex-native/profile/me",
       "/nex-native/chat-themes-library",
       "/nex-native/manage",
       "/nex-native/vault",
-      "/nex-native/settings/tier",
       "/nex-native/settings",
       "/nex-native/settings/security",
       "/nex-native/settings/help",
@@ -229,13 +243,26 @@ describe("ControlDrawer · architectural guards", () => {
       "profile",
       "chats-contacts",
       "chat-appearance",
+      // Owner directive 2026-10-20 · Shop appearance row · companion
+      // to Chat appearance · skins the public shop face/cover.
+      "shop-appearance",
       // Owner directive 2026-10-19 · Intro Video row · settings page
       // for the user's own 8s intro + title overlay.
       "intro-video",
+      // Owner directive 2026-10-22 · Status row · 24h ephemeral
+      // sharing stored device-local.
+      "status",
     ]);
+    // Owner directive 2026-11-01 (Batch D+) · YOUR BUSINESS rows now
+    // include my-shop (primary owner-admin entry), delivery-pricing
+    // and creator-support. Order below reflects source ordering of
+    // YOUR_BUSINESS_ROWS (not the bisnis-slice render ordering).
     expect(__internal.YOUR_BUSINESS_ROWS.map((r) => r.key)).toEqual([
+      "my-shop",
       "my-businesses",
+      "delivery-pricing",
       "packages",
+      "creator-support",
     ]);
     expect(__internal.BUSINESS_VAULT_ROW.key).toBe("business-vault");
     expect(__internal.PREFERENCES_ROWS.map((r) => r.key)).toEqual([

@@ -33,7 +33,10 @@ const LANDING_SRC = fs.readFileSync(LANDING_PAGE_PATH, "utf8");
 // comments. We keep this simple on purpose — a crude strip is enough
 // for structural assertions.
 function stripComments(src: string): string {
+  // Normalise CRLF → LF so the `//.*$` strip matches on both Windows-
+  // and Unix-checked-out working trees.
   return src
+    .replace(/\r\n/g, "\n")
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .split("\n")
     .map((line) => line.replace(/\/\/.*$/, ""))

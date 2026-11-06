@@ -210,69 +210,39 @@ describe("buildClipboardPayload · copies the minimal identifier", () => {
   });
 });
 
-/* ─── C · home/page.tsx integration source shape ──────────────── */
+/* ─── C · home/page.tsx retired-redirect contract ─────────────────
+ *
+ * Owner directive 2026-10-19 · /nex-native/home as a standalone
+ * surface is retired. page.tsx is now a thin 307 permanent-redirect
+ * to /nex-native/contacts. The sealed first-contact gate + predicate
+ * + panel continue to live as reusable modules (covered by layers A,
+ * B, D, E in this file) · they are consumed by /contacts not /home.
+ */
 
-describe("home/page.tsx · first-contact integration", () => {
-  it("imports FirstContactPanel + resolveFirstContactSignals from the panel", () => {
+describe("home/page.tsx · retired-redirect contract", () => {
+  it("imports permanentRedirect from next/navigation", () => {
     expect(HOME_SRC).toMatch(
-      /import\s*\{[^}]*FirstContactPanel[^}]*resolveFirstContactSignals[^}]*\}\s*from\s*["']\.\/_first-contact-panel["']/,
+      /import\s*\{\s*permanentRedirect\s*\}\s*from\s*["']next\/navigation["']/,
     );
   });
 
-  it("imports shouldShowFirstContact from the pure predicate module", () => {
-    expect(HOME_SRC).toMatch(
-      /import\s*\{\s*shouldShowFirstContact\s*\}\s*from\s*["']\.\/_first-contact-predicate["']/,
-    );
+  it("the default export is an async component that calls permanentRedirect", () => {
+    expect(HOME_SRC).toMatch(/export\s+default\s+async\s+function/);
+    expect(HOME_SRC).toContain("permanentRedirect(");
   });
 
-  it("calls the resolver with session.account.id", () => {
-    expect(HOME_SRC).toContain(
-      "resolveFirstContactSignals(session.account.id)",
-    );
+  it("redirects to /nex-native/contacts (not /chat, not /home-v2, not any new surface)", () => {
+    expect(HOME_SRC).toContain('permanentRedirect("/nex-native/contacts")');
+    expect(HOME_SRC).not.toMatch(/permanentRedirect\(["']\/nex-native\/chat/);
   });
 
-  it("derives the gate from the shared predicate", () => {
-    expect(HOME_SRC).toContain(
-      "shouldShowFirstContact(firstContactSignals)",
-    );
-    expect(HOME_SRC).toContain(
-      "const showFirstContact = shouldShowFirstContact",
-    );
-  });
-
-  it("derives canShareProfileUrl strictly from profile.is_discoverable === true", () => {
-    expect(HOME_SRC).toMatch(
-      /const\s+canShareProfileUrl\s*=\s*profile\?\.is_discoverable\s*===\s*true/,
-    );
-  });
-
-  it("renders FirstContactPanel ONLY under both the gate AND handle guard", () => {
-    // Guard must require both showFirstContact AND handle.
-    expect(HOME_SRC).toMatch(
-      /\{\s*showFirstContact\s*&&\s*handle\s*&&\s*\(\s*<FirstContactPanel/,
-    );
-    const unguarded = HOME_SRC.match(/<FirstContactPanel/g) ?? [];
-    expect(unguarded).toHaveLength(1);
-  });
-
-  it("passes handle, firstName, canShareProfileUrl, accentHex to the panel", () => {
-    expect(HOME_SRC).toContain("handle={handle}");
-    expect(HOME_SRC).toContain("canShareProfileUrl={canShareProfileUrl}");
-    expect(HOME_SRC).toContain("accentHex={themeAccent}");
-    // firstName derived from displayName
-    expect(HOME_SRC).toMatch(/firstName=\{displayName\.split/);
-  });
-
-  it("preserves the sealed shouldShowFirstVisitInvitation path", () => {
-    expect(HOME_SRC).toContain(
-      "shouldShowFirstVisitInvitation(conversationCount)",
-    );
-    expect(HOME_SRC).toContain(
-      "const showFirstVisitInvitation = shouldShowFirstVisitInvitation",
-    );
-    expect(HOME_SRC).toMatch(
-      /\{showFirstVisitInvitation\s*&&\s*\(\s*<FirstVisitInvitation/,
-    );
+  it("does NOT re-introduce the retired FirstContactPanel render", () => {
+    // Guarantees the redirect stays thin · the panel + predicate
+    // continue to be consumed by /contacts instead.
+    expect(HOME_SRC).not.toContain("FirstContactPanel");
+    expect(HOME_SRC).not.toContain("resolveFirstContactSignals");
+    expect(HOME_SRC).not.toContain("shouldShowFirstContact");
+    expect(HOME_SRC).not.toContain("shouldShowFirstVisitInvitation");
   });
 
   it("does NOT introduce a DB mutation, cookie set, or RPC call", () => {
@@ -283,21 +253,9 @@ describe("home/page.tsx · first-contact integration", () => {
     expect(HOME_SRC).not.toMatch(/\.rpc\(/);
   });
 
-  it("does NOT introduce an automatic redirect for first-contact", () => {
-    expect(HOME_SRC).not.toMatch(/redirect\(["']\/nex-native\/chat\/first-contact/);
-    expect(HOME_SRC).not.toMatch(/redirect\(["']\/nex-native\/u\//);
-  });
-
   it("preserves the force-dynamic + nodejs runtime", () => {
     expect(HOME_SRC).toContain('export const runtime = "nodejs"');
     expect(HOME_SRC).toContain('export const dynamic = "force-dynamic"');
-  });
-
-  it("preserves the pinned Promise.all destructure name order", () => {
-    expect(HOME_SRC).toMatch(
-      /\[\s*profile\s*,\s*ownedBusinesses\s*,\s*themes\s*,\s*conversationCount\s*\]/,
-    );
-    expect(HOME_SRC).toMatch(/\.catch\(\(\):\s*number\s*\|\s*null\s*=>\s*null\s*\)/);
   });
 });
 
