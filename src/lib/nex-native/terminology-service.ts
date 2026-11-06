@@ -148,10 +148,10 @@ export async function getProfessionById(
  * Architectural note (founder-recorded 2026-09-30 · audit at
  * commit 1f11f706+):
  *
- *   Public cover routes at /nex-native/[businessSlug] declare
+ *   The original public cover route (retired 2026-11-06) declared
  *   export const dynamic = "force-dynamic" and NO Next.js route
  *   cache, ISR, React cache(), unstable_cache(), revalidateTag,
- *   or fetch caching sits on the path
+ *   or fetch caching sat on the path
  *
  *      profession save → DB → resolveTerminology → cover-content-loader
  *      → content.terminology → dynamic cover render

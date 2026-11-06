@@ -41,7 +41,9 @@ import type { DirectoryClassification } from "./types";
 
 /**
  * The verbatim Next.js dynamic route pattern for an owner-claimed
- * NEX Business cover. Matches `src/app/nex-native/[businessSlug]/page.tsx`.
+ * NEX Business cover. Original destination page was retired 2026-11-06
+ * (business-slug subtree deletion); constant retained for the
+ * destination-resolver API contract until a new consumer is wired.
  *
  * Pattern token: `{slug}`.
  */
@@ -228,11 +230,13 @@ export const SEALED_UNRESOLVED_REASONS: readonly UnresolvedReason[] = [
 //   · imports only ./types (type-only)
 //
 // Route pattern discipline
-//   · If `src/app/nex-native/[businessSlug]/page.tsx` is ever renamed,
-//     update NEX_BUSINESS_ROUTE_PATTERN AND the resolver's path
-//     builder in the same wave.
-//   · Likewise for `src/app/nex-native/u/[handle]/page.tsx` and
-//     NEX_USER_PROFILE_ROUTE_PATTERN.
+//   · The business-slug route page was retired 2026-11-06. When a
+//     replacement destination surface is chosen, update
+//     NEX_BUSINESS_ROUTE_PATTERN AND the resolver's path builder in
+//     the same wave.
+//   · For `src/app/nex-native/u/[handle]/page.tsx` + the paired
+//     NEX_USER_PROFILE_ROUTE_PATTERN, keep the file-path and constant
+//     in sync whenever either is renamed.
 //
 // Discriminated-union discipline
 //   · If a new destination kind is ever added, update the resolver's

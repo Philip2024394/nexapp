@@ -185,27 +185,10 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
     flags: [],
     notes: "Currently at /nex-native/search · the move to /directory/search is a Phase A rewrite.",
   },
-  {
-    id: "directory_business_slug",
-    filePath: "src/app/nex-native/[businessSlug]/page.tsx",
-    currentUrl: "/nex-native/[businessSlug]",
-    canonicalUrl: "/directory/b/[slug]",
-    name: "Business Cover · Public Shop",
-    purpose: "Public cover page for a claimed business · owner-controlled.",
-    parentId: "directory_home",
-    feature: "commerce",
-    accessLevel: "public",
-    redirectsFrom: ["/nex-native/[businessSlug]"],
-    visibleInNav: false,
-    sitemapInclude: true,
-    sitemapChangeFreq: "weekly",
-    sitemapPriority: 0.7,
-    lifecycle: "active",
-    params: ["slug"],
-    runtime: "nodejs",
-    flags: ["commerce_gated", "slug_unique_on_nex_business"],
-    activeDate: "2026-09-27",
-  },
+  // directory_business_slug entry retired 2026-11-06 · the public
+  // business-slug cover page was deleted per owner directive. When a
+  // replacement cover destination is chosen, re-add an entry here with
+  // the new filePath + currentUrl.
 
   // ─── admin ───────────────────────────────────────────────────────
   {

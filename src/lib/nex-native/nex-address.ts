@@ -5,8 +5,8 @@
 // Founder-sealed doctrine (see doctrine_nex_chat_is_the_product / _presence_builder):
 //   The public "NEX Address" (cakeshopjogja.nex · philip.nex) is the human-
 //   readable doorway. The DISPLAY is future-proofed for real .nex-namespace
-//   ambitions; the CURRENT URL routes through the existing in-app slug
-//   handler at /nex-native/[businessSlug] (Slice 15a shipped).
+//   ambitions. The original in-app slug handler was retired 2026-11-06; the
+//   URL destination will be re-wired when a replacement surface is chosen.
 //
 // This module is a boundary: callers pass in a business (or an account)
 // and get back a stable { stem, display, url } record. If NEX later ships

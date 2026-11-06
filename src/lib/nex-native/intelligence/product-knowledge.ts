@@ -223,9 +223,9 @@ export const NEX_FEATURES: readonly ProductKnowledgeEntry[] = [
     kind: "feature",
     title: "Public shop / menu landing",
     content:
-      "Every business gets a public page at /nex-native/[businessSlug] where cold visitors (no auth) can browse products or view the menu. Product images + menu photos stay server-hosted (unencrypted by design so shops actually load for strangers).",
+      "The public business cover surface was retired 2026-11-06. A replacement destination for cold visitors is pending — until then, only authenticated discovery paths reach a business.",
     keywords: ["shop", "landing", "public", "menu", "browse", "product"],
-    sealed_at: "2026-09-29",
+    sealed_at: "2026-11-06",
     required_plan: "gratis",
   },
   {

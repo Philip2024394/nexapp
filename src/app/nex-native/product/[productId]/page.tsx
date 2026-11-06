@@ -11,7 +11,6 @@
 //
 // No new chat system. No new product system. No schema change.
 
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import "../../nex-native.css";
 import * as productService from "@/lib/nex-native/product-service";
@@ -56,9 +55,10 @@ export default async function Page({
       <main className="mx-auto max-w-2xl px-4 py-6">
         <header className="mb-4 border-b border-[var(--nex-neutral-300)] pb-3">
           <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--nex-accent-600)]">
-            <Link href={`/nex-native/${business.slug}`} className="hover:underline">
-              @{business.slug}.nex
-            </Link>
+            {/* Business handle shown as plain text · the business-slug
+                destination was retired 2026-11-06, so this is no longer
+                a link. Wire a replacement when a new destination exists. */}
+            @{business.slug}.nex
           </p>
           <h1 className="text-xl font-semibold text-[var(--nex-neutral-900)]">
             {product.name}
@@ -137,12 +137,9 @@ export default async function Page({
 
         <section className="mb-4 rounded-xl border border-[var(--nex-neutral-200)] bg-white/70 p-3 text-xs text-[var(--nex-neutral-700)]">
           Sold by{" "}
-          <Link
-            href={`/nex-native/${business.slug}`}
-            className="font-medium text-[var(--nex-neutral-900)] hover:underline"
-          >
+          <span className="font-medium text-[var(--nex-neutral-900)]">
             {business.display_name}
-          </Link>
+          </span>
           {business.address && <> · {business.address.split("\n")[0]}</>}
         </section>
 

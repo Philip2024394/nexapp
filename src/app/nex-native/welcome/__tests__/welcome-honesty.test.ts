@@ -30,7 +30,7 @@
 //   G2 · Every tile href starts with "/nex-native/" and points at
 //        exactly one of the known guest-open NEX routes (library,
 //        discover, community). No external URL, no payment URL, no
-//        /nex-native/[businessSlug] (which is commerce-gated).
+//        commerce-gated routes.
 //   G3 · Primary + secondary CTAs route to the real sign-in and
 //        create-account surfaces.
 //   G4 · No tile text claims chat / purchase / ownership — these
@@ -147,8 +147,9 @@ describe("welcome page · honesty guardrails", () => {
       ).toBe(true);
     }
     // Explicit negative assertions on sealed commerce-gated routes.
+    // (The business-slug route was retired 2026-11-06, so the matching
+    //  entry was dropped from this fixture.)
     for (const commerceGated of [
-      "/nex-native/[businessSlug]",
       "/nex-native/cart",
       "/nex-native/orders",
       "/nex-native/manage/",

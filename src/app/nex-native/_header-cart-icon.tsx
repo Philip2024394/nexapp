@@ -5,8 +5,7 @@
 // Cart icon that sits in the top header of shop/restaurant surfaces.
 // Two visual variants:
 //   • "fixed"  (default) · absolute-positioned floating icon · used on
-//                          subpages without a header right-cluster
-//                          (e.g. /nex-native/[businessSlug]/menu).
+//                          subpages without a header right-cluster.
 //   • "inline"           · 15px icon that slots into the shop landing
 //                          page's Home/Settings cluster · matches the
 //                          HeaderIconLink styling exactly.

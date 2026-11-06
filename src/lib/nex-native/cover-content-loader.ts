@@ -1,9 +1,9 @@
 // src/lib/nex-native/cover-content-loader.ts
 //
 // Turns a nex_business row (+ related tables) into the runtime content
-// bundle the sealed cover primitives consume. Consumed by
-// /nex-native/[businessSlug]/page.tsx when the seller has picked a
-// cover_layout_id (Migration 100).
+// bundle the sealed cover primitives consume. Originally consumed by
+// the public business-slug page (retired 2026-11-06) · still used by
+// the cover preview surfaces and awaiting a new consumer.
 //
 // The bundle intentionally mirrors MockCoverContent (from
 // src/app/nex-native/cover/mock-data.ts) so the exact same rendering
