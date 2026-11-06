@@ -188,42 +188,58 @@ export function ShopThemesClient({
           own paired colour). `tintHex` state still flows to the
           Apply action so the persistence chain is unchanged. */}
 
-      {/* ── Background · single entry to the backgrounds library ─
-          Owner directive 2026-11-06 · the inline preset carousel +
-          upload row was removed; the sole entry point for picking a
-          shop background is now /manage/shop/backgrounds, which
-          applies the pick and redirects back here so the templates
-          render under the new backdrop. */}
+      {/* ── Activate Shop CTA ─────────────────────────────────
+          Owner directive 2026-11-06 · "the button under the phone
+          change to Activate Shop". The CTA under the phone is now
+          the commit action for the currently-selected template +
+          tint (same onApplyAll contract that drove the removed
+          sticky footer). Choose-background access is already in
+          the header via the solid gold Library button · users
+          don't need a second entry point beneath the phone. */}
       <section
-        aria-label="Background"
-        /* Owner directive 2026-11-06 · centre the CTA across the
-           phone width so it reads as the sole primary action on
-           the surface (previously left-aligned · looked lonely). */
-        style={{ display: "flex", justifyContent: "center" }}
+        aria-label="Activate shop"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 6,
+        }}
       >
-        {/* Owner directive 2026-11-06 · solid cream-gold (world
-            palette's --nex-world-secondary) · icon removed · button
-            now reads as a primary CTA, not an outlined chip. */}
-        <Link
-          href="/nex-native/manage/shop/backgrounds"
-          data-nex-choose-background
+        <button
+          type="button"
+          onClick={onApplyAll}
+          disabled={pending || status.kind === "applying"}
+          data-nex-shop-activate
           style={{
             display: "inline-flex",
             alignItems: "center",
-            padding: "10px 18px",
-            fontSize: 12,
-            fontWeight: 800,
-            letterSpacing: "0.08em",
+            padding: "12px 24px",
+            fontSize: 13,
+            fontWeight: 900,
+            letterSpacing: "0.1em",
             textTransform: "uppercase",
             color: "#1A120A",
             background: GOLD,
-            textDecoration: "none",
             border: "none",
             borderRadius: 999,
+            fontFamily: "inherit",
+            cursor:
+              pending || status.kind === "applying" ? "wait" : "pointer",
           }}
         >
-          Choose Background
-        </Link>
+          {status.kind === "applying"
+            ? "Activating…"
+            : status.kind === "ok"
+              ? "Shop active ✓"
+              : status.kind === "error"
+                ? "Retry"
+                : "Activate Shop"}
+        </button>
+        {status.kind === "error" ? (
+          <span style={{ fontSize: 11, color: "#D82A2A" }}>
+            {status.message}
+          </span>
+        ) : null}
       </section>
 
     </div>
