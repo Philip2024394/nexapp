@@ -258,6 +258,21 @@ export default async function CoverLayoutPreview({
           [data-nex-cover-sticky-bar] {
             display: none !important;
           }
+          /* Owner directive 2026-11-06 · "why is there a cart button
+             on hero area · we have the main cart icon which should
+             be connected one cart for slider or shop or any other
+             cart check out experince on the owners chat app". The
+             sealed hero floating CoverCartButton (layouts.tsx
+             ~L1579) reads a separate "nex_cart_v1" localStorage key,
+             while the HeaderCartIcon in the burger-menu cluster
+             reads the app-wired NEX_CART_STORAGE_KEY. Hiding the
+             hero button here keeps the single header cart as the
+             only entry point visible in the picker preview. Follow-
+             up: unify the two keys at the shop-cart-service layer
+             so production surfaces inherit the one-cart contract. */
+          [data-nex-cover-cart-button] {
+            display: none !important;
+          }
         `}</style>
       )}
       {!isEmbedded && (
