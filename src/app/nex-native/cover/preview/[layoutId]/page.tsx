@@ -13,6 +13,7 @@ import { CoverThemeSkin } from "../../theme-skin";
 import { CoverLayoutSwitch } from "../../layout-switch";
 import { BurgerMenu } from "../../_burger-menu";
 import { ShopChatFab } from "../../_shop-chat-fab";
+import { ShopSideChatDrawer } from "../../_shop-side-chat-drawer";
 // Owner directive 2026-11-06 · "is all work wired and connected
 // supabase". Load the owner's real nex_business row (when a dev-
 // impersonated session is present) so the burger-menu overlays
@@ -486,6 +487,11 @@ export default async function CoverLayoutPreview({
         <ShopChatFab
           ownerHandle={ownerHandle}
           shopName={shopContent?.displayName ?? null}
+          accentHex={effectiveAccent}
+        />
+        <ShopSideChatDrawer
+          shopName={shopContent?.displayName ?? null}
+          shopOwnerAccountId={null}
           accentHex={effectiveAccent}
         />
       </PhoneFrame>

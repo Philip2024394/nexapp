@@ -32,6 +32,7 @@ import { CoverThemeSkin } from "../cover/theme-skin";
 import { CoverLayoutSwitch } from "../cover/layout-switch";
 import { BurgerMenu } from "../cover/_burger-menu";
 import { ShopChatFab } from "../cover/_shop-chat-fab";
+import { ShopSideChatDrawer } from "../cover/_shop-side-chat-drawer";
 import { PhoneFrame } from "../cover/preview/_phone-frame";
 import {
   COVER_LAYOUT_IDS,
@@ -189,6 +190,11 @@ export default async function PublicShopPage({
         <ShopChatFab
           ownerHandle={business.owner_account_id}
           shopName={business.display_name}
+          accentHex={accentHex}
+        />
+        <ShopSideChatDrawer
+          shopName={business.display_name}
+          shopOwnerAccountId={business.owner_account_id}
           accentHex={accentHex}
         />
       </PhoneFrame>
