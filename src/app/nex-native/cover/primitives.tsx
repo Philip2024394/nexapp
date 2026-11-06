@@ -171,6 +171,12 @@ export interface CoverIdentityBadgeProps {
    *  bottom-right of the portrait circle where the theme charm used
    *  to sit. Optional · falls back to nothing when absent. */
   countryCode?: string | null;
+  /** Owner directive 2026-11-06 · "this should be under business
+   *  name 1 row · Dublin, Ireland and same on front shop page".
+   *  Location city/region (e.g. "Dublin, Ireland") rendered as a
+   *  single compact line directly under the business name with a
+   *  small pin glyph. Optional · when null the row is skipped. */
+  location?: string | null;
 }
 
 /**
@@ -328,6 +334,42 @@ export function CoverIdentityBadge(
           >
             {props.name}
           </div>
+          {/* Owner directive 2026-11-06 · location single-row under
+              business name · pin glyph + city/country · same shape
+              as the About Us overlay header so the two surfaces
+              feel continuous. Rendered BEFORE the subtitle so the
+              location anchors the identity even on taglines-empty
+              mocks. */}
+          {props.location && (
+            <div
+              style={{
+                marginTop: 2,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                fontSize: 11,
+                color: "var(--nex-text-dim)",
+                letterSpacing: "0.02em",
+                lineHeight: 1.3,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                textShadow: "0 1px 4px rgba(0,0,0,0.65)",
+              }}
+            >
+              <span
+                aria-hidden
+                style={{
+                  color: "var(--nex-accent)",
+                  fontSize: 12,
+                  lineHeight: 1,
+                }}
+              >
+                📍
+              </span>
+              {props.location}
+            </div>
+          )}
           <div
             style={{
               marginTop: 2,

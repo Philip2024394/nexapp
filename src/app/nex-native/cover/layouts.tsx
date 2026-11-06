@@ -72,6 +72,7 @@ export function LayoutCafe({ content, themeId }: LayoutProps): React.JSX.Element
           themeId={themeId}
           presenceOnline={content.presenceOnline}
           countryCode={content.countryCode ?? null}
+          location={content.location}
         />
         <div style={{ marginTop: 26 }}>
           {/* Founder direction 2026-09-30 · default eyebrow is "Services"
@@ -241,6 +242,7 @@ export function LayoutCafeRound({ content, themeId }: LayoutProps): React.JSX.El
           themeId={themeId}
           presenceOnline={content.presenceOnline}
           countryCode={content.countryCode ?? null}
+          location={content.location}
         />
         <div style={{ marginTop: 26 }}>
           <CoverSectionHeading
@@ -365,6 +367,7 @@ export function LayoutAccommodation({
           themeId={themeId}
           presenceOnline={content.presenceOnline}
           countryCode={content.countryCode ?? null}
+          location={content.location}
         />
         <div style={{ marginTop: 26 }}>
           <CoverSectionHeading
@@ -571,6 +574,7 @@ export function LayoutProductRound({ content, themeId }: LayoutProps): React.JSX
           size="compact"
           presenceOnline={content.presenceOnline}
           countryCode={content.countryCode ?? null}
+          location={content.location}
         />
         <div style={{ marginTop: 20 }}>
           <WhoWeAreCollapsible
@@ -685,6 +689,7 @@ export function LayoutCafeLandscape({ content, themeId }: LayoutProps): React.JS
           themeId={themeId}
           presenceOnline={content.presenceOnline}
           countryCode={content.countryCode ?? null}
+          location={content.location}
         />
         <div style={{ marginTop: 26 }}>
           <CoverSectionHeading
@@ -837,6 +842,7 @@ export function LayoutProduct({ content, themeId }: LayoutProps): React.JSX.Elem
           size="compact"
           presenceOnline={content.presenceOnline}
           countryCode={content.countryCode ?? null}
+          location={content.location}
         />
         <div style={{ marginTop: 20 }}>
           <WhoWeAreCollapsible
@@ -979,6 +985,7 @@ export function LayoutProductLandscape({ content, themeId }: LayoutProps): React
           size="compact"
           presenceOnline={content.presenceOnline}
           countryCode={content.countryCode ?? null}
+          location={content.location}
         />
         <div style={{ marginTop: 20 }}>
           <WhoWeAreCollapsible
@@ -1105,6 +1112,7 @@ export function LayoutPersonalBrand({ content, themeId }: LayoutProps): React.JS
           themeId={themeId}
           presenceOnline={content.presenceOnline}
           countryCode={content.countryCode ?? null}
+          location={content.location}
         />
         {/* Founder direction 2026-09-30 · "Our Journey" · 7-line story
             block · reuses the WhoWeAreCollapsible primitive with a
@@ -2217,6 +2225,7 @@ export function LayoutPersonalBrandLandscape({
           themeId={themeId}
           presenceOnline={content.presenceOnline}
           countryCode={content.countryCode ?? null}
+          location={content.location}
         />
         <div style={{ marginTop: 20 }}>
           <WhoWeAreCollapsible
@@ -2381,6 +2390,7 @@ export function LayoutPersonalBrandRound({
           themeId={themeId}
           presenceOnline={content.presenceOnline}
           countryCode={content.countryCode ?? null}
+          location={content.location}
         />
         <div style={{ marginTop: 20 }}>
           <WhoWeAreCollapsible

@@ -449,6 +449,7 @@ export default async function CoverLayoutPreview({
           address={null}
           hours={null}
           shopUrl={null}
+          accentHex={effectiveAccent}
         />
         {/* Owner directive 2026-11-06 · "Chat with us is floating
             button bottom right on screen". Replaces the burger's

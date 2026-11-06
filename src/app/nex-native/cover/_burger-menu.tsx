@@ -47,6 +47,12 @@ interface BurgerMenuProps {
   readonly hours?: ReadonlyArray<{ day: string; hours: string }> | null;
   /** Public shop URL for the share action. */
   readonly shopUrl?: string | null;
+  /** Owner directive 2026-11-06 · "same theme color as front
+   *  theme" · the burger overlays (About Us in particular) live
+   *  OUTSIDE the CoverThemeSkin wrapper so --nex-accent doesn't
+   *  inherit · callers thread the applied tint explicitly. Falls
+   *  back to the world-palette gold when omitted. */
+  readonly accentHex?: string | null;
 }
 
 const GOLD = "var(--nex-world-secondary, #C6A15B)";
@@ -62,7 +68,12 @@ export function BurgerMenu({
   address,
   hours,
   shopUrl,
+  accentHex,
 }: BurgerMenuProps): React.JSX.Element {
+  const accent =
+    accentHex && /^#[0-9A-Fa-f]{6}$/.test(accentHex)
+      ? accentHex
+      : "#C6A15B";
   const [open, setOpen] = React.useState(false);
   // Owner-authorised 2026-11-06: four slide-up sheets replace the inline
   // dropdown rows for content-heavy sections (world-standard Airbnb /
@@ -123,16 +134,17 @@ export function BurgerMenu({
       <div
         style={{
           position: "absolute",
-          top: 10,
+          /* Owner directive 2026-11-06 (refined) · "cart icon move
+             up little same row as burger icon". The 1.6× scale +
+             top-right transform origin pushed the cart's visible
+             centre below the burger's · drop top from 10 → 4 so
+             both icons sit on a shared horizontal row. */
+          top: 4,
           right: 56,
           zIndex: 50,
           display: "inline-flex",
           color: CREAM,
           filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.75))",
-          /* Owner directive 2026-11-06 · scale the sealed inline cart
-             icon (15px glyph · 6px padding) up ~1.6× so it sits at
-             the same visual weight as the stroke-3 burger beside it ·
-             the badge count scales uniformly so hitboxes stay clean. */
           transform: "scale(1.6)",
           transformOrigin: "top right",
         }}
@@ -290,7 +302,7 @@ export function BurgerMenu({
         />
       ) : null}
       {sheet === "about" ? (
-        <AboutUsSheet onClose={() => setSheet(null)} />
+        <AboutUsSheet accent={accent} onClose={() => setSheet(null)} />
       ) : null}
     </>
   );
@@ -791,24 +803,30 @@ function ServicesSheet({
 // 2026-11-06. Real content lives on nex_business; placeholder here.
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
-// AboutUsSheet · owner directive 2026-11-06 refined:
-//   "about us button in burger slider when selected will turn the
-//    shop over lay into black frosted glass with about us text and
-//    profile image and buisness name and online will show in
-//    header as normal - close button on top right x and bottom
-//    footer area social media icons add mock text and social media
-//    for user see template view"
+// AboutUsSheet · owner directive 2026-11-06 refined twice:
+//   · First pass · full-overlay frosted-glass with mock body content
+//   · Second pass · pin + clock meta line, accent tracks the applied
+//                   theme tint, compacted so content fits the phone
+//                   without forced scroll, close top-right, socials
+//                   bottom-right (bottom footer).
 //
-// Full-overlay implementation (no slide-up sheet):
-//   · position:absolute inset:0 across the whole shop frame
-//   · background: translucent black + backdrop-filter blur =
-//     "frosted black glass" over the cover
-//   · HEADER: profile avatar + business name + green online dot
-//   · BODY: mock "Our story" / "What we make" / "Where we're based"
-//   · FOOTER: 5 solid-gold social-media icon buttons (mock links)
-//   · TOP-RIGHT: X close button
+// Positioning stays position:absolute inset:0 so the overlay covers
+// the whole shop frame but doesn't escape the sealed phone-frame
+// containing block.
 // -----------------------------------------------------------------------------
-function AboutUsSheet({ onClose }: { onClose: () => void }) {
+function AboutUsSheet({
+  accent,
+  onClose,
+}: {
+  accent: string;
+  onClose: () => void;
+}) {
+  // Mock hours logic for the clock meta line · "Closing today 18:00"
+  // when still open · "Opens tomorrow 10:00" when outside hours · all
+  // computed client-side from a simple 10:00–18:00 Tues–Sat mock. The
+  // wire batch swaps this for real nex_business.hours_by_day data.
+  const todayStatus = React.useMemo(() => computeMockOpenStatus(), []);
+
   return (
     <div
       role="dialog"
@@ -825,16 +843,23 @@ function AboutUsSheet({ onClose }: { onClose: () => void }) {
         display: "flex",
         flexDirection: "column",
         padding:
-          "calc(env(safe-area-inset-top, 0px) + 18px) 18px calc(env(safe-area-inset-bottom, 0px) + 18px)",
+          "calc(env(safe-area-inset-top, 0px) + 14px) 14px calc(env(safe-area-inset-bottom, 0px) + 14px)",
         boxSizing: "border-box",
         fontFamily: "Inter, system-ui, sans-serif",
         animation: "nexShopAboutFadeIn 240ms ease-out",
       }}
     >
-      <style>{`@keyframes nexShopAboutFadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
+      <style>{`
+        @keyframes nexShopAboutFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes nexAboutPing {
+          0%   { transform: scale(1); opacity: 0.55; }
+          80%  { transform: scale(1.7); opacity: 0; }
+          100% { transform: scale(1.7); opacity: 0; }
+        }
+      `}</style>
 
-      {/* Close · top-right · scoped so it stays over the frosted
-          glass without needing portals. */}
+      {/* Close · top-right · gold-rimmed circle in the applied
+          accent so it reads as part of the theme. */}
       <button
         type="button"
         onClick={onClose}
@@ -842,16 +867,16 @@ function AboutUsSheet({ onClose }: { onClose: () => void }) {
         data-nex-shop-about-close
         style={{
           position: "absolute",
-          top: 12,
-          right: 12,
-          width: 32,
-          height: 32,
+          top: 10,
+          right: 10,
+          width: 30,
+          height: 30,
           borderRadius: 999,
           background: "rgba(255,255,255,0.08)",
           color: CREAM,
-          border: `1px solid ${BORDER_HI}`,
+          border: `1px solid ${hexAlpha(accent, 0.55)}`,
           cursor: "pointer",
-          fontSize: 16,
+          fontSize: 15,
           lineHeight: 1,
           padding: 0,
           zIndex: 1,
@@ -860,115 +885,213 @@ function AboutUsSheet({ onClose }: { onClose: () => void }) {
         ×
       </button>
 
-      {/* HEADER · profile avatar · business name · online dot.
-          Mock content for template view · wires to nex_business +
-          nex_account_profile in a follow-up. */}
+      {/* HEADER · profile avatar + business name + online dot + meta
+          line with pin location and clock hours. Avatar + accents
+          track the applied theme tint so the overlay feels native
+          to the current template. */}
       <header
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 12,
-          paddingBottom: 14,
-          borderBottom: `1px solid ${BORDER}`,
-          paddingRight: 44,
+          gap: 10,
+          paddingBottom: 10,
+          borderBottom: `1px solid ${hexAlpha(accent, 0.25)}`,
+          paddingRight: 40,
         }}
       >
+        {/* Owner directive 2026-11-06 (refined) · "about us show
+            have the same style profile ping and country flag round
+            image". Sealed CoverIdentityBadge vocabulary scaled to
+            the overlay's 48px portrait: two pulsing green ping
+            rings for online presence + a small round flag badge
+            in the bottom-right where the sealed badge's charm
+            sits. */}
         <div
-          aria-hidden
           style={{
-            width: 54,
-            height: 54,
-            borderRadius: "50%",
-            background: `linear-gradient(135deg, ${GOLD}, #8E6F3C)`,
-            display: "grid",
-            placeItems: "center",
-            color: "#1A120A",
-            fontSize: 22,
-            fontWeight: 900,
-            boxShadow: "0 6px 18px rgba(0,0,0,0.45)",
+            position: "relative",
+            width: 48,
+            height: 48,
             flexShrink: 0,
           }}
         >
-          IP
+          <span
+            aria-hidden
+            style={{
+              position: "absolute",
+              inset: -4,
+              borderRadius: "50%",
+              border: "2px solid #22C55E",
+              animation:
+                "nexAboutPing 2s cubic-bezier(0, 0, 0.2, 1) infinite",
+              pointerEvents: "none",
+            }}
+          />
+          <span
+            aria-hidden
+            style={{
+              position: "absolute",
+              inset: -4,
+              borderRadius: "50%",
+              border: "2px solid #22C55E",
+              animation:
+                "nexAboutPing 2s cubic-bezier(0, 0, 0.2, 1) infinite",
+              animationDelay: "1s",
+              pointerEvents: "none",
+            }}
+          />
+          <div
+            aria-hidden
+            style={{
+              position: "relative",
+              width: 48,
+              height: 48,
+              borderRadius: "50%",
+              background: `linear-gradient(135deg, ${accent}, ${darken(accent, 0.35)})`,
+              display: "grid",
+              placeItems: "center",
+              color: readableInk(accent),
+              fontSize: 18,
+              fontWeight: 900,
+              boxShadow: "0 4px 14px rgba(0,0,0,0.45)",
+              border: `2px solid ${accent}`,
+            }}
+          >
+            IP
+          </div>
+          {/* Country flag badge · bottom-right · same anchor as
+              the sealed CoverIdentityBadge flag · 18px circle so
+              it reads at 48px portrait scale. */}
+          <span
+            aria-hidden
+            style={{
+              position: "absolute",
+              right: -2,
+              bottom: -2,
+              width: 20,
+              height: 20,
+              borderRadius: "50%",
+              background: "#03101D",
+              display: "grid",
+              placeItems: "center",
+              fontSize: 12,
+              border: `1.5px solid ${accent}`,
+              boxShadow: "0 2px 6px rgba(0,0,0,0.5)",
+            }}
+          >
+            🇮🇪
+          </span>
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: 900,
               color: CREAM,
               letterSpacing: "-0.01em",
+              lineHeight: 1.15,
             }}
           >
             Irish Pride
           </div>
+          {/* Owner directive 2026-11-06 (refined) · "this should be
+              under business name 1 row · Dublin, Ireland and same
+              on front shop page". Single-row location line under
+              the name · no "Online ·" prefix (presence stays on
+              the avatar rim per sealed vocabulary). */}
           <div
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
               fontSize: 11,
               color: INK_DIM,
-              letterSpacing: "0.04em",
+              letterSpacing: "0.03em",
               marginTop: 2,
+              lineHeight: 1.2,
             }}
           >
-            <span
-              aria-hidden
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: 999,
-                background: "#16D66B",
-                boxShadow: "0 0 10px rgba(22, 214, 107, 0.65)",
-              }}
-            />
-            Online · Dublin, Ireland
+            Dublin, Ireland
           </div>
         </div>
       </header>
 
-      {/* BODY · scrolls when needed · mock content for template view. */}
-      <div style={{ flex: 1, overflow: "auto", paddingTop: 14, paddingBottom: 14 }}>
-        <section style={{ marginBottom: 16 }}>
-          <div style={sectionCapStyle}>Our story</div>
-          <p style={sheetBodyStyle}>
-            A small Dublin workshop founded on the simple idea that
-            everyday objects deserve to be made properly. We work with
-            local materials, long-time collaborators, and the same
-            steady hands that have been in this craft for years.
-          </p>
-        </section>
-        <section style={{ marginBottom: 16 }}>
-          <div style={sectionCapStyle}>What we make</div>
-          <p style={sheetBodyStyle}>
-            Signature pieces in our own designs, custom orders built
-            to size, and limited seasonal drops. Every item is made in
-            the workshop, finished by hand, and shipped in recycled
-            packaging.
+      {/* Meta row · pin (location) + clock (open status) · accent-
+          tinted glyphs, compact layout, sits just below the header. */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 10,
+          padding: "10px 0 12px",
+          fontSize: 10.5,
+          color: INK_DIM,
+        }}
+      >
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
+          }}
+        >
+          <span
+            aria-hidden
+            style={{ color: accent, fontSize: 13, lineHeight: 1 }}
+          >
+            📍
+          </span>
+          12 Francis Street · Dublin 8
+        </span>
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
+          }}
+        >
+          <span
+            aria-hidden
+            style={{ color: accent, fontSize: 13, lineHeight: 1 }}
+          >
+            🕐
+          </span>
+          <span style={{ color: todayStatus.isOpen ? "#16D66B" : CREAM }}>
+            {todayStatus.label}
+          </span>
+        </span>
+      </div>
+
+      {/* BODY · two compact sections so content fits the phone
+          without forced scroll · auto overflow stays on so long
+          real-business copy can still scroll when it lands. */}
+      <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
+        <section style={{ marginBottom: 10 }}>
+          <div style={{ ...sectionCapStyle, color: accent }}>Our story</div>
+          <p style={{ ...sheetBodyStyle, fontSize: 12, lineHeight: 1.45 }}>
+            A small Dublin workshop built on the idea that everyday
+            objects deserve to be made properly · local materials,
+            long-time collaborators, steady hands.
           </p>
         </section>
         <section>
-          <div style={sectionCapStyle}>Where we&rsquo;re based</div>
-          <p style={sheetBodyStyle}>
-            12 Francis Street · Dublin 8 · Ireland · visit Tues–Sat
-            10:00–18:00 · online orders ship worldwide.
+          <div style={{ ...sectionCapStyle, color: accent }}>What we make</div>
+          <p style={{ ...sheetBodyStyle, fontSize: 12, lineHeight: 1.45 }}>
+            Signature pieces in our own designs, custom orders built
+            to size, and limited seasonal drops · finished by hand ·
+            shipped in recycled packaging.
           </p>
         </section>
       </div>
 
-      {/* FOOTER · mock social-media row · 5 solid-gold circular
-          icon buttons. Links are href="#" placeholders tagged with
-          data-nex-pending-action so the signup/wire batch can
-          replace them with the owner's real handles. */}
+      {/* FOOTER · social-media row sits bottom · 5 solid accent-
+          coloured circles so the row matches the applied theme
+          (not hardcoded gold). Mock hrefs tagged for wire-up. */}
       <footer
         style={{
-          paddingTop: 14,
-          borderTop: `1px solid ${BORDER}`,
+          paddingTop: 12,
+          borderTop: `1px solid ${hexAlpha(accent, 0.25)}`,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          gap: 10,
+          gap: 8,
         }}
       >
         {[
@@ -985,17 +1108,17 @@ function AboutUsSheet({ onClose }: { onClose: () => void }) {
             title={s.label}
             data-nex-pending-action={`social-${s.label.toLowerCase()}`}
             style={{
-              width: 38,
-              height: 38,
+              width: 34,
+              height: 34,
               borderRadius: "50%",
-              background: GOLD,
-              color: "#1A120A",
+              background: accent,
+              color: readableInk(accent),
               display: "grid",
               placeItems: "center",
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: 900,
               textDecoration: "none",
-              boxShadow: "0 4px 10px rgba(0,0,0,0.35)",
+              boxShadow: "0 3px 8px rgba(0,0,0,0.35)",
             }}
           >
             {s.glyph}
@@ -1004,6 +1127,62 @@ function AboutUsSheet({ onClose }: { onClose: () => void }) {
       </footer>
     </div>
   );
+}
+
+// ─── Mock open-status + colour helpers ─────────────────────────────────
+// Light-weight utilities colocated with AboutUsSheet so the component
+// stays self-contained · follow-up batch will replace computeMockOpen-
+// Status with a real hours lookup from nex_business.hours_by_day.
+
+function computeMockOpenStatus(): { isOpen: boolean; label: string } {
+  const now = new Date();
+  const hour = now.getHours();
+  // Mock schedule · Tues–Sat 10:00–18:00 · closed Sun / Mon.
+  const day = now.getDay(); // 0=Sun 1=Mon 2=Tue … 6=Sat
+  const openDay = day >= 2 && day <= 6;
+  if (openDay && hour >= 10 && hour < 18) {
+    return { isOpen: true, label: `Closing today ${18}:00` };
+  }
+  // Next open slot label.
+  const tomorrow = (day + 1) % 7;
+  const openLabel =
+    tomorrow >= 2 && tomorrow <= 6
+      ? "Opens tomorrow 10:00"
+      : "Opens Tuesday 10:00";
+  return { isOpen: false, label: openLabel };
+}
+
+function hexAlpha(hex: string, alpha: number): string {
+  const m = /^#([0-9A-Fa-f]{6})$/.exec(hex);
+  if (!m) return `rgba(198, 161, 91, ${alpha})`;
+  const h = m[1]!;
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function darken(hex: string, amount: number): string {
+  const m = /^#([0-9A-Fa-f]{6})$/.exec(hex);
+  if (!m) return hex;
+  const h = m[1]!;
+  const r = Math.max(0, Math.floor(parseInt(h.slice(0, 2), 16) * (1 - amount)));
+  const g = Math.max(0, Math.floor(parseInt(h.slice(2, 4), 16) * (1 - amount)));
+  const b = Math.max(0, Math.floor(parseInt(h.slice(4, 6), 16) * (1 - amount)));
+  return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+}
+
+function readableInk(hex: string): string {
+  // Simple WCAG-style luminance check · pick warm-ink #1A120A when
+  // the accent is bright, pure white when it's dark.
+  const m = /^#([0-9A-Fa-f]{6})$/.exec(hex);
+  if (!m) return "#1A120A";
+  const h = m[1]!;
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+  return lum > 0.55 ? "#1A120A" : "#FAF8F4";
 }
 
 // -----------------------------------------------------------------------------
