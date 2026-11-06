@@ -27,6 +27,7 @@ import { NEX, GLASS, GLASS_CHIP } from "./_palette";
 import { VaultQuickActions } from "./_upload-dialog";
 import { LockVaultNowButton } from "./_lock-button-client";
 import { MigrationRunner } from "./_migration-runner-client";
+import { DownloadEverythingButton } from "./_download-everything-client";
 import {
   IconChats,
   IconDocument,
@@ -167,6 +168,7 @@ export default async function VaultWorkspaceHomePage() {
           <ContactsEntryTile t={t} />
           <VaultQuickActions />
           <FileCategoriesList t={t} />
+          <DownloadEverythingSection />
         </main>
       </div>
     </>
@@ -612,6 +614,37 @@ function ContactsEntryTile({ t }: { t: (k: I18nKey) => string }) {
         </span>
         <ChevronRight size={18} strokeWidth={1.8} color={NEX.textMuted} aria-hidden />
       </Link>
+    </section>
+  );
+}
+
+/** Vault W5 · "Download everything" section · Phase 4 Batch 4.2
+ *  (2026-11-06). Honest copy per W7 principle + Vault LOCKED B6 ·
+ *  no encryption or "nothing-stored" claims. Server enforces the
+ *  one-export-per-24h rate limit; client just surfaces the result. */
+function DownloadEverythingSection() {
+  return (
+    <section
+      data-nex-vault-download-everything-section
+      aria-label="Download everything in your Vault"
+      style={{ marginTop: 24 }}
+    >
+      <h2
+        style={{
+          fontSize: 11,
+          letterSpacing: "0.22em",
+          textTransform: "uppercase",
+          color: NEX.accent,
+          fontWeight: 700,
+          margin: "0 2px 10px",
+        }}
+      >
+        Your copy
+      </h2>
+      <DownloadEverythingButton
+        label="Download everything in your Vault"
+        blurb="Get a download link for every file you've stored in your Vault. One export per day."
+      />
     </section>
   );
 }
