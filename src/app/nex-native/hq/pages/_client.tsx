@@ -98,8 +98,42 @@ export function HqPagesClient({
 
   const [filter, setFilter] = React.useState("");
   const [selectedUrl, setSelectedUrl] = React.useState<string | null>(null);
+  const [previewAnchor, setPreviewAnchor] = React.useState<{
+    top: number;
+    left: number;
+  } | null>(null);
   const [confirmDelete, setConfirmDelete] = React.useState<ConfirmDelete>(null);
   const [pending, startTransition] = React.useTransition();
+
+  // Open the preview popover anchored next to the clicked view button.
+  function openPreviewAt(url: string, buttonEl: HTMLElement) {
+    const rect = buttonEl.getBoundingClientRect();
+    // Right-anchor the popover beside the button if there is room,
+    // else fall back to the left edge of the button. Vertical baseline
+    // follows the button's top so the user's eye stays with the click.
+    const popoverWidth = 420;
+    const canFitRight = rect.right + 10 + popoverWidth < window.innerWidth;
+    const left = canFitRight ? rect.right + 10 : Math.max(16, rect.left - popoverWidth - 10);
+    // Clamp vertically so the popover never renders above the viewport.
+    const top = Math.max(16, Math.min(rect.top, window.innerHeight - 560));
+    setPreviewAnchor({ top, left });
+    setSelectedUrl(url);
+  }
+
+  function closePreview() {
+    setSelectedUrl(null);
+    setPreviewAnchor(null);
+  }
+
+  // Close on Escape.
+  React.useEffect(() => {
+    if (!selectedUrl) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closePreview();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [selectedUrl]);
 
   // Side-panel inspection data for the selected route · own folder
   // files + external callers. Refreshed whenever selectedUrl changes
@@ -255,14 +289,15 @@ export function HqPagesClient({
       className="nex-admin-root"
       style={{
         display: "flex",
-        flexDirection: "row",
+        flexDirection: "column",
         gap: 16,
         minHeight: "calc(100dvh - 56px)",
         color: INK,
         fontFamily: "Inter, system-ui, sans-serif",
       }}
     >
-      {/* ── LEFT PANE · route table ────────────────────────────── */}
+      {/* ── Route table · full width · preview is a floating popover
+          anchored to the clicked view button (see openPreviewAt). ── */}
       <section
         aria-label="Route list"
         style={{
@@ -385,7 +420,7 @@ export function HqPagesClient({
                 </code>
                 <button
                   type="button"
-                  onClick={() => setSelectedUrl(url)}
+                  onClick={(e) => openPreviewAt(url, e.currentTarget)}
                   aria-label={`Preview ${url}`}
                   title={isDynamic(url) ? "Dynamic route · preview will 404" : "Preview"}
                   style={buttonStyle(ACCENT)}
@@ -549,15 +584,31 @@ export function HqPagesClient({
         </div>
       </section>
 
-      {/* ── RIGHT PANE · persistent small preview + deletion-impact
-          file lists for the selected route ───────────────────── */}
-      <RightPane
-        selectedUrl={selectedUrl}
-        isDynamic={selectedUrl ? isDynamic(selectedUrl) : false}
-        inspect={inspect}
-        isQueued={selectedUrl ? queuedSet.has(selectedUrl) : false}
-        onClose={() => setSelectedUrl(null)}
-      />
+      {/* ── Floating PREVIEW popover · positioned next to the clicked
+          view button via previewAnchor state ─────────────────── */}
+      {selectedUrl && previewAnchor ? (
+        <>
+          {/* Transparent backdrop · click anywhere outside to close. */}
+          <div
+            aria-hidden
+            onClick={closePreview}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "transparent",
+              zIndex: 800,
+            }}
+          />
+          <PreviewPopover
+            selectedUrl={selectedUrl}
+            isDynamic={isDynamic(selectedUrl)}
+            inspect={inspect}
+            isQueued={queuedSet.has(selectedUrl)}
+            anchor={previewAnchor}
+            onClose={closePreview}
+          />
+        </>
+      ) : null}
 
       {/* ── Delete confirm · single small Yes/No popup ─────────── */}
       {confirmDelete ? (
@@ -655,31 +706,41 @@ function buttonStyle(accent: string): React.CSSProperties {
   };
 }
 
-function RightPane({
+function PreviewPopover({
   selectedUrl,
   isDynamic,
   inspect,
   isQueued,
+  anchor,
   onClose,
 }: {
-  selectedUrl: string | null;
+  selectedUrl: string;
   isDynamic: boolean;
   inspect: null | "loading" | RouteInspection;
   isQueued: boolean;
+  anchor: { top: number; left: number };
   onClose: () => void;
 }) {
   return (
     <aside
       aria-label="Route inspector"
+      role="dialog"
+      aria-modal="false"
       style={{
-        flex: "0 0 400px",
+        position: "fixed",
+        top: anchor.top,
+        left: anchor.left,
+        width: 420,
+        maxHeight: "calc(100vh - 32px)",
         display: "flex",
         flexDirection: "column",
         minWidth: 0,
-        border: `1px solid ${BORDER}`,
+        border: `1px solid ${BORDER_HI}`,
         borderRadius: 14,
         background: SURFACE,
         overflow: "hidden",
+        boxShadow: "0 24px 60px rgba(0,0,0,0.6)",
+        zIndex: 850,
       }}
     >
       {/* ── Header · PREVIEW label + URL + Open/Close ──────────── */}
