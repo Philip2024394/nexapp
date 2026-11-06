@@ -184,15 +184,17 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
     tintSwatch: "#FF6B2B",
     downloadsBase: 1055,
   },
-  // Irish-green pack · same 6 compositions in emerald/neon-green
-  // tones · paired with a vivid Irish green tint so the theme
-  // colour tracks the image (owner-authorised 2026-11-06).
-  // Newer release · lower baselines to look like they're still
+  // Owner directive 2026-11-06 · "we dont want the word irish on
+  // the themes · themes are world wide for shops back grounds" ·
+  // renamed the 6 emerald variants to "· Green" so nothing in the
+  // catalogue is country-scoped · file paths keep -green suffix
+  // (changing them would break the server-side whitelist). Newer
+  // release · lower baselines so these look like they're still
   // picking up momentum.
   {
     id: "global-cart-glow-green",
     url: "/nex-brand/shop-themes/global-cart-glow-green.png",
-    label: "Global Cart · Irish Green",
+    label: "Global Cart · Green",
     category: "retail",
     tintSwatch: "#16D66B",
     downloadsBase: 156,
@@ -200,7 +202,7 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
   {
     id: "nex-bag-electric-green",
     url: "/nex-brand/shop-themes/nex-bag-electric-green.png",
-    label: "NEX Bag · Irish Green",
+    label: "NEX Bag · Green",
     category: "retail",
     tintSwatch: "#16D66B",
     downloadsBase: 203,
@@ -208,7 +210,7 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
   {
     id: "best-deals-green",
     url: "/nex-brand/shop-themes/best-deals-green.png",
-    label: "Best Deals · Irish Green",
+    label: "Best Deals · Green",
     category: "sale",
     tintSwatch: "#16D66B",
     downloadsBase: 341,
@@ -216,7 +218,7 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
   {
     id: "electronics-showcase-green",
     url: "/nex-brand/shop-themes/electronics-showcase-green.png",
-    label: "Electronics · Irish Green",
+    label: "Electronics · Green",
     category: "electronics",
     tintSwatch: "#16D66B",
     downloadsBase: 189,
@@ -224,7 +226,7 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
   {
     id: "delivery-globe-green",
     url: "/nex-brand/shop-themes/delivery-globe-green.png",
-    label: "Delivery · Irish Green",
+    label: "Delivery · Green",
     category: "delivery",
     tintSwatch: "#16D66B",
     downloadsBase: 98,
@@ -232,7 +234,7 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
   {
     id: "mobile-shop-now-green",
     url: "/nex-brand/shop-themes/mobile-shop-now-green.png",
-    label: "Mobile · Irish Green",
+    label: "Mobile · Green",
     category: "online",
     tintSwatch: "#16D66B",
     downloadsBase: 267,

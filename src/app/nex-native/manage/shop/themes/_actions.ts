@@ -138,9 +138,11 @@ const PRESET_BACKGROUND_META: ReadonlyMap<
     "/nex-brand/shop-themes/mobile-shop-now.png",
     { tintHex: "#FF6B2B" },
   ],
-  // Owner directive 2026-11-06 · Irish-green variants (th7–th12) ·
-  // same 6 compositions in emerald/neon-green tones · paired tint
-  // is a vivid Irish green so the theme colour follows the image.
+  // Owner directive 2026-11-06 · emerald-green variants (th7–th12) ·
+  // same 6 compositions in neon-green tones · paired tint is a
+  // vivid green so the theme colour follows the image. Not country-
+  // scoped · themes are worldwide (owner directive "we dont want
+  // the word irish on the themes").
   [
     "/nex-brand/shop-themes/global-cart-glow-green.png",
     { tintHex: "#16D66B" },
