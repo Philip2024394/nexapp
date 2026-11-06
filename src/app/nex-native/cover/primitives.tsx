@@ -1079,6 +1079,43 @@ export function CoverProductCard({
               Sold out
             </span>
           )}
+          {/* Owner directive 2026-11-06 · "small view product button
+              move to the image lower right side · this allows price
+              1 row". The magnifier now sits as an overlay on the
+              image, freeing the meta stack below so the price gets
+              its own row and no longer shares with the icon. */}
+          <span
+            aria-hidden
+            data-nex-cover-view-product
+            style={{
+              position: "absolute",
+              bottom: 8,
+              right: 8,
+              width: 28,
+              height: 28,
+              borderRadius: "50%",
+              background: "var(--nex-accent)",
+              color: "#03101D",
+              display: "grid",
+              placeItems: "center",
+              boxShadow: "0 4px 10px rgba(0,0,0,0.35)",
+            }}
+          >
+            <svg
+              width={15}
+              height={15}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <circle cx="11" cy="11" r="7" />
+              <line x1="21" y1="21" x2="16.5" y2="16.5" />
+            </svg>
+          </span>
         </div>
         {/* Founder direction 2026-09-30 (revised) · card meta stack ·
               name → 2-line description → price + round magnifier.
@@ -1129,69 +1166,23 @@ export function CoverProductCard({
               {product.description}
             </div>
           )}
+          {/* Owner directive 2026-11-06 · magnifier moved to the
+              image (bottom-right overlay) · price now owns its own
+              full row · no flex-wrapper needed · long prices wrap
+              naturally without fighting for space with an icon. */}
           <div
             style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 6,
+              fontSize: 13,
+              fontWeight: 800,
+              color: "var(--nex-accent)",
+              letterSpacing: "0.01em",
+              lineHeight: 1.25,
               marginTop: 2,
-              minWidth: 0,
+              wordBreak: "break-word",
+              overflowWrap: "anywhere",
             }}
           >
-            {/* Founder direction 2026-09-30 · price must ALWAYS show
-                in full · no ellipsis truncation. Long values wrap to
-                a second line rather than clipping. */}
-            <div
-              style={{
-                flex: "1 1 auto",
-                minWidth: 0,
-                fontSize: 12,
-                fontWeight: 800,
-                color: "var(--nex-accent)",
-                letterSpacing: "0.01em",
-                lineHeight: 1.25,
-                wordBreak: "break-word",
-                overflowWrap: "anywhere",
-              }}
-            >
-              {priceLabel}
-            </div>
-            <span
-              aria-hidden
-              /* Owner directive 2026-11-06 · "view product button and
-                 price should be fresh color no shade". The round
-                 magnifier sits next to the price as the tap-to-open
-                 affordance (see card-meta comment above) · the dark
-                 drop-shadow was the "shade" · removing it gives a
-                 flat, fresh accent chip. */
-              style={{
-                flex: "0 0 auto",
-                width: 26,
-                height: 26,
-                borderRadius: "50%",
-                background: "var(--nex-accent)",
-                color: "#03101D",
-                display: "grid",
-                placeItems: "center",
-                boxShadow: "none",
-              }}
-            >
-              <svg
-                width={14}
-                height={14}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden
-              >
-                <circle cx="11" cy="11" r="7" />
-                <line x1="21" y1="21" x2="16.5" y2="16.5" />
-              </svg>
-            </span>
+            {priceLabel}
           </div>
         </div>
       </Link>

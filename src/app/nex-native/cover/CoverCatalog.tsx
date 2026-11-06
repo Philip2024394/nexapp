@@ -166,10 +166,12 @@ function Pagination({
 }) {
   const canPrev = page > 0;
   const canNext = page < totalPages - 1;
-  const pages = React.useMemo(
-    () => Array.from({ length: totalPages }, (_, i) => i),
-    [totalPages],
-  );
+
+  /* Owner directive 2026-11-06 · "each template shop must have
+     page previous and back and page count for template displaying".
+     The numbered-pills row was dropped in favour of a compact
+     "Page X of Y" readout between the arrows · same semantics,
+     same tap targets, less pixel chrome on narrow shop surfaces. */
 
   return (
     <div
@@ -179,9 +181,8 @@ function Pagination({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        gap: 6,
+        gap: 10,
         marginTop: 18,
-        flexWrap: "wrap",
       }}
     >
       <PageArrow
@@ -189,41 +190,30 @@ function Pagination({
         disabled={!canPrev}
         onClick={() => canPrev && onSelect(page - 1)}
       />
-      {pages.map((p) => {
-        const isActive = p === page;
-        return (
-          <button
-            key={p}
-            type="button"
-            aria-label={`Page ${p + 1}`}
-            aria-current={isActive ? "page" : undefined}
-            onClick={() => onSelect(p)}
-            style={{
-              appearance: "none",
-              minWidth: 32,
-              height: 32,
-              padding: "0 10px",
-              borderRadius: 10,
-              // Founder direction 2026-09-30 · borders removed from
-              // every pagination button · reads as pure text pills.
-              border: "none",
-              background: isActive
-                ? "var(--nex-accent, #06b6d4)"
-                : "transparent",
-              color: isActive
-                ? "#03101D"
-                : "var(--nex-text-dim, rgba(148,163,184,0.9))",
-              fontFamily: "var(--nex-font-body, inherit)",
-              fontSize: 13,
-              fontWeight: isActive ? 800 : 600,
-              cursor: "pointer",
-              transition: "background 140ms ease, color 140ms ease",
-            }}
-          >
-            {p + 1}
-          </button>
-        );
-      })}
+      <span
+        aria-live="polite"
+        style={{
+          display: "inline-flex",
+          alignItems: "baseline",
+          gap: 6,
+          padding: "6px 14px",
+          fontFamily: "var(--nex-font-body, inherit)",
+          fontSize: 12,
+          fontWeight: 800,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+          color: "var(--nex-text)",
+          background: "rgba(0,0,0,0.35)",
+          borderRadius: 999,
+          border: "1px solid var(--nex-accent-soft, rgba(198,161,91,0.35))",
+        }}
+      >
+        <span style={{ color: "var(--nex-accent)", fontSize: 14 }}>
+          {page + 1}
+        </span>
+        <span style={{ opacity: 0.6 }}>/</span>
+        <span>{totalPages}</span>
+      </span>
       <PageArrow
         direction="next"
         disabled={!canNext}

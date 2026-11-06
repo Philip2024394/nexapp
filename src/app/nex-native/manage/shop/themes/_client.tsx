@@ -226,15 +226,28 @@ export function ShopThemesClient({
         </Link>
       </section>
 
-      {/* ── Apply CTA + inline status ───────────────────────── */}
+      {/* Owner directive 2026-11-06 · "apply theme could be
+          floating footer bar". Footer is now position: sticky at
+          the bottom of the scroll area · stays visible while the
+          owner swipes through templates · the status pill floats
+          next to the button inside the same bar · subtle blurred
+          backdrop keeps the rest of the UI readable through it. */}
       <footer
+        data-nex-shop-apply-theme-bar
         style={{
+          position: "sticky",
+          bottom: 0,
+          marginLeft: -20,
+          marginRight: -20,
+          padding: "10px 20px calc(env(safe-area-inset-bottom, 0px) + 10px)",
+          background: "rgba(5, 15, 28, 0.78)",
+          backdropFilter: "blur(14px) saturate(1.1)",
+          WebkitBackdropFilter: "blur(14px) saturate(1.1)",
+          borderTop: `1px solid ${BORDER_HI}`,
           display: "flex",
           alignItems: "center",
           gap: 10,
-          paddingTop: 10,
-          marginTop: "auto",
-          borderTop: `1px solid ${BORDER}`,
+          zIndex: 40,
         }}
       >
         <button
@@ -242,24 +255,44 @@ export function ShopThemesClient({
           onClick={onApplyAll}
           disabled={pending || status.kind === "applying"}
           style={{
-            padding: "10px 18px",
+            flex: "1 1 auto",
+            padding: "12px 18px",
             background: `linear-gradient(135deg, ${EMERALD}, ${FOREST})`,
             color: CREAM,
             border: `1px solid ${GOLD}`,
-            borderRadius: 10,
+            borderRadius: 12,
             fontSize: 13,
             fontWeight: 800,
-            letterSpacing: "0.04em",
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
             cursor: "pointer",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+            boxShadow: "0 10px 26px rgba(0,0,0,0.45)",
           }}
         >
           {status.kind === "applying" ? "Applying…" : "Apply theme"}
         </button>
         {status.kind === "ok" ? (
-          <span style={{ fontSize: 12, color: GOLD }}>{status.message}</span>
+          <span
+            style={{
+              fontSize: 11,
+              color: GOLD,
+              flexShrink: 0,
+              maxWidth: 140,
+              textAlign: "right",
+            }}
+          >
+            {status.message}
+          </span>
         ) : status.kind === "error" ? (
-          <span style={{ fontSize: 12, color: "#D82A2A" }}>
+          <span
+            style={{
+              fontSize: 11,
+              color: "#D82A2A",
+              flexShrink: 0,
+              maxWidth: 140,
+              textAlign: "right",
+            }}
+          >
             {status.message}
           </span>
         ) : null}
