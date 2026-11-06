@@ -33,6 +33,7 @@ import { CoverLayoutSwitch } from "../cover/layout-switch";
 import { BurgerMenu } from "../cover/_burger-menu";
 import { ShopChatFab } from "../cover/_shop-chat-fab";
 import { ShopSideChatDrawer } from "../cover/_shop-side-chat-drawer";
+import { ProductDetailSheet } from "../cover/_product-detail-sheet";
 import { PhoneFrame } from "../cover/preview/_phone-frame";
 import {
   COVER_LAYOUT_IDS,
@@ -195,6 +196,30 @@ export default async function PublicShopPage({
         <ShopSideChatDrawer
           shopName={business.display_name}
           shopOwnerAccountId={business.owner_account_id}
+          accentHex={accentHex}
+        />
+        {/* Owner directive 2026-11-06 · product detail bottom sheet ·
+            opens when the URL carries ?product=<id> · "Buy now · chat"
+            routes the purchase into the owner's peer chat · Add to
+            cart writes NEX_CART_STORAGE_KEY using the sealed
+            NexCartItem shape so the HeaderCartIcon badge bumps
+            immediately. */}
+        <ProductDetailSheet
+          products={coverProducts.map((p) => ({
+            id: p.id,
+            name: p.name,
+            price_pence: p.price_pence,
+            currency: p.currency,
+            image_url: p.image_url,
+            description: p.description ?? null,
+          }))}
+          shopOwnerAccountId={business.owner_account_id}
+          shopName={business.display_name}
+          shopBusinessId={business.id}
+          shopSlug={business.slug}
+          acceptedPaymentLabels={
+            (business.accepted_payment_methods ?? []) as ReadonlyArray<string>
+          }
           accentHex={accentHex}
         />
       </PhoneFrame>
