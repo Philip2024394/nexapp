@@ -844,6 +844,14 @@ function AboutUsSheet({
       role="dialog"
       aria-label="About us"
       data-nex-shop-sheet="about-us"
+      /* Owner directive 2026-11-06 · "about us should fit inside
+         the phone width and show the round corners not square
+         black color". Overlay now carries the sealed phone-frame
+         border-radius (32px) so its rounded corners show through
+         instead of painting a black square inside the tile. On
+         surfaces with a smaller outer radius (themes-picker tile
+         @ 18px), the parent's overflow: hidden clips the 32 down
+         to its own shape, so the overlay still reads correctly. */
       style={{
         position: "absolute",
         inset: 0,
@@ -857,6 +865,8 @@ function AboutUsSheet({
         padding:
           "calc(env(safe-area-inset-top, 0px) + 14px) 14px calc(env(safe-area-inset-bottom, 0px) + 14px)",
         boxSizing: "border-box",
+        borderRadius: 32,
+        overflow: "hidden",
         fontFamily: "Inter, system-ui, sans-serif",
         animation: "nexShopAboutFadeIn 240ms ease-out",
       }}
