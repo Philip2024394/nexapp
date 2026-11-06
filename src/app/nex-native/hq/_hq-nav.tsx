@@ -82,6 +82,16 @@ const NAV_ITEMS: ReadonlyArray<{
     glyph: "👥",
     match: (p) => p.startsWith("/nex-native/contacts"),
   },
+  // Owner directive 2026-11-06 · direct jump into the seeded peer
+  // chat with Aoife (UUID matches the mock notifications feed), so
+  // admins can inspect the peer-chat chrome from HQ without routing
+  // through contacts.
+  {
+    href: "/nex-native/chat/peer/11111111-aaaa-4aaa-8aaa-111111111112",
+    label: "Peer Chat · Aoife",
+    glyph: "🗨",
+    match: (p) => p.startsWith("/nex-native/chat/peer/"),
+  },
 ];
 
 export function HqNav(): React.JSX.Element {
