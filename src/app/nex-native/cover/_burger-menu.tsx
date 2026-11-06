@@ -289,15 +289,20 @@ export function BurgerMenu({
           hours={hours}
           mapsHref={mapsHref}
           directionsHref={directionsHref}
+          accent={accent}
           onClose={() => setSheet(null)}
         />
       ) : null}
       {sheet === "shipping" ? (
-        <ShippingReturnsSheet onClose={() => setSheet(null)} />
+        <ShippingReturnsSheet
+          accent={accent}
+          onClose={() => setSheet(null)}
+        />
       ) : null}
       {sheet === "services" ? (
         <ServicesSheet
           ownerHandle={ownerHandle ?? null}
+          accent={accent}
           onClose={() => setSheet(null)}
         />
       ) : null}
@@ -440,10 +445,12 @@ const SHEET_SURFACE = "rgba(5, 15, 28, 0.98)";
 
 function Sheet({
   title,
+  accent,
   onClose,
   children,
 }: {
   title: string;
+  accent: string;
   onClose: () => void;
   children: React.ReactNode;
 }) {
@@ -474,7 +481,11 @@ function Sheet({
           color: INK,
           borderTopLeftRadius: 18,
           borderTopRightRadius: 18,
-          borderTop: `2px solid ${GOLD}`,
+          /* Owner directive 2026-11-06 · sheet accents (top border,
+             title colour, grab handle, header divider) now follow
+             the applied theme tint so Shipping & Returns / Services
+             / Visit Us all paint in the current template's colour. */
+          borderTop: `2px solid ${accent}`,
           boxShadow: "0 -20px 40px rgba(0,0,0,0.65)",
           zIndex: 61,
           display: "flex",
@@ -490,7 +501,7 @@ function Sheet({
           style={{
             width: 36,
             height: 4,
-            background: BORDER_HI,
+            background: hexAlpha(accent, 0.6),
             borderRadius: 999,
             margin: "8px auto 2px",
           }}
@@ -501,7 +512,7 @@ function Sheet({
             alignItems: "center",
             justifyContent: "space-between",
             padding: "8px 14px 12px",
-            borderBottom: `1px solid ${BORDER}`,
+            borderBottom: `1px solid ${hexAlpha(accent, 0.25)}`,
           }}
         >
           <h2
@@ -509,7 +520,7 @@ function Sheet({
               margin: 0,
               fontSize: 15,
               fontWeight: 900,
-              color: GOLD,
+              color: accent,
               letterSpacing: "0.02em",
             }}
           >
@@ -555,16 +566,18 @@ function VisitUsSheet({
   hours,
   mapsHref,
   directionsHref,
+  accent,
   onClose,
 }: {
   address?: string | null;
   hours?: ReadonlyArray<{ day: string; hours: string }> | null;
   mapsHref: string;
   directionsHref: string;
+  accent: string;
   onClose: () => void;
 }) {
   return (
-    <Sheet title="Visit us" onClose={onClose}>
+    <Sheet title="Visit us" accent={accent} onClose={onClose}>
       {/* Map placeholder · tap or magnifier opens native maps. */}
       <a
         href={mapsHref}
@@ -713,25 +726,32 @@ function VisitUsSheet({
 // sheet with per-section details. Content is placeholder copy; owner
 // will wire real values once Shop Settings ships that form.
 // -----------------------------------------------------------------------------
-function ShippingReturnsSheet({ onClose }: { onClose: () => void }) {
+function ShippingReturnsSheet({
+  accent,
+  onClose,
+}: {
+  accent: string;
+  onClose: () => void;
+}) {
+  const cap = { ...sectionCapStyle, color: accent };
   return (
-    <Sheet title="Shipping & Returns" onClose={onClose}>
+    <Sheet title="Shipping & Returns" accent={accent} onClose={onClose}>
       <section style={{ marginBottom: 14 }}>
-        <div style={sectionCapStyle}>📦 Dispatch</div>
+        <div style={cap}>📦 Dispatch</div>
         <p style={sheetBodyStyle}>
           Orders ship within 1–2 business days from Dublin. Tracked
           delivery with email + SMS updates.
         </p>
       </section>
       <section style={{ marginBottom: 14 }}>
-        <div style={sectionCapStyle}>🚚 Delivery</div>
+        <div style={cap}>🚚 Delivery</div>
         <p style={sheetBodyStyle}>
           Standard delivery across Ireland · 2–4 business days. UK + EU
           delivery · 5–8 business days. Free delivery on orders over €50.
         </p>
       </section>
       <section>
-        <div style={sectionCapStyle}>↩️ Returns</div>
+        <div style={cap}>↩️ Returns</div>
         <p style={sheetBodyStyle}>
           Change of mind returns accepted within 30 days · item must be
           unused and in original packaging. Full refund issued to the
@@ -753,46 +773,50 @@ function ShippingReturnsSheet({ onClose }: { onClose: () => void }) {
 // -----------------------------------------------------------------------------
 function ServicesSheet({
   ownerHandle,
+  accent,
   onClose,
 }: {
   ownerHandle: string | null;
+  accent: string;
   onClose: () => void;
 }) {
   const chatHref = ownerHandle
     ? `/nex-native/chat/peer/${encodeURIComponent(ownerHandle)}`
     : null;
+  const cap = { ...sectionCapStyle, color: accent };
   return (
-    <Sheet title="Services" onClose={onClose}>
+    <Sheet title="Services" accent={accent} onClose={onClose}>
       <section style={{ marginBottom: 14 }}>
-        <div style={sectionCapStyle}>🛒 Retail</div>
+        <div style={cap}>🛒 Retail</div>
         <p style={sheetBodyStyle}>
           Buy direct from the shop — products listed are in stock and
           ship as shown. Secure checkout, tracked delivery.
         </p>
       </section>
       <section style={{ marginBottom: 14 }}>
-        <div style={sectionCapStyle}>🏷 Wholesale</div>
+        <div style={cap}>🏷 Wholesale</div>
         <p style={sheetBodyStyle}>
           Bulk orders for stockists + trade clients. Trade pricing,
           volume discounts, and consolidated dispatch on request.
         </p>
       </section>
       <section>
-        <div style={sectionCapStyle}>✨ Custom orders</div>
+        <div style={cap}>✨ Custom orders</div>
         <p style={sheetBodyStyle}>
           Make-to-suit. Send dimensions, colours, materials, or a
           reference photo — owner replies with a quote + lead time.
         </p>
       </section>
+      {/* Owner directive 2026-11-06 · "services remove this Chat
+          opens once the shop owner signs in · we have floating
+          chat button on each shop theme". Signed-out fallback was
+          redundant · the sealed ShopChatFab bottom-right already
+          handles chat intent across every template. */}
       {chatHref ? (
         <a href={chatHref} style={{ ...ctaPrimaryStyle, marginTop: 18 }}>
           Chat with owner about a custom order →
         </a>
-      ) : (
-        <div style={{ ...ctaSecondaryStyle, marginTop: 18 }}>
-          Chat opens once the shop owner signs in.
-        </div>
-      )}
+      ) : null}
     </Sheet>
   );
 }
