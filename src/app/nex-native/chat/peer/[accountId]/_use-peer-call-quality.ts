@@ -38,7 +38,7 @@ import {
   QUALITY_THRESHOLDS,
   type PreviousSnapshotCache,
   type QualitySnapshot,
-} from "@/app/nex-native/call/g/[sessionId]/_use-connection-quality";
+} from "@/lib/nex-native/calls-chrome/connection-quality-hook";
 import type { CallsConnectionQuality } from "@/lib/nex-native/calls-chrome/types";
 
 export interface UsePeerCallQualityOptions {

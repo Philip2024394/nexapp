@@ -23,7 +23,7 @@ import {
   QUALITY_THRESHOLDS,
   type PreviousSnapshotCache,
   type QualitySnapshot,
-} from "../../../../call/g/[sessionId]/_use-connection-quality";
+} from "@/lib/nex-native/calls-chrome/connection-quality-hook";
 
 const DIR = path.resolve(__dirname, "..");
 const HOOK = fs.readFileSync(path.join(DIR, "_use-peer-call-quality.ts"), "utf8");
