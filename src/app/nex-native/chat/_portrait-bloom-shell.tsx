@@ -2863,8 +2863,8 @@ function documentIconForMime(mime: string, filename: string): string {
  *  product_share attachment. Landscape · shop identity · product name
  *  + price · personal note · huge typographic reward · "Open · claim
  *  reward" CTA that deep-links to the buyer-facing D6 view with the
- *  grant hydrated. Matches the sealed B4 design from
- *  /nex-native/shop-prototypes/direct-price/share-banner. */
+ *  grant hydrated. (Original B4 prototype reference deleted on
+ *  2026-11-06 per owner directive · design is now sealed inline.) */
 function MessageProductShareBanner({
   share,
   hasBody,

@@ -288,9 +288,7 @@ body::-webkit-scrollbar,
  *   · /nex-native/hq/*
  *   · /nex-native/manage/*
  *   · /nex-native/dev/*
- *   · /nex-native/home-prototypes/*
  *   · /nex-native/prototypes/*
- *   · /nex-native/shop-prototypes/*
  */
 @media (min-width: 500px) {
   html:has(.nex-admin-root),

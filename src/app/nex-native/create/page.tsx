@@ -36,7 +36,7 @@ import { CloseButton } from "./_close-button";
 // already wraps every /nex-native/* route in .nex-native-stage >
 // .nex-native-frame, so a plain <main> renders inside the sealed
 // phone-frame column automatically. Prototype pages like
-// /shop-prototypes-v2 and /free-chat/card-prototypes do the same.
+// /free-chat/card-prototypes do the same.
 
 export const metadata = {
   title: "Create · NEX",
