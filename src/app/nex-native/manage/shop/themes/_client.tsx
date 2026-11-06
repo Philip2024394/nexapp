@@ -189,36 +189,24 @@ export function ShopThemesClient({
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: 2,
+          gap: 4,
           paddingBottom: 6,
           borderBottom: `1px solid ${BORDER}`,
         }}
       >
-        <div
-          style={{
-            fontSize: 10,
-            fontWeight: 800,
-            color: GOLD,
-            letterSpacing: "0.18em",
-            textTransform: "uppercase",
-          }}
-        >
-          Shop Themes
-        </div>
         <h1
           style={{
             margin: 0,
-            fontSize: 20,
+            fontSize: 22,
             fontWeight: 900,
             color: INK,
             letterSpacing: "-0.01em",
           }}
         >
-          {businessName ?? "Your shop"}
+          Shop Themes
         </h1>
-        <p style={{ margin: "2px 0 0", fontSize: 12, color: INK_DIM }}>
-          Pick a template, tint, and backdrop. Changes apply to your public
-          shop cover immediately.
+        <p style={{ margin: 0, fontSize: 12, color: INK_DIM, lineHeight: 1.45 }}>
+          Choose from 11 Shop Templates · change colors and backgrounds for your brand.
         </p>
       </header>
 
