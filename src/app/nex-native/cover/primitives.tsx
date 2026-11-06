@@ -500,14 +500,17 @@ export function CoverSectionHeading({
   return (
     <div style={{ marginBottom: 14 }}>
       {eyebrow && (
+        /* Owner directive 2026-11-06 · eyebrow upsized to 14 + 900
+           weight so "Services" reads as a bold section marker, not
+           a whispered caption. */
         <div
           style={{
-            fontSize: 10,
-            fontWeight: 700,
-            letterSpacing: "0.14em",
+            fontSize: 14,
+            fontWeight: 900,
+            letterSpacing: "0.1em",
             textTransform: "uppercase",
             color: "var(--nex-accent)",
-            marginBottom: 4,
+            marginBottom: 6,
           }}
         >
           {eyebrow}
@@ -595,7 +598,7 @@ export function CoverCategoryTabs({
   onSelect: (id: string) => void;
   maxDisplay?: number;
 }): React.JSX.Element | null {
-  // Founder ruling: 0-1 sections hide the tab bar entirely.
+  // Founder ruling: 0-1 sections hide the picker entirely.
   if (sections.length <= 1) return null;
 
   const ordered = [...sections].sort(
@@ -603,62 +606,66 @@ export function CoverCategoryTabs({
   );
   const visible = ordered.slice(0, maxDisplay);
 
-  // Founder direction 2026-09-30 · no "All" tab in the row. Nothing
-  // selected = grid shows everything, no underline anywhere. Tapping
-  // a tab underlines it AND filters the grid. Tapping the active tab
-  // again clears the filter (toggle behaviour). Only the highlighted
-  // tab shows an underline · unselected tabs sit as plain text with
-  // no line beneath them.
-  const tabs = visible.map((s) => ({ id: s.id, label: s.name }));
+  /* Owner directive 2026-11-06 · "change these to drop down slider
+     Category 1 / Category 2 / Category 3". The horizontal underline-
+     tabs pattern is gone · a native-styled <select> now carries the
+     same semantics: empty value = unfiltered (All), picking a
+     category id filters the grid. Matches the dropdown shape used
+     on /manage/shop/backgrounds for consistency. Keeping the
+     component name + prop shape so every layout keeps compiling. */
 
   return (
     <div
-      role="tablist"
-      aria-label="Category tabs"
       style={{
+        position: "relative",
         display: "flex",
-        gap: 4,
-        overflow: "hidden",
+        alignItems: "center",
         marginBottom: 14,
       }}
     >
-      {tabs.map((tab) => {
-        const isActive = tab.id === activeId;
-        return (
-          <button
-            key={tab.id}
-            role="tab"
-            aria-selected={isActive}
-            onClick={() => onSelect(isActive ? "" : tab.id)}
-            type="button"
-            style={{
-              appearance: "none",
-              background: "transparent",
-              border: "none",
-              padding: "10px 14px 12px",
-              margin: 0,
-              cursor: "pointer",
-              fontFamily: "var(--nex-font-body)",
-              fontSize: 13,
-              fontWeight: isActive ? 700 : 500,
-              letterSpacing: "0.02em",
-              color: isActive
-                ? "var(--nex-accent, #06b6d4)"
-                : "var(--nex-text-dim, rgba(148,163,184,0.8))",
-              // Only the highlighted tab gets a line beneath it. Others
-              // sit as plain text · no border, no track.
-              borderBottom: isActive
-                ? "2px solid var(--nex-accent, #06b6d4)"
-                : "none",
-              transition: "color 160ms ease, border-color 160ms ease",
-              whiteSpace: "nowrap",
-              textTransform: "capitalize",
-            }}
-          >
-            {tab.label}
-          </button>
-        );
-      })}
+      <select
+        aria-label="Filter by category"
+        value={activeId}
+        onChange={(e) => onSelect(e.currentTarget.value)}
+        data-nex-cover-category-select
+        style={{
+          appearance: "none",
+          WebkitAppearance: "none",
+          MozAppearance: "none",
+          width: "100%",
+          padding: "10px 36px 10px 14px",
+          background: "rgba(5, 15, 28, 0.72)",
+          color: "var(--nex-text)",
+          border: "1px solid var(--nex-accent-soft, rgba(198,161,91,0.55))",
+          borderRadius: 10,
+          fontFamily: "var(--nex-font-body)",
+          fontSize: 13,
+          fontWeight: 700,
+          letterSpacing: "0.02em",
+          cursor: "pointer",
+          textTransform: "capitalize",
+        }}
+      >
+        <option value="">All categories · {ordered.length}</option>
+        {visible.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.name}
+          </option>
+        ))}
+      </select>
+      <span
+        aria-hidden
+        style={{
+          position: "absolute",
+          right: 14,
+          pointerEvents: "none",
+          color: "var(--nex-accent)",
+          fontSize: 10,
+          fontWeight: 900,
+        }}
+      >
+        ▼
+      </span>
     </div>
   );
 }
