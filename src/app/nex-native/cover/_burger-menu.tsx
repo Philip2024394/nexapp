@@ -114,19 +114,27 @@ export function BurgerMenu({
 
   return (
     <>
-      {/* Top-right cluster · owner directive 2026-11-06 · the cart
-          icon returns to the header to the LEFT of the burger (just
-          icon, no button chrome · matches HeaderIconLink tone) wired
-          to the sealed NEX_CART_STORAGE_KEY + AddToCartButton events
-          via HeaderCartIcon variant="inline". The old bottom-sticky
-          Cart button is hidden in the preview via ?embed=1 CSS. */}
+      {/* Top-right cluster · owner directive 2026-11-06 (revised) ·
+          cart icon enlarged alongside the burger · burger button
+          chrome removed (no dark circle, no gold ring) so it reads
+          as just a bold stroke-3 glyph like the cart. Both icons
+          drop-shadow for legibility over any background. Burger
+          sits against the right edge; cart sits ~30px to its left. */}
       <div
         style={{
           position: "absolute",
-          top: 14,
+          top: 10,
           right: 56,
           zIndex: 50,
           display: "inline-flex",
+          color: CREAM,
+          filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.75))",
+          /* Owner directive 2026-11-06 · scale the sealed inline cart
+             icon (15px glyph · 6px padding) up ~1.6× so it sits at
+             the same visual weight as the stroke-3 burger beside it ·
+             the badge count scales uniformly so hitboxes stay clean. */
+          transform: "scale(1.6)",
+          transformOrigin: "top right",
         }}
         data-nex-shop-header-cart
       >
@@ -140,31 +148,30 @@ export function BurgerMenu({
         data-nex-shop-burger
         style={{
           position: "absolute",
-          top: 10,
-          right: 10,
-          width: 36,
-          height: 36,
-          borderRadius: "50%",
-          background: "rgba(0, 0, 0, 0.55)",
-          border: `1px solid ${GOLD}`,
+          top: 12,
+          right: 12,
+          width: 32,
+          height: 32,
+          borderRadius: 0,
+          background: "transparent",
+          border: "none",
           color: CREAM,
           display: "grid",
           placeItems: "center",
           cursor: "pointer",
           zIndex: 50,
-          backdropFilter: "blur(10px)",
           WebkitTapHighlightColor: "transparent",
           padding: 0,
-          boxShadow: "0 4px 14px rgba(0,0,0,0.45)",
+          filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.75))",
         }}
       >
         <svg
-          width="18"
-          height="18"
+          width="28"
+          height="28"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          strokeWidth="2.2"
+          strokeWidth="3"
           strokeLinecap="round"
           aria-hidden
         >
