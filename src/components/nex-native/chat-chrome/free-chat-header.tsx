@@ -37,10 +37,18 @@ import {
 // right-nav · opens a search dropdown that submits to /nex-feed?q=.
 import { NexLiveSearchButton } from "@/components/nex-native/chat-chrome/nex-live-search-button";
 
+/** Owner directive 2026-11-06 · when the peer owns a shop the header
+ *  renders a small 🏪 badge inline with their chat name · tap opens
+ *  the shop. Callers thread a ready-rendered ShopBadge component
+ *  (variant="inline" or "pill") so this chrome stays presentational. */
 export interface FreeChatHeaderProps {
   /** Wordmark line · "NEX" for guests, display_name for signed-in,
    *  peer.display_name for peer chats. */
   readonly displayName: string;
+  /** Optional inline badge rendered after the display name · typically
+   *  the peer's shop 🏪 pill (owner directive 2026-11-06). Null = no
+   *  badge. */
+  readonly nameBadge?: React.ReactNode;
   /** Subtitle line · "NEX - Guest" for guests, nex-handle for signed-in,
    *  profession or presence for peer chats. */
   readonly subtitle: string;
@@ -101,6 +109,7 @@ const DEFAULT_SUBTITLE = "#B5C3D6";
 
 export function FreeChatHeader({
   displayName,
+  nameBadge,
   subtitle,
   avatarUrl,
   drawerSession,
@@ -239,6 +248,18 @@ export function FreeChatHeader({
         >
           {displayName}
         </span>
+        {nameBadge ? (
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              marginTop: 2,
+              marginBottom: 2,
+            }}
+          >
+            {nameBadge}
+          </span>
+        ) : null}
         <span
           data-nex-free-chat-header-subtitle
           style={{

@@ -37,6 +37,11 @@ import { redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import * as friendService from "@/lib/nex-native/friend-service";
+// Owner directive 2026-11-06 · join nex_business by owner_account_id
+// for each friend so the contacts cards light up with a real shop
+// badge (hasShop + shopHref) instead of the mock values. Batched read
+// · one query per contacts render regardless of friend count.
+import { resolveShopBadges } from "@/lib/nex-native/shop-badge-service";
 // Owner-authored 2026-11-05 · unread-chat badges on contact cards.
 import * as peerConversationServiceForUnread from "@/lib/nex-native/peer-conversation-service";
 import * as peerMessageServiceForUnread from "@/lib/nex-native/peer-message-service";
@@ -320,9 +325,19 @@ export default async function ContactsPage({ searchParams }: PageProps) {
     }),
   );
 
+  // Owner directive 2026-11-06 · resolve the shop badge for every
+  // friend in one batched query so the contacts cards show a real
+  // 🏪 pill (hasShop + shopHref) instead of the mock values · absent
+  // from the Map means "no shop" · fail-soft on error returns an
+  // empty Map so the UI still renders.
+  const shopBadges = await resolveShopBadges(
+    liveFriendAccounts.map((a) => a.id),
+  );
+
   // Hydrate into the row-shape the UI consumes.
   const friendRows: ContactRowDisplay[] = liveFriendAccounts.map((a, i) => {
     const profile = friendProfiles[i];
+    const badge = shopBadges.get(a.id);
     return {
       id: a.id,
       kind: "friend" as const,
@@ -346,6 +361,13 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       // if profession is NULL/empty, the line is omitted entirely
       // (never fabricated).
       professionLine: buildProfessionLine(profile?.profession, profile?.headline),
+      // Owner directive 2026-11-06 · shop badge data flows from the
+      // batched resolveShopBadges call above · variants that already
+      // read hasShop / shopHref (card-v1 · card-v4 · card-g3 · card-g4)
+      // start showing the gold 🏪 pill the moment a friend activates
+      // a shop · no UI change required at the card layer.
+      hasShop: Boolean(badge),
+      shopHref: badge ? `/nex-native/${badge.slug}` : null,
     };
   });
 

@@ -62,6 +62,11 @@ import { FreeChatCallCenterDrawerClient } from "../../../free-chat/_call-center-
 // bubbles + composer + theme wallpaper + all production features.
 import { FreeChatHeader } from "@/components/nex-native/chat-chrome/free-chat-header";
 import { NotificationsDrawer } from "@/components/nex-native/notifications-drawer/notifications-drawer-client";
+// Owner directive 2026-11-06 · when the peer owns a shop render a
+// 🏪 badge inline with their chat name · tap opens the shop. peer
+// business is already loaded above (peerBusiness) · ShopBadge just
+// renders the resolved info.
+import { ShopBadge } from "@/components/nex-native/shop-badge";
 // Owner-authored 2026-11-05 · real incoming-invite notifications ·
 // replaces the mock "follows" section with live pending-incoming
 // friend-edges so the viewer sees who's inviting them.
@@ -1058,6 +1063,20 @@ export default async function PeerChatPage({
       >
         <FreeChatHeader
           displayName={peerFirstName}
+          nameBadge={
+            peerBusiness ? (
+              <ShopBadge
+                badge={{
+                  accountId: peer.id,
+                  businessId: peerBusiness.id,
+                  displayName: peerBusiness.display_name,
+                  slug: peerBusiness.slug,
+                  logoUrl: peerBusiness.logo_url,
+                }}
+                variant="inline"
+              />
+            ) : null
+          }
           subtitle={headerSubtitle}
           avatarUrl={profile?.avatar_url ?? null}
           drawerSession={drawerSession}
