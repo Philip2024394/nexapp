@@ -285,6 +285,17 @@ Alternative: `/nex-native/shop/setup` as a first-run wizard. Owner chooses — s
 
 Each row below is the proposed schema addition to enforce § C–§ F. No migration is authorised by this contract. Owner must separately approve a numbered migration (next sequential after phase-u migration 281 per the task brief; latest on phase-x worktree is 256, so phase-u merge is a prerequisite).
 
+> **Authored as DRAFT (not applied)**: Migration **283** —
+> `nex-supabase/migrations/283_nex_shop_membership_schema.sql` — was
+> authored 2026-11-06 Batch 4.6 as the full § G schema (the three
+> `nex_account` columns, four `nex_business` membership columns,
+> `nex_product.discovered_at` with Daily Discovery partial unique, and
+> `nex_webhook_event_log`). File is guarded by `RAISE EXCEPTION` and
+> **cannot be applied** until the owner issues separate authorisation
+> naming the file (per CLAUDE.md § 5). B3 in § H stays OPEN.
+> The RPC + idempotency table rows below remain unauthored — deferred
+> to a later numbered migration.
+
 | Table | Column / change | Purpose |
 |---|---|---|
 | `nex_account` | `shop_subscription_id text NULL` | Stripe customer/subscription identifier for this account. |
