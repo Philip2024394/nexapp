@@ -1012,34 +1012,21 @@ function AboutUsSheet({
         </div>
       </header>
 
-      {/* Meta row · pin (location) + clock (open status) · accent-
-          tinted glyphs, compact layout, sits just below the header. */}
+      {/* Meta row · owner directive 2026-11-06 refined · clock
+          status moved to the RIGHT side (hours scan right-to-left
+          like a shop sign), pin + address dropped out of this row
+          (they sit at the lower end of the page just above the
+          social footer per owner request). */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          flexWrap: "wrap",
-          gap: 10,
-          padding: "10px 0 12px",
+          justifyContent: "flex-end",
+          padding: "10px 0 6px",
           fontSize: 10.5,
           color: INK_DIM,
         }}
       >
-        <span
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 5,
-          }}
-        >
-          <span
-            aria-hidden
-            style={{ color: accent, fontSize: 13, lineHeight: 1 }}
-          >
-            📍
-          </span>
-          12 Francis Street · Dublin 8
-        </span>
         <span
           style={{
             display: "inline-flex",
@@ -1079,6 +1066,31 @@ function AboutUsSheet({
             shipped in recycled packaging.
           </p>
         </section>
+      </div>
+
+      {/* Owner directive 2026-11-06 refined · address moved to the
+          lower end of the page · sits just above the social footer
+          so the full street address reads as a direct "visit us"
+          cue right before the user taps a social link. */}
+      <div
+        style={{
+          padding: "10px 0 12px",
+          borderTop: `1px solid ${hexAlpha(accent, 0.18)}`,
+          marginTop: 10,
+          fontSize: 11,
+          color: INK_DIM,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+        }}
+      >
+        <span
+          aria-hidden
+          style={{ color: accent, fontSize: 14, lineHeight: 1 }}
+        >
+          📍
+        </span>
+        12 Francis Street · Dublin 8 · Ireland
       </div>
 
       {/* FOOTER · social-media row sits bottom · 5 solid accent-
