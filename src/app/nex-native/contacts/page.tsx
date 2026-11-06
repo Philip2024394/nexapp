@@ -273,12 +273,35 @@ export default async function ContactsPage({ searchParams }: PageProps) {
     );
   }
   const businessContactsByBusinessId = new Map<string, { name: string; slug: string | null; conversationId: string }>();
+  // Owner directive 2026-11-06 · #4 business inbox tab · when the
+  // viewer owns a shop, their Business filter also needs to surface
+  // CUSTOMERS who messaged their shop (my_side='business'). Keyed by
+  // conversation id so each incoming customer thread appears once ·
+  // name comes from the other participant via other_display_name ·
+  // business context lets the row read as "Customer · via <shop>".
+  const shopCustomersByConversationId = new Map<
+    string,
+    {
+      conversationId: string;
+      customerName: string;
+      shopName: string;
+      shopSlug: string | null;
+    }
+  >();
   for (const c of conversations) {
     if (c.my_side === "customer" && !businessContactsByBusinessId.has(c.business.id)) {
       businessContactsByBusinessId.set(c.business.id, {
         name: c.business.display_name,
         slug: c.business.slug ?? null,
         conversationId: c.conversation.id,
+      });
+    }
+    if (c.my_side === "business" && c.other_display_name) {
+      shopCustomersByConversationId.set(c.conversation.id, {
+        conversationId: c.conversation.id,
+        customerName: c.other_display_name,
+        shopName: c.business.display_name,
+        shopSlug: c.business.slug ?? null,
       });
     }
   }
@@ -398,21 +421,38 @@ export default async function ContactsPage({ searchParams }: PageProps) {
   };
   friendRows.sort((a, b) => presenceRank(a.presence ?? null) - presenceRank(b.presence ?? null));
 
-  const businessRows: ContactRowDisplay[] = Array.from(businessContactsByBusinessId.entries()).map(
-    ([businessId, b]) => ({
-      id: businessId,
+  const businessRows: ContactRowDisplay[] = [
+    // Shops the viewer has messaged · customer-side conversations ·
+    // row reads as the shop's display name + slug handle · tap opens
+    // the stored conversation.
+    ...Array.from(businessContactsByBusinessId.entries()).map(
+      ([businessId, b]) => ({
+        id: businessId,
+        kind: "business" as const,
+        displayName: b.name,
+        handle: b.slug,
+        avatarUrl: null,
+        chatHref: `/nex-native/conversations/${b.conversationId}`,
+        professionLine: null,
+        profileHref: b.slug ? `/nex-native/${b.slug}` : null,
+      }),
+    ),
+    // Owner directive 2026-11-06 · #4 business inbox · customers who
+    // messaged this viewer's shop (my_side='business'). Row reads
+    // "Customer · via <shopName>" so the owner immediately sees the
+    // business context · professionLine carries the shop name ·
+    // conversation deep-link uses the sealed /conversations/<id> path.
+    ...Array.from(shopCustomersByConversationId.values()).map((entry) => ({
+      id: `shop-inbox:${entry.conversationId}`,
       kind: "business" as const,
-      displayName: b.name,
-      handle: b.slug,
+      displayName: entry.customerName,
+      handle: null,
       avatarUrl: null,
-      chatHref: `/nex-native/conversations/${b.conversationId}`,
-      // Business rows don't have a profession · the identity-card
-      // layout for businesses (category / city / etc.) is a future
-      // pass, not this commit's scope.
-      professionLine: null,
-      profileHref: b.slug ? `/nex-native/${b.slug}` : null,
-    }),
-  );
+      chatHref: `/nex-native/conversations/${entry.conversationId}`,
+      professionLine: `Customer · via ${entry.shopName}`,
+      profileHref: null,
+    })),
+  ];
   businessRows.sort((a, b) => presenceRank(a.presence ?? null) - presenceRank(b.presence ?? null));
 
   // Owner-authored 2026-11-05 · pending-outgoing invite rows built
