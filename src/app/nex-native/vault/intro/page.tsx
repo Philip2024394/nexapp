@@ -11,7 +11,7 @@
 //   · brand header   · ping badge + NEX wordmark + VAULT chip + tagline
 //   · hero           · heroine image (hero.png) + "Welcome to NEX Vault"
 //   · capabilities   · 4 glass icons (capability-icons.png) + labels
-//   · pitch          · glass card + vault-interface.png + 100% PRIVATE
+//   · pitch          · glass card + vault-interface.png + honest-copy (W7 2026-11-06)
 //   · features       · 4 cyber icons (feature-icons.png) + labels
 //   · primary CTA    · orange "Enter NEX Vault →" → /vault/setup
 //   · secondary CTA  · "Maybe later" → /nex-native/home
@@ -289,8 +289,9 @@ export default async function VaultIntroPage() {
                 color: NEX.textSecondary,
               }}
             >
-              Store, manage and protect your photos, files, contacts, notes and
-              more — all in one secure vault, only you can access.
+              Store, manage and keep your photos, files, contacts and notes in
+              one place — organised and durable while your Shop membership
+              stays active.
             </p>
           </section>
 
@@ -437,30 +438,9 @@ export default async function VaultIntroPage() {
                   maxWidth: "78%",
                 }}
               >
-                End-to-end encrypted, with no access from us. Only you hold the
-                key.
+                Your content stays with you. We never sell or share what you
+                store in Vault.
               </p>
-              <span
-                data-nex-vault-intro-private-chip
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 5,
-                  padding: "4px 10px",
-                  borderRadius: 999,
-                  background: NEX.secureSoft,
-                  border: `1px solid ${NEX.secureStrong}`,
-                  color: NEX.secure,
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  textShadow: "none",
-                }}
-              >
-                <span aria-hidden>💧</span>
-                100% Private
-              </span>
             </div>
           </section>
 
