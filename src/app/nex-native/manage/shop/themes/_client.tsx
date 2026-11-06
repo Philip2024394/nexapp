@@ -777,80 +777,108 @@ function FullscreenTemplate({
       role="dialog"
       aria-modal="true"
       aria-label={`${layoutLabel} template fullscreen`}
+      onClick={onClose}
       style={{
         position: "fixed",
         inset: 0,
-        background: "#020914",
+        background: "rgba(2, 9, 20, 0.92)",
         zIndex: 9999,
         display: "flex",
-        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 12,
+        boxSizing: "border-box",
       }}
     >
-      <header
+      {/* Phone-shaped fullscreen · owner directive 2026-11-06:
+          "when i select the view template it should open in the
+          phone screen not on desktop screen width". Centred in the
+          dim backdrop · taps on the dim area close. */}
+      <div
+        onClick={(e) => e.stopPropagation()}
         style={{
+          position: "relative",
+          width: "min(420px, calc((100dvh - 24px) * 9 / 19.5))",
+          height: "min(calc(100dvh - 24px), calc(420px * 19.5 / 9))",
+          aspectRatio: "9 / 19.5",
+          borderRadius: 24,
+          background: "#020914",
+          border: `1px solid ${BORDER_HI}`,
+          boxShadow:
+            "0 0 0 4px #000, 0 40px 80px rgba(0,0,0,0.75), 0 0 0 1px rgba(198,161,91,0.3)",
+          overflow: "hidden",
           display: "flex",
-          alignItems: "center",
-          gap: 10,
-          padding: "10px 14px",
-          background: "rgba(0,0,0,0.55)",
-          borderBottom: `1px solid ${BORDER_HI}`,
-          color: CREAM,
-          flexShrink: 0,
+          flexDirection: "column",
         }}
       >
-        <span
+        <header
           style={{
-            fontSize: 11,
-            fontWeight: 800,
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-            color: GOLD,
-          }}
-        >
-          Template
-        </span>
-        <span style={{ flex: 1, fontSize: 13, fontWeight: 700 }}>
-          {layoutLabel}
-        </span>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close fullscreen"
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: "50%",
-            background: "transparent",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "8px 12px",
+            background: "rgba(0,0,0,0.55)",
+            borderBottom: `1px solid ${BORDER_HI}`,
             color: CREAM,
-            border: `1px solid ${BORDER_HI}`,
-            fontSize: 20,
-            lineHeight: 1,
-            cursor: "pointer",
-            display: "grid",
-            placeItems: "center",
+            flexShrink: 0,
+            backdropFilter: "blur(10px)",
           }}
         >
-          ×
-        </button>
-      </header>
-      <iframe
-        key={`fs:${layoutId}:${imageUrl ?? "none"}:${tintHex}`}
-        src={`/nex-native/cover/preview/${layoutId}?embed=1${
-          imageUrl ? `&bg=${encodeURIComponent(imageUrl)}` : ""
-        }${
-          /^#[0-9A-Fa-f]{6}$/.test(tintHex)
-            ? `&tint=${encodeURIComponent(tintHex)}`
-            : ""
-        }`}
-        title={`${layoutLabel} template fullscreen`}
-        style={{
-          flex: 1,
-          width: "100%",
-          height: "100%",
-          border: "none",
-          background: "transparent",
-        }}
-      />
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 800,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: GOLD,
+            }}
+          >
+            Template
+          </span>
+          <span style={{ flex: 1, fontSize: 12, fontWeight: 700 }}>
+            {layoutLabel}
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close fullscreen"
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: "50%",
+              background: "transparent",
+              color: CREAM,
+              border: `1px solid ${BORDER_HI}`,
+              fontSize: 18,
+              lineHeight: 1,
+              cursor: "pointer",
+              display: "grid",
+              placeItems: "center",
+              flexShrink: 0,
+            }}
+          >
+            ×
+          </button>
+        </header>
+        <iframe
+          key={`fs:${layoutId}:${imageUrl ?? "none"}:${tintHex}`}
+          src={`/nex-native/cover/preview/${layoutId}?embed=1${
+            imageUrl ? `&bg=${encodeURIComponent(imageUrl)}` : ""
+          }${
+            /^#[0-9A-Fa-f]{6}$/.test(tintHex)
+              ? `&tint=${encodeURIComponent(tintHex)}`
+              : ""
+          }`}
+          title={`${layoutLabel} template fullscreen`}
+          style={{
+            flex: 1,
+            width: "100%",
+            height: "100%",
+            border: "none",
+            background: "transparent",
+          }}
+        />
+      </div>
     </div>
   );
 }

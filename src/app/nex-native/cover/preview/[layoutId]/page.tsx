@@ -11,6 +11,7 @@ import Link from "next/link";
 import * as chatThemeService from "@/lib/nex-native/chat-theme-service";
 import { CoverThemeSkin } from "../../theme-skin";
 import { CoverLayoutSwitch } from "../../layout-switch";
+import { BurgerMenu } from "../../_burger-menu";
 import {
   COVER_LAYOUT_IDS,
   COVER_LAYOUT_LABELS,
@@ -372,6 +373,18 @@ export default async function CoverLayoutPreview({
             themeId={theme.id}
           />
         </CoverThemeSkin>
+        {/* Owner directive 2026-11-06 · world-class shop apps keep
+            address + hours + policies behind a burger · this top-
+            right button opens a right-anchored dropdown with Visit
+            us + Hours + Dispatch + Returns + Wholesale + Chat +
+            Share. Position: absolute so it stays scoped to the
+            phone frame on both preview + real shop surfaces. */}
+        <BurgerMenu
+          ownerHandle={null}
+          address={null}
+          hours={null}
+          shopUrl={null}
+        />
       </PhoneFrame>
       {/* Owner-authorised 2026-10-18 · S7 · the action bar is a
           sibling of the sealed PhoneFrame so the frame's mobile
