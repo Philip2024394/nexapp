@@ -177,26 +177,27 @@ export function ShopThemesClient({
           applies the pick and redirects back here so the templates
           render under the new backdrop. */}
       <section aria-label="Background">
+        {/* Owner directive 2026-11-06 · solid cream-gold (world
+            palette's --nex-world-secondary) · icon removed · button
+            now reads as a primary CTA, not an outlined chip. */}
         <Link
           href="/nex-native/manage/shop/backgrounds"
           data-nex-choose-background
           style={{
             display: "inline-flex",
             alignItems: "center",
-            gap: 8,
-            padding: "8px 14px",
-            fontSize: 11.5,
+            padding: "10px 18px",
+            fontSize: 12,
             fontWeight: 800,
             letterSpacing: "0.08em",
             textTransform: "uppercase",
-            color: GOLD,
-            background: "transparent",
+            color: "#1A120A",
+            background: GOLD,
             textDecoration: "none",
-            border: `1px solid ${GOLD}`,
+            border: "none",
             borderRadius: 999,
           }}
         >
-          <span aria-hidden style={{ fontSize: 14 }}>🖼️</span>
           Choose Background
         </Link>
       </section>

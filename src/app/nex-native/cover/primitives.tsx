@@ -525,10 +525,14 @@ export function CoverSectionHeading({
             dash that used to sit before the title. Title now stands alone
             for a cleaner heading. */}
         <h2
+          /* Owner directive 2026-11-06 · section-heading title shrunk
+             from 20 → 12 · the heading sits alongside the (smaller)
+             products beneath it and used to over-emphasise the
+             shipping-scope label. */
           style={{
             margin: 0,
             fontFamily: "var(--nex-font-display)",
-            fontSize: 20,
+            fontSize: 12,
             fontWeight: 700,
             letterSpacing: "-0.01em",
             textShadow: "0 1px 4px rgba(0,0,0,0.55)",

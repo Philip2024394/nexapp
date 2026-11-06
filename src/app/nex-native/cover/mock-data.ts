@@ -182,6 +182,11 @@ export const MARIA_MOCK: MockCoverContent = {
   locationLat: null,
   locationLng: null,
   countryCode: "ID",
+  // Owner directive 2026-11-06 · the heading text was "Local Delivery
+  // / Export" (resolved from shippingScope) · owner wants it to read
+  // "Delivery 38km" on the preview. sectionTitle overrides the enum
+  // resolution per the sectionTitle doc above.
+  sectionTitle: "Delivery 38km",
   shippingScope: "local_and_export",
   aboutUs:
     "This is where your brand story lives · the place visitors get to know who you are before they buy. Talk about your mission · your ambitions · your goals · the moment you started · the people beside you · the standards you refuse to compromise on.\n\nKeep it specific · keep it warm · keep it yours. If you have been at this for years, say so. If you are new and hungry, own that too. Explain the craft, the promise, the reason you exist.\n\nEvery reader who lands here should leave knowing what makes your work different from everyone else's. Sellers rewrite this at any time from /manage/info.",
