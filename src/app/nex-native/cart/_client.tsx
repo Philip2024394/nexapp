@@ -26,7 +26,7 @@ import {
   NEX_CART_STORAGE_KEY,
   type NexCartItem,
 } from "@/lib/nex-native/cart-types";
-import { sendCartOrderAction } from "../_actions";
+import { CheckoutSheet } from "./_checkout-sheet";
 
 const GOLD = "var(--nex-world-secondary, #C6A15B)";
 const CREAM = "var(--nex-world-cream, #FAF8F4)";
@@ -111,6 +111,9 @@ function formatPrice(pence: number, currency: string): string {
 export function CartPageClient(): React.JSX.Element {
   const [items, setItems] = React.useState<NexCartItem[]>([]);
   const [hydrated, setHydrated] = React.useState(false);
+  const [checkoutShopId, setCheckoutShopId] = React.useState<string | null>(
+    null,
+  );
 
   React.useEffect(() => {
     setItems(readCart());
@@ -192,9 +195,46 @@ export function CartPageClient(): React.JSX.Element {
           onUpdateQty={updateQty}
           onRemoveItem={removeItem}
           onClearShop={clearShop}
+          onCheckout={() => setCheckoutShopId(group.shopId)}
         />
       ))}
       <Footer />
+
+      {/* Checkout sheet · opens when a shop's Checkout → button is
+          tapped · collects buyer name / phone / delivery address /
+          payment method pick then POSTs to sendCartOrderAction. */}
+      {checkoutShopId
+        ? (() => {
+            const group = groups.find((g) => g.shopId === checkoutShopId);
+            if (!group) return null;
+            return (
+              <CheckoutSheet
+                shopDisplayName={group.shopDisplayName}
+                shopSlug={group.shopSlug}
+                shopId={group.shopId}
+                shopOwnerAccountId={group.shopOwnerAccountId}
+                currency={group.currency}
+                items={group.items.map((it) => ({
+                  product_id: it.id,
+                  kind: it.kind,
+                  name: it.name,
+                  price_pence: it.price_pence,
+                  currency: it.currency,
+                  quantity: it.quantity,
+                  image_url: it.image_url,
+                  variants: it.variants,
+                }))}
+                subtotalLabel={formatPrice(
+                  group.subtotalPence,
+                  group.currency,
+                )}
+                acceptedPaymentMethods={[]}
+                acceptedPaymentLabels={[]}
+                onClose={() => setCheckoutShopId(null)}
+              />
+            );
+          })()
+        : null}
     </div>
   );
 }
@@ -318,41 +358,14 @@ function ShopCartGroup({
   onUpdateQty,
   onRemoveItem,
   onClearShop,
+  onCheckout,
 }: {
   group: ShopGroup;
   onUpdateQty: (key: string, delta: number) => void;
   onRemoveItem: (key: string) => void;
   onClearShop: (shopId: string) => void;
+  onCheckout: () => void;
 }): React.JSX.Element {
-  const payload = React.useMemo(() => {
-    const items = group.items.map((it) => ({
-      product_id: it.id,
-      kind: it.kind,
-      name: it.name,
-      price_pence: it.price_pence,
-      currency: it.currency,
-      quantity: it.quantity,
-      image_url: it.image_url,
-      variants: it.variants,
-    }));
-    return JSON.stringify({
-      peer_account_id: group.shopOwnerAccountId,
-      shop_id: group.shopId,
-      shop_slug: group.shopSlug,
-      shop_display_name: group.shopDisplayName,
-      currency: group.currency,
-      items,
-    });
-  }, [group]);
-
-  const intentId = React.useMemo(
-    () =>
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
-    [group.shopId, group.subtotalPence],
-  );
-
   return (
     <section
       aria-label={`Cart items from ${group.shopDisplayName}`}
@@ -582,29 +595,26 @@ function ShopCartGroup({
             {formatPrice(group.subtotalPence, group.currency)}
           </div>
         </div>
-        <form action={sendCartOrderAction} method="post">
-          <input type="hidden" name="send_intent_id" value={intentId} />
-          <input type="hidden" name="cart_payload" value={payload} />
-          <button
-            type="submit"
-            style={{
-              padding: "12px 20px",
-              borderRadius: 999,
-              background: GOLD,
-              color: "#1A120A",
-              fontSize: 12,
-              fontWeight: 900,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              border: "none",
-              cursor: "pointer",
-              fontFamily: "inherit",
-              boxShadow: "0 10px 24px rgba(198,161,91,0.22)",
-            }}
-          >
-            Checkout →
-          </button>
-        </form>
+        <button
+          type="button"
+          onClick={onCheckout}
+          style={{
+            padding: "12px 20px",
+            borderRadius: 999,
+            background: GOLD,
+            color: "#1A120A",
+            fontSize: 12,
+            fontWeight: 900,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            border: "none",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            boxShadow: "0 10px 24px rgba(198,161,91,0.22)",
+          }}
+        >
+          Checkout →
+        </button>
       </div>
     </section>
   );
