@@ -907,7 +907,10 @@ function AboutUsSheet({
           alignItems: "center",
           gap: 10,
           paddingBottom: 10,
-          borderBottom: `1px solid ${hexAlpha(accent, 0.25)}`,
+          /* Owner directive 2026-11-06 · "about us the phone edge
+             line remove · we dont want phone color rim line" ·
+             accent-tinted divider lines (header / address / footer)
+             stripped so the overlay reads as a single flat sheet. */
           paddingRight: 40,
         }}
       >
@@ -965,7 +968,6 @@ function AboutUsSheet({
               fontSize: 18,
               fontWeight: 900,
               boxShadow: "0 4px 14px rgba(0,0,0,0.45)",
-              border: `2px solid ${accent}`,
             }}
           >
             IP
@@ -1087,7 +1089,6 @@ function AboutUsSheet({
       <div
         style={{
           padding: "10px 0 12px",
-          borderTop: `1px solid ${hexAlpha(accent, 0.18)}`,
           marginTop: 10,
           fontSize: 11,
           color: INK_DIM,
@@ -1114,7 +1115,6 @@ function AboutUsSheet({
       <footer
         style={{
           paddingTop: 12,
-          borderTop: `1px solid ${hexAlpha(accent, 0.25)}`,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
