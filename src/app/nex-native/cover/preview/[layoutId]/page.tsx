@@ -182,6 +182,17 @@ export default async function CoverLayoutPreview({
             box-shadow: none !important;
             transform: none !important;
           }
+          /* Owner directive 2026-11-06 · "remove shade from screen" ·
+             hide CoverThemeSkin's legibility scrim (dark top+bottom
+             gradient) + accent-glow radial so the chosen background
+             paints clean, not dimmed. These overlays stay in place
+             on the real shop surface outside the preview iframe. */
+          [aria-hidden][style*="linear-gradient(180deg, rgba(3,8,20"],
+          [aria-hidden][style*="linear-gradient(180deg,rgba(3,8,20"],
+          [aria-hidden][style*="radial-gradient(60% 40% at 50% 8%"],
+          [aria-hidden][style*="radial-gradient(60%40%at 50% 8%"] {
+            display: none !important;
+          }
         `}</style>
       )}
       {!isEmbedded && (

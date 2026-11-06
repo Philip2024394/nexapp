@@ -157,7 +157,7 @@ export const MARIA_MOCK: MockCoverContent = {
   // to a specific vertical. Sellers select a template skin, brain-
   // storm their own business, then rewrite these fields on
   // /manage/shop + /manage/info.
-  businessName: "Your Business Name",
+  businessName: "Brand Name",
   tagline: "Your slogan · what you do in a few words",
   handle: "@your-handle",
   // Owner directive 2026-10-22 · the identity rail's compact location
