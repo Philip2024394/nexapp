@@ -140,3 +140,80 @@ export async function clearShopCoverTint(businessId: string): Promise<void> {
     throw new Error(`shop-cover-service.clearShopCoverTint: ${error.message}`);
   }
 }
+
+// ─── Shop-cover content read ──────────────────────────────────────────
+// Owner directive 2026-11-06 · "is all work wired and connected
+// supabase if not wire and connect". The burger-menu overlays
+// (About Us, Visit Us, Services) + the CoverIdentityBadge location
+// row previously hardcoded "Irish Pride / Dublin, Ireland / 12
+// Francis Street". This helper reads the owner's real business row
+// so the preview iframe paints with real content when a session is
+// present. All fields are nullable · callers fall back to mock
+// strings for untouched fields so the template surface still reads
+// as a finished page for visitors + brand-new shops.
+
+/** Shape of the owner-authored content that feeds the shop-cover
+ *  preview + the burger-menu overlays. Mirrors columns on
+ *  nex_business (migrations 014 · 026 · 072 · 100 · 212). All
+ *  fields optional so partially-filled shops still render. */
+export interface ShopCoverContent {
+  readonly displayName: string | null;
+  readonly slug: string | null;
+  readonly city: string | null;
+  readonly description: string | null;
+  readonly address: string | null;
+  readonly hoursDisplay: string | null;
+  readonly logoUrl: string | null;
+  readonly instagramHandle: string | null;
+  readonly facebookHandle: string | null;
+  readonly tiktokHandle: string | null;
+  readonly websiteUrl: string | null;
+  readonly publicPhone: string | null;
+}
+
+interface ShopCoverContentRow {
+  display_name: string | null;
+  slug: string | null;
+  city: string | null;
+  description: string | null;
+  address: string | null;
+  hours_display: string | null;
+  logo_url: string | null;
+  instagram_handle: string | null;
+  facebook_handle: string | null;
+  tiktok_handle: string | null;
+  website_url: string | null;
+  public_phone: string | null;
+}
+
+/** Load the owner-authored cover content for one business. Returns
+ *  null when the business doesn't exist · all fields inside nullable
+ *  so callers decide per-field between the real value and a mock
+ *  fallback. Caller is responsible for passing a business id that
+ *  the current session owns (use listBusinessesByOwner first). */
+export async function getShopCoverContent(
+  businessId: string,
+): Promise<ShopCoverContent | null> {
+  const { data, error } = await nexSupabaseAdmin
+    .from("nex_business")
+    .select(
+      "display_name, slug, city, description, address, hours_display, logo_url, instagram_handle, facebook_handle, tiktok_handle, website_url, public_phone",
+    )
+    .eq("id", businessId)
+    .maybeSingle<ShopCoverContentRow>();
+  if (error || !data) return null;
+  return {
+    displayName: data.display_name,
+    slug: data.slug,
+    city: data.city,
+    description: data.description,
+    address: data.address,
+    hoursDisplay: data.hours_display,
+    logoUrl: data.logo_url,
+    instagramHandle: data.instagram_handle,
+    facebookHandle: data.facebook_handle,
+    tiktokHandle: data.tiktok_handle,
+    websiteUrl: data.website_url,
+    publicPhone: data.public_phone,
+  };
+}

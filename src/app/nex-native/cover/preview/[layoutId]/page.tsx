@@ -13,6 +13,13 @@ import { CoverThemeSkin } from "../../theme-skin";
 import { CoverLayoutSwitch } from "../../layout-switch";
 import { BurgerMenu } from "../../_burger-menu";
 import { ShopChatFab } from "../../_shop-chat-fab";
+// Owner directive 2026-11-06 · "is all work wired and connected
+// supabase". Load the owner's real nex_business row (when a dev-
+// impersonated session is present) so the burger-menu overlays
+// paint with persisted content instead of the hardcoded mock.
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
+import { listBusinessesByOwner } from "@/lib/nex-native/business-service";
+import { getShopCoverContent } from "@/lib/nex-native/shop-cover-service";
 import {
   COVER_LAYOUT_IDS,
   COVER_LAYOUT_LABELS,
@@ -159,6 +166,26 @@ export default async function CoverLayoutPreview({
     typeof sp.tint === "string" && /^#[0-9A-Fa-f]{6}$/.test(sp.tint)
       ? sp.tint
       : theme.accent_hex;
+
+  // Owner directive 2026-11-06 · load the owner's real business row
+  // when a session is present so the burger-menu overlays + FAB
+  // paint with persisted content (display_name · city · description ·
+  // address · hours_display · social handles · logo). Silent fallback
+  // to null means visitors + unauthenticated preview iframes still
+  // see the mock copy (unchanged behaviour).
+  const shopContent = await (async () => {
+    try {
+      const session = await resolveSessionWithDevOverride();
+      if (!session) return null;
+      const businesses = await listBusinessesByOwner(session.account.id);
+      const business = businesses[0];
+      if (!business) return null;
+      return await getShopCoverContent(business.id);
+    } catch {
+      return null;
+    }
+  })();
+  const ownerHandle = shopContent?.slug ?? null;
 
   return (
     <>
@@ -445,19 +472,20 @@ export default async function CoverLayoutPreview({
             Share. Position: absolute so it stays scoped to the
             phone frame on both preview + real shop surfaces. */}
         <BurgerMenu
-          ownerHandle={null}
-          address={null}
+          ownerHandle={ownerHandle}
+          address={shopContent?.address ?? null}
           hours={null}
-          shopUrl={null}
+          shopUrl={shopContent?.slug ? `/nex-native/${shopContent.slug}` : null}
           accentHex={effectiveAccent}
+          content={shopContent}
         />
         {/* Owner directive 2026-11-06 · "Chat with us is floating
             button bottom right on screen". Replaces the burger's
             Chat row with a dedicated FAB · send-first, signup
             contextual flow. */}
         <ShopChatFab
-          ownerHandle={null}
-          shopName={null}
+          ownerHandle={ownerHandle}
+          shopName={shopContent?.displayName ?? null}
           accentHex={effectiveAccent}
         />
       </PhoneFrame>

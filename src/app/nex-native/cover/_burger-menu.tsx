@@ -32,6 +32,7 @@
 
 import * as React from "react";
 import { HeaderCartIcon } from "../_header-cart-icon";
+import type { ShopCoverContent } from "@/lib/nex-native/shop-cover-service";
 
 interface BurgerMenuProps {
   /** Owner's NEX handle so the "Chat with us" row can deep-link
@@ -53,6 +54,15 @@ interface BurgerMenuProps {
    *  inherit · callers thread the applied tint explicitly. Falls
    *  back to the world-palette gold when omitted. */
   readonly accentHex?: string | null;
+  /** Owner directive 2026-11-06 · "is all work wired and connected
+   *  supabase". Threaded from the preview page's
+   *  getShopCoverContent(businessId) call · lets the burger-menu
+   *  overlays (About Us · Visit Us · Services) paint with the
+   *  owner's real nex_business row instead of the hardcoded "Irish
+   *  Pride / Dublin / 12 Francis Street" mock. Null when no
+   *  business is in session · every sheet falls back to the mock
+   *  per-field so the template view still reads as finished. */
+  readonly content?: ShopCoverContent | null;
 }
 
 const GOLD = "var(--nex-world-secondary, #C6A15B)";
@@ -69,7 +79,16 @@ export function BurgerMenu({
   hours,
   shopUrl,
   accentHex,
+  content,
 }: BurgerMenuProps): React.JSX.Element {
+  // Owner-authored content overrides mock defaults field-by-field.
+  // address/hours props (which the preview page already threaded)
+  // still win over content.address/hoursDisplay when supplied — the
+  // picker's live edits should beat the persisted shop row.
+  const resolvedAddress = address ?? content?.address ?? null;
+  const resolvedShopUrl =
+    shopUrl ??
+    (content?.slug ? `/nex-native/${content.slug}` : null);
   const accent =
     accentHex && /^#[0-9A-Fa-f]{6}$/.test(accentHex)
       ? accentHex
@@ -98,11 +117,11 @@ export function BurgerMenu({
     return () => window.removeEventListener("keydown", handler);
   }, [open, sheet]);
 
-  const mapsHref = address
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
+  const mapsHref = resolvedAddress
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(resolvedAddress)}`
     : "https://www.google.com/maps";
-  const directionsHref = address
-    ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`
+  const directionsHref = resolvedAddress
+    ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(resolvedAddress)}`
     : "https://www.google.com/maps/dir/";
 
   function openSheet(key: Exclude<SheetKey, null>) {
@@ -285,8 +304,9 @@ export function BurgerMenu({
           is one · owner-sealed shop-page phone-frame rule 2026-11-06). */}
       {sheet === "visit" ? (
         <VisitUsSheet
-          address={address}
+          address={resolvedAddress}
           hours={hours}
+          hoursDisplay={content?.hoursDisplay ?? null}
           mapsHref={mapsHref}
           directionsHref={directionsHref}
           accent={accent}
@@ -307,7 +327,12 @@ export function BurgerMenu({
         />
       ) : null}
       {sheet === "about" ? (
-        <AboutUsSheet accent={accent} onClose={() => setSheet(null)} />
+        <AboutUsSheet
+          accent={accent}
+          content={content ?? null}
+          shopUrl={resolvedShopUrl}
+          onClose={() => setSheet(null)}
+        />
       ) : null}
     </>
   );
@@ -564,6 +589,7 @@ function Sheet({
 function VisitUsSheet({
   address,
   hours,
+  hoursDisplay,
   mapsHref,
   directionsHref,
   accent,
@@ -571,6 +597,10 @@ function VisitUsSheet({
 }: {
   address?: string | null;
   hours?: ReadonlyArray<{ day: string; hours: string }> | null;
+  /** Owner-authored hours string (nex_business.hours_display) ·
+   *  renders as a single-row hint under the per-day grid when
+   *  structured hours aren't provided. */
+  hoursDisplay?: string | null;
   mapsHref: string;
   directionsHref: string;
   accent: string;
@@ -682,7 +712,9 @@ function VisitUsSheet({
         >
           {(hours && hours.length > 0
             ? hours
-            : [{ day: "Hours coming soon", hours: "" }]
+            : hoursDisplay
+              ? [{ day: "Open", hours: hoursDisplay }]
+              : [{ day: "Hours coming soon", hours: "" }]
           ).map((r) => (
             <React.Fragment key={r.day}>
               <span style={{ color: GOLD, fontWeight: 700 }}>{r.day}</span>
@@ -828,9 +860,13 @@ function ServicesSheet({
 // -----------------------------------------------------------------------------
 function AboutUsSheet({
   accent,
+  content,
+  shopUrl,
   onClose,
 }: {
   accent: string;
+  content: ShopCoverContent | null;
+  shopUrl: string | null;
   onClose: () => void;
 }) {
   // Mock hours logic for the clock meta line · "Closing today 18:00"
@@ -838,6 +874,40 @@ function AboutUsSheet({
   // computed client-side from a simple 10:00–18:00 Tues–Sat mock. The
   // wire batch swaps this for real nex_business.hours_by_day data.
   const todayStatus = React.useMemo(() => computeMockOpenStatus(), []);
+
+  // Owner directive 2026-11-06 · "is all work wired and connected
+  // supabase". Content prop overrides each mock field · null parts
+  // fall back to the mock so the preview still reads for visitors.
+  const displayName = content?.displayName ?? "Irish Pride";
+  const city = content?.city ?? "Dublin, Ireland";
+  const description =
+    content?.description ??
+    "A small Dublin workshop built on the idea that everyday objects deserve to be made properly · local materials, long-time collaborators, steady hands.";
+  const address =
+    content?.address ?? "12 Francis Street · Dublin 8 · Ireland";
+  const monogram = initialsFromName(displayName);
+
+  // Social-handle URL builders · thread the raw handles the owner
+  // typed (sans @) · fall back to the mock "#" href when the owner
+  // hasn't set a handle yet so the row shape stays consistent.
+  const socialHrefs = {
+    Instagram: content?.instagramHandle
+      ? `https://instagram.com/${content.instagramHandle}`
+      : null,
+    TikTok: content?.tiktokHandle
+      ? `https://tiktok.com/@${content.tiktokHandle}`
+      : null,
+    Facebook: content?.facebookHandle
+      ? `https://facebook.com/${content.facebookHandle}`
+      : null,
+    WhatsApp: content?.publicPhone
+      ? `https://wa.me/${content.publicPhone.replace(/[^\d+]/g, "")}`
+      : null,
+    Website: content?.websiteUrl ?? null,
+  };
+  // Keep the shopUrl reference so the inline-share pattern can wire
+  // in a follow-up · consumed by data-nex-pending-action tags today.
+  void shopUrl;
 
   return (
     <div
@@ -980,7 +1050,7 @@ function AboutUsSheet({
               boxShadow: "0 4px 14px rgba(0,0,0,0.45)",
             }}
           >
-            IP
+            {monogram}
           </div>
           {/* Country flag badge · bottom-right · same anchor as
               the sealed CoverIdentityBadge flag · 18px circle so
@@ -1015,7 +1085,7 @@ function AboutUsSheet({
               lineHeight: 1.15,
             }}
           >
-            Irish Pride
+            {displayName}
           </div>
           {/* Owner directive 2026-11-06 (refined) · "this should be
               under business name 1 row · Dublin, Ireland and same
@@ -1031,7 +1101,7 @@ function AboutUsSheet({
               lineHeight: 1.2,
             }}
           >
-            Dublin, Ireland
+            {city}
           </div>
         </div>
       </header>
@@ -1076,18 +1146,15 @@ function AboutUsSheet({
       <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
         <section style={{ marginBottom: 10 }}>
           <div style={{ ...sectionCapStyle, color: accent }}>Our story</div>
-          <p style={{ ...sheetBodyStyle, fontSize: 12, lineHeight: 1.45 }}>
-            A small Dublin workshop built on the idea that everyday
-            objects deserve to be made properly · local materials,
-            long-time collaborators, steady hands.
-          </p>
-        </section>
-        <section>
-          <div style={{ ...sectionCapStyle, color: accent }}>What we make</div>
-          <p style={{ ...sheetBodyStyle, fontSize: 12, lineHeight: 1.45 }}>
-            Signature pieces in our own designs, custom orders built
-            to size, and limited seasonal drops · finished by hand ·
-            shipped in recycled packaging.
+          <p
+            style={{
+              ...sheetBodyStyle,
+              fontSize: 12,
+              lineHeight: 1.45,
+              whiteSpace: "pre-line",
+            }}
+          >
+            {description}
           </p>
         </section>
       </div>
@@ -1113,7 +1180,7 @@ function AboutUsSheet({
         >
           📍
         </span>
-        12 Francis Street · Dublin 8 · Ireland
+        {address}
       </div>
 
       {/* FOOTER · owner directive 2026-11-06 refined · "the scial
@@ -1131,29 +1198,38 @@ function AboutUsSheet({
           gap: 10,
         }}
       >
-        {SHOP_PAGE_SOCIAL_ICONS.map((s) => (
-          <a
-            key={s.label}
-            href="#"
-            aria-label={s.label}
-            title={s.label}
-            data-nex-pending-action={`social-${s.label.toLowerCase()}`}
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: 10,
-              background: "var(--nex-world-secondary, #C6A15B)",
-              color: "#1A120A",
-              display: "grid",
-              placeItems: "center",
-              textDecoration: "none",
-              boxShadow: "none",
-              border: "none",
-            }}
-          >
-            {s.glyph}
-          </a>
-        ))}
+        {SHOP_PAGE_SOCIAL_ICONS.map((s) => {
+          const href = socialHrefs[s.label as keyof typeof socialHrefs];
+          const isWired = Boolean(href);
+          return (
+            <a
+              key={s.label}
+              href={href ?? "#"}
+              target={isWired ? "_blank" : undefined}
+              rel={isWired ? "noreferrer noopener" : undefined}
+              aria-label={s.label}
+              title={s.label}
+              data-nex-pending-action={
+                isWired ? undefined : `social-${s.label.toLowerCase()}`
+              }
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 10,
+                background: "var(--nex-world-secondary, #C6A15B)",
+                color: "#1A120A",
+                display: "grid",
+                placeItems: "center",
+                textDecoration: "none",
+                boxShadow: "none",
+                border: "none",
+                opacity: isWired ? 1 : 0.55,
+              }}
+            >
+              {s.glyph}
+            </a>
+          );
+        })}
       </footer>
     </div>
   );
@@ -1180,6 +1256,16 @@ function computeMockOpenStatus(): { isOpen: boolean; label: string } {
       ? "Opens tomorrow 10:00"
       : "Opens Tuesday 10:00";
   return { isOpen: false, label: openLabel };
+}
+
+function initialsFromName(name: string | null | undefined): string {
+  const safe = (name ?? "").trim();
+  if (!safe) return "·";
+  const parts = safe.split(/\s+/).filter(Boolean);
+  const a = parts[0]?.[0] ?? "";
+  const b = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "";
+  const monogram = (a + b).toUpperCase();
+  return monogram || "·";
 }
 
 function hexAlpha(hex: string, alpha: number): string {
