@@ -3,7 +3,7 @@
 // NEX · Free Chat · Prototype gallery.
 // Owner-authorised 2026-10-21 (iteration 36 · research synthesis).
 // -----------------------------------------------------------------------------
-// Index of six chat-interface prototypes derived from research into:
+// Index of five chat-interface prototypes derived from research into:
 //   · WhatsApp + iMessage baseline
 //   · Modern innovators (Telegram · Discord · Signal · Snapchat · Line
 //     · WeChat · Threads · Beeper)
@@ -48,15 +48,6 @@ interface Prototype {
 }
 
 const PROTOTYPES: readonly Prototype[] = [
-  {
-    slug: "classic-polish",
-    number: "P1",
-    title: "Classic Polish",
-    tagline: "WhatsApp-grade baseline · double-tick · reaction shelf · voice-note waveform",
-    inspiration: "WhatsApp · Signal",
-    glyph: "💬",
-    accent: "#25D366",
-  },
   {
     slug: "bubble-fx",
     number: "P2",
@@ -151,7 +142,7 @@ export default function PrototypeGalleryPage(): React.ReactElement {
               color: NEX.text,
             }}
           >
-            Six prototype directions
+            Five prototype directions
           </h1>
           <p
             style={{
