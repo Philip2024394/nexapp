@@ -355,11 +355,19 @@ export function ShopBackgroundsClient({
             >
               <div
                 aria-hidden
+                /* Owner directive 2026-11-06 · tiles must fit the
+                   image at full height AND full width · source
+                   images are portrait 9:16-ish · tile aspect matches
+                   + background-size:100% 100% guarantees the whole
+                   image paints edge-to-edge with no crop. */
                 style={{
                   position: "relative",
                   width: "100%",
-                  aspectRatio: "4 / 5",
-                  background: `url(${preset.url}) center/cover`,
+                  aspectRatio: "9 / 16",
+                  backgroundImage: `url(${preset.url})`,
+                  backgroundSize: "100% 100%",
+                  backgroundPosition: "center",
+                  backgroundRepeat: "no-repeat",
                 }}
               >
                 {/* Tint swatch · small circle top-left showing the

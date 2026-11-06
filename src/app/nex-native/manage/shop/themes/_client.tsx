@@ -28,6 +28,24 @@ import { createPortal } from "react-dom";
 import { applyShopLayoutAction, applyShopTintAction } from "./_actions";
 import type { CoverLayoutId } from "@/app/nex-native/cover/layout-ids";
 
+// Owner directive 2026-11-06 · template-type emoji shown next to the
+// layout name in the picker header (icon + Café · Library button).
+// Three families mirror the 11 COVER_LAYOUT_IDS: cafe/food · product
+// · personal brand · and the one accommodation layout.
+const TEMPLATE_ICONS: Readonly<Record<CoverLayoutId, string>> = {
+  cafe: "☕",
+  cafe_landscape: "☕",
+  cafe_round: "☕",
+  product: "📦",
+  product_landscape: "📦",
+  product_round: "📦",
+  product_landscape_round: "📦",
+  personal_brand: "✨",
+  personal_brand_landscape: "✨",
+  personal_brand_round: "✨",
+  accommodation: "🏨",
+};
+
 // Palette · emerald Ireland tokens with navy fallback for the HQ
 // identity. Only the per-row pieces need explicit colours; the
 // stage/body inherits from the world-stylesheet.
@@ -147,7 +165,7 @@ export function ShopThemesClient({
           Shop Themes
         </h1>
         <p style={{ margin: 0, fontSize: 12, color: INK_DIM, lineHeight: 1.45 }}>
-          Choose from 11 Shop Templates · change colors and backgrounds for your brand.
+          Copy url and start sharing online and social bio linking · the world is waiting…
         </p>
       </header>
 
@@ -374,11 +392,15 @@ function TemplateCarousel({
     else if (dx >= 40) goPrev();
   }
 
+  const templateIcon = TEMPLATE_ICONS[selectedLayout] ?? "📱";
+
   return (
     <section aria-label="Template picker" style={{ position: "relative" }}>
-      {/* Navigation row · left arrow · template name · right arrow.
-          Owner directive 2026-11-06 · dropped the "N / M" counter
-          · dots row below still shows position. */}
+      {/* Navigation row · owner directive 2026-11-06 · template icon
+          + name LEFT · small "Library" button with magnifier RIGHT ·
+          the left/right arrows are absolute-positioned on the preview
+          tile itself (see ArrowButton below) so the header stays
+          clean. */}
       <div
         style={{
           display: "flex",
@@ -387,21 +409,63 @@ function TemplateCarousel({
           marginTop: 6,
         }}
       >
-        <ArrowButton direction="left" onClick={goPrev} />
         <div
           style={{
             flex: 1,
-            textAlign: "center",
-            fontSize: 12,
-            fontWeight: 800,
-            color: INK,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            minWidth: 0,
           }}
         >
-          {layoutLabels[selectedLayout]}
+          <span
+            aria-hidden
+            style={{ fontSize: 18, lineHeight: 1 }}
+          >
+            {templateIcon}
+          </span>
+          <span
+            style={{
+              fontSize: 13,
+              fontWeight: 800,
+              color: INK,
+              letterSpacing: "0.04em",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {layoutLabels[selectedLayout]}
+          </span>
         </div>
-        <ArrowButton direction="right" onClick={goNext} />
+        <Link
+          href="/nex-native/manage/shop/backgrounds"
+          data-nex-template-library
+          /* Owner directive 2026-11-06 · "small button for Library
+             with magnaftying glass" · gold-outlined pill with 🔍
+             glyph · routes to the backgrounds library (the browse-
+             all-presets surface) · a dedicated templates grid-view
+             library can replace the href in a follow-up. */
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+            padding: "5px 10px",
+            fontSize: 10.5,
+            fontWeight: 800,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: GOLD,
+            background: "transparent",
+            textDecoration: "none",
+            border: `1px solid ${GOLD}`,
+            borderRadius: 999,
+            flexShrink: 0,
+          }}
+        >
+          <span aria-hidden style={{ fontSize: 12 }}>🔍</span>
+          Library
+        </Link>
       </div>
 
       <div
@@ -486,6 +550,12 @@ function TemplateCarousel({
         >
           <span aria-hidden>👆</span>
         </button>
+
+        {/* Owner directive 2026-11-06 · arrows moved out of the
+            header row + onto the tile edges so the header can carry
+            icon + template name + Library button cleanly. */}
+        <ArrowButton direction="left" onClick={goPrev} />
+        <ArrowButton direction="right" onClick={goNext} />
       </div>
 
       {/* Fullscreen overlay · portaled to document.body so it escapes
