@@ -26,6 +26,10 @@ import { notFound } from "next/navigation";
 import * as businessService from "@/lib/nex-native/business-service";
 import * as productService from "@/lib/nex-native/product-service";
 import * as chatThemeService from "@/lib/nex-native/chat-theme-service";
+// Owner directive 2026-11-06 readiness fill · surface an owner-only
+// empty state when the shop is live but has zero products so the
+// shop owner sees the gap on their public face.
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { listThemeEmojis } from "@/lib/nex-native/theme-emoji-service";
 import { getShopCoverContent } from "@/lib/nex-native/shop-cover-service";
 import { CoverThemeSkin } from "../cover/theme-skin";
@@ -67,13 +71,23 @@ export default async function PublicShopPage({
 
   // Parallel loads · all fail-soft so a transient Supabase blip
   // doesn't crash the shop surface.
-  const [products, coverContent, themeRow] = await Promise.all([
-    productService
-      .listProductsByBusiness(business.id, "live")
-      .catch(() => []),
-    getShopCoverContent(business.id).catch(() => null),
-    chatThemeService.getThemeById(DEFAULT_THEME).catch(() => null),
-  ]);
+  const [products, coverContent, themeRow, viewerSession] =
+    await Promise.all([
+      productService
+        .listProductsByBusiness(business.id, "live")
+        .catch(() => []),
+      getShopCoverContent(business.id).catch(() => null),
+      chatThemeService.getThemeById(DEFAULT_THEME).catch(() => null),
+      resolveSessionWithDevOverride().catch(() => null),
+    ]);
+
+  // Owner directive 2026-11-06 readiness fill · viewer-is-owner check
+  // powers the "Your shop is empty · add products →" banner that only
+  // the owner sees on their own public face. Everyone else sees the
+  // template render exactly as before (empty catalog · no banner).
+  const isOwnerViewer =
+    viewerSession?.account.id === business.owner_account_id;
+  const shouldShowOwnerEmptyPrompt = isOwnerViewer && products.length === 0;
 
   // Resolve layout + tint + wallpaper with sensible fallbacks.
   const layoutId: CoverLayoutId =
@@ -198,6 +212,17 @@ export default async function PublicShopPage({
           shopOwnerAccountId={business.owner_account_id}
           accentHex={accentHex}
         />
+        {/* Owner directive 2026-11-06 readiness · owner-only empty-
+            products prompt · sits above the sticky bottom of the
+            shop surface, below the ShopChatFab. Only renders when
+            viewer IS the shop owner AND products.length === 0.
+            Everyone else sees the template render untouched. */}
+        {shouldShowOwnerEmptyPrompt ? (
+          <OwnerEmptyPrompt
+            shopName={business.display_name}
+            accentHex={accentHex}
+          />
+        ) : null}
         {/* Owner directive 2026-11-06 · product detail bottom sheet ·
             opens when the URL carries ?product=<id> · "Buy now · chat"
             routes the purchase into the owner's peer chat · Add to
@@ -234,3 +259,92 @@ export default async function PublicShopPage({
 // Silence unused-import warnings in strict configs · COVER_LAYOUT_IDS
 // is referenced only in the type guard call above.
 void COVER_LAYOUT_IDS;
+
+// ─── Owner-only empty-products prompt ─────────────────────────────────
+// Owner directive 2026-11-06 readiness · when the owner views their
+// own shop and products.length === 0, show a floating banner above
+// the ShopChatFab with a direct link to /manage/products so they can
+// add listings without hunting through the manage tree. Other
+// viewers (customers · guests) see the template render as-is with
+// an empty catalog — their path is to ask the owner in chat.
+
+function OwnerEmptyPrompt({
+  shopName,
+  accentHex,
+}: {
+  shopName: string;
+  accentHex: string;
+}): React.JSX.Element {
+  // Position : absolute scoped to the phone frame · sits above the
+  // ShopChatFab (which is bottom-right 56×56 + safe-area). Non-blocking
+  // pointer events outside the pill so the rest of the shop stays
+  // tappable.
+  return (
+    <div
+      aria-live="polite"
+      data-nex-owner-empty-prompt
+      style={{
+        position: "absolute",
+        left: 14,
+        right: 86, // leave room for the ShopChatFab + its ring
+        bottom: "calc(env(safe-area-inset-bottom, 0px) + 18px)",
+        zIndex: 60,
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "10px 14px",
+        background: "rgba(5, 15, 28, 0.94)",
+        border: `1px solid ${accentHex}`,
+        borderRadius: 14,
+        boxShadow: "0 12px 26px rgba(0,0,0,0.55)",
+        fontFamily: "Inter, system-ui, sans-serif",
+        color: "#F2F5F8",
+      }}
+    >
+      <span aria-hidden style={{ fontSize: 18, lineHeight: 1 }}>
+        🛍
+      </span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 11.5,
+            fontWeight: 900,
+            color: "var(--nex-world-cream, #FAF8F4)",
+            letterSpacing: "-0.005em",
+          }}
+        >
+          {shopName} is live · no products yet
+        </div>
+        <div
+          style={{
+            fontSize: 10,
+            color: "#B5C3D6",
+            marginTop: 1,
+            lineHeight: 1.35,
+          }}
+        >
+          Customers can chat but can&rsquo;t buy until you list.
+        </div>
+      </div>
+      <a
+        href="/nex-native/manage/products"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          padding: "7px 12px",
+          fontSize: 10,
+          fontWeight: 900,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          color: "#1A120A",
+          background: accentHex,
+          borderRadius: 999,
+          textDecoration: "none",
+          flexShrink: 0,
+        }}
+      >
+        + Add
+      </a>
+    </div>
+  );
+}

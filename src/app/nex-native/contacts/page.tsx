@@ -272,13 +272,24 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       err,
     );
   }
-  const businessContactsByBusinessId = new Map<string, { name: string; slug: string | null; conversationId: string }>();
+  const businessContactsByBusinessId = new Map<
+    string,
+    {
+      name: string;
+      slug: string | null;
+      conversationId: string;
+      unread: number;
+    }
+  >();
   // Owner directive 2026-11-06 · #4 business inbox tab · when the
   // viewer owns a shop, their Business filter also needs to surface
   // CUSTOMERS who messaged their shop (my_side='business'). Keyed by
   // conversation id so each incoming customer thread appears once ·
   // name comes from the other participant via other_display_name ·
   // business context lets the row read as "Customer · via <shop>".
+  // Owner directive 2026-11-06 readiness fill · unread_count from
+  // the conversation summary is now threaded through so each row
+  // shows a red badge when there are unseen messages.
   const shopCustomersByConversationId = new Map<
     string,
     {
@@ -286,6 +297,7 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       customerName: string;
       shopName: string;
       shopSlug: string | null;
+      unread: number;
     }
   >();
   for (const c of conversations) {
@@ -294,6 +306,7 @@ export default async function ContactsPage({ searchParams }: PageProps) {
         name: c.business.display_name,
         slug: c.business.slug ?? null,
         conversationId: c.conversation.id,
+        unread: c.unread_count ?? 0,
       });
     }
     if (c.my_side === "business" && c.other_display_name) {
@@ -302,6 +315,7 @@ export default async function ContactsPage({ searchParams }: PageProps) {
         customerName: c.other_display_name,
         shopName: c.business.display_name,
         shopSlug: c.business.slug ?? null,
+        unread: c.unread_count ?? 0,
       });
     }
   }
@@ -438,6 +452,7 @@ export default async function ContactsPage({ searchParams }: PageProps) {
         chatHref: `/nex-native/conversations/${b.conversationId}`,
         professionLine: "Shop · you follow",
         profileHref: b.slug ? `/nex-native/${b.slug}` : null,
+        unreadCount: b.unread,
       }),
     ),
     // Owner directive 2026-11-06 · #4 business inbox · customers who
@@ -445,6 +460,9 @@ export default async function ContactsPage({ searchParams }: PageProps) {
     // "Customer · via <shopName>" so the owner immediately sees the
     // business context · professionLine carries the shop name ·
     // conversation deep-link uses the sealed /conversations/<id> path.
+    // Owner directive 2026-11-06 readiness · unreadCount now flows
+    // through so card variants paint the red badge when owner has
+    // unopened customer messages.
     ...Array.from(shopCustomersByConversationId.values()).map((entry) => ({
       id: `shop-inbox:${entry.conversationId}`,
       kind: "business" as const,
@@ -454,6 +472,7 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       chatHref: `/nex-native/conversations/${entry.conversationId}`,
       professionLine: `Customer · via ${entry.shopName}`,
       profileHref: null,
+      unreadCount: entry.unread,
     })),
   ];
   businessRows.sort((a, b) => presenceRank(a.presence ?? null) - presenceRank(b.presence ?? null));
