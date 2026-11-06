@@ -40,6 +40,12 @@ interface Props {
   readonly ownerHandle?: string | null;
   /** Shop display name for the drawer header + signup popup copy. */
   readonly shopName?: string | null;
+  /** Owner directive 2026-11-06 · "floating chat button must also
+   *  change with theme color". The FAB sits outside CoverThemeSkin
+   *  so --nex-accent doesn't inherit · callers thread the tint in
+   *  explicitly. Defaults to the world-palette gold when omitted so
+   *  the FAB still renders on surfaces without a tint. */
+  readonly accentHex?: string | null;
 }
 
 const GOLD = "var(--nex-world-secondary, #C6A15B)";
@@ -58,7 +64,10 @@ const DRAFT_KEY = "nex-shop-chat-draft";
 export function ShopChatFab({
   ownerHandle,
   shopName,
+  accentHex,
 }: Props): React.JSX.Element {
+  const accent =
+    accentHex && /^#[0-9A-Fa-f]{6}$/.test(accentHex) ? accentHex : "#C6A15B";
   const [open, setOpen] = React.useState(false);
   const [draft, setDraft] = React.useState("");
   const [signupPrompt, setSignupPrompt] = React.useState(false);
@@ -125,7 +134,11 @@ export function ShopChatFab({
           width: 56,
           height: 56,
           borderRadius: "50%",
-          background: `linear-gradient(135deg, ${EMERALD}, ${FOREST})`,
+          /* Owner directive 2026-11-06 · FAB background now tracks
+             the theme tint so each preset background paints a
+             matching chat button. Solid accent fill keeps the glyph
+             legible and the button obvious. */
+          background: accent,
           border: `2px solid ${GOLD}`,
           color: CREAM,
           display: "grid",

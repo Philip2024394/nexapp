@@ -151,6 +151,15 @@ export default async function CoverLayoutPreview({
     String(COVER_LAYOUT_IDS.indexOf(layoutId) + 1).padStart(2, "0");
   const templateName = COVER_LAYOUT_LABELS[layoutId];
 
+  // Owner directive 2026-11-06 · resolve the effective accent once
+  // so sibling components outside CoverThemeSkin (ShopChatFab in
+  // particular) can match the theme colour · the FAB is a sibling
+  // of the skin wrapper so --nex-accent CSS var doesn't inherit.
+  const effectiveAccent =
+    typeof sp.tint === "string" && /^#[0-9A-Fa-f]{6}$/.test(sp.tint)
+      ? sp.tint
+      : theme.accent_hex;
+
   return (
     <>
       {/* Owner directive 2026-11-06 · when embedded inside the
@@ -204,6 +213,20 @@ export default async function CoverLayoutPreview({
           [aria-hidden][style*="position:fixed"][style*="opacity:0.35"],
           [aria-hidden][style*="position: fixed"][style*="opacity: 0.35"] {
             opacity: 1 !important;
+          }
+          /* Owner directive 2026-11-06 · "the back ground image
+             must fit the template shop back ground width and
+             height". Inside the picker preview, the wallpaper
+             fills both axes exactly (no Ken Burns zoom, no
+             transform drift, stretch to 100% × 100%) so the owner
+             sees the chosen preset painted edge-to-edge. Real-shop
+             pages keep the sealed cinematic Ken Burns + cover. */
+          [data-nex-cover-wallpaper] {
+            animation: none !important;
+            transform: none !important;
+            background-size: 100% 100% !important;
+            background-position: center !important;
+            background-repeat: no-repeat !important;
           }
           /* Owner directive 2026-11-06 · "we can remove this from
              home page as we have in burger drawer Visit us ·
@@ -356,11 +379,7 @@ export default async function CoverLayoutPreview({
             URL · untrusted / malformed values fall back to the sealed
             chat_theme defaults. */}
         <CoverThemeSkin
-          accentHex={
-            typeof sp.tint === "string" && /^#[0-9A-Fa-f]{6}$/.test(sp.tint)
-              ? sp.tint
-              : theme.accent_hex
-          }
+          accentHex={effectiveAccent}
           bubbleRimHex={theme.bubble_rim_hex}
           composerRimHex={theme.composer_rim_hex}
           wallpaperUrl={
@@ -420,7 +439,11 @@ export default async function CoverLayoutPreview({
             button bottom right on screen". Replaces the burger's
             Chat row with a dedicated FAB · send-first, signup
             contextual flow. */}
-        <ShopChatFab ownerHandle={null} shopName={null} />
+        <ShopChatFab
+          ownerHandle={null}
+          shopName={null}
+          accentHex={effectiveAccent}
+        />
       </PhoneFrame>
       {/* Owner-authorised 2026-10-18 · S7 · the action bar is a
           sibling of the sealed PhoneFrame so the frame's mobile

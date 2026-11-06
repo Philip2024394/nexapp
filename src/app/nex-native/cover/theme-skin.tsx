@@ -284,9 +284,14 @@ export function CoverThemeSkin(props: CoverThemeSkinProps): React.JSX.Element {
             was previously only true inside preview iframes). Low opacity so
             copy stays legible but the image is part of the visual
             language, not a stock backdrop. Ken Burns slow drift adds
-            life without stealing attention. */}
+            life without stealing attention.
+            Owner directive 2026-11-06 · data-nex-cover-wallpaper tag
+            lets the themes-picker ?embed=1 preview override the Ken
+            Burns transform + swap background-size to "100% 100%" so
+            the chosen preset paints edge-to-edge on both axes. */}
         <div
           aria-hidden
+          data-nex-cover-wallpaper
           style={{
             position: "fixed",
             inset: 0,
