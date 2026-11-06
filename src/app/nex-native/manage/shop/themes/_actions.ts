@@ -99,6 +99,34 @@ export async function applyShopBackgroundAction(
   return { ok: true, url: result.url };
 }
 
+/** Bundled preset background URLs the owner can pick without
+ *  uploading. Keeping the whitelist server-side prevents arbitrary
+ *  URL injection via the client. */
+const PRESET_BACKGROUND_URLS: ReadonlySet<string> = new Set([
+  "/nex-brand/shop-themes/dynamic-nex-shopping-showcase.png",
+]);
+
+export async function applyShopPresetBackgroundAction(
+  businessId: string,
+  presetUrl: string,
+): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  if (!PRESET_BACKGROUND_URLS.has(presetUrl)) {
+    return { ok: false, error: "unknown-preset" };
+  }
+  try {
+    await requireOwnedBusiness(businessId);
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+  const { error } = await nexSupabaseAdmin
+    .from("nex_business")
+    .update({ shop_cover_image_url: presetUrl })
+    .eq("id", businessId);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/nex-native/manage/shop/themes");
+  return { ok: true, url: presetUrl };
+}
+
 export async function clearShopBackgroundAction(
   businessId: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {

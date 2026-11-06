@@ -23,6 +23,7 @@ import {
   applyShopLayoutAction,
   applyShopTintAction,
   applyShopBackgroundAction,
+  applyShopPresetBackgroundAction,
   clearShopBackgroundAction,
 } from "./_actions";
 import type { CoverLayoutId } from "@/app/nex-native/cover/layout-ids";
@@ -51,6 +52,21 @@ interface Props {
   readonly layoutIds: readonly CoverLayoutId[];
   readonly layoutLabels: Readonly<Record<CoverLayoutId, string>>;
 }
+
+// Bundled shop-theme background presets · included in every shop
+// subscription. Owner can also upload their own image (handled
+// separately below).
+const PRESET_BACKGROUNDS: ReadonlyArray<{
+  readonly id: string;
+  readonly url: string;
+  readonly label: string;
+}> = [
+  {
+    id: "dynamic-nex-shopping-showcase",
+    url: "/nex-brand/shop-themes/dynamic-nex-shopping-showcase.png",
+    label: "Dynamic NEX Shopping Showcase",
+  },
+];
 
 export function ShopThemesClient({
   businessId,
@@ -133,6 +149,26 @@ export function ShopThemesClient({
         setStatus({ kind: "ok", message: "Background cleared." });
       } else {
         setStatus({ kind: "error", message: `clear: ${result.error}` });
+      }
+    });
+  }
+
+  function onPickPreset(presetUrl: string) {
+    if (!businessId) return;
+    setStatus({ kind: "applying" });
+    startTransition(async () => {
+      const result = await applyShopPresetBackgroundAction(
+        businessId,
+        presetUrl,
+      );
+      if (result.ok) {
+        setImageUrl(result.url);
+        setStatus({ kind: "ok", message: "Background applied." });
+      } else {
+        setStatus({
+          kind: "error",
+          message: `preset: ${result.error}`,
+        });
       }
     });
   }
@@ -263,23 +299,90 @@ export function ShopThemesClient({
         </div>
       </section>
 
-      {/* ── Background image ────────────────────────────────── */}
+      {/* ── Background image · presets + upload ─────────────── */}
       <section aria-label="Background image">
         <SectionLabel>Background image</SectionLabel>
+
+        {/* Preset library · bundled with every shop subscription. */}
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            marginTop: 6,
+            overflowX: "auto",
+            paddingBottom: 4,
+          }}
+        >
+          {PRESET_BACKGROUNDS.map((preset) => {
+            const isActive = imageUrl === preset.url;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => onPickPreset(preset.url)}
+                aria-label={`Use preset background ${preset.label}`}
+                aria-current={isActive ? "true" : undefined}
+                data-nex-shop-bg-preset={preset.id}
+                style={{
+                  flex: "0 0 96px",
+                  padding: 0,
+                  background: "transparent",
+                  border: `2px solid ${isActive ? GOLD : BORDER}`,
+                  borderRadius: 10,
+                  cursor: "pointer",
+                  boxShadow: isActive
+                    ? "0 0 0 3px rgba(198, 161, 91, 0.18)"
+                    : "none",
+                  transition:
+                    "border-color 160ms ease, box-shadow 160ms ease",
+                  overflow: "hidden",
+                }}
+              >
+                <img
+                  src={preset.url}
+                  alt=""
+                  style={{
+                    width: "100%",
+                    height: 64,
+                    objectFit: "cover",
+                    display: "block",
+                  }}
+                />
+                <div
+                  style={{
+                    padding: "4px 6px",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: isActive ? GOLD : INK_DIM,
+                    textAlign: "center",
+                    letterSpacing: "0.04em",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {preset.label}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Upload + current + remove row. */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             gap: 10,
-            marginTop: 6,
+            marginTop: 8,
             flexWrap: "wrap",
           }}
         >
           <div
             aria-hidden
             style={{
-              width: 64,
-              height: 64,
+              width: 48,
+              height: 48,
               borderRadius: 10,
               background: imageUrl
                 ? `url(${imageUrl}) center/cover`
@@ -300,7 +403,7 @@ export function ShopThemesClient({
               cursor: "pointer",
             }}
           >
-            Upload image
+            Upload your own
             <input
               type="file"
               accept="image/png,image/jpeg,image/webp"
@@ -326,7 +429,7 @@ export function ShopThemesClient({
                 cursor: "pointer",
               }}
             >
-              Remove background
+              Remove
             </button>
           ) : null}
           <span style={{ fontSize: 11, color: INK_MUTED }}>
