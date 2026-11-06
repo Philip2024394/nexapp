@@ -27,6 +27,9 @@ import {
   type NexCartItem,
 } from "@/lib/nex-native/cart-types";
 import { CheckoutSheet } from "./_checkout-sheet";
+import {
+  getShopPaymentMeta,
+} from "./_shop-payment-methods";
 
 const GOLD = "var(--nex-world-secondary, #C6A15B)";
 const CREAM = "var(--nex-world-cream, #FAF8F4)";
@@ -228,8 +231,12 @@ export function CartPageClient(): React.JSX.Element {
                   group.subtotalPence,
                   group.currency,
                 )}
-                acceptedPaymentMethods={[]}
-                acceptedPaymentLabels={[]}
+                acceptedPaymentMethods={
+                  getShopPaymentMeta(group.shopId).methods
+                }
+                acceptedPaymentLabels={
+                  getShopPaymentMeta(group.shopId).methods
+                }
                 onClose={() => setCheckoutShopId(null)}
               />
             );

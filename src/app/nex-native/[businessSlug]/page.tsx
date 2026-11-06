@@ -217,9 +217,13 @@ export default async function PublicShopPage({
           shopName={business.display_name}
           shopBusinessId={business.id}
           shopSlug={business.slug}
+          acceptedPaymentMethods={
+            (business.accepted_payment_methods ?? []) as ReadonlyArray<string>
+          }
           acceptedPaymentLabels={
             (business.accepted_payment_methods ?? []) as ReadonlyArray<string>
           }
+          shopQrCodeImageUrl={business.qr_code_image_url ?? null}
           accentHex={accentHex}
         />
       </PhoneFrame>

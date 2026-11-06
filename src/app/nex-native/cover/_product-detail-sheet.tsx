@@ -28,6 +28,7 @@ import {
   NEX_CART_STORAGE_KEY,
   type NexCartItem,
 } from "@/lib/nex-native/cart-types";
+import { writeShopPaymentMeta } from "../cart/_shop-payment-methods";
 
 const GOLD = "var(--nex-world-secondary, #C6A15B)";
 const CREAM = "#FAF8F4";
@@ -53,7 +54,9 @@ export interface ProductDetailSheetProps {
   readonly shopName: string;
   readonly shopBusinessId: string;
   readonly shopSlug: string;
+  readonly acceptedPaymentMethods?: ReadonlyArray<string>;
   readonly acceptedPaymentLabels: ReadonlyArray<string>;
+  readonly shopQrCodeImageUrl?: string | null;
   readonly accentHex?: string | null;
 }
 
@@ -63,7 +66,9 @@ export function ProductDetailSheet({
   shopName,
   shopBusinessId,
   shopSlug,
+  acceptedPaymentMethods,
   acceptedPaymentLabels,
+  shopQrCodeImageUrl,
   accentHex,
 }: ProductDetailSheetProps): React.JSX.Element | null {
   const router = useRouter();
@@ -159,6 +164,20 @@ export function ProductDetailSheet({
         JSON.stringify(next),
       );
       window.dispatchEvent(new CustomEvent("nex-cart-changed"));
+      // Owner directive 2026-11-06 · also persist the shop's accepted
+      // payment methods + QR code URL so the cart's CheckoutSheet can
+      // read them without a server round-trip when the buyer lands
+      // on /cart. Keyed by shop_id · fully optional (no methods just
+      // hides the payment picker).
+      if (
+        acceptedPaymentMethods &&
+        acceptedPaymentMethods.length > 0
+      ) {
+        writeShopPaymentMeta(shopBusinessId, {
+          methods: acceptedPaymentMethods,
+          qrUrl: shopQrCodeImageUrl ?? null,
+        });
+      }
       setStatus({ kind: "added" });
     } catch (e) {
       setStatus({ kind: "error", msg: (e as Error).message });
