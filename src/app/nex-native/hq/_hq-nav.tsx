@@ -101,6 +101,14 @@ const NAV_ITEMS: ReadonlyArray<{
     glyph: "📦",
     match: (p) => p.startsWith("/nex-native/create/product"),
   },
+  // Owner directive 2026-11-06 · user-facing chat-themes library
+  // preview (distinct from the HQ Chat Themes admin page above).
+  {
+    href: "/nex-native/chat-themes-library",
+    label: "Themes Library",
+    glyph: "📚",
+    match: (p) => p.startsWith("/nex-native/chat-themes-library"),
+  },
 ];
 
 export function HqNav(): React.JSX.Element {
