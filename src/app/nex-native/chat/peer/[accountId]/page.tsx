@@ -1049,7 +1049,30 @@ export default async function PeerChatPage({
   ];
   const peerFirstName =
     peer.display_name.split(/\s+/)[0] ?? peer.display_name;
-  const headerSubtitle = profile?.profession ?? presenceLabel ?? "Online";
+  // Owner directive 2026-11-06 · identity swap · customer viewing a
+  // shop owner sees the SHOP's face (display_name + logo_url) instead
+  // of the owner's personal chat identity. Owner viewing a customer
+  // sees the customer's face PLUS a "Replying as <my shop>" chip so
+  // they know which hat they're wearing. One rule: if the peer owns
+  // a shop AND the viewer isn't the peer, we show the shop face.
+  const viewerBusiness = viewerBusinesses[0] ?? null;
+  const showShopFace =
+    peerBusiness && peer.id !== session.account.id;
+  const effectivePeerDisplayName = showShopFace
+    ? peerBusiness!.display_name
+    : peerFirstName;
+  const effectivePeerAvatarUrl = showShopFace
+    ? peerBusiness!.logo_url ?? null
+    : (profile?.avatar_url ?? null);
+  const headerSubtitle = showShopFace
+    ? "Shop · tap to open"
+    : (profile?.profession ?? presenceLabel ?? "Online");
+  // Owner-side "Replying as" context strip · renders only when the
+  // VIEWER owns a shop (any kind of peer chat where they might send
+  // a shop-authored reply). Separate concept from showShopFace: the
+  // customer sees the shop face; the owner sees this chip.
+  const replyingAsChip =
+    viewerBusiness && !showShopFace ? viewerBusiness.display_name : null;
 
   return (
     <div data-nex-peer-chat-prototype-wrap>
@@ -1097,9 +1120,14 @@ export default async function PeerChatPage({
         }}
       >
         <FreeChatHeader
-          displayName={peerFirstName}
+          displayName={effectivePeerDisplayName}
           nameBadge={
-            peerBusiness ? (
+            // When showing the shop face, the whole header IS the shop
+            // · a secondary badge would duplicate. Only render the
+            // inline shop badge for non-swapped (regular peer) chats
+            // with a shop owner, so the viewer still sees the signal
+            // if they happen to be chatting with a shop-owning friend.
+            !showShopFace && peerBusiness ? (
               <ShopBadge
                 badge={{
                   accountId: peer.id,
@@ -1113,7 +1141,7 @@ export default async function PeerChatPage({
             ) : null
           }
           subtitle={headerSubtitle}
-          avatarUrl={profile?.avatar_url ?? null}
+          avatarUrl={effectivePeerAvatarUrl}
           drawerSession={drawerSession}
           peerAccountId={peer.id}
           peerSharedMediaHref={`/nex-native/chat/peer/${peer.id}/media`}
@@ -1127,6 +1155,37 @@ export default async function PeerChatPage({
           }
         />
       </div>
+
+      {/* Owner directive 2026-11-06 · identity-swap chip · the viewer
+          owns a shop and is replying to a non-shop peer · thin gold
+          strip just under the header reminds them which hat they're
+          wearing. Positions fixed under the header slot so it never
+          competes with chat bubbles. */}
+      {replyingAsChip ? (
+        <div
+          data-nex-replying-as-chip
+          style={{
+            position: "fixed",
+            top: 58,
+            left: 0,
+            right: 0,
+            zIndex: 9,
+            padding: "5px 14px",
+            background: "rgba(198, 161, 91, 0.14)",
+            borderBottom: "1px solid rgba(198, 161, 91, 0.35)",
+            color: "var(--nex-world-secondary, #C6A15B)",
+            fontSize: 11,
+            fontWeight: 900,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            textAlign: "center",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+          }}
+        >
+          🏪 Replying as {replyingAsChip}
+        </div>
+      ) : null}
 
       {/* Owner-authorised 2026-11-05 · fresh-conversation empty state.
           When the thread has zero messages, render a centered welcome
