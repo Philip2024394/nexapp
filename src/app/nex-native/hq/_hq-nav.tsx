@@ -48,6 +48,14 @@ const NAV_ITEMS: ReadonlyArray<{
     glyph: "⚙",
     match: (p) => p.startsWith("/nex-native/hq/harvest"),
   },
+  // Owner directive 2026-11-06 · founder tool · lists every
+  // /nex-native/* route with iframe preview + queueable delete.
+  {
+    href: "/nex-native/hq/pages",
+    label: "Pages",
+    glyph: "📋",
+    match: (p) => p.startsWith("/nex-native/hq/pages"),
+  },
   // Owner directive 2026-11-03 · "we need 1 side menu for communities
   // in hq where admin can add a community or delete a community".
   {
