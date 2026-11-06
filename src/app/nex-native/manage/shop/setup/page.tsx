@@ -49,5 +49,16 @@ export default async function ShopSetupPage(): Promise<never> {
   if (!existing.shipping_scope) {
     redirect("/nex-native/manage/shop/setup/policies");
   }
-  redirect("/nex-native/manage/shop/themes");
+  const hasAnyContact = Boolean(
+    existing.instagram_handle ||
+      existing.facebook_handle ||
+      existing.tiktok_handle ||
+      existing.public_phone ||
+      existing.website_url ||
+      existing.public_email,
+  );
+  if (!hasAnyContact) {
+    redirect("/nex-native/manage/shop/setup/contact");
+  }
+  redirect("/nex-native/manage/shop/setup/finish");
 }

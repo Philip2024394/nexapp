@@ -282,10 +282,41 @@ export async function saveShopPoliciesAction(
     return { ok: false, error: (e as Error).message };
   }
   revalidatePath("/nex-native/manage/shop/setup");
-  // Steps 7-8 ship next · for now jump to the themes picker where
-  // the burger-menu overlays already read every field we've set.
   return {
     ok: true,
-    nextHref: "/nex-native/manage/shop/themes",
+    nextHref: "/nex-native/manage/shop/setup/contact",
+  };
+}
+
+// ─── Step 7 · Contact + socials ──────────────────────────────────────
+// Writes the 5 social-handle columns + website + public phone/email
+// via the sealed updateBusinessProfile normaliser (strips leading @ ·
+// pattern-validates handles). All fields optional.
+
+export async function saveShopContactAction(
+  formData: FormData,
+): Promise<ActionResult> {
+  const str = (k: string): string | null => {
+    const v = String(formData.get(k) ?? "").trim();
+    return v.length > 0 ? v : null;
+  };
+  const biz = await requireBusiness();
+  if (!biz.ok) return biz;
+  try {
+    await updateBusinessProfile(biz.businessId, {
+      instagram_handle: str("instagramHandle"),
+      facebook_handle: str("facebookHandle"),
+      tiktok_handle: str("tiktokHandle"),
+      website_url: str("websiteUrl"),
+      public_phone: str("publicPhone"),
+      public_email: str("publicEmail"),
+    });
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+  revalidatePath("/nex-native/manage/shop/setup");
+  return {
+    ok: true,
+    nextHref: "/nex-native/manage/shop/setup/finish",
   };
 }
