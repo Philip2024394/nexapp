@@ -7,27 +7,25 @@
 //
 // Layout (desktop + mobile via a single phone-frame-scoped flex):
 //   · Sticky header · "Shop Themes" + current business name.
-//   · Hero preview tile · 16:9 card showing the currently-selected
-//     template with the live tint + background overlay.
-//   · Horizontal snap-scroll carousel · 11 template tiles · tap or
-//     swipe to select · active tile gets an emerald ring.
-//   · Accent colour row · native <input type="color"> + hex field +
-//     "Clear tint" reset.
-//   · Background image row · "Upload" button (image/png · image/jpeg
-//     · image/webp · 5 MB cap) + thumbnail + "Remove" reset.
-//   · Sticky footer · "Apply" writes the three selections through
-//     three sealed server actions and shows an inline confirmation.
+//   · Template carousel · 11 cover templates · arrow + swipe + dots
+//     · 👆 button fullscreens the current template preview.
+//   · Choose Background pill · single CTA linking to the dedicated
+//     backgrounds library (/manage/shop/backgrounds) which is the
+//     sole writer for shop background image URLs. Inline presets +
+//     upload were removed 2026-11-06 per owner directive.
+//   · Sticky footer · "Apply" writes layout + tint through two
+//     sealed server actions and shows an inline confirmation.
+//     Background is applied separately from the library page.
 
 import * as React from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
-import {
-  applyShopLayoutAction,
-  applyShopTintAction,
-  applyShopBackgroundAction,
-  applyShopPresetBackgroundAction,
-  clearShopBackgroundAction,
-} from "./_actions";
+// Owner directive 2026-11-06 · the inline Background-image section
+// (upload + preset carousel) was removed · all background picking
+// now flows through /manage/shop/backgrounds, which writes via
+// applyShopPresetBackgroundAction and redirects back to this page.
+// The actions below are the ones this page still invokes directly.
+import { applyShopLayoutAction, applyShopTintAction } from "./_actions";
 import type { CoverLayoutId } from "@/app/nex-native/cover/layout-ids";
 
 // Palette · emerald Ireland tokens with navy fallback for the HQ
@@ -55,21 +53,6 @@ interface Props {
   readonly layoutLabels: Readonly<Record<CoverLayoutId, string>>;
 }
 
-// Bundled shop-theme background presets · included in every shop
-// subscription. Owner can also upload their own image (handled
-// separately below).
-const PRESET_BACKGROUNDS: ReadonlyArray<{
-  readonly id: string;
-  readonly url: string;
-  readonly label: string;
-}> = [
-  {
-    id: "dynamic-nex-shopping-showcase",
-    url: "/nex-brand/shop-themes/dynamic-nex-shopping-showcase.png",
-    label: "Dynamic NEX Shopping Showcase",
-  },
-];
-
 export function ShopThemesClient({
   businessId,
   businessName,
@@ -84,7 +67,11 @@ export function ShopThemesClient({
   const [tintHex, setTintHex] = React.useState<string>(
     currentTintHex ?? "#123D2B",
   );
-  const [imageUrl, setImageUrl] = React.useState<string | null>(currentImageUrl);
+  // Owner directive 2026-11-06 · the inline Background-image section
+  // was removed · imageUrl now flows one-way from the server prop
+  // (the backgrounds library page is the sole writer · router.push
+  // back to this page re-fetches the fresh value).
+  const imageUrl = currentImageUrl;
   const [status, setStatus] = React.useState<
     | { kind: "idle" }
     | { kind: "applying" }
@@ -124,54 +111,6 @@ export function ShopThemesClient({
         kind: "ok",
         message: "Applied · your shop now renders with the new theme.",
       });
-    });
-  }
-
-  async function onUploadBackground(file: File) {
-    if (!businessId) return;
-    const fd = new FormData();
-    fd.set("businessId", businessId);
-    fd.set("file", file);
-    setStatus({ kind: "applying" });
-    const result = await applyShopBackgroundAction(fd);
-    if (result.ok) {
-      setImageUrl(result.url);
-      setStatus({ kind: "ok", message: "Background uploaded." });
-    } else {
-      setStatus({ kind: "error", message: `background: ${result.error}` });
-    }
-  }
-
-  function onClearBackground() {
-    if (!businessId) return;
-    startTransition(async () => {
-      const result = await clearShopBackgroundAction(businessId);
-      if (result.ok) {
-        setImageUrl(null);
-        setStatus({ kind: "ok", message: "Background cleared." });
-      } else {
-        setStatus({ kind: "error", message: `clear: ${result.error}` });
-      }
-    });
-  }
-
-  function onPickPreset(presetUrl: string) {
-    if (!businessId) return;
-    setStatus({ kind: "applying" });
-    startTransition(async () => {
-      const result = await applyShopPresetBackgroundAction(
-        businessId,
-        presetUrl,
-      );
-      if (result.ok) {
-        setImageUrl(result.url);
-        setStatus({ kind: "ok", message: "Background applied." });
-      } else {
-        setStatus({
-          kind: "error",
-          message: `preset: ${result.error}`,
-        });
-      }
     });
   }
 
@@ -231,177 +170,35 @@ export function ShopThemesClient({
           own paired colour). `tintHex` state still flows to the
           Apply action so the persistence chain is unchanged. */}
 
-      {/* ── Background image · presets + upload ─────────────── */}
-      <section aria-label="Background image">
-        <div
+      {/* ── Background · single entry to the backgrounds library ─
+          Owner directive 2026-11-06 · the inline preset carousel +
+          upload row was removed; the sole entry point for picking a
+          shop background is now /manage/shop/backgrounds, which
+          applies the pick and redirects back here so the templates
+          render under the new backdrop. */}
+      <section aria-label="Background">
+        <Link
+          href="/nex-native/manage/shop/backgrounds"
+          data-nex-choose-background
           style={{
-            display: "flex",
+            display: "inline-flex",
             alignItems: "center",
-            justifyContent: "space-between",
-            gap: 10,
-          }}
-        >
-          <SectionLabel>Background image</SectionLabel>
-          {/* Owner directive 2026-11-06 · small button that opens
-              the dedicated Shop Backgrounds library (mirrors
-              /chat-themes-library's pattern for shop backgrounds). */}
-          <Link
-            href="/nex-native/manage/shop/backgrounds"
-            data-nex-choose-background
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "4px 10px",
-              fontSize: 10.5,
-              fontWeight: 800,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: GOLD,
-              background: "transparent",
-              textDecoration: "none",
-              border: `1px solid ${GOLD}`,
-              borderRadius: 999,
-            }}
-          >
-            <span aria-hidden style={{ fontSize: 12 }}>🖼️</span>
-            Choose Background
-          </Link>
-        </div>
-
-        {/* Preset library · bundled with every shop subscription. */}
-        <div
-          style={{
-            display: "flex",
             gap: 8,
-            marginTop: 6,
-            overflowX: "auto",
-            paddingBottom: 4,
+            padding: "8px 14px",
+            fontSize: 11.5,
+            fontWeight: 800,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: GOLD,
+            background: "transparent",
+            textDecoration: "none",
+            border: `1px solid ${GOLD}`,
+            borderRadius: 999,
           }}
         >
-          {PRESET_BACKGROUNDS.map((preset) => {
-            const isActive = imageUrl === preset.url;
-            return (
-              <button
-                key={preset.id}
-                type="button"
-                onClick={() => onPickPreset(preset.url)}
-                aria-label={`Use preset background ${preset.label}`}
-                aria-current={isActive ? "true" : undefined}
-                data-nex-shop-bg-preset={preset.id}
-                style={{
-                  flex: "0 0 96px",
-                  padding: 0,
-                  background: "transparent",
-                  border: `2px solid ${isActive ? GOLD : BORDER}`,
-                  borderRadius: 10,
-                  cursor: "pointer",
-                  boxShadow: isActive
-                    ? "0 0 0 3px rgba(198, 161, 91, 0.18)"
-                    : "none",
-                  transition:
-                    "border-color 160ms ease, box-shadow 160ms ease",
-                  overflow: "hidden",
-                }}
-              >
-                <img
-                  src={preset.url}
-                  alt=""
-                  style={{
-                    width: "100%",
-                    height: 64,
-                    objectFit: "cover",
-                    display: "block",
-                  }}
-                />
-                <div
-                  style={{
-                    padding: "4px 6px",
-                    fontSize: 10,
-                    fontWeight: 700,
-                    color: isActive ? GOLD : INK_DIM,
-                    textAlign: "center",
-                    letterSpacing: "0.04em",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {preset.label}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Upload + current + remove row. */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            marginTop: 8,
-            flexWrap: "wrap",
-          }}
-        >
-          <div
-            aria-hidden
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: 10,
-              background: imageUrl
-                ? `url(${imageUrl}) center/cover`
-                : `linear-gradient(135deg, ${EMERALD}, ${FOREST})`,
-              border: `1px solid ${BORDER}`,
-              flexShrink: 0,
-            }}
-          />
-          <label
-            style={{
-              fontSize: 12,
-              fontWeight: 700,
-              padding: "8px 12px",
-              background: EMERALD,
-              color: CREAM,
-              border: `1px solid ${BORDER_HI}`,
-              borderRadius: 8,
-              cursor: "pointer",
-            }}
-          >
-            Upload your own
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              style={{ display: "none" }}
-              onChange={(e) => {
-                const f = e.currentTarget.files?.[0];
-                if (f) onUploadBackground(f);
-              }}
-            />
-          </label>
-          {imageUrl ? (
-            <button
-              type="button"
-              onClick={onClearBackground}
-              disabled={pending}
-              style={{
-                fontSize: 11,
-                padding: "6px 10px",
-                background: "transparent",
-                color: INK_DIM,
-                border: `1px solid ${BORDER}`,
-                borderRadius: 8,
-                cursor: "pointer",
-              }}
-            >
-              Remove
-            </button>
-          ) : null}
-          <span style={{ fontSize: 11, color: INK_MUTED }}>
-            PNG · JPG · WebP · up to 5 MB
-          </span>
-        </div>
+          <span aria-hidden style={{ fontSize: 14 }}>🖼️</span>
+          Choose Background
+        </Link>
       </section>
 
       {/* ── Apply CTA + inline status ───────────────────────── */}

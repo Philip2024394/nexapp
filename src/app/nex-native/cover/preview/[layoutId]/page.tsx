@@ -226,6 +226,15 @@ export default async function CoverLayoutPreview({
           [data-nex-cover-composer] {
             display: none !important;
           }
+          /* Owner directive 2026-11-06 · "move cart icon up to header
+             on left side of burger button and remove the button from
+             cart - just icon". Hide the sealed bottom sticky bar
+             (Chat/Menu/Cart chunky buttons) · Chat is now a floating
+             FAB bottom-right, Cart is now the small icon in the top
+             header left of the burger button. */
+          [data-nex-cover-sticky-bar] {
+            display: none !important;
+          }
         `}</style>
       )}
       {!isEmbedded && (

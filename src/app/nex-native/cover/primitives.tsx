@@ -1148,6 +1148,12 @@ export function CoverProductCard({
             </div>
             <span
               aria-hidden
+              /* Owner directive 2026-11-06 · "view product button and
+                 price should be fresh color no shade". The round
+                 magnifier sits next to the price as the tap-to-open
+                 affordance (see card-meta comment above) · the dark
+                 drop-shadow was the "shade" · removing it gives a
+                 flat, fresh accent chip. */
               style={{
                 flex: "0 0 auto",
                 width: 26,
@@ -1157,7 +1163,7 @@ export function CoverProductCard({
                 color: "#03101D",
                 display: "grid",
                 placeItems: "center",
-                boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
+                boxShadow: "none",
               }}
             >
               <svg
@@ -1297,16 +1303,22 @@ export function CoverIdentityRail({
               rel="noreferrer noopener"
               aria-label={it.label}
               title={it.label}
+              /* Owner directive 2026-11-06 · "social links buttons on
+                 this theme should be golden color matt". Matt gold
+                 anchored to the world-palette gold (var(--nex-world-
+                 secondary)) so every shop theme gets the same calm
+                 brass-coin look · no gloss, no gradient, no shadow. */
               style={{
                 width: 34,
                 height: 34,
                 borderRadius: 10,
                 display: "grid",
                 placeItems: "center",
-                background: "var(--nex-accent-faint)",
-                border: "1px solid var(--nex-accent-soft)",
-                color: "var(--nex-accent)",
+                background: "rgba(198, 161, 91, 0.12)",
+                border: "1px solid rgba(198, 161, 91, 0.55)",
+                color: "var(--nex-world-secondary, #C6A15B)",
                 textDecoration: "none",
+                boxShadow: "none",
               }}
             >
               {it.glyph}
@@ -1382,6 +1394,7 @@ export function CoverStickyBar({
 }): React.JSX.Element {
   return (
     <div
+      data-nex-cover-sticky-bar
       style={{
         position: "fixed",
         left: 0,
