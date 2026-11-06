@@ -99,18 +99,55 @@ export async function applyShopBackgroundAction(
   return { ok: true, url: result.url };
 }
 
-/** Bundled preset background URLs the owner can pick without
- *  uploading. Keeping the whitelist server-side prevents arbitrary
- *  URL injection via the client. */
-const PRESET_BACKGROUND_URLS: ReadonlySet<string> = new Set([
-  "/nex-brand/shop-themes/dynamic-nex-shopping-showcase.png",
+/** Owner directive 2026-11-06 · each preset background carries a
+ *  paired tint colour tuned to the image's dominant accent · when
+ *  the owner picks a background the server also applies the matching
+ *  tint so the shop theme feels cohesive (no manual colour pick
+ *  needed per directive "theme color must be set to suit back ground
+ *  image"). Keeping both the whitelist AND the tint mapping on the
+ *  server prevents client-side URL injection or tint mis-matches. */
+const PRESET_BACKGROUND_META: ReadonlyMap<
+  string,
+  { tintHex: string | null }
+> = new Map([
+  [
+    "/nex-brand/shop-themes/dynamic-nex-shopping-showcase.png",
+    { tintHex: "#C6A15B" },
+  ],
+  [
+    "/nex-brand/shop-themes/global-cart-glow.png",
+    { tintHex: "#FF7A2B" },
+  ],
+  [
+    "/nex-brand/shop-themes/nex-bag-electric.png",
+    { tintHex: "#2A6DD9" },
+  ],
+  [
+    "/nex-brand/shop-themes/sale-best-deals.png",
+    { tintHex: "#FF6600" },
+  ],
+  [
+    "/nex-brand/shop-themes/electronics-showcase.png",
+    { tintHex: "#1E4A8C" },
+  ],
+  [
+    "/nex-brand/shop-themes/delivery-globe.png",
+    { tintHex: "#FF7A2B" },
+  ],
+  [
+    "/nex-brand/shop-themes/mobile-shop-now.png",
+    { tintHex: "#FF6B2B" },
+  ],
 ]);
 
 export async function applyShopPresetBackgroundAction(
   businessId: string,
   presetUrl: string,
-): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
-  if (!PRESET_BACKGROUND_URLS.has(presetUrl)) {
+): Promise<
+  { ok: true; url: string; tintHex: string | null } | { ok: false; error: string }
+> {
+  const meta = PRESET_BACKGROUND_META.get(presetUrl);
+  if (!meta) {
     return { ok: false, error: "unknown-preset" };
   }
   try {
@@ -123,8 +160,16 @@ export async function applyShopPresetBackgroundAction(
     .update({ shop_cover_image_url: presetUrl })
     .eq("id", businessId);
   if (error) return { ok: false, error: error.message };
+
+  // Apply the paired tint (best-effort · a failure here doesn't roll
+  // back the image · the owner can re-pick the preset to retry).
+  if (meta.tintHex) {
+    await updateShopCoverTint(businessId, meta.tintHex).catch(() => {
+      /* ignore · tint will stay as-is */
+    });
+  }
   revalidatePath("/nex-native/manage/shop/themes");
-  return { ok: true, url: presetUrl };
+  return { ok: true, url: presetUrl, tintHex: meta.tintHex };
 }
 
 export async function clearShopBackgroundAction(

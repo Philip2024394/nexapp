@@ -5,17 +5,23 @@
 // NEX Shop Backgrounds library · interactive grid.
 // Owner-authorised 2026-11-06.
 // -----------------------------------------------------------------------------
-// Mirrors the /chat-themes-library visual: emerald + gold palette ·
-// phone-framed · hero header + grid of preset tiles + inline apply.
+// Mirrors the /chat-themes-library visual language (emerald + gold
+// palette · phone-framed · hero header + grid of preset tiles + inline
+// apply). Each tile shows a 4:5 portrait background with a category
+// chip + tint-swatch pill + name label.
 //
-// Each tile shows the background image at a 16:10 aspect ratio with
-// a dim overlay + name label. Tapping a tile:
-//   1. Calls applyShopPresetBackgroundAction (sealed guardrails ·
-//      whitelist on the server) · writes nex_business.shop_cover_
-//      image_url.
-//   2. Shows an inline "Applied · opening Shop Themes" status pill.
-//   3. Redirects to /manage/shop/themes so the owner sees the new
-//      background on the template carousel.
+// Interactions:
+//   · Category dropdown · filters the grid to one category · "All
+//     categories" shows every preset.
+//   · Tap a tile · calls applyShopPresetBackgroundAction (sealed
+//     server · writes nex_business.shop_cover_image_url AND applies
+//     the preset's paired tint hex so the theme colour matches).
+//   · After apply · redirects to /manage/shop/themes so the owner
+//     sees the new background + tint painted on every template.
+//
+// Owner directive 2026-11-06 · the theme color is set to suit the
+// background image · the pairing lives on the server (actions.ts
+// PRESET_BACKGROUND_META) so clients can't drift.
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
@@ -23,31 +29,100 @@ import Link from "next/link";
 import { applyShopPresetBackgroundAction } from "../themes/_actions";
 
 const EMERALD = "var(--nex-world-primary, #123D2B)";
-const FOREST = "var(--nex-world-forest, #1B5138)";
 const GOLD = "var(--nex-world-secondary, #C6A15B)";
 const CREAM = "#FAF8F4";
 const INK = "#F2F5F8";
 const INK_DIM = "#B5C3D6";
 const INK_MUTED = "#7D9BC0";
 const SURFACE = "rgba(5, 15, 28, 0.72)";
+const SURFACE_HI = "rgba(5, 15, 28, 0.92)";
 const BORDER = "rgba(198, 161, 91, 0.25)";
 const BORDER_HI = "rgba(198, 161, 91, 0.55)";
 
-// Keep the catalog colocated here · follow-up batch will move it to
-// a shared lib module once the second + third presets ship.
+// ─── Catalogue ──────────────────────────────────────────────────────────
+// Each preset carries:
+//   · id         · stable key
+//   · url        · must match a server-side whitelist entry in
+//                  PRESET_BACKGROUND_META (actions.ts) · the server
+//                  rejects unknown URLs.
+//   · label      · owner-facing name
+//   · category   · one of CATEGORIES.id · filters the grid
+//   · tintSwatch · hex string for the small circular swatch chip ·
+//                  mirrors the server-side tint that gets applied.
+
+interface ShopBackgroundCategory {
+  readonly id: string;
+  readonly label: string;
+  readonly emoji: string;
+}
+
+const CATEGORIES: ReadonlyArray<ShopBackgroundCategory> = [
+  { id: "all", label: "All categories", emoji: "🖼️" },
+  { id: "retail", label: "Retail & general shop", emoji: "🛍" },
+  { id: "online", label: "Online & mobile shop", emoji: "📱" },
+  { id: "electronics", label: "Electronics & tech", emoji: "🎧" },
+  { id: "sale", label: "Sale & promotions", emoji: "🏷" },
+  { id: "delivery", label: "Delivery & logistics", emoji: "🚚" },
+  { id: "showcase", label: "Showcase & lifestyle", emoji: "✨" },
+];
+
 interface ShopBackgroundPreset {
   readonly id: string;
   readonly url: string;
   readonly label: string;
-  readonly description: string;
+  readonly category: ShopBackgroundCategory["id"];
+  readonly tintSwatch: string;
 }
 
 const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
   {
     id: "dynamic-nex-shopping-showcase",
     url: "/nex-brand/shop-themes/dynamic-nex-shopping-showcase.png",
-    label: "Dynamic NEX Shopping Showcase",
-    description: "Warm retail atmosphere · product-first palette.",
+    label: "NEX Shopping Showcase",
+    category: "showcase",
+    tintSwatch: "#C6A15B",
+  },
+  {
+    id: "global-cart-glow",
+    url: "/nex-brand/shop-themes/global-cart-glow.png",
+    label: "Global Cart · Orange Glow",
+    category: "retail",
+    tintSwatch: "#FF7A2B",
+  },
+  {
+    id: "nex-bag-electric",
+    url: "/nex-brand/shop-themes/nex-bag-electric.png",
+    label: "NEX Bag · Electric",
+    category: "retail",
+    tintSwatch: "#2A6DD9",
+  },
+  {
+    id: "sale-best-deals",
+    url: "/nex-brand/shop-themes/sale-best-deals.png",
+    label: "Sale · Best Deals",
+    category: "sale",
+    tintSwatch: "#FF6600",
+  },
+  {
+    id: "electronics-showcase",
+    url: "/nex-brand/shop-themes/electronics-showcase.png",
+    label: "Electronics Showcase",
+    category: "electronics",
+    tintSwatch: "#1E4A8C",
+  },
+  {
+    id: "delivery-globe",
+    url: "/nex-brand/shop-themes/delivery-globe.png",
+    label: "Delivery · Global Reach",
+    category: "delivery",
+    tintSwatch: "#FF7A2B",
+  },
+  {
+    id: "mobile-shop-now",
+    url: "/nex-brand/shop-themes/mobile-shop-now.png",
+    label: "Mobile · Shop Now",
+    category: "online",
+    tintSwatch: "#FF6B2B",
   },
 ];
 
@@ -62,12 +137,22 @@ export function ShopBackgroundsClient({
 }: Props): React.JSX.Element {
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
+  const [selectedCategory, setSelectedCategory] =
+    React.useState<ShopBackgroundCategory["id"]>("all");
   const [status, setStatus] = React.useState<
     | { kind: "idle" }
     | { kind: "applying"; id: string }
     | { kind: "ok"; id: string }
     | { kind: "error"; message: string }
   >({ kind: "idle" });
+
+  const visible = React.useMemo(
+    () =>
+      selectedCategory === "all"
+        ? PRESETS
+        : PRESETS.filter((p) => p.category === selectedCategory),
+    [selectedCategory],
+  );
 
   function onPick(preset: ShopBackgroundPreset) {
     if (!businessId) return;
@@ -79,9 +164,6 @@ export function ShopBackgroundsClient({
       );
       if (result.ok) {
         setStatus({ kind: "ok", id: preset.id });
-        // Small delay so the owner sees the confirmation pill flip
-        // on the tile before the redirect takes them to the themes
-        // picker with the new background painted on every template.
         setTimeout(() => {
           router.push("/nex-native/manage/shop/themes");
         }, 650);
@@ -102,8 +184,7 @@ export function ShopBackgroundsClient({
         overflow: "auto",
       }}
     >
-      {/* Header · same shape as /chat-themes-library · "back" link,
-          big title, small tagline. */}
+      {/* Back · header */}
       <nav style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <Link
           href="/nex-native/manage/shop/themes"
@@ -144,22 +225,100 @@ export function ShopBackgroundsClient({
           Shop Backgrounds
         </h1>
         <p style={{ margin: 0, fontSize: 12, color: INK_DIM, lineHeight: 1.45 }}>
-          Choose a background for your shop · bundled with your subscription · updates every template instantly.
+          Choose a background · tap once to apply · theme colour matches
+          the image automatically.
         </p>
       </header>
 
-      {/* Grid · single-column snap-scroll · each tile is a full-
-          width 16:10 preview with label underneath · same pattern
-          as the chat-themes featured strip. */}
+      {/* Category dropdown · world-standard native select on mobile,
+          styled consistent with the gold rim so it reads as part of
+          the surface. All presets are scanned/assigned a category on
+          upload (future uploads will auto-classify · for now the
+          catalogue above carries explicit categories). */}
+      <section aria-label="Filter by category">
+        <label
+          htmlFor="nex-shop-bg-category"
+          style={{
+            display: "block",
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            color: GOLD,
+            marginBottom: 6,
+          }}
+        >
+          Category
+        </label>
+        <div
+          style={{
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
+          <select
+            id="nex-shop-bg-category"
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.currentTarget.value)}
+            data-nex-shop-bg-category-select
+            style={{
+              appearance: "none",
+              WebkitAppearance: "none",
+              MozAppearance: "none",
+              width: "100%",
+              padding: "10px 36px 10px 14px",
+              background: SURFACE_HI,
+              color: INK,
+              border: `1px solid ${BORDER_HI}`,
+              borderRadius: 10,
+              fontSize: 13,
+              fontWeight: 700,
+              fontFamily: "inherit",
+              cursor: "pointer",
+            }}
+          >
+            {CATEGORIES.map((c) => {
+              const count =
+                c.id === "all"
+                  ? PRESETS.length
+                  : PRESETS.filter((p) => p.category === c.id).length;
+              return (
+                <option key={c.id} value={c.id}>
+                  {c.emoji}  {c.label} · {count}
+                </option>
+              );
+            })}
+          </select>
+          <span
+            aria-hidden
+            style={{
+              position: "absolute",
+              right: 14,
+              pointerEvents: "none",
+              color: GOLD,
+              fontSize: 10,
+              fontWeight: 900,
+            }}
+          >
+            ▼
+          </span>
+        </div>
+      </section>
+
+      {/* Grid · 2 tiles per row · mirrors the chat-themes-library
+          marketplace grid shape (owner directive 2026-11-06 ·
+          "Shop Backgrounds same page ui design 2 each row like
+          chat themes ui page design"). */}
       <section
         aria-label="Shop background presets"
         style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 12,
+          display: "grid",
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          gap: 10,
         }}
       >
-        {PRESETS.map((preset) => {
+        {visible.map((preset) => {
           const isCurrent = currentImageUrl === preset.url;
           const isApplying =
             status.kind === "applying" && status.id === preset.id;
@@ -191,7 +350,7 @@ export function ShopBackgroundsClient({
                     ? "0 0 0 3px rgba(198, 161, 91, 0.18)"
                     : "none",
                 transition:
-                  "border-color 160ms ease, box-shadow 160ms ease",
+                  "border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease",
               }}
             >
               <div
@@ -199,10 +358,28 @@ export function ShopBackgroundsClient({
                 style={{
                   position: "relative",
                   width: "100%",
-                  aspectRatio: "16 / 10",
+                  aspectRatio: "4 / 5",
                   background: `url(${preset.url}) center/cover`,
                 }}
               >
+                {/* Tint swatch · small circle top-left showing the
+                    matching theme colour that gets applied along
+                    with the background. */}
+                <span
+                  aria-hidden
+                  title={`Applies tint ${preset.tintSwatch}`}
+                  style={{
+                    position: "absolute",
+                    top: 8,
+                    left: 8,
+                    width: 18,
+                    height: 18,
+                    borderRadius: 999,
+                    background: preset.tintSwatch,
+                    border: "2px solid rgba(255,255,255,0.85)",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.45)",
+                  }}
+                />
                 {isCurrent ? (
                   <span style={pillStyle}>Current</span>
                 ) : isApplied ? (
@@ -217,26 +394,52 @@ export function ShopBackgroundsClient({
               </div>
               <div
                 style={{
-                  padding: "10px 12px 12px",
+                  padding: "8px 10px 10px",
                   display: "flex",
                   flexDirection: "column",
                   gap: 2,
                 }}
               >
-                <div style={{ fontSize: 13, fontWeight: 800 }}>
+                <div style={{ fontSize: 12, fontWeight: 800 }}>
                   {preset.label}
                 </div>
-                <div style={{ fontSize: 11, color: INK_DIM, lineHeight: 1.45 }}>
-                  {preset.description}
+                <div
+                  style={{
+                    fontSize: 10,
+                    color: INK_DIM,
+                    letterSpacing: "0.05em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {CATEGORIES.find((c) => c.id === preset.category)?.label ??
+                    preset.category}
                 </div>
               </div>
             </button>
           );
         })}
 
+        {visible.length === 0 ? (
+          <div
+            style={{
+              gridColumn: "1 / -1",
+              padding: 14,
+              fontSize: 12,
+              color: INK_MUTED,
+              background: SURFACE,
+              border: `1px dashed ${BORDER}`,
+              borderRadius: 10,
+              textAlign: "center",
+            }}
+          >
+            No backgrounds in this category yet · more land every seasonal drop.
+          </div>
+        ) : null}
+
         {!businessId ? (
           <div
             style={{
+              gridColumn: "1 / -1",
               padding: 14,
               fontSize: 12,
               color: INK_MUTED,
@@ -259,6 +462,7 @@ export function ShopBackgroundsClient({
         {status.kind === "error" ? (
           <div
             style={{
+              gridColumn: "1 / -1",
               padding: 10,
               fontSize: 12,
               color: "#D82A2A",
@@ -283,7 +487,8 @@ export function ShopBackgroundsClient({
           lineHeight: 1.5,
         }}
       >
-        More backgrounds land here with every seasonal drop · you can also upload your own on <Link href="/nex-native/manage/shop/themes" style={{ color: GOLD }}>Shop Themes</Link>.
+        Theme colour auto-matches each background · pick again any time
+        from <Link href="/nex-native/manage/shop/themes" style={{ color: GOLD }}>Shop Themes</Link>.
       </footer>
     </div>
   );
@@ -291,12 +496,12 @@ export function ShopBackgroundsClient({
 
 const pillStyle: React.CSSProperties = {
   position: "absolute",
-  top: 10,
-  left: 10,
+  top: 8,
+  right: 8,
   padding: "3px 10px",
   background: "rgba(0,0,0,0.6)",
-  color: "#FAF8F4",
-  fontSize: 10,
+  color: CREAM,
+  fontSize: 9.5,
   fontWeight: 800,
   letterSpacing: "0.1em",
   textTransform: "uppercase",

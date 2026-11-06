@@ -1307,20 +1307,21 @@ export function CoverIdentityRail({
               rel="noreferrer noopener"
               aria-label={it.label}
               title={it.label}
-              /* Owner directive 2026-11-06 · "social links buttons on
-                 this theme should be golden color matt". Matt gold
-                 anchored to the world-palette gold (var(--nex-world-
-                 secondary)) so every shop theme gets the same calm
-                 brass-coin look · no gloss, no gradient, no shadow. */
+              /* Owner directive 2026-11-06 (revised) · "Social Links
+                 need solid color buttons". Solid gold fill
+                 (var(--nex-world-secondary)) with warm ink glyph so
+                 the brand icons pop instead of reading as outline
+                 chips. No gloss, no gradient, no shadow · matches
+                 the new solid Choose Background CTA. */
               style={{
                 width: 34,
                 height: 34,
                 borderRadius: 10,
                 display: "grid",
                 placeItems: "center",
-                background: "rgba(198, 161, 91, 0.12)",
-                border: "1px solid rgba(198, 161, 91, 0.55)",
-                color: "var(--nex-world-secondary, #C6A15B)",
+                background: "var(--nex-world-secondary, #C6A15B)",
+                border: "none",
+                color: "#1A120A",
                 textDecoration: "none",
                 boxShadow: "none",
               }}
