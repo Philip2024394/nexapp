@@ -459,21 +459,35 @@ export default async function ContactsPage({ searchParams }: PageProps) {
   // from listPendingOutgoing edges + fetched peer accounts. Each row
   // carries pending:true so ContactRow renders the gold "Invited ·
   // waiting" chip and surrounding highlighted border.
+  // Owner directive 2026-11-06 · shop badge on friend-invite confirm
+  // rows · resolve the pending peers' shop badges in a batched read
+  // so the gold 🏪 pill shows even BEFORE the invite is accepted.
+  const pendingShopBadges = await resolveShopBadges(
+    pendingPeerAccounts
+      .filter((a): a is NonNullable<typeof a> => a !== null)
+      .map((a) => a.id),
+  );
+
   const pendingRows: ContactRowDisplay[] = pendingPeerAccounts
     .filter((a): a is NonNullable<typeof a> => a !== null)
-    .map((a) => ({
-      id: a.id,
-      kind: "friend" as const,
-      displayName: a.display_name,
-      handle: a.nex_handle,
-      avatarUrl: null,
-      chatHref: a.nex_handle
-        ? `/chat/${a.nex_handle}`
-        : `/nex-native/chat/peer/${a.id}`,
-      profileHref: null,
-      professionLine: "Invited · waiting for them to accept",
-      pending: true,
-    }));
+    .map((a) => {
+      const badge = pendingShopBadges.get(a.id);
+      return {
+        id: a.id,
+        kind: "friend" as const,
+        displayName: a.display_name,
+        handle: a.nex_handle,
+        avatarUrl: null,
+        chatHref: a.nex_handle
+          ? `/chat/${a.nex_handle}`
+          : `/nex-native/chat/peer/${a.id}`,
+        profileHref: null,
+        professionLine: "Invited · waiting for them to accept",
+        pending: true,
+        hasShop: Boolean(badge),
+        shopHref: badge ? `/nex-native/${badge.slug}` : null,
+      };
+    });
 
   // D7 filter · All = merged + sorted by displayName
   // Friends = friends only · Business = businesses only
