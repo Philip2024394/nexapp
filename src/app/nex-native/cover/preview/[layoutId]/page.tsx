@@ -47,7 +47,11 @@ import { BrandTapBridge } from "./_brand-tap-bridge";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const DEFAULT_THEME = "pink-dream";
+// Owner directive 2026-11-06 · default theme flipped from pink-dream
+// to nex-flat so the shop-themes picker iframe doesn't render under
+// the dream-themed hero by default. Callers that want a specific
+// theme still pass `?theme=<id>`.
+const DEFAULT_THEME = "nex-flat";
 
 const HEADER_STYLE: React.CSSProperties = {
   position: "sticky",
@@ -147,11 +151,39 @@ export default async function CoverLayoutPreview({
 
   return (
     <>
-      {/* Design header · founder always knows which template + theme
-          they're working on, and can jump back to the gallery.
-          Owner directive 2026-10-18 · header is HIDDEN when ?embed=1
-          so this page can be mounted as a mini preview inside the
-          Cover Themes Library without any chrome. */}
+      {/* Owner directive 2026-11-06 · when embedded inside the
+          shop-themes picker iframe, nuke every layer of chrome that
+          sits between the iframe and the actual template render:
+          dev-impersonation banner, the sealed phone-frame bezel +
+          clamp, stage padding, the global hero backdrop. The
+          template fills the iframe fully. */}
+      {isEmbedded && (
+        <style>{`
+          /* Dev-impersonation banner · top:0 fixed strip */
+          body > div[style*="position:fixed"][style*="top:0"],
+          body > div[style*="position: fixed"][style*="top: 0"] { display: none !important; }
+          /* Lift the sealed phone-frame clamp */
+          html, body { background: transparent !important; }
+          .nex-native-stage {
+            display: block !important;
+            padding: 0 !important;
+            background: transparent !important;
+            width: 100vw !important;
+            min-height: 100vh !important;
+          }
+          .nex-native-frame {
+            width: 100vw !important;
+            max-width: 100vw !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            min-height: 100vh !important;
+            aspect-ratio: initial !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            transform: none !important;
+          }
+        `}</style>
+      )}
       {!isEmbedded && (
         <header style={HEADER_STYLE}>
           <div

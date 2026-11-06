@@ -199,7 +199,7 @@ export function ShopThemesClient({
             margin: 0,
             fontSize: 22,
             fontWeight: 900,
-            color: INK,
+            color: GOLD,
             letterSpacing: "-0.01em",
           }}
         >
@@ -592,8 +592,8 @@ function TemplateCarousel({
   return (
     <section aria-label="Template picker" style={{ position: "relative" }}>
       {/* Navigation row · left arrow · template name · right arrow.
-          Lives ABOVE the preview so the template render stays
-          completely clean (no overlays, no buttons). */}
+          Owner directive 2026-11-06 · dropped the "N / M" counter
+          · dots row below still shows position. */}
       <div
         style={{
           display: "flex",
@@ -615,9 +615,6 @@ function TemplateCarousel({
           }}
         >
           {layoutLabels[selectedLayout]}
-          <span style={{ color: INK_MUTED, marginLeft: 8, fontWeight: 600 }}>
-            {index + 1} / {layoutIds.length}
-          </span>
         </div>
         <ArrowButton direction="right" onClick={goNext} />
       </div>
