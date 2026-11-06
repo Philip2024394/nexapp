@@ -226,11 +226,14 @@ export function ShopThemesClient({
         </Link>
       </section>
 
-      {/* Owner directive 2026-11-06 (clarified) · "full width black
-          bar footer with text apply theme". The whole bar IS the
-          button · solid black · spans edge-to-edge · "Apply theme"
-          text centred · status message replaces the text inline
-          when applying / succeeded / errored. */}
+      {/* Owner directive 2026-11-06 (refined) · "footer that has
+          Select and on left side smaller text downloads 289". Full-
+          width black bar · downloads count LEFT (social proof, dim
+          cream, smaller) · SELECT CTA RIGHT (gold, larger, uppercase)
+          · the whole bar is tappable so the hitbox stays generous.
+          Downloads count is a placeholder for now · wire to a real
+          per-template install count in a follow-up batch
+          (nex_business.cover_layout_id GROUP BY). */}
       <button
         type="button"
         onClick={onApplyAll}
@@ -241,36 +244,63 @@ export function ShopThemesClient({
           bottom: 0,
           marginLeft: -20,
           marginRight: -20,
-          padding: "16px 20px calc(env(safe-area-inset-bottom, 0px) + 16px)",
+          padding: "14px 20px calc(env(safe-area-inset-bottom, 0px) + 14px)",
           background: "#000000",
-          color:
-            status.kind === "error"
-              ? "#FF6B6B"
-              : status.kind === "ok"
-                ? GOLD
-                : CREAM,
+          color: CREAM,
           border: "none",
           borderTop: `1px solid ${BORDER_HI}`,
-          fontSize: 14,
-          fontWeight: 900,
-          letterSpacing: "0.12em",
-          textTransform: "uppercase",
           cursor:
             pending || status.kind === "applying" ? "wait" : "pointer",
           zIndex: 40,
           width: "auto",
-          display: "block",
-          textAlign: "center",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
           fontFamily: "inherit",
         }}
       >
-        {status.kind === "applying"
-          ? "Applying…"
-          : status.kind === "ok"
-            ? status.message
-            : status.kind === "error"
-              ? status.message
-              : "Apply theme"}
+        {/* Left · social-proof stat · placeholder count until the
+            real download tally ships (see TODO in server shell). */}
+        <span
+          data-nex-pending-action="wire-template-downloads"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 11,
+            fontWeight: 700,
+            color: "rgba(250, 248, 244, 0.6)",
+            letterSpacing: "0.04em",
+          }}
+        >
+          <span aria-hidden style={{ fontSize: 13 }}>📥</span>
+          <span style={{ color: GOLD, fontWeight: 900 }}>289</span>
+          downloads
+        </span>
+        {/* Right · primary action · state swaps the label in-place. */}
+        <span
+          style={{
+            fontSize: 14,
+            fontWeight: 900,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            color:
+              status.kind === "error"
+                ? "#FF6B6B"
+                : status.kind === "ok"
+                  ? GOLD
+                  : CREAM,
+          }}
+        >
+          {status.kind === "applying"
+            ? "Applying…"
+            : status.kind === "ok"
+              ? "Applied ✓"
+              : status.kind === "error"
+                ? "Retry"
+                : "Select →"}
+        </span>
       </button>
     </div>
   );
