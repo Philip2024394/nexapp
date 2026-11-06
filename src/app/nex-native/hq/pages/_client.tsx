@@ -17,6 +17,7 @@
 //      (actual git rm + commit is a separate step).
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import {
   inspectRouteAction,
   queueDeletionAction,
@@ -585,30 +586,37 @@ export function HqPagesClient({
       </section>
 
       {/* ── Floating PREVIEW popover · positioned next to the clicked
-          view button via previewAnchor state ─────────────────── */}
-      {selectedUrl && previewAnchor ? (
-        <>
-          {/* Transparent backdrop · click anywhere outside to close. */}
-          <div
-            aria-hidden
-            onClick={closePreview}
-            style={{
-              position: "fixed",
-              inset: 0,
-              background: "transparent",
-              zIndex: 800,
-            }}
-          />
-          <PreviewPopover
-            selectedUrl={selectedUrl}
-            isDynamic={isDynamic(selectedUrl)}
-            inspect={inspect}
-            isQueued={queuedSet.has(selectedUrl)}
-            anchor={previewAnchor}
-            onClose={closePreview}
-          />
-        </>
-      ) : null}
+          view button via previewAnchor state. Portaled to document
+          .body so `position: fixed` escapes the sealed .nex-native-
+          frame's `transform: translateZ(0)` (which would otherwise
+          trap the popover inside the phone-frame containing block,
+          nex-native.css ~line 178). ─────────────────────────── */}
+      {selectedUrl && previewAnchor && typeof document !== "undefined"
+        ? createPortal(
+            <>
+              {/* Transparent backdrop · click anywhere outside to close. */}
+              <div
+                aria-hidden
+                onClick={closePreview}
+                style={{
+                  position: "fixed",
+                  inset: 0,
+                  background: "transparent",
+                  zIndex: 800,
+                }}
+              />
+              <PreviewPopover
+                selectedUrl={selectedUrl}
+                isDynamic={isDynamic(selectedUrl)}
+                inspect={inspect}
+                isQueued={queuedSet.has(selectedUrl)}
+                anchor={previewAnchor}
+                onClose={closePreview}
+              />
+            </>,
+            document.body,
+          )
+        : null}
 
       {/* ── Delete confirm · single small Yes/No popup ─────────── */}
       {confirmDelete ? (
