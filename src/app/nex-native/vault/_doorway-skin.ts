@@ -2,20 +2,18 @@
 //
 // NEX Vault · doorway skin registry.
 //
-// Each visual theme owns its own Vault doorway page (rule sealed
-// 2026-10-03 · vault-research.md §10.0.1). This file is the shared
-// skin contract — a theme's doorway page selects a VaultDoorwaySkin
-// and hands it to <DoorwayShell>. The PIN-entry mechanics (6 cells,
-// mock reject, auto-focus, cleared-on-reject) are identical across
-// skins. Only the visual world changes.
+// Owner-amended 2026-11-06 · the three non-Ireland theme doorways
+// (Joker · Haunted Hotel · Pink Dream) were retired as duplicates of
+// the single NEX doorway. The skin-registry contract stays in place
+// (type + SKIN_NEX + SKIN_BY_SLUG) so existing <DoorwayShell> wiring
+// continues to work unchanged.
 //
-// Adding a new theme = (1) add a Skin preset here, (2) create its
-// route file at /nex-native/vault/<slug>/page.tsx. The simplicity
-// principle (§10.0 · one-line prompt, no technical clutter) applies
-// unconditionally regardless of skin.
+// The PIN-entry mechanics (6 cells, mock reject, auto-focus,
+// cleared-on-reject) are identical across skins. Only one skin
+// remains · the NEX Vault Ireland doorway.
 
 export interface VaultDoorwaySkin {
-  slug: "nex" | "joker" | "haunted-hotel" | "pink-dream";
+  slug: "nex";
   label: string;
   font: string;
   // "center" (default) keeps the content block vertically centred.
@@ -48,7 +46,7 @@ export interface VaultDoorwaySkin {
   };
 }
 
-// Master-pass follow-up 2026-10-07 · NEX doorway skin is now colour-
+// Master-pass follow-up 2026-10-07 · NEX doorway skin is colour-
 // aligned with the NEX palette (navy base + NEX orange brand + NEX
 // cyan protection accents). The orange hue is the NEX wordmark
 // orange (#FF7200), not the warmer Vault-only #FF8A2A. PIN cells
@@ -85,102 +83,6 @@ export const SKIN_NEX: VaultDoorwaySkin = {
   },
 };
 
-export const SKIN_JOKER: VaultDoorwaySkin = {
-  slug: "joker",
-  label: "Joker Vault",
-  font:
-    "'Bebas Neue', 'Impact', ui-sans-serif, system-ui, -apple-system, sans-serif",
-  contentAnchor: "bottom",
-  bg: {
-    base: "#0a0804",
-    radialOverlay: undefined,
-    imageUrl: "/nex-native/vault/joker-doorway.png",
-    imageBlend: "normal",
-    imageOpacity: 1,
-  },
-  text: {
-    primary: "#F2E8D4",
-    secondary: "#B8A77E",
-    brandChip: "#8FFF6E",
-  },
-  cells: {
-    bg: "rgba(8, 6, 3, 0.72)",
-    border: "rgba(143, 255, 110, 0.55)",
-    borderMuted: "rgba(143, 255, 110, 0.22)",
-    activeGlow: "rgba(143, 255, 110, 0.18)",
-    filled: "#E0F7D0",
-  },
-  feedback: {
-    orange: "#F8C878",
-    muted: "#B8A77E",
-  },
-};
-
-export const SKIN_HAUNTED_HOTEL: VaultDoorwaySkin = {
-  slug: "haunted-hotel",
-  label: "Haunted Hotel Vault",
-  font:
-    "'Playfair Display', 'Georgia', 'Times New Roman', ui-serif, serif",
-  contentAnchor: "bottom",
-  bg: {
-    base: "#0a0604",
-    radialOverlay: undefined,
-    imageUrl: "/nex-native/vault/haunted-hotel-doorway.png",
-    imageBlend: "normal",
-    imageOpacity: 1,
-  },
-  text: {
-    primary: "#F4F0E6",
-    secondary: "#C9BFAE",
-    brandChip: "#f0c87a",
-  },
-  cells: {
-    bg: "rgba(26, 16, 8, 0.72)",
-    border: "rgba(240, 200, 122, 0.55)",
-    borderMuted: "rgba(240, 200, 122, 0.22)",
-    activeGlow: "rgba(240, 200, 122, 0.18)",
-    filled: "#f8d87a",
-  },
-  feedback: {
-    orange: "#f0c87a",
-    muted: "#C9BFAE",
-  },
-};
-
-export const SKIN_PINK_DREAM: VaultDoorwaySkin = {
-  slug: "pink-dream",
-  label: "Pink Dream Vault",
-  font:
-    "'Manrope', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-  contentAnchor: "bottom",
-  bg: {
-    base: "#2A1824",
-    radialOverlay: undefined,
-    imageUrl: "/nex-native/vault/pink-dream-doorway.png",
-    imageBlend: "normal",
-    imageOpacity: 1,
-  },
-  text: {
-    primary: "#FFF5FA",
-    secondary: "#E8C6D3",
-    brandChip: "#F6A8C0",
-  },
-  cells: {
-    bg: "rgba(60, 30, 48, 0.72)",
-    border: "rgba(246, 168, 192, 0.60)",
-    borderMuted: "rgba(246, 168, 192, 0.25)",
-    activeGlow: "rgba(246, 168, 192, 0.20)",
-    filled: "#FDE4EC",
-  },
-  feedback: {
-    orange: "#F6A8C0",
-    muted: "#E8C6D3",
-  },
-};
-
 export const SKIN_BY_SLUG: Record<VaultDoorwaySkin["slug"], VaultDoorwaySkin> = {
   nex: SKIN_NEX,
-  joker: SKIN_JOKER,
-  "haunted-hotel": SKIN_HAUNTED_HOTEL,
-  "pink-dream": SKIN_PINK_DREAM,
 };
