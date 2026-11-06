@@ -18,13 +18,11 @@
 
 import * as React from "react";
 import {
-  countCallersAction,
   inspectRouteAction,
   queueDeletionAction,
   renameRouteAction,
   toggleLockAction,
   unqueueDeletionAction,
-  type CallerInfo,
   type DeletionQueueEntry,
   type LockOverrides,
   type RenameQueueEntry,
@@ -56,12 +54,7 @@ interface Props {
 
 type RowStatus = "kept" | "queued" | "candidate";
 
-type Modal1 = { readonly kind: "confirm1"; readonly url: string } | null;
-
-type Modal2 =
-  | { readonly kind: "loading"; readonly url: string }
-  | { readonly kind: "ready"; readonly url: string; readonly callers: CallerInfo }
-  | null;
+type ConfirmDelete = { readonly url: string } | null;
 
 export function HqPagesClient({
   routes,
@@ -105,8 +98,7 @@ export function HqPagesClient({
 
   const [filter, setFilter] = React.useState("");
   const [selectedUrl, setSelectedUrl] = React.useState<string | null>(null);
-  const [modal1, setModal1] = React.useState<Modal1>(null);
-  const [modal2, setModal2] = React.useState<Modal2>(null);
+  const [confirmDelete, setConfirmDelete] = React.useState<ConfirmDelete>(null);
   const [pending, startTransition] = React.useTransition();
 
   // Side-panel inspection data for the selected route · own folder
@@ -155,21 +147,19 @@ export function HqPagesClient({
   );
 
   // ── Delete flow handlers ────────────────────────────────────────
+  // Single small confirm popup · on Yes we queue the deletion and
+  // auto-select the URL so the right pane fills with the files Claude
+  // will process on the next chat turn.
 
-  function openConfirm1(url: string) {
-    setModal1({ kind: "confirm1", url });
+  function openConfirmDelete(url: string) {
+    setConfirmDelete({ url });
   }
 
-  function proceedToConfirm2(url: string) {
-    setModal1(null);
-    setModal2({ kind: "loading", url });
-    startTransition(async () => {
-      const callers = await countCallersAction(url);
-      setModal2({ kind: "ready", url, callers });
-    });
+  function cancelConfirmDelete() {
+    setConfirmDelete(null);
   }
 
-  function finalConfirm(url: string) {
+  function confirmDeleteYes(url: string) {
     startTransition(async () => {
       const res = await queueDeletionAction(url);
       if (res.ok) {
@@ -181,8 +171,11 @@ export function HqPagesClient({
             actorAccountId: "self",
           },
         ]);
+        // Surface the files in the right pane so the founder can see
+        // exactly what Claude will process.
+        setSelectedUrl(url);
       }
-      setModal2(null);
+      setConfirmDelete(null);
     });
   }
 
@@ -437,7 +430,7 @@ export function HqPagesClient({
                 ) : status === "candidate" ? (
                   <button
                     type="button"
-                    onClick={() => openConfirm1(url)}
+                    onClick={() => openConfirmDelete(url)}
                     disabled={pending}
                     aria-label={`Queue delete ${url}`}
                     title="Queue for deletion"
@@ -562,130 +555,42 @@ export function HqPagesClient({
         selectedUrl={selectedUrl}
         isDynamic={selectedUrl ? isDynamic(selectedUrl) : false}
         inspect={inspect}
+        isQueued={selectedUrl ? queuedSet.has(selectedUrl) : false}
         onClose={() => setSelectedUrl(null)}
       />
 
-      {/* ── MODAL #1 · first confirm ───────────────────────────── */}
-      {modal1 ? (
-        <ModalShell onDismiss={() => setModal1(null)}>
-          <h2 style={modalTitleStyle}>Send this route to Claude for deletion?</h2>
+      {/* ── Delete confirm · single small Yes/No popup ─────────── */}
+      {confirmDelete ? (
+        <ModalShell onDismiss={cancelConfirmDelete}>
+          <h2 style={modalTitleStyle}>Confirm delete</h2>
           <p style={modalBodyStyle}>
-            <code style={modalCodeStyle}>{modal1.url}</code>
+            <code style={modalCodeStyle}>{confirmDelete.url}</code>
           </p>
-          <p style={{ ...modalBodyStyle, color: INK_DIM }}>
-            This records the delete request in
+          <p style={{ ...modalBodyStyle, color: INK_DIM, fontSize: 12 }}>
+            Yes queues this URL for Claude. The files to delete + files
+            to clean will load in the right pane so you can watch Claude
+            process them one after the next (say
             <code style={{ ...modalCodeStyle, margin: "0 4px" }}>
-              data/hq-deletion-queue.jsonl
+              process hq deletion queue
             </code>
-            so Claude can execute the full removal (files, imports,
-            commit, push) on the next chat turn. The next screen will
-            show how many other files reference this route so you can
-            decide with full context.
+            in chat to start).
           </p>
           <div style={modalActionsStyle}>
             <button
               type="button"
-              onClick={() => setModal1(null)}
+              onClick={cancelConfirmDelete}
               style={modalCancelStyle}
             >
-              Cancel
+              No
             </button>
             <button
               type="button"
-              onClick={() => proceedToConfirm2(modal1.url)}
-              style={modalPrimaryStyle(ACCENT)}
-            >
-              Continue →
-            </button>
-          </div>
-        </ModalShell>
-      ) : null}
-
-      {/* ── MODAL #2 · caller count + final confirm ────────────── */}
-      {modal2 ? (
-        <ModalShell onDismiss={() => setModal2(null)}>
-          <h2 style={modalTitleStyle}>Confirm · send to Claude for deletion</h2>
-          <p style={modalBodyStyle}>
-            <code style={modalCodeStyle}>{modal2.url}</code>
-          </p>
-          {modal2.kind === "loading" ? (
-            <p style={{ ...modalBodyStyle, color: INK_DIM }}>
-              Counting external callers…
-            </p>
-          ) : (
-            <>
-              <p style={{ ...modalBodyStyle, color: INK }}>
-                <strong style={{ color: modal2.callers.count > 0 ? RED_HOT : GREEN }}>
-                  {modal2.callers.count}
-                </strong>{" "}
-                external file{modal2.callers.count === 1 ? "" : "s"} reference this
-                route.
-                {modal2.callers.truncated ? " (showing first 50)" : ""}
-              </p>
-              {modal2.callers.count > 0 ? (
-                <ul
-                  style={{
-                    maxHeight: 220,
-                    overflowY: "auto",
-                    margin: "6px 0 14px",
-                    padding: "8px 12px",
-                    background: "#030B18",
-                    border: `1px solid ${BORDER}`,
-                    borderRadius: 8,
-                    fontSize: 11,
-                    fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-                    color: INK_DIM,
-                    listStyle: "none",
-                  }}
-                >
-                  {modal2.callers.files.map((f) => (
-                    <li key={f} style={{ padding: "2px 0" }}>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-              <p
-                style={{
-                  ...modalBodyStyle,
-                  color: INK_DIM,
-                  fontSize: 12,
-                  background: "rgba(0,175,255,0.08)",
-                  border: `1px solid ${BORDER_HI}`,
-                  borderRadius: 8,
-                  padding: "8px 12px",
-                }}
-              >
-                <strong style={{ color: ACCENT }}>What happens next:</strong>{" "}
-                click “Send to Claude” to record the request. Then open
-                your Claude chat and say
-                <code style={{ ...modalCodeStyle, margin: "0 4px" }}>
-                  process hq deletion queue
-                </code>
-                and Claude will run the full removal (git rm the route
-                files · fix the {modal2.callers.count} caller
-                file{modal2.callers.count === 1 ? "" : "s"} · commit ·
-                push).
-              </p>
-            </>
-          )}
-          <div style={modalActionsStyle}>
-            <button
-              type="button"
-              onClick={() => setModal2(null)}
-              style={modalCancelStyle}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              disabled={modal2.kind !== "ready" || pending}
-              onClick={() =>
-                modal2.kind === "ready" ? finalConfirm(modal2.url) : undefined
-              }
+              disabled={pending}
+              onClick={() => confirmDeleteYes(confirmDelete.url)}
               style={modalPrimaryStyle(RED)}
+              autoFocus
             >
-              {pending ? "Sending…" : "Send to Claude"}
+              {pending ? "Queuing…" : "Yes, delete"}
             </button>
           </div>
         </ModalShell>
@@ -754,11 +659,13 @@ function RightPane({
   selectedUrl,
   isDynamic,
   inspect,
+  isQueued,
   onClose,
 }: {
   selectedUrl: string | null;
   isDynamic: boolean;
   inspect: null | "loading" | RouteInspection;
+  isQueued: boolean;
   onClose: () => void;
 }) {
   return (
@@ -863,6 +770,40 @@ function RightPane({
       >
         {selectedUrl ? (
           <>
+            {isQueued ? (
+              <div
+                style={{
+                  margin: "10px 10px 0",
+                  padding: "8px 10px",
+                  background: "rgba(166,0,0,0.18)",
+                  border: `1px solid ${RED_HOT}`,
+                  borderRadius: 8,
+                  fontSize: 11,
+                  color: INK,
+                  lineHeight: 1.45,
+                }}
+              >
+                <strong style={{ color: RED_HOT }}>
+                  Queued for Claude to delete.
+                </strong>{" "}
+                Open chat and say{" "}
+                <code
+                  style={{
+                    padding: "1px 5px",
+                    background: "#030B18",
+                    border: `1px solid ${BORDER}`,
+                    borderRadius: 4,
+                    fontSize: 10,
+                    color: ACCENT,
+                    fontFamily:
+                      "ui-monospace, SFMono-Regular, Menlo, monospace",
+                  }}
+                >
+                  process hq deletion queue
+                </code>{" "}
+                to start the removal.
+              </div>
+            ) : null}
             {isDynamic ? (
               <div
                 style={{
