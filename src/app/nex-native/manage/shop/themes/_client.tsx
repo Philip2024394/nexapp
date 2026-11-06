@@ -186,83 +186,15 @@ export function ShopThemesClient({
         </p>
       </header>
 
-      {/* ── Hero preview ────────────────────────────────────── */}
-      <HeroPreview
-        layoutId={selectedLayout}
+      {/* ── Single-pane template picker · arrows + swipe ────── */}
+      <TemplateCarousel
+        layoutIds={layoutIds}
+        layoutLabels={layoutLabels}
+        selectedLayout={selectedLayout}
         tintHex={tintHex}
         imageUrl={imageUrl}
+        onPick={onPickLayout}
       />
-
-      {/* ── Template carousel ───────────────────────────────── */}
-      <section aria-label="Template picker">
-        <SectionLabel>Template</SectionLabel>
-        <div
-          style={{
-            display: "flex",
-            gap: 10,
-            overflowX: "auto",
-            scrollSnapType: "x mandatory",
-            paddingBottom: 6,
-            marginTop: 6,
-          }}
-        >
-          {layoutIds.map((id) => {
-            const isActive = id === selectedLayout;
-            return (
-              <button
-                key={id}
-                type="button"
-                onClick={() => onPickLayout(id)}
-                data-nex-shop-template-tile={id}
-                data-nex-shop-template-active={isActive ? "true" : "false"}
-                style={{
-                  flex: "0 0 120px",
-                  scrollSnapAlign: "start",
-                  padding: 0,
-                  background: SURFACE,
-                  border: `2px solid ${isActive ? GOLD : BORDER}`,
-                  borderRadius: 12,
-                  cursor: "pointer",
-                  textAlign: "left",
-                  color: INK,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 6,
-                  boxShadow: isActive
-                    ? `0 0 0 3px rgba(198, 161, 91, 0.18)`
-                    : "none",
-                  transition: "border-color 160ms ease, box-shadow 160ms ease",
-                }}
-              >
-                <div
-                  aria-hidden
-                  style={{
-                    width: "100%",
-                    aspectRatio: "9 / 16",
-                    background: `linear-gradient(135deg, ${EMERALD}, ${FOREST})`,
-                    borderRadius: "10px 10px 0 0",
-                    position: "relative",
-                    overflow: "hidden",
-                  }}
-                >
-                  {/* Simple tile-shape hint per layout family. */}
-                  <TemplateGlyph layoutId={id} />
-                </div>
-                <div
-                  style={{
-                    padding: "2px 8px 8px",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color: isActive ? GOLD : INK_DIM,
-                  }}
-                >
-                  {layoutLabels[id]}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </section>
 
       {/* ── Accent colour ───────────────────────────────────── */}
       <section aria-label="Accent colour">
@@ -507,59 +439,200 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function HeroPreview({
-  layoutId,
+/** Single-pane carousel · one template fills the phone-frame-sized
+ *  preview. Left + right arrow buttons navigate · swipe gestures
+ *  mirror the arrows · dots along the bottom give position + direct
+ *  jump · the carousel IS the picker (no separate hero preview). */
+function TemplateCarousel({
+  layoutIds,
+  layoutLabels,
+  selectedLayout,
   tintHex,
   imageUrl,
+  onPick,
 }: {
-  layoutId: CoverLayoutId;
+  layoutIds: readonly CoverLayoutId[];
+  layoutLabels: Readonly<Record<CoverLayoutId, string>>;
+  selectedLayout: CoverLayoutId;
   tintHex: string;
   imageUrl: string | null;
+  onPick: (id: CoverLayoutId) => void;
 }) {
+  const index = Math.max(
+    0,
+    layoutIds.findIndex((id) => id === selectedLayout),
+  );
+  const last = layoutIds.length - 1;
+
+  const goPrev = React.useCallback(() => {
+    const next = index === 0 ? last : index - 1;
+    onPick(layoutIds[next]!);
+  }, [index, last, layoutIds, onPick]);
+  const goNext = React.useCallback(() => {
+    const next = index === last ? 0 : index + 1;
+    onPick(layoutIds[next]!);
+  }, [index, last, layoutIds, onPick]);
+
+  // Keyboard · arrow keys when the preview is focused / hovered.
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") goPrev();
+      else if (e.key === "ArrowRight") goNext();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [goPrev, goNext]);
+
+  // Touch swipe · horizontal drag ≥ 40px triggers nav.
+  const touchStartX = React.useRef<number | null>(null);
+  function onTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0]?.clientX ?? null;
+  }
+  function onTouchEnd(e: React.TouchEvent) {
+    const startX = touchStartX.current;
+    const endX = e.changedTouches[0]?.clientX;
+    touchStartX.current = null;
+    if (startX == null || endX == null) return;
+    const dx = endX - startX;
+    if (dx <= -40) goNext();
+    else if (dx >= 40) goPrev();
+  }
+
   return (
-    <div
-      aria-label="Hero preview"
-      style={{
-        width: "100%",
-        aspectRatio: "16 / 10",
-        borderRadius: 14,
-        background: imageUrl
-          ? `url(${imageUrl}) center/cover`
-          : `linear-gradient(135deg, ${EMERALD}, ${FOREST})`,
-        border: `1px solid ${BORDER_HI}`,
-        position: "relative",
-        overflow: "hidden",
-        boxShadow: "0 20px 48px rgba(0,0,0,0.5)",
-      }}
-    >
-      {/* Tint overlay · scales with selected hex. */}
+    <section aria-label="Template picker" style={{ position: "relative" }}>
+      <SectionLabel>Template · {index + 1} of {layoutIds.length}</SectionLabel>
       <div
-        aria-hidden
+        role="region"
+        aria-roledescription="carousel"
+        aria-label={`Shop template ${layoutLabels[selectedLayout]}`}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
         style={{
-          position: "absolute",
-          inset: 0,
-          background: `linear-gradient(180deg, transparent 50%, ${tintHex}66 100%)`,
-        }}
-      />
-      {/* Layout label pill. */}
-      <div
-        style={{
-          position: "absolute",
-          top: 10,
-          left: 10,
-          padding: "4px 10px",
-          background: "rgba(0,0,0,0.55)",
-          color: "#FAF8F4",
-          fontSize: 10,
-          fontWeight: 800,
-          letterSpacing: "0.12em",
-          textTransform: "uppercase",
-          borderRadius: 999,
+          marginTop: 8,
+          position: "relative",
+          width: "100%",
+          aspectRatio: "9 / 16",
+          maxHeight: "60vh",
+          borderRadius: 18,
+          background: imageUrl
+            ? `url(${imageUrl}) center/cover`
+            : `linear-gradient(135deg, ${EMERALD}, ${FOREST})`,
+          border: `1px solid ${BORDER_HI}`,
+          overflow: "hidden",
+          boxShadow: "0 20px 48px rgba(0,0,0,0.55)",
+          margin: "8px auto 0",
+          maxWidth: 360,
+          cursor: "grab",
+          touchAction: "pan-y",
         }}
       >
-        {layoutId.replace(/_/g, " ")}
+        {/* Tint overlay · reflects selected hex. */}
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: `linear-gradient(180deg, transparent 45%, ${tintHex}80 100%)`,
+          }}
+        />
+        {/* Layout family glyph · visual cue of the layout family. */}
+        <TemplateGlyph layoutId={selectedLayout} />
+        {/* Label pill · bottom. */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: 18,
+            left: "50%",
+            transform: "translateX(-50%)",
+            padding: "6px 14px",
+            background: "rgba(0,0,0,0.6)",
+            backdropFilter: "blur(8px)",
+            color: CREAM,
+            fontSize: 12,
+            fontWeight: 800,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            borderRadius: 999,
+            border: `1px solid ${BORDER_HI}`,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {layoutLabels[selectedLayout]}
+        </div>
+
+        {/* Left arrow. */}
+        <ArrowButton direction="left" onClick={goPrev} />
+        {/* Right arrow. */}
+        <ArrowButton direction="right" onClick={goNext} />
       </div>
-    </div>
+
+      {/* Position dots · tap any to jump directly. */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          gap: 6,
+          marginTop: 10,
+        }}
+      >
+        {layoutIds.map((id, i) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => onPick(id)}
+            aria-label={`Jump to ${layoutLabels[id]}`}
+            aria-current={i === index ? "true" : undefined}
+            style={{
+              width: i === index ? 20 : 6,
+              height: 6,
+              borderRadius: 999,
+              background: i === index ? GOLD : "rgba(198, 161, 91, 0.3)",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              transition: "width 160ms ease, background 160ms ease",
+            }}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ArrowButton({
+  direction,
+  onClick,
+}: {
+  direction: "left" | "right";
+  onClick: () => void;
+}) {
+  const isLeft = direction === "left";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={isLeft ? "Previous template" : "Next template"}
+      style={{
+        position: "absolute",
+        top: "50%",
+        [isLeft ? "left" : "right"]: 10,
+        transform: "translateY(-50%)",
+        width: 44,
+        height: 44,
+        borderRadius: "50%",
+        background: "rgba(0,0,0,0.55)",
+        border: `1px solid ${BORDER_HI}`,
+        color: CREAM,
+        fontSize: 20,
+        cursor: "pointer",
+        display: "grid",
+        placeItems: "center",
+        backdropFilter: "blur(6px)",
+        WebkitTapHighlightColor: "transparent",
+      }}
+    >
+      {isLeft ? "‹" : "›"}
+    </button>
   );
 }
 
