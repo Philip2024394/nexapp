@@ -141,20 +141,24 @@ export function HqPagesClient({ routes, initialQueue, kept }: Props): React.JSX.
       className="nex-admin-root"
       style={{
         display: "flex",
+        flexDirection: "column",
         gap: 16,
         minHeight: "calc(100dvh - 56px)",
         color: INK,
         fontFamily: "Inter, system-ui, sans-serif",
       }}
     >
-      {/* ── LEFT PANE · route table ────────────────────────────── */}
+      {/* ── Single full-width route table · preview + modals are
+          overlays so they're always visible regardless of viewport
+          width. */}
       <section
         aria-label="Route list"
         style={{
-          flex: "0 0 560px",
+          flex: 1,
           display: "flex",
           flexDirection: "column",
           minWidth: 0,
+          minHeight: 0,
           border: `1px solid ${BORDER}`,
           borderRadius: 14,
           background: SURFACE,
@@ -320,113 +324,31 @@ export function HqPagesClient({ routes, initialQueue, kept }: Props): React.JSX.
         </div>
       </section>
 
-      {/* ── RIGHT PANE · iframe preview ────────────────────────── */}
-      <section
-        aria-label="Page preview"
-        style={{
-          flex: 1,
-          minWidth: 0,
-          display: "flex",
-          flexDirection: "column",
-          border: `1px solid ${BORDER}`,
-          borderRadius: 14,
-          background: SURFACE,
-          overflow: "hidden",
-        }}
-      >
-        <header
-          style={{
-            padding: "12px 18px",
-            borderBottom: `1px solid ${BORDER}`,
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            minHeight: 44,
-          }}
-        >
-          <strong style={{ fontSize: 13, color: INK_MUTED }}>Preview</strong>
-          {selectedUrl ? (
-            <>
-              <code
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  fontSize: 12,
-                  color: ACCENT,
-                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {selectedUrl}
-              </code>
-              <a
-                href={selectedUrl}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  fontSize: 11,
-                  color: ACCENT,
-                  textDecoration: "none",
-                  border: `1px solid ${BORDER_HI}`,
-                  borderRadius: 6,
-                  padding: "4px 8px",
-                }}
-              >
-                Open ↗
-              </a>
-              <button
-                type="button"
-                onClick={() => setSelectedUrl(null)}
-                aria-label="Close preview"
-                style={{
-                  ...buttonStyle(INK_MUTED),
-                  width: 28,
-                  height: 28,
-                }}
-              >
-                ×
-              </button>
-            </>
-          ) : (
-            <span style={{ fontSize: 12, color: INK_MUTED }}>
-              Click 👁 on any row to load the live page here.
-            </span>
-          )}
-        </header>
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "center",
-            padding: 16,
-            background: "#020914",
-            overflow: "auto",
-          }}
-        >
-          {selectedUrl ? (
-            <PreviewFrame url={selectedUrl} isDynamic={isDynamic(selectedUrl)} />
-          ) : (
-            <div style={{ color: INK_MUTED, fontSize: 13, marginTop: 40 }}>
-              No page selected.
-            </div>
-          )}
-        </div>
-      </section>
+      {/* ── PREVIEW OVERLAY · fullscreen iframe when a row is picked ── */}
+      {selectedUrl ? (
+        <PreviewOverlay
+          url={selectedUrl}
+          isDynamic={isDynamic(selectedUrl)}
+          onClose={() => setSelectedUrl(null)}
+        />
+      ) : null}
 
       {/* ── MODAL #1 · first confirm ───────────────────────────── */}
       {modal1 ? (
         <ModalShell onDismiss={() => setModal1(null)}>
-          <h2 style={modalTitleStyle}>Queue this route for deletion?</h2>
+          <h2 style={modalTitleStyle}>Send this route to Claude for deletion?</h2>
           <p style={modalBodyStyle}>
             <code style={modalCodeStyle}>{modal1.url}</code>
           </p>
           <p style={{ ...modalBodyStyle, color: INK_DIM }}>
-            Phase 1 is queue-only · this does NOT delete files yet. The
-            next screen will show how many other files reference this
-            route so you can decide with full context.
+            This records the delete request in
+            <code style={{ ...modalCodeStyle, margin: "0 4px" }}>
+              data/hq-deletion-queue.jsonl
+            </code>
+            so Claude can execute the full removal (files, imports,
+            commit, push) on the next chat turn. The next screen will
+            show how many other files reference this route so you can
+            decide with full context.
           </p>
           <div style={modalActionsStyle}>
             <button
@@ -450,7 +372,7 @@ export function HqPagesClient({ routes, initialQueue, kept }: Props): React.JSX.
       {/* ── MODAL #2 · caller count + final confirm ────────────── */}
       {modal2 ? (
         <ModalShell onDismiss={() => setModal2(null)}>
-          <h2 style={modalTitleStyle}>Confirm deletion queue</h2>
+          <h2 style={modalTitleStyle}>Confirm · send to Claude for deletion</h2>
           <p style={modalBodyStyle}>
             <code style={modalCodeStyle}>{modal2.url}</code>
           </p>
@@ -491,10 +413,27 @@ export function HqPagesClient({ routes, initialQueue, kept }: Props): React.JSX.
                   ))}
                 </ul>
               ) : null}
-              <p style={{ ...modalBodyStyle, color: INK_DIM, fontSize: 12 }}>
-                Queuing records the request in{" "}
-                <code style={{ fontSize: 11 }}>data/hq-deletion-queue.jsonl</code>.
-                Actual file removal + import cleanup runs in a separate step.
+              <p
+                style={{
+                  ...modalBodyStyle,
+                  color: INK_DIM,
+                  fontSize: 12,
+                  background: "rgba(0,175,255,0.08)",
+                  border: `1px solid ${BORDER_HI}`,
+                  borderRadius: 8,
+                  padding: "8px 12px",
+                }}
+              >
+                <strong style={{ color: ACCENT }}>What happens next:</strong>{" "}
+                click “Send to Claude” to record the request. Then open
+                your Claude chat and say
+                <code style={{ ...modalCodeStyle, margin: "0 4px" }}>
+                  process hq deletion queue
+                </code>
+                and Claude will run the full removal (git rm the route
+                files · fix the {modal2.callers.count} caller
+                file{modal2.callers.count === 1 ? "" : "s"} · commit ·
+                push).
               </p>
             </>
           )}
@@ -514,7 +453,7 @@ export function HqPagesClient({ routes, initialQueue, kept }: Props): React.JSX.
               }
               style={modalPrimaryStyle(RED)}
             >
-              {pending ? "Queuing…" : "Queue deletion"}
+              {pending ? "Sending…" : "Send to Claude"}
             </button>
           </div>
         </ModalShell>
@@ -579,46 +518,163 @@ function buttonStyle(accent: string): React.CSSProperties {
   };
 }
 
-function PreviewFrame({
+function PreviewOverlay({
   url,
   isDynamic,
+  onClose,
 }: {
   url: string;
   isDynamic: boolean;
+  onClose: () => void;
 }) {
+  // Escape key closes the overlay.
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {isDynamic ? (
-        <div
-          style={{
-            padding: "8px 12px",
-            background: "rgba(255,114,0,0.12)",
-            border: `1px solid ${ORANGE}66`,
-            borderRadius: 8,
-            fontSize: 12,
-            color: ORANGE,
-            maxWidth: 390,
-          }}
-        >
-          Dynamic route · the preview will likely 404 because{" "}
-          <code style={{ fontSize: 11 }}>[slug]</code> segments aren&rsquo;t
-          filled in. Use the “Open ↗” button to open with a real slug.
-        </div>
-      ) : null}
-      <iframe
-        key={url}
-        src={url}
-        title={url}
+    <>
+      <div
+        aria-hidden
+        onClick={onClose}
         style={{
-          width: 390,
-          height: 844,
-          border: `1px solid ${BORDER_HI}`,
-          borderRadius: 24,
-          background: "#000",
-          boxShadow: "0 24px 60px rgba(0,0,0,0.6)",
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.78)",
+          zIndex: 900,
         }}
       />
-    </div>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Preview ${url}`}
+        style={{
+          position: "fixed",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: "min(460px, 95vw)",
+          maxHeight: "95vh",
+          display: "flex",
+          flexDirection: "column",
+          background: SURFACE,
+          border: `1px solid ${BORDER_HI}`,
+          borderRadius: 18,
+          overflow: "hidden",
+          boxShadow: "0 32px 80px rgba(0,0,0,0.7)",
+          zIndex: 901,
+        }}
+      >
+        <header
+          style={{
+            padding: "12px 16px",
+            borderBottom: `1px solid ${BORDER}`,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            background: SURFACE_HI,
+          }}
+        >
+          <strong style={{ fontSize: 12, color: INK_MUTED, letterSpacing: "0.1em" }}>
+            PREVIEW
+          </strong>
+          <code
+            title={url}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              fontSize: 12,
+              color: ACCENT,
+              fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {url}
+          </code>
+          <a
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              fontSize: 11,
+              color: ACCENT,
+              textDecoration: "none",
+              border: `1px solid ${BORDER_HI}`,
+              borderRadius: 6,
+              padding: "4px 8px",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Open ↗
+          </a>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close preview"
+            style={{
+              width: 30,
+              height: 30,
+              background: "transparent",
+              color: INK,
+              border: `1px solid ${BORDER}`,
+              borderRadius: 6,
+              fontSize: 18,
+              cursor: "pointer",
+              lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
+        </header>
+        {isDynamic ? (
+          <div
+            style={{
+              padding: "8px 16px",
+              background: "rgba(255,114,0,0.12)",
+              borderBottom: `1px solid ${ORANGE}66`,
+              fontSize: 12,
+              color: ORANGE,
+            }}
+          >
+            Dynamic route · the preview will likely 404 because{" "}
+            <code style={{ fontSize: 11 }}>[slug]</code> segments aren&rsquo;t
+            filled in. Use “Open ↗” with a real slug.
+          </div>
+        ) : null}
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "stretch",
+            justifyContent: "center",
+            padding: 12,
+            background: "#020914",
+            overflow: "auto",
+          }}
+        >
+          <iframe
+            key={url}
+            src={url}
+            title={url}
+            style={{
+              width: "100%",
+              maxWidth: 430,
+              height: 780,
+              border: `1px solid ${BORDER_HI}`,
+              borderRadius: 18,
+              background: "#000",
+              boxShadow: "0 18px 40px rgba(0,0,0,0.6)",
+            }}
+          />
+        </div>
+      </div>
+    </>
   );
 }
 
