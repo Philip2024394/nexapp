@@ -220,6 +220,32 @@ export default async function ShopSetupFinishPage(): Promise<React.JSX.Element> 
           >
             Pick template & activate →
           </Link>
+          {/* Owner directive 2026-11-06 readiness fill · without
+              products the public shop surface renders as an empty
+              template · give the owner a visible path to add products
+              right after they activate so the loop completes. */}
+          <Link
+            href="/nex-native/manage/products"
+            data-nex-shop-finish-products
+            style={{
+              display: "inline-flex",
+              alignSelf: "center",
+              alignItems: "center",
+              gap: 6,
+              padding: "10px 20px",
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: GOLD,
+              background: "transparent",
+              border: `1px solid ${GOLD}`,
+              textDecoration: "none",
+              borderRadius: 999,
+            }}
+          >
+            + Add your first product
+          </Link>
           <span
             style={{
               fontSize: 10,
