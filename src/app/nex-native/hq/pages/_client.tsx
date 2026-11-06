@@ -285,6 +285,158 @@ export function HqPagesClient({
   const queuedCount = queue.length;
   const candidateCount = routes.length - keptCount - queuedCount;
 
+  // ── Section grouping · owner directive 2026-11-06 "update tree
+  //    mapping for professional flow" · sections ordered to follow
+  //    the Ireland user journey: entry → discovery → engagement →
+  //    shop/commerce → themes → vault → profile/community → admin →
+  //    settings → legal. Each URL falls in the FIRST matching
+  //    section; "Other" catches anything that doesn't match.
+  const SECTIONS: ReadonlyArray<{
+    readonly key: string;
+    readonly label: string;
+    readonly emoji: string;
+    readonly test: (url: string) => boolean;
+  }> = React.useMemo(
+    () => [
+      {
+        key: "entry",
+        label: "Entry & Auth",
+        emoji: "🚪",
+        test: (u) =>
+          u === "/nex-native" ||
+          u === "/nex-native/sign-in" ||
+          u === "/nex-native/ireland-entry" ||
+          u === "/nex-native/home" ||
+          u === "/nex-native/welcome",
+      },
+      {
+        key: "directory",
+        label: "Directory",
+        emoji: "🗺️",
+        test: (u) => u.startsWith("/nex-native/directory"),
+      },
+      {
+        key: "chat",
+        label: "Chat",
+        emoji: "💬",
+        test: (u) =>
+          u.startsWith("/nex-native/chat/") ||
+          u === "/nex-native/chat" ||
+          u.startsWith("/nex-native/free-chat") ||
+          u.startsWith("/nex-native/contacts") ||
+          u === "/nex-native/friends" ||
+          u.startsWith("/nex-native/group-chat"),
+      },
+      {
+        key: "themes",
+        label: "Chat Themes",
+        emoji: "🎨",
+        test: (u) =>
+          u.startsWith("/nex-native/chat-themes-library") ||
+          u.startsWith("/nex-native/themes"),
+      },
+      {
+        key: "shop",
+        label: "Shop",
+        emoji: "🏪",
+        test: (u) =>
+          u.startsWith("/nex-native/manage") ||
+          u.startsWith("/nex-native/cover") ||
+          u.startsWith("/nex-native/create") ||
+          u.startsWith("/nex-native/product") ||
+          u.startsWith("/nex-native/orders"),
+      },
+      {
+        key: "vault",
+        label: "Vault",
+        emoji: "🔒",
+        test: (u) => u.startsWith("/nex-native/vault"),
+      },
+      {
+        key: "profile",
+        label: "Profile",
+        emoji: "👤",
+        test: (u) =>
+          u.startsWith("/nex-native/profile") ||
+          u.startsWith("/nex-native/u/"),
+      },
+      {
+        key: "community",
+        label: "Community",
+        emoji: "📢",
+        test: (u) => u.startsWith("/nex-native/community"),
+      },
+      {
+        key: "live",
+        label: "Live",
+        emoji: "🔴",
+        test: (u) => u.startsWith("/nex-native/live-commerce"),
+      },
+      {
+        key: "hq",
+        label: "HQ",
+        emoji: "🏛️",
+        test: (u) => u.startsWith("/nex-native/hq"),
+      },
+      {
+        key: "call",
+        label: "Call",
+        emoji: "📞",
+        test: (u) =>
+          u === "/nex-native/call-centre" ||
+          u.startsWith("/nex-native/call/"),
+      },
+      {
+        key: "settings",
+        label: "Settings",
+        emoji: "⚙️",
+        test: (u) => u.startsWith("/nex-native/settings"),
+      },
+      {
+        key: "legal",
+        label: "Legal & Meta",
+        emoji: "📜",
+        test: (u) =>
+          u === "/nex-native/privacy" ||
+          u === "/nex-native/terms" ||
+          u === "/nex-native/support" ||
+          u === "/nex-native/help" ||
+          u === "/nex-native/share" ||
+          u.startsWith("/nex-native/unsubscribe"),
+      },
+    ],
+    [],
+  );
+
+  // Bucket filteredRoutes into sections (first-match wins · "Other"
+  // collects URLs that don't hit any section).
+  const groupedRoutes = React.useMemo(() => {
+    const groups: Array<{ section: typeof SECTIONS[number]; urls: string[] }> =
+      SECTIONS.map((s) => ({ section: s, urls: [] }));
+    const other: string[] = [];
+    for (const url of filteredRoutes) {
+      const idx = SECTIONS.findIndex((s) => s.test(url));
+      if (idx >= 0) {
+        groups[idx]!.urls.push(url);
+      } else {
+        other.push(url);
+      }
+    }
+    const result = groups.filter((g) => g.urls.length > 0);
+    if (other.length > 0) {
+      result.push({
+        section: {
+          key: "other",
+          label: "Other",
+          emoji: "•",
+          test: () => false,
+        },
+        urls: other,
+      });
+    }
+    return result;
+  }, [filteredRoutes, SECTIONS]);
+
   return (
     <div
       className="nex-admin-root"
@@ -368,13 +520,50 @@ export function HqPagesClient({
             padding: "4px 0",
           }}
         >
-          {filteredRoutes.map((url) => {
-            const status = statusOf(url);
-            const locked = isLocked(url);
-            const pendingRenameTo = pendingRenameMap.get(url);
-            const isSelected = url === selectedUrl;
-            const isRenaming = renamingUrl === url;
-            return (
+          {groupedRoutes.map(({ section, urls }) => (
+            <React.Fragment key={section.key}>
+              <div
+                data-nex-hq-section-header={section.key}
+                style={{
+                  position: "sticky",
+                  top: 0,
+                  background: SURFACE_HI,
+                  borderBottom: `1px solid ${BORDER_HI}`,
+                  padding: "8px 14px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontSize: 11,
+                  fontWeight: 800,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.12em",
+                  color: ACCENT,
+                  zIndex: 1,
+                }}
+              >
+                <span style={{ fontSize: 13 }} aria-hidden>
+                  {section.emoji}
+                </span>
+                <span>{section.label}</span>
+                <span
+                  style={{
+                    marginLeft: "auto",
+                    fontSize: 10,
+                    color: INK_MUTED,
+                    fontWeight: 600,
+                    letterSpacing: "0.08em",
+                  }}
+                >
+                  {urls.length}
+                </span>
+              </div>
+              {urls.map((url) => {
+                const status = statusOf(url);
+                const locked = isLocked(url);
+                const pendingRenameTo = pendingRenameMap.get(url);
+                const isSelected = url === selectedUrl;
+                const isRenaming = renamingUrl === url;
+                return (
               <div
                 key={url}
                 data-nex-hq-route-row={url}
@@ -568,8 +757,10 @@ export function HqPagesClient({
                   </div>
                 ) : null}
               </div>
-            );
-          })}
+                );
+              })}
+            </React.Fragment>
+          ))}
           {filteredRoutes.length === 0 ? (
             <div
               style={{
