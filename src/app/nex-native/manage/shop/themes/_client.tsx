@@ -790,16 +790,21 @@ function FullscreenTemplate({
         boxSizing: "border-box",
       }}
     >
-      {/* Phone-shaped fullscreen · owner directive 2026-11-06:
+      {/* Phone-shaped fullscreen · owner directives 2026-11-06:
           "when i select the view template it should open in the
-          phone screen not on desktop screen width". Centred in the
-          dim backdrop · taps on the dim area close. */}
+          phone screen not on desktop screen width" + "reduce the
+          phone size on desktop to fit correctly on height".
+          Centred in the dim backdrop · phone width now caps at
+          340 px (down from 420) and height leaves 48 px of
+          breathing room top+bottom so the frame NEVER touches the
+          viewport edge even on 720 p laptops. Taps on the dim
+          area close. */}
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
           position: "relative",
-          width: "min(420px, calc((100dvh - 24px) * 9 / 19.5))",
-          height: "min(calc(100dvh - 24px), calc(420px * 19.5 / 9))",
+          width: "min(340px, calc((100dvh - 48px) * 9 / 19.5))",
+          height: "min(calc(100dvh - 48px), calc(340px * 19.5 / 9))",
           aspectRatio: "9 / 19.5",
           borderRadius: 24,
           background: "#020914",

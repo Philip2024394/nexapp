@@ -218,6 +218,14 @@ export default async function CoverLayoutPreview({
           a[style*="dashed var(--nex-accent-soft,"] {
             display: none !important;
           }
+          /* Owner directive 2026-11-06 · "footer text field still
+             showing remove" · hide the sealed CoverComposer footer
+             input (+ · emoji · text · send) since the floating
+             Chat FAB bottom-right + burger menu together now carry
+             every user intent the composer previously served. */
+          [data-nex-cover-composer] {
+            display: none !important;
+          }
         `}</style>
       )}
       {!isEmbedded && (

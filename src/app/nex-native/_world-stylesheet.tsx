@@ -86,7 +86,13 @@ export async function resolveWorldForLayout(): Promise<WorldDefinition> {
  *  Community Banner · every world + the fallback point at the same
  *  image so desktop/tablet (≥500px per nex-native.css) renders one
  *  consistent branded backdrop across the entire app. */
-const GLOBAL_DESKTOP_BACKDROP = "/nex-brand/nex-global-community-banner.png";
+// Owner directive 2026-11-06 · "change the desktop back ground image
+// to this on all desktop and tablet view" · NEX Global Connection
+// Experience supersedes the earlier Global Community Banner as the
+// single desktop/tablet backdrop painted behind the sealed phone
+// frame on viewports ≥500 px (see nex-native.css global-desktop-
+// hero block).
+const GLOBAL_DESKTOP_BACKDROP = "/nex-brand/nex-global-connection-experience.png";
 
 const WORLD_DESKTOP_BACKDROP: Record<string, string> = {
   ireland: GLOBAL_DESKTOP_BACKDROP,
