@@ -291,17 +291,6 @@ export function BurgerMenu({
               href="#"
               disabled
             />
-            <MenuRow
-              icon="💬"
-              label="Chat with us"
-              sublabel={ownerHandle ? `@${ownerHandle}` : "Preview mode"}
-              href={
-                ownerHandle
-                  ? `/nex-native/chat/peer/${encodeURIComponent(ownerHandle)}`
-                  : "#"
-              }
-              disabled={!ownerHandle}
-            />
             {shopUrl ? (
               <button
                 type="button"

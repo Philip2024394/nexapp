@@ -159,7 +159,7 @@ export const MARIA_MOCK: MockCoverContent = {
   // /manage/shop + /manage/info.
   businessName: "Brand Name",
   tagline: "",
-  handle: "@your-handle",
+  handle: "Social Links",
   // Owner directive 2026-10-22 · the identity rail's compact location
   // line was a duplicate of the top Visit-Us panel's address block ·
   // mock `location` is now empty so the rail skips its `{location &&

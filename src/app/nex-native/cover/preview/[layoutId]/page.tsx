@@ -12,6 +12,7 @@ import * as chatThemeService from "@/lib/nex-native/chat-theme-service";
 import { CoverThemeSkin } from "../../theme-skin";
 import { CoverLayoutSwitch } from "../../layout-switch";
 import { BurgerMenu } from "../../_burger-menu";
+import { ShopChatFab } from "../../_shop-chat-fab";
 import {
   COVER_LAYOUT_IDS,
   COVER_LAYOUT_LABELS,
@@ -204,6 +205,19 @@ export default async function CoverLayoutPreview({
           [aria-hidden][style*="position: fixed"][style*="opacity: 0.35"] {
             opacity: 1 !important;
           }
+          /* Owner directive 2026-11-06 · "we can remove this from
+             home page as we have in burger drawer Visit us ·
+             Directions ↗ · address · Opening Hours". Hide the
+             inline Visit-Us panel (the dashed <a> block rendered
+             in all 11 cover layouts) because the burger menu top-
+             right now carries the same info. Target via the
+             block's distinctive inline-style pattern:
+             border:1px dashed var(--nex-accent-soft) +
+             background linear-gradient with --nex-accent-faint. */
+          a[style*="dashed var(--nex-accent-soft)"],
+          a[style*="dashed var(--nex-accent-soft,"] {
+            display: none !important;
+          }
         `}</style>
       )}
       {!isEmbedded && (
@@ -385,6 +399,11 @@ export default async function CoverLayoutPreview({
           hours={null}
           shopUrl={null}
         />
+        {/* Owner directive 2026-11-06 · "Chat with us is floating
+            button bottom right on screen". Replaces the burger's
+            Chat row with a dedicated FAB · send-first, signup
+            contextual flow. */}
+        <ShopChatFab ownerHandle={null} shopName={null} />
       </PhoneFrame>
       {/* Owner-authorised 2026-10-18 · S7 · the action bar is a
           sibling of the sealed PhoneFrame so the frame's mobile
