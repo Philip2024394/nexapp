@@ -221,72 +221,14 @@ export function ShopThemesClient({
         onPick={onPickLayout}
       />
 
-      {/* ── Accent colour ───────────────────────────────────── */}
-      <section aria-label="Accent colour">
-        <SectionLabel>Accent colour</SectionLabel>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            marginTop: 6,
-          }}
-        >
-          <label
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "6px 10px",
-              background: SURFACE,
-              border: `1px solid ${BORDER}`,
-              borderRadius: 8,
-              cursor: "pointer",
-            }}
-          >
-            <input
-              type="color"
-              value={tintHex}
-              onChange={(e) => setTintHex(e.target.value)}
-              aria-label="Pick accent colour"
-              style={{
-                appearance: "none",
-                border: "none",
-                background: "transparent",
-                width: 28,
-                height: 28,
-                padding: 0,
-                cursor: "pointer",
-              }}
-            />
-            <code
-              style={{
-                fontSize: 12,
-                fontFamily: "ui-monospace, Menlo, monospace",
-                color: INK,
-                letterSpacing: "0.04em",
-              }}
-            >
-              {tintHex.toUpperCase()}
-            </code>
-          </label>
-          <button
-            type="button"
-            onClick={() => setTintHex("#123D2B")}
-            style={{
-              fontSize: 11,
-              padding: "6px 10px",
-              background: "transparent",
-              color: INK_DIM,
-              border: `1px solid ${BORDER}`,
-              borderRadius: 8,
-              cursor: "pointer",
-            }}
-          >
-            Reset to emerald
-          </button>
-        </div>
-      </section>
+      {/* Owner directive 2026-11-06 · "remove Accent colour color
+          option each theme image we upload we will pick the theme
+          color". The explicit colour-picker UI is gone · the tint
+          is now derived automatically per background (preset and
+          upload both default to emerald for now · follow-up batch
+          wires per-preset tint metadata so each preset carries its
+          own paired colour). `tintHex` state still flows to the
+          Apply action so the persistence chain is unchanged. */}
 
       {/* ── Background image · presets + upload ─────────────── */}
       <section aria-label="Background image">
