@@ -18,7 +18,13 @@
 import type * as React from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// Owner directive 2026-11-06 readiness fill · the manage/products
+// page previously used the production-only session resolver which
+// bounced dev-impersonated owners to /sign-in. Swap to the dev-aware
+// resolver (same contract) so owners testing with
+// NEX_DEV_IMPERSONATE_HANDLE can reach their product list. Real
+// sessions are unaffected.
+import { resolveSessionWithDevOverride as resolveNexAppSessionFromContext } from "@/lib/nex-native/app/dev-impersonation";
 import * as businessService from "@/lib/nex-native/business-service";
 import * as productService from "@/lib/nex-native/product-service";
 import { ProductCardClient, type ProductCardViewModel } from "./_product-card-client";
