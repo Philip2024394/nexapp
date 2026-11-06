@@ -77,11 +77,6 @@ import { FreeChatCanvasClient, type SeedMessage } from "./_canvas-client";
 // chat · mount the inline NotificationsDrawer bell + feed it the same
 // real data sources (pending invites + unread chats).
 import { NotificationsDrawer } from "@/components/nex-native/notifications-drawer/notifications-drawer-client";
-// Owner directive 2026-11-06 · feed real shop-side conversations into
-// the drawer's "orders" section so the free-chat home surfaces
-// customer orders in the same slide-down inbox as every other NEX
-// notification. Same helper is used on the peer chat page.
-import { buildShopOrderNotifications } from "@/lib/nex-native/notifications/shop-order-notifications";
 import {
   MOCK_NOTIFICATIONS,
   type NotificationItem,
@@ -303,6 +298,11 @@ export default async function FreeChatPage({
           createdAt: x.edge.created_at ?? new Date().toISOString(),
           unread: true,
           thumbnailUrl: null,
+          // Owner directive 2026-11-06 · rim badge + tap-profile wire.
+          senderAccountId: x.account.id,
+          profileHref: x.account.nex_handle
+            ? `/nex-native/u/${x.account.nex_handle}`
+            : null,
         }));
     } catch {
       // soft-fail · guest path or DB hiccup should never break the chat shell
@@ -336,6 +336,10 @@ export default async function FreeChatPage({
             createdAt: c.last_message_at ?? c.created_at,
             unread: true,
             thumbnailUrl: null,
+            senderAccountId: other.id,
+            profileHref: other.nex_handle
+              ? `/nex-native/u/${other.nex_handle}`
+              : null,
           };
         }),
       );
@@ -346,25 +350,31 @@ export default async function FreeChatPage({
       // soft-fail · same rationale as above
     }
   }
-  // Owner directive 2026-11-06 · real shop-side conversations as the
-  // "orders" section (replacing mock) · fail-soft on any error so the
-  // drawer still renders with the rest of the sections. Only fires
-  // for signed-in viewers · guests get an empty orders section (no
-  // business to inbox).
-  const shopOrderNotifsFC = signedInSession
-    ? await buildShopOrderNotifications(
-        signedInSession.account.id,
-      ).catch(() => [] as NotificationItem[])
-    : [];
-  const freeChatNotifications: NotificationItem[] = [
+  // Owner directive 2026-11-06 (revised): "notivications go to
+  // notivications and messages from chat to chat · we dont need
+  // any inbox". Owner directive 2026-11-06 · also batch-resolve
+  // shop badges so the drawer paints a 🏪 pip on sender rims.
+  const notifSenderIdsFC = [
     ...incomingInviteNotifsFC,
     ...unreadChatNotifsFC,
-    ...shopOrderNotifsFC,
+  ]
+    .map((n) => n.senderAccountId)
+    .filter((id): id is string => Boolean(id));
+  const notifShopBadgesFC = await (await import(
+    "@/lib/nex-native/shop-badge-service"
+  )).resolveShopBadges(notifSenderIdsFC);
+  const enrichSenderShopFC = <T extends NotificationItem>(n: T): T => {
+    const sid = n.senderAccountId;
+    if (!sid) return n;
+    const badge = notifShopBadgesFC.get(sid);
+    if (!badge) return n;
+    return { ...n, senderHasShop: true };
+  };
+  const freeChatNotifications: NotificationItem[] = [
+    ...incomingInviteNotifsFC.map(enrichSenderShopFC),
+    ...unreadChatNotifsFC.map(enrichSenderShopFC),
     ...MOCK_NOTIFICATIONS.filter(
-      (n) =>
-        n.section !== "follows" &&
-        n.section !== "chats" &&
-        n.section !== "orders",
+      (n) => n.section !== "follows" && n.section !== "chats",
     ),
   ];
 

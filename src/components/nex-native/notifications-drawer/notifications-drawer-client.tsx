@@ -750,6 +750,37 @@ function NotificationRow({
             `}</style>
           </>
         ) : null}
+        {/* Owner directive 2026-11-06 · "if they have shop will be
+            badge on their profile rim" · small gold 🏪 pill at the
+            bottom-right of the avatar when the notification sender
+            owns a shop. Positioned where the sealed country-flag
+            badge sits on CoverIdentityBadge so the vocabulary is
+            consistent across surfaces. */}
+        {row.senderHasShop ? (
+          <span
+            aria-hidden
+            title="Owns a shop"
+            data-nex-notifications-row-shop-badge
+            style={{
+              position: "absolute",
+              right: -2,
+              bottom: -2,
+              width: 16,
+              height: 16,
+              borderRadius: "50%",
+              background: "var(--nex-world-secondary, #C6A15B)",
+              color: "#1A120A",
+              display: "grid",
+              placeItems: "center",
+              fontSize: 9,
+              border: "1.5px solid rgba(2, 9, 20, 0.95)",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.4)",
+              pointerEvents: "none",
+            }}
+          >
+            🏪
+          </span>
+        ) : null}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div

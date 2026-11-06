@@ -51,6 +51,22 @@ export interface NotificationItem {
   /** Optional avatar / thumbnail URL (peer avatar for chats · product
    *  image for shop · null for sections without per-row art). */
   readonly thumbnailUrl?: string | null;
+  /** Owner directive 2026-11-06 · the sender's chat identity id ·
+   *  used to join nex_business and surface a 🏪 shop badge on their
+   *  avatar rim when they own a shop. Null when the notification
+   *  isn't account-scoped (system events, order shipments, etc.). */
+  readonly senderAccountId?: string | null;
+  /** Owner directive 2026-11-06 · tap target for the sender's
+   *  profile when the viewer wants to "see who they deal with"
+   *  without first opening the subject. When present the drawer
+   *  renders the avatar as its own link to this URL · tapping the
+   *  row body still opens `href` (the subject). Null = avatar is
+   *  not tappable as a separate target. */
+  readonly profileHref?: string | null;
+  /** Owner directive 2026-11-06 · when true the drawer paints a
+   *  small gold 🏪 badge on the bottom-right of the avatar rim so
+   *  the viewer sees at a glance that the sender owns a shop. */
+  readonly senderHasShop?: boolean;
 }
 
 export interface NotificationSectionMeta {

@@ -74,10 +74,6 @@ import {
   MOCK_NOTIFICATIONS,
   type NotificationItem,
 } from "@/lib/nex-native/notifications/mock-notifications-data";
-// Owner directive 2026-11-06 · feed real shop-side conversations
-// into the drawer's "orders" section so the owner sees customer
-// orders in the same slide-down inbox as every other NEX notif.
-import { buildShopOrderNotifications } from "@/lib/nex-native/notifications/shop-order-notifications";
 import { ShopDrawer } from "@/components/nex-native/shop-drawer/shop-drawer-client";
 import { ScrollToBottomButton } from "@/components/nex-native/chat-chrome/scroll-to-bottom-button";
 import { effectiveTier } from "@/lib/nex-native/account-service";
@@ -946,6 +942,14 @@ export default async function PeerChatPage({
         createdAt: x.edge.created_at ?? new Date().toISOString(),
         unread: true,
         thumbnailUrl: null,
+        // Owner directive 2026-11-06 · carry sender account id so the
+        // drawer can resolve + paint the shop rim badge · profileHref
+        // lets the viewer tap the avatar to see who they deal with
+        // without first opening the chat.
+        senderAccountId: x.account.id,
+        profileHref: x.account.nex_handle
+          ? `/nex-native/u/${x.account.nex_handle}`
+          : null,
       }));
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -996,6 +1000,10 @@ export default async function PeerChatPage({
             createdAt: c.last_message_at ?? c.created_at,
             unread: true,
             thumbnailUrl: null,
+            senderAccountId: other.id,
+            profileHref: other.nex_handle
+              ? `/nex-native/u/${other.nex_handle}`
+              : null,
           };
         }),
     );
@@ -1007,27 +1015,36 @@ export default async function PeerChatPage({
     console.warn("peer-chat · unread-chats build failed:", err);
   }
 
-  // Owner directive 2026-11-06 · buildShopOrderNotifications joins
-  // nex_conversation + nex_message for conversations where the viewer
-  // participates as side='business' and emits NotificationItem rows
-  // for the "orders" section. Fail-soft: empty array if any service
-  // blips so the drawer still renders with the remaining sections.
-  const shopOrderNotifs = await buildShopOrderNotifications(
-    session.account.id,
-  ).catch(() => [] as NotificationItem[]);
-
-  // Merge · real invites replace mock follows · real unread chats
-  // replace mock chats · real shop orders replace mock orders · all
-  // other mock sections stay until a real source lands.
-  const notifications: NotificationItem[] = [
+  // Owner directive 2026-11-06 (revised): "notivications go to
+  // notivications and messages from chat to chat · we dont need
+  // any inbox". Customer messages to shops live in the regular
+  // chat list, NOT in a dedicated inbox section.
+  //
+  // Owner directive 2026-11-06 · also batch-resolve shop badges for
+  // every notification sender so the drawer paints a 🏪 gold pip on
+  // the avatar rim when the sender owns a shop. One query per render
+  // regardless of notification count.
+  const notifSenderIds = [
     ...incomingInviteNotifs,
     ...unreadChatNotifs,
-    ...shopOrderNotifs,
+  ]
+    .map((n) => n.senderAccountId)
+    .filter((id): id is string => Boolean(id));
+  const notifShopBadges = await (await import(
+    "@/lib/nex-native/shop-badge-service"
+  )).resolveShopBadges(notifSenderIds);
+  const enrichSenderShop = <T extends NotificationItem>(n: T): T => {
+    const sid = n.senderAccountId;
+    if (!sid) return n;
+    const badge = notifShopBadges.get(sid);
+    if (!badge) return n;
+    return { ...n, senderHasShop: true };
+  };
+  const notifications: NotificationItem[] = [
+    ...incomingInviteNotifs.map(enrichSenderShop),
+    ...unreadChatNotifs.map(enrichSenderShop),
     ...MOCK_NOTIFICATIONS.filter(
-      (n) =>
-        n.section !== "follows" &&
-        n.section !== "chats" &&
-        n.section !== "orders",
+      (n) => n.section !== "follows" && n.section !== "chats",
     ),
   ];
   const peerFirstName =
