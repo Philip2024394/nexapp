@@ -176,7 +176,13 @@ export function ShopThemesClient({
           shop background is now /manage/shop/backgrounds, which
           applies the pick and redirects back here so the templates
           render under the new backdrop. */}
-      <section aria-label="Background">
+      <section
+        aria-label="Background"
+        /* Owner directive 2026-11-06 · centre the CTA across the
+           phone width so it reads as the sole primary action on
+           the surface (previously left-aligned · looked lonely). */
+        style={{ display: "flex", justifyContent: "center" }}
+      >
         {/* Owner directive 2026-11-06 · solid cream-gold (world
             palette's --nex-world-secondary) · icon removed · button
             now reads as a primary CTA, not an outlined chip. */}
