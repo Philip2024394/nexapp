@@ -109,6 +109,18 @@ const NAV_ITEMS: ReadonlyArray<{
     glyph: "📚",
     match: (p) => p.startsWith("/nex-native/chat-themes-library"),
   },
+  // Owner directive 2026-11-06 · Free Chat with the themes drawer
+  // + preview flags on, so admins can inspect the in-chat theme
+  // picker without manually toggling the UI. Same pathname as the
+  // Free Chat entry above · match stays on Free Chat so both items
+  // highlight when viewing either URL (query params don't affect
+  // pathname-based matching).
+  {
+    href: "/nex-native/free-chat?show-themes=1&preview=1",
+    label: "Free Chat · Themes",
+    glyph: "🖼",
+    match: (p) => p.startsWith("/nex-native/free-chat"),
+  },
 ];
 
 export function HqNav(): React.JSX.Element {
