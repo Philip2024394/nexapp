@@ -500,7 +500,37 @@ function TemplateCarousel({
 
   return (
     <section aria-label="Template picker" style={{ position: "relative" }}>
-      <SectionLabel>Template · {index + 1} of {layoutIds.length}</SectionLabel>
+      {/* Navigation row · left arrow · template name · right arrow.
+          Lives ABOVE the preview so the template render stays
+          completely clean (no overlays, no buttons). */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginTop: 6,
+        }}
+      >
+        <ArrowButton direction="left" onClick={goPrev} />
+        <div
+          style={{
+            flex: 1,
+            textAlign: "center",
+            fontSize: 12,
+            fontWeight: 800,
+            color: INK,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+          }}
+        >
+          {layoutLabels[selectedLayout]}
+          <span style={{ color: INK_MUTED, marginLeft: 8, fontWeight: 600 }}>
+            {index + 1} / {layoutIds.length}
+          </span>
+        </div>
+        <ArrowButton direction="right" onClick={goNext} />
+      </div>
+
       <div
         role="region"
         aria-roledescription="carousel"
@@ -508,27 +538,29 @@ function TemplateCarousel({
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
         style={{
-          marginTop: 8,
+          marginTop: 10,
           position: "relative",
           width: "100%",
-          aspectRatio: "9 / 16",
-          maxHeight: "60vh",
+          // Match the sealed phone-frame aspect ratio (360 × 780 =
+          // 9 : 19.5) so the iframe content fits naturally without
+          // vertical scroll.
+          aspectRatio: "9 / 19.5",
           borderRadius: 18,
-          background: `linear-gradient(135deg, ${EMERALD}, ${FOREST})`,
+          background: "transparent",
           border: `1px solid ${BORDER_HI}`,
           overflow: "hidden",
           boxShadow: "0 20px 48px rgba(0,0,0,0.55)",
-          cursor: "grab",
           touchAction: "pan-y",
           boxSizing: "border-box",
         }}
       >
         {/* Real template render · iframes the sealed cover/preview
-            /[layoutId] route so the owner sees the actual shop
-            layout under the chosen theme, not a stand-in glyph. */}
+            /[layoutId]?embed=1 route · ?embed=1 hides the preview's
+            own action bar + chrome so only the shop cover itself
+            renders inside the carousel. */}
         <iframe
           key={selectedLayout}
-          src={`/nex-native/cover/preview/${selectedLayout}`}
+          src={`/nex-native/cover/preview/${selectedLayout}?embed=1`}
           title={`${layoutLabels[selectedLayout]} template preview`}
           loading="lazy"
           style={{
@@ -538,63 +570,8 @@ function TemplateCarousel({
             height: "100%",
             border: "none",
             background: "transparent",
-            pointerEvents: "none",
           }}
         />
-        {/* Custom background overlay · renders on top of the iframe
-            at low opacity so the owner sees how their uploaded image
-            lands on the chosen layout. */}
-        {imageUrl ? (
-          <div
-            aria-hidden
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: `url(${imageUrl}) center/cover`,
-              opacity: 0.35,
-              mixBlendMode: "overlay",
-              pointerEvents: "none",
-            }}
-          />
-        ) : null}
-        {/* Tint overlay · reflects selected hex. */}
-        <div
-          aria-hidden
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: `linear-gradient(180deg, transparent 45%, ${tintHex}66 100%)`,
-            pointerEvents: "none",
-          }}
-        />
-        {/* Label pill · bottom. */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: 18,
-            left: "50%",
-            transform: "translateX(-50%)",
-            padding: "6px 14px",
-            background: "rgba(0,0,0,0.65)",
-            backdropFilter: "blur(8px)",
-            color: CREAM,
-            fontSize: 12,
-            fontWeight: 800,
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            borderRadius: 999,
-            border: `1px solid ${BORDER_HI}`,
-            whiteSpace: "nowrap",
-            pointerEvents: "none",
-          }}
-        >
-          {layoutLabels[selectedLayout]}
-        </div>
-
-        {/* Left arrow. */}
-        <ArrowButton direction="left" onClick={goPrev} />
-        {/* Right arrow. */}
-        <ArrowButton direction="right" onClick={goNext} />
       </div>
 
       {/* Position dots · tap any to jump directly. */}
