@@ -92,6 +92,15 @@ const NAV_ITEMS: ReadonlyArray<{
     glyph: "🗨",
     match: (p) => p.startsWith("/nex-native/chat/peer/"),
   },
+  // Owner directive 2026-11-06 · product-category picker launched
+  // against a specific seeded business so admins can inspect the
+  // category-selection step of the Create Product flow.
+  {
+    href: "/nex-native/create/product/category?business=a81e53d5-7a3c-4a49-9b95-613de648a749",
+    label: "Create · Category",
+    glyph: "📦",
+    match: (p) => p.startsWith("/nex-native/create/product"),
+  },
 ];
 
 export function HqNav(): React.JSX.Element {
