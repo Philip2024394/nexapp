@@ -226,77 +226,52 @@ export function ShopThemesClient({
         </Link>
       </section>
 
-      {/* Owner directive 2026-11-06 · "apply theme could be
-          floating footer bar". Footer is now position: sticky at
-          the bottom of the scroll area · stays visible while the
-          owner swipes through templates · the status pill floats
-          next to the button inside the same bar · subtle blurred
-          backdrop keeps the rest of the UI readable through it. */}
-      <footer
+      {/* Owner directive 2026-11-06 (clarified) · "full width black
+          bar footer with text apply theme". The whole bar IS the
+          button · solid black · spans edge-to-edge · "Apply theme"
+          text centred · status message replaces the text inline
+          when applying / succeeded / errored. */}
+      <button
+        type="button"
+        onClick={onApplyAll}
+        disabled={pending || status.kind === "applying"}
         data-nex-shop-apply-theme-bar
         style={{
           position: "sticky",
           bottom: 0,
           marginLeft: -20,
           marginRight: -20,
-          padding: "10px 20px calc(env(safe-area-inset-bottom, 0px) + 10px)",
-          background: "rgba(5, 15, 28, 0.78)",
-          backdropFilter: "blur(14px) saturate(1.1)",
-          WebkitBackdropFilter: "blur(14px) saturate(1.1)",
+          padding: "16px 20px calc(env(safe-area-inset-bottom, 0px) + 16px)",
+          background: "#000000",
+          color:
+            status.kind === "error"
+              ? "#FF6B6B"
+              : status.kind === "ok"
+                ? GOLD
+                : CREAM,
+          border: "none",
           borderTop: `1px solid ${BORDER_HI}`,
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
+          fontSize: 14,
+          fontWeight: 900,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          cursor:
+            pending || status.kind === "applying" ? "wait" : "pointer",
           zIndex: 40,
+          width: "auto",
+          display: "block",
+          textAlign: "center",
+          fontFamily: "inherit",
         }}
       >
-        <button
-          type="button"
-          onClick={onApplyAll}
-          disabled={pending || status.kind === "applying"}
-          style={{
-            flex: "1 1 auto",
-            padding: "12px 18px",
-            background: `linear-gradient(135deg, ${EMERALD}, ${FOREST})`,
-            color: CREAM,
-            border: `1px solid ${GOLD}`,
-            borderRadius: 12,
-            fontSize: 13,
-            fontWeight: 800,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-            cursor: "pointer",
-            boxShadow: "0 10px 26px rgba(0,0,0,0.45)",
-          }}
-        >
-          {status.kind === "applying" ? "Applying…" : "Apply theme"}
-        </button>
-        {status.kind === "ok" ? (
-          <span
-            style={{
-              fontSize: 11,
-              color: GOLD,
-              flexShrink: 0,
-              maxWidth: 140,
-              textAlign: "right",
-            }}
-          >
-            {status.message}
-          </span>
-        ) : status.kind === "error" ? (
-          <span
-            style={{
-              fontSize: 11,
-              color: "#D82A2A",
-              flexShrink: 0,
-              maxWidth: 140,
-              textAlign: "right",
-            }}
-          >
-            {status.message}
-          </span>
-        ) : null}
-      </footer>
+        {status.kind === "applying"
+          ? "Applying…"
+          : status.kind === "ok"
+            ? status.message
+            : status.kind === "error"
+              ? status.message
+              : "Apply theme"}
+      </button>
     </div>
   );
 }
