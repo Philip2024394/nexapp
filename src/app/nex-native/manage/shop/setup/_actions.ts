@@ -27,7 +27,11 @@ import {
   updateBusinessProfile,
   updateBusinessCityAndHours,
   updateBusinessCategoryAndKeywords,
+  updateShippingScope,
+  updateReturnPolicy,
   uploadOnboardingLogo,
+  NEX_SHIPPING_SCOPES,
+  type NexShippingScope,
 } from "@/lib/nex-native/business-service";
 import { NEX_BUSINESS_CATEGORIES } from "@/lib/nex-native/site-templates";
 
@@ -204,9 +208,82 @@ export async function saveShopHoursAction(
     return { ok: false, error: (e as Error).message };
   }
   revalidatePath("/nex-native/manage/shop/setup");
-  // Steps 5-8 ship in subsequent batches · route to the themes
-  // picker so owners can land on a real preview with their partial
-  // data already populating the burger menus + identity rail.
+  return {
+    ok: true,
+    nextHref: "/nex-native/manage/shop/setup/story",
+  };
+}
+
+// ─── Step 5 · Story ───────────────────────────────────────────────────
+// Writes nex_business.description (2000 char cap). Rendered on the
+// About Us overlay body + used by the directory search cards.
+
+export async function saveShopStoryAction(
+  formData: FormData,
+): Promise<ActionResult> {
+  const description = String(formData.get("description") ?? "").trim();
+  if (description.length > 2000) {
+    return { ok: false, error: "description-too-long" };
+  }
+  const biz = await requireBusiness();
+  if (!biz.ok) return biz;
+  try {
+    await updateBusinessProfile(biz.businessId, {
+      description: description.length > 0 ? description : null,
+    });
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+  revalidatePath("/nex-native/manage/shop/setup");
+  return {
+    ok: true,
+    nextHref: "/nex-native/manage/shop/setup/policies",
+  };
+}
+
+// ─── Step 6 · Policies ───────────────────────────────────────────────
+// Writes shipping_scope (enum from NEX_SHIPPING_SCOPES, migration 108)
+// and return_policy (JSONB, migration 076). updateReturnPolicy
+// enforces legal minimums server-side (window ≥ 7 days · refund ≥ 3
+// days · defective + wrong_item always accepted) so we don't need
+// client-side legal validation here.
+
+export async function saveShopPoliciesAction(
+  formData: FormData,
+): Promise<ActionResult> {
+  const shippingRaw = String(formData.get("shippingScope") ?? "").trim();
+  const acceptsReturns =
+    String(formData.get("acceptsReturns") ?? "") === "true";
+  const windowDaysRaw = Number(formData.get("windowDays") ?? "14");
+  const notes = String(formData.get("returnNotes") ?? "").trim();
+
+  const shippingScope: NexShippingScope | null = (
+    NEX_SHIPPING_SCOPES as readonly string[]
+  ).includes(shippingRaw)
+    ? (shippingRaw as NexShippingScope)
+    : null;
+
+  if (!shippingScope) {
+    return { ok: false, error: "shipping-scope-required" };
+  }
+
+  const biz = await requireBusiness();
+  if (!biz.ok) return biz;
+  try {
+    await updateShippingScope(biz.businessId, shippingScope);
+    await updateReturnPolicy(biz.businessId, {
+      accepts_returns: acceptsReturns,
+      window_days: Number.isFinite(windowDaysRaw)
+        ? Math.floor(windowDaysRaw)
+        : 14,
+      notes: notes.length > 0 ? notes : null,
+    });
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+  revalidatePath("/nex-native/manage/shop/setup");
+  // Steps 7-8 ship next · for now jump to the themes picker where
+  // the burger-menu overlays already read every field we've set.
   return {
     ok: true,
     nextHref: "/nex-native/manage/shop/themes",

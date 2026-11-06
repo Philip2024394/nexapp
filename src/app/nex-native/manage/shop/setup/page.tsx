@@ -43,5 +43,11 @@ export default async function ShopSetupPage(): Promise<never> {
   if (!existing.hours_display) {
     redirect("/nex-native/manage/shop/setup/hours");
   }
+  if (!existing.description) {
+    redirect("/nex-native/manage/shop/setup/story");
+  }
+  if (!existing.shipping_scope) {
+    redirect("/nex-native/manage/shop/setup/policies");
+  }
   redirect("/nex-native/manage/shop/themes");
 }
