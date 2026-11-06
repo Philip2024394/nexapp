@@ -311,6 +311,52 @@ export default async function ShopSettingsPage({
 
         {banner && <Banner code={banner.code} message={banner.message} />}
 
+        {/* Shop Themes CTA · owner-authorised 2026-11-06 · owner
+            lands here to open their shop; this tile takes them to
+            the sealed template picker where template + tint + bg
+            all apply through shop-cover-service. */}
+        <Link
+          href="/nex-native/manage/shop/themes"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            padding: "14px 16px",
+            borderRadius: 14,
+            background:
+              "linear-gradient(135deg, rgba(18,61,43,0.95), rgba(27,81,56,0.95))",
+            border: "1px solid rgba(198,161,91,0.55)",
+            textDecoration: "none",
+            color: "#FAF8F4",
+            marginBottom: 16,
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 10, fontWeight: 800, color: "#C6A15B", letterSpacing: "0.12em", textTransform: "uppercase" }}>
+              Design
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 700, marginTop: 2 }}>
+              Shop theme & background
+            </div>
+            <div style={{ fontSize: 12, color: "rgba(250,248,244,0.78)", marginTop: 2 }}>
+              Pick from 11 templates · pick a brand color · upload your own background or use a bundled preset.
+            </div>
+          </div>
+          <div
+            style={{
+              fontSize: 12,
+              color: "#C6A15B",
+              fontWeight: 700,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Open →
+          </div>
+        </Link>
+
         {isVenueCategory(business.business_category) && (
           <Link
             href="/nex-native/manage/venue"

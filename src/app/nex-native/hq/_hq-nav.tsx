@@ -129,6 +129,14 @@ const NAV_ITEMS: ReadonlyArray<{
     glyph: "🖼",
     match: (p) => p.startsWith("/nex-native/free-chat"),
   },
+  // Owner directive 2026-11-06 · Shop Themes · 11-template carousel
+  // + accent colour picker + background preset / upload.
+  {
+    href: "/nex-native/manage/shop/themes",
+    label: "Shop Themes",
+    glyph: "🏪",
+    match: (p) => p.startsWith("/nex-native/manage/shop/themes"),
+  },
 ];
 
 export function HqNav(): React.JSX.Element {
