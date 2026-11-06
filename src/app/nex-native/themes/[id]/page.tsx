@@ -72,7 +72,7 @@ import { cookies } from "next/headers";
 import {
   WELCOME_INTENT_COOKIE,
   isWelcomeIntent,
-} from "../../welcome/_welcome-intent";
+} from "@/lib/nex-native/welcome-intent";
 
 /** Resolve the server-side `next` URL that the Use-this-theme button
  *  will send users to after `updateChatThemeAction` writes the

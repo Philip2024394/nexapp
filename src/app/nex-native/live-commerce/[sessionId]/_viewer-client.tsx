@@ -50,8 +50,15 @@ import {
   type ShareEvidence,
 } from "@/components/nex-native/live-commerce/LiveViewerFooter";
 import { MessagePanel } from "@/components/nex-native/live-commerce/MessagePanel";
-import { getLiveInviteTargetAction } from "@/app/nex-native/live-commerce/_invite-target-action";
+// _invite-target-action deleted 2026-11-06 together with
+// /live-commerce parent · stubbed to null-return so the build still
+// compiles · Live is scope-reduction-REMOVED anyway.
 import type { InviteTarget } from "@/lib/nex-native/live-broadcast/invite-target";
+async function getLiveInviteTargetAction(
+  _accountId: string,
+): Promise<{ ok: false; reason: "retired" }> {
+  return { ok: false, reason: "retired" };
+}
 import { FollowButton } from "@/components/nex-native/follow/FollowButton";
 import { IrishShamrockBurst } from "@/components/nex-native/country-flare/IrishShamrockBurst";
 import {

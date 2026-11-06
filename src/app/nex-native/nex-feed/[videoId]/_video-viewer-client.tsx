@@ -33,8 +33,15 @@ import {
   type BroadcasterLibraryVideo,
 } from "@/components/nex-native/live-commerce/BroadcasterLibrarySheet";
 import { MessagePanel } from "@/components/nex-native/live-commerce/MessagePanel";
-import { getLiveInviteTargetAction } from "@/app/nex-native/live-commerce/_invite-target-action";
+// _invite-target-action deleted 2026-11-06 together with
+// /live-commerce parent · stubbed to null-return so the build still
+// compiles · nex-feed is scope-reduction-REMOVED anyway.
 import type { InviteTarget } from "@/lib/nex-native/live-broadcast/invite-target";
+async function getLiveInviteTargetAction(
+  _accountId: string,
+): Promise<{ ok: false; reason: "retired" }> {
+  return { ok: false, reason: "retired" };
+}
 import { VideoShareSheet } from "@/components/nex-native/live-commerce/VideoShareSheet";
 import { CategoryGridSheet } from "@/components/nex-native/live-commerce/CategoryGridSheet";
 // Owner directive 2026-11-05 iter 23 · retire LiveSideDrawer · the

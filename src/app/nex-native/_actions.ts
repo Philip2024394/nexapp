@@ -453,7 +453,7 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
   // destination page retains its single source of truth.
   {
     const { WELCOME_INTENT_COOKIE, isWelcomeIntent } = await import(
-      "./welcome/_welcome-intent"
+      "@/lib/nex-native/welcome-intent"
     );
     const jar = await cookies();
     const rawIntent = jar.get(WELCOME_INTENT_COOKIE)?.value ?? null;
@@ -4362,7 +4362,7 @@ export async function createBusinessAction(formData: FormData): Promise<never> {
     let verticalPresetCategory: string | null = null;
     try {
       const { readVerticalIntent } = await import(
-        "@/app/nex-native/welcome/_welcome-intent"
+        "@/lib/nex-native/welcome-intent"
       );
       const { getPreset } = await import(
         "@/lib/nex-native/vertical-presets"
@@ -4528,7 +4528,7 @@ export async function createBusinessAction(formData: FormData): Promise<never> {
     // soft-fails on its own.
     try {
       const { clearVerticalIntent } = await import(
-        "@/app/nex-native/welcome/_welcome-intent"
+        "@/lib/nex-native/welcome-intent"
       );
       await clearVerticalIntent();
     } catch (clearErr) {
@@ -4540,7 +4540,7 @@ export async function createBusinessAction(formData: FormData): Promise<never> {
     }
     try {
       const { clearVerticalDeclined } = await import(
-        "@/app/nex-native/welcome/_welcome-intent"
+        "@/lib/nex-native/welcome-intent"
       );
       await clearVerticalDeclined();
     } catch (clearErr) {
