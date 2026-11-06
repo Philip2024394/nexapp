@@ -94,94 +94,53 @@ export function BurgerMenu({
 
   return (
     <>
-      {/* Top-right icon cluster · cart + burger · owner directive
-          2026-11-06: "burger icon and cart icon header right side
-          yes". Flex row inside a positioned wrapper so both sit
-          on the same baseline. */}
-      <div
+      {/* Top-right burger · owner directive 2026-11-06 · cart was
+          removed from this cluster because the sealed cover layouts
+          already mount an app-connected cart icon wired to the shop
+          products system (NEX_CART_STORAGE_KEY / AddToCartButton
+          per src/app/nex-native/_header-cart-icon.tsx). Keeping
+          only the burger here avoids rendering two carts on screen. */}
+      <button
+        type="button"
+        aria-label="Shop menu"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        data-nex-shop-burger
         style={{
           position: "absolute",
           top: 10,
           right: 10,
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 8,
+          width: 36,
+          height: 36,
+          borderRadius: "50%",
+          background: "rgba(0, 0, 0, 0.55)",
+          border: `1px solid ${GOLD}`,
+          color: CREAM,
+          display: "grid",
+          placeItems: "center",
+          cursor: "pointer",
           zIndex: 50,
+          backdropFilter: "blur(10px)",
+          WebkitTapHighlightColor: "transparent",
+          padding: 0,
+          boxShadow: "0 4px 14px rgba(0,0,0,0.45)",
         }}
       >
-        <a
-          href="/nex-native/cart"
-          aria-label="Shopping cart"
-          data-nex-shop-cart
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: "50%",
-            background: "rgba(0, 0, 0, 0.55)",
-            border: `1px solid ${GOLD}`,
-            color: CREAM,
-            display: "grid",
-            placeItems: "center",
-            textDecoration: "none",
-            backdropFilter: "blur(10px)",
-            WebkitTapHighlightColor: "transparent",
-            boxShadow: "0 4px 14px rgba(0,0,0,0.45)",
-          }}
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          aria-hidden
         >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <circle cx="9" cy="20" r="1.4" />
-            <circle cx="17" cy="20" r="1.4" />
-            <path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 2-1.5L21 8H6" />
-          </svg>
-        </a>
-        <button
-          type="button"
-          aria-label="Shop menu"
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-          data-nex-shop-burger
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: "50%",
-            background: "rgba(0, 0, 0, 0.55)",
-            border: `1px solid ${GOLD}`,
-            color: CREAM,
-            display: "grid",
-            placeItems: "center",
-            cursor: "pointer",
-            backdropFilter: "blur(10px)",
-            WebkitTapHighlightColor: "transparent",
-            padding: 0,
-            boxShadow: "0 4px 14px rgba(0,0,0,0.45)",
-          }}
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            aria-hidden
-          >
-            <line x1="4" y1="7" x2="20" y2="7" />
-            <line x1="4" y1="12" x2="20" y2="12" />
-            <line x1="4" y1="17" x2="20" y2="17" />
-          </svg>
-        </button>
-      </div>
+          <line x1="4" y1="7" x2="20" y2="7" />
+          <line x1="4" y1="12" x2="20" y2="12" />
+          <line x1="4" y1="17" x2="20" y2="17" />
+        </svg>
+      </button>
 
       {open ? (
         <>

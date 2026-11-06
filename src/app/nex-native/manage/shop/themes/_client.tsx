@@ -19,6 +19,7 @@
 //     three sealed server actions and shows an inline confirmation.
 
 import * as React from "react";
+import Link from "next/link";
 import { createPortal } from "react-dom";
 import {
   applyShopLayoutAction,
@@ -232,7 +233,41 @@ export function ShopThemesClient({
 
       {/* ── Background image · presets + upload ─────────────── */}
       <section aria-label="Background image">
-        <SectionLabel>Background image</SectionLabel>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+          }}
+        >
+          <SectionLabel>Background image</SectionLabel>
+          {/* Owner directive 2026-11-06 · small button that opens
+              the dedicated Shop Backgrounds library (mirrors
+              /chat-themes-library's pattern for shop backgrounds). */}
+          <Link
+            href="/nex-native/manage/shop/backgrounds"
+            data-nex-choose-background
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "4px 10px",
+              fontSize: 10.5,
+              fontWeight: 800,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: GOLD,
+              background: "transparent",
+              textDecoration: "none",
+              border: `1px solid ${GOLD}`,
+              borderRadius: 999,
+            }}
+          >
+            <span aria-hidden style={{ fontSize: 12 }}>🖼️</span>
+            Choose Background
+          </Link>
+        </div>
 
         {/* Preset library · bundled with every shop subscription. */}
         <div
