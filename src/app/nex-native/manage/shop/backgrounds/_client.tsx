@@ -124,6 +124,51 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
     category: "online",
     tintSwatch: "#FF6B2B",
   },
+  // Irish-green pack · same 6 compositions in emerald/neon-green
+  // tones · paired with a vivid Irish green tint so the theme
+  // colour tracks the image (owner-authorised 2026-11-06).
+  {
+    id: "global-cart-glow-green",
+    url: "/nex-brand/shop-themes/global-cart-glow-green.png",
+    label: "Global Cart · Irish Green",
+    category: "retail",
+    tintSwatch: "#16D66B",
+  },
+  {
+    id: "nex-bag-electric-green",
+    url: "/nex-brand/shop-themes/nex-bag-electric-green.png",
+    label: "NEX Bag · Irish Green",
+    category: "retail",
+    tintSwatch: "#16D66B",
+  },
+  {
+    id: "best-deals-green",
+    url: "/nex-brand/shop-themes/best-deals-green.png",
+    label: "Best Deals · Irish Green",
+    category: "sale",
+    tintSwatch: "#16D66B",
+  },
+  {
+    id: "electronics-showcase-green",
+    url: "/nex-brand/shop-themes/electronics-showcase-green.png",
+    label: "Electronics · Irish Green",
+    category: "electronics",
+    tintSwatch: "#16D66B",
+  },
+  {
+    id: "delivery-globe-green",
+    url: "/nex-brand/shop-themes/delivery-globe-green.png",
+    label: "Delivery · Irish Green",
+    category: "delivery",
+    tintSwatch: "#16D66B",
+  },
+  {
+    id: "mobile-shop-now-green",
+    url: "/nex-brand/shop-themes/mobile-shop-now-green.png",
+    label: "Mobile · Irish Green",
+    category: "online",
+    tintSwatch: "#16D66B",
+  },
 ];
 
 interface Props {

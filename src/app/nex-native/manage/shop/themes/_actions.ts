@@ -138,6 +138,33 @@ const PRESET_BACKGROUND_META: ReadonlyMap<
     "/nex-brand/shop-themes/mobile-shop-now.png",
     { tintHex: "#FF6B2B" },
   ],
+  // Owner directive 2026-11-06 · Irish-green variants (th7–th12) ·
+  // same 6 compositions in emerald/neon-green tones · paired tint
+  // is a vivid Irish green so the theme colour follows the image.
+  [
+    "/nex-brand/shop-themes/global-cart-glow-green.png",
+    { tintHex: "#16D66B" },
+  ],
+  [
+    "/nex-brand/shop-themes/nex-bag-electric-green.png",
+    { tintHex: "#16D66B" },
+  ],
+  [
+    "/nex-brand/shop-themes/best-deals-green.png",
+    { tintHex: "#16D66B" },
+  ],
+  [
+    "/nex-brand/shop-themes/electronics-showcase-green.png",
+    { tintHex: "#16D66B" },
+  ],
+  [
+    "/nex-brand/shop-themes/delivery-globe-green.png",
+    { tintHex: "#16D66B" },
+  ],
+  [
+    "/nex-brand/shop-themes/mobile-shop-now-green.png",
+    { tintHex: "#16D66B" },
+  ],
 ]);
 
 export async function applyShopPresetBackgroundAction(
