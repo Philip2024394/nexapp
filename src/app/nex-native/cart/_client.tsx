@@ -237,6 +237,9 @@ export function CartPageClient(): React.JSX.Element {
                 acceptedPaymentLabels={
                   getShopPaymentMeta(group.shopId).methods
                 }
+                shopQrCodeImageUrl={
+                  getShopPaymentMeta(group.shopId).qrUrl
+                }
                 onClose={() => setCheckoutShopId(null)}
               />
             );

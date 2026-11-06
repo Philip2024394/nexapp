@@ -424,7 +424,10 @@ export default async function ContactsPage({ searchParams }: PageProps) {
   const businessRows: ContactRowDisplay[] = [
     // Shops the viewer has messaged · customer-side conversations ·
     // row reads as the shop's display name + slug handle · tap opens
-    // the stored conversation.
+    // the stored conversation. Owner directive 2026-11-06 · prefix
+    // the professionLine with "Shop · " so the two Business-tab
+    // halves (shops I follow vs customers of my shop) read distinctly
+    // at a glance without a structural card refactor.
     ...Array.from(businessContactsByBusinessId.entries()).map(
       ([businessId, b]) => ({
         id: businessId,
@@ -433,7 +436,7 @@ export default async function ContactsPage({ searchParams }: PageProps) {
         handle: b.slug,
         avatarUrl: null,
         chatHref: `/nex-native/conversations/${b.conversationId}`,
-        professionLine: null,
+        professionLine: "Shop · you follow",
         profileHref: b.slug ? `/nex-native/${b.slug}` : null,
       }),
     ),

@@ -53,6 +53,10 @@ export interface CheckoutSheetProps {
   readonly acceptedPaymentMethods: ReadonlyArray<string>;
   /** Pre-rendered labels for the methods (e.g. "💵 Cash on Delivery"). */
   readonly acceptedPaymentLabels: ReadonlyArray<string>;
+  /** Optional · when buyer picks QRIS the sheet renders a QR preview
+   *  card so they know what to look for at delivery (owner directive
+   *  2026-11-06 "payment from owner connected"). */
+  readonly shopQrCodeImageUrl?: string | null;
   readonly onClose: () => void;
 }
 
@@ -102,6 +106,7 @@ export function CheckoutSheet({
   subtotalLabel,
   acceptedPaymentMethods,
   acceptedPaymentLabels,
+  shopQrCodeImageUrl,
   onClose,
 }: CheckoutSheetProps): React.JSX.Element {
   const [buyerName, setBuyerName] = React.useState("");
@@ -529,6 +534,64 @@ export function CheckoutSheet({
                   Your pick lands with the order in chat so the shop
                   knows which instructions to send back.
                 </span>
+
+                {/* Owner directive 2026-11-06 · QR preview when QRIS
+                    picked AND shop supplied a QR URL. Buyer sees what
+                    they'll scan at delivery · completes the commerce
+                    loop without NEX touching the money. */}
+                {paymentMethod === "qris_delivery" &&
+                shopQrCodeImageUrl ? (
+                  <div
+                    style={{
+                      marginTop: 10,
+                      padding: "12px 12px",
+                      border: `1px solid ${BORDER_HI}`,
+                      borderRadius: 12,
+                      background: "rgba(0, 0, 0, 0.35)",
+                      display: "flex",
+                      gap: 12,
+                      alignItems: "center",
+                    }}
+                  >
+                    <img
+                      src={shopQrCodeImageUrl}
+                      alt={`${shopDisplayName} QRIS code`}
+                      style={{
+                        width: 72,
+                        height: 72,
+                        objectFit: "contain",
+                        borderRadius: 8,
+                        background: CREAM,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 900,
+                          letterSpacing: "0.1em",
+                          textTransform: "uppercase",
+                          color: GOLD,
+                          marginBottom: 2,
+                        }}
+                      >
+                        Scan this at delivery
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: INK_DIM,
+                          lineHeight: 1.45,
+                        }}
+                      >
+                        This is {shopDisplayName}&rsquo;s QR code. Driver
+                        presents it when the package arrives · scan with
+                        your banking app to pay.
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>
