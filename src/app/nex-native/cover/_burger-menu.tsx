@@ -1093,9 +1093,12 @@ function AboutUsSheet({
         12 Francis Street · Dublin 8 · Ireland
       </div>
 
-      {/* FOOTER · social-media row sits bottom · 5 solid accent-
-          coloured circles so the row matches the applied theme
-          (not hardcoded gold). Mock hrefs tagged for wire-up. */}
+      {/* FOOTER · owner directive 2026-11-06 refined · "the scial
+          media icons same style and design as shop page". Matches
+          the sealed CoverIdentityRail buttons exactly: 34×34,
+          borderRadius 10 (square-rounded, not circle), solid world
+          gold fill, warm ink glyph, no border, no shadow, same
+          stroke-1.4 SVG vocabulary. */}
       <footer
         style={{
           paddingTop: 12,
@@ -1103,16 +1106,10 @@ function AboutUsSheet({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          gap: 8,
+          gap: 10,
         }}
       >
-        {[
-          { label: "Instagram", glyph: "📷" },
-          { label: "TikTok", glyph: "🎵" },
-          { label: "Facebook", glyph: "f" },
-          { label: "WhatsApp", glyph: "💬" },
-          { label: "Website", glyph: "🌐" },
-        ].map((s) => (
+        {SHOP_PAGE_SOCIAL_ICONS.map((s) => (
           <a
             key={s.label}
             href="#"
@@ -1122,15 +1119,14 @@ function AboutUsSheet({
             style={{
               width: 34,
               height: 34,
-              borderRadius: "50%",
-              background: accent,
-              color: readableInk(accent),
+              borderRadius: 10,
+              background: "var(--nex-world-secondary, #C6A15B)",
+              color: "#1A120A",
               display: "grid",
               placeItems: "center",
-              fontSize: 14,
-              fontWeight: 900,
               textDecoration: "none",
-              boxShadow: "0 3px 8px rgba(0,0,0,0.35)",
+              boxShadow: "none",
+              border: "none",
             }}
           >
             {s.glyph}
@@ -1183,6 +1179,61 @@ function darken(hex: string, amount: number): string {
   const b = Math.max(0, Math.floor(parseInt(h.slice(4, 6), 16) * (1 - amount)));
   return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
 }
+
+// ─── Shop-page-matched social icon catalogue ──────────────────────────
+// Owner directive 2026-11-06 · the About Us socials row must render
+// the same SVG vocabulary as CoverIdentityRail on the shop cover
+// (stroke 1.4 · 16×16 viewBox 24 · currentColor fill) so the two
+// surfaces feel like one design system. Matches primitives.tsx
+// IconInstagram / IconTikTok / IconFacebook / IconWhatsApp / IconGlobe.
+const SHOP_PAGE_SOCIAL_ICONS: ReadonlyArray<{
+  label: string;
+  glyph: React.ReactNode;
+}> = [
+  {
+    label: "Instagram",
+    glyph: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <rect x="4" y="4" width="16" height="16" rx="4.5" stroke="currentColor" strokeWidth="1.6" />
+        <circle cx="12" cy="12" r="3.6" stroke="currentColor" strokeWidth="1.6" />
+        <circle cx="17" cy="7" r="0.9" fill="currentColor" />
+      </svg>
+    ),
+  },
+  {
+    label: "TikTok",
+    glyph: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path d="M14.5 4v9.2a3 3 0 11-3-3V13a1.7 1.7 0 100 3.4A1.7 1.7 0 0013.2 14V4h1.3c.2 1.7 1.4 3 3 3.2" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    label: "Facebook",
+    glyph: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path d="M14 8h2V5h-2a3 3 0 00-3 3v2H9v3h2v7h3v-7h2l1-3h-3V8a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.4" fill="none" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    label: "WhatsApp",
+    glyph: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path d="M4 20l1.5-4A7 7 0 1112 19a7 7 0 01-3.5-.9L4 20zM9 9.5c0-.4.4-.5.7-.5s.5 0 .7.5.7 1.5.7 1.7-.2.4-.5.5c-.3.2-.4.3-.2.6.4.7 1.3 1.6 2 2 .3.1.5 0 .6-.2.2-.3.4-.5.7-.5.5 0 1.4.7 1.7.9.2.2.2.4.1.5-.3.6-1 1.1-1.7 1.1-1.4 0-3.4-1.5-4.4-3.4-.4-.6-.4-1.3-.4-1.7z" stroke="currentColor" strokeWidth="1.3" fill="none" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    label: "Website",
+    glyph: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M4 12h16M12 4c2.5 2.5 3.5 5 3.5 8s-1 5.5-3.5 8M12 4C9.5 6.5 8.5 9 8.5 12s1 5.5 3.5 8" stroke="currentColor" strokeWidth="1.3" fill="none" />
+      </svg>
+    ),
+  },
+];
 
 function readableInk(hex: string): string {
   // Simple WCAG-style luminance check · pick warm-ink #1A120A when
