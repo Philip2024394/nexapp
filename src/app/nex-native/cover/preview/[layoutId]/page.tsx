@@ -193,6 +193,16 @@ export default async function CoverLayoutPreview({
           [aria-hidden][style*="radial-gradient(60%40%at 50% 8%"] {
             display: none !important;
           }
+          /* Owner directive 2026-11-06 · "remove the shade from
+             screen of shops we want fresh clear view" · the sealed
+             wallpaper layer paints at opacity:0.35 for text
+             legibility on real shop pages (see theme-skin.tsx
+             line 294). Inside the embed preview we want the image
+             at full opacity so the owner sees it clean. */
+          [aria-hidden][style*="position:fixed"][style*="opacity:0.35"],
+          [aria-hidden][style*="position: fixed"][style*="opacity: 0.35"] {
+            opacity: 1 !important;
+          }
         `}</style>
       )}
       {!isEmbedded && (
