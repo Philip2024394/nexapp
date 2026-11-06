@@ -70,7 +70,7 @@ import {
   toggleMusicTrackLikeAction,
   recordMusicTrackShareAction,
   recordMusicTrackPlayAction,
-} from "@/app/nex-native/create/upload-music/_actions";
+} from "@/lib/nex-native/music/upload-actions";
 import type { MusicFeedEntry } from "@/lib/nex-native/music/active-music-feed-reader";
 import type { NexMusicTrackRow } from "@/lib/nex-native/music/types";
 

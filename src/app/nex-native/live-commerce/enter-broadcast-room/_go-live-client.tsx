@@ -62,7 +62,7 @@ import {
   type LiveAudioMixerHandle,
 } from "@/lib/nex-native/music/live-audio-mixer";
 import type { NexMusicTrackRow } from "@/lib/nex-native/music/types";
-import { getMusicPlayUrlAction } from "@/app/nex-native/create/upload-music/_actions";
+import { getMusicPlayUrlAction } from "@/lib/nex-native/music/upload-actions";
 
 /* Phase 2 · G2 · real-catalog entry shape produced by page.tsx.
  * Server component reads nex_product via productService and projects
