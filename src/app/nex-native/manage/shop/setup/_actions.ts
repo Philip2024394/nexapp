@@ -26,8 +26,10 @@ import {
   provisionDefaultBusiness,
   updateBusinessProfile,
   updateBusinessCityAndHours,
+  updateBusinessCategoryAndKeywords,
   uploadOnboardingLogo,
 } from "@/lib/nex-native/business-service";
+import { NEX_BUSINESS_CATEGORIES } from "@/lib/nex-native/site-templates";
 
 type ActionResult =
   | { ok: true; nextHref: string }
@@ -140,8 +142,71 @@ export async function saveShopLocationAction(
     return { ok: false, error: (e as Error).message };
   }
   revalidatePath("/nex-native/manage/shop/setup");
-  // Step 3 (Category) ships in the next batch · route to themes picker
-  // for now so the owner can keep exploring with partial setup.
+  return {
+    ok: true,
+    nextHref: "/nex-native/manage/shop/setup/category",
+  };
+}
+
+// ─── Step 3 · Category ────────────────────────────────────────────────
+// Picks ONE business_category from the sealed NEX_BUSINESS_CATEGORIES
+// list (migration 065). The template picker reads this to narrow the
+// 11 cover layouts to the family that fits (menu-first vs product-
+// first vs portfolio) · and the terminology engine uses it to pick
+// catalog-heading labels. Validation happens inside
+// updateBusinessCategoryAndKeywords (throws on unknown category).
+
+export async function saveShopCategoryAction(
+  formData: FormData,
+): Promise<ActionResult> {
+  const category = String(formData.get("category") ?? "").trim();
+  if (!category) {
+    return { ok: false, error: "category-required" };
+  }
+  if (!(NEX_BUSINESS_CATEGORIES as readonly string[]).includes(category)) {
+    return { ok: false, error: "unknown-category" };
+  }
+  const biz = await requireBusiness();
+  if (!biz.ok) return biz;
+  try {
+    await updateBusinessCategoryAndKeywords(biz.businessId, { category });
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+  revalidatePath("/nex-native/manage/shop/setup");
+  return {
+    ok: true,
+    nextHref: "/nex-native/manage/shop/setup/hours",
+  };
+}
+
+// ─── Step 4 · Opening hours ───────────────────────────────────────────
+// MVP · free-text hours line (nex_business.hours_display) which the
+// About Us + Visit Us surfaces already render. Structured weekly
+// grid (nex_business.hours JSONB) is a follow-up enhancement — the
+// text field works everywhere the structured one would AND stays
+// editable without a day-by-day editor.
+
+export async function saveShopHoursAction(
+  formData: FormData,
+): Promise<ActionResult> {
+  const hoursDisplay = String(formData.get("hoursDisplay") ?? "").trim();
+  if (hoursDisplay.length > 200) {
+    return { ok: false, error: "hours-too-long" };
+  }
+  const biz = await requireBusiness();
+  if (!biz.ok) return biz;
+  try {
+    await updateBusinessCityAndHours(biz.businessId, {
+      hoursDisplay: hoursDisplay.length > 0 ? hoursDisplay : null,
+    });
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+  revalidatePath("/nex-native/manage/shop/setup");
+  // Steps 5-8 ship in subsequent batches · route to the themes
+  // picker so owners can land on a real preview with their partial
+  // data already populating the burger menus + identity rail.
   return {
     ok: true,
     nextHref: "/nex-native/manage/shop/themes",

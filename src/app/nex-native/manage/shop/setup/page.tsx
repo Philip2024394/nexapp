@@ -37,5 +37,11 @@ export default async function ShopSetupPage(): Promise<never> {
   if (!existing.city) {
     redirect("/nex-native/manage/shop/setup/location");
   }
+  if (!existing.business_category) {
+    redirect("/nex-native/manage/shop/setup/category");
+  }
+  if (!existing.hours_display) {
+    redirect("/nex-native/manage/shop/setup/hours");
+  }
   redirect("/nex-native/manage/shop/themes");
 }
