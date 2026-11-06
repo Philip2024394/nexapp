@@ -61,6 +61,11 @@ const CATEGORIES: ReadonlyArray<ShopBackgroundCategory> = [
   { id: "retail", label: "Retail & general shop", emoji: "🛍" },
   { id: "online", label: "Online & mobile shop", emoji: "📱" },
   { id: "electronics", label: "Electronics & tech", emoji: "🎧" },
+  { id: "fashion", label: "Fashion & beauty", emoji: "👗" },
+  { id: "tools", label: "Tools & trade", emoji: "🛠" },
+  { id: "sports", label: "Sports & outdoors", emoji: "🏀" },
+  { id: "food", label: "Food & grocery", emoji: "🥬" },
+  { id: "travel", label: "Travel & experiences", emoji: "✈️" },
   { id: "sale", label: "Sale & promotions", emoji: "🏷" },
   { id: "delivery", label: "Delivery & logistics", emoji: "🚚" },
   { id: "showcase", label: "Showcase & lifestyle", emoji: "✨" },
@@ -75,6 +80,10 @@ interface ShopBackgroundPreset {
   /** Seed baseline for the "N downloads" stat · drifts up on
    *  randomised 3h / 16h / 24h intervals in useFakeDownloads. */
   readonly downloadsBase: number;
+  /** Owner directive 2026-11-06 · "NEW" badge shown on SOME tiles ·
+   *  only a subset of recent uploads carry this flag (same look as
+   *  the chat themes library · looks natural, not every new one). */
+  readonly isNew?: boolean;
 }
 
 // Fake-but-natural download counter · same contract as the one on
@@ -227,8 +236,72 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
     category: "online",
     tintSwatch: "#16D66B",
     downloadsBase: 267,
+    isNew: true,
+  },
+  // Owner directive 2026-11-06 · six new category-specific
+  // backgrounds introducing fashion, tools, sports, food, and
+  // travel surfaces plus a second electronics option. NEW badge
+  // assigned to a random subset (fashion · sports · travel) so
+  // the catalogue reads as a steady drip of fresh uploads, not a
+  // batch drop (owner-authorised "not all will show new").
+  {
+    id: "electronics-blue-glow",
+    url: "/nex-brand/shop-themes/electronics-blue-glow.png",
+    label: "Electronics · Blue Glow",
+    category: "electronics",
+    tintSwatch: "#1E6DD9",
+    downloadsBase: 72,
+  },
+  {
+    id: "fashion-beauty-purple",
+    url: "/nex-brand/shop-themes/fashion-beauty-purple.png",
+    label: "Fashion · Purple Night",
+    category: "fashion",
+    tintSwatch: "#C62AD9",
+    downloadsBase: 58,
+    isNew: true,
+  },
+  {
+    id: "tools-trade-green",
+    url: "/nex-brand/shop-themes/tools-trade-green.png",
+    label: "Tools & Trade · Jade",
+    category: "tools",
+    tintSwatch: "#16D66B",
+    downloadsBase: 41,
+  },
+  {
+    id: "sports-outdoors-orange",
+    url: "/nex-brand/shop-themes/sports-outdoors-orange.png",
+    label: "Sports & Outdoors · Ember",
+    category: "sports",
+    tintSwatch: "#FF7A2B",
+    downloadsBase: 66,
+    isNew: true,
+  },
+  {
+    id: "food-grocery-red",
+    url: "/nex-brand/shop-themes/food-grocery-red.png",
+    label: "Food & Grocery · Ruby",
+    category: "food",
+    tintSwatch: "#D82A2A",
+    downloadsBase: 33,
+  },
+  {
+    id: "travel-luggage-gold",
+    url: "/nex-brand/shop-themes/travel-luggage-gold.png",
+    label: "Travel · Amber Trail",
+    category: "travel",
+    tintSwatch: "#F2B23A",
+    downloadsBase: 51,
+    isNew: true,
   },
 ];
+
+// Owner directive 2026-11-06 · "libary must have previous and
+// back after 20 themes displaying". Hard cap of 20 tiles per
+// page · when the filtered catalogue exceeds 20 the prev/next
+// arrows + "N / Total" count appear below the grid.
+const PRESETS_PER_PAGE = 20;
 
 interface Props {
   readonly businessId: string | null;
@@ -243,6 +316,7 @@ export function ShopBackgroundsClient({
   const [pending, startTransition] = React.useTransition();
   const [selectedCategory, setSelectedCategory] =
     React.useState<ShopBackgroundCategory["id"]>("all");
+  const [page, setPage] = React.useState(0);
   const [status, setStatus] = React.useState<
     | { kind: "idle" }
     | { kind: "applying"; id: string }
@@ -250,12 +324,31 @@ export function ShopBackgroundsClient({
     | { kind: "error"; message: string }
   >({ kind: "idle" });
 
-  const visible = React.useMemo(
+  // Reset to page 0 when the category filter changes so the owner
+  // always lands on the first page of the newly filtered set.
+  React.useEffect(() => {
+    setPage(0);
+  }, [selectedCategory]);
+
+  const filtered = React.useMemo(
     () =>
       selectedCategory === "all"
         ? PRESETS
         : PRESETS.filter((p) => p.category === selectedCategory),
     [selectedCategory],
+  );
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filtered.length / PRESETS_PER_PAGE),
+  );
+  const pageSafe = Math.min(page, totalPages - 1);
+  const visible = React.useMemo(
+    () =>
+      filtered.slice(
+        pageSafe * PRESETS_PER_PAGE,
+        pageSafe * PRESETS_PER_PAGE + PRESETS_PER_PAGE,
+      ),
+    [filtered, pageSafe],
   );
 
   function onPick(preset: ShopBackgroundPreset) {
@@ -494,6 +587,56 @@ export function ShopBackgroundsClient({
         ) : null}
       </section>
 
+      {/* Owner directive 2026-11-06 · "libary must have previous
+          and back after 20 themes displaying". Pagination row
+          mirrors the sealed CoverCatalog shape: prev arrow · N/Total
+          count pill · next arrow · auto-hides when the filtered
+          catalogue fits in one page. */}
+      {totalPages > 1 ? (
+        <nav
+          aria-label="Background pages"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            padding: "4px 0 2px",
+          }}
+        >
+          <PageArrow
+            direction="prev"
+            disabled={pageSafe === 0}
+            onClick={() => setPage(pageSafe - 1)}
+          />
+          <span
+            aria-live="polite"
+            style={{
+              display: "inline-flex",
+              alignItems: "baseline",
+              gap: 6,
+              padding: "6px 14px",
+              fontSize: 12,
+              fontWeight: 800,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: INK,
+              background: "rgba(0,0,0,0.35)",
+              borderRadius: 999,
+              border: `1px solid ${BORDER_HI}`,
+            }}
+          >
+            <span style={{ color: GOLD, fontSize: 14 }}>{pageSafe + 1}</span>
+            <span style={{ opacity: 0.6 }}>/</span>
+            <span>{totalPages}</span>
+          </span>
+          <PageArrow
+            direction="next"
+            disabled={pageSafe === totalPages - 1}
+            onClick={() => setPage(pageSafe + 1)}
+          />
+        </nav>
+      ) : null}
+
       <footer
         style={{
           marginTop: "auto",
@@ -605,6 +748,13 @@ function PresetTile({
           <span style={{ ...pillStyle, background: EMERALD }}>
             Applying…
           </span>
+        ) : preset.isNew ? (
+          /* Owner directive 2026-11-06 · NEW badge on a subset of
+             recent uploads so the catalogue looks like a drip of
+             fresh themes, not a batch drop. */
+          <span style={{ ...pillStyle, background: GOLD, color: "#1A120A" }}>
+            New
+          </span>
         ) : null}
       </div>
       <div
@@ -654,6 +804,44 @@ function PresetTile({
           </span>
         </div>
       </div>
+    </button>
+  );
+}
+
+// ─── Pagination arrow ────────────────────────────────────────────────
+function PageArrow({
+  direction,
+  disabled,
+  onClick,
+}: {
+  direction: "prev" | "next";
+  disabled: boolean;
+  onClick: () => void;
+}): React.JSX.Element {
+  return (
+    <button
+      type="button"
+      aria-label={direction === "prev" ? "Previous page" : "Next page"}
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        appearance: "none",
+        width: 34,
+        height: 34,
+        borderRadius: "50%",
+        border: `1px solid ${BORDER_HI}`,
+        background: "rgba(0,0,0,0.35)",
+        color: GOLD,
+        fontSize: 18,
+        fontWeight: 900,
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.35 : 1,
+        display: "grid",
+        placeItems: "center",
+        transition: "opacity 140ms ease",
+      }}
+    >
+      {direction === "prev" ? "‹" : "›"}
     </button>
   );
 }

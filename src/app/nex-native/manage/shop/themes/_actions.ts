@@ -165,6 +165,35 @@ const PRESET_BACKGROUND_META: ReadonlyMap<
     "/nex-brand/shop-themes/mobile-shop-now-green.png",
     { tintHex: "#16D66B" },
   ],
+  // Owner directive 2026-11-06 · six new category-specific
+  // backgrounds (th13–th18) introducing fashion, tools, sports,
+  // food, and travel surfaces plus a second electronics option.
+  // Each tint matches the dominant glow of the source image so
+  // the applied theme colour tracks the dominant hue.
+  [
+    "/nex-brand/shop-themes/electronics-blue-glow.png",
+    { tintHex: "#1E6DD9" },
+  ],
+  [
+    "/nex-brand/shop-themes/fashion-beauty-purple.png",
+    { tintHex: "#C62AD9" },
+  ],
+  [
+    "/nex-brand/shop-themes/tools-trade-green.png",
+    { tintHex: "#16D66B" },
+  ],
+  [
+    "/nex-brand/shop-themes/sports-outdoors-orange.png",
+    { tintHex: "#FF7A2B" },
+  ],
+  [
+    "/nex-brand/shop-themes/food-grocery-red.png",
+    { tintHex: "#D82A2A" },
+  ],
+  [
+    "/nex-brand/shop-themes/travel-luggage-gold.png",
+    { tintHex: "#F2B23A" },
+  ],
 ]);
 
 export async function applyShopPresetBackgroundAction(
