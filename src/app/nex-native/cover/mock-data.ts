@@ -158,7 +158,7 @@ export const MARIA_MOCK: MockCoverContent = {
   // storm their own business, then rewrite these fields on
   // /manage/shop + /manage/info.
   businessName: "Brand Name",
-  tagline: "Your slogan · what you do in a few words",
+  tagline: "",
   handle: "@your-handle",
   // Owner directive 2026-10-22 · the identity rail's compact location
   // line was a duplicate of the top Visit-Us panel's address block ·
