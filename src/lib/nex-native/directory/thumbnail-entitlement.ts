@@ -45,6 +45,7 @@ import "server-only";
 import { withClient } from "@/lib/nex/db";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import { effectiveTier } from "@/lib/nex-native/account-service";
+import { hasShopAccess } from "@/lib/nex-native/business-trial/entitlements";
 import { NexTierLimitError } from "@/lib/nex-native/tier-gate";
 import type {
   NexAccountRow,
@@ -190,6 +191,11 @@ interface OwnerFacts {
   readonly bisnis_expires_at: string | null;
   readonly themes_trial_used_at: string | null;
   readonly subscription_plan: NexSubscriptionPlan | null;
+  /** Phase 4 Batch 4.5 · 2026-11-06 · B2 shim · required by the
+   *  shared `hasShopAccess` helper so an active Business Trial also
+   *  unlocks the 12-slot bisnis allowance (matches the sealed Shop
+   *  Entitlement Contract). Nullable column · null means "no trial". */
+  readonly business_trial_status: NexAccountRow["business_trial_status"];
 }
 
 /**
@@ -226,10 +232,14 @@ async function loadOwnerFactsForCanonical(
       : null;
   if (!ownerAccountId || ownerAccountId.length === 0) return null;
 
-  // Step 2 · load the owner account from Supabase.
+  // Step 2 · load the owner account from Supabase. Includes
+  // `business_trial_status` so the Shop-entitlement helper (K14 β)
+  // can see trial state · see § H-B2 shim notes above.
   const { data, error } = await nexSupabaseAdmin
     .from("nex_account")
-    .select("tier, bisnis_expires_at, themes_trial_used_at, subscription_plan")
+    .select(
+      "tier, bisnis_expires_at, themes_trial_used_at, subscription_plan, business_trial_status",
+    )
     .eq("id", ownerAccountId)
     .maybeSingle();
   if (error || !data) return null;
@@ -271,11 +281,27 @@ export async function getThumbnailAllowance(
       ? effectiveTier(owner as Pick<NexAccountRow, "tier" | "bisnis_expires_at" | "themes_trial_used_at">)
       : null;
 
-    return resolveThumbnailAllowanceFromRaw({
+    const base = resolveThumbnailAllowanceFromRaw({
       lifecycleState,
       effectiveTier: effTier,
       subscriptionPlan: owner?.subscription_plan ?? null,
     });
+
+    // Phase 4 Batch 4.5 · 2026-11-06 · § H-B2 · single-source Shop
+    // entitlement authority. When the pure resolver lands on
+    // CLAIMED_GRATIS_ALLOWANCE but the owner has Shop access via the
+    // sealed `hasShopAccess` predicate (K14 Option β 2026-10-22 ·
+    // includes Business Trial), surface the same 12-slot bisnis
+    // allowance the paid-tier owner receives. Owner-sealed Shop
+    // Entitlement Contract treats trial and paid identically for the
+    // shop-visibility axis. Precedence above step 4 (Pro / custom)
+    // and the Unclaimed/null gates are UNCHANGED · only the bisnis
+    // step is re-sourced to the shared helper.
+    if (owner && base === CLAIMED_GRATIS_ALLOWANCE && hasShopAccess(owner)) {
+      return BISNIS_ALLOWANCE;
+    }
+
+    return base;
   } catch {
     // Fail-closed · never block the render path with a thrown error.
     return UNCLAIMED_ALLOWANCE;

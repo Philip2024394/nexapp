@@ -49,6 +49,12 @@ import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-imperson
 import * as accountService from "@/lib/nex-native/account-service";
 import * as accountProfileService from "@/lib/nex-native/account-profile-service";
 import { effectiveTier } from "@/lib/nex-native/account-service";
+// Phase 4 Batch 4.5 · 2026-11-06 · § H-B2 · single-source Shop
+// entitlement authority · gates the AvatarShopBadge so the clickable
+// shop button only appears when the owner's Shop membership is
+// actually active (paid or trial), not just when a nex_business row
+// exists.
+import { getShopEntitlement } from "@/lib/nex-native/shop-entitlement";
 import * as businessService from "@/lib/nex-native/business-service";
 import * as friendService from "@/lib/nex-native/friend-service";
 import * as reportService from "@/lib/nex-native/report-service";
@@ -422,6 +428,17 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
     ? resolveSafeTradeStatus(primaryBusiness)
     : null;
 
+  // Phase 4 Batch 4.5 · 2026-11-06 · § H-B2 · fail-closed Shop
+  // entitlement lookup for the profile owner. Fed into IdentityHero
+  // so the AvatarShopBadge renders ONLY when the owner has live Shop
+  // access (paid tier or active Business Trial). Previously the badge
+  // rendered whenever a business row existed, even for lapsed / free
+  // accounts whose shop page should not be publicly linked.
+  const shopEntitlement = primaryBusiness
+    ? await getShopEntitlement(profileAccount.id)
+    : { hasShop: false, periodEnd: null };
+  const shopActive = shopEntitlement.hasShop;
+
   // Owner-authorised 2026-10-20 · Phase 1 Verified-Directory wedge ·
   // resolve the Trust Score for the primary business. Fail-soft to
   // unknown-tier when no business exists or when there's no canonical
@@ -714,6 +731,7 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
             connectState={connectState}
             safeTradeSnapshot={safeTradeSnapshot}
             primaryBusiness={primaryBusiness}
+            shopActive={shopActive}
             chatHref={chatHref}
             trustScore={trustScore}
             ownerClaimedAtIso={businessOwnerClaimedAtIso}
@@ -748,6 +766,7 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
           connectState={connectState}
           safeTradeSnapshot={safeTradeSnapshot}
           primaryBusiness={primaryBusiness}
+          shopActive={shopActive}
           chatHref={chatHref}
           trustScore={trustScore}
           ownerClaimedAtIso={businessOwnerClaimedAtIso}
@@ -798,6 +817,13 @@ function ProfileBody(props: {
   connectState: ConnectState;
   safeTradeSnapshot: SafeTradeSnapshot | null;
   primaryBusiness: { id: string; slug: string | null; display_name: string } | null;
+  /** Phase 4 Batch 4.5 · 2026-11-06 · § H-B2 · resolved once at the
+   *  page level via `getShopEntitlement(profileAccountId)`. True iff
+   *  the profile owner has a live Shop entitlement (paid tier or
+   *  active Business Trial · see K14 Option β). Drives whether the
+   *  AvatarShopBadge renders on the profile hero. Fail-closed on any
+   *  read error at the resolver. */
+  shopActive: boolean;
   chatHref: string;
   /** Dev-only · when true, Connect/Message buttons render even in
    *  owner mode so the owner can preview what viewers see. Driven
@@ -901,7 +927,11 @@ function ProfileBody(props: {
         earnedCreatorBadges={props.earnedCreatorBadges}
         supportSettings={props.creatorSupportSettings}
         shopHref={
-          props.primaryBusiness?.slug
+          // Phase 4 Batch 4.5 · 2026-11-06 · § H-B2 · single-source
+          // Shop entitlement authority. Badge renders ONLY when the
+          // owner's Shop membership is active, not merely when a
+          // nex_business row exists.
+          props.shopActive && props.primaryBusiness?.slug
             ? `/nex-native/${props.primaryBusiness.slug}`
             : null
         }
