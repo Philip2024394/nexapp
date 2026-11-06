@@ -27,6 +27,16 @@ import { requireHqAdmin } from "@/lib/nex-native/hq-authorization";
 
 const execp = promisify(exec);
 const QUEUE_FILE = path.join(process.cwd(), "data", "hq-deletion-queue.jsonl");
+const RENAME_QUEUE_FILE = path.join(
+  process.cwd(),
+  "data",
+  "hq-rename-queue.jsonl",
+);
+const LOCK_OVERRIDES_FILE = path.join(
+  process.cwd(),
+  "data",
+  "hq-lock-overrides.json",
+);
 
 export interface DeletionQueueEntry {
   readonly url: string;
@@ -138,6 +148,122 @@ async function listRouteOwnFiles(url: string): Promise<string[]> {
   await walk(root, url);
   return results.sort();
 }
+
+// ─── Rename queue ─────────────────────────────────────────────────
+
+export interface RenameQueueEntry {
+  readonly oldUrl: string;
+  readonly newUrl: string;
+  readonly queuedAt: string;
+  readonly actorAccountId: string;
+}
+
+export async function readRenameQueue(): Promise<RenameQueueEntry[]> {
+  try {
+    const text = await readFile(RENAME_QUEUE_FILE, "utf8");
+    return text
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => {
+        try {
+          return JSON.parse(line) as RenameQueueEntry;
+        } catch {
+          return null;
+        }
+      })
+      .filter((x): x is RenameQueueEntry => x !== null);
+  } catch {
+    return [];
+  }
+}
+
+/** Minimal validation · the final sanity check (collision, is-dynamic,
+ *  is-file-system-legal) runs when Claude processes the queue. */
+function validateNewUrl(newUrl: string): string | null {
+  if (!newUrl.startsWith("/nex-native/")) {
+    return "New URL must start with /nex-native/";
+  }
+  if (newUrl.length < "/nex-native/".length + 1) {
+    return "New URL is empty after /nex-native/";
+  }
+  if (/\s/.test(newUrl)) return "URL contains whitespace";
+  if (newUrl.endsWith("/")) return "Remove the trailing slash";
+  return null;
+}
+
+export async function renameRouteAction(
+  oldUrl: string,
+  newUrl: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  let actor: string;
+  try {
+    actor = await assertHqAdmin();
+  } catch {
+    return { ok: false, error: "not-authorised" };
+  }
+  const trimmed = newUrl.trim();
+  if (trimmed === oldUrl) {
+    return { ok: false, error: "new URL is identical to old URL" };
+  }
+  const err = validateNewUrl(trimmed);
+  if (err) return { ok: false, error: err };
+  await mkdir(path.dirname(RENAME_QUEUE_FILE), { recursive: true });
+  const entry: RenameQueueEntry = {
+    oldUrl,
+    newUrl: trimmed,
+    queuedAt: new Date().toISOString(),
+    actorAccountId: actor,
+  };
+  await appendFile(
+    RENAME_QUEUE_FILE,
+    JSON.stringify(entry) + "\n",
+    "utf8",
+  );
+  return { ok: true };
+}
+
+// ─── Lock overrides ───────────────────────────────────────────────
+
+export type LockOverrides = Record<string, boolean>;
+
+export async function readLockOverrides(): Promise<LockOverrides> {
+  try {
+    const text = await readFile(LOCK_OVERRIDES_FILE, "utf8");
+    const parsed = JSON.parse(text) as unknown;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const result: LockOverrides = {};
+      for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+        if (typeof v === "boolean") result[k] = v;
+      }
+      return result;
+    }
+  } catch {
+    /* fall through */
+  }
+  return {};
+}
+
+export async function toggleLockAction(
+  url: string,
+  locked: boolean,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    await assertHqAdmin();
+  } catch {
+    return { ok: false, error: "not-authorised" };
+  }
+  const current = await readLockOverrides();
+  const next: LockOverrides = { ...current, [url]: locked };
+  await mkdir(path.dirname(LOCK_OVERRIDES_FILE), { recursive: true });
+  await writeFile(
+    LOCK_OVERRIDES_FILE,
+    JSON.stringify(next, null, 2) + "\n",
+    "utf8",
+  );
+  return { ok: true };
+}
+
+// ─── Route inspection ─────────────────────────────────────────────
 
 /** Combined inspection for a route · own-folder files + external
  *  callers · used by the HQ Pages dashboard right-side panel to

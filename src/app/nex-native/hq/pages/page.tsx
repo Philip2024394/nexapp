@@ -18,7 +18,11 @@ import {
   enumerateNexNativeRoutes,
   IRELAND_KEPT_ROUTES,
 } from "@/lib/nex-native/hq/route-enumerator";
-import { readDeletionQueue } from "./_actions";
+import {
+  readDeletionQueue,
+  readLockOverrides,
+  readRenameQueue,
+} from "./_actions";
 import { HqPagesClient } from "./_client";
 
 export const dynamic = "force-dynamic";
@@ -31,9 +35,21 @@ export default async function HqPagesPage(): Promise<React.JSX.Element> {
     .catch(() => false);
   if (!authorised) notFound();
 
-  const routes = await enumerateNexNativeRoutes();
-  const queue = await readDeletionQueue();
+  const [routes, queue, renameQueue, lockOverrides] = await Promise.all([
+    enumerateNexNativeRoutes(),
+    readDeletionQueue(),
+    readRenameQueue(),
+    readLockOverrides(),
+  ]);
   const kept = Array.from(IRELAND_KEPT_ROUTES);
 
-  return <HqPagesClient routes={routes} initialQueue={queue} kept={kept} />;
+  return (
+    <HqPagesClient
+      routes={routes}
+      initialQueue={queue}
+      initialRenameQueue={renameQueue}
+      initialLockOverrides={lockOverrides}
+      kept={kept}
+    />
+  );
 }

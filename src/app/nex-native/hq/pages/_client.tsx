@@ -21,9 +21,13 @@ import {
   countCallersAction,
   inspectRouteAction,
   queueDeletionAction,
+  renameRouteAction,
+  toggleLockAction,
   unqueueDeletionAction,
   type CallerInfo,
   type DeletionQueueEntry,
+  type LockOverrides,
+  type RenameQueueEntry,
   type RouteInspection,
 } from "./_actions";
 
@@ -45,6 +49,8 @@ const RED_HOT = "#D82A2A";
 interface Props {
   readonly routes: readonly string[];
   readonly initialQueue: readonly DeletionQueueEntry[];
+  readonly initialRenameQueue: readonly RenameQueueEntry[];
+  readonly initialLockOverrides: LockOverrides;
   readonly kept: readonly string[];
 }
 
@@ -57,13 +63,45 @@ type Modal2 =
   | { readonly kind: "ready"; readonly url: string; readonly callers: CallerInfo }
   | null;
 
-export function HqPagesClient({ routes, initialQueue, kept }: Props): React.JSX.Element {
+export function HqPagesClient({
+  routes,
+  initialQueue,
+  initialRenameQueue,
+  initialLockOverrides,
+  kept,
+}: Props): React.JSX.Element {
   const keptSet = React.useMemo(() => new Set(kept), [kept]);
   const [queue, setQueue] = React.useState<readonly DeletionQueueEntry[]>(initialQueue);
+  const [renameQueue, setRenameQueue] = React.useState<
+    readonly RenameQueueEntry[]
+  >(initialRenameQueue);
+  const [lockOverrides, setLockOverrides] = React.useState<LockOverrides>(
+    initialLockOverrides,
+  );
   const queuedSet = React.useMemo(
     () => new Set(queue.map((e) => e.url)),
     [queue],
   );
+  const pendingRenameMap = React.useMemo(() => {
+    const m = new Map<string, string>();
+    for (const r of renameQueue) m.set(r.oldUrl, r.newUrl);
+    return m;
+  }, [renameQueue]);
+
+  // Effective lock = user override if set, else hardcoded kept list.
+  const isLocked = React.useCallback(
+    (url: string): boolean => {
+      if (url in lockOverrides) return lockOverrides[url];
+      return keptSet.has(url);
+    },
+    [lockOverrides, keptSet],
+  );
+
+  // Inline rename state · which row currently has its input open, and
+  // its draft value.
+  const [renamingUrl, setRenamingUrl] = React.useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = React.useState("");
+  const [renameError, setRenameError] = React.useState<string | null>(null);
 
   const [filter, setFilter] = React.useState("");
   const [selectedUrl, setSelectedUrl] = React.useState<string | null>(null);
@@ -101,11 +139,11 @@ export function HqPagesClient({ routes, initialQueue, kept }: Props): React.JSX.
 
   const statusOf = React.useCallback(
     (url: string): RowStatus => {
-      if (keptSet.has(url)) return "kept";
+      if (isLocked(url)) return "kept";
       if (queuedSet.has(url)) return "queued";
       return "candidate";
     },
-    [keptSet, queuedSet],
+    [isLocked, queuedSet],
   );
 
   // Dynamic routes (contain `[` or `]`) can't be previewed usefully
@@ -152,6 +190,65 @@ export function HqPagesClient({ routes, initialQueue, kept }: Props): React.JSX.
     startTransition(async () => {
       const res = await unqueueDeletionAction(url);
       if (res.ok) setQueue((q) => q.filter((e) => e.url !== url));
+    });
+  }
+
+  function toggleLock(url: string) {
+    const next = !isLocked(url);
+    // Optimistic update.
+    setLockOverrides((prev) => ({ ...prev, [url]: next }));
+    startTransition(async () => {
+      const res = await toggleLockAction(url, next);
+      if (!res.ok) {
+        // Roll back on failure.
+        setLockOverrides((prev) => {
+          const copy = { ...prev };
+          if (url in initialLockOverrides) {
+            copy[url] = initialLockOverrides[url];
+          } else {
+            delete copy[url];
+          }
+          return copy;
+        });
+      }
+    });
+  }
+
+  function openRename(url: string) {
+    setRenamingUrl(url);
+    // Prefill with current URL so the founder only edits the diff.
+    setRenameDraft(url);
+    setRenameError(null);
+  }
+
+  function cancelRename() {
+    setRenamingUrl(null);
+    setRenameDraft("");
+    setRenameError(null);
+  }
+
+  function submitRename(oldUrl: string) {
+    const draft = renameDraft.trim();
+    if (!draft || draft === oldUrl) {
+      cancelRename();
+      return;
+    }
+    startTransition(async () => {
+      const res = await renameRouteAction(oldUrl, draft);
+      if (res.ok) {
+        setRenameQueue((q) => [
+          ...q,
+          {
+            oldUrl,
+            newUrl: draft,
+            queuedAt: new Date().toISOString(),
+            actorAccountId: "self",
+          },
+        ]);
+        cancelRename();
+      } else {
+        setRenameError(res.error);
+      }
     });
   }
 
@@ -229,9 +326,9 @@ export function HqPagesClient({ routes, initialQueue, kept }: Props): React.JSX.
               flexWrap: "wrap",
             }}
           >
-            <LegendDot color={GREEN} label="kept (HQ sidebar)" />
+            <LegendDot color={GREEN} label="🔒 locked · Ireland app" />
             <LegendDot color={ORANGE} label="queued for deletion" />
-            <LegendDot color={INK_MUTED} label="candidate" />
+            <LegendDot color={INK_MUTED} label="🔓 unlocked · candidate" />
           </div>
         </header>
 
@@ -244,7 +341,10 @@ export function HqPagesClient({ routes, initialQueue, kept }: Props): React.JSX.
         >
           {filteredRoutes.map((url) => {
             const status = statusOf(url);
+            const locked = isLocked(url);
+            const pendingRenameTo = pendingRenameMap.get(url);
             const isSelected = url === selectedUrl;
+            const isRenaming = renamingUrl === url;
             return (
               <div
                 key={url}
@@ -258,6 +358,7 @@ export function HqPagesClient({ routes, initialQueue, kept }: Props): React.JSX.
                   borderBottom: `1px solid ${BORDER}`,
                   background: isSelected ? SURFACE_HI : "transparent",
                   cursor: "default",
+                  flexWrap: isRenaming ? "wrap" : "nowrap",
                 }}
                 onMouseEnter={(e) => {
                   if (!isSelected)
@@ -269,7 +370,7 @@ export function HqPagesClient({ routes, initialQueue, kept }: Props): React.JSX.
               >
                 <StatusDot status={status} />
                 <code
-                  title={url}
+                  title={pendingRenameTo ? `${url} → ${pendingRenameTo}` : url}
                   style={{
                     flex: 1,
                     minWidth: 0,
@@ -283,6 +384,11 @@ export function HqPagesClient({ routes, initialQueue, kept }: Props): React.JSX.
                   }}
                 >
                   {url}
+                  {pendingRenameTo ? (
+                    <span style={{ color: ACCENT, marginLeft: 8 }}>
+                      → {pendingRenameTo}
+                    </span>
+                  ) : null}
                 </code>
                 <button
                   type="button"
@@ -292,6 +398,30 @@ export function HqPagesClient({ routes, initialQueue, kept }: Props): React.JSX.
                   style={buttonStyle(ACCENT)}
                 >
                   👁
+                </button>
+                <button
+                  type="button"
+                  onClick={() => (isRenaming ? cancelRename() : openRename(url))}
+                  disabled={pending}
+                  aria-label={`Rename ${url}`}
+                  title={isRenaming ? "Cancel rename" : "Rename · queued for Claude to apply"}
+                  style={buttonStyle(ACCENT)}
+                >
+                  ✎
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleLock(url)}
+                  disabled={pending}
+                  aria-label={locked ? `Unlock ${url}` : `Lock ${url}`}
+                  title={
+                    locked
+                      ? "Locked · part of Ireland · click to unlock"
+                      : "Unlocked · click to lock as Ireland-kept"
+                  }
+                  style={buttonStyle(locked ? GREEN : INK_MUTED)}
+                >
+                  {locked ? "🔒" : "🔓"}
                 </button>
                 {status === "queued" ? (
                   <button
@@ -318,16 +448,96 @@ export function HqPagesClient({ routes, initialQueue, kept }: Props): React.JSX.
                 ) : (
                   <span
                     aria-label="Kept · not deletable"
-                    title="Kept · HQ sidebar route"
+                    title="Kept · unlock first if you want to delete"
                     style={{
                       ...buttonStyle(GREEN),
-                      opacity: 0.55,
+                      opacity: 0.4,
                       cursor: "not-allowed",
                     }}
+                    aria-hidden
                   >
-                    🔒
+                    —
                   </span>
                 )}
+                {isRenaming ? (
+                  <div
+                    style={{
+                      flexBasis: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      paddingTop: 8,
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={renameDraft}
+                      onChange={(e) => {
+                        setRenameDraft(e.target.value);
+                        if (renameError) setRenameError(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") submitRename(url);
+                        if (e.key === "Escape") cancelRename();
+                      }}
+                      autoFocus
+                      aria-label={`New URL for ${url}`}
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        padding: "6px 10px",
+                        background: "#030B18",
+                        border: `1px solid ${
+                          renameError ? RED_HOT : BORDER_HI
+                        }`,
+                        borderRadius: 6,
+                        color: INK,
+                        fontSize: 12,
+                        fontFamily:
+                          "ui-monospace, SFMono-Regular, Menlo, monospace",
+                        outline: "none",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => submitRename(url)}
+                      disabled={pending}
+                      style={{
+                        ...buttonStyle(ACCENT),
+                        width: "auto",
+                        padding: "0 10px",
+                        fontSize: 11,
+                        fontWeight: 700,
+                      }}
+                    >
+                      Queue rename
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelRename}
+                      style={{
+                        ...buttonStyle(INK_MUTED),
+                        width: "auto",
+                        padding: "0 10px",
+                        fontSize: 11,
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    {renameError ? (
+                      <div
+                        style={{
+                          flexBasis: "100%",
+                          color: RED_HOT,
+                          fontSize: 11,
+                          padding: "4px 2px",
+                        }}
+                      >
+                        {renameError}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             );
           })}
