@@ -46,11 +46,11 @@ import {
   TitleOverlay,
   segmentsToAttrs,
   type CharAttr,
-} from "@/app/nex-native/settings/intro-video/_intro-video-client";
+} from "@/lib/nex-native/intro-video/intro-video-client";
 import type {
   IntroOverlayFontId,
   IntroOverlaySizeId,
-} from "@/app/nex-native/settings/intro-video/_overlay-fonts";
+} from "@/lib/nex-native/intro-video/overlay-fonts";
 import type {
   IntroTitlePosition,
   IntroSettings,

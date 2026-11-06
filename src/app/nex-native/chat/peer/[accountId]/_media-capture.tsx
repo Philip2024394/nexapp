@@ -29,7 +29,7 @@ import { createPortal } from "react-dom";
 import { useRouter, usePathname } from "next/navigation";
 import { uploadEncryptedAttachment } from "@/lib/nex-native/crypto/encrypted-attachment-upload";
 import { stashEncryptedAttachmentKey } from "@/lib/nex-native/crypto/encrypted-attachment-stash";
-import { getMyDataUsagePrefsAction } from "@/app/nex-native/settings/data-usage/_actions";
+import { getMyDataUsagePrefsAction } from "@/lib/nex-native/data-usage/actions";
 
 // Stage A · owner-authorised 2026-11-03 · "document" joins the
 // Capture family so the composer's Add-media modal can route PDFs /

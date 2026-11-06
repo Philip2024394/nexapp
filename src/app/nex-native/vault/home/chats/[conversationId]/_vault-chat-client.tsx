@@ -52,7 +52,7 @@ import { sendEncryptedPeerMessage } from "@/lib/nex-native/crypto/encrypted-send
 import { preserveAttachmentsForVaultedConversation } from "@/lib/nex-native/vault/client/attachment-preservation";
 import { lockVaultEverywhere } from "@/lib/nex-native/vault/client/lock-sweep";
 import { uploadEncryptedAttachment } from "@/lib/nex-native/crypto/encrypted-attachment-upload";
-import { getMyDataUsagePrefsAction } from "@/app/nex-native/settings/data-usage/_actions";
+import { getMyDataUsagePrefsAction } from "@/lib/nex-native/data-usage/actions";
 // R1 · universal live-messaging consumer · same transport as normal
 // chat. Opened ONLY while Vault is unlocked AND the Vault chat has
 // finished its initial boot. On arrival, fetch new rows via the sealed
