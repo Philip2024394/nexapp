@@ -1,14 +1,17 @@
 // src/app/nex-native/hq/page.tsx
 //
 // Owner-authorised 2026-10-31 (round 4 · HQ repair task).
-// NEX HQ landing · central desktop entry presenting the two country
-// applications as selectable cards.
+// Owner-amended 2026-11-06 · HQ Home scoped to Ireland only.
+// NEX HQ landing · central desktop entry presenting the Ireland
+// country application as a selectable card. Indonesia remains a
+// deployment identity and a world in /hq/worlds; it is just not
+// surfaced from HQ Home.
 //
 // - Server-rendered; `requireHqAdmin` gate (non-revealing 404 on deny).
 // - Uses the sealed sidebar via hq/layout.tsx.
-// - Two country cards use the actual supplied images at
-//   /nex-brand/hq/ireland-studio.png and /nex-brand/hq/indonesia-studio.png
-// - Clicking a card navigates to the existing World Engine workspace
+// - The Ireland card uses the supplied image at
+//   /nex-brand/hq/ireland-studio.png
+// - Clicking the card navigates to the existing World Engine workspace
 //   with a focus query param so that world's section is highlighted.
 // - No duplicate World Engine; no runtime global switch; identity
 //   remains deployment-derived (D-6 doctrine).
@@ -28,10 +31,10 @@ const ACCENT = "#00AFFF";
 const BORDER = "rgba(0,175,255,0.14)";
 
 type CountryCard = {
-  readonly id: "ireland" | "indonesia";
+  readonly id: "ireland";
   readonly displayName: string;
   readonly subtitle: string;
-  readonly worldId: "ireland" | "indonesia";
+  readonly worldId: "ireland";
   readonly image: string;
   readonly imageAlt: string;
   readonly ringColor: string;
@@ -40,9 +43,9 @@ type CountryCard = {
 };
 
 // Owner-authorised 2026-10-31 (country-preview round) · country-card
-// primary action now opens the LIVE deployed app (so founder lands
-// inside Ireland/Indonesia experience auto-signed-in). The World
-// Engine palette workspace remains as a secondary link.
+// primary action opens the LIVE deployed app (so founder lands inside
+// the Ireland experience auto-signed-in). The World Engine palette
+// workspace remains as a secondary link.
 const CARDS: readonly CountryCard[] = [
   {
     id: "ireland",
@@ -54,17 +57,6 @@ const CARDS: readonly CountryCard[] = [
     ringColor: "#1F8B4C",
     appUrl: "https://nex-ireland-preview.vercel.app/nex-native/contacts",
     paletteHref: "/nex-native/hq/worlds?focus=ireland",
-  },
-  {
-    id: "indonesia",
-    displayName: "NEX INDONESIA",
-    subtitle: "Garuda red · gold · indigo",
-    worldId: "indonesia",
-    image: "/nex-brand/hq/indonesia-studio.png",
-    imageAlt: "NEX Indonesia · red + gold studio background",
-    ringColor: "#C8102E",
-    appUrl: "https://nex-indonesia-preview.vercel.app/nex-native/contacts",
-    paletteHref: "/nex-native/hq/worlds?focus=indonesia",
   },
 ];
 
@@ -109,7 +101,7 @@ export default async function HqHomePage(): Promise<React.JSX.Element> {
             margin: 0,
           }}
         >
-          Select a country application to open its World Engine
+          Open the Ireland country application to enter its World Engine
           workspace. From there you can preview the country identity on
           your own device without changing what other users see.
           Deployment-derived identity remains the source of truth in
@@ -121,7 +113,7 @@ export default async function HqHomePage(): Promise<React.JSX.Element> {
         aria-label="Country applications"
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))",
+          gridTemplateColumns: "minmax(420px, 560px)",
           gap: 22,
         }}
       >
@@ -161,7 +153,7 @@ export default async function HqHomePage(): Promise<React.JSX.Element> {
           </div>
           No migration apply · no deploy · no push from this surface.
           Changes to activate the identity globally are blocked by the
-          two-apps doctrine.
+          deployment-identity doctrine.
         </div>
         <div>
           <div style={{ color: INK, fontSize: 13, fontWeight: 800, marginBottom: 4 }}>
