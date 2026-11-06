@@ -692,31 +692,19 @@ function VisitUsSheet({
         </div>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 8,
-          marginTop: 18,
-        }}
+      {/* Owner directive 2026-11-06 · "visit us 1 button in footer
+          · Get Directions". Open-in-Maps CTA dropped · the main
+          map tile above already deep-links to the same Google Maps
+          page when tapped, so a dedicated button was redundant.
+          Directions stays as the single primary action. */}
+      <a
+        href={directionsHref}
+        target="_blank"
+        rel="noreferrer"
+        style={{ ...ctaPrimaryStyle, marginTop: 18 }}
       >
-        <a
-          href={mapsHref}
-          target="_blank"
-          rel="noreferrer"
-          style={ctaSecondaryStyle}
-        >
-          Open in Maps ↗
-        </a>
-        <a
-          href={directionsHref}
-          target="_blank"
-          rel="noreferrer"
-          style={ctaPrimaryStyle}
-        >
-          Get Directions ↗
-        </a>
-      </div>
+        Get Directions ↗
+      </a>
     </Sheet>
   );
 }
