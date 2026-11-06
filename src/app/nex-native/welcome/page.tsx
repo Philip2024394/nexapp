@@ -853,6 +853,15 @@ function LandscapeCard({ card }: { card: ChatNexCard }): React.ReactElement {
   // When the owner approves pricing (§B-1 price-validation), the chip
   // flips automatically to "7 days free, then $9.99/month" (or
   // equivalent approved value + currency).
+  //
+  // Phase 4 Batch 4.7 audit · 2026-11-06 · the sealed B-4 3-unlock
+  // rule stays enforced here: no "7 days free" compound copy is
+  // emitted until §B-1 (price validation) flips APPROVED. The
+  // owner-authored `chip` field below ("Chat · Shop · Vault" on the
+  // Business Chat card) remains verbatim per §K locks. The Bisnis
+  // regional price surfaces on /packages (see
+  // src/app/nex-native/packages/page.tsx) which uses the same
+  // DISPLAY-ONLY `getShopPrice(iso2)` helper.
   const pricingPackage = pricingPackageId
     ? getPricingPackage(pricingPackageId)
     : null;

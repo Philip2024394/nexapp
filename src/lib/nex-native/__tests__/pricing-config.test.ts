@@ -20,6 +20,7 @@ import {
   type PricingTrial,
   formatPricingAmount,
   getPricingPackage,
+  getShopPrice,
   isPackageReadyForLive,
   isTrialReadyForLive,
   welcomeCardChipFor,
@@ -458,6 +459,100 @@ describe("G · doctrine · the catalogue cannot silently misrepresent", () => {
           `${pkg.id}: trial.convertsAutomatically must stay false until billing is wired`,
         ).toBe(false);
       }
+    }
+  });
+});
+
+// ─── H · getShopPrice · §K-1 core-four regional display ─────────
+//
+// Shop Entitlement Contract §K-1 LOCK (2026-11-06) · the Business
+// (Bisnis) card on /nex-native/packages renders a detected-country
+// price for the four launch markets. These tests pin the exact
+// strings so a careless currency-swap or rounding edit fails loudly.
+//
+// DISPLAY ONLY · the strings here are not permitted to drive a Stripe
+// integration until §B-1 (price validation with real customers) is
+// recorded APPROVED.
+
+describe("H · getShopPrice · §K-1 launch markets", () => {
+  test("H-1 · US → $9.99 / $99 (USD, 17% saving)", () => {
+    const p = getShopPrice("US");
+    expect(p.monthly).toBe("$9.99");
+    expect(p.annual).toBe("$99");
+    expect(p.currency).toBe("USD");
+    expect(p.saving).toBe("17%");
+  });
+
+  test("H-2 · GB → £8.99 / £89 (GBP, 17% saving)", () => {
+    const p = getShopPrice("GB");
+    expect(p.monthly).toBe("£8.99");
+    expect(p.annual).toBe("£89");
+    expect(p.currency).toBe("GBP");
+    expect(p.saving).toBe("17%");
+  });
+
+  test("H-3 · ID → Rp49,000 / Rp490,000 (IDR, 17% saving)", () => {
+    const p = getShopPrice("ID");
+    expect(p.monthly).toBe("Rp49,000");
+    expect(p.annual).toBe("Rp490,000");
+    expect(p.currency).toBe("IDR");
+    expect(p.saving).toBe("17%");
+  });
+
+  test("H-4 · DE (Eurozone) → €9.99 / €99 (EUR, 17% saving)", () => {
+    const p = getShopPrice("DE");
+    expect(p.monthly).toBe("€9.99");
+    expect(p.annual).toBe("€99");
+    expect(p.currency).toBe("EUR");
+    expect(p.saving).toBe("17%");
+  });
+
+  test("H-5 · other Eurozone countries also resolve to EUR (FR · ES · IT · NL · IE · PT · AT · FI · LU · BE · GR)", () => {
+    for (const iso of [
+      "FR",
+      "ES",
+      "IT",
+      "NL",
+      "IE",
+      "PT",
+      "AT",
+      "FI",
+      "LU",
+      "BE",
+      "GR",
+    ]) {
+      const p = getShopPrice(iso);
+      expect(p.currency, `${iso} should map to EUR`).toBe("EUR");
+      expect(p.monthly).toBe("€9.99");
+    }
+  });
+
+  test("H-6 · unknown ISO-2 → USD anchor fallback", () => {
+    const p = getShopPrice("ZZ");
+    expect(p.currency).toBe("USD");
+    expect(p.monthly).toBe("$9.99");
+    expect(p.annual).toBe("$99");
+  });
+
+  test("H-7 · null / undefined / empty string → USD anchor fallback", () => {
+    expect(getShopPrice(null).currency).toBe("USD");
+    expect(getShopPrice(undefined).currency).toBe("USD");
+    expect(getShopPrice("").currency).toBe("USD");
+  });
+
+  test("H-8 · ISO-2 input is case-insensitive", () => {
+    expect(getShopPrice("gb").currency).toBe("GBP");
+    expect(getShopPrice("id").currency).toBe("IDR");
+    expect(getShopPrice("de").currency).toBe("EUR");
+  });
+
+  test("H-9 · non-Eurozone European ISO-2 falls back to USD (SE · DK · PL · NO · CH · GB-already-dedicated)", () => {
+    // Sweden, Denmark, Poland, Norway, Switzerland use their own
+    // currencies and are not in the core-four launch set. §K-1 LOCK
+    // reserves adding further currencies for a post-launch
+    // authorisation.
+    for (const iso of ["SE", "DK", "PL", "NO", "CH"]) {
+      expect(getShopPrice(iso).currency, `${iso} should NOT map to EUR`).toBe("USD");
     }
   });
 });

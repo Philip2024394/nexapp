@@ -19,10 +19,26 @@
 // touched. Reading searchParams forces the page to render dynamically
 // so `force-static` was swapped to `force-dynamic` (still SSR-only ·
 // no client JS added).
+//
+// Phase 4 Batch 4.7 · 2026-11-06 · Shop Entitlement Contract §K-1
+// LOCK · the Bisnis card now renders a country-detected price for
+// the core-four launch markets (USD · GBP · IDR · EUR). The country
+// hint is read from the `nex_country_hint` HTTP-only cookie (written
+// by create-account/page.tsx via `persistCountryHintCookie` on Phase
+// 2 Batch 2.4) with Vercel/Cloudflare geo headers as the first-visit
+// fallback. §B-1 LOCK forbids hard-coding these prices into a Stripe
+// integration until the owner records price-validation approval —
+// the strings returned by `getShopPrice` are DISPLAY ONLY.
 
 import type * as React from "react";
 import Link from "next/link";
+import { cookies, headers } from "next/headers";
 import { NEX_OFFICIAL_CHAT_HREF } from "@/lib/nex-native/nex-official";
+import {
+  NEX_COUNTRY_HINT_COOKIE,
+  isValidCountryIso2,
+} from "@/lib/nex-native/country/country-hint-cookie";
+import { getShopPrice } from "@/lib/nex-native/pricing-config";
 import { NexPageHeader } from "../_page-header";
 
 export const dynamic = "force-dynamic";
@@ -62,6 +78,25 @@ export default async function PackagesPage({
   const params = await searchParams;
   const intent = (params.intent ?? "").trim().toLowerCase();
   const bisnisHighlighted = intent === "bisnis";
+
+  // Phase 4 Batch 4.7 · 2026-11-06 · resolve the visitor's ISO-2
+  // country for the Bisnis price display. Priority:
+  //   1. `nex_country_hint` cookie (persisted post-signup at
+  //      create-account render — Phase 2 Batch 2.4)
+  //   2. Vercel geo header `x-vercel-ip-country`
+  //   3. Cloudflare geo header `cf-ipcountry`
+  //   4. Default: `US` · USD anchor fallback per §K-1 LOCK
+  // Shape-checked so a malformed header can never leak into the UI.
+  const cookieJar = await cookies();
+  const hdrs = await headers();
+  const cookieHint = cookieJar.get(NEX_COUNTRY_HINT_COOKIE)?.value;
+  const vercelCountry = hdrs.get("x-vercel-ip-country");
+  const cfCountry = hdrs.get("cf-ipcountry");
+  const rawIso2 = [cookieHint, vercelCountry, cfCountry].find((v) =>
+    isValidCountryIso2((v ?? "").toUpperCase()),
+  );
+  const countryIso2 = rawIso2 ? rawIso2.toUpperCase() : "US";
+  const bisnisPrice = getShopPrice(countryIso2);
 
   return (
     <div
@@ -207,8 +242,14 @@ export default async function PackagesPage({
           <PackageCard
             eyebrow="Full power"
             title="Bisnis"
-            priceLabel="Rp 99,000"
-            priceSubline="per month · IDR 990k / year"
+            // Phase 4 Batch 4.7 · 2026-11-06 · Shop Entitlement
+            // Contract §K-1 LOCK · price is detected-country only
+            // (USD · GBP · IDR · EUR) via `getShopPrice(countryIso2)`
+            // resolved above. Default for unknown ISO-2 = USD anchor.
+            // DISPLAY ONLY · §B-1 LOCK forbids hard-coding into the
+            // billing provider until price validation is approved.
+            priceLabel={bisnisPrice.monthly}
+            priceSubline={`per month · ${bisnisPrice.annual} / year (${bisnisPrice.saving} saving)`}
             features={BISNIS_FEATURES}
             ctaHref="/nex-native/create-account?intent=bisnis"
             ctaLabel="Upgrade to Bisnis"
@@ -261,8 +302,9 @@ export default async function PackagesPage({
           NEX takes{" "}
           <b style={{ color: "#B8F1CC" }}>0% of every sale</b> on both
           Gratis and Bisnis. A seller doing Rp 100 million a month on
-          Shopee pays Rp 7–15 million in fees. On NEX Bisnis they pay
-          Rp 99,000. On NEX Gratis they pay nothing.
+          Shopee pays Rp 7–15 million in fees. On NEX Bisnis they pay{" "}
+          {bisnisPrice.monthly} a month flat. On NEX Gratis they pay
+          nothing.
         </div>
       </section>
 

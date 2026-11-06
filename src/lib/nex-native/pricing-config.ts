@@ -319,3 +319,117 @@ export function welcomeCardChipFor(
   if (pkg.price) return formatPricingAmount(pkg.price, locale);
   return "See all plans";
 }
+
+// ─── Shop regional price display · §K-1 launch markets ──────────
+//
+// DISPLAY ONLY · do not hard-code these values into a payment
+// integration until §B-1 (price validation with real customers) is
+// recorded APPROVED on the catalogue above. The function returns
+// formatted strings suitable for the /packages page Business (Bisnis)
+// card so the price a visitor sees matches their inferred country
+// without requiring a fresh geo lookup at render time (the caller
+// reads `nex_country_hint` cookie + Vercel/Cloudflare geo header and
+// passes the resulting ISO-2 here).
+//
+// Shop Entitlement Contract §K-1 LOCK (2026-11-06) · launch markets
+// are USD + GBP + IDR + EUR. Unknown ISO-2 falls back to the USD
+// anchor (the single-currency catalogue value above, which is also
+// $9.99/month).
+//
+// Core four values · §B-2 table:
+//   · US  · $9.99 / month · $99 / year   (17% saving vs 12×9.99)
+//   · GB  · £8.99 / month · £89 / year   (17% saving vs 12×8.99)
+//   · ID  · Rp49,000 / month · Rp490,000 / year
+//   · EU  · €9.99 / month · €99 / year
+//
+// The EU member list is the full set of 20 Eurozone countries that use
+// the euro as their sole currency, plus the 4 EU-area microstates
+// (Andorra · Monaco · San Marino · Vatican) that monetarily participate
+// in the euro. A visitor from an EU country NOT on this list (e.g. SE
+// Sweden, DK Denmark, PL Poland) falls through to the USD anchor —
+// §K-1 reserves adding further currencies for post-launch work.
+
+/** The core four launch markets return values. §B-1 LOCK forbids
+ *  consuming these from a billing provider without recorded owner
+ *  price-validation approval. */
+export interface ShopPriceDisplay {
+  readonly monthly: string;
+  readonly annual: string;
+  readonly currency: string;
+  readonly saving: string;
+}
+
+/** Eurozone ISO-2 set. Using the sole-euro definition (not "uses euro
+ *  as reference"). Values that are NOT on this list fall back to the
+ *  USD anchor. */
+const EUROZONE_ISO2: ReadonlySet<string> = new Set([
+  "AT",
+  "BE",
+  "CY",
+  "DE",
+  "EE",
+  "ES",
+  "FI",
+  "FR",
+  "GR",
+  "HR",
+  "IE",
+  "IT",
+  "LT",
+  "LU",
+  "LV",
+  "MT",
+  "NL",
+  "PT",
+  "SI",
+  "SK",
+  // Monetary euro participants (microstates) — treated as euro for
+  // display purposes only.
+  "AD",
+  "MC",
+  "SM",
+  "VA",
+]);
+
+/** Return the display strings for the Shop (Bisnis) card in the
+ *  visitor's detected country. Unknown ISO-2 → USD anchor.
+ *
+ *  DISPLAY ONLY · do not hard-code the returned strings into a Stripe
+ *  integration · §B-1 price-validation gate must open first. */
+export function getShopPrice(iso2: string | null | undefined): ShopPriceDisplay {
+  const code = (iso2 ?? "").toUpperCase();
+  switch (code) {
+    case "GB":
+      return {
+        monthly: "£8.99",
+        annual: "£89",
+        currency: "GBP",
+        saving: "17%",
+      };
+    case "ID":
+      return {
+        monthly: "Rp49,000",
+        annual: "Rp490,000",
+        currency: "IDR",
+        saving: "17%",
+      };
+    default:
+      if (EUROZONE_ISO2.has(code)) {
+        return {
+          monthly: "€9.99",
+          annual: "€99",
+          currency: "EUR",
+          saving: "17%",
+        };
+      }
+      // USD anchor · US and every unknown-or-outside-launch-markets
+      // code. §K-1 LOCK reserves adding further currencies to a
+      // separate post-launch authorisation.
+      return {
+        monthly: "$9.99",
+        annual: "$99",
+        currency: "USD",
+        saving: "17%",
+      };
+  }
+}
