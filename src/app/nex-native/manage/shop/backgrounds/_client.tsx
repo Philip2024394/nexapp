@@ -72,6 +72,50 @@ interface ShopBackgroundPreset {
   readonly label: string;
   readonly category: ShopBackgroundCategory["id"];
   readonly tintSwatch: string;
+  /** Seed baseline for the "N downloads" stat · drifts up on
+   *  randomised 3h / 16h / 24h intervals in useFakeDownloads. */
+  readonly downloadsBase: number;
+}
+
+// Fake-but-natural download counter · same contract as the one on
+// the themes picker · stores per-key count + next bump time in
+// localStorage · randomised intervals [3h · 16h · 24h] + random
+// increments [1..5] so each preset's tally drifts up at a human-
+// looking pace. Replace with a server-backed count once the
+// nex_business.shop_cover_image_url GROUP BY lands.
+function useFakeDownloads(key: string, base: number): number {
+  const [count, setCount] = React.useState(base);
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const storageKey = `nex-shop-dl:${key}`;
+    const INTERVAL_HOURS = [3, 16, 24] as const;
+    const now = Date.now();
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      const parsed = raw
+        ? (JSON.parse(raw) as { count?: number; nextAt?: number })
+        : null;
+      const currentCount = parsed?.count ?? base;
+      const nextAt = parsed?.nextAt ?? 0;
+      if (now >= nextAt) {
+        const inc = Math.floor(Math.random() * 5) + 1;
+        const intervalH =
+          INTERVAL_HOURS[Math.floor(Math.random() * INTERVAL_HOURS.length)]!;
+        const newCount = currentCount + inc;
+        const newNextAt = now + intervalH * 60 * 60 * 1000;
+        window.localStorage.setItem(
+          storageKey,
+          JSON.stringify({ count: newCount, nextAt: newNextAt }),
+        );
+        setCount(newCount);
+      } else {
+        setCount(currentCount);
+      }
+    } catch {
+      setCount(base);
+    }
+  }, [key, base]);
+  return count;
 }
 
 const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
@@ -81,6 +125,7 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
     label: "NEX Shopping Showcase",
     category: "showcase",
     tintSwatch: "#C6A15B",
+    downloadsBase: 1240,
   },
   {
     id: "global-cart-glow",
@@ -88,6 +133,7 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
     label: "Global Cart · Orange Glow",
     category: "retail",
     tintSwatch: "#FF7A2B",
+    downloadsBase: 487,
   },
   {
     id: "nex-bag-electric",
@@ -95,6 +141,7 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
     label: "NEX Bag · Electric",
     category: "retail",
     tintSwatch: "#2A6DD9",
+    downloadsBase: 623,
   },
   {
     id: "sale-best-deals",
@@ -102,6 +149,7 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
     label: "Sale · Best Deals",
     category: "sale",
     tintSwatch: "#FF6600",
+    downloadsBase: 892,
   },
   {
     id: "electronics-showcase",
@@ -109,6 +157,7 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
     label: "Electronics Showcase",
     category: "electronics",
     tintSwatch: "#1E4A8C",
+    downloadsBase: 745,
   },
   {
     id: "delivery-globe",
@@ -116,6 +165,7 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
     label: "Delivery · Global Reach",
     category: "delivery",
     tintSwatch: "#FF7A2B",
+    downloadsBase: 312,
   },
   {
     id: "mobile-shop-now",
@@ -123,16 +173,20 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
     label: "Mobile · Shop Now",
     category: "online",
     tintSwatch: "#FF6B2B",
+    downloadsBase: 1055,
   },
   // Irish-green pack · same 6 compositions in emerald/neon-green
   // tones · paired with a vivid Irish green tint so the theme
   // colour tracks the image (owner-authorised 2026-11-06).
+  // Newer release · lower baselines to look like they're still
+  // picking up momentum.
   {
     id: "global-cart-glow-green",
     url: "/nex-brand/shop-themes/global-cart-glow-green.png",
     label: "Global Cart · Irish Green",
     category: "retail",
     tintSwatch: "#16D66B",
+    downloadsBase: 156,
   },
   {
     id: "nex-bag-electric-green",
@@ -140,6 +194,7 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
     label: "NEX Bag · Irish Green",
     category: "retail",
     tintSwatch: "#16D66B",
+    downloadsBase: 203,
   },
   {
     id: "best-deals-green",
@@ -147,6 +202,7 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
     label: "Best Deals · Irish Green",
     category: "sale",
     tintSwatch: "#16D66B",
+    downloadsBase: 341,
   },
   {
     id: "electronics-showcase-green",
@@ -154,6 +210,7 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
     label: "Electronics · Irish Green",
     category: "electronics",
     tintSwatch: "#16D66B",
+    downloadsBase: 189,
   },
   {
     id: "delivery-globe-green",
@@ -161,6 +218,7 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
     label: "Delivery · Irish Green",
     category: "delivery",
     tintSwatch: "#16D66B",
+    downloadsBase: 98,
   },
   {
     id: "mobile-shop-now-green",
@@ -168,6 +226,7 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
     label: "Mobile · Irish Green",
     category: "online",
     tintSwatch: "#16D66B",
+    downloadsBase: 267,
   },
 ];
 
@@ -363,114 +422,20 @@ export function ShopBackgroundsClient({
           gap: 10,
         }}
       >
-        {visible.map((preset) => {
-          const isCurrent = currentImageUrl === preset.url;
-          const isApplying =
-            status.kind === "applying" && status.id === preset.id;
-          const isApplied = status.kind === "ok" && status.id === preset.id;
-          return (
-            <button
-              key={preset.id}
-              type="button"
-              onClick={() => onPick(preset)}
-              disabled={pending || !businessId}
-              data-nex-shop-bg-preset-tile={preset.id}
-              aria-current={isCurrent ? "true" : undefined}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 0,
-                padding: 0,
-                background: SURFACE,
-                border: `2px solid ${
-                  isCurrent || isApplied ? GOLD : BORDER
-                }`,
-                borderRadius: 14,
-                cursor: businessId ? "pointer" : "not-allowed",
-                color: INK,
-                textAlign: "left",
-                overflow: "hidden",
-                boxShadow:
-                  isCurrent || isApplied
-                    ? "0 0 0 3px rgba(198, 161, 91, 0.18)"
-                    : "none",
-                transition:
-                  "border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease",
-              }}
-            >
-              <div
-                aria-hidden
-                /* Owner directive 2026-11-06 · tiles must fit the
-                   image at full height AND full width · source
-                   images are portrait 9:16-ish · tile aspect matches
-                   + background-size:100% 100% guarantees the whole
-                   image paints edge-to-edge with no crop. */
-                style={{
-                  position: "relative",
-                  width: "100%",
-                  aspectRatio: "9 / 16",
-                  backgroundImage: `url(${preset.url})`,
-                  backgroundSize: "100% 100%",
-                  backgroundPosition: "center",
-                  backgroundRepeat: "no-repeat",
-                }}
-              >
-                {/* Tint swatch · small circle top-left showing the
-                    matching theme colour that gets applied along
-                    with the background. */}
-                <span
-                  aria-hidden
-                  title={`Applies tint ${preset.tintSwatch}`}
-                  style={{
-                    position: "absolute",
-                    top: 8,
-                    left: 8,
-                    width: 18,
-                    height: 18,
-                    borderRadius: 999,
-                    background: preset.tintSwatch,
-                    border: "2px solid rgba(255,255,255,0.85)",
-                    boxShadow: "0 2px 6px rgba(0,0,0,0.45)",
-                  }}
-                />
-                {isCurrent ? (
-                  <span style={pillStyle}>Current</span>
-                ) : isApplied ? (
-                  <span style={{ ...pillStyle, background: EMERALD }}>
-                    Applied
-                  </span>
-                ) : isApplying ? (
-                  <span style={{ ...pillStyle, background: EMERALD }}>
-                    Applying…
-                  </span>
-                ) : null}
-              </div>
-              <div
-                style={{
-                  padding: "8px 10px 10px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 2,
-                }}
-              >
-                <div style={{ fontSize: 12, fontWeight: 800 }}>
-                  {preset.label}
-                </div>
-                <div
-                  style={{
-                    fontSize: 10,
-                    color: INK_DIM,
-                    letterSpacing: "0.05em",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {CATEGORIES.find((c) => c.id === preset.category)?.label ??
-                    preset.category}
-                </div>
-              </div>
-            </button>
-          );
-        })}
+        {visible.map((preset) => (
+          <PresetTile
+            key={preset.id}
+            preset={preset}
+            isCurrent={currentImageUrl === preset.url}
+            isApplying={
+              status.kind === "applying" && status.id === preset.id
+            }
+            isApplied={status.kind === "ok" && status.id === preset.id}
+            disabled={pending || !businessId}
+            businessId={businessId}
+            onPick={onPick}
+          />
+        ))}
 
         {visible.length === 0 ? (
           <div
@@ -544,6 +509,152 @@ export function ShopBackgroundsClient({
         from <Link href="/nex-native/manage/shop/themes" style={{ color: GOLD }}>Shop Themes</Link>.
       </footer>
     </div>
+  );
+}
+
+// ─── Preset tile ────────────────────────────────────────────────────────
+// Extracted so useFakeDownloads can run per-preset without violating
+// the rules-of-hooks loop constraint.
+function PresetTile({
+  preset,
+  isCurrent,
+  isApplying,
+  isApplied,
+  disabled,
+  businessId,
+  onPick,
+}: {
+  preset: ShopBackgroundPreset;
+  isCurrent: boolean;
+  isApplying: boolean;
+  isApplied: boolean;
+  disabled: boolean;
+  businessId: string | null;
+  onPick: (preset: ShopBackgroundPreset) => void;
+}): React.JSX.Element {
+  const downloads = useFakeDownloads(
+    `bg:${preset.id}`,
+    preset.downloadsBase,
+  );
+  return (
+    <button
+      type="button"
+      onClick={() => onPick(preset)}
+      disabled={disabled}
+      data-nex-shop-bg-preset-tile={preset.id}
+      aria-current={isCurrent ? "true" : undefined}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 0,
+        padding: 0,
+        background: SURFACE,
+        border: `2px solid ${isCurrent || isApplied ? GOLD : BORDER}`,
+        borderRadius: 14,
+        cursor: businessId ? "pointer" : "not-allowed",
+        color: INK,
+        textAlign: "left",
+        overflow: "hidden",
+        boxShadow:
+          isCurrent || isApplied
+            ? "0 0 0 3px rgba(198, 161, 91, 0.18)"
+            : "none",
+        transition:
+          "border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease",
+      }}
+    >
+      <div
+        aria-hidden
+        /* Owner directive 2026-11-06 · tiles must fit the
+           image at full height AND full width · source
+           images are portrait 9:16-ish · tile aspect matches
+           + background-size:100% 100% guarantees the whole
+           image paints edge-to-edge with no crop. */
+        style={{
+          position: "relative",
+          width: "100%",
+          aspectRatio: "9 / 16",
+          backgroundImage: `url(${preset.url})`,
+          backgroundSize: "100% 100%",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
+        <span
+          aria-hidden
+          title={`Applies tint ${preset.tintSwatch}`}
+          style={{
+            position: "absolute",
+            top: 8,
+            left: 8,
+            width: 18,
+            height: 18,
+            borderRadius: 999,
+            background: preset.tintSwatch,
+            border: "2px solid rgba(255,255,255,0.85)",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.45)",
+          }}
+        />
+        {isCurrent ? (
+          <span style={pillStyle}>Current</span>
+        ) : isApplied ? (
+          <span style={{ ...pillStyle, background: EMERALD }}>
+            Applied
+          </span>
+        ) : isApplying ? (
+          <span style={{ ...pillStyle, background: EMERALD }}>
+            Applying…
+          </span>
+        ) : null}
+      </div>
+      <div
+        style={{
+          padding: "8px 10px 10px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 3,
+        }}
+      >
+        <div style={{ fontSize: 12, fontWeight: 800 }}>{preset.label}</div>
+        <div
+          style={{
+            fontSize: 10,
+            color: INK_DIM,
+            letterSpacing: "0.05em",
+            textTransform: "uppercase",
+          }}
+        >
+          {CATEGORIES.find((c) => c.id === preset.category)?.label ??
+            preset.category}
+        </div>
+        {/* Owner directive 2026-11-06 · per-preset download count
+            with inbox glyph · drifts up on random 3h/16h/24h
+            intervals so each tile feels alive. */}
+        <div
+          data-nex-shop-bg-downloads={preset.id}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+            fontSize: 10.5,
+            fontWeight: 700,
+            color: INK_DIM,
+            marginTop: 2,
+          }}
+        >
+          <span aria-hidden style={{ fontSize: 12 }}>📥</span>
+          <span
+            style={{
+              color: GOLD,
+              fontWeight: 900,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {downloads.toLocaleString()}
+          </span>
+        </div>
+      </div>
+    </button>
   );
 }
 

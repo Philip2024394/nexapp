@@ -28,23 +28,65 @@ import { createPortal } from "react-dom";
 import { applyShopLayoutAction, applyShopTintAction } from "./_actions";
 import type { CoverLayoutId } from "@/app/nex-native/cover/layout-ids";
 
-// Owner directive 2026-11-06 · template-type emoji shown next to the
-// layout name in the picker header (icon + Café · Library button).
-// Three families mirror the 11 COVER_LAYOUT_IDS: cafe/food · product
-// · personal brand · and the one accommodation layout.
-const TEMPLATE_ICONS: Readonly<Record<CoverLayoutId, string>> = {
-  cafe: "☕",
-  cafe_landscape: "☕",
-  cafe_round: "☕",
-  product: "📦",
-  product_landscape: "📦",
-  product_round: "📦",
-  product_landscape_round: "📦",
-  personal_brand: "✨",
-  personal_brand_landscape: "✨",
-  personal_brand_round: "✨",
-  accommodation: "🏨",
+// Owner directive 2026-11-06 · per-template download baselines ·
+// each layout starts at a hand-picked seed count · useFakeDownloads
+// ticks the count up every 3 / 16 / 24 hours (random interval per
+// template) to look like a steady stream of shop owners activating
+// the template · localStorage-scoped so each session's own stream
+// feels organic (server-side counts can replace the seed table in
+// a follow-up without touching the hook or the UI).
+const TEMPLATE_DOWNLOADS_BASE: Readonly<Record<CoverLayoutId, number>> = {
+  cafe: 1247,
+  cafe_landscape: 892,
+  cafe_round: 534,
+  product: 2156,
+  product_landscape: 1843,
+  product_round: 1012,
+  product_landscape_round: 678,
+  personal_brand: 1489,
+  personal_brand_landscape: 923,
+  personal_brand_round: 712,
+  accommodation: 445,
 };
+
+// Fake-but-natural download counter · stores per-key count + next
+// bump time in localStorage · randomised intervals [3h · 16h · 24h]
+// + randomised increments [1..5] so the number drifts up at a
+// human-looking pace instead of ticking like a stopwatch.
+function useFakeDownloads(key: string, base: number): number {
+  const [count, setCount] = React.useState(base);
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const storageKey = `nex-shop-dl:${key}`;
+    const INTERVAL_HOURS = [3, 16, 24] as const;
+    const now = Date.now();
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      const parsed = raw
+        ? (JSON.parse(raw) as { count?: number; nextAt?: number })
+        : null;
+      const currentCount = parsed?.count ?? base;
+      const nextAt = parsed?.nextAt ?? 0;
+      if (now >= nextAt) {
+        const inc = Math.floor(Math.random() * 5) + 1;
+        const intervalH =
+          INTERVAL_HOURS[Math.floor(Math.random() * INTERVAL_HOURS.length)]!;
+        const newCount = currentCount + inc;
+        const newNextAt = now + intervalH * 60 * 60 * 1000;
+        window.localStorage.setItem(
+          storageKey,
+          JSON.stringify({ count: newCount, nextAt: newNextAt }),
+        );
+        setCount(newCount);
+      } else {
+        setCount(currentCount);
+      }
+    } catch {
+      setCount(base);
+    }
+  }, [key, base]);
+  return count;
+}
 
 // Palette · emerald Ireland tokens with navy fallback for the HQ
 // identity. Only the per-row pieces need explicit colours; the
@@ -370,15 +412,18 @@ function TemplateCarousel({
     else if (dx >= 40) goPrev();
   }
 
-  const templateIcon = TEMPLATE_ICONS[selectedLayout] ?? "📱";
+  const downloadsCount = useFakeDownloads(
+    `template:${selectedLayout}`,
+    TEMPLATE_DOWNLOADS_BASE[selectedLayout] ?? 500,
+  );
 
   return (
     <section aria-label="Template picker" style={{ position: "relative" }}>
-      {/* Navigation row · owner directive 2026-11-06 · template icon
-          + name LEFT · small "Library" button with magnifier RIGHT ·
-          the left/right arrows are absolute-positioned on the preview
-          tile itself (see ArrowButton below) so the header stays
-          clean. */}
+      {/* Navigation row · owner directive 2026-11-06 (refined) ·
+          ☕ Café label + template icon REMOVED · left slot now shows
+          the live download count for the current template (reads as
+          "N shops activated this") · Library solid gold button stays
+          on the right. Arrows live on the preview tile edges. */}
       <div
         style={{
           display: "flex",
@@ -392,28 +437,25 @@ function TemplateCarousel({
             flex: 1,
             display: "inline-flex",
             alignItems: "center",
-            gap: 8,
+            gap: 6,
             minWidth: 0,
+            color: INK,
           }}
+          data-nex-template-downloads={selectedLayout}
         >
-          <span
-            aria-hidden
-            style={{ fontSize: 18, lineHeight: 1 }}
-          >
-            {templateIcon}
+          <span aria-hidden style={{ fontSize: 15, lineHeight: 1 }}>
+            📥
           </span>
           <span
             style={{
-              fontSize: 13,
-              fontWeight: 800,
-              color: INK,
-              letterSpacing: "0.04em",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
+              fontSize: 14,
+              fontWeight: 900,
+              color: GOLD,
+              fontVariantNumeric: "tabular-nums",
+              letterSpacing: "0.02em",
             }}
           >
-            {layoutLabels[selectedLayout]}
+            {downloadsCount.toLocaleString()}
           </span>
         </div>
         <Link
@@ -496,42 +538,17 @@ function TemplateCarousel({
           }}
         />
 
-        {/* Centre tap · opens the template in a fullscreen overlay. */}
-        <button
-          type="button"
-          onClick={() => setFullscreen(true)}
-          aria-label="Open template fullscreen"
-          title="Open fullscreen"
-          data-nex-shop-template-fullscreen-trigger
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: 68,
-            height: 68,
-            borderRadius: "50%",
-            background: "rgba(0, 0, 0, 0.55)",
-            border: `2px solid ${GOLD}`,
-            color: CREAM,
-            fontSize: 28,
-            lineHeight: 1,
-            display: "grid",
-            placeItems: "center",
-            cursor: "pointer",
-            boxShadow:
-              "0 10px 30px rgba(0,0,0,0.55), 0 0 0 6px rgba(198,161,91,0.14)",
-            backdropFilter: "blur(10px)",
-            WebkitTapHighlightColor: "transparent",
-            transition: "transform 160ms ease",
-          }}
-        >
-          <span aria-hidden>👆</span>
-        </button>
+        {/* Owner directive 2026-11-06 (refined) · "remove the yellow
+            hand button from screen center". The 👆 fullscreen trigger
+            was replaced · double-tap / expand gestures can land on
+            the iframe itself in a follow-up if owner wants quick
+            fullscreen back. setFullscreen state kept so the overlay
+            below can be re-opened from a future trigger without
+            rewiring. */}
 
         {/* Owner directive 2026-11-06 · arrows moved out of the
             header row + onto the tile edges so the header can carry
-            icon + template name + Library button cleanly. */}
+            the downloads stat + Library button cleanly. */}
         <ArrowButton direction="left" onClick={goPrev} />
         <ArrowButton direction="right" onClick={goNext} />
       </div>
