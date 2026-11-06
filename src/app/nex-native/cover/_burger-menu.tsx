@@ -790,36 +790,219 @@ function ServicesSheet({
 // in the design (product-grid-first templates). Owner-authorised
 // 2026-11-06. Real content lives on nex_business; placeholder here.
 // -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// AboutUsSheet · owner directive 2026-11-06 refined:
+//   "about us button in burger slider when selected will turn the
+//    shop over lay into black frosted glass with about us text and
+//    profile image and buisness name and online will show in
+//    header as normal - close button on top right x and bottom
+//    footer area social media icons add mock text and social media
+//    for user see template view"
+//
+// Full-overlay implementation (no slide-up sheet):
+//   · position:absolute inset:0 across the whole shop frame
+//   · background: translucent black + backdrop-filter blur =
+//     "frosted black glass" over the cover
+//   · HEADER: profile avatar + business name + green online dot
+//   · BODY: mock "Our story" / "What we make" / "Where we're based"
+//   · FOOTER: 5 solid-gold social-media icon buttons (mock links)
+//   · TOP-RIGHT: X close button
+// -----------------------------------------------------------------------------
 function AboutUsSheet({ onClose }: { onClose: () => void }) {
   return (
-    <Sheet title="About us" onClose={onClose}>
-      <section style={{ marginBottom: 14 }}>
-        <div style={sectionCapStyle}>Our story</div>
-        <p style={sheetBodyStyle}>
-          A short description of the shop lives here — who you are,
-          what you make, and the craft or care that goes into each
-          piece.
-        </p>
-      </section>
-      <section style={{ marginBottom: 14 }}>
-        <div style={sectionCapStyle}>What we make</div>
-        <p style={sheetBodyStyle}>
-          Signature products, materials, and the style that makes this
-          shop yours.
-        </p>
-      </section>
-      <section>
-        <div style={sectionCapStyle}>Where we&rsquo;re based</div>
-        <p style={sheetBodyStyle}>
-          Address, workshop or showroom location, and the area you
-          serve.
-        </p>
-      </section>
-      <p style={sheetHintStyle}>
-        Edit this in Manage → Shop → About, and it shows here on every
-        template without an inline About block.
-      </p>
-    </Sheet>
+    <div
+      role="dialog"
+      aria-label="About us"
+      data-nex-shop-sheet="about-us"
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 70,
+        background: "rgba(0, 0, 0, 0.72)",
+        backdropFilter: "blur(14px) saturate(1.1)",
+        WebkitBackdropFilter: "blur(14px) saturate(1.1)",
+        color: INK,
+        display: "flex",
+        flexDirection: "column",
+        padding:
+          "calc(env(safe-area-inset-top, 0px) + 18px) 18px calc(env(safe-area-inset-bottom, 0px) + 18px)",
+        boxSizing: "border-box",
+        fontFamily: "Inter, system-ui, sans-serif",
+        animation: "nexShopAboutFadeIn 240ms ease-out",
+      }}
+    >
+      <style>{`@keyframes nexShopAboutFadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
+
+      {/* Close · top-right · scoped so it stays over the frosted
+          glass without needing portals. */}
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Close"
+        data-nex-shop-about-close
+        style={{
+          position: "absolute",
+          top: 12,
+          right: 12,
+          width: 32,
+          height: 32,
+          borderRadius: 999,
+          background: "rgba(255,255,255,0.08)",
+          color: CREAM,
+          border: `1px solid ${BORDER_HI}`,
+          cursor: "pointer",
+          fontSize: 16,
+          lineHeight: 1,
+          padding: 0,
+          zIndex: 1,
+        }}
+      >
+        ×
+      </button>
+
+      {/* HEADER · profile avatar · business name · online dot.
+          Mock content for template view · wires to nex_business +
+          nex_account_profile in a follow-up. */}
+      <header
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          paddingBottom: 14,
+          borderBottom: `1px solid ${BORDER}`,
+          paddingRight: 44,
+        }}
+      >
+        <div
+          aria-hidden
+          style={{
+            width: 54,
+            height: 54,
+            borderRadius: "50%",
+            background: `linear-gradient(135deg, ${GOLD}, #8E6F3C)`,
+            display: "grid",
+            placeItems: "center",
+            color: "#1A120A",
+            fontSize: 22,
+            fontWeight: 900,
+            boxShadow: "0 6px 18px rgba(0,0,0,0.45)",
+            flexShrink: 0,
+          }}
+        >
+          IP
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: 16,
+              fontWeight: 900,
+              color: CREAM,
+              letterSpacing: "-0.01em",
+            }}
+          >
+            Irish Pride
+          </div>
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 11,
+              color: INK_DIM,
+              letterSpacing: "0.04em",
+              marginTop: 2,
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: 999,
+                background: "#16D66B",
+                boxShadow: "0 0 10px rgba(22, 214, 107, 0.65)",
+              }}
+            />
+            Online · Dublin, Ireland
+          </div>
+        </div>
+      </header>
+
+      {/* BODY · scrolls when needed · mock content for template view. */}
+      <div style={{ flex: 1, overflow: "auto", paddingTop: 14, paddingBottom: 14 }}>
+        <section style={{ marginBottom: 16 }}>
+          <div style={sectionCapStyle}>Our story</div>
+          <p style={sheetBodyStyle}>
+            A small Dublin workshop founded on the simple idea that
+            everyday objects deserve to be made properly. We work with
+            local materials, long-time collaborators, and the same
+            steady hands that have been in this craft for years.
+          </p>
+        </section>
+        <section style={{ marginBottom: 16 }}>
+          <div style={sectionCapStyle}>What we make</div>
+          <p style={sheetBodyStyle}>
+            Signature pieces in our own designs, custom orders built
+            to size, and limited seasonal drops. Every item is made in
+            the workshop, finished by hand, and shipped in recycled
+            packaging.
+          </p>
+        </section>
+        <section>
+          <div style={sectionCapStyle}>Where we&rsquo;re based</div>
+          <p style={sheetBodyStyle}>
+            12 Francis Street · Dublin 8 · Ireland · visit Tues–Sat
+            10:00–18:00 · online orders ship worldwide.
+          </p>
+        </section>
+      </div>
+
+      {/* FOOTER · mock social-media row · 5 solid-gold circular
+          icon buttons. Links are href="#" placeholders tagged with
+          data-nex-pending-action so the signup/wire batch can
+          replace them with the owner's real handles. */}
+      <footer
+        style={{
+          paddingTop: 14,
+          borderTop: `1px solid ${BORDER}`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 10,
+        }}
+      >
+        {[
+          { label: "Instagram", glyph: "📷" },
+          { label: "TikTok", glyph: "🎵" },
+          { label: "Facebook", glyph: "f" },
+          { label: "WhatsApp", glyph: "💬" },
+          { label: "Website", glyph: "🌐" },
+        ].map((s) => (
+          <a
+            key={s.label}
+            href="#"
+            aria-label={s.label}
+            title={s.label}
+            data-nex-pending-action={`social-${s.label.toLowerCase()}`}
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: "50%",
+              background: GOLD,
+              color: "#1A120A",
+              display: "grid",
+              placeItems: "center",
+              fontSize: 15,
+              fontWeight: 900,
+              textDecoration: "none",
+              boxShadow: "0 4px 10px rgba(0,0,0,0.35)",
+            }}
+          >
+            {s.glyph}
+          </a>
+        ))}
+      </footer>
+    </div>
   );
 }
 
