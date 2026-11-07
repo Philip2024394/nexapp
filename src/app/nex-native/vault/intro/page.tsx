@@ -11,7 +11,7 @@
 //   · brand header   · ping badge + NEX wordmark + VAULT chip + tagline
 //   · hero           · heroine image (hero.png) + "Welcome to NEX Vault"
 //   · capabilities   · 4 glass icons (capability-icons.png) + labels
-//   · pitch          · glass card + vault-interface.png + 100% PRIVATE
+//   · pitch          · glass card + vault-interface.png + "Private by design"
 //   · features       · 4 cyber icons (feature-icons.png) + labels
 //   · primary CTA    · orange "Enter NEX Vault →" → /vault/setup
 //   · secondary CTA  · "Maybe later" → /nex-native/home
@@ -41,7 +41,7 @@ const CAPABILITIES: ReadonlyArray<{ title: string; subtitle: string }> = [
 ];
 
 const FEATURES: ReadonlyArray<{ line1: string; line2: string }> = [
-  { line1: "End-to-End", line2: "Encryption" },
+  { line1: "On-Device", line2: "Key" },
   { line1: "Cloud", line2: "Backup" },
   { line1: "Biometric", line2: "Access" },
   { line1: "Always", line2: "Available" },
@@ -290,7 +290,7 @@ export default async function VaultIntroPage() {
               }}
             >
               Store, manage and protect your photos, files, contacts, notes and
-              more — all in one secure vault, only you can access.
+              more — your personal vault, with access controlled by your device.
             </p>
           </section>
 
@@ -437,8 +437,8 @@ export default async function VaultIntroPage() {
                   maxWidth: "78%",
                 }}
               >
-                End-to-end encrypted, with no access from us. Only you hold the
-                key.
+                Your Vault key is created on your device · NEX cannot unlock it
+                for you. Encryption of items inside Vault rolls out progressively.
               </p>
               <span
                 data-nex-vault-intro-private-chip
@@ -459,7 +459,7 @@ export default async function VaultIntroPage() {
                 }}
               >
                 <span aria-hidden>💧</span>
-                100% Private
+                Private by design
               </span>
             </div>
           </section>

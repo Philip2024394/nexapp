@@ -70,7 +70,7 @@ export const NEX_FEATURES: readonly ProductKnowledgeEntry[] = [
     kind: "feature",
     title: "Peer-to-peer chat",
     content:
-      "Send text messages between two NEX users. Every message is end-to-end encrypted on your device before it leaves · NEX servers only hold ciphertext until delivery. Server drops delivered ciphertext after 7 days (Bridge 78 purge). Your phone is the archive · if you lose it you lose the history.",
+      "Send text messages between two NEX users. Messages are end-to-end encrypted on your device before delivery when both parties have an active device key · if your contact's device isn't ready, the composer warns you before the message is sent as a standard (unencrypted) message. Server drops delivered ciphertext after 7 days (Bridge 78 purge). Your phone is the archive · if you lose it you lose the history.",
     keywords: ["chat", "message", "text", "send", "peer", "friend", "e2e", "encrypted"],
     sealed_at: "2026-09-29",
     required_plan: "gratis",
@@ -81,7 +81,7 @@ export const NEX_FEATURES: readonly ProductKnowledgeEntry[] = [
     kind: "feature",
     title: "Encrypted photos, videos, and voice notes",
     content:
-      "Personal images, video, and voice notes sent in peer chat are encrypted on your device before upload (Bridge 81). Recipient's device decrypts. Server only holds ciphertext bytes. Shop product images and restaurant menu photos stay server-hosted per the doctrine split so cold visitors can browse.",
+      "Personal images, video and voice notes sent in peer chat use client-side encryption when both devices are set up (Bridge 81). Documents currently use the standard attachment path (deferred to a later stage). The composer warns before sending if encryption can't complete so you can decide whether to proceed. Shop product images and restaurant menu photos stay server-hosted per the doctrine split so cold visitors can browse.",
     keywords: ["photo", "image", "video", "voice", "attachment", "encrypted", "media", "record"],
     sealed_at: "2026-09-29",
     required_plan: "gratis",

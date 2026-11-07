@@ -257,7 +257,7 @@ export const EN_PACK: Record<I18nKey, string> = {
   "vault.setup.lockOverlay.title":            "Locking Vault",
   "vault.setup.lockOverlay.subtitle":         "Returning to NEX home…",
   "vault.setup.welcome.title":                "Protect your Vault",
-  "vault.setup.welcome.body":                 "Your Vault key is created on your device. NEX cannot read your protected Vault content.",
+  "vault.setup.welcome.body":                 "Your Vault key is created on your device. NEX cannot read your Vault key or unlock Vault on your behalf. Encryption of items inside Vault rolls out progressively · unprotected items are migrated on your next Vault unlock.",
   "vault.setup.welcome.ctaReady":             "Set up Vault",
   "vault.setup.welcome.ctaPreparing":         "Preparing…",
   "vault.setup.choose.title":                 "How do you want to unlock Vault?",

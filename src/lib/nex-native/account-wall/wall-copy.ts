@@ -196,8 +196,8 @@ export const WALL_COPY: Readonly<Record<AccountWallActionId, AccountWallCopy>> =
     explainer:
       "Create your free NEX account to protect conversations in your Vault.",
     benefits: [
-      "End-to-end encrypted chats",
-      "Only unlocked by your device",
+      "Encrypted chats when both devices are set up",
+      "Vault unlocked only on your device",
       "Free account · no card needed",
     ],
     primaryCta: "Create free account",
