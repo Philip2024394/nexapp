@@ -256,6 +256,33 @@ const PRESET_BACKGROUND_META: ReadonlyMap<
   ["/nex-brand/shop-themes/phil128.png", { tintHex: "#2A6DD9" }],
   ["/nex-brand/shop-themes/phil129.png", { tintHex: "#7CB342" }],
   ["/nex-brand/shop-themes/phil130.png", { tintHex: "#2A6DD9" }],
+  // Owner directive 2026-11-07 (third batch) · 21 more portrait
+  // backgrounds for shop page backgrounds · watches / vitamins /
+  // teddy / theme / plastering trade / jewellery / door hardware.
+  // Spaced filenames (vitamins 2 · teddy 2 · plasterers max ·
+  // plastering 1) were hyphenated to avoid URL-encoding fragility.
+  // VITAMINS.png lowercased to vitamins.png.
+  ["/nex-brand/shop-themes/w1.png", { tintHex: "#4A6B8C" }],
+  ["/nex-brand/shop-themes/w2.png", { tintHex: "#D9A83A" }],
+  ["/nex-brand/shop-themes/watches.png", { tintHex: "#D9B86A" }],
+  ["/nex-brand/shop-themes/watch1.png", { tintHex: "#6B9F3A" }],
+  ["/nex-brand/shop-themes/vitamins.png", { tintHex: "#FF8A1F" }],
+  ["/nex-brand/shop-themes/vitamins-2.png", { tintHex: "#F2A82A" }],
+  ["/nex-brand/shop-themes/theme1.png", { tintHex: "#8B5FC9" }],
+  ["/nex-brand/shop-themes/theme4.png", { tintHex: "#E880C9" }],
+  ["/nex-brand/shop-themes/teddy1.png", { tintHex: "#F2A7C1" }],
+  ["/nex-brand/shop-themes/teddy-2.png", { tintHex: "#F08CA8" }],
+  ["/nex-brand/shop-themes/plasterers-max.png", { tintHex: "#FF7A2B" }],
+  ["/nex-brand/shop-themes/plastering-1.png", { tintHex: "#E8A87C" }],
+  ["/nex-brand/shop-themes/phil91.png", { tintHex: "#E8E8F0" }],
+  ["/nex-brand/shop-themes/phil92.png", { tintHex: "#D9A83A" }],
+  ["/nex-brand/shop-themes/phil93.png", { tintHex: "#F5E8D9" }],
+  ["/nex-brand/shop-themes/phil94.png", { tintHex: "#8B3DD9" }],
+  ["/nex-brand/shop-themes/phil95.png", { tintHex: "#D92A2A" }],
+  ["/nex-brand/shop-themes/phil96.png", { tintHex: "#2AC9D9" }],
+  ["/nex-brand/shop-themes/phil97.png", { tintHex: "#4A5A6B" }],
+  ["/nex-brand/shop-themes/phil98.png", { tintHex: "#2A6DD9" }],
+  ["/nex-brand/shop-themes/phil99.png", { tintHex: "#A0522D" }],
 ]);
 
 export async function applyShopPresetBackgroundAction(

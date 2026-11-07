@@ -732,6 +732,202 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
     tintSwatch: "#2A6DD9",
     downloadsBase: 32,
   },
+  // Owner directive 2026-11-07 (third batch) · 21 more portrait
+  // backgrounds. Spaced filenames hyphenated; VITAMINS.png
+  // lowercased. Categories: electronics (watches), food (vitamins),
+  // showcase (theme1/4), fashion (teddy + jewellery), tools
+  // (plastering + door hardware).
+
+  // ── Watches (4) ──
+  {
+    id: "w1-rolex-matterhorn",
+    url: "/nex-brand/shop-themes/w1.png",
+    label: "Rolex · Matterhorn Collection",
+    category: "electronics",
+    tintSwatch: "#4A6B8C",
+    downloadsBase: 58,
+    isNew: true,
+  },
+  {
+    id: "w2-watches-world-sunset",
+    url: "/nex-brand/shop-themes/w2.png",
+    label: "Luxury Watches · World Sunset",
+    category: "electronics",
+    tintSwatch: "#D9A83A",
+    downloadsBase: 47,
+  },
+  {
+    id: "watches-brand-wall",
+    url: "/nex-brand/shop-themes/watches.png",
+    label: "Watch Brands · Gallery",
+    category: "electronics",
+    tintSwatch: "#D9B86A",
+    downloadsBase: 62,
+  },
+  {
+    id: "watch1-forest-log",
+    url: "/nex-brand/shop-themes/watch1.png",
+    label: "Watches · Forest Log",
+    category: "electronics",
+    tintSwatch: "#6B9F3A",
+    downloadsBase: 41,
+    isNew: true,
+  },
+
+  // ── Vitamins (2) ──
+  {
+    id: "vitamins-woman-glow",
+    url: "/nex-brand/shop-themes/vitamins.png",
+    label: "Vitamin Range · Orange Glow",
+    category: "food",
+    tintSwatch: "#FF8A1F",
+    downloadsBase: 35,
+    isNew: true,
+  },
+  {
+    id: "vitamins-2-beach-splash",
+    url: "/nex-brand/shop-themes/vitamins-2.png",
+    label: "Vitamins · Beach Splash",
+    category: "food",
+    tintSwatch: "#F2A82A",
+    downloadsBase: 28,
+  },
+
+  // ── Showcase · teddy themed (2) ──
+  {
+    id: "theme1-night-teddy",
+    url: "/nex-brand/shop-themes/theme1.png",
+    label: "Dream Teddy · Night Sky",
+    category: "showcase",
+    tintSwatch: "#8B5FC9",
+    downloadsBase: 44,
+  },
+  {
+    id: "theme4-good-vibes-city",
+    url: "/nex-brand/shop-themes/theme4.png",
+    label: "Good Vibes · City Sunset",
+    category: "showcase",
+    tintSwatch: "#E880C9",
+    downloadsBase: 51,
+    isNew: true,
+  },
+
+  // ── Fashion · teddy bears (2) ──
+  {
+    id: "teddy1-pink-room",
+    url: "/nex-brand/shop-themes/teddy1.png",
+    label: "Teddy Pink · Soft Border",
+    category: "fashion",
+    tintSwatch: "#F2A7C1",
+    downloadsBase: 37,
+  },
+  {
+    id: "teddy-2-pink-balloons",
+    url: "/nex-brand/shop-themes/teddy-2.png",
+    label: "Teddies · Pink Balloons",
+    category: "fashion",
+    tintSwatch: "#F08CA8",
+    downloadsBase: 42,
+    isNew: true,
+  },
+
+  // ── Tools & trade · plastering (2) ──
+  {
+    id: "plasterers-max-backpack",
+    url: "/nex-brand/shop-themes/plasterers-max.png",
+    label: "Plasterers Max · Gear Bag",
+    category: "tools",
+    tintSwatch: "#FF7A2B",
+    downloadsBase: 33,
+    isNew: true,
+  },
+  {
+    id: "plastering-1-worker",
+    url: "/nex-brand/shop-themes/plastering-1.png",
+    label: "Plastering · On the Job",
+    category: "tools",
+    tintSwatch: "#E8A87C",
+    downloadsBase: 29,
+  },
+
+  // ── Fashion · jewellery (phil91–96, 6) ──
+  {
+    id: "phil91-diamond-black-velvet",
+    url: "/nex-brand/shop-themes/phil91.png",
+    label: "Diamonds · Black Velvet",
+    category: "fashion",
+    tintSwatch: "#E8E8F0",
+    downloadsBase: 46,
+  },
+  {
+    id: "phil92-gold-lion",
+    url: "/nex-brand/shop-themes/phil92.png",
+    label: "Gold Lion · Chain Set",
+    category: "fashion",
+    tintSwatch: "#D9A83A",
+    downloadsBase: 53,
+    isNew: true,
+  },
+  {
+    id: "phil93-pearls-cream",
+    url: "/nex-brand/shop-themes/phil93.png",
+    label: "Pearls · Cream Rose",
+    category: "fashion",
+    tintSwatch: "#F5E8D9",
+    downloadsBase: 38,
+  },
+  {
+    id: "phil94-amethyst-purple",
+    url: "/nex-brand/shop-themes/phil94.png",
+    label: "Amethyst · Purple",
+    category: "fashion",
+    tintSwatch: "#8B3DD9",
+    downloadsBase: 34,
+  },
+  {
+    id: "phil95-roses-rings-red",
+    url: "/nex-brand/shop-themes/phil95.png",
+    label: "Rings · Red Roses",
+    category: "fashion",
+    tintSwatch: "#D92A2A",
+    downloadsBase: 49,
+    isNew: true,
+  },
+  {
+    id: "phil96-turquoise-set",
+    url: "/nex-brand/shop-themes/phil96.png",
+    label: "Turquoise · Statement Set",
+    category: "fashion",
+    tintSwatch: "#2AC9D9",
+    downloadsBase: 31,
+  },
+
+  // ── Tools & trade · door hardware (phil97–99, 3) ──
+  {
+    id: "phil97-black-door-chrome",
+    url: "/nex-brand/shop-themes/phil97.png",
+    label: "Black Door · Chrome Handles",
+    category: "tools",
+    tintSwatch: "#4A5A6B",
+    downloadsBase: 27,
+  },
+  {
+    id: "phil98-white-door-blue",
+    url: "/nex-brand/shop-themes/phil98.png",
+    label: "White Door · Electric Blue",
+    category: "tools",
+    tintSwatch: "#2A6DD9",
+    downloadsBase: 24,
+    isNew: true,
+  },
+  {
+    id: "phil99-french-doors-oak",
+    url: "/nex-brand/shop-themes/phil99.png",
+    label: "French Doors · Oak",
+    category: "tools",
+    tintSwatch: "#A0522D",
+    downloadsBase: 36,
+  },
 ];
 
 // Owner directive 2026-11-06 · "libary must have previous and
