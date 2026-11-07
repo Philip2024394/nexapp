@@ -28,21 +28,47 @@ const INK_MUTED = "#7D9BC0";
 const BORDER = "rgba(198, 161, 91, 0.25)";
 const BORDER_HI = "rgba(198, 161, 91, 0.55)";
 
-const PROMPTS: ReadonlyArray<{ label: string; template: string }> = [
+// Owner directive 2026-11-07 · "list these that they are professional
+// but can be used for any category as suggestion". These five prompts
+// are deliberately CATEGORY-AGNOSTIC · they work for a bakery, a
+// hotel, a staircase company, a hair salon, a fitness studio, an
+// ecommerce brand or a community organisation. No vertical-specific
+// wording, no food-menu framing. Tap-to-insert kept · the seller
+// replaces the [bracketed placeholders] with their own details.
+const PROMPTS: ReadonlyArray<{
+  label: string;
+  hint: string;
+  template: string;
+}> = [
   {
-    label: "Craft / maker",
+    label: "Welcome",
+    hint: "Warm, direct introduction.",
     template:
-      "A small Dublin workshop built on the idea that everyday objects deserve to be made properly · local materials, long-time collaborators, steady hands. Every piece is finished by hand and shipped in recycled packaging.",
+      "We're a [what you do] serving customers across [your area]. Whether you're looking for [one thing you help with] or [another thing], we're here to help — message us any time.",
   },
   {
-    label: "Café / food",
+    label: "The work",
+    hint: "Focus on your process, standards or materials.",
     template:
-      "A neighbourhood café for the quiet morning crowd and the long afternoon reader. Short menu · beans roasted twice a week · everything baked downstairs. Sit in, take away, or message us for a pre-order.",
+      "Every job gets the same attention · [one line on how you work]. We work with [materials, suppliers or partners] because [why it matters]. Questions about how we work? Message us.",
   },
   {
-    label: "Service business",
+    label: "The experience",
+    hint: "Lead with what it feels like to buy from you.",
     template:
-      "Clear pricing, honest timelines, and work we'd be proud to put our name on. Twenty years serving Dublin · ask for a quote any time via chat.",
+      "Working with us starts with a message. Tell us what you need, we'll say honestly whether we can help, and go from there. No pressure, no upsell — only work we can stand behind.",
+  },
+  {
+    label: "Our story",
+    hint: "Origin, who you serve, what you believe in.",
+    template:
+      "We started in [year or season] with a simple idea: [premise]. Since then we've helped [who] with [what]. We believe [principle] — it shapes everything we do.",
+  },
+  {
+    label: "Short & sharp",
+    hint: "Minimal · confident · no-sell.",
+    template:
+      "[What you do] · [where you're based] · [who you serve]. Message us to get started.",
   },
 ];
 
@@ -91,7 +117,10 @@ export function StoryStepClient({
         onSubmit={onSubmit}
         style={{ display: "flex", flexDirection: "column", gap: 14 }}
       >
-        {/* Prompt chips · pre-fill the textarea with a workable draft. */}
+        {/* Prompt chips · pre-fill the textarea with a workable draft.
+            Prompts are category-agnostic · the owner chose the angle
+            (welcome · the work · the experience · story · short) and
+            personalises the [bracketed placeholders] below. */}
         <div>
           <span style={LABEL_STYLE}>Need a starting point?</span>
           <div
@@ -101,51 +130,70 @@ export function StoryStepClient({
               gap: 8,
             }}
           >
-            {PROMPTS.map((p) => (
-              <button
-                key={p.label}
-                type="button"
-                onClick={() => setDescription(p.template)}
-                data-nex-story-prompt={p.label}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 3,
-                  padding: "10px 12px",
-                  background: "rgba(5, 15, 28, 0.9)",
-                  border: `1px solid ${BORDER}`,
-                  borderRadius: 10,
-                  color: INK,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  textAlign: "left",
-                }}
-              >
-                <span
+            {PROMPTS.map((p) => {
+              const isActive = description.trim() === p.template.trim();
+              return (
+                <button
+                  key={p.label}
+                  type="button"
+                  onClick={() => setDescription(p.template)}
+                  data-nex-story-prompt={p.label}
                   style={{
-                    fontSize: 11,
-                    fontWeight: 900,
-                    color: GOLD,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "10px 12px",
+                    background: isActive
+                      ? "rgba(198, 161, 91, 0.14)"
+                      : "rgba(5, 15, 28, 0.9)",
+                    border: `1px solid ${isActive ? BORDER_HI : BORDER}`,
+                    borderRadius: 10,
+                    color: INK,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    textAlign: "left",
                   }}
                 >
-                  {p.label}
-                </span>
-                <span
-                  style={{
-                    fontSize: 11,
-                    color: INK_DIM,
-                    lineHeight: 1.45,
-                  }}
-                >
-                  {p.template}
-                </span>
-              </button>
-            ))}
+                  <span
+                    style={{
+                      flex: 1,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 1,
+                      minWidth: 0,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 11.5,
+                        fontWeight: 900,
+                        color: GOLD,
+                        letterSpacing: "0.06em",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {p.label}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        color: INK_DIM,
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {p.hint}
+                    </span>
+                  </span>
+                  <span aria-hidden style={{ color: GOLD, fontSize: 13, fontWeight: 900 }}>
+                    →
+                  </span>
+                </button>
+              );
+            })}
           </div>
           <span style={HINT_STYLE}>
-            Tap a prompt · edit freely to make it your own.
+            Tap a prompt to drop a template into the field below · edit
+            freely to make it your own.
           </span>
         </div>
 
