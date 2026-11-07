@@ -16,6 +16,11 @@ import { redirect } from "next/navigation";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { listBusinessesByOwner } from "@/lib/nex-native/business-service";
 import { getShopCoverOverrides } from "@/lib/nex-native/shop-cover-service";
+import { effectiveTier } from "@/lib/nex-native/account-service";
+import {
+  ControlDrawer,
+  type ControlDrawerSession,
+} from "@/components/nex-native/control-drawer/control-drawer-client";
 import { ShopBackgroundsClient } from "./_client";
 
 export const runtime = "nodejs";
@@ -38,6 +43,16 @@ export default async function ShopBackgroundsPage(): Promise<React.JSX.Element> 
     ? await getShopCoverOverrides(business.id)
     : { imageUrl: null, tintHex: null };
 
+  // Owner directive 2026-11-07 · shared ControlDrawer in the header's
+  // right-side slot so the user can navigate away from the backgrounds
+  // library without leaving the phone-frame shell. Same shape mounted
+  // on /cover-themes-library + /directory/landing + /contacts.
+  const drawerSession: ControlDrawerSession = {
+    displayName: session.account.display_name,
+    nexHandle: session.account.nex_handle,
+    isBisnis: effectiveTier(session.account) === "bisnis",
+  };
+
   return (
     <>
       <style>{`html, body { background: ${NEX_BG}; }`}</style>
@@ -57,6 +72,22 @@ export default async function ShopBackgroundsPage(): Promise<React.JSX.Element> 
           boxSizing: "border-box",
         }}
       >
+        {/* Owner directive 2026-11-07 · absolute drawer slot anchored
+            top-right of the page so it stays above the scrollable grid
+            inside _client without reserving a row in the client layout.
+            z-index above the client content · tap target 36×36 (sealed
+            ControlDrawer trigger size). */}
+        <div
+          data-nex-shop-backgrounds-drawer-slot
+          style={{
+            position: "absolute",
+            top: "calc(env(safe-area-inset-top, 0px) + 14px)",
+            right: 20,
+            zIndex: 20,
+          }}
+        >
+          <ControlDrawer session={drawerSession} />
+        </div>
         <ShopBackgroundsClient
           businessId={business?.id ?? null}
           currentImageUrl={overrides.imageUrl}
