@@ -262,7 +262,7 @@ export function PoliciesStepClient({
               you&rsquo;ve ticked a freight method, so your shop will be
               listed as exporting.
               {servesLocal
-                ? " You also serve local buyers via postal / pickup."
+                ? ` You also serve local buyers via ${localMethodsSummary(methods)}.`
                 : " No local methods ticked — your shop is export-only."}
             </div>
           ) : null}
@@ -537,6 +537,16 @@ export function PoliciesStepClient({
       </form>
     </WizardShell>
   );
+}
+
+/** "Postal service", "Pick-up", or "Postal service and Pick-up" —
+ *  mirrors the on-card labels so the banner stays consistent. */
+function localMethodsSummary(methods: Set<MethodSlug>): string {
+  const hasPostal = methods.has("postal");
+  const hasPickup = methods.has("pickup");
+  if (hasPostal && hasPickup) return "Postal service and Pick-up";
+  if (hasPostal) return "Postal service";
+  return "Pick-up";
 }
 
 function errorCopy(code: string): string {
