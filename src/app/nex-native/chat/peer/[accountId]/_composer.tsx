@@ -187,11 +187,15 @@ export function PeerComposer({
   const formRef = React.useRef<HTMLFormElement>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const mediaCaptureRef = React.useRef<MediaCaptureHandle | null>(null);
-  // Attachment-file input · a plain hidden <input type="file"> that
-  // the paperclip button on the left of the input bar triggers. Any
-  // mime type is accepted; the file is posted through the same
-  // uploadAction the camera/video/voice flows use.
-  const attachInputRef = React.useRef<HTMLInputElement | null>(null);
+  // Phase 1 follow-up 2026-11-07 · the orphan `attachInputRef` + its
+  // two hidden `<input type="file">` tiles (one in the live Chat9001Pill
+  // path, one inside the retained-for-revert `{false && (ChatComposerPill)}`
+  // block) have been removed. They posted directly to the plaintext
+  // uploadAction and no caller invoked `attachInputRef.current?.click()`
+  // anywhere in the tree. Keeping unreachable plaintext upload code was
+  // a latent regression risk · owner noted the removal in the Phase 1
+  // commit (ae6aec8). All attach entry points now route via the sealed
+  // + button → MediaCapture pipeline with the fail-closed encryption gate.
   const [text, setText] = React.useState("");
   const [modalOpen, setModalOpen] = React.useState(false);
   const [emojiOpen, setEmojiOpen] = React.useState(false);
@@ -1055,23 +1059,10 @@ export function PeerComposer({
             pixel-identical to /nex-native/free-chat (Chat 9001).
             The sealed ChatComposerPill call is preserved below the
             new mount behind {false && ...} so the structure remains
-            revert-safe. Hidden file input stays outside the pill. */}
-        {uploadAction && (
-          <input
-            ref={attachInputRef}
-            type="file"
-            accept="*/*"
-            style={{ display: "none" }}
-            onChange={(e) => {
-              const f = e.currentTarget.files?.[0];
-              if (!f) return;
-              const fd = new FormData();
-              fd.append("attachment_file", f);
-              uploadAction(fd);
-              e.currentTarget.value = "";
-            }}
-          />
-        )}
+            revert-safe.
+            Phase 1 follow-up 2026-11-07 · the orphan hidden file
+            input that lived here was removed · all attach entry
+            points route via MediaCapture now. */}
         <Chat9001Pill
           value={text}
           onChange={setText}
@@ -1106,25 +1097,10 @@ export function PeerComposer({
                   Chat UI Standard (Chat 9001) · the paperclip AttachButton
                   is retired from the pill prefix so peer-chat matches
                   the free-chat pill shape exactly ([+ | textarea | emoji
-                  | send]). File-input ref is retained for any lingering
-                  consumer; the + button now owns ALL attach entry points
-                  via the sealed UniversalAttachPanel. */}
-              {uploadAction && (
-                <input
-                  ref={attachInputRef}
-                  type="file"
-                  accept="*/*"
-                  style={{ display: "none" }}
-                  onChange={(e) => {
-                    const f = e.currentTarget.files?.[0];
-                    if (!f) return;
-                    const fd = new FormData();
-                    fd.append("attachment_file", f);
-                    uploadAction(fd);
-                    e.currentTarget.value = "";
-                  }}
-                />
-              )}
+                  | send]).
+                  Phase 1 follow-up 2026-11-07 · the orphan hidden file
+                  input that lived here was removed · all attach entry
+                  points route via MediaCapture now. */}
               {hasPendingEmojis && (
                 <div
                   style={{
