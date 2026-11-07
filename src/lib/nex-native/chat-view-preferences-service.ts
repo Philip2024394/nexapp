@@ -24,104 +24,31 @@
 import "server-only";
 import { nexSupabaseAdmin } from "./supabase-admin";
 import type { NexUuid } from "./types";
+import {
+  DEFAULT_CHAT_VIEW_PREFS,
+  narrowFontFamily,
+  narrowFontSize,
+  type ChatFontFamily,
+  type ChatFontSize,
+  type ChatViewPreferences,
+} from "./chat-view-preferences";
 
-// ─── Types ────────────────────────────────────────────────────────────
-
-export type ChatFontFamily =
-  | "default"
-  | "system"
-  | "serif"
-  | "monospace"
-  | "handwritten";
-export type ChatFontSize = "small" | "medium" | "large";
-
-export interface ChatViewPreferences {
-  readonly screenshot_copy_protection_enabled: boolean;
-  readonly chat_font_family: ChatFontFamily;
-  readonly chat_font_size: ChatFontSize;
-  readonly chat_bg_from_shop_cover: boolean;
-  readonly shop_cover_from_chat_theme: boolean;
-}
-
-/** Sealed defaults · match migration 285 CHECK/DEFAULT. Applied when
- *  the columns are absent OR when a service-layer read error forces
- *  fail-safe. Changing these requires a sealed doctrine revision. */
-export const DEFAULT_CHAT_VIEW_PREFS: ChatViewPreferences = {
-  screenshot_copy_protection_enabled: false,
-  chat_font_family: "default",
-  chat_font_size: "medium",
-  chat_bg_from_shop_cover: false,
-  shop_cover_from_chat_theme: false,
-};
-
-// ─── UI preset catalogues ─────────────────────────────────────────────
-
-export const CHAT_FONT_FAMILIES: ReadonlyArray<{
-  readonly value: ChatFontFamily;
-  readonly label: string;
-  readonly cssStack: string;
-  readonly description: string;
-}> = [
-  {
-    value: "default",
-    label: "Default · Inter",
-    cssStack:
-      "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-    description: "NEX's house font · clean and readable at every size.",
-  },
-  {
-    value: "system",
-    label: "System",
-    cssStack:
-      "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif",
-    description: "Your device's native font · looks most like other apps.",
-  },
-  {
-    value: "serif",
-    label: "Serif",
-    cssStack:
-      "Georgia, 'Times New Roman', Times, serif",
-    description: "Classic reading font · a little more formal.",
-  },
-  {
-    value: "monospace",
-    label: "Monospace",
-    cssStack:
-      "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace",
-    description: "Fixed-width · good for code-like precision.",
-  },
-  {
-    value: "handwritten",
-    label: "Handwritten",
-    cssStack:
-      "'Comic Sans MS', 'Marker Felt', 'Bradley Hand', cursive",
-    description: "Casual handwritten feel · for lighter conversations.",
-  },
-];
-
-export const CHAT_FONT_SIZES: ReadonlyArray<{
-  readonly value: ChatFontSize;
-  readonly label: string;
-  readonly cssSize: string;
-  readonly description: string;
-}> = [
-  { value: "small", label: "Small", cssSize: "13px", description: "Tighter · more messages visible." },
-  { value: "medium", label: "Medium", cssSize: "15px", description: "NEX default · balanced." },
-  { value: "large", label: "Large", cssSize: "17px", description: "Easier to read at arm's length." },
-];
-
-/** Resolve a stored font-family to the CSS stack string. Falls back
- *  to default when the stored value is unknown. */
-export function resolveFontFamilyCss(value: ChatFontFamily): string {
-  const match = CHAT_FONT_FAMILIES.find((f) => f.value === value);
-  return (match ?? CHAT_FONT_FAMILIES[0]!).cssStack;
-}
-
-/** Resolve a stored font-size to its CSS pixel value. */
-export function resolveFontSizeCss(value: ChatFontSize): string {
-  const match = CHAT_FONT_SIZES.find((f) => f.value === value);
-  return (match ?? CHAT_FONT_SIZES[1]!).cssSize;
-}
+// Re-export the pure client-safe surface so existing server callers
+// that import from this file continue to compile unchanged. Client
+// components should import from `./chat-view-preferences` directly
+// to avoid pulling `"server-only"` into the client bundle.
+export {
+  DEFAULT_CHAT_VIEW_PREFS,
+  CHAT_FONT_FAMILIES,
+  CHAT_FONT_SIZES,
+  resolveFontFamilyCss,
+  resolveFontSizeCss,
+} from "./chat-view-preferences";
+export type {
+  ChatFontFamily,
+  ChatFontSize,
+  ChatViewPreferences,
+} from "./chat-view-preferences";
 
 // ─── Column probe · safe degradation before migration 285 is applied ──
 
@@ -146,25 +73,10 @@ export function _resetChatViewPrefsColumnProbeCacheForTests(): void {
   viewPrefsColumnProbeCache = null;
 }
 
-// ─── Narrowing helpers ───────────────────────────────────────────────
-
-function narrowFontFamily(raw: unknown): ChatFontFamily {
-  if (
-    raw === "default" ||
-    raw === "system" ||
-    raw === "serif" ||
-    raw === "monospace" ||
-    raw === "handwritten"
-  ) {
-    return raw;
-  }
-  return DEFAULT_CHAT_VIEW_PREFS.chat_font_family;
-}
-
-function narrowFontSize(raw: unknown): ChatFontSize {
-  if (raw === "small" || raw === "medium" || raw === "large") return raw;
-  return DEFAULT_CHAT_VIEW_PREFS.chat_font_size;
-}
+// ─── Row mapper ──────────────────────────────────────────────────────
+// narrowFontFamily + narrowFontSize are imported from the pure
+// chat-view-preferences module so client + server share one source
+// of truth.
 
 function rowToPrefs(row: Record<string, unknown>): ChatViewPreferences {
   return {

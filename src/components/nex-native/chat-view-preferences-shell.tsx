@@ -20,14 +20,18 @@
 // before or after migration 285 is applied.
 
 import * as React from "react";
+// Client-safe module · pure types + resolvers · no "server-only"
+// import. The runtime functions here (resolveFontFamilyCss,
+// resolveFontSizeCss) are needed in the browser bundle so this
+// client component cannot import from chat-view-preferences-service.
 import type {
   ChatFontFamily,
   ChatFontSize,
-} from "@/lib/nex-native/chat-view-preferences-service";
+} from "@/lib/nex-native/chat-view-preferences";
 import {
   resolveFontFamilyCss,
   resolveFontSizeCss,
-} from "@/lib/nex-native/chat-view-preferences-service";
+} from "@/lib/nex-native/chat-view-preferences";
 
 export interface ChatViewPreferencesShellProps {
   readonly screenshot_copy_protection_enabled: boolean;
