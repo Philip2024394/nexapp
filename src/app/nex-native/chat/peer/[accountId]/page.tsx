@@ -1074,8 +1074,28 @@ export default async function PeerChatPage({
   const replyingAsChip =
     viewerBusiness && !showShopFace ? viewerBusiness.display_name : null;
 
+  // Owner-sealed 2026-11-07 · Chat Settings Hub Sections 5+6 · viewer-
+  // side protection + font preferences. Fail-safe: when migration 285
+  // is unapplied the service returns sealed defaults (protection OFF,
+  // font = default / medium) · the shell renders a no-op style. See
+  // src/lib/nex-native/chat-view-preferences-service.ts.
+  const { getChatViewPreferencesSafe } = await import(
+    "@/lib/nex-native/chat-view-preferences-service"
+  );
+  const { ChatViewPreferencesShell } = await import(
+    "@/components/nex-native/chat-view-preferences-shell"
+  );
+  const chatViewPrefs = await getChatViewPreferencesSafe(session.account.id);
+
   return (
     <div data-nex-peer-chat-prototype-wrap>
+      <ChatViewPreferencesShell
+        screenshot_copy_protection_enabled={
+          chatViewPrefs.screenshot_copy_protection_enabled
+        }
+        chat_font_family={chatViewPrefs.chat_font_family}
+        chat_font_size={chatViewPrefs.chat_font_size}
+      />
       {/* Owner-authorised 2026-11-05 · scoped CSS hides the sealed
           PortraitBloomShell native identity header + home/cart/shop
           right cluster so only the layered FreeChatHeader renders.

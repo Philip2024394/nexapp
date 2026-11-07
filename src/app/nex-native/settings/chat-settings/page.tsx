@@ -154,26 +154,27 @@ export default async function ChatSettingsPage({
           />
 
           <SettingsGroupHeader>Screenshot & copy protection</SettingsGroupHeader>
-          <ComingSoonCard
+          <LinkCard
+            href="/nex-native/settings/chat-protection"
             emoji="📷"
             title="Block screenshot and copy"
-            subtitle="Prevents screenshots, copy-to-clipboard, and media save on chats where you enable it. Web can't block all OS-level screenshots · best-effort with explicit warnings."
+            subtitle="Viewer-side CSS + context-menu + copy-keystroke blocks on your chat UI. Honest about OS-level screenshot limits."
           />
 
           <SettingsGroupHeader>Chat font</SettingsGroupHeader>
-          <ComingSoonCard
+          <LinkCard
+            href="/nex-native/settings/chat-font"
             emoji="🔤"
             title="Font style and size"
-            subtitle="Pick a chat font family and size. Reset to default any time. Affects your view only · not what contacts see."
-            rightLabel="Reset"
+            subtitle="Pick a chat font family and size for YOUR view. Reset to default any time. Contacts never see a different font because of this."
           />
 
           <SettingsGroupHeader>Background sync</SettingsGroupHeader>
-          <ComingSoonCard
+          <LinkCard
+            href="/nex-native/settings/chat-background-sync"
             emoji="🪞"
             title="Shop cover ↔ chat background"
             subtitle="Two independent toggles: (1) use your shop cover as your chat background, (2) use your chat theme image as your shop cover. Reset either independently."
-            rightLabel="Reset"
           />
 
           <SettingsGroupHeader>Honest state</SettingsGroupHeader>
