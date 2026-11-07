@@ -167,7 +167,13 @@ export const MARIA_MOCK: MockCoverContent = {
   // still populate this independently.
   location: "",
   portraitUrl: "",
-  ownerAccountId: "preview-account",
+  // Owner directive 2026-11-07 · "preview-account" was tripping a
+  // UUID 22P02 error at the chat peer page when any surface in the
+  // preview iframe linked to this owner (e.g., the chat FAB). Using
+  // the all-zeros UUID keeps the shape valid; the chat page's UUID
+  // guard + maybeSingle still redirects to /chat since no row owns
+  // this id.
+  ownerAccountId: "00000000-0000-0000-0000-000000000000",
   presenceOnline: true,
   social: {
     instagram: "yourbusiness",

@@ -240,6 +240,17 @@ export default async function PeerChatPage({
   }
   if (peerAccountId === session.account.id) redirect("/nex-native/chat");
 
+  // Owner directive 2026-11-07 · guard against non-UUID peerAccountId
+  // (e.g. "preview-account" from a template-preview iframe mock).
+  // Postgres rejects non-UUID shapes with a hard 22P02 that surfaces
+  // as a runtime error page; we'd rather treat it like a missing
+  // peer and redirect cleanly.
+  const UUID_RE =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!UUID_RE.test(peerAccountId)) {
+    redirect("/nex-native/chat");
+  }
+
   // R9 Stage 4 (2026-10-15 · migration 199 unapplied as of this commit)
   // · resolve the viewer's chat privacy preferences server-side.
   // getChatPreferencesSafe reads nex_account columns; when the migration
