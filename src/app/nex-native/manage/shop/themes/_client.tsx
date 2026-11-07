@@ -158,39 +158,30 @@ export function ShopThemesClient({
           borderBottom: `1px solid ${BORDER}`,
         }}
       >
-        <div
+        <h1
           style={{
-            display: "flex",
-            alignItems: "baseline",
-            justifyContent: "space-between",
-            gap: 10,
+            margin: 0,
+            fontSize: 20,
+            fontWeight: 900,
+            color: GOLD,
+            letterSpacing: "-0.01em",
           }}
         >
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 20,
-              fontWeight: 900,
-              color: GOLD,
-              letterSpacing: "-0.01em",
-            }}
-          >
-            Shop Template
-          </h1>
-          <span
-            data-nex-step-indicator
-            style={{
-              fontSize: 10,
-              fontWeight: 900,
-              color: INK_MUTED,
-              letterSpacing: "0.14em",
-              textTransform: "uppercase",
-              flexShrink: 0,
-            }}
-          >
-            Step 1 of 2
-          </span>
-        </div>
+          Shop Template
+        </h1>
+        <span
+          data-nex-step-indicator
+          style={{
+            fontSize: 10,
+            fontWeight: 900,
+            color: INK_MUTED,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            marginTop: 2,
+          }}
+        >
+          Step 1 of 2
+        </span>
       </header>
 
       {/* Owner directive 2026-11-07 · "no undo white outside phone -
@@ -381,12 +372,12 @@ export function ShopThemesClient({
           }}
         >
           {status.kind === "applying"
-            ? "Activating…"
+            ? "Selecting…"
             : status.kind === "ok"
-              ? "Shop active ✓"
+              ? "Template selected ✓"
               : status.kind === "error"
                 ? "Retry"
-                : "Activate Shop"}
+                : "Select template"}
         </button>
         {status.kind === "error" ? (
           <span style={{ fontSize: 11, color: "#B13030" }}>

@@ -114,7 +114,22 @@ export default async function ShopThemesPage(): Promise<React.JSX.Element> {
             zIndex: 20,
           }}
         >
-          <ControlDrawer session={drawerSession} />
+          {/* Owner directive 2026-11-07 · "add cream button for the +
+              side drawer round". Trigger rendered as a cream circle
+              with warm-ink + glyph so it reads as a friendly action
+              against the sealed dark Ireland world chrome. */}
+          <ControlDrawer
+            session={drawerSession}
+            triggerStyle={{
+              width: 40,
+              height: 40,
+              borderRadius: 999,
+              background: "#FAF8F4",
+              color: "#1A120A",
+              border: "1.5px solid var(--nex-world-secondary, #C6A15B)",
+              boxShadow: "0 6px 16px rgba(0, 0, 0, 0.35)",
+            }}
+          />
         </div>
         <ShopThemesClient
           businessId={business?.id ?? null}
