@@ -4,9 +4,51 @@
 // Enforces the DISPOSABLE-POSTGRES-ONLY posture: refuses to run if
 // NEX_REHEARSAL_PG_URL looks like a Supabase / production hostname, and
 // refuses to use NEX_POSTGRES_URL / DATABASE_URL.
+//
+// Credential delivery:
+//   The password must never appear in chat / logs / the committed tree.
+//   We accept the connection string through either:
+//     (a) process.env.NEX_REHEARSAL_PG_URL (shell-set), or
+//     (b) a .env.rehearsal file in the repo root with the one line:
+//            NEX_REHEARSAL_PG_URL=postgresql://postgres:xxx@127.0.0.1:5433/postgres
+//   The file is already covered by .gitignore's `.env*` rule · never
+//   commits. The loader reads it ONCE at module init and immediately
+//   unlinks the stored string from the parsed file contents · the
+//   raw string is retained only inside process.env.
 
 import pg from "pg";
+import { readFileSync, existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 const { Client } = pg;
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = join(__dirname, "..", "..");
+const REHEARSAL_ENV_FILE = join(REPO_ROOT, ".env.rehearsal");
+
+// Load .env.rehearsal into process.env if present. Never echo contents.
+(function loadRehearsalEnv() {
+  if (process.env.NEX_REHEARSAL_PG_URL) return; // shell-set wins
+  if (!existsSync(REHEARSAL_ENV_FILE)) return;
+  const raw = readFileSync(REHEARSAL_ENV_FILE, "utf8");
+  for (const line of raw.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq < 0) continue;
+    const key = trimmed.slice(0, eq).trim();
+    // Only load the exact key we need · do not populate arbitrary env.
+    if (key !== "NEX_REHEARSAL_PG_URL") continue;
+    let value = trimmed.slice(eq + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    process.env.NEX_REHEARSAL_PG_URL = value;
+  }
+})();
 
 const PRODUCTION_HOSTNAME_FRAGMENTS = [
   "supabase.co",
