@@ -169,6 +169,7 @@ export interface ShopCoverContent {
   readonly tiktokHandle: string | null;
   readonly websiteUrl: string | null;
   readonly publicPhone: string | null;
+  readonly publicEmail: string | null;
 }
 
 interface ShopCoverContentRow {
@@ -184,6 +185,7 @@ interface ShopCoverContentRow {
   tiktok_handle: string | null;
   website_url: string | null;
   public_phone: string | null;
+  public_email: string | null;
 }
 
 /** Load the owner-authored cover content for one business. Returns
@@ -197,7 +199,7 @@ export async function getShopCoverContent(
   const { data, error } = await nexSupabaseAdmin
     .from("nex_business")
     .select(
-      "display_name, slug, city, description, address, hours_display, logo_url, instagram_handle, facebook_handle, tiktok_handle, website_url, public_phone",
+      "display_name, slug, city, description, address, hours_display, logo_url, instagram_handle, facebook_handle, tiktok_handle, website_url, public_phone, public_email",
     )
     .eq("id", businessId)
     .maybeSingle<ShopCoverContentRow>();
@@ -215,5 +217,6 @@ export async function getShopCoverContent(
     tiktokHandle: data.tiktok_handle,
     websiteUrl: data.website_url,
     publicPhone: data.public_phone,
+    publicEmail: data.public_email,
   };
 }

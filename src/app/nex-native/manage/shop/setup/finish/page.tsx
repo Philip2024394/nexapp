@@ -180,8 +180,7 @@ export default async function ShopSetupFinishPage(): Promise<React.JSX.Element> 
           >
             Nice work.
             <br />
-            <span style={{ color: GOLD }}>{existing.display_name}</span> is
-            almost live.
+            <span style={{ color: GOLD }}>Your shop</span> is almost live.
           </h1>
           <p
             style={{

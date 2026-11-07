@@ -900,9 +900,6 @@ function AboutUsSheet({
     Facebook: content?.facebookHandle
       ? `https://facebook.com/${content.facebookHandle}`
       : null,
-    WhatsApp: content?.publicPhone
-      ? `https://wa.me/${content.publicPhone.replace(/[^\d+]/g, "")}`
-      : null,
     Website: content?.websiteUrl ?? null,
   };
   // Keep the shopUrl reference so the inline-share pattern can wire
@@ -1159,29 +1156,94 @@ function AboutUsSheet({
         </section>
       </div>
 
-      {/* Owner directive 2026-11-06 refined · address moved to the
-          lower end of the page · sits just above the social footer
-          so the full street address reads as a direct "visit us"
-          cue right before the user taps a social link. */}
-      <div
+      {/* Owner directive 2026-11-07 · dedicated Contact us section
+          sits just above the social footer. Always labelled · the
+          seller's phone/email become tap-to-call / tap-to-email
+          links when present; address falls back to the content or
+          mock. WhatsApp is deliberately NOT referenced (owner
+          directive 2026-11-07). */}
+      <section
+        aria-label="Contact us"
         style={{
-          padding: "10px 0 12px",
           marginTop: 10,
-          fontSize: 11,
-          color: INK_DIM,
-          display: "inline-flex",
-          alignItems: "center",
+          padding: "12px 12px",
+          borderRadius: 12,
+          border: `1px solid ${accent}55`,
+          background: "rgba(5, 15, 28, 0.55)",
+          display: "flex",
+          flexDirection: "column",
           gap: 6,
         }}
       >
-        <span
-          aria-hidden
-          style={{ color: accent, fontSize: 14, lineHeight: 1 }}
+        <div
+          style={{
+            fontSize: 10.5,
+            fontWeight: 900,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            color: accent,
+          }}
         >
-          📍
-        </span>
-        {address}
-      </div>
+          Contact us
+        </div>
+
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            fontSize: 11.5,
+            color: INK_DIM,
+            lineHeight: 1.4,
+          }}
+        >
+          <span aria-hidden style={{ color: accent, fontSize: 14 }}>📍</span>
+          <span>{address}</span>
+        </div>
+
+        {content?.publicPhone ? (
+          <a
+            href={`tel:${content.publicPhone.replace(/[^\d+]/g, "")}`}
+            aria-label={`Call ${displayName}`}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 11.5,
+              color: INK,
+              textDecoration: "none",
+              lineHeight: 1.4,
+            }}
+          >
+            <span aria-hidden style={{ color: accent, fontSize: 14 }}>📞</span>
+            <span style={{ textDecoration: "underline" }}>
+              {content.publicPhone}
+            </span>
+          </a>
+        ) : null}
+
+        {content?.publicEmail ? (
+          <a
+            href={`mailto:${content.publicEmail}`}
+            aria-label={`Email ${displayName}`}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 11.5,
+              color: INK,
+              textDecoration: "none",
+              lineHeight: 1.4,
+              wordBreak: "break-all",
+            }}
+          >
+            <span aria-hidden style={{ color: accent, fontSize: 14 }}>✉</span>
+            <span style={{ textDecoration: "underline" }}>
+              {content.publicEmail}
+            </span>
+          </a>
+        ) : null}
+      </section>
 
       {/* FOOTER · owner directive 2026-11-06 refined · "the scial
           media icons same style and design as shop page". Matches
@@ -1293,7 +1355,10 @@ function darken(hex: string, amount: number): string {
 // the same SVG vocabulary as CoverIdentityRail on the shop cover
 // (stroke 1.4 · 16×16 viewBox 24 · currentColor fill) so the two
 // surfaces feel like one design system. Matches primitives.tsx
-// IconInstagram / IconTikTok / IconFacebook / IconWhatsApp / IconGlobe.
+// IconInstagram / IconTikTok / IconFacebook / IconGlobe. Owner
+// directive 2026-11-07 · dropped WhatsApp from the social row ·
+// phone is now a plain Contact-us listing with a tel: link, not a
+// chat-app deep link.
 const SHOP_PAGE_SOCIAL_ICONS: ReadonlyArray<{
   label: string;
   glyph: React.ReactNode;
@@ -1321,14 +1386,6 @@ const SHOP_PAGE_SOCIAL_ICONS: ReadonlyArray<{
     glyph: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
         <path d="M14 8h2V5h-2a3 3 0 00-3 3v2H9v3h2v7h3v-7h2l1-3h-3V8a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.4" fill="none" strokeLinejoin="round" />
-      </svg>
-    ),
-  },
-  {
-    label: "WhatsApp",
-    glyph: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-        <path d="M4 20l1.5-4A7 7 0 1112 19a7 7 0 01-3.5-.9L4 20zM9 9.5c0-.4.4-.5.7-.5s.5 0 .7.5.7 1.5.7 1.7-.2.4-.5.5c-.3.2-.4.3-.2.6.4.7 1.3 1.6 2 2 .3.1.5 0 .6-.2.2-.3.4-.5.7-.5.5 0 1.4.7 1.7.9.2.2.2.4.1.5-.3.6-1 1.1-1.7 1.1-1.4 0-3.4-1.5-4.4-3.4-.4-.6-.4-1.3-.4-1.7z" stroke="currentColor" strokeWidth="1.3" fill="none" strokeLinejoin="round" />
       </svg>
     ),
   },

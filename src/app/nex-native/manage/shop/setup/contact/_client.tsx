@@ -69,10 +69,10 @@ const FIELDS: ReadonlyArray<SocialField> = [
   },
   {
     name: "publicPhone",
-    label: "WhatsApp / phone",
+    label: "Contact number",
     prefix: "+",
     placeholder: "353 1 234 5678",
-    hint: "Include the country code so WhatsApp links work.",
+    hint: "Include the country code.",
     type: "tel",
   },
   {
@@ -244,8 +244,7 @@ export function ContactStepClient({
             marginTop: 2,
           }}
         >
-          {INK.length > 0 ? "" : null}Handles are stored without the @.
-          WhatsApp link uses the phone when present.
+          Handles are stored without the @.
         </span>
       </form>
     </WizardShell>
