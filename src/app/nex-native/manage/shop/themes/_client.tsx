@@ -236,36 +236,44 @@ export function ShopThemesClient({
             background: "transparent",
           }}
         />
+      </section>
+
+      {/* Owner directive 2026-11-07 · "view large screen - must be
+          outside the phone the button and must open in screen size".
+          Labelled pill sits outside the phone frame · the full-
+          screen dialog portals to document.body and covers the
+          whole viewport. */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+        }}
+      >
         <button
           type="button"
           onClick={() => setFullscreen(true)}
-          aria-label="View template full-screen"
-          title="View full-screen"
           data-nex-template-fullscreen
           style={{
-            position: "absolute",
-            top: 10,
-            right: 10,
-            width: 36,
-            height: 36,
-            borderRadius: 10,
-            background: "rgba(26, 18, 10, 0.72)",
-            color: CREAM,
-            border: `1px solid ${GOLD}`,
-            display: "grid",
-            placeItems: "center",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "8px 16px",
+            fontSize: 11,
+            fontWeight: 800,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: GOLD,
+            background: "rgba(5, 15, 28, 0.9)",
+            border: `1.5px solid ${BORDER_HI}`,
+            borderRadius: 999,
             cursor: "pointer",
             fontFamily: "inherit",
-            fontSize: 18,
-            fontWeight: 900,
-            lineHeight: 1,
-            padding: 0,
-            boxShadow: "0 4px 12px rgba(26,18,10,0.35)",
           }}
         >
-          ⤢
+          <span aria-hidden style={{ fontSize: 14, lineHeight: 1 }}>⤢</span>
+          View large screen
         </button>
-      </section>
+      </div>
 
       {/* ── Prev / count / next row under the phone ──────────── */}
       <div
