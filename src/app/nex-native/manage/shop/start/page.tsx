@@ -20,6 +20,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { listBusinessesByOwner } from "@/lib/nex-native/business-service";
+import { ShopStartWelcomeModal } from "./_welcome-modal";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -89,6 +90,11 @@ export default async function ShopStartPage(): Promise<React.JSX.Element> {
           <Footer />
         </div>
       </main>
+      {/* Owner directive 2026-11-07 · first-impression welcome pop-up ·
+          auto-opens on mount · "Lets go" routes into the setup wizard ·
+          ESC / backdrop / "Maybe later" close it to reveal the full
+          landing underneath. */}
+      <ShopStartWelcomeModal />
     </>
   );
 }
