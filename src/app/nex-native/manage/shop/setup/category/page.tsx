@@ -10,7 +10,16 @@
 import type * as React from "react";
 import { redirect } from "next/navigation";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
-import { listBusinessesByOwner } from "@/lib/nex-native/business-service";
+import {
+  inferRev6PairFromLegacySlug,
+  listBusinessesByOwner,
+} from "@/lib/nex-native/business-service";
+import { isBusinessCategory } from "@/lib/nex-native/business/categories";
+import { isBusinessSubtype } from "@/lib/nex-native/business/subtypes";
+import type {
+  BusinessCategory,
+  BusinessSubtype,
+} from "@/lib/nex-native/business/types";
 import { CategoryStepClient } from "./_client";
 
 export const runtime = "nodejs";
@@ -52,9 +61,42 @@ export default async function ShopSetupCategoryPage(): Promise<React.JSX.Element
         }}
       >
         <CategoryStepClient
-          initialCategory={existing.business_category ?? null}
+          {...resolveInitialPair(existing)}
         />
       </main>
     </>
   );
+}
+
+/** Resolution rank (owner-sealed 2026-11-07):
+ *   1 · nex_business.profile.primary (Rev 6 pair · canonical)
+ *   2 · nex_business.business_category legacy slug via
+ *       inferRev6PairFromLegacySlug — pre-Rev 6 accounts keep their
+ *       classification visible in the Step 3 dropdowns.
+ *   3 · null · dropdowns default to "Select a category". */
+function resolveInitialPair(row: {
+  profile?: { primary?: { category?: unknown; subtype?: unknown } | null } | null;
+  business_category?: string | null;
+}): {
+  initialCategory: BusinessCategory | null;
+  initialSubtype: BusinessSubtype | null;
+} {
+  const pCat = row.profile?.primary?.category;
+  const pSub = row.profile?.primary?.subtype;
+  const pCatStr = typeof pCat === "string" ? pCat : null;
+  const pSubStr = typeof pSub === "string" ? pSub : null;
+  if (isBusinessCategory(pCatStr) && isBusinessSubtype(pSubStr)) {
+    return {
+      initialCategory: pCatStr as BusinessCategory,
+      initialSubtype: pSubStr as BusinessSubtype,
+    };
+  }
+  const inferred = inferRev6PairFromLegacySlug(row.business_category ?? null);
+  if (inferred) {
+    return {
+      initialCategory: inferred.category,
+      initialSubtype: inferred.subtype,
+    };
+  }
+  return { initialCategory: null, initialSubtype: null };
 }

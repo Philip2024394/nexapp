@@ -18,6 +18,35 @@ import type {
   NexWeeklyHours,
 } from "./types";
 import { NEX_WEEK_DAYS } from "./types";
+import { narrowCountryCode } from "./country-catalogue";
+
+// ─── operating_country_code column-probe cache ─────────────────────
+// Migration 286 is AUTHORED · NOT YET APPLIED to production. Until
+// it lands, we must detect the column's absence at runtime and avoid
+// writing it (otherwise every save fails with "column does not
+// exist"). This matches the sealed defaults pattern used elsewhere
+// in nex-native services.
+//
+// The probe runs at most once per process · subsequent writes read
+// the cached result. We refresh on error (column added mid-process)
+// by clearing the cache and re-probing on the next write.
+
+let OPERATING_COUNTRY_COLUMN_READY: boolean | null = null;
+
+async function ensureOperatingCountryColumnReady(): Promise<boolean> {
+  if (OPERATING_COUNTRY_COLUMN_READY !== null) {
+    return OPERATING_COUNTRY_COLUMN_READY;
+  }
+  const { error } = await nexSupabaseAdmin
+    .from("nex_business")
+    .select("operating_country_code")
+    .limit(1);
+  // PGRST116 / 42703 both signal "column does not exist" in the
+  // Supabase REST error surface. Treat ANY error as "not ready" ·
+  // the writer will skip the field and consumers already fall back.
+  OPERATING_COUNTRY_COLUMN_READY = !error;
+  return OPERATING_COUNTRY_COLUMN_READY;
+}
 
 const PROFILE_LIMITS: Record<string, number> = {
   description: 2000,
@@ -87,6 +116,48 @@ function assertEmailShape(email: string | null): void {
       `business-service.updateBusinessProfile: public_email malformed · got ${email.slice(0, 32)}…`
     );
   }
+}
+
+// ─── Default currency for a business ──────────────────────────────
+// Owner-sealed 2026-11-07 · thin resolver consumed by the product-
+// create form, the delivery editor, the floating cart and other
+// per-shop price surfaces so they default to the SHOP'S country
+// currency (not the app's env default). Resolution order:
+//   1 · nex_business.operating_country_code → catalogue currency
+//   2 · NEX_APP_CURRENCY env var (deployment-wide default)
+//   3 · NEX_APP_COUNTRY env var → catalogue currency
+//   4 · "EUR" · worldwide-neutral hard default
+// Never throws · degrades through fallbacks when the migration
+// hasn't landed yet (`operating_country_code` reads as undefined).
+
+import { defaultCurrencyForCountry } from "./country-catalogue";
+
+/** Resolve the ISO 4217 currency a business should default to for
+ *  prices. Reads the per-business operating_country_code when set ·
+ *  falls back to env then to EUR. Safe to call pre-migration (just
+ *  returns the env/EUR fallback). */
+export async function getDefaultCurrencyForBusiness(
+  businessId: NexUuid,
+): Promise<string> {
+  const biz = await getBusinessById(businessId);
+  return defaultCurrencyFromBusinessRow(biz);
+}
+
+/** Pure variant for call sites that already hold the row. */
+export function defaultCurrencyFromBusinessRow(
+  biz: NexBusinessRow | null,
+): string {
+  const country = biz?.operating_country_code ?? null;
+  if (country) {
+    return defaultCurrencyForCountry(country, "EUR");
+  }
+  const envCurrency = process.env.NEX_APP_CURRENCY?.trim();
+  if (envCurrency && /^[A-Z]{3}$/.test(envCurrency)) return envCurrency;
+  const envCountry =
+    process.env.NEX_APP_COUNTRY ??
+    process.env.NEXT_PUBLIC_NEX_APP_COUNTRY ??
+    null;
+  return defaultCurrencyForCountry(envCountry, "EUR");
 }
 
 /** Read one business by NEX UUID · null when not found. */
@@ -298,6 +369,30 @@ export async function updateBusinessProfile(
   if ("website_url" in update)  assertUrlShape(update["website_url"] as string | null,  "website_url");
   if ("public_email" in update) assertEmailShape(update["public_email"] as string | null);
 
+  // operating_country_code · narrow against the sealed catalogue ·
+  // column-probe guards pre-migration production (migration 286).
+  if (patch.operating_country_code !== undefined) {
+    const raw = patch.operating_country_code;
+    let next: string | null;
+    if (raw === null || (typeof raw === "string" && raw.trim().length === 0)) {
+      next = null;
+    } else {
+      const narrowed = narrowCountryCode(raw);
+      if (!narrowed) {
+        throw new Error(
+          `business-service.updateBusinessProfile: operating_country_code must be a known ISO2 from the NEX country catalogue · got ${String(raw).slice(0, 16)}`
+        );
+      }
+      next = narrowed;
+    }
+    const columnReady = await ensureOperatingCountryColumnReady();
+    if (columnReady) {
+      update["operating_country_code"] = next;
+    }
+    // Column not yet applied · silently drop the field. Consumers
+    // read NEX_APP_COUNTRY as the fallback, so behaviour is stable.
+  }
+
   if (Object.keys(update).length === 0) {
     // No-op · return current row · idempotent.
     const current = await getBusinessById(id);
@@ -377,6 +472,216 @@ export function normaliseWeeklyHours(input: unknown): NexWeeklyHours {
  *  Pass `null` to clear · pass a full 7-day object to set.
  *  Validation is done here (DB CHECK is only the object-with-7-keys shape). */
 import { NEX_BUSINESS_CATEGORIES } from "./site-templates";
+import {
+  BUSINESS_SUBTYPE_CATEGORY,
+  isBusinessSubtype,
+} from "./business/subtypes";
+import { isBusinessCategory } from "./business/categories";
+import type {
+  BusinessCategory,
+  BusinessSubtype,
+} from "./business/types";
+
+// ─── Rev 6 primary-profile writer ──────────────────────────────────
+// Owner-sealed 2026-11-07. Rev 6 (FROZEN · 2026-10-02) made the 5x30
+// category+subtype pair the canonical classification context,
+// persisted to `nex_business.profile` JSONB (migration 126). The
+// legacy `business_category` text column (migration 065, 23 slugs) is
+// still read by 20+ downstream surfaces (directory, cover loader,
+// theme chooser, menu-first routing, discovery, intelligence) so we
+// keep it populated via a strict 1:1 overlap map and leave it
+// untouched for Rev 6 subtypes with no legacy equivalent.
+//
+// Exact overlaps between the two namespaces (character-for-character):
+//   restaurant · cafe · bakery · beauty
+// Everything else is Rev 6 only; `business_category` stays as-is on
+// save (prior value preserved · never silently cleared).
+
+// Owner-sealed 2026-11-07 · Phase B · extended the 1:1 mirror map
+// from 4 → 22 entries so every Rev 6 subtype with an exact legacy
+// slug equivalent keeps writing to nex_business.business_category.
+// Downstream Directory + search-service + landing-category-mapping
+// keep seeing the correct bucket on new signups. Rev 6 subtypes
+// without a legacy twin (every Accommodation/Property subtype,
+// food_maker, catering, food_delivery, health_wellness, home_services,
+// trade_construction, professional, creative, retail, manufacturer,
+// wholesale, local_artisan, exporter, motorbike_shop) leave the
+// legacy column untouched · profile JSONB is their canonical home.
+// 4 of the 18 new mirror slugs (ice-cream, dessert-shop, drinks-shop,
+// juice-bar) are rejected by migration 065's CHECK until migration
+// 287 lands · the writer silently drops them in that case.
+const REV6_SUBTYPE_TO_LEGACY_SLUG: Partial<Record<BusinessSubtype, string>> = {
+  // Original 1:1 overlaps.
+  restaurant: "restaurant",
+  cafe: "cafe",
+  bakery: "bakery",
+  beauty: "beauty",
+  // Food · Phase B · ⚠ requires migration 287 to clear the 065 CHECK.
+  ice_cream: "ice-cream",
+  dessert_shop: "dessert-shop",
+  drinks: "drinks-shop",
+  juice_bar: "juice-bar",
+  // Services · Phase B · slugs already permitted by 065 CHECK.
+  salon: "salon",
+  fitness: "fitness",
+  tradesperson: "tradesperson",
+  construction: "construction",
+  staircase_company: "staircase-company",
+  consultant: "consultant",
+  agency: "agency",
+  professional: "professional-service",
+  home_services: "local-service",
+  events: "event",
+  portfolio: "portfolio",
+  creator: "creator",
+  community: "community",
+  // Products · Phase B · slugs already permitted by 065 CHECK.
+  ecommerce: "ecommerce",
+  product_brand: "product-brand",
+};
+
+// ─── Legacy-slug → Rev 6 pair reverse map (read-side pre-fill) ──────
+// Used by category/page.tsx when a returning seller has
+// business_category set but profile.primary is null (ie account was
+// created before the Rev 6 wizard shipped). Returns the Rev 6 pair
+// the dropdown should pre-select; never writes. Pure fn · safe
+// anywhere.
+//
+// The map is the inverse of REV6_SUBTYPE_TO_LEGACY_SLUG for every
+// slug where the inverse makes sense · "retail" (legacy "ecommerce"
+// ↔ Rev 6 "ecommerce") takes precedence over the generic "retail"
+// bucket per the "specific ahead of generic" rule.
+
+const LEGACY_SLUG_TO_REV6_SUBTYPE: Record<string, BusinessSubtype> = {
+  // Food (legacy kebab-case → Rev 6 snake_case)
+  bakery:               "bakery",
+  restaurant:           "restaurant",
+  cafe:                 "cafe",
+  "ice-cream":          "ice_cream",
+  "dessert-shop":       "dessert_shop",
+  "drinks-shop":        "drinks",
+  "juice-bar":          "juice_bar",
+  // Services
+  tradesperson:         "tradesperson",
+  construction:         "construction",
+  "staircase-company":  "staircase_company",
+  salon:                "salon",
+  beauty:               "beauty",
+  fitness:              "fitness",
+  consultant:           "consultant",
+  agency:               "agency",
+  "local-service":      "home_services",
+  portfolio:            "portfolio",
+  community:            "community",
+  event:                "events",
+  creator:              "creator",
+  "professional-service": "professional",
+  // Products
+  ecommerce:            "ecommerce",
+  "product-brand":      "product_brand",
+};
+
+/** Pure read-side helper · when a returning seller has only the
+ *  legacy `business_category` slug set (pre-Rev 6 account), derive
+ *  the Rev 6 pair so the Shop Setup Step 3 dropdown pre-selects
+ *  correctly. Returns null for unknown slugs. */
+export function inferRev6PairFromLegacySlug(
+  slug: string | null | undefined,
+): { category: BusinessCategory; subtype: BusinessSubtype } | null {
+  if (!slug) return null;
+  const subtype = LEGACY_SLUG_TO_REV6_SUBTYPE[slug.trim()];
+  if (!subtype) return null;
+  return {
+    category: BUSINESS_SUBTYPE_CATEGORY[subtype],
+    subtype,
+  };
+}
+
+/** Write the Rev 6 primary classification pair to nex_business.profile
+ *  and (when a 1:1 legacy overlap exists) mirror the subtype to the
+ *  legacy business_category column so downstream readers keep working.
+ *
+ *  Throws if the subtype doesn't belong to the given category (defence
+ *  against stale form state where the owner changed category after
+ *  picking a subtype). Preserves `profile.secondary` when a profile
+ *  already exists; overwrites only `profile.primary`. */
+export async function setBusinessPrimaryProfile(
+  id: NexUuid,
+  input: {
+    readonly category: BusinessCategory;
+    readonly subtype: BusinessSubtype;
+  },
+): Promise<NexBusinessRow> {
+  if (!isBusinessCategory(input.category)) {
+    throw new Error(
+      `business-service.setBusinessPrimaryProfile: unknown category '${input.category}'`,
+    );
+  }
+  if (!isBusinessSubtype(input.subtype)) {
+    throw new Error(
+      `business-service.setBusinessPrimaryProfile: unknown subtype '${input.subtype}'`,
+    );
+  }
+  if (BUSINESS_SUBTYPE_CATEGORY[input.subtype] !== input.category) {
+    throw new Error(
+      `business-service.setBusinessPrimaryProfile: subtype '${input.subtype}' does not belong to category '${input.category}'`,
+    );
+  }
+
+  const current = await getBusinessById(id);
+  if (!current) {
+    throw new Error(
+      `business-service.setBusinessPrimaryProfile: business ${id} not found`,
+    );
+  }
+
+  const existingSecondary =
+    (current.profile?.secondary as unknown[]) ?? [];
+  const nextProfile = {
+    primary: { category: input.category, subtype: input.subtype },
+    secondary: existingSecondary,
+  };
+
+  const update: Record<string, unknown> = { profile: nextProfile };
+  const legacyMirror = REV6_SUBTYPE_TO_LEGACY_SLUG[input.subtype];
+  if (legacyMirror) {
+    update.business_category = legacyMirror;
+  }
+  // No else · subtypes without a legacy overlap leave the old column
+  // alone (preserves whatever a prior save wrote · never clobbers).
+
+  const { data, error } = await nexSupabaseAdmin
+    .from("nex_business")
+    .update(update)
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error || !data) {
+    // Migration 287 drift guard · if the 4 new food slugs
+    // (ice-cream, dessert-shop, drinks-shop, juice-bar) get written
+    // before migration 287 extends the 065 CHECK, Postgres rejects
+    // just the business_category write · retry without the mirror
+    // so the Rev 6 profile still lands. Rev 6 pair IS the canonical
+    // record; losing the legacy mirror only costs Directory tiling
+    // on the new food subtypes until the migration is applied.
+    const msg = error?.message ?? "";
+    const isCategoryCheckRejection =
+      /nex_business_category_check|business_category.*check/i.test(msg);
+    if (legacyMirror && isCategoryCheckRejection) {
+      const retry = await nexSupabaseAdmin
+        .from("nex_business")
+        .update({ profile: nextProfile })
+        .eq("id", id)
+        .select("*")
+        .single();
+      if (!retry.error && retry.data) return retry.data as NexBusinessRow;
+    }
+    throw new Error(
+      `business-service.setBusinessPrimaryProfile(${id}): ${error?.message ?? "no row returned"}`,
+    );
+  }
+  return data as NexBusinessRow;
+}
 
 /** Bridge 14 · update the vertical + discovery keywords on a
  *  business row. Category must be one of NEX_BUSINESS_CATEGORIES or

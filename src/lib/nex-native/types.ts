@@ -595,6 +595,15 @@ export interface NexBusinessRow {
    *  Shown on the About panel with a 📍 pin. Free-text 1-80 chars
    *  when set. Directory facet reads this via lower(city) index. */
   city: string | null;
+  /** Migration 286 · sealed 2026-11-07 · ISO 3166-1 alpha-2 country
+   *  where THE SHOP operates. May differ from the owner's personal
+   *  country (expat sellers, dropshippers, dual-residency sellers).
+   *  Drives currency default, VAT/GST overlays, SEO hreflang, payment
+   *  rail selection, and statutory consumer-rights copy. Nullable ·
+   *  consumers fall back to NEX_APP_COUNTRY env. Optional in the type
+   *  because the service layer column-probes (migration 286 is
+   *  AUTHORED · NOT YET APPLIED to production). */
+  operating_country_code?: string | null;
   /** Bridge 16e · human-readable opening hours · migration 072.
    *  Free-text 0-200 chars ("Mon-Sat 9am-6pm · closed Sunday").
    *  Complements the structured nex_business.hours JSONB. */
@@ -752,6 +761,11 @@ export interface NexBusinessProfilePatch {
   tiktok_handle?: string | null;
   linkedin_handle?: string | null;
   x_handle?: string | null;
+  /** Migration 286 · sealed 2026-11-07 · ISO 3166-1 alpha-2. Validated
+   *  app-side against the sealed country catalogue · empty string
+   *  clears to null. Column is probed at write time so the service
+   *  degrades safely when the migration hasn't landed yet. */
+  operating_country_code?: string | null;
 }
 
 // ---------------------------------------------------------------------------

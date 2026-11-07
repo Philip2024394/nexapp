@@ -87,6 +87,14 @@ const R: Record<BusinessSubtype, readonly ContentTypeKey[]> = {
   wholesale:          ["product", "portfolio_item", "testimonial", "offer"],
   local_artisan:      ["product", "portfolio_item", "testimonial", "offer"],
   exporter:           ["product", "portfolio_item", "testimonial", "offer"],
+  motorbike_shop:     ["product", "testimonial", "offer", "portfolio_item"],
+  // Products · Phase B restoration 2026-11-07
+  ecommerce:          ["product", "offer", "testimonial"],
+  product_brand:      ["product", "portfolio_item", "offer", "testimonial"],
+  // Food · Phase B restoration 2026-11-07
+  ice_cream:          ["menu_item", "offer", "testimonial", "portfolio_item"],
+  dessert_shop:       ["menu_item", "offer", "testimonial", "portfolio_item"],
+  juice_bar:          ["menu_item", "offer", "testimonial"],
   // Services
   beauty:             ["service", "portfolio_item", "testimonial", "offer"],
   health_wellness:    ["service", "portfolio_item", "testimonial", "offer"],
@@ -96,6 +104,17 @@ const R: Record<BusinessSubtype, readonly ContentTypeKey[]> = {
   professional:       ["service", "testimonial", "offer", "portfolio_item"],
   events:             ["offer", "portfolio_item", "testimonial", "service"],
   creative:           ["portfolio_item", "service", "offer", "testimonial"],
+  // Services · Phase B restoration 2026-11-07
+  salon:              ["service", "portfolio_item", "testimonial", "offer"],
+  fitness:            ["service", "offer", "testimonial", "portfolio_item"],
+  tradesperson:       ["service", "portfolio_item", "testimonial", "offer"],
+  construction:       ["service", "portfolio_item", "testimonial", "offer"],
+  staircase_company:  ["service", "portfolio_item", "testimonial", "offer"],
+  consultant:         ["service", "testimonial", "portfolio_item", "offer"],
+  agency:             ["service", "portfolio_item", "testimonial", "offer"],
+  portfolio:          ["portfolio_item", "service", "testimonial", "offer"],
+  creator:            ["portfolio_item", "service", "testimonial"],
+  community:          ["offer", "portfolio_item", "testimonial"],
 };
 
 export const CONTENT_RECOMMENDATIONS_BY_SUBTYPE: Readonly<

@@ -30,8 +30,13 @@ export type BusinessCategory =
   | "services";
 
 // -----------------------------------------------------------------------------
-// Subtypes · 30 total · behavioural only (property's inventory type and
+// Subtypes · 45 total · behavioural only (property's inventory type and
 // listing mode live on the individual listing, not here).
+// -----------------------------------------------------------------------------
+// Owner directive 2026-11-07 · "No legitimate business should be left
+// without a suitable category in NEX." Additive extension of the
+// 2026-10-02 freeze (freeze is additive-only · never remove/reorder).
+// 15 new subtypes appended at the end of each category's union below.
 // -----------------------------------------------------------------------------
 export type FoodSubtype =
   | "restaurant"
@@ -40,7 +45,14 @@ export type FoodSubtype =
   | "food_maker"
   | "catering"
   | "drinks"
-  | "food_delivery";
+  | "food_delivery"
+  // Phase B restoration · owner-authorised 2026-11-07 · restores
+  // fine-grained food-retail identity that Rev 6's original flat
+  // subtype list had rolled into food_maker/drinks. Keeps food_maker
+  // in place as the "Other Food Business" fallback.
+  | "ice_cream"
+  | "dessert_shop"
+  | "juice_bar";
 
 export type AccommodationSubtype =
   | "hotel"
@@ -67,7 +79,14 @@ export type ProductsSubtype =
   | "wholesale"
   | "local_artisan"
   | "exporter"
-  | "motorbike_shop";
+  | "motorbike_shop"
+  // Phase B restoration · owner-authorised 2026-11-07 · distinguishes
+  // online-only sellers + brand owners from physical retail. `retail`
+  // stays as the physical-store default · `ecommerce` is for pure-
+  // online sellers · `product_brand` is for brand owners who use
+  // contract manufacturers (DTC / designer-led brands).
+  | "ecommerce"
+  | "product_brand";
 
 export type ServicesSubtype =
   | "beauty"
@@ -77,7 +96,22 @@ export type ServicesSubtype =
   | "trade_construction"
   | "automotive"
   | "events"
-  | "creative";
+  | "creative"
+  // Phase B restoration · owner-authorised 2026-11-07. Specialisations
+  // that Rev 6's original flat subtype list had collapsed into broader
+  // buckets. The generic buckets (health_wellness · trade_construction
+  // · professional · creative · beauty) stay in place as "Other …"
+  // fallbacks per the owner's "specific ahead of generic" rule.
+  | "salon"
+  | "fitness"
+  | "tradesperson"
+  | "construction"
+  | "staircase_company"
+  | "consultant"
+  | "agency"
+  | "portfolio"
+  | "creator"
+  | "community";
 
 export type BusinessSubtype =
   | FoodSubtype

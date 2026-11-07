@@ -12,6 +12,11 @@ import type * as React from "react";
 import { redirect } from "next/navigation";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { listBusinessesByOwner } from "@/lib/nex-native/business-service";
+import { getProfileByAccountId } from "@/lib/nex-native/account-profile-service";
+import {
+  resolveDefaultOperatingCountry,
+  narrowCountryCode,
+} from "@/lib/nex-native/country-catalogue";
 import { LocationStepClient } from "./_client";
 
 export const runtime = "nodejs";
@@ -35,6 +40,28 @@ export default async function ShopSetupLocationPage(): Promise<React.JSX.Element
     redirect("/nex-native/manage/shop/setup/identity");
   }
 
+  // Pre-fill rank (owner-sealed 2026-11-07):
+  //   1 · existing shop operating_country_code (owner's prior save)
+  //   2 · owner account profile country_code
+  //   3 · owner account phone_country_code → ISO2
+  //   4 · NEX_APP_COUNTRY env
+  //   5 · null · dropdown defaults to "Select country"
+  const profile = await getProfileByAccountId(session.account.id);
+  const envCountry =
+    process.env.NEX_APP_COUNTRY ??
+    process.env.NEXT_PUBLIC_NEX_APP_COUNTRY ??
+    null;
+  const existingOperatingCountry =
+    narrowCountryCode((existing as { operating_country_code?: string | null }).operating_country_code ?? null) ??
+    null;
+  const resolvedDefaultCountry =
+    existingOperatingCountry ??
+    resolveDefaultOperatingCountry({
+      profileCountryCode: profile?.country_code ?? null,
+      phoneCountryCode: session.account.phone_country_code ?? null,
+      envCountry,
+    });
+
   return (
     <>
       <style>{`html, body { background: ${NEX_BG}; }`}</style>
@@ -57,6 +84,8 @@ export default async function ShopSetupLocationPage(): Promise<React.JSX.Element
         <LocationStepClient
           initialAddress={existing.address ?? ""}
           initialCity={existing.city ?? ""}
+          initialCountryCode={resolvedDefaultCountry}
+          accountProfileCountryCode={narrowCountryCode(profile?.country_code ?? null)}
         />
       </main>
     </>

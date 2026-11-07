@@ -3,17 +3,20 @@
 // src/app/nex-native/manage/shop/setup/location/_client.tsx
 //
 // Shop Setup · Step 2 · Location client.
-// Owner-authorised 2026-11-06.
+// Owner-authorised 2026-11-06 · country-dropdown rework 2026-11-07.
 // -----------------------------------------------------------------------------
 // Captures:
-//   · Address → nex_business.address
+//   · Country → nex_business.operating_country_code (migration 286)
 //   · City    → nex_business.city
-//   · Country → Ireland (implicit from NEX_APP_COUNTRY env · migration-
-//               free per the scope discussion)
+//   · Address → nex_business.address
 //
-// Both fields optional at this step · owner can skip and fill later.
-// Save → autosave through saveShopLocationAction · routes to Step 3
-// (currently the themes picker while the remaining steps are built).
+// Country is PRE-FILLED from the signed-in owner's account profile /
+// phone country code / env and is OVERRIDEABLE · expat sellers +
+// dropshippers who run a shop out of another country can pick the
+// right one. A subtle hint banner appears when the pick differs from
+// the owner's personal country so the override is explicit, not
+// accidental. All three fields optional at this step · owner can skip
+// and fill later.
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
@@ -26,31 +29,50 @@ import {
   SURFACE_CARD_STYLE,
 } from "../_wizard-shell";
 import { saveShopLocationAction } from "../_actions";
+import {
+  COUNTRY_CATALOGUE_SORTED,
+  lookupCountry,
+} from "@/lib/nex-native/country-catalogue";
 
 const GOLD = "var(--nex-world-secondary, #C6A15B)";
 const CREAM = "var(--nex-world-cream, #FAF8F4)";
 const INK_DIM = "#B5C3D6";
 const INK_MUTED = "#7D9BC0";
+const AMBER = "#F3C56B";
 
 export function LocationStepClient({
   initialAddress,
   initialCity,
+  initialCountryCode,
+  accountProfileCountryCode,
 }: {
   initialAddress: string;
   initialCity: string;
+  initialCountryCode: string | null;
+  accountProfileCountryCode: string | null;
 }): React.JSX.Element {
   const router = useRouter();
+  const [countryCode, setCountryCode] = React.useState<string>(
+    initialCountryCode ?? "",
+  );
   const [address, setAddress] = React.useState(initialAddress);
   const [city, setCity] = React.useState(initialCity);
   const [status, setStatus] = React.useState<
     { kind: "idle" } | { kind: "saving" } | { kind: "error"; message: string }
   >({ kind: "idle" });
 
+  const selectedCountry = lookupCountry(countryCode);
+  const divergesFromAccount =
+    accountProfileCountryCode !== null &&
+    countryCode !== "" &&
+    countryCode !== accountProfileCountryCode;
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (status.kind === "saving") return;
     setStatus({ kind: "saving" });
     const fd = new FormData();
+    fd.set("operatingCountryCode", countryCode);
     fd.set("address", address.trim());
     fd.set("city", city.trim());
     const result = await saveShopLocationAction(fd);
@@ -68,8 +90,8 @@ export function LocationStepClient({
   return (
     <WizardShell
       stepNumber={2}
-      stepTitle="Where you're based"
-      stepLead="Shown to buyers on the Visit Us panel and used for the 'Get Directions' link. Skip if you sell online only."
+      stepTitle="Where your shop is based"
+      stepLead="Pick the country your shop operates in — we use it to set your currency default, SEO region and consumer-rights copy. You can override your personal country if you run a shop abroad."
       backHref="/nex-native/manage/shop/setup/identity"
       skipHref={undefined /* skip wired to its own button below */}
     >
@@ -77,47 +99,118 @@ export function LocationStepClient({
         onSubmit={onSubmit}
         style={{ display: "flex", flexDirection: "column", gap: 14 }}
       >
-        {/* Country badge · Ireland fixed for this launch (env-derived). */}
-        <div
-          style={{
-            ...SURFACE_CARD_STYLE,
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-          }}
-        >
-          <span aria-hidden style={{ fontSize: 22 }}>🇮🇪</span>
-          <div style={{ flex: 1 }}>
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 900,
-                color: CREAM,
-                letterSpacing: "-0.005em",
-              }}
-            >
-              Ireland
-            </div>
-            <span style={{ fontSize: 10.5, color: INK_MUTED }}>
-              NEX Ireland launch · country is fixed per app identity.
-            </span>
-          </div>
-          <span
+        {/* Country dropdown · pre-filled · overrideable. */}
+        <div>
+          <label htmlFor="shop-country" style={LABEL_STYLE}>
+            Country your shop operates in
+          </label>
+          <div
             style={{
-              padding: "4px 10px",
-              fontSize: 9.5,
-              fontWeight: 900,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              color: GOLD,
-              background: "rgba(198, 161, 91, 0.12)",
-              border: "1px solid rgba(198, 161, 91, 0.55)",
-              borderRadius: 999,
+              ...SURFACE_CARD_STYLE,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "10px 12px",
             }}
           >
-            IE · default
+            <span aria-hidden style={{ fontSize: 22, minWidth: 24 }}>
+              {selectedCountry ? selectedCountry.flag : "🌐"}
+            </span>
+            <select
+              id="shop-country"
+              value={countryCode}
+              onChange={(e) => setCountryCode(e.currentTarget.value)}
+              style={{
+                flex: 1,
+                background: "transparent",
+                border: "none",
+                outline: "none",
+                color: CREAM,
+                fontFamily: "inherit",
+                fontSize: 14,
+                fontWeight: 700,
+                letterSpacing: "-0.005em",
+                cursor: "pointer",
+                appearance: "none",
+                WebkitAppearance: "none",
+                MozAppearance: "none",
+                padding: "4px 0",
+              }}
+            >
+              <option value="" style={{ background: "#0A1526" }}>
+                Select country…
+              </option>
+              {COUNTRY_CATALOGUE_SORTED.map((c, i, arr) => {
+                // Insert a visual divider after launch markets so the
+                // list reads as "launch markets · rest" without a
+                // disabled divider row that some mobile browsers skip.
+                const prev = arr[i - 1];
+                const separator =
+                  prev && prev.launchMarket && !c.launchMarket ? "─── Other countries ───" : null;
+                return (
+                  <React.Fragment key={c.code}>
+                    {separator ? (
+                      <option disabled style={{ background: "#0A1526", color: INK_MUTED }}>
+                        {separator}
+                      </option>
+                    ) : null}
+                    <option value={c.code} style={{ background: "#0A1526" }}>
+                      {c.flag} &nbsp;{c.label} · {c.currency}
+                    </option>
+                  </React.Fragment>
+                );
+              })}
+            </select>
+            {selectedCountry ? (
+              <span
+                style={{
+                  padding: "4px 10px",
+                  fontSize: 9.5,
+                  fontWeight: 900,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: GOLD,
+                  background: "rgba(198, 161, 91, 0.12)",
+                  border: "1px solid rgba(198, 161, 91, 0.55)",
+                  borderRadius: 999,
+                }}
+              >
+                {selectedCountry.code}
+              </span>
+            ) : null}
+          </div>
+          <span style={HINT_STYLE}>
+            Pre-filled from your account. Pick a different country if your
+            shop operates abroad.
           </span>
         </div>
+
+        {/* Override hint · only when country differs from account profile. */}
+        {divergesFromAccount ? (
+          <div
+            style={{
+              padding: "10px 12px",
+              fontSize: 11.5,
+              lineHeight: 1.45,
+              color: AMBER,
+              background: "rgba(243, 197, 107, 0.08)",
+              border: "1px solid rgba(243, 197, 107, 0.4)",
+              borderRadius: 10,
+            }}
+          >
+            <strong style={{ color: AMBER, fontWeight: 900 }}>Heads up ·</strong>{" "}
+            your personal country on NEX is{" "}
+            <span style={{ color: CREAM, fontWeight: 800 }}>
+              {lookupCountry(accountProfileCountryCode)?.label ?? accountProfileCountryCode}
+            </span>{" "}
+            but you&rsquo;ve set this shop to operate in{" "}
+            <span style={{ color: CREAM, fontWeight: 800 }}>
+              {selectedCountry?.label}
+            </span>
+            . That&rsquo;s fine for cross-border sellers — currency, tax
+            overlays and SEO will follow the shop&rsquo;s country.
+          </div>
+        ) : null}
 
         {/* City. */}
         <div>
@@ -128,7 +221,7 @@ export function LocationStepClient({
             id="shop-city"
             type="text"
             maxLength={80}
-            placeholder="Dublin · Cork · Galway · Limerick · …"
+            placeholder="Dublin · London · Jakarta · Sydney · …"
             value={city}
             onChange={(e) => setCity(e.currentTarget.value)}
             style={FIELD_STYLE}
@@ -147,7 +240,7 @@ export function LocationStepClient({
             id="shop-address"
             rows={2}
             maxLength={500}
-            placeholder="12 Francis Street, Dublin 8, D08 XXXX"
+            placeholder="Street, city, postcode"
             value={address}
             onChange={(e) => setAddress(e.currentTarget.value)}
             style={{
@@ -174,7 +267,7 @@ export function LocationStepClient({
               borderRadius: 10,
             }}
           >
-            {status.message}
+            {errorCopy(status.message)}
           </div>
         ) : null}
 
@@ -225,4 +318,19 @@ export function LocationStepClient({
       </form>
     </WizardShell>
   );
+}
+
+function errorCopy(code: string): string {
+  switch (code) {
+    case "country-invalid":
+      return "Please pick a country from the list.";
+    case "city-length":
+      return "City must be 1-80 characters.";
+    case "address-too-long":
+      return "Address must be 500 characters or fewer.";
+    case "not-authenticated":
+      return "You've been signed out · please sign in again.";
+    default:
+      return code;
+  }
 }

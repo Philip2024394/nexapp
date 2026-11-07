@@ -147,6 +147,17 @@ const R: Record<BusinessSubtype, readonly CapabilityKey[]> = {
   food_delivery: [
     "local_delivery", "pickup", "service_area_radius", "enquiry_contact",
   ],
+  // Food · Phase B restoration 2026-11-07
+  ice_cream: [
+    "dine_in", "pickup", "local_delivery", "physical_venue", "enquiry_contact",
+  ],
+  dessert_shop: [
+    "pickup", "local_delivery", "deposit_booking_fee", "physical_venue",
+    "enquiry_contact",
+  ],
+  juice_bar: [
+    "dine_in", "pickup", "local_delivery", "physical_venue", "enquiry_contact",
+  ],
   // Accommodation
   hotel: [
     "room_booking", "availability_calendar", "deposit_booking_fee",
@@ -215,6 +226,19 @@ const R: Record<BusinessSubtype, readonly CapabilityKey[]> = {
     "international_shipping", "national_shipping", "moq_wholesale",
     "quote_request", "enquiry_contact", "virtual_consultation",
   ],
+  motorbike_shop: [
+    "pickup", "local_delivery", "physical_venue", "quote_request",
+    "enquiry_contact",
+  ],
+  // Products · Phase B restoration 2026-11-07
+  ecommerce: [
+    "national_shipping", "international_shipping", "local_delivery",
+    "online_payment", "enquiry_contact",
+  ],
+  product_brand: [
+    "national_shipping", "international_shipping", "moq_wholesale",
+    "online_payment", "enquiry_contact", "virtual_consultation",
+  ],
   // Services
   beauty: [
     "appointments", "at_customer_location", "at_business_location",
@@ -247,6 +271,47 @@ const R: Record<BusinessSubtype, readonly CapabilityKey[]> = {
   creative: [
     "appointments", "at_customer_location", "at_business_location",
     "quote_request", "virtual_consultation", "enquiry_contact",
+  ],
+  // Services · Phase B restoration 2026-11-07. Recommendations inherit
+  // the closest Rev 6 parent subtype · owner-editable per business.
+  salon: [
+    "appointments", "at_business_location", "physical_venue",
+    "enquiry_contact",
+  ],
+  fitness: [
+    "appointments", "recurring_service", "at_business_location",
+    "physical_venue", "enquiry_contact",
+  ],
+  tradesperson: [
+    "quote_request", "site_visit", "at_customer_location",
+    "service_area_radius", "enquiry_contact", "request_callback",
+  ],
+  construction: [
+    "quote_request", "site_visit", "at_customer_location",
+    "service_area_radius", "enquiry_contact", "virtual_consultation",
+  ],
+  staircase_company: [
+    "quote_request", "site_visit", "at_customer_location",
+    "at_business_location", "enquiry_contact",
+  ],
+  consultant: [
+    "appointments", "quote_request", "enquiry_contact",
+    "virtual_consultation",
+  ],
+  agency: [
+    "appointments", "quote_request", "enquiry_contact",
+    "virtual_consultation",
+  ],
+  portfolio: [
+    "enquiry_contact", "quote_request", "virtual_consultation",
+    "at_customer_location",
+  ],
+  creator: [
+    "enquiry_contact", "quote_request", "virtual_consultation",
+  ],
+  community: [
+    "enquiry_contact", "physical_venue", "at_business_location",
+    "request_callback",
   ],
 };
 

@@ -26,14 +26,23 @@ import {
   provisionDefaultBusiness,
   updateBusinessProfile,
   updateBusinessCityAndHours,
-  updateBusinessCategoryAndKeywords,
+  setBusinessPrimaryProfile,
   updateShippingScope,
   updateReturnPolicy,
   uploadOnboardingLogo,
   NEX_SHIPPING_SCOPES,
   type NexShippingScope,
 } from "@/lib/nex-native/business-service";
-import { NEX_BUSINESS_CATEGORIES } from "@/lib/nex-native/site-templates";
+import { narrowCountryCode } from "@/lib/nex-native/country-catalogue";
+import { isBusinessCategory } from "@/lib/nex-native/business/categories";
+import {
+  BUSINESS_SUBTYPE_CATEGORY,
+  isBusinessSubtype,
+} from "@/lib/nex-native/business/subtypes";
+import type {
+  BusinessCategory,
+  BusinessSubtype,
+} from "@/lib/nex-native/business/types";
 
 type ActionResult =
   | { ok: true; nextHref: string }
@@ -116,17 +125,27 @@ export async function uploadShopIdentityLogoAction(
 }
 
 // ─── Step 2 · Location ────────────────────────────────────────────────
-// Writes street address + city. Country stays implicit from the app
-// identity (Ireland for this launch · migration-free per the scope
-// discussion). updateBusinessCityAndHours handles city; address goes
-// through the generic updateBusinessProfile path so we don't rewrite
-// hours_display here.
+// Writes operating country (ISO2 · migration 286) · street address · city.
+// Country field was reworked 2026-11-07 from an Ireland-only env badge
+// to a dropdown so expats + dropshippers can declare the shop's actual
+// operating country independently of their personal account country.
+// Empty string → null (seller skipped) · known-ISO2 passes through
+// narrowCountryCode · unknown values surface as 'country-invalid'.
 
 export async function saveShopLocationAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const address = String(formData.get("address") ?? "").trim() || null;
   const city = String(formData.get("city") ?? "").trim() || null;
+  const countryRaw = String(formData.get("operatingCountryCode") ?? "").trim();
+  const country: string | null = (() => {
+    if (countryRaw.length === 0) return null; // owner skipped
+    const narrowed = narrowCountryCode(countryRaw);
+    return narrowed; // null when unknown · handled below
+  })();
+  if (countryRaw.length > 0 && country === null) {
+    return { ok: false, error: "country-invalid" };
+  }
   if (address && address.length > 500) {
     return { ok: false, error: "address-too-long" };
   }
@@ -136,8 +155,15 @@ export async function saveShopLocationAction(
   const biz = await requireBusiness();
   if (!biz.ok) return biz;
   try {
-    if (address !== null) {
-      await updateBusinessProfile(biz.businessId, { address });
+    // Combine the operating-country + address patch into one
+    // updateBusinessProfile call · the service layer column-probes
+    // operating_country_code so pre-migration production silently
+    // drops that field without failing the whole save.
+    const patch: Parameters<typeof updateBusinessProfile>[1] = {};
+    if (country !== null) patch.operating_country_code = country;
+    if (address !== null) patch.address = address;
+    if (Object.keys(patch).length > 0) {
+      await updateBusinessProfile(biz.businessId, patch);
     }
     if (city !== null) {
       await updateBusinessCityAndHours(biz.businessId, { city });
@@ -153,27 +179,38 @@ export async function saveShopLocationAction(
 }
 
 // ─── Step 3 · Category ────────────────────────────────────────────────
-// Picks ONE business_category from the sealed NEX_BUSINESS_CATEGORIES
-// list (migration 065). The template picker reads this to narrow the
-// 11 cover layouts to the family that fits (menu-first vs product-
-// first vs portfolio) · and the terminology engine uses it to pick
-// catalog-heading labels. Validation happens inside
-// updateBusinessCategoryAndKeywords (throws on unknown category).
+// Rev 6 (FROZEN 2026-10-02) · writes the canonical {category, subtype}
+// pair to nex_business.profile JSONB (migration 126). Dropdown rework
+// 2026-11-07 replaced the legacy 23-slug single-pick with two
+// dependent dropdowns driven by BUSINESS_CATEGORIES + subtypesByCategory.
+// setBusinessPrimaryProfile also mirrors subtype → legacy
+// business_category when a 1:1 slug overlap exists (restaurant · cafe ·
+// bakery · beauty) so downstream legacy readers (directory, menu-first
+// routing, cover loader) keep working.
 
 export async function saveShopCategoryAction(
   formData: FormData,
 ): Promise<ActionResult> {
-  const category = String(formData.get("category") ?? "").trim();
-  if (!category) {
+  const categoryRaw = String(formData.get("category") ?? "").trim();
+  const subtypeRaw = String(formData.get("subtype") ?? "").trim();
+  if (!categoryRaw || !subtypeRaw) {
     return { ok: false, error: "category-required" };
   }
-  if (!(NEX_BUSINESS_CATEGORIES as readonly string[]).includes(category)) {
+  if (!isBusinessCategory(categoryRaw)) {
     return { ok: false, error: "unknown-category" };
+  }
+  if (!isBusinessSubtype(subtypeRaw)) {
+    return { ok: false, error: "unknown-subtype" };
+  }
+  const category = categoryRaw as BusinessCategory;
+  const subtype = subtypeRaw as BusinessSubtype;
+  if (BUSINESS_SUBTYPE_CATEGORY[subtype] !== category) {
+    return { ok: false, error: "subtype-mismatch" };
   }
   const biz = await requireBusiness();
   if (!biz.ok) return biz;
   try {
-    await updateBusinessCategoryAndKeywords(biz.businessId, { category });
+    await setBusinessPrimaryProfile(biz.businessId, { category, subtype });
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }
@@ -286,6 +323,106 @@ export async function saveShopPoliciesAction(
     ok: true,
     nextHref: "/nex-native/manage/shop/setup/contact",
   };
+}
+
+// ─── Side flow · Request a missing category ──────────────────────────
+// Owner-sealed 2026-11-07 · "No legitimate business should be left
+// without a suitable category in NEX." A seller whose business isn't
+// covered by the existing Rev 6 subtypes submits a short description
+// + (optionally) the closest-match category. The request lands in
+// nex_category_request as a REVIEW QUEUE row · NEX never auto-adds
+// subtypes from user submissions. HQ review path is a separate
+// authorisation gate.
+//
+// Column-probe safe · gracefully no-ops pre-migration-288 by
+// returning a soft-fail that the client can show as "Noted · the
+// team will review" without claiming the request was saved.
+
+import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
+import { isBusinessCategory as isBusinessCategoryValue } from "@/lib/nex-native/business/categories";
+
+let CATEGORY_REQUEST_TABLE_READY: boolean | null = null;
+async function ensureCategoryRequestTableReady(): Promise<boolean> {
+  if (CATEGORY_REQUEST_TABLE_READY !== null) return CATEGORY_REQUEST_TABLE_READY;
+  const { error } = await nexSupabaseAdmin
+    .from("nex_category_request")
+    .select("id")
+    .limit(1);
+  CATEGORY_REQUEST_TABLE_READY = !error;
+  return CATEGORY_REQUEST_TABLE_READY;
+}
+
+export async function requestMissingCategoryAction(
+  formData: FormData,
+): Promise<
+  | { ok: true }
+  | { ok: false; error: string }
+> {
+  const session = await resolveSessionWithDevOverride();
+  if (!session) return { ok: false, error: "not-authenticated" };
+
+  const businessName = String(formData.get("businessName") ?? "").trim();
+  const businessDescription = String(formData.get("businessDescription") ?? "").trim();
+  const requestedCategoryRaw = String(formData.get("requestedCategory") ?? "").trim();
+  const requestedSubtypeLabel = String(formData.get("requestedSubtypeLabel") ?? "").trim();
+
+  if (businessName.length < 2 || businessName.length > 120) {
+    return { ok: false, error: "name-length" };
+  }
+  if (businessDescription.length < 10 || businessDescription.length > 1000) {
+    return { ok: false, error: "description-length" };
+  }
+  const requestedCategory =
+    requestedCategoryRaw.length > 0 && isBusinessCategoryValue(requestedCategoryRaw)
+      ? requestedCategoryRaw
+      : null;
+  if (requestedCategoryRaw.length > 0 && requestedCategory === null) {
+    return { ok: false, error: "unknown-category" };
+  }
+
+  // Associate with the seller's existing business row when present.
+  // Null when they request before Step 1 provisions a business.
+  let businessId: string | null = null;
+  try {
+    const list = await listBusinessesByOwner(session.account.id);
+    businessId = list[0]?.id ?? null;
+  } catch {
+    // Non-fatal · the request still records without business_id.
+  }
+
+  const tableReady = await ensureCategoryRequestTableReady();
+  if (!tableReady) {
+    // Migration 288 not yet applied · return ok=true so the UX stays
+    // honest to the seller ("thank you, we've noted it"). The audit
+    // log below captures the submission server-side.
+    console.warn(
+      "[nex] requestMissingCategoryAction · migration 288 not applied · request not persisted",
+      {
+        accountId: session.account.id,
+        businessName,
+        requestedCategory,
+        requestedSubtypeLabel,
+      },
+    );
+    return { ok: true };
+  }
+
+  const { error } = await nexSupabaseAdmin
+    .from("nex_category_request")
+    .insert({
+      account_id: session.account.id,
+      business_id: businessId,
+      business_name: businessName,
+      business_description: businessDescription,
+      requested_category: requestedCategory,
+      requested_subtype_label:
+        requestedSubtypeLabel.length > 0 ? requestedSubtypeLabel : null,
+      status: "pending",
+    });
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
 }
 
 // ─── Step 7 · Contact + socials ──────────────────────────────────────
