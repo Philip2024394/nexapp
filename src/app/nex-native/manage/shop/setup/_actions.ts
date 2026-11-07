@@ -353,12 +353,6 @@ export async function saveShopPoliciesAction(
     return { ok: false, error: "shipping-methods-required" };
   }
 
-  const dispatchRaw = Number(formData.get("dispatchDays") ?? "");
-  const dispatchDays =
-    Number.isFinite(dispatchRaw) && dispatchRaw >= 0 && dispatchRaw <= 365
-      ? Math.floor(dispatchRaw)
-      : null;
-
   const acceptsReturns =
     String(formData.get("acceptsReturns") ?? "") === "true";
   const windowDaysRaw = Number(formData.get("windowDays") ?? "14");
@@ -367,9 +361,10 @@ export async function saveShopPoliciesAction(
   const biz = await requireBusiness();
   if (!biz.ok) return biz;
   try {
+    // Dispatch time intentionally omitted · writer preserves any
+    // prior value (dispatchTimeDays === undefined means don't touch).
     await updateShippingMethodsAndDispatch(biz.businessId, {
       methods,
-      dispatchTimeDays: dispatchDays,
     });
     await updateReturnPolicy(biz.businessId, {
       accepts_returns: acceptsReturns,

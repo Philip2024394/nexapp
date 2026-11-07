@@ -894,12 +894,20 @@ async function ensureDispatchDaysColumnReady(): Promise<boolean> {
 /** Column-probe safe writer for the multi-select shipping methods.
  *  Normalises + narrows to known methods · silently drops the field
  *  pre-migration-289. Also writes the derived legacy shipping_scope
- *  so Directory + cover readers stay honest. */
+ *  so Directory + cover readers stay honest.
+ *
+ *  dispatchTimeDays semantics:
+ *    · undefined · don't touch the column (preserves prior value)
+ *    · null      · explicitly clear to NULL
+ *    · number    · set (clamped 0..365)
+ *  Shop Setup Step 6 does NOT surface dispatch time (owner directive
+ *  2026-11-07 moved it off that step); the parameter stays available
+ *  for future per-product dispatch surfaces. */
 export async function updateShippingMethodsAndDispatch(
   businessId: NexUuid,
   input: {
     readonly methods: readonly string[];
-    readonly dispatchTimeDays: number | null;
+    readonly dispatchTimeDays?: number | null;
   },
 ): Promise<void> {
   // Narrow the methods array against the sealed enum. Unknown entries
@@ -918,7 +926,7 @@ export async function updateShippingMethodsAndDispatch(
 
   const update: Record<string, unknown> = {};
   if (methodsReady) update.shipping_methods = dedup;
-  if (daysReady) {
+  if (daysReady && input.dispatchTimeDays !== undefined) {
     const n = input.dispatchTimeDays;
     update.dispatch_time_days =
       typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= 365

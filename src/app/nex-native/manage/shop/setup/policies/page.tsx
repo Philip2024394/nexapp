@@ -54,9 +54,6 @@ export default async function ShopSetupPoliciesPage(): Promise<React.JSX.Element
                 m === "postal" || m === "pickup" || m === "sea_freight" || m === "airfreight",
             ) ?? []
           }
-          initialDispatchDays={
-            (existing as { dispatch_time_days?: number | null }).dispatch_time_days ?? null
-          }
           initialAcceptsReturns={existing.return_policy.accepts_returns}
           initialWindowDays={existing.return_policy.window_days}
           initialNotes={existing.return_policy.notes ?? ""}

@@ -83,13 +83,11 @@ const METHOD_OPTIONS: ReadonlyArray<MethodOption> = [
 
 export function PoliciesStepClient({
   initialMethods,
-  initialDispatchDays,
   initialAcceptsReturns,
   initialWindowDays,
   initialNotes,
 }: {
   initialMethods: MethodSlug[];
-  initialDispatchDays: number | null;
   initialAcceptsReturns: boolean;
   initialWindowDays: number;
   initialNotes: string;
@@ -97,11 +95,6 @@ export function PoliciesStepClient({
   const router = useRouter();
   const [methods, setMethods] = React.useState<Set<MethodSlug>>(
     () => new Set<MethodSlug>(initialMethods),
-  );
-  const [dispatchDays, setDispatchDays] = React.useState<string>(
-    initialDispatchDays === null || initialDispatchDays === undefined
-      ? ""
-      : String(initialDispatchDays),
   );
   const [acceptsReturns, setAcceptsReturns] = React.useState(initialAcceptsReturns);
   const [windowDays, setWindowDays] = React.useState<number>(
@@ -139,7 +132,6 @@ export function PoliciesStepClient({
     for (const opt of METHOD_OPTIONS) {
       fd.set(`ship_${opt.slug}`, methods.has(opt.slug) ? "true" : "false");
     }
-    fd.set("dispatchDays", dispatchDays);
     fd.set("acceptsReturns", acceptsReturns ? "true" : "false");
     fd.set("windowDays", String(windowDays));
     fd.set("returnNotes", notes.trim());
@@ -266,45 +258,6 @@ export function PoliciesStepClient({
                 : " No local methods ticked — your shop is export-only."}
             </div>
           ) : null}
-        </div>
-
-        {/* ── Dispatch time ──────────────────────────────────── */}
-        <div>
-          <label htmlFor="shop-dispatch-days" style={LABEL_STYLE}>
-            Dispatch time
-          </label>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <input
-              id="shop-dispatch-days"
-              type="number"
-              min={0}
-              max={365}
-              step={1}
-              placeholder="e.g. 2"
-              value={dispatchDays}
-              onChange={(e) => setDispatchDays(e.currentTarget.value)}
-              style={{ ...FIELD_STYLE, maxWidth: 110 }}
-            />
-            <span
-              style={{
-                fontSize: 12.5,
-                color: INK,
-                fontWeight: 700,
-              }}
-            >
-              day(s) to dispatch
-            </span>
-          </div>
-          <span style={HINT_STYLE}>
-            How many days between order and dispatch · 0 means
-            same-day. Shown on your product pages as a default.
-          </span>
         </div>
 
         {/* ── Returns policy ───────────────────────────────────── */}
