@@ -48,7 +48,6 @@ export default async function ShopSetupStoryPage(): Promise<React.JSX.Element> {
         }}
       >
         <StoryStepClient
-          shopName={existing.display_name}
           initialDescription={existing.description ?? ""}
         />
       </main>

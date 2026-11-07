@@ -73,10 +73,8 @@ const PROMPTS: ReadonlyArray<{
 ];
 
 export function StoryStepClient({
-  shopName,
   initialDescription,
 }: {
-  shopName: string;
   initialDescription: string;
 }): React.JSX.Element {
   const router = useRouter();
@@ -109,7 +107,7 @@ export function StoryStepClient({
   return (
     <WizardShell
       stepNumber={5}
-      stepTitle={`What makes ${shopName} different?`}
+      stepTitle="Your story"
       stepLead="A short paragraph customers see on your About Us overlay. Keep it warm, keep it specific — buyers are reading this to decide whether to chat."
       backHref="/nex-native/manage/shop/setup/hours"
     >
