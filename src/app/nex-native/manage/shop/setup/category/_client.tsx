@@ -226,15 +226,15 @@ export function CategoryStepClient({
               onChange={(e) => onCategoryChange(e.currentTarget.value)}
               style={SELECT_STYLE}
             >
-              <option value="" style={{ background: "#0A1526" }}>
+              <option value="" style={{ background: "#000" }}>
                 Select a category…
               </option>
               {BUSINESS_CATEGORIES.map((c) => (
-                <option key={c} value={c} style={{ background: "#0A1526" }}>
+                <option key={c} value={c} style={{ background: "#000" }}>
                   {CATEGORY_EMOJI[c]} &nbsp;{BUSINESS_CATEGORY_LABEL[c]}
                 </option>
               ))}
-              <option value={CATEGORY_OTHER} style={{ background: "#0A1526" }}>
+              <option value={CATEGORY_OTHER} style={{ background: "#000" }}>
                 ✳ &nbsp;Other → request a category
               </option>
             </select>
@@ -274,7 +274,7 @@ export function CategoryStepClient({
                 cursor: activeCategory ? "pointer" : "not-allowed",
               }}
             >
-              <option value="" style={{ background: "#0A1526" }}>
+              <option value="" style={{ background: "#000" }}>
                 {activeCategory ? "Select a subcategory…" : "Pick a category first"}
               </option>
               {activeSubtypes
@@ -285,7 +285,7 @@ export function CategoryStepClient({
                     OTHER_BUSINESS_FALLBACK_SUBTYPE[BUSINESS_SUBTYPE_CATEGORY[s]] !== s,
                 )
                 .map((s) => (
-                  <option key={s} value={s} style={{ background: "#0A1526" }}>
+                  <option key={s} value={s} style={{ background: "#000" }}>
                     {SUBTYPE_EMOJI[s]} &nbsp;{BUSINESS_SUBTYPE_LABEL[s]}
                   </option>
                 ))}
@@ -359,7 +359,7 @@ function renderOtherOption(category: BusinessCategory): React.JSX.Element | null
   if (subtypeFallback) {
     // Direct-save fallback (Food/Services/Products).
     return (
-      <option value={subtypeFallback} style={{ background: "#0A1526" }}>
+      <option value={subtypeFallback} style={{ background: "#000" }}>
         ✳ &nbsp;Other {BUSINESS_CATEGORY_LABEL[category]} business…
       </option>
     );
@@ -369,7 +369,7 @@ function renderOtherOption(category: BusinessCategory): React.JSX.Element | null
     return (
       <option
         value={`__other__:${category}`}
-        style={{ background: "#0A1526" }}
+        style={{ background: "#000" }}
       >
         ✳ &nbsp;Other {BUSINESS_CATEGORY_LABEL[category]} business → request
       </option>

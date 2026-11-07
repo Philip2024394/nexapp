@@ -232,11 +232,11 @@ export function RequestCategoryClient({
                 MozAppearance: "none",
               }}
             >
-              <option value="" style={{ background: "#0A1526" }}>
+              <option value="" style={{ background: "#000" }}>
                 I&rsquo;m not sure
               </option>
               {BUSINESS_CATEGORIES.map((c) => (
-                <option key={c} value={c} style={{ background: "#0A1526" }}>
+                <option key={c} value={c} style={{ background: "#000" }}>
                   {CATEGORY_EMOJI[c]} &nbsp;{BUSINESS_CATEGORY_LABEL[c]}
                 </option>
               ))}

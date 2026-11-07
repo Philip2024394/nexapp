@@ -137,7 +137,7 @@ export function LocationStepClient({
                 padding: "4px 0",
               }}
             >
-              <option value="" style={{ background: "#0A1526" }}>
+              <option value="" style={{ background: "#000" }}>
                 Select country…
               </option>
               {COUNTRY_CATALOGUE_SORTED.map((c, i, arr) => {
@@ -150,11 +150,11 @@ export function LocationStepClient({
                 return (
                   <React.Fragment key={c.code}>
                     {separator ? (
-                      <option disabled style={{ background: "#0A1526", color: INK_MUTED }}>
+                      <option disabled style={{ background: "#000", color: INK_MUTED }}>
                         {separator}
                       </option>
                     ) : null}
-                    <option value={c.code} style={{ background: "#0A1526" }}>
+                    <option value={c.code} style={{ background: "#000" }}>
                       {c.flag} &nbsp;{c.label} · {c.currency}
                     </option>
                   </React.Fragment>
