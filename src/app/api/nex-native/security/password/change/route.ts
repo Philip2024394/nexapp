@@ -17,7 +17,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
-import { logSignInEvent } from "@/lib/nex-native/security-service";
+import {
+  bumpSessionsInvalidatedAtForOwner,
+  logSignInEvent,
+} from "@/lib/nex-native/security-service";
 import { readClientIp, readUserAgent } from "@/lib/nex-native/app/security-request";
 import { clearAllStepUpForAccount } from "@/lib/nex-native/vault/step-up-service";
 
@@ -125,7 +128,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // password reset ≠ Vault destruction.
   await clearAllStepUpForAccount(session.account.id);
 
-  // Audit · successful password change.
+  // Owner directive 2026-11-07 · Item 2 · mass session invalidation on
+  // successful password change. Writes nex_account.sessions_invalidated_at
+  // = now() so every NEX session whose JWT iat is BEFORE this moment ·
+  // including the current device that triggered the change · is rejected
+  // by `resolveFromUser` on its next protected request. Standard
+  // OWASP/NIST post-password-change hygiene · the user re-authenticates
+  // with the new password on every device. Audit event below records the
+  // timestamp returned for incident-response forensics.
+  const invalidation = await bumpSessionsInvalidatedAtForOwner(
+    session.account.id,
+  );
+
+  // Audit · successful password change. `created_at` is server-set so
+  // callers that correlate this event with the invalidation timestamp
+  // can do so via the account's `sessions_invalidated_at` column.
   await logSignInEvent({
     account_id: session.account.id,
     event_type: "password_change",
@@ -134,5 +151,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     user_agent: readUserAgent(req),
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    sessions_invalidated_at: invalidation.invalidated_at,
+  });
 }

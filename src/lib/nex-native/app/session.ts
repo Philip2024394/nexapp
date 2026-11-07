@@ -28,6 +28,19 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { cookies as nextCookies, headers as nextHeaders } from "next/headers";
+import {
+  extractJwtIssuedAt,
+  isJwtInvalidatedByMassInvalidation,
+} from "./session-invalidation";
+
+// Re-export the pure helpers so prior callers that import them from
+// session.ts (if any) keep compiling. Primary consumers should import
+// directly from "./session-invalidation" to avoid pulling server-only
+// into their bundles.
+export {
+  extractJwtIssuedAt,
+  isJwtInvalidatedByMassInvalidation,
+} from "./session-invalidation";
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { nexSupabaseAdmin } from "../supabase-admin";
@@ -207,11 +220,11 @@ async function resolveFromUser(
   //       non-revoked so the device that triggered the action keeps
   //       its session), OR
   //   (b) the account's `sessions_invalidated_at` is newer than this
-  //       session's JWT iat (mass invalidation path · reserved for
-  //       future flows like "revoke on password change · including
-  //       this device"). Phase 1.0 does NOT bump sessions_invalidated_at
-  //       from any user-triggered action · the column is wired but
-  //       only (a) is user-reachable today.
+  //       session's JWT iat (mass invalidation path · owner-sealed
+  //       2026-11-07 · Item 2 wired this to the password-change
+  //       endpoint via `bumpSessionsInvalidatedAtForOwner`. ANY event
+  //       that must re-authenticate every device including the one
+  //       that triggered the action bumps this column).
   if (accessToken) {
     const sessionKey = sha256Hex(accessToken);
     const sessRow = await nexSupabaseAdmin
@@ -223,14 +236,13 @@ async function resolveFromUser(
     if (sessRow.data?.revoked_at) {
       return null;
     }
-    if (account.sessions_invalidated_at) {
-      const issuedAtSec = extractJwtIssuedAt(accessToken);
-      if (issuedAtSec !== null) {
-        const invalidatedAtMs = Date.parse(account.sessions_invalidated_at);
-        if (Number.isFinite(invalidatedAtMs) && issuedAtSec * 1000 < invalidatedAtMs) {
-          return null;
-        }
-      }
+    if (
+      isJwtInvalidatedByMassInvalidation(
+        accessToken,
+        account.sessions_invalidated_at,
+      )
+    ) {
+      return null;
     }
   }
 
@@ -269,24 +281,6 @@ function sha256Hex(input: string): string {
   return createHash("sha256").update(input, "utf8").digest("hex");
 }
 
-/** Extract the `iat` (issued-at, seconds since epoch) claim from a JWT.
- *  Returns null when the token is malformed · never throws. */
-function extractJwtIssuedAt(jwt: string): number | null {
-  const parts = jwt.split(".");
-  if (parts.length !== 3) return null;
-  try {
-    // JWT payload is base64url-encoded. Convert to base64 then decode.
-    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const padLen = (4 - (b64.length % 4)) % 4;
-    const padded = b64 + "=".repeat(padLen);
-    const json = Buffer.from(padded, "base64").toString("utf8");
-    const obj = JSON.parse(json);
-    const iat = obj?.iat;
-    return typeof iat === "number" && Number.isFinite(iat) ? iat : null;
-  } catch {
-    return null;
-  }
-}
 
 /** Upsert the nex_session row for this (account, session key) pair.
  *  Insert path creates a minimal row (no device_label · the sign-in

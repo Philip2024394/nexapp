@@ -166,13 +166,15 @@ export async function setSessionTrustedForOwner(
  *  their next protected request.
  *
  *  Does NOT bump `nex_account.sessions_invalidated_at` · that column
- *  is reserved for future "mass invalidation including the current
- *  device" flows (e.g. a dedicated 'sign out everywhere + this device'
- *  button, or a password-change-triggered mass invalidation). Mixing
- *  the two mechanisms would kick out the current session too (because
- *  the current session's JWT iat is older than the bump time) ·
- *  defeating the sealed 'keep me signed in, log everyone else out'
- *  rule. Returns the number of nex_session rows that were revoked. */
+ *  drives the OTHER kick-out mechanism (mass invalidation INCLUDING
+ *  the current device) which is deliberately kept separate from this
+ *  function. Owner directive 2026-11-07 · Item 2 · for the password-
+ *  change path use `bumpSessionsInvalidatedAtForOwner` below. Mixing
+ *  the two mechanisms here would kick out the current session too
+ *  (because its JWT iat is older than the bump time) · defeating the
+ *  sealed "keep me signed in, log everyone else out" rule this
+ *  function enforces. Returns the number of nex_session rows that
+ *  were revoked. */
 export async function revokeAllOtherSessionsForOwner(
   ownerAccountId: NexUuid,
   keepSessionKey?: string | null,
@@ -196,6 +198,36 @@ export async function revokeAllOtherSessionsForOwner(
     invalidated_at: now,
     revoked_count: revokedRows?.length ?? 0,
   };
+}
+
+/** Mass session invalidation INCLUDING the current device. Owner
+ *  directive 2026-11-07 · Item 2. Writes
+ *  `nex_account.sessions_invalidated_at = now()` so every NEX session
+ *  whose JWT was issued before this moment · including the one that
+ *  triggered the bump · is rejected by the session resolver on its
+ *  next protected request (see `resolveFromUser` in
+ *  `./app/session.ts`).
+ *
+ *  Use this for events that MUST re-authenticate every device · e.g.
+ *  password change, email change, suspected account compromise. Do
+ *  NOT use this for "sign out all other devices · keep current"
+ *  flows · that is `revokeAllOtherSessionsForOwner` above.
+ *
+ *  Returns the ISO timestamp that was written so callers can log it. */
+export async function bumpSessionsInvalidatedAtForOwner(
+  ownerAccountId: NexUuid,
+): Promise<{ invalidated_at: string }> {
+  const now = new Date().toISOString();
+  const { error } = await nexSupabaseAdmin
+    .from("nex_account")
+    .update({ sessions_invalidated_at: now })
+    .eq("id", ownerAccountId);
+  if (error) {
+    throw new Error(
+      `security-service.bumpSessionsInvalidatedAtForOwner: ${error.message}`,
+    );
+  }
+  return { invalidated_at: now };
 }
 
 // ---------------------------------------------------------------------------
