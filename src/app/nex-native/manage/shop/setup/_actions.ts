@@ -282,6 +282,13 @@ export async function saveShopHoursAction(
 ): Promise<ActionResult> {
   const parsed = parseWeeklyHoursFromForm(formData);
   if ("error" in parsed) return { ok: false, error: parsed.error };
+  // Owner-sealed 2026-11-07 · at-least-one-open-day invariant.
+  // Defence in depth: the client also blocks all-closed submissions
+  // but a tampered FormData could bypass that.
+  const anyOpen = NEX_WEEK_DAYS.some((d) => parsed[d] !== null);
+  if (!anyOpen) {
+    return { ok: false, error: "hours-all-closed" };
+  }
   const biz = await requireBusiness();
   if (!biz.ok) return biz;
   try {

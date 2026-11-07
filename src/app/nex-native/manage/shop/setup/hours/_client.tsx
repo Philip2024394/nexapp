@@ -87,6 +87,13 @@ function initialWeek(initial: NexWeeklyHours | null): WeekDraft {
 const HHMM = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
 
 function validateWeek(week: WeekDraft): string | null {
+  // Owner-sealed 2026-11-07 · a business must be open at least one
+  // day a week. All-closed weeks aren't a legitimate shop state ·
+  // the owner should toggle away-mode or archive instead.
+  const anyOpen = NEX_WEEK_DAYS.some((d) => !week[d].closed);
+  if (!anyOpen) {
+    return "Your shop must be open at least one day a week.";
+  }
   for (const d of NEX_WEEK_DAYS) {
     const v = week[d];
     if (v.closed) continue;
@@ -370,6 +377,8 @@ function errorCopy(code: string): string {
   switch (code) {
     case "hours-invalid":
       return "One or more days have invalid times. Open must be before close.";
+    case "hours-all-closed":
+      return "Your shop must be open at least one day a week.";
     case "not-authenticated":
       return "You've been signed out · please sign in again.";
     default:
