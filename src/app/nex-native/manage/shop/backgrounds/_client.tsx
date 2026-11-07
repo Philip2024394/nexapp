@@ -658,6 +658,80 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
     tintSwatch: "#2A6DD9",
     downloadsBase: 42,
   },
+  // Owner directive 2026-11-07 (later same day) · 8 more portrait
+  // backgrounds for shop template pages. phil122/124 = watch
+  // compositions · phil125-130 = vitamin / supplement product shots
+  // (classified under "food" · health consumables sit alongside
+  // groceries in the current category set). phil123 was supplied
+  // in .paint format · skipped until owner re-exports as PNG.
+  {
+    id: "phil122-watches-gold-silk",
+    url: "/nex-brand/shop-themes/phil122.png",
+    label: "Watches · Gold Silk",
+    category: "electronics",
+    tintSwatch: "#D9B86A",
+    downloadsBase: 39,
+    isNew: true,
+  },
+  {
+    id: "phil124-watches-blue-splash",
+    url: "/nex-brand/shop-themes/phil124.png",
+    label: "Watches · Blue Splash",
+    category: "electronics",
+    tintSwatch: "#2A6DD9",
+    downloadsBase: 44,
+  },
+  {
+    id: "phil125-vitamin-c",
+    url: "/nex-brand/shop-themes/phil125.png",
+    label: "Vitamin C · Orange Burst",
+    category: "food",
+    tintSwatch: "#FF8A1F",
+    downloadsBase: 31,
+    isNew: true,
+  },
+  {
+    id: "phil126-multi-vitamin-berries",
+    url: "/nex-brand/shop-themes/phil126.png",
+    label: "Multi Vitamin · Berries",
+    category: "food",
+    tintSwatch: "#B13D8A",
+    downloadsBase: 27,
+  },
+  {
+    id: "phil127-vitamin-d3",
+    url: "/nex-brand/shop-themes/phil127.png",
+    label: "Vitamin D3 · Bone Health",
+    category: "food",
+    tintSwatch: "#F2A82A",
+    downloadsBase: 34,
+    isNew: true,
+  },
+  {
+    id: "phil128-omega-3",
+    url: "/nex-brand/shop-themes/phil128.png",
+    label: "Omega-3 · Fish Oil",
+    category: "food",
+    tintSwatch: "#2A6DD9",
+    downloadsBase: 29,
+  },
+  {
+    id: "phil129-magnesium-wellness",
+    url: "/nex-brand/shop-themes/phil129.png",
+    label: "Magnesium · Wellness",
+    category: "food",
+    tintSwatch: "#7CB342",
+    downloadsBase: 36,
+    isNew: true,
+  },
+  {
+    id: "phil130-zinc-immune",
+    url: "/nex-brand/shop-themes/phil130.png",
+    label: "Zinc · Immune Support",
+    category: "food",
+    tintSwatch: "#2A6DD9",
+    downloadsBase: 32,
+  },
 ];
 
 // Owner directive 2026-11-06 · "libary must have previous and

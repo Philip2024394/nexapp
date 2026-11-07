@@ -242,6 +242,20 @@ const PRESET_BACKGROUND_META: ReadonlyMap<
   ["/nex-brand/shop-themes/phil119.png", { tintHex: "#2A6DD9" }],
   ["/nex-brand/shop-themes/phil120.png", { tintHex: "#D9B86A" }],
   ["/nex-brand/shop-themes/phil121.png", { tintHex: "#2A6DD9" }],
+  // Owner directive 2026-11-07 (later same day) · 8 more portrait
+  // backgrounds for shop template pages: 2 watch compositions + 6
+  // vitamin/supplement product shots. Tints match dominant hue of
+  // each source image. phil123 was supplied as .paint (Microsoft
+  // Paint project) · not web-usable · owner asked to re-export as
+  // PNG and that entry will be added when it lands.
+  ["/nex-brand/shop-themes/phil122.png", { tintHex: "#D9B86A" }],
+  ["/nex-brand/shop-themes/phil124.png", { tintHex: "#2A6DD9" }],
+  ["/nex-brand/shop-themes/phil125.png", { tintHex: "#FF8A1F" }],
+  ["/nex-brand/shop-themes/phil126.png", { tintHex: "#B13D8A" }],
+  ["/nex-brand/shop-themes/phil127.png", { tintHex: "#F2A82A" }],
+  ["/nex-brand/shop-themes/phil128.png", { tintHex: "#2A6DD9" }],
+  ["/nex-brand/shop-themes/phil129.png", { tintHex: "#7CB342" }],
+  ["/nex-brand/shop-themes/phil130.png", { tintHex: "#2A6DD9" }],
 ]);
 
 export async function applyShopPresetBackgroundAction(
