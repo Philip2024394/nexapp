@@ -293,6 +293,19 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
     href: "/nex-native/chat-themes-library",
     locked: false,
   },
+  // Owner directive 2026-11-07 · NEX Store · dedicated place to
+  // discover + purchase NEX's own optional extras (Vault, future
+  // themes packs, future add-ons). NOT a third-party marketplace ·
+  // NEX-owned product catalogue only. Sits between Chat themes and
+  // Discovery because it extends the "your NEX" vocabulary with
+  // purchasable additions.
+  {
+    key: "nex-store",
+    label: "🛍  NEX Store",
+    subtitle: "Vault, themes and NEX extras",
+    href: "/nex-native/store",
+    locked: false,
+  },
   // Owner directive 2026-11-05 · Discovery moves OUT of the chat header
   // (freeing room for a less cramped [ bell · + ] right-nav) and INTO
   // the right-side drawer where it belongs with other app-level
