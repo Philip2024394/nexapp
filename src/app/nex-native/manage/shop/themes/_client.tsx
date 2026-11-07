@@ -225,7 +225,7 @@ export function ShopThemesClient({
         <iframe
           key={`${selectedLayout}:${imageUrl ?? "none"}:${tintHex}`}
           src={previewSrc}
-          title={`${layoutLabels[selectedLayout]} template preview`}
+          title={`Template ${layoutIndex + 1} of ${totalLayouts} preview`}
           loading="lazy"
           style={{
             position: "absolute",
@@ -288,7 +288,7 @@ export function ShopThemesClient({
         <span
           data-nex-template-counter
           style={{
-            fontSize: 12,
+            fontSize: 14,
             fontWeight: 900,
             color: INK,
             letterSpacing: "0.04em",
@@ -298,18 +298,6 @@ export function ShopThemesClient({
           }}
         >
           Template {layoutIndex + 1} of {totalLayouts}
-          <span
-            style={{
-              display: "block",
-              fontSize: 10,
-              fontWeight: 700,
-              color: INK_DIM,
-              marginTop: 2,
-              letterSpacing: "0.02em",
-            }}
-          >
-            {layoutLabels[selectedLayout]}
-          </span>
         </span>
         <ArrowPill direction="right" onClick={nextLayout} />
       </div>
@@ -373,7 +361,7 @@ export function ShopThemesClient({
         ? createPortal(
             <FullscreenTemplate
               src={previewSrc}
-              label={layoutLabels[selectedLayout]}
+              label={`Template ${layoutIndex + 1} of ${totalLayouts}`}
               onClose={() => setFullscreen(false)}
             />,
             document.body,
