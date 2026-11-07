@@ -928,6 +928,84 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
     tintSwatch: "#A0522D",
     downloadsBase: 36,
   },
+  // Owner directive 2026-11-07 (fourth batch) · 65 more tiles.
+
+  // ── Cakes + desserts · food ──
+  { id: "phil21-berry-cheesecake-lilac", url: "/nex-brand/shop-themes/phil21.png", label: "Berry Cheesecake · Lilac", category: "food", tintSwatch: "#B88CD9", downloadsBase: 38 },
+  { id: "phil22-blueberry-cake-mint", url: "/nex-brand/shop-themes/phil22.png", label: "Blueberry Cake · Mint", category: "food", tintSwatch: "#7BC4C4", downloadsBase: 35, isNew: true },
+  { id: "phil23-choc-strawberry-pink", url: "/nex-brand/shop-themes/phil23.png", label: "Chocolate Strawberry · Pink", category: "food", tintSwatch: "#F08CA8", downloadsBase: 42 },
+
+  // ── Abstract silk + plain backdrops · showcase ──
+  { id: "phil24-cream-silk", url: "/nex-brand/shop-themes/phil24.png", label: "Cream Silk", category: "showcase", tintSwatch: "#E8D5A8", downloadsBase: 27 },
+  { id: "phil25-pink-silk", url: "/nex-brand/shop-themes/phil25.png", label: "Pink Silk", category: "showcase", tintSwatch: "#F08CB8", downloadsBase: 29 },
+  { id: "phil26-copper-silk", url: "/nex-brand/shop-themes/phil26.png", label: "Copper Silk", category: "showcase", tintSwatch: "#A86A3A", downloadsBase: 24 },
+  { id: "phil27-purple-silk", url: "/nex-brand/shop-themes/phil27.png", label: "Purple Silk", category: "showcase", tintSwatch: "#8B5FC9", downloadsBase: 26 },
+  { id: "phil28-teal-silk", url: "/nex-brand/shop-themes/phil28.png", label: "Teal Silk", category: "showcase", tintSwatch: "#4FD1C5", downloadsBase: 31, isNew: true },
+  { id: "phil29-coral-silk", url: "/nex-brand/shop-themes/phil29.png", label: "Coral Silk", category: "showcase", tintSwatch: "#F08C7B", downloadsBase: 25 },
+  { id: "phil30-cream-flat", url: "/nex-brand/shop-themes/phil30.png", label: "Cream · Plain", category: "showcase", tintSwatch: "#F5E8D9", downloadsBase: 22 },
+  { id: "phil31-pink-flat", url: "/nex-brand/shop-themes/phil31.png", label: "Pink · Plain", category: "showcase", tintSwatch: "#F2A7C1", downloadsBase: 28 },
+  { id: "phil32-brown-flat", url: "/nex-brand/shop-themes/phil32.png", label: "Brown · Plain", category: "showcase", tintSwatch: "#6B3A1F", downloadsBase: 19 },
+  { id: "phil33-lilac-flat", url: "/nex-brand/shop-themes/phil33.png", label: "Lilac · Plain", category: "showcase", tintSwatch: "#C090F0", downloadsBase: 23 },
+  { id: "phil34-mint-flat", url: "/nex-brand/shop-themes/phil34.png", label: "Mint · Plain", category: "showcase", tintSwatch: "#90F0D0", downloadsBase: 21 },
+  { id: "phil35-coral-flat", url: "/nex-brand/shop-themes/phil35.png", label: "Coral · Plain", category: "showcase", tintSwatch: "#F0807B", downloadsBase: 24 },
+  { id: "phil36-navy-flat", url: "/nex-brand/shop-themes/phil36.png", label: "Navy · Plain", category: "showcase", tintSwatch: "#1F3A6B", downloadsBase: 20 },
+  { id: "phil37-teal-flat", url: "/nex-brand/shop-themes/phil37.png", label: "Teal · Plain", category: "showcase", tintSwatch: "#0FA8A8", downloadsBase: 22 },
+  { id: "phil38-orange-flat", url: "/nex-brand/shop-themes/phil38.png", label: "Orange · Plain", category: "showcase", tintSwatch: "#F08C1F", downloadsBase: 25 },
+  { id: "phil39-grey-flat", url: "/nex-brand/shop-themes/phil39.png", label: "Grey · Plain", category: "showcase", tintSwatch: "#BFBFBF", downloadsBase: 17 },
+  { id: "phil40-red-flat", url: "/nex-brand/shop-themes/phil40.png", label: "Red · Plain", category: "showcase", tintSwatch: "#C0001F", downloadsBase: 28 },
+  { id: "phil41-dark-green-flat", url: "/nex-brand/shop-themes/phil41.png", label: "Dark Green · Plain", category: "showcase", tintSwatch: "#0F5F2B", downloadsBase: 21 },
+  { id: "phil42-cream-light", url: "/nex-brand/shop-themes/phil42.png", label: "Soft Cream", category: "showcase", tintSwatch: "#F5E8C5", downloadsBase: 18 },
+  { id: "phil43-light-grey", url: "/nex-brand/shop-themes/phil43.png", label: "Light Grey", category: "showcase", tintSwatch: "#D5D5D5", downloadsBase: 16 },
+  { id: "phil44-ivory", url: "/nex-brand/shop-themes/phil44.png", label: "Ivory", category: "showcase", tintSwatch: "#F5EFE0", downloadsBase: 19 },
+  { id: "phil45-pale-blue", url: "/nex-brand/shop-themes/phil45.png", label: "Pale Blue", category: "showcase", tintSwatch: "#B5D5F0", downloadsBase: 20 },
+  { id: "phil46-pale-lilac", url: "/nex-brand/shop-themes/phil46.png", label: "Pale Lilac", category: "showcase", tintSwatch: "#E0C5F5", downloadsBase: 22 },
+  { id: "phil47-soft-pink", url: "/nex-brand/shop-themes/phil47.png", label: "Soft Pink", category: "showcase", tintSwatch: "#F5B5D0", downloadsBase: 23 },
+
+  // ── Cruise + travel ──
+  { id: "phil48-cruise-beach", url: "/nex-brand/shop-themes/phil48.png", label: "Cruise · Beach Cream", category: "travel", tintSwatch: "#E8D5A8", downloadsBase: 34 },
+  { id: "phil49-cruise-globe", url: "/nex-brand/shop-themes/phil49.png", label: "Cruise · Globe", category: "travel", tintSwatch: "#7A9BC4", downloadsBase: 31 },
+  { id: "phil50-cruise-tropic", url: "/nex-brand/shop-themes/phil50.png", label: "Cruise · Tropical", category: "travel", tintSwatch: "#F5E8C5", downloadsBase: 37, isNew: true },
+  { id: "phil51-cruise-pink", url: "/nex-brand/shop-themes/phil51.png", label: "Cruise · Pink Sunset", category: "travel", tintSwatch: "#F08CA8", downloadsBase: 39 },
+  { id: "phil52-cruise-glacier", url: "/nex-brand/shop-themes/phil52.png", label: "Cruise · Glacier", category: "travel", tintSwatch: "#5BA7D9", downloadsBase: 28 },
+  { id: "phil53-cruise-paris", url: "/nex-brand/shop-themes/phil53.png", label: "Cruise · Paris Twilight", category: "travel", tintSwatch: "#9B6DD9", downloadsBase: 45, isNew: true },
+
+  // ── Mains · food ──
+  { id: "phil54-burger-orange", url: "/nex-brand/shop-themes/phil54.png", label: "Burger · Orange", category: "food", tintSwatch: "#FF7A2B", downloadsBase: 57 },
+  { id: "phil55-pizza-cream", url: "/nex-brand/shop-themes/phil55.png", label: "Pizza · Cream", category: "food", tintSwatch: "#E8A82A", downloadsBase: 51 },
+  { id: "phil61-pizza-dark", url: "/nex-brand/shop-themes/phil61.png", label: "Pizza · Dark Slate", category: "food", tintSwatch: "#D9452A", downloadsBase: 43 },
+  { id: "phil62-burger-bright", url: "/nex-brand/shop-themes/phil62.png", label: "Burger · Bright Orange", category: "food", tintSwatch: "#FF7A2B", downloadsBase: 46 },
+  { id: "phil63-spaghetti-cream", url: "/nex-brand/shop-themes/phil63.png", label: "Spaghetti · Cream", category: "food", tintSwatch: "#D9823B", downloadsBase: 40, isNew: true },
+  { id: "phil64-salmon-blue", url: "/nex-brand/shop-themes/phil64.png", label: "Salmon · Blue Splash", category: "food", tintSwatch: "#2A6DD9", downloadsBase: 44 },
+  { id: "phil65-choc-berry-pink", url: "/nex-brand/shop-themes/phil65.png", label: "Chocolate Berry · Pink", category: "food", tintSwatch: "#E85AA8", downloadsBase: 38 },
+  { id: "phil66-steak-red", url: "/nex-brand/shop-themes/phil66.png", label: "Steak · Red", category: "food", tintSwatch: "#B1203D", downloadsBase: 49 },
+  { id: "phil67-noodles-asian", url: "/nex-brand/shop-themes/phil67.png", label: "Asian Noodles", category: "food", tintSwatch: "#D97A2A", downloadsBase: 42 },
+  { id: "phil68-kebab-red", url: "/nex-brand/shop-themes/phil68.png", label: "Kebab · Red Grill", category: "food", tintSwatch: "#D9452A", downloadsBase: 36 },
+  { id: "phil69-fried-rice-yellow", url: "/nex-brand/shop-themes/phil69.png", label: "Fried Rice · Yellow", category: "food", tintSwatch: "#D9BA2A", downloadsBase: 33, isNew: true },
+  { id: "phil70-asian-wok-green", url: "/nex-brand/shop-themes/phil70.png", label: "Asian Wok · Green", category: "food", tintSwatch: "#1F6F2B", downloadsBase: 39 },
+  { id: "phil71-dumplings-blue", url: "/nex-brand/shop-themes/phil71.png", label: "Dumplings · Blue", category: "food", tintSwatch: "#2A6DD9", downloadsBase: 34 },
+  { id: "phil72-sushi-wood", url: "/nex-brand/shop-themes/phil72.png", label: "Sushi · Dark Wood", category: "food", tintSwatch: "#8B5A2B", downloadsBase: 41 },
+  { id: "phil73-bread-yellow", url: "/nex-brand/shop-themes/phil73.png", label: "Bread · Golden", category: "food", tintSwatch: "#E8A82A", downloadsBase: 30 },
+  { id: "phil74-donuts-brown", url: "/nex-brand/shop-themes/phil74.png", label: "Donuts · Brown", category: "food", tintSwatch: "#A0522D", downloadsBase: 44 },
+  { id: "phil75-strawberry-cake", url: "/nex-brand/shop-themes/phil75.png", label: "Strawberry Cake · Pink", category: "food", tintSwatch: "#F08CA8", downloadsBase: 37 },
+  { id: "phil76-bread-wheat-green", url: "/nex-brand/shop-themes/phil76.png", label: "Rustic Bread · Wheat", category: "food", tintSwatch: "#1F6F2B", downloadsBase: 28 },
+  { id: "phil77-scones-blue", url: "/nex-brand/shop-themes/phil77.png", label: "Scones · Blue", category: "food", tintSwatch: "#2A6DD9", downloadsBase: 32 },
+  { id: "phil78-croissants-orange", url: "/nex-brand/shop-themes/phil78.png", label: "Croissants · Golden", category: "food", tintSwatch: "#F0A82A", downloadsBase: 40 },
+
+  // ── Tools & trade ──
+  { id: "phil79-power-drills-yellow", url: "/nex-brand/shop-themes/phil79.png", label: "Power Drills · Yellow", category: "tools", tintSwatch: "#F0B82A", downloadsBase: 38 },
+  { id: "phil80-wrenches-blue", url: "/nex-brand/shop-themes/phil80.png", label: "Wrenches · Blue", category: "tools", tintSwatch: "#2A6DD9", downloadsBase: 33 },
+  { id: "phil81-hammer-saw-wood", url: "/nex-brand/shop-themes/phil81.png", label: "Carpentry · Wood Bench", category: "tools", tintSwatch: "#A0522D", downloadsBase: 29, isNew: true },
+  { id: "phil82-wrenches-red-metal", url: "/nex-brand/shop-themes/phil82.png", label: "Wrenches · Red Metal", category: "tools", tintSwatch: "#B1203D", downloadsBase: 31 },
+  { id: "phil83-hard-hat-orange", url: "/nex-brand/shop-themes/phil83.png", label: "Hard Hat · Orange", category: "tools", tintSwatch: "#F0931F", downloadsBase: 36 },
+  { id: "phil84-garden-tools", url: "/nex-brand/shop-themes/phil84.png", label: "Garden Tools · Green", category: "tools", tintSwatch: "#1F7F3F", downloadsBase: 27 },
+
+  // ── Baby + kids clothing · fashion ──
+  { id: "phil85-baby-blue-teddy", url: "/nex-brand/shop-themes/phil85.png", label: "Baby Blue · Teddy", category: "fashion", tintSwatch: "#5BA7D9", downloadsBase: 42 },
+  { id: "phil86-baby-pink-bunny", url: "/nex-brand/shop-themes/phil86.png", label: "Baby Pink · Bunny", category: "fashion", tintSwatch: "#F08CB8", downloadsBase: 48, isNew: true },
+  { id: "phil87-baby-cream-teddy", url: "/nex-brand/shop-themes/phil87.png", label: "Baby Cream · Teddy", category: "fashion", tintSwatch: "#D9C5A0", downloadsBase: 34 },
+  { id: "phil88-baby-green-dino", url: "/nex-brand/shop-themes/phil88.png", label: "Baby Green · Dino", category: "fashion", tintSwatch: "#5FC97B", downloadsBase: 39 },
+  { id: "phil89-baby-yellow-giraffe", url: "/nex-brand/shop-themes/phil89.png", label: "Baby Yellow · Giraffe", category: "fashion", tintSwatch: "#F0C82A", downloadsBase: 36 },
+  { id: "phil90-baby-lilac-sheep", url: "/nex-brand/shop-themes/phil90.png", label: "Baby Lilac · Sheep", category: "fashion", tintSwatch: "#9B6DD9", downloadsBase: 41, isNew: true },
 ];
 
 // Owner directive 2026-11-06 · "libary must have previous and
