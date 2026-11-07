@@ -491,14 +491,14 @@ function FullscreenTemplate({
   label: string;
   onClose: () => void;
 }) {
-  // Owner directive 2026-11-07 · "view large screen must stay inside
-  // the phone screen size of phone . not open desktop of tablet
-  // size". The dialog still portals to document.body (so it escapes
-  // the sealed phone-frame transform) and fills the viewport with a
-  // dim backdrop, but the iframe INSIDE is clamped to a phone-shaped
-  // 9:19.5 container · its width is min(96vw, 96vh*9/19.5) so on a
-  // desktop monitor it still looks like a larger phone, never a
-  // widescreen page.
+  // Owner directive 2026-11-07 (two refinements):
+  //   · "view large screen must stay inside the phone screen size of
+  //     phone . not open desktop of tablet size" · the iframe is
+  //     clamped to a 9:19.5 phone silhouette regardless of viewport.
+  //   · "we must have close small button footer center small and we
+  //     dont need see this on desktop Template 1 of 11" · the top
+  //     header (gold label + × button) was removed; close now lives
+  //     as a small centred pill BELOW the phone silhouette.
   return (
     <div
       role="dialog"
@@ -513,67 +513,21 @@ function FullscreenTemplate({
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
+        gap: 14,
         padding: "env(safe-area-inset-top, 0px) 12px env(safe-area-inset-bottom, 0px)",
         boxSizing: "border-box",
       }}
       onClick={onClose}
     >
       <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 10,
-          width: "min(96vw, calc(96vh * 9 / 19.5))",
-          paddingBlock: "10px",
-          color: CREAM,
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <span
-          style={{
-            fontSize: 12,
-            fontWeight: 900,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            color: GOLD,
-          }}
-        >
-          {label}
-        </span>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close large view"
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 999,
-            background: "rgba(250, 248, 244, 0.1)",
-            border: `1px solid ${GOLD}`,
-            color: CREAM,
-            fontSize: 18,
-            fontWeight: 900,
-            lineHeight: 1,
-            cursor: "pointer",
-            display: "grid",
-            placeItems: "center",
-            padding: 0,
-            fontFamily: "inherit",
-          }}
-        >
-          ×
-        </button>
-      </div>
-      <div
         data-nex-template-fullscreen-frame
         onClick={(e) => e.stopPropagation()}
         style={{
           // Phone silhouette clamped to viewport · same 9:19.5 ratio
           // as the picker preview · just bigger.
-          width: "min(96vw, calc(94vh * 9 / 19.5))",
+          width: "min(96vw, calc(86vh * 9 / 19.5))",
           aspectRatio: "9 / 19.5",
-          maxHeight: "94vh",
+          maxHeight: "86vh",
           borderRadius: 32,
           background: PAD_CREAM,
           border: `2px solid ${GOLD}`,
@@ -595,6 +549,27 @@ function FullscreenTemplate({
           }}
         />
       </div>
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Close large view"
+        data-nex-template-fullscreen-close
+        style={{
+          padding: "6px 18px",
+          fontSize: 10.5,
+          fontWeight: 800,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          color: CREAM,
+          background: "rgba(5, 15, 28, 0.9)",
+          border: `1.5px solid ${GOLD}`,
+          borderRadius: 999,
+          cursor: "pointer",
+          fontFamily: "inherit",
+        }}
+      >
+        Close
+      </button>
     </div>
   );
 }
