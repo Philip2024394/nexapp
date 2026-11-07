@@ -450,6 +450,21 @@ export async function sendPeerMessage(
     // Silently drop bad reply pointers rather than erroring the send.
   }
 
+  // Owner-sealed 2026-11-07 · disappearing messages Phase 2 wire-in.
+  // Compute disappearing_at from the sender's account default before
+  // insert. For OFF (0) default · patch is empty · no stamp. For
+  // positive-integer defaults · patch = { disappearing_at: ISO }. For
+  // sentinel -1 "immediately after view" · patch is empty at send
+  // (Phase 3 stamps at read time). If migration 283's disappearing_at
+  // column is absent · patch is empty · insert works on the pre-
+  // migration schema without error.
+  const { resolveDisappearingAtPatchForSend } = await import(
+    "./disappearing-messages-service"
+  );
+  const disappearingPatch = await resolveDisappearingAtPatchForSend(
+    input.sender_account_id,
+  );
+
   const { data, error } = await nexSupabaseAdmin
     .from("nex_peer_message")
     .insert({
@@ -463,6 +478,8 @@ export async function sendPeerMessage(
       // Bridge 99 idempotency key · UNIQUE (sender_account_id,
       // send_intent_id) enforced by Migration 102 Part C.
       ...(input.send_intent_id ? { send_intent_id: input.send_intent_id } : {}),
+      // Disappearing messages · Phase 2 (owner-sealed 2026-11-07).
+      ...disappearingPatch,
     })
     .select("*")
     .single();
@@ -705,6 +722,77 @@ export async function markPeerMessagesRead(
     // eslint-disable-next-line no-console
     console.warn(
       `peer-message-service.markPeerMessagesRead soft-fail: ${error.message}`,
+    );
+  }
+
+  // Owner-sealed 2026-11-07 · disappearing messages Phase 3 wire-in.
+  // For any messages we just stamped read AND whose SENDER has the
+  // -1 ("immediately after view") sentinel default AND whose
+  // disappearing_at is still NULL · stamp disappearing_at = now + 30s
+  // grace so the purge job (migration 284) removes them shortly.
+  //
+  // Degrades safely when:
+  //   · migration 283 (disappearing_at column) unapplied · column
+  //     probe returns false · we skip the stamping block entirely.
+  //   · migration 282 (sender default column) unapplied · the service
+  //     fail-safe returns OFF for every sender · nobody qualifies ·
+  //     no update fires.
+  //
+  // Scope · we only stamp messages that were JUST marked read in the
+  // same call (read_at = now). This avoids retroactively stamping
+  // older messages whose sender has since changed their default.
+  try {
+    const {
+      hasDisappearingAtColumn,
+      getDisappearingDefaultSafe,
+      computeExpiresAtAtReadTime,
+    } = await import("./disappearing-messages-service");
+    const columnReady = await hasDisappearingAtColumn();
+    if (!columnReady) return;
+
+    // Find the messages this call stamped read that lack a
+    // disappearing_at · group by sender so we batch per-sender.
+    const { data: rows, error: selErr } = await nexSupabaseAdmin
+      .from("nex_peer_message")
+      .select("id, sender_account_id")
+      .eq("conversation_id", conversationId)
+      .neq("sender_account_id", viewerAccountId)
+      .eq("read_at", now)
+      .is("disappearing_at", null);
+    if (selErr || !rows || rows.length === 0) return;
+
+    // Group IDs by sender · then resolve each sender's default once.
+    const bySender = new Map<string, string[]>();
+    for (const r of rows as Array<{ id: string; sender_account_id: string }>) {
+      const list = bySender.get(r.sender_account_id) ?? [];
+      list.push(r.id);
+      bySender.set(r.sender_account_id, list);
+    }
+
+    const graceAt = computeExpiresAtAtReadTime(new Date()).toISOString();
+    for (const [senderId, ids] of bySender.entries()) {
+      const def = await getDisappearingDefaultSafe(senderId);
+      if (def !== -1) continue; // only -1 sentinel stamps at read time
+      const { error: updErr } = await nexSupabaseAdmin
+        .from("nex_peer_message")
+        .update({ disappearing_at: graceAt })
+        .in("id", ids);
+      if (updErr) {
+        // best-effort · never throw from a read-marker
+        // eslint-disable-next-line no-console
+        console.warn(
+          `peer-message-service.markPeerMessagesRead disappearing-stamp soft-fail: ${updErr.message}`,
+        );
+      }
+    }
+  } catch (err) {
+    // Any import/probe/query failure degrades to "no-op stamping" ·
+    // the read receipt itself already fired above so chat UX is OK.
+    // eslint-disable-next-line no-console
+    console.warn(
+      `peer-message-service.markPeerMessagesRead disappearing-stamp exception: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
     );
   }
 }

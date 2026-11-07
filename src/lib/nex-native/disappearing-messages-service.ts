@@ -156,3 +156,59 @@ export const AFTER_VIEW_GRACE_SECONDS = 30;
 export function computeExpiresAtAtReadTime(readAt: Date): Date {
   return new Date(readAt.getTime() + AFTER_VIEW_GRACE_SECONDS * 1000);
 }
+
+// ─── Column probe · safe degradation before migration 283 is applied ──
+//
+// Cached module-local probe. First send/read that would touch
+// nex_peer_message.disappearing_at runs one cheap SELECT with LIMIT 0
+// to confirm the column exists. Subsequent calls skip the probe. If
+// the column is absent, the write path silently omits the field so
+// the insert/update succeeds with the pre-migration-283 schema.
+
+let disappearingAtColumnProbeCache: boolean | null = null;
+
+/** Returns true if `nex_peer_message.disappearing_at` exists in the
+ *  live schema. Cached on first call. Call sites that intend to write
+ *  the column should ALWAYS check this first and omit the field when
+ *  false · otherwise the insert/update will error on column-absence
+ *  during the gap between code ship and migration 283 application. */
+export async function hasDisappearingAtColumn(): Promise<boolean> {
+  if (disappearingAtColumnProbeCache !== null) {
+    return disappearingAtColumnProbeCache;
+  }
+  try {
+    const { error } = await nexSupabaseAdmin
+      .from("nex_peer_message")
+      .select("disappearing_at")
+      .limit(0);
+    disappearingAtColumnProbeCache = !error;
+    return disappearingAtColumnProbeCache;
+  } catch {
+    disappearingAtColumnProbeCache = false;
+    return false;
+  }
+}
+
+/** Test-only · reset the cached probe. Used by vitest suites that
+ *  switch between "column present" and "column absent" fixtures. */
+export function _resetDisappearingAtColumnProbeCacheForTests(): void {
+  disappearingAtColumnProbeCache = null;
+}
+
+/** High-level helper for the send path. Returns a partial patch to
+ *  merge into the insert payload. Empty object when the sender has
+ *  OFF default, the -1 sentinel (which stamps at read time, not send),
+ *  OR the column is absent. Non-empty object carrying
+ *  { disappearing_at: "ISO8601 string" } when a timer is live AND
+ *  the column exists. */
+export async function resolveDisappearingAtPatchForSend(
+  senderAccountId: NexUuid,
+  now: Date = new Date(),
+): Promise<Record<string, string>> {
+  const def = await getDisappearingDefaultSafe(senderAccountId);
+  const expires = computeExpiresAtAtSendTime(def, now);
+  if (!expires) return {};
+  const ok = await hasDisappearingAtColumn();
+  if (!ok) return {};
+  return { disappearing_at: expires.toISOString() };
+}
