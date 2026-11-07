@@ -236,6 +236,51 @@ export function ShopThemesClient({
             background: "transparent",
           }}
         />
+        {/* Owner directive 2026-11-07 · "add little scrolling bar
+            verticle right side of templates only for user viewing the
+            templates so user knows the screen template will scrolling
+            · on full screen this bar is not showing or on live view".
+            Decorative only · visual hint that the iframe content can
+            scroll. The thumb drifts down + up on a slow loop so the
+            cue reads even without interaction. Not scroll-synced ·
+            scope-contained. Full-screen overlay + public shop pages
+            do NOT render this element. */}
+        <div
+          aria-hidden
+          data-nex-template-scroll-hint
+          style={{
+            position: "absolute",
+            top: "14%",
+            bottom: "14%",
+            right: 5,
+            width: 3,
+            borderRadius: 999,
+            background: "rgba(198, 161, 91, 0.22)",
+            pointerEvents: "none",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "28%",
+              borderRadius: 999,
+              background: GOLD,
+              opacity: 0.85,
+              animation: "nexTemplateScrollHint 3.6s ease-in-out infinite",
+            }}
+          />
+        </div>
+        <style>{`
+          @keyframes nexTemplateScrollHint {
+            0%   { transform: translateY(0%); }
+            50%  { transform: translateY(257%); }
+            100% { transform: translateY(0%); }
+          }
+        `}</style>
       </section>
 
       {/* Owner directive 2026-11-07 · "view large screen - must be
