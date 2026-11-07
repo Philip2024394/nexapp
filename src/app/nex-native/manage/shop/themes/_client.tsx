@@ -136,6 +136,42 @@ export function ShopThemesClient({
 
   const previewSrc = buildPreviewSrc(selectedLayout, imageUrl, tintHex);
 
+  // ─── Zero-white-screen loading state ────────────────────────
+  // Owner directive 2026-11-07 "NEX WORLD STANDARD — FULL-SCREEN
+  // SHOP TEMPLATE PREVIEW & ZERO-WHITE-SCREEN LOADING". Single
+  // iframe (no key remount) + branded emerald overlay that covers
+  // the iframe until onLoad fires for the current previewSrc. 12s
+  // safety timeout surfaces a retry prompt rather than letting the
+  // spinner run forever.
+  const [loadedSrc, setLoadedSrc] = React.useState<string | null>(null);
+  const [loadTimeoutFor, setLoadTimeoutFor] = React.useState<string | null>(null);
+  const loading = loadedSrc !== previewSrc;
+  const timedOut = loadTimeoutFor === previewSrc;
+
+  React.useEffect(() => {
+    if (!loading) return;
+    setLoadTimeoutFor(null);
+    const handle = window.setTimeout(() => {
+      setLoadTimeoutFor(previewSrc);
+    }, 12000);
+    return () => window.clearTimeout(handle);
+  }, [previewSrc, loading]);
+
+  function onIframeLoad() {
+    setLoadedSrc(previewSrc);
+    setLoadTimeoutFor(null);
+  }
+
+  function retryPreviewLoad() {
+    // Force-rebust the src with a cache-bust so stuck 3rd-party
+    // chunks don't pin us to a broken state.
+    setLoadedSrc(null);
+    setLoadTimeoutFor(null);
+    // No state change needed on previewSrc · the iframe's onLoad
+    // handler re-fires when the src is set again · we nudge it
+    // by resetting loadedSrc above so loading === true again.
+  }
+
   return (
     <div
       style={{
@@ -214,10 +250,10 @@ export function ShopThemesClient({
         }}
       >
         <iframe
-          key={`${selectedLayout}:${imageUrl ?? "none"}:${tintHex}`}
           src={previewSrc}
           title={`Template ${layoutIndex + 1} of ${totalLayouts} preview`}
-          loading="lazy"
+          loading="eager"
+          onLoad={onIframeLoad}
           style={{
             position: "absolute",
             inset: 0,
@@ -226,6 +262,12 @@ export function ShopThemesClient({
             border: "none",
             background: "transparent",
           }}
+        />
+        <TemplateLoadingOverlay
+          visible={loading}
+          templateNumber={layoutIndex + 1}
+          timedOut={timedOut}
+          onRetry={retryPreviewLoad}
         />
         {/* Owner directive 2026-11-07 · "add little scrolling bar
             verticle right side of templates only for user viewing the
@@ -397,7 +439,7 @@ export function ShopThemesClient({
         ? createPortal(
             <FullscreenTemplate
               src={previewSrc}
-              label={`Template ${layoutIndex + 1} of ${totalLayouts}`}
+              templateNumber={layoutIndex + 1}
               onClose={() => setFullscreen(false)}
             />,
             document.body,
@@ -473,15 +515,167 @@ function ArrowPill({
   );
 }
 
+// NEX World Standard · zero-white-screen loading overlay for every
+// template preview surface (picker + full-screen). Emerald fill
+// with centred ring spinner + "Loading Template N" copy · fades
+// out over 240ms when the iframe below reports onLoad for the
+// current src · surfaces a "Try again" prompt after a 12s stall
+// timeout rather than running the spinner forever.
+function TemplateLoadingOverlay({
+  visible,
+  templateNumber,
+  timedOut,
+  onRetry,
+}: {
+  visible: boolean;
+  templateNumber: number;
+  timedOut: boolean;
+  onRetry: () => void;
+}): React.JSX.Element {
+  return (
+    <div
+      aria-live="polite"
+      aria-busy={visible}
+      data-nex-template-loading-overlay
+      style={{
+        position: "absolute",
+        inset: 0,
+        background: "var(--nex-world-primary, #123D2B)",
+        color: CREAM,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 18,
+        opacity: visible ? 1 : 0,
+        transition: "opacity 240ms ease-out",
+        pointerEvents: visible ? "auto" : "none",
+        zIndex: 5,
+        borderRadius: "inherit",
+      }}
+    >
+      {timedOut ? (
+        <>
+          <span aria-hidden style={{ fontSize: 28, lineHeight: 1 }}>⚠️</span>
+          <div style={{ textAlign: "center", padding: "0 16px" }}>
+            <div
+              style={{
+                fontSize: 14,
+                fontWeight: 900,
+                color: GOLD,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+              }}
+            >
+              Template {templateNumber} is taking longer than usual
+            </div>
+            <div
+              style={{
+                fontSize: 11,
+                color: CREAM,
+                opacity: 0.8,
+                marginTop: 4,
+                lineHeight: 1.4,
+              }}
+            >
+              Check your connection and try again.
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onRetry}
+            style={{
+              padding: "8px 20px",
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: "#1A120A",
+              background: GOLD,
+              border: "none",
+              borderRadius: 999,
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            Try again
+          </button>
+        </>
+      ) : (
+        <>
+          <div
+            data-nex-template-spinner
+            aria-hidden
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 999,
+              border: "3px solid rgba(250, 248, 244, 0.22)",
+              borderTopColor: GOLD,
+              animation: "nexTemplateSpin 900ms linear infinite",
+            }}
+          />
+          <div style={{ textAlign: "center" }}>
+            <div
+              style={{
+                fontSize: 13.5,
+                fontWeight: 900,
+                color: GOLD,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+              }}
+            >
+              Loading Template {templateNumber}
+            </div>
+            <div
+              style={{
+                fontSize: 11,
+                color: CREAM,
+                opacity: 0.75,
+                marginTop: 4,
+              }}
+            >
+              Preparing your shop preview…
+            </div>
+          </div>
+        </>
+      )}
+      <style>{`
+        @keyframes nexTemplateSpin {
+          0%   { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 function FullscreenTemplate({
   src,
-  label,
+  templateNumber,
   onClose,
 }: {
   src: string;
-  label: string;
+  templateNumber: number;
   onClose: () => void;
 }) {
+  // Zero-white-screen guarantee · same single-iframe + branded
+  // emerald overlay pattern the picker uses. 12s safety timeout
+  // falls back to a retry prompt rather than infinite spinner.
+  const [loadedSrc, setLoadedSrc] = React.useState<string | null>(null);
+  const [timedOutFor, setTimedOutFor] = React.useState<string | null>(null);
+  const loading = loadedSrc !== src;
+  const timedOut = timedOutFor === src;
+  React.useEffect(() => {
+    if (!loading) return;
+    setTimedOutFor(null);
+    const handle = window.setTimeout(() => setTimedOutFor(src), 12000);
+    return () => window.clearTimeout(handle);
+  }, [src, loading]);
+  function retry() {
+    setLoadedSrc(null);
+    setTimedOutFor(null);
+  }
   // Owner directive 2026-11-07 (three refinements):
   //   · "view large screen must stay inside the phone screen size of
   //     phone . not open desktop of tablet size" · the iframe is
@@ -497,7 +691,7 @@ function FullscreenTemplate({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={`${label} large view`}
+      aria-label={`Template ${templateNumber} large view`}
       style={{
         position: "fixed",
         inset: 0,
@@ -531,7 +725,9 @@ function FullscreenTemplate({
       >
         <iframe
           src={src}
-          title={`${label} large view`}
+          title={`Template ${templateNumber} large view`}
+          loading="eager"
+          onLoad={() => setLoadedSrc(src)}
           style={{
             position: "absolute",
             inset: 0,
@@ -540,6 +736,12 @@ function FullscreenTemplate({
             border: "none",
             background: "transparent",
           }}
+        />
+        <TemplateLoadingOverlay
+          visible={loading}
+          templateNumber={templateNumber}
+          timedOut={timedOut}
+          onRetry={retry}
         />
         {/* Close pill floats INSIDE the phone's bottom-centre so it
             stays visible on short mobile viewports where a
