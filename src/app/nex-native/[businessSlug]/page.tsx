@@ -36,7 +36,12 @@ import { CoverThemeSkin } from "../cover/theme-skin";
 import { CoverLayoutSwitch } from "../cover/layout-switch";
 import { BurgerMenu } from "../cover/_burger-menu";
 import { ShopChatFab } from "../cover/_shop-chat-fab";
-import { ShopSideChatDrawer } from "../cover/_shop-side-chat-drawer";
+// Owner directive 2026-11-07 · ShopSideChatDrawer (top-left chat icon
+// on the shop cover) retired · the bottom-right ShopChatFab already
+// routes to the owner's chat page, so the duplicate top-left tap
+// target was removed. The drawer file is preserved on disk in case
+// we want to re-mount it later with a different trigger.
+// import { ShopSideChatDrawer } from "../cover/_shop-side-chat-drawer";
 import { ProductDetailSheet } from "../cover/_product-detail-sheet";
 import { PhoneFrame } from "../cover/preview/_phone-frame";
 import {
@@ -207,11 +212,11 @@ export default async function PublicShopPage({
           shopName={business.display_name}
           accentHex={accentHex}
         />
-        <ShopSideChatDrawer
-          shopName={business.display_name}
-          shopOwnerAccountId={business.owner_account_id}
-          accentHex={accentHex}
-        />
+        {/* Owner directive 2026-11-07 · ShopSideChatDrawer unmounted ·
+            the top-left chat trigger was a duplicate entry point, the
+            bottom-right ShopChatFab above already routes to the owner's
+            chat page. File preserved in cover/_shop-side-chat-drawer.tsx
+            for revert-safety but no longer rendered. */}
         {/* Owner directive 2026-11-06 readiness · owner-only empty-
             products prompt · sits above the sticky bottom of the
             shop surface, below the ShopChatFab. Only renders when

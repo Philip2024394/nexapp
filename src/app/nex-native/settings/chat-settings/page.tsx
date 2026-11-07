@@ -138,10 +138,11 @@ export default async function ChatSettingsPage({
           />
 
           <SettingsGroupHeader>Disappearing messages</SettingsGroupHeader>
-          <ComingSoonCard
+          <LinkCard
+            href="/nex-native/settings/disappearing-messages"
             emoji="⏳"
             title="Default message timer"
-            subtitle="Off · Immediately after view · 5 min · 30 min · 1 hour · 24 hours · 7 days. Applies to new conversations · per-chat overrides supported when this ships."
+            subtitle="Off · Immediately after view · 5 min · 30 min · 1 hour · 24 hours · 7 days. Applies to messages YOU send · per-chat overrides deferred to a later update."
           />
 
           <SettingsGroupHeader>Blocked contacts</SettingsGroupHeader>
