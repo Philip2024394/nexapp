@@ -28,11 +28,10 @@ import {
   updateBusinessCityAndHours,
   updateBusinessHours,
   setBusinessPrimaryProfile,
-  updateShippingScope,
+  updateShippingMethodsAndDispatch,
   updateReturnPolicy,
   uploadOnboardingLogo,
-  NEX_SHIPPING_SCOPES,
-  type NexShippingScope,
+  NEX_SHIPPING_METHODS,
 } from "@/lib/nex-native/business-service";
 import { NEX_WEEK_DAYS } from "@/lib/nex-native/types";
 import type { NexWeeklyHours } from "@/lib/nex-native/types";
@@ -334,35 +333,44 @@ export async function saveShopStoryAction(
 }
 
 // ─── Step 6 · Policies ───────────────────────────────────────────────
-// Writes shipping_scope (enum from NEX_SHIPPING_SCOPES, migration 108)
-// and return_policy (JSONB, migration 076). updateReturnPolicy
-// enforces legal minimums server-side (window ≥ 7 days · refund ≥ 3
-// days · defective + wrong_item always accepted) so we don't need
-// client-side legal validation here.
+// Owner directive 2026-11-07 · multi-select shipping methods
+// (Postal · Pick-up · Sea Freight · Airfreight) + shop-level
+// dispatch time (days) + returns policy with a sensible pre-filled
+// default. Migration 289 AUTHORED adds shipping_methods text[] +
+// dispatch_time_days integer · updateShippingMethodsAndDispatch is
+// column-probe safe pre-migration and derives the legacy
+// shipping_scope enum so Directory/cover readers keep working.
 
 export async function saveShopPoliciesAction(
   formData: FormData,
 ): Promise<ActionResult> {
-  const shippingRaw = String(formData.get("shippingScope") ?? "").trim();
+  // Collect ticked shipping methods from the multi-select.
+  const methods: string[] = [];
+  for (const m of NEX_SHIPPING_METHODS) {
+    if (String(formData.get(`ship_${m}`) ?? "") === "true") methods.push(m);
+  }
+  if (methods.length === 0) {
+    return { ok: false, error: "shipping-methods-required" };
+  }
+
+  const dispatchRaw = Number(formData.get("dispatchDays") ?? "");
+  const dispatchDays =
+    Number.isFinite(dispatchRaw) && dispatchRaw >= 0 && dispatchRaw <= 365
+      ? Math.floor(dispatchRaw)
+      : null;
+
   const acceptsReturns =
     String(formData.get("acceptsReturns") ?? "") === "true";
   const windowDaysRaw = Number(formData.get("windowDays") ?? "14");
   const notes = String(formData.get("returnNotes") ?? "").trim();
 
-  const shippingScope: NexShippingScope | null = (
-    NEX_SHIPPING_SCOPES as readonly string[]
-  ).includes(shippingRaw)
-    ? (shippingRaw as NexShippingScope)
-    : null;
-
-  if (!shippingScope) {
-    return { ok: false, error: "shipping-scope-required" };
-  }
-
   const biz = await requireBusiness();
   if (!biz.ok) return biz;
   try {
-    await updateShippingScope(biz.businessId, shippingScope);
+    await updateShippingMethodsAndDispatch(biz.businessId, {
+      methods,
+      dispatchTimeDays: dispatchDays,
+    });
     await updateReturnPolicy(biz.businessId, {
       accepts_returns: acceptsReturns,
       window_days: Number.isFinite(windowDaysRaw)

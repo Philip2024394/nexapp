@@ -825,6 +825,126 @@ export async function updateShippingScope(
   }
 }
 
+// ─── Multi-method shipping + dispatch time ────────────────────────
+// Owner-sealed 2026-11-07 · migration 289 adds `shipping_methods text[]`
+// and `dispatch_time_days integer` on nex_business. These writers
+// column-probe at runtime so the Shop Setup step still saves when
+// the migration has not been applied yet (the fields silently drop
+// and the legacy shipping_scope keeps the row honest).
+
+export const NEX_SHIPPING_METHODS = [
+  "postal",
+  "pickup",
+  "sea_freight",
+  "airfreight",
+] as const;
+export type NexShippingMethod = (typeof NEX_SHIPPING_METHODS)[number];
+
+/** Deterministic derivation of the legacy single-value shipping_scope
+ *  from the multi-select methods. Rules (owner-sealed 2026-11-07):
+ *    · empty                              → null (keeps prior value)
+ *    · only {postal}                      → local_delivery
+ *    · only {pickup}                      → pickup_only
+ *    · only {postal, pickup}              → local_delivery
+ *    · only {sea_freight} / {airfreight}  → international_only
+ *    · any freight + any local method     → local_and_export
+ *
+ *  Local methods = postal · pickup. Freight methods = sea_freight ·
+ *  airfreight. Freight-only (no local) means the shop exports only.
+ */
+export function deriveShippingScopeFromMethods(
+  methods: readonly NexShippingMethod[],
+): NexShippingScope | null {
+  const set = new Set(methods);
+  if (set.size === 0) return null;
+  const hasPostal = set.has("postal");
+  const hasPickup = set.has("pickup");
+  const hasLocal = hasPostal || hasPickup;
+  const hasFreight = set.has("sea_freight") || set.has("airfreight");
+  if (hasLocal && hasFreight) return "local_and_export";
+  if (hasFreight) return "international_only";
+  if (hasPostal) return "local_delivery";
+  // Only pickup remains.
+  return "pickup_only";
+}
+
+let SHIPPING_METHODS_COLUMN_READY: boolean | null = null;
+let DISPATCH_DAYS_COLUMN_READY: boolean | null = null;
+
+async function ensureShippingMethodsColumnReady(): Promise<boolean> {
+  if (SHIPPING_METHODS_COLUMN_READY !== null) return SHIPPING_METHODS_COLUMN_READY;
+  const { error } = await nexSupabaseAdmin
+    .from("nex_business")
+    .select("shipping_methods")
+    .limit(1);
+  SHIPPING_METHODS_COLUMN_READY = !error;
+  return SHIPPING_METHODS_COLUMN_READY;
+}
+
+async function ensureDispatchDaysColumnReady(): Promise<boolean> {
+  if (DISPATCH_DAYS_COLUMN_READY !== null) return DISPATCH_DAYS_COLUMN_READY;
+  const { error } = await nexSupabaseAdmin
+    .from("nex_business")
+    .select("dispatch_time_days")
+    .limit(1);
+  DISPATCH_DAYS_COLUMN_READY = !error;
+  return DISPATCH_DAYS_COLUMN_READY;
+}
+
+/** Column-probe safe writer for the multi-select shipping methods.
+ *  Normalises + narrows to known methods · silently drops the field
+ *  pre-migration-289. Also writes the derived legacy shipping_scope
+ *  so Directory + cover readers stay honest. */
+export async function updateShippingMethodsAndDispatch(
+  businessId: NexUuid,
+  input: {
+    readonly methods: readonly string[];
+    readonly dispatchTimeDays: number | null;
+  },
+): Promise<void> {
+  // Narrow the methods array against the sealed enum. Unknown entries
+  // dropped silently (never throw · tolerates client-side drift).
+  const narrowedMethods = input.methods.filter(
+    (m): m is NexShippingMethod =>
+      (NEX_SHIPPING_METHODS as readonly string[]).includes(m),
+  );
+  const dedup = Array.from(new Set(narrowedMethods));
+  const derivedScope = deriveShippingScopeFromMethods(dedup);
+
+  const [methodsReady, daysReady] = await Promise.all([
+    ensureShippingMethodsColumnReady(),
+    ensureDispatchDaysColumnReady(),
+  ]);
+
+  const update: Record<string, unknown> = {};
+  if (methodsReady) update.shipping_methods = dedup;
+  if (daysReady) {
+    const n = input.dispatchTimeDays;
+    update.dispatch_time_days =
+      typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= 365
+        ? Math.floor(n)
+        : null;
+  }
+  // Legacy shipping_scope: always keep it populated when we have a
+  // derived value (preserves Directory + cover rendering). If methods
+  // is empty we leave the column alone (never clobber a prior value).
+  if (derivedScope !== null) {
+    update.shipping_scope = derivedScope;
+  }
+
+  if (Object.keys(update).length === 0) return; // nothing to write
+
+  const { error } = await nexSupabaseAdmin
+    .from("nex_business")
+    .update(update)
+    .eq("id", businessId);
+  if (error) {
+    throw new Error(
+      `business-service.updateShippingMethodsAndDispatch(${businessId}): ${error.message}`,
+    );
+  }
+}
+
 /** Human-friendly labels + emoji · consumed by the seller selector,
  *  the shop-landing chip strip, and the /safe-trade explainer. */
 export const NEX_PAYMENT_METHOD_META: Record<

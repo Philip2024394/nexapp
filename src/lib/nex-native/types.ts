@@ -558,8 +558,19 @@ export interface NexBusinessRow {
   /** Migration 108 · sealed 2026-09-30 · how the shop fulfils orders.
    *  Enum: local_delivery / local_and_export / international_only /
    *  pickup_only / dine_in / digital. NULL = unset (cover falls back
-   *  to "Local Delivery"). Set by seller on /manage/shop. */
+   *  to "Local Delivery"). Set by seller on /manage/shop. Derived
+   *  from `shipping_methods` on save after migration 289. */
   shipping_scope?: string | null;
+  /** Migration 289 · owner-sealed 2026-11-07 · multi-method shipping.
+   *  Array subset of {'postal','sea_freight','airfreight'}. Postal =
+   *  local/regional. Sea Freight or Airfreight present ⇒ the shop
+   *  exports. Nullable · Optional in the type because the service
+   *  layer column-probes (migration 289 AUTHORED · NOT YET APPLIED). */
+  shipping_methods?: string[] | null;
+  /** Migration 289 · owner-sealed 2026-11-07 · shop-level default
+   *  dispatch time in days (0..365). Shown on Shipping & Returns ·
+   *  used as the per-product dispatch_time fallback. Nullable. */
+  dispatch_time_days?: number | null;
   /** Migration 109 · sealed 2026-09-30 · seller-authored info-pages
    *  blob backing the cover-composer + info tray. Shape validated in
    *  src/lib/nex-native/info-pages-service.ts. Nullable · seller can
