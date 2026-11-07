@@ -175,26 +175,17 @@ export function ShopThemesClient({
         </p>
       </header>
 
-      {/* Owner directive 2026-11-07 · "behind the template offwhite".
-          PAD_CREAM card wraps the phone + its counter so the template
-          reads as a product mock-up inside a soft off-white surface.
-          Page around the pad stays on the sealed dark Ireland NEX_BG. */}
-      <div
-        data-nex-template-pad
-        style={{
-          background: PAD_CREAM,
-          borderRadius: 24,
-          padding: "20px 16px 14px",
-          boxShadow: "0 18px 46px rgba(0, 0, 0, 0.35)",
-          display: "flex",
-          flexDirection: "column",
-          gap: 12,
-          alignItems: "center",
-        }}
-      >
+      {/* Owner directive 2026-11-07 · "no undo white outside phone -
+          inside phone background color cream off white". The outer
+          cream pad was removed · the off-white now sits INSIDE the
+          phone silhouette as the interior backdrop (so transparent
+          areas of the template render show cream through). Page
+          chrome stays on the sealed dark Ireland NEX_BG. */}
+
       {/* ── PHONE FRAME LIVE PREVIEW ─────────────────────────────
           Sealed 9:19.5 silhouette · narrow max-width keeps the frame
-          tall + phone-shaped. Fullscreen trigger (⤢) overlays the
+          tall + phone-shaped. Interior bg is off-white (PAD_CREAM)
+          per owner 2026-11-07. Fullscreen trigger (⤢) overlays the
           top-right. */}
       <section
         aria-label="Live preview"
@@ -206,10 +197,10 @@ export function ShopThemesClient({
           minHeight: 500,
           margin: "0 auto",
           borderRadius: 32,
-          background: "transparent",
+          background: PAD_CREAM,
           border: `2px solid ${BORDER_HI}`,
           overflow: "hidden",
-          boxShadow: "0 12px 32px rgba(26, 18, 10, 0.22)",
+          boxShadow: "0 18px 46px rgba(0, 0, 0, 0.4)",
           boxSizing: "border-box",
         }}
       >
@@ -258,14 +249,13 @@ export function ShopThemesClient({
         </button>
       </section>
 
-      {/* ── Prev / count / next row under the phone (inside pad) ─ */}
+      {/* ── Prev / count / next row under the phone ──────────── */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           gap: 12,
-          width: "100%",
         }}
       >
         <ArrowPill direction="left" onClick={prevLayout} />
@@ -274,7 +264,7 @@ export function ShopThemesClient({
           style={{
             fontSize: 12,
             fontWeight: 900,
-            color: PAD_INK,
+            color: INK,
             letterSpacing: "0.04em",
             fontVariantNumeric: "tabular-nums",
             minWidth: 150,
@@ -287,7 +277,7 @@ export function ShopThemesClient({
               display: "block",
               fontSize: 10,
               fontWeight: 700,
-              color: PAD_INK_DIM,
+              color: INK_DIM,
               marginTop: 2,
               letterSpacing: "0.02em",
             }}
@@ -297,8 +287,6 @@ export function ShopThemesClient({
         </span>
         <ArrowPill direction="right" onClick={nextLayout} />
       </div>
-      </div>
-      {/* end cream pad */}
 
       {/* ── Activate Shop CTA ─────────────────────────────────── */}
       <section
@@ -415,20 +403,19 @@ function ArrowPill({
         width: 44,
         height: 44,
         borderRadius: 999,
-        // ArrowPill sits inside the cream pad · dark fill with gold
-        // ring stands out against the off-white backdrop.
-        background: PAD_INK,
-        border: `1.5px solid ${GOLD}`,
-        color: CREAM,
+        // Sits on the dark Ireland page bg · dark fill with gold
+        // ring + gold glyph reads cleanly on NEX_BG.
+        background: "rgba(5, 15, 28, 0.9)",
+        border: `1.5px solid ${BORDER_HI}`,
+        color: GOLD,
         display: "grid",
         placeItems: "center",
         cursor: "pointer",
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: 900,
         lineHeight: 1,
         fontFamily: "inherit",
         padding: 0,
-        boxShadow: "0 4px 10px rgba(26, 18, 10, 0.18)",
       }}
     >
       {direction === "left" ? "◀" : "▶"}
