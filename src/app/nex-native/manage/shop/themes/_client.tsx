@@ -491,14 +491,17 @@ function FullscreenTemplate({
   label: string;
   onClose: () => void;
 }) {
-  // Owner directive 2026-11-07 (two refinements):
+  // Owner directive 2026-11-07 (three refinements):
   //   · "view large screen must stay inside the phone screen size of
   //     phone . not open desktop of tablet size" · the iframe is
   //     clamped to a 9:19.5 phone silhouette regardless of viewport.
   //   · "we must have close small button footer center small and we
   //     dont need see this on desktop Template 1 of 11" · the top
-  //     header (gold label + × button) was removed; close now lives
-  //     as a small centred pill BELOW the phone silhouette.
+  //     header (label + × button) was removed.
+  //   · "how does the user view on mobile screen if the button close
+  //     is outside the phone screen" · the Close pill now floats
+  //     INSIDE the phone silhouette at its bottom-centre so it is
+  //     always visible, never clipped below the mobile fold.
   return (
     <div
       role="dialog"
@@ -513,7 +516,6 @@ function FullscreenTemplate({
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        gap: 14,
         padding: "env(safe-area-inset-top, 0px) 12px env(safe-area-inset-bottom, 0px)",
         boxSizing: "border-box",
       }}
@@ -525,9 +527,9 @@ function FullscreenTemplate({
         style={{
           // Phone silhouette clamped to viewport · same 9:19.5 ratio
           // as the picker preview · just bigger.
-          width: "min(96vw, calc(86vh * 9 / 19.5))",
+          width: "min(96vw, calc(96vh * 9 / 19.5))",
           aspectRatio: "9 / 19.5",
-          maxHeight: "86vh",
+          maxHeight: "96vh",
           borderRadius: 32,
           background: PAD_CREAM,
           border: `2px solid ${GOLD}`,
@@ -548,28 +550,42 @@ function FullscreenTemplate({
             background: "transparent",
           }}
         />
+        {/* Close pill floats INSIDE the phone's bottom-centre so it
+            stays visible on short mobile viewports where a
+            below-the-phone button would be clipped. Semi-opaque dark
+            fill sits on the template content without obscuring it. */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          aria-label="Close large view"
+          data-nex-template-fullscreen-close
+          style={{
+            position: "absolute",
+            bottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)",
+            left: "50%",
+            transform: "translateX(-50%)",
+            padding: "6px 18px",
+            fontSize: 10.5,
+            fontWeight: 800,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            color: CREAM,
+            background: "rgba(5, 15, 28, 0.88)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            border: `1.5px solid ${GOLD}`,
+            borderRadius: 999,
+            cursor: "pointer",
+            fontFamily: "inherit",
+            boxShadow: "0 4px 14px rgba(0,0,0,0.55)",
+          }}
+        >
+          Close
+        </button>
       </div>
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="Close large view"
-        data-nex-template-fullscreen-close
-        style={{
-          padding: "6px 18px",
-          fontSize: 10.5,
-          fontWeight: 800,
-          letterSpacing: "0.12em",
-          textTransform: "uppercase",
-          color: CREAM,
-          background: "rgba(5, 15, 28, 0.9)",
-          border: `1.5px solid ${GOLD}`,
-          borderRadius: 999,
-          cursor: "pointer",
-          fontFamily: "inherit",
-        }}
-      >
-        Close
-      </button>
     </div>
   );
 }
