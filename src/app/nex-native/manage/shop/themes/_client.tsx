@@ -52,6 +52,17 @@ const PAD_CREAM = "#FAF8F4";
 const PAD_INK = "#1A120A";
 const PAD_INK_DIM = "#5F4A2C";
 
+// Owner directive 2026-11-07 · "for users that will view templates
+// of the shop templates this will be the back ground image untill
+// them choose their own back ground image". A soft cream + gold
+// wave painting feels on-brand with the Ireland world palette and
+// gives every template a pleasant backdrop while browsing, before
+// the owner picks a real background from /manage/shop/backgrounds.
+// PICKER + FULLSCREEN previews only · never written to the DB · the
+// owner's saved background (currentImageUrl) still takes precedence.
+const DEFAULT_PREVIEW_BG =
+  "/nex-brand/shop-themes/elegant-cream-gold-wave.png";
+
 interface Props {
   readonly businessId: string | null;
   readonly businessName: string | null;
@@ -74,7 +85,12 @@ export function ShopThemesClient({
     React.useState<CoverLayoutId>(currentLayoutId);
   // Background + tint carry through unchanged so a save re-persists
   // whatever the owner last picked on /manage/shop/backgrounds.
+  // When no owner background is set yet, preview surfaces fall back
+  // to DEFAULT_PREVIEW_BG (cream + gold wave) so sellers never see
+  // a blank hero. The fallback is PREVIEW-ONLY · onApplyAll below
+  // writes `currentImageUrl` to the DB, not the fallback.
   const imageUrl = currentImageUrl;
+  const previewImageUrl = currentImageUrl ?? DEFAULT_PREVIEW_BG;
   const tintHex = currentTintHex ?? "#123D2B";
   const [status, setStatus] = React.useState<
     | { kind: "idle" }
@@ -134,7 +150,7 @@ export function ShopThemesClient({
     });
   }
 
-  const previewSrc = buildPreviewSrc(selectedLayout, imageUrl, tintHex);
+  const previewSrc = buildPreviewSrc(selectedLayout, previewImageUrl, tintHex);
 
   // ─── Zero-white-screen loading state ────────────────────────
   // Owner directive 2026-11-07 "NEX WORLD STANDARD — FULL-SCREEN
