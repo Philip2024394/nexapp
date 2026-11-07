@@ -16,7 +16,6 @@ import {
   appendFile,
   mkdir,
   readdir,
-  readFile,
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
@@ -24,51 +23,32 @@ import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { requireHqAdmin } from "@/lib/nex-native/hq-authorization";
+// Owner directive 2026-11-07 · Item 3 · Fix 1 · the three reader
+// functions + their constants + their types live in a non-"use server"
+// sibling module so they are NOT exported as client-invocable Server
+// Actions. Imported here only by same-file mutating actions that need
+// to read current state before writing. External callers (hq/pages/
+// page.tsx) must import from "./_queue-readers" directly · re-
+// exporting from a "use server" file would turn the re-exports into
+// Server Actions, defeating the point.
+import {
+  LOCK_OVERRIDES_FILE,
+  QUEUE_FILE,
+  RENAME_QUEUE_FILE,
+  readDeletionQueue,
+  readLockOverrides,
+  type DeletionQueueEntry,
+  type LockOverrides,
+  type RenameQueueEntry,
+} from "./_queue-readers";
 
 const execp = promisify(exec);
-const QUEUE_FILE = path.join(process.cwd(), "data", "hq-deletion-queue.jsonl");
-const RENAME_QUEUE_FILE = path.join(
-  process.cwd(),
-  "data",
-  "hq-rename-queue.jsonl",
-);
-const LOCK_OVERRIDES_FILE = path.join(
-  process.cwd(),
-  "data",
-  "hq-lock-overrides.json",
-);
-
-export interface DeletionQueueEntry {
-  readonly url: string;
-  readonly queuedAt: string;
-  readonly actorAccountId: string;
-  readonly reason?: string;
-}
 
 async function assertHqAdmin(): Promise<string> {
   const session = await resolveSessionWithDevOverride();
   if (!session) throw new Error("not-authenticated");
   await requireHqAdmin(session.account.id);
   return session.account.id;
-}
-
-export async function readDeletionQueue(): Promise<DeletionQueueEntry[]> {
-  try {
-    const text = await readFile(QUEUE_FILE, "utf8");
-    return text
-      .split("\n")
-      .filter(Boolean)
-      .map((line) => {
-        try {
-          return JSON.parse(line) as DeletionQueueEntry;
-        } catch {
-          return null;
-        }
-      })
-      .filter((x): x is DeletionQueueEntry => x !== null);
-  } catch {
-    return [];
-  }
 }
 
 export async function queueDeletionAction(
@@ -150,32 +130,8 @@ async function listRouteOwnFiles(url: string): Promise<string[]> {
 }
 
 // ─── Rename queue ─────────────────────────────────────────────────
-
-export interface RenameQueueEntry {
-  readonly oldUrl: string;
-  readonly newUrl: string;
-  readonly queuedAt: string;
-  readonly actorAccountId: string;
-}
-
-export async function readRenameQueue(): Promise<RenameQueueEntry[]> {
-  try {
-    const text = await readFile(RENAME_QUEUE_FILE, "utf8");
-    return text
-      .split("\n")
-      .filter(Boolean)
-      .map((line) => {
-        try {
-          return JSON.parse(line) as RenameQueueEntry;
-        } catch {
-          return null;
-        }
-      })
-      .filter((x): x is RenameQueueEntry => x !== null);
-  } catch {
-    return [];
-  }
-}
+// RenameQueueEntry + readRenameQueue + RENAME_QUEUE_FILE live in
+// `_queue-readers.ts` per Item 3 · Fix 1.
 
 /** Minimal validation · the final sanity check (collision, is-dynamic,
  *  is-file-system-legal) runs when Claude processes the queue. */
@@ -223,25 +179,8 @@ export async function renameRouteAction(
 }
 
 // ─── Lock overrides ───────────────────────────────────────────────
-
-export type LockOverrides = Record<string, boolean>;
-
-export async function readLockOverrides(): Promise<LockOverrides> {
-  try {
-    const text = await readFile(LOCK_OVERRIDES_FILE, "utf8");
-    const parsed = JSON.parse(text) as unknown;
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      const result: LockOverrides = {};
-      for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
-        if (typeof v === "boolean") result[k] = v;
-      }
-      return result;
-    }
-  } catch {
-    /* fall through */
-  }
-  return {};
-}
+// LockOverrides + readLockOverrides + LOCK_OVERRIDES_FILE live in
+// `_queue-readers.ts` per Item 3 · Fix 1.
 
 export async function toggleLockAction(
   url: string,

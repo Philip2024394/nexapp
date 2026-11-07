@@ -12,7 +12,7 @@
 // direct-chat buttons for either party.
 
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import { requireHqAdmin, HqAuthorizationError } from "@/lib/nex-native/hq-authorization";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
@@ -55,7 +55,9 @@ export default async function HqCommunitiesPage() {
   try {
     await requireHqAdmin(session.account.id);
   } catch (err) {
-    if (err instanceof HqAuthorizationError) redirect("/nex-native");
+    // Owner directive 2026-11-07 · Item 3 · Fix 3 · non-revealing 404
+    // on deny (standardised across every HQ page).
+    if (err instanceof HqAuthorizationError) notFound();
     throw err;
   }
 

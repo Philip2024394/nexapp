@@ -18,11 +18,14 @@ import {
   enumerateNexNativeRoutes,
   IRELAND_KEPT_ROUTES,
 } from "@/lib/nex-native/hq/route-enumerator";
+// Owner directive 2026-11-07 · Item 3 · Fix 1 · readers live in a
+// non-"use server" sibling module so they are not exported as
+// client-invocable Server Actions.
 import {
   readDeletionQueue,
   readLockOverrides,
   readRenameQueue,
-} from "./_actions";
+} from "./_queue-readers";
 import { HqPagesClient } from "./_client";
 
 export const dynamic = "force-dynamic";

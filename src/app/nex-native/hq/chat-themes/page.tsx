@@ -10,7 +10,7 @@
 // chat-theme-service.updateTheme. Hero image + accent colour editing
 // stays out of this page · future HQ pages can own those surfaces.
 
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
@@ -61,7 +61,11 @@ export default async function HqChatThemesPage({ searchParams }: PageProps) {
   try {
     await requireHqAdmin(session.account.id);
   } catch (err) {
-    if (err instanceof HqAuthorizationError) redirect("/nex-native");
+    // Owner directive 2026-11-07 · Item 3 · Fix 3 · standardise HQ
+    // denial to notFound() across every page (non-revealing 404 ·
+    // never leaks the existence of the HQ surface or the role
+    // requirement).
+    if (err instanceof HqAuthorizationError) notFound();
     throw err;
   }
 
