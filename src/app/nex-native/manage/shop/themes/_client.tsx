@@ -39,38 +39,6 @@ const INK_MUTED = "#7D9BC0";
 const BORDER = "rgba(198, 161, 91, 0.25)";
 const BORDER_HI = "rgba(198, 161, 91, 0.55)";
 
-// ─── Template thumb metadata ───────────────────────────────────────
-// Emoji + short tag per template so the horizontal strip above the
-// phone frame is scannable at a glance. Full label stays in
-// COVER_LAYOUT_LABELS for the under-phone counter line.
-const TEMPLATE_EMOJI: Record<CoverLayoutId, string> = {
-  cafe:                       "☕",
-  cafe_landscape:             "🏞",
-  cafe_round:                 "⚪",
-  product:                    "📦",
-  product_landscape:          "🏞",
-  product_round:              "⚪",
-  product_landscape_round:    "🎯",
-  personal_brand:             "🎨",
-  personal_brand_landscape:   "🖼",
-  personal_brand_round:       "⚪",
-  accommodation:              "🏨",
-};
-
-const TEMPLATE_SHORT: Record<CoverLayoutId, string> = {
-  cafe:                       "Café",
-  cafe_landscape:             "Café · L",
-  cafe_round:                 "Café · R",
-  product:                    "Product",
-  product_landscape:          "Product · L",
-  product_round:              "Product · R",
-  product_landscape_round:    "Product · L·R",
-  personal_brand:             "Brand",
-  personal_brand_landscape:   "Brand · L",
-  personal_brand_round:       "Brand · R",
-  accommodation:              "Stay",
-};
-
 // ─── Featured background presets ───────────────────────────────────
 // Curated set that appears as a horizontal strip beneath the phone
 // frame · the full ~200-preset library stays at
@@ -233,79 +201,28 @@ export function ShopThemesClient({
         </p>
       </header>
 
-      {/* ── SECTION 1 · SHOP TEMPLATE ────────────────────────── */}
-      <section aria-label="Shop template" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <SectionLabel>Shop template</SectionLabel>
-        <div
-          data-nex-template-strip
-          style={{
-            display: "flex",
-            gap: 8,
-            overflowX: "auto",
-            WebkitOverflowScrolling: "touch",
-            paddingBottom: 6,
-            paddingInline: 2,
-            scrollSnapType: "x proximity",
-          }}
-        >
-          {layoutIds.map((id) => {
-            const picked = id === selectedLayout;
-            return (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setSelectedLayout(id)}
-                data-nex-template-thumb={id}
-                aria-pressed={picked}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 4,
-                  minWidth: 78,
-                  padding: "8px 6px",
-                  background: picked
-                    ? "rgba(198, 161, 91, 0.2)"
-                    : "rgba(5, 15, 28, 0.9)",
-                  border: `1.5px solid ${picked ? GOLD : BORDER}`,
-                  borderRadius: 10,
-                  color: picked ? GOLD : INK,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  scrollSnapAlign: "start",
-                  flexShrink: 0,
-                  boxShadow: picked ? "0 0 0 3px rgba(198,161,91,0.14)" : "none",
-                }}
-              >
-                <span aria-hidden style={{ fontSize: 22, lineHeight: 1 }}>
-                  {TEMPLATE_EMOJI[id]}
-                </span>
-                <span
-                  style={{
-                    fontSize: 10,
-                    fontWeight: picked ? 900 : 700,
-                    color: picked ? GOLD : CREAM,
-                    whiteSpace: "nowrap",
-                    letterSpacing: "0.02em",
-                  }}
-                >
-                  {TEMPLATE_SHORT[id]}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
+      {/* Owner directive 2026-11-07 · the "Shop template" horizontal
+          thumb strip was removed. Template navigation is via the
+          arrow pills under the phone frame + the keyboard ← → keys ·
+          the live preview IS the main surface. */}
 
-      {/* ── SECTION 2 · PHONE FRAME LIVE PREVIEW ─────────────── */}
+      {/* ── PHONE FRAME LIVE PREVIEW ─────────────────────────────
+          Owner directive 2026-11-07 · "make the window for view shop
+          template longer and like phone shape". Container stays
+          phone-shaped (9:19.5 sealed ratio) · width is capped to
+          keep the frame narrow + tall · minHeight lifts the preview
+          so short templates still render the full phone silhouette
+          on short viewports. */}
       <section
         aria-label="Live preview"
         style={{
           position: "relative",
           width: "100%",
+          maxWidth: 300,
           aspectRatio: "9 / 19.5",
-          borderRadius: 18,
+          minHeight: 500,
+          margin: "0 auto",
+          borderRadius: 32,
           background: "transparent",
           border: `1px solid ${BORDER_HI}`,
           overflow: "hidden",
@@ -424,13 +341,19 @@ export function ShopThemesClient({
                 title={bg.label}
                 style={{
                   position: "relative",
-                  width: 72,
-                  minWidth: 72,
-                  aspectRatio: "4 / 5",
+                  // Owner directive 2026-11-07 · "the back ground
+                  // themes also phone shape and fit the image to
+                  // shape height and width". Phone silhouette
+                  // (9:19.5) · wider borderRadius matches the live-
+                  // preview frame above · object-fit cover fills
+                  // the full shape.
+                  width: 62,
+                  minWidth: 62,
+                  aspectRatio: "9 / 19.5",
                   padding: 0,
                   background: "transparent",
                   border: `2px solid ${picked ? GOLD : BORDER}`,
-                  borderRadius: 10,
+                  borderRadius: 14,
                   overflow: "hidden",
                   cursor: "pointer",
                   scrollSnapAlign: "start",
