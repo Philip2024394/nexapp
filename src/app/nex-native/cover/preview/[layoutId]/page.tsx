@@ -13,7 +13,12 @@ import { CoverThemeSkin } from "../../theme-skin";
 import { CoverLayoutSwitch } from "../../layout-switch";
 import { BurgerMenu } from "../../_burger-menu";
 import { ShopChatFab } from "../../_shop-chat-fab";
-import { ShopSideChatDrawer } from "../../_shop-side-chat-drawer";
+// Owner directive 2026-11-07 · ShopSideChatDrawer (top-left chat icon
+// on the preview image) retired · the preview is embedded via iframe
+// into /manage/shop/themes and the icon was still painting over each
+// template image. Unmounted here to match the public [businessSlug]
+// retirement in commit 6cad37d. ShopChatFab bottom-right remains.
+// import { ShopSideChatDrawer } from "../../_shop-side-chat-drawer";
 // Owner directive 2026-11-06 · "is all work wired and connected
 // supabase". Load the owner's real nex_business row (when a dev-
 // impersonated session is present) so the burger-menu overlays
@@ -489,11 +494,12 @@ export default async function CoverLayoutPreview({
           shopName={shopContent?.displayName ?? null}
           accentHex={effectiveAccent}
         />
-        <ShopSideChatDrawer
-          shopName={shopContent?.displayName ?? null}
-          shopOwnerAccountId={null}
-          accentHex={effectiveAccent}
-        />
+        {/* Owner directive 2026-11-07 · ShopSideChatDrawer unmounted ·
+            the top-left chat trigger was painting over every template
+            preview image when embedded in /manage/shop/themes. The
+            bottom-right ShopChatFab remains as the sole owner-chat
+            entry point. File preserved at cover/_shop-side-chat-drawer
+            .tsx for revert-safety. */}
       </PhoneFrame>
       {/* Owner-authorised 2026-10-18 · S7 · the action bar is a
           sibling of the sealed PhoneFrame so the frame's mobile

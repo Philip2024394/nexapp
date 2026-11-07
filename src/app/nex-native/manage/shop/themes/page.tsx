@@ -33,6 +33,11 @@ import { redirect } from "next/navigation";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { listBusinessesByOwner } from "@/lib/nex-native/business-service";
 import { getShopCoverOverrides } from "@/lib/nex-native/shop-cover-service";
+import { effectiveTier } from "@/lib/nex-native/account-service";
+import {
+  ControlDrawer,
+  type ControlDrawerSession,
+} from "@/components/nex-native/control-drawer/control-drawer-client";
 import {
   COVER_LAYOUT_IDS,
   COVER_LAYOUT_LABELS,
@@ -66,6 +71,16 @@ export default async function ShopThemesPage(): Promise<React.JSX.Element> {
       ? (business.cover_layout_id as CoverLayoutId)
       : "cafe";
 
+  // Owner directive 2026-11-07 · shared ControlDrawer (default + icon
+  // trigger) anchored top-right so the user can navigate away without
+  // leaving the phone-frame shell. Same pattern mounted on
+  // /manage/shop/backgrounds, /cover-themes-library and others.
+  const drawerSession: ControlDrawerSession = {
+    displayName: session.account.display_name,
+    nexHandle: session.account.nex_handle,
+    isBisnis: effectiveTier(session.account) === "bisnis",
+  };
+
   return (
     <>
       <style>{`html, body { background: ${NEX_BG}; }`}</style>
@@ -85,6 +100,22 @@ export default async function ShopThemesPage(): Promise<React.JSX.Element> {
           boxSizing: "border-box",
         }}
       >
+        {/* Owner directive 2026-11-07 · absolute drawer slot anchored
+            top-right of the page so it stays above the scrollable grid
+            inside _client without reserving a row in the client layout.
+            Triggers the sealed shared ControlDrawer · default + icon
+            trigger · opens the full navigation panel. */}
+        <div
+          data-nex-shop-themes-drawer-slot
+          style={{
+            position: "absolute",
+            top: "calc(env(safe-area-inset-top, 0px) + 14px)",
+            right: 20,
+            zIndex: 20,
+          }}
+        >
+          <ControlDrawer session={drawerSession} />
+        </div>
         <ShopThemesClient
           businessId={business?.id ?? null}
           businessName={business?.display_name ?? null}
