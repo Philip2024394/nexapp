@@ -1006,6 +1006,39 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
   { id: "phil88-baby-green-dino", url: "/nex-brand/shop-themes/phil88.png", label: "Baby Green · Dino", category: "fashion", tintSwatch: "#5FC97B", downloadsBase: 39 },
   { id: "phil89-baby-yellow-giraffe", url: "/nex-brand/shop-themes/phil89.png", label: "Baby Yellow · Giraffe", category: "fashion", tintSwatch: "#F0C82A", downloadsBase: 36 },
   { id: "phil90-baby-lilac-sheep", url: "/nex-brand/shop-themes/phil90.png", label: "Baby Lilac · Sheep", category: "fashion", tintSwatch: "#9B6DD9", downloadsBase: 41, isNew: true },
+
+  // Owner directive 2026-11-07 (fifth batch) · 25 tt* tiles.
+  // Interior/lighting (tt1-tt6 · showcase) + luxury handbags
+  // (tt9-tt27 · fashion). tt7/tt8 gap preserved.
+
+  // ── Interior · lighting · showcase (6) ──
+  { id: "tt1-blue-chair-lamp", url: "/nex-brand/shop-themes/tt1.png", label: "Blue Armchair · Pendant", category: "showcase", tintSwatch: "#2E3B52", downloadsBase: 29, isNew: true },
+  { id: "tt2-gold-rings-sofa", url: "/nex-brand/shop-themes/tt2.png", label: "Gold Rings · Cream Sofa", category: "showcase", tintSwatch: "#D9C5A0", downloadsBase: 34 },
+  { id: "tt3-navy-bulb-bed", url: "/nex-brand/shop-themes/tt3.png", label: "Navy Bedroom · Edison Bulb", category: "showcase", tintSwatch: "#1F3A6B", downloadsBase: 26 },
+  { id: "tt4-brown-leather-chair", url: "/nex-brand/shop-themes/tt4.png", label: "Brown Leather · Warm Light", category: "showcase", tintSwatch: "#8B5A2B", downloadsBase: 31, isNew: true },
+  { id: "tt5-olive-wood-sideboard", url: "/nex-brand/shop-themes/tt5.png", label: "Olive · Wood Sideboard", category: "showcase", tintSwatch: "#6B7F3A", downloadsBase: 24 },
+  { id: "tt6-chrome-orchid", url: "/nex-brand/shop-themes/tt6.png", label: "Chrome · Orchid", category: "showcase", tintSwatch: "#8B939F", downloadsBase: 28 },
+
+  // ── Luxury handbags · fashion (19) ──
+  { id: "tt9-red-quilted-bag", url: "/nex-brand/shop-themes/tt9.png", label: "Red Quilted · Crimson", category: "fashion", tintSwatch: "#C0001F", downloadsBase: 52, isNew: true },
+  { id: "tt10-navy-tote-silk", url: "/nex-brand/shop-themes/tt10.png", label: "Navy Tote · Silk", category: "fashion", tintSwatch: "#1F3A6B", downloadsBase: 44 },
+  { id: "tt11-cream-tote-tan", url: "/nex-brand/shop-themes/tt11.png", label: "Cream Tote · Tan", category: "fashion", tintSwatch: "#D9C5A0", downloadsBase: 38 },
+  { id: "tt12-emerald-bag-silk", url: "/nex-brand/shop-themes/tt12.png", label: "Emerald Bag · Silk", category: "fashion", tintSwatch: "#0F5F2B", downloadsBase: 41 },
+  { id: "tt13-purple-bag-smoke", url: "/nex-brand/shop-themes/tt13.png", label: "Purple Bag · Smoke", category: "fashion", tintSwatch: "#8B3DD9", downloadsBase: 36 },
+  { id: "tt14-tan-set-black-gold", url: "/nex-brand/shop-themes/tt14.png", label: "Tan Set · Black & Gold", category: "fashion", tintSwatch: "#C0821F", downloadsBase: 47, isNew: true },
+  { id: "tt15-tan-set-navy-rays", url: "/nex-brand/shop-themes/tt15.png", label: "Tan Set · Navy Rays", category: "fashion", tintSwatch: "#1F3A6B", downloadsBase: 42 },
+  { id: "tt16-tan-set-red-silk", url: "/nex-brand/shop-themes/tt16.png", label: "Tan Set · Red Silk", category: "fashion", tintSwatch: "#C0001F", downloadsBase: 49 },
+  { id: "tt17-tan-set-cream-arch", url: "/nex-brand/shop-themes/tt17.png", label: "Tan Set · Cream Arch", category: "fashion", tintSwatch: "#D9C5A0", downloadsBase: 35 },
+  { id: "tt18-tan-set-emerald", url: "/nex-brand/shop-themes/tt18.png", label: "Tan Set · Emerald Marble", category: "fashion", tintSwatch: "#0F5F2B", downloadsBase: 43 },
+  { id: "tt19-tan-set-purple", url: "/nex-brand/shop-themes/tt19.png", label: "Tan Set · Purple Haze", category: "fashion", tintSwatch: "#8B3DD9", downloadsBase: 37 },
+  { id: "tt20-falling-tan-cream", url: "/nex-brand/shop-themes/tt20.png", label: "Falling Bags · Cream", category: "fashion", tintSwatch: "#D9C5A0", downloadsBase: 46, isNew: true },
+  { id: "tt21-falling-tan-pale", url: "/nex-brand/shop-themes/tt21.png", label: "Falling Bags · Pale", category: "fashion", tintSwatch: "#D9C5A0", downloadsBase: 39 },
+  { id: "tt22-cream-gold-float", url: "/nex-brand/shop-themes/tt22.png", label: "Cream & Gold · Float", category: "fashion", tintSwatch: "#D9C5A0", downloadsBase: 44 },
+  { id: "tt23-black-gold-ribbon", url: "/nex-brand/shop-themes/tt23.png", label: "Black Bags · Gold Ribbon", category: "fashion", tintSwatch: "#D9A83A", downloadsBase: 51, isNew: true },
+  { id: "tt24-pink-float-silk", url: "/nex-brand/shop-themes/tt24.png", label: "Pink · Silk Float", category: "fashion", tintSwatch: "#F08CB8", downloadsBase: 48, isNew: true },
+  { id: "tt25-navy-float-swirl", url: "/nex-brand/shop-themes/tt25.png", label: "Navy · Swirl Float", category: "fashion", tintSwatch: "#1F3A6B", downloadsBase: 40 },
+  { id: "tt26-red-float-gold", url: "/nex-brand/shop-themes/tt26.png", label: "Red · Gold Float", category: "fashion", tintSwatch: "#C0001F", downloadsBase: 45 },
+  { id: "tt27-emerald-float-silk", url: "/nex-brand/shop-themes/tt27.png", label: "Emerald · Silk Float", category: "fashion", tintSwatch: "#0F5F2B", downloadsBase: 42 },
 ];
 
 // Owner directive 2026-11-06 · "libary must have previous and

@@ -353,6 +353,35 @@ const PRESET_BACKGROUND_META: ReadonlyMap<
   ["/nex-brand/shop-themes/phil88.png", { tintHex: "#5FC97B" }],
   ["/nex-brand/shop-themes/phil89.png", { tintHex: "#F0C82A" }],
   ["/nex-brand/shop-themes/phil90.png", { tintHex: "#9B6DD9" }],
+  // Owner directive 2026-11-07 (fifth batch) · 25 tt* portrait
+  // backgrounds for shop templates · 6 interior/lighting scenes and
+  // 19 luxury handbag compositions. Tints match dominant hue per
+  // image. tt7/tt8 not supplied · gap preserved.
+  ["/nex-brand/shop-themes/tt1.png", { tintHex: "#2E3B52" }],
+  ["/nex-brand/shop-themes/tt2.png", { tintHex: "#D9C5A0" }],
+  ["/nex-brand/shop-themes/tt3.png", { tintHex: "#1F3A6B" }],
+  ["/nex-brand/shop-themes/tt4.png", { tintHex: "#8B5A2B" }],
+  ["/nex-brand/shop-themes/tt5.png", { tintHex: "#6B7F3A" }],
+  ["/nex-brand/shop-themes/tt6.png", { tintHex: "#8B939F" }],
+  ["/nex-brand/shop-themes/tt9.png", { tintHex: "#C0001F" }],
+  ["/nex-brand/shop-themes/tt10.png", { tintHex: "#1F3A6B" }],
+  ["/nex-brand/shop-themes/tt11.png", { tintHex: "#D9C5A0" }],
+  ["/nex-brand/shop-themes/tt12.png", { tintHex: "#0F5F2B" }],
+  ["/nex-brand/shop-themes/tt13.png", { tintHex: "#8B3DD9" }],
+  ["/nex-brand/shop-themes/tt14.png", { tintHex: "#C0821F" }],
+  ["/nex-brand/shop-themes/tt15.png", { tintHex: "#1F3A6B" }],
+  ["/nex-brand/shop-themes/tt16.png", { tintHex: "#C0001F" }],
+  ["/nex-brand/shop-themes/tt17.png", { tintHex: "#D9C5A0" }],
+  ["/nex-brand/shop-themes/tt18.png", { tintHex: "#0F5F2B" }],
+  ["/nex-brand/shop-themes/tt19.png", { tintHex: "#8B3DD9" }],
+  ["/nex-brand/shop-themes/tt20.png", { tintHex: "#D9C5A0" }],
+  ["/nex-brand/shop-themes/tt21.png", { tintHex: "#D9C5A0" }],
+  ["/nex-brand/shop-themes/tt22.png", { tintHex: "#D9C5A0" }],
+  ["/nex-brand/shop-themes/tt23.png", { tintHex: "#D9A83A" }],
+  ["/nex-brand/shop-themes/tt24.png", { tintHex: "#F08CB8" }],
+  ["/nex-brand/shop-themes/tt25.png", { tintHex: "#1F3A6B" }],
+  ["/nex-brand/shop-themes/tt26.png", { tintHex: "#C0001F" }],
+  ["/nex-brand/shop-themes/tt27.png", { tintHex: "#0F5F2B" }],
 ]);
 
 export async function applyShopPresetBackgroundAction(
