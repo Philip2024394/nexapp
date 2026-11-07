@@ -96,7 +96,11 @@ export default async function ShopStartPage({
 
           <HowItWorks />
 
-          <Guarantee />
+          {/* Owner directive 2026-11-07 · Guarantee strip (🇮🇪 Built
+              for Ireland · 🛡 NEX never handles payments · 💬 Free to
+              open · pay only to promote) removed from the shop-start
+              landing. Function definition below retained in case
+              owner reinstates it later. */}
 
           <Footer />
         </div>
