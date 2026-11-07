@@ -52,16 +52,13 @@ const PAD_CREAM = "#FAF8F4";
 const PAD_INK = "#1A120A";
 const PAD_INK_DIM = "#5F4A2C";
 
-// Owner directive 2026-11-07 · "for users that will view templates
-// of the shop templates this will be the back ground image untill
-// them choose their own back ground image". A soft cream + gold
-// wave painting feels on-brand with the Ireland world palette and
-// gives every template a pleasant backdrop while browsing, before
-// the owner picks a real background from /manage/shop/backgrounds.
-// PICKER + FULLSCREEN previews only · never written to the DB · the
-// owner's saved background (currentImageUrl) still takes precedence.
-const DEFAULT_PREVIEW_BG =
-  "/nex-brand/shop-themes/elegant-cream-gold-wave.png";
+// Owner directive 2026-11-07 (refined) · the Step 1 template picker
+// always paints templates on this neutral cc1.png backdrop so sellers
+// see each template's structure on a consistent canvas. The owner's
+// real saved background (currentImageUrl) still composes on their
+// public /{slug} shop · Step 2 (/backgrounds) is where they pick it.
+// PICKER + FULLSCREEN previews only · never written to the DB.
+const DEFAULT_PREVIEW_BG = "/nex-brand/shop-themes/cc1.png";
 
 interface Props {
   readonly businessId: string | null;
