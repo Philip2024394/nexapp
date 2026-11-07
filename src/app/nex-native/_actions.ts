@@ -44,6 +44,10 @@ import * as businessService from "@/lib/nex-native/business-service";
 // bare `nexSupabaseAdmin` references were failing to resolve.
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import * as productService from "@/lib/nex-native/product-service";
+import {
+  guardGalleryUpdate,
+  guardRestoreProduct,
+} from "@/lib/nex-native/billing/shop-tier-guard";
 import * as menuService from "@/lib/nex-native/menu-service";
 import * as safeTradeConsentService from "@/lib/nex-native/safe-trade-consent-service";
 import * as reportService from "@/lib/nex-native/report-service";
@@ -5197,6 +5201,24 @@ export async function updateProductImageUrlAction(formData: FormData): Promise<n
     );
   }
 
+  // Shop tier gate · proposed total = (new hero? 1 : 0) + existing gallery
+  // length. Blocks bypassing image caps via direct URL edits.
+  const existingGallery = Array.isArray(product.gallery_urls)
+    ? product.gallery_urls.length
+    : 0;
+  const proposedTotal = (imageUrl ? 1 : 0) + existingGallery;
+  const tierDecision = await guardGalleryUpdate(
+    product.business_id,
+    productId,
+    proposedTotal,
+  );
+  if (!tierDecision.ok) {
+    redirectToManageWithBanner(
+      `shop_tier_${tierDecision.code}`,
+      tierDecision.message ?? "Shop tier limit reached",
+    );
+  }
+
   try {
     await productService.updateProductImageUrl(productId, imageUrl);
   } catch (e) {
@@ -5238,6 +5260,23 @@ export async function updateProductGalleryAction(formData: FormData): Promise<ne
     redirectToManageWithBanner(
       "not_owner",
       "you do not own the business this product belongs to"
+    );
+  }
+
+  // Shop tier gate · total images = existing hero + proposed gallery
+  // length. Blocks bypassing the per-tier image cap via direct URL
+  // edits (owner-sealed 2026-11-07).
+  const heroPresent = product.image_url ? 1 : 0;
+  const proposedTotal = heroPresent + (normalisedUrls?.length ?? 0);
+  const tierDecision = await guardGalleryUpdate(
+    product.business_id,
+    productId,
+    proposedTotal,
+  );
+  if (!tierDecision.ok) {
+    redirectToManageWithBanner(
+      `shop_tier_${tierDecision.code}`,
+      tierDecision.message ?? "Shop tier limit reached",
     );
   }
 
@@ -5470,6 +5509,19 @@ export async function changeProductStatusAction(formData: FormData): Promise<nev
       "not_owner",
       "you do not own the business this product belongs to"
     );
+  }
+
+  // Shop tier gate · bringing a non-active product (archived) back to
+  // 'live' re-counts it against the active cap. Archive → live is a
+  // bypass path if ungated (owner-sealed 2026-11-07).
+  if (statusRaw === "live" && product.status !== "live") {
+    const tierDecision = await guardRestoreProduct(product.business_id);
+    if (!tierDecision.ok) {
+      redirectToManageWithBanner(
+        `shop_tier_${tierDecision.code}`,
+        tierDecision.message ?? "Shop tier limit reached",
+      );
+    }
   }
 
   try {

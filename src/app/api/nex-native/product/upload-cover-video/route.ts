@@ -6,20 +6,26 @@
 // products/<business_id>/videos/<timestamp-random>.<ext>, returns the
 // public URL.
 //
-// TRUST BOUNDARY (sealed in cover-video-spec.ts comments):
-//   · Client enforces the 30-second cap via the HTML5 video-metadata
-//     probe BEFORE upload.
-//   · Server enforces the SIZE cap only (60 MB).
-//   · A server-side duration check would require ffprobe (new binary
-//     dependency, out of authorised scope). The honest consequence:
-//     a hostile seller could upload a longer video under the size
-//     cap; the URL would be stored. This matches the policy posture
-//     NEX uses for every other seller-declared field.
+// TRUST BOUNDARY (owner-updated 2026-11-07):
+//   · Server reads file bytes once, probes duration with bundled
+//     ffprobe (ffprobe-static + fluent-ffmpeg · already in
+//     package.json), then enforces tier caps BEFORE writing to storage.
+//   · Client-reported duration is ignored. Server bytes are the source
+//     of truth.
+//   · If ffprobe fails to resolve a duration (corrupt container,
+//     unsupported codec), the request is rejected rather than silently
+//     accepted · fail-closed on duration-unknown is a deliberate
+//     posture for a feature advertised as duration-capped.
 
 import { NextResponse } from "next/server";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { listBusinessesByOwner } from "@/lib/nex-native/business-service";
 import { uploadProductCoverVideo } from "@/lib/nex-native/product-service";
+import {
+  guardUploadVideo,
+  guardUploadVideoForNew,
+} from "@/lib/nex-native/billing/shop-tier-guard";
+import { probeVideoDurationSeconds } from "@/lib/nex-native/billing/video-duration-probe";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,6 +51,9 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json({ ok: false, code: "invalid-input", message: "business_id must be a UUID" }, { status: 400 });
   }
 
+  const rawProductId = String(form.get("product_id") ?? "").trim();
+  const productId = /^[0-9a-f-]{36}$/i.test(rawProductId) ? rawProductId : null;
+
   const file = form.get("file");
   if (!(file instanceof File)) {
     return NextResponse.json({ ok: false, code: "invalid-input", message: "file is required" }, { status: 400 });
@@ -64,9 +73,54 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json({ ok: false, code: "business-not-owned" }, { status: 403 });
   }
 
+  // Server-side duration probe · fail-closed on probe failure.
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const mime = (file.type || "").toLowerCase();
+  const probeExt = mime.includes("mp4")
+    ? "mp4"
+    : mime.includes("webm")
+    ? "webm"
+    : mime.includes("quicktime")
+    ? "mov"
+    : "mp4";
+  const durationSeconds = await probeVideoDurationSeconds(bytes, probeExt);
+  if (durationSeconds <= 0) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: "video-duration-unknown",
+        message:
+          "We couldn't read the video's duration · please re-encode and try again (mp4 / webm / mov).",
+      },
+      { status: 400 },
+    );
+  }
+
+  // Shop tier gate · Entry/Professional/Plus caps on per-product video
+  // count + file size + duration · fail-closed on missing
+  // business/account/product (owner-sealed 2026-11-07).
+  const tierDecision = productId
+    ? await guardUploadVideo(businessId, productId, file.size, durationSeconds)
+    : await guardUploadVideoForNew(businessId, file.size, durationSeconds);
+  if (!tierDecision.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: `shop-tier:${tierDecision.code}`,
+        message: tierDecision.message,
+        upgradeCta: tierDecision.upgradeCta,
+      },
+      { status: 403 },
+    );
+  }
+
   try {
-    const { url, objectPath } = await uploadProductCoverVideo({ businessId, file });
-    return NextResponse.json({ ok: true, data: { url, objectPath } });
+    const probedFile = new File([bytes], file.name, { type: file.type });
+    const { url, objectPath } = await uploadProductCoverVideo({
+      businessId,
+      file: probedFile,
+    });
+    return NextResponse.json({ ok: true, data: { url, objectPath, durationSeconds } });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     const code = /exceeds .* cap/.test(message)

@@ -17,6 +17,7 @@ import { redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import * as businessService from "@/lib/nex-native/business-service";
 import * as productService from "@/lib/nex-native/product-service";
+import { guardRestoreProduct } from "@/lib/nex-native/billing/shop-tier-guard";
 import {
   NEX_PRODUCT_STOCK_STATUSES,
   type NexProductStockStatus,
@@ -172,6 +173,17 @@ export async function restoreProductAction(
 
   if (product.status !== "archived") {
     redirectWithBanner("restore_noop", `${product.name} · not archived`);
+  }
+
+  // Shop tier gate · restoring archived → draft re-counts this product
+  // against the active-product cap. Ungated, this would be a bypass path
+  // for the per-tier product limit (owner-sealed 2026-11-07).
+  const tierDecision = await guardRestoreProduct(product.business_id);
+  if (!tierDecision.ok) {
+    redirectWithBanner(
+      `shop_tier_${tierDecision.code}`,
+      tierDecision.message ?? "Shop tier limit reached",
+    );
   }
 
   try {

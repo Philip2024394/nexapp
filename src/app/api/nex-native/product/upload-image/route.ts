@@ -21,6 +21,10 @@ import { NextResponse } from "next/server";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { listBusinessesByOwner } from "@/lib/nex-native/business-service";
 import { uploadProductImage } from "@/lib/nex-native/product-service";
+import {
+  guardUploadImage,
+  guardUploadImageForNew,
+} from "@/lib/nex-native/billing/shop-tier-guard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,6 +50,9 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json({ ok: false, code: "invalid-input", message: "business_id must be a UUID" }, { status: 400 });
   }
 
+  const rawProductId = String(form.get("product_id") ?? "").trim();
+  const productId = /^[0-9a-f-]{36}$/i.test(rawProductId) ? rawProductId : null;
+
   const file = form.get("file");
   if (!(file instanceof File)) {
     return NextResponse.json({ ok: false, code: "invalid-input", message: "file is required" }, { status: 400 });
@@ -64,6 +71,24 @@ export async function POST(req: Request): Promise<Response> {
   }
   if (!ownedIds.has(businessId)) {
     return NextResponse.json({ ok: false, code: "business-not-owned" }, { status: 403 });
+  }
+
+  // Shop tier gate · Entry/Professional/Professional Plus limits on
+  // per-product image count + per-file byte size. Fail-closed on
+  // missing business/account (owner-sealed 2026-11-07).
+  const tierDecision = productId
+    ? await guardUploadImage(businessId, productId, file.size)
+    : await guardUploadImageForNew(businessId, file.size);
+  if (!tierDecision.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: `shop-tier:${tierDecision.code}`,
+        message: tierDecision.message,
+        upgradeCta: tierDecision.upgradeCta,
+      },
+      { status: 403 },
+    );
   }
 
   try {

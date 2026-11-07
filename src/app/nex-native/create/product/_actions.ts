@@ -28,6 +28,7 @@
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { listBusinessesByOwner } from "@/lib/nex-native/business-service";
 import * as productService from "@/lib/nex-native/product-service";
+import { guardCreateProduct } from "@/lib/nex-native/billing/shop-tier-guard";
 import {
   resolveCategorySpec,
   isCategorySpecRegistered,
@@ -179,6 +180,17 @@ export async function createProductAction(
   }
   if (!ownedIds.has(input.businessId)) {
     return err("business-not-owned", "You do not own this business");
+  }
+
+  // 3b · Shop tier gate · Entry/Professional/Professional Plus product
+  // caps (owner-sealed 2026-11-07). Fail-open on infrastructure flakes
+  // (matches tier-gate.ts posture); hard-deny only on verified overrun.
+  const tierDecision = await guardCreateProduct(input.businessId);
+  if (!tierDecision.ok) {
+    return err(
+      "tier-limit",
+      tierDecision.message ?? "Shop tier limit reached for this account",
+    );
   }
 
   // 4 · Category spec gate
