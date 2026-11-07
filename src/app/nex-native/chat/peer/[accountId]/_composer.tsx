@@ -363,31 +363,26 @@ export function PeerComposer({
     };
   }, [handleCapturePick]);
 
-  /** Send a File that came out of the recorder · we POST it via
-   *  the same upload Server Action by building a FormData and
-   *  submitting a hidden form. Redirect chain matches the file-
-   *  input flow · attachment_url lands on the URL, composer picks
-   *  it up as pendingAttachment. */
+  /** Send a File that came out of the recorder. Phase 1 fail-closed
+   *  (owner-authorised 2026-11-07): route the File through MediaCapture
+   *  so it goes through the same encryption + explicit-choice prompt
+   *  flow as a picker-produced File. Previously the recorder path
+   *  went DIRECTLY to the plaintext uploadAction, which was a bypass
+   *  of the encrypted send path for desktop camera/video/voice. */
   const recorderSend = React.useCallback(
     (file: File) => {
       if (!uploadAction) return;
-      // Server Actions accept FormData directly · we don't need a
-      // real <form> submit path. Build the FormData and invoke.
-      // The action redirects on success · the browser navigates
-      // and this recorder unmounts on the next render.
-      const fd = new FormData();
-      fd.set("attachment_file", file);
-      Promise.resolve(uploadAction(fd)).catch((e) => {
-        const msg = e instanceof Error ? e.message : String(e);
-        // NEXT_REDIRECT is Next's internal navigation signal · expected.
-        if (!msg.includes("NEXT_REDIRECT")) {
-          // eslint-disable-next-line no-console
-          console.error("uploadAction failed:", e);
-        }
-      });
+      const kind = recorderKind;
+      if (!kind) return;
+      // MediaCapture.sendRecordedFile honours encryptedUploadEnabled:
+      //   · true  → attemptEncryptedAttachment; on block, shows the
+      //             explicit-choice prompt instead of plaintext-posting.
+      //   · false → plaintext POST (NEX1 support is designed plaintext).
+      // Never a silent plaintext fall-through.
+      mediaCaptureRef.current?.sendRecordedFile({ kind, file });
       setRecorderKind(null);
     },
-    [uploadAction],
+    [uploadAction, recorderKind],
   );
 
   const insertEmoji = React.useCallback(

@@ -30,13 +30,19 @@ describe("Stage A · document attachment contract", () => {
       expect(SRC).toMatch(/documentFormRef/);
       expect(SRC).toMatch(/documentInputRef/);
       expect(SRC).toMatch(/accept="\*\/\*"/);
-      expect(SRC).toMatch(/onFileChosen\(documentFormRef, "document"\)/);
+      // Phase 1 (2026-11-07) · onFileChosen signature is now
+      // `onFileChosen(kind)` · the per-form ref is resolved inside
+      // the plaintext submit helper, not threaded through the handler.
+      expect(SRC).toMatch(/onChange=\{onFileChosen\("document"\)\}/);
     });
 
-    it("skips the encrypted path for documents (Bridge 88 posture)", () => {
-      // The encrypted branch must guard against kind === "document"
-      // so classifyMime doesn't throw just to fall back to plaintext.
-      expect(SRC).toMatch(/encryptedUploadEnabled\s*&&\s*kind\s*!==\s*"document"/);
+    it("documents are routed via attemptEncryptedAttachment (Phase 1 fail-closed)", () => {
+      // Phase 1 replaces the old Bridge 88 'skip encrypted path for
+      // documents' branch. Documents now enter the encryption attempt,
+      // which returns `blocked` with reason 'unsupported-mime' so the
+      // explicit-choice prompt renders · no silent plaintext submit.
+      expect(SRC).toMatch(/attemptEncryptedAttachment/);
+      expect(SRC).not.toMatch(/encryptedUploadEnabled\s*&&\s*kind\s*!==\s*"document"/);
     });
 
     it("has client-side size + MIME pre-check before upload", () => {

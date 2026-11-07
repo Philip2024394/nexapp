@@ -16,8 +16,9 @@
 //     the right accept + capture attrs so native OS tools open.
 //   · Progress overlay during upload (uploading state, kind-specific
 //     copy).
-//   · Encrypted upload path exists with silent plaintext fallback
-//     (Bridge 88 doctrine).
+//   · Encrypted upload path exists with FAIL-CLOSED outcome (Phase 1 ·
+//     owner-authorised 2026-11-07, supersedes the earlier silent-
+//     fallback doctrine). No module-level plaintext fallthrough.
 //   · Recorder (desktop) · getUserMedia request, MediaRecorder-based
 //     start/stop, status enum covers "denied" + "unsupported",
 //     fallback-to-file-input prop exists.
@@ -77,17 +78,20 @@ describe("B · _media-capture · uploading state + progress overlay + kind-speci
     expect(CAPTURE).toMatch(/Uploading voice note/);
   });
 
-  it("renders a progress overlay via createPortal (Bridge 65 doctrine)", () => {
+  it("renders an upload progress overlay via createPortal (Bridge 65 doctrine)", () => {
     expect(CAPTURE).toMatch(/import\s*\{\s*createPortal\s*\}\s*from\s*["']react-dom["']/);
-    expect(CAPTURE.toLowerCase()).toMatch(/progress overlay/);
+    // Post-Phase-1 wording · "progress overlay" / "upload overlay" /
+    // "UploadOverlay" are all accepted so the assertion survives
+    // comment-header refreshes.
+    expect(CAPTURE.toLowerCase()).toMatch(/progress overlay|upload overlay|uploadoverlay/);
   });
 });
 
-// ─── C · Encrypted upload path + silent fallback ─────────────────────
+// ─── C · Encrypted upload path · Phase 1 fail-closed (2026-11-07) ────
 
-describe("C · _media-capture · encrypted upload path with silent plaintext fallback (Bridge 88)", () => {
-  it("imports the encrypted-attachment upload helper", () => {
-    expect(CAPTURE).toMatch(/uploadEncryptedAttachment/);
+describe("C · _media-capture · encrypted upload path · Phase 1 fail-closed", () => {
+  it("imports the fail-closed attempt helper", () => {
+    expect(CAPTURE).toMatch(/attemptEncryptedAttachment/);
   });
 
   it("accepts an encryptedUploadEnabled prop so NEX1 (no E2E) can disable it", () => {
@@ -100,6 +104,31 @@ describe("C · _media-capture · encrypted upload path with silent plaintext fal
 
   it("declares the sealed uploadQuality preference enum", () => {
     expect(CAPTURE).toMatch(/"standard"\s*\|\s*"hd"/);
+  });
+
+  it("imports the fail-closed outcome type + block copy table", () => {
+    expect(CAPTURE).toMatch(/BLOCK_COPY/);
+    expect(CAPTURE).toMatch(/AttachmentBlockedOutcome/);
+  });
+
+  it("renders the AttachmentBlockPrompt on a blocked outcome", () => {
+    expect(CAPTURE).toMatch(/AttachmentBlockPrompt/);
+  });
+
+  it("does NOT contain a silent plaintext fallback after encryption failure", () => {
+    // Prove there's no `catch { formRef.current?.requestSubmit() }` /
+    // equivalent in a branch following a failed encryption attempt.
+    expect(CAPTURE).not.toMatch(/catch\s*(?:\(\w*\))?\s*\{\s*formRef\.current\?\.requestSubmit\(\)/);
+    expect(CAPTURE).not.toMatch(/Silent fallback to the plaintext/);
+  });
+
+  it("blocked state is required before any plaintext submission", () => {
+    // The plaintext submit helpers must be reached from either:
+    //   (a) the encryptedUploadEnabled=false branch (NEX1 support), or
+    //   (b) the user's explicit tap on Send-as-standard inside the
+    //       block prompt (onPromptSendStandard).
+    // Neither path can be an auto-fallthrough from a failed encryption.
+    expect(CAPTURE).toMatch(/onPromptSendStandard/);
   });
 });
 
@@ -156,7 +185,8 @@ describe("F · doctrine honesty · recorder documents the fallback contract", ()
     expect(RECORDER.toLowerCase()).toMatch(/mobile.*(native camera|file.?input)|desktop.*mediarecorder/);
   });
 
-  it("capture file header documents the encrypted-upload silent fallback (Bridge 88)", () => {
-    expect(CAPTURE.toLowerCase()).toMatch(/silent fallback|silent-fallback/);
+  it("capture file header documents the Phase 1 fail-closed posture", () => {
+    expect(CAPTURE.toLowerCase()).toMatch(/fail-closed|fail closed/);
+    expect(CAPTURE.toLowerCase()).toMatch(/no silent plaintext fallback|not a silent fallthrough|not silently/);
   });
 });
