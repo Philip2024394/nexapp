@@ -382,6 +382,24 @@ const PRESET_BACKGROUND_META: ReadonlyMap<
   ["/nex-brand/shop-themes/tt25.png", { tintHex: "#1F3A6B" }],
   ["/nex-brand/shop-themes/tt26.png", { tintHex: "#C0001F" }],
   ["/nex-brand/shop-themes/tt27.png", { tintHex: "#0F5F2B" }],
+  // Owner directive 2026-11-07 (sixth batch) · 15 bb* portrait
+  // backgrounds · 10 travel/outdoors (backpacks + luggage) + 5
+  // fashion (shoes).
+  ["/nex-brand/shop-themes/bb1.png", { tintHex: "#FF7A2B" }],
+  ["/nex-brand/shop-themes/bb2.png", { tintHex: "#1F6F2B" }],
+  ["/nex-brand/shop-themes/bb3.png", { tintHex: "#2A6DD9" }],
+  ["/nex-brand/shop-themes/bb4.png", { tintHex: "#5BA7D9" }],
+  ["/nex-brand/shop-themes/bb5.png", { tintHex: "#D9A86A" }],
+  ["/nex-brand/shop-themes/bb6.png", { tintHex: "#8B3DD9" }],
+  ["/nex-brand/shop-themes/bb7.png", { tintHex: "#F0A82A" }],
+  ["/nex-brand/shop-themes/bb8.png", { tintHex: "#2A6DD9" }],
+  ["/nex-brand/shop-themes/bb9.png", { tintHex: "#D9452A" }],
+  ["/nex-brand/shop-themes/bb10.png", { tintHex: "#4A6B8C" }],
+  ["/nex-brand/shop-themes/bb11.png", { tintHex: "#C0821F" }],
+  ["/nex-brand/shop-themes/bb12.png", { tintHex: "#2A6DD9" }],
+  ["/nex-brand/shop-themes/bb13.png", { tintHex: "#D9823B" }],
+  ["/nex-brand/shop-themes/bb14.png", { tintHex: "#8B5A2B" }],
+  ["/nex-brand/shop-themes/bb15.png", { tintHex: "#D92A2A" }],
 ]);
 
 export async function applyShopPresetBackgroundAction(

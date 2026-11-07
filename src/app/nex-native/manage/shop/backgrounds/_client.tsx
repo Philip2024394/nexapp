@@ -1039,6 +1039,28 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
   { id: "tt25-navy-float-swirl", url: "/nex-brand/shop-themes/tt25.png", label: "Navy · Swirl Float", category: "fashion", tintSwatch: "#1F3A6B", downloadsBase: 40 },
   { id: "tt26-red-float-gold", url: "/nex-brand/shop-themes/tt26.png", label: "Red · Gold Float", category: "fashion", tintSwatch: "#C0001F", downloadsBase: 45 },
   { id: "tt27-emerald-float-silk", url: "/nex-brand/shop-themes/tt27.png", label: "Emerald · Silk Float", category: "fashion", tintSwatch: "#0F5F2B", downloadsBase: 42 },
+
+  // Owner directive 2026-11-07 (sixth batch) · 15 bb* tiles.
+  // Travel/outdoors backpacks + luggage (bb1-10) + shoes (bb11-15).
+
+  // ── Travel · backpacks + luggage (10) ──
+  { id: "bb1-orange-backpack-sunset", url: "/nex-brand/shop-themes/bb1.png", label: "Orange Backpack · Mountain Sunset", category: "travel", tintSwatch: "#FF7A2B", downloadsBase: 54, isNew: true },
+  { id: "bb2-green-pack-forest", url: "/nex-brand/shop-themes/bb2.png", label: "Green Pack · Forest Lantern", category: "travel", tintSwatch: "#1F6F2B", downloadsBase: 42 },
+  { id: "bb3-urban-pack-skyline", url: "/nex-brand/shop-themes/bb3.png", label: "Urban Pack · City Skyline", category: "travel", tintSwatch: "#2A6DD9", downloadsBase: 46 },
+  { id: "bb4-blue-pack-snow", url: "/nex-brand/shop-themes/bb4.png", label: "Blue Pack · Snow Peak", category: "travel", tintSwatch: "#5BA7D9", downloadsBase: 39, isNew: true },
+  { id: "bb5-tan-pack-desert", url: "/nex-brand/shop-themes/bb5.png", label: "Tan Pack · Desert Dunes", category: "travel", tintSwatch: "#D9A86A", downloadsBase: 37 },
+  { id: "bb6-magenta-pack-twilight", url: "/nex-brand/shop-themes/bb6.png", label: "Magenta Pack · Twilight Hills", category: "travel", tintSwatch: "#8B3DD9", downloadsBase: 44 },
+  { id: "bb7-beach-pack-palm-sunset", url: "/nex-brand/shop-themes/bb7.png", label: "Beach Pack · Palm Sunset", category: "travel", tintSwatch: "#F0A82A", downloadsBase: 51, isNew: true },
+  { id: "bb8-lake-pack-reflection", url: "/nex-brand/shop-themes/bb8.png", label: "Lake Pack · Reflection", category: "travel", tintSwatch: "#2A6DD9", downloadsBase: 41 },
+  { id: "bb9-red-pack-campfire-night", url: "/nex-brand/shop-themes/bb9.png", label: "Red Pack · Campfire Night", category: "travel", tintSwatch: "#D9452A", downloadsBase: 48 },
+  { id: "bb10-roller-luggage-plane", url: "/nex-brand/shop-themes/bb10.png", label: "Roller Luggage · Airport Horizon", category: "travel", tintSwatch: "#4A6B8C", downloadsBase: 43 },
+
+  // ── Fashion · shoes (5) ──
+  { id: "bb11-dress-shoes-gold", url: "/nex-brand/shop-themes/bb11.png", label: "Leather Dress Shoes · Gold", category: "fashion", tintSwatch: "#C0821F", downloadsBase: 38, isNew: true },
+  { id: "bb12-runners-neon-blue", url: "/nex-brand/shop-themes/bb12.png", label: "Runners · Neon Blue", category: "fashion", tintSwatch: "#2A6DD9", downloadsBase: 46 },
+  { id: "bb13-hiking-boots-mountain", url: "/nex-brand/shop-themes/bb13.png", label: "Hiking Boots · Mountain", category: "fashion", tintSwatch: "#D9823B", downloadsBase: 35 },
+  { id: "bb14-suede-loafers-brown", url: "/nex-brand/shop-themes/bb14.png", label: "Suede Loafers · Brown Wall", category: "fashion", tintSwatch: "#8B5A2B", downloadsBase: 32 },
+  { id: "bb15-sneakers-city-night", url: "/nex-brand/shop-themes/bb15.png", label: "Sneakers · City Night", category: "fashion", tintSwatch: "#D92A2A", downloadsBase: 49, isNew: true },
 ];
 
 // Owner directive 2026-11-06 · "libary must have previous and
