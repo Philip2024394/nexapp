@@ -194,7 +194,7 @@ export function ShopStartWelcomeModal(): React.JSX.Element | null {
               <>
                 Every NEX shop URL ships with SEO built in · we've tuned
                 the search schema so customers hunting your category find
-                you without you lifting a finger.
+                you without you lifting a finger or the marketing cost.
               </>
             }
           />
