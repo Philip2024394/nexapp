@@ -356,6 +356,7 @@ export function ControlDrawer({
   viewerCreatorSupportConfigured,
   viewerSupportSettings,
   hideCreatorSupportRow,
+  portalTarget,
   triggerStyle,
   triggerIcon = "plus",
   peerSharedMediaHref,
@@ -440,12 +441,42 @@ export function ControlDrawer({
   // phone bezel on desktop. Portaling into the frame gives the
   // drawer a definite-height containing block that matches the
   // visible phone surface at every viewport.
+  // Owner directive 2026-11-07 · "wire the existing portalTarget API
+   //  · if an explicit portalTarget is supplied, use it as the portal
+   //  destination · otherwise retain the existing automatic
+   //  .nex-native-frame detection". Preserves section + phone-frame
+   //  containment · callers today pass nothing so auto-detect still
+   //  runs and nothing visual changes. Surfaces outside .nex-native-
+   //  frame (full-viewport theme previews etc.) can now supply an
+   //  explicit target and have the drawer actually render there.
   React.useEffect(() => {
+    if (portalTarget) {
+      setFrameNode(portalTarget);
+      return;
+    }
     const frame = triggerRef.current?.closest<HTMLElement>(
       ".nex-native-frame",
     );
     setFrameNode(frame ?? null);
-  }, []);
+    // Dev-mode observability · surfaces the "drawer fails silently
+    // because no portal target resolved" case early so future
+    // callers get a loud signal instead of a missing menu.
+    if (!frame && process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[ControlDrawer] portal target did not resolve · neither an " +
+          "explicit `portalTarget` prop nor the automatic " +
+          "`.nex-native-frame` ancestor could be found. Drawer will " +
+          "not render.",
+        {
+          currentSurface: currentSurface ?? "(unknown)",
+          triggerIcon,
+          triggerAtPath:
+            typeof window !== "undefined" ? window.location.pathname : null,
+        },
+      );
+    }
+  }, [portalTarget, currentSurface, triggerIcon]);
 
   // Drive the mount + visibility lifecycle so the slide-in and
   // slide-out transitions have an element to animate.
