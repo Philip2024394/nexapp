@@ -39,13 +39,24 @@ const BORDER_HI = "rgba(198, 161, 91, 0.55)";
 const SANS =
   "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
-export default async function ShopStartPage(): Promise<React.JSX.Element> {
+export default async function ShopStartPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ preview?: string }>;
+}): Promise<React.JSX.Element> {
   const session = await resolveSessionWithDevOverride();
   if (!session) {
     redirect("/nex-native/sign-in?next=/nex-native/manage/shop/start");
   }
+  const sp = await searchParams;
+  // Owner-authorised 2026-11-07 · ?preview=1 escape hatch · lets an
+  // already-onboarded user (incl. the dev-impersonation persona which
+  // has the Irish Pride shop) re-open the welcome landing + modal
+  // without affecting their business or triggering the redirect-to-
+  // themes shortcut. Matches the sealed /welcome?preview=1 pattern.
+  const previewMode = sp.preview === "1";
   const businesses = await listBusinessesByOwner(session.account.id);
-  if (businesses[0]) {
+  if (businesses[0] && !previewMode) {
     // Already onboarded · drop them straight into the picker.
     redirect("/nex-native/manage/shop/themes");
   }
