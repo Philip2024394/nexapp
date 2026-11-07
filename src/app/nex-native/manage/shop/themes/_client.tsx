@@ -158,21 +158,39 @@ export function ShopThemesClient({
           borderBottom: `1px solid ${BORDER}`,
         }}
       >
-        <h1
+        <div
           style={{
-            margin: 0,
-            fontSize: 20,
-            fontWeight: 900,
-            color: GOLD,
-            letterSpacing: "-0.01em",
+            display: "flex",
+            alignItems: "baseline",
+            justifyContent: "space-between",
+            gap: 10,
           }}
         >
-          Shop Template
-        </h1>
-        <p style={{ margin: 0, fontSize: 11, color: INK_DIM, lineHeight: 1.4 }}>
-          Lets pick shop template first and then we can view the back
-          ground themes.
-        </p>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: 20,
+              fontWeight: 900,
+              color: GOLD,
+              letterSpacing: "-0.01em",
+            }}
+          >
+            Shop Template
+          </h1>
+          <span
+            data-nex-step-indicator
+            style={{
+              fontSize: 10,
+              fontWeight: 900,
+              color: INK_MUTED,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              flexShrink: 0,
+            }}
+          >
+            Step 1 of 2
+          </span>
+        </div>
       </header>
 
       {/* Owner directive 2026-11-07 · "no undo white outside phone -
