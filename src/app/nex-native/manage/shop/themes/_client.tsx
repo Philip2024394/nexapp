@@ -491,11 +491,19 @@ function FullscreenTemplate({
   label: string;
   onClose: () => void;
 }) {
+  // Owner directive 2026-11-07 · "view large screen must stay inside
+  // the phone screen size of phone . not open desktop of tablet
+  // size". The dialog still portals to document.body (so it escapes
+  // the sealed phone-frame transform) and fills the viewport with a
+  // dim backdrop, but the iframe INSIDE is clamped to a phone-shaped
+  // 9:19.5 container · its width is min(96vw, 96vh*9/19.5) so on a
+  // desktop monitor it still looks like a larger phone, never a
+  // widescreen page.
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={`${label} template full-screen`}
+      aria-label={`${label} large view`}
       style={{
         position: "fixed",
         inset: 0,
@@ -503,7 +511,10 @@ function FullscreenTemplate({
         background: "rgba(26, 18, 10, 0.92)",
         display: "flex",
         flexDirection: "column",
-        padding: "env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px)",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "env(safe-area-inset-top, 0px) 12px env(safe-area-inset-bottom, 0px)",
+        boxSizing: "border-box",
       }}
       onClick={onClose}
     >
@@ -513,7 +524,8 @@ function FullscreenTemplate({
           alignItems: "center",
           justifyContent: "space-between",
           gap: 10,
-          padding: "12px 16px",
+          width: "min(96vw, calc(96vh * 9 / 19.5))",
+          paddingBlock: "10px",
           color: CREAM,
         }}
         onClick={(e) => e.stopPropagation()}
@@ -532,7 +544,7 @@ function FullscreenTemplate({
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close full-screen"
+          aria-label="Close large view"
           style={{
             width: 36,
             height: 36,
@@ -553,17 +565,36 @@ function FullscreenTemplate({
           ×
         </button>
       </div>
-      <iframe
-        src={src}
-        title={`${label} fullscreen`}
+      <div
+        data-nex-template-fullscreen-frame
         onClick={(e) => e.stopPropagation()}
         style={{
-          flex: 1,
-          width: "100%",
-          border: "none",
-          background: "transparent",
+          // Phone silhouette clamped to viewport · same 9:19.5 ratio
+          // as the picker preview · just bigger.
+          width: "min(96vw, calc(94vh * 9 / 19.5))",
+          aspectRatio: "9 / 19.5",
+          maxHeight: "94vh",
+          borderRadius: 32,
+          background: PAD_CREAM,
+          border: `2px solid ${GOLD}`,
+          overflow: "hidden",
+          boxShadow: "0 24px 60px rgba(0,0,0,0.55)",
+          position: "relative",
         }}
-      />
+      >
+        <iframe
+          src={src}
+          title={`${label} large view`}
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            border: "none",
+            background: "transparent",
+          }}
+        />
+      </div>
     </div>
   );
 }
