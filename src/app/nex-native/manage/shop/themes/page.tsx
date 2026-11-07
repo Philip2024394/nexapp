@@ -124,9 +124,13 @@ export default async function ShopThemesPage(): Promise<React.JSX.Element> {
               width: 40,
               height: 40,
               borderRadius: 999,
-              background: "#FAF8F4",
+              // Owner directive 2026-11-07 · "why is the button side
+              // drawer not same color button as Shop Template" · the
+              // trigger now matches the gold "Shop Template" heading
+              // colour. Round gold circle with warm-ink + glyph.
+              background: "var(--nex-world-secondary, #C6A15B)",
               color: "#1A120A",
-              border: "1.5px solid var(--nex-world-secondary, #C6A15B)",
+              border: "none",
               boxShadow: "0 6px 16px rgba(0, 0, 0, 0.35)",
             }}
           />

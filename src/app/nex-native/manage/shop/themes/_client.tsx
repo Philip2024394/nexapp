@@ -85,12 +85,15 @@ export function ShopThemesClient({
     React.useState<CoverLayoutId>(currentLayoutId);
   // Background + tint carry through unchanged so a save re-persists
   // whatever the owner last picked on /manage/shop/backgrounds.
-  // When no owner background is set yet, preview surfaces fall back
-  // to DEFAULT_PREVIEW_BG (cream + gold wave) so sellers never see
-  // a blank hero. The fallback is PREVIEW-ONLY · onApplyAll below
-  // writes `currentImageUrl` to the DB, not the fallback.
   const imageUrl = currentImageUrl;
-  const previewImageUrl = currentImageUrl ?? DEFAULT_PREVIEW_BG;
+  // Owner directive 2026-11-07 clarified · on the Step 1 template
+  // picker the preview ALWAYS paints on DEFAULT_PREVIEW_BG so
+  // sellers see each template on a neutral cream+gold canvas
+  // regardless of any background they may have already saved
+  // elsewhere. The real composed look (template + their chosen bg)
+  // renders on their public /{slug} shop · Step 2 (/backgrounds)
+  // is where they pick that background.
+  const previewImageUrl = DEFAULT_PREVIEW_BG;
   const tintHex = currentTintHex ?? "#123D2B";
   const [status, setStatus] = React.useState<
     | { kind: "idle" }
