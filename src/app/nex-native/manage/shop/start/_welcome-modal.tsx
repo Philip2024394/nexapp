@@ -203,9 +203,9 @@ export function ShopStartWelcomeModal(): React.JSX.Element | null {
             title="Pick a theme in seconds"
             body={
               <>
-                Choose from the full category theme library · first
-                impressions always last. Then sit back · your business
-                lives at your fingertips.
+                Choose your category · select a shop theme · enter the
+                details and sit back. Notice how easy it is to do
+                business. Your business lives at your fingertips.
               </>
             }
           />
