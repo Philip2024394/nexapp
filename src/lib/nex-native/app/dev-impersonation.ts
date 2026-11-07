@@ -63,6 +63,18 @@ function isDevImpersonationEnabled(): boolean {
   const hasHandle = typeof handle === "string" && handle.trim().length > 0;
   if (!hasHandle) return false;
 
+  // Owner directive 2026-11-07 · Item 1 · hard-fail in Vercel production.
+  // VERCEL_ENV is set by Vercel at build + runtime to one of
+  // production | preview | development. We refuse impersonation
+  // outright when VERCEL_ENV === "production" regardless of any other
+  // env state (handle present, URL checks, etc.). The Ireland +
+  // Indonesia preview deployments use VERCEL_ENV=preview and still
+  // reach the sandbox-URL path below, so this guard does not affect
+  // those flows. Double belt alongside the existing Supabase-URL
+  // check so a project-ref change in the future cannot silently
+  // re-enable impersonation on the live nexapp Vercel project.
+  if (process.env.VERCEL_ENV === "production") return false;
+
   if (process.env.NODE_ENV !== "production") return true;
 
   // NODE_ENV=production path · must be a non-production Supabase target.
