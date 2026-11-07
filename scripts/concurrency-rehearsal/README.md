@@ -1,8 +1,24 @@
-# NEX Shop concurrency · migration 281 · local rehearsal harness
+# NEX Shop concurrency · migration 281 · rehearsal harness
 
 Owner-authorised 2026-11-07. **DISPOSABLE POSTGRES ONLY** · never
 production. The harness creates a new database, applies migration 281,
 runs the full test suite, then drops the database.
+
+## Primary execution path · GitHub Actions CI (recommended)
+
+Owner-authorised 2026-11-07 (Option 1). The rehearsal runs in CI against
+an isolated, disposable `postgres:15` service container. No local
+Postgres needed, no credentials required.
+
+Trigger from the Actions tab → **Shop Concurrency Rehearsal (migration
+281)** → **Run workflow**, OR push any change to `nex-supabase/
+migrations/281_*`, `scripts/concurrency-rehearsal/**`, or the workflow
+file itself.
+
+The workflow is at `.github/workflows/concurrency-rehearsal.yml`.
+See the orchestrator section below for what the 6 tests prove.
+
+## Secondary execution path · local (if CI isn't available)
 
 ## Prerequisites
 

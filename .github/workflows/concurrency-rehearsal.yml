@@ -1,0 +1,157 @@
+# .github/workflows/concurrency-rehearsal.yml
+# -----------------------------------------------------------------------------
+# NEX Shop · migration 281 concurrency rehearsal · CI-executed.
+#
+# Owner-authorised 2026-11-07 (Option 1 · follow-on to local PG17 dead-end).
+# Runs the 6-test concurrency harness against an isolated, disposable
+# postgres:15 service container provided by GitHub Actions. No production
+# credentials used · no production database touched · no external
+# provisioning · the postgres service is torn down with the runner.
+#
+# Trigger policy
+#   · push     · only on the Ireland build branch
+#   · workflow_dispatch · manual trigger from the Actions tab (owner)
+#   · pull_request · only when files in the rehearsal scope change
+#     (migration 281 OR the harness itself) · prevents the whole PR
+#     backlog from spending CI minutes on this.
+#
+# A successful run is required before considering the production
+# migration of 281 (per owner directive 2026-11-07).
+
+name: Shop Concurrency Rehearsal (migration 281)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - nex-ireland-build-2026-11-06
+    paths:
+      - "nex-supabase/migrations/281_*"
+      - "scripts/concurrency-rehearsal/**"
+      - ".github/workflows/concurrency-rehearsal.yml"
+  pull_request:
+    paths:
+      - "nex-supabase/migrations/281_*"
+      - "scripts/concurrency-rehearsal/**"
+
+# No elevated permissions needed · this workflow doesn't push, doesn't
+# interact with secrets, doesn't touch any external service.
+permissions:
+  contents: read
+
+jobs:
+  rehearsal:
+    name: 6-test concurrency rehearsal
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # Postgres service container · isolated to this job · torn down
+    # with the runner. Credentials are ephemeral (matched in the
+    # NEX_REHEARSAL_PG_URL below). No GitHub secrets consumed.
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: rehearsal
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    env:
+      # Points the harness at the service container above. The harness's
+      # _lib.getRehearsalConnection() refuses any URL containing the
+      # fragments supabase.co / pooler.supabase.com / rds.amazonaws.com
+      # / neon.tech · 127.0.0.1 passes that check. Password is the
+      # ephemeral one set on the service above · lifetime = this job.
+      NEX_REHEARSAL_PG_URL: postgresql://postgres:rehearsal@127.0.0.1:55432/postgres
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies (pg client only needed for the harness)
+        run: npm ci --no-audit --no-fund
+
+      - name: Preflight · verify harness refuses production hostnames
+        # Safety belt · prove the production-hostname refusal still fires
+        # before letting the actual rehearsal run. If someone accidentally
+        # sets NEX_REHEARSAL_PG_URL to a Supabase URL in a future edit,
+        # this step fails loudly.
+        run: |
+          set -e
+          for forbidden in \
+            "postgresql://u:p@aws-0-eu-west-1.pooler.supabase.com:5432/postgres" \
+            "postgresql://u:p@db.ijvqdvsvwtwxzcqmoqit.supabase.co:5432/postgres" \
+            "postgresql://u:p@foo.rds.amazonaws.com:5432/postgres" \
+            "postgresql://u:p@foo.neon.tech:5432/postgres"; do
+            echo "testing refusal of: $forbidden"
+            if NEX_REHEARSAL_PG_URL="$forbidden" node -e "import('./scripts/concurrency-rehearsal/_lib.mjs').then(m => { try { m.getRehearsalConnection(); console.error('SAFETY FAIL: accepted production URL'); process.exit(1); } catch (e) { console.log('ok · refused: ' + e.message.split(String.fromCharCode(10))[0]); } })"; then
+              :
+            else
+              echo "safety guard broken · aborting"
+              exit 1
+            fi
+          done
+
+      - name: Preflight · verify postgres service is reachable
+        run: |
+          set -e
+          node -e "
+            const pg = require('pg');
+            const c = new pg.Client({ connectionString: process.env.NEX_REHEARSAL_PG_URL });
+            c.connect()
+              .then(() => c.query('SELECT version()'))
+              .then(r => { console.log('postgres ready: ' + r.rows[0].version.split(',')[0]); return c.end(); })
+              .catch(e => { console.error('postgres unreachable: ' + e.message); process.exit(1); });
+          "
+
+      - name: Run 6-test rehearsal
+        # The orchestrator:
+        #   1 · creates a disposable database nex_rehearsal_YYYYMMDD_HHMMSS
+        #   2 · applies the minimal schema (nex_account, nex_business, nex_product + roles)
+        #   3 · applies nex-supabase/migrations/281_*.sql
+        #   4 · runs 6 tests:
+        #       · test:01 · 20 concurrent at cap=50 count=49 → exactly 1 succeeds
+        #       · test:02 · cross-business parallel → no cross-shop serialisation
+        #       · test:03 · missing business → foreign_key_violation
+        #       · test:04 · security · only service_role has EXECUTE
+        #       · test:05 · rollback · function dropped, rows unchanged
+        #       · test:06 · re-apply idempotent
+        #   5 · drops the disposable database in a finally block
+        # Non-zero exit = test failure. The orchestrator logs per-test
+        # results to stdout which land in the Actions log.
+        run: node scripts/concurrency-rehearsal/run-rehearsal.mjs
+
+      - name: Summary (on success)
+        if: success()
+        run: |
+          echo "✅ 6-test rehearsal passed against disposable postgres:15"
+          echo ""
+          echo "This proves migration 281's advisory-lock design behaves"
+          echo "correctly in CI. Production application of 281 still"
+          echo "requires separate owner approval + per-CLAUDE.md §4-5."
+
+      - name: Summary (on failure)
+        if: failure()
+        run: |
+          echo "❌ Rehearsal failed · do NOT apply migration 281 to production"
+          echo "Inspect the orchestrator log above for the exact failing test."
+          echo ""
+          echo "Common causes:"
+          echo "  · migration SQL syntax drift"
+          echo "  · Postgres 15 behaviour difference from assumption"
+          echo "  · boundary test off-by-one (check test:01 output)"
+          echo "  · service-role grant assertion (test:04)"
+          exit 1
