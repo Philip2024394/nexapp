@@ -15,6 +15,12 @@ import { cookies } from "next/headers";
 import { resolveNexAppSession } from "@/lib/nex-native/app/session";
 import { resolveWebauthnConfig } from "@/lib/nex-native/webauthn-config";
 import { saveCredential } from "@/lib/nex-native/webauthn-service";
+import {
+  accountRateLimitKey,
+  buildRateLimitResponse,
+  isSecurityRateLimitError,
+  recordIfAllowed,
+} from "@/lib/nex-native/security-rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,6 +29,20 @@ export async function POST(req: Request) {
   const session = await resolveNexAppSession(req);
   if (!session) {
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  }
+  // Owner directive 2026-11-08 · Item 4 · per-account throttle on
+  // WebAuthn enrollment · symmetric policy with enroll-start.
+  try {
+    await recordIfAllowed(
+      accountRateLimitKey(session.account.id),
+      "webauthn_enroll",
+    );
+  } catch (e) {
+    if (isSecurityRateLimitError(e)) {
+      const r = buildRateLimitResponse(e);
+      return NextResponse.json(r.body, { status: r.status, headers: r.headers });
+    }
+    throw e;
   }
   const cfg = resolveWebauthnConfig(req);
 

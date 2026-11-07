@@ -21,6 +21,12 @@ import {
   bumpSessionsInvalidatedAtForOwner,
   logSignInEvent,
 } from "@/lib/nex-native/security-service";
+import {
+  accountRateLimitKey,
+  buildRateLimitResponse,
+  isSecurityRateLimitError,
+  recordIfAllowed,
+} from "@/lib/nex-native/security-rate-limit";
 import { readClientIp, readUserAgent } from "@/lib/nex-native/app/security-request";
 import { clearAllStepUpForAccount } from "@/lib/nex-native/vault/step-up-service";
 
@@ -42,6 +48,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       { ok: false, error: "no_email_on_account" },
       { status: 400 },
     );
+  }
+
+  // Owner directive 2026-11-08 · Item 4 · rate-limit password change
+  // per authenticated account. Called BEFORE any verify/update so
+  // throttled attempts never reach Supabase. Fail-open on DB wobble
+  // (see security-rate-limit.ts doctrine).
+  try {
+    await recordIfAllowed(
+      accountRateLimitKey(session.account.id),
+      "password_change",
+    );
+  } catch (e) {
+    if (isSecurityRateLimitError(e)) {
+      const r = buildRateLimitResponse(e);
+      return NextResponse.json(r.body, { status: r.status, headers: r.headers });
+    }
+    throw e;
   }
   let body: { current?: string; new?: string };
   try {

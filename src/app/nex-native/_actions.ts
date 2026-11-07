@@ -43,6 +43,17 @@ import * as businessService from "@/lib/nex-native/business-service";
 // listing + nex_account updates. The import had been dropped; four
 // bare `nexSupabaseAdmin` references were failing to resolve.
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
+// Owner directive 2026-11-08 · Item 4 · per-IP rate-limit on account
+// creation (both signUpAction and createNexAccountAction). Imported
+// via static import so TypeScript catches signature changes · the
+// dynamic requireHqAdmin imports elsewhere in this file follow a
+// different pattern (admin-only · rarely touched).
+import {
+  ipRateLimitKey,
+  isSecurityRateLimitError,
+  recordIfAllowed,
+} from "@/lib/nex-native/security-rate-limit";
+import { headers as nextHeaders } from "next/headers";
 import * as productService from "@/lib/nex-native/product-service";
 import {
   guardGalleryUpdate,
@@ -124,7 +135,46 @@ function redirectToSignInWithError(code: string, message: string): never {
 // authoritative · no extra fields). Uses the same Supabase auth backbone
 // as signUpAction, just without the phone requirement.
 // -------------------------------------------------------------------------
+/** Derive a limiter IP from the current Server Action's request
+ *  headers. Server Actions don't receive a NextRequest · we pull the
+ *  same Vercel-set x-forwarded-for / x-real-ip trusted by the rest of
+ *  the app. Unknown → "unknown" (hashed anyway in ipRateLimitKey). */
+async function readActionClientIp(): Promise<string> {
+  try {
+    const h = await nextHeaders();
+    const xff = h.get("x-forwarded-for") ?? "";
+    const first = xff.split(",")[0]?.trim();
+    if (first) return first;
+    const realIp = h.get("x-real-ip");
+    if (realIp) return realIp.trim();
+  } catch {
+    /* RSC/action context not available · fall through */
+  }
+  return "unknown";
+}
+
+async function enforceAccountCreateRateLimit(
+  redirectToOnThrottle: string,
+): Promise<void> {
+  const ip = await readActionClientIp();
+  try {
+    await recordIfAllowed(ipRateLimitKey(ip), "account_create");
+  } catch (e) {
+    if (isSecurityRateLimitError(e)) {
+      redirect(
+        `${redirectToOnThrottle}?error=rate_limited&retry_after=${e.retryAfterSeconds}`,
+      );
+    }
+    throw e;
+  }
+}
+
 export async function createNexAccountAction(formData: FormData): Promise<never> {
+  // Owner directive 2026-11-08 · Item 4 · per-IP throttle on account
+  // creation (3 per hour per hashed IP) BEFORE any form parsing so
+  // bot farms can't spin on bad input without cost.
+  await enforceAccountCreateRateLimit("/nex-native/create-account");
+
   const fullName = String(formData.get("full_name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
@@ -687,6 +737,11 @@ export async function devPassAction(_formData: FormData): Promise<never> {
 // calls redirect(), so Promise<ActionResult> was a lie. Changing to
 // Promise<void> makes this valid as a `<form action>` prop.
 export async function signUpAction(formData: FormData): Promise<void> {
+  // Owner directive 2026-11-08 · Item 4 · per-IP throttle on account
+  // creation. Same limit the alternate createNexAccountAction path uses
+  // so neither entry point is a bypass.
+  await enforceAccountCreateRateLimit("/nex-native/sign-up");
+
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const passwordConfirm = String(formData.get("password_confirm") ?? "");

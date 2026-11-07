@@ -25,6 +25,12 @@ import {
   readClientIp,
   readUserAgent,
 } from "@/lib/nex-native/app/security-request";
+import {
+  accountRateLimitKey,
+  buildRateLimitResponse,
+  isSecurityRateLimitError,
+  recordIfAllowed,
+} from "@/lib/nex-native/security-rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,6 +39,20 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const session = await resolveNexAppSessionFromContext();
   if (!session) {
     return NextResponse.json({ ok: false, error: "not_signed_in" }, { status: 401 });
+  }
+  // Owner directive 2026-11-08 · Item 4 · tighter cap (3/hour) since
+  // mass invalidation is a high-impact rare operation.
+  try {
+    await recordIfAllowed(
+      accountRateLimitKey(session.account.id),
+      "session_revoke_all",
+    );
+  } catch (e) {
+    if (isSecurityRateLimitError(e)) {
+      const r = buildRateLimitResponse(e);
+      return NextResponse.json(r.body, { status: r.status, headers: r.headers });
+    }
+    throw e;
   }
   const keepSessionKey = currentSessionKey(req);
   try {

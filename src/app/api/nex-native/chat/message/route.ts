@@ -26,6 +26,12 @@ import * as productService from "@/lib/nex-native/product-service";
 import * as conversationService from "@/lib/nex-native/conversation-service";
 import { enqueueNexReply } from "@/lib/nex-native/intelligence/enqueue-nex-reply";
 import type { NexUuid } from "@/lib/nex-native/types";
+import {
+  accountRateLimitKey,
+  buildRateLimitResponse,
+  isSecurityRateLimitError,
+  recordIfAllowed,
+} from "@/lib/nex-native/security-rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,6 +49,22 @@ export async function POST(req: Request) {
   }
   if (!session) {
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  }
+
+  // Owner directive 2026-11-08 · Item 4 · rate-limit per account at
+  // 60 messages/hour (1/sec average · generous for legitimate chat).
+  // Caps scripted spam without bothering a legitimate user.
+  try {
+    await recordIfAllowed(
+      accountRateLimitKey(session.account.id),
+      "chat_message",
+    );
+  } catch (e) {
+    if (isSecurityRateLimitError(e)) {
+      const r = buildRateLimitResponse(e);
+      return NextResponse.json(r.body, { status: r.status, headers: r.headers });
+    }
+    throw e;
   }
 
   let body: Record<string, unknown> = {};

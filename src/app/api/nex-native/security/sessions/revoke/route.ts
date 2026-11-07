@@ -13,6 +13,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import { revokeSessionForOwner, logSignInEvent } from "@/lib/nex-native/security-service";
+import {
+  accountRateLimitKey,
+  buildRateLimitResponse,
+  isSecurityRateLimitError,
+  recordIfAllowed,
+} from "@/lib/nex-native/security-rate-limit";
 import { readClientIp, readUserAgent } from "@/lib/nex-native/app/security-request";
 
 export const runtime = "nodejs";
@@ -22,6 +28,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const session = await resolveNexAppSessionFromContext();
   if (!session) {
     return NextResponse.json({ ok: false, error: "not_signed_in" }, { status: 401 });
+  }
+  // Owner directive 2026-11-08 · Item 4 · rate-limit per account.
+  try {
+    await recordIfAllowed(
+      accountRateLimitKey(session.account.id),
+      "session_revoke",
+    );
+  } catch (e) {
+    if (isSecurityRateLimitError(e)) {
+      const r = buildRateLimitResponse(e);
+      return NextResponse.json(r.body, { status: r.status, headers: r.headers });
+    }
+    throw e;
   }
   let body: { session_id?: string };
   try {

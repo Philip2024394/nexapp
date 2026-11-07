@@ -28,6 +28,23 @@ import {
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import { resolveWebauthnConfig } from "@/lib/nex-native/webauthn-config";
 import {
+  buildRateLimitResponse,
+  ipRateLimitKey,
+  isSecurityRateLimitError,
+  recordIfAllowed,
+} from "@/lib/nex-native/security-rate-limit";
+
+/** Plain-Request IP reader · the sealed readClientIp requires a
+ *  NextRequest. Reads the same forwarded-for header set by Vercel. */
+function readRequestClientIp(req: Request): string | null {
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff) {
+    const first = xff.split(",")[0]?.trim();
+    if (first) return first;
+  }
+  return req.headers.get("x-real-ip");
+}
+import {
   getCredentialById,
   markCredentialUsed,
 } from "@/lib/nex-native/webauthn-service";
@@ -36,6 +53,22 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  // Owner directive 2026-11-08 · Item 4 · per-IP throttle on assert
+  // completion · same policy as assert-start so an attacker running
+  // start → finish loops is capped either way.
+  try {
+    await recordIfAllowed(
+      ipRateLimitKey(readRequestClientIp(req)),
+      "webauthn_assert",
+    );
+  } catch (e) {
+    if (isSecurityRateLimitError(e)) {
+      const r = buildRateLimitResponse(e);
+      return NextResponse.json(r.body, { status: r.status, headers: r.headers });
+    }
+    throw e;
+  }
+
   const cfg = resolveWebauthnConfig(req);
 
   const jar = await cookies();

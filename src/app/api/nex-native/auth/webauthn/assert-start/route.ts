@@ -10,6 +10,23 @@ import { generateAuthenticationOptions } from "@simplewebauthn/server";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import { listCredentialsForAccount } from "@/lib/nex-native/webauthn-service";
 import { resolveWebauthnConfig } from "@/lib/nex-native/webauthn-config";
+import {
+  buildRateLimitResponse,
+  ipRateLimitKey,
+  isSecurityRateLimitError,
+  recordIfAllowed,
+} from "@/lib/nex-native/security-rate-limit";
+
+/** Plain-Request IP reader · the sealed readClientIp requires a
+ *  NextRequest. Reads the same forwarded-for header set by Vercel. */
+function readRequestClientIp(req: Request): string | null {
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff) {
+    const first = xff.split(",")[0]?.trim();
+    if (first) return first;
+  }
+  return req.headers.get("x-real-ip");
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +34,25 @@ export const dynamic = "force-dynamic";
 interface Body { email?: string }
 
 export async function POST(req: Request) {
+  // Owner directive 2026-11-08 · Item 4 · per-IP throttle on
+  // WebAuthn assertion starts. Protects against email-hint enumeration
+  // attacks (the handler leaks whether an email has credentials via
+  // the allowCredentials array shape). Limit is per hashed IP, pre-
+  // auth; a legitimate user retrying a failed assert won't hit 10 in
+  // 15min. See security-rate-limit.ts for the policy rationale.
+  try {
+    await recordIfAllowed(
+      ipRateLimitKey(readRequestClientIp(req)),
+      "webauthn_assert",
+    );
+  } catch (e) {
+    if (isSecurityRateLimitError(e)) {
+      const r = buildRateLimitResponse(e);
+      return NextResponse.json(r.body, { status: r.status, headers: r.headers });
+    }
+    throw e;
+  }
+
   const cfg = resolveWebauthnConfig(req);
   let body: Body = {};
   try { body = (await req.json()) as Body; } catch { /* body optional */ }
