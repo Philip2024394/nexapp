@@ -455,7 +455,11 @@ function TemplateCarousel({
               letterSpacing: "0.02em",
             }}
           >
-            {downloadsCount.toLocaleString()}
+            {/* Owner-sealed 2026-11-07 · pin locale to en-US so
+                server + client agree on thousands separator (server
+                in Ireland renders "1.247", browser in en-US renders
+                "1,247" · mismatch triggers hydration error). */}
+            {downloadsCount.toLocaleString("en-US")}
           </span>
         </div>
         <Link

@@ -1566,7 +1566,9 @@ function PresetTile({
               fontVariantNumeric: "tabular-nums",
             }}
           >
-            {downloads.toLocaleString()}
+            {/* Owner-sealed 2026-11-07 · pin locale to en-US · same
+                hydration-mismatch fix as /manage/shop/themes _client. */}
+            {downloads.toLocaleString("en-US")}
           </span>
         </div>
       </div>
