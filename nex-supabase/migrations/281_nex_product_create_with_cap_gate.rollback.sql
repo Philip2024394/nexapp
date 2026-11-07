@@ -11,9 +11,13 @@
 -- To apply this rollback:
 --   psql $DATABASE_URL -f nex-supabase/migrations/281_nex_product_create_with_cap_gate.rollback.sql
 --
--- STATUS · PREPARED LOCALLY · NOT APPLIED.
+-- STATUS · PREPARED LOCALLY · NOT APPLIED TO PRODUCTION.
+
+BEGIN;
 
 DROP FUNCTION IF EXISTS public.nex_product_create_with_cap_gate(
   uuid, text, text, text, text[], text[], text, text, integer, text,
   text, text, text, jsonb, text, uuid, text, uuid, integer
 );
+
+COMMIT;

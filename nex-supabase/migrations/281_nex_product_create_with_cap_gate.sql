@@ -6,6 +6,16 @@
 -- the guardCreateProduct check and BOTH insert, producing N+1 active products
 -- on a plan capped at N.
 --
+-- SECURITY NOTE · updated 2026-11-07 after owner directive §9 static review:
+--   The function parameters include the business_id that will own the new
+--   row. We MUST NOT expose this to the `authenticated` role via GRANT ·
+--   that would let user A create a product in user B's shop by passing
+--   B's business_id. The grant is therefore RESTRICTED to `service_role`
+--   only. All callers go through a Node server action which runs the
+--   ownership check in `src/app/nex-native/create/product/_actions.ts`
+--   BEFORE invoking this RPC. Defensive existence check added inside the
+--   function as belt-and-braces.
+--
 -- DESIGN · stored function wraps the (count, check, insert) sequence in a
 -- single transaction and holds a per-business advisory lock while the check
 -- runs. The advisory lock is scoped to the transaction (pg_advisory_xact_lock)
@@ -21,8 +31,8 @@
 --     tens of milliseconds.
 --
 -- SECURITY DEFINER
---   · Runs with the function owner's privileges so callers (anon/auth via
---     PostgREST) do not need direct INSERT privileges on nex_product.
+--   · Runs with the function owner's privileges so callers do not need
+--     direct INSERT privileges on nex_product.
 --   · search_path is pinned to avoid injection via rogue public schemas.
 --
 -- ROLLBACK
@@ -32,8 +42,10 @@
 --
 -- STATUS · PREPARED LOCALLY · NOT APPLIED TO PRODUCTION.
 -- Owner authorisation required separately before this file is executed
--- against ijvqdvsvwtwxzcqmoqit. Local test runs happen against a Docker
--- Postgres scratch instance when authorised.
+-- against ijvqdvsvwtwxzcqmoqit. Local rehearsal against a disposable
+-- Postgres only (Docker or local disposable instance).
+
+BEGIN;
 
 CREATE OR REPLACE FUNCTION public.nex_product_create_with_cap_gate(
   p_business_id uuid,
@@ -65,7 +77,19 @@ DECLARE
   v_active_count integer;
   v_new_id uuid;
   v_lock_key bigint;
+  v_business_exists boolean;
 BEGIN
+  -- Defensive existence check · fail fast with a distinct error so the
+  -- Node action can distinguish "bogus business_id" from "cap reached".
+  -- This is NOT a substitute for the ownership check in the Node server
+  -- action · callers MUST verify ownership before invoking this RPC.
+  SELECT EXISTS(SELECT 1 FROM nex_business WHERE id = p_business_id)
+    INTO v_business_exists;
+  IF NOT v_business_exists THEN
+    RAISE EXCEPTION 'nex_product_create_with_cap_gate: business % does not exist', p_business_id
+      USING ERRCODE = 'foreign_key_violation';
+  END IF;
+
   -- Per-business advisory lock · transaction-scoped. Different businesses
   -- do not serialise against each other; two requests for the SAME
   -- business do.
@@ -104,20 +128,33 @@ BEGIN
 END;
 $$;
 
--- Lock down · only authenticated roles may execute this. Anon callers
--- MUST go through the service-role client (or an auth-gated RPC).
+-- Lock down · ONLY service_role may execute this. The `authenticated`
+-- grant from an earlier draft was removed 2026-11-07 after static review
+-- (owner directive §9) · granting to authenticated would let any logged-
+-- in user pass an arbitrary p_business_id and create products in another
+-- shop. All product-create flows must route through the Node server
+-- action which runs the ownership check via listBusinessesByOwner before
+-- invoking this RPC with the service-role client.
 REVOKE ALL ON FUNCTION public.nex_product_create_with_cap_gate(
   uuid, text, text, text, text[], text[], text, text, integer, text,
   text, text, text, jsonb, text, uuid, text, uuid, integer
 ) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.nex_product_create_with_cap_gate(
+  uuid, text, text, text, text[], text[], text, text, integer, text,
+  text, text, text, jsonb, text, uuid, text, uuid, integer
+) FROM authenticated;
 GRANT EXECUTE ON FUNCTION public.nex_product_create_with_cap_gate(
   uuid, text, text, text, text[], text[], text, text, integer, text,
   text, text, text, jsonb, text, uuid, text, uuid, integer
-) TO authenticated, service_role;
+) TO service_role;
 
 COMMENT ON FUNCTION public.nex_product_create_with_cap_gate IS
 'Owner-sealed 2026-11-07. Serialises check-then-insert for Shop tier
 product-creation to close the TOCTOU race. Per-business advisory lock.
 Raises check_violation when the current active count has reached the
 supplied p_cap. Caller passes the cap from the Entry/Professional/Plus
-entitlement spec in src/lib/nex-native/commercial/shop-entitlements.ts.';
+entitlement spec in src/lib/nex-native/commercial/shop-entitlements.ts.
+EXECUTE grant is RESTRICTED to service_role · ownership must be checked
+by the Node server action before this function is invoked.';
+
+COMMIT;
