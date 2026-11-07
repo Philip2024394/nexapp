@@ -16,6 +16,10 @@ scripts/.pexels-query-cache.json
 # re-emits it on every run.
 scripts/.upload-report-chat-themes.json
 
+# Shop-background upload report — same posture as chat-themes.
+# Script `upload-shop-theme-backgrounds.mjs` re-emits it on every run.
+scripts/.upload-report-shop-themes.json
+
 .vercel
 
 .env.tools.local
