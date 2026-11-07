@@ -2,26 +2,31 @@
 
 // src/app/nex-native/manage/shop/themes/_client.tsx
 //
-// Shop Themes picker · three-axis layout.
-// Owner-authorised 2026-11-06 · dual-axis rework 2026-11-07.
+// Shop Themes · Template picker (template-only surface).
+// Owner-authorised 2026-11-06 · light-theme rework 2026-11-07.
 // -----------------------------------------------------------------------------
-// Owner directive 2026-11-07 · "i am confused how the user will know
-// the difference that they can select shop template and also back
-// ground theme image · help". Resolution: two labelled control
-// surfaces around one live preview.
+// Owner directive 2026-11-07 · "what we should have first is only
+// the shop templates where user can back and forward and activate
+// on white back ground off white · the user must see phone size
+// height to scale to width and templates fitting with button over
+// full screen".
 //
-//   SHOP TEMPLATE          ← labelled · horizontal strip of 11 thumbs
-//     [ phone frame ]      ← live preview · updates on every pick
-//     ◀ Template N / 11 ▶  ← arrows + counter under the phone
-//   BACKGROUND             ← labelled · horizontal strip of bg thumbs
-//     [ Activate Shop ]    ← saves template + bg + tint in one click
-//
-// Backend writes unchanged · applyShopLayoutAction + applyShopTintAction
-// + applyShopPresetBackgroundAction. The full ~200-preset library
-// stays at /manage/shop/backgrounds via the "See all" link.
+// Resolution:
+//   · This page is TEMPLATE-ONLY · no inline background strip (the
+//     background library stays at /manage/shop/backgrounds).
+//   · Off-white page bg (page.tsx sets NEX_BG = #FAF8F4). Dark ink
+//     body copy · gold accents · emerald/forest preserved on the
+//     Activate pill for brand consistency.
+//   · Phone preview holds the sealed 9:19.5 silhouette · centred ·
+//     max-width 300px · fullscreen trigger (⤢) in the top-right.
+//   · ◀ Template N / 11 ▶ counter under the phone; keyboard ← →.
+//   · Backend writes unchanged · Activate still sends
+//     applyShopLayoutAction + applyShopTintAction + (if set)
+//     applyShopPresetBackgroundAction so any background the owner
+//     picked elsewhere stays persisted.
 
 import * as React from "react";
-import Link from "next/link";
+import { createPortal } from "react-dom";
 import {
   applyShopLayoutAction,
   applyShopPresetBackgroundAction,
@@ -33,49 +38,19 @@ const GOLD = "var(--nex-world-secondary, #C6A15B)";
 const EMERALD = "var(--nex-world-primary, #123D2B)";
 const FOREST = "var(--nex-world-forest, #1B5138)";
 const CREAM = "var(--nex-world-cream, #FAF8F4)";
-const INK = "#F2F5F8";
-const INK_DIM = "#B5C3D6";
-const INK_MUTED = "#7D9BC0";
+const INK = "#F2F5F8"; // page body ink · reads on dark NEX page
+const INK_DIM = "#B5C3D6"; // faded cool · body copy on dark
+const INK_MUTED = "#7D9BC0"; // dim · hint copy on dark
 const BORDER = "rgba(198, 161, 91, 0.25)";
 const BORDER_HI = "rgba(198, 161, 91, 0.55)";
 
-// ─── Featured background presets ───────────────────────────────────
-// Curated set that appears as a horizontal strip beneath the phone
-// frame · the full ~200-preset library stays at
-// /manage/shop/backgrounds. URLs match PRESET_BACKGROUND_META in
-// _actions.ts so applyShopPresetBackgroundAction accepts them.
-interface FeaturedBg {
-  readonly url: string;
-  readonly label: string;
-  readonly tintHex: string;
-}
-
-const FEATURED_BACKGROUNDS: ReadonlyArray<FeaturedBg> = [
-  { url: "/nex-brand/shop-themes/dynamic-nex-shopping-showcase.png", label: "Showcase",           tintHex: "#C6A15B" },
-  { url: "/nex-brand/shop-themes/global-cart-glow.png",              label: "Cart glow",          tintHex: "#FF7A2B" },
-  { url: "/nex-brand/shop-themes/nex-bag-electric.png",              label: "Electric",           tintHex: "#2A6DD9" },
-  { url: "/nex-brand/shop-themes/sale-best-deals.png",               label: "Sale",               tintHex: "#FF6600" },
-  { url: "/nex-brand/shop-themes/electronics-showcase.png",          label: "Electronics",        tintHex: "#1E4A8C" },
-  { url: "/nex-brand/shop-themes/delivery-globe.png",                label: "Delivery",           tintHex: "#FF7A2B" },
-  { url: "/nex-brand/shop-themes/mobile-shop-now.png",               label: "Mobile shop",        tintHex: "#FF6B2B" },
-  { url: "/nex-brand/shop-themes/global-cart-glow-green.png",        label: "Cart · green",       tintHex: "#16D66B" },
-  { url: "/nex-brand/shop-themes/fashion-beauty-purple.png",         label: "Fashion",            tintHex: "#C62AD9" },
-  { url: "/nex-brand/shop-themes/tools-trade-green.png",             label: "Tools",              tintHex: "#16D66B" },
-  { url: "/nex-brand/shop-themes/sports-outdoors-orange.png",        label: "Sports",             tintHex: "#FF7A2B" },
-  { url: "/nex-brand/shop-themes/food-grocery-red.png",              label: "Food",               tintHex: "#D82A2A" },
-  { url: "/nex-brand/shop-themes/travel-luggage-gold.png",           label: "Travel",             tintHex: "#F2B23A" },
-  { url: "/nex-brand/shop-themes/phil1.png",                         label: "Soft pink",          tintHex: "#F2B4D4" },
-  { url: "/nex-brand/shop-themes/phil6.png",                         label: "Fresh green",        tintHex: "#7CB342" },
-  { url: "/nex-brand/shop-themes/phil8.png",                         label: "Deep blue",          tintHex: "#4A6B8C" },
-  { url: "/nex-brand/shop-themes/phil11.png",                        label: "Warm brown",         tintHex: "#A0522D" },
-  { url: "/nex-brand/shop-themes/phil100.png",                       label: "Vivid orange",       tintHex: "#FF6A1F" },
-  { url: "/nex-brand/shop-themes/phil119.png",                       label: "Royal blue",         tintHex: "#2A6DD9" },
-  { url: "/nex-brand/shop-themes/watches.png",                       label: "Watches",            tintHex: "#D9B86A" },
-  { url: "/nex-brand/shop-themes/vitamins.png",                      label: "Vitamins",           tintHex: "#FF8A1F" },
-  { url: "/nex-brand/shop-themes/theme1.png",                        label: "Violet",             tintHex: "#8B5FC9" },
-  { url: "/nex-brand/shop-themes/tt3.png",                           label: "Night blue",         tintHex: "#1F3A6B" },
-  { url: "/nex-brand/shop-themes/bb1.png",                           label: "Travel orange",      tintHex: "#FF7A2B" },
-];
+// Owner directive 2026-11-07 · "not the app page white undo - i
+// mean behind the template offwhite". The page stays dark; this
+// cream pad sits DIRECTLY BEHIND the phone preview so the template
+// reads as a product-photo mock-up inside a soft off-white card.
+const PAD_CREAM = "#FAF8F4";
+const PAD_INK = "#1A120A";
+const PAD_INK_DIM = "#5F4A2C";
 
 interface Props {
   readonly businessId: string | null;
@@ -89,7 +64,6 @@ interface Props {
 
 export function ShopThemesClient({
   businessId,
-  businessName,
   currentLayoutId,
   currentTintHex,
   currentImageUrl,
@@ -98,10 +72,10 @@ export function ShopThemesClient({
 }: Props): React.JSX.Element {
   const [selectedLayout, setSelectedLayout] =
     React.useState<CoverLayoutId>(currentLayoutId);
-  const [imageUrl, setImageUrl] = React.useState<string | null>(currentImageUrl);
-  const [tintHex, setTintHex] = React.useState<string>(
-    currentTintHex ?? "#123D2B",
-  );
+  // Background + tint carry through unchanged so a save re-persists
+  // whatever the owner last picked on /manage/shop/backgrounds.
+  const imageUrl = currentImageUrl;
+  const tintHex = currentTintHex ?? "#123D2B";
   const [status, setStatus] = React.useState<
     | { kind: "idle" }
     | { kind: "applying" }
@@ -109,6 +83,7 @@ export function ShopThemesClient({
     | { kind: "error"; message: string }
   >({ kind: "idle" });
   const [pending, startTransition] = React.useTransition();
+  const [fullscreen, setFullscreen] = React.useState(false);
 
   // No business row yet → soft empty state.
   if (!businessId) {
@@ -125,20 +100,16 @@ export function ShopThemesClient({
   const nextLayout = () =>
     setSelectedLayout(layoutIds[layoutIndex === totalLayouts - 1 ? 0 : layoutIndex + 1]!);
 
-  // Keyboard arrow navigation (page-level).
+  // Keyboard arrow navigation (page-level) · Escape closes fullscreen.
   React.useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "ArrowLeft") prevLayout();
       else if (e.key === "ArrowRight") nextLayout();
+      else if (e.key === "Escape" && fullscreen) setFullscreen(false);
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [layoutIndex, layoutIds]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  function pickBackground(bg: FeaturedBg) {
-    setImageUrl(bg.url);
-    setTintHex(bg.tintHex);
-  }
+  }, [layoutIndex, layoutIds, fullscreen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function onApplyAll() {
     if (!businessId) return;
@@ -158,10 +129,12 @@ export function ShopThemesClient({
       }
       setStatus({
         kind: "ok",
-        message: "Applied · your shop renders with the new theme.",
+        message: "Template activated · your shop is live.",
       });
     });
   }
+
+  const previewSrc = buildPreviewSrc(selectedLayout, imageUrl, tintHex);
 
   return (
     <div
@@ -172,6 +145,7 @@ export function ShopThemesClient({
         gap: 14,
         minHeight: 0,
         overflow: "auto",
+        color: INK,
       }}
     >
       {/* ── Header ───────────────────────────────────────────── */}
@@ -193,26 +167,35 @@ export function ShopThemesClient({
             letterSpacing: "-0.01em",
           }}
         >
-          Shop Themes
+          Shop Template
         </h1>
         <p style={{ margin: 0, fontSize: 11, color: INK_DIM, lineHeight: 1.4 }}>
-          Pick a template for structure · pick a background for style.
-          Preview updates live inside the phone.
+          Lets pick shop template first and then we can view the back
+          ground themes.
         </p>
       </header>
 
-      {/* Owner directive 2026-11-07 · the "Shop template" horizontal
-          thumb strip was removed. Template navigation is via the
-          arrow pills under the phone frame + the keyboard ← → keys ·
-          the live preview IS the main surface. */}
-
+      {/* Owner directive 2026-11-07 · "behind the template offwhite".
+          PAD_CREAM card wraps the phone + its counter so the template
+          reads as a product mock-up inside a soft off-white surface.
+          Page around the pad stays on the sealed dark Ireland NEX_BG. */}
+      <div
+        data-nex-template-pad
+        style={{
+          background: PAD_CREAM,
+          borderRadius: 24,
+          padding: "20px 16px 14px",
+          boxShadow: "0 18px 46px rgba(0, 0, 0, 0.35)",
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+          alignItems: "center",
+        }}
+      >
       {/* ── PHONE FRAME LIVE PREVIEW ─────────────────────────────
-          Owner directive 2026-11-07 · "make the window for view shop
-          template longer and like phone shape". Container stays
-          phone-shaped (9:19.5 sealed ratio) · width is capped to
-          keep the frame narrow + tall · minHeight lifts the preview
-          so short templates still render the full phone silhouette
-          on short viewports. */}
+          Sealed 9:19.5 silhouette · narrow max-width keeps the frame
+          tall + phone-shaped. Fullscreen trigger (⤢) overlays the
+          top-right. */}
       <section
         aria-label="Live preview"
         style={{
@@ -224,21 +207,15 @@ export function ShopThemesClient({
           margin: "0 auto",
           borderRadius: 32,
           background: "transparent",
-          border: `1px solid ${BORDER_HI}`,
+          border: `2px solid ${BORDER_HI}`,
           overflow: "hidden",
-          boxShadow: "0 20px 48px rgba(0,0,0,0.55)",
+          boxShadow: "0 12px 32px rgba(26, 18, 10, 0.22)",
           boxSizing: "border-box",
         }}
       >
         <iframe
           key={`${selectedLayout}:${imageUrl ?? "none"}:${tintHex}`}
-          src={`/nex-native/cover/preview/${selectedLayout}?embed=1${
-            imageUrl ? `&bg=${encodeURIComponent(imageUrl)}` : ""
-          }${
-            /^#[0-9A-Fa-f]{6}$/.test(tintHex)
-              ? `&tint=${encodeURIComponent(tintHex)}`
-              : ""
-          }`}
+          src={previewSrc}
           title={`${layoutLabels[selectedLayout]} template preview`}
           loading="lazy"
           style={{
@@ -250,15 +227,45 @@ export function ShopThemesClient({
             background: "transparent",
           }}
         />
+        <button
+          type="button"
+          onClick={() => setFullscreen(true)}
+          aria-label="View template full-screen"
+          title="View full-screen"
+          data-nex-template-fullscreen
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 10,
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            background: "rgba(26, 18, 10, 0.72)",
+            color: CREAM,
+            border: `1px solid ${GOLD}`,
+            display: "grid",
+            placeItems: "center",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            fontSize: 18,
+            fontWeight: 900,
+            lineHeight: 1,
+            padding: 0,
+            boxShadow: "0 4px 12px rgba(26,18,10,0.35)",
+          }}
+        >
+          ⤢
+        </button>
       </section>
 
-      {/* ── Prev / count / next row under the phone ──────────── */}
+      {/* ── Prev / count / next row under the phone (inside pad) ─ */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           gap: 12,
+          width: "100%",
         }}
       >
         <ArrowPill direction="left" onClick={prevLayout} />
@@ -267,7 +274,7 @@ export function ShopThemesClient({
           style={{
             fontSize: 12,
             fontWeight: 900,
-            color: CREAM,
+            color: PAD_INK,
             letterSpacing: "0.04em",
             fontVariantNumeric: "tabular-nums",
             minWidth: 150,
@@ -280,7 +287,7 @@ export function ShopThemesClient({
               display: "block",
               fontSize: 10,
               fontWeight: 700,
-              color: GOLD,
+              color: PAD_INK_DIM,
               marginTop: 2,
               letterSpacing: "0.02em",
             }}
@@ -290,120 +297,8 @@ export function ShopThemesClient({
         </span>
         <ArrowPill direction="right" onClick={nextLayout} />
       </div>
-
-      {/* ── SECTION 3 · BACKGROUND ───────────────────────────── */}
-      <section aria-label="Background" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 8,
-          }}
-        >
-          <SectionLabel>Background</SectionLabel>
-          <Link
-            href="/nex-native/manage/shop/backgrounds"
-            data-nex-bg-see-all
-            style={{
-              fontSize: 10,
-              fontWeight: 800,
-              color: GOLD,
-              textDecoration: "underline",
-              letterSpacing: "0.04em",
-            }}
-          >
-            See all →
-          </Link>
-        </div>
-        <div
-          data-nex-bg-strip
-          style={{
-            display: "flex",
-            gap: 8,
-            overflowX: "auto",
-            WebkitOverflowScrolling: "touch",
-            paddingBottom: 6,
-            paddingInline: 2,
-            scrollSnapType: "x proximity",
-          }}
-        >
-          {FEATURED_BACKGROUNDS.map((bg) => {
-            const picked = bg.url === imageUrl;
-            return (
-              <button
-                key={bg.url}
-                type="button"
-                onClick={() => pickBackground(bg)}
-                data-nex-bg-thumb={bg.url}
-                aria-pressed={picked}
-                aria-label={bg.label}
-                title={bg.label}
-                style={{
-                  position: "relative",
-                  // Owner directive 2026-11-07 · "the back ground
-                  // themes also phone shape and fit the image to
-                  // shape height and width". Phone silhouette
-                  // (9:19.5) · wider borderRadius matches the live-
-                  // preview frame above · object-fit cover fills
-                  // the full shape.
-                  width: 62,
-                  minWidth: 62,
-                  aspectRatio: "9 / 19.5",
-                  padding: 0,
-                  background: "transparent",
-                  border: `2px solid ${picked ? GOLD : BORDER}`,
-                  borderRadius: 14,
-                  overflow: "hidden",
-                  cursor: "pointer",
-                  scrollSnapAlign: "start",
-                  flexShrink: 0,
-                  boxShadow: picked
-                    ? "0 0 0 3px rgba(198,161,91,0.22)"
-                    : "none",
-                }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={bg.url}
-                  alt={bg.label}
-                  loading="lazy"
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    display: "block",
-                  }}
-                />
-                {picked ? (
-                  <span
-                    aria-hidden
-                    style={{
-                      position: "absolute",
-                      top: 4,
-                      right: 4,
-                      width: 18,
-                      height: 18,
-                      borderRadius: "50%",
-                      background: GOLD,
-                      color: "#1A120A",
-                      display: "grid",
-                      placeItems: "center",
-                      fontSize: 11,
-                      fontWeight: 900,
-                      boxShadow: "0 2px 6px rgba(0,0,0,0.45)",
-                    }}
-                  >
-                    ✓
-                  </span>
-                ) : null}
-              </button>
-            );
-          })}
-        </div>
-      </section>
+      </div>
+      {/* end cream pad */}
 
       {/* ── Activate Shop CTA ─────────────────────────────────── */}
       <section
@@ -435,7 +330,7 @@ export function ShopThemesClient({
             borderRadius: 999,
             fontFamily: "inherit",
             cursor: pending || status.kind === "applying" ? "wait" : "pointer",
-            boxShadow: "0 12px 26px rgba(198,161,91,0.25)",
+            boxShadow: "0 12px 26px rgba(198,161,91,0.35)",
           }}
         >
           {status.kind === "applying"
@@ -447,7 +342,7 @@ export function ShopThemesClient({
                 : "Activate Shop"}
         </button>
         {status.kind === "error" ? (
-          <span style={{ fontSize: 11, color: "#FF6B6B" }}>
+          <span style={{ fontSize: 11, color: "#B13030" }}>
             {status.message}
           </span>
         ) : null}
@@ -458,37 +353,50 @@ export function ShopThemesClient({
         ) : null}
       </section>
 
-      {businessName ? (
-        <span
-          style={{
-            display: "block",
-            textAlign: "center",
-            fontSize: 10,
-            color: INK_MUTED,
-            paddingBottom: 4,
-          }}
+      {/* Fullscreen overlay · portaled to document.body so it escapes
+          the sealed phone-frame transform. Close via × or Escape. */}
+      {fullscreen && typeof document !== "undefined"
+        ? createPortal(
+            <FullscreenTemplate
+              src={previewSrc}
+              label={layoutLabels[selectedLayout]}
+              onClose={() => setFullscreen(false)}
+            />,
+            document.body,
+          )
+        : null}
+
+      <span
+        style={{
+          display: "block",
+          textAlign: "center",
+          fontSize: 10,
+          color: INK_MUTED,
+          paddingBottom: 4,
+        }}
+      >
+        Need to change the background? Go to{" "}
+        <a
+          href="/nex-native/manage/shop/backgrounds"
+          style={{ color: INK_DIM, fontWeight: 800 }}
         >
-          Saved on nex_business · editable from /manage/shop any time.
-        </span>
-      ) : null}
+          Backgrounds →
+        </a>
+      </span>
     </div>
   );
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        fontSize: 10,
-        fontWeight: 900,
-        color: GOLD,
-        letterSpacing: "0.14em",
-        textTransform: "uppercase",
-      }}
-    >
-      {children}
-    </div>
-  );
+function buildPreviewSrc(
+  layoutId: CoverLayoutId,
+  imageUrl: string | null,
+  tintHex: string,
+): string {
+  const bg = imageUrl ? `&bg=${encodeURIComponent(imageUrl)}` : "";
+  const tint = /^#[0-9A-Fa-f]{6}$/.test(tintHex)
+    ? `&tint=${encodeURIComponent(tintHex)}`
+    : "";
+  return `/nex-native/cover/preview/${layoutId}?embed=1${bg}${tint}`;
 }
 
 function ArrowPill({
@@ -507,21 +415,110 @@ function ArrowPill({
         width: 44,
         height: 44,
         borderRadius: 999,
-        background: "rgba(5, 15, 28, 0.9)",
-        border: `1.5px solid ${BORDER_HI}`,
-        color: GOLD,
+        // ArrowPill sits inside the cream pad · dark fill with gold
+        // ring stands out against the off-white backdrop.
+        background: PAD_INK,
+        border: `1.5px solid ${GOLD}`,
+        color: CREAM,
         display: "grid",
         placeItems: "center",
         cursor: "pointer",
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: 900,
         lineHeight: 1,
         fontFamily: "inherit",
         padding: 0,
+        boxShadow: "0 4px 10px rgba(26, 18, 10, 0.18)",
       }}
     >
       {direction === "left" ? "◀" : "▶"}
     </button>
+  );
+}
+
+function FullscreenTemplate({
+  src,
+  label,
+  onClose,
+}: {
+  src: string;
+  label: string;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${label} template full-screen`}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        background: "rgba(26, 18, 10, 0.92)",
+        display: "flex",
+        flexDirection: "column",
+        padding: "env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px)",
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+          padding: "12px 16px",
+          color: CREAM,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <span
+          style={{
+            fontSize: 12,
+            fontWeight: 900,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: GOLD,
+          }}
+        >
+          {label}
+        </span>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close full-screen"
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 999,
+            background: "rgba(250, 248, 244, 0.1)",
+            border: `1px solid ${GOLD}`,
+            color: CREAM,
+            fontSize: 18,
+            fontWeight: 900,
+            lineHeight: 1,
+            cursor: "pointer",
+            display: "grid",
+            placeItems: "center",
+            padding: 0,
+            fontFamily: "inherit",
+          }}
+        >
+          ×
+        </button>
+      </div>
+      <iframe
+        src={src}
+        title={`${label} fullscreen`}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          flex: 1,
+          width: "100%",
+          border: "none",
+          background: "transparent",
+        }}
+      />
+    </div>
   );
 }
 
@@ -547,9 +544,9 @@ function EmptyShopState(): React.JSX.Element {
         Create your shop first
       </h1>
       <p style={{ margin: 0, fontSize: 13, color: INK_DIM, maxWidth: 320 }}>
-        Shop themes let you customise the cover of your public shop page.
-        Head to Manage · Shop to provision your business before picking a
-        theme.
+        Shop templates let you customise the cover of your public shop
+        page. Head to Manage · Shop to provision your business before
+        picking a template.
       </p>
       <a
         href="/nex-native/manage/shop"
