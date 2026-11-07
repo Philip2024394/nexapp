@@ -51,7 +51,7 @@ export default async function ShopSetupHoursPage(): Promise<React.JSX.Element> {
         }}
       >
         <HoursStepClient
-          initialHoursDisplay={existing.hours_display ?? ""}
+          initialHours={existing.hours ?? null}
         />
       </main>
     </>

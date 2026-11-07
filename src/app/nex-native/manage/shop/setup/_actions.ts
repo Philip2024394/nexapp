@@ -26,6 +26,7 @@ import {
   provisionDefaultBusiness,
   updateBusinessProfile,
   updateBusinessCityAndHours,
+  updateBusinessHours,
   setBusinessPrimaryProfile,
   updateShippingScope,
   updateReturnPolicy,
@@ -33,6 +34,8 @@ import {
   NEX_SHIPPING_SCOPES,
   type NexShippingScope,
 } from "@/lib/nex-native/business-service";
+import { NEX_WEEK_DAYS } from "@/lib/nex-native/types";
+import type { NexWeeklyHours } from "@/lib/nex-native/types";
 import { narrowCountryCode } from "@/lib/nex-native/country-catalogue";
 import { isBusinessCategory } from "@/lib/nex-native/business/categories";
 import {
@@ -222,24 +225,69 @@ export async function saveShopCategoryAction(
 }
 
 // ─── Step 4 · Opening hours ───────────────────────────────────────────
-// MVP · free-text hours line (nex_business.hours_display) which the
-// About Us + Visit Us surfaces already render. Structured weekly
-// grid (nex_business.hours JSONB) is a follow-up enhancement — the
-// text field works everywhere the structured one would AND stays
-// editable without a day-by-day editor.
+// Owner directive 2026-11-07 · structured 7-day grid replaces the
+// free-text MVP. Each form field pair is ${day}_open + ${day}_close
+// (HH:MM) plus ${day}_closed ("true" | "false"). Server parses into
+// NexWeeklyHours, validates via normaliseWeeklyHours (open before
+// close · HH:MM shape · all 7 days present), writes both:
+//   · nex_business.hours JSONB (migration 031) · canonical
+//   · nex_business.hours_display text · derived summary so legacy
+//     About Us / Visit Us surfaces that read the text column keep
+//     working for new signups.
+
+const HHMM_RE = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
+
+function parseWeeklyHoursFromForm(formData: FormData): NexWeeklyHours | { error: string } {
+  const out = {} as NexWeeklyHours;
+  for (const d of NEX_WEEK_DAYS) {
+    const closed = String(formData.get(`${d}_closed`) ?? "") === "true";
+    if (closed) {
+      out[d] = null;
+      continue;
+    }
+    const open = String(formData.get(`${d}_open`) ?? "").trim();
+    const close = String(formData.get(`${d}_close`) ?? "").trim();
+    if (!HHMM_RE.test(open) || !HHMM_RE.test(close)) {
+      return { error: "hours-invalid" };
+    }
+    out[d] = { open, close };
+  }
+  return out;
+}
+
+function formatHoursDisplay(hours: NexWeeklyHours): string {
+  // Short readable summary · "Mon 09:00–17:30 · Tue 09:00–17:30 · …".
+  // Keep under the 200-char hours_display cap. Collapsing identical
+  // runs (e.g. "Mon–Fri 09:00–17:30") is a future polish; honest
+  // per-day listing prevents accidental summarisation bugs.
+  const LABEL: Record<keyof NexWeeklyHours, string> = {
+    mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu",
+    fri: "Fri", sat: "Sat", sun: "Sun",
+  };
+  const parts: string[] = [];
+  for (const d of NEX_WEEK_DAYS) {
+    const v = hours[d];
+    if (!v) {
+      parts.push(`${LABEL[d]} closed`);
+    } else {
+      parts.push(`${LABEL[d]} ${v.open}–${v.close}`);
+    }
+  }
+  const summary = parts.join(" · ");
+  return summary.length > 200 ? summary.slice(0, 200) : summary;
+}
 
 export async function saveShopHoursAction(
   formData: FormData,
 ): Promise<ActionResult> {
-  const hoursDisplay = String(formData.get("hoursDisplay") ?? "").trim();
-  if (hoursDisplay.length > 200) {
-    return { ok: false, error: "hours-too-long" };
-  }
+  const parsed = parseWeeklyHoursFromForm(formData);
+  if ("error" in parsed) return { ok: false, error: parsed.error };
   const biz = await requireBusiness();
   if (!biz.ok) return biz;
   try {
+    await updateBusinessHours(biz.businessId, parsed);
     await updateBusinessCityAndHours(biz.businessId, {
-      hoursDisplay: hoursDisplay.length > 0 ? hoursDisplay : null,
+      hoursDisplay: formatHoursDisplay(parsed),
     });
   } catch (e) {
     return { ok: false, error: (e as Error).message };
