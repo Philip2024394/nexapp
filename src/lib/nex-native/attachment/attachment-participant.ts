@@ -41,19 +41,43 @@ export async function verifyParticipantForCiphertext(
   storagePath: string,
 ): Promise<ParticipantCheck> {
   if (!isValidCiphertextPath(storagePath)) return "not-found";
-  // Lookup · find the conversation_id for any peer_message whose
-  // attachment_meta.envelope.storage_path matches. Note · old envelopes
-  // use storage_url · we look for both shapes so the signed route can
-  // also service legacy records if an owner-authorised re-key pass is
-  // run later. For now the default upload emits only storage_path.
-  const q = await nexSupabaseAdmin
+  // Resolve the owning message. Two possible shapes:
+  //   A · new uploads · envelope.storage_path is set on the message row
+  //       (/api/nex-native/attachment/encrypted writes it there).
+  //   B · legacy migrated uploads · envelope is sealed-immutable by the
+  //       migration-054 trigger · we record (message_id, storage_path)
+  //       in the append-only nex_peer_chat_envelope_overlay instead
+  //       (migration 298).
+  // We try A first (direct JSONB match) and fall back to B. Both paths
+  // feed the same participant check.
+  let conversationId: string | null = null;
+  const direct = await nexSupabaseAdmin
     .from("nex_peer_message")
-    .select("conversation_id, attachment_meta")
+    .select("conversation_id")
     .filter("attachment_meta->envelope->>storage_path", "eq", storagePath)
     .limit(1)
     .maybeSingle();
-  if (q.error || !q.data) return "not-found";
-  const conversationId = (q.data as { conversation_id: string }).conversation_id;
+  if (!direct.error && direct.data) {
+    conversationId = (direct.data as { conversation_id: string }).conversation_id;
+  } else {
+    // Fallback · overlay lookup (migration 298)
+    const overlay = await nexSupabaseAdmin
+      .from("nex_peer_chat_envelope_overlay")
+      .select("message_id")
+      .eq("storage_path", storagePath)
+      .limit(1)
+      .maybeSingle();
+    if (overlay.error || !overlay.data) return "not-found";
+    const msgId = (overlay.data as { message_id: string }).message_id;
+    const msg = await nexSupabaseAdmin
+      .from("nex_peer_message")
+      .select("conversation_id")
+      .eq("id", msgId)
+      .maybeSingle();
+    if (msg.error || !msg.data) return "not-found";
+    conversationId = (msg.data as { conversation_id: string }).conversation_id;
+  }
+  if (!conversationId) return "not-found";
   const conv = await nexSupabaseAdmin
     .from("nex_peer_conversation")
     .select("participant_a_id, participant_b_id")
