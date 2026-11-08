@@ -18,14 +18,16 @@
 //     effective-tier shorthand for the HQ list only · pricing /
 //     entitlement surfaces must still use the sealed service layer.
 //   · Incident severity is read from nex_incident (migration 300)
-//     via a defensive try/catch. If the table is not present on the
-//     target Supabase project, the reader returns "ok" for every row
-//     so no false health claim is made.
+//     via a defensive try/catch. Owner correction 2026-11-08 ·
+//     when the incident table is UNAVAILABLE (pre-migration, probe
+//     error, etc.) the reader must return "unknown" rather than
+//     fabricating "ok". Matches the health-monitoring doctrine that
+//     UNKNOWN must never be collapsed to HEALTHY.
 
 import "server-only";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 
-export type MemberIssueLevel = "ok" | "warn" | "critical";
+export type MemberIssueLevel = "ok" | "warn" | "critical" | "unknown";
 
 export type MemberAccountType = "free" | "membership";
 
@@ -100,10 +102,12 @@ export async function fetchNewMembers(limit = 100): Promise<MemberRow[]> {
     /* defensive · keep the map empty · never fabricate */
   }
 
-  // Step 3 · open incidents from nex_incident · defensive against
-  // pre-migration-300 sandboxes where the table does not exist yet.
-  // Critical beats warn beats ok.
+  // Step 3 · open incidents from nex_incident. If the table is not
+  // available on this environment we cannot verify issue state · the
+  // default for every row becomes "unknown" (owner correction
+  // 2026-11-08 · never report HEALTHY when probe fails).
   const issueByAccount = new Map<string, MemberIssueLevel>();
+  let incidentTableAvailable = false;
   try {
     const { data: incidentsRaw, error: incidentsErr } = await nexSupabaseAdmin
       .from("nex_incident")
@@ -112,6 +116,7 @@ export async function fetchNewMembers(limit = 100): Promise<MemberRow[]> {
       .in("scope", ["chat", "auth"])
       .not("status", "in", "(CLOSED,RECOVERED)");
     if (!incidentsErr) {
+      incidentTableAvailable = true;
       for (const inc of (incidentsRaw ?? []) as RawIncident[]) {
         const id = inc.actor_account_id;
         if (!id) continue;
@@ -130,12 +135,16 @@ export async function fetchNewMembers(limit = 100): Promise<MemberRow[]> {
       }
     }
     // If incidentsErr is set (table missing · migration 300 not yet
-    // applied on this environment), silently default every row to "ok".
-    // This matches the owner directive: "no fake health indicators ·
-    // if incident table is missing, show green dot with no false claim".
+    // applied on this environment), incidentTableAvailable stays
+    // false · every row reports "unknown" below.
   } catch {
-    /* defensive · default-ok for every row */
+    /* defensive · incidentTableAvailable stays false · every row unknown */
   }
+
+  // Default-per-row = "ok" ONLY if the incident table was reachable
+  // (we checked and found no open row for the account). Otherwise
+  // "unknown" so HQ sees the gap honestly.
+  const defaultLevel: MemberIssueLevel = incidentTableAvailable ? "ok" : "unknown";
 
   // Step 4 · project the final rows.
   return accounts.map<MemberRow>((a) => ({
@@ -145,6 +154,6 @@ export async function fetchNewMembers(limit = 100): Promise<MemberRow[]> {
     countryCode: countryByAccount.get(a.id) ?? null,
     accountType: a.tier && a.tier !== "gratis" ? "membership" : "free",
     joinedAt: a.created_at,
-    issue: issueByAccount.get(a.id) ?? "ok",
+    issue: issueByAccount.get(a.id) ?? defaultLevel,
   }));
 }

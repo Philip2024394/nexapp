@@ -52,12 +52,14 @@ function shortHash(id: string): string {
 function issueColour(level: MemberIssueLevel): string {
   if (level === "critical") return ACCENT_FAIL;
   if (level === "warn") return ACCENT_WARN;
+  if (level === "unknown") return "#7D9BC0"; // muted · signals "cannot verify"
   return ACCENT_OK;
 }
 
 function issueTitle(level: MemberIssueLevel): string {
   if (level === "critical") return "Open critical incident (chat or auth scope).";
   if (level === "warn") return "Open warn-severity incident (chat or auth scope).";
+  if (level === "unknown") return "Incident table unavailable · health unknown · not reported as healthy.";
   return "No open incidents.";
 }
 

@@ -206,7 +206,7 @@ describe("fetchNewMembers", () => {
     expect(rows[1]!.accountType).toBe("membership");
   });
 
-  it("defaults to issue=ok when the nex_incident table is missing", async () => {
+  it("defaults to issue=unknown when the nex_incident table is missing (owner correction 2026-11-08 · never report HEALTHY on unverifiable state)", async () => {
     SHARED.accountResp = {
       data: [
         {
@@ -226,6 +226,25 @@ describe("fetchNewMembers", () => {
 
     const rows = await fetchNewMembers();
     expect(rows).toHaveLength(1);
+    expect(rows[0]!.issue).toBe("unknown");
+  });
+
+  it("reports issue=ok only when the incident table was reachable AND no open incident existed", async () => {
+    SHARED.accountResp = {
+      data: [
+        {
+          id: "44444444-4444-4444-8444-444444444444",
+          nex_handle: "nex-10004",
+          display_name: "Siobhan",
+          tier: "gratis",
+          created_at: "2026-11-08T10:00:00.000Z",
+        },
+      ],
+      error: null,
+    };
+    // Table reachable, no rows returned
+    SHARED.incidentResp = { data: [], error: null };
+    const rows = await fetchNewMembers();
     expect(rows[0]!.issue).toBe("ok");
   });
 
