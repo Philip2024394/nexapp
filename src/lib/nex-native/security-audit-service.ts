@@ -272,6 +272,21 @@ export const SECURITY_AUDIT_EVENTS: Record<string, AuditEventSpec> = {
     targetType: "nex_account",
     description: "HQ direct message delivery failed · no message persisted",
   },
+  // Owner directive 2026-11-08 (round 2) · HQ admin-grant surface
+  // (migration 302). Shop + theme grants are append-only · the audit
+  // event rides alongside for operator timeline visibility.
+  "security.hq.admin_grant.completed": {
+    allowedMetadataKeys: ["grant_kind", "shop_months", "theme_id", "grant_id"],
+    onWriteFailure: "fail-open",
+    targetType: "nex_account",
+    description: "HQ admin granted shop or theme entitlement to a member",
+  },
+  "security.hq.admin_grant.revoked": {
+    allowedMetadataKeys: ["grant_kind", "grant_id", "reason_code"],
+    onWriteFailure: "fail-open",
+    targetType: "nex_account",
+    description: "HQ admin revoked a prior shop or theme grant",
+  },
   "security.hq.incident.acknowledged": {
     allowedMetadataKeys: ["incident_id"],
     onWriteFailure: "fail-open",

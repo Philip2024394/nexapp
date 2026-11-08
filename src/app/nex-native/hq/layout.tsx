@@ -22,6 +22,7 @@
 
 import type * as React from "react";
 import { HqNav } from "./_hq-nav";
+import { SectionBoundary } from "@/components/nex-native/section-boundary/SectionBoundary";
 
 const INK = "#F2F5F8";
 const INK_DIM = "#B5C3D6";
@@ -116,7 +117,15 @@ export default function HqLayout({
             background: WORKSPACE_BG,
           }}
         >
-          {children}
+          {/* Owner-authorised 2026-11-08 (round 2) · Priority 1 of the
+              Final Verification Phase · wrap the HQ route tree in the
+              sealed SectionBoundary so a render failure in any HQ
+              sub-page shows the per-section fallback card (never the
+              Next default error page) and fires a redacted incident
+              via POST /api/nex-native/incident/section-error. The
+              boundary isolates HQ from the rest of NEX · a crash
+              here can never take down /chat or /shop. */}
+          <SectionBoundary section="hq">{children}</SectionBoundary>
         </main>
       </div>
     </div>
