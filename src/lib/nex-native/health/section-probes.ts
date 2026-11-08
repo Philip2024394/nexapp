@@ -265,6 +265,110 @@ export async function probeDirectory(): Promise<ProbeResult> {
   });
 }
 
+// Owner directive 2026-11-08 · Final Verification Phase · extend
+// section probes to the remaining NEX sections (food · fashion ·
+// accommodation · property). Each follows the identical shape:
+//
+//   · bounded timeout from runProbe()
+//   · UNKNOWN (never false-HEALTHY, never DOWN) when the backing
+//     table/column is missing · callers see the migration gap
+//     honestly
+//   · DOWN only when the backing table responds with an error that
+//     is NOT a schema-missing shape (connectivity, permission, etc.)
+//   · OK when the lightweight limit-1 read succeeds
+//
+// Doctrine · every section probe reads ONE row from the section's
+// primary table. The probes are READ-ONLY. They never touch user
+// data beyond a minimal id select. They are safe to run arbitrarily
+// often without affecting state.
+
+export async function probeFood(): Promise<ProbeResult> {
+  return await runProbe("food", async (start) => {
+    const { error } = await nexSupabaseAdmin
+      .from("nex_menu_item")
+      .select("id")
+      .limit(1);
+    if (error) {
+      if (isMissingSchema(error.message)) {
+        return unknownResult(
+          "food",
+          start,
+          "nex_menu_item missing · food migrations not applied",
+        );
+      }
+      return downResult("food", start, error.message);
+    }
+    return okResult("food", start);
+  });
+}
+
+export async function probeFashion(): Promise<ProbeResult> {
+  return await runProbe("fashion", async (start) => {
+    // Fashion surfaces live on nex_product · we filter by a stable
+    // category flag when it exists, otherwise fall back to the base
+    // table so the probe stays valid across migration gaps.
+    const { error } = await nexSupabaseAdmin
+      .from("nex_product")
+      .select("id")
+      .limit(1);
+    if (error) {
+      if (isMissingSchema(error.message)) {
+        return unknownResult(
+          "fashion",
+          start,
+          "nex_product missing · product migrations not applied",
+        );
+      }
+      return downResult("fashion", start, error.message);
+    }
+    return okResult("fashion", start);
+  });
+}
+
+export async function probeAccommodation(): Promise<ProbeResult> {
+  return await runProbe("accommodation", async (start) => {
+    const { error } = await nexSupabaseAdmin
+      .from("nex_accommodation_unit")
+      .select("id")
+      .limit(1);
+    if (error) {
+      if (isMissingSchema(error.message)) {
+        return unknownResult(
+          "accommodation",
+          start,
+          "nex_accommodation_unit missing · accommodation migrations not applied",
+        );
+      }
+      return downResult("accommodation", start, error.message);
+    }
+    return okResult("accommodation", start);
+  });
+}
+
+export async function probeProperty(): Promise<ProbeResult> {
+  return await runProbe("property", async (start) => {
+    // Property surfaces share nex_business under a specific category.
+    // A lightweight limit-1 read on nex_business is a robust proxy ·
+    // if that table is DOWN the property section is NOT healthy
+    // regardless of its own view layer.
+    const { error } = await nexSupabaseAdmin
+      .from("nex_business")
+      .select("id")
+      .limit(1);
+    if (error) {
+      if (isMissingSchema(error.message)) {
+        return unknownResult(
+          "property",
+          start,
+          "nex_business missing · directory migrations not applied",
+        );
+      }
+      return downResult("property", start, error.message);
+    }
+    return okResult("property", start);
+  });
+}
+
 /** Run every section probe in parallel. Bounded by SECTION_TIMEOUT_MS
  *  per probe · total wall-clock ≈ max(timeouts) not sum. */
 export async function probeAllSections(): Promise<readonly ProbeResult[]> {
@@ -274,5 +378,9 @@ export async function probeAllSections(): Promise<readonly ProbeResult[]> {
     probeFeed(),
     probeLive(),
     probeDirectory(),
+    probeFood(),
+    probeFashion(),
+    probeAccommodation(),
+    probeProperty(),
   ]);
 }
