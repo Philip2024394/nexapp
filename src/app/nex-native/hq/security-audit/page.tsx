@@ -54,6 +54,10 @@ interface PageSearchParams {
   readonly cursor_at?: string;
   readonly cursor_id?: string;
   readonly view?: string;
+  readonly ok?: string;
+  readonly error?: string;
+  readonly id?: string;
+  readonly detail?: string;
 }
 
 function parseOutcome(raw?: string): OutcomeKind {
@@ -105,7 +109,7 @@ export default async function HqSecurityAuditPage({
   const view = sp.view === "unresolved" ? "unresolved" : "log";
 
   if (view === "unresolved") {
-    return <UnresolvedView />;
+    return <UnresolvedView sp={sp} />;
   }
   return <LogView sp={sp} />;
 }
@@ -155,7 +159,11 @@ async function LogView({
   );
 }
 
-async function UnresolvedView(): Promise<React.JSX.Element> {
+async function UnresolvedView({
+  sp,
+}: {
+  readonly sp: PageSearchParams;
+}): Promise<React.JSX.Element> {
   let page: UnresolvedPage;
   let errorMessage: string | null = null;
   try {
@@ -168,8 +176,11 @@ async function UnresolvedView(): Promise<React.JSX.Element> {
   return (
     <div style={{ maxWidth: 1180, margin: "0 auto", color: INK }}>
       <PageHeader active="unresolved" />
+      {sp.ok && <ResolvedBanner tone="ok">{formatUnresolvedOk(sp.ok, sp.id)}</ResolvedBanner>}
+      {sp.error && <ResolvedBanner tone="fail">{formatUnresolvedError(sp.error, sp.detail)}</ResolvedBanner>}
       {errorMessage && <ErrorBanner message={errorMessage} />}
       <section
+        aria-label="Unresolved doctrine"
         style={{
           padding: "16px 18px",
           borderRadius: 14,
@@ -181,15 +192,38 @@ async function UnresolvedView(): Promise<React.JSX.Element> {
           marginBottom: 16,
         }}
       >
-        <strong style={{ color: ACCENT_WARN }}>Unresolved · needs review.</strong>{" "}
-        These are attempted security events that never received a matching
-        completed or failed audit row within the reconciliation window.
-        Each one represents an action that MAY or MAY NOT have completed ·
-        never treat an unresolved attempted as confirmed success.
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+          <div>
+            <strong style={{ color: ACCENT_WARN }}>Unresolved · needs review.</strong>{" "}
+            These are attempted security events that never received a matching
+            completed or failed audit row within the reconciliation window.
+            Each one represents an action that MAY or MAY NOT have completed ·
+            never treat an unresolved attempted as confirmed success.
+          </div>
+          <div style={{ fontSize: 11, color: INK_MUTED, textTransform: "uppercase", letterSpacing: "0.1em", whiteSpace: "nowrap" }}>
+            {page.rows.length} on this page
+            {page.nextCursor ? " · more available" : ""}
+          </div>
+        </div>
       </section>
       {page.rows.length === 0 ? (
-        <div style={{ color: INK_MUTED, fontSize: 14, padding: 24 }}>
-          No unresolved attempted events.
+        <div
+          style={{
+            color: INK_MUTED,
+            fontSize: 14,
+            padding: 32,
+            textAlign: "center",
+            border: `1px dashed ${BORDER}`,
+            borderRadius: 14,
+            lineHeight: 1.6,
+          }}
+        >
+          <div style={{ fontSize: 16, color: INK_DIM, marginBottom: 6 }}>
+            No unresolved attempted events.
+          </div>
+          <div style={{ fontSize: 12 }}>
+            The reconciler cron runs every 10 minutes and surfaces orphans here.
+          </div>
         </div>
       ) : (
         <table
@@ -595,4 +629,50 @@ function ErrorBanner({ message }: { readonly message: string }): React.JSX.Eleme
       <strong>Reader error:</strong> {message}
     </div>
   );
+}
+
+function ResolvedBanner({
+  tone,
+  children,
+}: {
+  readonly tone: "ok" | "fail";
+  readonly children: React.ReactNode;
+}): React.JSX.Element {
+  const color = tone === "ok" ? "#4ADE80" : ACCENT_FAIL;
+  return (
+    <div
+      role="status"
+      style={{
+        padding: "12px 14px",
+        marginBottom: 14,
+        borderRadius: 10,
+        border: `1px solid ${color}`,
+        background: tone === "ok" ? "rgba(74,222,128,0.07)" : "rgba(255,91,91,0.06)",
+        color,
+        fontSize: 13,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function formatUnresolvedOk(code: string, id?: string): string {
+  if (code === "resolved") return `Marked attempted log #${id ?? "?"} as manually resolved.`;
+  if (code === "race") {
+    return `Log #${id ?? "?"} was already resolved by another reviewer.`;
+  }
+  return `OK · ${code}`;
+}
+
+function formatUnresolvedError(code: string, detail?: string): string {
+  if (code === "unauthenticated") return "Your HQ session has expired · please sign in again.";
+  if (code === "forbidden") return "Not authorised · HQ admin required.";
+  if (code === "notes_required") return "Reviewer notes are required for manual resolution.";
+  if (code === "invalid_id") return "Invalid attempted log id.";
+  if (code === "function_not_available") {
+    return "Migration 297 not applied · manual resolve function unavailable in this environment.";
+  }
+  if (code === "resolve_failed") return `Resolve failed: ${detail ?? "unknown"}`;
+  return `Error: ${code}`;
 }

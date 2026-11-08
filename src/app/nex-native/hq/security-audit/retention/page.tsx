@@ -94,6 +94,7 @@ export default async function HqRetentionPage({
       {sp.ok && <Banner tone="ok">{formatOk(sp.ok, sp.prefix)}</Banner>}
 
       <section
+        aria-label="Retention policy doctrine"
         style={{
           padding: "16px 18px",
           borderRadius: 14,
@@ -105,13 +106,20 @@ export default async function HqRetentionPage({
           marginBottom: 20,
         }}
       >
-        No automatic retention periods exist. Policies below are explicitly
-        authorised by an HQ admin. An empty table means every event is
-        retained forever. Deleting a row here does NOT delete audit events ·
-        it only removes the retention policy.
+        <p style={{ margin: "0 0 8px" }}>
+          No automatic retention periods exist. Policies below are explicitly
+          authorised by an HQ admin and attributed to that admin&apos;s
+          account id. An empty table means every event is retained forever.
+        </p>
+        <p style={{ margin: "0", color: INK_MUTED, fontSize: 12.5 }}>
+          <strong style={{ color: INK_DIM }}>Note ·</strong> deleting a row
+          here removes the POLICY only. It does NOT delete any audit log
+          rows. Actual pruning runs under a separate owner-authorised cron.
+        </p>
       </section>
 
       <section
+        aria-label="Add retention policy"
         style={{
           marginBottom: 24,
           padding: "18px 20px",
@@ -123,6 +131,13 @@ export default async function HqRetentionPage({
         <h2 style={{ fontSize: 14, fontWeight: 800, margin: "0 0 10px", color: INK }}>
           Add / update a policy
         </h2>
+        <p style={{ margin: "0 0 14px", fontSize: 12, color: INK_MUTED, lineHeight: 1.5 }}>
+          Event prefix follows the catalog shape <code style={{ color: INK_DIM }}>namespace.action</code>
+          {" or "}<code style={{ color: INK_DIM }}>namespace.action.outcome</code> (e.g.
+          {" "}<code style={{ color: INK_DIM }}>security.password_change</code>). Retain days must
+          be a positive integer up to 36500 (≈100 years). Saving overwrites
+          any existing policy for the same prefix.
+        </p>
         <form
           action={upsertRetentionPolicyAction}
           style={{
@@ -138,9 +153,14 @@ export default async function HqRetentionPage({
               type="text"
               name="event_prefix"
               required
+              pattern="^[a-z][a-z0-9_]{2,63}(\.[a-z][a-z0-9_]{2,63})?$"
               placeholder="e.g. security.password_change"
+              aria-describedby="event_prefix_hint"
               style={inputStyle}
             />
+            <span id="event_prefix_hint" style={hintStyle}>
+              lowercase · dots between segments · each segment 3-64 chars
+            </span>
           </label>
           <label style={{ display: "grid", gap: 4 }}>
             <span style={labelStyle}>Retain days</span>
@@ -150,8 +170,11 @@ export default async function HqRetentionPage({
               min={1}
               max={36500}
               required
+              placeholder="30"
+              aria-describedby="retain_days_hint"
               style={inputStyle}
             />
+            <span id="retain_days_hint" style={hintStyle}>1 to 36500</span>
           </label>
           <button type="submit" style={primaryBtnStyle}>
             SAVE
@@ -214,6 +237,13 @@ const inputStyle: React.CSSProperties = {
   color: INK,
   fontSize: 13,
   fontFamily: "monospace",
+};
+
+const hintStyle: React.CSSProperties = {
+  fontSize: 10.5,
+  color: INK_MUTED,
+  letterSpacing: "0.04em",
+  marginTop: 2,
 };
 
 const primaryBtnStyle: React.CSSProperties = {
