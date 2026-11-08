@@ -56,7 +56,8 @@ create table if not exists nex_security_rate_limit (
     'chat_message',
     'account_create',
     'webauthn_assert',
-    'webauthn_enroll'
+    'webauthn_enroll',
+    'visitor_bootstrap'
   )),
   constraint ck_sec_rl_count check (count >= 0),
   constraint ck_sec_rl_key_shape check (

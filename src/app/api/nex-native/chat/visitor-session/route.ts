@@ -32,9 +32,28 @@
 import { NextResponse } from "next/server";
 import { nexAppSsrServerClient } from "@/lib/nex-native/app/session";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
+import {
+  buildRateLimitResponse,
+  ipRateLimitKey,
+  isSecurityRateLimitError,
+  recordIfAllowed,
+} from "@/lib/nex-native/security-rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/** Plain-Request IP reader · the sealed readClientIp requires a
+ *  NextRequest. Reads the same forwarded-for header set by Vercel.
+ *  Owner directive 2026-11-08 · callers never choose their own IP ·
+ *  we derive from the request headers Vercel populates at the edge. */
+function readRequestClientIp(req: Request): string | null {
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff) {
+    const first = xff.split(",")[0]?.trim();
+    if (first) return first;
+  }
+  return req.headers.get("x-real-ip");
+}
 
 function randomToken(bytes: number): string {
   const arr = new Uint8Array(bytes);
@@ -43,6 +62,24 @@ function randomToken(bytes: number): string {
 }
 
 export async function POST(req: Request) {
+  // Owner directive 2026-11-08 · visitor_bootstrap rate-limit runs
+  // BEFORE the idempotency check so a signed-in caller cannot be used
+  // to probe the rate-limit state, AND before any auth.admin.createUser
+  // call so the `?_signed_in` fast path can't be exploited to bypass
+  // the limiter. Identity is the hashed IP · no client-supplied field.
+  try {
+    await recordIfAllowed(
+      ipRateLimitKey(readRequestClientIp(req)),
+      "visitor_bootstrap",
+    );
+  } catch (e) {
+    if (isSecurityRateLimitError(e)) {
+      const r = buildRateLimitResponse(e);
+      return NextResponse.json(r.body, { status: r.status, headers: r.headers });
+    }
+    throw e;
+  }
+
   // If the caller already has a session, do nothing · idempotent.
   const ssr = await nexAppSsrServerClient();
   const existing = await ssr.auth.getUser();

@@ -22,10 +22,28 @@ import * as businessService from "@/lib/nex-native/business-service";
 import * as productService from "@/lib/nex-native/product-service";
 import * as conversationService from "@/lib/nex-native/conversation-service";
 import { enqueueNexReply } from "@/lib/nex-native/intelligence/enqueue-nex-reply";
+import {
+  buildRateLimitResponse,
+  ipRateLimitKey,
+  isSecurityRateLimitError,
+  recordIfAllowed,
+} from "@/lib/nex-native/security-rate-limit";
 import type { NexUuid } from "@/lib/nex-native/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/** Plain-Request IP reader · Vercel-populated headers only, never
+ *  a client-supplied field. Owner directive 2026-11-08 · callers
+ *  cannot spoof the security identity. */
+function readRequestClientIp(req: Request): string | null {
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff) {
+    const first = xff.split(",")[0]?.trim();
+    if (first) return first;
+  }
+  return req.headers.get("x-real-ip");
+}
 
 function randomToken(bytes: number): string {
   const arr = new Uint8Array(bytes);
@@ -34,6 +52,24 @@ function randomToken(bytes: number): string {
 }
 
 export async function POST(req: Request) {
+  // Owner directive 2026-11-08 · same visitor_bootstrap limiter as
+  // the /visitor-session route · shared `nex_security_rate_limit`
+  // (DB path) + shared per-lambda Map (fallback) · neither endpoint
+  // can be used to bypass the other's protection because they both
+  // record into the same (ip:<sha256>, "visitor_bootstrap") bucket.
+  try {
+    await recordIfAllowed(
+      ipRateLimitKey(readRequestClientIp(req)),
+      "visitor_bootstrap",
+    );
+  } catch (e) {
+    if (isSecurityRateLimitError(e)) {
+      const r = buildRateLimitResponse(e);
+      return NextResponse.json(r.body, { status: r.status, headers: r.headers });
+    }
+    throw e;
+  }
+
   let body: Record<string, unknown> = {};
   try {
     body = ((await req.json()) as Record<string, unknown>) ?? {};

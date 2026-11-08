@@ -44,7 +44,8 @@ export type SecurityRateLimitAction =
   | "chat_message"
   | "account_create"
   | "webauthn_assert"
-  | "webauthn_enroll";
+  | "webauthn_enroll"
+  | "visitor_bootstrap";
 
 /** Owner directive 2026-11-08 · Part A · per-action behaviour when
  *  the DB-backed path cannot run (probe negative) OR when a
@@ -124,6 +125,13 @@ export const SECURITY_RATE_LIMITS: Record<
     fallback: "in_memory",
     rationale:
       "Per account · legitimate enrolment of 5 passkeys per hour is more than enough for every scenario including multi-device setup days.",
+  },
+  visitor_bootstrap: {
+    windowMinutes: 60,
+    maxPerWindow: 10,
+    fallback: "in_memory",
+    rationale:
+      "Per hashed IP · the NEX visitor-session + visitor-first-message routes bootstrap placeholder auth.users rows for anonymous pre-signup chat. A legitimate visitor needs at most 1-2 bootstraps per hour (one per device/browser, re-provision after cookie loss). 10/hr caps automated spam of visitor rows without blocking shared-device flows. Fallback is in_memory · session_revoke's fail-open semantics would be wrong here · a visitor-creation path cannot tolerate unbounded fan-out during a DB brown-out.",
   },
 };
 

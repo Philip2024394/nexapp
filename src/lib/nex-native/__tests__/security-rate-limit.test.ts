@@ -98,7 +98,7 @@ describe("Policy table", () => {
     }
   });
 
-  it("includes all seven endpoint group actions", () => {
+  it("includes every endpoint group action", () => {
     const expected = [
       "password_change",
       "session_revoke",
@@ -107,6 +107,7 @@ describe("Policy table", () => {
       "account_create",
       "webauthn_assert",
       "webauthn_enroll",
+      "visitor_bootstrap",
     ] as const;
     for (const action of expected) {
       expect(SECURITY_RATE_LIMITS[action]).toBeDefined();
