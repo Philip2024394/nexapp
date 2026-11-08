@@ -422,17 +422,52 @@ export async function findOpenIncidentByDedupKey(
 /** Bump last_seen_at on an existing incident matching the dedup key
  *  + country. Returns bumped=true + the incident id when one was
  *  updated. Used by monitor signals that would otherwise storm the
- *  table with identical rows. */
+ *  table with identical rows.
+ *
+ *  Owner directive 2026-11-08 (round 11) Priority 2 completion ·
+ *  ALSO increments the migration-305 `dedup_count` column so the HQ
+ *  operator can see burst depth at a glance. We fetch the current
+ *  row to compute dedup_count+1 (Supabase JS does not expose a
+ *  general SQL expression in .update() · the +1 is computed in-
+ *  process with a bounded read + write). Pre-migration-305 envs
+ *  silently skip the counter · the bump otherwise succeeds.
+ */
 export async function bumpIncidentLastSeen(
   input: BumpDedupInput,
 ): Promise<BumpDedupResult> {
   const lookup = await findOpenIncidentByDedupKey(input);
   if (lookup.skipped) return { bumped: false, skipped: "table_not_available" };
   if (!lookup.incidentId) return { bumped: false };
+  // Fetch current dedup_count. If the column doesn't exist in this
+  // environment (pre-305), the select errors and we fall back to a
+  // bump that only touches last_seen_at + updated_at.
+  let nextCount: number | undefined;
+  try {
+    const row = await nexSupabaseAdmin
+      .from("nex_incident")
+      .select("dedup_count")
+      .eq("id", lookup.incidentId)
+      .maybeSingle();
+    if (!row.error && row.data) {
+      const current = (row.data as { dedup_count: number | null }).dedup_count;
+      if (typeof current === "number" && current >= 1) {
+        nextCount = current + 1;
+      }
+    }
+  } catch {
+    /* defensive · leave nextCount undefined */
+  }
+
   const nowIso = new Date().toISOString();
+  const patch: Record<string, unknown> = {
+    last_seen_at: nowIso,
+    updated_at: nowIso,
+  };
+  if (nextCount != null) patch.dedup_count = nextCount;
+
   const { error } = await nexSupabaseAdmin
     .from("nex_incident")
-    .update({ last_seen_at: nowIso, updated_at: nowIso })
+    .update(patch)
     .eq("id", lookup.incidentId);
   if (error) return { bumped: false };
   return { bumped: true, incidentId: lookup.incidentId };

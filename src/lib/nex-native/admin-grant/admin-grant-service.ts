@@ -23,6 +23,11 @@ import "server-only";
 import { nexSupabaseAdmin } from "../supabase-admin";
 import { sendHqMessage, HqDirectError } from "../hq-direct-channel/hq-direct-service";
 import { recordAuditEvent } from "../security-audit-service";
+import {
+  accountRateLimitKey,
+  isSecurityRateLimitError,
+  recordIfAllowed,
+} from "../security-rate-limit";
 
 const UUID_SHAPE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -41,11 +46,44 @@ export class AdminGrantError extends Error {
     | "invalid_note"
     | "write_failed"
     | "table_not_available"
-    | "member_not_found";
-  constructor(code: AdminGrantError["code"], message: string) {
+    | "member_not_found"
+    | "rate_limited";
+  readonly retryAfterSeconds?: number;
+  constructor(
+    code: AdminGrantError["code"],
+    message: string,
+    retryAfterSeconds?: number,
+  ) {
     super(`admin-grant: ${code} · ${message}`);
     this.name = "AdminGrantError";
     this.code = code;
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
+
+// Owner directive 2026-11-08 (round 11) Priority 4 · dedicated
+// hq_admin_grant rate-limit ring. Called at the TOP of every
+// grant writer BEFORE the DB insert. Fail-closed · if the limiter
+// throws an unexpected error (not a rate-limit trip) we propagate
+// so the caller never writes a grant with unverified rate state.
+async function enforceAdminGrantRate(grantedByAccountId: string): Promise<void> {
+  try {
+    await recordIfAllowed(
+      accountRateLimitKey(grantedByAccountId),
+      "hq_admin_grant",
+    );
+  } catch (e) {
+    if (isSecurityRateLimitError(e)) {
+      throw new AdminGrantError(
+        "rate_limited",
+        `HQ admin-grant throttled · retry in ${e.retryAfterSeconds}s`,
+        e.retryAfterSeconds,
+      );
+    }
+    // Any OTHER failure (SecurityUnavailableError or similar) ·
+    // propagate · we do NOT silently allow a grant when the
+    // limiter cannot confirm quota.
+    throw e;
   }
 }
 
@@ -158,6 +196,11 @@ export async function grantShopMonths(input: GrantShopInput): Promise<GrantResul
     throw new AdminGrantError("invalid_months", "months must be an integer 1..12");
   }
 
+  // Owner directive 2026-11-08 (round 11) Priority 4 · dedicated
+  // hq_admin_grant rate ring fires BEFORE any DB write so a
+  // throttled admin never half-creates a grant row.
+  await enforceAdminGrantRate(input.grantedBy);
+
   const ready = await ensureAdminGrantTableReady();
   if (!ready) return { ok: false, skipped: "table_not_available" };
 
@@ -240,6 +283,12 @@ export async function grantFreeTheme(input: GrantThemeInput): Promise<GrantResul
       "themeId must be a short slug [a-z0-9_-]{1,128}",
     );
   }
+
+  // Owner directive 2026-11-08 (round 11) Priority 4 · rate limit
+  // fires BEFORE the DB write · same ring as grantShopMonths · one
+  // operator's bursts across both grant kinds count toward the
+  // same per-account quota.
+  await enforceAdminGrantRate(input.grantedBy);
 
   const ready = await ensureAdminGrantTableReady();
   if (!ready) return { ok: false, skipped: "table_not_available" };

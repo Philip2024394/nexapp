@@ -74,6 +74,39 @@ vi.mock("../../supabase-admin", () => {
   };
 });
 
+// Owner directive 2026-11-08 (round 11) Priority 4 · dedicated
+// hq_admin_grant rate ring. Tests stub the limiter so individual
+// cases can assert enforcement behaviour without running the real
+// DB-backed limiter.
+const RATE_STATE = vi.hoisted(() => ({
+  calls: [] as Array<{ key: string; action: string }>,
+  throwOnNth: null as null | number, // which call throws rate-limit
+}));
+
+class MockSecurityRateLimitError extends Error {
+  readonly action: string;
+  readonly retryAfterSeconds: number;
+  constructor(action: string, retryAfterSeconds: number) {
+    super(`throttled`);
+    this.name = "SecurityRateLimitError";
+    this.action = action;
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
+
+vi.mock("../../security-rate-limit", () => ({
+  accountRateLimitKey: (id: string) => `acct:${id}`,
+  isSecurityRateLimitError: (e: unknown) =>
+    e instanceof MockSecurityRateLimitError,
+  recordIfAllowed: (key: string, action: string) => {
+    RATE_STATE.calls.push({ key, action });
+    if (RATE_STATE.throwOnNth != null && RATE_STATE.calls.length === RATE_STATE.throwOnNth) {
+      return Promise.reject(new MockSecurityRateLimitError(action, 42));
+    }
+    return Promise.resolve();
+  },
+}));
+
 vi.mock("../../hq-direct-channel/hq-direct-service", () => ({
   HqDirectError: class HqDirectError extends Error {
     readonly code: string;
@@ -319,5 +352,116 @@ describe("readers", () => {
     STATE.selectRows = [{ theme_id: "emerald" }, { theme_id: "midnight" }];
     const out = await listActiveThemeGrants(ACCOUNT_A);
     expect([...out].sort()).toEqual(["emerald", "midnight"]);
+  });
+});
+
+// ─── Priority 4 · hq_admin_grant rate ring (round 11) ──────────────
+
+describe("hq_admin_grant rate ring", () => {
+  beforeEach(() => {
+    _resetAdminGrantProbeForTests();
+    STATE.probeError = null;
+    STATE.insertResult = { data: { id: "grant-uuid-1" }, error: null };
+    STATE.insertedRows = [];
+    STATE.selectRows = [];
+    STATE.hqSendResult = {
+      ok: true,
+      messageId: "msg-uuid-1",
+      shouldThrow: null,
+    };
+    RATE_STATE.calls = [];
+    RATE_STATE.throwOnNth = null;
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  it("calls recordIfAllowed with the dedicated hq_admin_grant action on shop grant", async () => {
+    await grantShopMonths({
+      accountId: ACCOUNT_A,
+      months: 1,
+      grantedBy: ACCOUNT_HQ,
+    });
+    expect(RATE_STATE.calls).toHaveLength(1);
+    expect(RATE_STATE.calls[0]!.action).toBe("hq_admin_grant");
+    expect(RATE_STATE.calls[0]!.key).toBe(`acct:${ACCOUNT_HQ}`);
+  });
+
+  it("calls recordIfAllowed with the dedicated hq_admin_grant action on theme grant", async () => {
+    await grantFreeTheme({
+      accountId: ACCOUNT_A,
+      themeId: "emerald",
+      grantedBy: ACCOUNT_HQ,
+    });
+    expect(RATE_STATE.calls).toHaveLength(1);
+    expect(RATE_STATE.calls[0]!.action).toBe("hq_admin_grant");
+  });
+
+  it("throws AdminGrantError(rate_limited) with retryAfterSeconds when the ring trips", async () => {
+    RATE_STATE.throwOnNth = 1;
+    await expect(
+      grantShopMonths({
+        accountId: ACCOUNT_A,
+        months: 1,
+        grantedBy: ACCOUNT_HQ,
+      }),
+    ).rejects.toMatchObject({
+      name: "AdminGrantError",
+      code: "rate_limited",
+      retryAfterSeconds: 42,
+    });
+    // No DB write when the ring trips.
+    expect(STATE.insertedRows).toEqual([]);
+  });
+
+  it("does NOT share quota with account_create · only hq_admin_grant is consulted", async () => {
+    await grantShopMonths({
+      accountId: ACCOUNT_A,
+      months: 1,
+      grantedBy: ACCOUNT_HQ,
+    });
+    // The ring consulted was hq_admin_grant. If anyone wires
+    // account_create here by accident this assertion catches it.
+    const actions = RATE_STATE.calls.map((c) => c.action);
+    expect(actions).toContain("hq_admin_grant");
+    expect(actions).not.toContain("account_create");
+  });
+
+  it("per-operator quota · two different grantors each get their own slot in the ring", async () => {
+    const GRANTOR_B = "33333333-3333-4333-8333-333333333333";
+    await grantShopMonths({
+      accountId: ACCOUNT_A,
+      months: 1,
+      grantedBy: ACCOUNT_HQ,
+    });
+    await grantShopMonths({
+      accountId: ACCOUNT_A,
+      months: 1,
+      grantedBy: GRANTOR_B,
+    });
+    expect(RATE_STATE.calls).toHaveLength(2);
+    expect(RATE_STATE.calls[0]!.key).toBe(`acct:${ACCOUNT_HQ}`);
+    expect(RATE_STATE.calls[1]!.key).toBe(`acct:${GRANTOR_B}`);
+  });
+
+  it("rate check fires BEFORE the DB write · trip in the 3rd call blocks the 3rd write", async () => {
+    RATE_STATE.throwOnNth = 3;
+    await grantShopMonths({
+      accountId: ACCOUNT_A,
+      months: 1,
+      grantedBy: ACCOUNT_HQ,
+    });
+    await grantShopMonths({
+      accountId: ACCOUNT_A,
+      months: 1,
+      grantedBy: ACCOUNT_HQ,
+    });
+    await expect(
+      grantShopMonths({
+        accountId: ACCOUNT_A,
+        months: 1,
+        grantedBy: ACCOUNT_HQ,
+      }),
+    ).rejects.toMatchObject({ code: "rate_limited" });
+    // Exactly 2 writes · the 3rd was blocked.
+    expect(STATE.insertedRows).toHaveLength(2);
   });
 });

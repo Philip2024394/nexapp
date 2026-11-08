@@ -685,6 +685,9 @@ function formatGrantError(code: string): string {
   if (code === "member_not_found") {
     return "Grant recorded but the chat bubble could not be delivered (member may be deleted). The entitlement still applies.";
   }
+  if (code === "rate_limited") {
+    return "HQ admin-grant rate limit reached · retry in a moment. This ring is per-operator · 30 grants per 15 minutes.";
+  }
   return `Grant error · ${code}`;
 }
 

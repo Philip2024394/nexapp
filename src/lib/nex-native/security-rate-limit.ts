@@ -68,7 +68,13 @@ export type SecurityRateLimitAction =
   | "account_create"
   | "webauthn_assert"
   | "webauthn_enroll"
-  | "visitor_bootstrap";
+  | "visitor_bootstrap"
+  // Owner directive 2026-11-08 (round 11) Priority 4 · dedicated ring
+  // for HQ admin-grant operations. Separates grant throttling from
+  // account_create (which has its own 503-escalation state). An HQ
+  // admin issuing legitimate grants should NEVER be slowed down by
+  // the account_create ring hitting the 503 fuse.
+  | "hq_admin_grant";
 
 /** Owner directive 2026-11-08 · Part A · per-action behaviour when
  *  the DB-backed path cannot run (probe negative) OR when a
@@ -155,6 +161,21 @@ export const SECURITY_RATE_LIMITS: Record<
     fallback: "in_memory",
     rationale:
       "Per hashed IP · the NEX visitor-session + visitor-first-message routes bootstrap placeholder auth.users rows for anonymous pre-signup chat. A legitimate visitor needs at most 1-2 bootstraps per hour (one per device/browser, re-provision after cookie loss). 10/hr caps automated spam of visitor rows without blocking shared-device flows. Fallback is in_memory · session_revoke's fail-open semantics would be wrong here · a visitor-creation path cannot tolerate unbounded fan-out during a DB brown-out.",
+  },
+  // Owner directive 2026-11-08 (round 11) Priority 4 · HQ admin
+  // grant surface. Per HQ-admin account id · a legitimate operator
+  // issuing manual-pay grants in a busy day may hit 10-20; a bot
+  // or compromised HQ credential spamming grants is the attack
+  // profile we throttle. 30 per 15min gives real admins headroom
+  // and caps abuse. fallback=in_memory because this ring MUST NOT
+  // fail open · an unlimited admin-grant path is the exact abuse
+  // vector we're guarding.
+  hq_admin_grant: {
+    windowMinutes: 15,
+    maxPerWindow: 30,
+    fallback: "in_memory",
+    rationale:
+      "Per HQ admin account · 30 grants per 15min is comfortably above any legitimate single-operator workload and caps credential-compromise damage. Dedicated ring so a slow account_create 503 fuse never blocks legitimate grants and so grant bursts never poison the account_create ring. in_memory fallback · fail-closed per-lambda cap is strictly better than fail-open on a privileged surface.",
   },
 };
 
