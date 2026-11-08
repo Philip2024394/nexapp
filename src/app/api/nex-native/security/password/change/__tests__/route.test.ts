@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => {
     },
     verifyShouldSucceed: true,
     updateShouldSucceed: true,
+    auditShouldThrow: false,
     bumpCalls: [] as string[],
     logSignInCalls: [] as Array<{
       event_type: string;
@@ -101,6 +102,50 @@ vi.mock("@supabase/supabase-js", () => ({
   }),
 }));
 
+// Rate-limit · unconditionally allow · tests exercise the route
+// control-flow after the rate-limit gate, not the gate itself.
+vi.mock("@/lib/nex-native/security-rate-limit", () => ({
+  recordIfAllowed: () => Promise.resolve(),
+  accountRateLimitKey: (id: string) => `acct:${id.toLowerCase()}`,
+  ipRateLimitKey: (ip: string | null) =>
+    `ip:${(ip ?? "unknown").padEnd(16, "x")}`,
+  isSecurityRateLimitError: () => false,
+  isSecurityUnavailableError: () => false,
+  buildRateLimitResponse: () => ({ status: 429, body: {}, headers: {} }),
+}));
+
+// Audit writer · hoisted toggle lets individual tests force the
+// fail-loud path by setting mocks.auditShouldThrow = true. Default is
+// a no-op success so the audit-wiring is out of the way for tests
+// that exercise other control-flow branches.
+class AuditWriteErrorForTest extends Error {
+  readonly event: string;
+  readonly phase: string;
+  constructor(event: string, phase: string, cause: string) {
+    super(`security-audit: ${event} ${phase} write failed · ${cause}`);
+    this.name = "AuditWriteError";
+    this.event = event;
+    this.phase = phase;
+  }
+}
+vi.mock("@/lib/nex-native/security-audit-service", () => ({
+  recordAuditEvent: (input: { event: string; outcome: string }) => {
+    if ((mocks as { auditShouldThrow?: boolean }).auditShouldThrow) {
+      return Promise.reject(
+        new AuditWriteErrorForTest(
+          input.event,
+          input.outcome === "attempted" ? "attempted" : "completion",
+          "table_not_available",
+        ),
+      );
+    }
+    return Promise.resolve({ ok: true, logId: 1 });
+  },
+  isAuditWriteError: (e: unknown) =>
+    e instanceof Error && e.name === "AuditWriteError",
+  AuditWriteError: AuditWriteErrorForTest,
+}));
+
 // Env vars read at module load.
 vi.stubEnv("NEX_SUPABASE_URL", "https://sandbox.supabase.co");
 vi.stubEnv("NEXT_PUBLIC_NEX_SUPABASE_ANON_KEY", "anon-key");
@@ -126,6 +171,7 @@ describe("POST /api/nex-native/security/password/change · Item 2", () => {
     };
     mocks.verifyShouldSucceed = true;
     mocks.updateShouldSucceed = true;
+    mocks.auditShouldThrow = false;
     mocks.bumpCalls.length = 0;
     mocks.logSignInCalls.length = 0;
     mocks.clearStepUpCalls.length = 0;
@@ -213,5 +259,22 @@ describe("POST /api/nex-native/security/password/change · Item 2", () => {
     const body = (await res.json()) as { ok: boolean; error: string };
     expect(body.error).toBe("same_password");
     expect(mocks.bumpCalls).toEqual([]);
+  });
+
+  it("fail-loud audit (e.g. table_not_available) returns 503 BEFORE updateUserById · password NOT changed · owner-corrected 2026-11-08", async () => {
+    mocks.auditShouldThrow = true;
+    const res = await POST(
+      makeRequest({ current: "oldpass123", new: "newpass123" }) as never,
+    );
+    expect(res.status).toBe(503);
+    expect(res.headers.get("Retry-After")).toBe("30");
+    const body = (await res.json()) as { ok: boolean; error: string };
+    expect(body.error).toBe("audit_unavailable");
+    // Password NOT changed · the mutation sits BEHIND the audit gate.
+    expect(mocks.bumpCalls).toEqual([]);
+    // logSignInEvent fires for the current-password verify path before
+    // the audit gate · the audit gate runs AFTER the verify step · so
+    // the sign-in event may or may not have landed depending on where
+    // we throw. What MATTERS · bump was never called · password unchanged.
   });
 });

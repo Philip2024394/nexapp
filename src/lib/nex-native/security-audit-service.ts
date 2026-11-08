@@ -341,28 +341,34 @@ function sanitiseMetadata(
   return out;
 }
 
-// ─── Table-availability probe · pre-migration-292 compatibility ─────
+// ─── Table-availability probe · pre-migration-292 behaviour ─────────
 //
-// Owner directive 2026-11-08 Phase 2 · we wire the audit writer into
-// live handlers NOW so the wiring is complete and reviewable before
-// migration 292 is applied. During the pre-apply window the audit
-// table does not exist · writes would fail with "relation does not
-// exist" and (for fail-loud events) would abort the sensitive action.
+// Owner directive 2026-11-08 (correction) · do NOT treat missing
+// audit table as a successful write. Previously the probe returned
+// { ok: false, skipped: "table_not_available" } for every event
+// including fail-loud ones · callers that only checked for
+// AuditWriteError silently proceeded, creating a security-sensitive
+// action with no audit trail reported as success. That is the
+// bug the owner called out · "we need a clearly reported unavailable
+// state and the agreed fail-loud behaviour, not a silent success".
 //
-// Compatibility · one-shot table-existence probe cached for the
-// lifetime of the process. When the table is missing, every event
-// returns { ok: false, skipped: "table_not_available" } as a no-op.
-// Once migration 292 is applied, the probe flips on next cold start
-// and writes begin naturally. Loud log on first discovery so the
-// gap is visible.
+// Corrected behaviour
+//   · Fail-loud events (password_change.attempted/completed etc.) ·
+//     when the table is unavailable, THROW AuditWriteError. Caller's
+//     existing fail-loud catch kicks in · user sees a 503 inconclusive
+//     response · the sensitive mutation is NOT performed.
+//   · Fail-open events (denied / routine logs) · still return
+//     { ok: false, skipped: "table_not_available" } · the deny/log
+//     surface was never critical enough to block the user response on.
+//   · One-shot probe caches the "table missing" state for the process
+//     lifetime · one loud warn on first discovery, then the
+//     fail-loud-per-event decision runs synchronously after.
 //
-// Honest limitation · while the table is unavailable, the fail-loud
-// contract ("never report success when audit uncertain") is relaxed ·
-// sensitive actions proceed WITHOUT an audit record. This is
-// acceptable because the alternative is blocking every password
-// change / enroll / revoke until the migration is applied, which is
-// worse than having no audit at all for an audit capability that is
-// NEW. State this explicitly in every commit / report.
+// Honest effect · until migration 292 is applied, every sensitive
+// security operation (password change, mass session invalidation,
+// WebAuthn enrollment, HQ page-delete, account deletion) returns
+// 503 instead of proceeding. This is the correct security posture ·
+// an uncounted sensitive action is strictly worse than a blocked one.
 
 let AUDIT_TABLE_READY: boolean | null = null;
 
@@ -489,11 +495,18 @@ export async function recordAuditEvent(
     ? sanitiseMetadata(input.event, input.metadata)
     : {};
 
-  // Pre-migration-292 compatibility · skip writes when the table is
-  // not yet available. See the AUDIT_TABLE_READY block above for the
-  // full rationale and honest-limitation disclosure.
+  // Pre-migration-292 behaviour · owner-corrected 2026-11-08 · for
+  // fail-loud events we THROW AuditWriteError so the caller's existing
+  // sensitive-action abort path runs. For fail-open events we return
+  // skipped=table_not_available (same as before) · fail-open callers
+  // explicitly accept missing audit records.
   const tableReady = await ensureAuditTableReady();
   if (!tableReady) {
+    if (spec.onWriteFailure === "fail-loud") {
+      const phase: "attempted" | "completion" =
+        input.outcome === "attempted" ? "attempted" : "completion";
+      throw new AuditWriteError(input.event, phase, "table_not_available");
+    }
     return { ok: false, skipped: "table_not_available" };
   }
 

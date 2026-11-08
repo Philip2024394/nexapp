@@ -353,19 +353,57 @@ describe("recordAuditEvent · pre-migration-292 compatibility", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
-  it("returns table_not_available (no throw) when the audit table is missing · even for fail-loud events", async () => {
+  it("fail-loud event + missing table → THROWS AuditWriteError (owner-corrected 2026-11-08)", async () => {
     SUPABASE_STATE.probeResult = {
       error: { message: "relation nex_security_audit_log does not exist" },
     };
     makeInsertSucceed(); // irrelevant · probe gates us out first
+    try {
+      await recordAuditEvent({
+        event: "security.password_change.completed",
+        outcome: "completed",
+        actorAccountId: ACCOUNT_ID,
+      });
+      throw new Error("expected throw");
+    } catch (err) {
+      expect(isAuditWriteError(err)).toBe(true);
+      const e = err as AuditWriteError;
+      expect(e.event).toBe("security.password_change.completed");
+      expect(e.phase).toBe("completion");
+      expect(e.message).toContain("table_not_available");
+    }
+    expect(SUPABASE_STATE.lastInsertedRow).toBeNull();
+  });
+
+  it("fail-loud attempted event + missing table → throws with phase='attempted'", async () => {
+    SUPABASE_STATE.probeResult = {
+      error: { message: "relation nex_security_audit_log does not exist" },
+    };
+    try {
+      await recordAuditEvent({
+        event: "security.password_change.attempted",
+        outcome: "attempted",
+        actorAccountId: ACCOUNT_ID,
+      });
+      throw new Error("expected throw");
+    } catch (err) {
+      expect(isAuditWriteError(err)).toBe(true);
+      expect((err as AuditWriteError).phase).toBe("attempted");
+    }
+  });
+
+  it("fail-open event + missing table → returns skipped=table_not_available (no throw)", async () => {
+    SUPABASE_STATE.probeResult = {
+      error: { message: "relation nex_security_audit_log does not exist" },
+    };
     const r = await recordAuditEvent({
-      event: "security.password_change.completed", // normally fail-loud
-      outcome: "completed",
+      event: "security.password_change.denied", // fail-open
+      outcome: "denied",
       actorAccountId: ACCOUNT_ID,
+      metadata: { reason: "rate_limited" },
     });
     expect(r.ok).toBe(false);
     expect(r.skipped).toBe("table_not_available");
-    expect(SUPABASE_STATE.lastInsertedRow).toBeNull();
   });
 
   it("probe caches across calls · both returns are table_not_available", async () => {
