@@ -36,8 +36,8 @@
 //     · the real timer wires up in Phase 2 when a session exists
 
 import type { CSSProperties } from "react";
+import type * as React from "react";
 import { notFound } from "next/navigation";
-import { CallsVideoHeader } from "@/lib/nex-native/calls-chrome/calls-video-header";
 import { VideoTile } from "@/lib/nex-native/calls-chrome/video-tile";
 import { ConnectionFooter } from "@/lib/nex-native/calls-chrome/connection-footer";
 import { CallControlBarShell } from "./_control-bar-shell";
@@ -46,14 +46,20 @@ import type { CallsParticipant } from "@/lib/nex-native/calls-chrome/types";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Owner directive 2026-11-08 (round 13) · emerald palette replaces
-// cyan. The sealed presence-rim doctrine + HQ emerald theme both
-// use #16D66B · the call preview now matches.
+// Owner directive 2026-11-08 (round 13 · amended round 14) ·
+// emerald + gold dual-tone palette. Emerald #16D66B is the NEX
+// presence-rim colour · gold #D9A83A pairs with it for the Call
+// Center header + backdrop. Sealed calls-chrome/* primitives
+// (VideoTile, ConnectionFooter) keep their own palette · only
+// the page-local tokens change here.
 const NEX = {
   bg: "var(--nex-world-background-base, #040E09)",
   emerald: "#16D66B",
   emeraldBorder: "rgba(22,214,107,0.14)",
   emeraldBorderBright: "rgba(22,214,107,0.42)",
+  gold: "#D9A83A",
+  goldBright: "#F0C85A",
+  goldBorder: "rgba(217,168,58,0.42)",
   textDim: "#B5C3D6",
   textMute: "#7D9BC0",
 };
@@ -145,12 +151,12 @@ export default function CallPreviewPage() {
           "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
       }}
     >
-      {/* Owner directive 2026-10-19 · same background image as the
-          sealed NEX directory search page. Round 13 (2026-11-08)
-          shifts the gradient tint from navy-only to navy + emerald
-          radial halo in the top-left so the master Calls & Video
-          chrome reads with the NEX emerald identity. Image path is
-          unchanged. */}
+      {/* Owner directive 2026-11-08 (round 14) · emerald + gold
+          dual-tone backdrop. Emerald radial halo in the top-left,
+          gold radial halo in the bottom-right, deep navy base linear
+          gradient underneath. No image · the previous directory-bg
+          was retired here when the owner moved to the Call Center
+          chrome. */}
       <div
         aria-hidden
         data-nex-call-preview-bg
@@ -161,12 +167,9 @@ export default function CallPreviewPage() {
           width: "100%",
           height: "100svh",
           backgroundImage:
-            `radial-gradient(900px 600px at 20% 15%, rgba(22,214,107,0.08), rgba(22,214,107,0) 60%), ` +
-            `linear-gradient(180deg, rgba(4,14,9,0.35) 0%, rgba(4,14,9,0.55) 55%, rgba(4,14,9,0.82) 100%), ` +
-            `url("/nex-directory/directory-bg.png")`,
-          backgroundSize: "100% 100%, 100% 100%, 100% 100%",
-          backgroundRepeat: "no-repeat, no-repeat, no-repeat",
-          backgroundPosition: "center, center, center",
+            `radial-gradient(900px 600px at 15% 10%, rgba(22,214,107,0.22), rgba(22,214,107,0) 60%), ` +
+            `radial-gradient(900px 600px at 85% 90%, rgba(217,168,58,0.18), rgba(217,168,58,0) 60%), ` +
+            `linear-gradient(180deg, #051A10 0%, #06231A 55%, #04140A 100%)`,
           pointerEvents: "none",
           zIndex: 0,
         }}
@@ -214,8 +217,13 @@ export default function CallPreviewPage() {
         >
           Dev preview · mock data · not a live call
         </div>
-        {/* 1 · Header */}
-        <CallsVideoHeader status="connected" elapsed="04:32" />
+        {/* 1 · Call Center header · owner directive 2026-11-08
+             (round 14) · the sealed CallsVideoHeader (with profile
+             + text + status) is RETIRED on this preview surface in
+             favour of a simple icon + "Call Center" title. The
+             sealed primitive stays untouched for production peer-
+             chat where profile identity is relevant. */}
+        <CallCenterHeader />
 
         {/* 2 · Video grid · asymmetric layout per the sealed concept */}
         <section style={gridScrollZoneStyle} aria-label="Participants">
@@ -252,6 +260,65 @@ export default function CallPreviewPage() {
 // PreviewRibbon component retired 2026-10-19 along with its text
 // and the "Back to Calls hub" link · see comment at the main
 // render for the owner directive.
+
+function CallCenterHeader(): React.JSX.Element {
+  return (
+    <header
+      data-nex-call-center-header
+      role="banner"
+      style={callCenterHeaderStyle}
+    >
+      <span
+        aria-hidden
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: 10,
+          background:
+            `linear-gradient(135deg, ${NEX.emerald} 0%, ${NEX.gold} 100%)`,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0 0 18px rgba(22,214,107,0.35)",
+        }}
+      >
+        <HeadsetGlyph />
+      </span>
+      <span
+        style={{
+          fontSize: 16,
+          fontWeight: 900,
+          color: NEX.goldBright,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+        }}
+      >
+        Call Center
+      </span>
+    </header>
+  );
+}
+
+function HeadsetGlyph(): React.JSX.Element {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#04140A"
+      strokeWidth="2.1"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M4 14 v-2 a8 8 0 0 1 16 0 v2" />
+      <path d="M4 14 h3 v6 H5 a1 1 0 0 1 -1 -1 z" />
+      <path d="M20 14 h-3 v6 h2 a1 1 0 0 0 1 -1 z" />
+      <path d="M16 20 a4 3 0 0 1 -4 2" />
+    </svg>
+  );
+}
 
 function ParticipantRow({ count }: { count: number }) {
   return (
@@ -334,6 +401,17 @@ const gridPairRowStyle: CSSProperties = {
   gridTemplateColumns: "1fr 1fr",
   gap: 10,
 };
+const callCenterHeaderStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  padding: "14px 18px 10px",
+  background:
+    "linear-gradient(180deg, rgba(4,14,9,0.75) 0%, rgba(4,14,9,0.35) 100%)",
+  borderBottom: `1px solid ${NEX.goldBorder}`,
+  flexShrink: 0,
+};
+
 const participantRowStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
