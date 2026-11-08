@@ -27,6 +27,21 @@
 //     · the cron keeps ticking · surfaces as soon as 293 lands.
 //   · Operational failure (transient RPC error) returns 500 · Vercel
 //     retries on its own schedule · no manual re-run needed.
+//
+// Recovery wiring audit · Owner-authorised 2026-11-08.
+// --------------------------------------------------------------------------
+// This cron route is INTENTIONALLY NOT wrapped in withIdempotencyKey or
+// withRetry. The SECURITY DEFINER function
+// nex_security_audit_reconcile_unmatched (migration 293) carries a
+// UNIQUE(attempted_log_id) constraint on the reconciliation sidecar
+// table · THAT constraint is the idempotency key. Re-invocations within
+// the same window either (a) skip rows already inserted or (b) insert
+// newly-unmatched rows that the previous invocation missed. Adding an
+// in-memory withIdempotencyKey wrapper on top would be strictly
+// redundant and could mask stale-ledger failures by caching a "0
+// inserted" result past the window boundary. Vercel's cron retry
+// schedule is the right outer loop here · the SQL UNIQUE is the right
+// correctness primitive.
 
 import { NextResponse, type NextRequest } from "next/server";
 import { timingSafeEqual } from "node:crypto";

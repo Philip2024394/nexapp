@@ -49,6 +49,8 @@ import {
   getCredentialById,
   markCredentialUsed,
 } from "@/lib/nex-native/webauthn-service";
+import { withRetry } from "@/lib/nex-native/recovery/retry";
+import { withBreaker, CircuitOpenError } from "@/lib/nex-native/recovery/circuit-breaker";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -181,7 +183,82 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "account_has_no_auth" }, { status: 500 });
   }
 
-  const auth = await nexSupabaseAdmin.auth.admin.getUserById(supabaseUserId);
+  // Recovery wires · Owner-authorised 2026-11-08.
+  // --------------------------------------------------------------------------
+  // WHY SAFE · auth.admin.getUserById is a pure READ by stable primary key.
+  // The @supabase/supabase-js gotrue-admin API documents this as a GET
+  // request against /auth/v1/admin/users/{id} · idempotent per HTTP
+  // semantics (RFC 9110 §9.2.2) · repeated reads return the same row
+  // and MUST NOT create duplicates (contrast with auth.admin.createUser
+  // which is explicitly forbidden to retry per owner doctrine). No state
+  // is mutated by this call.
+  //
+  // RETRY · maxAttempts=3 with the default predicate (network-shape +
+  // 429/5xx gateway only · never 4xx auth/not-found). 3 attempts is
+  // enough to ride through a single pod restart or transient DNS blip;
+  // more would just stall the user's sign-in on sustained upstream
+  // outages (the breaker handles that case).
+  //
+  // BREAKER · "supabase_auth_admin" shared with the listUsers call in
+  // assert-start/route.ts · failures in either surface count against
+  // the same budget because they hit the same upstream admin API.
+  // failureThreshold=5 / windowMs=30_000 / cooldownMs=60_000 per owner
+  // directive · opens after a sustained upstream incident, lets a probe
+  // through after 60s cooldown. OPEN state surfaces as auth_user_missing
+  // 500 (we deliberately do NOT distinguish "breaker open" in the
+  // response · the client receives the same failure shape and retries
+  // on its own schedule).
+  //
+  // OWNER-SAFE BOUNDARY · ONLY the getUserById READ is wrapped. The
+  // subsequent auth.admin.generateLink (mutates · issues a magic-link
+  // token) and ssr.auth.verifyOtp (mutates · consumes the token into a
+  // session) are NEVER retried · they are non-idempotent writes that
+  // would create duplicate tokens / duplicate session cookies if
+  // retried. Per owner doctrine: "Payment / purchase flows" and
+  // "Account deletion workflow steps" style mutations must not be
+  // wrapped and generateLink/verifyOtp sit in the same forbidden
+  // category (token issuance + session mutation).
+  const authReader = async () =>
+    withRetry(
+      async () => {
+        const result = await nexSupabaseAdmin.auth.admin.getUserById(
+          supabaseUserId,
+        );
+        // supabase-js returns { data, error } rather than throwing ·
+        // synthesise an Error so withRetry's shouldRetry predicate can
+        // see the transient-ness of the status code.
+        if (result.error) {
+          const synthetic = new Error(result.error.message ?? "auth_admin_error") as Error & {
+            status?: number;
+            code?: string;
+          };
+          const status = (result.error as { status?: number }).status;
+          if (typeof status === "number") synthetic.status = status;
+          const code = (result.error as { code?: string }).code;
+          if (typeof code === "string") synthetic.code = code;
+          throw synthetic;
+        }
+        return result;
+      },
+      { idempotent: true, maxAttempts: 3 },
+    );
+
+  let auth;
+  try {
+    auth = await withBreaker("supabase_auth_admin", authReader, {
+      failureThreshold: 5,
+      windowMs: 30_000,
+      cooldownMs: 60_000,
+    });
+  } catch (e) {
+    // Breaker OPEN or exhausted retries · surface honest failure. We
+    // collapse CircuitOpenError into the same auth_user_missing shape
+    // the legacy path returned so the client flow is unchanged.
+    if (e instanceof CircuitOpenError) {
+      return NextResponse.json({ error: "auth_user_missing" }, { status: 503 });
+    }
+    return NextResponse.json({ error: "auth_user_missing" }, { status: 500 });
+  }
   if (auth.error || !auth.data.user?.email) {
     return NextResponse.json({ error: "auth_user_missing" }, { status: 500 });
   }

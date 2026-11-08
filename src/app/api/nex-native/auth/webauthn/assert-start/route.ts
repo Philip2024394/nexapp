@@ -17,6 +17,7 @@ import {
   recordIfAllowed,
 } from "@/lib/nex-native/security-rate-limit";
 import { recordAuditEvent } from "@/lib/nex-native/security-audit-service";
+import { withBreaker, CircuitOpenError } from "@/lib/nex-native/recovery/circuit-breaker";
 
 /** Plain-Request IP reader · the sealed readClientIp requires a
  *  NextRequest. Reads the same forwarded-for header set by Vercel. */
@@ -69,8 +70,53 @@ export async function POST(req: Request) {
 
   if (body.email && typeof body.email === "string" && body.email.includes("@")) {
     // Resolve email → auth user → nex_account → list credentials.
-    const list = await nexSupabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
-    const found = list.data?.users.find((u) => u.email?.toLowerCase() === body.email!.toLowerCase());
+    //
+    // Recovery wire · Owner-authorised 2026-11-08.
+    // ------------------------------------------------------------------
+    // WHY SAFE · auth.admin.listUsers is a bounded READ documented as
+    // GET /auth/v1/admin/users against the gotrue admin API · idempotent
+    // per HTTP semantics · no state is mutated. The page/perPage cap of
+    // 200 keeps the call bounded; a repeat call returns the same page.
+    //
+    // BREAKER · "supabase_auth_admin" · same budget as the getUserById
+    // call in assert-finish/route.ts · both hit the gotrue admin API so
+    // a shared breaker protects against cascading failure.
+    // failureThreshold=5 / windowMs=30_000 / cooldownMs=60_000 per owner
+    // directive. If the breaker is OPEN we fall through with no
+    // allowCredentials · the browser then relies on resident-key
+    // discovery (same honest behaviour we already show for an unknown
+    // email), which does not leak account existence either way.
+    //
+    // NO RETRY LAYER · the handler is user-facing and a stuck gotrue
+    // call must not turn a sign-in flow into a 30-second hang · the
+    // breaker's fast-fail behaviour is the right degradation here. If
+    // the upstream is simply slow, we fall through to the empty
+    // allowList case, which is already the documented behaviour of this
+    // route when an email has no credentials.
+    //
+    // OWNER-SAFE BOUNDARY · the subsequent nex_account read and
+    // listCredentialsForAccount are SELECT queries against our own
+    // Postgres · read-safe, no wrap needed. The handler NEVER writes
+    // state inside this branch.
+    let list: Awaited<ReturnType<typeof nexSupabaseAdmin.auth.admin.listUsers>> | null = null;
+    try {
+      list = await withBreaker(
+        "supabase_auth_admin",
+        () => nexSupabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 }),
+        { failureThreshold: 5, windowMs: 30_000, cooldownMs: 60_000 },
+      );
+    } catch (e) {
+      // Breaker OPEN · degrade silently to the empty-allowList path ·
+      // the browser's resident-key discovery still works and the user
+      // sees no account-existence leak. Non-breaker errors fall
+      // through the same way (listUsers rarely throws · typically
+      // returns {data,error}).
+      if (!(e instanceof CircuitOpenError)) {
+        // Upstream error that was not caught by the breaker · keep
+        // behaviour honest by still allowing resident-key discovery.
+      }
+    }
+    const found = list?.data?.users?.find((u) => u.email?.toLowerCase() === body.email!.toLowerCase());
     if (found) {
       const acc = await nexSupabaseAdmin
         .from("nex_account")
