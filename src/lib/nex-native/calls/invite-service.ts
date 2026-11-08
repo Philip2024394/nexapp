@@ -281,6 +281,130 @@ export async function inviteToCall(
   };
 }
 
+// ─── Decline notification (round 24 · owner directive 2026-11-08) ─
+//
+// When a receiver declines a call invite, their participant row
+// flips left_at=now(). Round 23 delivered this but DID NOT message
+// the inviter · the tile just dropped from the host's grid. Owner
+// clarified: the host should see an "invitation declined" message
+// in the same peer conversation the invite rode in on.
+//
+// Honesty invariants
+//   · Idempotent · relies on the caller passing `firstDecline=true`
+//     only when the UPDATE on nex_group_call_participant actually
+//     flipped the row (the caller derives this from the UPDATE
+//     result count). A second click lands with left_at already set
+//     → caller skips this helper → no duplicate decline message.
+//   · Fail-soft · a notification send failure does NOT re-raise ·
+//     the decline itself is already durable via the participant
+//     row update. Non-idempotent-never-retry honoured.
+//   · Preserves E2E encryption posture · a decline is operational
+//     metadata · it contains NO chat content and NO attachment ·
+//     the body is a bounded status string "✖ <name> declined the
+//     <media> call invite". Same insert path inviteToCall uses.
+//   · No new attachment_type · no migration required.
+
+export interface NotifyDeclineInput {
+  readonly sessionId: string;
+  readonly declinerAccountId: string;
+}
+
+export interface NotifyDeclineResult {
+  readonly ok: boolean;
+  readonly messageId?: string;
+  readonly skipped?: "self_decline" | "session_missing" | "already_sent";
+  readonly error?: string;
+}
+
+export async function notifyInviteDeclined(
+  input: NotifyDeclineInput,
+): Promise<NotifyDeclineResult> {
+  if (!UUID_SHAPE.test(input.sessionId)) {
+    return { ok: false, error: "invalid_session" };
+  }
+  if (!UUID_SHAPE.test(input.declinerAccountId)) {
+    return { ok: false, error: "invalid_decliner" };
+  }
+
+  // 1 · Resolve the session · we need the host + media_type.
+  const sess = await nexSupabaseAdmin
+    .from("nex_group_call_session")
+    .select("host_account_id, media_type")
+    .eq("id", input.sessionId)
+    .maybeSingle();
+  if (sess.error || !sess.data) {
+    return { ok: false, skipped: "session_missing" };
+  }
+  const host = sess.data as {
+    host_account_id: string;
+    media_type: CallMediaType;
+  };
+
+  // 2 · Self-decline guard · the host cannot decline their own
+  //     invite (they don't receive one). Treat as a no-op.
+  if (host.host_account_id === input.declinerAccountId) {
+    return { ok: true, skipped: "self_decline" };
+  }
+
+  // 3 · Resolve the pair conversation. This is the same path
+  //     inviteToCall uses · the invite + decline ride the same
+  //     thread so the host sees a continuous timeline.
+  const conversationId = await getOrCreateConversation(
+    input.declinerAccountId,
+    host.host_account_id,
+  );
+  if (!conversationId) return { ok: false, error: "conversation_missing" };
+
+  // 4 · Lightweight duplicate-send guard · if a decline message
+  //     from this sender on this conversation landed in the last
+  //     60 seconds, assume it was ours and skip. This is a
+  //     defence-in-depth layer · the primary idempotency gate is
+  //     the UPDATE affected-rows check at the callsite.
+  const sinceIso = new Date(Date.now() - 60_000).toISOString();
+  const recent = await nexSupabaseAdmin
+    .from("nex_peer_message")
+    .select("id, body")
+    .eq("conversation_id", conversationId)
+    .eq("sender_account_id", input.declinerAccountId)
+    .gte("sent_at", sinceIso)
+    .limit(5);
+  if (!recent.error && recent.data) {
+    const rows = recent.data as Array<{ id: string; body: string | null }>;
+    if (rows.some((r) => (r.body ?? "").startsWith("✖ "))) {
+      return { ok: true, skipped: "already_sent" };
+    }
+  }
+
+  // 5 · Resolve decliner display name for a legible status line.
+  const decl = await nexSupabaseAdmin
+    .from("nex_account")
+    .select("display_name")
+    .eq("id", input.declinerAccountId)
+    .maybeSingle();
+  const declinerName =
+    (decl.data as { display_name: string | null } | null)?.display_name ??
+    "Member";
+  const mediaWord = host.media_type === "audio" ? "voice" : "video";
+  const body = `✖ ${declinerName} declined the ${mediaWord} call invite`;
+
+  // 6 · Insert the status message · no attachment · ordinary
+  //     body text. Peer-chat renderer paints it as a regular
+  //     message bubble on the host's side.
+  const inserted = await nexSupabaseAdmin
+    .from("nex_peer_message")
+    .insert({
+      conversation_id: conversationId,
+      sender_account_id: input.declinerAccountId,
+      body,
+    })
+    .select("id")
+    .maybeSingle();
+  if (inserted.error || !inserted.data) {
+    return { ok: false, error: inserted.error?.message ?? "insert_failed" };
+  }
+  return { ok: true, messageId: (inserted.data as { id: string }).id };
+}
+
 // ─── Contact-picker readers ────────────────────────────────────────
 
 export interface PickerContact {

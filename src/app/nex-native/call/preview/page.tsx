@@ -47,7 +47,10 @@ import {
   ControlDrawer,
   type ControlDrawerSession,
 } from "@/components/nex-native/control-drawer/control-drawer-client";
-import { fetchPickerContacts } from "@/lib/nex-native/calls/invite-service";
+import {
+  fetchPickerContacts,
+  notifyInviteDeclined,
+} from "@/lib/nex-native/calls/invite-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -187,20 +190,48 @@ async function acceptInviteOnLoad(
   accept: boolean,
 ): Promise<void> {
   // Idempotent · already-joined + already-declined land as no-ops.
+  // Round 24 · we now ask the UPDATE to return the affected rows
+  // via .select("id") · if the array is empty the row was already
+  // flipped (second click · after-action navigation · browser
+  // refresh). Using that signal to gate the decline notification
+  // makes the notifier naturally idempotent · the duplicate click
+  // does not create a duplicate "✖ declined" message.
   const patch = accept
     ? { joined_at: new Date().toISOString() }
     : { left_at: new Date().toISOString() };
+  let affectedRowCount = 0;
   try {
-    await nexSupabaseAdmin
+    const { data, error } = await nexSupabaseAdmin
       .from("nex_group_call_participant")
       .update(patch)
       .eq("session_id", sessionId)
       .eq("account_id", accountId)
-      // Only update rows that are still pending (joined_at null)
-      // so a decline after accept doesn't rewrite joined_at.
-      .is("left_at", null);
+      // Only update rows that are still pending (left_at null) so
+      // a decline after accept doesn't rewrite joined_at.
+      .is("left_at", null)
+      .select("id");
+    if (!error && Array.isArray(data)) {
+      affectedRowCount = data.length;
+    }
   } catch {
     /* fail-soft · a next load retries */
+  }
+
+  // Owner directive 2026-11-08 (round 24) · host-notification on
+  // decline. Only fire when this UPDATE actually flipped the row
+  // (first decline). A retry / duplicate tab lands here with
+  // affectedRowCount === 0 → we skip. Fail-soft · a notification
+  // failure does NOT undo the decline · non-idempotent-never-retry
+  // honoured.
+  if (!accept && affectedRowCount > 0) {
+    try {
+      await notifyInviteDeclined({
+        sessionId,
+        declinerAccountId: accountId,
+      });
+    } catch {
+      /* fail-soft · the decline is durable regardless */
+    }
   }
 }
 
