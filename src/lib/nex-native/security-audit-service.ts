@@ -259,6 +259,18 @@ export const SECURITY_AUDIT_EVENTS: Record<string, AuditEventSpec> = {
     targetType: "nex_account",
     description: "Account deletion failed · partial state possible",
   },
+  "security.hq.direct_message.completed": {
+    allowedMetadataKeys: ["target_account_id", "body_length"],
+    onWriteFailure: "fail-open",
+    targetType: "nex_account",
+    description: "HQ direct message delivered via sealed Nex sentinel",
+  },
+  "security.hq.direct_message.failed": {
+    allowedMetadataKeys: ["error_code", "target_account_id"],
+    onWriteFailure: "fail-open",
+    targetType: "nex_account",
+    description: "HQ direct message delivery failed · no message persisted",
+  },
 };
 
 // ─── Prohibition list · categorical no-log keys ──────────────────────
