@@ -1052,6 +1052,78 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
   { id: "freight-34", url: "/nex-brand/shop-themes/freight-34.png", label: "Freight · 05", category: "delivery", tintSwatch: "#1F3A6B", downloadsBase: 0, isNew: true },
   { id: "freight-35", url: "/nex-brand/shop-themes/freight-35.png", label: "Freight · 06", category: "delivery", tintSwatch: "#4A6B7F", downloadsBase: 0, isNew: true },
 
+  // ── Tool Hire · 6 tiles (owner directive 2026-11-08 round 11) ──
+  // Source fashion 36-41 · industrial yellow/orange + utility grey.
+  { id: "tool-hire-36", url: "/nex-brand/shop-themes/tool-hire-36.png", label: "Tool Hire · 01", category: "tools", tintSwatch: "#F0B82A", downloadsBase: 0, isNew: true },
+  { id: "tool-hire-37", url: "/nex-brand/shop-themes/tool-hire-37.png", label: "Tool Hire · 02", category: "tools", tintSwatch: "#F0931F", downloadsBase: 0, isNew: true },
+  { id: "tool-hire-38", url: "/nex-brand/shop-themes/tool-hire-38.png", label: "Tool Hire · 03", category: "tools", tintSwatch: "#8B939F", downloadsBase: 0, isNew: true },
+  { id: "tool-hire-39", url: "/nex-brand/shop-themes/tool-hire-39.png", label: "Tool Hire · 04", category: "tools", tintSwatch: "#F0B82A", downloadsBase: 0, isNew: true },
+  { id: "tool-hire-40", url: "/nex-brand/shop-themes/tool-hire-40.png", label: "Tool Hire · 05", category: "tools", tintSwatch: "#2E3B52", downloadsBase: 0, isNew: true },
+  { id: "tool-hire-41", url: "/nex-brand/shop-themes/tool-hire-41.png", label: "Tool Hire · 06", category: "tools", tintSwatch: "#A0522D", downloadsBase: 0, isNew: true },
+
+  // ── Wine · 6 tiles (owner directive 2026-11-08 round 11) ──
+  // Source fashion 42-47 · wine · deep reds + warm amber + burgundy.
+  // Category 'food' matches the existing "Food & grocery" chip since
+  // NEX has no dedicated beverages category.
+  { id: "wine-42", url: "/nex-brand/shop-themes/wine-42.png", label: "Wine · 01", category: "food", tintSwatch: "#8B0A1F", downloadsBase: 0, isNew: true },
+  { id: "wine-43", url: "/nex-brand/shop-themes/wine-43.png", label: "Wine · 02", category: "food", tintSwatch: "#6B2D4A", downloadsBase: 0, isNew: true },
+  { id: "wine-44", url: "/nex-brand/shop-themes/wine-44.png", label: "Wine · 03", category: "food", tintSwatch: "#C0001F", downloadsBase: 0, isNew: true },
+  { id: "wine-45", url: "/nex-brand/shop-themes/wine-45.png", label: "Wine · 04", category: "food", tintSwatch: "#D9A83A", downloadsBase: 0, isNew: true },
+  { id: "wine-46", url: "/nex-brand/shop-themes/wine-46.png", label: "Wine · 05", category: "food", tintSwatch: "#4A1A2B", downloadsBase: 0, isNew: true },
+  { id: "wine-47", url: "/nex-brand/shop-themes/wine-47.png", label: "Wine · 06", category: "food", tintSwatch: "#8B0A1F", downloadsBase: 0, isNew: true },
+
+  // ── Mobile phones · 4 tiles (owner directive 2026-11-08 round 11) ──
+  // Source fashion 48-51 · electronics · chrome + slate + electric.
+  { id: "mobile-phones-48", url: "/nex-brand/shop-themes/mobile-phones-48.png", label: "Mobile Phones · 01", category: "electronics", tintSwatch: "#2E3B52", downloadsBase: 0, isNew: true },
+  { id: "mobile-phones-49", url: "/nex-brand/shop-themes/mobile-phones-49.png", label: "Mobile Phones · 02", category: "electronics", tintSwatch: "#8B939F", downloadsBase: 0, isNew: true },
+  { id: "mobile-phones-50", url: "/nex-brand/shop-themes/mobile-phones-50.png", label: "Mobile Phones · 03", category: "electronics", tintSwatch: "#2A6DD9", downloadsBase: 0, isNew: true },
+  { id: "mobile-phones-51", url: "/nex-brand/shop-themes/mobile-phones-51.png", label: "Mobile Phones · 04", category: "electronics", tintSwatch: "#1F3A6B", downloadsBase: 0, isNew: true },
+
+  // ── Property sales · 6 tiles (owner directive 2026-11-08 round 11) ──
+  // Source fashion 52-57 · property · cream/warm-wood/sunset palette.
+  // Category 'showcase' matches the existing lifestyle filter.
+  { id: "property-52", url: "/nex-brand/shop-themes/property-52.png", label: "Property Sales · 01", category: "showcase", tintSwatch: "#D9C5A0", downloadsBase: 0, isNew: true },
+  { id: "property-53", url: "/nex-brand/shop-themes/property-53.png", label: "Property Sales · 02", category: "showcase", tintSwatch: "#8B5A2B", downloadsBase: 0, isNew: true },
+  { id: "property-54", url: "/nex-brand/shop-themes/property-54.png", label: "Property Sales · 03", category: "showcase", tintSwatch: "#F0A82A", downloadsBase: 0, isNew: true },
+  { id: "property-55", url: "/nex-brand/shop-themes/property-55.png", label: "Property Sales · 04", category: "showcase", tintSwatch: "#1F3A6B", downloadsBase: 0, isNew: true },
+  { id: "property-56", url: "/nex-brand/shop-themes/property-56.png", label: "Property Sales · 05", category: "showcase", tintSwatch: "#6B7F3A", downloadsBase: 0, isNew: true },
+  { id: "property-57", url: "/nex-brand/shop-themes/property-57.png", label: "Property Sales · 06", category: "showcase", tintSwatch: "#D9C5A0", downloadsBase: 0, isNew: true },
+
+  // ── Building company · 6 tiles (owner directive 2026-11-08 round 11) ──
+  // Source fashion 58-63 · construction · high-vis orange/hard-hat yellow.
+  { id: "building-company-58", url: "/nex-brand/shop-themes/building-company-58.png", label: "Building Company · 01", category: "tools", tintSwatch: "#F0931F", downloadsBase: 0, isNew: true },
+  { id: "building-company-59", url: "/nex-brand/shop-themes/building-company-59.png", label: "Building Company · 02", category: "tools", tintSwatch: "#F0B82A", downloadsBase: 0, isNew: true },
+  { id: "building-company-60", url: "/nex-brand/shop-themes/building-company-60.png", label: "Building Company · 03", category: "tools", tintSwatch: "#A0522D", downloadsBase: 0, isNew: true },
+  { id: "building-company-61", url: "/nex-brand/shop-themes/building-company-61.png", label: "Building Company · 04", category: "tools", tintSwatch: "#8B939F", downloadsBase: 0, isNew: true },
+  { id: "building-company-62", url: "/nex-brand/shop-themes/building-company-62.png", label: "Building Company · 05", category: "tools", tintSwatch: "#F0931F", downloadsBase: 0, isNew: true },
+  { id: "building-company-63", url: "/nex-brand/shop-themes/building-company-63.png", label: "Building Company · 06", category: "tools", tintSwatch: "#2E3B52", downloadsBase: 0, isNew: true },
+
+  // ── Villa sales · 6 tiles (owner directive 2026-11-08 round 11) ──
+  // Source fashion 64-69 · villa · mediterranean warm-stone palette.
+  { id: "villa-64", url: "/nex-brand/shop-themes/villa-64.png", label: "Villa Sales · 01", category: "showcase", tintSwatch: "#D9C5A0", downloadsBase: 0, isNew: true },
+  { id: "villa-65", url: "/nex-brand/shop-themes/villa-65.png", label: "Villa Sales · 02", category: "showcase", tintSwatch: "#5BA7D9", downloadsBase: 0, isNew: true },
+  { id: "villa-66", url: "/nex-brand/shop-themes/villa-66.png", label: "Villa Sales · 03", category: "showcase", tintSwatch: "#0F5F2B", downloadsBase: 0, isNew: true },
+  { id: "villa-67", url: "/nex-brand/shop-themes/villa-67.png", label: "Villa Sales · 04", category: "showcase", tintSwatch: "#F0A82A", downloadsBase: 0, isNew: true },
+  { id: "villa-68", url: "/nex-brand/shop-themes/villa-68.png", label: "Villa Sales · 05", category: "showcase", tintSwatch: "#8B5A2B", downloadsBase: 0, isNew: true },
+  { id: "villa-69", url: "/nex-brand/shop-themes/villa-69.png", label: "Villa Sales · 06", category: "showcase", tintSwatch: "#D9C5A0", downloadsBase: 0, isNew: true },
+
+  // ── Timber frame · 1 tile (owner directive 2026-11-08 round 11) ──
+  // Source fashion 70 · timber · warm wood.
+  { id: "timber-frame-70", url: "/nex-brand/shop-themes/timber-frame-70.png", label: "Timber Frame · 01", category: "tools", tintSwatch: "#8B5A2B", downloadsBase: 0, isNew: true },
+
+  // ── Building supplies · 10 tiles (owner directive 2026-11-08 round 11) ──
+  // Source fashion 71-80 · building supplies · utility palette.
+  { id: "building-supplies-71", url: "/nex-brand/shop-themes/building-supplies-71.png", label: "Building Supplies · 01", category: "tools", tintSwatch: "#8B939F", downloadsBase: 0, isNew: true },
+  { id: "building-supplies-72", url: "/nex-brand/shop-themes/building-supplies-72.png", label: "Building Supplies · 02", category: "tools", tintSwatch: "#A0522D", downloadsBase: 0, isNew: true },
+  { id: "building-supplies-73", url: "/nex-brand/shop-themes/building-supplies-73.png", label: "Building Supplies · 03", category: "tools", tintSwatch: "#F0B82A", downloadsBase: 0, isNew: true },
+  { id: "building-supplies-74", url: "/nex-brand/shop-themes/building-supplies-74.png", label: "Building Supplies · 04", category: "tools", tintSwatch: "#2E3B52", downloadsBase: 0, isNew: true },
+  { id: "building-supplies-75", url: "/nex-brand/shop-themes/building-supplies-75.png", label: "Building Supplies · 05", category: "tools", tintSwatch: "#F0931F", downloadsBase: 0, isNew: true },
+  { id: "building-supplies-76", url: "/nex-brand/shop-themes/building-supplies-76.png", label: "Building Supplies · 06", category: "tools", tintSwatch: "#6B7F3A", downloadsBase: 0, isNew: true },
+  { id: "building-supplies-77", url: "/nex-brand/shop-themes/building-supplies-77.png", label: "Building Supplies · 07", category: "tools", tintSwatch: "#8B5A2B", downloadsBase: 0, isNew: true },
+  { id: "building-supplies-78", url: "/nex-brand/shop-themes/building-supplies-78.png", label: "Building Supplies · 08", category: "tools", tintSwatch: "#C0001F", downloadsBase: 0, isNew: true },
+  { id: "building-supplies-79", url: "/nex-brand/shop-themes/building-supplies-79.png", label: "Building Supplies · 09", category: "tools", tintSwatch: "#8B939F", downloadsBase: 0, isNew: true },
+  { id: "building-supplies-80", url: "/nex-brand/shop-themes/building-supplies-80.png", label: "Building Supplies · 10", category: "tools", tintSwatch: "#F0B82A", downloadsBase: 0, isNew: true },
+
   // ── Tools & trade ──
   { id: "phil79-power-drills-yellow", url: "/nex-brand/shop-themes/phil79.png", label: "Power Drills · Yellow", category: "tools", tintSwatch: "#F0B82A", downloadsBase: 38 },
   { id: "phil80-wrenches-blue", url: "/nex-brand/shop-themes/phil80.png", label: "Wrenches · Blue", category: "tools", tintSwatch: "#2A6DD9", downloadsBase: 33 },
