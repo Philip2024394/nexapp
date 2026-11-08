@@ -37,7 +37,6 @@ const NEX = {
 export interface SecurityPageShellProps {
   activeRouteKey:
     | "landing"
-    | "devices"
     | "activity"
     | "password"
     | "delete-account";

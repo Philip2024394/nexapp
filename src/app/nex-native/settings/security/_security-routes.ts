@@ -31,13 +31,14 @@ export const SECURITY_ROUTES: readonly SecurityRouteDef[] = [
     title: "Security",
     subtitle: "Dashboard · health check · everything in one place",
   },
-  {
-    key: "devices",
-    href: "/nex-native/settings/security/devices",
-    file: "src/app/nex-native/settings/security/devices/page.tsx",
-    title: "Devices",
-    subtitle: "Active sessions and face sign-in credentials",
-  },
+  // Note · the `devices` sub-route was intentionally purged on
+  // 2026-11-06 as part of the HQ-deletion-queue sweep (commit
+  // 16f6c4c · "Process HQ deletion queue · 29 trees"). Face sign-in
+  // credentials + active sessions are currently accessed via the
+  // Activity page (nex_sign_in_event) and the password reset flow's
+  // mass-session-invalidation path. If a dedicated Devices surface
+  // is reinstated, add the registry row back AND restore the
+  // page.tsx file in the same commit.
   {
     key: "activity",
     href: "/nex-native/settings/security/activity",

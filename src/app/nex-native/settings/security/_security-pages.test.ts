@@ -23,11 +23,16 @@ const SHELL_FILE = path.join(
 // ─── A · route registry shape ─────────────────────────────────────────
 
 describe("A · SECURITY_ROUTES registry", () => {
-  test("exports exactly 5 routes with expected keys", () => {
-    expect(SECURITY_ROUTES.length).toBe(5);
+  test("exports exactly 4 routes with expected keys", () => {
+    // Note · "devices" was intentionally removed from the registry in
+    // 2026-11-08 to match the actual filesystem after the 2026-11-06
+    // HQ-deletion-queue sweep (commit 16f6c4c). If a dedicated Devices
+    // surface is reinstated, update this assertion in the same commit
+    // that restores the page.
+    expect(SECURITY_ROUTES.length).toBe(4);
     const keys = SECURITY_ROUTES.map((r) => r.key).sort();
     expect(keys).toEqual(
-      ["activity", "delete-account", "devices", "landing", "password"].sort(),
+      ["activity", "delete-account", "landing", "password"].sort(),
     );
   });
 
