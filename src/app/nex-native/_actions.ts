@@ -122,7 +122,13 @@ function redirectToCreateAccountWithError(
   // round-trip so the user doesn't re-type their email. Password is
   // NEVER echoed back · it is dropped on failure by design.
   if (preserve?.email) qs.set("preserve_email", preserve.email);
-  redirect(`/nex-native/create-account?${qs.toString()}`);
+  // Owner-sealed 2026-11-04 · /nex-native/create-account retired to
+  // the Recycle Bin. Signup now lives on the same URL as sign-in via
+  // the sealed Ireland auth model (one sign-in URL). Route error
+  // bounces to the sign-in page with mode=signup so the UI opens
+  // directly on the signup tab.
+  qs.set("mode", "signup");
+  redirect(`/nex-native/sign-in?${qs.toString()}`);
 }
 
 function redirectToSignInWithError(code: string, message: string): never {

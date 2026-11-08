@@ -70,6 +70,13 @@ export type IncidentScope =
   | "storage"
   | "db"
   | "cron";
+// Phase-1 note 2026-11-08 (round 6) · `settings` + `community` wraps
+// were authorised but the DB CHECK on nex_incident.scope (migration
+// 300) still enforces the enum above · Priority-2 migration 304 will
+// expand the CHECK + add the enum values. For Phase 1 those two
+// segments report incidents with scope='infra' so the write succeeds
+// without a schema change. A log line at the segment error.tsx makes
+// the scope mapping explicit so the HQ operator can trace back.
 
 export type IncidentCountry = "ireland" | "indonesia" | "worldwide" | "hq" | "global";
 

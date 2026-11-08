@@ -37,9 +37,14 @@ export default async function MyProfileShortcut({ searchParams }: PageProps): Pr
   }
   const handle = session.account.nex_handle;
   if (!handle) {
-    // Edge case · signed-in account with no handle yet. Send to the
-    // handle-creation surface rather than crashing.
-    redirect("/nex-native/create-account?return_to=/nex-native/profile/me");
+    // Edge case · signed-in account with no handle yet. Owner-sealed
+    // 2026-11-04 · the "create profile" surface is
+    // /settings/profile/edit (the create-account route was retired to
+    // the Recycle Bin same day). The ?from=signup query mirrors the
+    // post-signup first-fill flow.
+    redirect(
+      "/nex-native/settings/profile/edit?from=signup&return_to=/nex-native/profile/me",
+    );
   }
   const sp = await searchParams;
   const qs = new URLSearchParams();
