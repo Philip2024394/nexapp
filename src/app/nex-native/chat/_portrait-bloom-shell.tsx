@@ -148,17 +148,20 @@ export interface PortraitBloomMessage {
     slug: string;
     label: string;
   } | null;
-  /** Owner-authorised 2026-11-08 (round 22) · Call Center invite ·
-   *  when attachment_type='call_invite' this carries the session
-   *  deep-link + media_type + host_account_id. The bubble renders
-   *  an inline Accept button for the receiver (host sees a quiet
-   *  "Invite sent" caption). session_id is the uuid of the sealed
-   *  nex_group_call_session created by inviteToCall. */
+  /** Owner-authorised 2026-11-08 (round 22 · extended round 25) ·
+   *  Call Center invite · when attachment_type='call_invite' this
+   *  carries the session deep-link + media_type + host_account_id.
+   *  Round 25 (Option C hybrid) · also carries cross_country flag +
+   *  host_country + invitee_country so the receiver bubble renders
+   *  a "cross-country" disclosure chip before the Accept pill. */
   attachment_call_invite?: {
     session_id: string;
     media_type: "audio" | "video";
     host_account_id: string;
     accept_href: string | null;
+    cross_country?: boolean;
+    host_country?: "ireland" | "indonesia" | "worldwide" | "global" | null;
+    invitee_country?: "ireland" | "indonesia" | "worldwide" | "global" | null;
   } | null;
   /** Bridge ThemeSticker · sealed 2026-10-01 · when attachment_type
    *  = 'sticker' this carries the frozen sticker snapshot so the
@@ -1907,6 +1910,15 @@ export function PortraitBloomShell({
                           mediaType={m.attachment_call_invite.media_type}
                           acceptHref={m.attachment_call_invite.accept_href}
                           sessionId={m.attachment_call_invite.session_id}
+                          crossCountry={
+                            m.attachment_call_invite.cross_country ?? false
+                          }
+                          hostCountry={
+                            m.attachment_call_invite.host_country ?? null
+                          }
+                          inviteeCountry={
+                            m.attachment_call_invite.invitee_country ?? null
+                          }
                         />
                       ) : null}
                       {m.body && (() => {
@@ -2346,11 +2358,22 @@ function CallInviteBubble({
   mediaType,
   acceptHref,
   sessionId,
+  crossCountry,
+  hostCountry,
+  inviteeCountry,
 }: {
   readonly mine: boolean;
   readonly mediaType: "audio" | "video";
   readonly acceptHref: string | null;
   readonly sessionId: string;
+  readonly crossCountry: boolean;
+  readonly hostCountry: "ireland" | "indonesia" | "worldwide" | "global" | null;
+  readonly inviteeCountry:
+    | "ireland"
+    | "indonesia"
+    | "worldwide"
+    | "global"
+    | null;
 }): React.JSX.Element {
   const EMERALD = "#16D66B";
   const EMERALD_SOFT = "rgba(22,214,107,0.15)";
@@ -2440,6 +2463,41 @@ function CallInviteBubble({
           </div>
         </div>
       </div>
+      {crossCountry && (
+        /* Owner-authorised 2026-11-08 (round 25) · Option C hybrid.
+           Cross-country disclosure · shown ONLY when the host +
+           invitee countries differ AND both are resolved. Tapping
+           Accept with this chip visible is the explicit consent
+           signal · the server stamps cross_country_consent_at on
+           the participant row when the Accept lands. */
+        <div
+          role="status"
+          aria-label="Cross-country invite"
+          data-nex-call-invite-cross-country="true"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "7px 10px",
+            borderRadius: 8,
+            background: "rgba(217,168,58,0.12)",
+            border: "1px solid rgba(217,168,58,0.42)",
+            color: "#F0C85A",
+            fontSize: 11,
+            lineHeight: 1.45,
+          }}
+        >
+          <span aria-hidden style={{ fontSize: 13 }}>🌍</span>
+          <span>
+            <strong style={{ fontWeight: 800 }}>Cross-country invite</strong>
+            {" · "}
+            {hostCountry && inviteeCountry
+              ? `host ${hostCountry} · you ${inviteeCountry}`
+              : "host + you are in different countries"}
+            {" · "}tapping Accept confirms you want to join
+          </span>
+        </div>
+      )}
       <div style={{ display: "flex", gap: 8 }}>
         <a
           href={safeAccept}

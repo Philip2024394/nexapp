@@ -32,6 +32,59 @@ const UUID_SHAPE =
 
 export type CallMediaType = "audio" | "video";
 
+// Owner directive 2026-11-08 (round 25 · Option C hybrid) · sealed
+// country enum shared with nex_incident + nex_group_call_session.
+export type CallCountry = "ireland" | "indonesia" | "worldwide" | "global";
+
+/** Map ISO2 country_code from nex_account_profile to the sealed
+ *  Call Center country enum. Unknown or NULL · defaults to
+ *  'worldwide' so principle #3 (restrictions MUST NOT prevent an
+ *  authorised invitation) is preserved · a profile with no
+ *  country_code is treated as 'worldwide' and NEVER blocked. */
+export function iso2ToCallCountry(iso2: string | null | undefined): CallCountry {
+  if (!iso2) return "worldwide";
+  const up = iso2.toUpperCase();
+  if (up === "IE") return "ireland";
+  if (up === "ID") return "indonesia";
+  return "worldwide";
+}
+
+/** Server-only reader · resolve a NEX account's call-country from
+ *  their profile row. Returns 'worldwide' when the profile is
+ *  missing · never throws. */
+export async function fetchAccountCallCountry(
+  accountId: string,
+): Promise<CallCountry> {
+  if (!UUID_SHAPE.test(accountId)) return "worldwide";
+  try {
+    const { data } = await nexSupabaseAdmin
+      .from("nex_account_profile")
+      .select("country_code")
+      .eq("account_id", accountId)
+      .maybeSingle();
+    const iso = (data as { country_code: string | null } | null)?.country_code;
+    return iso2ToCallCountry(iso);
+  } catch {
+    return "worldwide";
+  }
+}
+
+/** Owner-exact principle 1 + 2 · same-country calls work normally ·
+ *  cross-country permitted with explicit consent. Returns TRUE when
+ *  the receiver's country differs from the host's country AND both
+ *  are known (neither is 'worldwide' as the unknown fallback).
+ *  A 'worldwide' side is treated as compatible with everything ·
+ *  preserves principle #3 (no block on unknown-country). */
+export function isCrossCountry(
+  hostCountry: CallCountry,
+  joinerCountry: CallCountry,
+): boolean {
+  if (hostCountry === joinerCountry) return false;
+  if (hostCountry === "worldwide" || joinerCountry === "worldwide") return false;
+  if (hostCountry === "global" || joinerCountry === "global") return false;
+  return true;
+}
+
 export class InviteCallError extends Error {
   readonly code:
     | "invalid_self"
@@ -183,7 +236,20 @@ export async function inviteToCall(
     return { ok: false, skipped: "attachment_type_not_available" };
   }
 
-  // 1 · Session · reuse if provided, else create as host.
+  // Owner directive 2026-11-08 (round 25 · Option C) · resolve
+  // host + invitee country to stamp the session + decide whether
+  // the invite is cross-country. Honest fallback · an unresolved
+  // profile defaults to 'worldwide' so the invite is NEVER blocked
+  // (principle #3).
+  const hostCountry = await fetchAccountCallCountry(input.selfAccountId);
+  const inviteeCountry = await fetchAccountCallCountry(input.inviteeAccountId);
+  const crossCountry = isCrossCountry(hostCountry, inviteeCountry);
+
+  // 1 · Session · reuse if provided, else create as host. The
+  //     host_country is derived at insert time + stays stable for
+  //     the life of the session (owner principle · "host-country of
+  //     record" · a traveler using Ireland identity on an Indonesia
+  //     IP still creates an Ireland session).
   let sessionId: string | null = input.existingSessionId ?? null;
   if (!sessionId) {
     const sessionInsert = await nexSupabaseAdmin
@@ -192,6 +258,7 @@ export async function inviteToCall(
         host_account_id: input.selfAccountId,
         state: "ringing",
         media_type: input.mediaType,
+        host_country: hostCountry,
       })
       .select("id")
       .maybeSingle();
@@ -243,6 +310,10 @@ export async function inviteToCall(
     input.mediaType === "video"
       ? "📞 Video call invite · tap Accept to join"
       : "📞 Voice call invite · tap Accept to join";
+  // Owner directive 2026-11-08 (round 25) · cross-country flag +
+  // the two countries ride the attachment_meta so the receiver's
+  // chat bubble can render the cross-country disclosure WITHOUT
+  // re-querying the session. Honest metadata · no chat content.
   const messageInsert = await nexSupabaseAdmin
     .from("nex_peer_message")
     .insert({
@@ -255,6 +326,9 @@ export async function inviteToCall(
         session_id: sessionId,
         media_type: input.mediaType,
         host_account_id: input.selfAccountId,
+        host_country: hostCountry,
+        invitee_country: inviteeCountry,
+        cross_country: crossCountry,
       },
     })
     .select("id")

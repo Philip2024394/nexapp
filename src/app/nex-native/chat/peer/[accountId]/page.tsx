@@ -830,21 +830,41 @@ export default async function PeerChatPage({
         m.attachment_meta &&
         typeof m.attachment_meta === "object" &&
         "session_id" in m.attachment_meta
-          ? {
-              session_id: String(
-                (m.attachment_meta as Record<string, unknown>).session_id ?? "",
-              ),
-              media_type:
-                (m.attachment_meta as Record<string, unknown>).media_type ===
-                "audio"
-                  ? ("audio" as const)
-                  : ("video" as const),
-              host_account_id: String(
-                (m.attachment_meta as Record<string, unknown>).host_account_id ??
-                  "",
-              ),
-              accept_href: m.attachment_url ?? null,
-            }
+          ? (() => {
+              const meta = m.attachment_meta as Record<string, unknown>;
+              const safeCountry = (
+                v: unknown,
+              ):
+                | "ireland"
+                | "indonesia"
+                | "worldwide"
+                | "global"
+                | null => {
+                if (
+                  v === "ireland" ||
+                  v === "indonesia" ||
+                  v === "worldwide" ||
+                  v === "global"
+                )
+                  return v;
+                return null;
+              };
+              return {
+                session_id: String(meta.session_id ?? ""),
+                media_type:
+                  meta.media_type === "audio"
+                    ? ("audio" as const)
+                    : ("video" as const),
+                host_account_id: String(meta.host_account_id ?? ""),
+                accept_href: m.attachment_url ?? null,
+                // Round 25 · Option C · cross-country disclosure
+                // signal rides attachment_meta so the bubble shows
+                // the chip without a second DB read.
+                cross_country: meta.cross_country === true,
+                host_country: safeCountry(meta.host_country),
+                invitee_country: safeCountry(meta.invitee_country),
+              };
+            })()
           : null,
       attachment_product:
         m.attachment_type === "product" &&

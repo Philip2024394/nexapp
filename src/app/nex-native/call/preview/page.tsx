@@ -48,8 +48,11 @@ import {
   type ControlDrawerSession,
 } from "@/components/nex-native/control-drawer/control-drawer-client";
 import {
+  fetchAccountCallCountry,
   fetchPickerContacts,
+  isCrossCountry,
   notifyInviteDeclined,
+  type CallCountry,
 } from "@/lib/nex-native/calls/invite-service";
 
 export const runtime = "nodejs";
@@ -85,6 +88,7 @@ interface SessionShape {
   readonly state: "ringing" | "live" | "ended";
   readonly media_type: "audio" | "video";
   readonly host_account_id: string;
+  readonly host_country: CallCountry;
 }
 
 interface RawParticipantRow {
@@ -103,7 +107,7 @@ async function fetchSession(sessionId: string): Promise<SessionShape | null> {
   try {
     const { data, error } = await nexSupabaseAdmin
       .from("nex_group_call_session")
-      .select("id, state, media_type, host_account_id")
+      .select("id, state, media_type, host_account_id, host_country")
       .eq("id", sessionId)
       .maybeSingle();
     if (error || !data) return null;
@@ -188,17 +192,35 @@ async function acceptInviteOnLoad(
   sessionId: string,
   accountId: string,
   accept: boolean,
+  hostCountry: CallCountry,
 ): Promise<void> {
   // Idempotent · already-joined + already-declined land as no-ops.
-  // Round 24 · we now ask the UPDATE to return the affected rows
-  // via .select("id") · if the array is empty the row was already
-  // flipped (second click · after-action navigation · browser
-  // refresh). Using that signal to gate the decline notification
-  // makes the notifier naturally idempotent · the duplicate click
-  // does not create a duplicate "✖ declined" message.
+  // Round 24 · UPDATE returns the affected rows via .select("id").
+  // Round 25 · when the accept crosses country boundaries (Option C
+  // hybrid · owner principles 1 + 2) · we stamp joined_from_country
+  // AND cross_country_consent_at atomically with joined_at. This is
+  // SERVER-SIDE enforcement (owner principle #7) · the chat bubble's
+  // disclosure is advisory only · the real consent signal is
+  // persisted here from the viewer's own profile country.
+  let joinerCountry: CallCountry = "worldwide";
+  if (accept) {
+    joinerCountry = await fetchAccountCallCountry(accountId);
+  }
+  const nowIso = new Date().toISOString();
+  const crossCountry = accept && isCrossCountry(hostCountry, joinerCountry);
   const patch = accept
-    ? { joined_at: new Date().toISOString() }
-    : { left_at: new Date().toISOString() };
+    ? {
+        joined_at: nowIso,
+        joined_from_country: joinerCountry,
+        // Owner principle #2 · cross-country permitted when the
+        // participant explicitly accepts · the accept URL carries
+        // the country-disclosure chip in the chat bubble before
+        // this write · tapping Accept IS the explicit consent.
+        // Same-country joins stay NULL · consent-is-required is a
+        // signal, not a universal marker.
+        cross_country_consent_at: crossCountry ? nowIso : null,
+      }
+    : { left_at: nowIso };
   let affectedRowCount = 0;
   try {
     const { data, error } = await nexSupabaseAdmin
@@ -257,7 +279,16 @@ export default async function CallPreviewPage({
   // row BEFORE reading participants so the grid shows the viewer
   // as live on this same render.
   if (sessionId && selfAccountId && (sp.accept === "1" || sp.accept === "0")) {
-    await acceptInviteOnLoad(sessionId, selfAccountId, sp.accept === "1");
+    // Round 25 · acceptInviteOnLoad needs the session's host_country
+    // to compute the cross-country consent gate · if we don't have
+    // the session row (unknown sessionId), fall back to 'worldwide'
+    // so the accept remains a no-op on the UPDATE but never blocks.
+    await acceptInviteOnLoad(
+      sessionId,
+      selfAccountId,
+      sp.accept === "1",
+      session?.host_country ?? "worldwide",
+    );
   }
   const participants = session
     ? await fetchParticipants(session.id, selfAccountId)
