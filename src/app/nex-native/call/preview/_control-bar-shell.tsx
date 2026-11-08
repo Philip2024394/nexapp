@@ -95,7 +95,14 @@ export function CallControlBarShell(): React.JSX.Element {
         <MoreGlyph />
       </ControlButton>
 
-      <EndCallButton onEnd={() => router.push("/nex-native/calls")} />
+      {/* Owner-reported 2026-11-08 round 21 · /nex-native/calls is
+          404 on this branch (the sealed Calls hub route does not
+          exist yet). End-call falls back to /nex-native/contacts
+          · that is where a user would go to invite someone to a
+          new call anyway. router.back() would send the user to the
+          previous page which might be a chat; the explicit push
+          to /contacts matches the Call Center intent.*/}
+      <EndCallButton onEnd={() => router.push("/nex-native/contacts")} />
     </div>
   );
 }
