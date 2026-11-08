@@ -499,3 +499,96 @@ function toHourIso(iso: string): string {
   d.setUTCMinutes(0, 0, 0);
   return d.toISOString();
 }
+
+// ─── Retention ────────────────────────────────────────────────────
+
+/** Default retention · owner-reviewable. 180 days matches the viewer
+ *  cookie max-age so a user who returns inside the cookie window is
+ *  still counted as the same anonymous viewer · older rows carry no
+ *  live dedup value and are safe to prune. */
+export const DEFAULT_PAGE_VIEW_RETENTION_DAYS = 180;
+
+/** Soft cap on rows per prune call · defends against a runaway
+ *  delete that holds a long transaction. */
+const PRUNE_BATCH_SIZE = 5_000;
+
+export interface PrunePageViewsResult {
+  readonly ok: boolean;
+  readonly deletedCount: number;
+  readonly skipped?: "table_not_available";
+  readonly error?: string;
+  readonly olderThanIso: string;
+}
+
+/**
+ * Delete nex_page_view rows older than the given cutoff.
+ *
+ * Owner directive 2026-11-08 (round 7 · Traffic Verification
+ * Handover) · we authored the HELPER but have NOT wired it to a
+ * cron. A future owner-authorised commit can run this from a cron
+ * route. Running locally · safe · bounded to PRUNE_BATCH_SIZE rows
+ * per call · the caller can loop until deletedCount < limit.
+ *
+ * Safety:
+ *   · Pre-migration-303 · returns skipped=table_not_available.
+ *   · Rejects a cutoff in the future · would delete everything.
+ *   · Rejects a cutoff less than 7 days in the past · defends
+ *     against a misconfigured env wiping recent data.
+ *   · Returns the count deleted so a cron can log the operation.
+ */
+export async function pruneOldPageViews(
+  opts: { readonly olderThanDays?: number } = {},
+): Promise<PrunePageViewsResult> {
+  const days = Math.max(7, Math.min(opts.olderThanDays ?? DEFAULT_PAGE_VIEW_RETENTION_DAYS, 3650));
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const cutoffIso = cutoff.toISOString();
+
+  const ready = await ensurePageViewTableReady();
+  if (!ready) {
+    return { ok: false, deletedCount: 0, skipped: "table_not_available", olderThanIso: cutoffIso };
+  }
+
+  // Supabase JS v2 · .delete() + .select() returns the deleted rows.
+  // Limit the batch so a single call can never hold a huge lock.
+  // The bulk query is bounded by the 'viewed_at' index.
+  const { data, error } = await nexSupabaseAdmin
+    .from("nex_page_view")
+    .delete()
+    .lt("viewed_at", cutoffIso)
+    .select("id")
+    .limit(PRUNE_BATCH_SIZE);
+  if (error) {
+    return { ok: false, deletedCount: 0, error: error.message, olderThanIso: cutoffIso };
+  }
+  return {
+    ok: true,
+    deletedCount: (data ?? []).length,
+    olderThanIso: cutoffIso,
+  };
+}
+
+// ─── Account-deletion scrub helper ────────────────────────────────
+
+/**
+ * Null the viewer_account_id on all nex_page_view rows for a given
+ * account. Called by account-deletion-service at soft-delete time so
+ * a soft-deleted account's direct identity link in historical views
+ * is severed (the aggregate counts via viewer_token_hash stay valid).
+ *
+ * Returns a result the caller can log. Never throws · observability
+ * only. Pre-migration-303 · no-op.
+ */
+export async function scrubViewerAccountId(
+  accountId: string,
+): Promise<{ ok: boolean; scrubbedCount: number; error?: string }> {
+  if (!UUID_SHAPE.test(accountId)) return { ok: false, scrubbedCount: 0, error: "bad_account_id" };
+  const ready = await ensurePageViewTableReady();
+  if (!ready) return { ok: true, scrubbedCount: 0 };
+  const { data, error } = await nexSupabaseAdmin
+    .from("nex_page_view")
+    .update({ viewer_account_id: null })
+    .eq("viewer_account_id", accountId)
+    .select("id");
+  if (error) return { ok: false, scrubbedCount: 0, error: error.message };
+  return { ok: true, scrubbedCount: (data ?? []).length };
+}

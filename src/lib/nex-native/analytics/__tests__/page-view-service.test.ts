@@ -22,6 +22,9 @@ const STATE = vi.hoisted(() => ({
   },
   insertedRows: [] as Array<{ table: string; row: Record<string, unknown> }>,
   selectRows: [] as Array<Record<string, unknown>>,
+  deleteRows: null as null | Array<Record<string, unknown>>,
+  lastUpdatePatch: null as null | Record<string, unknown>,
+  lastMutateKind: null as null | "update" | "delete",
 }));
 
 vi.mock("../../supabase-admin", () => {
@@ -36,6 +39,21 @@ vi.mock("../../supabase-admin", () => {
     chain.lt = () => chain;
     chain.order = () => chain;
     chain.limit = () => chain;
+    (chain as Record<string, unknown>).then = (
+      resolve?: ((v: unknown) => unknown) | null,
+      reject?: ((r: unknown) => unknown) | null,
+    ) => list().then(resolve ?? undefined, reject ?? undefined);
+    return chain;
+  }
+  function makeDelUpd(kind: "update" | "delete") {
+    const chain: Record<string, unknown> = {};
+    const list = () =>
+      Promise.resolve({ data: STATE.deleteRows ?? STATE.selectRows, error: STATE.probeError });
+    chain.eq = () => chain;
+    chain.lt = () => chain;
+    chain.limit = () => chain;
+    chain.select = () => chain;
+    STATE.lastMutateKind = kind;
     (chain as Record<string, unknown>).then = (
       resolve?: ((v: unknown) => unknown) | null,
       reject?: ((r: unknown) => unknown) | null,
@@ -60,6 +78,13 @@ vi.mock("../../supabase-admin", () => {
               }),
             };
           },
+          update(patch: Record<string, unknown>) {
+            STATE.lastUpdatePatch = patch;
+            return makeDelUpd("update");
+          },
+          delete() {
+            return makeDelUpd("delete");
+          },
         };
       },
     },
@@ -74,8 +99,10 @@ import {
   generateViewerToken,
   hashesEqual,
   isLikelyBot,
+  pruneOldPageViews,
   recordPageView,
   resolveViewCountry,
+  scrubViewerAccountId,
   sha256Hex,
 } from "../page-view-service";
 
@@ -447,5 +474,68 @@ describe("aggregation readers", () => {
     STATE.probeError = { message: "schema cache missing" };
     const out = await fetchBusinessViewCounts30d([BUSINESS_ID]);
     expect(out.size).toBe(0);
+  });
+});
+
+describe("retention + scrub helpers", () => {
+  beforeEach(() => {
+    _resetPageViewProbeForTests();
+    STATE.probeError = null;
+    STATE.selectRows = [];
+    STATE.deleteRows = null;
+    STATE.lastUpdatePatch = null;
+    STATE.lastMutateKind = null;
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  it("pruneOldPageViews · returns deletedCount from the delete result", async () => {
+    STATE.deleteRows = [{ id: "a" }, { id: "b" }, { id: "c" }];
+    const r = await pruneOldPageViews({ olderThanDays: 180 });
+    expect(r.ok).toBe(true);
+    expect(r.deletedCount).toBe(3);
+    expect(r.olderThanIso).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(STATE.lastMutateKind).toBe("delete");
+  });
+
+  it("pruneOldPageViews · rejects a cutoff less than 7 days in the past (clamped to 7 days)", async () => {
+    STATE.deleteRows = [];
+    const r = await pruneOldPageViews({ olderThanDays: 1 });
+    // The function clamps to 7 days min · the delete still runs
+    // against the 7-day cutoff, not the 1-day one.
+    expect(r.ok).toBe(true);
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    const cutoffMs = Date.parse(r.olderThanIso);
+    expect(Date.now() - cutoffMs).toBeGreaterThanOrEqual(sevenDaysMs - 1000);
+  });
+
+  it("pruneOldPageViews · returns table_not_available when migration 303 missing", async () => {
+    _resetPageViewProbeForTests();
+    STATE.probeError = { message: "schema cache missing" };
+    const r = await pruneOldPageViews();
+    expect(r.ok).toBe(false);
+    expect(r.skipped).toBe("table_not_available");
+  });
+
+  it("scrubViewerAccountId · nulls viewer_account_id and returns count", async () => {
+    STATE.deleteRows = [{ id: "a" }, { id: "b" }]; // used as "select rows" of the update
+    const r = await scrubViewerAccountId(ACCOUNT_ID);
+    expect(r.ok).toBe(true);
+    expect(r.scrubbedCount).toBe(2);
+    expect(STATE.lastUpdatePatch).toEqual({ viewer_account_id: null });
+    expect(STATE.lastMutateKind).toBe("update");
+  });
+
+  it("scrubViewerAccountId · bad accountId is rejected", async () => {
+    const r = await scrubViewerAccountId("not-uuid");
+    expect(r.ok).toBe(false);
+    expect(r.error).toBe("bad_account_id");
+  });
+
+  it("scrubViewerAccountId · no-op when table missing · returns ok", async () => {
+    _resetPageViewProbeForTests();
+    STATE.probeError = { message: "relation does not exist" };
+    const r = await scrubViewerAccountId(ACCOUNT_ID);
+    expect(r.ok).toBe(true);
+    expect(r.scrubbedCount).toBe(0);
   });
 });

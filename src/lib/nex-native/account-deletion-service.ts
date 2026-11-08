@@ -139,6 +139,41 @@ export async function deleteOwnAccount(
     return { ok: false, error: "soft_delete_failed", detail };
   }
 
+  // Step 3b · scrub viewer_account_id on page-view rows. Owner
+  // directive 2026-11-08 (round 7 · Traffic Verification Handover).
+  // Migration 303 ships nex_page_view with viewer_account_id FK
+  // ON DELETE SET NULL · but soft-delete does NOT trigger the FK
+  // cascade (the account row still exists with deleted_at set).
+  // We must explicitly NULL the identity link here so a soft-
+  // deleted account cannot be traced through historical views.
+  // The viewer_token_hash column is preserved so aggregate counts
+  // stay accurate · we only sever the direct identity link.
+  // Pre-migration-303 environments: this update either returns an
+  // error (table missing) or 0 rows affected · both are safe
+  // because there are no rows to scrub.
+  try {
+    const pvScrub = await nexSupabaseAdmin
+      .from("nex_page_view")
+      .update({ viewer_account_id: null })
+      .eq("viewer_account_id", ownerAccountId);
+    if (pvScrub.error) {
+      // Only warn · the broader deletion workflow MUST not stop for
+      // an analytics-table scrub failure. The row is already soft-
+      // deleted · a follow-up erasure pass can retry.
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[account-deletion] viewer_account_id scrub failed · continuing",
+        { detail: pvScrub.error.message },
+      );
+    }
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[account-deletion] viewer_account_id scrub threw · continuing",
+      { detail: e instanceof Error ? e.message : String(e) },
+    );
+  }
+
   // Step 4 · pseudonymise audit actor. Caller supplies the erased
   // identity · if migration 294 is not yet applied the wrapper
   // returns skipped=function_not_available · in that case we DO NOT
