@@ -181,10 +181,21 @@ describe("probeAllSections", () => {
     const results = await probeAllSections();
     const elapsed = performance.now() - started;
 
-    // Five sections · chat, shops, feed, live, directory.
-    expect(results).toHaveLength(5);
+    // Nine sections · chat, shops, feed, live, directory + food,
+    // fashion, accommodation, property (added 2026-11-08).
+    expect(results).toHaveLength(9);
     const names = results.map((r) => r.name).sort();
-    expect(names).toEqual(["chat", "directory", "feed", "live", "shops"]);
+    expect(names).toEqual([
+      "accommodation",
+      "chat",
+      "directory",
+      "fashion",
+      "feed",
+      "food",
+      "live",
+      "property",
+      "shops",
+    ]);
 
     // Total wall-clock is bounded by a single probe's timeout · the
     // probes fan out in parallel.

@@ -226,6 +226,31 @@ describe("recordAuditEvent · metadata sanitisation", () => {
     });
     expect(SUPABASE_STATE.lastInsertedRow!.metadata).toEqual({});
   });
+
+  // Owner directive 2026-11-08 · leak review AMBER→GREEN closure.
+  // Previously the sanitiser only checked key NAMES against the
+  // prohibition + allow-list. A sensitive VALUE under a permitted key
+  // (e.g. a stack trace that contained a Stripe key, or a reason field
+  // that interpolated an email) would land in the DB unchanged. The
+  // new value-level scrub applies redactPatterns to every string value
+  // (and string leaves under one level of nested object).
+  it("scrubs sensitive values under permitted keys", async () => {
+    await recordAuditEvent({
+      event: "security.account.sign_in.denied",
+      outcome: "denied",
+      actorIdentity: "ip:hashed-abcdefghij",
+      metadata: {
+        // "reason" is in the allow-list for this event. A sensitive
+        // value interpolated into the reason should NOT land raw.
+        reason: "user bob@example.com forwarded sk_live_abc123XYZ in slack",
+      },
+    });
+    const meta = SUPABASE_STATE.lastInsertedRow!.metadata as Record<string, unknown>;
+    const reason = String(meta.reason);
+    expect(reason).toContain("[REDACTED]");
+    expect(reason).not.toContain("bob@example.com");
+    expect(reason).not.toContain("sk_live_abc123XYZ");
+  });
 });
 
 describe("recordAuditEvent · input validation", () => {

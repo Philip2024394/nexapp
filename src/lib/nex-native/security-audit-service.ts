@@ -29,6 +29,7 @@
 
 import "server-only";
 import { nexSupabaseAdmin } from "./supabase-admin";
+import { redactPatterns } from "./incident/incident-service";
 
 // ─── Error types ─────────────────────────────────────────────────────
 
@@ -375,12 +376,35 @@ function sanitiseMetadata(
       );
       continue;
     }
-    // Shallow-only · nested objects are passed through as-is. The
-    // prohibition check does not recurse. Callers must not pass
-    // sensitive values under permitted keys.
-    out[k] = v;
+    // Owner directive 2026-11-08 · leak review AMBER closure.
+    // Previously this was a key-name-only allowlist · a caller passing
+    // a sensitive VALUE under an allowed key would persist raw into
+    // the audit JSON. Now every string value (and string leaves under
+    // one level of nested object) is scrubbed through the shared
+    // REDACTION_PATTERNS from incident-service · same regex catalog,
+    // so a Stripe key / JWT / email / IPv4 / etc under a permitted
+    // metadata key becomes "[REDACTED]" before the row lands.
+    out[k] = scrubMetadataValue(v);
   }
   return out;
+}
+
+/** One-level deep scrub · strings get pattern-redacted, plain objects
+ *  recurse one level (keeps us safe for common nested shapes like
+ *  { reason, details } · deliberately bounded to avoid catalog drift
+ *  from becoming a runtime surprise). Non-string / non-plain-object
+ *  values (numbers, booleans, arrays) pass through unchanged. */
+function scrubMetadataValue(v: unknown): unknown {
+  if (typeof v === "string") return redactPatterns(v);
+  if (v && typeof v === "object" && !Array.isArray(v)) {
+    const nested: Record<string, unknown> = {};
+    for (const [nk, nv] of Object.entries(v as Record<string, unknown>)) {
+      nested[nk] =
+        typeof nv === "string" ? redactPatterns(nv) : (nv as unknown);
+    }
+    return nested;
+  }
+  return v;
 }
 
 // ─── Table-availability probe · pre-migration-292 behaviour ─────────

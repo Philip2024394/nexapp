@@ -15,6 +15,7 @@ const STATE = vi.hoisted(() => ({
   insertedRows: [] as Array<{ table: string; row: Record<string, unknown> }>,
   currentIncident: null as null | { id: string; status: string },
   updateError: null as null | { message: string },
+  lastUpdatePatch: null as null | Record<string, unknown>,
 }));
 
 vi.mock("../../supabase-admin", () => ({
@@ -44,12 +45,15 @@ vi.mock("../../supabase-admin", () => ({
             }),
           };
         },
-        update: (_patch: Record<string, unknown>) => ({
-          eq: (_c: string, _v: unknown) => ({
-            eq: (_c2: string, _v2: unknown) =>
-              Promise.resolve({ error: STATE.updateError }),
-          }),
-        }),
+        update: (patch: Record<string, unknown>) => {
+          STATE.lastUpdatePatch = patch;
+          return {
+            eq: (_c: string, _v: unknown) => ({
+              eq: (_c2: string, _v2: unknown) =>
+                Promise.resolve({ error: STATE.updateError }),
+            }),
+          };
+        },
       };
     },
   },
@@ -84,6 +88,57 @@ describe("redactSummary", () => {
   it("truncates to 400 chars", () => {
     const long = "x".repeat(600);
     expect(redactSummary(long).length).toBeLessThanOrEqual(400);
+  });
+
+  // Owner directive 2026-11-08 · leak review AMBER→GREEN closure.
+  it("masks email addresses", () => {
+    expect(redactSummary("contact bob.smith+alias@example.co.uk failed"))
+      .not.toContain("bob.smith+alias@example.co.uk");
+  });
+  it("masks IPv6 addresses", () => {
+    expect(redactSummary("peer 2001:db8:85a3:0:0:8a2e:370:7334 unreachable"))
+      .toContain("[REDACTED]");
+  });
+  it("masks E.164 phone numbers", () => {
+    expect(redactSummary("SMS to +353871234567 bounced"))
+      .not.toContain("+353871234567");
+  });
+  it("masks OpenAI project keys", () => {
+    expect(redactSummary("header: sk-proj-abc_def-GHI123 leaked"))
+      .not.toContain("sk-proj-abc_def-GHI123");
+  });
+  it("masks Anthropic API keys", () => {
+    expect(redactSummary("x-api-key sk-ant-api03-XyzAbc_123-456 fallback"))
+      .not.toContain("sk-ant-api03-XyzAbc_123-456");
+  });
+  it("masks AWS access key ids", () => {
+    expect(redactSummary("creds=AKIAIOSFODNN7EXAMPLE scope iam"))
+      .not.toContain("AKIAIOSFODNN7EXAMPLE");
+  });
+  it("masks GitHub personal access tokens", () => {
+    expect(redactSummary("gh auth ghp_ABCDEFGHIJ1234567890abcdefGHIJKL123456"))
+      .not.toContain("ghp_ABCDEFGHIJ1234567890abcdefGHIJKL123456");
+  });
+  it("masks GitHub fine-grained PATs", () => {
+    const tok = "github_pat_ABC_DEFghijkl1234567890_XYZ";
+    expect(redactSummary(`token=${tok} used`)).not.toContain(tok);
+  });
+  it("masks Stripe restricted keys", () => {
+    expect(redactSummary("rk_live_abc123XYZ failed")).not.toContain("rk_live_abc123XYZ");
+    expect(redactSummary("rk_test_abc123XYZ failed")).not.toContain("rk_test_abc123XYZ");
+  });
+  it("masks api_key= inline credentials", () => {
+    expect(redactSummary("retry api_key=hunter2secretvalue"))
+      .toContain("[REDACTED]");
+  });
+  it("masks PEM private key blocks", () => {
+    const pem = "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQ...\n-----END RSA PRIVATE KEY-----";
+    expect(redactSummary(`dumped: ${pem}`)).toBe(
+      // slice-400 then replaced
+      redactSummary(`dumped: ${pem}`),
+    );
+    expect(redactSummary(`dumped: ${pem}`)).toContain("[REDACTED]");
+    expect(redactSummary(`dumped: ${pem}`)).not.toContain("MIIEpAIBAAKCAQ");
   });
 });
 
@@ -217,6 +272,27 @@ describe("transitionIncident", () => {
     });
     expect(r.ok).toBe(true);
     expect(STATE.insertedRows.some((e) => e.row.kind === "status_transition")).toBe(true);
+  });
+
+  // Owner directive 2026-11-08 · leak review AMBER closure. The
+  // recovery_action_taken field previously bypassed redactSummary and
+  // only got slice(0, 400). Verify it now runs through the same
+  // pattern scrub as `summary` + `note`.
+  it("redacts recovery_action_taken through redactSummary", async () => {
+    STATE.currentIncident = { id: "x", status: "PROTECTING" };
+    STATE.lastUpdatePatch = null;
+    const r = await transitionIncident({
+      incidentId: "x",
+      toStatus: "RECOVERED",
+      recoveryActionTaken: "rolled back migration · leaked user@example.com and sk_live_abc123",
+    });
+    expect(r.ok).toBe(true);
+    const patch = STATE.lastUpdatePatch as Record<string, unknown> | null;
+    expect(patch).not.toBeNull();
+    const field = String((patch as Record<string, unknown>).recovery_action_taken);
+    expect(field).toContain("[REDACTED]");
+    expect(field).not.toContain("user@example.com");
+    expect(field).not.toContain("sk_live_abc123");
   });
 });
 

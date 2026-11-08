@@ -91,22 +91,65 @@ export interface CreateIncidentResult {
   readonly error?: string;
 }
 
+// Owner directive 2026-11-08 · incident-metadata-leak-review-2026-11-08.md
+// AMBER → GREEN closure. Patterns expanded to cover the gaps surfaced
+// by the leak audit · email, IPv6, phone, OpenAI, AWS, GitHub PAT/
+// OAuth, PEM private key blocks, Stripe restricted-keys, api_key=.
+// Order matters · PEM block (multi-line) comes BEFORE generic patterns
+// so a nested bearer/jwt inside a PEM pastes gets fully stripped first.
 const REDACTION_PATTERNS: readonly RegExp[] = [
+  // PEM private / certificate blocks · multi-line · strip first so
+  // anything inside the block (bearer tokens in a dump etc.) is gone
+  // before the per-pattern passes run.
+  /-----BEGIN [A-Z0-9 ]+?-----[\s\S]*?-----END [A-Z0-9 ]+?-----/g,
+  // Stripe
   /sk_live_[a-zA-Z0-9]+/g,
   /sk_test_[a-zA-Z0-9]+/g,
-  /eyJ[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-]+/g, // JWT
-  /\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b/g, // raw IPs
+  /rk_live_[a-zA-Z0-9]+/g,
+  /rk_test_[a-zA-Z0-9]+/g,
+  // OpenAI (sk-proj-, sk-, sk-ant-)
+  /sk-(?:proj|ant)-[A-Za-z0-9_\-]+/g,
+  // Anthropic API key prefix
+  /sk-ant-api[0-9]{2}-[A-Za-z0-9_\-]+/g,
+  // AWS access key id
+  /\bAKIA[A-Z0-9]{16}\b/g,
+  // GitHub tokens · PAT / OAuth / user / server / refresh
+  /\bgh[pousr]_[A-Za-z0-9]{20,}\b/g,
+  // GitHub fine-grained PAT
+  /\bgithub_pat_[A-Za-z0-9_]{20,}\b/g,
+  // Supabase service-role / anon JWTs (eyJ... three-part) · same shape
+  // as all JWTs so the next pattern catches them · listed here as a
+  // documentary reminder not a separate pattern.
+  /eyJ[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-]+/g,
+  // Raw IPv4
+  /\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b/g,
+  // Raw IPv6 · at least 3 colons to avoid matching host:port
+  /\b(?:[0-9a-fA-F]{1,4}:){3,7}[0-9a-fA-F]{1,4}\b/g,
+  // E.164 phone number · +<1-15 digits> with a minimum of 7 to avoid
+  // matching country-code-only hints
+  /\+[1-9]\d{6,14}\b/g,
+  // Email address
+  /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g,
+  // Named inline credentials
   /password[=:][^\s&]+/gi,
   /token[=:][^\s&]+/gi,
+  /api[_-]?key[=:][^\s&]+/gi,
+  /secret[=:][^\s&]+/gi,
   /authorization:\s*bearer\s+[^\s]+/gi,
 ];
 
-export function redactSummary(input: string): string {
-  let out = input.slice(0, 400);
+/** Apply the pattern-redaction pass only · used by metadata-value
+ *  scrubs where we do not want the 400-char truncation. */
+export function redactPatterns(input: string): string {
+  let out = input;
   for (const re of REDACTION_PATTERNS) {
     out = out.replace(re, "[REDACTED]");
   }
   return out;
+}
+
+export function redactSummary(input: string): string {
+  return redactPatterns(input.slice(0, 400));
 }
 
 // Pre-migration-300 probe cache
@@ -246,7 +289,10 @@ export async function transitionIncident(
     updated_at: new Date().toISOString(),
   };
   if (input.recoveryActionTaken) {
-    patch.recovery_action_taken = input.recoveryActionTaken.slice(0, 400);
+    // Owner directive 2026-11-08 · leak review found this field was
+    // written without redaction. Route through redactSummary so the
+    // same patterns that scrub `summary` also scrub this field.
+    patch.recovery_action_taken = redactSummary(input.recoveryActionTaken);
   }
   if (input.toStatus === "RECOVERED" || input.toStatus === "CLOSED") {
     patch.resolved_at = new Date().toISOString();
