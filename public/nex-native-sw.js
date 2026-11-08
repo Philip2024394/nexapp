@@ -92,11 +92,19 @@ self.addEventListener("notificationclick", (event) => {
   // Build the deep-link URL. For incoming-call notifications, honor
   // the caller-supplied url (already includes ?accept_call=<id>).
   // Decline just closes the notification · client picks up nothing.
+  //
+  // Round 28 · 2026-11-08 · group-call invites embed a declineUrl so
+  // Decline routes to /call/preview?session=<id>&accept=0 · the page
+  // fires notifyInviteDeclined on the server. 1:1 incoming_call pushes
+  // do NOT embed declineUrl so they keep the sealed return-only
+  // behaviour (caller times out).
   let url = data.url || "/nex-native/home";
   if (data.kind === "incoming_call" && action === "decline") {
-    // No navigation · caller will time out. Future work: fire a POST
-    // that broadcasts a bye on the signalling channel.
-    return;
+    if (typeof data.declineUrl === "string" && data.declineUrl.length > 0) {
+      url = data.declineUrl;
+    } else {
+      return;
+    }
   }
 
   event.waitUntil((async () => {

@@ -347,6 +347,34 @@ export async function inviteToCall(
     return { ok: false, sessionId, participantId, error: "message_insert_failed" };
   }
 
+  // 5 · Fail-soft Web Push to the invitee's registered devices.
+  //     Round 28 · 2026-11-08 · wakes a closed tab / locked phone so
+  //     the incoming-group-call hub overlay is NOT the only ring. A
+  //     push failure NEVER breaks the invite · the authoritative
+  //     signal is the DB insert above + the Realtime-less polling
+  //     hub (round 27) · the push is the discoverability layer.
+  //     Resolve host display name from nex_account · fall back to
+  //     "Member" so the push copy stays legible in every path.
+  try {
+    const hostRow = await nexSupabaseAdmin
+      .from("nex_account")
+      .select("display_name")
+      .eq("id", input.selfAccountId)
+      .maybeSingle();
+    const hostDisplayName =
+      (hostRow.data as { display_name: string | null } | null)
+        ?.display_name ?? "Member";
+    await notifyInviteePushNotification({
+      inviteeAccountId: input.inviteeAccountId,
+      sessionId,
+      hostDisplayName,
+      mediaType: input.mediaType,
+      crossCountry,
+    });
+  } catch {
+    /* fail-soft · invite is already durable via the DB writes above */
+  }
+
   return {
     ok: true,
     sessionId,
@@ -681,4 +709,138 @@ export async function fetchPickerContacts(
       lastMessageAt: lastByOther.get(id) ?? null,
     };
   });
+}
+
+// ─── Invitee push notification (round 28 · 2026-11-08) ────────────
+//
+// After an invite lands in the peer-chat thread, fan a Web Push out
+// to the invitee's registered devices so a closed tab / locked phone
+// still rings. Routes through the sealed dispatchPushNotification
+// (migration 098 subscription store + migration 198 preferences).
+//
+// Honesty invariants
+//   · Fail-soft · never breaks inviteToCall · wrapped at the call
+//     site.
+//   · payload.kind = "system" · group calls have their own session ·
+//     they are NOT bound to a vaulted peer conversation · the Vault
+//     guard does not apply by construction (and the invite ALREADY
+//     rode through the peer chat which has its own Vault guard).
+//   · Honors the recipient's "call" category preference + fail-closed
+//     when the preferences service is unreachable (inherited from
+//     dispatchPushNotification).
+//   · No decrypted content · title = "<host> is calling…" · body =
+//     localised "Incoming NEX video/voice call". Session + accept
+//     url + decline url ride in data.
+//   · Non-idempotent-never-retry honored · one fire per inviteToCall
+//     call site · a retried inviteToCall that short-circuits on
+//     `already_invited` does NOT re-fire the push.
+
+import {
+  dispatchPushNotification,
+  type DispatchPayload,
+} from "../notification-dispatch-service";
+import { resolveAccountLocale, t as tI18n } from "@/lib/nex/i18n/server";
+
+export interface NotifyInviteePushInput {
+  readonly inviteeAccountId: string;
+  readonly sessionId: string;
+  readonly hostDisplayName: string;
+  readonly mediaType: CallMediaType;
+  readonly crossCountry: boolean;
+}
+
+export interface NotifyInviteePushResult {
+  readonly ok: boolean;
+  readonly delivered: number;
+  readonly skipped_reason?: string;
+  readonly error?: string;
+}
+
+export async function notifyInviteePushNotification(
+  input: NotifyInviteePushInput,
+): Promise<NotifyInviteePushResult> {
+  if (!UUID_SHAPE.test(input.inviteeAccountId)) {
+    return { ok: false, delivered: 0, error: "invalid_invitee" };
+  }
+  if (!UUID_SHAPE.test(input.sessionId)) {
+    return { ok: false, delivered: 0, error: "invalid_session" };
+  }
+  if (input.mediaType !== "audio" && input.mediaType !== "video") {
+    return { ok: false, delivered: 0, error: "invalid_media_type" };
+  }
+
+  // Resolve invitee locale for a localised title + body. Fail-soft ·
+  // an unresolved locale falls back to the DEFAULT_LANG baseline.
+  let locale: ReturnType<typeof resolveAccountLocale>;
+  try {
+    const row = await nexSupabaseAdmin
+      .from("nex_account")
+      .select("locale")
+      .eq("id", input.inviteeAccountId)
+      .maybeSingle();
+    locale = resolveAccountLocale(
+      (row.data as { locale: string | null } | null)?.locale ?? null,
+    );
+  } catch {
+    locale = resolveAccountLocale(null);
+  }
+
+  const title = tI18n("push.title.isCallingTemplate", locale).replace(
+    "{name}",
+    input.hostDisplayName,
+  );
+  const body = tI18n(
+    input.mediaType === "video"
+      ? "push.body.incomingVideoCall"
+      : "push.body.incomingVoiceCall",
+    locale,
+  );
+
+  // Both the Accept and Decline URLs ride in the payload so the
+  // service worker's notificationclick handler routes either way to
+  // the Call Center page · acceptInviteOnLoad does the DB flip +
+  // fires notifyInviteDeclined when accept=0.
+  const acceptUrl =
+    `/nex-native/call/preview?session=${encodeURIComponent(input.sessionId)}&accept=1`;
+  const declineUrl =
+    `/nex-native/call/preview?session=${encodeURIComponent(input.sessionId)}&accept=0`;
+
+  const payload: DispatchPayload = {
+    kind: "system",
+    title,
+    body,
+    data: {
+      url: acceptUrl,
+      declineUrl,
+      kind: "incoming_call",
+      callId: input.sessionId,
+      sessionId: input.sessionId,
+      mediaType: input.mediaType,
+      isGroupCall: true,
+      crossCountry: input.crossCountry,
+      tag: `nex-group-call-${input.sessionId}`,
+      requireInteraction: true,
+    },
+  };
+
+  try {
+    const result = await dispatchPushNotification(
+      input.inviteeAccountId,
+      "call",
+      payload,
+    );
+    return {
+      ok: true,
+      delivered: result.delivered,
+      ...(result.skipped_reason
+        ? { skipped_reason: result.skipped_reason }
+        : {}),
+    };
+  } catch (e) {
+    return {
+      ok: false,
+      delivered: 0,
+      error: e instanceof Error ? e.message : "dispatch_failed",
+    };
+  }
 }
