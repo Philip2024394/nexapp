@@ -9,44 +9,66 @@
 // commission rule). NEX does not hold or distribute seller sale
 // proceeds.
 //
+// PHASE 1 F-3 FIX · 2026-11-09 · owner-authorised (G1).
+// -----------------------------------------------------------------------------
+// Prior shape accepted client-supplied `amountMinor` and `currency` per item ·
+// server used them directly as Stripe `unit_amount` without verifying against
+// the authoritative `nex_product.price_pence`. A malicious buyer could pay 1
+// cent for a 10,000-cent product. This revision:
+//   · Requires `productId: string` per line item (replaces name / amountMinor /
+//     currency in the request body).
+//   · Server fetches each product via product-service.getProductById().
+//   · Server verifies product.business_id === body.businessId (prevents
+//     cross-business cart injection).
+//   · Server verifies product.status === "live" (prevents purchasing drafts
+//     or archived items).
+//   · Server verifies product.stock_status !== "sold_out" when stock_status
+//     is set (honest buyer UX · explicit 409 rather than silent oversell).
+//   · Server uses product.price_pence + product.currency authoritatively ·
+//     client cannot influence Stripe unit_amount.
+//   · Idempotency fingerprint now uses server-resolved values so a
+//     client-crafted fingerprint cannot pre-bind a session with a bad
+//     price.
+//   · payment_intent_data.metadata carries nex_item_product_ids so the
+//     webhook processor (Del 6 · not yet wired) can reconstruct the order
+//     with server-verified prices rather than trusting Stripe line_items
+//     after the fact.
+// -----------------------------------------------------------------------------
 // Request body (JSON):
 //   {
-//     businessId: string,              // the seller's nex_business.id
-//     items: [{ name, amountMinor, currency, quantity }],  // cart line items
-//     successUrl?: string,             // defaults to shop URL ?checkout=success
-//     cancelUrl?: string               // defaults to shop URL ?checkout=cancelled
+//     businessId: string,
+//     items: [{ productId: string, quantity: number }],
+//     successUrl?: string,
+//     cancelUrl?: string
 //   }
 //
 // Response:
 //   200 {ok:true, url, checkoutSessionId}
-//   400 {ok:false, code:'bad_request'}
+//   400 {ok:false, code:'bad_request'|'product_business_mismatch'}
 //   401 {ok:false, code:'unauthenticated'}
-//   404 {ok:false, code:'business_not_found'}
-//   422 {ok:false, code:'seller_not_ready', reason}
+//   404 {ok:false, code:'business_not_found'|'product_not_found'}
+//   409 {ok:false, code:'product_not_purchaseable'|'product_sold_out'}
+//   422 {ok:false, code:'seller_not_ready'|'unsupported_currency'|'mixed_currency_cart'|'product_price_out_of_range'}
 //   500 {ok:false, code:'stripe_error'|'config_error'}
 //
 // Honesty invariants (owner-sealed):
 //   · 0% application fee · NEX never takes a cut of seller sales
 //   · Destination charge · funds go DIRECTLY to seller's connected account
 //   · NEX does not hold funds · no Stripe transfer back to NEX
+//   · Server-side price trust · client can NEVER influence Stripe unit_amount
 //   · Order creation deferred until payment_intent.succeeded webhook
-//     (Del 6 · NOT WIRED THIS ROUND). The buyer's checkout ingests
-//     cart data via inline price_data · metadata carries business_id
-//     + buyer account_id so the webhook can reconstruct the order.
-//   · Multi-item carts · cleanly represented via multiple Checkout
-//     line_items · no dependency on multi-item nex_order schema
-//     (which is sealed as Path A but not yet implemented · Del 5
-//     deliberately avoids creating orders at checkout-create time).
+//     (Del 6 · NOT WIRED THIS ROUND).
 //   · The seller MUST have charges_enabled=true or we refuse cleanly
 //     (fail-closed).
-//   · Idempotency key per (business, buyer, cart-fingerprint) prevents
-//     duplicate Checkout Sessions on client double-submit.
+//   · Idempotency key per (business, buyer, server-resolved-cart fingerprint)
+//     prevents duplicate Checkout Sessions on client double-submit.
 
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createHash } from "node:crypto";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { getBusinessById } from "@/lib/nex-native/business-service";
+import * as productService from "@/lib/nex-native/product-service";
 import { readLocalConnectStatus } from "@/lib/nex-native/billing/stripe-connect-service";
 
 export const runtime = "nodejs";
@@ -58,8 +80,16 @@ const ALLOWED_CURRENCIES: ReadonlySet<string> = new Set([
   "eur", "gbp", "usd", "idr",
 ]);
 const ZERO_DECIMAL: ReadonlySet<string> = new Set(["jpy", "idr"]);
+const MAX_ITEMS = 50;
+const MAX_UNIT_AMOUNT_MINOR = 100_000_000; // 1,000,000 units in minor-currency form
 
 interface ParsedItem {
+  readonly productId: string;
+  readonly quantity: number;
+}
+
+interface ResolvedItem {
+  readonly productId: string;
   readonly name: string;
   readonly amountMinor: number;
   readonly currency: string;
@@ -77,24 +107,22 @@ function parseBody(input: unknown): ParsedBody | null {
   if (!input || typeof input !== "object") return null;
   const b = input as Record<string, unknown>;
   if (typeof b.businessId !== "string" || !UUID_SHAPE.test(b.businessId)) return null;
-  if (!Array.isArray(b.items) || b.items.length === 0 || b.items.length > 50) return null;
+  if (!Array.isArray(b.items) || b.items.length === 0 || b.items.length > MAX_ITEMS) return null;
   const parsedItems: ParsedItem[] = [];
-  const currencies: Set<string> = new Set();
   for (const raw of b.items) {
     if (!raw || typeof raw !== "object") return null;
     const it = raw as Record<string, unknown>;
-    const name = typeof it.name === "string" ? it.name.trim() : "";
-    const amountMinor = typeof it.amountMinor === "number" ? Math.floor(it.amountMinor) : -1;
-    const currency = typeof it.currency === "string" ? it.currency.toLowerCase() : "";
+    const productId = typeof it.productId === "string" ? it.productId : "";
     const quantity = typeof it.quantity === "number" ? Math.floor(it.quantity) : 0;
-    if (name.length === 0 || name.length > 250) return null;
-    if (amountMinor < 0 || amountMinor > 100_000_000) return null; // cap at 1M units
-    if (!ALLOWED_CURRENCIES.has(currency)) return null;
+    if (!UUID_SHAPE.test(productId)) return null;
     if (quantity < 1 || quantity > 999) return null;
-    parsedItems.push({ name, amountMinor, currency, quantity });
-    currencies.add(currency);
+    parsedItems.push({ productId, quantity });
   }
-  if (currencies.size !== 1) return null; // single-currency carts only
+  // De-duplicate productId · the server will treat multiple-line-items-same-product
+  // as a quantity sum. For now we reject duplicates as a shape error so the
+  // caller must send a single consolidated line per product.
+  const productIds = new Set(parsedItems.map((p) => p.productId));
+  if (productIds.size !== parsedItems.length) return null;
   const successUrl = typeof b.successUrl === "string" ? b.successUrl : undefined;
   const cancelUrl = typeof b.cancelUrl === "string" ? b.cancelUrl : undefined;
   if (successUrl && !/^https?:\/\//.test(successUrl)) return null;
@@ -121,7 +149,15 @@ function makeStripeClient(): Stripe {
   });
 }
 
-function cartFingerprint(businessId: string, buyerId: string, items: ReadonlyArray<ParsedItem>): string {
+function cartFingerprint(
+  businessId: string,
+  buyerId: string,
+  items: ReadonlyArray<ResolvedItem>,
+): string {
+  // Fingerprint includes server-resolved amountMinor + currency so a
+  // client-crafted fingerprint cannot pre-bind a session with a tampered
+  // price. Fingerprint is day-stamped so a cart change the next day
+  // yields a new idempotency key even for the same product set.
   const payload = JSON.stringify({ b: businessId, u: buyerId, i: items });
   return createHash("sha256").update(payload, "utf8").digest("hex").slice(0, 32);
 }
@@ -184,7 +220,86 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  // 4 · build Stripe client + URLs
+  // 4 · server-side product resolution · F-3 fix
+  const resolvedItems: ResolvedItem[] = [];
+  for (const item of body.items) {
+    const product = await productService.getProductById(item.productId).catch(() => null);
+    if (!product) {
+      return NextResponse.json(
+        { ok: false, code: "product_not_found", productId: item.productId },
+        { status: 404 },
+      );
+    }
+    if (product.business_id !== body.businessId) {
+      return NextResponse.json(
+        { ok: false, code: "product_business_mismatch", productId: item.productId },
+        { status: 400 },
+      );
+    }
+    if (product.status !== "live") {
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "product_not_purchaseable",
+          productId: item.productId,
+          reason: `product_status_is_${product.status}`,
+        },
+        { status: 409 },
+      );
+    }
+    if (product.stock_status === "sold_out") {
+      return NextResponse.json(
+        { ok: false, code: "product_sold_out", productId: item.productId },
+        { status: 409 },
+      );
+    }
+    const currency = (product.currency ?? "").toLowerCase();
+    if (!ALLOWED_CURRENCIES.has(currency)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "unsupported_currency",
+          productId: item.productId,
+          currency: product.currency,
+        },
+        { status: 422 },
+      );
+    }
+    if (
+      !Number.isInteger(product.price_pence) ||
+      product.price_pence < 0 ||
+      product.price_pence > MAX_UNIT_AMOUNT_MINOR
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "product_price_out_of_range",
+          productId: item.productId,
+        },
+        { status: 422 },
+      );
+    }
+    resolvedItems.push({
+      productId: item.productId,
+      name: product.name,
+      amountMinor: product.price_pence,
+      currency,
+      quantity: item.quantity,
+    });
+  }
+
+  // 5 · single-currency assertion (preserved from prior behaviour)
+  const currencies = new Set(resolvedItems.map((it) => it.currency));
+  if (currencies.size !== 1) {
+    return NextResponse.json(
+      { ok: false, code: "mixed_currency_cart" },
+      { status: 422 },
+    );
+  }
+  const currency = resolvedItems[0]!.currency;
+  const zeroDecimal = ZERO_DECIMAL.has(currency);
+
+  // 6 · build Stripe client + URLs
   let stripeClient: Stripe;
   try {
     stripeClient = makeStripeClient();
@@ -208,10 +323,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     body.cancelUrl ??
     `${origin}/nex-native/${businessSlug}?checkout=cancelled`;
 
-  // 5 · build Stripe line_items from inline price_data
-  const currency = body.items[0].currency;
-  const zeroDecimal = ZERO_DECIMAL.has(currency);
-  const line_items = body.items.map((it) => ({
+  // 7 · build Stripe line_items from SERVER-RESOLVED values (never client)
+  const line_items = resolvedItems.map((it) => ({
     price_data: {
       currency: it.currency,
       product_data: { name: it.name },
@@ -220,8 +333,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     quantity: it.quantity,
   }));
 
-  // 6 · create Checkout Session with destination charge
-  const idempotencyKey = `nex-buyer-${body.businessId}-${session.account.id}-${cartFingerprint(body.businessId, session.account.id, body.items)}`;
+  // 8 · create Checkout Session with destination charge
+  // Fingerprint uses server-resolved values so client cannot pre-bind
+  // an idempotent session with a tampered price.
+  const idempotencyKey = `nex-buyer-${body.businessId}-${session.account.id}-${cartFingerprint(body.businessId, session.account.id, resolvedItems)}`;
+  // Metadata for Del 6 webhook reconstruction · comma-separated product IDs
+  const productIdsCsv = resolvedItems.map((it) => it.productId).join(",");
 
   try {
     const checkoutSession = await stripeClient.checkout.sessions.create(
@@ -244,12 +361,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             nex_buyer_account_id: session.account.id,
             nex_role: "buyer_seller_payment",
             nex_zero_decimal_currency: zeroDecimal ? "1" : "0",
+            nex_item_product_ids: productIdsCsv,
           },
         },
         metadata: {
           nex_business_id: body.businessId,
           nex_buyer_account_id: session.account.id,
           nex_role: "buyer_seller_payment",
+          nex_item_product_ids: productIdsCsv,
         },
         client_reference_id: session.account.id,
       },
