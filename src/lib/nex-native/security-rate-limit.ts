@@ -35,6 +35,29 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { nexSupabaseAdmin } from "./supabase-admin";
 
+// Owner-sealed 2026-11-08 · Security & Recovery · escalation signals
+// flow into the incident service via the monitor adaptor. Dynamic
+// import pattern · a monitor-module load failure MUST NOT break the
+// rate-limiter · fire-and-forget + swallow errors inside the signal
+// helper.
+async function signalEscalation(action: SecurityRateLimitAction, retryAfter: number): Promise<void> {
+  try {
+    const mod = await import("./security-monitor/security-monitor");
+    void mod
+      .reportRateLimitEscalation({
+        action,
+        scope: "auth",
+        affectedCount: 0,
+        thresholdCrossed: ACCOUNT_CREATE_FAILURE_THRESHOLD,
+        windowSeconds: ACCOUNT_CREATE_FAILURE_WINDOW_MS / 1000,
+      })
+      .catch(() => undefined);
+    void retryAfter; // observability hook · retryAfter not used in the summary
+  } catch {
+    /* monitor module unavailable · never affects user flow */
+  }
+}
+
 // ─── Action enum + policy (sealed starting values) ────────────────────
 
 export type SecurityRateLimitAction =
@@ -523,6 +546,7 @@ async function rpcRecordIfAllowed(
           "[security-rate-limit] account_create · RPC path ESCALATED to 503",
           { error: msg },
         );
+        void signalEscalation("account_create", 60);
         throw new SecurityUnavailableError("account_create", 60);
       }
     }
@@ -602,6 +626,7 @@ async function dbRecordIfAllowed(
           "s · caller must not create an account until this clears.",
           { error: readErr.message },
         );
+        void signalEscalation("account_create", 60);
         throw new SecurityUnavailableError("account_create", 60);
       }
     }
@@ -683,6 +708,7 @@ async function dbRecordIfAllowed(
         // raised." Throw on the CURRENT call once the threshold is
         // crossed · the current user is refused along with everyone
         // after them until the ring prunes or a DB op succeeds.
+        void signalEscalation("account_create", 60);
         throw new SecurityUnavailableError("account_create", 60);
       }
     }
