@@ -8,6 +8,10 @@
     {
       "path": "/api/nex-native/billing/cron/reconcile",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/nex-native/cron/security-audit-reconcile",
+      "schedule": "*/10 * * * *"
     }
   ]
 }
