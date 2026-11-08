@@ -29,6 +29,10 @@ import {
 } from "@/lib/nex-native/security-rate-limit";
 import { readClientIp, readUserAgent } from "@/lib/nex-native/app/security-request";
 import { clearAllStepUpForAccount } from "@/lib/nex-native/vault/step-up-service";
+import {
+  isAuditWriteError,
+  recordAuditEvent,
+} from "@/lib/nex-native/security-audit-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -61,6 +65,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   } catch (e) {
     if (isSecurityRateLimitError(e)) {
+      // Owner directive 2026-11-08 Phase 2 · audit the denial.
+      // Fail-open · we do not block the 429 response on audit failure.
+      void recordAuditEvent({
+        event: "security.password_change.denied",
+        outcome: "denied",
+        actorAccountId: session.account.id,
+        actorIdentity: `acct:${session.account.id}`,
+        metadata: {
+          reason: "rate_limited",
+          // retry_after_seconds is a permitted key for ..denied events
+        },
+      }).catch(() => undefined);
       const r = buildRateLimitResponse(e);
       return NextResponse.json(r.body, { status: r.status, headers: r.headers });
     }
@@ -118,10 +134,45 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       ip_address: readClientIp(req),
       user_agent: readUserAgent(req),
     }).catch(() => undefined);
+    // New audit · password change failed at the current-password check.
+    void recordAuditEvent({
+      event: "security.password_change.failed",
+      outcome: "failed",
+      actorAccountId: session.account.id,
+      actorIdentity: `acct:${session.account.id}`,
+      targetType: "nex_account",
+      targetId: session.account.id,
+      metadata: { error_code: "wrong_current_password" },
+    }).catch(() => undefined);
     return NextResponse.json(
       { ok: false, error: "wrong_current_password" },
       { status: 400 },
     );
+  }
+
+  // Owner directive 2026-11-08 Phase 2 · split attempted/completed
+  // audit protocol for external Supabase Auth mutations. The attempted
+  // row MUST be persisted BEFORE updateUserById · if the audit INSERT
+  // fails (fail-loud) we abort the surrounding action and the caller
+  // gets an inconclusive response. Reconciliation catches any
+  // attempted-without-matching-completed case later.
+  try {
+    await recordAuditEvent({
+      event: "security.password_change.attempted",
+      outcome: "attempted",
+      actorAccountId: session.account.id,
+      actorIdentity: `acct:${session.account.id}`,
+      targetType: "nex_account",
+      targetId: session.account.id,
+    });
+  } catch (auditErr) {
+    if (isAuditWriteError(auditErr)) {
+      return NextResponse.json(
+        { ok: false, error: "audit_unavailable" },
+        { status: 503, headers: { "Retry-After": "30" } },
+      );
+    }
+    throw auditErr;
   }
 
   // Set the new password via the admin API.
@@ -136,6 +187,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       success: false,
       ip_address: readClientIp(req),
       user_agent: readUserAgent(req),
+    }).catch(() => undefined);
+    // Pair the attempted row with a failed row · fail-open.
+    void recordAuditEvent({
+      event: "security.password_change.failed",
+      outcome: "failed",
+      actorAccountId: session.account.id,
+      actorIdentity: `acct:${session.account.id}`,
+      targetType: "nex_account",
+      targetId: session.account.id,
+      metadata: { error_code: "admin_update_failed" },
     }).catch(() => undefined);
     return NextResponse.json(
       { ok: false, error: updateResult.error.message },
@@ -173,6 +234,41 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     ip_address: readClientIp(req),
     user_agent: readUserAgent(req),
   });
+
+  // Owner directive 2026-11-08 Phase 2 · completion audit row.
+  // Fail-loud · if THIS write fails after updateUserById succeeded we
+  // have a half-state (password changed · completion row missing).
+  // The caller sees inconclusive; reconciliation picks up the
+  // orphaned attempted row and flags it unresolved.
+  try {
+    await recordAuditEvent({
+      event: "security.password_change.completed",
+      outcome: "completed",
+      actorAccountId: session.account.id,
+      actorIdentity: `acct:${session.account.id}`,
+      targetType: "nex_account",
+      targetId: session.account.id,
+      metadata: {
+        sessions_invalidated_at: invalidation.invalidated_at,
+      },
+    });
+  } catch (auditErr) {
+    if (isAuditWriteError(auditErr)) {
+      // Password WAS changed · but completion audit failed. Honest
+      // response · user re-authenticates on every device (sessions
+      // already invalidated) and the audit trail shows attempted
+      // without completed · reconciler surfaces this.
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "audit_completion_failed",
+          sessions_invalidated_at: invalidation.invalidated_at,
+        },
+        { status: 503 },
+      );
+    }
+    throw auditErr;
+  }
 
   return NextResponse.json({
     ok: true,

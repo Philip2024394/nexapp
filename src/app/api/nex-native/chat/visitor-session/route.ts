@@ -38,6 +38,7 @@ import {
   isSecurityRateLimitError,
   recordIfAllowed,
 } from "@/lib/nex-native/security-rate-limit";
+import { recordAuditEvent } from "@/lib/nex-native/security-audit-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -74,6 +75,12 @@ export async function POST(req: Request) {
     );
   } catch (e) {
     if (isSecurityRateLimitError(e)) {
+      void recordAuditEvent({
+        event: "security.visitor.bootstrap.denied",
+        outcome: "denied",
+        actorIdentity: ipRateLimitKey(readRequestClientIp(req)),
+        metadata: { reason: "rate_limited" },
+      }).catch(() => undefined);
       const r = buildRateLimitResponse(e);
       return NextResponse.json(r.body, { status: r.status, headers: r.headers });
     }

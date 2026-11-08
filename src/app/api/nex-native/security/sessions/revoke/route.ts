@@ -19,6 +19,7 @@ import {
   isSecurityRateLimitError,
   recordIfAllowed,
 } from "@/lib/nex-native/security-rate-limit";
+import { recordAuditEvent } from "@/lib/nex-native/security-audit-service";
 import { readClientIp, readUserAgent } from "@/lib/nex-native/app/security-request";
 
 export const runtime = "nodejs";
@@ -37,6 +38,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   } catch (e) {
     if (isSecurityRateLimitError(e)) {
+      void recordAuditEvent({
+        event: "security.session_revoke.denied",
+        outcome: "denied",
+        actorAccountId: session.account.id,
+        actorIdentity: `acct:${session.account.id}`,
+        metadata: { reason: "rate_limited" },
+      }).catch(() => undefined);
       const r = buildRateLimitResponse(e);
       return NextResponse.json(r.body, { status: r.status, headers: r.headers });
     }
@@ -70,6 +78,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }).catch(() => {
       /* audit failure must not fail the user-visible action */
     });
+    // Owner directive 2026-11-08 Phase 2 · fail-open · session_revoke
+    // is a low-stakes legitimate ops path · we do not block the
+    // user-visible success on audit failure.
+    void recordAuditEvent({
+      event: "security.session_revoke.completed",
+      outcome: "completed",
+      actorAccountId: session.account.id,
+      actorIdentity: `acct:${session.account.id}`,
+      targetType: "nex_session",
+      targetId: sessionId,
+      metadata: { revoke_cause: "user" },
+    }).catch(() => undefined);
     return NextResponse.json({ ok: true });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

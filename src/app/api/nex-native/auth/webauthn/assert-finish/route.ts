@@ -33,6 +33,7 @@ import {
   isSecurityRateLimitError,
   recordIfAllowed,
 } from "@/lib/nex-native/security-rate-limit";
+import { recordAuditEvent } from "@/lib/nex-native/security-audit-service";
 
 /** Plain-Request IP reader · the sealed readClientIp requires a
  *  NextRequest. Reads the same forwarded-for header set by Vercel. */
@@ -63,6 +64,12 @@ export async function POST(req: Request) {
     );
   } catch (e) {
     if (isSecurityRateLimitError(e)) {
+      void recordAuditEvent({
+        event: "security.webauthn.assert.denied",
+        outcome: "denied",
+        actorIdentity: ipRateLimitKey(readRequestClientIp(req)),
+        metadata: { reason: "rate_limited" },
+      }).catch(() => undefined);
       const r = buildRateLimitResponse(e);
       return NextResponse.json(r.body, { status: r.status, headers: r.headers });
     }
@@ -115,6 +122,14 @@ export async function POST(req: Request) {
       requireUserVerification: true,
     });
   } catch (e) {
+    void recordAuditEvent({
+      event: "security.webauthn.assert.failed",
+      outcome: "failed",
+      actorIdentity: ipRateLimitKey(readRequestClientIp(req)),
+      targetType: "nex_webauthn_credential",
+      targetId: stored.credential_id,
+      metadata: { error_code: "verification_threw" },
+    }).catch(() => undefined);
     return NextResponse.json(
       { error: "verification_failed", detail: (e as Error).message },
       { status: 400 },
@@ -122,12 +137,35 @@ export async function POST(req: Request) {
   }
 
   if (!verification.verified) {
+    void recordAuditEvent({
+      event: "security.webauthn.assert.failed",
+      outcome: "failed",
+      actorIdentity: ipRateLimitKey(readRequestClientIp(req)),
+      targetType: "nex_webauthn_credential",
+      targetId: stored.credential_id,
+      metadata: { error_code: "not_verified" },
+    }).catch(() => undefined);
     return NextResponse.json({ error: "not_verified" }, { status: 400 });
   }
 
   // 3 · bump counter + last_used_at
   const newCounter = verification.authenticationInfo?.newCounter ?? Number(stored.counter);
   try { await markCredentialUsed(stored.credential_id, newCounter); } catch { /* non-fatal */ }
+
+  // Audit · WebAuthn assert succeeded. Fail-open · authentication is a
+  // frequent legitimate action and audit failure should not block it.
+  void recordAuditEvent({
+    event: "security.webauthn.assert.completed",
+    outcome: "completed",
+    actorAccountId: stored.account_id,
+    actorIdentity: `acct:${stored.account_id}`,
+    targetType: "nex_webauthn_credential",
+    targetId: stored.credential_id,
+    metadata: {
+      credential_id: stored.credential_id,
+      counter_delta: newCounter - Number(stored.counter),
+    },
+  }).catch(() => undefined);
 
   // 4 · look up account + supabase auth user for session issuance
   const acc = await nexSupabaseAdmin

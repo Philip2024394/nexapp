@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 const SUPABASE_STATE = vi.hoisted(() => ({
+  probeResult: { error: null as { message: string } | null },
   insertResult: {
     data: null as { id: number } | null,
     error: null as { message: string } | null,
@@ -35,6 +36,13 @@ vi.mock("../supabase-admin", () => ({
             },
           };
         },
+        select(_cols: string) {
+          return {
+            limit(_n: number) {
+              return Promise.resolve({ error: SUPABASE_STATE.probeResult.error });
+            },
+          };
+        },
       };
     },
   },
@@ -43,6 +51,7 @@ vi.mock("../supabase-admin", () => ({
 import {
   AuditWriteError,
   SECURITY_AUDIT_EVENTS,
+  _resetAuditTableProbeForTests,
   generateErasedActorIdentity,
   isAuditWriteError,
   recordAuditEvent,
@@ -152,6 +161,8 @@ describe("recordAuditEvent · happy path", () => {
 
 describe("recordAuditEvent · metadata sanitisation", () => {
   beforeEach(() => {
+    _resetAuditTableProbeForTests();
+    SUPABASE_STATE.probeResult = { error: null };
     SUPABASE_STATE.lastInsertedRow = null;
     makeInsertSucceed();
     vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -206,6 +217,8 @@ describe("recordAuditEvent · metadata sanitisation", () => {
 
 describe("recordAuditEvent · input validation", () => {
   beforeEach(() => {
+    _resetAuditTableProbeForTests();
+    SUPABASE_STATE.probeResult = { error: null };
     SUPABASE_STATE.lastInsertedRow = null;
     makeInsertSucceed();
     vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -266,6 +279,8 @@ describe("recordAuditEvent · input validation", () => {
 
 describe("recordAuditEvent · fail-loud vs fail-open", () => {
   beforeEach(() => {
+    _resetAuditTableProbeForTests();
+    SUPABASE_STATE.probeResult = { error: null };
     SUPABASE_STATE.lastInsertedRow = null;
     vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -314,6 +329,51 @@ describe("recordAuditEvent · fail-loud vs fail-open", () => {
     });
     expect(r.ok).toBe(false);
     expect(r.skipped).toBe("write_failed_fail_open");
+  });
+});
+
+describe("recordAuditEvent · pre-migration-292 compatibility", () => {
+  beforeEach(() => {
+    _resetAuditTableProbeForTests();
+    SUPABASE_STATE.lastInsertedRow = null;
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  it("returns table_not_available (no throw) when the audit table is missing · even for fail-loud events", async () => {
+    SUPABASE_STATE.probeResult = {
+      error: { message: "relation nex_security_audit_log does not exist" },
+    };
+    makeInsertSucceed(); // irrelevant · probe gates us out first
+    const r = await recordAuditEvent({
+      event: "security.password_change.completed", // normally fail-loud
+      outcome: "completed",
+      actorAccountId: ACCOUNT_ID,
+    });
+    expect(r.ok).toBe(false);
+    expect(r.skipped).toBe("table_not_available");
+    expect(SUPABASE_STATE.lastInsertedRow).toBeNull();
+  });
+
+  it("probe caches across calls · both returns are table_not_available", async () => {
+    SUPABASE_STATE.probeResult = {
+      error: { message: "relation nex_security_audit_log does not exist" },
+    };
+    const r1 = await recordAuditEvent({
+      event: "security.password_change.denied",
+      outcome: "denied",
+      metadata: { reason: "rate_limited" },
+    });
+    expect(r1.skipped).toBe("table_not_available");
+    // Flip the probe · subsequent calls should still see "not available"
+    // because the cache locked in on the first call.
+    SUPABASE_STATE.probeResult = { error: null };
+    const r2 = await recordAuditEvent({
+      event: "security.password_change.denied",
+      outcome: "denied",
+      metadata: { reason: "rate_limited" },
+    });
+    expect(r2.skipped).toBe("table_not_available");
   });
 });
 

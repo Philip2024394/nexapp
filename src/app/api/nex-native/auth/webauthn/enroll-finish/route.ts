@@ -21,6 +21,10 @@ import {
   isSecurityRateLimitError,
   recordIfAllowed,
 } from "@/lib/nex-native/security-rate-limit";
+import {
+  isAuditWriteError,
+  recordAuditEvent,
+} from "@/lib/nex-native/security-audit-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,6 +43,13 @@ export async function POST(req: Request) {
     );
   } catch (e) {
     if (isSecurityRateLimitError(e)) {
+      void recordAuditEvent({
+        event: "security.webauthn.enroll.denied",
+        outcome: "denied",
+        actorAccountId: session.account.id,
+        actorIdentity: `acct:${session.account.id}`,
+        metadata: { reason: "rate_limited" },
+      }).catch(() => undefined);
       const r = buildRateLimitResponse(e);
       return NextResponse.json(r.body, { status: r.status, headers: r.headers });
     }
@@ -89,6 +100,33 @@ export async function POST(req: Request) {
   }
 
   const { credential } = verification.registrationInfo;
+
+  // Owner directive 2026-11-08 Phase 2 · split attempted/completed
+  // audit protocol around the external credential-persist write.
+  // Fail-loud · an uncounted enrollment is a credential-provenance gap.
+  try {
+    await recordAuditEvent({
+      event: "security.webauthn.enroll.attempted",
+      outcome: "attempted",
+      actorAccountId: session.account.id,
+      actorIdentity: `acct:${session.account.id}`,
+      targetType: "nex_webauthn_credential",
+      targetId: credential.id,
+      metadata: {
+        credential_type: "platform",
+        rp_id: cfg.rpID,
+      },
+    });
+  } catch (auditErr) {
+    if (isAuditWriteError(auditErr)) {
+      return NextResponse.json(
+        { error: "audit_unavailable", detail: "retry in a moment" },
+        { status: 503, headers: { "Retry-After": "30" } },
+      );
+    }
+    throw auditErr;
+  }
+
   try {
     await saveCredential({
       account_id: session.account.id,
@@ -99,10 +137,49 @@ export async function POST(req: Request) {
       device_label: deviceLabel,
     });
   } catch (e) {
+    void recordAuditEvent({
+      event: "security.webauthn.enroll.failed",
+      outcome: "failed",
+      actorAccountId: session.account.id,
+      actorIdentity: `acct:${session.account.id}`,
+      metadata: { error_code: "save_failed" },
+    }).catch(() => undefined);
     return NextResponse.json(
       { error: "save_failed", detail: (e as Error).message },
       { status: 500 },
     );
+  }
+
+  // Completion row · fail-loud · a persisted credential without its
+  // audit row is a provenance gap that must surface as an incomplete
+  // enrollment to the user (reconciliation will mark the attempted
+  // row unresolved otherwise).
+  try {
+    await recordAuditEvent({
+      event: "security.webauthn.enroll.completed",
+      outcome: "completed",
+      actorAccountId: session.account.id,
+      actorIdentity: `acct:${session.account.id}`,
+      targetType: "nex_webauthn_credential",
+      targetId: credential.id,
+      metadata: {
+        credential_id: credential.id,
+        transports: credential.transports ?? [],
+      },
+    });
+  } catch (auditErr) {
+    if (isAuditWriteError(auditErr)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "audit_completion_failed",
+          detail:
+            "credential persisted but the audit trail is incomplete · retry to confirm",
+        },
+        { status: 503 },
+      );
+    }
+    throw auditErr;
   }
 
   const res = NextResponse.json({ ok: true });

@@ -341,6 +341,60 @@ function sanitiseMetadata(
   return out;
 }
 
+// ─── Table-availability probe · pre-migration-292 compatibility ─────
+//
+// Owner directive 2026-11-08 Phase 2 · we wire the audit writer into
+// live handlers NOW so the wiring is complete and reviewable before
+// migration 292 is applied. During the pre-apply window the audit
+// table does not exist · writes would fail with "relation does not
+// exist" and (for fail-loud events) would abort the sensitive action.
+//
+// Compatibility · one-shot table-existence probe cached for the
+// lifetime of the process. When the table is missing, every event
+// returns { ok: false, skipped: "table_not_available" } as a no-op.
+// Once migration 292 is applied, the probe flips on next cold start
+// and writes begin naturally. Loud log on first discovery so the
+// gap is visible.
+//
+// Honest limitation · while the table is unavailable, the fail-loud
+// contract ("never report success when audit uncertain") is relaxed ·
+// sensitive actions proceed WITHOUT an audit record. This is
+// acceptable because the alternative is blocking every password
+// change / enroll / revoke until the migration is applied, which is
+// worse than having no audit at all for an audit capability that is
+// NEW. State this explicitly in every commit / report.
+
+let AUDIT_TABLE_READY: boolean | null = null;
+
+async function ensureAuditTableReady(): Promise<boolean> {
+  if (AUDIT_TABLE_READY !== null) return AUDIT_TABLE_READY;
+  try {
+    const { error } = await nexSupabaseAdmin
+      .from("nex_security_audit_log")
+      .select("id")
+      .limit(0);
+    AUDIT_TABLE_READY = !error;
+    if (!AUDIT_TABLE_READY) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[security-audit] nex_security_audit_log unavailable · all audit " +
+          "writes will no-op until migration 292 is applied. This DISABLES " +
+          "the fail-loud contract during the pre-apply window.",
+        { error: error?.message ?? null },
+      );
+    }
+    return AUDIT_TABLE_READY;
+  } catch {
+    AUDIT_TABLE_READY = false;
+    return false;
+  }
+}
+
+/** Exposed so tests can reset the probe between isolated runs. */
+export function _resetAuditTableProbeForTests(): void {
+  AUDIT_TABLE_READY = null;
+}
+
 // ─── Writer input ────────────────────────────────────────────────────
 
 export interface AuditWriteInput {
@@ -356,7 +410,10 @@ export interface AuditWriteInput {
 export interface AuditWriteResult {
   readonly ok: boolean;
   readonly logId?: number;
-  readonly skipped?: "catalog_miss" | "write_failed_fail_open";
+  readonly skipped?:
+    | "catalog_miss"
+    | "write_failed_fail_open"
+    | "table_not_available";
 }
 
 // ─── Writer ──────────────────────────────────────────────────────────
@@ -431,6 +488,14 @@ export async function recordAuditEvent(
   const metadata = input.metadata
     ? sanitiseMetadata(input.event, input.metadata)
     : {};
+
+  // Pre-migration-292 compatibility · skip writes when the table is
+  // not yet available. See the AUDIT_TABLE_READY block above for the
+  // full rationale and honest-limitation disclosure.
+  const tableReady = await ensureAuditTableReady();
+  if (!tableReady) {
+    return { ok: false, skipped: "table_not_available" };
+  }
 
   const row = {
     event: input.event,

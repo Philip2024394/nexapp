@@ -16,6 +16,7 @@ import {
   isSecurityRateLimitError,
   recordIfAllowed,
 } from "@/lib/nex-native/security-rate-limit";
+import { recordAuditEvent } from "@/lib/nex-native/security-audit-service";
 
 /** Plain-Request IP reader · the sealed readClientIp requires a
  *  NextRequest. Reads the same forwarded-for header set by Vercel. */
@@ -47,6 +48,13 @@ export async function POST(req: Request) {
     );
   } catch (e) {
     if (isSecurityRateLimitError(e)) {
+      // Pre-auth path · the actor is an IP · no account identity yet.
+      void recordAuditEvent({
+        event: "security.webauthn.assert.denied",
+        outcome: "denied",
+        actorIdentity: ipRateLimitKey(readRequestClientIp(req)),
+        metadata: { reason: "rate_limited" },
+      }).catch(() => undefined);
       const r = buildRateLimitResponse(e);
       return NextResponse.json(r.body, { status: r.status, headers: r.headers });
     }

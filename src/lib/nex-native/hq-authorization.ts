@@ -152,7 +152,41 @@ export async function requireHqReviewer(
   accountId: NexUuid | null | undefined,
 ): Promise<HqRole> {
   const role = await getHqRole(accountId);
-  if (role === "reviewer" || role === "admin") return role;
+  if (role === "reviewer" || role === "admin") {
+    // Owner directive 2026-11-08 Phase 2 · audit the HQ-gate success.
+    // Fire-and-forget · we must not add latency to an HQ view render
+    // AND the audit module's probe handles the pre-migration-292
+    // window gracefully. Dynamic import to avoid circular deps if
+    // the audit module ever imports from this file.
+    try {
+      const { recordAuditEvent } = await import("./security-audit-service");
+      void recordAuditEvent({
+        event: "security.hq.authz.completed",
+        outcome: "completed",
+        actorAccountId: accountId ?? null,
+        actorIdentity: accountId ? `acct:${accountId}` : null,
+      }).catch(() => undefined);
+    } catch {
+      /* dynamic import failure is non-fatal · never block HQ paths */
+    }
+    return role;
+  }
+  // Non-admin accessing HQ reviewer path · audit the denial.
+  try {
+    const { recordAuditEvent } = await import("./security-audit-service");
+    void recordAuditEvent({
+      event: "security.hq.authz.denied",
+      outcome: "denied",
+      actorAccountId: accountId ?? null,
+      actorIdentity: accountId ? `acct:${accountId}` : null,
+      metadata: {
+        role_present: role != null,
+        reason: accountId ? "not-hq" : "no-session",
+      },
+    }).catch(() => undefined);
+  } catch {
+    /* non-fatal */
+  }
   throw new HqAuthorizationError("reviewer", accountId ?? null);
 }
 
@@ -164,6 +198,34 @@ export async function requireHqAdmin(
   accountId: NexUuid | null | undefined,
 ): Promise<void> {
   const role = await getHqRole(accountId);
-  if (role === "admin") return;
+  if (role === "admin") {
+    try {
+      const { recordAuditEvent } = await import("./security-audit-service");
+      void recordAuditEvent({
+        event: "security.hq.authz.completed",
+        outcome: "completed",
+        actorAccountId: accountId ?? null,
+        actorIdentity: accountId ? `acct:${accountId}` : null,
+      }).catch(() => undefined);
+    } catch {
+      /* non-fatal */
+    }
+    return;
+  }
+  try {
+    const { recordAuditEvent } = await import("./security-audit-service");
+    void recordAuditEvent({
+      event: "security.hq.authz.denied",
+      outcome: "denied",
+      actorAccountId: accountId ?? null,
+      actorIdentity: accountId ? `acct:${accountId}` : null,
+      metadata: {
+        role_present: role != null,
+        reason: accountId ? "not-hq" : "no-session",
+      },
+    }).catch(() => undefined);
+  } catch {
+    /* non-fatal */
+  }
   throw new HqAuthorizationError("admin", accountId ?? null);
 }

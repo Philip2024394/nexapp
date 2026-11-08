@@ -54,6 +54,7 @@ import {
   isSecurityUnavailableError,
   recordIfAllowed,
 } from "@/lib/nex-native/security-rate-limit";
+import { recordAuditEvent } from "@/lib/nex-native/security-audit-service";
 import { headers as nextHeaders } from "next/headers";
 import * as productService from "@/lib/nex-native/product-service";
 import {
@@ -166,11 +167,29 @@ async function enforceAccountCreateRateLimit(
     // redirect lands BEFORE any Supabase auth.admin.createUser call ·
     // the handler never half-creates a user during DB brown-outs.
     if (isSecurityUnavailableError(e)) {
+      void recordAuditEvent({
+        event: "security.account.sign_up.denied",
+        outcome: "denied",
+        actorIdentity: ipRateLimitKey(ip),
+        metadata: {
+          reason: "service_unavailable",
+          retry_after_seconds: e.retryAfterSeconds,
+        },
+      }).catch(() => undefined);
       redirect(
         `${redirectToOnThrottle}?error=service_unavailable&retry_after=${e.retryAfterSeconds}`,
       );
     }
     if (isSecurityRateLimitError(e)) {
+      void recordAuditEvent({
+        event: "security.account.sign_up.denied",
+        outcome: "denied",
+        actorIdentity: ipRateLimitKey(ip),
+        metadata: {
+          reason: "rate_limited",
+          retry_after_seconds: e.retryAfterSeconds,
+        },
+      }).catch(() => undefined);
       redirect(
         `${redirectToOnThrottle}?error=rate_limited&retry_after=${e.retryAfterSeconds}`,
       );
