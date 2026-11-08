@@ -41,8 +41,35 @@ const DEDUP_WINDOW_MS = 60_000;
 const DEDUP_MAX_ENTRIES = 1024;
 const DEDUP = new Map<string, number>();
 
-function dedupKeyBase(scope: IncidentScope, category: IncidentCategory, extra?: string): string {
-  return `${scope}|${category}|${extra ?? ""}`;
+/** Owner directive 2026-11-08 (round 8) Priority 2 · dedup is now
+ *  COUNTRY-AWARE. An identical signal in `ireland` and `indonesia`
+ *  within the same process must NOT dedup against each other · they
+ *  are distinct incidents with distinct HQ visibility. The country
+ *  arg is derived from resolveCountry() at the callsite. The function
+ *  also exports the DB-level dedup_key (country-agnostic) via
+ *  stableDedupKey() so incident-service can match the country column
+ *  at the DB layer. Together they give both in-process burst
+ *  suppression AND cross-request same-signature coalescing. */
+function dedupKeyBase(
+  scope: IncidentScope,
+  category: IncidentCategory,
+  country: IncidentCountry,
+  extra?: string,
+): string {
+  return `${scope}|${category}|${country}|${extra ?? ""}`;
+}
+
+/** DB-level stable dedup key · country-agnostic. The country column
+ *  on nex_incident is what partitions by country at the DB layer;
+ *  the dedup_key value is the SAME shape for ireland + indonesia so
+ *  future readers can aggregate across countries when they want to. */
+export function stableDedupKey(
+  scope: IncidentScope,
+  category: IncidentCategory,
+  extra?: string,
+): string {
+  const safe = (extra ?? "").replace(/[^a-z0-9_.-]/gi, ".").toLowerCase();
+  return `${scope}.${category}${safe ? `.${safe}` : ""}`;
 }
 
 function markSignalFresh(key: string): boolean {
@@ -90,16 +117,20 @@ export interface RateLimitEscalationSignal {
 export async function reportRateLimitEscalation(
   signal: RateLimitEscalationSignal,
 ): Promise<{ created: boolean; incidentId?: string; skipped?: string }> {
-  const key = dedupKeyBase("auth", "attack", signal.action);
+  const country = resolveCountry();
+  const key = dedupKeyBase("auth", "attack", country, signal.action);
   if (!markSignalFresh(key)) return { created: false, skipped: "dedup_suppressed" };
   const res = await createIncident({
     category: "attack",
     severity: "critical",
     scope: signal.scope,
-    country: resolveCountry(),
+    country,
     summary: `rate-limit escalation · action=${signal.action} · threshold=${signal.thresholdCrossed} crossed in ${signal.windowSeconds}s · affected=${signal.affectedCount}`,
     adminActionRequired: true,
     usersAffectedCount: Math.max(0, signal.affectedCount),
+    detectionSource: "security_signal",
+    service: "rate_limit",
+    dedupKey: stableDedupKey("auth", "attack", signal.action),
   });
   if (!res.ok) return { created: false, skipped: res.skipped ?? "incident_write_failed" };
   return { created: true, incidentId: res.incidentId };
@@ -118,7 +149,8 @@ export interface AuthAnomalySignal {
 export async function reportAuthAnomaly(
   signal: AuthAnomalySignal,
 ): Promise<{ created: boolean; incidentId?: string; skipped?: string }> {
-  const key = dedupKeyBase("auth", "security", signal.kind);
+  const country = resolveCountry();
+  const key = dedupKeyBase("auth", "security", country, signal.kind);
   if (!markSignalFresh(key)) return { created: false, skipped: "dedup_suppressed" };
   const severity: IncidentSeverity =
     signal.kind === "counter_rollback_detected" ? "critical" : "warn";
@@ -126,10 +158,13 @@ export async function reportAuthAnomaly(
     category: "auth",
     severity,
     scope: "auth",
-    country: resolveCountry(),
+    country,
     summary: `auth anomaly · ${signal.kind}`,
     correlationId: signal.correlationId ?? null,
     adminActionRequired: severity === "critical",
+    detectionSource: "security_signal",
+    service: "auth",
+    dedupKey: stableDedupKey("auth", "security", signal.kind),
   });
   if (!res.ok) return { created: false, skipped: res.skipped ?? "incident_write_failed" };
   return { created: true, incidentId: res.incidentId };
@@ -145,18 +180,22 @@ export interface DependencyDegradationSignal {
 export async function reportDependencyDegradation(
   signal: DependencyDegradationSignal,
 ): Promise<{ created: boolean; incidentId?: string; skipped?: string }> {
-  const key = dedupKeyBase(signal.scope, "degraded", `${signal.dependency}:${signal.reason}`);
+  const country = resolveCountry();
+  const key = dedupKeyBase(signal.scope, "degraded", country, `${signal.dependency}:${signal.reason}`);
   if (!markSignalFresh(key)) return { created: false, skipped: "dedup_suppressed" };
   const severity: IncidentSeverity = signal.reason === "down" ? "critical" : "warn";
   const res = await createIncident({
     category: "degraded",
     severity,
     scope: signal.scope,
-    country: resolveCountry(),
+    country,
     summary: `dependency ${signal.dependency} · ${signal.reason}${
       signal.latency_ms !== undefined ? ` · latency=${signal.latency_ms}ms` : ""
     }`,
     adminActionRequired: severity === "critical",
+    detectionSource: "security_signal",
+    service: signal.dependency,
+    dedupKey: stableDedupKey(signal.scope, "degraded", `${signal.dependency}.${signal.reason}`),
   });
   if (!res.ok) return { created: false, skipped: res.skipped ?? "incident_write_failed" };
   return { created: true, incidentId: res.incidentId };
@@ -170,15 +209,19 @@ export interface AuditPersistenceFailureSignal {
 export async function reportAuditPersistenceFailure(
   signal: AuditPersistenceFailureSignal,
 ): Promise<{ created: boolean; incidentId?: string; skipped?: string }> {
-  const key = dedupKeyBase("auth", "security", `audit_fail:${signal.event}:${signal.stage}`);
+  const country = resolveCountry();
+  const key = dedupKeyBase("auth", "security", country, `audit_fail:${signal.event}:${signal.stage}`);
   if (!markSignalFresh(key)) return { created: false, skipped: "dedup_suppressed" };
   const res = await createIncident({
     category: "security",
     severity: "critical",
     scope: "auth",
-    country: resolveCountry(),
+    country,
     summary: `audit persistence failure · ${signal.event} ${signal.stage}`,
     adminActionRequired: true,
+    detectionSource: "security_signal",
+    service: "audit",
+    dedupKey: stableDedupKey("auth", "security", `audit_fail.${signal.event}.${signal.stage}`),
   });
   if (!res.ok) return { created: false, skipped: res.skipped ?? "incident_write_failed" };
   return { created: true, incidentId: res.incidentId };
@@ -198,15 +241,19 @@ export interface RecoveryAttemptSignal {
 export async function reportRecoveryAttempt(
   signal: RecoveryAttemptSignal,
 ): Promise<{ created: boolean; incidentId?: string; skipped?: string }> {
-  const key = dedupKeyBase(signal.scope, signal.category, `recovery:${signal.action}`);
+  const country = resolveCountry();
+  const key = dedupKeyBase(signal.scope, signal.category, country, `recovery:${signal.action}`);
   if (!markSignalFresh(key)) return { created: false, skipped: "dedup_suppressed" };
   const res = await createIncident({
     category: signal.success ? "recovery" : signal.category,
     severity: signal.success ? "info" : "warn",
     scope: signal.scope,
-    country: resolveCountry(),
+    country,
     summary: signal.summary,
     adminActionRequired: !signal.success,
+    detectionSource: "security_signal",
+    service: `recovery.${signal.action}`.slice(0, 64),
+    dedupKey: stableDedupKey(signal.scope, signal.category, `recovery.${signal.action}`),
   });
   if (!res.ok) return { created: false, skipped: res.skipped ?? "incident_write_failed" };
   return { created: true, incidentId: res.incidentId };

@@ -21,6 +21,7 @@ import {
   isLegalTransition,
   redactSummary,
   transitionIncident,
+  verifyIncidentRecovery,
   type IncidentStatus,
 } from "@/lib/nex-native/incident/incident-service";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
@@ -34,6 +35,7 @@ const LEGAL_STATUSES: readonly IncidentStatus[] = [
   "RECOVERING",
   "RECOVERED",
   "MONITORING",
+  "VERIFIED",
   "NEEDS_ADMIN",
   "CLOSED",
 ];
@@ -119,6 +121,39 @@ export async function acknowledgeIncidentAction(
   );
 
   redirect(`${basePath(incidentId)}?ok=acknowledged`);
+}
+
+/** Owner directive 2026-11-08 (round 8) Priority 2 · dedicated
+ *  verify action · the ONLY path into VERIFIED. Records the operator
+ *  identity on the incident row and emits a 'verified' event. Must
+ *  not be reachable by anyone who hasn't passed requireHqAdmin. */
+export async function verifyIncidentAction(formData: FormData): Promise<void> {
+  const incidentId = String(formData.get("incident_id") ?? "").trim();
+  const note = String(formData.get("note") ?? "").trim();
+  const { actorId } = await gateOrRedirect(incidentId);
+
+  const result = await verifyIncidentRecovery({
+    incidentId,
+    verifierAccountId: actorId,
+    note: note.length > 0 ? note : null,
+  });
+  if (!result.ok) {
+    const reason = result.error ?? "verify_failed";
+    redirect(
+      `${basePath(incidentId)}?error=${encodeURIComponent(reason)}&detail=${encodeURIComponent(
+        result.fromStatus ?? "",
+      )}`,
+    );
+  }
+
+  await emitAudit(
+    actorId,
+    "security.hq.incident.transitioned",
+    { incident_id: incidentId, from_status: result.fromStatus ?? "", to_status: "VERIFIED" },
+    incidentId,
+  );
+
+  redirect(`${basePath(incidentId)}?ok=verified`);
 }
 
 export async function transitionIncidentAction(

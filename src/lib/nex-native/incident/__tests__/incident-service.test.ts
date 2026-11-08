@@ -16,56 +16,86 @@ const STATE = vi.hoisted(() => ({
   currentIncident: null as null | { id: string; status: string },
   updateError: null as null | { message: string },
   lastUpdatePatch: null as null | Record<string, unknown>,
+  dedupLookupResult: null as null | { id: string },
+  updateByIdError: null as null | { message: string },
 }));
 
-vi.mock("../../supabase-admin", () => ({
-  nexSupabaseAdmin: {
-    from(table: string) {
-      return {
-        select: () => ({
-          limit: () => Promise.resolve({ data: [], error: STATE.probeError }),
-          eq: () => ({
-            maybeSingle: () =>
-              Promise.resolve({ data: STATE.currentIncident, error: null }),
-          }),
-          order: () => ({
-            limit: () => Promise.resolve({ data: [], error: null }),
-          }),
-          not: () => ({
-            count: 0,
-          }),
-        }),
-        insert(row: Record<string, unknown> | Record<string, unknown>[]) {
-          const rows = Array.isArray(row) ? row : [row];
-          for (const r of rows) STATE.insertedRows.push({ table, row: r });
-          return {
-            select: () => ({
-              maybeSingle: () =>
-                Promise.resolve({ data: STATE.insertResult.data, error: STATE.insertResult.error }),
-            }),
-          };
-        },
-        update: (patch: Record<string, unknown>) => {
-          STATE.lastUpdatePatch = patch;
-          return {
-            eq: (_c: string, _v: unknown) => ({
-              eq: (_c2: string, _v2: unknown) =>
-                Promise.resolve({ error: STATE.updateError }),
-            }),
-          };
-        },
-      };
+vi.mock("../../supabase-admin", () => {
+  // Chain that supports both single-row lookups (maybeSingle) and
+  // the dedup pattern (eq → eq → not → order → limit → maybeSingle).
+  function makeSelectChain(): Record<string, unknown> {
+    const chain: Record<string, unknown> = {};
+    chain.limit = () => chain;
+    chain.eq = () => chain;
+    chain.not = () => chain;
+    chain.order = () => chain;
+    chain.gte = () => chain;
+    chain.lt = () => chain;
+    chain.maybeSingle = () =>
+      Promise.resolve({ data: STATE.currentIncident ?? STATE.dedupLookupResult, error: null });
+    (chain as Record<string, unknown>).then = (
+      resolve?: ((v: unknown) => unknown) | null,
+      reject?: ((r: unknown) => unknown) | null,
+    ) =>
+      Promise.resolve({ data: [], error: STATE.probeError }).then(
+        resolve ?? undefined,
+        reject ?? undefined,
+      );
+    return chain;
+  }
+  return {
+    nexSupabaseAdmin: {
+      from(table: string) {
+        return {
+          select: () => makeSelectChain(),
+          insert(row: Record<string, unknown> | Record<string, unknown>[]) {
+            const rows = Array.isArray(row) ? row : [row];
+            for (const r of rows) STATE.insertedRows.push({ table, row: r });
+            return {
+              select: () => ({
+                maybeSingle: () =>
+                  Promise.resolve({ data: STATE.insertResult.data, error: STATE.insertResult.error }),
+              }),
+            };
+          },
+          update: (patch: Record<string, unknown>) => {
+            STATE.lastUpdatePatch = patch;
+            const updChain: Record<string, unknown> = {};
+            // Single-field .eq() path used by the dedup bump helper.
+            // Chained .eq().eq() path used by the optimistic-concurrency
+            // transition writer. Both supported.
+            updChain.eq = (_c: string, _v: unknown) => {
+              const second: Record<string, unknown> = {};
+              second.eq = (_c2: string, _v2: unknown) =>
+                Promise.resolve({ error: STATE.updateError });
+              (second as Record<string, unknown>).then = (
+                resolve?: ((v: unknown) => unknown) | null,
+                reject?: ((r: unknown) => unknown) | null,
+              ) =>
+                Promise.resolve({ error: STATE.updateByIdError }).then(
+                  resolve ?? undefined,
+                  reject ?? undefined,
+                );
+              return second;
+            };
+            return updChain;
+          },
+        };
+      },
     },
-  },
-}));
+  };
+});
 
 import {
   _resetIncidentProbeForTests,
+  bumpIncidentLastSeen,
   createIncident,
+  findOpenIncidentByDedupKey,
   isLegalTransition,
   recordRecoveryAttempt,
   redactSummary,
   transitionIncident,
+  verifyIncidentRecovery,
 } from "../incident-service";
 
 describe("redactSummary", () => {
@@ -318,5 +348,197 @@ describe("recordRecoveryAttempt", () => {
     });
     expect(STATE.insertedRows[0]!.row.kind).toBe("recovery_failure");
     expect(String(STATE.insertedRows[0]!.row.note)).toContain("[REDACTED]");
+  });
+});
+
+// ─── Priority 2 · VERIFIED lifecycle ───────────────────────────────
+
+describe("isLegalTransition · VERIFIED split (migration 304)", () => {
+  it("RECOVERED → VERIFIED is legal", () => {
+    expect(isLegalTransition("RECOVERED", "VERIFIED")).toBe(true);
+  });
+  it("MONITORING → VERIFIED is legal", () => {
+    expect(isLegalTransition("MONITORING", "VERIFIED")).toBe(true);
+  });
+  it("DETECTED → VERIFIED is NOT legal (must auto-recover first)", () => {
+    expect(isLegalTransition("DETECTED", "VERIFIED")).toBe(false);
+  });
+  it("RECOVERING → VERIFIED is NOT legal (must reach RECOVERED first)", () => {
+    expect(isLegalTransition("RECOVERING", "VERIFIED")).toBe(false);
+  });
+  it("VERIFIED → CLOSED is legal (terminal exit)", () => {
+    expect(isLegalTransition("VERIFIED", "CLOSED")).toBe(true);
+  });
+  it("VERIFIED → RECOVERED is NOT legal (verified is a 'done' claim)", () => {
+    expect(isLegalTransition("VERIFIED", "RECOVERED")).toBe(false);
+  });
+  it("VERIFIED → DETECTED is NOT legal (create a new incident instead)", () => {
+    expect(isLegalTransition("VERIFIED", "DETECTED")).toBe(false);
+  });
+});
+
+describe("transitionIncident · refuses generic VERIFIED path", () => {
+  beforeEach(() => {
+    _resetIncidentProbeForTests();
+    STATE.probeError = null;
+    STATE.insertedRows = [];
+    STATE.lastUpdatePatch = null;
+    STATE.currentIncident = { id: "x", status: "RECOVERED" };
+  });
+  it("returns verifier_required when toStatus=VERIFIED (preserves verifier identity integrity)", async () => {
+    const r = await transitionIncident({
+      incidentId: "x",
+      toStatus: "VERIFIED",
+      actorAccountId: "11111111-1111-4111-8111-111111111111",
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toBe("verifier_required");
+    expect(STATE.insertedRows).toEqual([]);
+  });
+});
+
+describe("verifyIncidentRecovery", () => {
+  const VERIFIER_ID = "22222222-2222-4222-8222-222222222222";
+  beforeEach(() => {
+    _resetIncidentProbeForTests();
+    STATE.probeError = null;
+    STATE.insertedRows = [];
+    STATE.lastUpdatePatch = null;
+    STATE.updateError = null;
+    STATE.updateByIdError = null;
+  });
+
+  it("stamps verified_by_admin + verified_at on RECOVERED → VERIFIED", async () => {
+    STATE.currentIncident = { id: "x", status: "RECOVERED" };
+    const r = await verifyIncidentRecovery({
+      incidentId: "x",
+      verifierAccountId: VERIFIER_ID,
+      note: "operator confirmed via dashboard",
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.fromStatus).toBe("RECOVERED");
+    const patch = STATE.lastUpdatePatch as Record<string, unknown>;
+    expect(patch).toBeTruthy();
+    expect(patch.status).toBe("VERIFIED");
+    expect(patch.verified_by_admin).toBe(VERIFIER_ID);
+    expect(typeof patch.verified_at).toBe("string");
+    expect(typeof patch.resolved_at).toBe("string");
+    // Companion 'verified' event
+    const event = STATE.insertedRows.find((r) => r.row.kind === "verified");
+    expect(event).toBeTruthy();
+    expect(event!.row.from_status).toBe("RECOVERED");
+    expect(event!.row.to_status).toBe("VERIFIED");
+    expect(event!.row.actor_account_id).toBe(VERIFIER_ID);
+  });
+
+  it("rejects an illegal transition into VERIFIED", async () => {
+    STATE.currentIncident = { id: "x", status: "DETECTED" };
+    const r = await verifyIncidentRecovery({
+      incidentId: "x",
+      verifierAccountId: VERIFIER_ID,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toBe("illegal_transition");
+    expect(STATE.insertedRows).toEqual([]);
+  });
+
+  it("rejects when the incident is missing", async () => {
+    STATE.currentIncident = null;
+    const r = await verifyIncidentRecovery({
+      incidentId: "nope",
+      verifierAccountId: VERIFIER_ID,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toBe("not_found");
+  });
+});
+
+describe("historical RECOVERED preservation", () => {
+  beforeEach(() => {
+    _resetIncidentProbeForTests();
+    STATE.probeError = null;
+    STATE.insertedRows = [];
+    STATE.lastUpdatePatch = null;
+  });
+
+  it("a historical RECOVERED incident cannot be reinterpreted · only operator-verified", async () => {
+    // Transition path · RECOVERED → CLOSED stays legal (operator
+    // can dismiss without verifying) but ONLY the dedicated
+    // verifyIncidentRecovery can produce VERIFIED.
+    STATE.currentIncident = { id: "hist", status: "RECOVERED" };
+    const genericAttempt = await transitionIncident({
+      incidentId: "hist",
+      toStatus: "VERIFIED",
+    });
+    expect(genericAttempt.ok).toBe(false);
+    // The row's historical status is NOT mutated by the refusal.
+    expect(STATE.lastUpdatePatch).toBeNull();
+  });
+});
+
+// ─── Priority 2 · country-aware dedup ──────────────────────────────
+
+describe("findOpenIncidentByDedupKey + bumpIncidentLastSeen", () => {
+  beforeEach(() => {
+    _resetIncidentProbeForTests();
+    STATE.probeError = null;
+    STATE.currentIncident = null;
+    STATE.dedupLookupResult = null;
+    STATE.lastUpdatePatch = null;
+    STATE.updateByIdError = null;
+  });
+
+  it("findOpenIncidentByDedupKey · returns null when no match", async () => {
+    STATE.dedupLookupResult = null;
+    const r = await findOpenIncidentByDedupKey({
+      dedupKey: "auth.attack.rate_limit",
+      country: "ireland",
+    });
+    expect(r.incidentId).toBeNull();
+  });
+
+  it("findOpenIncidentByDedupKey · returns the match id", async () => {
+    STATE.dedupLookupResult = { id: "match-xyz" };
+    const r = await findOpenIncidentByDedupKey({
+      dedupKey: "auth.attack.rate_limit",
+      country: "ireland",
+    });
+    expect(r.incidentId).toBe("match-xyz");
+  });
+
+  it("findOpenIncidentByDedupKey · returns table_not_available pre-migration-300", async () => {
+    _resetIncidentProbeForTests();
+    STATE.probeError = { message: 'relation "nex_incident" does not exist' };
+    const r = await findOpenIncidentByDedupKey({
+      dedupKey: "x.y.z",
+      country: "ireland",
+    });
+    expect(r.incidentId).toBeNull();
+    expect(r.skipped).toBe("table_not_available");
+  });
+
+  it("bumpIncidentLastSeen · no-op when no match (returns bumped=false)", async () => {
+    STATE.dedupLookupResult = null;
+    const r = await bumpIncidentLastSeen({
+      dedupKey: "x.y.z",
+      country: "ireland",
+    });
+    expect(r.bumped).toBe(false);
+    expect(STATE.lastUpdatePatch).toBeNull();
+  });
+
+  it("bumpIncidentLastSeen · updates last_seen_at + updated_at when match found", async () => {
+    STATE.dedupLookupResult = { id: "match-abc" };
+    const r = await bumpIncidentLastSeen({
+      dedupKey: "x.y.z",
+      country: "indonesia",
+    });
+    expect(r.bumped).toBe(true);
+    expect(r.incidentId).toBe("match-abc");
+    const patch = STATE.lastUpdatePatch as Record<string, unknown>;
+    expect(typeof patch.last_seen_at).toBe("string");
+    expect(typeof patch.updated_at).toBe("string");
+    // We deliberately do NOT update status · bump is a lifespan ping.
+    expect(patch.status).toBeUndefined();
   });
 });

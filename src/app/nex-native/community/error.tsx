@@ -1,7 +1,7 @@
 "use client";
-// Owner-authorised 2026-11-08 (round 6) · Phase 1 remediation · Priority 1.
-// Community scope reports as 'infra' until Priority-2 migration 304
-// expands the nex_incident.scope CHECK enum to include 'community'.
+// Owner-authorised 2026-11-08 (round 6+8) · segment error boundary.
+// Priority 2 migration 304 added 'community' to the DB scope CHECK ·
+// section reports now carry the true scope.
 import { SegmentErrorBoundary } from "@/components/nex-native/section-boundary/SegmentErrorBoundary";
 
 export default function CommunitySegmentError({
@@ -12,6 +12,6 @@ export default function CommunitySegmentError({
   readonly reset: () => void;
 }): React.JSX.Element {
   return (
-    <SegmentErrorBoundary section="infra" label="Community" error={error} reset={reset} />
+    <SegmentErrorBoundary section="community" label="Community" error={error} reset={reset} />
   );
 }

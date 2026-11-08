@@ -49,7 +49,10 @@ export type SegmentScope =
   | "auth"
   | "storage"
   | "db"
-  | "cron";
+  | "cron"
+  // Owner-authorised 2026-11-08 (round 8) Priority 2 · migration 304.
+  | "settings"
+  | "community";
 
 export interface SegmentErrorBoundaryProps {
   /** Scope tag sent to the incident endpoint. */

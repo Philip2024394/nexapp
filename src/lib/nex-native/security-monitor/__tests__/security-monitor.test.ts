@@ -8,13 +8,26 @@ vi.stubEnv("NEXT_PUBLIC_NEX_SUPABASE_URL", "https://sandbox.supabase.co");
 vi.stubEnv("NEX_SUPABASE_SERVICE_ROLE_KEY", "mock-service-role-key");
 vi.stubEnv("NEXT_PUBLIC_NEX_SUPABASE_ANON_KEY", "mock-anon");
 
+interface CreateCall {
+  category: string;
+  severity: string;
+  scope: string;
+  country: string;
+  summary: string;
+  adminActionRequired?: boolean;
+  usersAffectedCount?: number;
+  detectionSource?: string;
+  service?: string | null;
+  dedupKey?: string | null;
+}
+
 const SHARED = vi.hoisted(() => ({
-  createCalls: [] as Array<{ category: string; severity: string; scope: string; country: string; summary: string; adminActionRequired?: boolean; usersAffectedCount?: number }>,
+  createCalls: [] as Array<CreateCall>,
   createResult: { ok: true as boolean, incidentId: "incident-1" as string | undefined, skipped: undefined as string | undefined },
 }));
 
 vi.mock("../../incident/incident-service", () => ({
-  createIncident: (input: { category: string; severity: string; scope: string; country: string; summary: string; adminActionRequired?: boolean; usersAffectedCount?: number }) => {
+  createIncident: (input: CreateCall) => {
     SHARED.createCalls.push(input);
     return Promise.resolve({ ok: SHARED.createResult.ok, incidentId: SHARED.createResult.incidentId, skipped: SHARED.createResult.skipped });
   },
@@ -174,5 +187,56 @@ describe("country resolution from env", () => {
     vi.stubEnv("NEX_APP_COUNTRY", "mars");
     await reportAuthAnomaly({ kind: "repeated_wrong_password" });
     expect(SHARED.createCalls[0]!.country).toBe("global");
+  });
+});
+
+// ─── Priority 2 · country-aware dedup + mig 304 fields ─────────────
+
+describe("country-aware dedup (owner directive 2026-11-08 round 8)", () => {
+  beforeEach(() => {
+    _resetMonitorDedupForTests();
+    SHARED.createCalls = [];
+    SHARED.createResult = { ok: true, incidentId: "incident-1", skipped: undefined };
+  });
+
+  it("identical signal in a different country is NOT deduped", async () => {
+    // First signal in Ireland.
+    vi.stubEnv("NEX_APP_COUNTRY", "ireland");
+    const first = await reportAuthAnomaly({ kind: "repeated_wrong_password" });
+    expect(first.created).toBe(true);
+    // Same signal in Indonesia · must NOT be suppressed · different
+    // country boundary.
+    vi.stubEnv("NEX_APP_COUNTRY", "indonesia");
+    const second = await reportAuthAnomaly({ kind: "repeated_wrong_password" });
+    expect(second.created).toBe(true);
+    expect(SHARED.createCalls).toHaveLength(2);
+    expect(SHARED.createCalls[0]!.country).toBe("ireland");
+    expect(SHARED.createCalls[1]!.country).toBe("indonesia");
+  });
+
+  it("identical signal in the same country IS deduped (burst suppression)", async () => {
+    vi.stubEnv("NEX_APP_COUNTRY", "ireland");
+    const first = await reportAuthAnomaly({ kind: "repeated_wrong_password" });
+    const second = await reportAuthAnomaly({ kind: "repeated_wrong_password" });
+    expect(first.created).toBe(true);
+    expect(second.created).toBe(false);
+    expect(second.skipped).toBe("dedup_suppressed");
+    expect(SHARED.createCalls).toHaveLength(1);
+  });
+
+  it("populates migration-304 detectionSource + service + dedupKey", async () => {
+    vi.stubEnv("NEX_APP_COUNTRY", "ireland");
+    await reportRateLimitEscalation({
+      action: "account_create",
+      scope: "auth",
+      affectedCount: 15,
+      thresholdCrossed: 10,
+      windowSeconds: 60,
+    });
+    const call = SHARED.createCalls[0]!;
+    expect(call.detectionSource).toBe("security_signal");
+    expect(call.service).toBe("rate_limit");
+    expect(typeof call.dedupKey).toBe("string");
+    expect(call.dedupKey).toMatch(/^auth\.attack/);
   });
 });

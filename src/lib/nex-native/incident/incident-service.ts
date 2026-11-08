@@ -42,8 +42,15 @@ export type IncidentCategory =
   | "attack"
   | "degraded";
 
-export type IncidentSeverity = "info" | "warn" | "critical";
+// Owner directive 2026-11-08 (round 8) Priority 2 · 4-tier severity
+// (migration 304). `high` sits between warn and critical.
+export type IncidentSeverity = "info" | "warn" | "high" | "critical";
 
+// Owner directive 2026-11-08 (round 8) Priority 2 · VERIFIED is a
+// NEW distinct status (migration 304). It means an HQ operator has
+// CONFIRMED a recovery claim. RECOVERED = auto-recovery claimed ·
+// VERIFIED = operator-verified. Historical RECOVERED rows stay
+// RECOVERED and are NEVER retroactively reinterpreted as VERIFIED.
 export type IncidentStatus =
   | "DETECTED"
   | "INVESTIGATING"
@@ -51,8 +58,20 @@ export type IncidentStatus =
   | "RECOVERING"
   | "RECOVERED"
   | "MONITORING"
+  | "VERIFIED"
   | "NEEDS_ADMIN"
   | "CLOSED";
+
+/** How an incident was detected. Bounded enum enforced in DB CHECK. */
+export type IncidentDetectionSource =
+  | "section_boundary"
+  | "section_probe"
+  | "core_probe"
+  | "security_signal"
+  | "audit_reconciler"
+  | "manual"
+  | "external_webhook"
+  | "unknown";
 
 export type IncidentScope =
   | "chat"
@@ -69,14 +88,13 @@ export type IncidentScope =
   | "auth"
   | "storage"
   | "db"
-  | "cron";
-// Phase-1 note 2026-11-08 (round 6) · `settings` + `community` wraps
-// were authorised but the DB CHECK on nex_incident.scope (migration
-// 300) still enforces the enum above · Priority-2 migration 304 will
-// expand the CHECK + add the enum values. For Phase 1 those two
-// segments report incidents with scope='infra' so the write succeeds
-// without a schema change. A log line at the segment error.tsx makes
-// the scope mapping explicit so the HQ operator can trace back.
+  | "cron"
+  // Owner-authorised 2026-11-08 (round 8) Priority 2 · migration 304
+  // expands the DB CHECK to include these two values · the TS enum
+  // + section-error endpoint LEGAL_SECTIONS + SegmentScope stay in
+  // lock-step.
+  | "settings"
+  | "community";
 
 export type IncidentCountry = "ireland" | "indonesia" | "worldwide" | "hq" | "global";
 
@@ -89,6 +107,12 @@ export interface CreateIncidentInput {
   readonly correlationId?: string | null;
   readonly usersAffectedCount?: number;
   readonly adminActionRequired?: boolean;
+  // Owner directive 2026-11-08 (round 8) Priority 2 · migration 304
+  // fields. All optional at the service layer · the DB enforces
+  // shape constraints + defaults.
+  readonly detectionSource?: IncidentDetectionSource;
+  readonly service?: string | null;
+  readonly dedupKey?: string | null;
 }
 
 export interface CreateIncidentResult {
@@ -189,13 +213,20 @@ export function _resetIncidentProbeForTests(): void {
   INCIDENT_TABLE_READY = null;
 }
 
+// Owner directive 2026-11-08 (round 8) Priority 2 · VERIFIED split.
+// RECOVERED means auto-recovery CLAIMED. VERIFIED means an HQ operator
+// has CONFIRMED the recovery. The only path INTO VERIFIED is from
+// RECOVERED or MONITORING. VERIFIED → CLOSED is the only exit forward.
+// If a problem returns after VERIFIED, create a NEW incident · the
+// VERIFIED state is a terminal "done" claim and must not be reopened.
 const LEGAL_TRANSITIONS: Record<IncidentStatus, readonly IncidentStatus[]> = {
   DETECTED: ["INVESTIGATING", "PROTECTING", "RECOVERING", "NEEDS_ADMIN", "CLOSED"],
   INVESTIGATING: ["PROTECTING", "RECOVERING", "NEEDS_ADMIN", "CLOSED"],
   PROTECTING: ["RECOVERING", "RECOVERED", "NEEDS_ADMIN", "CLOSED"],
   RECOVERING: ["RECOVERED", "MONITORING", "NEEDS_ADMIN", "CLOSED"],
-  RECOVERED: ["MONITORING", "CLOSED"],
-  MONITORING: ["RECOVERED", "CLOSED", "NEEDS_ADMIN"],
+  RECOVERED: ["MONITORING", "VERIFIED", "CLOSED"],
+  MONITORING: ["RECOVERED", "VERIFIED", "CLOSED", "NEEDS_ADMIN"],
+  VERIFIED: ["CLOSED"],
   NEEDS_ADMIN: ["INVESTIGATING", "RECOVERING", "CLOSED"],
   CLOSED: [],
 };
@@ -231,6 +262,13 @@ export async function createIncident(
       correlation_id: input.correlationId ?? null,
       users_affected_count: Math.max(0, input.usersAffectedCount ?? 0),
       admin_action_required: input.adminActionRequired ?? false,
+      // Owner directive 2026-11-08 (round 8) Priority 2 · populate the
+      // migration-304 columns when the caller provides them. The DB
+      // supplies safe defaults (last_seen_at=now, source='unknown')
+      // when absent.
+      detection_source: input.detectionSource ?? undefined,
+      service: input.service ?? undefined,
+      dedup_key: input.dedupKey ?? undefined,
     })
     .select("id")
     .maybeSingle();
@@ -269,7 +307,8 @@ export interface TransitionResult {
     | "not_found"
     | "illegal_transition"
     | "write_failed"
-    | "table_not_available";
+    | "table_not_available"
+    | "verifier_required";
   readonly fromStatus?: IncidentStatus;
 }
 
@@ -291,9 +330,20 @@ export async function transitionIncident(
     return { ok: false, error: "illegal_transition", fromStatus };
   }
 
+  // Owner directive 2026-11-08 (round 8) Priority 2 · VERIFIED is
+  // reserved for operator-verified resolution. Reject generic
+  // transitionIncident attempts to VERIFIED · callers MUST use
+  // verifyIncidentRecovery() which carries the verifier account id.
+  if (input.toStatus === "VERIFIED") {
+    return { ok: false, error: "verifier_required", fromStatus };
+  }
+
   const patch: Record<string, unknown> = {
     status: input.toStatus,
     updated_at: new Date().toISOString(),
+    // Every write updates last_seen_at so readers can bucket by
+    // recency without re-joining events.
+    last_seen_at: new Date().toISOString(),
   };
   if (input.recoveryActionTaken) {
     // Owner directive 2026-11-08 · leak review found this field was
@@ -301,7 +351,10 @@ export async function transitionIncident(
     // same patterns that scrub `summary` also scrub this field.
     patch.recovery_action_taken = redactSummary(input.recoveryActionTaken);
   }
-  if (input.toStatus === "RECOVERED" || input.toStatus === "CLOSED") {
+  // Owner directive 2026-11-08 (round 8) Priority 2 · RECOVERED no
+  // longer sets resolved_at. Only VERIFIED and CLOSED do · they are
+  // the genuine terminal "done" states.
+  if (input.toStatus === "CLOSED") {
     patch.resolved_at = new Date().toISOString();
   }
 
@@ -318,6 +371,128 @@ export async function transitionIncident(
     actor_account_id: input.actorAccountId ?? null,
     from_status: fromStatus,
     to_status: input.toStatus,
+    note: input.note ? redactSummary(input.note) : null,
+  });
+
+  return { ok: true, fromStatus };
+}
+
+// ─── Country-aware dedup (owner directive 2026-11-08 round 8) ────
+//
+// For a signal that fires repeatedly (e.g. "rate limit tripped on
+// auth"), callers compute a stable dedup_key (scope|category|extra)
+// and ALSO carry the country. We look up an open-same-signature
+// incident · if one exists, we BUMP its last_seen_at instead of
+// inserting a new row. This keeps HQ Alerts from storming during
+// a repeated signal AND is country-aware · an identical signature
+// in `ireland` vs `indonesia` creates TWO incidents, not one.
+
+export interface BumpDedupInput {
+  readonly dedupKey: string;
+  readonly country: IncidentCountry;
+}
+
+export interface BumpDedupResult {
+  readonly bumped: boolean;
+  readonly incidentId?: string;
+  readonly skipped?: "table_not_available";
+}
+
+/** Return the id of an open same-signature incident for the given
+ *  country, or null if none exists. Readers call this before a
+ *  createIncident to decide dedup-vs-insert. */
+export async function findOpenIncidentByDedupKey(
+  input: BumpDedupInput,
+): Promise<{ incidentId: string | null; skipped?: "table_not_available" }> {
+  const ready = await ensureIncidentTableReady();
+  if (!ready) return { incidentId: null, skipped: "table_not_available" };
+  const { data, error } = await nexSupabaseAdmin
+    .from("nex_incident")
+    .select("id")
+    .eq("dedup_key", input.dedupKey)
+    .eq("country", input.country)
+    .not("status", "in", "(CLOSED,VERIFIED)")
+    .order("detected_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) return { incidentId: null };
+  return { incidentId: (data as { id: string } | null)?.id ?? null };
+}
+
+/** Bump last_seen_at on an existing incident matching the dedup key
+ *  + country. Returns bumped=true + the incident id when one was
+ *  updated. Used by monitor signals that would otherwise storm the
+ *  table with identical rows. */
+export async function bumpIncidentLastSeen(
+  input: BumpDedupInput,
+): Promise<BumpDedupResult> {
+  const lookup = await findOpenIncidentByDedupKey(input);
+  if (lookup.skipped) return { bumped: false, skipped: "table_not_available" };
+  if (!lookup.incidentId) return { bumped: false };
+  const nowIso = new Date().toISOString();
+  const { error } = await nexSupabaseAdmin
+    .from("nex_incident")
+    .update({ last_seen_at: nowIso, updated_at: nowIso })
+    .eq("id", lookup.incidentId);
+  if (error) return { bumped: false };
+  return { bumped: true, incidentId: lookup.incidentId };
+}
+
+// ─── VERIFIED · operator verification (owner directive 2026-11-08 round 8) ───
+//
+// RECOVERED means auto-recovery CLAIMED. VERIFIED means an HQ operator
+// has independently CONFIRMED the recovery. This function is the ONLY
+// path into VERIFIED · it requires a real HQ-admin account id so the
+// audit trail carries the verifier identity. The caller MUST have
+// already re-checked requireHqAdmin at the server-action boundary.
+
+export interface VerifyRecoveryInput {
+  readonly incidentId: string;
+  readonly verifierAccountId: string;
+  readonly note?: string | null;
+}
+
+export async function verifyIncidentRecovery(
+  input: VerifyRecoveryInput,
+): Promise<TransitionResult> {
+  const ready = await ensureIncidentTableReady();
+  if (!ready) return { ok: false, error: "table_not_available" };
+
+  const current = await nexSupabaseAdmin
+    .from("nex_incident")
+    .select("id, status")
+    .eq("id", input.incidentId)
+    .maybeSingle();
+  if (current.error || !current.data) return { ok: false, error: "not_found" };
+
+  const fromStatus = (current.data as { status: IncidentStatus }).status;
+  if (!isLegalTransition(fromStatus, "VERIFIED")) {
+    return { ok: false, error: "illegal_transition", fromStatus };
+  }
+
+  const nowIso = new Date().toISOString();
+  const patch: Record<string, unknown> = {
+    status: "VERIFIED",
+    verified_by_admin: input.verifierAccountId,
+    verified_at: nowIso,
+    resolved_at: nowIso,
+    updated_at: nowIso,
+    last_seen_at: nowIso,
+  };
+
+  const upd = await nexSupabaseAdmin
+    .from("nex_incident")
+    .update(patch)
+    .eq("id", input.incidentId)
+    .eq("status", fromStatus);
+  if (upd.error) return { ok: false, error: "write_failed", fromStatus };
+
+  await nexSupabaseAdmin.from("nex_incident_event").insert({
+    incident_id: input.incidentId,
+    kind: "verified",
+    actor_account_id: input.verifierAccountId,
+    from_status: fromStatus,
+    to_status: "VERIFIED",
     note: input.note ? redactSummary(input.note) : null,
   });
 
@@ -385,6 +560,17 @@ export interface IncidentRow {
   readonly detected_at: string;
   readonly resolved_at: string | null;
   readonly correlation_id: string | null;
+  // Owner directive 2026-11-08 (round 8) Priority 2 · migration 304
+  // fields exposed to readers. `verified_by_admin` + `verified_at`
+  // populated only when status=VERIFIED. `last_seen_at` is always
+  // populated. `detection_source` + `service` + `dedup_key` populated
+  // for new rows; nullable for historical rows.
+  readonly last_seen_at: string;
+  readonly detection_source: IncidentDetectionSource;
+  readonly service: string | null;
+  readonly verified_by_admin: string | null;
+  readonly verified_at: string | null;
+  readonly dedup_key: string | null;
 }
 
 export interface IncidentSummaryCounts {
@@ -402,7 +588,7 @@ export async function fetchRecentIncidents(limit = 100): Promise<readonly Incide
   const { data, error } = await nexSupabaseAdmin
     .from("nex_incident")
     .select(
-      "id, category, severity, scope, country, status, summary, recovery_action_taken, users_affected_count, admin_action_required, detected_at, resolved_at, correlation_id",
+      "id, category, severity, scope, country, status, summary, recovery_action_taken, users_affected_count, admin_action_required, detected_at, resolved_at, correlation_id, last_seen_at, detection_source, service, verified_by_admin, verified_at, dedup_key",
     )
     .order("detected_at", { ascending: false })
     .limit(limit);

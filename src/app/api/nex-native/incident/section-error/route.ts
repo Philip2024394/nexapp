@@ -61,6 +61,11 @@ const LEGAL_SECTIONS: ReadonlySet<IncidentScope> = new Set<IncidentScope>([
   "storage",
   "db",
   "cron",
+  // Owner-authorised 2026-11-08 (round 8) Priority 2 · migration 304
+  // expanded the DB CHECK · the endpoint + the SegmentErrorBoundary
+  // scope + the error.tsx files now all agree.
+  "settings",
+  "community",
 ]);
 
 interface Body {
@@ -185,7 +190,9 @@ export async function POST(req: Request): Promise<NextResponse> {
 
   // 4 · Record the incident · category=service, severity=warn,
   //     scope=<section>, country=NEX_APP_COUNTRY. The summary is
-  //     redacted by the incident service.
+  //     redacted by the incident service. Owner directive 2026-11-08
+  //     (round 8) Priority 2 · detection_source='section_boundary'
+  //     so operators can filter incidents by how they were detected.
   const country = resolveCountry();
   const actorTag = actorAccountId ? ` · actor=${actorAccountId}` : "";
   const summary = `section render error · ${messageClipped}${actorTag}`;
@@ -196,6 +203,9 @@ export async function POST(req: Request): Promise<NextResponse> {
       scope: section,
       country,
       summary,
+      detectionSource: "section_boundary",
+      service: `nex-native.${section}`,
+      dedupKey: `${section}.service.render_error`,
     });
   } catch {
     // createIncident itself never throws by contract · but defensive

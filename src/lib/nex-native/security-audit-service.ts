@@ -404,22 +404,52 @@ function sanitiseMetadata(
   return out;
 }
 
-/** One-level deep scrub · strings get pattern-redacted, plain objects
- *  recurse one level (keeps us safe for common nested shapes like
- *  { reason, details } · deliberately bounded to avoid catalog drift
- *  from becoming a runtime surprise). Non-string / non-plain-object
- *  values (numbers, booleans, arrays) pass through unchanged. */
+/** Recursive metadata scrub · owner directive 2026-11-08 (round 8)
+ *  Priority 2 · closes the array-bypass gap found by the sealed
+ *  Safety Audit Part C.
+ *
+ *  Walks every string leaf anywhere in the value and runs it through
+ *  redactPatterns. Handles:
+ *    · plain strings (direct scrub)
+ *    · plain objects (recurse)
+ *    · arrays (recurse each element)
+ *    · arrays nested inside objects
+ *    · objects nested inside arrays
+ *    · mixed structures (object of arrays of objects of strings)
+ *
+ *  Bounded depth · 8 levels. A metadata blob deeper than that is
+ *  truncated at the depth cap to `"[REDACTED_DEEP]"` · defends
+ *  against a crafted input that would recurse forever.
+ *
+ *  Cycle detection · WeakSet · if the SAME object is seen twice in
+ *  the recursion, the second visit returns `"[REDACTED_CYCLE]"`.
+ *
+ *  Numbers, booleans, null, undefined pass through unchanged.
+ */
+const SCRUB_MAX_DEPTH = 8;
+
 function scrubMetadataValue(v: unknown): unknown {
+  return scrubWalk(v, 0, new WeakSet<object>());
+}
+
+function scrubWalk(v: unknown, depth: number, seen: WeakSet<object>): unknown {
+  if (depth > SCRUB_MAX_DEPTH) return "[REDACTED_DEEP]";
   if (typeof v === "string") return redactPatterns(v);
-  if (v && typeof v === "object" && !Array.isArray(v)) {
-    const nested: Record<string, unknown> = {};
-    for (const [nk, nv] of Object.entries(v as Record<string, unknown>)) {
-      nested[nk] =
-        typeof nv === "string" ? redactPatterns(nv) : (nv as unknown);
-    }
-    return nested;
+  if (v == null || typeof v !== "object") return v;
+  // At this point v is a non-null object (array or plain). Guard
+  // against cycles BEFORE recursing.
+  if (seen.has(v as object)) return "[REDACTED_CYCLE]";
+  seen.add(v as object);
+  if (Array.isArray(v)) {
+    const out: unknown[] = [];
+    for (const item of v) out.push(scrubWalk(item, depth + 1, seen));
+    return out;
   }
-  return v;
+  const nested: Record<string, unknown> = {};
+  for (const [nk, nv] of Object.entries(v as Record<string, unknown>)) {
+    nested[nk] = scrubWalk(nv, depth + 1, seen);
+  }
+  return nested;
 }
 
 // ─── Table-availability probe · pre-migration-292 behaviour ─────────

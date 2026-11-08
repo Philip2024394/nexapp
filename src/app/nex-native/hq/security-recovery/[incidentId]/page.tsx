@@ -24,6 +24,7 @@ import {
   escalateIncidentAction,
   saveResolutionNotesAction,
   transitionIncidentAction,
+  verifyIncidentAction,
 } from "./_actions";
 
 export const dynamic = "force-dynamic";
@@ -58,6 +59,15 @@ interface IncidentDetailRow {
   readonly acknowledged_at: string | null;
   readonly assigned_to: string | null;
   readonly resolution_notes: string | null;
+  // Owner directive 2026-11-08 (round 8) Priority 2 · migration 304
+  // fields. Rendered on the drill-down so operators can see at a
+  // glance when a RECOVERED was verified and by whom.
+  readonly last_seen_at?: string | null;
+  readonly detection_source?: string | null;
+  readonly service?: string | null;
+  readonly verified_by_admin?: string | null;
+  readonly verified_at?: string | null;
+  readonly dedup_key?: string | null;
 }
 
 const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -69,6 +79,10 @@ const ALL_STATUSES: readonly IncidentStatus[] = [
   "RECOVERING",
   "RECOVERED",
   "MONITORING",
+  // Owner directive 2026-11-08 (round 8) Priority 2 · VERIFIED is a
+  // NEW distinct status. The transition dropdown excludes it (we do
+  // NOT allow verification via the generic transition form · a
+  // dedicated verifyIncidentAction carries the verifier identity).
   "NEEDS_ADMIN",
   "CLOSED",
 ];
@@ -79,7 +93,7 @@ async function fetchIncident(
   const { data, error } = await nexSupabaseAdmin
     .from("nex_incident")
     .select(
-      "id, correlation_id, category, severity, scope, country, status, users_affected_count, admin_action_required, summary, recovery_action_taken, detected_at, resolved_at, updated_at, acknowledged_by, acknowledged_at, assigned_to, resolution_notes",
+      "id, correlation_id, category, severity, scope, country, status, users_affected_count, admin_action_required, summary, recovery_action_taken, detected_at, resolved_at, updated_at, acknowledged_by, acknowledged_at, assigned_to, resolution_notes, last_seen_at, detection_source, service, verified_by_admin, verified_at, dedup_key",
     )
     .eq("id", incidentId)
     .maybeSingle();
@@ -351,6 +365,13 @@ function OperatorActions({
   const transitionsFromHere = ALL_STATUSES.filter((s) =>
     isLegalTransition(incident.status, s),
   );
+  // Owner directive 2026-11-08 (round 8) Priority 2 · VERIFIED is a
+  // distinct operator-only transition with its own form carrying the
+  // verifier identity. Show the Mark-verified panel only when the
+  // incident is in a verifiable state (RECOVERED or MONITORING).
+  const canVerify =
+    incident.status === "RECOVERED" || incident.status === "MONITORING";
+  const alreadyVerified = incident.status === "VERIFIED";
 
   return (
     <section
@@ -431,6 +452,39 @@ function OperatorActions({
                 </button>
               </>
             )}
+          </div>
+        </form>
+
+        {/* Mark Verified · owner directive 2026-11-08 (round 8) Priority 2.
+            RECOVERED means auto-recovery CLAIMED. VERIFIED means the
+            operator has INDEPENDENTLY CONFIRMED. The verifier id is
+            stamped on the row and carried in the audit event. */}
+        <form action={verifyIncidentAction}>
+          <input type="hidden" name="incident_id" value={incident.id} />
+          <div style={formGroupStyle}>
+            <div style={formTitleStyle}>Mark Verified</div>
+            <div style={formHelpStyle}>
+              {alreadyVerified
+                ? `Verified ${formatUtc(incident.verified_at ?? "")} by ${shortHash(incident.verified_by_admin ?? "")}`
+                : canVerify
+                  ? "Operator-verified resolution · stamps verified_by_admin + verified_at."
+                  : "Only incidents in RECOVERED or MONITORING can be verified."}
+            </div>
+            <input
+              type="text"
+              name="note"
+              placeholder="Verification note (redacted)"
+              maxLength={300}
+              disabled={!canVerify || alreadyVerified}
+              style={inputStyle}
+            />
+            <button
+              type="submit"
+              disabled={!canVerify || alreadyVerified}
+              style={buttonStyle(canVerify && !alreadyVerified ? "primary" : "muted")}
+            >
+              {alreadyVerified ? "Already verified" : "Mark verified"}
+            </button>
           </div>
         </form>
 

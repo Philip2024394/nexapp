@@ -251,6 +251,105 @@ describe("recordAuditEvent · metadata sanitisation", () => {
     expect(reason).not.toContain("bob@example.com");
     expect(reason).not.toContain("sk_live_abc123XYZ");
   });
+
+  // Owner directive 2026-11-08 (round 8) Priority 2 · close the
+  // Safety-Audit-C array-bypass gap. Recursive scrub must handle
+  // every shape of nesting.
+  it("scrubs string leaves inside a top-level array under a permitted key", async () => {
+    await recordAuditEvent({
+      event: "security.account.sign_in.denied",
+      outcome: "denied",
+      actorIdentity: "ip:hashed-abcdefghij",
+      metadata: {
+        reason: [
+          "first clue · bob@example.com",
+          "second clue · sk_live_ABC123XYZ",
+          "nothing sensitive",
+        ],
+      },
+    });
+    const meta = SUPABASE_STATE.lastInsertedRow!.metadata as Record<string, unknown>;
+    const arr = meta.reason as string[];
+    expect(Array.isArray(arr)).toBe(true);
+    expect(arr[0]).not.toContain("bob@example.com");
+    expect(arr[0]).toContain("[REDACTED]");
+    expect(arr[1]).not.toContain("sk_live_ABC123XYZ");
+    expect(arr[1]).toContain("[REDACTED]");
+    expect(arr[2]).toBe("nothing sensitive");
+  });
+
+  it("scrubs strings in objects nested inside arrays", async () => {
+    await recordAuditEvent({
+      event: "security.account.sign_in.denied",
+      outcome: "denied",
+      actorIdentity: "ip:hashed-abcdefghij",
+      metadata: {
+        reason: [
+          { note: "AWS key AKIAIOSFODNN7EXAMPLE leaked", ok: false },
+          { note: "normal note", ok: true },
+        ],
+      },
+    });
+    const meta = SUPABASE_STATE.lastInsertedRow!.metadata as Record<string, unknown>;
+    const arr = meta.reason as Array<Record<string, unknown>>;
+    expect(arr[0]!.note).not.toContain("AKIAIOSFODNN7EXAMPLE");
+    expect(arr[0]!.note).toContain("[REDACTED]");
+    expect(arr[0]!.ok).toBe(false);
+    expect(arr[1]!.note).toBe("normal note");
+  });
+
+  it("scrubs strings in arrays nested inside objects (multi-level)", async () => {
+    await recordAuditEvent({
+      event: "security.account.sign_in.denied",
+      outcome: "denied",
+      actorIdentity: "ip:hashed-abcdefghij",
+      metadata: {
+        reason: {
+          clues: ["ghp_ABCDEFGHIJ1234567890abcdefGHIJKL123456"],
+          deeper: { more: ["more info · +353871234567"] },
+        },
+      },
+    });
+    const meta = SUPABASE_STATE.lastInsertedRow!.metadata as Record<string, unknown>;
+    const reason = meta.reason as Record<string, unknown>;
+    const clues = reason.clues as string[];
+    expect(clues[0]).not.toContain("ghp_ABCDEFGHIJ");
+    expect(clues[0]).toContain("[REDACTED]");
+    const deeper = (reason.deeper as Record<string, unknown>).more as string[];
+    expect(deeper[0]).not.toContain("+353871234567");
+    expect(deeper[0]).toContain("[REDACTED]");
+  });
+
+  it("truncates at SCRUB_MAX_DEPTH rather than recursing forever", async () => {
+    // Build a 10-level-deep nested value · scrubber caps at 8.
+    let deep: unknown = "secret token=abc123xyz";
+    for (let i = 0; i < 10; i++) deep = { wrap: deep };
+    await recordAuditEvent({
+      event: "security.account.sign_in.denied",
+      outcome: "denied",
+      actorIdentity: "ip:hashed-abcdefghij",
+      metadata: { reason: deep as never },
+    });
+    const meta = SUPABASE_STATE.lastInsertedRow!.metadata as Record<string, unknown>;
+    // Somewhere in the chain a REDACTED_DEEP sentinel must appear.
+    const str = JSON.stringify(meta);
+    expect(str).toContain("REDACTED_DEEP");
+  });
+
+  it("handles cycles by substituting REDACTED_CYCLE", async () => {
+    const a: Record<string, unknown> = { note: "safe" };
+    const b: Record<string, unknown> = { back: a };
+    a.forward = b;
+    await recordAuditEvent({
+      event: "security.account.sign_in.denied",
+      outcome: "denied",
+      actorIdentity: "ip:hashed-abcdefghij",
+      metadata: { reason: a as never },
+    });
+    const meta = SUPABASE_STATE.lastInsertedRow!.metadata as Record<string, unknown>;
+    const str = JSON.stringify(meta);
+    expect(str).toContain("REDACTED_CYCLE");
+  });
 });
 
 describe("recordAuditEvent · input validation", () => {
