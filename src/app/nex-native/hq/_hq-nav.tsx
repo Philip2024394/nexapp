@@ -165,6 +165,13 @@ const NAV: readonly NavItem[] = [
     match: (p) => p.startsWith("/nex-native/hq/security-recovery"),
   },
   {
+    kind: "leaf",
+    href: "/nex-native/hq/alerts",
+    label: "Alerts",
+    glyph: "🚨",
+    match: (p) => p.startsWith("/nex-native/hq/alerts"),
+  },
+  {
     kind: "section",
     key: "dev-previews",
     label: "Dev previews",

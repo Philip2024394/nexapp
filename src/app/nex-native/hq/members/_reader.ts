@@ -31,12 +31,37 @@ export type MemberIssueLevel = "ok" | "warn" | "critical" | "unknown";
 
 export type MemberAccountType = "free" | "membership";
 
+// Owner directive 2026-11-08 (round 3) · the Members list now surfaces
+// the exact package the member is paying for, their shop URL (if a
+// business has been created and published), and recent order activity.
+// Fields that cannot be filled from the current schema (true earnings
+// in fiat, page-view counts) are explicitly marked as unavailable at
+// the renderer · the reader never fabricates numbers.
+export type MemberPackageKind =
+  | "free"            // tier=gratis AND no active admin shop grant
+  | "paid-bisnis"     // tier=bisnis (monthly membership)
+  | "paid-pro"        // tier=pro (deferred phase-2 tier)
+  | "paid-tier"       // tier set but outside the known enum · honest unknown-paid
+  | "admin-grant";    // no paid tier but an active admin shop grant covers them
+
 export interface MemberRow {
   readonly accountId: string;
   readonly nexHandle: string | null;
   readonly displayName: string;
   readonly countryCode: string | null;
   readonly accountType: MemberAccountType;
+  readonly packageKind: MemberPackageKind;
+  /** Shop slug if this account owns a published business · null when
+   *  no business or when the slug hasn't been chosen yet. */
+  readonly shopSlug: string | null;
+  /** Count of orders where business_id's owner is this account in the
+   *  last 30 days · "—" in the UI means the lookup is unavailable. */
+  readonly ordersLast30d: number | null;
+  /** Total of nex_admin_grant active rows for this account (shop +
+   *  theme). Just a count · the detail lives on the message page. */
+  readonly activeGrantCount: number;
+  /** Tier text as-stored (for the row's expanded tooltip). */
+  readonly tierRaw: string | null;
   readonly joinedAt: string;
   readonly issue: MemberIssueLevel;
 }
@@ -146,13 +171,160 @@ export async function fetchNewMembers(limit = 100): Promise<MemberRow[]> {
   // "unknown" so HQ sees the gap honestly.
   const defaultLevel: MemberIssueLevel = incidentTableAvailable ? "ok" : "unknown";
 
-  // Step 4 · project the final rows.
+  // Step 4 · business slug per owner_account_id (shop URL). Published
+  // business rows populate nex_business.slug · we filter out soft-
+  // deleted businesses (deleted_at IS NULL). Owners with multiple
+  // businesses get their most recently created one shown first ·
+  // the Members list is a status surface, not an exhaustive directory.
+  const slugByOwner = new Map<string, string | null>();
+  try {
+    const { data: bizRaw, error: bizErr } = await nexSupabaseAdmin
+      .from("nex_business")
+      .select("owner_account_id, slug, created_at")
+      .in("owner_account_id", accountIds)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false });
+    if (!bizErr) {
+      for (const b of (bizRaw ?? []) as Array<{
+        owner_account_id: string;
+        slug: string | null;
+        created_at: string;
+      }>) {
+        if (!slugByOwner.has(b.owner_account_id)) {
+          slugByOwner.set(b.owner_account_id, b.slug ?? null);
+        }
+      }
+    }
+  } catch {
+    /* defensive · slug map empty · renderer shows "—" */
+  }
+
+  // Step 5 · active admin-grant counts per account (migration 302).
+  // Honest-unknown · if the table is missing we leave 0 in the map ·
+  // the renderer labels this as "no admin grants", matching the DB
+  // state we actually observed (empty), rather than claiming grant
+  // info we cannot see.
+  const grantCountByAccount = new Map<string, number>();
+  try {
+    const { data: grantsRaw, error: grantsErr } = await nexSupabaseAdmin
+      .from("nex_admin_grant")
+      .select("account_id, expires_at, kind")
+      .in("account_id", accountIds)
+      .is("revoked_at", null);
+    if (!grantsErr) {
+      const nowMs = Date.now();
+      for (const g of (grantsRaw ?? []) as Array<{
+        account_id: string;
+        expires_at: string | null;
+        kind: string | null;
+      }>) {
+        const active =
+          g.kind === "theme" ||
+          (g.kind === "shop" &&
+            g.expires_at != null &&
+            new Date(g.expires_at).getTime() > nowMs);
+        if (!active) continue;
+        grantCountByAccount.set(
+          g.account_id,
+          (grantCountByAccount.get(g.account_id) ?? 0) + 1,
+        );
+      }
+    }
+  } catch {
+    /* defensive · leave map empty */
+  }
+
+  // Step 6 · active SHOP grants (for the package-kind derivation).
+  const hasShopGrant = new Map<string, boolean>();
+  try {
+    const { data: shopGrants, error } = await nexSupabaseAdmin
+      .from("nex_admin_grant")
+      .select("account_id, expires_at")
+      .in("account_id", accountIds)
+      .eq("kind", "shop")
+      .is("revoked_at", null);
+    if (!error) {
+      const nowMs = Date.now();
+      for (const g of (shopGrants ?? []) as Array<{
+        account_id: string;
+        expires_at: string | null;
+      }>) {
+        if (g.expires_at && new Date(g.expires_at).getTime() > nowMs) {
+          hasShopGrant.set(g.account_id, true);
+        }
+      }
+    }
+  } catch {
+    /* defensive */
+  }
+
+  // Step 7 · 30-day order counts per business owner. We cannot
+  // compute true "earnings" without a payments table (sealed "NEX
+  // never handles payments") · we surface ACTIVITY instead so the
+  // HQ UI can honestly differentiate active shops from quiet ones.
+  const ordersByOwner = new Map<string, number>();
+  try {
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    // Double-hop · (1) list all businesses for the viewed accounts ·
+    // (2) count orders on those business ids. Bounded and additive.
+    const { data: bizForOrders, error: bizErr } = await nexSupabaseAdmin
+      .from("nex_business")
+      .select("id, owner_account_id")
+      .in("owner_account_id", accountIds)
+      .is("deleted_at", null);
+    if (!bizErr && bizForOrders && bizForOrders.length > 0) {
+      const bizIds = (bizForOrders as Array<{ id: string }>).map((b) => b.id);
+      const ownerByBiz = new Map<string, string>();
+      for (const b of bizForOrders as Array<{
+        id: string;
+        owner_account_id: string;
+      }>) {
+        ownerByBiz.set(b.id, b.owner_account_id);
+      }
+      const { data: ordersRaw, error: ordersErr } = await nexSupabaseAdmin
+        .from("nex_order")
+        .select("business_id, created_at")
+        .in("business_id", bizIds)
+        .gte("created_at", since);
+      if (!ordersErr) {
+        for (const o of (ordersRaw ?? []) as Array<{
+          business_id: string;
+        }>) {
+          const owner = ownerByBiz.get(o.business_id);
+          if (!owner) continue;
+          ordersByOwner.set(owner, (ordersByOwner.get(owner) ?? 0) + 1);
+        }
+      } else {
+        // Flag the owner as "lookup unavailable" via sentinel null below.
+        for (const a of accountIds) ordersByOwner.delete(a);
+      }
+    }
+  } catch {
+    /* defensive · no row inserts · all rows report "—" for orders */
+  }
+
+  function derivePackage(tier: string | null, accountId: string): MemberPackageKind {
+    if (tier === "bisnis") return "paid-bisnis";
+    if (tier === "pro") return "paid-pro";
+    if (tier && tier !== "gratis") return "paid-tier";
+    if (hasShopGrant.get(accountId)) return "admin-grant";
+    return "free";
+  }
+
+  // Step 8 · project.
   return accounts.map<MemberRow>((a) => ({
     accountId: a.id,
     nexHandle: a.nex_handle,
     displayName: a.display_name ?? "",
     countryCode: countryByAccount.get(a.id) ?? null,
     accountType: a.tier && a.tier !== "gratis" ? "membership" : "free",
+    packageKind: derivePackage(a.tier, a.id),
+    shopSlug: slugByOwner.get(a.id) ?? null,
+    ordersLast30d: ordersByOwner.has(a.id)
+      ? ordersByOwner.get(a.id) ?? 0
+      : null,
+    activeGrantCount: grantCountByAccount.get(a.id) ?? 0,
+    tierRaw: a.tier,
     joinedAt: a.created_at,
     issue: issueByAccount.get(a.id) ?? defaultLevel,
   }));
