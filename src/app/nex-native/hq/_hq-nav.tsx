@@ -56,6 +56,16 @@ const NAV_ITEMS: ReadonlyArray<{
     glyph: "📋",
     match: (p) => p.startsWith("/nex-native/hq/pages"),
   },
+  // Owner directive 2026-11-08 · member-management side section ·
+  // New Members list + Shops / Chats / Vault sub-sections · each row
+  // links to /nex-native/hq/members/[accountId]/message for the HQ
+  // DM surface (parallel agent).
+  {
+    href: "/nex-native/hq/members",
+    label: "Members",
+    glyph: "👤",
+    match: (p) => p.startsWith("/nex-native/hq/members"),
+  },
   // Owner directive 2026-11-03 · "we need 1 side menu for communities
   // in hq where admin can add a community or delete a community".
   {
