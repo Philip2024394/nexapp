@@ -40,6 +40,7 @@ import { VideoTile } from "@/lib/nex-native/calls-chrome/video-tile";
 import { ConnectionFooter } from "@/lib/nex-native/calls-chrome/connection-footer";
 import { CallControlBarShell } from "./_control-bar-shell";
 import { AddPeopleContactsRow } from "./_add-row-client";
+import { LiveCallClient } from "./_live-call-client";
 import type { CallsParticipant } from "@/lib/nex-native/calls-chrome/types";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
@@ -370,28 +371,49 @@ export default async function CallPreviewPage({
             row. */}
         <CallCenterHeader drawerSession={drawerSession} />
 
-        {/* Video grid · gold-framed tiles · real data when a
-            session is attached · empty state otherwise. */}
-        <section style={gridScrollZoneStyle} aria-label="Participants">
-          {grid.length === 0 ? (
-            <EmptyState hasSession={!!session} signedIn={!!selfSession} />
-          ) : (
-            <GoldGrid participants={grid} />
-          )}
-        </section>
+        {/* Video grid · owner directive 2026-11-08 round 26 · when
+            a real session + signed-in viewer exist, render the
+            opt-in LiveCallClient which mounts GroupCallEngine on
+            tap. Idle state shows an "Enable camera/mic" card so no
+            direct-URL visitor is surprised by a permission prompt.
+            When no session / no viewer, fall back to the sealed
+            empty-state + gold grid preview chrome. */}
+        {session && selfSession ? (
+          <LiveCallClient
+            sessionId={session.id}
+            selfAccountId={selfSession.account.id}
+            selfDisplayName={selfSession.account.display_name ?? "You"}
+            mediaType={session.media_type}
+          />
+        ) : (
+          <section style={gridScrollZoneStyle} aria-label="Participants">
+            {grid.length === 0 ? (
+              <EmptyState
+                hasSession={!!session}
+                signedIn={!!selfSession}
+              />
+            ) : (
+              <GoldGrid participants={grid} />
+            )}
+          </section>
+        )}
 
         {/* Row with Add people + Add contacts · both gold · NO
-            container (owner directive · "with no back ground
-            container"). The contact-picker modal receives real
-            peer-chat contacts split by Friends vs Business. */}
+            container. Rendered BELOW the live client so the invite
+            affordance is available during an active call. */}
         <AddPeopleContactsRow
           count={grid.length}
           sessionId={session?.id ?? null}
           contacts={pickerContacts}
         />
 
-        {/* Themed footer · emerald + gold with dark-red end-call. */}
-        <CallControlBarShell />
+        {/* Themed footer · owner directive 2026-11-08 round 26 ·
+            the sealed CallControlBarShell stays when there's NO
+            live session (dev preview surface). The LiveCallClient
+            renders its OWN control bar (Mute · Camera · Hang up)
+            once the engine is active · we hide this one during an
+            active session to avoid two bars. */}
+        {!(session && selfSession) && <CallControlBarShell />}
 
         {/* Honest footer · null quality → chrome renders "Measuring…" */}
         <ConnectionFooter quality={null} />
