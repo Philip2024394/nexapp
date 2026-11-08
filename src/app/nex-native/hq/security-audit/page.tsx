@@ -30,6 +30,7 @@ import {
   type AuditRow,
   type UnresolvedPage,
 } from "./_reader";
+import { manuallyResolveUnresolvedAction } from "./_unresolved-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -204,7 +205,7 @@ async function UnresolvedView(): Promise<React.JSX.Element> {
               <Th>Event</Th>
               <Th>Actor</Th>
               <Th>Attempted at</Th>
-              <Th>Notes</Th>
+              <Th>Resolve</Th>
             </tr>
           </thead>
           <tbody>
@@ -217,7 +218,51 @@ async function UnresolvedView(): Promise<React.JSX.Element> {
                 <Td>{r.event}</Td>
                 <Td>{r.actor_account_id ?? r.actor_identity ?? "—"}</Td>
                 <Td>{formatUtc(r.occurred_at)}</Td>
-                <Td>{r.notes ?? "—"}</Td>
+                <Td>
+                  <form
+                    action={manuallyResolveUnresolvedAction}
+                    style={{ display: "grid", gap: 6 }}
+                  >
+                    <input
+                      type="hidden"
+                      name="attempted_log_id"
+                      value={String(r.attempted_log_id)}
+                    />
+                    <input
+                      type="text"
+                      name="notes"
+                      required
+                      maxLength={900}
+                      placeholder="Reviewer notes · required"
+                      style={{
+                        padding: "6px 8px",
+                        borderRadius: 4,
+                        border: `1px solid ${BORDER}`,
+                        background: "#061021",
+                        color: INK,
+                        fontSize: 12,
+                        fontFamily: "monospace",
+                      }}
+                    />
+                    <button
+                      type="submit"
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 4,
+                        border: `1px solid ${ACCENT}`,
+                        background: "rgba(0,175,255,0.08)",
+                        color: ACCENT,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.08em",
+                      }}
+                    >
+                      Mark resolved
+                    </button>
+                  </form>
+                </Td>
               </tr>
             ))}
           </tbody>
@@ -261,6 +306,11 @@ function PageHeader({
           href="/nex-native/hq/security-audit?view=unresolved"
           label="Unresolved"
           active={active === "unresolved"}
+        />
+        <TabLink
+          href="/nex-native/hq/security-audit/retention"
+          label="Retention"
+          active={false}
         />
       </nav>
     </header>
