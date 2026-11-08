@@ -271,6 +271,36 @@ export const SECURITY_AUDIT_EVENTS: Record<string, AuditEventSpec> = {
     targetType: "nex_account",
     description: "HQ direct message delivery failed · no message persisted",
   },
+  "security.hq.incident.acknowledged": {
+    allowedMetadataKeys: ["incident_id"],
+    onWriteFailure: "fail-open",
+    targetType: "nex_incident",
+    description: "HQ operator acknowledged an incident",
+  },
+  "security.hq.incident.transitioned": {
+    allowedMetadataKeys: ["incident_id", "from_status", "to_status"],
+    onWriteFailure: "fail-open",
+    targetType: "nex_incident",
+    description: "HQ operator moved an incident between lifecycle statuses",
+  },
+  "security.hq.incident.assigned": {
+    allowedMetadataKeys: ["incident_id", "assigned_to_id"],
+    onWriteFailure: "fail-open",
+    targetType: "nex_incident",
+    description: "HQ operator assigned an incident to an account",
+  },
+  "security.hq.incident.escalated": {
+    allowedMetadataKeys: ["incident_id", "reason"],
+    onWriteFailure: "fail-open",
+    targetType: "nex_incident",
+    description: "HQ operator escalated an incident to NEEDS_ADMIN",
+  },
+  "security.hq.incident.resolution_notes_saved": {
+    allowedMetadataKeys: ["incident_id"],
+    onWriteFailure: "fail-open",
+    targetType: "nex_incident",
+    description: "HQ operator saved resolution notes on an incident",
+  },
 };
 
 // ─── Prohibition list · categorical no-log keys ──────────────────────

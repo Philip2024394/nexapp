@@ -370,6 +370,7 @@ function IncidentTable({ rows }: { readonly rows: readonly IncidentRow[] }): Rea
     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
       <thead>
         <tr style={{ borderBottom: `1px solid ${BORDER}`, color: INK_MUTED }}>
+          <Th>Incident</Th>
           <Th>Detected</Th>
           <Th>Country</Th>
           <Th>Scope</Th>
@@ -383,6 +384,18 @@ function IncidentTable({ rows }: { readonly rows: readonly IncidentRow[] }): Rea
       <tbody>
         {rows.map((r) => (
           <tr key={r.id} style={{ borderBottom: `1px solid ${BORDER}` }}>
+            <Td style={{ fontFamily: "monospace", fontSize: 11 }}>
+              <Link
+                href={`/nex-native/hq/security-recovery/${r.id}`}
+                style={{
+                  color: ACCENT,
+                  textDecoration: "none",
+                  fontWeight: 700,
+                }}
+              >
+                {r.id.slice(0, 8)}…{r.id.slice(-4)}
+              </Link>
+            </Td>
             <Td>{formatUtc(r.detected_at)}</Td>
             <Td style={{ textTransform: "uppercase", fontSize: 11, letterSpacing: "0.08em", color: INK_MUTED }}>
               {r.country}
