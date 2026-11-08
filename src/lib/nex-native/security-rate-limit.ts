@@ -215,9 +215,23 @@ function floorWindow(nowMs: number, windowMinutes: number): Date {
   return new Date(Math.floor(nowMs / windowMs) * windowMs);
 }
 
-// ─── Column-probe cache ───────────────────────────────────────────────
+// ─── Capability probe caches ─────────────────────────────────────────
 
 let TABLE_READY: boolean | null = null;
+
+/** Owner directive 2026-11-08 · Phase 0 complete-build authorises the
+ *  application-side RPC integration for migration 291. Lazy detection
+ *  · the first call that reaches the DB path tries the RPC · if the
+ *  function does not exist (42883 or "does not exist" in the message),
+ *  we remember that for the lifetime of the process and fall through
+ *  to the 2-phase read-then-upsert path (which still provides
+ *  correct enforcement but inherits the cold-bucket race documented
+ *  at the top of this file).
+ *
+ *  Honest limitation preserved · if migration 291 is NOT APPLIED,
+ *  distributed enforcement is cold-bucket-racy. We do NOT silently
+ *  claim atomic enforcement · the probe logs loudly on cache miss. */
+let RPC_READY: boolean | null = null;
 
 async function ensureTableReady(): Promise<boolean> {
   if (TABLE_READY !== null) return TABLE_READY;
@@ -247,6 +261,12 @@ async function ensureTableReady(): Promise<boolean> {
 /** Exposed so tests can reset the probe between isolated runs. */
 export function _resetSecurityRateLimitProbeCacheForTests(): void {
   TABLE_READY = null;
+  RPC_READY = null;
+}
+
+/** Exposed so tests can observe which path is in use. */
+export function _getRpcReadyForTests(): boolean | null {
+  return RPC_READY;
 }
 
 // ─── Fallback · process-local Map (not distributed) ──────────────────
@@ -438,6 +458,115 @@ export function _accountCreateFailureCountForTests(): number {
   return ACCOUNT_CREATE_DB_FAILURES.length;
 }
 
+// ─── RPC-backed path · migration 291 ────────────────────────────────
+//
+// Owner directive 2026-11-08 · when the atomic claim function is
+// available, the service calls it instead of the 2-phase
+// read-then-upsert pattern. The RPC eliminates the cold-bucket race
+// documented at the top of this file.
+//
+// Return contract:
+//   true  · the RPC handled the call (either allowed or threw)
+//   false · the RPC is not available · caller should delegate to the
+//           2-phase table-based path (which may further fall back to
+//           in-memory per policy)
+//
+// account_create semantics preserved:
+//   - RPC transient error → record failure + check escalation
+//   - RPC allowed=false   → reset escalation ring (RPC is healthy)
+//   - RPC allowed=true    → reset escalation ring
+//   - RPC 42883           → do NOT record failure · function missing
+//                            is a migration gap, not a DB wobble
+
+async function rpcRecordIfAllowed(
+  key: string,
+  action: SecurityRateLimitAction,
+): Promise<boolean> {
+  if (RPC_READY === false) return false;
+  const policy = SECURITY_RATE_LIMITS[action];
+  type ClaimRow = { allowed: boolean; retry_after_seconds: number };
+  const { data, error } = (await nexSupabaseAdmin.rpc(
+    "nex_security_rate_limit_claim",
+    {
+      _key: key,
+      _action: action,
+      _window_minutes: policy.windowMinutes,
+      _max_per_window: policy.maxPerWindow,
+    },
+  )) as { data: ClaimRow[] | ClaimRow | null; error: { message: string; code?: string } | null };
+  if (error) {
+    const code = error.code ?? "";
+    const msg = error.message ?? "";
+    if (code === "42883" || /does not exist|undefined function/i.test(msg)) {
+      // Function missing · migration 291 not applied. Fall through to
+      // 2-phase path. Loud log only on first discovery so the gap is
+      // visible without flooding the logs on every subsequent call.
+      if (RPC_READY === null) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          "[security-rate-limit] nex_security_rate_limit_claim RPC not " +
+            "available · falling back to 2-phase read-then-upsert · " +
+            "cold-bucket race present until migration 291 is applied.",
+          { code, msg },
+        );
+      }
+      RPC_READY = false;
+      return false;
+    }
+    // Transient RPC error (permission, connectivity, timeout).
+    // Same semantics as a DB read error on the 2-phase path.
+    if (action === "account_create") {
+      recordAccountCreateDbFailure();
+      if (isAccountCreateEscalated()) {
+        // eslint-disable-next-line no-console
+        console.error(
+          "[security-rate-limit] account_create · RPC path ESCALATED to 503",
+          { error: msg },
+        );
+        throw new SecurityUnavailableError("account_create", 60);
+      }
+    }
+    if (policy.fallback === "in_memory") {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[security-rate-limit] RPC error · degrading to in-memory per-lambda fallback",
+        { action, error: msg },
+      );
+      localRecordIfAllowed(key, action);
+      return true;
+    }
+    // fail_open
+    // eslint-disable-next-line no-console
+    console.warn("[security-rate-limit] RPC error · fail-open", {
+      action,
+      error: msg,
+    });
+    return true;
+  }
+  // Function exists and returned.
+  RPC_READY = true;
+  const row: ClaimRow | null = Array.isArray(data) ? data[0] ?? null : data;
+  if (!row || typeof row.allowed !== "boolean") {
+    // Defensive · the sealed function always returns one row with
+    // (allowed boolean, retry_after_seconds integer). Anything else
+    // is a surprise · delegate to the 2-phase path for safety.
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[security-rate-limit] RPC returned unexpected shape · delegating to 2-phase path",
+      { data },
+    );
+    return false;
+  }
+  // Healthy RPC round-trip · clear account_create escalation ring.
+  if (action === "account_create") {
+    resetAccountCreateDbFailures();
+  }
+  if (!row.allowed) {
+    throw new SecurityRateLimitError(action, row.retry_after_seconds);
+  }
+  return true;
+}
+
 // ─── DB-backed path ──────────────────────────────────────────────────
 
 async function dbRecordIfAllowed(
@@ -607,6 +736,12 @@ export async function recordIfAllowed(
     localRecordIfAllowed(key, action);
     return;
   }
+  // Prefer the atomic RPC when migration 291 is applied · it
+  // eliminates the cold-bucket race. If the function is not available,
+  // rpcRecordIfAllowed returns false and we fall through to the
+  // 2-phase table-based path (correct but inherits the race).
+  const rpcHandled = await rpcRecordIfAllowed(key, action);
+  if (rpcHandled) return;
   await dbRecordIfAllowed(key, action);
 }
 

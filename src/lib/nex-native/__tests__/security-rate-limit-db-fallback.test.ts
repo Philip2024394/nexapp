@@ -36,10 +36,27 @@ const SUPABASE_STATE = vi.hoisted(() => ({
     error: null as { message: string } | null,
   },
   writeResult: { error: null as { message: string } | null },
+  // Owner directive 2026-11-08 · complete-build adds the RPC path.
+  // Default · function does not exist · tests fall through to the
+  // 2-phase table-based path. Suites override to exercise the RPC branch.
+  rpcResult: {
+    data: null as unknown,
+    error: {
+      message:
+        "function nex_security_rate_limit_claim(text, text, integer, integer) does not exist",
+      code: "42883",
+    } as { message: string; code?: string } | null,
+  },
 }));
 
 vi.mock("../supabase-admin", () => ({
   nexSupabaseAdmin: {
+    rpc(_fn: string, _args: Record<string, unknown>) {
+      return Promise.resolve({
+        data: SUPABASE_STATE.rpcResult.data,
+        error: SUPABASE_STATE.rpcResult.error,
+      });
+    },
     from(_table: string) {
       // The probe is `select("key").limit(0)` · all other reads use
       // `.eq(...).eq(...).eq(...).maybeSingle()`. Distinguish by the
@@ -84,6 +101,7 @@ vi.mock("../supabase-admin", () => ({
 import {
   _accountCreateFailureCountForTests,
   _forceLocalSweepForTests,
+  _getRpcReadyForTests,
   _localFallbackSizeForTests,
   _resetAccountCreateFailureStateForTests,
   _resetSecurityRateLimitLocalForTests,
@@ -103,6 +121,41 @@ function makeProbeSucceed(): void {
   SUPABASE_STATE.probeResult = { error: null };
 }
 
+/** Reset the RPC mock to "function does not exist" between tests so
+ *  the 2-phase path runs by default · unless a test explicitly opts
+ *  into the migration-291 RPC branch. */
+function makeRpcMissing(): void {
+  SUPABASE_STATE.rpcResult = {
+    data: null,
+    error: {
+      message:
+        "function nex_security_rate_limit_claim(text, text, integer, integer) does not exist",
+      code: "42883",
+    },
+  };
+}
+
+function makeRpcAllow(): void {
+  SUPABASE_STATE.rpcResult = {
+    data: [{ allowed: true, retry_after_seconds: 0 }],
+    error: null,
+  };
+}
+
+function makeRpcDeny(retryAfterSeconds = 120): void {
+  SUPABASE_STATE.rpcResult = {
+    data: [{ allowed: false, retry_after_seconds: retryAfterSeconds }],
+    error: null,
+  };
+}
+
+function makeRpcTransientError(): void {
+  SUPABASE_STATE.rpcResult = {
+    data: null,
+    error: { message: "connection reset by peer", code: "08006" },
+  };
+}
+
 function makeReadFail(message = "connection refused"): void {
   SUPABASE_STATE.readResult = { data: null, error: { message } };
 }
@@ -119,12 +172,105 @@ function makeWriteFail(message = "statement timeout"): void {
   SUPABASE_STATE.writeResult = { error: { message } };
 }
 
+describe("RPC-backed path · migration 291 integration", () => {
+  beforeEach(() => {
+    _resetSecurityRateLimitProbeCacheForTests();
+    _resetSecurityRateLimitLocalForTests();
+    _resetAccountCreateFailureStateForTests();
+    makeProbeSucceed();
+    makeRpcMissing();
+    makeReadSucceedEmpty();
+    makeWriteSucceed();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("RPC available + allowed → single-roundtrip success", async () => {
+    makeRpcAllow();
+    const key = accountRateLimitKey("00000000-0000-0000-0000-00000000rpc1");
+    await recordIfAllowed(key, "password_change");
+    expect(_getRpcReadyForTests()).toBe(true);
+  });
+
+  it("RPC available + denied → SecurityRateLimitError with retry_after from DB", async () => {
+    makeRpcDeny(345);
+    const key = accountRateLimitKey("00000000-0000-0000-0000-00000000rpc2");
+    try {
+      await recordIfAllowed(key, "password_change");
+      throw new Error("expected throw");
+    } catch (err) {
+      expect(isSecurityRateLimitError(err)).toBe(true);
+      const e = err as SecurityRateLimitError;
+      expect(e.retryAfterSeconds).toBe(345);
+      expect(e.action).toBe("password_change");
+    }
+  });
+
+  it("RPC 42883 (function missing) → falls through to 2-phase path, no failure recorded", async () => {
+    makeRpcMissing();
+    const key = accountRateLimitKey("00000000-0000-0000-0000-00000000rpc3");
+    await recordIfAllowed(key, "account_create");
+    expect(_getRpcReadyForTests()).toBe(false);
+    expect(_accountCreateFailureCountForTests()).toBe(0);
+  });
+
+  it("RPC transient error on account_create → records failure + delegates to in-memory", async () => {
+    makeRpcTransientError();
+    const key = ipRateLimitKey("198.51.100.rpc4");
+    await recordIfAllowed(key, "account_create");
+    expect(_accountCreateFailureCountForTests()).toBe(1);
+  });
+
+  it("RPC transient error crosses 10-in-60s threshold → SecurityUnavailableError on current call", async () => {
+    makeRpcTransientError();
+    let escalatedAt = -1;
+    for (let i = 0; i < 20; i++) {
+      const key = ipRateLimitKey(`198.51.100.rpc5.${i}`);
+      try {
+        await recordIfAllowed(key, "account_create");
+      } catch (err) {
+        if (isSecurityUnavailableError(err)) {
+          escalatedAt = i;
+          const e = err as SecurityUnavailableError;
+          expect(e.retryAfterSeconds).toBe(60);
+          break;
+        }
+      }
+    }
+    expect(escalatedAt).toBe(10);
+  });
+
+  it("RPC succeeds for account_create → escalation ring cleared", async () => {
+    makeRpcTransientError();
+    for (let i = 0; i < 5; i++) {
+      const key = ipRateLimitKey(`198.51.100.rpc6.${i}`);
+      try {
+        await recordIfAllowed(key, "account_create");
+      } catch {
+        /* throttle · ignore */
+      }
+    }
+    expect(_accountCreateFailureCountForTests()).toBeGreaterThan(0);
+    makeRpcAllow();
+    await recordIfAllowed(
+      ipRateLimitKey("198.51.100.rpc6.recover"),
+      "account_create",
+    );
+    expect(_accountCreateFailureCountForTests()).toBe(0);
+  });
+});
+
 describe("DB-backed path · per-action fallback on read error", () => {
   beforeEach(() => {
     _resetSecurityRateLimitProbeCacheForTests();
     _resetSecurityRateLimitLocalForTests();
     _resetAccountCreateFailureStateForTests();
     makeProbeSucceed();
+    makeRpcMissing();
     makeWriteSucceed();
     // Silence the loud warn/error logs so test output stays readable.
     vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -199,6 +345,7 @@ describe("account_create · 503 escalation when DB fails > threshold in 60s", ()
     _resetSecurityRateLimitLocalForTests();
     _resetAccountCreateFailureStateForTests();
     makeProbeSucceed();
+    makeRpcMissing();
     makeWriteSucceed();
     vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -259,6 +406,7 @@ describe("account_create · failure ring behaviour", () => {
     _resetSecurityRateLimitLocalForTests();
     _resetAccountCreateFailureStateForTests();
     makeProbeSucceed();
+    makeRpcMissing();
     makeWriteSucceed();
     vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -356,6 +504,7 @@ describe("DB write-failure fallback · owner directive 2026-11-08 Part A FINAL R
     _resetSecurityRateLimitLocalForTests();
     _resetAccountCreateFailureStateForTests();
     makeProbeSucceed();
+    makeRpcMissing();
     makeReadSucceedEmpty();
     vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -478,6 +627,7 @@ describe("visitor_bootstrap · shared bucket across both visitor routes", () => 
     _resetSecurityRateLimitLocalForTests();
     _resetAccountCreateFailureStateForTests();
     makeProbeSucceed();
+    makeRpcMissing();
     makeWriteSucceed();
     makeReadSucceedEmpty();
     vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -575,6 +725,7 @@ describe("In-memory fallback map · bounded cleanup", () => {
     _resetSecurityRateLimitLocalForTests();
     _resetAccountCreateFailureStateForTests();
     makeProbeSucceed();
+    makeRpcMissing();
     makeWriteSucceed();
     vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
