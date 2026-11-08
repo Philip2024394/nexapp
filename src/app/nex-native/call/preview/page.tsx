@@ -43,6 +43,10 @@ import { AddPeopleContactsRow } from "./_add-row-client";
 import type { CallsParticipant } from "@/lib/nex-native/calls-chrome/types";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
+import {
+  ControlDrawer,
+  type ControlDrawerSession,
+} from "@/components/nex-native/control-drawer/control-drawer-client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -199,6 +203,22 @@ export default async function CallPreviewPage({
       }
     : null;
 
+  // Owner directive 2026-11-08 (round 20) · side drawer button on
+  // the right of the Call Center header. Same ControlDrawer the
+  // free-chat + chat-themes surfaces mount · passes the viewer's
+  // ControlDrawerSession when signed in · null when anon (drawer
+  // then surfaces the sealed sign-in prompt).
+  const drawerSession: ControlDrawerSession | null = selfSession
+    ? {
+        displayName: selfSession.account.display_name ?? "You",
+        nexHandle: selfSession.account.nex_handle ?? null,
+        isBisnis:
+          selfSession.account.tier === "bisnis" &&
+          selfSession.account.tier !== null,
+        activeChatThemeImageUrl: null,
+      }
+    : null;
+
   // Participant pool for the grid · real self + other participants,
   // de-duplicated (self might also be a row in the session).
   const others = participants.filter((p) => p.id !== selfAccountId);
@@ -232,10 +252,11 @@ export default async function CallPreviewPage({
             applies (page is dev-only in production unless
             NEX_DEV_ROUTES=1). */}
 
-        {/* Call Center title · icon + text only · NO container
-            (owner directive 2026-11-08 round 15 · "remove
-            container from header just text and icon"). */}
-        <CallCenterHeader />
+        {/* Call Center title · icon + text on the left · side
+            drawer trigger on the right (owner directive 2026-11-08
+            round 20). Header still has NO container · just a flex
+            row. */}
+        <CallCenterHeader drawerSession={drawerSession} />
 
         {/* Video grid · gold-framed tiles · real data when a
             session is attached · empty state otherwise. */}
@@ -264,7 +285,11 @@ export default async function CallPreviewPage({
 
 // ─── Components ────────────────────────────────────────────────────
 
-function CallCenterHeader(): React.JSX.Element {
+function CallCenterHeader({
+  drawerSession,
+}: {
+  readonly drawerSession: ControlDrawerSession | null;
+}): React.JSX.Element {
   return (
     <header
       data-nex-call-center-header
@@ -272,37 +297,59 @@ function CallCenterHeader(): React.JSX.Element {
       style={{
         display: "flex",
         alignItems: "center",
+        justifyContent: "space-between",
         gap: 10,
         padding: "18px 18px 10px",
         flexShrink: 0,
       }}
     >
-      <span
-        aria-hidden
-        style={{
-          width: 32,
-          height: 32,
-          borderRadius: 10,
-          background:
-            `linear-gradient(135deg, ${NEX.emerald} 0%, ${NEX.gold} 100%)`,
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <HeadsetGlyph />
-      </span>
-      <span
-        style={{
-          fontSize: 16,
-          fontWeight: 900,
+      <div style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+        <span
+          aria-hidden
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 10,
+            background:
+              `linear-gradient(135deg, ${NEX.emerald} 0%, ${NEX.gold} 100%)`,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <HeadsetGlyph />
+        </span>
+        <span
+          style={{
+            fontSize: 16,
+            fontWeight: 900,
+            color: NEX.goldBright,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+          }}
+        >
+          Call Center
+        </span>
+      </div>
+
+      {/* Right side · sealed ControlDrawer with Call Center-tuned
+          trigger · emerald+gold ring over the dark backdrop so the
+          button reads cleanly against the video area underneath. */}
+      <ControlDrawer
+        session={drawerSession}
+        triggerIcon="plus"
+        currentSurface="chat"
+        triggerStyle={{
+          width: 36,
+          height: 36,
+          borderRadius: "50%",
+          background: "rgba(5,26,16,0.75)",
+          border: `1px solid ${NEX.goldBorder}`,
           color: NEX.goldBright,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
+          boxShadow:
+            "0 4px 14px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(22,214,107,0.25)",
         }}
-      >
-        Call Center
-      </span>
+      />
     </header>
   );
 }
