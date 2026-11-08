@@ -31,6 +31,7 @@ import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import { I18nProvider } from "@/lib/nex/i18n/I18nProvider";
 import { resolveServerLocale } from "@/lib/nex/i18n/server";
 import { IncomingCallHub } from "./_incoming-call-hub";
+import { IncomingGroupCallHub } from "./_incoming-group-call-hub";
 import { PushSubscribeHub } from "./_push-subscribe-hub";
 import { AppBadgeSyncClient } from "./_app-badge-sync-client";
 // Owner-authored 2026-11-05 · global action-toast surface.
@@ -241,6 +242,12 @@ export default async function NexNativeLayout({
                 selfAccountId={selfAccountId}
                 selfDisplayName={selfDisplayName}
               />
+              {/* Owner-authorised 2026-11-08 (round 27) · group-call
+                  incoming hub · polls /api/nex-native/calls/incoming-
+                  group every 15s. Sits alongside the sealed 1:1 hub
+                  · different data-source (DB polls not Realtime) so
+                  there is no overlap. */}
+              <IncomingGroupCallHub />
               <PushSubscribeHub vapidPublicKey={vapidPublicKey} />
               {/* Owner directive 2026-10-16 · home-screen app badge sync.
                   Mounted only for signed-in viewers (anonymous has no

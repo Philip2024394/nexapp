@@ -479,6 +479,118 @@ export async function notifyInviteDeclined(
   return { ok: true, messageId: (inserted.data as { id: string }).id };
 }
 
+// ─── Incoming-call inbox reader (round 27) ────────────────────────
+
+export interface IncomingGroupInvite {
+  readonly sessionId: string;
+  readonly invitedAt: string;
+  readonly mediaType: CallMediaType;
+  readonly hostAccountId: string;
+  readonly hostDisplayName: string;
+  readonly hostCountry: CallCountry;
+  readonly viewerCountry: CallCountry;
+  readonly crossCountry: boolean;
+  readonly sessionState: "ringing" | "live" | "ended";
+}
+
+/** Fetch group-call invites currently RINGING for the viewer ·
+ *  participant row has invited_at set + joined_at null + left_at
+ *  null + session.state != 'ended'. Bounded to 10 · ordered
+ *  newest-first · drives the incoming-call hub overlay. Powers the
+ *  polling incoming-group-call hub (sealed service_role-only RLS
+ *  precludes anon Realtime · poll is the right primary). */
+export async function fetchPendingGroupInvites(
+  viewerAccountId: string,
+): Promise<readonly IncomingGroupInvite[]> {
+  if (!UUID_SHAPE.test(viewerAccountId)) return [];
+
+  const parts = await nexSupabaseAdmin
+    .from("nex_group_call_participant")
+    .select("session_id, invited_at, joined_at, left_at")
+    .eq("account_id", viewerAccountId)
+    .is("joined_at", null)
+    .is("left_at", null)
+    .not("invited_at", "is", null)
+    .order("invited_at", { ascending: false })
+    .limit(10);
+  if (parts.error || !parts.data) return [];
+  const rows = parts.data as Array<{
+    session_id: string;
+    invited_at: string;
+    joined_at: string | null;
+    left_at: string | null;
+  }>;
+  if (rows.length === 0) return [];
+
+  const sessionIds = rows.map((r) => r.session_id);
+  const sessions = await nexSupabaseAdmin
+    .from("nex_group_call_session")
+    .select("id, state, media_type, host_account_id, host_country")
+    .in("id", sessionIds)
+    .not("state", "eq", "ended");
+  if (sessions.error) return [];
+  const sessionById = new Map<
+    string,
+    {
+      id: string;
+      state: "ringing" | "live" | "ended";
+      media_type: CallMediaType;
+      host_account_id: string;
+      host_country: CallCountry;
+    }
+  >(
+    ((sessions.data ?? []) as Array<{
+      id: string;
+      state: "ringing" | "live" | "ended";
+      media_type: CallMediaType;
+      host_account_id: string;
+      host_country: CallCountry;
+    }>).map((s) => [s.id, s]),
+  );
+
+  const hostIds = Array.from(
+    new Set(
+      sessionIds
+        .map((id) => sessionById.get(id)?.host_account_id)
+        .filter((v): v is string => !!v),
+    ),
+  );
+  const hosts =
+    hostIds.length > 0
+      ? await nexSupabaseAdmin
+          .from("nex_account")
+          .select("id, display_name")
+          .in("id", hostIds)
+      : { data: [] as Array<{ id: string; display_name: string | null }>, error: null };
+  const hostNameById = new Map<string, string>(
+    ((hosts.data ??
+      []) as Array<{ id: string; display_name: string | null }>).map((h) => [
+      h.id,
+      h.display_name ?? "Member",
+    ]),
+  );
+
+  const viewerCountry = await fetchAccountCallCountry(viewerAccountId);
+
+  const out: IncomingGroupInvite[] = [];
+  for (const r of rows) {
+    const s = sessionById.get(r.session_id);
+    if (!s) continue; // session ended or missing
+    out.push({
+      sessionId: r.session_id,
+      invitedAt: r.invited_at,
+      mediaType: s.media_type,
+      hostAccountId: s.host_account_id,
+      hostDisplayName: hostNameById.get(s.host_account_id) ?? "Member",
+      hostCountry: s.host_country,
+      viewerCountry,
+      crossCountry: isCrossCountry(s.host_country, viewerCountry),
+      sessionState: s.state,
+    });
+  }
+  return out;
+}
+
 // ─── Contact-picker readers ────────────────────────────────────────
 
 export interface PickerContact {
