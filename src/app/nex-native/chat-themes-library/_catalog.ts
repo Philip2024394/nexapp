@@ -114,6 +114,16 @@ export const LIBRARY_THEMES: readonly LibraryTheme[] = [
   { id: "library-y-11", label: "Ireland · Y11", wallpaperUrl: "/nex-themes/library/preview/y-11.png", oneTimePriceEUR: 3.99, accentHex: "#C6A15B", downloads: 54 },
   { id: "library-y-12", label: "Ireland · Y12", wallpaperUrl: "/nex-themes/library/preview/y-12.png", oneTimePriceEUR: 3.99, accentHex: "#C6A15B", downloads: 38 },
 
+  // ── Release 6 · 2026-11-08 · Pets drop (4 tiles · owner directive) ──
+  // Source files from the owner's Pictures folder (home chat 1-4).
+  // Flagged isNew:true across the drop. accent stays Ireland Gold per
+  // the sealed catalog convention (accentHex is the active-tile glow,
+  // not the preview content).
+  { id: "library-pets-1", label: "Pets · 1", wallpaperUrl: "/nex-themes/library/preview/pets-1.png", oneTimePriceEUR: 3.99, accentHex: "#C6A15B", downloads: 0, isNew: true },
+  { id: "library-pets-2", label: "Pets · 2", wallpaperUrl: "/nex-themes/library/preview/pets-2.png", oneTimePriceEUR: 3.99, accentHex: "#C6A15B", downloads: 0, isNew: true },
+  { id: "library-pets-3", label: "Pets · 3", wallpaperUrl: "/nex-themes/library/preview/pets-3.png", oneTimePriceEUR: 3.99, accentHex: "#C6A15B", downloads: 0, isNew: true },
+  { id: "library-pets-4", label: "Pets · 4", wallpaperUrl: "/nex-themes/library/preview/pets-4.png", oneTimePriceEUR: 3.99, accentHex: "#C6A15B", downloads: 0, isNew: true },
+
   // ── Release · 2026-11-03 · owner batch (97 Supabase-hosted) ────
   { id: 'theme-o1', label: 'Theme 1', wallpaperUrl: 'https://ijvqdvsvwtwxzcqmoqit.supabase.co/storage/v1/object/public/nex-chat-themes/library/o1.png', oneTimePriceEUR: 3.99, accentHex: '#C6A15B', downloads: 573, isNew: true },
   { id: 'theme-o2', label: 'Theme 2', wallpaperUrl: 'https://ijvqdvsvwtwxzcqmoqit.supabase.co/storage/v1/object/public/nex-chat-themes/library/o2.png', oneTimePriceEUR: 3.99, accentHex: '#C6A15B', downloads: 2482, isNew: true },
