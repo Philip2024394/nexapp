@@ -51,6 +51,7 @@ import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import {
   ipRateLimitKey,
   isSecurityRateLimitError,
+  isSecurityUnavailableError,
   recordIfAllowed,
 } from "@/lib/nex-native/security-rate-limit";
 import { headers as nextHeaders } from "next/headers";
@@ -160,6 +161,15 @@ async function enforceAccountCreateRateLimit(
   try {
     await recordIfAllowed(ipRateLimitKey(ip), "account_create");
   } catch (e) {
+    // Owner directive 2026-11-08 · Part A · account_create escalates
+    // to a 503 when the DB-backed limiter has repeatedly failed. The
+    // redirect lands BEFORE any Supabase auth.admin.createUser call ·
+    // the handler never half-creates a user during DB brown-outs.
+    if (isSecurityUnavailableError(e)) {
+      redirect(
+        `${redirectToOnThrottle}?error=service_unavailable&retry_after=${e.retryAfterSeconds}`,
+      );
+    }
     if (isSecurityRateLimitError(e)) {
       redirect(
         `${redirectToOnThrottle}?error=rate_limited&retry_after=${e.retryAfterSeconds}`,
