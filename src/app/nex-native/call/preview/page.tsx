@@ -1,7 +1,8 @@
 // src/app/nex-native/call/preview/page.tsx
 //
 // NEX Calls & Video · master-layout PREVIEW surface.
-// Owner-authorised 2026-10-19 (Phase 1 UI shell).
+// Owner-authorised 2026-10-19 (Phase 1 UI shell) · emerald palette
+// refresh 2026-11-08 (round 13 · colours-only · layout unchanged).
 // -----------------------------------------------------------------------------
 // Dedicated preview page the owner walks to approve the sealed
 // visual concept. Composes the four calls-chrome primitives
@@ -16,6 +17,16 @@
 //   carry "coming later" tooltips + the disabled attribute · same
 //   discipline the sealed Calls hub uses for its Group-call /
 //   Call-link tiles.
+//
+// Round 13 change (owner directive 2026-11-08 · colours only):
+//   · Cyan #00AFFF → emerald #16D66B across the local page tokens,
+//     the background gradient overlay, the participant row border,
+//     the participant counter colour, and the Add People button
+//     borders/text. Layout is byte-identical to the sealed 2026-10-19
+//     shape · owner-exact: "the orginal layout but update the nex
+//     theme colors."
+//   · Sealed `calls-chrome/*` primitives are UNCHANGED — their
+//     palette is owned by the primitive surface, not by this page.
 //
 // Honesty invariants upheld:
 //   · No fabricated participant data (names clearly tagged "mock")
@@ -35,9 +46,14 @@ import type { CallsParticipant } from "@/lib/nex-native/calls-chrome/types";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Owner directive 2026-11-08 (round 13) · emerald palette replaces
+// cyan. The sealed presence-rim doctrine + HQ emerald theme both
+// use #16D66B · the call preview now matches.
 const NEX = {
-  bg: "var(--nex-world-background-base, #020914)",
-  cyan: "#00AFFF",
+  bg: "var(--nex-world-background-base, #040E09)",
+  emerald: "#16D66B",
+  emeraldBorder: "rgba(22,214,107,0.14)",
+  emeraldBorderBright: "rgba(22,214,107,0.42)",
   textDim: "#B5C3D6",
   textMute: "#7D9BC0",
 };
@@ -130,12 +146,11 @@ export default function CallPreviewPage() {
       }}
     >
       {/* Owner directive 2026-10-19 · same background image as the
-          sealed NEX directory search page (/nex-directory/directory-
-          bg.png). Absolute-positioned behind all content with the
-          same translucent-navy gradient overlay the directory uses,
-          so the master Calls & Video chrome reads legibly on top.
-          Image path · gradient stops · size · position are all
-          byte-identical to _landing-directory-view.tsx:886-898. */}
+          sealed NEX directory search page. Round 13 (2026-11-08)
+          shifts the gradient tint from navy-only to navy + emerald
+          radial halo in the top-left so the master Calls & Video
+          chrome reads with the NEX emerald identity. Image path is
+          unchanged. */}
       <div
         aria-hidden
         data-nex-call-preview-bg
@@ -146,10 +161,12 @@ export default function CallPreviewPage() {
           width: "100%",
           height: "100svh",
           backgroundImage:
-            `linear-gradient(180deg, rgba(2,9,20,0.35) 0%, rgba(2,9,20,0.55) 55%, rgba(2,9,20,0.82) 100%), url("/nex-directory/directory-bg.png")`,
-          backgroundSize: "100% 100%, 100% 100%",
-          backgroundRepeat: "no-repeat, no-repeat",
-          backgroundPosition: "center, center",
+            `radial-gradient(900px 600px at 20% 15%, rgba(22,214,107,0.08), rgba(22,214,107,0) 60%), ` +
+            `linear-gradient(180deg, rgba(4,14,9,0.35) 0%, rgba(4,14,9,0.55) 55%, rgba(4,14,9,0.82) 100%), ` +
+            `url("/nex-directory/directory-bg.png")`,
+          backgroundSize: "100% 100%, 100% 100%, 100% 100%",
+          backgroundRepeat: "no-repeat, no-repeat, no-repeat",
+          backgroundPosition: "center, center, center",
           pointerEvents: "none",
           zIndex: 0,
         }}
@@ -323,15 +340,15 @@ const participantRowStyle: CSSProperties = {
   justifyContent: "space-between",
   gap: 10,
   padding: "8px 14px",
-  background: "rgba(2, 9, 20, 0.95)",
-  borderTop: "1px solid rgba(0, 175, 255, 0.12)",
+  background: "rgba(4, 14, 9, 0.95)",
+  borderTop: `1px solid ${NEX.emeraldBorder}`,
   flexShrink: 0,
 };
 const participantCountStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   gap: 5,
-  color: NEX.cyan,
+  color: NEX.emerald,
   fontSize: 12,
   fontWeight: 700,
 };
@@ -343,8 +360,8 @@ const addPeopleStyle: CSSProperties = {
   minHeight: 32,
   borderRadius: 999,
   background: "transparent",
-  color: NEX.cyan,
-  border: `1px solid rgba(0, 175, 255, 0.42)`,
+  color: NEX.emerald,
+  border: `1px solid ${NEX.emeraldBorderBright}`,
   fontSize: 11,
   fontWeight: 700,
   letterSpacing: 0.3,
