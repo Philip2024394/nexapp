@@ -26,6 +26,15 @@ import { HqNav } from "./_hq-nav";
 const INK = "#F2F5F8";
 const INK_DIM = "#B5C3D6";
 const BG = "var(--nex-world-background-base, #020914)";
+// Owner directive 2026-11-08 (round 2) · emerald HQ backdrop. The
+// right-side workspace gets a layered radial-gradient tint that keeps
+// the base dark but reads as HQ territory (emerald #16D66B glow in
+// the top-left, falling off to the base BG). Sidebar is already tinted
+// emerald in _hq-nav.tsx · this lifts the main content to match.
+const WORKSPACE_BG =
+  "radial-gradient(1200px 700px at 0% 0%, rgba(22,214,107,0.10), rgba(22,214,107,0) 55%), " +
+  "radial-gradient(900px 600px at 100% 100%, rgba(22,214,107,0.05), rgba(22,214,107,0) 60%), " +
+  "var(--nex-world-background-base, #040E09)";
 
 export default function HqLayout({
   children,
@@ -104,6 +113,7 @@ export default function HqLayout({
             minWidth: 0,
             padding: "28px 32px",
             overflow: "auto",
+            background: WORKSPACE_BG,
           }}
         >
           {children}

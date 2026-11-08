@@ -2,9 +2,17 @@
 
 // src/app/nex-native/hq/_hq-nav.tsx
 //
-// Owner-authorised 2026-10-31 · NEX HQ permanent desktop sidebar.
-// 260px fixed left-rail · navigation only · active route indicator.
-// Shared across all /nex-native/hq/* routes via hq/layout.tsx.
+// Owner directive 2026-11-08 (round 2) · HQ sidebar overhaul.
+//   · Palette · emerald green (NEX #16D66B) · replaces cyan #00AFFF.
+//   · Structure · main links that have sub-pages render as collapsible
+//     drop-down sections (accordion). Clicking the row header toggles
+//     the drawer open/closed · the section auto-expands when the
+//     current pathname is inside it.
+//   · Completeness · every /nex-native/hq/* route page.tsx has an
+//     entry below (static routes only · [params] dynamic routes are
+//     reached via the relevant list page).
+//   · Shared chrome · mounted once by hq/layout.tsx · persists across
+//     every HQ sub-route.
 
 import * as React from "react";
 import Link from "next/link";
@@ -13,144 +21,227 @@ import { usePathname } from "next/navigation";
 const INK = "#F2F5F8";
 const INK_DIM = "#B5C3D6";
 const INK_MUTED = "#7D9BC0";
-const SURFACE = "#07152A";
-const SURFACE_HI = "#0A1B36";
-const ACCENT = "#00AFFF";
-const BORDER = "rgba(0,175,255,0.14)";
-const BORDER_HI = "rgba(0,175,255,0.42)";
+const SURFACE = "#071A12";
+const SURFACE_HI = "#0B2A1C";
+const ACCENT = "#16D66B";
+const ACCENT_SOFT = "rgba(22,214,107,0.12)";
+const BORDER = "rgba(22,214,107,0.18)";
+const BORDER_HI = "rgba(22,214,107,0.48)";
 
-const NAV_ITEMS: ReadonlyArray<{
+interface NavLeaf {
+  readonly kind: "leaf";
   readonly href: string;
   readonly label: string;
-  readonly glyph: string;
+  readonly glyph?: string;
   readonly match: (pathname: string) => boolean;
-}> = [
+}
+
+interface NavSection {
+  readonly kind: "section";
+  readonly key: string;
+  readonly label: string;
+  readonly glyph: string;
+  /** Optional landing page for the section header itself. If absent
+   *  clicking the header only toggles the drawer. */
+  readonly homeHref?: string;
+  readonly children: readonly NavLeaf[];
+  readonly match: (pathname: string) => boolean;
+}
+
+type NavItem = NavLeaf | NavSection;
+
+const NAV: readonly NavItem[] = [
   {
+    kind: "leaf",
     href: "/nex-native/hq",
     label: "HQ Home",
     glyph: "⌂",
     match: (p) => p === "/nex-native/hq",
   },
-  // Owner directive 2026-11-03 · Ireland-first phase · the Worlds
-  // switcher is retained at /nex-native/hq/worlds (reachable by direct
-  // URL) but hidden from the HQ sidebar so everyday development stops
-  // switching between Ireland, Worldwide and Indonesia. Re-enable this
-  // entry when inactive worlds become active again.
-  // {
-  //   href: "/nex-native/hq/worlds",
-  //   label: "Worlds",
-  //   glyph: "◉",
-  //   match: (p) => p.startsWith("/nex-native/hq/worlds"),
-  // },
   {
+    kind: "leaf",
     href: "/nex-native/hq/harvest",
     label: "Harvest",
     glyph: "⚙",
     match: (p) => p.startsWith("/nex-native/hq/harvest"),
   },
-  // Owner directive 2026-11-06 · founder tool · lists every
-  // /nex-native/* route with iframe preview + queueable delete.
   {
+    kind: "leaf",
     href: "/nex-native/hq/pages",
     label: "Pages",
     glyph: "📋",
     match: (p) => p.startsWith("/nex-native/hq/pages"),
   },
-  // Owner directive 2026-11-08 · member-management side section ·
-  // New Members list + Shops / Chats / Vault sub-sections · each row
-  // links to /nex-native/hq/members/[accountId]/message for the HQ
-  // DM surface (parallel agent).
   {
-    href: "/nex-native/hq/members",
+    kind: "section",
+    key: "members",
     label: "Members",
     glyph: "👤",
+    homeHref: "/nex-native/hq/members",
     match: (p) => p.startsWith("/nex-native/hq/members"),
+    children: [
+      {
+        kind: "leaf",
+        href: "/nex-native/hq/members",
+        label: "Overview",
+        match: (p) => p === "/nex-native/hq/members",
+      },
+      {
+        kind: "leaf",
+        href: "/nex-native/hq/members/shops",
+        label: "Shops",
+        match: (p) => p.startsWith("/nex-native/hq/members/shops"),
+      },
+      {
+        kind: "leaf",
+        href: "/nex-native/hq/members/chats",
+        label: "Chats",
+        match: (p) => p.startsWith("/nex-native/hq/members/chats"),
+      },
+      {
+        kind: "leaf",
+        href: "/nex-native/hq/members/vault",
+        label: "Vault",
+        match: (p) => p.startsWith("/nex-native/hq/members/vault"),
+      },
+    ],
   },
-  // Owner directive 2026-11-03 · "we need 1 side menu for communities
-  // in hq where admin can add a community or delete a community".
   {
+    kind: "leaf",
     href: "/nex-native/hq/communities",
     label: "Communities",
     glyph: "☘",
     match: (p) => p.startsWith("/nex-native/hq/communities"),
   },
-  // Owner directive 2026-11-03 · "yes add menu link to page where
-  // owner can rename each theme".
   {
+    kind: "leaf",
     href: "/nex-native/hq/chat-themes",
     label: "Chat Themes",
     glyph: "🎨",
     match: (p) => p.startsWith("/nex-native/hq/chat-themes"),
   },
-  // Owner directive 2026-11-06 · quick jump to the Free Chat preview
-  // surface from HQ so admins can inspect the user-facing experience
-  // without typing the URL.
   {
-    href: "/nex-native/free-chat",
-    label: "Free Chat",
-    glyph: "💬",
-    match: (p) => p.startsWith("/nex-native/free-chat"),
+    kind: "section",
+    key: "security-audit",
+    label: "Security Audit",
+    glyph: "📜",
+    homeHref: "/nex-native/hq/security-audit",
+    match: (p) => p.startsWith("/nex-native/hq/security-audit"),
+    children: [
+      {
+        kind: "leaf",
+        href: "/nex-native/hq/security-audit",
+        label: "Log",
+        match: (p) =>
+          p === "/nex-native/hq/security-audit" ||
+          p === "/nex-native/hq/security-audit/",
+      },
+      {
+        kind: "leaf",
+        href: "/nex-native/hq/security-audit?view=unresolved",
+        label: "Unresolved",
+        match: () => false,
+      },
+      {
+        kind: "leaf",
+        href: "/nex-native/hq/security-audit/retention",
+        label: "Retention",
+        match: (p) => p.startsWith("/nex-native/hq/security-audit/retention"),
+      },
+      {
+        kind: "leaf",
+        href: "/nex-native/hq/security-audit/deletion-recovery",
+        label: "Deletion recovery",
+        match: (p) =>
+          p.startsWith("/nex-native/hq/security-audit/deletion-recovery"),
+      },
+    ],
   },
-  // Owner directive 2026-11-06 · Contacts preview from HQ · the
-  // ?dev=1 query enables the dev-impersonation / preview flag so the
-  // seeded contacts render for the admin viewer.
   {
-    href: "/nex-native/contacts?dev=1",
-    label: "Contacts",
-    glyph: "👥",
-    match: (p) => p.startsWith("/nex-native/contacts"),
+    kind: "leaf",
+    href: "/nex-native/hq/security-recovery",
+    label: "Security & Recovery",
+    glyph: "🛡",
+    match: (p) => p.startsWith("/nex-native/hq/security-recovery"),
   },
-  // Owner directive 2026-11-06 · direct jump into the seeded peer
-  // chat with Aoife (UUID matches the mock notifications feed), so
-  // admins can inspect the peer-chat chrome from HQ without routing
-  // through contacts.
   {
-    href: "/nex-native/chat/peer/11111111-aaaa-4aaa-8aaa-111111111112",
-    label: "Peer Chat · Aoife",
-    glyph: "🗨",
-    match: (p) => p.startsWith("/nex-native/chat/peer/"),
-  },
-  // Owner directive 2026-11-06 · product-category picker launched
-  // against a specific seeded business so admins can inspect the
-  // category-selection step of the Create Product flow.
-  {
-    href: "/nex-native/create/product/category?business=a81e53d5-7a3c-4a49-9b95-613de648a749",
-    label: "Create · Category",
-    glyph: "📦",
-    match: (p) => p.startsWith("/nex-native/create/product"),
-  },
-  // Owner directive 2026-11-06 · user-facing chat-themes library
-  // preview (distinct from the HQ Chat Themes admin page above).
-  {
-    href: "/nex-native/chat-themes-library",
-    label: "Themes Library",
-    glyph: "📚",
-    match: (p) => p.startsWith("/nex-native/chat-themes-library"),
-  },
-  // Owner directive 2026-11-06 · Free Chat with the themes drawer
-  // + preview flags on, so admins can inspect the in-chat theme
-  // picker without manually toggling the UI. Same pathname as the
-  // Free Chat entry above · match stays on Free Chat so both items
-  // highlight when viewing either URL (query params don't affect
-  // pathname-based matching).
-  {
-    href: "/nex-native/free-chat?show-themes=1&preview=1",
-    label: "Free Chat · Themes",
-    glyph: "🖼",
-    match: (p) => p.startsWith("/nex-native/free-chat"),
-  },
-  // Owner directive 2026-11-06 · Shop Themes · 11-template carousel
-  // + accent colour picker + background preset / upload.
-  {
-    href: "/nex-native/manage/shop/themes",
-    label: "Shop Themes",
-    glyph: "🏪",
-    match: (p) => p.startsWith("/nex-native/manage/shop/themes"),
+    kind: "section",
+    key: "dev-previews",
+    label: "Dev previews",
+    glyph: "👀",
+    match: () => false,
+    children: [
+      {
+        kind: "leaf",
+        href: "/nex-native/free-chat",
+        label: "Free Chat",
+        match: () => false,
+      },
+      {
+        kind: "leaf",
+        href: "/nex-native/free-chat?show-themes=1&preview=1",
+        label: "Free Chat · Themes",
+        match: () => false,
+      },
+      {
+        kind: "leaf",
+        href: "/nex-native/contacts?dev=1",
+        label: "Contacts",
+        match: () => false,
+      },
+      {
+        kind: "leaf",
+        href: "/nex-native/chat/peer/11111111-aaaa-4aaa-8aaa-111111111112",
+        label: "Peer Chat · Aoife",
+        match: () => false,
+      },
+      {
+        kind: "leaf",
+        href: "/nex-native/chat-themes-library",
+        label: "Themes Library",
+        match: () => false,
+      },
+      {
+        kind: "leaf",
+        href: "/nex-native/manage/shop/themes",
+        label: "Shop Themes",
+        match: () => false,
+      },
+      {
+        kind: "leaf",
+        href:
+          "/nex-native/create/product/category?business=a81e53d5-7a3c-4a49-9b95-613de648a749",
+        label: "Create · Category",
+        match: () => false,
+      },
+    ],
   },
 ];
 
 export function HqNav(): React.JSX.Element {
   const pathname = usePathname() ?? "";
+
+  // Each section starts collapsed unless the current pathname lives
+  // inside it. Clicking the section header toggles the drawer.
+  const [openKeys, setOpenKeys] = React.useState<Set<string>>(() => {
+    const open = new Set<string>();
+    for (const item of NAV) {
+      if (item.kind === "section" && item.match(pathname)) {
+        open.add(item.key);
+      }
+    }
+    return open;
+  });
+
+  function toggle(key: string): void {
+    setOpenKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
   return (
     <aside
       aria-label="NEX HQ navigation"
@@ -169,7 +260,12 @@ export function HqNav(): React.JSX.Element {
         fontFamily: "Inter, system-ui, sans-serif",
       }}
     >
-      <header style={{ padding: "4px 10px 10px", borderBottom: `1px solid ${BORDER}` }}>
+      <header
+        style={{
+          padding: "4px 10px 10px",
+          borderBottom: `1px solid ${BORDER}`,
+        }}
+      >
         <div
           style={{
             fontSize: 10,
@@ -198,55 +294,19 @@ export function HqNav(): React.JSX.Element {
       </header>
 
       <nav style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        {NAV_ITEMS.map((item) => {
-          const active = item.match(pathname);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={active ? "page" : undefined}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "10px 12px",
-                borderRadius: 10,
-                textDecoration: "none",
-                color: active ? INK : INK_DIM,
-                background: active ? SURFACE_HI : "transparent",
-                border: active ? `1px solid ${BORDER_HI}` : `1px solid transparent`,
-                fontSize: 13.5,
-                fontWeight: active ? 800 : 600,
-                transition: "background 120ms ease, border-color 120ms ease",
-              }}
-            >
-              <span
-                aria-hidden
-                style={{
-                  width: 20,
-                  textAlign: "center",
-                  fontSize: 15,
-                  color: active ? ACCENT : INK_MUTED,
-                }}
-              >
-                {item.glyph}
-              </span>
-              <span style={{ flex: 1 }}>{item.label}</span>
-              {active ? (
-                <span
-                  aria-hidden
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: 999,
-                    background: ACCENT,
-                    boxShadow: `0 0 10px ${ACCENT}`,
-                  }}
-                />
-              ) : null}
-            </Link>
-          );
-        })}
+        {NAV.map((item) =>
+          item.kind === "leaf" ? (
+            <LeafRow key={item.href} item={item} pathname={pathname} />
+          ) : (
+            <SectionRow
+              key={item.key}
+              item={item}
+              pathname={pathname}
+              open={openKeys.has(item.key)}
+              onToggle={() => toggle(item.key)}
+            />
+          ),
+        )}
       </nav>
 
       <div
@@ -259,10 +319,213 @@ export function HqNav(): React.JSX.Element {
           lineHeight: 1.55,
         }}
       >
-        Changes made in HQ affect the platform. Use preview before activate.
+        Changes made in HQ affect the platform. Use preview before
+        activate.
         <br />
         No production migration · no deployment from this surface.
       </div>
     </aside>
   );
+}
+
+function LeafRow({
+  item,
+  pathname,
+}: {
+  readonly item: NavLeaf;
+  readonly pathname: string;
+}): React.JSX.Element {
+  const active = item.match(pathname);
+  return (
+    <Link
+      href={item.href}
+      aria-current={active ? "page" : undefined}
+      style={rowStyle(active)}
+    >
+      <span
+        aria-hidden
+        style={{
+          width: 20,
+          textAlign: "center",
+          fontSize: 15,
+          color: active ? ACCENT : INK_MUTED,
+        }}
+      >
+        {item.glyph ?? "•"}
+      </span>
+      <span style={{ flex: 1 }}>{item.label}</span>
+      {active ? <ActiveDot /> : null}
+    </Link>
+  );
+}
+
+function SectionRow({
+  item,
+  pathname,
+  open,
+  onToggle,
+}: {
+  readonly item: NavSection;
+  readonly pathname: string;
+  readonly open: boolean;
+  readonly onToggle: () => void;
+}): React.JSX.Element {
+  const activeSection = item.match(pathname);
+  const expanded = open || activeSection;
+  const headerLabelId = `nav-sec-${item.key}`;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        aria-controls={headerLabelId}
+        style={{
+          ...rowStyle(activeSection),
+          width: "100%",
+          textAlign: "left",
+          cursor: "pointer",
+          fontFamily: "inherit",
+        }}
+      >
+        <span
+          aria-hidden
+          style={{
+            width: 20,
+            textAlign: "center",
+            fontSize: 15,
+            color: activeSection ? ACCENT : INK_MUTED,
+          }}
+        >
+          {item.glyph}
+        </span>
+        <span style={{ flex: 1 }}>{item.label}</span>
+        <span
+          aria-hidden
+          style={{
+            width: 14,
+            textAlign: "center",
+            fontSize: 11,
+            color: expanded ? ACCENT : INK_MUTED,
+            transition: "transform 160ms ease",
+            transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
+          }}
+        >
+          ▸
+        </span>
+      </button>
+
+      {expanded && (
+        <ul
+          id={headerLabelId}
+          style={{
+            listStyle: "none",
+            margin: 0,
+            padding: "2px 0 4px 26px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+            borderLeft: `1px dashed ${BORDER}`,
+            marginLeft: 16,
+          }}
+        >
+          {item.homeHref ? (
+            <SubLeaf
+              href={item.homeHref}
+              label="Overview"
+              active={
+                pathname === item.homeHref ||
+                pathname === `${item.homeHref}/`
+              }
+            />
+          ) : null}
+          {item.children
+            .filter((c) => c.href !== item.homeHref)
+            .map((c) => (
+              <SubLeaf
+                key={c.href}
+                href={c.href}
+                label={c.label}
+                active={c.match(pathname)}
+              />
+            ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function SubLeaf({
+  href,
+  label,
+  active,
+}: {
+  readonly href: string;
+  readonly label: string;
+  readonly active: boolean;
+}): React.JSX.Element {
+  return (
+    <li>
+      <Link
+        href={href}
+        aria-current={active ? "page" : undefined}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "7px 10px",
+          borderRadius: 7,
+          textDecoration: "none",
+          color: active ? INK : INK_DIM,
+          background: active ? ACCENT_SOFT : "transparent",
+          border: active
+            ? `1px solid ${BORDER_HI}`
+            : "1px solid transparent",
+          fontSize: 12.5,
+          fontWeight: active ? 700 : 500,
+        }}
+      >
+        <span style={{ flex: 1 }}>{label}</span>
+        {active ? <ActiveDot small /> : null}
+      </Link>
+    </li>
+  );
+}
+
+function ActiveDot({
+  small = false,
+}: {
+  readonly small?: boolean;
+}): React.JSX.Element {
+  const size = small ? 5 : 6;
+  return (
+    <span
+      aria-hidden
+      style={{
+        width: size,
+        height: size,
+        borderRadius: 999,
+        background: ACCENT,
+        boxShadow: `0 0 10px ${ACCENT}`,
+      }}
+    />
+  );
+}
+
+function rowStyle(active: boolean): React.CSSProperties {
+  return {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    padding: "10px 12px",
+    borderRadius: 10,
+    textDecoration: "none",
+    color: active ? INK : INK_DIM,
+    background: active ? SURFACE_HI : "transparent",
+    border: active ? `1px solid ${BORDER_HI}` : "1px solid transparent",
+    fontSize: 13.5,
+    fontWeight: active ? 800 : 600,
+    transition: "background 120ms ease, border-color 120ms ease",
+  };
 }

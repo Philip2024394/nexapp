@@ -149,6 +149,7 @@ async function LogView({
     <div style={{ maxWidth: 1180, margin: "0 auto", color: INK }}>
       <PageHeader active="log" />
       <FilterBar sp={sp} />
+      {page.tableUnavailable && <TableUnavailableBanner />}
       {errorMessage && <ErrorBanner message={errorMessage} />}
       <AuditTable rows={page.rows} />
       <Pager
@@ -178,6 +179,7 @@ async function UnresolvedView({
       <PageHeader active="unresolved" />
       {sp.ok && <ResolvedBanner tone="ok">{formatUnresolvedOk(sp.ok, sp.id)}</ResolvedBanner>}
       {sp.error && <ResolvedBanner tone="fail">{formatUnresolvedError(sp.error, sp.detail)}</ResolvedBanner>}
+      {page.tableUnavailable && <TableUnavailableBanner />}
       {errorMessage && <ErrorBanner message={errorMessage} />}
       <section
         aria-label="Unresolved doctrine"
@@ -632,6 +634,37 @@ function ErrorBanner({ message }: { readonly message: string }): React.JSX.Eleme
       }}
     >
       <strong>Reader error:</strong> {message}
+    </div>
+  );
+}
+
+// Owner directive 2026-11-08 (round 2) · friendly banner for the
+// "schema cache" 42P01 shape that appears when migrations 290-301 are
+// not yet applied to the current Supabase project (e.g. production
+// ijvqdvsvwtwxzcqmoqit per CLAUDE.md §5). No raw Postgres error.
+function TableUnavailableBanner(): React.JSX.Element {
+  return (
+    <div
+      style={{
+        padding: "14px 16px",
+        borderRadius: 12,
+        border: `1px solid ${ACCENT_WARN}`,
+        background: "rgba(247,181,0,0.08)",
+        color: ACCENT_WARN,
+        fontSize: 13,
+        marginBottom: 16,
+        lineHeight: 1.55,
+      }}
+    >
+      <strong>Audit log not deployed in this environment.</strong>
+      <br />
+      <span style={{ color: INK_DIM }}>
+        Migrations 290–301 (Security Programme) apply the{" "}
+        <code>nex_security_audit_log</code> table. They are only
+        active in the sandbox project · production is sealed until
+        owner authorisation. The viewer stays available but has no
+        rows to show here.
+      </span>
     </div>
   );
 }

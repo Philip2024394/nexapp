@@ -61,6 +61,55 @@ export interface AuditRow {
 export interface AuditPage {
   readonly rows: readonly AuditRow[];
   readonly nextCursor: AuditCursor | null;
+  /** When true, the underlying table / view / function is not
+   *  deployed to this environment (migration gap). The caller must
+   *  surface a friendly notice · do NOT throw. Owner directive
+   *  2026-11-08 · migrations 290-301 are NOT applied to production
+   *  per CLAUDE.md §5 · HQ must not crash on missing-table. */
+  readonly tableUnavailable?: boolean;
+}
+
+// Owner directive 2026-11-08 (round 2) · probe cache so the reader
+// does not throw on an environment where migration 292 (audit log
+// table) is missing · same pattern as incident-service +
+// security-audit-service.
+let AUDIT_TABLE_READY: boolean | null = null;
+
+async function ensureAuditTableReady(): Promise<boolean> {
+  if (AUDIT_TABLE_READY !== null) return AUDIT_TABLE_READY;
+  try {
+    const { error } = await nexSupabaseAdmin
+      .from("nex_security_audit_log")
+      .select("id")
+      .limit(0);
+    AUDIT_TABLE_READY = !error;
+    if (!AUDIT_TABLE_READY) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[security-audit-reader] nex_security_audit_log unavailable · page will degrade to empty state",
+        { error: error?.message ?? null },
+      );
+    }
+    return AUDIT_TABLE_READY;
+  } catch {
+    AUDIT_TABLE_READY = false;
+    return false;
+  }
+}
+
+function isMissingSchema(message: string | null | undefined): boolean {
+  if (!message) return false;
+  return (
+    /does not exist/i.test(message) ||
+    /schema cache/i.test(message) ||
+    /relation .* does not exist/i.test(message) ||
+    /could not find the table/i.test(message)
+  );
+}
+
+/** Exposed so tests can reset the probe between isolated runs. */
+export function _resetAuditReaderProbeForTests(): void {
+  AUDIT_TABLE_READY = null;
 }
 
 function validateInput(input: AuditQueryInput): void {
@@ -79,9 +128,15 @@ function validateInput(input: AuditQueryInput): void {
 }
 
 /** Fetch one page of audit rows · ordered DESC by (occurred_at, id).
- *  Returns at most PAGE_SIZE rows + the cursor for the next page. */
+ *  Returns at most PAGE_SIZE rows + the cursor for the next page.
+ *  When the backing table is unavailable (migration gap) returns an
+ *  empty page with `tableUnavailable: true` · never throws. */
 export async function fetchAuditPage(input: AuditQueryInput): Promise<AuditPage> {
   validateInput(input);
+  const ready = await ensureAuditTableReady();
+  if (!ready) {
+    return { rows: [], nextCursor: null, tableUnavailable: true };
+  }
   let q = nexSupabaseAdmin
     .from("nex_security_audit_log")
     .select(
@@ -120,6 +175,13 @@ export async function fetchAuditPage(input: AuditQueryInput): Promise<AuditPage>
   }
   const { data, error } = await q;
   if (error) {
+    // If the schema cache signalled a missing table mid-flight (e.g.
+    // migration drift between probe + query) degrade gracefully same
+    // as the up-front probe would have.
+    if (isMissingSchema(error.message)) {
+      AUDIT_TABLE_READY = false;
+      return { rows: [], nextCursor: null, tableUnavailable: true };
+    }
     throw new Error(`security-audit-reader: ${error.message}`);
   }
   const rows = (data ?? []) as AuditRow[];
@@ -149,6 +211,7 @@ export interface UnresolvedRow {
 export interface UnresolvedPage {
   readonly rows: readonly UnresolvedRow[];
   readonly nextCursor: { decided_at: string; id: number } | null;
+  readonly tableUnavailable?: boolean;
 }
 
 /** Fetch attempted-events that have been flagged as unresolved by
@@ -160,6 +223,10 @@ export async function fetchUnresolvedPage(cursor?: {
   decided_at: string;
   id: number;
 }): Promise<UnresolvedPage> {
+  const ready = await ensureAuditTableReady();
+  if (!ready) {
+    return { rows: [], nextCursor: null, tableUnavailable: true };
+  }
   // Supabase postgrest join via select = outer-table.inner-table
   // syntax · we read reconciliation rows + the matching attempted
   // audit log row in one request.
@@ -179,6 +246,10 @@ export async function fetchUnresolvedPage(cursor?: {
   }
   const { data, error } = await q;
   if (error) {
+    if (isMissingSchema(error.message)) {
+      AUDIT_TABLE_READY = false;
+      return { rows: [], nextCursor: null, tableUnavailable: true };
+    }
     throw new Error(`security-audit-reader (unresolved): ${error.message}`);
   }
   type Joined = {
