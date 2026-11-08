@@ -26,6 +26,7 @@
 
 import "server-only";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
+import { fetchBusinessViewCounts30d } from "@/lib/nex-native/analytics/page-view-service";
 
 export type MemberIssueLevel = "ok" | "warn" | "critical" | "unknown";
 
@@ -62,6 +63,10 @@ export interface MemberRow {
   readonly activeGrantCount: number;
   /** Tier text as-stored (for the row's expanded tooltip). */
   readonly tierRaw: string | null;
+  /** 30-day page-view count for this member's primary shop. Null
+   *  when the migration 303 table is unavailable OR when the member
+   *  has no published business yet. "0" is a legitimate number. */
+  readonly shopHits30d: number | null;
   readonly joinedAt: string;
   readonly issue: MemberIssueLevel;
 }
@@ -303,6 +308,46 @@ export async function fetchNewMembers(limit = 100): Promise<MemberRow[]> {
     /* defensive · no row inserts · all rows report "—" for orders */
   }
 
+  // Step 7b · 30-day view counts per business. Owner-authorised
+  // 2026-11-08 (round 5) · uses the sealed analytics service. Returns
+  // an empty map when migration 303 is missing (production today).
+  // Honest-null posture · if we have NO business for the account we
+  // surface null (not 0) so the UI can distinguish "no shop yet" from
+  // "shop with zero traffic".
+  const viewsByBusiness = new Map<string, number>();
+  const businessIdByOwner = new Map<string, string>();
+  try {
+    const { data: bizForViews, error: bizErr } = await nexSupabaseAdmin
+      .from("nex_business")
+      .select("id, owner_account_id, created_at")
+      .in("owner_account_id", accountIds)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false });
+    if (!bizErr && bizForViews && bizForViews.length > 0) {
+      // Pick the FIRST (most recently created) business per owner as
+      // the primary shop · same pick the Shop URL column uses.
+      for (const b of bizForViews as Array<{
+        id: string;
+        owner_account_id: string;
+      }>) {
+        if (!businessIdByOwner.has(b.owner_account_id)) {
+          businessIdByOwner.set(b.owner_account_id, b.id);
+        }
+      }
+      const bizIds = Array.from(businessIdByOwner.values());
+      const counts = await fetchBusinessViewCounts30d(bizIds);
+      for (const [bizId, n] of counts) viewsByBusiness.set(bizId, n);
+    }
+  } catch {
+    /* defensive · leave viewsByBusiness empty · UI shows "—" */
+  }
+
+  function hitsForOwner(ownerId: string): number | null {
+    const bizId = businessIdByOwner.get(ownerId);
+    if (!bizId) return null;
+    return viewsByBusiness.get(bizId) ?? 0;
+  }
+
   function derivePackage(tier: string | null, accountId: string): MemberPackageKind {
     if (tier === "bisnis") return "paid-bisnis";
     if (tier === "pro") return "paid-pro";
@@ -325,6 +370,7 @@ export async function fetchNewMembers(limit = 100): Promise<MemberRow[]> {
       : null,
     activeGrantCount: grantCountByAccount.get(a.id) ?? 0,
     tierRaw: a.tier,
+    shopHits30d: hitsForOwner(a.id),
     joinedAt: a.created_at,
     issue: issueByAccount.get(a.id) ?? defaultLevel,
   }));

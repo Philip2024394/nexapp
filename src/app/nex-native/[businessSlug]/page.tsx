@@ -22,8 +22,19 @@
 //     product=<productId> (existing peer-chat flow)
 
 import type * as React from "react";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import * as businessService from "@/lib/nex-native/business-service";
+// Owner directive 2026-11-08 (round 5) · traffic analytics tracer ·
+// fires once per server response (no client re-render double-count).
+// Sandbox-only until migration 303 is applied in prod.
+import {
+  recordPageView,
+  isLikelyBot,
+  sha256Hex,
+  resolveViewCountry,
+} from "@/lib/nex-native/analytics/page-view-service";
+import { resolveViewerToken } from "@/lib/nex-native/analytics/viewer-cookie";
 import * as productService from "@/lib/nex-native/product-service";
 import * as chatThemeService from "@/lib/nex-native/chat-theme-service";
 // Owner directive 2026-11-06 readiness fill · surface an owner-only
@@ -93,6 +104,41 @@ export default async function PublicShopPage({
   const isOwnerViewer =
     viewerSession?.account.id === business.owner_account_id;
   const shouldShowOwnerEmptyPrompt = isOwnerViewer && products.length === 0;
+
+  // Owner directive 2026-11-08 (round 5) · page-view tracer.
+  // Fires EXACTLY ONCE per server render · no client callback · a
+  // browser re-mount triggers a fresh server request so the semantics
+  // stay "one view per real HTTP GET from a human". The owner is NOT
+  // counted when they view their own shop (prevents inflated
+  // self-views).
+  //
+  // All of the tracer logic is fail-soft · a Supabase blip or a
+  // missing migration 303 returns table_not_available and the page
+  // continues to render normally. We do NOT await the result so the
+  // tracer never blocks the user-visible render path.
+  if (!isOwnerViewer) {
+    try {
+      const hdrs = await headers();
+      const userAgent = hdrs.get("user-agent") ?? null;
+      const botLikely = isLikelyBot(userAgent);
+      const { tokenHash } = await resolveViewerToken();
+      const country = resolveViewCountry({
+        vercelIpCountry: hdrs.get("x-vercel-ip-country"),
+        envCountry: process.env.NEX_APP_COUNTRY,
+      });
+      void recordPageView({
+        businessId: business.id,
+        pageType: "business",
+        country,
+        viewerTokenHash: tokenHash,
+        viewerAccountId: viewerSession?.account.id ?? null,
+        userAgentHash: userAgent ? sha256Hex(userAgent) : null,
+        botLikely,
+      });
+    } catch {
+      /* fail-soft · analytics never blocks the shop surface */
+    }
+  }
 
   // Resolve layout + tint + wallpaper with sensible fallbacks.
   const layoutId: CoverLayoutId =

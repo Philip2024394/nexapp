@@ -332,7 +332,7 @@ export default async function HqMembersPage({
                     <EarningsCell />
                   </Td>
                   <Td style={{ textAlign: "right" }}>
-                    <HitsCell />
+                    <HitsCell value={r.shopHits30d} accountId={r.accountId} />
                   </Td>
                   <Td style={{ textAlign: "right" }}>
                     <Link
@@ -503,16 +503,40 @@ function EarningsCell(): React.JSX.Element {
   );
 }
 
-function HitsCell(): React.JSX.Element {
-  // Owner directive 2026-11-08 (round 3) · shop page-view telemetry
-  // has NOT been wired · a nex_page_view (or equivalent) migration +
-  // tracer calls at /nex-native/[businessSlug] + API read helpers
-  // are the next piece of scope. Until then the column honestly
-  // reads "—".
+function HitsCell({
+  value,
+  accountId,
+}: {
+  readonly value: number | null;
+  readonly accountId: string;
+}): React.JSX.Element {
+  // Owner directive 2026-11-08 (round 5) · shop page-view telemetry
+  // now wired via migration 303 + the sealed page-view-service. The
+  // number is a 30-day COUNT(*) of real view rows (bots excluded at
+  // write time). Null is honest "no business yet" or "table missing
+  // on this env" · the tooltip differentiates for the admin.
+  if (value == null) {
+    return (
+      <span
+        style={{ color: INK_MUTED }}
+        title="No published shop OR nex_page_view table not deployed in this env."
+      >
+        —
+      </span>
+    );
+  }
   return (
-    <span style={{ color: INK_MUTED }} title="Shop page-view telemetry not yet recorded.">
-      —
-    </span>
+    <Link
+      href={`/nex-native/hq/members/${accountId}/traffic`}
+      style={{
+        fontWeight: 700,
+        color: ACCENT_EMERALD,
+        textDecoration: "none",
+      }}
+      title="Open hourly traffic chart (last 24h)"
+    >
+      {value}
+    </Link>
   );
 }
 
@@ -532,13 +556,14 @@ function TelemetryGapNotice(): React.JSX.Element {
       }}
     >
       <strong style={{ color: ACCENT_EMERALD }}>Data posture:</strong>{" "}
-      The <em>Orders · 30d</em> column counts real <code>nex_order</code>
-      rows per owner. <em>Earnings · 30d</em> and <em>Shop hits · 30d</em>
-      {" "}read <code>—</code> because NEX does not record fiat earnings
-      (sealed) and shop page-view telemetry has not yet been wired. To
-      turn those columns real, a <code>nex_page_view</code> table + a
-      tracer at <code>/nex-native/[businessSlug]</code> are the next
-      authorisation.
+      <em>Orders · 30d</em> counts real <code>nex_order</code> rows.
+      <em> Shop hits · 30d</em> counts real <code>nex_page_view</code>
+      rows (bots filtered at write time · owner-view excluded ·
+      60s dedup per viewer+business) · click a number for the hourly
+      traffic chart. <em>Earnings · 30d</em> stays <code>—</code> ·
+      sealed <em>NEX never handles payments</em>. Migration 303 is
+      applied to sandbox only · production remains sealed pending
+      owner authorisation.
     </div>
   );
 }
