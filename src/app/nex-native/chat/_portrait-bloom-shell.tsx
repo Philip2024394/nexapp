@@ -122,6 +122,11 @@ export interface PortraitBloomMessage {
     // the recipient's MessageAttachment branch can render the
     // document chip with filename + size + MIME icon.
     | "document"
+    // Call Center · owner-authorised 2026-11-08 (round 22) · Migration
+    // 306 extended the CHECK to include 'call_invite'. The bubble
+    // branch renders an Accept button that deep-links to
+    // /nex-native/call/preview?session=<uuid>&accept=1.
+    | "call_invite"
     | null;
   /** Stage A · owner-authorised 2026-11-03 · when attachment_type =
    *  'document' this projects filename + size_bytes + mime from the
@@ -142,6 +147,18 @@ export interface PortraitBloomMessage {
     theme_id: string;
     slug: string;
     label: string;
+  } | null;
+  /** Owner-authorised 2026-11-08 (round 22) · Call Center invite ·
+   *  when attachment_type='call_invite' this carries the session
+   *  deep-link + media_type + host_account_id. The bubble renders
+   *  an inline Accept button for the receiver (host sees a quiet
+   *  "Invite sent" caption). session_id is the uuid of the sealed
+   *  nex_group_call_session created by inviteToCall. */
+  attachment_call_invite?: {
+    session_id: string;
+    media_type: "audio" | "video";
+    host_account_id: string;
+    accept_href: string | null;
   } | null;
   /** Bridge ThemeSticker · sealed 2026-10-01 · when attachment_type
    *  = 'sticker' this carries the frozen sticker snapshot so the

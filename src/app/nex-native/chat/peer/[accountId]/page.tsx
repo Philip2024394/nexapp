@@ -819,6 +819,33 @@ export default async function PeerChatPage({
       deleted_for_everyone: !!m.deleted_for_everyone,
       attachment_url: m.attachment_url ?? null,
       attachment_type: m.attachment_type ?? null,
+      // Owner directive 2026-11-08 (round 22) · Call Center invite
+      // flow · project the migration-306 attachment into a typed
+      // slot so the message bubble can render an inline Accept
+      // button. host_account_id lets the bubble renderer check
+      // whether the viewer is the receiver (not the host · host
+      // doesn't need a button on their own invite).
+      attachment_call_invite:
+        m.attachment_type === "call_invite" &&
+        m.attachment_meta &&
+        typeof m.attachment_meta === "object" &&
+        "session_id" in m.attachment_meta
+          ? {
+              session_id: String(
+                (m.attachment_meta as Record<string, unknown>).session_id ?? "",
+              ),
+              media_type:
+                (m.attachment_meta as Record<string, unknown>).media_type ===
+                "audio"
+                  ? ("audio" as const)
+                  : ("video" as const),
+              host_account_id: String(
+                (m.attachment_meta as Record<string, unknown>).host_account_id ??
+                  "",
+              ),
+              accept_href: m.attachment_url ?? null,
+            }
+          : null,
       attachment_product:
         m.attachment_type === "product" &&
         m.attachment_meta &&

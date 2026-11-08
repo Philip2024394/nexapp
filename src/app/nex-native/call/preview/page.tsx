@@ -47,6 +47,7 @@ import {
   ControlDrawer,
   type ControlDrawerSession,
 } from "@/components/nex-native/control-drawer/control-drawer-client";
+import { fetchPickerContacts } from "@/lib/nex-native/calls/invite-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -169,6 +170,8 @@ interface PageProps {
   readonly searchParams?: Promise<{
     readonly session?: string;
     readonly live?: string;
+    readonly invited?: string;
+    readonly invite_error?: string;
   }>;
 }
 
@@ -224,6 +227,15 @@ export default async function CallPreviewPage({
   const others = participants.filter((p) => p.id !== selfAccountId);
   const grid: readonly Participant[] = self ? [self, ...others] : others;
 
+  // Owner directive 2026-11-08 (round 22) · fetch real contact
+  // picker data (friends vs business split) for the modal. Reader
+  // bounds to 50 most-recent peer conversations · empty when the
+  // viewer has none. Only call when a session resolved · anonymous
+  // viewers see the sign-in prompt via the modal.
+  const pickerContacts = selfSession
+    ? await fetchPickerContacts(selfSession.account.id).catch(() => [])
+    : [];
+
   return (
     <main
       data-nex-call-preview-root
@@ -270,8 +282,13 @@ export default async function CallPreviewPage({
 
         {/* Row with Add people + Add contacts · both gold · NO
             container (owner directive · "with no back ground
-            container"). */}
-        <AddPeopleContactsRow count={grid.length} sessionId={session?.id ?? null} />
+            container"). The contact-picker modal receives real
+            peer-chat contacts split by Friends vs Business. */}
+        <AddPeopleContactsRow
+          count={grid.length}
+          sessionId={session?.id ?? null}
+          contacts={pickerContacts}
+        />
 
         {/* Themed footer · emerald + gold with dark-red end-call. */}
         <CallControlBarShell />

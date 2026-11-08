@@ -3,33 +3,19 @@
 // src/app/nex-native/call/preview/_add-row-client.tsx
 //
 // NEX Call Center · Add people + Add contacts row + contact-picker
-// modal. Owner-authorised 2026-11-08 (round 19).
+// modal · owner-authorised 2026-11-08 (round 22 · fully-connected).
 // -----------------------------------------------------------------------------
-// Owner-exact (running list):
-//   · "sdd people should be gold button and add contacts with no
-//     back ground container" → row has NO container, both buttons
-//     gold.
-//   · "when user wants to add contact to video chat. and select
-//     add contact a container pop up with that users contacts
-//     friends or business toggle will displaying for user to
-//     select contact" → clicking Add contacts opens a modal with a
-//     Friends / Business toggle.
-//
-// Wired-state discipline:
-//   · The toggle + selection UI is fully interactive.
-//   · The contact list itself is a WIRED=planned empty state ·
-//     fetching the viewer's contacts + splitting friends vs
-//     business requires a server action that reads
-//     nex_peer_conversation + nex_business · documented as the
-//     next authorisation step in docs/doctrine/video-call-wiring-
-//     audit-2026-11-08.md. The modal's structure is in place so
-//     wiring the list is a one-path change.
-//   · Invite dispatch (what happens when the user taps a contact)
-//     routes to /contacts?invite=<sessionId> as the planned
-//     destination · the actual invite-in-chat flow is the audit's
-//     7-step gap list.
+// Round-22 changes
+//   · Modal now renders REAL contacts split by Friends vs Business
+//     (business = other party owns a nex_business row). Data fetched
+//     server-side via fetchPickerContacts and passed in as a prop.
+//   · Selecting a contact fires inviteContactToCallAction · which
+//     creates the group-call session (if needed) + inserts the
+//     participant row + sends a call_invite peer_message. The
+//     receiver sees a ringing bubble in chat.
 
 import * as React from "react";
+import { inviteContactToCallAction } from "./_invite-actions";
 
 const NEX = {
   emerald: "#16D66B",
@@ -46,14 +32,24 @@ const NEX = {
 
 type Kind = "friends" | "business";
 
+export interface PickerContact {
+  readonly accountId: string;
+  readonly displayName: string;
+  readonly nexHandle: string | null;
+  readonly isBusiness: boolean;
+  readonly lastMessageAt: string | null;
+}
+
 export interface AddRowClientProps {
   readonly count: number;
   readonly sessionId: string | null;
+  readonly contacts: readonly PickerContact[];
 }
 
 export function AddPeopleContactsRow({
   count,
   sessionId,
+  contacts,
 }: AddRowClientProps): React.JSX.Element {
   const [open, setOpen] = React.useState(false);
   const [kind, setKind] = React.useState<Kind>("friends");
@@ -121,6 +117,7 @@ export function AddPeopleContactsRow({
           kind={kind}
           onKindChange={setKind}
           sessionId={sessionId}
+          contacts={contacts}
           onClose={() => setOpen(false)}
         />
       )}
@@ -134,13 +131,18 @@ function ContactPickerModal({
   kind,
   onKindChange,
   sessionId,
+  contacts,
   onClose,
 }: {
   readonly kind: Kind;
   readonly onKindChange: (k: Kind) => void;
   readonly sessionId: string | null;
+  readonly contacts: readonly PickerContact[];
   readonly onClose: () => void;
 }): React.JSX.Element {
+  const filtered = contacts.filter((c) =>
+    kind === "business" ? c.isBusiness : !c.isBusiness,
+  );
   // Escape key closes · overlay click closes.
   React.useEffect(() => {
     function onKey(e: KeyboardEvent): void {
@@ -241,7 +243,7 @@ function ContactPickerModal({
           </TogglePill>
         </div>
 
-        {/* List · planned data source · honest empty state */}
+        {/* List · real contacts · click row to invite */}
         <div
           style={{
             flex: 1,
@@ -249,7 +251,15 @@ function ContactPickerModal({
             padding: "4px 16px 16px",
           }}
         >
-          <PlannedList kind={kind} />
+          {filtered.length === 0 ? (
+            <EmptyPickerState kind={kind} />
+          ) : (
+            <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 6 }}>
+              {filtered.map((c) => (
+                <ContactRow key={c.accountId} contact={c} sessionId={sessionId} />
+              ))}
+            </ul>
+          )}
         </div>
 
         {/* Footer · explain the wire + a direct-to-contacts link */}
@@ -323,11 +333,88 @@ function TogglePill({
   );
 }
 
-function PlannedList({ kind }: { readonly kind: Kind }): React.JSX.Element {
-  // Owner directive · wired=planned · the list itself needs a
-  // server action that reads the viewer's nex_peer_conversation
-  // (friends) or nex_business (business) rows. Doc the gap +
-  // show a honest empty state.
+function ContactRow({
+  contact,
+  sessionId,
+}: {
+  readonly contact: PickerContact;
+  readonly sessionId: string | null;
+}): React.JSX.Element {
+  return (
+    <li>
+      <form action={inviteContactToCallAction} data-nex-call-invite-row>
+        <input type="hidden" name="invitee_account_id" value={contact.accountId} />
+        {sessionId && <input type="hidden" name="session_id" value={sessionId} />}
+        <input type="hidden" name="media_type" value="video" />
+        <button
+          type="submit"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            width: "100%",
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: `1px solid ${NEX.goldBorderSoft}`,
+            background: "rgba(5,26,16,0.6)",
+            cursor: "pointer",
+            textAlign: "left",
+            fontFamily: "inherit",
+            color: NEX.text,
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: "50%",
+              background:
+                `linear-gradient(135deg, ${NEX.emerald} 0%, ${NEX.gold} 100%)`,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#04140A",
+              fontWeight: 900,
+              fontSize: 13,
+              flexShrink: 0,
+            }}
+          >
+            {contact.displayName.slice(0, 1).toUpperCase()}
+          </span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: 13, fontWeight: 700, color: NEX.text }}>
+              {contact.displayName}
+            </span>
+            <span style={{ display: "block", fontSize: 11, color: NEX.textMute }}>
+              {contact.nexHandle ?? "no handle"}
+              {contact.isBusiness ? " · 🏪 business" : ""}
+            </span>
+          </span>
+          <span
+            style={{
+              padding: "5px 10px",
+              borderRadius: 999,
+              background: NEX.goldSoft,
+              border: `1px solid ${NEX.goldBorder}`,
+              color: NEX.goldBright,
+              fontSize: 10.5,
+              fontWeight: 900,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              flexShrink: 0,
+            }}
+          >
+            Invite
+          </span>
+        </button>
+      </form>
+    </li>
+  );
+}
+
+function EmptyPickerState({ kind }: { readonly kind: Kind }): React.JSX.Element {
   return (
     <div
       role="status"
@@ -348,12 +435,12 @@ function PlannedList({ kind }: { readonly kind: Kind }): React.JSX.Element {
         {kind === "friends" ? "☘" : "🏪"}
       </div>
       <div style={{ color: NEX.text, fontWeight: 800, fontSize: 13 }}>
-        {kind === "friends" ? "Your friends" : "Your business contacts"}
+        No {kind === "friends" ? "friends" : "business contacts"} yet
       </div>
       <div style={{ maxWidth: 300 }}>
-        The list wires into your {kind === "friends" ? "peer conversations" : "saved businesses"} ·
-        a follow-up commit enables the picker. Use <strong>Open contacts →</strong>
-        {" "}below to invite from the full Contacts surface meanwhile.
+        {kind === "friends"
+          ? "Chat with someone first · the picker lists your most-recent peer conversations."
+          : "No contacts here own a business · start a chat with a shop owner and they'll show up on this tab."}
       </div>
     </div>
   );

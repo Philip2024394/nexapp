@@ -148,7 +148,15 @@ export type NexPeerAttachmentKind =
   // Bridge 88 posture unchanged · document bytes route through the
   // plaintext path in v1 · Stage A2 encrypts all attachment types
   // together as a single security model change.
-  | "document";
+  | "document"
+  // Call Center · owner-authorised 2026-11-08 (round 22) · Migration
+  // 306 extends the attachment_type CHECK to allow 'call_invite'.
+  // Sent by the Call Center invite-dispatch service · attachment_url
+  // is the deep-link to accept the call (/nex-native/call/preview?
+  // session=<uuid>&accept=1) and attachment_meta carries { session_id,
+  // media_type, host_account_id }. Receiver's bubble renderer shows
+  // an Accept button.
+  | "call_invite";
 
 export interface NexPeerAttachmentMeta {
   duration_ms?: number;
@@ -1017,7 +1025,15 @@ export async function sendEncryptedPeerMessages(
   }
 
   // Bump last_message_at so conversation lists sort correctly.
-  await touchPeerConversation(rows[0]!.conversation_id);
+  // Round 22 2026-11-08 · signature is (conversationId, sentAtIso)
+  // · the encrypted insert path did not pass the timestamp, which
+  // TypeScript now catches after the attachment_type enum was
+  // extended. Use the current time (payload insertions happened
+  // moments ago) so last_message_at is accurate.
+  await touchPeerConversation(
+    rows[0]!.conversation_id,
+    new Date().toISOString(),
+  );
 
   return (data as Array<{ id: NexUuid }>).map((r) => r.id);
 }
