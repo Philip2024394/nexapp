@@ -23,7 +23,6 @@ import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import { NEX_PEER_ATTACHMENT_MAX_BYTES } from "@/lib/nex-native/peer-message-service";
 import {
   PRIVATE_CIPHERTEXT_BUCKET,
-  PUBLIC_ATTACHMENT_BUCKET,
   ensurePrivateBucketReady,
 } from "@/lib/nex-native/attachment/bucket-config";
 
@@ -67,15 +66,29 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     .toString(36)
     .slice(2, 8)}.${ext}`;
 
-  // Owner-authorised 2026-11-08 · Phase A · prefer the private
-  // ciphertext bucket. Falls back to the legacy public bucket if the
-  // private bucket is not yet provisioned in Supabase Storage (same
-  // compat pattern as the audit writer's table probe).
+  // Owner-authorised 2026-11-08 Priority 2 · private-bucket-only.
+  // Removed the public-bucket fallback for NEW encrypted uploads ·
+  // the sandbox apply + upload + signed-URL verification at commit
+  // 2d67036 (updated f440170+) confirmed the private bucket path
+  // works end-to-end. If the bucket probe fails here we FAIL SAFE
+  // with 503 rather than silently writing ciphertext to the public
+  // bucket · the user retries once the owner provisions the bucket
+  // or applies migration 295 in the target env.
   const privateReady = await ensurePrivateBucketReady();
-  const targetBucketName = privateReady
-    ? PRIVATE_CIPHERTEXT_BUCKET
-    : PUBLIC_ATTACHMENT_BUCKET;
-  const bucket = nexSupabaseAdmin.storage.from(targetBucketName);
+  if (!privateReady) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "private_bucket_unavailable",
+        detail:
+          "the private ciphertext bucket is not available in this " +
+          "environment · encrypted uploads are refused rather than " +
+          "stored publicly · retry after the bucket is provisioned",
+      },
+      { status: 503, headers: { "Retry-After": "60" } },
+    );
+  }
+  const bucket = nexSupabaseAdmin.storage.from(PRIVATE_CIPHERTEXT_BUCKET);
   const { error } = await bucket.upload(objectPath, bytes, {
     // Encrypted bytes have no meaningful MIME · treat as generic
     // binary so browsers don't try to sniff/preview accidentally.
@@ -90,25 +103,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
   // Private-bucket path · return storage_path only · the recipient
   // fetches a short-lived signed URL via /api/nex-native/attachment/
-  // encrypted/signed when they need to decrypt.
-  // Public-bucket fallback · we ALSO return storage_url to maintain
-  // the current envelope compatibility until the private bucket lands.
-  if (privateReady) {
-    return NextResponse.json({
-      ok: true,
-      storage_path: objectPath,
-      bucket: PRIVATE_CIPHERTEXT_BUCKET,
-      private: true,
-      size_bytes: bytes.byteLength,
-    });
-  }
-  const { data: publicData } = bucket.getPublicUrl(objectPath);
+  // encrypted/signed when they need to decrypt. No storage_url is
+  // emitted · new envelopes carry storage_path exclusively. Legacy
+  // envelopes with storage_url pointing at the public bucket
+  // continue to resolve against it unchanged.
   return NextResponse.json({
     ok: true,
-    storage_url: publicData.publicUrl,
     storage_path: objectPath,
-    bucket: PUBLIC_ATTACHMENT_BUCKET,
-    private: false,
+    bucket: PRIVATE_CIPHERTEXT_BUCKET,
+    private: true,
     size_bytes: bytes.byteLength,
   });
 }
