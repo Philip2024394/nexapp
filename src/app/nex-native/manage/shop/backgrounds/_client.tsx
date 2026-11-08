@@ -1001,6 +1001,57 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
   { id: "shawarma-cinematic-emerald", url: "/nex-brand/shop-themes/shawarma-cinematic-emerald.png", label: "Shawarma · Cinematic Emerald", category: "food", tintSwatch: "#16D66B", downloadsBase: 0, isNew: true },
   { id: "kebab-green-kitchen", url: "/nex-brand/shop-themes/kebab-green-kitchen.png", label: "Kebab · Green Kitchen", category: "food", tintSwatch: "#16D66B", downloadsBase: 0, isNew: true },
 
+  // ── Fashion · Women's · 23 tiles (owner directive 2026-11-08 round 10) ──
+  // Source files from the owner's Pictures folder (fashion 1-11, 18-29).
+  // tintSwatch cycles soft-pink / mauve / emerald / neutral so the
+  // applied theme accent varies per tile · owner can override per-shop
+  // via the sealed themes picker.
+  { id: "fashion-womens-01", url: "/nex-brand/shop-themes/fashion-womens-01.png", label: "Fashion · Women's · 01", category: "fashion", tintSwatch: "#F08CB8", downloadsBase: 0, isNew: true },
+  { id: "fashion-womens-02", url: "/nex-brand/shop-themes/fashion-womens-02.png", label: "Fashion · Women's · 02", category: "fashion", tintSwatch: "#D9C5A0", downloadsBase: 0, isNew: true },
+  { id: "fashion-womens-03", url: "/nex-brand/shop-themes/fashion-womens-03.png", label: "Fashion · Women's · 03", category: "fashion", tintSwatch: "#8B3DD9", downloadsBase: 0, isNew: true },
+  { id: "fashion-womens-04", url: "/nex-brand/shop-themes/fashion-womens-04.png", label: "Fashion · Women's · 04", category: "fashion", tintSwatch: "#C0001F", downloadsBase: 0, isNew: true },
+  { id: "fashion-womens-05", url: "/nex-brand/shop-themes/fashion-womens-05.png", label: "Fashion · Women's · 05", category: "fashion", tintSwatch: "#0F5F2B", downloadsBase: 0, isNew: true },
+  { id: "fashion-womens-06", url: "/nex-brand/shop-themes/fashion-womens-06.png", label: "Fashion · Women's · 06", category: "fashion", tintSwatch: "#F08CB8", downloadsBase: 0, isNew: true },
+  { id: "fashion-womens-07", url: "/nex-brand/shop-themes/fashion-womens-07.png", label: "Fashion · Women's · 07", category: "fashion", tintSwatch: "#D9A83A", downloadsBase: 0, isNew: true },
+  { id: "fashion-womens-08", url: "/nex-brand/shop-themes/fashion-womens-08.png", label: "Fashion · Women's · 08", category: "fashion", tintSwatch: "#1F3A6B", downloadsBase: 0, isNew: true },
+  { id: "fashion-womens-09", url: "/nex-brand/shop-themes/fashion-womens-09.png", label: "Fashion · Women's · 09", category: "fashion", tintSwatch: "#9B6DD9", downloadsBase: 0, isNew: true },
+  { id: "fashion-womens-10", url: "/nex-brand/shop-themes/fashion-womens-10.png", label: "Fashion · Women's · 10", category: "fashion", tintSwatch: "#F0A82A", downloadsBase: 0, isNew: true },
+  { id: "fashion-womens-11", url: "/nex-brand/shop-themes/fashion-womens-11.png", label: "Fashion · Women's · 11", category: "fashion", tintSwatch: "#F08CB8", downloadsBase: 0, isNew: true },
+  { id: "fashion-womens-18", url: "/nex-brand/shop-themes/fashion-womens-18.png", label: "Fashion · Women's · 12", category: "fashion", tintSwatch: "#2A6DD9", downloadsBase: 0, isNew: true },
+  { id: "fashion-womens-19", url: "/nex-brand/shop-themes/fashion-womens-19.png", label: "Fashion · Women's · 13", category: "fashion", tintSwatch: "#0F5F2B", downloadsBase: 0, isNew: true },
+  { id: "fashion-womens-20", url: "/nex-brand/shop-themes/fashion-womens-20.png", label: "Fashion · Women's · 14", category: "fashion", tintSwatch: "#D9C5A0", downloadsBase: 0, isNew: true },
+  { id: "fashion-womens-21", url: "/nex-brand/shop-themes/fashion-womens-21.png", label: "Fashion · Women's · 15", category: "fashion", tintSwatch: "#8B3DD9", downloadsBase: 0, isNew: true },
+  { id: "fashion-womens-22", url: "/nex-brand/shop-themes/fashion-womens-22.png", label: "Fashion · Women's · 16", category: "fashion", tintSwatch: "#C0001F", downloadsBase: 0, isNew: true },
+  { id: "fashion-womens-23", url: "/nex-brand/shop-themes/fashion-womens-23.png", label: "Fashion · Women's · 17", category: "fashion", tintSwatch: "#F08CB8", downloadsBase: 0, isNew: true },
+  { id: "fashion-womens-24", url: "/nex-brand/shop-themes/fashion-womens-24.png", label: "Fashion · Women's · 18", category: "fashion", tintSwatch: "#D9A83A", downloadsBase: 0, isNew: true },
+  { id: "fashion-womens-25", url: "/nex-brand/shop-themes/fashion-womens-25.png", label: "Fashion · Women's · 19", category: "fashion", tintSwatch: "#1F3A6B", downloadsBase: 0, isNew: true },
+  { id: "fashion-womens-26", url: "/nex-brand/shop-themes/fashion-womens-26.png", label: "Fashion · Women's · 20", category: "fashion", tintSwatch: "#9B6DD9", downloadsBase: 0, isNew: true },
+  { id: "fashion-womens-27", url: "/nex-brand/shop-themes/fashion-womens-27.png", label: "Fashion · Women's · 21", category: "fashion", tintSwatch: "#F0A82A", downloadsBase: 0, isNew: true },
+  { id: "fashion-womens-28", url: "/nex-brand/shop-themes/fashion-womens-28.png", label: "Fashion · Women's · 22", category: "fashion", tintSwatch: "#F08CB8", downloadsBase: 0, isNew: true },
+  { id: "fashion-womens-29", url: "/nex-brand/shop-themes/fashion-womens-29.png", label: "Fashion · Women's · 23", category: "fashion", tintSwatch: "#0F5F2B", downloadsBase: 0, isNew: true },
+
+  // ── Fashion · Men's · 6 tiles (owner directive 2026-11-08 round 10) ──
+  // Source files fashion 12-17 · navy/charcoal/warm-brown palette.
+  { id: "fashion-mens-12", url: "/nex-brand/shop-themes/fashion-mens-12.png", label: "Fashion · Men's · 01", category: "fashion", tintSwatch: "#1F3A6B", downloadsBase: 0, isNew: true },
+  { id: "fashion-mens-13", url: "/nex-brand/shop-themes/fashion-mens-13.png", label: "Fashion · Men's · 02", category: "fashion", tintSwatch: "#2E3B52", downloadsBase: 0, isNew: true },
+  { id: "fashion-mens-14", url: "/nex-brand/shop-themes/fashion-mens-14.png", label: "Fashion · Men's · 03", category: "fashion", tintSwatch: "#8B5A2B", downloadsBase: 0, isNew: true },
+  { id: "fashion-mens-15", url: "/nex-brand/shop-themes/fashion-mens-15.png", label: "Fashion · Men's · 04", category: "fashion", tintSwatch: "#6B7F3A", downloadsBase: 0, isNew: true },
+  { id: "fashion-mens-16", url: "/nex-brand/shop-themes/fashion-mens-16.png", label: "Fashion · Men's · 05", category: "fashion", tintSwatch: "#1F3A6B", downloadsBase: 0, isNew: true },
+  { id: "fashion-mens-17", url: "/nex-brand/shop-themes/fashion-mens-17.png", label: "Fashion · Men's · 06", category: "fashion", tintSwatch: "#A0522D", downloadsBase: 0, isNew: true },
+
+  // ── Freight · 6 tiles (owner directive 2026-11-08 round 10) ──
+  // Source files fashion 30-35 · industrial / logistics palette.
+  // Category 'delivery' matches the existing "Delivery & logistics"
+  // filter · same filter chip surfaces these next to the delivery-
+  // globe + logistics presets. If owner later wants a dedicated
+  // Freight category chip, add it to CATEGORIES.
+  { id: "freight-30", url: "/nex-brand/shop-themes/freight-30.png", label: "Freight · 01", category: "delivery", tintSwatch: "#4A6B7F", downloadsBase: 0, isNew: true },
+  { id: "freight-31", url: "/nex-brand/shop-themes/freight-31.png", label: "Freight · 02", category: "delivery", tintSwatch: "#2E3B52", downloadsBase: 0, isNew: true },
+  { id: "freight-32", url: "/nex-brand/shop-themes/freight-32.png", label: "Freight · 03", category: "delivery", tintSwatch: "#F0931F", downloadsBase: 0, isNew: true },
+  { id: "freight-33", url: "/nex-brand/shop-themes/freight-33.png", label: "Freight · 04", category: "delivery", tintSwatch: "#8B939F", downloadsBase: 0, isNew: true },
+  { id: "freight-34", url: "/nex-brand/shop-themes/freight-34.png", label: "Freight · 05", category: "delivery", tintSwatch: "#1F3A6B", downloadsBase: 0, isNew: true },
+  { id: "freight-35", url: "/nex-brand/shop-themes/freight-35.png", label: "Freight · 06", category: "delivery", tintSwatch: "#4A6B7F", downloadsBase: 0, isNew: true },
+
   // ── Tools & trade ──
   { id: "phil79-power-drills-yellow", url: "/nex-brand/shop-themes/phil79.png", label: "Power Drills · Yellow", category: "tools", tintSwatch: "#F0B82A", downloadsBase: 38 },
   { id: "phil80-wrenches-blue", url: "/nex-brand/shop-themes/phil80.png", label: "Wrenches · Blue", category: "tools", tintSwatch: "#2A6DD9", downloadsBase: 33 },
