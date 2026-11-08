@@ -54,6 +54,12 @@ export function suffixForIdentity(identity: PriceRegistryIdentity): string {
 /** Env-var base names · suffix is appended per identity. */
 export const PRICE_ENV_VARS = {
   shop: {
+    // Owner-sealed 2026-11-08 Scope Reduction · single Shop package.
+    // Round 30 (2026-11-08) adds the canonical 'shop' tier. The two
+    // historical entries ('standard' · 'unlimited') are grandfathered
+    // so any pre-existing Stripe subscriptions created under the 3-tier
+    // model keep resolving. New subscriptions use 'shop'.
+    shop: "STRIPE_PRICE_SHOP",
     standard: "STRIPE_PRICE_SHOP_STANDARD",
     unlimited: "STRIPE_PRICE_SHOP_UNLIMITED",
   },
@@ -64,6 +70,41 @@ export const PRICE_ENV_VARS = {
     "100gb": "STRIPE_PRICE_VAULT_100GB",
   },
 } as const;
+
+// ---------------------------------------------------------------------------
+// Round 30 (2026-11-08) · multi-currency scheme for the single Shop tier
+// ---------------------------------------------------------------------------
+// Round 29h/29i created subscriptions via `NEX_STRIPE_PRICE_SHOP_<CCY>_
+// MONTHLY` per launch market (EUR/GBP/USD/IDR). The per-identity
+// STRIPE_PRICE_SHOP_<SUFFIX> scheme above is kept for backwards
+// compatibility · the webhook needs to resolve BOTH schemes. The
+// function below enumerates every Round 29h price ID and tags it with
+// the single 'shop' tier.
+//
+// NEVER logs the price-ID values · only env-var names.
+
+const ROUND_29H_SHOP_CURRENCY_ENV_VARS = [
+  "NEX_STRIPE_PRICE_SHOP_EUR_MONTHLY",
+  "NEX_STRIPE_PRICE_SHOP_GBP_MONTHLY",
+  "NEX_STRIPE_PRICE_SHOP_USD_MONTHLY",
+  "NEX_STRIPE_PRICE_SHOP_IDR_MONTHLY",
+] as const;
+
+/** Return the (envVar, priceId) pairs from the Round 29h scheme that
+ *  the caller should also map to (product='shop', tier='shop'). */
+function readRound29hShopPriceIds(
+  getEnv: (key: string) => string | undefined,
+): { envVar: string; priceId: string }[] {
+  const out: { envVar: string; priceId: string }[] = [];
+  for (const envVar of ROUND_29H_SHOP_CURRENCY_ENV_VARS) {
+    const raw = getEnv(envVar);
+    if (typeof raw !== "string") continue;
+    const v = raw.trim();
+    if (v.length === 0) continue;
+    out.push({ envVar, priceId: v });
+  }
+  return out;
+}
 
 /** Return the env-var names (preferred + fallback) for a (product, tier,
  *  identity). Caller reads preferred first; if missing, reads fallback. */
@@ -188,6 +229,29 @@ export function buildPriceRegistry(
         continue;
       }
       byPriceId.set(e.priceId, e);
+    }
+  }
+
+  // Round 30 (2026-11-08) · fold the Round 29h per-currency Shop price
+  // IDs into byPriceId so webhook resolveTierForPriceId finds them.
+  // All four map to (product='shop', tier='shop'). The byTier index
+  // intentionally does NOT get these (they share a tier key and would
+  // collide) · the per-currency selection happens at Checkout creation
+  // time in the /api/.../checkout/shop route, not here.
+  for (const r29h of readRound29hShopPriceIds(getEnv)) {
+    if (!isWellFormedStripePriceId(r29h.priceId)) {
+      malformed.push({ envVar: r29h.envVar });
+      continue;
+    }
+    if (!byPriceId.has(r29h.priceId)) {
+      byPriceId.set(r29h.priceId, {
+        product: "shop",
+        tier: "shop",
+        envVarPreferred: r29h.envVar,
+        envVarFallback: r29h.envVar,
+        envVarUsed: r29h.envVar,
+        priceId: r29h.priceId,
+      });
     }
   }
 

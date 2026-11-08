@@ -34,6 +34,7 @@
 
 import {
   ENTRY_ENTITLEMENT,
+  SHOP_ENTITLEMENT,
   PROFESSIONAL_ENTITLEMENT,
   PROFESSIONAL_PLUS_ENTITLEMENT,
   type ShopEntitlementSpec,
@@ -41,21 +42,40 @@ import {
 } from "@/lib/nex-native/commercial/shop-entitlements";
 
 // ─── Tier resolver ──────────────────────────────────────────────────
-// Maps the nex_account.shop_tier column value (added by migration 257,
-// already APPLIED per audit) to the entitlement spec. Null or unknown
-// values fall back to the Entry allowance so a brand-new owner gets
-// the 5-product trial experience without any DB write.
+// Maps the nex_account.shop_tier column value to the entitlement spec.
+// Null or unknown values fall back to the Entry allowance so a
+// brand-new owner gets the 5-product trial experience without any
+// DB write.
+//
+// Round 30 (owner-approved direction 2026-11-08) · canonical paid
+// value is 'shop'. Grandfathered aliases preserved for pre-reduction
+// rows that may still carry 'standard' / 'unlimited' (migration 257
+// original enum) or 'professional' / 'professional_plus' (round
+// 29b test labels). All paid aliases resolve to the single sealed
+// SHOP_ENTITLEMENT per the 2026-11-08 Scope Reduction.
 
-/** Normalise the DB column value to our 3-tier enum. */
+/** Set of DB values that mean "paid Shop subscription". Kept here as
+ *  the single source of truth so future callers can audit membership
+ *  without re-hunting through the resolver code. */
+const PAID_SHOP_DB_VALUES: ReadonlySet<string> = new Set([
+  "shop",            // canonical · owner-sealed 2026-11-08
+  "standard",        // grandfathered · migration 257 original enum
+  "unlimited",       // grandfathered · migration 257 original enum
+  "professional",    // grandfathered · round 29b alias label
+  "professional_plus", // grandfathered · round 29b alias label
+]);
+
+/** Normalise the DB column value to the current two-tier enum
+ *  ('entry' trial · 'shop' paid). */
 export function resolveShopTier(
   dbShopTier: string | null | undefined,
 ): ShopTier {
-  if (dbShopTier === "professional") return "professional";
-  if (dbShopTier === "professional_plus") return "professional_plus";
-  // Legacy values from migration 090 (bisnis / plus / ringan) are
-  // NOT mapped here. Those accounts need owner-approved migration to
-  // the new tier vocabulary. Until then they fall to entry allowance
-  // so limits are conservative, not generous.
+  if (typeof dbShopTier === "string" && PAID_SHOP_DB_VALUES.has(dbShopTier)) {
+    return "shop";
+  }
+  // Legacy values from migration 090 (bisnis / plus / ringan) + any
+  // other unrecognised string fall through to Entry. Owner-directive
+  // post-2026-11-07 review · fail-closed with conservative limits.
   return "entry";
 }
 
@@ -63,8 +83,7 @@ export function getSpecForDbTier(
   dbShopTier: string | null | undefined,
 ): ShopEntitlementSpec {
   const tier = resolveShopTier(dbShopTier);
-  if (tier === "professional") return PROFESSIONAL_ENTITLEMENT;
-  if (tier === "professional_plus") return PROFESSIONAL_PLUS_ENTITLEMENT;
+  if (tier === "shop") return SHOP_ENTITLEMENT;
   return ENTRY_ENTITLEMENT;
 }
 

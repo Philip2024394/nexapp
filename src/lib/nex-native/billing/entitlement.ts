@@ -47,13 +47,38 @@ import type {
   AdverseEventRow,
 } from "./types";
 
-/** Trial access policy · OWNER DECISION PENDING.
+/** Trial access policy · OWNER-SEALED Option B 2026-11-08 (round 29f) ·
+ *  reaffirmed Round 30. Flips the DRAFT 'none' default to 'full'.
  *
- *  See the decision register (option A / B / C). The default here is
- *  Option A (no access during trial · safest · matches sealed "never
- *  advertise unless implemented"). Changing this constant is the single
- *  point where the policy flips once owner selects B or C. */
-export const TRIALING_ACCESS_LEVEL: AccessLevel = "none"; // DRAFT
+ *  Justification (traced through the entire access-level decision tree
+ *  per Round 30 owner directive before changing):
+ *    · Guard 1 (no tier) · still returns 'none' · trial users with no
+ *      tier never reach this branch.
+ *    · Guard 2 (open adverse event) · still blocks · fraud/dispute/
+ *      refund during trial still revokes access. Correct fail-closed
+ *      behaviour preserved.
+ *    · Guard 3a (status in expired/incomplete) · still returns 'none' ·
+ *      an incomplete subscription that never received invoice.payment_
+ *      succeeded gets no access.
+ *    · Guard 3b (status=trialing) · now returns 'full' · matches sealed
+ *      Option B "7 days free" promise on /pricing.
+ *    · Timestamp governance after trial · when Stripe transitions status
+ *      from 'trialing' to 'active' (payment succeeded) the timestamp
+ *      path takes over with period_end. Trial→paid conversion is
+ *      lifecycle-correct.
+ *    · Trial cancel-during-period · Stripe keeps status='trialing' with
+ *      cancel_at_period_end=true until trial_end. User keeps 'full'
+ *      access until trial ends · matches sealed guardrail #4 (cancel-
+ *      during-trial keeps access until day 7).
+ *    · Trial→failed payment · Stripe transitions to 'past_due' or
+ *      'incomplete'. 'past_due' triggers the 7-day retry extension if
+ *      period_end is set. 'incomplete' returns 'none'. Both correct.
+ *
+ *  Never advertise 'full' trial access on marketing surfaces without
+ *  the pre-trial disclosure (/pricing round 29f carries this honestly:
+ *  "7 days free · then €4.99 / month unless you cancel · cancel
+ *  anytime"). */
+export const TRIALING_ACCESS_LEVEL: AccessLevel = "full";
 
 /** 7-day Stripe retry window extension past period_end. */
 export const PAST_DUE_RETRY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;

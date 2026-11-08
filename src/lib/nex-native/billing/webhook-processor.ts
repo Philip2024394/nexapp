@@ -139,6 +139,52 @@ export async function processStripeEvent(
       case "charge.dispute.closed":
         result = await handleDisputeClosed(event, ids, resolved, store, now);
         break;
+      // Round 31a2 · Stripe Connect side · updates nex_business row
+      // owning the account_id. Does NOT touch nex_account subscription
+      // state (different domain). Fail-soft when account_id doesn't
+      // match any NEX business.
+      case "account.updated": {
+        const { handleConnectAccountUpdatedEvent } = await import(
+          "./stripe-connect-service"
+        );
+        const obj = (event.data as { object?: unknown }).object as
+          | {
+              id?: string;
+              charges_enabled?: boolean;
+              payouts_enabled?: boolean;
+              country?: string | null;
+              requirements?: { currently_due?: string[] } | null;
+            }
+          | undefined;
+        if (!obj?.id) {
+          result = {
+            outcome: "error",
+            outcomeDetail: "account.updated · missing account id in payload",
+          };
+          break;
+        }
+        const connectResult = await handleConnectAccountUpdatedEvent({
+          id: obj.id,
+          charges_enabled: obj.charges_enabled,
+          payouts_enabled: obj.payouts_enabled,
+          country: obj.country ?? null,
+          requirements: obj.requirements ?? null,
+        });
+        if (connectResult.ok) {
+          result = {
+            outcome: "applied",
+            outcomeDetail: `Connect account.updated · business=${connectResult.businessId} · charges_enabled=${connectResult.charges_enabled}`,
+          };
+        } else {
+          const connectReason = connectResult.reason;
+          result = {
+            outcome:
+              connectReason === "no_business_for_account" ? "applied" : "error",
+            outcomeDetail: `Connect account.updated · ${connectReason}`,
+          };
+        }
+        break;
+      }
       default:
         result = {
           outcome: "applied",

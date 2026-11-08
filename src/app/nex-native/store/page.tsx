@@ -59,9 +59,11 @@ const STORE_ITEMS: ReadonlyArray<StoreItem> = [
     id: "vault",
     name: "Vault",
     glyph: "🔐",
-    priceLabel: "€9.99 / month",
+    // Owner-sealed 2026-11-08 (round 29) · Vault is bundled with the
+    // single NEX Shop package · no longer a separate paid product.
+    priceLabel: "Included with NEX Shop",
     href: "/nex-native/vault",
-    blurb: "Private encrypted storage for files + conversations.",
+    blurb: "Private encrypted storage · included with your Shop package.",
   },
   // Placeholder tiles · signal the catalogue will grow · suppressed
   // taps until each item is approved to go live.

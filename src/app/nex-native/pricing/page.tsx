@@ -1,34 +1,31 @@
 // src/app/nex-native/pricing/page.tsx
 //
-// NEX pricing page · Ireland launch presentation.
-// Owner-approved pricing · owner-authorised 2026-11-07 local build.
+// NEX pricing page · single-package presentation.
+// Owner-authorised 2026-11-08 (round 29).
 // -----------------------------------------------------------------------------
-// Replaces the Indonesia-focused 7-tier legacy at /settings/tier for
-// the launch-market view. Reads prices from the regional-pricing
-// reference registry (Ireland only is active). Chat is positioned as
-// the free foundation · Shop is the one paid business product with
-// two tiers · Chat Themes are separately purchasable · Vault lives
-// in the NEX Store.
+// Replaces the 3-tier (Entry / Professional / Professional Plus) layout
+// that preceded the 2026-11-08 commercial seal. Reflects the single
+// Shop package model with pay-as-you-grow storage packs.
 //
-// This page does NOT trigger checkout. No Stripe calls fire. Tapping
-// a plan routes to the (sealed, draft, not-wired) billing checkout
-// endpoint, which itself requires owner approval before going live.
+// This page does NOT trigger checkout. No Stripe calls fire. The
+// "Open Shop setup" CTA routes to the sealed setup flow; Stripe
+// wiring is held for separate owner authorisation.
 
-import type * as React from "react";
+import * as React from "react";
 import Link from "next/link";
 import {
-  PROFESSIONAL_MONTHLY,
-  PROFESSIONAL_ANNUAL,
-  PROFESSIONAL_PLUS_MONTHLY,
-  PROFESSIONAL_PLUS_ANNUAL,
+  SHOP_MONTHLY,
+  STORAGE_PACKS,
   getActivePrice,
+  getActivePackPrice,
   formatPrice,
+  type SupportedRegion,
+  type CapacityPackSpec,
 } from "@/lib/nex-native/commercial/regional-pricing";
 import {
-  ENTRY_ENTITLEMENT,
-  PROFESSIONAL_ENTITLEMENT,
-  PROFESSIONAL_PLUS_ENTITLEMENT,
+  SHOP_ENTITLEMENT,
 } from "@/lib/nex-native/commercial/shop-entitlements";
+import { ShopCheckoutButton } from "../_shop-checkout-button";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,12 +44,20 @@ const BORDER_HI = "rgba(198, 161, 91, 0.55)";
 const SANS =
   "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
-export default function NexPricingPage(): React.JSX.Element {
-  const proMonth = getActivePrice(PROFESSIONAL_MONTHLY, "IE");
-  const proYear = getActivePrice(PROFESSIONAL_ANNUAL, "IE");
-  const plusMonth = getActivePrice(PROFESSIONAL_PLUS_MONTHLY, "IE");
-  const plusYear = getActivePrice(PROFESSIONAL_PLUS_ANNUAL, "IE");
+// Launch markets · owner-sealed 2026-11-08. The viewer-region resolver
+// (`region-resolver.ts`) is deferred; until it lands, the page shows the
+// four launch-market prices as a transparent chart.
+const LAUNCH_MARKETS: ReadonlyArray<{
+  region: SupportedRegion;
+  label: string;
+}> = [
+  { region: "IE", label: "Europe" },
+  { region: "GB", label: "United Kingdom" },
+  { region: "US", label: "United States" },
+  { region: "ID", label: "Indonesia" },
+];
 
+export default function NexPricingPage(): React.JSX.Element {
   return (
     <>
       <style>{`html, body { background: ${NEX_BG}; }`}</style>
@@ -122,7 +127,7 @@ export default function NexPricingPage(): React.JSX.Element {
               borderRadius: 999,
             }}
           >
-            NEX Ireland Pricing
+            NEX Pricing
           </span>
           <h1
             style={{
@@ -134,7 +139,7 @@ export default function NexPricingPage(): React.JSX.Element {
               lineHeight: 1.15,
             }}
           >
-            Chat free. Sell when you&rsquo;re ready.
+            Chat free. One package. Grow as you go.
           </h1>
           <p
             style={{
@@ -146,9 +151,9 @@ export default function NexPricingPage(): React.JSX.Element {
               marginInline: "auto",
             }}
           >
-            NEX Chat is free forever. Shop is one paid membership with
-            two levels. Themes are optional one-time purchases. Vault
-            lives in NEX Store.
+            NEX Chat is free forever. Shop is one package at the same
+            price for everyone. Need more capacity? Buy storage and
+            bandwidth as your business grows.
           </p>
         </header>
 
@@ -167,88 +172,197 @@ export default function NexPricingPage(): React.JSX.Element {
           accent={false}
         />
 
-        {/* Entry allowance · 5 products trial */}
-        <PricingCard
-          badge="Try selling"
-          name="Entry · 5 products"
-          priceLabel="Included with any signed-in Chat account"
-          summary="Open a shop, list up to 5 products, see if it works for your business."
-          bullets={[
-            `${ENTRY_ENTITLEMENT.products.maxActive} active products`,
-            `${ENTRY_ENTITLEMENT.products.imagesPerProduct} images per product · ${Math.round(
-              ENTRY_ENTITLEMENT.products.imageMaxBytes / 1_000_000,
-            )} MB max`,
-            `No video on Entry · upgrade for video`,
-            `${Math.round(ENTRY_ENTITLEMENT.storage.mediaBytes / 1_000_000)} MB total media storage`,
-          ]}
-          cta={{
-            label: "Open Shop setup →",
-            href: "/nex-native/manage/shop/start",
+        {/* The single Shop package */}
+        <section
+          style={{
+            padding: "16px 18px 18px",
+            background: `linear-gradient(135deg, ${EMERALD} 0%, rgba(5,15,28,0.94) 80%)`,
+            border: `1px solid ${GOLD}`,
+            borderRadius: 16,
+            boxShadow:
+              "0 16px 40px rgba(0,0,0,0.5), 0 0 0 3px rgba(198,161,91,0.14)",
           }}
-          accent={false}
-        />
+        >
+          <span
+            style={{
+              display: "inline-block",
+              padding: "3px 10px",
+              fontSize: 10,
+              fontWeight: 900,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: "#1A120A",
+              background: GOLD,
+              borderRadius: 999,
+              marginBottom: 8,
+            }}
+          >
+            One package
+          </span>
+          <h2
+            style={{
+              margin: 0,
+              fontSize: 20,
+              fontWeight: 900,
+              color: CREAM,
+              letterSpacing: "-0.01em",
+            }}
+          >
+            {SHOP_ENTITLEMENT.displayName}
+          </h2>
+          <p
+            style={{
+              margin: "6px 0 10px",
+              fontSize: 12.5,
+              color: INK_DIM,
+              lineHeight: 1.5,
+            }}
+          >
+            One subscription. Same features everywhere. Chat Themes and
+            Vault included. 0% commission on sales.
+          </p>
 
-        {/* Pro · €9.99/mo */}
-        <PricingCard
-          badge="Most popular"
-          name="NEX Shop Professional"
-          priceLabel={
-            proMonth
-              ? `${formatPrice(proMonth)} / month`
-              : "Pricing coming soon"
-          }
-          subPriceLabel={
-            proYear
-              ? `or ${formatPrice(proYear)} / year · save ~17%`
-              : undefined
-          }
-          summary="A working shop for the typical seller — café, maker, independent brand."
-          bullets={[
-            `${PROFESSIONAL_ENTITLEMENT.products.maxActive} active products`,
-            `${PROFESSIONAL_ENTITLEMENT.products.imagesPerProduct} images per product · 4 MB max`,
-            `${PROFESSIONAL_ENTITLEMENT.products.videosPerProduct} video per product · 30 sec · 40 MB`,
-            `${Math.round(PROFESSIONAL_ENTITLEMENT.storage.mediaBytes / 1_000_000_000)} GB shop media storage`,
-            `${Math.round(PROFESSIONAL_ENTITLEMENT.storage.monthlyBandwidthBytes / 1_000_000_000)} GB monthly delivery`,
-            "All 11 shop templates + background catalogue",
-          ]}
-          cta={{
-            label: "Choose Professional",
-            href: "/nex-native/manage/shop/setup",
-            note: "Checkout is in review · tap routes to Shop setup today",
-          }}
-          accent={true}
-        />
+          {/* Per-market price chart */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr auto",
+              rowGap: 6,
+              columnGap: 12,
+              margin: "12px 0 14px",
+              padding: "10px 12px",
+              background: "rgba(2,9,20,0.4)",
+              border: `1px solid ${BORDER}`,
+              borderRadius: 10,
+            }}
+          >
+            {LAUNCH_MARKETS.map(({ region, label }) => {
+              const row = getActivePrice(SHOP_MONTHLY, region);
+              return (
+                <React.Fragment key={region}>
+                  <span style={{ fontSize: 12, color: INK_DIM }}>{label}</span>
+                  <span
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 900,
+                      color: GOLD,
+                      textAlign: "right",
+                    }}
+                  >
+                    {row ? `${formatPrice(row)} / month` : "Coming soon"}
+                  </span>
+                </React.Fragment>
+              );
+            })}
+          </div>
 
-        {/* Plus · €19.99/mo */}
-        <PricingCard
-          badge="For power sellers"
-          name="NEX Shop Professional Plus"
-          priceLabel={
-            plusMonth
-              ? `${formatPrice(plusMonth)} / month`
-              : "Pricing coming soon"
-          }
-          subPriceLabel={
-            plusYear
-              ? `or ${formatPrice(plusYear)} / year · save ~17%`
-              : undefined
-          }
-          summary="More products, more media, priority placement for shops with real volume."
-          bullets={[
-            `${PROFESSIONAL_PLUS_ENTITLEMENT.products.maxActive} active products`,
-            `${PROFESSIONAL_PLUS_ENTITLEMENT.products.imagesPerProduct} images per product · 8 MB max`,
-            `${PROFESSIONAL_PLUS_ENTITLEMENT.products.videosPerProduct} videos per product · 60 sec · 100 MB`,
-            `${Math.round(PROFESSIONAL_PLUS_ENTITLEMENT.storage.mediaBytes / 1_000_000_000)} GB shop media storage`,
-            `${Math.round(PROFESSIONAL_PLUS_ENTITLEMENT.storage.monthlyBandwidthBytes / 1_000_000_000)} GB monthly delivery`,
-            "Boosted directory listing · analytics · priority support",
-          ]}
-          cta={{
-            label: "Choose Plus",
-            href: "/nex-native/manage/shop/setup",
-            note: "Checkout is in review · tap routes to Shop setup today",
+          <ul
+            style={{
+              listStyle: "none",
+              padding: 0,
+              margin: "0 0 12px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
+            }}
+          >
+            {[
+              `${SHOP_ENTITLEMENT.products.maxActive} shop products`,
+              `${SHOP_ENTITLEMENT.products.videosTotal} shop videos (up to ${SHOP_ENTITLEMENT.products.videoMaxSeconds}s each)`,
+              `${Math.round(SHOP_ENTITLEMENT.storage.mediaBytes / 1_000_000_000)} GB storage`,
+              `${Math.round(SHOP_ENTITLEMENT.storage.monthlyBandwidthBytes / 1_000_000_000)} GB monthly delivery`,
+              "Chat Themes included",
+              "Vault included",
+              "0% commission on sales",
+            ].map((b) => (
+              <li
+                key={b}
+                style={{
+                  fontSize: 11.5,
+                  color: INK,
+                  display: "flex",
+                  gap: 6,
+                  lineHeight: 1.4,
+                }}
+              >
+                <span aria-hidden style={{ color: GOLD }}>·</span>
+                <span>{b}</span>
+              </li>
+            ))}
+          </ul>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {/* Owner-sealed 2026-11-08 Option B · pre-trial disclosure
+                shown BEFORE the button so the user understands what
+                happens on day 8 (honesty guardrail #1). */}
+            <span style={{ fontSize: 10, color: INK_MUTED, marginBottom: 2 }}>
+              7 days free · then €4.99 / £4.99 / $4.99 / Rp 89,000 per
+              month unless you cancel · cancel anytime.
+            </span>
+            <ShopCheckoutButton />
+          </div>
+        </section>
+
+        {/* Capacity upgrades · storage + bandwidth packs */}
+        <section
+          style={{
+            padding: "14px 16px 16px",
+            background: SURFACE,
+            border: `1px solid ${BORDER}`,
+            borderRadius: 14,
           }}
-          accent={false}
-        />
+        >
+          <h3
+            style={{
+              margin: 0,
+              fontSize: 15,
+              fontWeight: 900,
+              color: CREAM,
+              letterSpacing: "-0.005em",
+            }}
+          >
+            Grow as your business grows
+          </h3>
+          <p
+            style={{
+              margin: "6px 0 10px",
+              fontSize: 11.5,
+              color: INK_DIM,
+              lineHeight: 1.5,
+            }}
+          >
+            Start with 1 GB storage and 30 GB monthly delivery. Need
+            more? Buy capacity packs by the month. Storage and bandwidth
+            are sold separately, so a quiet shop never subsidises a
+            busy one.
+          </p>
+
+          {/* Owner directive 2026-11-08 (round 29d) · users don't
+              understand "bandwidth" · single "storage" surface here
+              too · the 6-card detail lives on /settings/storage for
+              owners who want it. */}
+          <PackGroup
+            title="Storage upgrades"
+            region="IE"
+            packs={STORAGE_PACKS}
+            emptyHint="Storage upgrade prices for Indonesia are pending pilot data."
+          />
+
+          <Link
+            href="/nex-native/settings/storage"
+            style={{
+              display: "inline-block",
+              marginTop: 6,
+              fontSize: 11,
+              fontWeight: 900,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: GOLD,
+              textDecoration: "none",
+            }}
+          >
+            See usage + upgrade →
+          </Link>
+        </section>
 
         {/* Other products · Vault + Themes */}
         <section
@@ -261,14 +375,14 @@ export default function NexPricingPage(): React.JSX.Element {
           <SideCard
             name="Vault"
             glyph="🔐"
-            summary="Private encrypted storage for files + conversations."
-            footer="Visit NEX Store"
-            href="/nex-native/store"
+            summary="Private encrypted storage. Included with your Shop package."
+            footer="Open Vault"
+            href="/nex-native/vault"
           />
           <SideCard
             name="Chat Themes"
             glyph="🎨"
-            summary="One-time theme purchases · no Shop required."
+            summary="One-time theme purchases · included with Shop · browse free previews."
             footer="Browse themes"
             href="/nex-native/chat-themes-library"
           />
@@ -283,12 +397,88 @@ export default function NexPricingPage(): React.JSX.Element {
             textAlign: "center",
           }}
         >
-          Prices shown in EUR for Ireland. Other regional prices land as
-          markets are enabled. Chat is free forever. NEX never handles
-          buyer-seller payments for Shop orders.
+          Same Shop package for every subscriber globally. Local prices
+          shown for the four launch markets. Indonesia upgrade pack
+          prices pending pilot usage data. NEX never handles buyer-seller
+          payments for Shop orders.
         </footer>
       </main>
     </>
+  );
+}
+
+function PackGroup({
+  title,
+  region,
+  packs,
+  emptyHint,
+}: {
+  title: string;
+  region: SupportedRegion;
+  packs: ReadonlyArray<CapacityPackSpec>;
+  emptyHint: string;
+}): React.JSX.Element {
+  return (
+    <div style={{ margin: "8px 0 12px" }}>
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 900,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+          color: INK_DIM,
+          marginBottom: 6,
+        }}
+      >
+        {title}
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(96px, 1fr))",
+          gap: 6,
+        }}
+      >
+        {packs.map((p) => {
+          const activeRow = getActivePackPrice(p, region);
+          return (
+            <div
+              key={p.size}
+              style={{
+                padding: "8px 10px",
+                background: "rgba(2,9,20,0.4)",
+                border: `1px solid ${BORDER}`,
+                borderRadius: 10,
+                textAlign: "center",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 900,
+                  color: CREAM,
+                }}
+              >
+                {p.displayName}
+              </div>
+              <div
+                style={{
+                  marginTop: 2,
+                  fontSize: 11,
+                  fontWeight: 800,
+                  color: GOLD,
+                }}
+              >
+                {activeRow ? formatPrice(activeRow) : "—"}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ fontSize: 10, color: INK_MUTED, marginTop: 4 }}>
+        {emptyHint}
+      </div>
+    </div>
   );
 }
 

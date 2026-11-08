@@ -25,12 +25,25 @@ import {
   PROFESSIONAL_PLUS_ENTITLEMENT,
 } from "../../commercial/shop-entitlements";
 
-describe("resolveShopTier", () => {
-  it("maps 'professional' → 'professional'", () => {
-    expect(resolveShopTier("professional")).toBe("professional");
+// Owner-approved direction 2026-11-08 Round 30 · 'shop' is the
+// canonical paid value. Resolver maps all paid aliases (shop |
+// standard | unlimited | professional | professional_plus) to the
+// single 'shop' entitlement; everything else is 'entry'.
+describe("resolveShopTier · canonical 'shop' + grandfathered aliases", () => {
+  it("maps 'shop' → 'shop' (canonical)", () => {
+    expect(resolveShopTier("shop")).toBe("shop");
   });
-  it("maps 'professional_plus' → 'professional_plus'", () => {
-    expect(resolveShopTier("professional_plus")).toBe("professional_plus");
+  it("maps 'standard' → 'shop' (migration 257 grandfathered)", () => {
+    expect(resolveShopTier("standard")).toBe("shop");
+  });
+  it("maps 'unlimited' → 'shop' (migration 257 grandfathered)", () => {
+    expect(resolveShopTier("unlimited")).toBe("shop");
+  });
+  it("maps 'professional' → 'shop' (round 29b alias)", () => {
+    expect(resolveShopTier("professional")).toBe("shop");
+  });
+  it("maps 'professional_plus' → 'shop' (round 29b alias)", () => {
+    expect(resolveShopTier("professional_plus")).toBe("shop");
   });
   it("maps null → 'entry' (conservative fallback)", () => {
     expect(resolveShopTier(null)).toBe("entry");
@@ -77,26 +90,32 @@ describe("enforceCreateProduct · Entry tier (5 product cap)", () => {
   });
 });
 
-describe("enforceCreateProduct · Professional tier (50 product cap)", () => {
-  it("allows the 50th product (currentCount=49)", () => {
-    const r = enforceCreateProduct("professional", 49);
+// Owner-sealed 2026-11-08 (round 29): single Shop tier model
+// supersedes the three-tier Pro/Plus split. `PROFESSIONAL_ENTITLEMENT`
+// and `PROFESSIONAL_PLUS_ENTITLEMENT` are now aliases of the new
+// `SHOP_ENTITLEMENT` (10 products · 3 videos total · 1 GB · 30 GB
+// monthly bandwidth). The "Pro" and "Plus" test descriptions below
+// are retained for alias coverage but exercise the single Shop spec.
+describe("enforceCreateProduct · Professional tier (10 product cap · aliased to Shop)", () => {
+  it("allows the 10th product (currentCount=9)", () => {
+    const r = enforceCreateProduct("professional", 9);
     expect(r.ok).toBe(true);
   });
-  it("denies the 51st product (currentCount=50)", () => {
-    const r = enforceCreateProduct("professional", 50);
+  it("denies the 11th product (currentCount=10)", () => {
+    const r = enforceCreateProduct("professional", 10);
     expect(r.ok).toBe(false);
     expect(r.errors[0]).toBe("product-cap");
     expect(r.spec).toBe(PROFESSIONAL_ENTITLEMENT);
   });
 });
 
-describe("enforceCreateProduct · Professional Plus tier (500 product cap)", () => {
-  it("allows the 500th product (currentCount=499)", () => {
-    const r = enforceCreateProduct("professional_plus", 499);
+describe("enforceCreateProduct · Professional Plus tier (10 product cap · aliased to Shop)", () => {
+  it("allows the 10th product (currentCount=9)", () => {
+    const r = enforceCreateProduct("professional_plus", 9);
     expect(r.ok).toBe(true);
   });
-  it("denies the 501st product (currentCount=500)", () => {
-    const r = enforceCreateProduct("professional_plus", 500);
+  it("denies the 11th product (currentCount=10)", () => {
+    const r = enforceCreateProduct("professional_plus", 10);
     expect(r.ok).toBe(false);
     expect(r.errors[0]).toBe("product-cap");
     expect(r.spec).toBe(PROFESSIONAL_PLUS_ENTITLEMENT);
@@ -154,8 +173,8 @@ describe("enforceVideoUpload · tier gates", () => {
     );
     expect(r.ok).toBe(true);
   });
-  it("Professional · denies second video when per-product cap=1", () => {
-    const r = enforceVideoUpload("professional", 1, 1_000_000, 10);
+  it("Professional · denies 4th video when per-product cap=3 (aliased to Shop)", () => {
+    const r = enforceVideoUpload("professional", 3, 1_000_000, 10);
     expect(r.ok).toBe(false);
     expect(r.errors).toContain("video-cap-per-product");
   });
@@ -202,9 +221,12 @@ describe("describeError · human-readable upgrade prompts", () => {
     const msg = describeError("video-not-allowed-on-tier", ENTRY_ENTITLEMENT);
     expect(msg.toLowerCase()).toContain("upgrade");
   });
-  it("video-cap singular vs plural", () => {
+  it("video-cap mentions the per-product count", () => {
+    // Owner-sealed 2026-11-08: single Shop tier · both legacy
+    // Professional and Professional Plus aliases resolve to the
+    // same SHOP_ENTITLEMENT with videosPerProduct=3.
     const pro = describeError("video-cap-per-product", PROFESSIONAL_ENTITLEMENT);
-    expect(pro).toMatch(/1 video\b/);
+    expect(pro).toMatch(/3 videos/);
     const plus = describeError("video-cap-per-product", PROFESSIONAL_PLUS_ENTITLEMENT);
     expect(plus).toMatch(/\d+ videos/);
   });

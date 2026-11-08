@@ -13,8 +13,13 @@
 
 export type NexProduct = "shop" | "vault";
 
-/** NEX Shop package. 257 CHECK · code mirrors. */
-export type ShopTier = "standard" | "unlimited";
+/** NEX Shop package. Migration 257 CHECK originally allowed
+ *  ('standard','unlimited') for the 3-tier model. Owner-sealed 2026-11-08
+ *  Scope Reduction collapses this to a single `shop` tier · migration 310
+ *  extends the CHECK to accept all three (new 'shop' + grandfathered
+ *  'standard' | 'unlimited' for any historical rows). Round 30 (2026-11-08)
+ *  makes 'shop' the canonical new value · all new subscriptions write 'shop'. */
+export type ShopTier = "shop" | "standard" | "unlimited";
 
 /** NEX Vault storage tier. 257 CHECK · code mirrors. */
 export type VaultTier = "gratis" | "5gb" | "25gb" | "50gb" | "100gb";

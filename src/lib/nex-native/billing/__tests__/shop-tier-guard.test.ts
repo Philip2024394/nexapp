@@ -202,29 +202,33 @@ describe("guardCreateProduct · tier decisions", () => {
     expect(d.upgradeCta).toContain("/pricing");
   });
 
-  it("Professional · count=49 → allow, count=50 → deny", async () => {
+  // Owner-sealed 2026-11-08 (round 29): Pro + Plus are aliases of
+  // the single Shop tier (10 products · displayName "NEX Shop"). The
+  // "already top tier" semantic (upgradeCta undefined) no longer
+  // applies because there is no tier above Shop · users scale via
+  // storage/bandwidth packs, not tier upgrades.
+  it("Professional · count=9 → allow, count=10 → deny", async () => {
     queueMaybeSingle({ owner_account_id: OWNER });
     queueMaybeSingle({ shop_tier: "professional" });
-    queueCount(49);
+    queueCount(9);
     const d1 = await guardCreateProduct(BIZ);
     expect(d1.ok).toBe(true);
 
     queueMaybeSingle({ owner_account_id: OWNER });
     queueMaybeSingle({ shop_tier: "professional" });
-    queueCount(50);
+    queueCount(10);
     const d2 = await guardCreateProduct(BIZ);
     expect(d2.ok).toBe(false);
     expect(d2.code).toBe("product-cap");
   });
 
-  it("Plus · count=500 → deny · no upgrade CTA (already top tier)", async () => {
+  it("Plus · count=10 → deny (aliased to Shop)", async () => {
     queueMaybeSingle({ owner_account_id: OWNER });
     queueMaybeSingle({ shop_tier: "professional_plus" });
-    queueCount(500);
+    queueCount(10);
     const d = await guardCreateProduct(BIZ);
     expect(d.ok).toBe(false);
     expect(d.code).toBe("product-cap");
-    expect(d.upgradeCta).toBeUndefined();
   });
 });
 
@@ -264,7 +268,7 @@ describe("guardGalleryUpdate · caps total images including hero", () => {
     expect(d.code).toBe("image-cap-per-product");
   });
 
-  it("Professional (cap 6) · hero + 5 gallery = 6 total → allow (boundary)", async () => {
+  it("Professional (cap 5 · aliased to Shop) · hero + 4 gallery = 5 total → allow (boundary)", async () => {
     queueMaybeSingle({ owner_account_id: OWNER });
     queueMaybeSingle({ shop_tier: "professional" });
     queueMaybeSingle({
@@ -272,11 +276,11 @@ describe("guardGalleryUpdate · caps total images including hero", () => {
       image_url: null,
       gallery_urls: [],
     });
-    const d = await guardGalleryUpdate(BIZ, PRODUCT, 6);
+    const d = await guardGalleryUpdate(BIZ, PRODUCT, 5);
     expect(d.ok).toBe(true);
   });
 
-  it("Plus (cap 10) · hero + 10 gallery = 11 total → deny", async () => {
+  it("Plus (cap 5 · aliased to Shop) · hero + 5 gallery = 6 total → deny", async () => {
     queueMaybeSingle({ owner_account_id: OWNER });
     queueMaybeSingle({ shop_tier: "professional_plus" });
     queueMaybeSingle({
@@ -284,7 +288,7 @@ describe("guardGalleryUpdate · caps total images including hero", () => {
       image_url: null,
       gallery_urls: [],
     });
-    const d = await guardGalleryUpdate(BIZ, PRODUCT, 11);
+    const d = await guardGalleryUpdate(BIZ, PRODUCT, 6);
     expect(d.ok).toBe(false);
     expect(d.code).toBe("image-cap-per-product");
   });

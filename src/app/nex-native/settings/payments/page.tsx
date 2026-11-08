@@ -14,6 +14,9 @@ import Link from "next/link";
 import { NexPageHeader } from "../../_page-header";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { getAccountById } from "@/lib/nex-native/account-service";
+import { listBusinessesByOwner } from "@/lib/nex-native/business-service";
+import { readLocalConnectStatus } from "@/lib/nex-native/billing/stripe-connect-service";
+import { StripeConnectClient } from "./_stripe-connect-client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,6 +36,25 @@ export default async function PaymentsSettingsPage() {
   const session = await resolveSessionWithDevOverride();
   const account = session ? await getAccountById(session.account.id) : null;
   const nexHandle = account?.nex_handle ?? null;
+
+  // Round 31a · load the seller's primary business + current Stripe
+  // Connect status (fail-soft when migration 311 not applied or
+  // no business exists yet).
+  const businesses = session
+    ? await listBusinessesByOwner(session.account.id).catch(() => [])
+    : [];
+  const primaryBusiness = businesses[0] ?? null;
+  const connectStatus = primaryBusiness
+    ? await readLocalConnectStatus(primaryBusiness.id)
+    : {
+        accountId: null,
+        chargesEnabled: false,
+        payoutsEnabled: false,
+        country: null,
+        requirementsCurrentlyDue: [] as string[],
+        onboardedAt: null,
+        lastWebhookAt: null,
+      };
 
   return (
     <main
@@ -93,21 +115,50 @@ export default async function PaymentsSettingsPage() {
           </p>
         </header>
 
-        {/* Stripe */}
-        <ProviderCard
-          name="Stripe"
-          statusLabel="Not connected"
-          statusConnected={false}
-          bullets={[
-            "Cards · Apple Pay · Google Pay",
-            "Lower fees · instant IE payouts",
-            "Works for Creator support AND shop sales",
-          ]}
-          signupLine="Create a new Stripe account OR sign in with an existing one"
-          ctaLabel="Connect with Stripe"
-          href="/nex-native/coming-soon?feature=payment-connect-stripe"
-          dataProvider="stripe"
-        />
+        {/* Stripe · round 31a · real Connect flow replaces the Phase-U
+            coming-soon placeholder. The ProviderCard renders only the
+            static copy now; the interactive status + button lives in
+            StripeConnectClient below so the server-side status flows
+            through without a page reload loop. */}
+        <section
+          data-provider="stripe"
+          style={{
+            margin: "20px 0 0",
+            padding: "18px 18px 20px",
+            borderRadius: 14,
+            background: IRELAND.panel,
+            border: `1px solid ${IRELAND.borderSoft}`,
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: 18,
+                fontWeight: 900,
+                color: IRELAND.textPrimary,
+                letterSpacing: "-0.005em",
+              }}
+            >
+              Stripe
+            </h2>
+            <ul style={{ margin: "4px 0 0 16px", padding: 0, fontSize: 12, color: IRELAND.primaryInk, lineHeight: 1.5 }}>
+              <li>Cards · Apple Pay · Google Pay</li>
+              <li>Lower fees · instant IE payouts</li>
+              <li>Works for Creator support AND shop sales</li>
+            </ul>
+          </div>
+          <StripeConnectClient
+            initialStatus={connectStatus}
+            gold={IRELAND.secondary}
+            inkDim={IRELAND.textMuted}
+            inkPrimary={IRELAND.textPrimary}
+            red="#A60000"
+          />
+        </section>
 
         {/* PayPal */}
         <ProviderCard

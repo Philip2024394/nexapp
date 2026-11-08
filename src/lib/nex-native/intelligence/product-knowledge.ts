@@ -254,57 +254,42 @@ export const NEX_FEATURES: readonly ProductKnowledgeEntry[] = [
 // ─── Plans ───────────────────────────────────────────────────────────
 
 export const NEX_PLANS: readonly ProductKnowledgeEntry[] = [
+  // Owner-sealed 2026-11-08 (round 29) · supersedes the seven-tier
+  // Indonesia model sealed 2026-09-29. Single global Shop package at
+  // €4.99 / £4.99 / $4.99 / Rp 89,000 with pay-as-you-grow capacity
+  // packs. Chat stays free forever. Chat Themes remain one-time per
+  // theme (regional pricing). Vault bundled with Shop.
   {
-    id: "plan.gratis",
+    id: "plan.chat_free",
     kind: "plan",
-    title: "NEX Gratis (free forever)",
+    title: "NEX Chat · free forever",
     content:
-      "Rp 0 · always. Includes: unlimited peer chat, unlimited groups, 5 base themes (Default/Titanium/Pink/Gold/Night), basic mascots, all chat effects (send + receive), full read receipts + presence, NEX1 support chat. Caps: 10 products, 3 posts/week, 100 email subscribers, 7-day analytics, 20 AI-reply attempts per day, 1 business per account.",
-    keywords: ["gratis", "free", "plan", "always"],
-    sealed_at: "2026-09-29",
+      "Chat is free for every NEX account, globally. Includes: unlimited peer chat, unlimited groups, 5 base themes, mascots, chat effects (send + receive), read receipts + presence, voice + video + group calls (free), NEX1 support chat. End-to-end encrypted. Device-local message storage. No phone number required.",
+    keywords: ["free", "chat", "foundation", "always"],
+    sealed_at: "2026-11-08",
     required_plan: "gratis",
-    entry_href: "/nex-native/settings/tier",
+    entry_href: "/nex-native/pricing",
   },
   {
-    id: "plan.buy_theme",
+    id: "plan.chat_themes",
     kind: "plan",
-    title: "Buy a theme · Rp 25,000 one-time",
+    title: "Chat Themes · one-time per theme",
     content:
-      "Own one premium theme forever · never expires · with all its mascots + effects. Buy as many single themes as you like. Pay once via GoPay / DANA / ShopeePay / QRIS / bank transfer (NEX ops manually activates after confirming transfer).",
-    keywords: ["buy", "purchase", "theme", "single", "one-time", "own", "forever"],
-    sealed_at: "2026-09-29",
-    entry_href: "/nex-native/settings/tier",
+      "Premium chat themes purchased one-time · yours forever. Prices by market: €3.49 (Europe) · £2.99 (UK) · $3.99 (US) · Rp 29,000 (Indonesia). Included free with any NEX Shop subscription.",
+    keywords: ["themes", "chat themes", "theme pack", "one-time", "purchase"],
+    sealed_at: "2026-11-08",
+    entry_href: "/nex-native/chat-themes-library",
   },
   {
-    id: "plan.themes_ringan",
+    id: "plan.nex_shop",
     kind: "plan",
-    title: "Themes Ringan · Rp 15,000 / month (or Rp 150,000 / year)",
+    title: "NEX Shop · €4.99 / £4.99 / $4.99 / Rp 89,000 per month",
     content:
-      "Five hand-picked premium themes each month · rotation refreshes on the 1st. Full mascot + send effects on every rotated theme. Cancel anytime. Yearly is Rp 12,500/mo effective. Costs less than one Grab ride per month.",
-    keywords: ["ringan", "subscribe", "monthly", "rotation", "rotated"],
-    sealed_at: "2026-09-29",
-    entry_href: "/nex-native/settings/tier",
-  },
-  {
-    id: "plan.bisnis",
-    kind: "plan",
-    title: "NEX Bisnis · Rp 39,000 / month (or Rp 390,000 / year)",
-    content:
-      "ALL premium themes (20+ and growing) · ALL mascots · ALL send effects · ALL custom bubble shapes · Shop/Menu slider in every chat · 20 boosted messages/month · priority Directory placement · first access to new limited-drop themes · priority NEX1 support. For personal AND business accounts. Yearly is Rp 32,500/mo effective.",
-    keywords: ["bisnis", "business", "premium", "subscribe", "unlimited"],
-    sealed_at: "2026-09-29",
+      "One global Shop package. Same features for every subscriber. Includes: 10 shop products, 3 shop videos, 1 GB storage, 30 GB monthly delivery, Chat Themes, Vault, 0% commission on sales. Grow with +5 / +10 / +25 GB storage packs (from €1.80/mo) and +30 / +100 / +300 GB bandwidth packs (from €2.69/mo). Cancel any time · 30-day read-only grace on cancel · 10% bandwidth grace before enforcement. Indonesia upgrade pack prices pending pilot data.",
+    keywords: ["shop", "subscribe", "business", "pricing", "plan", "monthly", "upgrade", "storage", "bandwidth"],
+    sealed_at: "2026-11-08",
     required_plan: "bisnis",
-    entry_href: "/nex-native/settings/tier",
-  },
-  {
-    id: "plan.own_theme_request",
-    kind: "plan",
-    title: "Own Theme Request · Rp 1,000,000 one-time",
-    content:
-      "Bespoke theme designed around your business (bakery gets a bakery theme, salon gets a salon theme). Full custom mascot pack + emoji pack + shop layout. Visible to every customer + friend who chats you. Includes 12 months of Bisnis. Sticky retention: leaving NEX means losing your brand theme.",
-    keywords: ["own", "custom", "bespoke", "brand", "request"],
-    sealed_at: "2026-09-29",
-    entry_href: "/nex-native/settings/tier",
+    entry_href: "/nex-native/pricing",
   },
 ];
 

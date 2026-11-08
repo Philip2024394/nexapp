@@ -537,23 +537,29 @@ describe("E7 · 7-day retry window extends full access past period_end", () => {
 });
 
 // ===========================================================================
-// Policy-neutral default guard · DRAFT trialing policy
+// Trialing policy guard · owner-sealed 2026-11-08 Option B · Round 30 flip
 // ===========================================================================
-describe("trialing status · policy default is 'none' (option A · owner decision pending)", () => {
-  it("TRIALING_ACCESS_LEVEL constant drives trial access", () => {
-    // This test exists so a future PR that flips the constant to 'full' or
-    // 'read-only' triggers a CI failure requiring explicit owner authorisation
-    // of the policy change.
-    expect(TRIALING_ACCESS_LEVEL).toBe("none");
+// This block previously asserted the DRAFT default `TRIALING_ACCESS_LEVEL
+// === 'none'` (option A). Owner Philip sealed Option B on 2026-11-08
+// (memory file project_nex_trial_decision_2026_11_08.md): the 7-day
+// free trial grants FULL Shop access from day 1. Round 30 flipped the
+// constant with a full trace through the entitlement decision tree
+// documented in the entitlement.ts header.
+describe("trialing status · sealed Option B 2026-11-08 · 7-day full access", () => {
+  it("TRIALING_ACCESS_LEVEL constant grants full access during trial", () => {
+    // A future PR that regresses the constant to 'none' or 'read-only'
+    // will fail this test and require explicit owner re-authorisation.
+    expect(TRIALING_ACCESS_LEVEL).toBe("full");
   });
 
-  it("account in 'trialing' status returns TRIALING_ACCESS_LEVEL", () => {
+  it("account in 'trialing' status returns 'full' access", () => {
     const now = new Date("2026-11-02T00:00:00Z");
     const view = makeView({
       status: "trialing",
       periodEnd: daysFromNow(now, 7),
     });
     expect(accessLevel(view, now)).toBe(TRIALING_ACCESS_LEVEL);
+    expect(accessLevel(view, now)).toBe("full");
   });
 });
 

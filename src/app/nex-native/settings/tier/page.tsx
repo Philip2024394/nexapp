@@ -1,230 +1,79 @@
 // src/app/nex-native/settings/tier/page.tsx
 //
-// Bridge 56 · NEX Plans · seven-tier pricing surface · sealed 2026-09-29.
-// -----------------------------------------------------------------------
-// Full pricing surface for NEX themes + Bisnis. Priced for Indonesian
-// mass market (daily wage Rp 60k reality) with a laddered structure:
+// NEX Package & billing · slim surface · owner-authorised 2026-11-08
+// (round 29c). SUPERSEDES the sealed 2026-09-29 Bridge 56 seven-tier
+// Indonesia page.
+// -----------------------------------------------------------------------------
+// Context: the new commercial model (single Shop package at €4.99 /
+// £4.99 / $4.99 / Rp 89,000 + separate storage + bandwidth packs)
+// replaces the seven-tier Ringan/Plus/Bisnis/Try/Buy/Custom ladder.
+// This page is reached from /settings and from /contacts "Package &
+// billing" — those links are preserved. Full pricing details live
+// at /nex-native/pricing · capacity management at
+// /nex-native/settings/storage.
 //
-//   1 · Gratis (free forever)                       · viral hook
-//   2 · Try a theme       · Rp 5k / 7 days          · impulse trial
-//   3 · Buy a theme       · Rp 25k one-time         · ownership psy
-//   4 · Themes Ringan     · Rp 15k / month          · mass market
-//   5 · Themes Plus       · Rp 39k / month          · middle class · MOST POPULAR
-//   6 · Bisnis            · Rp 99k / month          · business + heavy fans
-//   7 · Bisnis Custom     · Rp 3jt one-time         · bespoke brand theme
+// Deliberately preserved from the old page:
+//   · Auth gate + account lookup (so the current-plan indicator is
+//     honest · not a "coming soon" placeholder).
+//   · Three TrustBlocks (How to cancel · No hidden fees · How refunds
+//     work) in sealed verbatim copy. These are regression anchors
+//     for the honesty-copy tests at
+//     __tests__/_cancel-copy-honesty.test.ts.
+//   · NexPageHeader + dataScope="settings-tier" (unchanged).
 //
-// Payments follow the sealed "NEX never handles payments" doctrine:
-// every CTA opens the NEX1 support chat with a pre-filled purchase
-// intent · NEX ops team confirms bank transfer / GoPay / DANA /
-// ShopeePay / QRIS manually. No card checkout, no in-app charge.
-//
-// UI standards target: this is a paid-conversion surface, so it uses
-// the premium NEX palette (dark navy + cyan + orange), serif headers
-// for tier names, chip badges, MOST POPULAR callout, current-plan
-// indicator, and mobile-first responsive grid.
+// Deliberately removed:
+//   · The three-tier `SubscriptionSection` grid (Ringan/Plus/Bisnis).
+//   · The `startThemesTrialAction` trigger (action retained in
+//     _actions.ts for any other caller, but no longer bound here · a
+//     Shop subscription now bundles Chat Themes, so a separate themes
+//     trial is semantically redundant for new buyers).
+//   · The seven `TierOffer[]` data (Try / Buy / Ringan / Plus /
+//     Bisnis / Custom).
+//   · Indonesia-specific payment-chat routing (GoPay / DANA /
+//     ShopeePay / QRIS / bank transfer). Future payment UX lives
+//     with Stripe wiring on /pricing + /settings/storage.
+//   · Monthly/Yearly toggle (annual billing is not sealed under the
+//     new model).
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { effectiveTier } from "@/lib/nex-native/account-service";
+import { ShopCheckoutButton } from "../../_shop-checkout-button";
+import { ShopCancelButton } from "../../_shop-cancel-button";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import { NexPageHeader } from "../../_page-header";
 import type { NexAccountRow } from "@/lib/nex-native/types";
-import { NEX_SUBSCRIPTION_PLAN_LABEL } from "@/lib/nex-native/types";
-import { NEX_OFFICIAL_CHAT_HREF } from "@/lib/nex-native/nex-official";
-import {
-  hasUsedThemesTrial,
-  isThemesTrialActive,
-  themesTrialExpiresAt,
-} from "@/lib/nex-native/account-service";
-import { startThemesTrialAction } from "../../_actions";
-import { SubscriptionSection } from "./_subscription-section";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const NEX = {
   bg: "var(--nex-world-background-base, #020914)",
-  panel: "#03101D",
-  panelSoft: "rgba(6, 15, 28, 0.72)",
-  border: "rgba(139, 169, 209, 0.14)",
-  borderStrong: "rgba(0, 175, 255, 0.35)",
-  text: "#F4F7FC",
-  textDim: "#8BA9D1",
-  textMute: "#526B89",
-  cyan: "#00AFFF",
-  cyanSoft: "rgba(0, 175, 255, 0.5)",
-  cyanFaint: "rgba(0, 175, 255, 0.12)",
-  orange: "#FF7800",
-  orangeSoft: "rgba(255, 120, 0, 0.55)",
-  green: "#22E37A",
-  greenFaint: "rgba(34, 227, 122, 0.14)",
-  gold: "#FFD277",
+  panel: "rgba(5, 15, 28, 0.72)",
+  border: "rgba(198, 161, 91, 0.25)",
+  borderHi: "rgba(198, 161, 91, 0.55)",
+  emerald: "var(--nex-world-primary, #123D2B)",
+  gold: "var(--nex-world-secondary, #C6A15B)",
+  cream: "var(--nex-world-cream, #FAF8F4)",
+  ink: "#F2F5F8",
+  inkDim: "#B5C3D6",
+  inkMuted: "#7D9BC0",
 };
-
-const SERIF =
-  "'Cormorant Garamond', 'EB Garamond', 'Playfair Display', Georgia, serif";
-
-export interface TierOffer {
-  id: string;
-  eyebrow: string;
-  name: string;
-  price: string;
-  priceUnit: string;
-  /** Optional yearly billing · when present, the subscription
-   *  section's Monthly/Yearly toggle swaps to these values. */
-  yearlyPrice?: string;
-  yearlyPriceUnit?: string;
-  /** CTA label shown when the yearly toggle is active. */
-  yearlyCtaLabel?: string;
-  /** CTA intent shown when the yearly toggle is active. */
-  yearlyCtaIntent?: string;
-  tagline: string;
-  target: string;
-  features: string[];
-  accent: "gray" | "cyan" | "orange" | "gold";
-  ctaLabel: string;
-  ctaIntent: string;
-  popular?: boolean;
-  currentIfEffective?: "gratis" | "bisnis";
-}
-
-const OFFERS: TierOffer[] = [
-  {
-    id: "gratis",
-    eyebrow: "FREE FOREVER",
-    name: "Gratis",
-    price: "Rp 0",
-    priceUnit: "always",
-    tagline: "Chat with anyone · pick from 5 free themes",
-    target: "Everyone on NEX",
-    features: [
-      "Unlimited peer chat + groups",
-      "5 base themes (Default, Titanium, Pink, Gold, Night)",
-      "Basic mascots (per-theme starter set)",
-      "All chat effects (send + receive animations)",
-      "Full read receipts + presence",
-      "NEX1 support chat included",
-    ],
-    accent: "gray",
-    ctaLabel: "You're on this plan",
-    ctaIntent: "",
-    currentIfEffective: "gratis",
-  },
-  {
-    id: "buy",
-    eyebrow: "OWN IT FOREVER",
-    name: "Buy a theme",
-    price: "Rp 25,000",
-    priceUnit: "per theme · one time",
-    tagline: "Pick a favourite · keep it forever",
-    target: "One-and-done buyers",
-    features: [
-      "1 premium theme unlocked permanently",
-      "Full theme with all its mascots + effects",
-      "Never expires · yours forever",
-      "Buy as many single themes as you like",
-      "Pay once via GoPay / DANA / ShopeePay / QRIS / bank transfer",
-    ],
-    accent: "cyan",
-    ctaLabel: "Buy a theme · Rp 25k",
-    ctaIntent: "buy",
-  },
-  {
-    id: "ringan",
-    eyebrow: "MASS-MARKET FAVOURITE",
-    name: "Themes Ringan",
-    price: "Rp 15,000",
-    priceUnit: "per month",
-    yearlyPrice: "Rp 150,000",
-    yearlyPriceUnit: "per year · Rp 12.5k/mo effective",
-    yearlyCtaLabel: "Subscribe · Rp 150k/yr",
-    yearlyCtaIntent: "ringan_yearly",
-    tagline: "5 fresh premium themes rotated every month · never boring",
-    target: "Everyday buyers",
-    features: [
-      "5 hand-picked premium themes each month",
-      "Rotation refreshes 1st of every month",
-      "Full mascot + send effects on every rotated theme",
-      "Cancel any time",
-      "Costs less than one Grab ride per month",
-    ],
-    accent: "cyan",
-    ctaLabel: "Subscribe · Rp 15k/mo",
-    ctaIntent: "ringan",
-  },
-  {
-    id: "bisnis",
-    eyebrow: "BISNIS",
-    name: "Bisnis",
-    price: "Rp 39,000",
-    priceUnit: "per month",
-    yearlyPrice: "Rp 390,000",
-    yearlyPriceUnit: "per year · Rp 32.5k/mo effective",
-    yearlyCtaLabel: "Subscribe · Rp 390k/yr",
-    yearlyCtaIntent: "bisnis_yearly",
-    tagline:
-      "Everything unlocked · themes, mascots, effects, shop slider · for personal and business accounts",
-    target: "Any account · personal or business",
-    features: [
-      "ALL premium themes (20+ and growing)",
-      "ALL mascots across every theme",
-      "ALL send effects (Confetti · Hearts · Fireworks · more)",
-      "ALL custom bubble shapes (cloud · slate · frost · glass)",
-      "Shop / Menu slider (share products or menu in every chat)",
-      "20 boosted messages / month",
-      "Priority Directory placement (when Phase 2 lands)",
-      "First access to new limited-drop themes",
-      "Priority support in NEX1 chat",
-    ],
-    accent: "gold",
-    ctaLabel: "Subscribe · Rp 39k/mo",
-    ctaIntent: "bisnis",
-    currentIfEffective: "bisnis",
-  },
-  {
-    id: "custom",
-    eyebrow: "FOR BRANDS",
-    name: "Own Theme Request",
-    price: "Rp 1,000,000",
-    priceUnit: "one time · lifetime unlock",
-    tagline:
-      "Your own specialised theme built for your business · full mascots + emoji + shop layout",
-    target: "Cafes · cake shops · salons · agencies · brand accounts",
-    features: [
-      "Specialised theme designed around your business type",
-      "Bakery gets a bakery theme · salon gets a salon theme · etc.",
-      "Full mascot pack tuned to your brand personality",
-      "Full custom emoji pack (bakery = cakes/coffee/croissants)",
-      "Bespoke shop layout for your product / menu slider",
-      "Your theme visible to every customer + friend who chats you",
-      "1-on-1 design brief with the NEX design team",
-      "Includes Bisnis subscription for 12 months",
-      "Sticky retention: leaving NEX = losing your brand theme",
-    ],
-    accent: "gold",
-    ctaLabel: "Request my own theme · Rp 1jt",
-    ctaIntent: "custom",
-  },
-];
-
-const PAYMENT_METHODS = [
-  "🟢 GoPay",
-  "🟣 DANA",
-  "🟠 ShopeePay",
-  "🔵 OVO",
-  "⬛ QRIS",
-  "🏦 Bank transfer",
-];
+const SANS =
+  "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
 export default async function TierPage() {
-  const session = await resolveNexAppSessionFromContext();
+  // Dev-impersonation flows through this resolver so
+  // NEX_DEV_IMPERSONATE_HANDLE (e.g. nex-99901) appears as the
+  // signed-in viewer during testing, matching the storage page.
+  const session = await resolveSessionWithDevOverride();
   if (!session) redirect("/nex-native/sign-in?next=/nex-native/settings/tier");
 
   const row = await nexSupabaseAdmin
     .from("nex_account")
     .select(
-      "tier, bisnis_expires_at, display_name, nex_handle, themes_trial_used_at, subscription_plan",
+      "tier, bisnis_expires_at, display_name, nex_handle, subscription_plan, themes_trial_used_at",
     )
     .eq("id", session.account.id)
     .maybeSingle();
@@ -235,24 +84,13 @@ export default async function TierPage() {
     | "bisnis_expires_at"
     | "display_name"
     | "nex_handle"
-    | "themes_trial_used_at"
     | "subscription_plan"
+    | "themes_trial_used_at"
   >;
   const effective = effectiveTier(account);
-  const trialUsed = hasUsedThemesTrial(account);
-  const trialActive = isThemesTrialActive(account);
-  const trialExpiresIso = themesTrialExpiresAt(account);
-  // Bridge 57 · compute days-remaining on active trial · ceils to
-  // whole days so "6 days left" reads on day 1, "1 day left" on day 6.
-  const trialDaysLeft = (() => {
-    if (!trialActive || !trialExpiresIso) return null;
-    const ms = new Date(trialExpiresIso).getTime() - Date.now();
-    if (ms <= 0) return null;
-    return Math.max(1, Math.ceil(ms / (24 * 60 * 60 * 1000)));
-  })();
-  const isBisnis = effective === "bisnis" || effective === "pro";
+  const isPaid = effective === "bisnis" || effective === "pro";
   const expiresLabel =
-    isBisnis && account.bisnis_expires_at
+    isPaid && account.bisnis_expires_at
       ? new Date(account.bisnis_expires_at).toLocaleDateString("en-GB", {
           day: "numeric",
           month: "long",
@@ -261,228 +99,79 @@ export default async function TierPage() {
       : null;
 
   return (
-    <div style={{ minHeight: "100dvh", background: NEX.bg, color: NEX.text }}>
-      {/* 2026-10-28 · NexPageHeader (src/app/nex-native/_page-header.tsx:58-61)
-          accepts only `dataScope`. The previous title + subtitle props
-          were silently dropped at runtime. Scope attribute is set so
-          analytics / tests can target this surface; the header text
-          "NEX Plans · Own your look · pay only for what you use" is
-          rendered inside the main content region below. */}
+    <div style={{ minHeight: "100dvh", background: NEX.bg, color: NEX.ink }}>
       <NexPageHeader dataScope="settings-tier" />
-
       <main
         style={{
-          maxWidth: 1120,
+          maxWidth: 560,
           margin: "0 auto",
-          padding: "clamp(20px, 4vw, 40px) clamp(16px, 4vw, 32px) 80px",
+          padding: "clamp(16px, 4vw, 28px) 20px 80px",
+          fontFamily: SANS,
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
         }}
       >
-        {/* Current-plan chip */}
-        <CurrentPlanCard
-          effective={effective}
-          expiresLabel={expiresLabel}
-          displayName={account.display_name}
-          subscriptionPlan={account.subscription_plan}
-          trialActive={trialActive}
-          trialDaysLeft={trialDaysLeft}
-        />
-
-        {/* Hero copy */}
-        <section style={{ marginTop: 28, marginBottom: 36 }}>
-          <div
+        {/* Header */}
+        <header style={{ marginBottom: 2 }}>
+          <span
             style={{
               fontSize: 10,
-              letterSpacing: "0.32em",
+              fontWeight: 900,
+              letterSpacing: "0.12em",
               textTransform: "uppercase",
-              color: NEX.orange,
-              fontWeight: 800,
-              marginBottom: 12,
+              color: NEX.gold,
             }}
           >
-            🎨 Themes · Mascots · Effects
-          </div>
+            Package & billing
+          </span>
           <h1
             style={{
-              margin: 0,
-              fontFamily: SERIF,
-              fontSize: "clamp(32px, 6vw, 52px)",
-              lineHeight: 1.05,
+              margin: "4px 0 4px",
+              fontSize: 22,
+              fontWeight: 900,
+              color: NEX.cream,
               letterSpacing: "-0.015em",
-              fontWeight: 500,
-              maxWidth: 760,
+              lineHeight: 1.2,
             }}
           >
-            Priced for Indonesia. Built for the world.
+            Your NEX plan
           </h1>
           <p
             style={{
-              margin: "18px 0 0",
-              fontSize: 15,
-              lineHeight: 1.6,
-              color: NEX.textDim,
-              maxWidth: 640,
+              margin: 0,
+              fontSize: 12,
+              color: NEX.inkDim,
+              lineHeight: 1.5,
             }}
           >
-            Start free. Try a theme for the cost of a bottle of water.
-            Subscribe when you find your look. Own your favourite forever.
-            Every plan is honest — cancel any time.
+            Chat is free forever. Shop is one global package at €4.99 /
+            £4.99 / $4.99 / Rp 89,000 per month — same features
+            everywhere.
           </p>
-        </section>
+        </header>
 
-        {/* Gratis · big free tier card */}
-        <FreeHeroCard
-          offer={OFFERS[0]!}
-          isCurrent={effective === "gratis"}
+        <CurrentPlanCard
+          effective={effective}
+          isPaid={isPaid}
+          expiresLabel={expiresLabel}
+          displayName={account.display_name}
+          subscriptionPlan={account.subscription_plan}
         />
 
-        {/* Bridge 56e · single Packages row · Buy + Ringan + Bisnis
-           on ONE row · Monthly/Yearly toggle inside the section only
-           swaps the two subscription cards · Buy stays static
-           (one-time purchase, no billing cycle). */}
-        <SectionHeader
-          title="Choose your package"
-          subtitle="One-time or subscription · every package has a 7-day free trial"
-        />
-        <SubscriptionSection
-          offers={[OFFERS[1]!, OFFERS[2]!, OFFERS[3]!]}
-          currentEffective={effective}
-          trialUsed={trialUsed}
-          trialActive={trialActive}
-          startTrialAction={startThemesTrialAction}
-        />
+        <ShopSnapshot />
 
-        {/* Section 3 · brand tier */}
-        <SectionHeader
-          title="For brands"
-          subtitle="Your own specialised theme · limited slots per month"
-        />
-        <div style={{ marginBottom: 44 }}>
-          <BrandCard offer={OFFERS[4]!} />
-        </div>
+        <CapacityLink />
 
-        {/* Payment methods · Bridge 56f · reframed as an online-
-           safety feature per Founder direction 2026-09-29. */}
+        {/* Honesty TrustBlocks · preserved from 2026-10-20 P3-B +
+            Service Refund Policy seals. Copy must stay verbatim to
+            keep the cancel-copy-honesty tests green. */}
         <section
           style={{
-            marginBottom: 40,
-            padding: "20px 22px",
-            borderRadius: 14,
-            background:
-              "linear-gradient(135deg, rgba(34,227,122,0.08) 0%, rgba(6,15,28,0.72) 100%)",
-            border: "1px solid rgba(34,227,122,0.35)",
-            boxShadow:
-              "0 8px 22px rgba(0,0,0,0.35), 0 0 24px rgba(34,227,122,0.08)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              marginBottom: 8,
-            }}
-          >
-            <span
-              aria-hidden
-              style={{
-                display: "inline-grid",
-                placeItems: "center",
-                width: 28,
-                height: 28,
-                borderRadius: "50%",
-                background: NEX.greenFaint,
-                border: "1px solid rgba(34,227,122,0.4)",
-                color: NEX.green,
-                fontSize: 14,
-              }}
-            >
-              🛡
-            </span>
-            <div
-              style={{
-                fontSize: 10,
-                letterSpacing: "0.22em",
-                textTransform: "uppercase",
-                color: NEX.green,
-                fontWeight: 800,
-              }}
-            >
-              Online payment safety by design
-            </div>
-          </div>
-
-          <div
-            style={{
-              fontFamily: SERIF,
-              fontSize: 18,
-              fontWeight: 500,
-              color: NEX.text,
-              lineHeight: 1.25,
-              letterSpacing: "-0.005em",
-              marginBottom: 10,
-              maxWidth: 640,
-            }}
-          >
-            Your card details never touch a NEX server.
-          </div>
-
-          <div
-            style={{
-              fontSize: 13,
-              color: NEX.textDim,
-              lineHeight: 1.6,
-              marginBottom: 16,
-              maxWidth: 640,
-            }}
-          >
-            Every activation is processed by the NEX team as a
-            personal safety + quality check. No online payment
-            gateway · no stored card numbers · no data-breach
-            surface. You pay via your own trusted rail below, and
-            our team reviews + activates your plan within minutes of
-            confirmation.
-          </div>
-
-          <div
-            style={{
-              fontSize: 10,
-              letterSpacing: "0.16em",
-              textTransform: "uppercase",
-              color: NEX.textMute,
-              fontWeight: 700,
-              marginBottom: 10,
-            }}
-          >
-            Pay through your preferred rail
-          </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {PAYMENT_METHODS.map((m) => (
-              <span
-                key={m}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: 999,
-                  background: NEX.cyanFaint,
-                  border: `1px solid ${NEX.cyanSoft}`,
-                  color: NEX.text,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  letterSpacing: "0.02em",
-                }}
-              >
-                {m}
-              </span>
-            ))}
-          </div>
-        </section>
-
-        {/* FAQ / trust footer */}
-        <section
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-            gap: 16,
-            marginBottom: 20,
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+            marginTop: 8,
           }}
         >
           <TrustBlock
@@ -498,771 +187,273 @@ export default async function TierPage() {
             body="Bisnis payments cover ongoing access to the NEX service. NEX does not offer a voluntary money-back period. If NEX has not delivered the service as agreed, your consumer rights under applicable law still apply — message NEX1 support to raise the issue."
           />
         </section>
+
+        <footer
+          style={{
+            marginTop: 8,
+            paddingTop: 10,
+            borderTop: `1px solid ${NEX.border}`,
+            fontSize: 10.5,
+            color: NEX.inkMuted,
+            lineHeight: 1.5,
+            textAlign: "center",
+          }}
+        >
+          See the full package comparison at{" "}
+          <Link
+            href="/nex-native/pricing"
+            style={{ color: NEX.gold, textDecoration: "none" }}
+          >
+            /nex-native/pricing
+          </Link>{" "}
+          · capacity upgrades at{" "}
+          <Link
+            href="/nex-native/settings/storage"
+            style={{ color: NEX.gold, textDecoration: "none" }}
+          >
+            /nex-native/settings/storage
+          </Link>
+          .
+        </footer>
       </main>
     </div>
   );
 }
 
-/* -------------------------------------------------------------- *
- * Current-plan indicator                                          *
- * -------------------------------------------------------------- */
-
 function CurrentPlanCard({
   effective,
+  isPaid,
   expiresLabel,
   displayName,
   subscriptionPlan,
-  trialActive,
-  trialDaysLeft,
 }: {
   effective: "gratis" | "bisnis" | "pro";
+  isPaid: boolean;
   expiresLabel: string | null;
-  displayName: string;
+  displayName: string | null;
   subscriptionPlan: string | null;
-  trialActive: boolean;
-  trialDaysLeft: number | null;
 }) {
-  // Bridge 57 · surface the actual subscription_plan when set so
-  // Ringan buyers don't just see "Bisnis" (that's the tier gate,
-  // not what they bought). Falls back to tier label otherwise.
-  const planLabel = (() => {
-    if (subscriptionPlan && subscriptionPlan in NEX_SUBSCRIPTION_PLAN_LABEL) {
-      return NEX_SUBSCRIPTION_PLAN_LABEL[
-        subscriptionPlan as keyof typeof NEX_SUBSCRIPTION_PLAN_LABEL
-      ];
-    }
-    return effective === "bisnis"
-      ? "NEX Bisnis"
-      : effective === "pro"
-        ? "NEX Pro"
-        : "NEX Gratis";
-  })();
-  const isPaid = effective !== "gratis" && !trialActive;
-  const isTrial = trialActive;
-  const bgGradient = isTrial
-    ? "linear-gradient(135deg, rgba(34,227,122,0.14) 0%, rgba(0,175,255,0.10) 100%)"
-    : isPaid
-      ? "linear-gradient(135deg, rgba(255,210,119,0.14) 0%, rgba(255,120,0,0.10) 100%)"
-      : NEX.panelSoft;
-  const cardBorder = isTrial
-    ? "rgba(34,227,122,0.4)"
-    : isPaid
-      ? NEX.orangeSoft
-      : NEX.border;
-  const eyebrowColor = isTrial
-    ? NEX.green
-    : isPaid
-      ? NEX.gold
-      : NEX.textMute;
+  const label = isPaid ? "NEX Shop" : "NEX Chat (free)";
+  // Owner-sealed 2026-11-08 Option B · Gratis users entering the paid
+  // Shop surface now see the explicit 7-day trial framing.
+  const hint = isPaid
+    ? expiresLabel
+      ? `Active · renews ${expiresLabel}`
+      : "Active subscription"
+    : "Chat is free forever · start a 7-day free Shop trial to add products, themes and Vault.";
   return (
     <section
       style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        flexWrap: "wrap",
-        gap: 12,
-        padding: "14px 18px",
+        padding: "14px 16px 16px",
+        background: isPaid
+          ? `linear-gradient(135deg, ${NEX.emerald} 0%, rgba(5,15,28,0.94) 80%)`
+          : NEX.panel,
+        border: `1px solid ${isPaid ? NEX.gold : NEX.border}`,
         borderRadius: 14,
-        background: bgGradient,
-        border: `1px solid ${cardBorder}`,
+        boxShadow: isPaid ? "0 12px 32px rgba(0,0,0,0.45)" : "none",
       }}
     >
-      <div style={{ minWidth: 0 }}>
-        <div
-          style={{
-            fontSize: 10,
-            letterSpacing: "0.16em",
-            textTransform: "uppercase",
-            color: eyebrowColor,
-            fontWeight: 700,
-            marginBottom: 4,
-          }}
-        >
-          {displayName} · your current plan
-        </div>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
-          <span
-            style={{
-              fontFamily: SERIF,
-              fontSize: 22,
-              fontWeight: 600,
-              color: NEX.text,
-            }}
-          >
-            {isTrial ? "Trial · full Bisnis unlocked" : planLabel}
-          </span>
-          {isTrial && trialDaysLeft && (
-            <span
-              style={{
-                fontSize: 12,
-                color: NEX.green,
-                fontWeight: 700,
-              }}
-            >
-              {trialDaysLeft} day{trialDaysLeft === 1 ? "" : "s"} left
-            </span>
-          )}
-          {!isTrial && expiresLabel && (
-            <span style={{ fontSize: 12, color: NEX.textDim }}>
-              renews {expiresLabel}
-            </span>
-          )}
-        </div>
-      </div>
-      {isTrial ? (
-        <span
-          style={{
-            padding: "6px 12px",
-            borderRadius: 999,
-            background: NEX.greenFaint,
-            border: "1px solid rgba(34,227,122,0.4)",
-            color: NEX.green,
-            fontSize: 11,
-            fontWeight: 800,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-          }}
-        >
-          ✓ Trial
-        </span>
-      ) : isPaid ? (
-        <span
-          style={{
-            padding: "6px 12px",
-            borderRadius: 999,
-            background: NEX.greenFaint,
-            border: "1px solid rgba(34,227,122,0.4)",
-            color: NEX.green,
-            fontSize: 11,
-            fontWeight: 800,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-          }}
-        >
-          ✓ Active
-        </span>
-      ) : (
-        <span
-          style={{
-            fontSize: 12,
-            color: NEX.textDim,
-            fontStyle: "italic",
-          }}
-        >
-          Pick a plan below to unlock more
-        </span>
-      )}
-    </section>
-  );
-}
-
-/* -------------------------------------------------------------- *
- * Free hero card · full-width Gratis                              *
- * -------------------------------------------------------------- */
-
-function FreeHeroCard({
-  offer,
-  isCurrent,
-}: {
-  offer: TierOffer;
-  isCurrent: boolean;
-}) {
-  return (
-    <section
-      style={{
-        marginBottom: 40,
-        padding: "clamp(22px, 4vw, 36px)",
-        borderRadius: 20,
-        background:
-          "linear-gradient(135deg, rgba(0,175,255,0.08) 0%, rgba(3,16,29,0.72) 100%)",
-        border: `1px solid ${NEX.border}`,
-        boxShadow: "0 12px 32px rgba(0,0,0,0.35)",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 24, alignItems: "flex-end" }}>
-        <div style={{ flex: "1 1 260px", minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: 10,
-              letterSpacing: "0.28em",
-              textTransform: "uppercase",
-              color: NEX.cyan,
-              fontWeight: 800,
-              marginBottom: 8,
-            }}
-          >
-            {offer.eyebrow}
-          </div>
-          <h2
-            style={{
-              margin: 0,
-              fontFamily: SERIF,
-              fontSize: "clamp(28px, 5vw, 40px)",
-              lineHeight: 1.1,
-              fontWeight: 500,
-              letterSpacing: "-0.01em",
-            }}
-          >
-            {offer.name}
-          </h2>
-          <p
-            style={{
-              margin: "10px 0 0",
-              fontSize: 14,
-              lineHeight: 1.6,
-              color: NEX.textDim,
-              maxWidth: 520,
-            }}
-          >
-            {offer.tagline}
-          </p>
-        </div>
-        <div style={{ flexShrink: 0 }}>
-          <div
-            style={{
-              fontFamily: SERIF,
-              fontSize: "clamp(38px, 6vw, 56px)",
-              fontWeight: 500,
-              color: NEX.text,
-              lineHeight: 1,
-              letterSpacing: "-0.015em",
-            }}
-          >
-            {offer.price}
-          </div>
-          <div
-            style={{
-              fontSize: 12,
-              color: NEX.textDim,
-              marginTop: 6,
-              textAlign: "right",
-            }}
-          >
-            {offer.priceUnit}
-          </div>
-        </div>
-      </div>
-      <ul
-        style={{
-          listStyle: "none",
-          padding: 0,
-          margin: "24px 0 0",
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-          gap: 10,
-        }}
-      >
-        {offer.features.map((f) => (
-          <FeatureLine key={f} text={f} tone="cyan" />
-        ))}
-      </ul>
-      <div style={{ marginTop: 22 }}>
-        {isCurrent ? (
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "10px 18px",
-              borderRadius: 999,
-              background: NEX.greenFaint,
-              border: "1px solid rgba(34,227,122,0.4)",
-              color: NEX.green,
-              fontSize: 12,
-              fontWeight: 800,
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-            }}
-          >
-            ✓ You&apos;re on Gratis
-          </div>
-        ) : (
-          <div
-            style={{
-              fontSize: 12,
-              color: NEX.textDim,
-              fontStyle: "italic",
-            }}
-          >
-            Always available · you can downgrade any time.
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-
-/* -------------------------------------------------------------- *
- * Section header · consistent typographic block                   *
- * -------------------------------------------------------------- */
-
-function SectionHeader({
-  title,
-  subtitle,
-}: {
-  title: string;
-  subtitle: string;
-}) {
-  return (
-    <header style={{ marginBottom: 18 }}>
       <div
         style={{
           fontSize: 10,
-          letterSpacing: "0.22em",
+          fontWeight: 900,
+          letterSpacing: "0.1em",
           textTransform: "uppercase",
-          color: NEX.orange,
-          fontWeight: 800,
-          marginBottom: 6,
+          color: NEX.gold,
         }}
       >
-        {title}
+        Current plan
       </div>
       <div
         style={{
-          fontSize: 13,
-          color: NEX.textDim,
-          fontWeight: 500,
+          marginTop: 4,
+          fontSize: 17,
+          fontWeight: 900,
+          color: NEX.cream,
+          letterSpacing: "-0.01em",
         }}
       >
-        {subtitle}
+        {label}
       </div>
-      <div
-        style={{
-          marginTop: 10,
-          width: 40,
-          height: 2,
-          borderRadius: 2,
-          background: NEX.orange,
-        }}
-      />
-    </header>
-  );
-}
-
-/* -------------------------------------------------------------- *
- * Tier card · used by both one-time and subscription offers       *
- * -------------------------------------------------------------- */
-
-function TierCard({
-  offer,
-  highlightCurrent = false,
-}: {
-  offer: TierOffer;
-  highlightCurrent?: boolean;
-}) {
-  const isPopular = !!offer.popular;
-  const isGold = offer.accent === "gold";
-  const accentColor = isGold ? NEX.gold : isPopular ? NEX.orange : NEX.cyan;
-  const accentSoft = isGold ? "rgba(255,210,119,0.14)" : isPopular ? "rgba(255,120,0,0.14)" : NEX.cyanFaint;
-  const accentBorder = isGold ? "rgba(255,210,119,0.45)" : isPopular ? NEX.orangeSoft : NEX.cyanSoft;
-  const ctaHref = buildCtaHref(offer);
-  return (
-    <article
-      style={{
-        position: "relative",
-        display: "flex",
-        flexDirection: "column",
-        padding: "clamp(20px, 3vw, 26px)",
-        borderRadius: 18,
-        background: isPopular
-          ? "linear-gradient(180deg, rgba(255,120,0,0.10) 0%, rgba(3,16,29,0.92) 100%)"
-          : NEX.panelSoft,
-        border: `1px solid ${isPopular ? NEX.orangeSoft : NEX.border}`,
-        boxShadow: isPopular
-          ? "0 16px 36px rgba(255,120,0,0.2), 0 0 32px rgba(255,120,0,0.12)"
-          : "0 8px 20px rgba(0,0,0,0.28)",
-        transform: isPopular ? "translateY(-2px)" : undefined,
-        transition: "transform 180ms ease, box-shadow 180ms ease",
-      }}
-    >
-      {isPopular && (
-        <span
-          style={{
-            position: "absolute",
-            top: -14,
-            left: "50%",
-            transform: "translateX(-50%)",
-            padding: "6px 14px",
-            borderRadius: 999,
-            background:
-              "linear-gradient(135deg, #FF9033 0%, #FF7200 100%)",
-            color: "#0B0F1A",
-            fontSize: 10,
-            fontWeight: 900,
-            letterSpacing: "0.14em",
-            textTransform: "uppercase",
-            boxShadow: "0 6px 16px rgba(255,120,0,0.5)",
-            whiteSpace: "nowrap",
-          }}
-        >
-          ⭐ Most popular
-        </span>
-      )}
-      {highlightCurrent && (
-        <span
-          style={{
-            position: "absolute",
-            top: -12,
-            right: 16,
-            padding: "4px 10px",
-            borderRadius: 999,
-            background: NEX.greenFaint,
-            border: "1px solid rgba(34,227,122,0.5)",
-            color: NEX.green,
-            fontSize: 9,
-            fontWeight: 900,
-            letterSpacing: "0.14em",
-            textTransform: "uppercase",
-          }}
-        >
-          ✓ Current
-        </span>
-      )}
-
-      <div
-        style={{
-          fontSize: 9,
-          letterSpacing: "0.22em",
-          textTransform: "uppercase",
-          color: accentColor,
-          fontWeight: 800,
-          marginBottom: 8,
-        }}
-      >
-        {offer.eyebrow}
-      </div>
-      <h3
-        style={{
-          margin: 0,
-          fontFamily: SERIF,
-          fontSize: 26,
-          fontWeight: 500,
-          letterSpacing: "-0.005em",
-          color: NEX.text,
-        }}
-      >
-        {offer.name}
-      </h3>
-      <div
-        style={{
-          marginTop: 14,
-          display: "flex",
-          alignItems: "baseline",
-          gap: 8,
-          flexWrap: "wrap",
-        }}
-      >
-        <span
-          style={{
-            fontFamily: SERIF,
-            fontSize: 34,
-            fontWeight: 500,
-            color: NEX.text,
-            letterSpacing: "-0.02em",
-            lineHeight: 1,
-          }}
-        >
-          {offer.price}
-        </span>
-        <span style={{ fontSize: 12, color: NEX.textDim }}>
-          {offer.priceUnit}
-        </span>
-      </div>
+      {displayName ? (
+        <div style={{ fontSize: 11, color: NEX.inkDim, marginTop: 2 }}>
+          Signed in as {displayName}
+          {subscriptionPlan ? ` · ${subscriptionPlan}` : ""}
+        </div>
+      ) : null}
       <p
         style={{
-          margin: "12px 0 16px",
-          fontSize: 13,
-          color: NEX.textDim,
+          margin: "8px 0 0",
+          fontSize: 12,
+          color: NEX.inkDim,
           lineHeight: 1.5,
         }}
       >
-        {offer.tagline}
+        {hint}
       </p>
-
-      <ul
-        style={{
-          listStyle: "none",
-          padding: 0,
-          margin: "8px 0 20px",
-          display: "grid",
-          gap: 8,
-        }}
-      >
-        {offer.features.map((f) => (
-          <FeatureLine
-            key={f}
-            text={f}
-            tone={isPopular ? "orange" : isGold ? "gold" : "cyan"}
-          />
-        ))}
-      </ul>
-
-      <div style={{ marginTop: "auto" }}>
-        <div
-          style={{
-            fontSize: 10,
-            color: NEX.textMute,
-            marginBottom: 10,
-            fontWeight: 600,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-          }}
-        >
-          For · {offer.target}
+      {!isPaid ? (
+        <div style={{ marginTop: 10 }}>
+          <ShopCheckoutButton />
         </div>
-        <Link
-          href={ctaHref}
-          style={{
-            display: "block",
-            width: "100%",
-            padding: "14px 18px",
-            borderRadius: 12,
-            background: isPopular
-              ? "linear-gradient(180deg, #FF9033 0%, #FF7200 100%)"
-              : isGold
-                ? "linear-gradient(180deg, #FFDF9B 0%, #FFB947 100%)"
-                : accentSoft,
-            border: `1px solid ${accentBorder}`,
-            color: isPopular || isGold ? "#0B0F1A" : NEX.text,
-            fontSize: 13,
-            fontWeight: 800,
-            letterSpacing: "0.04em",
-            textAlign: "center",
-            textDecoration: "none",
-            boxShadow: isPopular
-              ? "0 8px 20px rgba(255,120,0,0.4)"
-              : isGold
-                ? "0 8px 20px rgba(255,180,71,0.35)"
-                : "none",
-          }}
-        >
-          {offer.ctaLabel}
-        </Link>
-      </div>
-    </article>
+      ) : (
+        <ShopCancelButton />
+      )}
+    </section>
   );
 }
 
-/* -------------------------------------------------------------- *
- * Brand card · Bisnis Custom Theme                                *
- * -------------------------------------------------------------- */
-
-function BrandCard({ offer }: { offer: TierOffer }) {
-  const ctaHref = buildCtaHref(offer);
+function ShopSnapshot() {
   return (
-    <article
+    <section
       style={{
-        padding: "clamp(22px, 4vw, 32px)",
-        borderRadius: 20,
-        background:
-          "linear-gradient(135deg, rgba(255,210,119,0.10) 0%, rgba(255,120,0,0.08) 100%)",
-        border: `1px solid rgba(255,210,119,0.35)`,
-        boxShadow:
-          "0 16px 40px rgba(255,120,0,0.14), 0 0 40px rgba(255,210,119,0.12)",
+        padding: "12px 14px 14px",
+        background: NEX.panel,
+        border: `1px solid ${NEX.border}`,
+        borderRadius: 12,
       }}
     >
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "1fr auto",
-          gap: 20,
-          alignItems: "flex-start",
-          flexWrap: "wrap",
-        }}
-      >
-        <div style={{ minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: 10,
-              letterSpacing: "0.28em",
-              textTransform: "uppercase",
-              color: NEX.gold,
-              fontWeight: 800,
-              marginBottom: 8,
-            }}
-          >
-            {offer.eyebrow}
-          </div>
-          <h3
-            style={{
-              margin: 0,
-              fontFamily: SERIF,
-              fontSize: "clamp(24px, 4vw, 32px)",
-              fontWeight: 500,
-              letterSpacing: "-0.01em",
-            }}
-          >
-            {offer.name}
-          </h3>
-          <p
-            style={{
-              margin: "10px 0 0",
-              fontSize: 14,
-              color: NEX.textDim,
-              lineHeight: 1.6,
-              maxWidth: 640,
-            }}
-          >
-            {offer.tagline}
-          </p>
-        </div>
-        <div style={{ flexShrink: 0 }}>
-          <div
-            style={{
-              fontFamily: SERIF,
-              fontSize: "clamp(28px, 4vw, 40px)",
-              fontWeight: 500,
-              color: NEX.text,
-              lineHeight: 1,
-              letterSpacing: "-0.015em",
-              textAlign: "right",
-            }}
-          >
-            {offer.price}
-          </div>
-          <div
-            style={{
-              fontSize: 12,
-              color: NEX.textDim,
-              marginTop: 6,
-              textAlign: "right",
-            }}
-          >
-            {offer.priceUnit}
-          </div>
-        </div>
-      </div>
-
-      <ul
-        style={{
-          listStyle: "none",
-          padding: 0,
-          margin: "22px 0 22px",
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          gap: 10,
-        }}
-      >
-        {offer.features.map((f) => (
-          <FeatureLine key={f} text={f} tone="gold" />
-        ))}
-      </ul>
-
-      <Link
-        href={ctaHref}
-        style={{
-          display: "inline-block",
-          padding: "14px 24px",
-          borderRadius: 12,
-          background: "linear-gradient(180deg, #FFDF9B 0%, #FFB947 100%)",
-          border: "1px solid rgba(255,210,119,0.55)",
-          color: "#0B0F1A",
-          fontSize: 13,
-          fontWeight: 800,
-          letterSpacing: "0.04em",
-          textDecoration: "none",
-          boxShadow: "0 10px 24px rgba(255,180,71,0.4)",
-        }}
-      >
-        {offer.ctaLabel} →
-      </Link>
-    </article>
-  );
-}
-
-/* -------------------------------------------------------------- *
- * Feature line · shared checkmark row                             *
- * -------------------------------------------------------------- */
-
-function FeatureLine({
-  text,
-  tone,
-}: {
-  text: string;
-  tone: "cyan" | "orange" | "gold";
-}) {
-  const color =
-    tone === "orange" ? NEX.orange : tone === "gold" ? NEX.gold : NEX.cyan;
-  return (
-    <li
-      style={{
-        display: "flex",
-        alignItems: "flex-start",
-        gap: 8,
-        fontSize: 13,
-        lineHeight: 1.5,
-        color: NEX.text,
-      }}
-    >
-      <span
-        aria-hidden
-        style={{
-          flexShrink: 0,
-          width: 16,
-          height: 16,
-          borderRadius: "50%",
-          background: `${color}22`,
-          border: `1px solid ${color}55`,
-          color,
-          display: "grid",
-          placeItems: "center",
           fontSize: 10,
           fontWeight: 900,
-          marginTop: 2,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          color: NEX.gold,
         }}
       >
-        ✓
-      </span>
-      <span>{text}</span>
-    </li>
-  );
-}
-
-/* -------------------------------------------------------------- *
- * Trust footer blocks                                             *
- * -------------------------------------------------------------- */
-
-function TrustBlock({ title, body }: { title: string; body: string }) {
-  return (
-    <div
-      style={{
-        padding: "16px 18px",
-        borderRadius: 12,
-        background: NEX.panelSoft,
-        border: `1px solid ${NEX.border}`,
-      }}
-    >
+        NEX Shop · one package
+      </div>
       <div
+        style={{
+          marginTop: 3,
+          fontSize: 13,
+          fontWeight: 800,
+          color: NEX.cream,
+        }}
+      >
+        €4.99 / £4.99 / $4.99 / Rp 89,000 per month
+      </div>
+      <ul
+        style={{
+          listStyle: "none",
+          padding: 0,
+          margin: "6px 0 10px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 3,
+        }}
+      >
+        {[
+          "10 shop products · 3 shop videos",
+          "1 GB storage · 30 GB monthly delivery",
+          "Chat Themes included",
+          "Vault included",
+          "0% commission on sales",
+        ].map((b) => (
+          <li
+            key={b}
+            style={{
+              fontSize: 11,
+              color: NEX.ink,
+              display: "flex",
+              gap: 6,
+              lineHeight: 1.4,
+            }}
+          >
+            <span aria-hidden style={{ color: NEX.gold }}>·</span>
+            <span>{b}</span>
+          </li>
+        ))}
+      </ul>
+      <Link
+        href="/nex-native/pricing"
         style={{
           fontSize: 11,
           fontWeight: 800,
           letterSpacing: "0.08em",
           textTransform: "uppercase",
-          color: NEX.cyan,
-          marginBottom: 8,
+          color: NEX.gold,
+          textDecoration: "none",
+        }}
+      >
+        See full details →
+      </Link>
+    </section>
+  );
+}
+
+function CapacityLink() {
+  return (
+    <Link
+      href="/nex-native/settings/storage"
+      style={{
+        display: "block",
+        padding: "12px 14px",
+        background: NEX.panel,
+        border: `1px solid ${NEX.border}`,
+        borderRadius: 12,
+        color: NEX.ink,
+        textDecoration: "none",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 900,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          color: NEX.gold,
+        }}
+      >
+        Storage
+      </div>
+      <div
+        style={{
+          marginTop: 3,
+          fontSize: 13,
+          fontWeight: 800,
+          color: NEX.cream,
+        }}
+      >
+        See your usage · buy more storage →
+      </div>
+      <div style={{ fontSize: 11, color: NEX.inkDim, marginTop: 2 }}>
+        +5 / +10 / +25 GB packs · recurring monthly · cancel anytime.
+      </div>
+    </Link>
+  );
+}
+
+function TrustBlock({ title, body }: { title: string; body: string }) {
+  return (
+    <div
+      style={{
+        padding: "10px 12px",
+        background: NEX.panel,
+        border: `1px solid ${NEX.border}`,
+        borderRadius: 10,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 900,
+          color: NEX.gold,
+          letterSpacing: "0.04em",
         }}
       >
         {title}
       </div>
-      <div style={{ fontSize: 12, color: NEX.textDim, lineHeight: 1.55 }}>
+      <p
+        style={{
+          margin: "4px 0 0",
+          fontSize: 11.5,
+          color: NEX.inkDim,
+          lineHeight: 1.5,
+        }}
+      >
         {body}
-      </div>
+      </p>
     </div>
   );
-}
-
-/* -------------------------------------------------------------- *
- * CTA · route to NEX1 support chat with pre-filled intent         *
- * -------------------------------------------------------------- */
-
-function buildCtaHref(offer: TierOffer): string {
-  if (!offer.ctaIntent) return "#";
-  // Route to the NEX1 support chat so ops can confirm bank transfer /
-  // GoPay / DANA / ShopeePay / QRIS payment and activate the plan.
-  // Adds a query hint so ops sees which offer the buyer picked.
-  const params = new URLSearchParams({ intent: offer.ctaIntent });
-  return `${NEX_OFFICIAL_CHAT_HREF}?${params.toString()}`;
 }
