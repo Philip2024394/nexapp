@@ -346,6 +346,11 @@ function PageHeader({
           label="Retention"
           active={false}
         />
+        <TabLink
+          href="/nex-native/hq/security-audit/deletion-recovery"
+          label="Recovery"
+          active={false}
+        />
       </nav>
     </header>
   );

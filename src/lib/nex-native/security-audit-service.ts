@@ -242,19 +242,19 @@ export const SECURITY_AUDIT_EVENTS: Record<string, AuditEventSpec> = {
     description: "Visitor bootstrap refused · rate-limit",
   },
   "security.account.delete.attempted": {
-    allowedMetadataKeys: ["initiator", "reason_code"],
+    allowedMetadataKeys: ["initiator", "reason_code", "stage"],
     onWriteFailure: "fail-loud",
     targetType: "nex_account",
     description: "Account deletion initiated · before GDPR erasure",
   },
   "security.account.delete.completed": {
-    allowedMetadataKeys: [],
+    allowedMetadataKeys: ["stage"],
     onWriteFailure: "fail-loud",
     targetType: "nex_account",
     description: "Account deletion succeeded · audit identity pseudonymised",
   },
   "security.account.delete.failed": {
-    allowedMetadataKeys: ["error_code", "partial_state"],
+    allowedMetadataKeys: ["error_code", "partial_state", "stage"],
     onWriteFailure: "fail-loud",
     targetType: "nex_account",
     description: "Account deletion failed · partial state possible",
