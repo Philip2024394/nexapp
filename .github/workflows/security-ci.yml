@@ -1,0 +1,129 @@
+# .github/workflows/security-ci.yml
+#
+# NEX Security CI · free-tier friendly automated checks.
+# Owner-sealed 2026-11-08.
+# -----------------------------------------------------------------------------
+# What it does on every push and PR to any branch:
+#   1. Install deps (npm ci · uses lockfile)
+#   2. secret-scan · fails the build when owner-sealed patterns match
+#      outside the exemption list (test fixtures, known pattern files,
+#      // secret-scan: ignore-line hatch)
+#   3. npm audit · flags dependency vulnerabilities at MODERATE+ level.
+#      Does NOT fail the build by default (the ecosystem moves fast and
+#      transitive advisories arrive regularly) · report is attached as
+#      an annotation. Toggle with the audit_fail input.
+#   4. TypeScript typecheck · tsc --noEmit on the whole project
+#   5. Security programme test suite · vitest run of the Security +
+#      Recovery files only (not the full repo, keeps CI under free-tier
+#      budget)
+#
+# No paid tools. No external SaaS. No third-party actions beyond
+# actions/checkout + actions/setup-node (both first-party + free).
+
+name: Security CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'nex-ireland-build-*'
+      - 'phase-*/*'
+  pull_request:
+    branches:
+      - main
+      - 'nex-ireland-build-*'
+  workflow_dispatch:
+    inputs:
+      audit_fail:
+        description: "Fail on npm audit moderate+ findings"
+        required: false
+        default: "false"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run secret scan
+        run: node scripts/security-ci/secret-scan.mjs
+
+  dependency-audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: npm audit (production dependencies)
+        id: audit
+        run: |
+          set +e
+          npm audit --omit=dev --audit-level=moderate --json > audit-report.json
+          echo "audit_exit_code=$?" >> $GITHUB_OUTPUT
+          node -e "const r = require('./audit-report.json'); const vulns = r.metadata && r.metadata.vulnerabilities || {}; console.log('Advisories by severity:', JSON.stringify(vulns));" || true
+      - name: Enforce audit (optional)
+        if: ${{ inputs.audit_fail == 'true' }}
+        run: |
+          if [ "${{ steps.audit.outputs.audit_exit_code }}" != "0" ]; then
+            echo "::error::npm audit reported moderate+ vulnerabilities and audit_fail=true"
+            exit 1
+          fi
+
+  typecheck:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx tsc --noEmit
+
+  security-programme-tests:
+    name: Security Programme vitest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Run security programme suites
+        run: |
+          npx vitest run \
+            src/lib/nex-native/__tests__/security-rate-limit.test.ts \
+            src/lib/nex-native/__tests__/security-rate-limit-db-fallback.test.ts \
+            src/lib/nex-native/__tests__/security-service-bump-invalidation.test.ts \
+            src/lib/nex-native/__tests__/security-audit-service.test.ts \
+            src/lib/nex-native/__tests__/security-audit-reconciler.test.ts \
+            src/lib/nex-native/__tests__/account-deletion-service.test.ts \
+            src/lib/nex-native/__tests__/account-deletion-recovery-service.test.ts \
+            src/lib/nex-native/__tests__/hq-authorization.test.ts \
+            src/lib/nex-native/attachment/__tests__/ \
+            src/lib/nex-native/app/__tests__/dev-impersonation.test.ts \
+            src/lib/nex-native/incident/__tests__/ \
+            src/lib/nex-native/health/__tests__/ \
+            src/lib/nex-native/security-monitor/__tests__/ \
+            src/lib/nex-native/recovery/__tests__/ \
+            src/lib/nex-native/hq-direct-channel/__tests__/ \
+            src/app/api/nex-native/security/ \
+            src/app/api/nex-native/auth/webauthn/__tests__/ \
+            src/app/api/nex-native/attachment/encrypted/__tests__/route.test.ts \
+            src/app/api/nex-native/attachment/encrypted/signed/__tests__/route.test.ts \
+            src/app/api/nex-native/cron/security-audit-reconcile/__tests__/ \
+            src/app/api/nex-native/hq/direct-message/__tests__/ \
+            src/app/nex-native/hq/security-audit/__tests__/retention-actions.test.ts \
+            src/app/nex-native/hq/members/__tests__/ \
+            src/app/nex-native/settings/security/_security-pages.test.ts \
+            src/app/nex-native/__tests__/hq-gate-coverage.test.ts \
+            scripts/attachment-migration/__tests__/
