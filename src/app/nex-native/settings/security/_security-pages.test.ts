@@ -23,10 +23,12 @@ const SHELL_FILE = path.join(
 // ─── A · route registry shape ─────────────────────────────────────────
 
 describe("A · SECURITY_ROUTES registry", () => {
-  test("exports exactly 4 routes with expected keys", () => {
-    expect(SECURITY_ROUTES.length).toBe(4);
+  test("exports exactly 5 routes with expected keys", () => {
+    expect(SECURITY_ROUTES.length).toBe(5);
     const keys = SECURITY_ROUTES.map((r) => r.key).sort();
-    expect(keys).toEqual(["activity", "devices", "landing", "password"].sort());
+    expect(keys).toEqual(
+      ["activity", "delete-account", "devices", "landing", "password"].sort(),
+    );
   });
 
   test("getSecurityRoute returns a record for each known key", () => {

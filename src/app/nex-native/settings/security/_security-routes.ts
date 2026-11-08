@@ -52,6 +52,13 @@ export const SECURITY_ROUTES: readonly SecurityRouteDef[] = [
     title: "Password",
     subtitle: "Change your account password",
   },
+  {
+    key: "delete-account",
+    href: "/nex-native/settings/security/delete-account",
+    file: "src/app/nex-native/settings/security/delete-account/page.tsx",
+    title: "Delete account",
+    subtitle: "Permanently remove your NEX account",
+  },
 ] as const;
 
 export function getSecurityRoute(key: string): SecurityRouteDef | null {
