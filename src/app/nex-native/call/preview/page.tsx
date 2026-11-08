@@ -1,39 +1,37 @@
 // src/app/nex-native/call/preview/page.tsx
 //
-// NEX Calls & Video · master-layout PREVIEW surface.
-// Owner-authorised 2026-10-19 (Phase 1 UI shell) · emerald palette
-// refresh 2026-11-08 (round 13 · colours-only · layout unchanged).
+// NEX Call Center · preview surface.
+// Owner-authorised 2026-10-19 (Phase 1) · round 15 redesign
+// 2026-11-08 · session-aware · gold frames · no mock · themed
+// footer with dark-red end-call.
 // -----------------------------------------------------------------------------
-// Dedicated preview page the owner walks to approve the sealed
-// visual concept. Composes the four calls-chrome primitives
-// (CallsVideoHeader + VideoTile + CallControlBar + ConnectionFooter)
-// with MOCK participants · zero WebRTC wiring.
+// Scope on this round (owner directives · running list):
+//   · Call Center title · icon + text only · NO container
+//   · Emerald + gold background (self-contained gradient)
+//   · Video frames with NEX gold border wrappers
+//   · NO MOCK data · page reads real participants from
+//     nex_group_call_participant when a ?session=<uuid> is present
+//     · otherwise renders an empty "Waiting for contacts" state
+//   · Footer buttons themed emerald · end-call dark red · via a
+//     page-local control bar (sealed calls-chrome/CallControlBar
+//     is left untouched · it's used by production peer-chat)
+//   · Add people + Add contacts · both gold · NO row container
+//     (buttons float directly over the backdrop)
 //
-// Per the audit shipped 2026-10-19:
-//   WIRED controls here (Mute · Camera · End Call) are visibly
-//   interactive · their state is local to this preview and resets
-//   on reload. The NOT-WIRED controls (Audio · Chat · Participants ·
-//   More · Add people) render with the same visual language but
-//   carry "coming later" tooltips + the disabled attribute · same
-//   discipline the sealed Calls hub uses for its Group-call /
-//   Call-link tiles.
-//
-// Round 13 change (owner directive 2026-11-08 · colours only):
-//   · Cyan #00AFFF → emerald #16D66B across the local page tokens,
-//     the background gradient overlay, the participant row border,
-//     the participant counter colour, and the Add People button
-//     borders/text. Layout is byte-identical to the sealed 2026-10-19
-//     shape · owner-exact: "the orginal layout but update the nex
-//     theme colors."
-//   · Sealed `calls-chrome/*` primitives are UNCHANGED — their
-//     palette is owned by the primitive surface, not by this page.
-//
-// Honesty invariants upheld:
-//   · No fabricated participant data (names clearly tagged "mock")
-//   · No fabricated connection quality · footer passes null → the
-//     chrome renders "Measuring…" rather than lying about status
-//   · The call timer is a static "04:32" matching the concept image
-//     · the real timer wires up in Phase 2 when a session exists
+// Ready-for-live-call posture
+//   · The GroupCallEngine (src/lib/nex-native/calls/group-call-
+//     engine.ts) owns getUserMedia + pairwise RTCPeerConnection.
+//     It is NOT auto-mounted here · mounting it fires the camera +
+//     microphone permission prompt. Gating via an explicit
+//     ?live=1 query so a direct-URL visitor never gets surprised
+//     with a permission dialog. The code structure + real
+//     participant data are ready · flipping to live is a one-
+//     path change once the owner says "turn it on".
+//   · Still gap-listed in docs/doctrine/video-call-wiring-audit-
+//     2026-11-08.md · the invite-in-chat + accept flow (new
+//     call_invite attachment type + migration 306 + Accept button
+//     in peer-chat message renderer + push notifications) is a
+//     separate owner authorisation.
 
 import type { CSSProperties } from "react";
 import type * as React from "react";
@@ -41,103 +39,176 @@ import { notFound } from "next/navigation";
 import { VideoTile } from "@/lib/nex-native/calls-chrome/video-tile";
 import { ConnectionFooter } from "@/lib/nex-native/calls-chrome/connection-footer";
 import { CallControlBarShell } from "./_control-bar-shell";
+import { AddPeopleContactsRow } from "./_add-row-client";
 import type { CallsParticipant } from "@/lib/nex-native/calls-chrome/types";
+import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Owner directive 2026-11-08 (round 13 · amended round 14) ·
-// emerald + gold dual-tone palette. Emerald #16D66B is the NEX
-// presence-rim colour · gold #D9A83A pairs with it for the Call
-// Center header + backdrop. Sealed calls-chrome/* primitives
-// (VideoTile, ConnectionFooter) keep their own palette · only
-// the page-local tokens change here.
+const UUID_SHAPE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Owner directive 2026-11-08 · emerald + gold palette · the local
+// page tokens. Sealed calls-chrome/* primitives keep their own
+// palette because they're reused by production peer-chat.
 const NEX = {
   bg: "var(--nex-world-background-base, #040E09)",
   emerald: "#16D66B",
-  emeraldBorder: "rgba(22,214,107,0.14)",
-  emeraldBorderBright: "rgba(22,214,107,0.42)",
+  emeraldSoft: "rgba(22,214,107,0.12)",
+  emeraldBorder: "rgba(22,214,107,0.28)",
+  emeraldBorderBright: "rgba(22,214,107,0.55)",
   gold: "#D9A83A",
   goldBright: "#F0C85A",
-  goldBorder: "rgba(217,168,58,0.42)",
+  goldSoft: "rgba(217,168,58,0.12)",
+  goldBorder: "rgba(217,168,58,0.55)",
+  endRed: "#8B1A24",
+  endRedBright: "#A6212F",
+  text: "#F2F5F8",
   textDim: "#B5C3D6",
   textMute: "#7D9BC0",
 };
 
-/** Owner-authorised preview roster · explicitly tagged "mock" so no
- *  viewer or reader of the DOM can mistake these for real users. The
- *  participant shape IS the real `CallsParticipant` shape · what
- *  changes in the real surface is the data source, not the type. */
-const MOCK_PARTICIPANTS: readonly CallsParticipant[] = [
-  {
-    id: "mock-alex",
-    name: "Alex Morgan",
-    imageUrl: null,
-    micOn: true,
-    videoOn: false,
-    isSelf: false,
-  },
-  {
-    id: "mock-emma",
-    name: "Emma",
-    imageUrl: null,
-    micOn: true,
-    videoOn: false,
-    isSelf: false,
-  },
-  {
-    id: "mock-daniel",
-    name: "Daniel",
-    imageUrl: null,
-    micOn: true,
-    videoOn: false,
-    isSelf: false,
-  },
-  {
-    id: "mock-sofia",
-    name: "Sofia",
-    imageUrl: null,
-    micOn: false,
-    videoOn: false,
-    isSelf: false,
-  },
-];
+// ─── Server data fetch · live-ready real participant read ─────────
 
-const MOCK_SELF: CallsParticipant = {
-  id: "mock-self",
-  name: "You",
-  imageUrl: null,
-  micOn: true,
-  videoOn: false,
-  isSelf: true,
-};
+interface SessionShape {
+  readonly id: string;
+  readonly state: "ringing" | "live" | "ended";
+  readonly media_type: "audio" | "video";
+  readonly host_account_id: string;
+}
 
-export default function CallPreviewPage() {
-  // R4 production access-control gate · owner-authorised 2026-10-19.
-  // Matches the sealed /dev/* convention used by:
-  //   · /nex-native/dev/standard-experience-preview/page.tsx:34-36
-  //   · /nex-native/dev/theme-preview-generated/page.tsx (A3)
-  //   · /nex-native/dev/joker-bespoke-preview/page.tsx (A3.1)
-  //
-  // Production users typing /nex-native/call/preview directly now get
-  // a clean 404. The owner reaches it in dev (NODE_ENV !== "production")
-  // automatically, or in prod by setting NEX_DEV_ROUTES=1 in .env.local.
-  //
-  // The DEV-PREVIEW ribbon below remains · belt-and-braces honesty for
-  // anyone running with NEX_DEV_ROUTES=1 who still needs to know this
-  // is a mock surface, not a live call.
+interface RawParticipantRow {
+  readonly account_id: string;
+  readonly invited_at: string | null;
+  readonly joined_at: string | null;
+  readonly left_at: string | null;
+}
+
+interface RawAccountRow {
+  readonly id: string;
+  readonly display_name: string | null;
+}
+
+async function fetchSession(sessionId: string): Promise<SessionShape | null> {
+  try {
+    const { data, error } = await nexSupabaseAdmin
+      .from("nex_group_call_session")
+      .select("id, state, media_type, host_account_id")
+      .eq("id", sessionId)
+      .maybeSingle();
+    if (error || !data) return null;
+    return data as SessionShape;
+  } catch {
+    return null;
+  }
+}
+
+// Owner directive 2026-11-08 (round 16) · participants have a
+// lifecycle: `pending` (invited, awaiting Accept · shows the
+// waiting animation in the center of their tile) → `live` (joined
+// · real video/audio stream). Modelled on the sealed migration
+// 133 columns · invited_at + joined_at.
+type ParticipantCallState = "pending" | "live";
+interface Participant extends CallsParticipant {
+  readonly callState: ParticipantCallState;
+}
+
+async function fetchParticipants(
+  sessionId: string,
+  selfAccountId: string | null,
+): Promise<readonly Participant[]> {
+  try {
+    const { data: rows, error } = await nexSupabaseAdmin
+      .from("nex_group_call_participant")
+      .select("account_id, invited_at, joined_at, left_at")
+      .eq("session_id", sessionId)
+      .is("left_at", null);
+    if (error || !rows) return [];
+    const parts = rows as RawParticipantRow[];
+    const ids = parts.map((r) => r.account_id);
+    if (ids.length === 0) return [];
+    const { data: accounts } = await nexSupabaseAdmin
+      .from("nex_account")
+      .select("id, display_name")
+      .in("id", ids);
+    const byId = new Map<string, RawAccountRow>(
+      ((accounts ?? []) as RawAccountRow[]).map((a) => [a.id, a]),
+    );
+    return parts.map<Participant>((p) => {
+      const callState: ParticipantCallState =
+        p.joined_at != null ? "live" : "pending";
+      return {
+        id: p.account_id,
+        name: byId.get(p.account_id)?.display_name ?? "Member",
+        imageUrl: null,
+        // Live mic/camera state carries over Realtime presence,
+        // not the DB row · at render time we display the honest
+        // baseline: audio on, video off. The live client will
+        // update these from the GroupCallEngine presence payload
+        // once mounted.
+        micOn: true,
+        videoOn: false,
+        isSelf: p.account_id === selfAccountId,
+        callState,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+// ─── Page ──────────────────────────────────────────────────────────
+
+interface PageProps {
+  readonly searchParams?: Promise<{
+    readonly session?: string;
+    readonly live?: string;
+  }>;
+}
+
+export default async function CallPreviewPage({
+  searchParams,
+}: PageProps): Promise<React.JSX.Element> {
+  // R4 production access-control gate · preserved from 2026-10-19.
   const isDev = process.env.NODE_ENV !== "production";
   const prodOverride = process.env.NEX_DEV_ROUTES === "1";
   if (!isDev && !prodOverride) notFound();
 
-  const alex = MOCK_PARTICIPANTS[0]!;
-  const emma = MOCK_PARTICIPANTS[1]!;
-  const daniel = MOCK_PARTICIPANTS[2]!;
-  const sofia = MOCK_PARTICIPANTS[3]!;
+  const sp = (await searchParams) ?? {};
+  const sessionId = sp.session && UUID_SHAPE.test(sp.session) ? sp.session : null;
+
+  // Session-aware read · only if a valid session id is in the URL.
+  const session = sessionId ? await fetchSession(sessionId) : null;
+  const selfSession = await resolveSessionWithDevOverride().catch(() => null);
+  const selfAccountId = selfSession?.account?.id ?? null;
+  const participants = session
+    ? await fetchParticipants(session.id, selfAccountId)
+    : [];
+
+  const self: Participant | null = selfSession
+    ? {
+        id: selfSession.account.id,
+        name: selfSession.account.display_name ?? "You",
+        imageUrl: null,
+        micOn: true,
+        videoOn: false,
+        isSelf: true,
+        callState: "live",
+      }
+    : null;
+
+  // Participant pool for the grid · real self + other participants,
+  // de-duplicated (self might also be a row in the session).
+  const others = participants.filter((p) => p.id !== selfAccountId);
+  const grid: readonly Participant[] = self ? [self, ...others] : others;
 
   return (
     <main
       data-nex-call-preview-root
+      data-nex-call-session={session?.id ?? ""}
+      data-nex-call-state={session?.state ?? "empty"}
       style={{
         position: "relative",
         height: "100dvh",
@@ -146,127 +217,65 @@ export default function CallPreviewPage() {
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
-        color: "#F2F5F8",
+        color: NEX.text,
         fontFamily:
           "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
       }}
     >
-      {/* Owner directive 2026-11-08 (round 14) · emerald + gold
-          dual-tone backdrop. Emerald radial halo in the top-left,
-          gold radial halo in the bottom-right, deep navy base linear
-          gradient underneath. No image · the previous directory-bg
-          was retired here when the owner moved to the Call Center
-          chrome. */}
-      <div
-        aria-hidden
-        data-nex-call-preview-bg
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100svh",
-          backgroundImage:
-            `radial-gradient(900px 600px at 15% 10%, rgba(22,214,107,0.22), rgba(22,214,107,0) 60%), ` +
-            `radial-gradient(900px 600px at 85% 90%, rgba(217,168,58,0.18), rgba(217,168,58,0) 60%), ` +
-            `linear-gradient(180deg, #051A10 0%, #06231A 55%, #04140A 100%)`,
-          pointerEvents: "none",
-          zIndex: 0,
-        }}
-      />
-      {/* Preview-mode disclosure ribbon retired 2026-10-19 (owner
-          directive · "remove this from header · master Calls &
-          Video chrome · mock participants · WebRTC wiring deferred
-          to Phase 2 · Back to Calls hub"). */}
+      {/* Emerald + gold dual-tone backdrop. */}
+      <div aria-hidden style={backdropStyle} />
 
-      {/* Content shell · position:relative + zIndex:1 so the master
-          chrome stacks above the directory-bg layer. Mirrors the
-          sealed `shellStyle` pattern used by
-          _landing-directory-view.tsx:900-902. */}
       <div style={shellStyle} data-nex-call-preview-shell>
-        {/* Phase 1B honesty ribbon · owner-authorised 2026-10-19.
-            Reason · the preview is not dev-gated (follows /call/*
-            convention, not /dev/*). The CallsVideoHeader below
-            uses status="connected" + elapsed="04:32" so a direct-URL
-            visitor could mistake this for a real call. This ribbon
-            makes the preview intent unambiguous to a human viewer
-            while leaving the composition visible for design review. */}
-        <div
-          data-nex-call-preview-dev-ribbon
-          role="status"
-          aria-label="Dev preview · not a live call"
-          style={{
-            position: "absolute",
-            top: 10,
-            left: 12,
-            right: 12,
-            zIndex: 10,
-            padding: "6px 10px",
-            borderRadius: 999,
-            background: "rgba(255, 180, 0, 0.14)",
-            border: "1px solid rgba(255, 180, 0, 0.55)",
-            color: "#FFC95C",
-            fontSize: 10.5,
-            fontWeight: 800,
-            letterSpacing: "0.14em",
-            textTransform: "uppercase",
-            textAlign: "center",
-            lineHeight: 1.2,
-            pointerEvents: "none",
-          }}
-        >
-          Dev preview · mock data · not a live call
-        </div>
-        {/* 1 · Call Center header · owner directive 2026-11-08
-             (round 14) · the sealed CallsVideoHeader (with profile
-             + text + status) is RETIRED on this preview surface in
-             favour of a simple icon + "Call Center" title. The
-             sealed primitive stays untouched for production peer-
-             chat where profile identity is relevant. */}
+        {/* Dev-preview ribbon retired 2026-11-08 round 18 ·
+            owner-exact: "remove the dev preview we are on account
+            99901 id." The R4 production access gate above still
+            applies (page is dev-only in production unless
+            NEX_DEV_ROUTES=1). */}
+
+        {/* Call Center title · icon + text only · NO container
+            (owner directive 2026-11-08 round 15 · "remove
+            container from header just text and icon"). */}
         <CallCenterHeader />
 
-        {/* 2 · Video grid · asymmetric layout per the sealed concept */}
+        {/* Video grid · gold-framed tiles · real data when a
+            session is attached · empty state otherwise. */}
         <section style={gridScrollZoneStyle} aria-label="Participants">
-          <div style={gridRowStyle}>
-            <VideoTile participant={alex} size="primary" />
-          </div>
-          <div style={gridPairRowStyle}>
-            <VideoTile participant={emma} size="medium" />
-            <VideoTile participant={daniel} size="medium" />
-          </div>
-          <div style={gridPairRowStyle}>
-            <VideoTile participant={sofia} size="medium" />
-            <VideoTile participant={MOCK_SELF} size="small" />
-          </div>
+          {grid.length === 0 ? (
+            <EmptyState hasSession={!!session} signedIn={!!selfSession} />
+          ) : (
+            <GoldGrid participants={grid} />
+          )}
         </section>
 
-        {/* 3 · Participant counter + Add People · Add People is NOT
-              wired today (per the sealed audit) · rendered per spec
-              but disabled with "coming later" tooltip. */}
-        <ParticipantRow count={MOCK_PARTICIPANTS.length} />
+        {/* Row with Add people + Add contacts · both gold · NO
+            container (owner directive · "with no back ground
+            container"). */}
+        <AddPeopleContactsRow count={grid.length} sessionId={session?.id ?? null} />
 
-        {/* 4 · Control bar · wired/placeholder discipline inside */}
+        {/* Themed footer · emerald + gold with dark-red end-call. */}
         <CallControlBarShell />
 
-        {/* 5 · Connection footer · passes null quality so the chrome
-              honestly renders "Measuring…" (no WebRTC stats pipeline
-              wired in this preview). */}
+        {/* Honest footer · null quality → chrome renders "Measuring…" */}
         <ConnectionFooter quality={null} />
       </div>
     </main>
   );
 }
 
-// PreviewRibbon component retired 2026-10-19 along with its text
-// and the "Back to Calls hub" link · see comment at the main
-// render for the owner directive.
+// ─── Components ────────────────────────────────────────────────────
 
 function CallCenterHeader(): React.JSX.Element {
   return (
     <header
       data-nex-call-center-header
       role="banner"
-      style={callCenterHeaderStyle}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "18px 18px 10px",
+        flexShrink: 0,
+      }}
     >
       <span
         aria-hidden
@@ -279,7 +288,6 @@ function CallCenterHeader(): React.JSX.Element {
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
-          boxShadow: "0 0 18px rgba(22,214,107,0.35)",
         }}
       >
         <HeadsetGlyph />
@@ -298,6 +306,299 @@ function CallCenterHeader(): React.JSX.Element {
     </header>
   );
 }
+
+function GoldGrid({
+  participants,
+}: {
+  readonly participants: readonly Participant[];
+}): React.JSX.Element {
+  // Keep the sealed asymmetric shape as long as we have ≥5 people.
+  // For <5 people render a responsive grid that scales down cleanly.
+  if (participants.length >= 5) {
+    const [a, b, c, d, e] = participants;
+    return (
+      <>
+        <div style={gridRowStyle}>
+          <GoldFrame participant={a!} size="primary" />
+        </div>
+        <div style={gridPairRowStyle}>
+          <GoldFrame participant={b!} size="medium" />
+          <GoldFrame participant={c!} size="medium" />
+        </div>
+        <div style={gridPairRowStyle}>
+          <GoldFrame participant={d!} size="medium" />
+          <GoldFrame participant={e!} size="small" />
+        </div>
+      </>
+    );
+  }
+
+  // 1-4 participants · responsive grid.
+  const cols = participants.length <= 1 ? 1 : 2;
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: `repeat(${cols}, 1fr)`,
+        gap: 10,
+      }}
+    >
+      {participants.map((p, i) => (
+        <GoldFrame
+          key={p.id}
+          participant={p}
+          size={i === 0 && participants.length <= 2 ? "primary" : "medium"}
+        />
+      ))}
+    </div>
+  );
+}
+
+// Owner directive 2026-11-08 (round 16) · each tile overlays:
+//   · "pending" → ring-pulse waiting animation centered on the tile
+//     + caption "Ringing · waiting for accept". Switches to live
+//     automatically when the GroupCallEngine presence flips the row
+//     (or on page revalidation).
+//   · "mic off" → mic icon top-right with a red strike-through
+//     line · visible for any participant whose micOn===false.
+function GoldFrame({
+  participant,
+  size,
+}: {
+  readonly participant: Participant;
+  readonly size: "primary" | "medium" | "small";
+}): React.JSX.Element {
+  const pending = participant.callState === "pending";
+  return (
+    <div
+      data-nex-call-video-frame
+      data-nex-call-participant-id={participant.id}
+      data-nex-call-state={participant.callState}
+      data-nex-call-mic={participant.micOn ? "on" : "off"}
+      style={{
+        position: "relative",
+        borderRadius: 16,
+        // Owner directive 2026-11-08 (round 19) · solid gold frame
+        // matching the "1 person" text colour (#F0C85A). Previous
+        // gold-gradient wrapper produced a lighter edge that read
+        // as a white line against the dark tile.
+        border: `2px solid ${NEX.goldBright}`,
+        overflow: "hidden",
+        background: "#031109",
+      }}
+    >
+      <VideoTile participant={participant} size={size} />
+
+      {pending && <WaitingOverlay name={participant.name} />}
+      {!participant.micOn && !pending && <MicOffBadge />}
+    </div>
+  );
+}
+
+function WaitingOverlay({ name }: { readonly name: string }): React.JSX.Element {
+  return (
+    <>
+      <style>{`
+        @keyframes nex-call-pulse {
+          0%   { transform: scale(0.85); opacity: 0.85; }
+          70%  { transform: scale(1.35); opacity: 0.0;  }
+          100% { transform: scale(1.35); opacity: 0.0;  }
+        }
+        @keyframes nex-call-dots {
+          0%   { opacity: 0.2; }
+          50%  { opacity: 1;   }
+          100% { opacity: 0.2; }
+        }
+      `}</style>
+      <div
+        role="status"
+        aria-label={`Ringing ${name} · waiting for accept`}
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 10,
+          background:
+            "radial-gradient(circle at center, rgba(5,26,16,0.45) 0%, rgba(3,17,9,0.85) 70%)",
+          pointerEvents: "none",
+        }}
+      >
+        {/* 3 concentric rings pulse outward · emerald → gold. */}
+        <div style={{ position: "relative", width: 64, height: 64 }}>
+          {[0, 0.6, 1.2].map((delay, i) => (
+            <span
+              key={i}
+              aria-hidden
+              style={{
+                position: "absolute",
+                inset: 0,
+                borderRadius: "50%",
+                border: `2px solid ${i === 0 ? NEX.gold : i === 1 ? NEX.goldBright : NEX.emerald}`,
+                animation: `nex-call-pulse 1.8s ease-out ${delay}s infinite`,
+                opacity: 0,
+              }}
+            />
+          ))}
+          <span
+            aria-hidden
+            style={{
+              position: "absolute",
+              inset: 18,
+              borderRadius: "50%",
+              background:
+                `linear-gradient(135deg, ${NEX.emerald} 0%, ${NEX.gold} 100%)`,
+              boxShadow: "0 0 24px rgba(22,214,107,0.55)",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <PhoneGlyph />
+          </span>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 900,
+              color: NEX.goldBright,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+            }}
+          >
+            Ringing
+          </div>
+          <div style={{ fontSize: 11, color: NEX.textDim, marginTop: 2 }}>
+            Waiting for {name} to accept
+            <span style={{ display: "inline-block", marginLeft: 4 }}>
+              <span style={{ animation: "nex-call-dots 1.2s ease-in-out infinite" }}>.</span>
+              <span style={{ animation: "nex-call-dots 1.2s ease-in-out 0.2s infinite" }}>.</span>
+              <span style={{ animation: "nex-call-dots 1.2s ease-in-out 0.4s infinite" }}>.</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function MicOffBadge(): React.JSX.Element {
+  // Owner directive 2026-11-08 (round 17) · if a participant has
+  // their sound off we show a mic icon on their video with a red
+  // strike-through line. The sealed VideoTile paints its own mic
+  // indicator too · this overlay sits ABOVE it so the red-strike
+  // is unmistakable at a glance.
+  return (
+    <div
+      aria-label="Microphone off"
+      data-nex-call-mic-off
+      style={{
+        position: "absolute",
+        top: 8,
+        right: 8,
+        width: 28,
+        height: 28,
+        borderRadius: 8,
+        background: "rgba(2,9,20,0.85)",
+        border: `1px solid ${NEX.goldBorder}`,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        pointerEvents: "none",
+      }}
+    >
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#F2F5F8"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+      >
+        <rect x="9" y="3" width="6" height="11" rx="3" />
+        <path d="M5 11 v1 a7 7 0 0 0 14 0 v-1" />
+        <path d="M12 19 v3" />
+        {/* Red strike-through diagonal. */}
+        <line x1="4" y1="4" x2="20" y2="20" stroke="#E53945" strokeWidth="2.6" />
+      </svg>
+    </div>
+  );
+}
+
+function PhoneGlyph(): React.JSX.Element {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#031109"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M5 4 h3 l2 5 l-3 2 a11 11 0 0 0 6 6 l2 -3 l5 2 v3 a2 2 0 0 1 -2 2 A17 17 0 0 1 3 6 a2 2 0 0 1 2 -2z" />
+    </svg>
+  );
+}
+
+function EmptyState({
+  hasSession,
+  signedIn,
+}: {
+  readonly hasSession: boolean;
+  readonly signedIn: boolean;
+}): React.JSX.Element {
+  const title = !signedIn
+    ? "Sign in to start a call"
+    : hasSession
+      ? "Waiting for participants to join…"
+      : "No active call";
+  const body = !signedIn
+    ? "Call Center requires a signed-in NEX account. Head back to Chat and sign in."
+    : hasSession
+      ? "Your session is live. Invite contacts or share the call link to bring people in."
+      : "Attach a session id to the URL (?session=<uuid>) to view a live call, or invite contacts from Chat to start one.";
+  return (
+    <div
+      role="status"
+      style={{
+        margin: "20px 12px",
+        padding: "28px 20px",
+        borderRadius: 16,
+        border: `1px dashed ${NEX.goldBorder}`,
+        background: "rgba(5,26,16,0.55)",
+        textAlign: "center",
+        lineHeight: 1.6,
+      }}
+    >
+      <div style={{ fontSize: 42, lineHeight: 1 }} aria-hidden>🌿</div>
+      <h2
+        style={{
+          fontSize: 16,
+          fontWeight: 900,
+          color: NEX.goldBright,
+          margin: "10px 0 6px",
+          letterSpacing: "0.04em",
+        }}
+      >
+        {title}
+      </h2>
+      <p style={{ fontSize: 13, color: NEX.textDim, margin: 0, maxWidth: 420, marginInline: "auto" }}>
+        {body}
+      </p>
+    </div>
+  );
+}
+
+// ─── Glyphs ────────────────────────────────────────────────────────
 
 function HeadsetGlyph(): React.JSX.Element {
   return (
@@ -320,59 +621,22 @@ function HeadsetGlyph(): React.JSX.Element {
   );
 }
 
-function ParticipantRow({ count }: { count: number }) {
-  return (
-    <div style={participantRowStyle} data-nex-call-preview-add-row>
-      <span style={participantCountStyle}>
-        <PeopleGlyph />
-        {count} people
-      </span>
-      <button
-        type="button"
-        disabled
-        aria-label="Add people · coming later"
-        title="Add people · coming later"
-        data-nex-call-add-people
-        data-nex-call-add-people-wired="false"
-        style={addPeopleStyle}
-      >
-        <span style={{ fontSize: 14, lineHeight: 1 }}>+</span>
-        <span>Add people</span>
-      </button>
-    </div>
-  );
-}
+// ─── Styles ────────────────────────────────────────────────────────
 
-function PeopleGlyph() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <circle cx="9" cy="9" r="3" />
-      <path d="M2 20 c0 -3.5 3 -6 7 -6 s7 2.5 7 6" />
-      <circle cx="17" cy="7" r="2.5" />
-      <path d="M15 14 c3 0 7 2 7 5" />
-    </svg>
-  );
-}
+const backdropStyle: CSSProperties = {
+  position: "absolute",
+  top: 0,
+  left: 0,
+  width: "100%",
+  height: "100svh",
+  backgroundImage:
+    `radial-gradient(900px 600px at 15% 10%, rgba(22,214,107,0.22), rgba(22,214,107,0) 60%), ` +
+    `radial-gradient(900px 600px at 85% 90%, rgba(217,168,58,0.18), rgba(217,168,58,0) 60%), ` +
+    `linear-gradient(180deg, #051A10 0%, #06231A 55%, #04140A 100%)`,
+  pointerEvents: "none",
+  zIndex: 0,
+};
 
-// ─── Styles ─────────────────────────────────────────────────────────
-// `ribbonStyle` retired 2026-10-19 along with PreviewRibbon · see
-// the comment at the main render for the owner directive.
-
-// Owner directive 2026-10-19 · content shell · stacks above the
-// directory-bg layer. Byte-identical pattern to the sealed
-// `shellStyle` in _landing-directory-view.tsx:900-902 so the
-// Calls preview reads with the same visual-layer discipline the
-// Directory uses.
 const shellStyle: CSSProperties = {
   position: "relative",
   zIndex: 1,
@@ -401,50 +665,4 @@ const gridPairRowStyle: CSSProperties = {
   gridTemplateColumns: "1fr 1fr",
   gap: 10,
 };
-const callCenterHeaderStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-  padding: "14px 18px 10px",
-  background:
-    "linear-gradient(180deg, rgba(4,14,9,0.75) 0%, rgba(4,14,9,0.35) 100%)",
-  borderBottom: `1px solid ${NEX.goldBorder}`,
-  flexShrink: 0,
-};
 
-const participantRowStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 10,
-  padding: "8px 14px",
-  background: "rgba(4, 14, 9, 0.95)",
-  borderTop: `1px solid ${NEX.emeraldBorder}`,
-  flexShrink: 0,
-};
-const participantCountStyle: CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 5,
-  color: NEX.emerald,
-  fontSize: 12,
-  fontWeight: 700,
-};
-const addPeopleStyle: CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 6,
-  padding: "6px 14px",
-  minHeight: 32,
-  borderRadius: 999,
-  background: "transparent",
-  color: NEX.emerald,
-  border: `1px solid ${NEX.emeraldBorderBright}`,
-  fontSize: 11,
-  fontWeight: 700,
-  letterSpacing: 0.3,
-  cursor: "not-allowed",
-  opacity: 0.55,
-  fontFamily: "inherit",
-  WebkitTapHighlightColor: "transparent",
-};
