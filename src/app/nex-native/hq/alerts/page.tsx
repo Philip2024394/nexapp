@@ -19,12 +19,17 @@ import Link from "next/link";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { requireHqAdmin } from "@/lib/nex-native/hq-authorization";
 import {
-  fetchRecentIncidents,
+  fetchAwaitingVerification,
   fetchIncidentSummary,
+  fetchOpenIncidents,
+  fetchRecentlyClosed,
+  fetchReopened,
+  fetchVerifiedIncidents,
   type IncidentRow,
   type IncidentSummaryCounts,
 } from "@/lib/nex-native/incident/incident-service";
 import { probeAllSections, type ProbeResult } from "@/lib/nex-native/health/section-probes";
+import { AlertsAutoRefresh } from "./_auto-refresh-client";
 
 export const dynamic = "force-dynamic";
 
@@ -45,9 +50,23 @@ export default async function HqAlertsPage(): Promise<React.JSX.Element> {
     .catch(() => false);
   if (!authorised) notFound();
 
-  const [summary, recent, probes] = await Promise.all([
+  // Owner directive 2026-11-08 (round 9) Priority 3 · 5 operator-
+  // meaningful state buckets rendered as distinct sections.
+  const [
+    summary,
+    openIncidents,
+    awaiting,
+    verified,
+    recentlyClosed,
+    reopened,
+    probes,
+  ] = await Promise.all([
     safeSummary(),
-    safeRecent(),
+    safeOpen(),
+    safeAwaiting(),
+    safeVerified(),
+    safeRecentlyClosed(),
+    safeReopened(),
     safeProbes(),
   ]);
 
@@ -90,9 +109,43 @@ export default async function HqAlertsPage(): Promise<React.JSX.Element> {
         </p>
       </header>
 
+      <AlertsAutoRefresh />
+
       <SummaryStrip summary={summary} />
       <ProbesStrip probes={probes} />
-      <RecentIncidents rows={recent} />
+
+      <StateBucket
+        tone="fail"
+        title="Needs action"
+        subtitle="Open incidents · operator required"
+        rows={openIncidents}
+      />
+      <StateBucket
+        tone="warn"
+        title="Awaiting verification"
+        subtitle="RECOVERED claims not yet operator-confirmed"
+        rows={awaiting}
+      />
+      <StateBucket
+        tone="fail"
+        title="Reopened"
+        subtitle="New incidents sharing correlation_id with a prior VERIFIED · regression signal"
+        rows={reopened}
+      />
+      <StateBucket
+        tone="ok"
+        title="Verified resolved"
+        subtitle="Operator-confirmed resolutions (recent)"
+        rows={verified}
+        showVerifier
+      />
+      <StateBucket
+        tone="muted"
+        title="Recently closed · 24h"
+        subtitle="Reference only · CLOSED is terminal · a return of the problem creates a NEW incident"
+        rows={recentlyClosed}
+      />
+
       <KnownGaps />
     </div>
   );
@@ -106,9 +159,41 @@ async function safeSummary(): Promise<IncidentSummaryCounts | null> {
   }
 }
 
-async function safeRecent(): Promise<readonly IncidentRow[]> {
+async function safeOpen(): Promise<readonly IncidentRow[]> {
   try {
-    return await fetchRecentIncidents(25);
+    return await fetchOpenIncidents(25);
+  } catch {
+    return [];
+  }
+}
+
+async function safeAwaiting(): Promise<readonly IncidentRow[]> {
+  try {
+    return await fetchAwaitingVerification(25);
+  } catch {
+    return [];
+  }
+}
+
+async function safeVerified(): Promise<readonly IncidentRow[]> {
+  try {
+    return await fetchVerifiedIncidents(10);
+  } catch {
+    return [];
+  }
+}
+
+async function safeRecentlyClosed(): Promise<readonly IncidentRow[]> {
+  try {
+    return await fetchRecentlyClosed(10);
+  } catch {
+    return [];
+  }
+}
+
+async function safeReopened(): Promise<readonly IncidentRow[]> {
+  try {
+    return await fetchReopened(10);
   } catch {
     return [];
   }
@@ -146,23 +231,36 @@ function SummaryStrip({
       </div>
     );
   }
+  // Owner directive 2026-11-08 (round 9) Priority 3 · 5-state summary.
   const cards: Array<{ label: string; value: number; tone: "ok" | "warn" | "fail" }> = [
-    { label: "Open", value: summary.open, tone: summary.open > 0 ? "warn" : "ok" },
     {
       label: "Open · critical",
       value: summary.open_critical,
       tone: summary.open_critical > 0 ? "fail" : "ok",
     },
     {
+      label: "Open · high",
+      value: summary.open_high,
+      tone: summary.open_high > 0 ? "warn" : "ok",
+    },
+    { label: "Open · total", value: summary.open, tone: summary.open > 0 ? "warn" : "ok" },
+    {
       label: "Needs admin",
       value: summary.needs_admin,
       tone: summary.needs_admin > 0 ? "warn" : "ok",
     },
     {
-      label: "Recovered · 24h",
-      value: summary.recovered_last_24h,
-      tone: "ok",
+      label: "Awaiting verification",
+      value: summary.awaiting_verification,
+      tone: summary.awaiting_verification > 0 ? "warn" : "ok",
     },
+    {
+      label: "Reopened · now",
+      value: summary.reopened_now,
+      tone: summary.reopened_now > 0 ? "fail" : "ok",
+    },
+    { label: "Verified · 24h", value: summary.verified_last_24h, tone: "ok" },
+    { label: "Closed · 24h", value: summary.closed_last_24h, tone: "ok" },
   ];
   return (
     <div
@@ -292,30 +390,52 @@ function ProbesStrip({
   );
 }
 
-function RecentIncidents({
+function StateBucket({
+  tone,
+  title,
+  subtitle,
   rows,
+  showVerifier,
 }: {
+  readonly tone: "fail" | "warn" | "ok" | "muted";
+  readonly title: string;
+  readonly subtitle: string;
   readonly rows: readonly IncidentRow[];
+  readonly showVerifier?: boolean;
 }): React.JSX.Element {
+  const toneColour =
+    tone === "fail"
+      ? ACCENT_FAIL
+      : tone === "warn"
+        ? ACCENT_WARN
+        : tone === "ok"
+          ? ACCENT_EMERALD
+          : INK_MUTED;
   return (
-    <section style={{ marginBottom: 20 }}>
+    <section style={{ marginBottom: 18 }}>
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center",
+          alignItems: "baseline",
           marginBottom: 6,
+          gap: 10,
+          flexWrap: "wrap",
         }}
       >
-        <div
-          style={{
-            fontSize: 10.5,
-            color: INK_MUTED,
-            textTransform: "uppercase",
-            letterSpacing: "0.12em",
-          }}
-        >
-          Recent incidents
+        <div>
+          <div
+            style={{
+              fontSize: 10.5,
+              color: toneColour,
+              textTransform: "uppercase",
+              letterSpacing: "0.12em",
+              fontWeight: 800,
+            }}
+          >
+            {title} · {rows.length}
+          </div>
+          <div style={{ fontSize: 11, color: INK_DIM, marginTop: 2 }}>{subtitle}</div>
         </div>
         <Link
           href="/nex-native/hq/security-recovery"
@@ -334,39 +454,57 @@ function RecentIncidents({
       {rows.length === 0 ? (
         <div
           style={{
-            padding: "14px 16px",
+            padding: "10px 14px",
             borderRadius: 10,
             border: `1px dashed ${BORDER_EMERALD}`,
             color: INK_MUTED,
-            fontSize: 13,
+            fontSize: 12.5,
           }}
         >
-          No recent incidents.
+          None.
         </div>
       ) : (
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
           <thead>
-            <tr style={{ borderBottom: `1px solid ${BORDER_EMERALD}`, color: INK_MUTED }}>
+            <tr style={{ borderBottom: `1px solid ${toneColour}`, color: INK_MUTED }}>
               <th style={thStyle}>At</th>
               <th style={thStyle}>Scope</th>
-              <th style={thStyle}>Category</th>
               <th style={thStyle}>Severity</th>
               <th style={thStyle}>Status</th>
-              <th style={thStyle}>Summary</th>
+              <th style={thStyle}>Service</th>
+              <th style={thStyle}>{showVerifier ? "Verifier" : "Summary"}</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} style={{ borderBottom: `1px solid ${BORDER_EMERALD}` }}>
-                <td style={tdStyle}>{r.detected_at.slice(0, 19).replace("T", " ")}</td>
+              <tr
+                key={r.id}
+                style={{ borderBottom: `1px solid ${BORDER_EMERALD}` }}
+              >
+                <td style={tdStyle}>
+                  <Link
+                    href={`/nex-native/hq/security-recovery/${r.id}`}
+                    style={{ color: ACCENT_EMERALD, textDecoration: "none" }}
+                  >
+                    {r.detected_at.slice(0, 19).replace("T", " ")}
+                  </Link>
+                </td>
                 <td style={tdStyle}>{r.scope}</td>
-                <td style={tdStyle}>{r.category}</td>
                 <td style={{ ...tdStyle, color: severityColour(r.severity) }}>
                   {r.severity}
                 </td>
                 <td style={tdStyle}>{r.status}</td>
                 <td style={{ ...tdStyle, color: INK_DIM }}>
-                  {r.summary?.slice(0, 180) ?? "—"}
+                  {r.service ?? "—"}
+                </td>
+                <td style={{ ...tdStyle, color: INK_DIM }}>
+                  {showVerifier
+                    ? r.verified_by_admin
+                      ? `${r.verified_by_admin.slice(0, 8)}… · ${
+                          r.verified_at?.slice(0, 19).replace("T", " ") ?? ""
+                        }`
+                      : "—"
+                    : (r.summary?.slice(0, 160) ?? "—")}
                 </td>
               </tr>
             ))}

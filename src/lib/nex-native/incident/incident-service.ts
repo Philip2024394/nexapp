@@ -576,8 +576,13 @@ export interface IncidentRow {
 export interface IncidentSummaryCounts {
   readonly open: number;
   readonly open_critical: number;
+  readonly open_high: number;
   readonly needs_admin: number;
+  readonly awaiting_verification: number;
+  readonly verified_last_24h: number;
   readonly recovered_last_24h: number;
+  readonly closed_last_24h: number;
+  readonly reopened_now: number;
   readonly by_country: Readonly<Record<IncidentCountry, number>>;
   readonly by_scope: Readonly<Record<string, number>>;
 }
@@ -596,42 +601,212 @@ export async function fetchRecentIncidents(limit = 100): Promise<readonly Incide
   return (data ?? []) as IncidentRow[];
 }
 
+// ─── Priority 3 · 5-state fetchers (owner directive 2026-11-08 round 9) ──
+//
+// HQ Alerts must distinguish 5 operator-meaningful states:
+//   1. Needs action           · open incidents (not RECOVERED/VERIFIED/CLOSED)
+//   2. Awaiting verification  · RECOVERED without a verifier stamp
+//   3. Verified resolved      · VERIFIED
+//   4. Recently closed        · CLOSED in the last 24h (reference only)
+//   5. Reopened               · a NEW incident whose correlation_id matches
+//                               a prior VERIFIED incident (regression signal)
+//
+// These are READ paths · bounded limits · no writes · no mutations.
+
+/** Open incidents · not RECOVERED/VERIFIED/CLOSED. Operator-actionable. */
+export async function fetchOpenIncidents(limit = 50): Promise<readonly IncidentRow[]> {
+  const ready = await ensureIncidentTableReady();
+  if (!ready) return [];
+  const { data, error } = await nexSupabaseAdmin
+    .from("nex_incident")
+    .select(
+      "id, category, severity, scope, country, status, summary, recovery_action_taken, users_affected_count, admin_action_required, detected_at, resolved_at, correlation_id, last_seen_at, detection_source, service, verified_by_admin, verified_at, dedup_key",
+    )
+    .not("status", "in", "(RECOVERED,VERIFIED,CLOSED)")
+    .order("detected_at", { ascending: false })
+    .limit(Math.max(1, Math.min(limit, 200)));
+  if (error) return [];
+  return (data ?? []) as IncidentRow[];
+}
+
+/** RECOVERED without a verifier stamp · awaiting operator verification.
+ *  Owner directive · RECOVERED is NOT a terminal success claim · it
+ *  is a recovery ATTEMPT that still needs operator confirmation. */
+export async function fetchAwaitingVerification(limit = 50): Promise<readonly IncidentRow[]> {
+  const ready = await ensureIncidentTableReady();
+  if (!ready) return [];
+  const { data, error } = await nexSupabaseAdmin
+    .from("nex_incident")
+    .select(
+      "id, category, severity, scope, country, status, summary, recovery_action_taken, users_affected_count, admin_action_required, detected_at, resolved_at, correlation_id, last_seen_at, detection_source, service, verified_by_admin, verified_at, dedup_key",
+    )
+    .eq("status", "RECOVERED")
+    .is("verified_at", null)
+    .order("last_seen_at", { ascending: false })
+    .limit(Math.max(1, Math.min(limit, 200)));
+  if (error) return [];
+  return (data ?? []) as IncidentRow[];
+}
+
+/** VERIFIED · operator has confirmed resolution. Carries verifier id. */
+export async function fetchVerifiedIncidents(limit = 25): Promise<readonly IncidentRow[]> {
+  const ready = await ensureIncidentTableReady();
+  if (!ready) return [];
+  const { data, error } = await nexSupabaseAdmin
+    .from("nex_incident")
+    .select(
+      "id, category, severity, scope, country, status, summary, recovery_action_taken, users_affected_count, admin_action_required, detected_at, resolved_at, correlation_id, last_seen_at, detection_source, service, verified_by_admin, verified_at, dedup_key",
+    )
+    .eq("status", "VERIFIED")
+    .order("verified_at", { ascending: false })
+    .limit(Math.max(1, Math.min(limit, 200)));
+  if (error) return [];
+  return (data ?? []) as IncidentRow[];
+}
+
+/** CLOSED in the last 24h · reference-only. */
+export async function fetchRecentlyClosed(limit = 25): Promise<readonly IncidentRow[]> {
+  const ready = await ensureIncidentTableReady();
+  if (!ready) return [];
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await nexSupabaseAdmin
+    .from("nex_incident")
+    .select(
+      "id, category, severity, scope, country, status, summary, recovery_action_taken, users_affected_count, admin_action_required, detected_at, resolved_at, correlation_id, last_seen_at, detection_source, service, verified_by_admin, verified_at, dedup_key",
+    )
+    .eq("status", "CLOSED")
+    .gte("resolved_at", since)
+    .order("resolved_at", { ascending: false })
+    .limit(Math.max(1, Math.min(limit, 200)));
+  if (error) return [];
+  return (data ?? []) as IncidentRow[];
+}
+
+/** Reopened · a NEW incident that shares a correlation_id with a prior
+ *  VERIFIED incident. Signals a regression after an operator-confirmed
+ *  resolution · highest-attention class.
+ *
+ *  Owner directive 2026-11-08 (round 8) was explicit: VERIFIED is a
+ *  terminal "done" claim. We do NOT reopen the same row. We DO
+ *  surface the correlation here so the operator sees the regression.
+ */
+export async function fetchReopened(limit = 25): Promise<readonly IncidentRow[]> {
+  const ready = await ensureIncidentTableReady();
+  if (!ready) return [];
+  // Two-step: (1) find correlation_ids that have a VERIFIED row AND a
+  // later open row. (2) return the later open rows.
+  // A single query via not-exists-join isn't exposed by Supabase JS ·
+  // we do two bounded reads and merge in-process.
+  const verified = await nexSupabaseAdmin
+    .from("nex_incident")
+    .select("correlation_id, verified_at")
+    .eq("status", "VERIFIED")
+    .not("correlation_id", "is", null)
+    .order("verified_at", { ascending: false })
+    .limit(200);
+  if (verified.error) return [];
+  const verifiedCorr = new Map<string, string>();
+  for (const r of (verified.data ?? []) as Array<{
+    correlation_id: string | null;
+    verified_at: string | null;
+  }>) {
+    if (r.correlation_id && r.verified_at) {
+      // Keep the latest verified_at for each correlation_id.
+      const existing = verifiedCorr.get(r.correlation_id);
+      if (!existing || existing < r.verified_at) {
+        verifiedCorr.set(r.correlation_id, r.verified_at);
+      }
+    }
+  }
+  if (verifiedCorr.size === 0) return [];
+  const correlations = Array.from(verifiedCorr.keys());
+  const open = await nexSupabaseAdmin
+    .from("nex_incident")
+    .select(
+      "id, category, severity, scope, country, status, summary, recovery_action_taken, users_affected_count, admin_action_required, detected_at, resolved_at, correlation_id, last_seen_at, detection_source, service, verified_by_admin, verified_at, dedup_key",
+    )
+    .in("correlation_id", correlations)
+    .not("status", "in", "(VERIFIED,CLOSED)")
+    .order("detected_at", { ascending: false })
+    .limit(Math.max(1, Math.min(limit, 200)));
+  if (open.error) return [];
+  // Keep only incidents newer than the VERIFIED they correlate with.
+  return ((open.data ?? []) as IncidentRow[]).filter((r) => {
+    const verifiedAt = r.correlation_id ? verifiedCorr.get(r.correlation_id) : null;
+    if (!verifiedAt) return false;
+    return r.detected_at > verifiedAt;
+  });
+}
+
 export async function fetchIncidentSummary(): Promise<IncidentSummaryCounts> {
   const ready = await ensureIncidentTableReady();
   const empty: IncidentSummaryCounts = {
     open: 0,
     open_critical: 0,
+    open_high: 0,
     needs_admin: 0,
+    awaiting_verification: 0,
+    verified_last_24h: 0,
     recovered_last_24h: 0,
+    closed_last_24h: 0,
+    reopened_now: 0,
     by_country: { ireland: 0, indonesia: 0, worldwide: 0, hq: 0, global: 0 },
     by_scope: {},
   };
   if (!ready) return empty;
   const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  // Owner directive 2026-11-08 (round 9) Priority 3 · VERIFIED is a
+  // DISTINCT terminal state. "Open" now excludes it the same way it
+  // excludes CLOSED. Awaiting-verification is its own count (RECOVERED
+  // without a verifier stamp).
   const open = await nexSupabaseAdmin
     .from("nex_incident")
     .select("id", { count: "exact", head: true })
-    .not("status", "in", "(RECOVERED,CLOSED)");
+    .not("status", "in", "(RECOVERED,VERIFIED,CLOSED)");
   const openCrit = await nexSupabaseAdmin
     .from("nex_incident")
     .select("id", { count: "exact", head: true })
-    .not("status", "in", "(RECOVERED,CLOSED)")
+    .not("status", "in", "(RECOVERED,VERIFIED,CLOSED)")
     .eq("severity", "critical");
+  const openHigh = await nexSupabaseAdmin
+    .from("nex_incident")
+    .select("id", { count: "exact", head: true })
+    .not("status", "in", "(RECOVERED,VERIFIED,CLOSED)")
+    .eq("severity", "high");
   const needsAdmin = await nexSupabaseAdmin
     .from("nex_incident")
     .select("id", { count: "exact", head: true })
     .eq("status", "NEEDS_ADMIN");
+  const awaitingVerification = await nexSupabaseAdmin
+    .from("nex_incident")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "RECOVERED")
+    .is("verified_at", null);
+  const verified24 = await nexSupabaseAdmin
+    .from("nex_incident")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "VERIFIED")
+    .gte("verified_at", yesterday);
   const rec = await nexSupabaseAdmin
     .from("nex_incident")
     .select("id", { count: "exact", head: true })
     .eq("status", "RECOVERED")
+    .gte("last_seen_at", yesterday);
+  const closed24 = await nexSupabaseAdmin
+    .from("nex_incident")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "CLOSED")
     .gte("resolved_at", yesterday);
+
+  // Reopened · derive from the dedicated reader (bounded fetch).
+  // Readers are cheap on sandbox volume · acceptable to call here.
+  const reopened = await fetchReopened(25);
 
   // Country + scope breakdowns via list query (open only)
   const openList = await nexSupabaseAdmin
     .from("nex_incident")
     .select("country, scope")
-    .not("status", "in", "(RECOVERED,CLOSED)");
+    .not("status", "in", "(RECOVERED,VERIFIED,CLOSED)");
   const by_country: Record<IncidentCountry, number> = {
     ireland: 0,
     indonesia: 0,
@@ -647,8 +822,13 @@ export async function fetchIncidentSummary(): Promise<IncidentSummaryCounts> {
   return {
     open: open.count ?? 0,
     open_critical: openCrit.count ?? 0,
+    open_high: openHigh.count ?? 0,
     needs_admin: needsAdmin.count ?? 0,
+    awaiting_verification: awaitingVerification.count ?? 0,
+    verified_last_24h: verified24.count ?? 0,
     recovered_last_24h: rec.count ?? 0,
+    closed_last_24h: closed24.count ?? 0,
+    reopened_now: reopened.length,
     by_country,
     by_scope,
   };
