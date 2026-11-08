@@ -543,8 +543,8 @@ export async function recordAuditEvent(
  *  to group an account's audit events after deletion without carrying
  *  the original UUID. The caller stores no mapping · the random value
  *  is generated fresh and used to update every audit row owned by the
- *  deleted account in a single UPDATE (via a SECURITY DEFINER function
- *  in a future migration · NOT part of this file). */
+ *  deleted account in a single UPDATE (via nex_security_audit_erase_actor
+ *  · see migration 294). */
 export function generateErasedActorIdentity(): string {
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
@@ -552,4 +552,63 @@ export function generateErasedActorIdentity(): string {
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
   return `erased:${hex}`;
+}
+
+/** Call the sealed SECURITY DEFINER function to pseudonymise every
+ *  audit row owned by a deleted account. The erased identity is
+ *  generated via generateErasedActorIdentity in the caller · this
+ *  function validates shape + returns the row count.
+ *
+ *  Compatibility · if migration 294 is not applied, returns ok=false
+ *  with skipped="function_not_available" and NO throw. The account-
+ *  deletion workflow treats this as "pseudonymisation not available
+ *  yet" and must decide whether to proceed with the deletion anyway
+ *  (owner decision · default should be to BLOCK deletion until the
+ *  pseudonymisation path is live).
+ *
+ *  Intended usage · this wrapper is called from within the same
+ *  logical transaction as the deletion mutation. Supabase client
+ *  does not expose a transaction API across RPCs, so the account-
+ *  deletion workflow should either (a) use a single SECURITY DEFINER
+ *  function that performs the DELETE + pseudonymisation in one SQL
+ *  statement, or (b) accept the risk of partial failure + retry
+ *  on failure to pseudonymise. Design to be decided when the real
+ *  deletion workflow is authored. */
+export async function eraseActorIdentityInAudit(
+  accountId: string,
+  erasedIdentity: string,
+): Promise<{
+  readonly ok: boolean;
+  readonly rowsUpdated?: number;
+  readonly skipped?: "function_not_available";
+  readonly error?: string;
+}> {
+  if (!/^erased:[a-z0-9]{16,64}$/.test(erasedIdentity)) {
+    throw new Error(
+      "security-audit: erasedIdentity must match ^erased:[a-z0-9]{16,64}$",
+    );
+  }
+  const { data, error } = await nexSupabaseAdmin.rpc(
+    "nex_security_audit_erase_actor",
+    { _account_id: accountId, _erased_identity: erasedIdentity },
+  );
+  if (error) {
+    const code = (error as { code?: string }).code ?? "";
+    const msg = error.message ?? "";
+    if (
+      code === "42883" ||
+      /does not exist|undefined function/i.test(msg)
+    ) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[security-audit] nex_security_audit_erase_actor not available · " +
+          "migration 294 may be unapplied. Audit rows NOT pseudonymised.",
+      );
+      return { ok: false, skipped: "function_not_available" };
+    }
+    return { ok: false, error: msg };
+  }
+  const rowsUpdated =
+    typeof data === "number" ? data : Array.isArray(data) ? Number(data[0] ?? 0) : 0;
+  return { ok: true, rowsUpdated };
 }

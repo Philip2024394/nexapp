@@ -15,10 +15,22 @@ const SUPABASE_STATE = vi.hoisted(() => ({
     error: null as { message: string } | null,
   },
   lastInsertedRow: null as Record<string, unknown> | null,
+  rpcResult: {
+    data: null as unknown,
+    error: null as { message: string; code?: string } | null,
+  },
+  rpcCalls: [] as Array<{ fn: string; args: Record<string, unknown> }>,
 }));
 
 vi.mock("../supabase-admin", () => ({
   nexSupabaseAdmin: {
+    rpc(fn: string, args: Record<string, unknown>) {
+      SUPABASE_STATE.rpcCalls.push({ fn, args });
+      return Promise.resolve({
+        data: SUPABASE_STATE.rpcResult.data,
+        error: SUPABASE_STATE.rpcResult.error,
+      });
+    },
     from(_table: string) {
       return {
         insert(row: Record<string, unknown>) {
@@ -52,6 +64,7 @@ import {
   AuditWriteError,
   SECURITY_AUDIT_EVENTS,
   _resetAuditTableProbeForTests,
+  eraseActorIdentityInAudit,
   generateErasedActorIdentity,
   isAuditWriteError,
   recordAuditEvent,
@@ -386,5 +399,52 @@ describe("generateErasedActorIdentity", () => {
       seen.add(id);
     }
     expect(seen.size).toBe(100);
+  });
+});
+
+describe("eraseActorIdentityInAudit", () => {
+  beforeEach(() => {
+    SUPABASE_STATE.rpcResult = { data: null, error: null };
+    SUPABASE_STATE.rpcCalls.length = 0;
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  it("calls the SECURITY DEFINER with the account id + erased identity", async () => {
+    SUPABASE_STATE.rpcResult = { data: 7, error: null };
+    const erased = generateErasedActorIdentity();
+    const r = await eraseActorIdentityInAudit(ACCOUNT_ID, erased);
+    expect(r.ok).toBe(true);
+    expect(r.rowsUpdated).toBe(7);
+    expect(SUPABASE_STATE.rpcCalls).toHaveLength(1);
+    expect(SUPABASE_STATE.rpcCalls[0]!.fn).toBe(
+      "nex_security_audit_erase_actor",
+    );
+    expect(SUPABASE_STATE.rpcCalls[0]!.args).toEqual({
+      _account_id: ACCOUNT_ID,
+      _erased_identity: erased,
+    });
+  });
+
+  it("rejects an identity that isn't of the erased: shape · fail-closed on programmer error", async () => {
+    await expect(
+      eraseActorIdentityInAudit(ACCOUNT_ID, `acct:${ACCOUNT_ID}`),
+    ).rejects.toThrow(/erasedIdentity must match/);
+    expect(SUPABASE_STATE.rpcCalls).toHaveLength(0);
+  });
+
+  it("42883 → skipped=function_not_available · migration 294 unapplied", async () => {
+    SUPABASE_STATE.rpcResult = {
+      data: null,
+      error: {
+        message: "function nex_security_audit_erase_actor does not exist",
+        code: "42883",
+      },
+    };
+    const r = await eraseActorIdentityInAudit(
+      ACCOUNT_ID,
+      generateErasedActorIdentity(),
+    );
+    expect(r.ok).toBe(false);
+    expect(r.skipped).toBe("function_not_available");
   });
 });
