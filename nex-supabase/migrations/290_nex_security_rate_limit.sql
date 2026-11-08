@@ -68,6 +68,18 @@ create table if not exists nex_security_rate_limit (
 create index if not exists idx_nex_security_rate_limit_window
   on nex_security_rate_limit (key, action, window_started_at desc);
 
+-- Owner-sealed defect fix 2026-11-08 · sandbox apply revealed that
+-- Supabase auto-grants anon + authenticated roles on new tables, so
+-- REVOKE FROM PUBLIC alone leaves write access open. Explicitly
+-- revoke every role that is NOT service_role, then enable RLS with
+-- zero policies so RLS-enforced clients (anon/authenticated via
+-- PostgREST) see zero rows. Service-role connections bypass RLS.
+alter table nex_security_rate_limit enable row level security;
+revoke all on nex_security_rate_limit from public;
+revoke all on nex_security_rate_limit from authenticated;
+revoke all on nex_security_rate_limit from anon;
+grant select, insert, update, delete on nex_security_rate_limit to service_role;
+
 comment on table nex_security_rate_limit is
   'Owner-sealed 2026-11-08 · per-identity + per-action rolling-window
    rate-limit counters for sensitive security endpoints. Service

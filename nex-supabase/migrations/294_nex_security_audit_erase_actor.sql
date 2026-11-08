@@ -82,7 +82,14 @@ begin
 end;
 $$;
 
+-- Owner-sealed defect fix 2026-11-08 · explicit revokes from
+-- anon + authenticated. CRITICAL · this function pseudonymises audit
+-- actor identity on account deletion · if an anonymous caller could
+-- invoke it, they could forge-overwrite audit actor IDs at will
+-- (GDPR bypass). Explicit role revokes close that vector.
 revoke all on function nex_security_audit_erase_actor(uuid, text) from public;
+revoke all on function nex_security_audit_erase_actor(uuid, text) from authenticated;
+revoke all on function nex_security_audit_erase_actor(uuid, text) from anon;
 grant execute on function nex_security_audit_erase_actor(uuid, text) to service_role;
 
 comment on function nex_security_audit_erase_actor(uuid, text) is

@@ -61,8 +61,14 @@ create table if not exists nex_security_audit_log (
 
   occurred_at        timestamptz  not null default now(),
 
+  -- Owner-sealed defect fix 2026-11-08 · sandbox apply revealed that
+  -- ~70% of the catalog uses 4-5 segment event names (e.g.
+  -- security.account.sign_up.attempted, security.hq.pages.delete_queue.
+  -- completed) + some 2-char segments (hq). The previous regex rejected
+  -- both patterns. Widened to allow 2-6 segments, minimum segment length
+  -- 2 characters (letter + ≥1 more).
   constraint ck_sec_audit_event
-    check (event ~ '^[a-z][a-z0-9_]{2,127}\.[a-z][a-z0-9_]{2,63}(\.[a-z][a-z0-9_]{2,63})?$'),
+    check (event ~ '^[a-z][a-z0-9_]{1,127}(\.[a-z][a-z0-9_]{1,63}){1,5}$'),
   constraint ck_sec_audit_outcome
     check (outcome in ('attempted','denied','completed','failed')),
   constraint ck_sec_audit_actor_ident

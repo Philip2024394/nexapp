@@ -66,7 +66,13 @@ begin
 end;
 $$;
 
+-- Owner-sealed defect fix 2026-11-08 · explicit revokes from
+-- anon + authenticated · Supabase auto-grants EXECUTE on new
+-- functions to those roles · REVOKE FROM PUBLIC alone is not
+-- sufficient to close them off.
 revoke all on function nex_security_rate_limit_prune() from public;
+revoke all on function nex_security_rate_limit_prune() from authenticated;
+revoke all on function nex_security_rate_limit_prune() from anon;
 grant execute on function nex_security_rate_limit_prune() to service_role;
 
 -- Atomic check-and-increment. Returns (true, 0) when the call is
@@ -156,6 +162,10 @@ $$;
 
 revoke all on function nex_security_rate_limit_claim(text, text, integer, integer)
   from public;
+revoke all on function nex_security_rate_limit_claim(text, text, integer, integer)
+  from authenticated;
+revoke all on function nex_security_rate_limit_claim(text, text, integer, integer)
+  from anon;
 grant execute on function nex_security_rate_limit_claim(text, text, integer, integer)
   to service_role;
 

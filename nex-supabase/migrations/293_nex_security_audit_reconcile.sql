@@ -99,7 +99,11 @@ begin
 end;
 $$;
 
+-- Owner-sealed defect fix 2026-11-08 · explicit revokes from
+-- anon + authenticated (Supabase auto-grants EXECUTE).
 revoke all on function nex_security_audit_reconcile_unmatched(integer) from public;
+revoke all on function nex_security_audit_reconcile_unmatched(integer) from authenticated;
+revoke all on function nex_security_audit_reconcile_unmatched(integer) from anon;
 grant execute on function nex_security_audit_reconcile_unmatched(integer) to service_role;
 
 comment on function nex_security_audit_reconcile_unmatched(integer) is
@@ -134,6 +138,8 @@ end;
 $$;
 
 revoke all on function nex_security_audit_reconcile_match_late(bigint, bigint, text) from public;
+revoke all on function nex_security_audit_reconcile_match_late(bigint, bigint, text) from authenticated;
+revoke all on function nex_security_audit_reconcile_match_late(bigint, bigint, text) from anon;
 grant execute on function nex_security_audit_reconcile_match_late(bigint, bigint, text) to service_role;
 
 insert into nex_migration_history (version, description, notes)
