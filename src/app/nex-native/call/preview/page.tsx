@@ -172,7 +172,36 @@ interface PageProps {
     readonly live?: string;
     readonly invited?: string;
     readonly invite_error?: string;
+    /** Owner directive 2026-11-08 (round 23) · when "1" the viewer
+     *  is accepting an invite. We flip their nex_group_call_
+     *  participant row to joined_at=now() (or set left_at when
+     *  "0" = decline). A separate commit will mount GroupCallEngine
+     *  once the accept flow + server actions are user-tested. */
+    readonly accept?: string;
   }>;
+}
+
+async function acceptInviteOnLoad(
+  sessionId: string,
+  accountId: string,
+  accept: boolean,
+): Promise<void> {
+  // Idempotent · already-joined + already-declined land as no-ops.
+  const patch = accept
+    ? { joined_at: new Date().toISOString() }
+    : { left_at: new Date().toISOString() };
+  try {
+    await nexSupabaseAdmin
+      .from("nex_group_call_participant")
+      .update(patch)
+      .eq("session_id", sessionId)
+      .eq("account_id", accountId)
+      // Only update rows that are still pending (joined_at null)
+      // so a decline after accept doesn't rewrite joined_at.
+      .is("left_at", null);
+  } catch {
+    /* fail-soft · a next load retries */
+  }
 }
 
 export default async function CallPreviewPage({
@@ -190,6 +219,15 @@ export default async function CallPreviewPage({
   const session = sessionId ? await fetchSession(sessionId) : null;
   const selfSession = await resolveSessionWithDevOverride().catch(() => null);
   const selfAccountId = selfSession?.account?.id ?? null;
+
+  // Owner directive 2026-11-08 (round 23) · receiver accept/decline.
+  // When the chat Accept button fires, the href lands here with
+  // accept=1. Decline lands with accept=0. We flip the participant
+  // row BEFORE reading participants so the grid shows the viewer
+  // as live on this same render.
+  if (sessionId && selfAccountId && (sp.accept === "1" || sp.accept === "0")) {
+    await acceptInviteOnLoad(sessionId, selfAccountId, sp.accept === "1");
+  }
   const participants = session
     ? await fetchParticipants(session.id, selfAccountId)
     : [];

@@ -1894,6 +1894,20 @@ export function PortraitBloomShell({
                               : undefined
                           }
                         />
+                      ) : m.attachment_type === "call_invite" &&
+                        m.attachment_call_invite ? (
+                        /* Call Center · owner-authorised 2026-11-08
+                           (round 23) · receiver sees an emerald Accept
+                           + muted Decline. Sender (m.mine) sees a
+                           quieter "Invite sent · waiting for accept"
+                           caption · the pending state is also visible
+                           in the Call Center grid tile. */
+                        <CallInviteBubble
+                          mine={m.mine}
+                          mediaType={m.attachment_call_invite.media_type}
+                          acceptHref={m.attachment_call_invite.accept_href}
+                          sessionId={m.attachment_call_invite.session_id}
+                        />
                       ) : null}
                       {m.body && (() => {
                         // Jumbo emoji auto-sizing · sealed 2026-10-01.
@@ -2320,6 +2334,162 @@ function formatDayLabel(iso: string): string {
  *   · audio · <audio controls> · voice-note bar
  *  Rounded to match the bubble corners · caps at bubble maxWidth so
  *  media never blows the layout. */
+// Call Center · owner-authorised 2026-11-08 (round 23) · bubble
+// branch for call_invite attachments. Receiver sees an emerald
+// Accept pill linking to /nex-native/call/preview?session=<id>&
+// accept=1 + a muted Decline pill linking to the same page with
+// accept=0. Sender (mine=true) sees a quiet caption "Invite sent".
+// No camera/mic prompt here · acceptance happens on the Call
+// Center surface where the user has explicit context.
+function CallInviteBubble({
+  mine,
+  mediaType,
+  acceptHref,
+  sessionId,
+}: {
+  readonly mine: boolean;
+  readonly mediaType: "audio" | "video";
+  readonly acceptHref: string | null;
+  readonly sessionId: string;
+}): React.JSX.Element {
+  const EMERALD = "#16D66B";
+  const EMERALD_SOFT = "rgba(22,214,107,0.15)";
+  const EMERALD_BORDER = "rgba(22,214,107,0.55)";
+  const INK = "#F2F5F8";
+  const DIM = "#B5C3D6";
+  const MUTED = "#7D9BC0";
+  const safeAccept =
+    acceptHref ??
+    `/nex-native/call/preview?session=${encodeURIComponent(sessionId)}&accept=1`;
+  const declineHref =
+    `/nex-native/call/preview?session=${encodeURIComponent(sessionId)}&accept=0`;
+  const mediaLabel = mediaType === "audio" ? "Voice" : "Video";
+
+  if (mine) {
+    return (
+      <div
+        data-nex-call-invite-bubble="sent"
+        role="status"
+        style={{
+          marginTop: 4,
+          padding: "8px 10px",
+          borderRadius: 10,
+          background: EMERALD_SOFT,
+          border: `1px dashed ${EMERALD_BORDER}`,
+          color: DIM,
+          fontSize: 12,
+          lineHeight: 1.5,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
+        <span aria-hidden style={{ fontSize: 14 }}>📞</span>
+        <span>{mediaLabel} call invite sent · waiting for accept</span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      data-nex-call-invite-bubble="received"
+      style={{
+        marginTop: 4,
+        padding: "10px 12px",
+        borderRadius: 12,
+        background:
+          `linear-gradient(135deg, ${EMERALD_SOFT} 0%, rgba(2,20,12,0.65) 100%)`,
+        border: `1px solid ${EMERALD_BORDER}`,
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
+        <span
+          aria-hidden
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 999,
+            background:
+              `linear-gradient(135deg, ${EMERALD} 0%, #D9A83A 100%)`,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#04140A",
+            fontSize: 15,
+            fontWeight: 900,
+            flexShrink: 0,
+          }}
+        >
+          📞
+        </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: INK }}>
+            Incoming {mediaLabel.toLowerCase()} call
+          </div>
+          <div style={{ fontSize: 11, color: MUTED }}>
+            Tap Accept to join · you can turn video off on the Call Center
+          </div>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <a
+          href={safeAccept}
+          aria-label="Accept call"
+          data-nex-call-invite-accept
+          style={{
+            flex: 1,
+            padding: "9px 12px",
+            borderRadius: 999,
+            border: `1px solid ${EMERALD}`,
+            background: EMERALD,
+            color: "#04140A",
+            fontSize: 12,
+            fontWeight: 900,
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+            textAlign: "center",
+            textDecoration: "none",
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          Accept
+        </a>
+        <a
+          href={declineHref}
+          aria-label="Decline call"
+          data-nex-call-invite-decline
+          style={{
+            flex: 1,
+            padding: "9px 12px",
+            borderRadius: 999,
+            border: `1px solid rgba(139,169,209,0.35)`,
+            background: "transparent",
+            color: DIM,
+            fontSize: 12,
+            fontWeight: 900,
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+            textAlign: "center",
+            textDecoration: "none",
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          Decline
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function MessageAttachment({
   url,
   kind,
