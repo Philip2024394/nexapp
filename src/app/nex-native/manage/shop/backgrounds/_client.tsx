@@ -991,6 +991,16 @@ const PRESETS: ReadonlyArray<ShopBackgroundPreset> = [
   { id: "phil77-scones-blue", url: "/nex-brand/shop-themes/phil77.png", label: "Scones · Blue", category: "food", tintSwatch: "#2A6DD9", downloadsBase: 32 },
   { id: "phil78-croissants-orange", url: "/nex-brand/shop-themes/phil78.png", label: "Croissants · Golden", category: "food", tintSwatch: "#F0A82A", downloadsBase: 40 },
 
+  // ── Kebab + shawarma · emerald glow (owner directive 2026-11-08) ──
+  // Five portrait feast shots with vivid emerald-green ambient glow.
+  // Server-side tint matches the dominant hue so the applied theme
+  // colour tracks the background.
+  { id: "kebab-smoky-green", url: "/nex-brand/shop-themes/kebab-smoky-green.png", label: "Kebab · Smoky Green", category: "food", tintSwatch: "#16D66B", downloadsBase: 0, isNew: true },
+  { id: "kebab-cascading", url: "/nex-brand/shop-themes/kebab-cascading.png", label: "Kebab · Cascading Feast", category: "food", tintSwatch: "#16D66B", downloadsBase: 0, isNew: true },
+  { id: "kebab-emerald-glow", url: "/nex-brand/shop-themes/kebab-emerald-glow.png", label: "Kebab · Emerald Glow", category: "food", tintSwatch: "#16D66B", downloadsBase: 0, isNew: true },
+  { id: "shawarma-cinematic-emerald", url: "/nex-brand/shop-themes/shawarma-cinematic-emerald.png", label: "Shawarma · Cinematic Emerald", category: "food", tintSwatch: "#16D66B", downloadsBase: 0, isNew: true },
+  { id: "kebab-green-kitchen", url: "/nex-brand/shop-themes/kebab-green-kitchen.png", label: "Kebab · Green Kitchen", category: "food", tintSwatch: "#16D66B", downloadsBase: 0, isNew: true },
+
   // ── Tools & trade ──
   { id: "phil79-power-drills-yellow", url: "/nex-brand/shop-themes/phil79.png", label: "Power Drills · Yellow", category: "tools", tintSwatch: "#F0B82A", downloadsBase: 38 },
   { id: "phil80-wrenches-blue", url: "/nex-brand/shop-themes/phil80.png", label: "Wrenches · Blue", category: "tools", tintSwatch: "#2A6DD9", downloadsBase: 33 },

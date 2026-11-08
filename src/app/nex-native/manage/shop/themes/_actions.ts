@@ -400,6 +400,15 @@ const PRESET_BACKGROUND_META: ReadonlyMap<
   ["/nex-brand/shop-themes/bb13.png", { tintHex: "#D9823B" }],
   ["/nex-brand/shop-themes/bb14.png", { tintHex: "#8B5A2B" }],
   ["/nex-brand/shop-themes/bb15.png", { tintHex: "#D92A2A" }],
+  // Owner directive 2026-11-08 · 5 kebab/shawarma portrait backgrounds
+  // with vivid emerald-green ambient glow · tint matches the sealed
+  // green variant (#16D66B) so the applied theme colour follows the
+  // image. Category = food.
+  ["/nex-brand/shop-themes/kebab-smoky-green.png", { tintHex: "#16D66B" }],
+  ["/nex-brand/shop-themes/kebab-cascading.png", { tintHex: "#16D66B" }],
+  ["/nex-brand/shop-themes/kebab-emerald-glow.png", { tintHex: "#16D66B" }],
+  ["/nex-brand/shop-themes/shawarma-cinematic-emerald.png", { tintHex: "#16D66B" }],
+  ["/nex-brand/shop-themes/kebab-green-kitchen.png", { tintHex: "#16D66B" }],
 ]);
 
 export async function applyShopPresetBackgroundAction(
