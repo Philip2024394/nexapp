@@ -129,6 +129,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.1",
     "@huggingface/transformers": "^4.3.0",
     "@playwright/test": "^1.62.1",
     "@types/bcryptjs": "^2.4.6",
