@@ -1,0 +1,36 @@
+# NEX CODEOWNERS
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-security/customizing-your-repository/about-code-owners
+#
+# Sealed 2026-11-09. Reviewers for critical paths. GitHub automatically
+# requests a review from the listed owners on every PR that touches a
+# matching path. Per constitution §4 · merge gates stay owner-driven;
+# this file is advisory review routing, not merge enforcement. Branch
+# protection rules on `main` enforce the gate.
+
+# Default owner · every PR gets the founder as reviewer unless a more
+# specific rule overrides.
+*                                              @Philip2024394
+
+# Sealed invariants · maximum scrutiny
+nex-supabase/migrations/**                     @Philip2024394
+scripts/apply-migration-*                      @Philip2024394
+src/lib/nex-native/device/**                   @Philip2024394
+src/lib/nex-native/signalling/**               @Philip2024394
+src/lib/nex-native/observability/**            @Philip2024394
+src/lib/nex-native/security-rate-limit.ts      @Philip2024394
+src/app/api/nex-native/billing/**              @Philip2024394
+src/app/api/nex-native/auth/**                 @Philip2024394
+src/app/api/nex-native/hq/**                   @Philip2024394
+
+# Doctrine · owner review before merge
+docs/doctrine/**                               @Philip2024394
+SECURITY.md                                    @Philip2024394
+CLAUDE.md                                      @Philip2024394
+public/.well-known/**                          @Philip2024394
+
+# Infrastructure config · owner review
+.github/workflows/**                           @Philip2024394
+next.config.*                                  @Philip2024394
+.lighthouserc.json                             @Philip2024394
+instrumentation.ts                             @Philip2024394
+sentry.*.config.*                              @Philip2024394

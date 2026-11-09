@@ -1,0 +1,60 @@
+# .github/dependabot.yml
+#
+# NEX Dependabot configuration. Sealed 2026-11-09.
+#
+# Automated dependency security + minor-version updates. Runs weekly
+# against npm + github-actions. Keeps the CODEOWNERS + security-ci
+# workflows aware of vulnerable transitive dependencies.
+#
+# Owner remains the merge gate (constitution §4) · Dependabot opens
+# PRs · owner reviews + merges.
+
+version: 2
+updates:
+  # npm dependencies · weekly scan
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Dublin"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "automated"
+    reviewers:
+      - "Philip2024394"
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+      include: "scope"
+    # Security updates are opened immediately regardless of the weekly
+    # schedule. Only version-range updates respect the interval.
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "indirect"
+    # Group minor + patch updates to avoid PR spam.
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions workflow dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Dublin"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "github-actions"
+    reviewers:
+      - "Philip2024394"
+    commit-message:
+      prefix: "ci"
+      include: "scope"

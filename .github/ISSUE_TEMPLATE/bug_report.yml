@@ -1,0 +1,76 @@
+name: Bug report
+description: Report a reproducible defect in NEX
+title: "[BUG] "
+labels: ["bug", "triage"]
+assignees:
+  - Philip2024394
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a NEX bug. Please do NOT use this template for
+        security vulnerabilities · see [SECURITY.md](../../blob/main/SECURITY.md)
+        for responsible-disclosure instructions.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you see? What did you expect?
+      placeholder: |
+        I clicked X on Y page, I expected Z, but instead W happened.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps that reliably reproduce the bug.
+      placeholder: |
+        1. Open /nex-native/...
+        2. Click ...
+        3. See error ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: country
+    attributes:
+      label: Country / regional deployment
+      options:
+        - Worldwide (nexapp)
+        - Ireland (nex-ireland-preview)
+        - Indonesia (nex-indonesia-preview)
+        - Unsure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device + browser
+      options:
+        - Mobile · iPhone · Safari
+        - Mobile · Android · Chrome
+        - Desktop · macOS · Safari
+        - Desktop · macOS · Chrome
+        - Desktop · Windows · Edge
+        - Desktop · Windows · Chrome
+        - Desktop · Linux
+        - Other (please specify in "What happened")
+    validations:
+      required: true
+
+  - type: textarea
+    id: console
+    attributes:
+      label: Browser console output
+      description: Open DevTools (F12) · copy any red errors here.
+      render: text
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or screen recording
+      description: Drag images into this box.

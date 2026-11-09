@@ -1,0 +1,53 @@
+name: Feature request
+description: Suggest an enhancement for NEX
+title: "[FEATURE] "
+labels: ["enhancement", "triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user problem does this solve? Why does it matter?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How would you approach it? Any UI sketches or API shape?
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any other ways to solve this?
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      multiple: true
+      options:
+        - Chat
+        - Directory
+        - Shop
+        - Vault
+        - Community Notice
+        - Chat Themes
+        - HQ (admin)
+        - Payments
+        - Auth
+        - Infrastructure
+        - Documentation
+
+  - type: checkboxes
+    id: sealed-check
+    attributes:
+      label: Sealed-invariant check
+      description: Does this request touch any of these?
+      options:
+        - label: "Private chat architecture (I-1..I-6)"
+        - label: "Payment or Stripe integration"
+        - label: "Account deletion / historical data"
+        - label: "None of the above"
