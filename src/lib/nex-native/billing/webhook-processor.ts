@@ -185,6 +185,99 @@ export async function processStripeEvent(
         }
         break;
       }
+      // Round 33 · 2026-11-09 · buyer→seller payment lifecycle via
+      // Stripe Connect destination charges. Events route only when
+      // metadata.nex_role === 'buyer_seller_payment' (fail-soft for
+      // any other payment_intent origin · common e.g. for NEX Sell
+      // listing €1.30 flow which is a separate scope).
+      case "payment_intent.succeeded": {
+        const { handleBuyerPaymentIntentSucceeded } = await import(
+          "./stripe-buyer-payment-service"
+        );
+        const obj = (event.data as { object?: unknown }).object as
+          | {
+              id?: string;
+              amount?: number;
+              currency?: string;
+              status?: string;
+              transfer_data?: { destination?: string } | null;
+              metadata?: {
+                nex_business_id?: string;
+                nex_buyer_account_id?: string;
+                nex_role?: string;
+              } | null;
+            }
+          | undefined;
+        if (!obj?.id) {
+          result = {
+            outcome: "error",
+            outcomeDetail: "payment_intent.succeeded · missing id in payload",
+          };
+          break;
+        }
+        const buyerResult = await handleBuyerPaymentIntentSucceeded({
+          id: obj.id,
+          amount: obj.amount,
+          currency: obj.currency,
+          status: obj.status,
+          transfer_data: obj.transfer_data ?? null,
+          metadata: obj.metadata ?? null,
+        });
+        if (buyerResult.ok) {
+          result = {
+            outcome: "applied",
+            outcomeDetail: `Buyer payment_intent.succeeded · business=${buyerResult.businessId} · amount=${buyerResult.amount} ${buyerResult.currency}`,
+          };
+        } else {
+          // Non-buyer-payment flows (e.g. NEX subscription PaymentIntents
+          // or Sell listing fees) are tagged 'applied' to prevent retry
+          // · they are simply out of scope for the Connect buyer handler.
+          result = {
+            outcome: "applied",
+            outcomeDetail: `payment_intent.succeeded · ${buyerResult.reason ?? "skipped"} (logged for audit)`,
+          };
+        }
+        break;
+      }
+      case "payment_intent.payment_failed": {
+        const { handleBuyerPaymentIntentFailed } = await import(
+          "./stripe-buyer-payment-service"
+        );
+        const obj = (event.data as { object?: unknown }).object as
+          | {
+              id?: string;
+              metadata?: {
+                nex_business_id?: string;
+                nex_buyer_account_id?: string;
+                nex_role?: string;
+              } | null;
+            }
+          | undefined;
+        if (!obj?.id) {
+          result = {
+            outcome: "error",
+            outcomeDetail:
+              "payment_intent.payment_failed · missing id in payload",
+          };
+          break;
+        }
+        const buyerResult = await handleBuyerPaymentIntentFailed({
+          id: obj.id,
+          metadata: obj.metadata ?? null,
+        });
+        if (buyerResult.ok) {
+          result = {
+            outcome: "applied",
+            outcomeDetail: `Buyer payment_intent.payment_failed · business=${buyerResult.businessId}`,
+          };
+        } else {
+          result = {
+            outcome: "applied",
+            outcomeDetail: `payment_intent.payment_failed · ${buyerResult.reason ?? "skipped"} (logged for audit)`,
+          };
+        }
+        break;
+      }
       default:
         result = {
           outcome: "applied",

@@ -39,18 +39,22 @@
 
 BEGIN;
 
--- Preflight · the column must already exist (migration 257).
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-     WHERE table_schema = 'public'
-       AND table_name = 'nex_account'
-       AND column_name = 'shop_tier'
-  ) THEN
-    RAISE EXCEPTION '310 preflight failed · nex_account.shop_tier column missing · expected migration 257 to have been applied first';
-  END IF;
-END $$;
+-- Amended 2026-11-09 Round 33 · owner-authorised self-sufficient apply.
+-- Originally this migration refused when migration 257 hadn't been
+-- applied to the target (sandbox was missing mig 257 per CLAUDE.md §5).
+-- To unblock the NEX subscription webhook work · the migration now
+-- adds the shop_tier column if it doesn't exist (mirroring mig 257's
+-- column shape) · then sets the sealed 2026-11-08 single-tier CHECK.
+-- Safe to re-apply on environments where 257 already added the column ·
+-- the ADD COLUMN IF NOT EXISTS is idempotent.
+ALTER TABLE public.nex_account
+  ADD COLUMN IF NOT EXISTS shop_tier text;
+
+-- Add an index on shop_tier if it doesn't exist (mirrors mig 257's
+-- indexing intent for tier filter queries).
+CREATE INDEX IF NOT EXISTS idx_nex_account_shop_tier
+  ON public.nex_account (shop_tier)
+  WHERE shop_tier IS NOT NULL;
 
 ALTER TABLE public.nex_account
   DROP CONSTRAINT IF EXISTS nex_account_shop_tier_check;

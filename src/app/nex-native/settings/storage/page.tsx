@@ -40,6 +40,7 @@ import {
 } from "@/lib/nex-native/shop/metering-service";
 import { NexPageHeader } from "../../_page-header";
 import { StandaloneShopLimitPopup } from "../../_shop-limit-popup";
+import { PackUpgradeButton } from "./_pack-upgrade-button";
 
 // Owner directive 2026-11-08 (round 29d) · users don't understand
 // "bandwidth" · everything is presented as "storage". Internally we
@@ -510,15 +511,17 @@ function StoragePlanCard({
     plan.bandwidthPackIndex,
   );
   const priceLabel = price ? `${price.label} / month` : "Price coming soon";
-  // Owner directive 2026-11-08 (round 29d) · button always reads
-  // "Upgrade" · viewer-state copy handled by InfoCard above. Still
-  // disabled until Stripe wires; tooltip explains the current block.
-  let buttonTitle = "Payment setup pending";
-  if (viewerKind === "signed_out") {
-    buttonTitle = "Sign in to upgrade";
-  } else if (viewerKind === "signed_in_no_shop") {
-    buttonTitle = "Open your shop first";
-  }
+  // Owner directive 2026-11-09 (round 33b) · Upgrade button is NOW
+  // wired to /api/nex-native/billing/checkout/pack via the client
+  // component · opens Stripe hosted checkout · redirects back to
+  // /settings/storage?pack_purchase=success on completion. Button
+  // stays disabled with explanatory tooltip when viewer is signed
+  // out or has no shop (fail-closed · the client component enforces
+  // this).
+  const packKey = STORAGE_PACKS[plan.storagePackIndex].size as
+    | "pack_5gb"
+    | "pack_10gb"
+    | "pack_25gb";
   // Pack bars are empty until purchased · when wired, this card's
   // bar will show how much of the bought pack has been consumed.
   const packTotalBytes = STORAGE_PACKS[plan.storagePackIndex].bytes;
@@ -550,27 +553,15 @@ function StoragePlanCard({
             {priceLabel}
           </span>
         </div>
-        <button
-          type="button"
-          disabled
-          aria-disabled
-          title={buttonTitle}
-          style={{
-            padding: "8px 14px",
-            fontSize: 11,
-            fontWeight: 900,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            color: INK_MUTED,
-            background: "transparent",
-            border: `1px solid ${BORDER}`,
-            borderRadius: 999,
-            cursor: "not-allowed",
-            opacity: 0.6,
-          }}
-        >
-          Upgrade
-        </button>
+        <PackUpgradeButton
+          packKey={packKey}
+          viewerKind={viewerKind}
+          inkMuted={INK_MUTED}
+          border={BORDER}
+          gold={GOLD}
+          cream={CREAM}
+          red="#A60000"
+        />
       </div>
       <StorageBar
         pct={0}
