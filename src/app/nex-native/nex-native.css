@@ -232,8 +232,13 @@ body::-webkit-scrollbar,
      * the full-bleed frame below so the containing-block semantics
      * don't matter there (viewport === frame).
      * ────────────────────────────────────────────────────────────── */
-    width: min(360px, calc((100dvh - 32px) * 9 / 19.5));
-    height: min(780px, calc(100dvh - 32px));
+    /* Owner directive 2026-11-09 · reduce desktop phone frame size by
+     * 20% (height 780→624, width 360→288, aspect ratio 9/19.5 preserved).
+     * Previous sealed-fix 2026-10-26 kept the 360×780 constants; this
+     * shrink supersedes that for desktop + tablet only. Phone-size
+     * <500px media query below is unchanged (real phones stay full-bleed). */
+    width: min(288px, calc((100dvh - 32px) * 9 / 19.5));
+    height: min(624px, calc(100dvh - 32px));
     aspect-ratio: 9 / 19.5;
     min-height: 0;
     position: relative;

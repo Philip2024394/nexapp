@@ -322,60 +322,57 @@ export function ContactRow({ row, accentHex }: ContactRowProps): React.JSX.Eleme
           </div>
         ) : null}
 
-        {/* Location + last-online row · owner directive 2026-11-03
-            (re-confirmed) · "online time or offline time should be
-            the same row as location line" · city on the left (with
-            map-pin), last-online on the right of the same row.
-            Honest absence: when neither city nor last-online exists,
-            the row is omitted entirely. */}
-        {(row.city || lastOnlineLabel) ? (
+        {/* Owner directive 2026-11-09 · city gets its own full-width
+            row so the locality name (e.g. "Wexford") reads clearly.
+            Previous same-row layout squeezed it against the time. */}
+        {row.city ? (
           <div
             data-nex-contacts-row-location
             style={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
-              gap: 8,
-              fontSize: 11,
-              color: NEX.textMute,
+              gap: 4,
+              fontSize: 12,
+              fontWeight: 700,
+              color: NEX.text,
               lineHeight: 1.2,
               minWidth: 0,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             }}
           >
-            {row.city ? (
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                  minWidth: 0,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                <MapPinIcon color={NEX.unreadRed} />
-                <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {row.city}
-                </span>
-              </span>
-            ) : (
-              <span aria-hidden />
-            )}
-            {lastOnlineLabel ? (
-              <span
-                data-nex-contacts-row-last-online
-                style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: 0.2,
-                  whiteSpace: "nowrap",
-                  flexShrink: 0,
-                }}
-              >
-                {lastOnlineLabel}
-              </span>
-            ) : null}
+            <MapPinIcon color={NEX.unreadRed} />
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+              {row.city}
+            </span>
+          </div>
+        ) : null}
+
+        {/* Owner directive 2026-11-09 · last-online label moves to
+            lower-right of the card. Separate row, justify-end, so
+            "Active 12m" sits below the location in the bottom-right
+            corner of the text column. */}
+        {lastOnlineLabel ? (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              marginTop: 2,
+            }}
+          >
+            <span
+              data-nex-contacts-row-last-online
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: 0.2,
+                whiteSpace: "nowrap",
+                color: NEX.textMute,
+              }}
+            >
+              {lastOnlineLabel}
+            </span>
           </div>
         ) : null}
       </div>
@@ -456,12 +453,15 @@ function skillOnly(line: string | null | undefined): string | null {
  *  Owner directive 2026-11-03 · "remove the ago" · labels are now
  *  tight: `23m` / `3h` / `Offline · 3m` / `Offline · 2d`. */
 function presenceLabel(row: ContactRowDisplay): string | null {
-  if (row.presence === "online") return null;
+  if (row.presence === "online") return "Active now";
   const mins = row.lastSeenMinsAgo;
   if (mins === null || mins === undefined) return null;
+  // Owner directive 2026-11-09 · prefix with "Active" for away presence
+  // (e.g. "Active 12m") so the lower-right label reads as a human
+  // presence line, not a bare minute count.
   if (row.presence === "away") {
-    if (mins < 60) return `${mins}m`;
-    return `${Math.round(mins / 60)}h`;
+    if (mins < 60) return `Active ${mins}m`;
+    return `Active ${Math.round(mins / 60)}h`;
   }
   if (mins < 60) return `Offline · ${mins}m`;
   if (mins < 60 * 24) return `Offline · ${Math.round(mins / 60)}h`;

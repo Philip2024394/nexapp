@@ -932,78 +932,11 @@ export default async function ContactsPage({ searchParams }: PageProps) {
             zoneName={communityZoneName}
             hasMembership={communityHasMembership}
           />
-          {/* Owner directive 2026-11-03 · "a nex user should be able
-              to add another nex contact to the community". Entry
-              point sits directly beneath the Community card so the
-              adder can see the group and the add-action together.
-              Only rendered when the viewer has an active membership. */}
-          {communityHasMembership ? (
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <Link
-                href="/nex-native/community/add-contact"
-                aria-label="Add a NEX contact to this community"
-                style={{
-                  flex: "1 1 30%",
-                  minWidth: 90,
-                  padding: "10px 10px",
-                  borderRadius: 10,
-                  background: "transparent",
-                  border: "1.5px solid var(--nex-world-secondary, #C6A15B)",
-                  color: "var(--nex-world-secondary, #C6A15B)",
-                  textDecoration: "none",
-                  fontSize: 11,
-                  fontWeight: 800,
-                  textAlign: "center",
-                  letterSpacing: "0.04em",
-                  textTransform: "uppercase",
-                }}
-              >
-                + Add contact
-              </Link>
-              <Link
-                href="/nex-native/community/members"
-                aria-label="View members of this community"
-                style={{
-                  flex: "1 1 30%",
-                  minWidth: 90,
-                  padding: "10px 10px",
-                  borderRadius: 10,
-                  background: "transparent",
-                  border: "1.5px solid var(--nex-world-primary-ink, #AFC5B5)",
-                  color: "var(--nex-world-primary-ink, #AFC5B5)",
-                  textDecoration: "none",
-                  fontSize: 11,
-                  fontWeight: 800,
-                  textAlign: "center",
-                  letterSpacing: "0.04em",
-                  textTransform: "uppercase",
-                }}
-              >
-                Members
-              </Link>
-              <Link
-                href="/nex-native/community/discover"
-                aria-label="Discover more Ireland communities"
-                style={{
-                  flex: "1 1 30%",
-                  minWidth: 90,
-                  padding: "10px 10px",
-                  borderRadius: 10,
-                  background: "transparent",
-                  border: "1.5px solid var(--nex-world-primary-ink, #AFC5B5)",
-                  color: "var(--nex-world-primary-ink, #AFC5B5)",
-                  textDecoration: "none",
-                  fontSize: 11,
-                  fontWeight: 800,
-                  textAlign: "center",
-                  letterSpacing: "0.04em",
-                  textTransform: "uppercase",
-                }}
-              >
-                Discover
-              </Link>
-            </div>
-          ) : null}
+          {/* Owner directive 2026-11-09 · "Add contact · Members ·
+              Discover" trio removed from the Groups tab per owner
+              request. The three destinations remain reachable by
+              direct URL (/nex-native/community/add-contact · /members ·
+              /discover) · only the Groups-tab entry chips are gone. */}
         </div>
       ) : null}
 

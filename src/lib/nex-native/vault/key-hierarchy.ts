@@ -106,11 +106,13 @@ export const RECOVERY_ARGON_PARAMS = PASSPHRASE_ARGON_PARAMS;
  *  existing wraps. Design §L.5. */
 export const PRF_HKDF_INFO = "nex/vault/webauthn-prf/v1";
 
-/** PIN length bounds (founder-locked 2026-10-06). 6-digit PINs are
- *  rejected everywhere · 8-12 digits is the permitted range. Passphrase
- *  mode uses the separate check in validatePassphrase. */
-export const PIN_MIN_LENGTH = 8;
-export const PIN_MAX_LENGTH = 12;
+/** PIN length bounds · owner-sealed 2026-11-09 override of the
+ *  2026-10-06 founder-lock. Vault is now gated on paid NEX Shop plan
+ *  ownership and PIN is exactly 6 digits (the sealed Ireland auth
+ *  model "finger press or 6 digit password"). Passphrase mode keeps
+ *  its own longer-length check in validatePassphrase. */
+export const PIN_MIN_LENGTH = 6;
+export const PIN_MAX_LENGTH = 6;
 
 /** Passphrase minimum (BIP-39 12-word mnemonic is ~96 bits entropy).
  *  Free-form passphrase bound at 20 chars minimum per design §K. */

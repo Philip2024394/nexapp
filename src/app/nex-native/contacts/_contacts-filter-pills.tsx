@@ -91,9 +91,19 @@ interface ContactsFilterPillsProps {
    *  and bounce the viewer to /sign-in. Server resolves this once
    *  from the request and passes down. */
   readonly extraQuery?: Readonly<Record<string, string>>;
+  /** Owner directive 2026-11-09 · when a category has unread messages,
+   *  the tab shows a small red indicator dot next to its label. Values
+   *  are the UNREAD COUNT per filter · 0 or missing = no dot. */
+  readonly unreadByFilter?: Readonly<
+    Partial<Record<Exclude<ContactsFilter, "all" | "dating">, number>>
+  >;
 }
 
-export function ContactsFilterPills({ active, extraQuery }: ContactsFilterPillsProps) {
+export function ContactsFilterPills({
+  active,
+  extraQuery,
+  unreadByFilter,
+}: ContactsFilterPillsProps) {
   // Owner directive 2026-10-23 · hide the toggle while the Create
   // Group hero is flipped to show the form. Clean workspace.
   const [flipped, setFlipped] = React.useState<boolean>(getCreateGroupFlipped);
@@ -126,6 +136,11 @@ export function ContactsFilterPills({ active, extraQuery }: ContactsFilterPillsP
           opt={opt}
           active={active}
           extraQuery={extraQuery}
+          unreadCount={
+            unreadByFilter
+              ? (unreadByFilter as Record<string, number | undefined>)[opt.value] ?? 0
+              : 0
+          }
         />
       ))}
     </nav>
@@ -136,11 +151,33 @@ function FilterTab({
   opt,
   active,
   extraQuery,
+  unreadCount,
 }: {
   readonly opt: FilterOption;
   readonly active: ContactsFilter;
   readonly extraQuery?: Readonly<Record<string, string>>;
+  readonly unreadCount: number;
 }) {
+  const hasUnread = unreadCount > 0;
+  const label = (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+      {opt.label}
+      {hasUnread ? (
+        <span
+          aria-label={`${unreadCount} unread`}
+          data-nex-contacts-filter-unread-dot
+          style={{
+            display: "inline-block",
+            width: 8,
+            height: 8,
+            borderRadius: "50%",
+            background: "#E33C3C",
+            boxShadow: "0 0 0 2px rgba(227,60,60,0.25)",
+          }}
+        />
+      ) : null}
+    </span>
+  );
   const isActive = opt.value === active;
   const baseStyle: React.CSSProperties = {
     flex: 1,
@@ -188,7 +225,7 @@ function FilterTab({
         title={opt.comingSoon ? "Coming soon" : undefined}
         style={{ ...baseStyle, ...disabledStyle }}
       >
-        {opt.label}
+        {label}
       </span>
     );
   }
@@ -202,10 +239,11 @@ function FilterTab({
       href={`/nex-native/contacts?${params.toString()}`}
       data-nex-contacts-filter-pill={opt.value}
       data-nex-contacts-filter-pill-state={isActive ? "active" : "inactive"}
+      data-nex-contacts-filter-pill-unread={hasUnread ? "true" : "false"}
       aria-current={isActive ? "page" : undefined}
       style={{ ...baseStyle, ...(isActive ? activeStyle : inactiveStyle) }}
     >
-      {opt.label}
+      {label}
     </Link>
   );
 }

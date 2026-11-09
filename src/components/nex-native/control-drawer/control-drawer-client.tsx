@@ -336,11 +336,17 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
 // Owner directive 2026-11-04 later-same-day · Ireland drawer trim.
 // Retired from drawer (still reachable by URL): settings-and-privacy,
 // security. Only Help · NEX1 remains in PREFERENCES.
+// Owner directive 2026-11-09 revision 4 · NEX 1 routes to the sealed
+// new chat surface at `/nex-native/nex-1` · dedicated path to avoid
+// clobbering the pre-existing `/nex-native/support` branching help
+// landing (Bridge 16c). Chat interface loads with a welcome bubble
+// from NEX Support on first visit.
 const PREFERENCES_ROWS: ReadonlyArray<MenuRow> = [
   {
-    key: "help",
-    label: "Help · NEX1",
-    href: "/nex-native/settings/help",
+    key: "nex-1",
+    label: "NEX 1",
+    subtitle: "Help and support",
+    href: "/nex-native/nex-1",
   },
 ];
 
@@ -839,6 +845,7 @@ function DrawerBody({
           Context-relevant on NEX Live, still useful everywhere else. */}
       <SectionGroup
         title="CREATE"
+        icon="✨"
         rows={CREATE_ROWS}
         isGuest={effectiveIsGuest}
         devUnlockMode={devUnlock}
@@ -846,6 +853,7 @@ function DrawerBody({
 
       <SectionGroup
         title="YOUR NEX"
+        icon="👤"
         rows={(() => {
           // Owner directive 2026-11-05 iter 26 · on NEX Live surfaces
           // the Discovery row self-hides · the viewer is already on
@@ -885,7 +893,8 @@ function DrawerBody({
        *  props stay in the component signature for API stability. */}
 
       <SectionGroup
-        title="PREFERENCES & SUPPORT"
+        title="NEX SUPPORT"
+        icon="⚙️"
         rows={PREFERENCES_ROWS}
         isGuest={effectiveIsGuest}
         devUnlockMode={devUnlock}
@@ -1120,11 +1129,15 @@ function IdentityBar({
 
 function SectionGroup({
   title,
+  icon,
   rows,
   isGuest,
   devUnlockMode = false,
 }: {
   readonly title: string;
+  /** Owner directive 2026-11-09 · emoji glyph shown before the title
+   *  so each section header reads as a bold, scannable grouping. */
+  readonly icon?: string;
   readonly rows: ReadonlyArray<MenuRow>;
   /** Owner directive 2026-10-18 · when true, rows carrying `locked: true`
    *  show the sealed 3D lock icon on the right and route through
@@ -1140,7 +1153,14 @@ function SectionGroup({
 }) {
   return (
     <section style={sectionStyle}>
-      <h3 style={sectionTitleStyle}>{title}</h3>
+      <h3 style={sectionTitleStyle}>
+        {icon ? (
+          <span aria-hidden style={sectionTitleIconStyle}>
+            {icon}
+          </span>
+        ) : null}
+        <span>{title}</span>
+      </h3>
       <ul style={sectionListStyle}>
         {rows.map((row) => {
           const showLock = isGuest && row.locked === true;
@@ -1183,6 +1203,22 @@ function SectionGroup({
                   </span>
                 ) : null}
               </Link>
+              {/* Owner directive 2026-11-09 revision 2 · broken gold
+                  divider under EVERY row · 30% of the row width ·
+                  left-aligned. Previously border-bottom spanned 100%;
+                  this short dashed segment reads as a subtle tick
+                  between rows rather than a full dividing line. Last
+                  row in a section still carries one per owner request. */}
+              <div
+                aria-hidden
+                data-nex-control-drawer-row-divider
+                style={{
+                  height: 0,
+                  width: "30%",
+                  margin: "0 auto",
+                  borderBottom: "1px dashed rgba(198, 161, 91, 0.55)",
+                }}
+              />
             </li>
           );
         })}
@@ -1425,22 +1461,18 @@ const drawerTitleStyle: React.CSSProperties = {
   fontWeight: 800,
   letterSpacing: 0.3,
 };
-// Owner directive 2026-10-18 · close is now the text word "Close"
-// styled in the drawer's theme accent (not an × glyph). Padding +
-// rounded border keep it tap-friendly without a filled badge.
-// Owner directive 2026-10-18 · drawer Close button is now a small
-// blue (NEX cyan) filled pill with small round corners (6px radius ·
-// not the previous full 999 pill-round). Smaller vertical height
-// (26px) so it reads as a chip, not a full button. Theme accent
-// variable kept so per-theme drawer tints still cascade.
+// Owner directive 2026-11-09 revision 2 · white text on the dark-red
+// Close chip was retired per owner request. Text is now the sealed
+// NEX gold so the label still contrasts against the red fill but
+// reads as brand-forward, not alarm-signal white.
 const closeButtonStyle: React.CSSProperties = {
   minHeight: 26,
   padding: "3px 10px",
-  background: `var(--nex-drawer-accent, ${CYAN})`,
-  border: `1px solid var(--nex-drawer-accent, ${CYAN})`,
-  color: "#0a0608",
+  background: "#8B0000",
+  border: "1px solid #6B0E0E",
+  color: "#C6A15B",
   fontSize: 12,
-  fontWeight: 700,
+  fontWeight: 800,
   letterSpacing: 0.4,
   lineHeight: 1,
   cursor: "pointer",
@@ -1585,10 +1617,10 @@ const identityBarAnonHintStyle: React.CSSProperties = {
   color: MUTED,
   fontSize: 11,
 };
-// Owner directive 2026-10-18 (iteration) · Sign-in CTA matches the
-// Close button style exactly · small blue chip with small round
-// corners · theme-accent aware (per-theme drawers tint via
-// `--nex-drawer-accent`).
+// Owner directive 2026-11-09 · Sign-in chip is now solid NEX gold with
+// dark-emerald text · earlier cyan theme-accent variant (2026-10-18) is
+// retired so the sign-in CTA reads as a brand-accent affordance
+// distinct from the Close button's dark-red dismiss.
 const identityBarAnonChipStyle: React.CSSProperties = {
   flexShrink: 0,
   display: "inline-flex",
@@ -1597,8 +1629,8 @@ const identityBarAnonChipStyle: React.CSSProperties = {
   minHeight: 26,
   padding: "3px 10px",
   borderRadius: 6,
-  background: `var(--nex-drawer-accent, ${CYAN})`,
-  color: "#0a0608",
+  background: "#C6A15B",
+  color: "#061710",
   fontSize: 12,
   fontWeight: 700,
   letterSpacing: 0.4,
@@ -1611,13 +1643,29 @@ const sectionStyle: React.CSSProperties = {
   gap: 4,
   marginTop: 10,
 };
+// Owner directive 2026-11-09 · section headers upgraded · larger text,
+// solid gold tone, bolder weight, with an inline emoji icon beside the
+// title so each group reads as a distinct scannable landmark. Previous
+// 10px muted uppercase label (sealed 2026-10-18) retired.
 const sectionTitleStyle: React.CSSProperties = {
-  margin: "0 0 4px 12px",
-  color: MUTED,
-  fontSize: 10,
-  fontWeight: 800,
-  letterSpacing: 1.1,
+  margin: "0 0 6px 10px",
+  color: "#C6A15B",
+  fontSize: 15,
+  fontWeight: 900,
+  letterSpacing: 0.6,
   textTransform: "uppercase",
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  lineHeight: 1.1,
+};
+const sectionTitleIconStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: 18,
+  lineHeight: 1,
+  flexShrink: 0,
 };
 const sectionListStyle: React.CSSProperties = {
   listStyle: "none",
@@ -1679,20 +1727,19 @@ const logoutRowStyle: React.CSSProperties = {
   paddingTop: 14,
   borderTop: `1px solid var(--nex-drawer-accent, ${PANEL_BORDER})`,
 };
-// Owner directive 2026-10-18 · "remove the badge and add logout with
-// door icon". The Log out row is now a subtle text + door-icon
-// button · no red danger outline / badge. Still routes through the
-// confirmation modal so the one-click-signout protection stays.
+// Owner directive 2026-11-09 · Log out text + door icon flipped to
+// dark red so the destructive action reads clearly. DoorIcon inherits
+// via currentColor. Earlier muted-grey variant (2026-10-18) retired.
 const logoutButtonStyle: React.CSSProperties = {
   width: "100%",
   minHeight: 44,
   padding: "0 16px",
   borderRadius: 10,
   background: "transparent",
-  color: MUTED,
+  color: "#8B0000",
   border: "none",
   fontSize: 14,
-  fontWeight: 700,
+  fontWeight: 800,
   cursor: "pointer",
   fontFamily: "inherit",
   display: "inline-flex",

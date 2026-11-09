@@ -22,9 +22,9 @@
 // infrastructure. This page does NOT invoke those paths · building
 // their UX layer is a separate owner-authorised workstream.
 
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { getContactsSetupStatusAction } from "@/lib/nex-native/emergency/actions";
 import { NexPageHeader } from "../_page-header";
 import { EmergencyHelpClient } from "./_emergency-help-client";
 
@@ -56,13 +56,24 @@ function emergencyNumberFor(countryCode: string | undefined): string {
 }
 
 export default async function EmergencyHelpPage() {
+  // Owner directive 2026-11-09 · Emergency Help must NOT require sign-in
+  // to access. In an emergency, dialing emergency services and sharing
+  // location via native SMS are life-safety primitives that must work
+  // regardless of auth state. Only the trusted-contacts management
+  // (separate /contacts route) requires a signed-in session.
   const session = await resolveNexAppSessionFromContext();
-  if (!session) {
-    redirect("/nex-native/sign-in?returnTo=%2Fnex-native%2Femergency-help");
-  }
+  const isSignedIn = session !== null;
 
   const countryCode = process.env.NEX_APP_COUNTRY;
   const emergencyNumber = emergencyNumberFor(countryCode);
+
+  // Setup-status read only runs when the actor is authenticated. When
+  // unauthenticated the setup-status card renders a sign-in prompt
+  // instead of a configured-contact count.
+  const statusRes = isSignedIn ? await getContactsSetupStatusAction() : null;
+  const contactStatus = statusRes?.ok
+    ? statusRes.value
+    : { totalContacts: 0, enabledContacts: 0, enabledToggleAvailable: false };
 
   return (
     <>
@@ -149,6 +160,148 @@ export default async function EmergencyHelpPage() {
               {emergencyNumber}
             </span>
           </a>
+
+          {/* Owner-sealed 2026-11-09 · Trusted contacts setup status.
+              Renders one of three states:
+                · signed-in + ≥1 contact → enabled-count summary + manage link
+                · signed-in + 0 contacts → add-contact CTA (red panel)
+                · signed-out → sign-in prompt (red panel, returnTo /contacts)
+              Honest about the two separate state buckets: configured-count
+              + enabled-count. Never fabricates a count for guests. */}
+          <section
+            data-nex-emergency-contacts-status
+            data-has-contacts={contactStatus.totalContacts > 0 ? "true" : "false"}
+            data-signed-in={isSignedIn ? "true" : "false"}
+            style={{
+              padding: 16,
+              borderRadius: 14,
+              background: isSignedIn && contactStatus.totalContacts > 0
+                ? PALETTE.panel
+                : "rgba(155,28,28,0.12)",
+              border: `1.5px solid ${
+                isSignedIn && contactStatus.totalContacts > 0
+                  ? PALETTE.borderSoft
+                  : PALETTE.danger
+              }`,
+              marginBottom: 14,
+            }}
+          >
+            <h2
+              style={{
+                margin: "0 0 6px",
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: "0.14em",
+                color: PALETTE.secondary,
+                textTransform: "uppercase",
+              }}
+            >
+              Emergency contacts
+            </h2>
+            {!isSignedIn ? (
+              <>
+                <p
+                  style={{
+                    margin: "0 0 12px",
+                    fontSize: 13,
+                    color: PALETTE.primaryInk,
+                    lineHeight: 1.55,
+                  }}
+                >
+                  Sign in to add trusted contacts who will be notified when
+                  you activate Emergency Help. You can still call emergency
+                  services and share your location via SMS without signing
+                  in.
+                </p>
+                <Link
+                  href="/nex-native/sign-in?returnTo=%2Fnex-native%2Femergency-help%2Fcontacts"
+                  data-nex-emergency-contacts-signin
+                  style={{
+                    display: "inline-block",
+                    padding: "10px 16px",
+                    borderRadius: 999,
+                    background: PALETTE.danger,
+                    color: "#FFF",
+                    textDecoration: "none",
+                    fontSize: 13,
+                    fontWeight: 800,
+                    letterSpacing: "0.03em",
+                  }}
+                >
+                  Sign in to manage contacts
+                </Link>
+              </>
+            ) : contactStatus.totalContacts === 0 ? (
+              <>
+                <p
+                  style={{
+                    margin: "0 0 12px",
+                    fontSize: 13,
+                    color: PALETTE.primaryInk,
+                    lineHeight: 1.55,
+                  }}
+                >
+                  You have no emergency contacts set up yet. Add the people
+                  you want NEX to notify when you activate Emergency Help.
+                </p>
+                <Link
+                  href="/nex-native/emergency-help/contacts"
+                  data-nex-emergency-contacts-cta
+                  style={{
+                    display: "inline-block",
+                    padding: "10px 16px",
+                    borderRadius: 999,
+                    background: PALETTE.danger,
+                    color: "#FFF",
+                    textDecoration: "none",
+                    fontSize: 13,
+                    fontWeight: 800,
+                    letterSpacing: "0.03em",
+                  }}
+                >
+                  Add emergency contact
+                </Link>
+              </>
+            ) : (
+              <>
+                <p
+                  style={{
+                    margin: "0 0 10px",
+                    fontSize: 13,
+                    color: PALETTE.primaryInk,
+                    lineHeight: 1.55,
+                  }}
+                >
+                  <strong style={{ color: "#FFF", fontWeight: 800 }}>
+                    {contactStatus.enabledContacts}
+                  </strong>{" "}
+                  of{" "}
+                  <strong style={{ color: "#FFF", fontWeight: 800 }}>
+                    {contactStatus.totalContacts}
+                  </strong>{" "}
+                  contact{contactStatus.totalContacts === 1 ? "" : "s"} will
+                  be notified when you activate Emergency Help.
+                </p>
+                <Link
+                  href="/nex-native/emergency-help/contacts"
+                  data-nex-emergency-contacts-manage
+                  style={{
+                    display: "inline-block",
+                    padding: "8px 14px",
+                    borderRadius: 999,
+                    background: "transparent",
+                    color: PALETTE.primaryInk,
+                    textDecoration: "none",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    border: `1px solid ${PALETTE.borderSoft}`,
+                  }}
+                >
+                  Manage contacts
+                </Link>
+              </>
+            )}
+          </section>
 
           {/* Secure location share · native SMS · no server storage. */}
           <section

@@ -1,17 +1,22 @@
 // src/app/nex-native/vault/_pin-entry-reducer.ts
 //
-// Vault Phase A · Commit A.3b · PIN entry state machine (8-12 digits).
+// Vault Phase A · PIN entry state machine (6 digits).
 //
-// Founder-locked policy 2026-10-06: 8-12 digit PINs ONLY. 6-digit PINs
-// are impossible at every surface. Users who want stronger protection
-// use passphrase mode (_passphrase-entry-client.tsx).
+// Owner-sealed 2026-11-09 override of the 2026-10-06 founder-lock:
+// PIN is now EXACTLY 6 digits. The 8-12 digit range is retired because
+// Vault is gated on paid Shop plan ownership (see vault/page.tsx) and
+// the sealed Ireland auth model specifies "finger press or 6 digit
+// password" as the vault inline security layer. Longer passphrase mode
+// (_passphrase-entry-client.tsx) remains in the codebase but its UI
+// entry points are hidden pending owner direction.
 //
 // Pure state machine · no crypto, no network, no storage. The actual
 // cryptographic flow lives in unlock-orchestrator.ts; this reducer only
 // drives the UI.
 
-export const PIN_MIN_LENGTH = 8;
-export const PIN_MAX_LENGTH = 12;
+export const PIN_MIN_LENGTH = 6;
+export const PIN_MAX_LENGTH = 6;
+export const PIN_LENGTH = 6;
 
 export type PinEntryKind =
   | "entering"

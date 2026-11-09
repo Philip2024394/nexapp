@@ -83,19 +83,19 @@ export function ContactsShell({ children }: ContactsShellProps) {
         />
       </div>
 
-      {/* Layer 2 · Dark frosted-glass overlay. The backdrop-filter blur
-          is what gives the real frosted effect · without it, the layer
-          would read as plain dark transparency. Vendor-prefixed for
-          WebKit (Safari / iOS). */}
+      {/* Layer 2 · Owner directive 2026-11-09 · Contacts background
+          switched to emerald green. The Ireland studio photo below
+          stays as subtle texture · the overlay sits at 95%+ opacity
+          with the sealed world-primary emerald so the dominant tone
+          of the page reads as green. Previous dark-glass overlay was
+          retired in this pass. */}
       <div
         aria-hidden
         style={{
           position: "absolute",
           inset: 0,
           background:
-            "linear-gradient(135deg, rgba(5, 15, 25, 0.55) 0%, rgba(10, 20, 15, 0.68) 100%)",
-          backdropFilter: "blur(22px) saturate(1.25)",
-          WebkitBackdropFilter: "blur(22px) saturate(1.25)",
+            "linear-gradient(135deg, rgba(18, 61, 43, 0.96) 0%, rgba(27, 81, 56, 0.98) 100%)",
           zIndex: 1,
         }}
       />

@@ -1338,7 +1338,24 @@ export function CoverIdentityRail({
         </div>
       )}
       {icons.length > 0 && (
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            // Owner directive 2026-11-09 · Social Links on 1 row only.
+            // `minWidth: 0` is the key fix · without it the grid child
+            // expands past its column (default `min-width: auto`) and
+            // icons on the right end up clipped. With `minWidth: 0` the
+            // row respects the parent column width and `overflowX: auto`
+            // takes over · scrolling horizontally when needed.
+            minWidth: 0,
+            flexWrap: "nowrap",
+            overflowX: "auto",
+            overflowY: "hidden",
+            scrollbarWidth: "none",
+            paddingRight: 4,
+          }}
+        >
           {icons.map((it) => it && (
             <a
               key={it.key}
@@ -1354,9 +1371,10 @@ export function CoverIdentityRail({
                  chips. No gloss, no gradient, no shadow · matches
                  the new solid Choose Background CTA. */
               style={{
-                width: 34,
-                height: 34,
-                borderRadius: 10,
+                width: 30,
+                height: 30,
+                flexShrink: 0,
+                borderRadius: 9,
                 display: "grid",
                 placeItems: "center",
                 background: "var(--nex-world-secondary, #C6A15B)",

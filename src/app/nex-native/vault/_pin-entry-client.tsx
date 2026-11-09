@@ -159,8 +159,8 @@ export function PinEntryClient({
             onChange={(e) => onChange(e.currentTarget.value)}
             disabled={isRateLimited || isSubmitting}
             maxLength={PIN_MAX_LENGTH}
-            placeholder={`${PIN_MIN_LENGTH}–${PIN_MAX_LENGTH} digits`}
-            aria-label="Enter your Vault PIN (8 to 12 digits)"
+            placeholder="6 digits"
+            aria-label="Enter your 6-digit Vault PIN"
             data-nex-vault-pin-input
             style={{
               flex: 1,

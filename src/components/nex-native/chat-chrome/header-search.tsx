@@ -89,50 +89,14 @@ const LIVE_TILES: readonly LiveTileDef[] = [
   // yet implemented).
 ];
 
-export function HeaderSearch(): React.JSX.Element {
-  const [open, setOpen] = React.useState(false);
-
-  React.useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
-  }, [open]);
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label="Open NEX directory"
-        aria-expanded={open}
-        data-nex-free-chat-header-search
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          width: 36,
-          height: 36,
-          padding: 0,
-          background: "transparent",
-          border: "none",
-          color: BUTTON_COLOR,
-          cursor: "pointer",
-          WebkitTapHighlightColor: "transparent",
-        }}
-      >
-        <SearchIcon />
-      </button>
-      {open ? <SearchOverlay onClose={() => setOpen(false)} /> : null}
-    </>
-  );
+// Owner directive 2026-11-09 · Discover overlay retired · the magnifier
+// trigger button is hidden from headers. The Discover / "What's live
+// right now?" / NEX Live tile / "Tap outside or press Esc to close"
+// screen no longer appears anywhere. The SearchOverlay component below
+// stays on disk (unused) for easy restore if the Discover hub is
+// re-authorised later.
+export function HeaderSearch(): React.JSX.Element | null {
+  return null;
 }
 
 // Owner directive 2026-11-03 · "the free chat page has button in

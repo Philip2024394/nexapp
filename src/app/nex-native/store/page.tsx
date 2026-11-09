@@ -54,44 +54,48 @@ interface StoreItem {
   readonly comingSoon?: boolean;
 }
 
+// Owner directive 2026-11-09 · NEX Store grid = the four destinations
+// the user wants surfaced as a discovery-style hub:
+//   1. Vault         → /nex-native/vault                   (bundled with Shop)
+//   2. Help          → /nex-native/emergency-help          (always free)
+//   3. Chat themes   → /nex-native/chat-themes-library     (free + paid packs)
+//   4. Shop themes   → /nex-native/manage/shop/themes      (bundled with Shop)
+//
+// The previous catalogue (Theme Packs, Shop Extras, Extra Vault) was
+// replaced per owner directive · the four above are the current shipping
+// set and "Help" was added so safety help is reachable from the same hub.
 const STORE_ITEMS: ReadonlyArray<StoreItem> = [
   {
     id: "vault",
     name: "Vault",
     glyph: "🔐",
-    // Owner-sealed 2026-11-08 (round 29) · Vault is bundled with the
-    // single NEX Shop package · no longer a separate paid product.
     priceLabel: "Included with NEX Shop",
     href: "/nex-native/vault",
     blurb: "Private encrypted storage · included with your Shop package.",
   },
-  // Placeholder tiles · signal the catalogue will grow · suppressed
-  // taps until each item is approved to go live.
   {
-    id: "chat-themes-packs",
-    name: "Theme Packs",
+    id: "help",
+    name: "Help",
+    glyph: "🚨",
+    priceLabel: "Free",
+    href: "/nex-native/emergency-help",
+    blurb: "Select your trusted contacts to alert when you need help.",
+  },
+  {
+    id: "chat-themes",
+    name: "Chat themes",
     glyph: "🎨",
-    priceLabel: "From €3.49",
+    priceLabel: "Free + paid packs",
     href: "/nex-native/chat-themes-library",
-    blurb: "Premium chat themes · one-time purchases.",
+    blurb: "Personalise your chat appearance · premium packs available.",
   },
   {
-    id: "shop-upgrades",
-    name: "Shop Extras",
-    glyph: "🛍",
-    priceLabel: "Coming soon",
-    href: null,
-    blurb: "Pro templates · boosted directory listings.",
-    comingSoon: true,
-  },
-  {
-    id: "vault-storage-plus",
-    name: "Extra Vault",
-    glyph: "💾",
-    priceLabel: "Coming soon",
-    href: null,
-    blurb: "Expand your Vault with additional storage.",
-    comingSoon: true,
+    id: "shop-themes",
+    name: "Shop themes",
+    glyph: "🖼",
+    priceLabel: "Included with NEX Shop",
+    href: "/nex-native/manage/shop/themes",
+    blurb: "Choose a cover + layout for your NEX shop · bundled with your Shop package.",
   },
 ];
 

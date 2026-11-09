@@ -48,6 +48,11 @@ export interface MultiChannelTrustedContactRow {
   readonly contactPhone: string | null;
   readonly addedAt: string;
   readonly contactLabel: string | null;
+  /** Owner-toggleable fan-out gate · migration 314. True when mig 314
+   *  not yet applied (fail-open to the sealed "always notify" default). */
+  readonly enabled: boolean;
+  /** Last edit timestamp · migration 314. Equals addedAt on pre-314 reads. */
+  readonly updatedAt: string;
 }
 
 /**
@@ -73,15 +78,62 @@ export function toLegacyRow(
   };
 }
 
-const SELECT_COLS = `
+const SELECT_COLS_V1 = `
   trusted_contact_id,
   owner_account_id,
   contact_account_id,
   contact_email,
   contact_phone,
   added_at,
-  contact_label
+  contact_label,
+  TRUE AS enabled,
+  added_at AS updated_at
 `;
+
+const SELECT_COLS_V2 = `
+  trusted_contact_id,
+  owner_account_id,
+  contact_account_id,
+  contact_email,
+  contact_phone,
+  added_at,
+  contact_label,
+  enabled,
+  updated_at
+`;
+
+// Mig 314 adds `enabled` + `updated_at`. We detect once and cache.
+// Fail-open: if the column isn't there yet, SELECT returns TRUE AS enabled
+// so pre-314 rows are treated as "always notify" (sealed default).
+let _schemaV2Checked = false;
+let _schemaV2 = false;
+
+async function ensureSchemaProbed(client: {
+  query: (sql: string, params?: unknown[]) => Promise<{ rows: unknown[]; rowCount?: number | null }>;
+}): Promise<boolean> {
+  if (_schemaV2Checked) return _schemaV2;
+  const r = await client.query(
+    `SELECT 1
+       FROM information_schema.columns
+      WHERE table_schema='nex'
+        AND table_name='trusted_contact'
+        AND column_name='enabled'
+      LIMIT 1`,
+  );
+  _schemaV2 = (r.rowCount ?? 0) === 1;
+  _schemaV2Checked = true;
+  return _schemaV2;
+}
+
+function selectCols(v2: boolean): string {
+  return v2 ? SELECT_COLS_V2 : SELECT_COLS_V1;
+}
+
+/** Test helper · resets the schema-probe cache. Not exported for prod use. */
+export function _resetSchemaProbeForTests(): void {
+  _schemaV2Checked = false;
+  _schemaV2 = false;
+}
 
 const MAX_LABEL_LEN = 60;
 const MIN_PHONE_LEN = 5;
@@ -114,6 +166,8 @@ function mapRow(r: Record<string, unknown>): MultiChannelTrustedContactRow {
     contactPhone: strOrNull(r.contact_phone),
     addedAt: toIso(r.added_at),
     contactLabel: strOrNull(r.contact_label),
+    enabled: r.enabled === false ? false : true,
+    updatedAt: toIso(r.updated_at ?? r.added_at),
   };
 }
 
@@ -276,12 +330,13 @@ export async function addContact(
       `;
     }
 
+    const v2 = await ensureSchemaProbed(client);
     const r = await client.query(
       `INSERT INTO nex.trusted_contact
          (owner_account_id, contact_account_id, contact_email, contact_phone, contact_label)
        VALUES ($1, $2, $3, $4, $5)
        ${onConflictSql}
-       RETURNING ${SELECT_COLS}`,
+       RETURNING ${selectCols(v2)}`,
       [owner, safeAccount, safeEmail, safePhone, safeLabel],
     );
     if ((r.rowCount ?? 0) !== 1) {
@@ -361,8 +416,9 @@ export async function listContacts(
   assertAccountId(ownerAccountId, "owner_account_id");
   const safeLimit = Math.min(Math.max(1, Math.floor(limit)), 200);
   const result = await withClient(async (client) => {
+    const v2 = await ensureSchemaProbed(client);
     const r = await client.query(
-      `SELECT ${SELECT_COLS}
+      `SELECT ${selectCols(v2)}
          FROM nex.trusted_contact
         WHERE owner_account_id = $1
         ORDER BY added_at DESC
@@ -372,6 +428,137 @@ export async function listContacts(
     return r.rows.map((row) => mapRow(row as Record<string, unknown>));
   });
   return result ?? [];
+}
+
+// =====================================================================
+// updateContact · PK-scoped edit of label / email / phone
+// =====================================================================
+//
+// Caller supplies the fields to change. A field present in `args` with a
+// non-undefined value is updated; a field omitted is left untouched. Pass
+// `null` to clear an identifier (as long as at least one identifier
+// remains on the row). The service rejects clearing the last identifier.
+
+export interface UpdateContactArgs {
+  readonly ownerAccountId: string;
+  readonly trustedContactId: string;
+  readonly contactLabel?: string | null;
+  readonly contactEmail?: string | null;
+  readonly contactPhone?: string | null;
+}
+
+export async function updateContact(
+  args: UpdateContactArgs,
+): Promise<MultiChannelTrustedContactRow> {
+  assertAccountId(args.ownerAccountId, "owner_account_id");
+  if (typeof args.trustedContactId !== "string" || args.trustedContactId.trim().length === 0) {
+    throw new Error("trusted_contact.invalid_trusted_contact_id");
+  }
+
+  const touchLabel = Object.prototype.hasOwnProperty.call(args, "contactLabel");
+  const touchEmail = Object.prototype.hasOwnProperty.call(args, "contactEmail");
+  const touchPhone = Object.prototype.hasOwnProperty.call(args, "contactPhone");
+
+  if (!touchLabel && !touchEmail && !touchPhone) {
+    throw new Error("trusted_contact.no_update_fields");
+  }
+
+  const newLabel = touchLabel ? sanitiseLabel(args.contactLabel) : undefined;
+  const newEmail = touchEmail ? sanitiseEmail(args.contactEmail) : undefined;
+  const newPhone = touchPhone ? sanitisePhone(args.contactPhone) : undefined;
+
+  const result = await withClient(async (client) => {
+    const v2 = await ensureSchemaProbed(client);
+
+    const existing = await client.query(
+      `SELECT contact_account_id, contact_email, contact_phone
+         FROM nex.trusted_contact
+        WHERE owner_account_id = $1
+          AND trusted_contact_id = $2`,
+      [args.ownerAccountId.trim(), args.trustedContactId.trim()],
+    );
+    if ((existing.rowCount ?? 0) !== 1) {
+      throw new Error("trusted_contact.not_found");
+    }
+    const row = existing.rows[0] as Record<string, unknown>;
+
+    const finalAccount = strOrNull(row.contact_account_id);
+    const finalEmail = touchEmail ? newEmail ?? null : strOrNull(row.contact_email);
+    const finalPhone = touchPhone ? newPhone ?? null : strOrNull(row.contact_phone);
+    if (finalAccount === null && finalEmail === null && finalPhone === null) {
+      throw new Error("trusted_contact.no_identifier");
+    }
+
+    const sets: string[] = [];
+    const params: unknown[] = [args.ownerAccountId.trim(), args.trustedContactId.trim()];
+    if (touchLabel) {
+      params.push(newLabel ?? null);
+      sets.push(`contact_label = $${params.length}`);
+    }
+    if (touchEmail) {
+      params.push(newEmail ?? null);
+      sets.push(`contact_email = $${params.length}`);
+    }
+    if (touchPhone) {
+      params.push(newPhone ?? null);
+      sets.push(`contact_phone = $${params.length}`);
+    }
+
+    const r = await client.query(
+      `UPDATE nex.trusted_contact
+          SET ${sets.join(", ")}
+        WHERE owner_account_id = $1
+          AND trusted_contact_id = $2
+       RETURNING ${selectCols(v2)}`,
+      params,
+    );
+    if ((r.rowCount ?? 0) !== 1) {
+      throw new Error("trusted_contact.update_failed");
+    }
+    return mapRow(r.rows[0] as Record<string, unknown>);
+  });
+  if (result === null) throw new Error("trusted_contact.db_unavailable");
+  return result;
+}
+
+// =====================================================================
+// setEnabled · toggle the fan-out gate (requires migration 314)
+// =====================================================================
+
+export async function setEnabled(args: {
+  readonly ownerAccountId: string;
+  readonly trustedContactId: string;
+  readonly enabled: boolean;
+}): Promise<MultiChannelTrustedContactRow> {
+  assertAccountId(args.ownerAccountId, "owner_account_id");
+  if (typeof args.trustedContactId !== "string" || args.trustedContactId.trim().length === 0) {
+    throw new Error("trusted_contact.invalid_trusted_contact_id");
+  }
+  if (typeof args.enabled !== "boolean") {
+    throw new Error("trusted_contact.invalid_enabled");
+  }
+
+  const result = await withClient(async (client) => {
+    const v2 = await ensureSchemaProbed(client);
+    if (!v2) {
+      // Fail-honest: the column isn't there yet.
+      throw new Error("trusted_contact.mig_314_required");
+    }
+    const r = await client.query(
+      `UPDATE nex.trusted_contact
+          SET enabled = $3
+        WHERE owner_account_id = $1
+          AND trusted_contact_id = $2
+       RETURNING ${selectCols(true)}`,
+      [args.ownerAccountId.trim(), args.trustedContactId.trim(), args.enabled],
+    );
+    if ((r.rowCount ?? 0) !== 1) {
+      throw new Error("trusted_contact.not_found");
+    }
+    return mapRow(r.rows[0] as Record<string, unknown>);
+  });
+  if (result === null) throw new Error("trusted_contact.db_unavailable");
+  return result;
 }
 
 // =====================================================================

@@ -52,13 +52,14 @@ const PAD_CREAM = "#FAF8F4";
 const PAD_INK = "#1A120A";
 const PAD_INK_DIM = "#5F4A2C";
 
-// Owner directive 2026-11-07 (refined) · the Step 1 template picker
-// always paints templates on this neutral cc1.png backdrop so sellers
-// see each template's structure on a consistent canvas. The owner's
-// real saved background (currentImageUrl) still composes on their
-// public /{slug} shop · Step 2 (/backgrounds) is where they pick it.
-// PICKER + FULLSCREEN previews only · never written to the DB.
-const DEFAULT_PREVIEW_BG = "/nex-brand/shop-themes/cc1.png";
+// Owner directive 2026-11-09 · replaces the earlier cc1.png cream +
+// gold canvas with the new emerald e-commerce backdrop. The Step 1
+// template picker paints every template on this backdrop so sellers
+// see each template's structure on a consistent brand canvas. The
+// owner's real saved background (currentImageUrl) still composes on
+// their public /{slug} shop · Step 2 (/backgrounds) is where they
+// pick it. PICKER + FULLSCREEN previews only · never written to the DB.
+const DEFAULT_PREVIEW_BG = "/nex-native/shop-themes-bg.png";
 
 interface Props {
   readonly businessId: string | null;
@@ -91,7 +92,15 @@ export function ShopThemesClient({
   // renders on their public /{slug} shop · Step 2 (/backgrounds)
   // is where they pick that background.
   const previewImageUrl = DEFAULT_PREVIEW_BG;
-  const tintHex = currentTintHex ?? "#123D2B";
+  // Owner directive 2026-11-09 revision 2 · default tint updated to
+  // the sealed NEX gold (#C6A15B) to pair with the new emerald e-
+  // commerce background. The previous default #123D2B dark-emerald was
+  // picked for the cream canvas · against the green image it blended
+  // in and read as muddy brown. Gold contrasts cleanly against both
+  // the green hero + the image's warm-toned products. Owner-saved
+  // tints (currentTintHex) still override this default on their own
+  // shop · this is only the first-paint default in the picker.
+  const tintHex = currentTintHex ?? "#C6A15B";
   const [status, setStatus] = React.useState<
     | { kind: "idle" }
     | { kind: "applying" }
@@ -258,8 +267,13 @@ export function ShopThemesClient({
           minHeight: 500,
           margin: "0 auto",
           borderRadius: 32,
-          background: PAD_CREAM,
-          border: `2px solid ${BORDER_HI}`,
+          // Owner directive 2026-11-09 (revision 2) · background image
+          // fills the FULL WIDTH of the silhouette · `100% 100%` size
+          // stretches to fit both axes so no side bars and no vertical
+          // crop · aspect ratio of image may distort slightly, that's
+          // intentional per owner request. Solid gold rim all round.
+          background: "url('/nex-native/shop-themes-bg.png') center / 100% 100% no-repeat",
+          border: `2px solid ${GOLD}`,
           overflow: "hidden",
           boxShadow: "0 18px 46px rgba(0, 0, 0, 0.4)",
           boxSizing: "border-box",
@@ -727,12 +741,14 @@ function FullscreenTemplate({
         onClick={(e) => e.stopPropagation()}
         style={{
           // Phone silhouette clamped to viewport · same 9:19.5 ratio
-          // as the picker preview · just bigger.
+          // as the picker preview · just bigger. Owner directive
+          // 2026-11-09 revision 2 · background image fills FULL WIDTH
+          // via `100% 100%` size · solid gold rim all around.
           width: "min(96vw, calc(96vh * 9 / 19.5))",
           aspectRatio: "9 / 19.5",
           maxHeight: "96vh",
           borderRadius: 32,
-          background: PAD_CREAM,
+          background: "url('/nex-native/shop-themes-bg.png') center / 100% 100% no-repeat",
           border: `2px solid ${GOLD}`,
           overflow: "hidden",
           boxShadow: "0 24px 60px rgba(0,0,0,0.55)",

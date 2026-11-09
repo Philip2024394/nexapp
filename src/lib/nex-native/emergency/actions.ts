@@ -39,8 +39,13 @@ import {
 } from "./_notification-hook";
 import {
   addContact as svcAddContact,
+  listContacts as svcListContacts,
   removeContact as svcRemoveContact,
+  setEnabled as svcSetEnabled,
+  updateContact as svcUpdateContact,
+  type MultiChannelTrustedContactRow,
 } from "./trusted-contacts-service";
+import { withClient as withDbClient } from "@/lib/nex/db";
 import {
   optIn as svcOptIn,
   optOut as svcOptOut,
@@ -614,6 +619,139 @@ export async function removeTrustedContactAction(
   return requireActor(async (ownerAccountId) => {
     await svcRemoveContact(ownerAccountId, contactAccountId);
     return ok(null);
+  });
+}
+
+// ---------------------------------------------------------------------
+// Multi-channel contact actions (owner-sealed 2026-11-09 Step 1).
+//
+// The legacy addTrustedContactAction above only accepts an account id.
+// These actions expose the multi-channel contract (NEX account OR email
+// OR phone, exactly as the service has supported since migration 196)
+// so the Emergency Help contact-management UI can collect any of the
+// three without the back-compat positional shim.
+// ---------------------------------------------------------------------
+
+export interface AddTrustedContactV2Args {
+  readonly contactAccountId?: string | null;
+  readonly contactEmail?: string | null;
+  readonly contactPhone?: string | null;
+  readonly contactLabel?: string | null;
+}
+
+export async function addTrustedContactV2Action(
+  args: AddTrustedContactV2Args,
+): Promise<EmergencyActionResult<MultiChannelTrustedContactRow>> {
+  return requireActor(async (ownerAccountId) => {
+    const row = await svcAddContact({
+      ownerAccountId,
+      contactAccountId: args.contactAccountId ?? null,
+      contactEmail: args.contactEmail ?? null,
+      contactPhone: args.contactPhone ?? null,
+      label: args.contactLabel ?? null,
+    });
+    return ok(row);
+  });
+}
+
+export async function listTrustedContactsAction(): Promise<
+  EmergencyActionResult<readonly MultiChannelTrustedContactRow[]>
+> {
+  return requireActor(async (ownerAccountId) => {
+    const rows = await svcListContacts(ownerAccountId);
+    return ok(rows);
+  });
+}
+
+export interface EditTrustedContactArgs {
+  readonly trustedContactId: string;
+  readonly contactLabel?: string | null;
+  readonly contactEmail?: string | null;
+  readonly contactPhone?: string | null;
+}
+
+export async function editTrustedContactAction(
+  args: EditTrustedContactArgs,
+): Promise<EmergencyActionResult<MultiChannelTrustedContactRow>> {
+  return requireActor(async (ownerAccountId) => {
+    const row = await svcUpdateContact({
+      ownerAccountId,
+      trustedContactId: args.trustedContactId,
+      ...(Object.prototype.hasOwnProperty.call(args, "contactLabel")
+        ? { contactLabel: args.contactLabel ?? null }
+        : {}),
+      ...(Object.prototype.hasOwnProperty.call(args, "contactEmail")
+        ? { contactEmail: args.contactEmail ?? null }
+        : {}),
+      ...(Object.prototype.hasOwnProperty.call(args, "contactPhone")
+        ? { contactPhone: args.contactPhone ?? null }
+        : {}),
+    });
+    return ok(row);
+  });
+}
+
+export async function removeTrustedContactByIdAction(
+  trustedContactId: string,
+): Promise<EmergencyActionResult<null>> {
+  return requireActor(async (ownerAccountId) => {
+    await svcRemoveContact({ ownerAccountId, trustedContactId });
+    return ok(null);
+  });
+}
+
+export async function setTrustedContactEnabledAction(args: {
+  readonly trustedContactId: string;
+  readonly enabled: boolean;
+}): Promise<EmergencyActionResult<MultiChannelTrustedContactRow>> {
+  return requireActor(async (ownerAccountId) => {
+    const row = await svcSetEnabled({
+      ownerAccountId,
+      trustedContactId: args.trustedContactId,
+      enabled: args.enabled,
+    });
+    return ok(row);
+  });
+}
+
+/**
+ * Setup status for the Emergency Help landing page.
+ *
+ * Returns whether the user has any trusted contacts configured and
+ * whether the server has migration 314 applied (controls whether the
+ * enable/disable toggle is usable). Non-authenticated callers receive
+ * `not_authenticated` so the setup-status card renders empty for guests.
+ */
+export async function getContactsSetupStatusAction(): Promise<
+  EmergencyActionResult<{
+    readonly totalContacts: number;
+    readonly enabledContacts: number;
+    readonly enabledToggleAvailable: boolean;
+  }>
+> {
+  return requireActor(async (ownerAccountId) => {
+    const rows = await svcListContacts(ownerAccountId);
+    // The service's mapRow fills enabled=TRUE on pre-314 reads via the
+    // TRUE AS enabled SELECT branch, so counting enabled rows is always
+    // honest regardless of mig state.
+    const enabledCount = rows.filter((r) => r.enabled).length;
+    // Probe mig 314 state via information_schema (cheap, one-row read).
+    const enabledToggleAvailable = await withDbClient(async (client) => {
+      const r = await client.query(
+        `SELECT 1
+           FROM information_schema.columns
+          WHERE table_schema='nex'
+            AND table_name='trusted_contact'
+            AND column_name='enabled'
+          LIMIT 1`,
+      );
+      return (r.rowCount ?? 0) === 1;
+    });
+    return ok({
+      totalContacts: rows.length,
+      enabledContacts: enabledCount,
+      enabledToggleAvailable: enabledToggleAvailable ?? false,
+    });
   });
 }
 

@@ -22,6 +22,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   NEX_CART_STORAGE_KEY,
   type NexCartItem,
@@ -187,7 +188,15 @@ export function CartPageClient(): React.JSX.Element {
         flexDirection: "column",
         gap: 14,
         minHeight: 0,
-        overflow: "auto",
+        // Owner directive 2026-11-09 · scrollbar was bouncing on the
+        // side when the cart was empty or just-under-viewport height.
+        // `overflow-y: auto` is kept so a long multi-shop cart still
+        // scrolls when needed · `overflow-x: hidden` + `scrollbarGutter:
+        // stable both-edges` prevents the track from jumping when
+        // content toggles between taller/shorter than the viewport.
+        overflowY: "auto",
+        overflowX: "hidden",
+        scrollbarGutter: "stable",
       }}
     >
       <Header totalGroups={groups.length} />
@@ -301,7 +310,43 @@ function Header({ totalGroups }: { totalGroups: number }): React.JSX.Element {
 }
 
 // ─── Empty state ─────────────────────────────────────────────────────
+//
+// Owner directive 2026-11-09 · when the cart is empty the page shows a
+// 5-second countdown and auto-navigates back · no tappable CTA. Users
+// landing on an empty cart by accident don't have to make a choice ·
+// the page returns them where they came from. `router.back()` is
+// preferred; when there's no history (direct entry · fresh tab) we
+// fall back to /nex-native/free-chat.
+const EMPTY_AUTO_REDIRECT_SECONDS = 5;
+
 function EmptyCart(): React.JSX.Element {
+  const router = useRouter();
+  const [secondsLeft, setSecondsLeft] = React.useState(
+    EMPTY_AUTO_REDIRECT_SECONDS,
+  );
+
+  React.useEffect(() => {
+    const interval = window.setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
+          window.clearInterval(interval);
+          // Try history-back first · fall back to the free-chat home
+          // if the browser has no previous entry.
+          window.setTimeout(() => {
+            if (typeof window !== "undefined" && window.history.length > 1) {
+              router.back();
+            } else {
+              router.replace("/nex-native/free-chat");
+            }
+          }, 50);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [router]);
+
   return (
     <div
       style={{
@@ -340,24 +385,18 @@ function EmptyCart(): React.JSX.Element {
           from multiple shops at once — each shop is a separate checkout.
         </p>
       </div>
-      <Link
-        href="/nex-native/free-chat"
+      <p
+        aria-live="polite"
+        data-nex-cart-empty-countdown={secondsLeft}
         style={{
-          display: "inline-flex",
-          alignItems: "center",
-          padding: "12px 22px",
-          fontSize: 12,
-          fontWeight: 900,
-          letterSpacing: "0.1em",
-          textTransform: "uppercase",
-          color: "#1A120A",
-          background: GOLD,
-          textDecoration: "none",
-          borderRadius: 999,
+          margin: 0,
+          fontSize: 11,
+          color: INK_MUTED,
+          letterSpacing: "0.02em",
         }}
       >
-        Explore shops →
-      </Link>
+        Taking you back in {secondsLeft}…
+      </p>
     </div>
   );
 }

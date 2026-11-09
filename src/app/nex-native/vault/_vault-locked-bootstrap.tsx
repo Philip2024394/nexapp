@@ -184,7 +184,10 @@ function PlaceholderMain({
       data-nex-vault-bootstrap-placeholder
       data-nex-vault-bootstrap-tone={tone ?? ""}
       style={{
-        minHeight: "100dvh",
+        flex: 1,
+        minHeight: 0,
+        width: "100%",
+        overflow: "hidden",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -221,7 +224,10 @@ function WaitingShell({
     <main
       data-nex-vault-waiting
       style={{
-        minHeight: "100dvh",
+        flex: 1,
+        minHeight: 0,
+        width: "100%",
+        overflow: "hidden",
         background: skin.bg.base,
         color: skin.text.primary,
         fontFamily: skin.font,
@@ -372,7 +378,10 @@ function PendingAuthoriseShell({
     <main
       data-nex-vault-pending
       style={{
-        minHeight: "100dvh",
+        flex: 1,
+        minHeight: 0,
+        width: "100%",
+        overflow: "hidden",
         background: skin.bg.base,
         color: skin.text.primary,
         fontFamily: skin.font,

@@ -36,21 +36,23 @@ export function DoorwayShell({ skin, deviceId }: DoorwayShellProps) {
         data-nex-vault-root
         data-nex-vault-theme={skin.slug}
         style={{
-          minHeight: "100dvh",
+          // Owner directive 2026-11-09 · locked vault page is a fixed-
+          // viewport card · no scrolling. The parent entry page already
+          // caps the height to 100dvh; this inner shell fills the
+          // available space and keeps content centered.
+          flex: 1,
+          minHeight: 0,
           background: skin.bg.base,
           color: skin.text.primary,
           fontFamily: skin.font,
-          padding:
-            skin.contentAnchor === "bottom"
-              ? "16px 20px 10vh"
-              : "16px 20px 32px",
+          padding: "16px 20px 24px",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          justifyContent:
-            skin.contentAnchor === "bottom" ? "flex-end" : "center",
+          justifyContent: "center",
           position: "relative",
           overflow: "hidden",
+          width: "100%",
         }}
       >
         {skin.bg.imageUrl && (
@@ -115,40 +117,13 @@ export function DoorwayShell({ skin, deviceId }: DoorwayShellProps) {
             Unlock your Vault
           </h1>
 
+          {/* Owner directive 2026-11-09 · stripped recovery-passphrase
+              link + sign-out link from the locked page. NEX does not
+              recover lost PINs (notification popup on set/reset makes
+              this explicit); the sign-out link is reachable from the
+              shell header above. */}
           <div style={{ marginTop: 36 }}>
             <PinEntryClient skin={skin} deviceId={deviceId} />
-          </div>
-
-          <div style={{ marginTop: 16 }}>
-            <a
-              href="/nex-native/vault/recover"
-              data-nex-vault-use-recovery
-              style={{
-                display: "inline-block",
-                color: skin.text.secondary,
-                fontSize: 13,
-                textDecoration: "underline",
-                opacity: 0.85,
-              }}
-            >
-              Forgot your PIN? Use recovery passphrase.
-            </a>
-          </div>
-
-          <div style={{ marginTop: 10 }}>
-            <a
-              href="/nex-native/home"
-              data-nex-vault-sign-out
-              style={{
-                display: "inline-block",
-                color: skin.text.secondary,
-                fontSize: 13,
-                textDecoration: "underline",
-                opacity: 0.7,
-              }}
-            >
-              Sign out of Vault · return to NEX
-            </a>
           </div>
         </div>
       </main>

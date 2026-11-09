@@ -29,7 +29,15 @@ export default async function CartPage(): Promise<React.JSX.Element> {
 
   return (
     <>
-      <style>{`html, body { background: ${NEX_BG}; }`}</style>
+      {/* Owner directive 2026-11-09 · cart page locked to the frame
+          viewport · no scrollbar bouncing on the side when the cart
+          is empty. The sealed phone-frame default is `overflow-y:
+          auto`; we override to `hidden` on cart routes so an empty
+          state never shows a vestigial scrollbar track. */}
+      <style>{`
+        html, body { background: ${NEX_BG}; }
+        .nex-native-frame { overflow: hidden !important; }
+      `}</style>
       <main
         data-nex-cart
         style={{
