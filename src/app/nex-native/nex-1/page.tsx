@@ -1,16 +1,23 @@
 // src/app/nex-native/nex-1/page.tsx
 //
-// NEX 1 · support chat surface · owner-sealed 2026-11-09.
+// NEX 1 · support chat surface · owner-sealed 2026-11-10 revision 2.
 //
-// Users land here from the NEX 1 row in the side drawer. Chat-style
-// interface with a welcome bubble from NEX Support on first load.
-// Real two-way messaging transport is a follow-up build · the
-// composer is visually present but Send is disabled until the
-// support reply channel is wired. No fake success states.
+// Three regions stacked vertically inside the phone frame:
+//   · Header · static · NEX wordmark left + "Support · online" + red
+//     close chip on the right (no Back button per owner directive).
+//   · Messages · scrolls internally.
+//   · Composer · static footer (keypad active).
+//
+// Viewport-locked via `height: 100dvh + overflow: hidden`. Dynamic-
+// viewport-height means iOS Safari naturally shrinks the page when
+// the keyboard pops, so the composer still sits above the keypad
+// without needing the body to scroll.
 
 import type * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Nex1ChatClient } from "./_client";
+import { Nex1HeaderSubtitle } from "./_header-subtitle";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,13 +31,14 @@ const PALETTE = {
   textMuted: "#B5C3D6",
   accent: "#C6A15B",
   cardBorder: "rgba(198, 161, 91, 0.35)",
+  danger: "#8B0000",
+  dangerBorder: "#6B0E0E",
 };
 
 export default function Nex1SupportPage(): React.JSX.Element {
   return (
     <>
       <style>{`
-        html, body { height: 100%; overflow: hidden; }
         .nex-native-frame {
           background: ${PALETTE.bg} !important;
           overflow: hidden !important;
@@ -39,7 +47,13 @@ export default function Nex1SupportPage(): React.JSX.Element {
       <div
         data-nex-1-page
         style={{
-          height: "100%",
+          // Owner directive 2026-11-10 revision 3 · `position:absolute
+          // inset:0` fills the containing phone frame exactly (624px
+          // on desktop) instead of `100dvh` which referred to the
+          // real viewport (e.g. 800px) and pushed the composer footer
+          // beyond the frame's clip. Same pattern cart page uses.
+          position: "absolute",
+          inset: 0,
           overflow: "hidden",
           background: PALETTE.bg,
           color: PALETTE.text,
@@ -59,65 +73,49 @@ export default function Nex1SupportPage(): React.JSX.Element {
               "calc(env(safe-area-inset-top, 0px) + 10px) 14px 10px",
             borderBottom: `1px solid ${PALETTE.cardBorder}`,
             background: PALETTE.bg,
+            gap: 10,
           }}
         >
-          <Link
-            href="/nex-native/free-chat"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-              padding: "4px 10px",
-              fontSize: 11,
-              fontWeight: 700,
-              color: PALETTE.accent,
-              textDecoration: "none",
-              border: `1px solid ${PALETTE.cardBorder}`,
-              borderRadius: 999,
-            }}
-          >
-            ← Back
-          </Link>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span
-              aria-hidden
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: "50%",
-                background: PALETTE.accent,
-                color: "#061710",
-                display: "grid",
-                placeItems: "center",
-                fontSize: 14,
-                fontWeight: 900,
-              }}
-            >
-              1
-            </span>
+          {/* Owner directive 2026-11-10 · Back button retired. Header
+              now has NEX wordmark left · "Support · online" subtitle ·
+              red Close chip right. */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <Image
+              src="/nex-native/nex-1-logo.png"
+              alt="NEX"
+              width={72}
+              height={28}
+              priority
+              style={{ height: 28, width: "auto", objectFit: "contain" }}
+            />
             <div style={{ display: "flex", flexDirection: "column" }}>
-              <span
-                style={{
-                  fontSize: 13,
-                  fontWeight: 800,
-                  letterSpacing: 0.2,
-                  color: PALETTE.text,
-                }}
-              >
-                NEX 1
-              </span>
-              <span
-                style={{
-                  fontSize: 10,
-                  color: PALETTE.textMuted,
-                  letterSpacing: 0.4,
-                }}
-              >
-                Support · online
-              </span>
+              <Nex1HeaderSubtitle />
             </div>
           </div>
-          <span style={{ width: 54 }} aria-hidden />
+          <Link
+            href="/nex-native/free-chat"
+            aria-label="Close NEX Support"
+            data-nex-1-close
+            style={{
+              flexShrink: 0,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 28,
+              height: 28,
+              borderRadius: "50%",
+              background: PALETTE.danger,
+              border: `1px solid ${PALETTE.dangerBorder}`,
+              color: "#FFFFFF",
+              textDecoration: "none",
+              fontSize: 14,
+              fontWeight: 900,
+              lineHeight: 1,
+              boxShadow: "0 2px 6px rgba(0,0,0,0.45)",
+            }}
+          >
+            ×
+          </Link>
         </header>
 
         <Nex1ChatClient />
