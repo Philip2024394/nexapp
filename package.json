@@ -131,6 +131,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.10.1",
     "@huggingface/transformers": "^4.3.0",
+    "@sentry/nextjs": "^8.47.0",
     "@playwright/test": "^1.62.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/fluent-ffmpeg": "^2.1.28",
