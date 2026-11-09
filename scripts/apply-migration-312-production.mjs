@@ -209,13 +209,19 @@ try {
   // webhook processor's service-role client continues to function).
   // We do NOT INSERT a test row (would pollute production audit log).
   for (const t of BILLING_TABLES) {
-    const r = await verify.query(`SELECT COUNT(*)::bigint AS n FROM "${t}" LIMIT 0`);
-    // If RLS blocked service-role, the query would fail · SELECT success
-    // under service-role confirms the lockdown preserves service-role access.
-    if (typeof r.rows[0].n === "string" || typeof r.rows[0].n === "number") {
-      console.log(`✓ V-F1-T6h-direct · service-role SELECT round-trip on ${t} succeeded`);
-    } else {
-      console.error(`✗ V-F1-T6h-direct FAIL on ${t}: unexpected shape`);
+    try {
+      const r = await verify.query(`SELECT COUNT(*)::bigint AS n FROM "${t}"`);
+      // If RLS blocked service-role, the query would error · a value in
+      // r.rows[0].n (even "0") proves the lockdown preserves service-role
+      // access. COUNT(*) always returns exactly one row so rows[0] is defined.
+      if (r.rows[0]?.n !== undefined) {
+        console.log(`✓ V-F1-T6h-direct · service-role SELECT round-trip on ${t} succeeded (count=${r.rows[0].n})`);
+      } else {
+        console.error(`✗ V-F1-T6h-direct FAIL on ${t}: COUNT returned unexpected shape`);
+        anyFail = true;
+      }
+    } catch (e) {
+      console.error(`✗ V-F1-T6h-direct FAIL on ${t}: ${e instanceof Error ? e.message : String(e)}`);
       anyFail = true;
     }
   }
