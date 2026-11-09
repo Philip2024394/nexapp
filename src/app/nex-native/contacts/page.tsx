@@ -84,6 +84,7 @@ import { ContactRow } from "./_contact-row";
 import Link from "next/link";
 import { ContactsPlusDrawer } from "./_contacts-plus-drawer";
 import { ContactsLiveWorldTrigger } from "./_contacts-live-world-trigger";
+import { UnifiedDrawer } from "@/components/nex-native/drawer/UnifiedDrawer";
 import { CommunityNoticeCard } from "./_community-notice-card";
 // Owner directive 2026-11-03 (B+β · full build) · "we want full build
 // and connected to create profile page so we know where the user is
@@ -667,6 +668,18 @@ export default async function ContactsPage({ searchParams }: PageProps) {
   // misleading the user with "0". Friends/Business still render their
   // real integer total; Groups renders the string literal and keeps
   // the pill chrome so the three buttons remain visually balanced.
+  // Owner directive 2026-11-10 · pill flips to red when the category
+  // has unread messages (summed across contact rows). Groups has no
+  // unread stream today · stays non-red.
+  const friendUnreadSum = friendRows.reduce(
+    (sum, r) => sum + (r.unreadCount ?? 0),
+    0,
+  );
+  const businessUnreadSum = businessRows.reduce(
+    (sum, r) => sum + (r.unreadCount ?? 0),
+    0,
+  );
+
   const categoryButtons: ReadonlyArray<{
     readonly id: string;
     readonly label: string;
@@ -674,6 +687,7 @@ export default async function ContactsPage({ searchParams }: PageProps) {
     readonly active: boolean;
     readonly href: string;
     readonly icon: React.ReactNode;
+    readonly hasUnread: boolean;
   }> = [
     {
       id: "friends",
@@ -681,6 +695,7 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       countLabel: String(friendRows.length),
       active: activeFilter === "friends",
       href: "/nex-native/contacts?tab=friends",
+      hasUnread: friendUnreadSum > 0,
       icon: (
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -701,6 +716,7 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       countLabel: "1",
       active: activeFilter === "groups",
       href: "/nex-native/contacts?tab=groups",
+      hasUnread: false,
       icon: (
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M12 2 2 7l10 5 10-5-10-5Z" />
@@ -715,6 +731,7 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       countLabel: String(businessRows.length),
       active: activeFilter === "business",
       href: "/nex-native/contacts?tab=business",
+      hasUnread: businessUnreadSum > 0,
       icon: (
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M3 7h18l-1.5 11a2 2 0 0 1-2 1.75H6.5a2 2 0 0 1-2-1.75L3 7Z" />
@@ -813,14 +830,62 @@ export default async function ContactsPage({ searchParams }: PageProps) {
         >
           Contacts
         </h1>
-        {/* Owner directive 2026-11-03 (later) · "remove the last button
-            from header should be 2 buttons not 3 · put back the side
-            drawer button plus". Ireland-map Gold circle retired · the
-            two kept buttons are the sealed grid-icon (live worlds) and
-            the sealed + side drawer. Community still reachable via the
-            Community card below (routes to /community/discover). */}
-        <ContactsLiveWorldTrigger />
-        <ContactsPlusDrawer />
+        {/* Owner directive 2026-11-10 · Discover overlay retired · the
+            grid trigger is now a Cart button that opens the buyer cart
+            (/nex-native/cart). The custom ContactsPlusDrawer is replaced
+            by the sealed global UnifiedDrawer on the right so every
+            surface uses the same drawer. */}
+        <Link
+          href="/nex-native/cart"
+          aria-label="Open shopping cart"
+          data-nex-contacts-cart-trigger
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: "50%",
+            background: "var(--nex-world-secondary, #C6A15B)",
+            color: "var(--nex-world-drawer-bg, #123D2B)",
+            display: "grid",
+            placeItems: "center",
+            flexShrink: 0,
+            textDecoration: "none",
+            fontSize: 20,
+            boxShadow: "0 6px 14px rgba(0, 0, 0, 0.35)",
+          }}
+        >
+          🛒
+        </Link>
+        <style>{`
+          [data-nex-contacts-global-drawer] button,
+          [data-nex-contacts-global-drawer] svg {
+            color: #061710 !important;
+            stroke: #061710 !important;
+          }
+          [data-nex-contacts-global-drawer] svg * {
+            stroke: #061710 !important;
+          }
+        `}</style>
+        <span
+          data-nex-contacts-global-drawer
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 40,
+            height: 40,
+            borderRadius: "50%",
+            background: "#C6A15B",
+            border: "1.5px solid #8B6A32",
+            boxShadow: "0 6px 14px rgba(0, 0, 0, 0.55)",
+            flexShrink: 0,
+          }}
+        >
+          <UnifiedDrawer
+            session={drawerSession}
+            viewerEarnedCreatorBadges={viewerCreatorBadges}
+            viewerSupportSettings={viewerCreatorSupportSettings}
+          />
+        </span>
       </header>
 
       {/* ===== ROW 1 · THREE FIXED CATEGORY BUTTONS =====
@@ -846,12 +911,22 @@ export default async function ContactsPage({ searchParams }: PageProps) {
           const fg = btn.active
             ? "var(--nex-world-drawer-bg, #123D2B)"
             : "var(--nex-world-primary-ink, #AFC5B5)";
-          const countBg = btn.active
-            ? "rgba(18, 61, 43, 0.18)"
-            : "rgba(198, 161, 91, 0.22)";
-          const countFg = btn.active
-            ? "var(--nex-world-drawer-bg, #123D2B)"
-            : "var(--nex-world-secondary, #C6A15B)";
+          // Owner directive 2026-11-10 · red pill when the category
+          // has unread messages · overrides the active/inactive tint
+          // so unread status always reads first.
+          // Dark red (#8B0000) per owner directive 2026-11-10 · matches
+          // the drawer Close + Logout chips so unread signals use one
+          // consistent shade across the app.
+          const countBg = btn.hasUnread
+            ? "#8B0000"
+            : btn.active
+              ? "rgba(18, 61, 43, 0.18)"
+              : "rgba(198, 161, 91, 0.22)";
+          const countFg = btn.hasUnread
+            ? "#FFFFFF"
+            : btn.active
+              ? "var(--nex-world-drawer-bg, #123D2B)"
+              : "var(--nex-world-secondary, #C6A15B)";
           return (
             <Link
               key={btn.id}

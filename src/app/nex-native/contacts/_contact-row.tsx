@@ -349,17 +349,14 @@ export function ContactRow({ row, accentHex }: ContactRowProps): React.JSX.Eleme
           </div>
         ) : null}
 
-        {/* Owner directive 2026-11-09 · last-online label moves to
-            lower-right of the card. Separate row, justify-end, so
-            "Active 12m" sits below the location in the bottom-right
-            corner of the text column. */}
+        {/* Owner directive 2026-11-10 · "Active now" absolute-positioned
+            at the bottom-right of the whole card · mirrors the time-text
+            position on chat bubbles. Takes it out of the text column
+            flex flow so names + professions + cities keep their vertical
+            rhythm regardless of presence state. */}
         {lastOnlineLabel ? (
           <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              marginTop: 2,
-            }}
+            style={{ display: "none" }}
           >
             <span
               data-nex-contacts-row-last-online
@@ -401,6 +398,30 @@ export function ContactRow({ row, accentHex }: ContactRowProps): React.JSX.Eleme
             🛒
           </span>
         </div>
+      ) : null}
+
+      {/* Owner directive 2026-11-10 · "Active now" / presence label
+          absolute-positioned at the bottom-right of the whole card ·
+          same position as the time text on chat bubbles. */}
+      {lastOnlineLabel ? (
+        <span
+          aria-hidden
+          data-nex-contacts-row-presence-bottom
+          style={{
+            position: "absolute",
+            right: 10,
+            bottom: 6,
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: 0.2,
+            whiteSpace: "nowrap",
+            color: NEX.textMute,
+            fontFamily:
+              "ui-monospace, 'SF Mono', Consolas, 'Liberation Mono', monospace",
+          }}
+        >
+          {lastOnlineLabel}
+        </span>
       ) : null}
 
     </Link>
