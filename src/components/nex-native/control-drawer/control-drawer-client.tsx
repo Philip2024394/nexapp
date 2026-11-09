@@ -252,18 +252,16 @@ const CONTACTS_HREF: string =
 // anyway, so the rows pointed at 404. The sealed CREATE section now
 // only surfaces product-listing.
 //
-// "List a product" row is retained here but FLAGGED · `/nex-native/
-// create/product` has no own page.tsx (only `/create/product/category/
-// page.tsx` exists as a sub-route). Awaiting owner direction on whether
-// to retire this row, add a page.tsx at /create/product, or redirect
-// to /create/product/category. Until then it stays so the removal is
-// strictly scoped to the owner-explicit "Upload video" + "Upload music".
+// Owner directive 2026-11-09 · "List a product" row now routes to
+// /create/product/category (the real first step of the sealed product-
+// creation journey · category selection). Previously pointed at
+// /create/product which has no page.tsx (only its /category subroute).
 const CREATE_ROWS: ReadonlyArray<MenuRow> = [
   {
     key: "create-product",
     label: "List a product",
     subtitle: "Shoppable card · optional video background",
-    href: "/nex-native/create/product",
+    href: "/nex-native/create/product/category",
     locked: false,
   },
 ];
@@ -303,24 +301,23 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
     href: "/nex-native/store",
     locked: false,
   },
-  // Owner directive 2026-11-05 · Discovery moves OUT of the chat header
-  // (freeing room for a less cramped [ bell · + ] right-nav) and INTO
-  // the right-side drawer where it belongs with other app-level
-  // destinations.
+  // Owner directive 2026-11-09 · NEX Live Feed retired · Discovery row
+  // now routes to /nex-native/directory (the current discovery surface
+  // for NEX businesses + products). Preserves user intent · they tapped
+  // "Discovery" to discover things · directory IS NEX's discovery.
   //
-  // Owner directive 2026-11-05 iter 22 · Discovery row now routes
-  // DIRECTLY to /nex-native/nex-feed · the 6-tile overlay collapsed to
-  // a single NEX Live destination (Music / Food / Stays / Trades
-  // merged into the one feed). Content search moved to the new
-  // magnifier dropdown in the chat header.
-  //
-  // Owner directive 2026-11-05 iter 26 · self-hides when
-  // currentSurface === "live" because the viewer is already there.
+  // Historical comments retained for context:
+  // · 2026-11-05 · Discovery moved from chat header into the drawer.
+  // · 2026-11-05 iter 22 · Previously routed to /nex-feed (NEX Live
+  //   Feed · music · food · stays · trades merged) · now retired.
+  // · 2026-11-05 iter 26 · Self-hides when currentSurface === "live"
+  //   because the viewer is already there (kept for layout parity
+  //   even though live surface itself is retired).
   {
     key: "discovery",
     label: "Discovery",
-    subtitle: "Explore the NEX Live feed",
-    href: "/nex-native/nex-feed",
+    subtitle: "Discover NEX businesses and products",
+    href: "/nex-native/directory",
     locked: false,
   },
 ];
