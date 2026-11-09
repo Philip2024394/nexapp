@@ -2,20 +2,24 @@
 
 // src/app/nex-native/nex-1/_client.tsx
 //
-// NEX 1 support-chat client · owner-sealed 2026-11-10 revision 4.
+// NEX 1 support-chat client · owner-sealed 2026-11-10 revision 5.
 //
-// This revision adds:
-//   · NEX brand logo sits OVER the top-left corner of each agent bubble
-//     (badge / tab position, not beside).
-//   · Consistent bubble widths · both user + agent cap at 78% so neither
-//     stretches full-width or reads lopsided against the other.
-//   · Send time rendered at the lower-right corner of every bubble.
-//   · Swipe-to-delete · each bubble becomes draggable on touch; drag
-//     left > 80px deletes the message from local state. (Welcome +
-//     auto-reply are permanent · they cannot be swiped away.)
+// This revision wires the chat to the server-backed ticket service
+// (migration 315). Messages persist in nex.support_message · admin
+// replies arrive via a 15-second poll. First-message auto-reply is
+// written server-side by postUserMessageAction when a new ticket is
+// created. Swipe-to-delete is now a local-view affordance only (does
+// not DELETE server rows) · the user cannot recall an already-sent
+// support message once it's in HQ.
 
 import * as React from "react";
 import Image from "next/image";
+import {
+  loadMyTicketAction,
+  postUserMessageAction,
+  type LoadMyTicketResult,
+} from "@/lib/nex-native/support/actions";
+import type { SupportMessage } from "@/lib/nex-native/support/ticket-service";
 
 const PALETTE = {
   agentBubbleBg: "rgba(10, 28, 20, 0.9)",
@@ -37,18 +41,10 @@ const WELCOME_BODY: ReadonlyArray<string> = [
   "Please note: NEX Support can assist with app-related matters but cannot resolve payment-provider issues. For payment processing, declined transactions, refunds or billing enquiries, please contact your payment provider directly.",
 ];
 
-interface UserMessage {
-  readonly id: string;
-  readonly body: string;
-  readonly sentAt: string;
-  readonly from: "user" | "agent-auto";
-}
-
-const AUTO_REPLY =
-  "Thanks for reaching out. Please describe your question or issue in detail. A NEX team member will reply soon — current response time is within 16 hours.";
-
 const BUBBLE_MAX_WIDTH = "78%";
-const SWIPE_DELETE_THRESHOLD_PX = 80;
+const SWIPE_HIDE_THRESHOLD_PX = 80;
+const ADMIN_POLL_INTERVAL_MS = 15_000;
+const TICKET_NUMBER_STORAGE_KEY = "nex-1-ticket-number";
 
 function formatTime(iso: string): string {
   try {
@@ -60,59 +56,115 @@ function formatTime(iso: string): string {
 }
 
 export function Nex1ChatClient(): React.ReactElement {
+  const [state, setState] = React.useState<LoadMyTicketResult | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
   const [draft, setDraft] = React.useState("");
-  const [messages, setMessages] = React.useState<UserMessage[]>([]);
+  const [busy, setBusy] = React.useState(false);
+  // Locally-hidden messages (swipe-to-hide client gesture · server row
+  // is NOT deleted).
+  const [hiddenIds, setHiddenIds] = React.useState<Set<string>>(() => new Set());
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
-  // Owner directive 2026-11-09 revision 3 · "keypad not working" fix.
-  // Pop the OS keypad on mount by focusing the composer input right
-  // after hydration. Short delay beats mobile Safari focus blockers.
+  // Initial load + auto-focus composer.
   React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const res = await loadMyTicketAction();
+      if (cancelled) return;
+      if (res.ok) {
+        setState(res.value);
+        if (res.value.ticket) {
+          try {
+            window.localStorage.setItem(
+              TICKET_NUMBER_STORAGE_KEY,
+              res.value.ticket.ticketNumber,
+            );
+          } catch {
+            /* silent */
+          }
+        }
+      } else if (res.reason === "not_authenticated") {
+        setError("Sign in to open a support ticket.");
+      } else {
+        setError("Could not load support. Please try again.");
+      }
+      setLoading(false);
+    })();
     const t = window.setTimeout(() => inputRef.current?.focus(), 80);
-    return () => window.clearTimeout(t);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
   }, []);
 
-  // Auto-scroll to the newest message when the list grows.
+  // Poll for admin replies every 15s while the chat is mounted.
+  React.useEffect(() => {
+    const interval = window.setInterval(async () => {
+      if (document.hidden) return;
+      const res = await loadMyTicketAction();
+      if (res.ok) {
+        setState(res.value);
+        if (res.value.ticket) {
+          try {
+            window.localStorage.setItem(
+              TICKET_NUMBER_STORAGE_KEY,
+              res.value.ticket.ticketNumber,
+            );
+          } catch {
+            /* silent */
+          }
+        }
+      }
+    }, ADMIN_POLL_INTERVAL_MS);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  // Auto-scroll to newest message on new content.
   React.useEffect(() => {
     if (!scrollRef.current) return;
     scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages.length]);
+  }, [state?.messages.length]);
 
-  const onSubmit = React.useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    const text = draft.trim();
-    if (text.length === 0) return;
-    const nextMsg: UserMessage = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      body: text.slice(0, 2000),
-      sentAt: new Date().toISOString(),
-      from: "user",
-    };
+  const onSubmit = React.useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      const text = draft.trim();
+      if (text.length === 0 || busy) return;
+      setBusy(true);
+      setError(null);
+      try {
+        const res = await postUserMessageAction({ body: text });
+        if (res.ok) {
+          setState(res.value);
+          if (res.value.ticket) {
+            try {
+              window.localStorage.setItem(
+                TICKET_NUMBER_STORAGE_KEY,
+                res.value.ticket.ticketNumber,
+              );
+            } catch {
+              /* silent */
+            }
+          }
+          setDraft("");
+        } else {
+          setError(reasonLabel(res.reason));
+        }
+      } finally {
+        setBusy(false);
+      }
+    },
+    [draft, busy],
+  );
 
-    // Owner directive 2026-11-10 · fire the auto-reply once · after
-    // the user's very first message. Short delay so it reads like a
-    // response rather than a pre-written statement. Guard rail: we
-    // key off "no prior user message" rather than a boolean flag so
-    // the auto-reply doesn't double-fire across HMR or re-renders.
-    const isFirstUserMessage = !hasAnyUserMessage(messages);
-    setMessages((prev) => [...prev, nextMsg]);
-    setDraft("");
+  const visibleMessages = React.useMemo<ReadonlyArray<SupportMessage>>(
+    () => (state?.messages ?? []).filter((m) => !hiddenIds.has(m.messageId)),
+    [state, hiddenIds],
+  );
 
-    if (isFirstUserMessage) {
-      window.setTimeout(() => {
-        const autoMsg: UserMessage = {
-          id: `auto-${Date.now()}`,
-          body: AUTO_REPLY,
-          sentAt: new Date().toISOString(),
-          from: "agent-auto",
-        };
-        setMessages((prev) => [...prev, autoMsg]);
-      }, 650);
-    }
-  }, [draft, messages]);
-
-  const canSend = draft.trim().length > 0;
+  const canSend = draft.trim().length > 0 && !busy;
 
   return (
     <>
@@ -131,20 +183,60 @@ export function Nex1ChatClient(): React.ReactElement {
         }}
       >
         <WelcomeBubble title={WELCOME_TITLE} paragraphs={WELCOME_BODY} />
-        {messages.map((m) =>
-          m.from === "user" ? (
-            <UserBubble
-              key={m.id}
-              body={m.body}
-              sentAt={m.sentAt}
-              onDelete={() =>
-                setMessages((prev) => prev.filter((x) => x.id !== m.id))
-              }
-            />
-          ) : (
-            <AutoReplyBubble key={m.id} body={m.body} sentAt={m.sentAt} />
-          ),
-        )}
+        {loading ? (
+          <div
+            style={{
+              fontSize: 11,
+              color: PALETTE.textMuted,
+              textAlign: "center",
+              padding: "8px 0",
+            }}
+          >
+            Loading your ticket…
+          </div>
+        ) : null}
+        {visibleMessages.map((m) => {
+          if (m.senderKind === "user") {
+            return (
+              <UserBubble
+                key={m.messageId}
+                body={m.body}
+                sentAt={m.sentAt}
+                onHide={() =>
+                  setHiddenIds((prev) => {
+                    const next = new Set(prev);
+                    next.add(m.messageId);
+                    return next;
+                  })
+                }
+              />
+            );
+          }
+          if (m.senderKind === "admin") {
+            return (
+              <AdminBubble key={m.messageId} body={m.body} sentAt={m.sentAt} />
+            );
+          }
+          return (
+            <AutoReplyBubble key={m.messageId} body={m.body} sentAt={m.sentAt} />
+          );
+        })}
+        {error ? (
+          <div
+            role="alert"
+            style={{
+              fontSize: 11.5,
+              color: "#FFB199",
+              background: "rgba(139,0,0,0.3)",
+              border: `1px solid ${PALETTE.danger}`,
+              padding: "8px 10px",
+              borderRadius: 8,
+              alignSelf: "center",
+            }}
+          >
+            {error}
+          </div>
+        ) : null}
       </main>
 
       <form
@@ -169,10 +261,6 @@ export function Nex1ChatClient(): React.ReactElement {
           placeholder="Type a message…"
           aria-label="Message NEX Support"
           maxLength={2000}
-          // Owner directive 2026-11-09 revision 3 · mobile-friendly
-          // keypad hints so iOS / Android pop the full keyboard with
-          // a Send enter key, instead of the previous bare type=text
-          // that some browsers interpret inconsistently.
           inputMode="text"
           enterKeyHint="send"
           autoComplete="off"
@@ -215,25 +303,44 @@ export function Nex1ChatClient(): React.ReactElement {
             opacity: canSend ? 1 : 0.6,
           }}
         >
-          Send
+          {busy ? "…" : "Send"}
         </button>
       </form>
     </>
   );
 }
 
+function reasonLabel(reason: string): string {
+  switch (reason) {
+    case "not_authenticated":
+      return "Sign in to send a support message.";
+    case "muted":
+      return "This ticket has been muted by NEX Support.";
+    case "closed":
+      return "This ticket is closed. Start a new session to continue.";
+    case "invalid_input":
+      return "Please enter a message (up to 4000 characters).";
+    case "db_unavailable":
+      return "Support is unavailable right now. Please try again shortly.";
+    default:
+      return "Could not send message. Please try again.";
+  }
+}
+
 // -----------------------------------------------------------------------------
-// Bubble primitives · logo-over-corner + width cap + timestamp + swipe
+// Bubble primitives
 // -----------------------------------------------------------------------------
 
 function AgentBubble({
   children,
   sentAt,
   dataAttr,
+  label,
 }: {
   readonly children: React.ReactNode;
   readonly sentAt?: string;
   readonly dataAttr: string;
+  readonly label?: string;
 }): React.ReactElement {
   return (
     <div
@@ -244,9 +351,6 @@ function AgentBubble({
         paddingTop: 12,
       }}
     >
-      {/* Logo sits OVER the top-left corner of the bubble per owner
-          directive 2026-11-10. Elevated with a dark backdrop so the
-          silver + orange wordmark stays legible on light bubble fills. */}
       <span
         style={{
           position: "absolute",
@@ -287,6 +391,20 @@ function AgentBubble({
           boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
         }}
       >
+        {label ? (
+          <div
+            style={{
+              fontSize: 9,
+              fontWeight: 800,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: PALETTE.accent,
+              marginBottom: 4,
+            }}
+          >
+            {label}
+          </div>
+        ) : null}
         {children}
         {sentAt ? <BubbleTimestamp iso={sentAt} tone="light" /> : null}
       </div>
@@ -332,19 +450,7 @@ function WelcomeBubble({
   readonly paragraphs: ReadonlyArray<string>;
 }): React.ReactElement {
   return (
-    <AgentBubble dataAttr="welcome">
-      <div
-        style={{
-          fontSize: 10,
-          fontWeight: 800,
-          letterSpacing: "0.14em",
-          textTransform: "uppercase",
-          color: PALETTE.accent,
-          marginBottom: 8,
-        }}
-      >
-        NEX Support
-      </div>
+    <AgentBubble dataAttr="welcome" label="NEX Support">
       <h2
         style={{
           margin: "0 0 8px",
@@ -373,13 +479,6 @@ function WelcomeBubble({
   );
 }
 
-function hasAnyUserMessage(messages: ReadonlyArray<UserMessage>): boolean {
-  for (const m of messages) {
-    if (m.from === "user") return true;
-  }
-  return false;
-}
-
 function AutoReplyBubble({
   body,
   sentAt,
@@ -388,42 +487,46 @@ function AutoReplyBubble({
   readonly sentAt: string;
 }): React.ReactElement {
   return (
-    <AgentBubble sentAt={sentAt} dataAttr="auto-reply">
-      <div
-        style={{
-          fontSize: 9,
-          fontWeight: 800,
-          letterSpacing: "0.14em",
-          textTransform: "uppercase",
-          color: PALETTE.accent,
-          marginBottom: 4,
-        }}
-      >
-        NEX Support · auto reply
-      </div>
+    <AgentBubble
+      sentAt={sentAt}
+      dataAttr="auto-reply"
+      label="NEX Support · auto reply"
+    >
       <div style={{ fontSize: 12.5, lineHeight: 1.55 }}>{body}</div>
     </AgentBubble>
   );
 }
 
-// Swipe-to-delete user bubble · pointer events track horizontal drag;
-// release past -80px triggers onDelete. Reverts to zero on short drags.
-function UserBubble({
+function AdminBubble({
   body,
   sentAt,
-  onDelete,
 }: {
   readonly body: string;
   readonly sentAt: string;
-  readonly onDelete: () => void;
+}): React.ReactElement {
+  return (
+    <AgentBubble sentAt={sentAt} dataAttr="admin" label="NEX Support">
+      <div style={{ fontSize: 13, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
+        {body}
+      </div>
+    </AgentBubble>
+  );
+}
+
+function UserBubble({
+  body,
+  sentAt,
+  onHide,
+}: {
+  readonly body: string;
+  readonly sentAt: string;
+  readonly onHide: () => void;
 }): React.ReactElement {
   const [dx, setDx] = React.useState(0);
   const startX = React.useRef<number | null>(null);
-  const pointerId = React.useRef<number | null>(null);
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     startX.current = e.clientX;
-    pointerId.current = e.pointerId;
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
   };
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -434,14 +537,13 @@ function UserBubble({
   const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     const d = dx;
     startX.current = null;
-    pointerId.current = null;
     try {
       (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
     } catch {
       /* no-op */
     }
-    if (d <= -SWIPE_DELETE_THRESHOLD_PX) {
-      onDelete();
+    if (d <= -SWIPE_HIDE_THRESHOLD_PX) {
+      onHide();
     } else {
       setDx(0);
     }
@@ -455,7 +557,6 @@ function UserBubble({
         marginLeft: "auto",
       }}
     >
-      {/* Red delete track revealed as the bubble slides left. */}
       <div
         aria-hidden
         style={{
@@ -475,7 +576,7 @@ function UserBubble({
           transition: dx === 0 ? "opacity 200ms ease" : "none",
         }}
       >
-        Delete
+        Hide
       </div>
       <div
         data-nex-1-bubble="user"
