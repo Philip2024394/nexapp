@@ -33,7 +33,10 @@ export const runtime = "nodejs";
 
 const DEST_SIGNED_IN = "/nex-native/contacts";
 const DEST_SIGNED_OUT = "/nex-native/free-chat?show-themes=1";
-const SPLASH_SECONDS = 3;
+// Owner directive 2026-11-09 · splash auto-divert tightened from 3s
+// to 2s. Activated-emergency users have this cancelled client-side
+// (see _splash-client.tsx which removes the meta refresh on mount).
+const SPLASH_SECONDS = 2;
 
 export default async function Page(): Promise<React.JSX.Element> {
   const session = await resolveNexAppSessionFromContext();

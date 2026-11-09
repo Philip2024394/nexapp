@@ -51,7 +51,11 @@ import { signOutAction } from "@/app/nex-native/_actions";
 // existing primitive rather than inventing a second lock shape
 // keeps the visual language consistent with SettingsHeaderSlot.
 import { LockedSettingsIcon } from "@/components/nex-native/account-gate/LockedSettingsIcon";
-import { hasActivatedEmergency } from "@/lib/nex-native/emergency/emergency-activation";
+// Owner directive 2026-11-09 · Emergency Help row removed from drawer.
+// Emergency UX moved to the splash page (/nex-native) where activated
+// users see a round HELP button + countdown-overlay. Non-activated
+// users see nothing and auto-divert in 2 seconds. See
+// src/app/nex-native/_splash-emergency-ui-client.tsx.
 // Owner directive 2026-11-01 · Batch D+ · auto-gate Creator Support row
 // by qualification. The type is client-safe (lives in creator-badges-
 // common.ts, no server-only Supabase chain pulled into the bundle).
@@ -820,16 +824,11 @@ function DrawerBody({
         drawerVisitor={drawerVisitor ?? null}
       />
 
-      {/* Owner directive 2026-10-20 · the Emergency Help row is a
-          dark-red CTA at the top of the drawer so safety help is
-          one tap away from any surface that mounts the drawer. The
-          Emergency flow is gated by `isEmergencyLiveMode()` at the
-          service layer (defaults OFF · deliveries are simulated),
-          so a guest can still land on the honest "simulated" surface
-          and discover trusted-contacts, help copy and the pilot
-          banner without first signing in. Routes to the sealed
-          /nex-native/emergency-help page.tsx. */}
-      <EmergencyHelpRow />
+      {/* Owner directive 2026-11-09 · Emergency Help row removed from
+          the drawer. The emergency UX now lives on the splash page
+          (round HELP button top-right for activated users · countdown
+          overlay · Enter-NEX bottom button). Non-activated users see
+          nothing emergency-related and auto-divert in 2 seconds. */}
 
       {/* Owner directive 2026-10-18 · guest viewers see a 3D lock
           on every account-gated row. The row stays tappable · tap
@@ -1117,94 +1116,6 @@ function IdentityBar({
   );
 }
 
-// ─── Emergency Help row · dark-red CTA at top of drawer ─────────────
-//
-// Owner directive 2026-10-20 · a standalone row above every section
-// so safety help is one tap away from any surface that mounts the
-// drawer. Dark red (not NEX's bright danger) · reads as "serious"
-// not "accent". Routes to the sealed /nex-native/emergency-help
-// which carries its own simulated/pilot framing.
-
-function EmergencyHelpRow() {
-  // Owner directive 2026-10-24 (Phase 0) · first-time consent gate.
-  //   · Not yet activated on this device → redirect to the activation
-  //     page with `?returnTo=/nex-native/emergency-help` so the user
-  //     lands on the countdown surface after consenting.
-  //   · Already activated → the Link navigates straight to
-  //     `/nex-native/emergency-help` (the existing countdown surface
-  //     is unchanged).
-  //   · Modifier-click (new tab / middle-click) bypasses the gate so
-  //     developers can still open the countdown surface directly.
-  //   · The activation flag is device-local prototype only (per
-  //     `src/lib/nex-native/emergency/emergency-activation.ts`) · do
-  //     NOT replace with server-side consent without separate
-  //     authorisation.
-  // Owner directive 2026-10-24 · the href on the <Link> MUST stay a
-  // literal string so the sealed regression anchor at
-  // `__tests__/emergency-row.test.ts` ("row routes to
-  // /nex-native/emergency-help") keeps matching the source. The
-  // activate-redirect target is kept as a local const only because
-  // it is used solely inside the click handler.
-  const ACTIVATE_HREF = "/nex-native/emergency-help/activate";
-
-  const handleClick = React.useCallback(
-    (e: React.MouseEvent<HTMLAnchorElement>) => {
-      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-      if (e.button !== 0) return;
-      if (hasActivatedEmergency()) return;
-      e.preventDefault();
-      const target = `${ACTIVATE_HREF}?returnTo=${encodeURIComponent("/nex-native/emergency-help")}`;
-      if (typeof window !== "undefined") {
-        window.location.assign(target);
-      }
-    },
-    [],
-  );
-
-  return (
-    <Link
-      href="/nex-native/emergency-help"
-      data-nex-control-drawer-emergency
-      aria-label="Emergency Help · simulated delivery · opens the help surface"
-      onClick={handleClick}
-      style={emergencyRowStyle}
-    >
-      <span aria-hidden style={emergencyIconStyle}>
-        <EmergencyBellIcon />
-      </span>
-      <span style={emergencyTextColumnStyle}>
-        <span style={emergencyLabelStyle}>Emergency Help</span>
-        <span style={emergencySubtitleStyle}>
-          Simulated · pilot
-        </span>
-      </span>
-    </Link>
-  );
-}
-
-function EmergencyBellIcon() {
-  // Simple exclamation-triangle · universally reads as "warning / help".
-  // Monochrome so it inherits the row's text colour for high contrast
-  // against the dark-red background.
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2.2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M12 3 L22 20 L2 20 Z" />
-      <path d="M12 9 L12 14" />
-      <circle cx="12" cy="17.4" r="0.9" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
 // ─── Section group · title + rows ──────────────────────────────────
 
 function SectionGroup({
@@ -1419,8 +1330,10 @@ const DANGER_INK = "#1A0505";
 // is a dark red (not bright) so it reads as "serious / use only when
 // needed" rather than a cosmetic accent. Border uses a brighter red
 // ring so the row still has visual presence against the drawer navy.
-const EMERGENCY_DARK_RED = "#8B0000";
-const EMERGENCY_DARK_RED_RING = "rgba(255, 77, 79, 0.65)";
+// EMERGENCY_DARK_RED + EMERGENCY_DARK_RED_RING constants retired
+// with the Emergency Help row (owner directive 2026-11-09). Splash
+// emergency UI defines its own dark-red palette locally so the drawer
+// bundle doesn't keep unused colour tokens around.
 
 const triggerButtonStyle: React.CSSProperties = {
   width: 36,
@@ -1549,56 +1462,9 @@ const drawerBodyStyle: React.CSSProperties = {
 // together with the QuickAccessRow component · Live / Vault / Socials
 // chips are no longer surfaced in the drawer.
 
-// Owner directive 2026-10-20 · dark red Emergency Help CTA at the
-// top of the drawer. Dark red fill (not NEX's bright DANGER) so the
-// row visibly reads as "serious use" rather than cosmetic accent.
-// 44px min-height preserves the shared touch-target floor used by
-// every other drawer row.
-const emergencyRowStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-  minHeight: 48,
-  padding: "10px 12px",
-  marginBottom: 6,
-  background: EMERGENCY_DARK_RED,
-  border: `1px solid ${EMERGENCY_DARK_RED_RING}`,
-  borderRadius: 12,
-  color: TEXT,
-  textDecoration: "none",
-  boxShadow: `0 1px 0 rgba(255,255,255,0.06) inset, 0 10px 24px -16px ${EMERGENCY_DARK_RED}`,
-};
-const emergencyIconStyle: React.CSSProperties = {
-  flexShrink: 0,
-  width: 32,
-  height: 32,
-  display: "grid",
-  placeItems: "center",
-  color: TEXT,
-  borderRadius: 8,
-  background: "rgba(0,0,0,0.25)",
-  border: "1px solid rgba(255,255,255,0.14)",
-};
-const emergencyTextColumnStyle: React.CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 2,
-  minWidth: 0,
-  flex: 1,
-};
-const emergencyLabelStyle: React.CSSProperties = {
-  color: TEXT,
-  fontSize: 14,
-  fontWeight: 700,
-  letterSpacing: 0.2,
-};
-const emergencySubtitleStyle: React.CSSProperties = {
-  color: "rgba(255,255,255,0.75)",
-  fontSize: 11,
-  fontWeight: 600,
-  letterSpacing: 0.3,
-  textTransform: "uppercase",
-};
+// emergency*Style constants retired with the Emergency Help row
+// (owner directive 2026-11-09). See splash emergency UI for the
+// new styling.
 
 // Owner directive 2026-10-18 · the identity-bar container picks up
 // the drawer's theme color. Background drops from solid PANEL to
