@@ -247,21 +247,18 @@ const CONTACTS_HREF: string =
 // relevant ordering (Create is the primary action on NEX Live, while
 // still useful everywhere else).
 
+// Owner directive 2026-11-09 · "Upload video" + "Upload music" removed
+// because NEX Live feed is retired · neither destination had a page.tsx
+// anyway, so the rows pointed at 404. The sealed CREATE section now
+// only surfaces product-listing.
+//
+// "List a product" row is retained here but FLAGGED · `/nex-native/
+// create/product` has no own page.tsx (only `/create/product/category/
+// page.tsx` exists as a sub-route). Awaiting owner direction on whether
+// to retire this row, add a page.tsx at /create/product, or redirect
+// to /create/product/category. Until then it stays so the removal is
+// strictly scoped to the owner-explicit "Upload video" + "Upload music".
 const CREATE_ROWS: ReadonlyArray<MenuRow> = [
-  {
-    key: "upload-video",
-    label: "Upload video",
-    subtitle: "Post a short video to NEX Live",
-    href: "/nex-native/create/upload-video",
-    locked: false,
-  },
-  {
-    key: "upload-music",
-    label: "Upload music",
-    subtitle: "Share a track to NEX Live",
-    href: "/nex-native/create/upload-music",
-    locked: false,
-  },
   {
     key: "create-product",
     label: "List a product",
