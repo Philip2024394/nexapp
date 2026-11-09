@@ -1,0 +1,41 @@
+{
+  "ci": {
+    "collect": {
+      "url": [
+        "http://localhost:3008/nex-native",
+        "http://localhost:3008/nex-native/ireland-entry",
+        "http://localhost:3008/nex-native/sign-in",
+        "http://localhost:3008/nex-native/directory",
+        "http://localhost:3008/nex-native/chat-themes-library",
+        "http://localhost:3008/nex-native/privacy",
+        "http://localhost:3008/nex-native/terms"
+      ],
+      "numberOfRuns": 2,
+      "settings": {
+        "preset": "mobile",
+        "chromeFlags": "--no-sandbox --disable-gpu --headless"
+      }
+    },
+    "assert": {
+      "preset": "lighthouse:recommended",
+      "assertions": {
+        "categories:performance": ["warn", { "minScore": 0.80 }],
+        "categories:accessibility": ["error", { "minScore": 0.90 }],
+        "categories:best-practices": ["warn", { "minScore": 0.90 }],
+        "categories:seo": ["warn", { "minScore": 0.85 }],
+        "largest-contentful-paint": ["warn", { "maxNumericValue": 2500 }],
+        "cumulative-layout-shift": ["warn", { "maxNumericValue": 0.1 }],
+        "interactive": ["warn", { "maxNumericValue": 3500 }],
+        "uses-http2": "off",
+        "csp-xss": "off",
+        "unused-javascript": "off",
+        "unused-css-rules": "off",
+        "legacy-javascript": "off",
+        "errors-in-console": "off"
+      }
+    },
+    "upload": {
+      "target": "temporary-public-storage"
+    }
+  }
+}

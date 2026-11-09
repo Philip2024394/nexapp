@@ -1,0 +1,94 @@
+# .github/workflows/lighthouse-ci.yml
+#
+# NEX Lighthouse CI · worldwide Core Web Vitals gate.
+# Owner-authorised 2026-11-09 under the quality-gates parallel build.
+# -----------------------------------------------------------------------------
+# What it does:
+#   1. Installs deps (npm ci)
+#   2. Builds NEX (next build)
+#   3. Starts the production server (next start -p 3008)
+#   4. Runs Lighthouse CI against 7 public worldwide surfaces (mobile preset)
+#   5. Asserts the Performance + Accessibility + Best-Practices + SEO
+#      thresholds from .lighthouserc.json
+#   6. Uploads report to temporary-public-storage (24h retention)
+#
+# Trigger strategy:
+#   · workflow_dispatch · owner-manual trigger while baseline is being
+#     established. The thresholds in .lighthouserc.json are a FIRST pass
+#     and will need tuning once we've seen real numbers.
+#   · After baseline is established, owner can add `pull_request` trigger
+#     to make this a deploy-blocking gate.
+#
+# Free-tier posture:
+#   · 1 runner · ubuntu-latest (free for public repos · 2000 min/mo private)
+#   · 2 runs per URL · 7 URLs = 14 Lighthouse runs · ~4-6 min total
+#   · No paid Lighthouse CI server · uses temporary-public-storage
+
+name: Lighthouse CI
+
+on:
+  workflow_dispatch:
+  # Uncomment the next three lines once baseline is established:
+  # pull_request:
+  #   branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse:
+    name: Lighthouse CI · worldwide public surfaces
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build NEX
+        run: npm run build
+        env:
+          # Build-time envs · owner must populate GH Secrets for these to
+          # exist in the CI context. Lighthouse runs against the static
+          # build output so missing runtime secrets degrade specific
+          # pages but do not fail the build.
+          NEXT_TELEMETRY_DISABLED: '1'
+
+      - name: Start NEX server (background)
+        run: |
+          npm run start &
+          echo $! > nex.pid
+          # Wait for server to be reachable
+          for i in {1..30}; do
+            if curl -sf http://localhost:3008/nex-native > /dev/null; then
+              echo "NEX server up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "NEX server failed to start"
+          exit 1
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli@0.14.x
+
+      - name: Run Lighthouse CI
+        run: lhci autorun --config=.lighthouserc.json
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+      - name: Stop NEX server
+        if: always()
+        run: |
+          if [ -f nex.pid ]; then
+            kill $(cat nex.pid) 2>/dev/null || true
+          fi
