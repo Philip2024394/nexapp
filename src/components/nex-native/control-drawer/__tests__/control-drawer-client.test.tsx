@@ -206,10 +206,21 @@ describe("ControlDrawer · architectural guards", () => {
     // Owner directive 2026-11-05 · global drawer unification · the
     // YOUR_BUSINESS rows + BUSINESS_VAULT row are REMOVED from the
     // drawer surface · only YOUR_NEX + PREFERENCES remain.
+    // Owner directive 2026-11-05 iter 22 · "discovery" row added to
+    // YOUR_NEX (replaced Live Feed subtitle on 2026-11-09 after NEX
+    // Live Feed was retired · href now routes to /directory).
+    // Owner directive 2026-11-07 · "nex-store" row added to YOUR_NEX
+    // between chat-appearance and discovery · dedicated place to
+    // discover + purchase NEX's own optional extras (Vault · themes).
+    // This guard synced to the sealed 5-row state on 2026-11-09 by
+    // Claude during audit remediation · prior 3-row assertion lagged
+    // the sealed directives.
     expect(__internal.YOUR_NEX_ROWS.map((r) => r.key)).toEqual([
       "profile",
       "chats-contacts",
       "chat-appearance",
+      "nex-store",
+      "discovery",
     ]);
     expect(__internal.PREFERENCES_ROWS.map((r) => r.key)).toEqual([
       "help",
