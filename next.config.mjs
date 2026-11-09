@@ -51,6 +51,35 @@ const nextConfig = {
     ];
   },
   async headers() {
+    // Owner-authorised 2026-11-09 under ops-gates build · Content Security
+    // Policy added in REPORT-ONLY mode. Does not block anything · the browser
+    // reports violations to the configured report-uri and we observe them.
+    // Once a 2-week observation window is clean, owner flips to enforce.
+    //
+    // Allow-list rationale:
+    //   · self            · base
+    //   · unsafe-inline   · Next.js hydration + sealed phone-frame inline styles
+    //   · https:          · trusted CDN images + external hosts (Supabase storage,
+    //                        ImageKit) — explicit hostnames preferred once CSP
+    //                        enforcement starts
+    //   · wss:            · Supabase Realtime + future signalling WebSocket
+    //   · blob:           · WebCrypto exports + attachment thumbnails on device
+    //   · data:           · inline SVG + small data-URL images
+    const cspReportOnly = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https://ijvqdvsvwtwxzcqmoqit.supabase.co https://ik.imagekit.io",
+      "font-src 'self' data:",
+      "connect-src 'self' https://ijvqdvsvwtwxzcqmoqit.supabase.co wss://ijvqdvsvwtwxzcqmoqit.supabase.co https://api.stripe.com https://*.ingest.sentry.io",
+      "frame-src 'self' https://js.stripe.com https://checkout.stripe.com",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self' https://checkout.stripe.com",
+      "object-src 'none'",
+      "upgrade-insecure-requests",
+    ].join("; ");
+
     const common = [
       {
         key: "Strict-Transport-Security",
@@ -63,6 +92,10 @@ const nextConfig = {
         value: "camera=(self), microphone=(self), geolocation=(self), interest-cohort=()",
       },
       { key: "X-Frame-Options", value: "SAMEORIGIN" },
+      {
+        key: "Content-Security-Policy-Report-Only",
+        value: cspReportOnly,
+      },
     ];
     return [{ source: "/(.*)", headers: common }];
   },
