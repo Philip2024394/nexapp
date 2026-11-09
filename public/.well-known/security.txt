@@ -1,0 +1,17 @@
+# NEX responsible-disclosure contact
+# RFC 9116 security.txt
+#
+# If you have found a security vulnerability in NEX, please report it to
+# the contact below. We aim to acknowledge valid reports within 72 hours.
+# Please do not publicly disclose until we have confirmed a mitigation is
+# in place.
+
+Contact: mailto:security@nex.app
+Expires: 2027-11-09T00:00:00Z
+Preferred-Languages: en
+Canonical: https://nex.app/.well-known/security.txt
+
+# Values above are PENDING confirmation of the six owner-supplied facts
+# (canonical support email and public domain). When confirmed the Contact
+# and Canonical lines must be updated · and this file re-signed if a PGP
+# key is provided.
