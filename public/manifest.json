@@ -1,0 +1,34 @@
+{
+  "name": "NEX",
+  "short_name": "NEX",
+  "description": "NEX · chat · connect · explore",
+  "start_url": "/nex-native",
+  "scope": "/nex-native",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#061021",
+  "theme_color": "#061021",
+  "lang": "en",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["social", "lifestyle", "communication"]
+}
