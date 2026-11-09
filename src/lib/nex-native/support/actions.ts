@@ -12,10 +12,11 @@
 
 "use server";
 
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import {
   createOrResumeTicket,
+  deleteTicket,
   getMessages,
   getMyActiveTicket,
   getTicketForAdmin,
@@ -24,13 +25,14 @@ import {
   postAdminReply,
   postAutoReply,
   postUserMessage,
+  resolveTicket,
   setTicketMuted,
   type SupportMessage,
   type SupportTicket,
 } from "./ticket-service";
 
 const AUTO_REPLY_BODY =
-  "Thanks for reaching out. Please describe your question or issue in detail. A NEX team member will reply soon — current response time is within 16 hours.";
+  "Thank you for contacting NEX Support. Please provide as much detail as possible about your question or issue so we can assist you effectively. A member of our team will get back to you as soon as possible, with a current response time of within 16 hours.";
 
 export type SupportActionReason =
   | "not_authenticated"
@@ -68,7 +70,11 @@ async function resolveActor(): Promise<
   | { ok: false }
 > {
   try {
-    const session = await resolveNexAppSessionFromContext();
+    // Owner directive 2026-11-10 · use the dev-override-aware session
+    // resolver so dev impersonation flows (99901 in sandbox) resolve
+    // correctly. Production path is unchanged · in prod this resolver
+    // only honours real sealed sessions.
+    const session = await resolveSessionWithDevOverride();
     if (!session) return { ok: false };
     const { data: acc } = await nexSupabaseAdmin
       .from("nex_account")
@@ -214,6 +220,35 @@ export async function adminSetMutedAction(args: {
   try {
     const ticket = await setTicketMuted(args.ticketId, args.muted);
     return ok(ticket);
+  } catch (e) {
+    return fail(mapError(e));
+  }
+}
+
+export async function adminResolveTicketAction(args: {
+  readonly ticketId: string;
+}): Promise<SupportActionResult<AdminTicketDetail>> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return fail(guard.reason);
+  try {
+    await resolveTicket(args.ticketId);
+    const ticket = await getTicketForAdmin(args.ticketId);
+    if (!ticket) return fail("not_found");
+    const messages = await getMessages(ticket.ticketId);
+    return ok({ ticket, messages });
+  } catch (e) {
+    return fail(mapError(e));
+  }
+}
+
+export async function adminDeleteTicketAction(args: {
+  readonly ticketId: string;
+}): Promise<SupportActionResult<null>> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return fail(guard.reason);
+  try {
+    await deleteTicket(args.ticketId);
+    return ok(null);
   } catch (e) {
     return fail(mapError(e));
   }

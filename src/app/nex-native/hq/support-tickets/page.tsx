@@ -12,7 +12,7 @@
 
 import type * as React from "react";
 import Link from "next/link";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import {
   isAdmin,
   listTicketsForAdmin,
@@ -35,7 +35,7 @@ const PALETTE = {
 };
 
 export default async function HqSupportTicketsPage(): Promise<React.JSX.Element> {
-  const session = await resolveNexAppSessionFromContext();
+  const session = await resolveSessionWithDevOverride();
   const signedIn = session !== null;
   const admin = signedIn ? await isAdmin(session!.account.id) : false;
 

@@ -13,9 +13,11 @@
 
 import * as React from "react";
 import {
+  adminDeleteTicketAction,
   adminGetTicketAction,
   adminListTicketsAction,
   adminPostReplyAction,
+  adminResolveTicketAction,
   adminSetMutedAction,
   type AdminTicketDetail,
 } from "@/lib/nex-native/support/actions";
@@ -146,6 +148,46 @@ export function HqSupportTicketsClient({
       setBusy(false);
     }
   }, [selectedId, detail]);
+
+  const onResolve = React.useCallback(async () => {
+    if (!selectedId) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await adminResolveTicketAction({ ticketId: selectedId });
+      if (res.ok) {
+        setDetail(res.value);
+        setTickets((prev) =>
+          prev.map((t) => (t.ticketId === selectedId ? res.value.ticket : t)),
+        );
+      } else {
+        setError(reasonLabel(res.reason));
+      }
+    } finally {
+      setBusy(false);
+    }
+  }, [selectedId]);
+
+  const onDelete = React.useCallback(async () => {
+    if (!selectedId) return;
+    if (!window.confirm(
+      "Delete this ticket and all its messages? This cannot be undone.",
+    )) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await adminDeleteTicketAction({ ticketId: selectedId });
+      if (res.ok) {
+        setTickets((prev) => prev.filter((t) => t.ticketId !== selectedId));
+        setSelectedId(null);
+        setDetail(null);
+      } else {
+        setError(reasonLabel(res.reason));
+      }
+    } finally {
+      setBusy(false);
+    }
+  }, [selectedId]);
 
   return (
     <div
@@ -335,6 +377,8 @@ export function HqSupportTicketsClient({
             onReplyChange={setReply}
             onReply={onReply}
             onToggleMute={onToggleMute}
+            onResolve={onResolve}
+            onDelete={onDelete}
             busy={busy}
           />
         )}
@@ -364,6 +408,8 @@ function TicketDetail({
   onReplyChange,
   onReply,
   onToggleMute,
+  onResolve,
+  onDelete,
   busy,
 }: {
   readonly detail: AdminTicketDetail;
@@ -371,8 +417,11 @@ function TicketDetail({
   readonly onReplyChange: (v: string) => void;
   readonly onReply: () => void;
   readonly onToggleMute: () => void;
+  readonly onResolve: () => void;
+  readonly onDelete: () => void;
   readonly busy: boolean;
 }): React.ReactElement {
+  const isResolved = detail.ticket.status === "resolved";
   const chatLink = `/nex-native/nex-1`;
   return (
     <>
@@ -445,26 +494,74 @@ function TicketDetail({
             </a>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onToggleMute}
-          disabled={busy}
-          data-nex-hq-ticket-mute-toggle
-          style={{
-            padding: "6px 12px",
-            borderRadius: 999,
-            background: detail.ticket.muted ? PALETTE.danger : "transparent",
-            border: `1.5px solid ${detail.ticket.muted ? PALETTE.danger : PALETTE.cardBorderStrong}`,
-            color: detail.ticket.muted ? "#FFF" : PALETTE.accent,
-            fontSize: 11,
-            fontWeight: 900,
-            letterSpacing: 0.3,
-            cursor: busy ? "not-allowed" : "pointer",
-            textTransform: "uppercase",
-          }}
-        >
-          {detail.ticket.muted ? "Unmute" : "Mute"}
-        </button>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <button
+            type="button"
+            onClick={onToggleMute}
+            disabled={busy}
+            data-nex-hq-ticket-mute-toggle
+            style={{
+              padding: "6px 12px",
+              borderRadius: 999,
+              background: detail.ticket.muted ? PALETTE.danger : "transparent",
+              border: `1.5px solid ${detail.ticket.muted ? PALETTE.danger : PALETTE.cardBorderStrong}`,
+              color: detail.ticket.muted ? "#FFF" : PALETTE.accent,
+              fontSize: 11,
+              fontWeight: 900,
+              letterSpacing: 0.3,
+              cursor: busy ? "not-allowed" : "pointer",
+              textTransform: "uppercase",
+            }}
+          >
+            {detail.ticket.muted ? "Unmute" : "Mute"}
+          </button>
+          <button
+            type="button"
+            onClick={onResolve}
+            disabled={busy || isResolved}
+            data-nex-hq-ticket-resolve
+            title={
+              isResolved
+                ? "Already resolved. User chat clears 1h after the resolve timestamp."
+                : "Mark as resolved · posts system message · user chat clears 1h later"
+            }
+            style={{
+              padding: "6px 12px",
+              borderRadius: 999,
+              background: isResolved ? "rgba(22, 214, 107, 0.2)" : PALETTE.success,
+              border: `1.5px solid ${isResolved ? "rgba(22, 214, 107, 0.4)" : PALETTE.success}`,
+              color: isResolved ? PALETTE.success : "#061710",
+              fontSize: 11,
+              fontWeight: 900,
+              letterSpacing: 0.3,
+              cursor: busy || isResolved ? "not-allowed" : "pointer",
+              textTransform: "uppercase",
+            }}
+          >
+            {isResolved ? "Resolved ✓" : "Resolve"}
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={busy}
+            data-nex-hq-ticket-delete
+            title="Hard delete · removes the ticket + all messages · cannot be undone"
+            style={{
+              padding: "6px 12px",
+              borderRadius: 999,
+              background: "transparent",
+              border: `1.5px solid ${PALETTE.danger}`,
+              color: PALETTE.danger,
+              fontSize: 11,
+              fontWeight: 900,
+              letterSpacing: 0.3,
+              cursor: busy ? "not-allowed" : "pointer",
+              textTransform: "uppercase",
+            }}
+          >
+            Delete
+          </button>
+        </div>
       </header>
 
       <div

@@ -29,15 +29,24 @@ export type SupportTicketStatus =
 export interface SupportTicket {
   readonly ticketId: string;
   readonly ticketNumber: string;
+  /** Short sequential id (mig 316) · displayed as "Ticket #N" in the UI. */
+  readonly sequenceNumber: number;
   readonly requesterAccountId: string;
   readonly requesterCountryIso: string | null;
   readonly status: SupportTicketStatus;
   readonly muted: boolean;
   readonly lastUserMessageAt: string | null;
   readonly lastAdminMessageAt: string | null;
+  /** Set when admin marks the ticket resolved · null otherwise. The
+   *  user-side chat view hides tickets resolved more than 1h ago. */
+  readonly resolvedAt: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
+
+export const USER_SIDE_RESOLVED_GRACE_HOURS = 1;
+const RESOLVED_SYSTEM_MESSAGE =
+  "NEX team has set this ticket to resolved.";
 
 export interface SupportMessage {
   readonly messageId: string;
@@ -51,12 +60,14 @@ export interface SupportMessage {
 const TICKET_COLS = `
   ticket_id,
   ticket_number,
+  sequence_number,
   requester_account_id,
   requester_country_iso,
   status,
   muted,
   last_user_message_at,
   last_admin_message_at,
+  resolved_at,
   created_at,
   updated_at
 `;
@@ -82,9 +93,17 @@ function toIsoOrNull(v: unknown): string | null {
 }
 
 function mapTicket(r: Record<string, unknown>): SupportTicket {
+  const seqRaw = r.sequence_number;
+  const sequenceNumber =
+    typeof seqRaw === "number"
+      ? seqRaw
+      : typeof seqRaw === "string"
+        ? Number.parseInt(seqRaw, 10) || 0
+        : 0;
   return {
     ticketId: String(r.ticket_id),
     ticketNumber: String(r.ticket_number),
+    sequenceNumber,
     requesterAccountId: String(r.requester_account_id),
     requesterCountryIso: r.requester_country_iso === null || r.requester_country_iso === undefined
       ? null
@@ -93,6 +112,7 @@ function mapTicket(r: Record<string, unknown>): SupportTicket {
     muted: !!r.muted,
     lastUserMessageAt: toIsoOrNull(r.last_user_message_at),
     lastAdminMessageAt: toIsoOrNull(r.last_admin_message_at),
+    resolvedAt: toIsoOrNull(r.resolved_at),
     createdAt: toIso(r.created_at),
     updatedAt: toIso(r.updated_at),
   };
@@ -124,7 +144,10 @@ function generateTicketNumber(): string {
 // User-side
 // ============================================================================
 
-/** Get the caller's currently-active ticket (if any). */
+/** Get the caller's currently-active ticket (if any). A ticket is
+ *  "active for the user" when it is not closed AND either not resolved
+ *  or resolved within the last 1 hour (grace window so the user sees
+ *  the "ticket resolved" bubble before the chat clears). */
 export async function getMyActiveTicket(
   accountId: string,
 ): Promise<SupportTicket | null> {
@@ -134,6 +157,9 @@ export async function getMyActiveTicket(
          FROM nex.support_ticket
         WHERE requester_account_id = $1
           AND status <> 'closed'
+          AND (status <> 'resolved'
+               OR resolved_at IS NULL
+               OR resolved_at + INTERVAL '${USER_SIDE_RESOLVED_GRACE_HOURS} hour' > now())
         ORDER BY created_at DESC
         LIMIT 1`,
       [accountId],
@@ -354,6 +380,55 @@ export async function postAdminReply(
   });
   if (result === null) throw new Error("support_ticket.db_unavailable");
   return result;
+}
+
+/** Admin resolves the ticket · posts an auto system message + sets
+ *  status='resolved' + resolved_at=now(). Idempotent · calling on an
+ *  already-resolved ticket is a no-op (does NOT post a second message). */
+export async function resolveTicket(
+  ticketId: string,
+): Promise<SupportTicket> {
+  const result = await withClient(async (client) => {
+    const cur = await client.query(
+      `SELECT status FROM nex.support_ticket WHERE ticket_id = $1`,
+      [ticketId],
+    );
+    if ((cur.rowCount ?? 0) !== 1) throw new Error("support_ticket.not_found");
+    const alreadyResolved =
+      (cur.rows[0] as { status: string }).status === "resolved";
+    if (!alreadyResolved) {
+      await client.query(
+        `INSERT INTO nex.support_message
+           (ticket_id, sender_kind, sender_account_id, body)
+         VALUES ($1, 'auto', NULL, $2)`,
+        [ticketId, RESOLVED_SYSTEM_MESSAGE],
+      );
+    }
+    const r = await client.query(
+      `UPDATE nex.support_ticket
+          SET status = 'resolved',
+              resolved_at = COALESCE(resolved_at, now())
+        WHERE ticket_id = $1
+       RETURNING ${TICKET_COLS}`,
+      [ticketId],
+    );
+    if ((r.rowCount ?? 0) !== 1) throw new Error("support_ticket.not_found");
+    return mapTicket(r.rows[0] as Record<string, unknown>);
+  });
+  if (result === null) throw new Error("support_ticket.db_unavailable");
+  return result;
+}
+
+/** Hard delete the ticket + all its messages. ON DELETE CASCADE on
+ *  nex.support_message handles the message rows. */
+export async function deleteTicket(ticketId: string): Promise<void> {
+  await withClient(async (client) => {
+    await client.query(
+      `DELETE FROM nex.support_ticket WHERE ticket_id = $1`,
+      [ticketId],
+    );
+    return true;
+  });
 }
 
 export async function setTicketMuted(

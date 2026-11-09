@@ -44,7 +44,13 @@ const WELCOME_BODY: ReadonlyArray<string> = [
 const BUBBLE_MAX_WIDTH = "78%";
 const SWIPE_HIDE_THRESHOLD_PX = 80;
 const ADMIN_POLL_INTERVAL_MS = 15_000;
+// Owner directive 2026-11-10 revision 2 · the header subtitle reads a
+// SHORT sequence id (e.g. "#146") written to localStorage key
+// `nex-1-ticket-sequence`. The old `nex-1-ticket-number` key is
+// deprecated but we keep writing it for one release so older cached
+// subtitle components don't go blank.
 const TICKET_NUMBER_STORAGE_KEY = "nex-1-ticket-number";
+const TICKET_SEQ_STORAGE_KEY = "nex-1-ticket-sequence";
 
 function formatTime(iso: string): string {
   try {
@@ -75,16 +81,7 @@ export function Nex1ChatClient(): React.ReactElement {
       if (cancelled) return;
       if (res.ok) {
         setState(res.value);
-        if (res.value.ticket) {
-          try {
-            window.localStorage.setItem(
-              TICKET_NUMBER_STORAGE_KEY,
-              res.value.ticket.ticketNumber,
-            );
-          } catch {
-            /* silent */
-          }
-        }
+        writeTicketIdentity(res.value.ticket);
       } else if (res.reason === "not_authenticated") {
         setError("Sign in to open a support ticket.");
       } else {
@@ -106,16 +103,7 @@ export function Nex1ChatClient(): React.ReactElement {
       const res = await loadMyTicketAction();
       if (res.ok) {
         setState(res.value);
-        if (res.value.ticket) {
-          try {
-            window.localStorage.setItem(
-              TICKET_NUMBER_STORAGE_KEY,
-              res.value.ticket.ticketNumber,
-            );
-          } catch {
-            /* silent */
-          }
-        }
+        writeTicketIdentity(res.value.ticket);
       }
     }, ADMIN_POLL_INTERVAL_MS);
     return () => window.clearInterval(interval);
@@ -138,16 +126,7 @@ export function Nex1ChatClient(): React.ReactElement {
         const res = await postUserMessageAction({ body: text });
         if (res.ok) {
           setState(res.value);
-          if (res.value.ticket) {
-            try {
-              window.localStorage.setItem(
-                TICKET_NUMBER_STORAGE_KEY,
-                res.value.ticket.ticketNumber,
-              );
-            } catch {
-              /* silent */
-            }
-          }
+          writeTicketIdentity(res.value.ticket);
           setDraft("");
         } else {
           setError(reasonLabel(res.reason));
@@ -308,6 +287,24 @@ export function Nex1ChatClient(): React.ReactElement {
       </form>
     </>
   );
+}
+
+function writeTicketIdentity(
+  ticket: LoadMyTicketResult["ticket"],
+): void {
+  if (!ticket) return;
+  try {
+    window.localStorage.setItem(
+      TICKET_NUMBER_STORAGE_KEY,
+      ticket.ticketNumber,
+    );
+    window.localStorage.setItem(
+      TICKET_SEQ_STORAGE_KEY,
+      String(ticket.sequenceNumber),
+    );
+  } catch {
+    /* silent · localStorage unavailable */
+  }
 }
 
 function reasonLabel(reason: string): string {

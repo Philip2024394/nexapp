@@ -2,59 +2,47 @@
 
 // src/app/nex-native/nex-1/_header-subtitle.tsx
 //
-// Owner directive 2026-11-10 · header now shows a ticket number
-// instead of a generic "Support · online" status. Ticket number is
-// client-generated on mount and persisted to localStorage so a
-// mid-flight refresh keeps the same number.
-//
-// Honest scope · the ticket number is LOCAL only. Phase 2 of this
-// workstream wires ticket persistence to a HQ tickets table + admin
-// reply flow. Until then, support tickets are not visible server-side.
+// Owner directive 2026-11-10 revision 2 · header displays the short
+// sequential ticket number (e.g. "Ticket #146") instead of the full
+// NX1-YYYYMMDD-XXXX string. Value is written to localStorage by
+// _client.tsx after the server returns a ticket; this component just
+// reads + displays it. A fresh visit before the chat loads shows
+// "Ticket …" as a placeholder.
 
 import * as React from "react";
 
-const STORAGE_KEY = "nex-1-ticket-number";
-
-function generateTicketNumber(): string {
-  const now = new Date();
-  const yyyy = now.getUTCFullYear().toString();
-  const mm = String(now.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(now.getUTCDate()).padStart(2, "0");
-  // 4 random alphanumeric chars so collisions are unlikely at low volumes.
-  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
-  return `NX1-${yyyy}${mm}${dd}-${rand}`;
-}
+const STORAGE_KEY = "nex-1-ticket-sequence";
 
 export function Nex1HeaderSubtitle(): React.ReactElement {
-  const [ticket, setTicket] = React.useState<string>("");
+  const [seq, setSeq] = React.useState<string>("");
 
   React.useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(STORAGE_KEY);
-      if (saved && saved.length > 0) {
-        setTicket(saved);
-        return;
+    const read = () => {
+      try {
+        const saved = window.localStorage.getItem(STORAGE_KEY);
+        setSeq(saved && saved.length > 0 ? saved : "");
+      } catch {
+        setSeq("");
       }
-      const next = generateTicketNumber();
-      window.localStorage.setItem(STORAGE_KEY, next);
-      setTicket(next);
-    } catch {
-      setTicket(generateTicketNumber());
-    }
+    };
+    read();
+    // Poll briefly so the subtitle updates once the client component
+    // writes the real ticket number after first server load.
+    const interval = window.setInterval(read, 1000);
+    return () => window.clearInterval(interval);
   }, []);
 
   return (
     <span
       data-nex-1-ticket-number
       style={{
-        fontSize: 10,
+        fontSize: 11,
         color: "#B5C3D6",
         letterSpacing: 0.4,
-        fontFamily:
-          "ui-monospace, 'SF Mono', Consolas, 'Liberation Mono', monospace",
+        fontWeight: 700,
       }}
     >
-      Ticket {ticket || "assigning…"}
+      Ticket {seq ? `#${seq}` : "…"}
     </span>
   );
 }
