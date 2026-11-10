@@ -144,26 +144,44 @@ export function getIdentityDesktopBackdrop(identityId: string): string | null {
   return IDENTITY_DESKTOP_BACKDROP[identityId] ?? null;
 }
 
-// Owner directive 2026-11-10 (cycle 5) · Worldwide identity palette.
-// Reuses the HQ-style neutral + emerald foundation (safe defaults) ·
-// emitted on `.nex-native-stage` AFTER the Ireland palette when
-// identity === "worldwide" so these take precedence. Owner will skin
-// this further in a later authorised pass.
+// Owner-sealed 2026-11-10 (cycle 5 approve → cycle 7 refine) ·
+// Worldwide identity palette. DISTINCT from Ireland (emerald + cream)
+// and from HQ (neutral dark). Worldwide uses DEEP TEAL (global ocean)
+// + WARM GOLD (NEX brand anchor) + rich navy surfaces · evoking
+// globality while keeping the NEX gold accent language intact so the
+// app still "feels NEX" regardless of deployment.
+//
+// Emitted on `.nex-native-stage` AFTER the Ireland palette when
+// identity === "worldwide" so these take precedence.
 const WORLDWIDE_PALETTE_OVERRIDES: Record<string, string> = {
-  "--nex-world-primary": "#1F8B4C",            // Emerald (neutral foundation)
-  "--nex-world-secondary": "#0F766E",          // Teal
-  "--nex-world-tertiary": "#0F766E",           // Teal (doubled)
-  "--nex-world-background-base": "#0B0F14",    // Deep neutral (HQ-style)
-  "--nex-world-surface": "#121821",            // Slightly elevated neutral
-  "--nex-world-surface-sunken": "#0D1218",     // Deeper neutral
-  "--nex-world-text-primary": "#E8EEF4",       // Near-white neutral ink
-  "--nex-world-text-secondary": "#A7B1BC",     // Dim neutral ink
-  "--nex-world-text-muted": "#6B7682",         // Muted neutral ink
-  "--nex-world-border": "rgba(31, 139, 76, 0.18)",
-  "--nex-world-border-accent": "rgba(31, 139, 76, 0.42)",
-  "--nex-world-success": "#1F8B4C",
+  // Primary · deep teal (global ocean)
+  "--nex-world-primary": "#0E5B5F",
+  // Secondary · warm gold (NEX brand anchor · matches Ireland's gold)
+  "--nex-world-secondary": "#D4A24F",
+  // Tertiary · amber (warm highlight)
+  "--nex-world-tertiary": "#E6B655",
+  // Background · deep navy (the "pre-dawn ocean" base)
+  "--nex-world-background-base": "#081821",
+  // Surface · elevated navy with teal undertone
+  "--nex-world-surface": "#0F2630",
+  // Sunken · deeper navy for recessed panels
+  "--nex-world-surface-sunken": "#061520",
+  // Primary-ink · warm off-white (not cold grey · feels global/warm)
+  "--nex-world-text-primary": "#F2EEE4",
+  // Secondary-ink · muted warm grey
+  "--nex-world-text-secondary": "#B8B2A4",
+  // Muted-ink · dim warm grey
+  "--nex-world-text-muted": "#7A7568",
+  // Borders · teal with low opacity
+  "--nex-world-border": "rgba(14, 91, 95, 0.22)",
+  "--nex-world-border-accent": "rgba(212, 162, 79, 0.42)", // gold-tinted
+  // Status colours · keep brand-consistent (don't fight Ireland)
+  "--nex-world-success": "#16A34A",
   "--nex-world-warning": "#F59E0B",
   "--nex-world-danger": "#B91C1C",
+  // Drawer backdrop (used by payments page + other dark drawers)
+  "--nex-world-drawer-bg": "#0E2A30",
+  "--nex-world-primary-ink": "#B9CBCA",
 };
 
 /** Emits a <style data-nex-world-root> block that scopes the world
