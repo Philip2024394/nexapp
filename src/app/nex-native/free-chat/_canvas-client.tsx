@@ -2369,7 +2369,7 @@ function FirstVisitThemeGrid({
                   : "0 0 6px rgba(255, 114, 0, 0.8)",
               }}
             />
-            Today&apos;s featured picks · refreshed daily
+            View image library
           </p>
         </div>
         <button
