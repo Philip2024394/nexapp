@@ -24,6 +24,9 @@
 
 "use server";
 
+// Next.js constraint · modules marked "use server" may ONLY export
+// async functions. Types + consts live in _actions-shared.ts.
+
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import * as orderService from "@/lib/nex-native/order-service";
@@ -33,28 +36,11 @@ import {
   notifyBuyerPaymentConfirmed,
 } from "@/lib/nex-native/manage-orders/order-notification-service";
 import type { NexOrderRow } from "@/lib/nex-native/types";
-
-export type ManageOrderActionReason =
-  | "not_authenticated"
-  | "not_owner"
-  | "not_found"
-  | "invalid_state_transition"
-  | "db_unavailable"
-  | "server_error"
-  /** P5 · a sub-60s manual confirm must carry a free-form note from
-   *  the seller justifying why they already know the payment landed.
-   *  Reduces click-through fraud. */
-  | "note_required_fast_confirm";
-
-/** P5 · sellers must attach a note when they confirm payment less
- *  than this many milliseconds after the buyer arrived on the
- *  payment page (nex_order.updated_at becomes the awaiting_manual_
- *  payment event timestamp). */
-export const FAST_CONFIRM_THRESHOLD_MS = 60_000;
-
-export type ManageOrderActionResult<T> =
-  | { readonly ok: true; readonly value: T }
-  | { readonly ok: false; readonly reason: ManageOrderActionReason };
+import {
+  FAST_CONFIRM_THRESHOLD_MS,
+  type ManageOrderActionReason,
+  type ManageOrderActionResult,
+} from "./_actions-shared";
 
 function fail<T>(reason: ManageOrderActionReason): ManageOrderActionResult<T> {
   return { ok: false, reason };

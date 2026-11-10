@@ -355,10 +355,12 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
   //     IdentityHero → CreatorBadgeStrip → CreatorSupportSheet ONLY
   //     when `enabled === true` (sealed privacy rule · never leak a
   //     draft). The gate below enforces that.
-  // Fail-open · null = not configured (or not yet applied migration).
-  const creatorSupportPromise = getCreatorSupportSettings(
-    profileAccount.id,
-  ).catch(() => null);
+  // Owner-sealed 2026-11-10 · Creator Support feature deleted.
+  // Short-circuit to null so the IdentityHero → CreatorBadgeStrip
+  // chain renders its empty-support state and no sheet opens.
+  // Preserved as a promise so downstream `await creatorSupportPromise`
+  // keeps working.
+  const creatorSupportPromise = Promise.resolve(null);
 
   // Owner-authorised 2026-10-31 · world-class "premium app feel" ·
   // warm the viewer's browser cache for the profile owner's music

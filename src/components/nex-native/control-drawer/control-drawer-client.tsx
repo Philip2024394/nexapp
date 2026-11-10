@@ -413,12 +413,20 @@ export function ControlDrawer({
   // /settings/creator reaches the sheet via the configured surface
   // (shared-primitive link + preview button) without requiring a
   // SectionGroup refactor to intercept clicks.
+  // Owner-sealed 2026-11-10 · Creator Support feature deleted ·
+  // the drawer row + sheet are force-hidden here. The surrounding
+  // prop plumbing + sheet component stay on disk for low-risk tear-
+  // out · those surfaces never render while this flag is false.
   const legacyAlwaysShow = viewerEarnedCreatorBadges === undefined;
   const qualifiedAndNotHidden =
     hideCreatorSupportRow !== true &&
     viewerEarnedCreatorBadges !== undefined &&
     viewerEarnedCreatorBadges.length > 0;
-  const showCreatorSupportRow = legacyAlwaysShow || qualifiedAndNotHidden;
+  // Preserved so TypeScript sees the variables; both flags remain
+  // unreachable via the forced override below.
+  void legacyAlwaysShow;
+  void qualifiedAndNotHidden;
+  const showCreatorSupportRow = false;
   const creatorSupportLabelOverride =
     viewerCreatorSupportConfigured === true || legacyAlwaysShow
       ? "Creator Support"
