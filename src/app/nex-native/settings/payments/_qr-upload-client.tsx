@@ -153,8 +153,8 @@ export function QrUploadClient({
       <div
         style={{
           display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
+          flexDirection: "column",
+          gap: 4,
           marginBottom: 2,
         }}
       >
@@ -163,15 +163,16 @@ export function QrUploadClient({
         </h2>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 11, fontWeight: 700, color: PALETTE.textMuted, letterSpacing: "0.04em", textTransform: "uppercase" }}>
           <span aria-hidden style={{ width: 10, height: 10, borderRadius: "50%", background: activeQrPreviewUrl ? PALETTE.paid : PALETTE.border }} />
-          {activeQrPreviewUrl ? "Active" : "Not uploaded"}
+          {activeQrPreviewUrl ? "Active" : "Not connected"}
         </div>
       </div>
 
       <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 4, fontSize: 13, color: PALETTE.textMuted, lineHeight: 1.5 }}>
-        <li>• Upload QRIS (Indonesia), GCash, PromptPay or other local QR</li>
-        <li>• Buyer sees your QR + instructions at checkout</li>
-        <li>• You confirm the order paid once funds arrive · NEX does not auto-confirm</li>
-        <li>• Max 3 uploads per 24 hours · PNG/JPEG/WEBP · 200–2000 px · ≤ 2 MB</li>
+        <li>• Upload QRIS (Indonesia), GCash, PromptPay or other local QR codes.</li>
+        <li>• Buyers see your QR and payment instructions at checkout.</li>
+        <li>• You confirm payment after funds arrive. NEX does not auto-confirm.</li>
+        <li>• Maximum 3 uploads per 24 hours.</li>
+        <li>• PNG, JPEG or WEBP · 200–2000 px · maximum 2 MB.</li>
       </ul>
 
       {/* Currently active QR */}

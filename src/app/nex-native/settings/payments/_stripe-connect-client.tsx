@@ -221,7 +221,7 @@ export function StripeConnectClient({
           {busy
             ? "Opening Stripe…"
             : !connected
-              ? "Connect with Stripe"
+              ? "Connect Stripe"
               : needsWork
                 ? "Continue Stripe onboarding"
                 : "Manage on Stripe"}

@@ -20,6 +20,8 @@ import { StripeConnectClient } from "./_stripe-connect-client";
 import { getActiveQrAsset } from "@/lib/nex-native/merchant-qr/qr-asset-service";
 import { mintForSellerPreview } from "@/lib/nex-native/merchant-qr/signed-url-service";
 import { QrUploadClient } from "./_qr-upload-client";
+import { PaymentSettingsClient } from "./_payment-settings-client";
+import { SaveSettingsButton } from "./_save-settings-button";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -125,8 +127,8 @@ export default async function PaymentsSettingsPage() {
               opacity: 0.95,
             }}
           >
-            Where support money and shop sales should land. Pick one or both.
-            NEX never holds the funds.
+            Choose where your shop sales payments go. Select one or both.
+            NEX never holds your funds.
           </p>
         </header>
 
@@ -162,8 +164,8 @@ export default async function PaymentsSettingsPage() {
             </h2>
             <ul style={{ margin: "4px 0 0 16px", padding: 0, fontSize: 12, color: IRELAND.primaryInk, lineHeight: 1.5 }}>
               <li>Cards · Apple Pay · Google Pay</li>
-              <li>Lower fees · instant IE payouts</li>
-              <li>Works for Creator support AND shop sales</li>
+              <li>Competitive fees · direct payouts</li>
+              <li>Supports shop sales</li>
             </ul>
           </div>
           <StripeConnectClient
@@ -173,6 +175,18 @@ export default async function PaymentsSettingsPage() {
             inkPrimary={IRELAND.textPrimary}
             red="#A60000"
           />
+          <p
+            style={{
+              margin: "4px 0 0",
+              fontSize: 11,
+              color: IRELAND.textMuted,
+              lineHeight: 1.5,
+            }}
+          >
+            NEX takes 0% commission on sales. Stripe pays directly to your
+            account. Payment provider fees and account issues are handled
+            by Stripe.
+          </p>
         </section>
 
         {/* PayPal */}
@@ -181,12 +195,12 @@ export default async function PaymentsSettingsPage() {
           statusLabel="Not connected"
           statusConnected={false}
           bullets={[
-            "PayPal balance · card · credit",
-            "Familiar to international supporters and buyers",
-            "Works for Creator support AND shop sales",
+            "PayPal balance · cards · credit",
+            "Trusted by international buyers and supporters",
+            "Supports shop sales",
           ]}
-          signupLine="Create a new PayPal Business account OR sign in with an existing one"
-          ctaLabel="Connect with PayPal"
+          signupLine="Create a PayPal Business account or sign in to an existing one."
+          ctaLabel="Connect PayPal"
           href="/nex-native/coming-soon?feature=payment-connect-paypal"
           dataProvider="paypal"
         />
@@ -204,10 +218,10 @@ export default async function PaymentsSettingsPage() {
           activeQrHeight={activeQr?.height_px ?? null}
         />
 
-        {/* Payment settings · preferred method · per-method toggles ·
-            disconnect. UI-only today · toggle state will persist once
-            the payment-provider-config table lands (Phase B). */}
-        <PaymentSettingsCard />
+        {/* Payment settings · preferred method + per-method toggles ·
+            interactive client-side state; persistence ships with
+            Phase B (nex.payment_provider_config). */}
+        <PaymentSettingsClient />
 
         <section
           style={{
@@ -227,7 +241,7 @@ export default async function PaymentsSettingsPage() {
               textTransform: "uppercase",
             }}
           >
-            How this works
+            How payments work
           </h3>
           <ul
             style={{
@@ -242,26 +256,15 @@ export default async function PaymentsSettingsPage() {
               lineHeight: 1.5,
             }}
           >
-            <li>• NEX takes 0% commission on Creator earnings.</li>
-            <li>• Payment provider fees apply from Stripe or PayPal directly.</li>
-            <li>• Payments go to YOUR account, not NEX.</li>
-            <li>• NEX cannot and does not confirm individual payments.</li>
+            <li>• NEX takes 0% commission on your sales.</li>
+            <li>• Stripe and PayPal provider fees may apply.</li>
+            <li>• Payments go directly to YOUR account, never through NEX.</li>
+            <li>• NEX does not independently verify or automatically confirm individual payments.</li>
           </ul>
         </section>
 
-        <div style={{ margin: "24px 0 0", textAlign: "center" }}>
-          <Link
-            href="/nex-native/settings/profile/edit"
-            style={{
-              color: IRELAND.primaryInk,
-              textDecoration: "none",
-              fontSize: 13,
-              fontWeight: 700,
-              opacity: 0.9,
-            }}
-          >
-            Skip for now · set this up later →
-          </Link>
+        <div style={{ margin: "24px 0 0" }}>
+          <SaveSettingsButton />
         </div>
       </div>
     </main>
@@ -502,9 +505,8 @@ function PaymentSettingsCard(): React.ReactElement {
           lineHeight: 1.5,
         }}
       >
-        Choose a preferred method · enable or disable individual methods ·
-        manage connected accounts. Changes save once the backend table
-        ships (Phase B).
+        Choose your preferred checkout method and enable or disable
+        individual payment options.
       </p>
 
       <div style={{ display: "grid", gap: 8 }}>
@@ -514,7 +516,7 @@ function PaymentSettingsCard(): React.ReactElement {
               Preferred at checkout
             </div>
             <div style={{ fontSize: 11, color: IRELAND.textMuted, marginTop: 2 }}>
-              Highlighted first on the buyer's checkout
+              Shown first to buyers at checkout.
             </div>
           </div>
           <select
@@ -533,18 +535,31 @@ function PaymentSettingsCard(): React.ReactElement {
           >
             <option>Stripe</option>
             <option>PayPal</option>
-            <option>QR code</option>
+            <option>QR Code</option>
           </select>
         </div>
 
-        {(["Stripe", "PayPal", "QR code"] as const).map((name) => (
+        <h3
+          style={{
+            margin: "6px 0 2px",
+            fontSize: 11,
+            fontWeight: 800,
+            color: IRELAND.secondary,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+          }}
+        >
+          Buyer checkout options
+        </h3>
+
+        {(["Stripe", "PayPal", "QR Code"] as const).map((name) => (
           <div key={name} style={row}>
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: IRELAND.textPrimary }}>
                 {name}
               </div>
               <div style={{ fontSize: 11, color: IRELAND.textMuted, marginTop: 2 }}>
-                Enabled on buyer checkout
+                Enable / Disable
               </div>
             </div>
             <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
@@ -570,7 +585,7 @@ function PaymentSettingsCard(): React.ReactElement {
           lineHeight: 1.5,
         }}
       >
-        Phase B pending · nex.payment_provider_config table + storage
+        Phase B pending: nex.payment_provider_config table and storage
         bucket require separate owner authorisation.
       </p>
     </section>
