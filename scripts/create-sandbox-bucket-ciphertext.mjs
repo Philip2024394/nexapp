@@ -41,6 +41,11 @@ async function getBucket() {
     },
   });
   if (r.status === 404) return null;
+  if (r.status === 400) {
+    const body = await r.text().catch(() => "");
+    if (/not.?found|NoSuchBucket|404/i.test(body)) return null;
+    throw new Error(`GET bucket failed · 400 · ${body}`);
+  }
   if (!r.ok) {
     const body = await r.text().catch(() => "");
     throw new Error(`GET bucket failed · ${r.status} · ${body}`);
