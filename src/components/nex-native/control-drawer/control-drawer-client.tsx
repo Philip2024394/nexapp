@@ -1430,12 +1430,12 @@ const drawerStyle: React.CSSProperties = {
   // which confirmed the drawer-specific flex interaction.
   height: "100%",
   maxHeight: "100%",
-  // Owner directive 2026-11-10 · side drawer now extends 60% of the
-  // phone frame width (was 85%). Pairs with the Cycle 19 subtitle
-  // rewording that trimmed every row's gray subtitle to fit in a
-  // single line at the new narrower width.
-  width: "60%",
-  maxWidth: 240,
+  // Owner directive 2026-11-10 iter 2 · side drawer covers 70% of
+  // the phone frame width (first iter was 60% · owner asked for a
+  // touch more). Pairs with the Cycle 19 subtitle rewording that
+  // trimmed every row's gray subtitle to one line.
+  width: "70%",
+  maxWidth: 280,
   // Owner-authorised 2026-11-04 later-same-day · NEX Ireland drawer trim.
   // Was `background: BG` which resolves to `--nex-world-background-base`
   // → Ireland's cream page base #FAF8F4 (correct for the page body,
