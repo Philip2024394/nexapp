@@ -292,6 +292,24 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
     href: "/nex-native/chat-themes-library",
     locked: false,
   },
+  // Owner directive 2026-11-10 · Payment Providers central hub ·
+  // seller/business accounts connect Stripe · PayPal · upload their
+  // own QR code · manage checkout methods per shop.
+  {
+    key: "payment-providers",
+    label: "Payment Providers",
+    subtitle: "Connect, manage and receive payments",
+    href: "/nex-native/settings/payments",
+    locked: false,
+  },
+  // Owner-sealed 2026-11-10 P3 · merchant order-management dashboard.
+  {
+    key: "my-orders",
+    label: "My Orders",
+    subtitle: "Shop orders · confirm payments · track fulfilment",
+    href: "/nex-native/manage/orders",
+    locked: false,
+  },
   // Owner directive 2026-11-07 · NEX Store · dedicated place to
   // discover + purchase NEX's own optional extras (Vault, future
   // themes packs, future add-ons). NOT a third-party marketplace ·
