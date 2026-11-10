@@ -18,7 +18,7 @@ import { NEX_SETTINGS } from "../_settings-shell";
 import {
   DISAPPEARING_PRESETS,
   type DisappearingSeconds,
-} from "@/lib/nex-native/disappearing-messages-service";
+} from "@/lib/nex-native/disappearing-messages-constants";
 
 interface Props {
   readonly current: DisappearingSeconds;
