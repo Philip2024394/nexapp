@@ -214,6 +214,67 @@ describe("verifyPaypalWebhookSignature", () => {
     expect(r.ok).toBe(false);
     expect(r.reason).toBe("verification_requires_api_call");
   });
+
+  // Documented PayPal header set required by the live verify-webhook-signature
+  // call · this scaffold does not enforce their presence individually but we
+  // document the shape so the live wire-up has a clear bar.
+  it("returns verification_requires_api_call even when ALL 5 PayPal headers present", () => {
+    const r = verifyPaypalWebhookSignature(
+      '{"id":"EV-ALL-5"}',
+      {
+        "paypal-auth-algo": "SHA256withRSA",
+        "paypal-cert-url": "https://api.sandbox.paypal.com/v1/certs/cert.pem",
+        "paypal-transmission-id": "txid-123",
+        "paypal-transmission-sig": "sig-abc",
+        "paypal-transmission-time": "2026-11-10T00:00:00Z",
+      },
+      "WH-TEST-FULL",
+    );
+    expect(r.ok).toBe(false);
+    expect(r.reason).toBe("verification_requires_api_call");
+  });
+
+  it("returns verification_requires_api_call with one header missing (defers to live call)", () => {
+    const r = verifyPaypalWebhookSignature(
+      '{"id":"EV-MISSING"}',
+      {
+        "paypal-auth-algo": "SHA256withRSA",
+        // Intentional · paypal-cert-url missing.
+        "paypal-transmission-id": "txid-123",
+        "paypal-transmission-sig": "sig-abc",
+        "paypal-transmission-time": "2026-11-10T00:00:00Z",
+      },
+      "WH-TEST-MISS",
+    );
+    expect(r.ok).toBe(false);
+    expect(r.reason).toBe("verification_requires_api_call");
+  });
+
+  it("returns verification_requires_api_call for wrong-format paypal-transmission-time (defers to live call)", () => {
+    const r = verifyPaypalWebhookSignature(
+      '{"id":"EV-BAD-TIME"}',
+      {
+        "paypal-auth-algo": "SHA256withRSA",
+        "paypal-cert-url": "https://api.sandbox.paypal.com/v1/certs/cert.pem",
+        "paypal-transmission-id": "txid-123",
+        "paypal-transmission-sig": "sig-abc",
+        "paypal-transmission-time": "not-a-date-at-all",
+      },
+      "WH-TEST-BADTIME",
+    );
+    expect(r.ok).toBe(false);
+    expect(r.reason).toBe("verification_requires_api_call");
+  });
+
+  it("result object omits echo of received transmission-sig (opaque failure)", () => {
+    const leak = "SECRETSIGLEAK123";
+    const r = verifyPaypalWebhookSignature(
+      '{"id":"EV-LEAK"}',
+      { "paypal-transmission-sig": leak },
+      "WH-TEST-LEAK",
+    );
+    expect(JSON.stringify(r)).not.toContain(leak);
+  });
 });
 
 describe("parsePaypalWebhookEvent", () => {

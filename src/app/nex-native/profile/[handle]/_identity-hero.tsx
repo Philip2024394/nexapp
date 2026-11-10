@@ -47,7 +47,8 @@ import type { TrustTier } from "@/lib/nex-native/trust/trust-score-shared";
 // primitive is independent · DevViewerBadge is NOT modified.
 // Stage 2.1 · tapping a Creator chip opens CreatorSupportSheet.
 import type { SectionProgress } from "@/lib/nex-native/creator/creator-badges-common";
-import type { CreatorSupportSettings } from "@/lib/nex-native/creator/creator-support-service";
+// CreatorSupportSettings type removed 2026-11-10 (Creator Support deleted).
+type CreatorSupportSettings = unknown;
 import { CreatorBadgeStrip } from "@/components/nex-native/creator/CreatorBadgeStrip";
 // Owner-authorised 2026-10-31 · NEX World Engine · Stage 5 wiring.
 import { NEX_W } from "@/lib/nex-worlds/world-palette-css";

@@ -75,7 +75,7 @@ import { OwnerEditShell } from "./_owner-edit-shell";
 import { SafeTradeHeroIcon } from "./_safe-trade-hero-icon";
 import { AccountMusicPreloader } from "@/components/nex-native/music/_account-music-preloader";
 import { CreatorWelcomePanel } from "@/components/nex-native/creator/CreatorWelcomePanel";
-import { getCreatorSupportSettings } from "@/lib/nex-native/creator/creator-support-service";
+// getCreatorSupportSettings import removed 2026-11-10 (Creator Support deleted).
 import { savePersonalProfileAction, submitSafeTradeReportAction } from "./_actions";
 import type {
   TrustAccountTier,
@@ -875,7 +875,7 @@ function ProfileBody(props: {
    *  settings for the tappable Support sheet. Server already gates
    *  this prop (null when the viewer is not the owner AND the
    *  creator has not publicly enabled Support · sealed privacy). */
-  creatorSupportSettings: import("@/lib/nex-native/creator/creator-support-service").CreatorSupportSettings | null;
+  creatorSupportSettings: unknown; // Creator Support deleted 2026-11-10 · prop kept for backward-compat with callers · ignored.
 }) {
   // Avatar + cover camera overlays only when the owner is actively
   // editing · zero footprint for viewers or in view mode.

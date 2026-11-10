@@ -280,4 +280,153 @@ describe("POST /api/nex-native/stripe/webhook", () => {
     // The underlying message must not appear in the response body.
     expect(JSON.stringify(json)).not.toContain("SECRET LEAK");
   });
+
+  // ────────────────────────────────────────────────────────────────────
+  // Hardening · replay + tamper + header-case + opacity (2026-11-10)
+  // ────────────────────────────────────────────────────────────────────
+
+  describe("hardening · byte-level tamper variants", () => {
+    it("whitespace-only change after signing → 400 · no markOrderPaid", async () => {
+      const body = checkoutCompletedBody();
+      const sig = signBody(body, WEBHOOK_SECRET, "1700000000");
+      // Insert a single space inside the metadata object · HMAC must fail.
+      const tampered = body.replace('"metadata":{"nex_order_id"', '"metadata":{ "nex_order_id"');
+      expect(tampered).not.toBe(body);
+      const { status } = await invokePost(tampered, sig);
+      expect(status).toBe(400);
+      expect(mocks.markOrderPaid).not.toHaveBeenCalled();
+    });
+
+    it("trailing newline added after signing → 400 · no markOrderPaid", async () => {
+      const body = checkoutCompletedBody();
+      const sig = signBody(body, WEBHOOK_SECRET, "1700000000");
+      const { status } = await invokePost(`${body}\n`, sig);
+      expect(status).toBe(400);
+      expect(mocks.markOrderPaid).not.toHaveBeenCalled();
+    });
+
+    it("JSON key reorder after signing → 400 · no markOrderPaid", async () => {
+      // Signature is over the exact bytes · semantically equivalent JSON with
+      // different key order MUST fail verification. If this ever started
+      // passing it would indicate the route has grown a JSON-canonicalising
+      // step (which would be wrong for Stripe's byte-exact signature model).
+      const body = JSON.stringify({
+        id: STRIPE_EVENT_ID,
+        type: "checkout.session.completed",
+        data: {
+          object: {
+            id: SESSION_ID,
+            metadata: { nex_order_id: ORDER_ID },
+            client_reference_id: ORDER_ID,
+            payment_status: "paid",
+          },
+        },
+      });
+      const sig = signBody(body, WEBHOOK_SECRET, "1700000000");
+      // Reorder top-level keys · bytes differ → HMAC fails.
+      const reordered = JSON.stringify({
+        type: "checkout.session.completed",
+        id: STRIPE_EVENT_ID,
+        data: {
+          object: {
+            id: SESSION_ID,
+            metadata: { nex_order_id: ORDER_ID },
+            client_reference_id: ORDER_ID,
+            payment_status: "paid",
+          },
+        },
+      });
+      expect(reordered).not.toBe(body);
+      const { status } = await invokePost(reordered, sig);
+      expect(status).toBe(400);
+      expect(mocks.markOrderPaid).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("hardening · header case-insensitivity (WHATWG Headers)", () => {
+    it("`Stripe-Signature` (title case) is accepted the same as `stripe-signature`", async () => {
+      // Node's `Headers` normalises all header names to lowercase on get()
+      // per the Fetch spec · prove by handing the request a title-case name
+      // and confirming the route still verifies and dispatches.
+      const body = checkoutCompletedBody();
+      const sig = signBody(body, WEBHOOK_SECRET, "1700000000");
+      const req = new Request(
+        "http://localhost:3008/api/nex-native/stripe/webhook",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "Stripe-Signature": sig,
+          },
+          body,
+        },
+      ) as unknown as import("next/server").NextRequest;
+      const mod = await import("../route");
+      const res = await mod.POST(req);
+      expect(res.status).toBe(200);
+      expect(mocks.markOrderPaid).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("hardening · error-response opacity (no signature or stack leak)", () => {
+    it("invalid signature response NEVER contains the computed or received signature bytes", async () => {
+      const body = checkoutCompletedBody();
+      const badSig = signBody(body, "whsec_wrong_secret", "1700000000");
+      const { status, json } = await invokePost(body, badSig);
+      expect(status).toBe(400);
+      const serialised = JSON.stringify(json);
+      // Received signature value must NOT appear in response.
+      const v1Part = badSig.split("v1=")[1] ?? "";
+      expect(v1Part.length).toBeGreaterThan(10);
+      expect(serialised).not.toContain(v1Part);
+      // Computed (correct) signature must NOT appear either.
+      const correctSig = signBody(body, WEBHOOK_SECRET, "1700000000").split("v1=")[1] ?? "";
+      expect(serialised).not.toContain(correctSig);
+      // Secret must never leak.
+      expect(serialised).not.toContain(WEBHOOK_SECRET);
+    });
+
+    it("handler exception response is opaque (no stack trace · no internal message)", async () => {
+      // Error with a line-number-like string + a stack to be sure none leaks.
+      const err = new Error("INTERNAL: cannot reach supabase pooler at 10.0.0.1:5432");
+      mocks.markOrderPaid.mockRejectedValueOnce(err);
+      const body = checkoutCompletedBody();
+      const sig = signBody(body, WEBHOOK_SECRET, "1700000000");
+      const { status, json } = await invokePost(body, sig);
+      expect(status).toBe(500);
+      const serialised = JSON.stringify(json);
+      expect(serialised).not.toContain("INTERNAL");
+      expect(serialised).not.toContain("supabase");
+      expect(serialised).not.toContain("10.0.0.1");
+      expect(serialised).not.toMatch(/at\s+\w+/); // no "at Function" stack frames
+    });
+  });
+
+  describe("hardening · timestamp-age window (documented gap)", () => {
+    // NOTE (gap flagged for parent-agent): verifyStripeSignature in
+    // `stripe-webhook-service.ts` intentionally does NOT enforce Stripe's
+    // 5-minute tolerance window · the doc comment on verifyStripeSignature
+    // calls this out explicitly. These tests document the CURRENT behaviour
+    // (an old timestamp still verifies if the HMAC matches) so a future
+    // change to enforce age would surface as a failing test to be reviewed.
+    // Fixing this requires changing production code behaviour · NOT in
+    // scope of this additive-tests pass. Flagged in final report.
+    it("old timestamp with correct signature still verifies (current behaviour)", async () => {
+      const body = checkoutCompletedBody();
+      // 1 hour old · Stripe's recommended tolerance is 5 min.
+      const oldTs = String(Math.floor(Date.now() / 1000) - 3600);
+      const sig = signBody(body, WEBHOOK_SECRET, oldTs);
+      const { status } = await invokePost(body, sig);
+      // Documents the gap · route currently accepts stale-but-signed events.
+      expect(status).toBe(200);
+    });
+
+    it("future timestamp with correct signature still verifies (current behaviour)", async () => {
+      const body = checkoutCompletedBody();
+      const futureTs = String(Math.floor(Date.now() / 1000) + 3600);
+      const sig = signBody(body, WEBHOOK_SECRET, futureTs);
+      const { status } = await invokePost(body, sig);
+      expect(status).toBe(200);
+    });
+  });
 });

@@ -66,20 +66,18 @@ export interface ContactsHeaderProps {
   // Resolved server-side in contacts/page.tsx and forwarded through
   // the header to the UnifiedDrawer mount below.
   readonly viewerEarnedCreatorBadges?: readonly import("@/lib/nex-native/creator/creator-badges-common").SectionProgress[];
-  readonly viewerCreatorSupportConfigured?: boolean;
+  // viewerCreatorSupportConfigured removed 2026-11-10 (Creator Support deleted).
   // Owner directive 2026-11-01 · Batch D++ · the full support-settings
   // object (QR, PayPal, external links, suggested amounts, thank-you
   // message) so the drawer-mounted CreatorSupportSheet can render the
   // viewer's own preview on tap. Null = never configured / disabled;
   // the sheet renders its sealed empty state.
-  readonly viewerSupportSettings?: import("@/lib/nex-native/creator/creator-support-service").CreatorSupportSettings | null;
+  // viewerSupportSettings removed 2026-11-10 (Creator Support deleted).
 }
 
 export function ContactsHeader({
   drawerSession,
   viewerEarnedCreatorBadges,
-  viewerCreatorSupportConfigured,
-  viewerSupportSettings,
 }: ContactsHeaderProps) {
   // Owner directive 2026-10-23 · header title swaps to "Create
   // Group" while the hero is flipped so the user sees a context-
@@ -142,8 +140,6 @@ export function ContactsHeader({
         <UnifiedDrawer
           session={drawerSession}
           viewerEarnedCreatorBadges={viewerEarnedCreatorBadges}
-          viewerCreatorSupportConfigured={viewerCreatorSupportConfigured}
-          viewerSupportSettings={viewerSupportSettings}
         />
       </div>
     </header>

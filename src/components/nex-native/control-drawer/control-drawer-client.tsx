@@ -64,8 +64,9 @@ import type { SectionProgress } from "@/lib/nex-native/creator/creator-badges-co
 // the sealed CreatorSupportSheet directly from the drawer, honouring the
 // original §4 directive. We re-use the SAME sheet component the profile
 // badge uses · never a second sheet.
-import { CreatorSupportSheet } from "@/components/nex-native/creator/CreatorSupportSheet";
-import type { CreatorSupportSettings } from "@/lib/nex-native/creator/creator-support-service";
+// CreatorSupportSheet import removed 2026-11-10 (Creator Support deleted · sheet no longer mounted).
+// CreatorSupportSettings type removed 2026-11-10 (Creator Support feature deleted).
+type CreatorSupportSettings = unknown;
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -673,27 +674,10 @@ export function ControlDrawer({
       {confirmLogout ? (
         <LogoutConfirmModal onCancel={() => setConfirmLogout(false)} />
       ) : null}
-      {/* Owner directive 2026-11-01 · Batch D++ · reuse the sealed
-       *  CreatorSupportSheet (same component the profile badge opens).
-       *  Sheet uses its own `position: fixed; zIndex: 9999` chrome so
-       *  it layers above both the drawer backdrop (closed by this
-       *  point) and the host surface. Props mirror the profile mount:
-       *  identity from the drawer session, badges + settings from the
-       *  server-resolved props. `creatorAvatarUrl` passed as null · the
-       *  viewer sees their OWN sheet (preview mode) and the fallback
-       *  letter-avatar is honest; a future micro-batch can extend the
-       *  session type with avatarUrl without changing this contract. */}
-      <CreatorSupportSheet
-        open={supportSheetOpen}
-        onClose={() => setSupportSheetOpen(false)}
-        creatorName={
-          identityNameOverride ?? session?.displayName ?? "NEX creator"
-        }
-        creatorAvatarUrl={null}
-        creatorNexHandle={session?.nexHandle ?? null}
-        earnedBadges={viewerEarnedCreatorBadges ?? []}
-        settings={viewerSupportSettings ?? null}
-      />
+      {/* Owner-sealed 2026-11-10 · Creator Support feature deleted ·
+          the CreatorSupportSheet mount is removed. supportSheetOpen
+          state remains harmlessly unused (would be removed in a
+          follow-up cleanup cycle). */}
       {/* prefers-reduced-motion override · the drawer transitions
           cancel to zero duration so motion-sensitive viewers see an
           instant open/close without the slide.

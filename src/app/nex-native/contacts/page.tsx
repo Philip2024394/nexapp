@@ -68,7 +68,8 @@ import {
   resolveCreatorBadges,
   EMPTY_EARNED_BADGES,
 } from "@/lib/nex-native/creator/creator-badges";
-import { getCreatorSupportSettings } from "@/lib/nex-native/creator/creator-support-service";
+// Creator Support feature deleted 2026-11-10 · getCreatorSupportSettings
+// import + fetch removed below.
 // Contacts intentionally does NOT wrap in `NexNativeShell` (and
 // therefore not in `NexHudFrame`). The HUD renders a floating
 // "NEX · ready" console-viewport button that the owner called out
@@ -650,10 +651,9 @@ export default async function ContactsPage({ searchParams }: PageProps) {
   // to the drawer's LEGACY always-visible row rather than silently
   // disappearing. Contacts is NOT a /chat/* conversation surface, so
   // `hideCreatorSupportRow` stays false (default) here.
-  const [viewerCreatorBadges, viewerCreatorSupportSettings] = await Promise.all([
-    resolveCreatorBadges(session.account.id).catch(() => EMPTY_EARNED_BADGES),
-    getCreatorSupportSettings(session.account.id).catch(() => null),
-  ]);
+  // Creator Support feature deleted 2026-11-10 · only badges remain.
+  const viewerCreatorBadges = await resolveCreatorBadges(session.account.id)
+    .catch(() => EMPTY_EARNED_BADGES);
 
   // Owner directive 2026-11-03 (revised) · structural rework ·
   //   1. Top row = THREE fixed category buttons · Friends · Groups ·
@@ -883,7 +883,7 @@ export default async function ContactsPage({ searchParams }: PageProps) {
           <UnifiedDrawer
             session={drawerSession}
             viewerEarnedCreatorBadges={viewerCreatorBadges}
-            viewerSupportSettings={viewerCreatorSupportSettings}
+            /* Creator Support feature deleted 2026-11-10 · viewerSupportSettings removed */
           />
         </span>
       </header>

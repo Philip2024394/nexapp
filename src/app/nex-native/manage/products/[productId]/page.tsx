@@ -245,6 +245,26 @@ export default async function ManageProductPage({
             </Link>
           </div>
 
+          {/* Owner-sealed 2026-11-10 · section-assignment server action
+              is not wired in this environment. Form stays visible for
+              read; submit is disabled + explicit banner above. */}
+          <div
+            role="status"
+            data-nex-section-assign-unwired
+            style={{
+              padding: "8px 12px",
+              borderRadius: 8,
+              background: "rgba(255, 175, 64, 0.1)",
+              border: "1px solid #FFAF40",
+              color: "#FFAF40",
+              fontSize: 11,
+              fontWeight: 600,
+              marginBottom: 6,
+            }}
+          >
+            Section reassignment is not available in this environment.
+          </div>
+
           <form
             action={assignSectionBound}
             style={{ display: "flex", gap: 8, flexWrap: "wrap" }}
@@ -293,6 +313,9 @@ export default async function ManageProductPage({
             )}
             <button
               type="submit"
+              disabled
+              title="Section reassignment is not wired in this environment."
+              data-nex-feature-unwired="section_assign"
               style={{
                 padding: "10px 16px",
                 borderRadius: 8,
@@ -303,10 +326,11 @@ export default async function ManageProductPage({
                 fontSize: 12,
                 fontWeight: 800,
                 letterSpacing: "0.04em",
-                cursor: "pointer",
+                cursor: "not-allowed",
+                opacity: 0.5,
               }}
             >
-              Save
+              Unavailable
             </button>
           </form>
           {atMaxSections && (

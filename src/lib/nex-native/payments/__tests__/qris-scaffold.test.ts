@@ -373,6 +373,51 @@ describe("parseMidtransWebhookEvent", () => {
   });
 });
 
+describe("Xendit · Unicode body round-trip (HMAC over UTF-8 bytes)", () => {
+  it("HMAC-SHA256 of a body with multi-byte UTF-8 characters round-trips", () => {
+    // Include scripts requiring multi-byte UTF-8 (Arabic, Japanese, emoji)
+    // and combining marks (naïve) · the HMAC hex MUST match itself on a
+    // round-trip. If this ever fails the string-encoding contract broke.
+    const body = JSON.stringify({
+      id: "xnd-utf8",
+      data: {
+        status: "SUCCEEDED",
+        reference_id: "order-🪙",
+        extra: "warung naïve café · 日本語 · إندونيسيا",
+        amount: 50000,
+      },
+    });
+    const sig = computeXenditSignature(body, XENDIT_WEBHOOK_TOKEN);
+    expect(verifyXenditSignature(body, sig, XENDIT_WEBHOOK_TOKEN)).toBe(true);
+  });
+});
+
+describe("Midtrans · trailing-whitespace sensitivity", () => {
+  // Midtrans signature is computed over concatenated FIELD values, not the
+  // raw request bytes · so adding whitespace to the raw body does not by
+  // itself change the signature. The protection against injected-field
+  // tampering is the field-level verification: if the signed order_id/
+  // status_code/gross_amount triple differs from what's in the body, the
+  // sig mismatches. This test documents that contract.
+  const payload = { order_id: "order-123", status_code: "200", gross_amount: "50000.00" };
+  it("raw-byte whitespace does not invalidate a field-level signature", () => {
+    const sig = computeMidtransSignature(payload, MIDTRANS_SERVER_KEY);
+    // The verifier accepts the same field triple regardless of surrounding
+    // whitespace in the raw body because it does not consume the raw body.
+    expect(verifyMidtransSignature(payload, sig, MIDTRANS_SERVER_KEY)).toBe(true);
+  });
+  it("tampered gross_amount with original signature → false", () => {
+    const sig = computeMidtransSignature(payload, MIDTRANS_SERVER_KEY);
+    expect(
+      verifyMidtransSignature(
+        { ...payload, gross_amount: "50000.00 " },
+        sig,
+        MIDTRANS_SERVER_KEY,
+      ),
+    ).toBe(false);
+  });
+});
+
 describe("parseXenditWebhookEvent", () => {
   it("SUCCEEDED → settlement", () => {
     const raw = JSON.stringify({

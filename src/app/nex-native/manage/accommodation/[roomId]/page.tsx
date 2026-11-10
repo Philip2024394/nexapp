@@ -144,6 +144,30 @@ export default async function EditRoomPage({
           </div>
         )}
 
+        {/* Owner-sealed 2026-11-10 · the room editor server action is
+            not wired in this environment. The form stays visible
+            (read-only) so sellers can review existing values · but
+            the submit button is disabled and an honest banner tells
+            them edits do not save. */}
+        <div
+          role="status"
+          data-nex-manage-accommodation-editor-unwired
+          style={{
+            padding: "10px 14px",
+            borderRadius: 10,
+            background: "rgba(255, 175, 64, 0.12)",
+            border: "1.5px solid #FFAF40",
+            color: "#FFAF40",
+            fontSize: 12,
+            fontWeight: 700,
+            marginBottom: 2,
+          }}
+        >
+          Room editing is not available in this environment yet. The
+          form below shows current values · changes you type here will
+          NOT save until the room-editor action is wired.
+        </div>
+
         <form
           action={updateRoomAction.bind(null, business.id, room.id)}
           data-nex-manage-accommodation-editor-form={room.id}
@@ -191,20 +215,24 @@ export default async function EditRoomPage({
 
           <button
             type="submit"
+            disabled
+            title="Room editing is not available in this environment yet · the server action is not wired."
             data-nex-manage-accommodation-editor-save={room.id}
+            data-nex-feature-unwired="room_editor"
             style={{
               marginTop: 8,
               padding: "10px 18px",
-              background: "#FF7200",
+              background: "rgba(255, 114, 0, 0.3)",
               color: "#1A0808",
               fontSize: 13,
               fontWeight: 700,
-              border: "1px solid rgba(255,114,0,0.6)",
+              border: "1px solid rgba(255,114,0,0.3)",
               borderRadius: 10,
-              cursor: "pointer",
+              cursor: "not-allowed",
+              opacity: 0.6,
             }}
           >
-            Save changes
+            Save changes · unavailable
           </button>
         </form>
       </div>

@@ -1,12 +1,20 @@
 -- PROPOSAL · NOT YET AUTHORISED · DO NOT APPLY
 -- =========================================================================
--- Drafted 2026-11-10 by RLS classification audit.
+-- Drafted 2026-11-10 by RLS classification audit · tightened 2026-11-10.
 -- Target: close GAP-P0 on nex.business_claim (migration 176 · no RLS).
 -- Sandbox-only envelope once authorised: kdstoyyeygcopkogqsyv.
 --
 -- Risk: leak would reveal which account is trying to claim which
 -- business (reputation/competitive risk). Reader scope must be the
 -- claimant themselves + HQ review (via service_role).
+--
+-- SCHEMA NOTES (verified against mig 176):
+--   · The column is `claimed_by_account_id` (TEXT, nullable), NOT
+--     `claimant_account_id`. It stores a cross-DB string of the
+--     Supabase nex_account.id (not a uuid FK). Policy casts the uuid
+--     from auth.uid()-joined nex_account.id to text for comparison.
+--   · Rows where claimed_by_account_id IS NULL (unverified claims)
+--     are visible only to service_role.
 
 BEGIN;
 
@@ -25,8 +33,9 @@ CREATE POLICY nex_business_claim_claimant_select
   FOR SELECT
   TO authenticated
   USING (
-    claimant_account_id IN (
-      SELECT id FROM nex_account WHERE supabase_user_id = auth.uid()
+    claimed_by_account_id IS NOT NULL
+    AND claimed_by_account_id = (
+      SELECT id::text FROM nex_account WHERE supabase_user_id = auth.uid()
     )
   );
 

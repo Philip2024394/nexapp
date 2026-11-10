@@ -1,8 +1,12 @@
 -- PROPOSAL · NOT YET AUTHORISED · DO NOT APPLY
 -- =========================================================================
--- Drafted 2026-11-10 by RLS classification audit.
+-- Drafted 2026-11-10 by RLS classification audit · tightened 2026-11-10.
 -- Target: close GAP-P0 on nex.incident_recipient (migration 224 · no RLS).
 -- Risk: table encodes the user's trusted-contact fan-out graph.
+--
+-- SCHEMA NOTES (verified against mig 224):
+--   · Join key is `i.incident_id = nex.incident_recipient.incident_id`.
+--   · Incident owner column is `requester_account_id`.
 --
 -- Policy: recipient-only SELECT OR triggering-incident owner SELECT;
 -- service_role bypass for dispatch logic.
@@ -28,14 +32,14 @@ CREATE POLICY nex_incident_recipient_scoped_select
     OR EXISTS (
       SELECT 1
         FROM nex.emergency_incident i
-        JOIN nex_account a ON a.id = i.triggered_by_account_id
-       WHERE i.id = nex.incident_recipient.incident_id
+        JOIN nex_account a ON a.id = i.requester_account_id
+       WHERE i.incident_id = nex.incident_recipient.incident_id
          AND a.supabase_user_id = auth.uid()
     )
   );
 
 COMMENT ON TABLE nex.incident_recipient IS
-  'Per-recipient fan-out rows. Recipient OR triggering-owner SELECT · service_role dispatch. Added via P-RLS proposal 2026-11-10.';
+  'Per-recipient fan-out rows. Recipient OR requester SELECT · service_role dispatch. Added via P-RLS proposal 2026-11-10.';
 
 COMMIT;
 
