@@ -163,7 +163,10 @@ export async function lookupActiveDeviceKeys(
     retired_at?: string | null;
     revoked_at?: string | null;
   };
-  const raw = (data as RowShape[] | null) ?? [];
+  // Cast through unknown because the select column list includes an
+  // optional `retired_at` field that only exists post-mig-323 · the
+  // Supabase typed-select helper can't narrow that at compile time.
+  const raw = (data as unknown as RowShape[] | null) ?? [];
 
   // Column-absent fallback · exclude rows flagged via the existing
   // schema's revoked_at column (if any). Mig 092 as-shipped does not
