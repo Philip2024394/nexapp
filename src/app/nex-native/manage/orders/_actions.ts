@@ -40,7 +40,17 @@ export type ManageOrderActionReason =
   | "not_found"
   | "invalid_state_transition"
   | "db_unavailable"
-  | "server_error";
+  | "server_error"
+  /** P5 · a sub-60s manual confirm must carry a free-form note from
+   *  the seller justifying why they already know the payment landed.
+   *  Reduces click-through fraud. */
+  | "note_required_fast_confirm";
+
+/** P5 · sellers must attach a note when they confirm payment less
+ *  than this many milliseconds after the buyer arrived on the
+ *  payment page (nex_order.updated_at becomes the awaiting_manual_
+ *  payment event timestamp). */
+export const FAST_CONFIRM_THRESHOLD_MS = 60_000;
 
 export type ManageOrderActionResult<T> =
   | { readonly ok: true; readonly value: T }
@@ -104,6 +114,21 @@ export async function sellerMarkOrderPaidAction(args: {
 }): Promise<ManageOrderActionResult<{ order: NexOrderRow }>> {
   const guard = await requireOrderOwnership(args.orderId);
   if (!guard.ok) return fail(guard.reason);
+
+  // P5 · fast-confirm note gate. The buyer transitions the order to
+  // `pending` the moment they land on the /pay page. If the seller
+  // flips to `paid` within FAST_CONFIRM_THRESHOLD_MS of that, require
+  // a note — the seller must justify how they already know the money
+  // landed. nex_order.updated_at carries that latest transition time
+  // (set by transitionOrderState in order-service).
+  const trimmedNote = (args.note ?? "").trim();
+  if (guard.order.state === "pending") {
+    const sincePendingMs = Date.now() - new Date(guard.order.updated_at).getTime();
+    if (sincePendingMs < FAST_CONFIRM_THRESHOLD_MS && trimmedNote.length === 0) {
+      return fail("note_required_fast_confirm");
+    }
+  }
+
   try {
     const { order } = await commerceService.markOrderPaid(
       args.orderId,
@@ -116,8 +141,10 @@ export async function sellerMarkOrderPaidAction(args: {
       event: "manual_payment_confirmed",
       actor_account_id: guard.accountId,
       metadata: {
-        note: (args.note ?? "").trim().slice(0, 500) || null,
+        note: trimmedNote.slice(0, 500) || null,
         from_state: guard.order.state,
+        fast_confirm: guard.order.state === "pending"
+          && (Date.now() - new Date(guard.order.updated_at).getTime()) < FAST_CONFIRM_THRESHOLD_MS,
       },
     });
     // P4 · notify buyer. Fail-soft · a notification outage must never

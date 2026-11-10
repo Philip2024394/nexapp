@@ -159,6 +159,28 @@ export async function updateMerchantNote(
   return data as NexOrderRow;
 }
 
+/**
+ * P5 · tag the payment surface that produced this order. Called by the
+ * buyer checkout action AFTER createOrder succeeds. NULLABLE column
+ * (mig 320). Only enum values enforced by the CHECK constraint are
+ * accepted at the DB level.
+ */
+export async function setPaymentMethod(
+  id: NexUuid,
+  method: "qr_manual" | "stripe_checkout" | "paypal" | "qris_dynamic",
+): Promise<NexOrderRow> {
+  const { data, error } = await nexSupabaseAdmin
+    .from("nex_order")
+    .update({ payment_method: method })
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error || !data) {
+    throw new Error(`order-service.setPaymentMethod: ${error?.message ?? "no row"}`);
+  }
+  return data as NexOrderRow;
+}
+
 /** Update the merchant-provided dispatch/tracking URL · empty/whitespace
  *  clears to null · http/https prefix required · length cap 1024 (DB CHECK). */
 export async function updateOrderTracking(

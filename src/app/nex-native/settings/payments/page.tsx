@@ -17,6 +17,9 @@ import { getAccountById } from "@/lib/nex-native/account-service";
 import { listBusinessesByOwner } from "@/lib/nex-native/business-service";
 import { readLocalConnectStatus } from "@/lib/nex-native/billing/stripe-connect-service";
 import { StripeConnectClient } from "./_stripe-connect-client";
+import { getActiveQrAsset } from "@/lib/nex-native/merchant-qr/qr-asset-service";
+import { mintForSellerPreview } from "@/lib/nex-native/merchant-qr/signed-url-service";
+import { QrUploadClient } from "./_qr-upload-client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,6 +58,18 @@ export default async function PaymentsSettingsPage() {
         onboardedAt: null,
         lastWebhookAt: null,
       };
+
+  // P5 · fetch current active QR + mint a short-lived signed URL
+  // for the seller to see it in their settings. Fail-soft: table
+  // / bucket may not exist yet (pre-migration).
+  const activeQr = primaryBusiness
+    ? await getActiveQrAsset(primaryBusiness.id).catch(() => null)
+    : null;
+  let activeQrPreviewUrl: string | null = null;
+  if (activeQr) {
+    const signed = await mintForSellerPreview(activeQr.storage_path).catch(() => null);
+    if (signed && signed.ok) activeQrPreviewUrl = signed.url;
+  }
 
   return (
     <main
@@ -183,7 +198,11 @@ export default async function PaymentsSettingsPage() {
             seller's written instructions at checkout. Owner manually
             marks the order paid once funds land · NEX never
             auto-confirms a QR payment. */}
-        <QrUploadCard />
+        <QrUploadClient
+          activeQrPreviewUrl={activeQrPreviewUrl}
+          activeQrWidth={activeQr?.width_px ?? null}
+          activeQrHeight={activeQr?.height_px ?? null}
+        />
 
         {/* Payment settings · preferred method · per-method toggles ·
             disconnect. UI-only today · toggle state will persist once

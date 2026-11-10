@@ -6920,6 +6920,19 @@ export async function placeOrderAction(formData: FormData): Promise<never> {
     await notifySellerNewOrder(order);
   } catch { /* silent · deliberate · order already persisted */ }
 
+  // P5 · tag the payment method and transition to pending so the
+  // buyer /pay page is the canonical landing. Fail-soft: a
+  // post-create metadata failure must not void the persisted order.
+  try {
+    await orderService.setPaymentMethod(order.id, "qr_manual");
+    await orderService.transitionOrderState(
+      order.id,
+      "pending",
+      session.account.id,
+      { event: "awaiting_manual_payment", payment_method: "qr_manual" },
+    );
+  } catch { /* silent · P5 metadata is additive */ }
+
   try {
     const noteLine = customerNote ? `\nBuyer note: ${customerNote}` : "";
     await conversationService.postMessage({

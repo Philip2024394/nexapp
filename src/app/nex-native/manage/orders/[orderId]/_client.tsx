@@ -842,6 +842,8 @@ function reasonLabel(reason: string): string {
     case "invalid_state_transition":
       return "This action is not valid from the current order state.";
     case "db_unavailable":    return "Database unavailable. Please try again shortly.";
+    case "note_required_fast_confirm":
+      return "This order has been pending for less than a minute. Add a short note explaining how you already know payment was received, then confirm.";
     default:                  return "Could not complete the action.";
   }
 }
