@@ -32,6 +32,7 @@ import {
 } from "@/lib/nex-native/merchant-qr/qr-asset-service";
 import { mintForBuyerPay } from "@/lib/nex-native/merchant-qr/signed-url-service";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
+import { getSellerActiveMethods } from "@/lib/nex-native/payments/method-resolver-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -80,23 +81,36 @@ export default async function BuyerPayPage({
     redirect(`/nex-native/orders/${orderId}`);
   }
 
-  // Resolve the seller's business + active QR.
-  const { data: biz } = await nexSupabaseAdmin
-    .from("nex_business")
-    .select("display_name, slug")
-    .eq("id", order.business_id)
-    .maybeSingle();
+  // Resolve the seller's business + every active payment method.
+  const [{ data: biz }, methods] = await Promise.all([
+    nexSupabaseAdmin
+      .from("nex_business")
+      .select("display_name, slug")
+      .eq("id", order.business_id)
+      .maybeSingle(),
+    getSellerActiveMethods(order.business_id),
+  ]);
   const sellerName = (biz as { display_name: string | null } | null)?.display_name ?? "the seller";
 
-  let qr: NexMerchantQrAssetRow | null = null;
-  try {
-    qr = await getActiveQrAsset(order.business_id);
-  } catch { qr = null; }
+  // If the seller has 0 methods, this page shouldn't have been
+  // reached · the buyer should be on /pay/chat. Redirect gracefully.
+  if (!methods.any_configured) {
+    redirect(`/nex-native/orders/${order.id}/pay/chat`);
+  }
 
+  // Multi-method picker: ≥ 2 methods active · buyer picks here.
+  const showPicker = methods.configured_count > 1;
+
+  let qr: NexMerchantQrAssetRow | null = null;
   let qrSignedUrl: string | null = null;
-  if (qr) {
-    const signed = await mintForBuyerPay(qr.storage_path);
-    if (signed.ok) qrSignedUrl = signed.url;
+  if (!showPicker && methods.qr_manual) {
+    try {
+      qr = await getActiveQrAsset(order.business_id);
+    } catch { qr = null; }
+    if (qr) {
+      const signed = await mintForBuyerPay(qr.storage_path);
+      if (signed.ok) qrSignedUrl = signed.url;
+    }
   }
 
   return (
@@ -169,10 +183,122 @@ export default async function BuyerPayPage({
             </div>
           </section>
 
+          {/* Multi-method picker · owner-sealed 2026-11-10. Buyer
+              chooses between the active gateways. */}
+          {showPicker ? (
+            <section
+              data-nex-method-picker
+              style={{
+                padding: 18,
+                borderRadius: 14,
+                background: PALETTE.cardBg,
+                border: `1.5px solid ${PALETTE.cardBorder}`,
+                display: "flex",
+                flexDirection: "column",
+                gap: 10,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 10,
+                  letterSpacing: "0.14em",
+                  color: PALETTE.accent,
+                  fontWeight: 900,
+                  textTransform: "uppercase",
+                }}
+              >
+                Choose how to pay
+              </div>
+              <p style={{ margin: 0, fontSize: 12.5, color: PALETTE.textMuted, lineHeight: 1.55 }}>
+                {sellerName} has set up multiple payment options. Pick one to continue.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {methods.stripe ? (
+                  <Link
+                    href={`/nex-native/orders/${order.id}/pay/stripe`}
+                    data-nex-picker-stripe
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "12px 14px",
+                      borderRadius: 12,
+                      background: "rgba(0,0,0,0.3)",
+                      border: `1.5px solid ${PALETTE.cardBorder}`,
+                      color: PALETTE.text,
+                      textDecoration: "none",
+                      fontSize: 13,
+                      fontWeight: 800,
+                    }}
+                  >
+                    <span>Stripe · card · Apple Pay · Google Pay</span>
+                    <span aria-hidden style={{ color: PALETTE.accent }}>→</span>
+                  </Link>
+                ) : null}
+                {methods.qr_manual ? (
+                  <Link
+                    href={`/nex-native/orders/${order.id}/pay?method=qr`}
+                    data-nex-picker-qr
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "12px 14px",
+                      borderRadius: 12,
+                      background: "rgba(0,0,0,0.3)",
+                      border: `1.5px solid ${PALETTE.cardBorder}`,
+                      color: PALETTE.text,
+                      textDecoration: "none",
+                      fontSize: 13,
+                      fontWeight: 800,
+                    }}
+                  >
+                    <span>Scan seller's QR code</span>
+                    <span aria-hidden style={{ color: PALETTE.accent }}>→</span>
+                  </Link>
+                ) : null}
+                {methods.paypal ? (
+                  <Link
+                    href={`/nex-native/orders/${order.id}/pay/paypal`}
+                    data-nex-picker-paypal
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "12px 14px",
+                      borderRadius: 12,
+                      background: "rgba(0,0,0,0.3)",
+                      border: `1.5px solid ${PALETTE.cardBorder}`,
+                      color: PALETTE.text,
+                      textDecoration: "none",
+                      fontSize: 13,
+                      fontWeight: 800,
+                    }}
+                  >
+                    <span>PayPal</span>
+                    <span aria-hidden style={{ color: PALETTE.accent }}>→</span>
+                  </Link>
+                ) : null}
+                <Link
+                  href={`/nex-native/orders/${order.id}/pay/chat`}
+                  data-nex-picker-chat
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "10px 14px",
+                    borderRadius: 12,
+                    background: "transparent",
+                    border: `1px dashed ${PALETTE.cardBorder}`,
+                    color: PALETTE.textMuted,
+                    textDecoration: "none",
+                    fontSize: 12,
+                    fontWeight: 700,
+                  }}
+                >
+                  <span>Arrange in chat with the seller instead</span>
+                  <span aria-hidden>→</span>
+                </Link>
+              </div>
+            </section>
+          ) : null}
+
           {/* Buyer-protection banner · owner-sealed 2026-11-10 ·
               high-prominence warning displayed ABOVE the QR card so
               the buyer reads it before scanning. */}
-          {qr && qrSignedUrl ? (
+          {!showPicker && qr && qrSignedUrl ? (
             <section
               data-nex-buyer-warning
               role="alert"
@@ -212,7 +338,7 @@ export default async function BuyerPayPage({
           ) : null}
 
           {/* QR card */}
-          {qr && qrSignedUrl ? (
+          {!showPicker && qr && qrSignedUrl ? (
             <section
               data-nex-qr-card
               style={{
@@ -250,7 +376,7 @@ export default async function BuyerPayPage({
                 QR link expires in a few minutes · refresh the page if the image stops loading.
               </div>
             </section>
-          ) : (
+          ) : !showPicker && !qr ? (
             <section
               data-nex-no-qr
               style={{
@@ -267,58 +393,62 @@ export default async function BuyerPayPage({
                 You can message the seller to arrange payment another way, or wait for them to configure a QR and reload this page.
               </p>
             </section>
-          )}
+          ) : null}
 
-          {/* System instructions · NEVER seller-authored */}
-          <section
-            style={{
-              padding: 14,
-              borderRadius: 12,
-              background: "rgba(0,0,0,0.25)",
-              border: `1px solid ${PALETTE.cardBorder}`,
-            }}
-          >
-            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: PALETTE.textMuted, lineHeight: 1.6 }}>
-              <li>Scan this QR with your bank or e-wallet app to pay the seller directly.</li>
-              <li><strong style={{ color: PALETTE.text }}>Verify the merchant name</strong> shown by your app before confirming the payment.</li>
-              <li>Payment is received by the seller, not by NEX.</li>
-              <li>The seller will confirm receipt manually after the payment reaches them. This may take a few minutes.</li>
-            </ul>
-          </section>
+          {/* System instructions, disclaimer, and "I have paid" CTA are
+              QR-specific · only render when the QR card is on screen. */}
+          {!showPicker && qr && qrSignedUrl ? (
+            <>
+              <section
+                style={{
+                  padding: 14,
+                  borderRadius: 12,
+                  background: "rgba(0,0,0,0.25)",
+                  border: `1px solid ${PALETTE.cardBorder}`,
+                }}
+              >
+                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: PALETTE.textMuted, lineHeight: 1.6 }}>
+                  <li>Scan this QR with your bank or e-wallet app to pay the seller directly.</li>
+                  <li><strong style={{ color: PALETTE.text }}>Verify the merchant name</strong> shown by your app before confirming the payment.</li>
+                  <li>Payment is received by the seller, not by NEX.</li>
+                  <li>The seller will confirm receipt manually after the payment reaches them. This may take a few minutes.</li>
+                </ul>
+              </section>
 
-          {/* Explicit verification disclaimer */}
-          <section
-            data-nex-verification-disclaimer
-            style={{
-              padding: 12,
-              borderRadius: 10,
-              background: "rgba(198, 161, 91, 0.08)",
-              border: `1px solid ${PALETTE.accent}55`,
-            }}
-          >
-            <p style={{ margin: 0, fontSize: 11.5, lineHeight: 1.55, color: PALETTE.textMuted }}>
-              <strong style={{ color: PALETTE.accent }}>NEX does not verify this payment.</strong>{" "}
-              The seller must confirm receipt in their dashboard. Until then, the order remains in <strong style={{ color: PALETTE.text }}>pending</strong>.
-            </p>
-          </section>
+              <section
+                data-nex-verification-disclaimer
+                style={{
+                  padding: 12,
+                  borderRadius: 10,
+                  background: "rgba(198, 161, 91, 0.08)",
+                  border: `1px solid ${PALETTE.accent}55`,
+                }}
+              >
+                <p style={{ margin: 0, fontSize: 11.5, lineHeight: 1.55, color: PALETTE.textMuted }}>
+                  <strong style={{ color: PALETTE.accent }}>NEX does not verify this payment.</strong>{" "}
+                  The seller must confirm receipt in their dashboard. Until then, the order remains in <strong style={{ color: PALETTE.text }}>pending</strong>.
+                </p>
+              </section>
 
-          <Link
-            href={`/nex-native/orders/${order.id}`}
-            style={{
-              alignSelf: "stretch",
-              padding: "12px 16px",
-              textAlign: "center",
-              background: PALETTE.accent,
-              color: "#061710",
-              textDecoration: "none",
-              borderRadius: 999,
-              fontSize: 13,
-              fontWeight: 800,
-              letterSpacing: "0.02em",
-            }}
-          >
-            I have paid · watch for seller confirmation
-          </Link>
+              <Link
+                href={`/nex-native/orders/${order.id}`}
+                style={{
+                  alignSelf: "stretch",
+                  padding: "12px 16px",
+                  textAlign: "center",
+                  background: PALETTE.accent,
+                  color: "#061710",
+                  textDecoration: "none",
+                  borderRadius: 999,
+                  fontSize: 13,
+                  fontWeight: 800,
+                  letterSpacing: "0.02em",
+                }}
+              >
+                I have paid · watch for seller confirmation
+              </Link>
+            </>
+          ) : null}
         </div>
       </main>
     </>

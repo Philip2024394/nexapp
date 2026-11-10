@@ -68,7 +68,9 @@ import * as likedProductService from "@/lib/nex-native/liked-product-service";
 import * as orderService from "@/lib/nex-native/order-service";
 import * as commerceService from "@/lib/nex-native/commerce-service";
 import { notifySellerNewOrder } from "@/lib/nex-native/manage-orders/order-notification-service";
-import { getActiveQrAsset } from "@/lib/nex-native/merchant-qr/qr-asset-service";
+import {
+  getCheckoutDestinationForBusiness,
+} from "@/lib/nex-native/payments/method-resolver-service";
 import * as cartService from "@/lib/nex-native/cart-service";
 // Phase 1 · Slice 1D · owner-authorised 2026-10-24 · marketing-layer
 // signal writer. Fire-and-await after successful sendPeerMessage so
@@ -6897,28 +6899,15 @@ export async function placeOrderAction(formData: FormData): Promise<never> {
     redirect(`/nex-native/${business.slug}?${qs.toString()}`);
   }
 
-  // P5 pre-activation review · owner-sealed 2026-11-10 ·
-  // Prevent ghost orders. Buyer checkout today is qr_manual-only
-  // (P2 Stripe Checkout remains gated). Refuse to CREATE an order
-  // when the seller has no active payment QR · otherwise the order
-  // would persist in `pending` with no payable surface.
-  // Fail-safe: if the merchant-qr table is not yet applied (returns
-  // from a pre-mig-319 environment) OR the lookup raises, we treat
-  // that as "no QR" and refuse rather than creating a ghost order.
-  let hasActiveQr = false;
-  try {
-    const activeQr = await getActiveQrAsset(business.id);
-    hasActiveQr = activeQr !== null;
-  } catch {
-    hasActiveQr = false;
-  }
-  if (!hasActiveQr) {
-    const qs = new URLSearchParams({
-      e: "seller_payment_qr_missing",
-      m: "The seller has not configured a payment method yet. Message them to arrange payment before placing an order.",
-    });
-    redirect(`/nex-native/${business.slug}?${qs.toString()}`);
-  }
+  // Payment-gateway orchestration · owner-sealed 2026-11-10 ·
+  // NEX is NEVER in the money flow. We only decide which of the
+  // seller's configured surfaces to send the buyer to:
+  //   · 0 methods → buyer and seller arrange via existing chat
+  //   · 1 method  → direct to that method's checkout page
+  //   · 2+ methods → buyer picks on /pay
+  // The resolver fails soft · a dependency outage ⇒ no methods ⇒
+  // chat fallback · the buyer is NEVER blocked from ordering.
+  const { methods, destination } = await getCheckoutDestinationForBusiness(business.id);
 
   let order;
   try {
@@ -6944,28 +6933,92 @@ export async function placeOrderAction(formData: FormData): Promise<never> {
     await notifySellerNewOrder(order);
   } catch { /* silent · deliberate · order already persisted */ }
 
-  // P5 · tag the payment method and transition to pending so the
-  // buyer /pay page is the canonical landing. Fail-soft: a
-  // post-create metadata failure must not void the persisted order.
+  // Tag payment_method based on the resolver outcome. Multi-method
+  // picker leaves the tag unset until the buyer picks. chat_only
+  // leaves it unset because there is no gateway involved. Fail-soft:
+  // mig 320 may not be applied yet in the current environment.
   try {
-    await orderService.setPaymentMethod(order.id, "qr_manual");
-    await orderService.transitionOrderState(
-      order.id,
-      "pending",
-      session.account.id,
-      { event: "awaiting_manual_payment", payment_method: "qr_manual" },
-    );
+    if (destination.kind === "qr") {
+      await orderService.setPaymentMethod(order.id, "qr_manual");
+      await orderService.transitionOrderState(
+        order.id,
+        "pending",
+        session.account.id,
+        { event: "awaiting_manual_payment", payment_method: "qr_manual" },
+      );
+    } else if (destination.kind === "stripe") {
+      await orderService.setPaymentMethod(order.id, "stripe_checkout");
+      await orderService.transitionOrderState(
+        order.id,
+        "pending",
+        session.account.id,
+        { event: "awaiting_stripe_checkout", payment_method: "stripe_checkout" },
+      );
+    } else if (destination.kind === "paypal") {
+      await orderService.setPaymentMethod(order.id, "paypal");
+      await orderService.transitionOrderState(
+        order.id,
+        "pending",
+        session.account.id,
+        { event: "awaiting_paypal", payment_method: "paypal" },
+      );
+    } else if (destination.kind === "qris_dynamic") {
+      await orderService.setPaymentMethod(order.id, "qris_dynamic");
+      await orderService.transitionOrderState(
+        order.id,
+        "pending",
+        session.account.id,
+        { event: "awaiting_qris_dynamic", payment_method: "qris_dynamic" },
+      );
+    } else if (destination.kind === "picker") {
+      // Transition to pending without a method tag · buyer selects on /pay.
+      await orderService.transitionOrderState(
+        order.id,
+        "pending",
+        session.account.id,
+        {
+          event: "awaiting_method_selection",
+          methods_available: {
+            stripe: methods.stripe,
+            qr_manual: methods.qr_manual,
+            paypal: methods.paypal,
+            qris_dynamic: methods.qris_dynamic,
+          },
+        },
+      );
+    } else {
+      // chat_only · order stays in `created` state · no gateway to await.
+      await orderService.recordOrderEvent({
+        order_id: order.id,
+        event: "awaiting_chat_arrangement",
+        actor_account_id: session.account.id,
+        metadata: { note: "no gateway configured · buyer and seller arrange via chat" },
+      });
+    }
   } catch { /* silent · P5 metadata is additive */ }
 
+  // Always post a chat message so both parties see the order details.
   try {
     const noteLine = customerNote ? `\nBuyer note: ${customerNote}` : "";
+    const paymentLine =
+      destination.kind === "chat_only"
+        ? "Payment: please arrange with seller via this chat."
+        : destination.kind === "qr"
+          ? "Payment: open the order to scan the seller's QR."
+          : destination.kind === "stripe"
+            ? "Payment: open the order to pay with Stripe."
+            : destination.kind === "paypal"
+              ? "Payment: open the order to pay with PayPal."
+              : destination.kind === "qris_dynamic"
+                ? "Payment: open the order to pay via QRIS."
+                : "Payment: open the order to choose how to pay.";
     await conversationService.postMessage({
       conversation_id: conversation.id,
       sender_account_id: session.account.id,
       body:
         `Order placed · ${product.name} · ${product.currency} ${(product.price_pence / 100).toFixed(2)}\n` +
         `Order id: ${order.id.slice(0, 8)}\n` +
-        `Payment: offline · please share details or confirm COD / pickup.` +
+        paymentLine +
         noteLine,
     });
   } catch {
@@ -6975,7 +7028,7 @@ export async function placeOrderAction(formData: FormData): Promise<never> {
   revalidatePath("/nex-native/orders");
   revalidatePath(`/nex-native/orders/${order.id}`);
   revalidatePath(`/nex-native/conversations/${conversation.id}`);
-  redirect(`/nex-native/orders/${order.id}`);
+  redirect(destination.url(order.id));
 }
 
 // ---------------------------------------------------------------------------

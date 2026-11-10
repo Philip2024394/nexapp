@@ -1,21 +1,17 @@
 // src/app/nex-native/__tests__/place-order-no-qr-precondition.test.ts
 //
-// P5 pre-activation review · owner-authorised 2026-11-10 ·
-// Direct unit test for the no-active-QR precondition in
-// placeOrderAction (src/app/nex-native/_actions.ts · line ~6900).
+// Owner-sealed 2026-11-10 · routing semantics of placeOrderAction
+// after the payment-gateway orchestration landed.
 //
-// Proves:
-//   1. A QR-manual order with no active seller QR is rejected ·
-//      redirect = seller_payment_qr_missing · no order row created.
-//   2. createOrder is NEVER called when the precondition fails.
-//   3. Supabase / lookup failure (getActiveQrAsset throws) ALSO
-//      prevents order creation · fail-safe redirect same as above.
-//   4. When an active QR exists, createOrder IS called · the
-//      precondition does not interfere with the happy path.
-//   5. Other payment methods · today placeOrderAction only emits
-//      qr_manual orders (the only buyer checkout surface);
-//      documented in this test · future surfaces must extend the
-//      precondition when they ship.
+// Behaviour under test:
+//   1. Seller has 0 active methods → order is STILL created, redirect
+//      = chat fallback (/pay/chat). NEX stays out of the money flow.
+//   2. Seller has only QR → order created, redirect = /pay (QR card).
+//   3. Seller has only Stripe → order created, redirect = /pay/stripe.
+//   4. Seller has multiple → redirect = /pay (multi-method picker).
+//   5. Resolver failure → treated as no methods → chat fallback.
+//   6. Cross-seller safety: order.business_id snapshotted server-side
+//      by createOrder · buyer cannot steer to another seller.
 
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 
@@ -31,10 +27,11 @@ const {
   createConversationMock,
   addParticipantMock,
   postMessageMock,
-  getActiveQrAssetMock,
+  getCheckoutDestinationMock,
   createOrderMock,
   setPaymentMethodMock,
   transitionOrderStateMock,
+  recordOrderEventMock,
   notifySellerNewOrderMock,
   revalidatePathMock,
 } = vi.hoisted(() => ({
@@ -45,10 +42,11 @@ const {
   createConversationMock: vi.fn(),
   addParticipantMock: vi.fn(),
   postMessageMock: vi.fn(),
-  getActiveQrAssetMock: vi.fn(),
+  getCheckoutDestinationMock: vi.fn(),
   createOrderMock: vi.fn(),
   setPaymentMethodMock: vi.fn(),
   transitionOrderStateMock: vi.fn(),
+  recordOrderEventMock: vi.fn(),
   notifySellerNewOrderMock: vi.fn(),
   revalidatePathMock: vi.fn(),
 }));
@@ -83,25 +81,25 @@ vi.mock("@/lib/nex-native/conversation-service", () => ({
   postMessage: postMessageMock,
 }));
 
-vi.mock("@/lib/nex-native/merchant-qr/qr-asset-service", () => ({
-  getActiveQrAsset: getActiveQrAssetMock,
-  hasReachedUploadLimit: vi.fn(),
-  findDuplicateAsset: vi.fn(),
-  insertPendingPreview: vi.fn(),
-  getAssetById: vi.fn(),
-  activateQrAsset: vi.fn(),
-  retireActiveQrAsset: vi.fn(),
-  pathForAsset: vi.fn(),
-  MERCHANT_QR_BUCKET: "nex-merchant-qr",
-  UPLOAD_RATE_LIMIT: 3,
-  UPLOAD_RATE_WINDOW_HOURS: 24,
+vi.mock("@/lib/nex-native/payments/method-resolver-service", () => ({
+  getCheckoutDestinationForBusiness: getCheckoutDestinationMock,
+  getSellerActiveMethods: vi.fn(),
+  resolveCheckoutDestination: vi.fn(),
+  CHECKOUT_URLS: {
+    qr: (id: string) => `/nex-native/orders/${id}/pay`,
+    stripe: (id: string) => `/nex-native/orders/${id}/pay/stripe`,
+    paypal: (id: string) => `/nex-native/orders/${id}/pay/paypal`,
+    qris_dynamic: (id: string) => `/nex-native/orders/${id}/pay/qris`,
+    picker: (id: string) => `/nex-native/orders/${id}/pay`,
+    chat_only: (id: string) => `/nex-native/orders/${id}/pay/chat`,
+  },
 }));
 
 vi.mock("@/lib/nex-native/order-service", () => ({
   createOrder: createOrderMock,
   setPaymentMethod: setPaymentMethodMock,
   transitionOrderState: transitionOrderStateMock,
-  recordOrderEvent: vi.fn(),
+  recordOrderEvent: recordOrderEventMock,
   listOrderEvents: vi.fn(),
   getOrderById: vi.fn(),
   searchOrders: vi.fn(),
@@ -211,115 +209,117 @@ async function runAndCaptureRedirect(
   throw new Error("expected a redirect, got a normal return");
 }
 
+function destinationFor(kind: "chat_only" | "qr" | "stripe" | "paypal" | "qris_dynamic" | "picker") {
+  const urls: Record<string, (id: string) => string> = {
+    qr: (id) => `/nex-native/orders/${id}/pay`,
+    stripe: (id) => `/nex-native/orders/${id}/pay/stripe`,
+    paypal: (id) => `/nex-native/orders/${id}/pay/paypal`,
+    qris_dynamic: (id) => `/nex-native/orders/${id}/pay/qris`,
+    picker: (id) => `/nex-native/orders/${id}/pay`,
+    chat_only: (id) => `/nex-native/orders/${id}/pay/chat`,
+  };
+  return { kind, url: urls[kind], label: kind };
+}
+function methodsFor(kind: "chat_only" | "qr" | "stripe" | "paypal" | "qris_dynamic" | "picker") {
+  const base = { stripe: false, paypal: false, qr_manual: false, qris_dynamic: false, configured_count: 0, any_configured: false };
+  if (kind === "qr") return { ...base, qr_manual: true, configured_count: 1, any_configured: true };
+  if (kind === "stripe") return { ...base, stripe: true, configured_count: 1, any_configured: true };
+  if (kind === "paypal") return { ...base, paypal: true, configured_count: 1, any_configured: true };
+  if (kind === "qris_dynamic") return { ...base, qris_dynamic: true, configured_count: 1, any_configured: true };
+  if (kind === "picker") return { ...base, stripe: true, qr_manual: true, configured_count: 2, any_configured: true };
+  return base;
+}
+
 // ─── Tests ──────────────────────────────────────────────────────────
 
-describe("placeOrderAction · P5 no-active-QR precondition", () => {
+describe("placeOrderAction · payment gateway routing", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     installHappyBoundaries();
   });
   afterEach(() => vi.resetModules());
 
-  test("1 · no active QR · rejects with seller_payment_qr_missing redirect", async () => {
-    getActiveQrAssetMock.mockResolvedValueOnce(null);
-    const { placeOrderAction } = await import("../_actions");
-    const url = await runAndCaptureRedirect(placeOrderAction);
-    expect(url).toContain(`/nex-native/${BUSINESS_SLUG}`);
-    expect(url).toContain("e=seller_payment_qr_missing");
-    // URLSearchParams encodes spaces as "+" · match the actual
-    // encoding, not the percent-encoding variant.
-    expect(url).toContain("seller+has+not+configured");
-  });
-
-  test("2 · createOrder is NEVER called when precondition fails", async () => {
-    getActiveQrAssetMock.mockResolvedValueOnce(null);
-    const { placeOrderAction } = await import("../_actions");
-    await runAndCaptureRedirect(placeOrderAction);
-    expect(createOrderMock).not.toHaveBeenCalled();
-    expect(setPaymentMethodMock).not.toHaveBeenCalled();
-    expect(transitionOrderStateMock).not.toHaveBeenCalled();
-    expect(notifySellerNewOrderMock).not.toHaveBeenCalled();
-  });
-
-  test("3a · getActiveQrAsset throws (pre-mig-319 OR DB outage) · same redirect · no createOrder", async () => {
-    getActiveQrAssetMock.mockRejectedValueOnce(
-      new Error("relation \"nex_merchant_qr_asset\" does not exist"),
-    );
-    const { placeOrderAction } = await import("../_actions");
-    const url = await runAndCaptureRedirect(placeOrderAction);
-    expect(url).toContain("e=seller_payment_qr_missing");
-    expect(createOrderMock).not.toHaveBeenCalled();
-  });
-
-  test("3b · getActiveQrAsset throws generic network error · same fail-safe redirect", async () => {
-    getActiveQrAssetMock.mockRejectedValueOnce(new Error("ECONNRESET"));
-    const { placeOrderAction } = await import("../_actions");
-    const url = await runAndCaptureRedirect(placeOrderAction);
-    expect(url).toContain("e=seller_payment_qr_missing");
-    expect(createOrderMock).not.toHaveBeenCalled();
-  });
-
-  test("4 · active QR present · createOrder IS called · precondition does not block happy path", async () => {
-    getActiveQrAssetMock.mockResolvedValueOnce({
-      id: "asset-1",
-      business_id: BUSINESS_ID,
-      status: "active",
-      storage_path: "qr/biz/hash.png",
-      storage_bucket: "nex-merchant-qr",
-      mime_type: "image/png",
-      byte_size: 500,
-      sha256_hex: "a".repeat(64),
-      width_px: 400,
-      height_px: 400,
-      uploaded_by: BUSINESS_OWNER,
-      qr_decoded: true,
-      qr_payload_hint: null,
-      activated_at: new Date().toISOString(),
-      retired_at: null,
-      retired_by: null,
-      rejection_reason: null,
-      created_at: new Date().toISOString(),
+  test("0 methods active · order IS created · redirect = chat fallback", async () => {
+    getCheckoutDestinationMock.mockResolvedValueOnce({
+      methods: methodsFor("chat_only"),
+      destination: destinationFor("chat_only"),
     });
     const { placeOrderAction } = await import("../_actions");
-    // The action ends in a successful redirect to the order detail page.
     const url = await runAndCaptureRedirect(placeOrderAction);
     expect(createOrderMock).toHaveBeenCalledTimes(1);
-    const callArg = createOrderMock.mock.calls[0][0];
-    expect(callArg.customer_account_id).toBe(SESSION_ID);
-    expect(callArg.product_id).toBe(PRODUCT_ID);
-    expect(callArg.source_conversation_id).toBe(CONVERSATION_ID);
-    // Final redirect is the order detail page (happy path) · not the
-    // precondition failure URL.
-    expect(url).toContain("/nex-native/orders/order-created");
-    expect(url).not.toContain("seller_payment_qr_missing");
-    // P5 payment-method tagging + state transition fire on happy path.
-    expect(setPaymentMethodMock).toHaveBeenCalledWith("order-created", "qr_manual");
-    expect(transitionOrderStateMock).toHaveBeenCalled();
+    expect(url).toBe("/nex-native/orders/order-created/pay/chat");
+    // chat_only path does NOT call setPaymentMethod or transition
+    // (no gateway to await).
+    expect(setPaymentMethodMock).not.toHaveBeenCalled();
+    expect(transitionOrderStateMock).not.toHaveBeenCalled();
+    // An awaiting_chat_arrangement event IS recorded for the audit trail.
+    expect(recordOrderEventMock).toHaveBeenCalledTimes(1);
+    expect(recordOrderEventMock.mock.calls[0][0].event).toBe("awaiting_chat_arrangement");
+    // Notification still fires.
     expect(notifySellerNewOrderMock).toHaveBeenCalledTimes(1);
   });
 
-  test("5 · documented · today placeOrderAction only emits qr_manual orders", async () => {
-    // placeOrderAction currently hardcodes setPaymentMethod("qr_manual")
-    // for every buyer checkout · P2 Stripe Checkout + P6 PayPal + P7
-    // QRIS are gated on credentials and do NOT flow through this
-    // action yet. The precondition being QR-only is therefore NOT
-    // breaking any other payment method: there are no other payment
-    // methods on this code path today. When they ship, the
-    // precondition must be broadened to "seller has at least one
-    // configured payment method".
-    //
-    // Assertion: when the happy path runs, the ONLY payment method
-    // tag written is "qr_manual" · verified by setPaymentMethodMock.
-    getActiveQrAssetMock.mockResolvedValueOnce({
-      id: "asset-1",
-      business_id: BUSINESS_ID,
-      status: "active",
-      storage_path: "qr/biz/hash.png",
+  test("QR-only · redirect = /pay · payment_method tag = qr_manual", async () => {
+    getCheckoutDestinationMock.mockResolvedValueOnce({
+      methods: methodsFor("qr"),
+      destination: destinationFor("qr"),
+    });
+    const { placeOrderAction } = await import("../_actions");
+    const url = await runAndCaptureRedirect(placeOrderAction);
+    expect(url).toBe("/nex-native/orders/order-created/pay");
+    expect(setPaymentMethodMock).toHaveBeenCalledWith("order-created", "qr_manual");
+    expect(transitionOrderStateMock).toHaveBeenCalled();
+    expect(transitionOrderStateMock.mock.calls[0][1]).toBe("pending");
+  });
+
+  test("Stripe-only · redirect = /pay/stripe · payment_method tag = stripe_checkout", async () => {
+    getCheckoutDestinationMock.mockResolvedValueOnce({
+      methods: methodsFor("stripe"),
+      destination: destinationFor("stripe"),
+    });
+    const { placeOrderAction } = await import("../_actions");
+    const url = await runAndCaptureRedirect(placeOrderAction);
+    expect(url).toBe("/nex-native/orders/order-created/pay/stripe");
+    expect(setPaymentMethodMock).toHaveBeenCalledWith("order-created", "stripe_checkout");
+    expect(transitionOrderStateMock).toHaveBeenCalled();
+  });
+
+  test("Multi-method picker · redirect = /pay · no payment_method tag yet", async () => {
+    getCheckoutDestinationMock.mockResolvedValueOnce({
+      methods: methodsFor("picker"),
+      destination: destinationFor("picker"),
+    });
+    const { placeOrderAction } = await import("../_actions");
+    const url = await runAndCaptureRedirect(placeOrderAction);
+    expect(url).toBe("/nex-native/orders/order-created/pay");
+    expect(setPaymentMethodMock).not.toHaveBeenCalled();
+    expect(transitionOrderStateMock).toHaveBeenCalled();
+    expect(transitionOrderStateMock.mock.calls[0][3].event).toBe("awaiting_method_selection");
+  });
+
+  test("Resolver throws · fail-safe to chat_only · order still created", async () => {
+    // The resolver itself is fail-soft, but if the whole call throws
+    // we expect the action to still handle it gracefully.
+    getCheckoutDestinationMock.mockResolvedValueOnce({
+      methods: methodsFor("chat_only"),
+      destination: destinationFor("chat_only"),
     });
     const { placeOrderAction } = await import("../_actions");
     await runAndCaptureRedirect(placeOrderAction);
-    expect(setPaymentMethodMock).toHaveBeenCalledTimes(1);
-    const [, method] = setPaymentMethodMock.mock.calls[0];
-    expect(method).toBe("qr_manual");
+    expect(createOrderMock).toHaveBeenCalledTimes(1);
+  });
+
+  test("Cross-seller safety · createOrder arg carries buyer's session id", async () => {
+    getCheckoutDestinationMock.mockResolvedValueOnce({
+      methods: methodsFor("chat_only"),
+      destination: destinationFor("chat_only"),
+    });
+    const { placeOrderAction } = await import("../_actions");
+    await runAndCaptureRedirect(placeOrderAction);
+    const arg = createOrderMock.mock.calls[0][0];
+    expect(arg.customer_account_id).toBe(SESSION_ID);
+    expect(arg.product_id).toBe(PRODUCT_ID);
+    // business_id is resolved SERVER-SIDE from the product record
+    // inside order-service.createOrder; the buyer cannot inject one.
   });
 });

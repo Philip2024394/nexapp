@@ -19,6 +19,7 @@ import { readLocalConnectStatus } from "@/lib/nex-native/billing/stripe-connect-
 import { StripeConnectClient } from "./_stripe-connect-client";
 import { getActiveQrAsset } from "@/lib/nex-native/merchant-qr/qr-asset-service";
 import { mintForSellerPreview } from "@/lib/nex-native/merchant-qr/signed-url-service";
+import { getSellerActiveMethods } from "@/lib/nex-native/payments/method-resolver-service";
 import { QrUploadClient } from "./_qr-upload-client";
 import { PaymentSettingsClient } from "./_payment-settings-client";
 import { SaveSettingsButton } from "./_save-settings-button";
@@ -72,6 +73,18 @@ export default async function PaymentsSettingsPage() {
     const signed = await mintForSellerPreview(activeQr.storage_path).catch(() => null);
     if (signed && signed.ok) activeQrPreviewUrl = signed.url;
   }
+
+  // Activation summary · owner-sealed 2026-11-10 · shows the seller
+  // exactly what buyers will see at checkout. Fail-soft if no business.
+  const methods = primaryBusiness
+    ? await getSellerActiveMethods(primaryBusiness.id).catch(() => null)
+    : null;
+  const activationLabels: string[] = [];
+  if (methods?.stripe) activationLabels.push("Stripe");
+  if (methods?.paypal) activationLabels.push("PayPal");
+  if (methods?.qr_manual) activationLabels.push("QR Code");
+  if (methods?.qris_dynamic) activationLabels.push("QRIS");
+  const noneActive = methods !== null && !methods.any_configured;
 
   return (
     <main
@@ -130,6 +143,56 @@ export default async function PaymentsSettingsPage() {
             Choose where your shop sales payments go. Select one or both.
             NEX never holds your funds.
           </p>
+
+          {/* Activation summary · owner-sealed 2026-11-10 · what the
+              buyer actually sees at checkout based on current config. */}
+          {methods ? (
+            <div
+              data-nex-activation-summary
+              style={{
+                marginTop: 14,
+                padding: "10px 14px",
+                borderRadius: 10,
+                background: noneActive
+                  ? "rgba(255, 175, 64, 0.1)"
+                  : "rgba(22, 214, 107, 0.08)",
+                border: `1px solid ${noneActive ? "#FFAF40" : "#16D66B"}55`,
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 900,
+                  letterSpacing: "0.14em",
+                  textTransform: "uppercase",
+                  color: noneActive ? "#FFAF40" : "#16D66B",
+                }}
+              >
+                Currently accepting
+              </div>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: IRELAND.textPrimary,
+                }}
+              >
+                {noneActive
+                  ? "Nothing yet — buyers will arrange payment in chat"
+                  : activationLabels.join(" · ")}
+              </div>
+              {noneActive ? (
+                <div style={{ fontSize: 11, color: IRELAND.textMuted, marginTop: 2, lineHeight: 1.45 }}>
+                  Connect Stripe or PayPal, or upload a QR code, to give
+                  buyers a direct checkout. NEX never touches your funds
+                  either way.
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </header>
 
         {/* Stripe · round 31a · real Connect flow replaces the Phase-U
