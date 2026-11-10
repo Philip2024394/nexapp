@@ -51,6 +51,15 @@ export interface FreeChatTheme {
    *  free theme. Picking a spotlight still applies the wallpaper
    *  immediately · payment is only taken via the Theme Library. */
   readonly isSpotlight?: boolean;
+  /** Owner-authorised 2026-11-10 · solid colour tile · when set AND
+   *  wallpaperUrl is null, the tile paints this hex as its preview AND
+   *  the chat canvas background paints this same hex when the theme is
+   *  applied. Replaces the 4 Ireland image themes (ireland-2/3/4/5)
+   *  with 4 colour themes (Cream · Light Gray · Fresh Green · Pink)
+   *  while keeping ireland-1 as the single remaining Ireland image.
+   *  Emerald stays the MAIN app theme · these are chat-background
+   *  options only. */
+  readonly backgroundHex?: string;
 }
 
 export const FREE_CHAT_THEMES: readonly FreeChatTheme[] = [
@@ -66,19 +75,17 @@ export const FREE_CHAT_THEMES: readonly FreeChatTheme[] = [
   { id: "theme-3", label: "Theme 3", wallpaperUrl: "/nex-themes/free-chat-theme-3.png", placeholderLabel: null, accentHex: "#16D66B", identity: "worldwide" },
   { id: "theme-5", label: "Theme 5", wallpaperUrl: "/nex-themes/free-chat-theme-5.png", placeholderLabel: null, accentHex: "#FF7200", identity: "worldwide" },
 
-  // ── Ireland tiles · owner-authorised 2026-11-02 ──────────────────
-  // 4 Irish wallpapers chosen by the owner (ire3 · ire2 · ireland-7 ·
-  // ireland-8). Accent hex uses the sealed Ireland Gold (#C6A15B) ·
-  // the sealed premium Irish accent · matches the Visit Shop badge,
-  // the drawer edge-light, and the Live Side Drawer gold detail.
-  { id: "ireland-1", label: "Ireland 1", wallpaperUrl: "/nex-themes/ireland/ire3.png",       placeholderLabel: null, accentHex: "#C6A15B", identity: "ireland" },
-  { id: "ireland-2", label: "Ireland 2", wallpaperUrl: "/nex-themes/ireland/ire2.png",       placeholderLabel: null, accentHex: "#C6A15B", identity: "ireland" },
-  { id: "ireland-3", label: "Ireland 3", wallpaperUrl: "/nex-themes/ireland/ireland-7.png",  placeholderLabel: null, accentHex: "#C6A15B", identity: "ireland" },
-  // Owner directive 2026-11-02 (revision 7) · the container-colour
-  // concept was retired · ireland-4 reverts to a standard wallpaper
-  // tile (ireland-8.png · the 5th Ireland asset the owner shipped).
-  { id: "ireland-4", label: "Ireland 4", wallpaperUrl: "/nex-themes/ireland/ireland-8.png", placeholderLabel: null, accentHex: "#C6A15B", identity: "ireland" },
-  { id: "ireland-5", label: "Ireland 5", wallpaperUrl: "/nex-themes/ireland/ireland-5.png",  placeholderLabel: null, accentHex: "#C6A15B", identity: "ireland" },
+  // ── Ireland tiles · owner-authorised 2026-11-10 (revision) ──────
+  // Owner directive 2026-11-10 · reduce the 5-image Ireland set to
+  // ONE remaining image theme + 4 solid-colour tiles. Emerald stays
+  // the MAIN app theme (chrome, drawer, buttons); these 4 colour
+  // tiles are chat-background OPTIONS the user can pick instead of
+  // the sealed emerald when they want a different vibe.
+  { id: "ireland-1", label: "Ireland", wallpaperUrl: "/nex-themes/ireland/ire3.png", placeholderLabel: null, accentHex: "#C6A15B", identity: "ireland" },
+  { id: "theme-cream",       label: "Cream",       wallpaperUrl: null, placeholderLabel: "Cream",   accentHex: "#D4A24F", identity: "ireland", backgroundHex: "#FFF9E9" },
+  { id: "theme-light-gray",  label: "Light Gray",  wallpaperUrl: null, placeholderLabel: "Gray",    accentHex: "#007AFF", identity: "ireland", backgroundHex: "#F5F5F7" },
+  { id: "theme-fresh-green", label: "Fresh Green", wallpaperUrl: null, placeholderLabel: "Green",   accentHex: "#4A7B1E", identity: "ireland", backgroundHex: "#CBEE92" },
+  { id: "theme-pink-soft",   label: "Pink",        wallpaperUrl: null, placeholderLabel: "Pink",    accentHex: "#D44680", identity: "ireland", backgroundHex: "#FFF0F5" },
 ];
 
 /** Owner-authorised 2026-11-02 · identity-scoped theme list for the
@@ -270,6 +277,19 @@ export function resolveFreeChatWallpaperUrl(
   if (match) return match.wallpaperUrl;
   const library = LIBRARY_THEMES.find((t) => t.id === themeId);
   return library?.wallpaperUrl ?? null;
+}
+
+/** Owner-authorised 2026-11-10 · resolve a theme id to its solid
+ *  background hex (if any). Returns null for image themes and for
+ *  themes that don't declare a `backgroundHex`. The canvas uses this
+ *  to paint the chat background when the picked theme is a colour
+ *  tile (no wallpaper image). */
+export function resolveFreeChatBackgroundHex(
+  themeId: string | null | undefined,
+): string | null {
+  if (!themeId) return null;
+  const match = FREE_CHAT_THEMES.find((t) => t.id === themeId);
+  return match?.backgroundHex ?? null;
 }
 
 // ─── Bubble customization · owner-authorised 2026-11-02 ────────────

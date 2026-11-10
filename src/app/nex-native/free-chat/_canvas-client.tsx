@@ -29,6 +29,7 @@ import {
   freeChatBackgroundCss,
   hexWithAlpha,
   resolveFreeChatAccentHex,
+  resolveFreeChatBackgroundHex,
   resolveFreeChatWallpaperUrl,
   resolveBubbleFillAndRim,
   defaultBubbleCustomizationForTheme,
@@ -239,6 +240,13 @@ export function FreeChatCanvasClient({
   // other tile (wallpaper themes) ignores containerColor.
   const activeBackgroundFallback = React.useMemo<string>(() => {
     if (activeWallpaperUrl) return NEX.bg;
+    // Owner-authorised 2026-11-10 · solid-colour tiles (Cream · Light
+    // Gray · Fresh Green · Pink) carry a `backgroundHex` on the theme
+    // record · paint that hex as the chat background when the user
+    // picks one. Takes precedence over the bubble-customize
+    // containerColor (which stays scoped to the nex-default tile).
+    const themeHex = resolveFreeChatBackgroundHex(themeId);
+    if (themeHex) return themeHex;
     if (
       bubbleCustomization?.containerColor &&
       initialThemeId === "nex-default"
@@ -246,7 +254,7 @@ export function FreeChatCanvasClient({
       return bubbleCustomization.containerColor;
     }
     return NEX.bg;
-  }, [activeWallpaperUrl, bubbleCustomization, initialThemeId]);
+  }, [activeWallpaperUrl, bubbleCustomization, initialThemeId, themeId]);
 
   React.useEffect(() => {
     const main = document.querySelector<HTMLElement>(
@@ -2382,18 +2390,23 @@ function ThemeTile({
   readonly onPress: () => void;
 }): React.JSX.Element {
   const hasImage = theme.wallpaperUrl !== null;
-  // Owner directive 2026-10-21 (iteration 59) · three visual states:
-  //   · image theme    · tile paints the wallpaper
-  //   · NEX default    · tile paints the NEX navy page preview (same
-  //                      colour the page reverts to) + "NEX" label +
-  //                      cyan border accent so it reads as the brand
-  //                      default, not an empty slot
-  //   · placeholder    · black tile with the numeric label (unchanged)
+  // Owner directive 2026-10-21 (iteration 59) + 2026-11-10 addition ·
+  // four visual states:
+  //   · image theme      · tile paints the wallpaper
+  //   · NEX default      · tile paints the NEX navy page preview + "NEX"
+  //                        label + cyan border accent
+  //   · solid colour tile · tile paints `theme.backgroundHex` (Cream /
+  //                        Light Gray / Fresh Green / Pink) with the
+  //                        theme name as its label
+  //   · legacy placeholder · black tile with the numeric label
   const isDefault = theme.isDefault === true;
+  const hasColor = !hasImage && !isDefault && typeof theme.backgroundHex === "string";
   const background = hasImage
     ? `url("${theme.wallpaperUrl}") center / cover no-repeat, #000`
     : isDefault
     ? NEX.bg
+    : hasColor
+    ? (theme.backgroundHex as string)
     : "#000";
   // Owner directive 2026-10-21 (iteration 63) · active tile uses a
   // bright cyan rim at full opacity so it still reads as "selected"
@@ -2435,7 +2448,30 @@ function ThemeTile({
       {isDefault && (
         <span data-nex-free-chat-first-visit-tile-default-label>NEX</span>
       )}
-      {!hasImage && !isDefault && (
+      {hasColor && (
+        // Owner-authorised 2026-11-10 · solid-colour tile label. The
+        // label text contrast is derived from the background's
+        // luminance · dark text on light backgrounds (cream / gray /
+        // pink) and light-ish text on fresh green. Mirrors the
+        // readable-on-swatch pattern used in the colour drawer.
+        <span
+          data-nex-free-chat-first-visit-tile-color-label
+          style={{
+            fontSize: 12,
+            fontWeight: 800,
+            letterSpacing: 0.6,
+            color: theme.id === "theme-fresh-green" ? "#1F2E0A" : "#1D1D1F",
+            textShadow: "0 1px 1px rgba(255, 255, 255, 0.35)",
+            padding: "2px 8px",
+            borderRadius: 999,
+            background: "rgba(255, 255, 255, 0.55)",
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          {theme.placeholderLabel ?? theme.label}
+        </span>
+      )}
+      {!hasImage && !isDefault && !hasColor && (
         <span data-nex-free-chat-first-visit-tile-placeholder>
           {theme.placeholderLabel}
         </span>
