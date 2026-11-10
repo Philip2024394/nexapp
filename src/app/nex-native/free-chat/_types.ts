@@ -81,11 +81,15 @@ export const FREE_CHAT_THEMES: readonly FreeChatTheme[] = [
   // the MAIN app theme (chrome, drawer, buttons); these 4 colour
   // tiles are chat-background OPTIONS the user can pick instead of
   // the sealed emerald when they want a different vibe.
+  // Owner-specified palette 2026-11-10 · solid main page + lighter cards +
+  // deeper matching text per theme. accentHex uses the deep text colour
+  // for buttons · rims · NEX wordmark · self bubble (like gold NEX on
+  // emerald · deep-of-same-family on each theme).
   { id: "ireland-1", label: "Ireland", wallpaperUrl: "/nex-themes/ireland/ire3.png", placeholderLabel: null, accentHex: "#C6A15B", identity: "ireland" },
-  { id: "theme-cream",       label: "Cream",       wallpaperUrl: null, placeholderLabel: "Cream",   accentHex: "#D4A24F", identity: "ireland", backgroundHex: "#FFF9E9" },
-  { id: "theme-light-gray",  label: "Light Gray",  wallpaperUrl: null, placeholderLabel: "Gray",    accentHex: "#007AFF", identity: "ireland", backgroundHex: "#F5F5F7" },
-  { id: "theme-fresh-green", label: "Fresh Green", wallpaperUrl: null, placeholderLabel: "Green",   accentHex: "#4A7B1E", identity: "ireland", backgroundHex: "#CBEE92" },
-  { id: "theme-pink-soft",   label: "Pink",        wallpaperUrl: null, placeholderLabel: "Pink",    accentHex: "#D44680", identity: "ireland", backgroundHex: "#FFF0F5" },
+  { id: "theme-cream",       label: "Cream",       wallpaperUrl: null, placeholderLabel: "Cream",   accentHex: "#453F35", identity: "ireland", backgroundHex: "#F2EBDD" },
+  { id: "theme-light-gray",  label: "Light Grey",  wallpaperUrl: null, placeholderLabel: "Grey",    accentHex: "#39443E", identity: "ireland", backgroundHex: "#E2E6E3" },
+  { id: "theme-fresh-green", label: "Fresh Green", wallpaperUrl: null, placeholderLabel: "Green",   accentHex: "#29452B", identity: "ireland", backgroundHex: "#CBEE92" },
+  { id: "theme-pink-soft",   label: "Pink",        wallpaperUrl: null, placeholderLabel: "Pink",    accentHex: "#593C49", identity: "ireland", backgroundHex: "#F2C6D5" },
 ];
 
 /** Owner-authorised 2026-11-02 · identity-scoped theme list for the

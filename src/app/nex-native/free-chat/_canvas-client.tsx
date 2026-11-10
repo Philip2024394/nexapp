@@ -237,26 +237,31 @@ export function FreeChatCanvasClient({
     selfText: string;
     selfBorder: string;
   }>(() => {
+    // Owner-specified palette 2026-11-10 · main page (bg) is the
+    // theme's canvas colour · cards (peer bubble + other containers)
+    // use the lighter sibling · text colour is the deep matching ink.
+    // self bubble takes the deep ink as fill so it reads like the
+    // emerald+gold NEX wordmark pattern · deep-of-same-family.
     switch (themeId) {
       case "theme-cream":
         return {
-          peerBg: "#FFFFFF", peerText: "#1A1816", peerBorder: "#EBE2CB",
-          selfBg: "#D4A24F", selfText: "#1A1816", selfBorder: "#B88A3D",
+          peerBg: "#FAF6ED", peerText: "#453F35", peerBorder: "#E4DDC7",
+          selfBg: "#453F35", selfText: "#FAF6ED", selfBorder: "#2E2A24",
         };
       case "theme-light-gray":
         return {
-          peerBg: "#E9E9EB", peerText: "#1D1D1F", peerBorder: "#DCDCDE",
-          selfBg: "#007AFF", selfText: "#FFFFFF", selfBorder: "#0062CC",
+          peerBg: "#F3F5F3", peerText: "#39443E", peerBorder: "#CCD3CF",
+          selfBg: "#39443E", selfText: "#F3F5F3", selfBorder: "#242B27",
         };
       case "theme-fresh-green":
         return {
-          peerBg: "#FFFEF6", peerText: "#1F2E0A", peerBorder: "#A3D664",
-          selfBg: "#4A7B1E", selfText: "#FFFEF6", selfBorder: "#3A6318",
+          peerBg: "#E5F5C9", peerText: "#29452B", peerBorder: "#B4D788",
+          selfBg: "#29452B", selfText: "#E5F5C9", selfBorder: "#1A2D1C",
         };
       case "theme-pink-soft":
         return {
-          peerBg: "#FFFFFF", peerText: "#2D1A20", peerBorder: "#F5D5E0",
-          selfBg: "#D44680", selfText: "#FFFFFF", selfBorder: "#B23A6D",
+          peerBg: "#F9E4EB", peerText: "#593C49", peerBorder: "#E8B6C6",
+          selfBg: "#593C49", selfText: "#F9E4EB", selfBorder: "#3E2832",
         };
       default:
         return null;
@@ -2501,71 +2506,98 @@ function ThemeTile({
         <span data-nex-free-chat-first-visit-tile-default-label>NEX</span>
       )}
       {hasColor && (
-        // Owner-authorised 2026-11-10 (rev 2) · colour tile now renders
-        // a mini chat preview inside the tile: incoming bubble top-
-        // left, outgoing bubble (in the theme's accent) centre-right,
-        // and the theme name at the bottom. Matches the prototype
-        // panels visually so the user sees the FULL theme vibe (not
-        // just the background hex) in each picker swatch.
-        <>
-          {/* Incoming (peer) bubble · top-left · white-ish card that
-              contrasts with the theme background. */}
-          <span
-            aria-hidden
-            data-nex-free-chat-tile-mini-bubble-in
-            style={{
-              position: "absolute",
-              top: "18%",
-              left: "12%",
-              width: "42%",
-              height: "16%",
-              borderRadius: "6px 6px 6px 2px",
-              background:
-                theme.id === "theme-fresh-green"
-                  ? "#FFFEF6"
-                  : theme.id === "theme-light-gray"
-                  ? "#E9E9EB"
-                  : "#FFFFFF",
-              boxShadow: "0 1px 2px rgba(0, 0, 0, 0.08)",
-            }}
-          />
-          {/* Outgoing (self) bubble · centre-right · theme accent so
-              the user sees which colour their own messages take. */}
-          <span
-            aria-hidden
-            data-nex-free-chat-tile-mini-bubble-out
-            style={{
-              position: "absolute",
-              top: "42%",
-              right: "12%",
-              width: "46%",
-              height: "16%",
-              borderRadius: "6px 6px 2px 6px",
-              background: theme.accentHex,
-              boxShadow: "0 1px 2px rgba(0, 0, 0, 0.12)",
-            }}
-          />
-          {/* Theme name · bottom label · dark text on all four themes
-              (fresh green also uses deep forest for legibility). */}
-          <span
-            data-nex-free-chat-first-visit-tile-color-label
-            style={{
-              position: "absolute",
-              bottom: 4,
-              left: 0,
-              right: 0,
-              textAlign: "center",
-              fontSize: 10,
-              fontWeight: 800,
-              letterSpacing: 0.4,
-              color:
-                theme.id === "theme-fresh-green" ? "#1F2E0A" : "#1D1D1F",
-              textShadow: "0 1px 1px rgba(255, 255, 255, 0.5)",
-            }}
-          >
-            {theme.label}
-          </span>
-        </>
+        // Owner-authorised 2026-11-10 (rev 3) · colour tile renders a
+        // mini container preview showing the "NEX" wordmark in the
+        // theme's accent colour on the main page shade · same pattern
+        // as "gold NEX on emerald green". Below the wordmark sits a
+        // light card showing the peer bubble colour. The outgoing
+        // bubble in the accent sits centre-right so the user sees all
+        // three theme colours (main + card + accent) in one tile.
+        (() => {
+          // Per-theme card shade from the owner-specified palette ·
+          // matches the colorThemePalette.peerBg exactly.
+          const cardShade =
+            theme.id === "theme-cream" ? "#FAF6ED"
+            : theme.id === "theme-light-gray" ? "#F3F5F3"
+            : theme.id === "theme-fresh-green" ? "#E5F5C9"
+            : theme.id === "theme-pink-soft" ? "#F9E4EB"
+            : "#FFFFFF";
+          return (
+            <>
+              {/* NEX wordmark · top · accent colour on main-page bg · same
+                  style as gold NEX on emerald in the sealed world backdrop. */}
+              <span
+                data-nex-free-chat-tile-nex-wordmark
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  top: "16%",
+                  left: 0,
+                  right: 0,
+                  textAlign: "center",
+                  fontSize: 14,
+                  fontWeight: 900,
+                  letterSpacing: 2.2,
+                  color: theme.accentHex,
+                  textShadow: "0 1px 1px rgba(255, 255, 255, 0.35)",
+                }}
+              >
+                NEX
+              </span>
+              {/* Light card · underneath the wordmark · shows the peer
+                  bubble colour (what peer messages will look like). */}
+              <span
+                aria-hidden
+                data-nex-free-chat-tile-mini-card
+                style={{
+                  position: "absolute",
+                  top: "42%",
+                  left: "12%",
+                  width: "44%",
+                  height: "14%",
+                  borderRadius: 4,
+                  background: cardShade,
+                  boxShadow: "0 1px 2px rgba(0, 0, 0, 0.1)",
+                }}
+              />
+              {/* Outgoing bubble · accent colour · what self messages
+                  look like. */}
+              <span
+                aria-hidden
+                data-nex-free-chat-tile-mini-bubble-out
+                style={{
+                  position: "absolute",
+                  top: "60%",
+                  right: "12%",
+                  width: "46%",
+                  height: "14%",
+                  borderRadius: 4,
+                  background: theme.accentHex,
+                  boxShadow: "0 1px 2px rgba(0, 0, 0, 0.12)",
+                }}
+              />
+              {/* Theme name · bottom label · accent colour so it ties
+                  back to the wordmark above. */}
+              <span
+                data-nex-free-chat-first-visit-tile-color-label
+                style={{
+                  position: "absolute",
+                  bottom: 4,
+                  left: 0,
+                  right: 0,
+                  textAlign: "center",
+                  fontSize: 9,
+                  fontWeight: 800,
+                  letterSpacing: 0.4,
+                  color: theme.accentHex,
+                  textShadow: "0 1px 1px rgba(255, 255, 255, 0.4)",
+                }}
+              >
+                {theme.label}
+              </span>
+            </>
+          );
+        })()
       )}
       {!hasImage && !isDefault && !hasColor && (
         <span data-nex-free-chat-first-visit-tile-placeholder>
