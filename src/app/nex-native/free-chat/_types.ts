@@ -132,8 +132,19 @@ import { LIBRARY_THEMES } from "../chat-themes-library/_catalog";
 // normal price doesn't apply yet". After the user picks + creates
 // account + hits Live, subsequent library buys are at full price
 // (strike line disappears · enforced at the Theme Library page).
+// Owner-authorised 2026-11-10 · Ireland picker rewritten: 1 image
+// (ireland-1) + 4 solid-colour tiles. Library spotlight rotation
+// retired for Ireland · emerald stays the main app theme, these 4
+// colours are chat-background options the user can swap.
 const PINNED_TILES_BY_IDENTITY: Record<string, readonly string[]> = {
-  ireland: ["nex-default"],
+  ireland: [
+    "nex-default",
+    "ireland-1",
+    "theme-cream",
+    "theme-light-gray",
+    "theme-fresh-green",
+    "theme-pink-soft",
+  ],
   worldwide: [],
   indonesia: [],
 };
@@ -196,6 +207,15 @@ export function getDailyFreeChatPicker(
   const pinned = pinnedIds
     .map((id) => FREE_CHAT_THEMES.find((t) => t.id === id))
     .filter((t): t is FreeChatTheme => t !== undefined);
+
+  // Owner-authorised 2026-11-10 · Ireland picker is now a FIXED set
+  // of 6 pinned tiles (nex-default + 1 Ireland image + 4 colour
+  // tiles). Library spotlight rotation retired for this identity.
+  // Worldwide / Indonesia keep the library-rotation path untouched
+  // (library catalog is Ireland-only today anyway).
+  if (target === "ireland") {
+    return pinned;
+  }
 
   const dateKey = (nowIso ?? new Date().toISOString()).slice(0, 10);
   const spotlights = pickSpotlightForDate(
