@@ -311,42 +311,19 @@ describe("Journey 1 · QR-only seller", () => {
 });
 
 // ===========================================================================
-// JOURNEY 2 · Stripe-only seller
+// JOURNEY 2 · Stripe webhook (member subscription path only)
+//
+// NOTE · sealed 2026-11-10 (REVISED): Stripe is NO LONGER a shop checkout
+// option. The "Stripe-only seller" resolver test and the orphan
+// stripe-checkout-service credentials_missing test were removed. The Stripe
+// webhook route itself stays (member subscription events + legacy charge
+// events route through it) · signature-verify + idempotency tests retained.
 // ===========================================================================
 
-describe("Journey 2 · Stripe-only seller", () => {
+describe("Journey 2 · Stripe webhook (member subscription path)", () => {
   beforeEach(() => {
-    mocks.readLocalConnectStatus.mockResolvedValue(stripeOn());
+    mocks.readLocalConnectStatus.mockResolvedValue(stripeOff());
     mocks.getActiveQrAsset.mockResolvedValue(null);
-  });
-
-  it("resolver returns stripe destination", async () => {
-    const { getCheckoutDestinationForBusiness } = await import("../method-resolver-service");
-    const { methods, destination } = await getCheckoutDestinationForBusiness(BIZ_ID as never);
-    expect(methods.stripe).toBe(true);
-    expect(methods.configured_count).toBe(1);
-    expect(destination.kind).toBe("stripe");
-    expect(destination.url(ORDER_ID as never)).toBe(
-      `/nex-native/orders/${ORDER_ID}/pay/stripe`,
-    );
-  });
-
-  it("stripe-checkout scaffold returns credentials_missing in test env", async () => {
-    // Keep STRIPE_SECRET_KEY + NEX_APP_PUBLIC_URL unset; sellerStripeAccountId
-    // is present (seller connected) so we reach the env-presence branch.
-    delete (process.env as Record<string, string | undefined>).STRIPE_SECRET_KEY;
-    delete (process.env as Record<string, string | undefined>).NEX_APP_PUBLIC_URL;
-    const { createMerchantDirectCheckoutSession } = await import(
-      "../stripe-checkout-service"
-    );
-    const result = await createMerchantDirectCheckoutSession({
-      order: buildOrder() as never,
-      sellerStripeAccountId: "acct_merchant_test",
-    });
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.reason).toBe("credentials_missing");
-    }
   });
 
   it("webhook · signed checkout.session.completed calls markOrderPaid · 200", async () => {
@@ -413,35 +390,25 @@ describe("Journey 2 · Stripe-only seller", () => {
 
 // ===========================================================================
 // JOURNEY 3 · Multi-method picker
+//
+// Under sealed 2026-11-10 (REVISED) gateway ownership: shop checkout
+// paths are PayPal + QR + QRIS only (Stripe removed). Multi-gateway
+// currently needs PayPal credentials wired · the full multi-method
+// picker e2e is covered via QR-only (J1) and chat_only (J4) until
+// PayPal onboarding lands. The resolver returns "picker" only when
+// 2+ shop gateways are active · not testable today without PayPal.
 // ===========================================================================
 
-describe("Journey 3 · Multi-method picker", () => {
-  beforeEach(() => {
-    mocks.readLocalConnectStatus.mockResolvedValue(stripeOn());
-    mocks.getActiveQrAsset.mockResolvedValue(qrOn());
-  });
-
-  it("resolver returns picker when 2 gateways active", async () => {
-    const { getCheckoutDestinationForBusiness } = await import("../method-resolver-service");
-    const { methods, destination } = await getCheckoutDestinationForBusiness(BIZ_ID as never);
-    expect(methods.configured_count).toBe(2);
-    expect(destination.kind).toBe("picker");
-    expect(destination.url(ORDER_ID as never)).toBe(`/nex-native/orders/${ORDER_ID}/pay`);
-  });
-
-  it("picker Stripe link routes to /pay/stripe", async () => {
+describe("Journey 3 · Multi-method picker (deferred until PayPal wired)", () => {
+  it("CHECKOUT_URLS maps the picker + qr keys to the shared /pay page", async () => {
     const { CHECKOUT_URLS } = await import("../method-resolver-service");
-    expect(CHECKOUT_URLS.stripe(ORDER_ID as never)).toBe(
-      `/nex-native/orders/${ORDER_ID}/pay/stripe`,
-    );
-  });
-
-  it("picker QR link routes to /pay (buyer picks QR on the picker page)", async () => {
-    const { CHECKOUT_URLS } = await import("../method-resolver-service");
-    // Picker page itself and QR mode both live under /pay — the picker
-    // renders Stripe + QR links; QR mode is the same URL.
     expect(CHECKOUT_URLS.qr(ORDER_ID as never)).toBe(`/nex-native/orders/${ORDER_ID}/pay`);
     expect(CHECKOUT_URLS.picker(ORDER_ID as never)).toBe(`/nex-native/orders/${ORDER_ID}/pay`);
+  });
+
+  it("CHECKOUT_URLS has no `stripe` key after 2026-11-10 rule change", async () => {
+    const { CHECKOUT_URLS } = await import("../method-resolver-service");
+    expect(Object.keys(CHECKOUT_URLS)).not.toContain("stripe");
   });
 });
 

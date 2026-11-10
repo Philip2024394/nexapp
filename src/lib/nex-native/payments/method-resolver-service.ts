@@ -1,33 +1,38 @@
 // src/lib/nex-native/payments/method-resolver-service.ts
 //
-// Owner-sealed 2026-11-10 · payment-gateway orchestration.
-// NEX never handles the money. This service figures out which
-// payment gateways a seller has configured, and routes the buyer
-// to the correct checkout surface.
+// Owner-sealed 2026-11-10 (REVISED) · payment-gateway orchestration.
+// NEX never handles the money. This service figures out which shop
+// payment gateways a seller has configured, and routes the buyer to
+// the correct checkout surface.
+//
+// AUTHORITATIVE RULES (sealed 2026-11-10 later revision):
+//   · Shop-owner commerce · customer-to-shop payments route through
+//     PayPal + manual QR + dynamic QRIS only.
+//   · Stripe is RESERVED for NEX member subscriptions / renewals /
+//     wallet top-ups and MUST NOT appear as a shop checkout option.
+//   · NEX does NOT hold funds. Every shop method is merchant-direct.
+//   · Gateway "active" state is derived from the seller's own
+//     configured surfaces · not a NEX decision.
+//   · Reads only. This service never writes to the seller's config.
+//
+// Stripe Connect code in billing/stripe-connect-service.ts remains
+// in-place for reversibility but is NOT read here · the seller's
+// Stripe-Connect fields on nex_business are legacy for this surface.
 //
 // If the seller has configured ZERO gateways, the buyer falls back
 // to the existing NEX Chat conversation to arrange payment manually
 // with the seller. This is NEX's "no gateway" path, not a failure.
-//
-// Doctrine:
-//   · NEX does NOT hold funds. Every method is merchant-direct.
-//   · Gateway "active" state is derived from the seller's own
-//     configured surfaces · not a NEX decision.
-//   · Reads only. This service never writes to the seller's config.
 
 import "server-only";
-import { readLocalConnectStatus } from "../billing/stripe-connect-service";
 import { getActiveQrAsset } from "../merchant-qr/qr-asset-service";
 import type { NexUuid } from "../types";
 
 export type PaymentMethodKey =
-  | "stripe"
   | "paypal"
   | "qr_manual"
   | "qris_dynamic";
 
 export interface SellerActiveMethods {
-  readonly stripe: boolean;
   readonly paypal: boolean;
   readonly qr_manual: boolean;
   readonly qris_dynamic: boolean;
@@ -38,11 +43,9 @@ export interface SellerActiveMethods {
 export type CheckoutDestinationKind =
   /** Seller has a QR configured · route buyer to the QR /pay page. */
   | "qr"
-  /** Seller has Stripe Connect active · route buyer to Stripe. */
-  | "stripe"
-  /** Seller has PayPal · route buyer to PayPal. (Not built yet.) */
+  /** Seller has PayPal · route buyer to PayPal. */
   | "paypal"
-  /** Seller has dynamic QRIS · route buyer to QRIS flow. (Not built yet.) */
+  /** Seller has dynamic QRIS · route buyer to QRIS flow. */
   | "qris_dynamic"
   /** Seller has multiple gateways active · buyer picks on /pay. */
   | "picker"
@@ -58,10 +61,11 @@ export interface CheckoutDestination {
   readonly label: string;
 }
 
-/** Centralised URL builders · all routes server-side. */
+/** Centralised URL builders · all routes server-side.
+ *  Stripe is deliberately absent · member subscriptions use
+ *  /api/nex-native/billing/checkout, not a /pay/* route. */
 export const CHECKOUT_URLS = {
   qr: (orderId: NexUuid) => `/nex-native/orders/${orderId}/pay`,
-  stripe: (orderId: NexUuid) => `/nex-native/orders/${orderId}/pay/stripe`,
   paypal: (orderId: NexUuid) => `/nex-native/orders/${orderId}/pay/paypal`,
   qris_dynamic: (orderId: NexUuid) => `/nex-native/orders/${orderId}/pay/qris`,
   picker: (orderId: NexUuid) => `/nex-native/orders/${orderId}/pay`,
@@ -77,19 +81,14 @@ export const CHECKOUT_URLS = {
 export async function getSellerActiveMethods(
   businessId: NexUuid,
 ): Promise<SellerActiveMethods> {
-  const [stripeStatus, qrAsset] = await Promise.all([
-    readLocalConnectStatus(businessId).catch(() => null),
-    getActiveQrAsset(businessId).catch(() => null),
-  ]);
-  const stripe = Boolean(stripeStatus && stripeStatus.chargesEnabled);
+  const qrAsset = await getActiveQrAsset(businessId).catch(() => null);
   const qr_manual = Boolean(qrAsset);
   // PayPal + dynamic QRIS not yet wired · BLOCKED on credentials.
   const paypal = false;
   const qris_dynamic = false;
-  const flags = [stripe, paypal, qr_manual, qris_dynamic];
+  const flags = [paypal, qr_manual, qris_dynamic];
   const configured_count = flags.filter(Boolean).length;
   return {
-    stripe,
     paypal,
     qr_manual,
     qris_dynamic,
@@ -123,9 +122,6 @@ export function resolveCheckoutDestination(
     };
   }
   // Exactly one method is active · route directly.
-  if (methods.stripe) {
-    return { kind: "stripe", url: CHECKOUT_URLS.stripe, label: "stripe" };
-  }
   if (methods.qr_manual) {
     return { kind: "qr", url: CHECKOUT_URLS.qr, label: "qr" };
   }

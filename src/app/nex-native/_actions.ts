@@ -6946,14 +6946,6 @@ export async function placeOrderAction(formData: FormData): Promise<never> {
         session.account.id,
         { event: "awaiting_manual_payment", payment_method: "qr_manual" },
       );
-    } else if (destination.kind === "stripe") {
-      await orderService.setPaymentMethod(order.id, "stripe_checkout");
-      await orderService.transitionOrderState(
-        order.id,
-        "pending",
-        session.account.id,
-        { event: "awaiting_stripe_checkout", payment_method: "stripe_checkout" },
-      );
     } else if (destination.kind === "paypal") {
       await orderService.setPaymentMethod(order.id, "paypal");
       await orderService.transitionOrderState(
@@ -6979,7 +6971,6 @@ export async function placeOrderAction(formData: FormData): Promise<never> {
         {
           event: "awaiting_method_selection",
           methods_available: {
-            stripe: methods.stripe,
             qr_manual: methods.qr_manual,
             paypal: methods.paypal,
             qris_dynamic: methods.qris_dynamic,
@@ -7005,13 +6996,11 @@ export async function placeOrderAction(formData: FormData): Promise<never> {
         ? "Payment: please arrange with seller via this chat."
         : destination.kind === "qr"
           ? "Payment: open the order to scan the seller's QR."
-          : destination.kind === "stripe"
-            ? "Payment: open the order to pay with Stripe."
-            : destination.kind === "paypal"
-              ? "Payment: open the order to pay with PayPal."
-              : destination.kind === "qris_dynamic"
-                ? "Payment: open the order to pay via QRIS."
-                : "Payment: open the order to choose how to pay.";
+          : destination.kind === "paypal"
+            ? "Payment: open the order to pay with PayPal."
+            : destination.kind === "qris_dynamic"
+              ? "Payment: open the order to pay via QRIS."
+              : "Payment: open the order to choose how to pay.";
     await conversationService.postMessage({
       conversation_id: conversation.id,
       sender_account_id: session.account.id,

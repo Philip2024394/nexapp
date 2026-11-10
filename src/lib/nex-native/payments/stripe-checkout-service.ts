@@ -1,6 +1,29 @@
 // src/lib/nex-native/payments/stripe-checkout-service.ts
 //
-// Owner-sealed 2026-11-10 · MERCHANT-DIRECT Stripe Checkout Sessions.
+// ============================================================================
+// DEPRECATED · 2026-11-10 (REVISED) · DO NOT USE FOR SHOP CHECKOUT
+// ============================================================================
+// This file was built on 2026-11-10 (earlier in the day) for merchant-direct
+// Stripe Checkout Sessions targeting shop-owner commerce. Later that same
+// day, owner sealed a REVISED gateway-ownership rule:
+//
+//   · Stripe → NEX member subscriptions / renewals / wallet top-ups ONLY.
+//   · PayPal → shop-owner commerce + customer-to-shop purchases.
+//   · Stripe MUST NOT appear in the shop buyer→seller checkout path.
+//
+// The method-resolver no longer imports this file (as of 2026-11-10 revised).
+// It stays in-tree for reversibility only. New callers should use:
+//
+//   · `src/lib/nex-native/billing/checkout-session.ts` for MEMBER SUBSCRIPTION
+//     Checkout Sessions (Stripe Shop package $4.99/mo).
+//   · `src/lib/nex-native/payments/paypal-checkout-service.ts` for SHOP
+//     CHECKOUT (buyer→seller).
+//
+// For audit history see:
+//   docs/doctrine/payment-gateway-ownership-matrix-2026-11-10.md §V-4
+// ============================================================================
+//
+// Historic doctrine (preserved for reference):
 // Doctrine (merchant-payments #7): charges hit the seller's connected
 // Stripe account directly. NEX takes zero fee, holds no money, and
 // does NOT use destination charges or Payouts routing.
@@ -14,14 +37,6 @@
 //
 // Until those are set, `createMerchantDirectCheckoutSession` returns
 // a `credentials_missing` reason and never touches the network.
-//
-// Owner sealed Stripe-first rule 2026-11-05: NO payment gateway may
-// be built ahead of a clear entitlement + post-payment behaviour.
-// The entitlement for this flow is: one paid NEX order whose seller
-// must deliver. Post-payment behaviour: Stripe webhook → NEX updates
-// order state to `paid` via commerce-service.markOrderPaid. That
-// webhook handler is NOT included in this scaffold; it is a
-// separate build gated on the same credentials.
 
 import "server-only";
 import { nexSupabaseAdmin } from "../supabase-admin";

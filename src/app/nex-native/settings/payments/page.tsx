@@ -80,7 +80,9 @@ export default async function PaymentsSettingsPage() {
     ? await getSellerActiveMethods(primaryBusiness.id).catch(() => null)
     : null;
   const activationLabels: string[] = [];
-  if (methods?.stripe) activationLabels.push("Stripe");
+  // Stripe deliberately absent · shop checkout routes through PayPal + QR + QRIS
+  // per sealed 2026-11-10 gateway ownership rules. Stripe is reserved for NEX
+  // member subscriptions (/manage/shop/subscription, billing/checkout-session.ts).
   if (methods?.paypal) activationLabels.push("PayPal");
   if (methods?.qr_manual) activationLabels.push("QR Code");
   if (methods?.qris_dynamic) activationLabels.push("QRIS");

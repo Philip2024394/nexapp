@@ -213,26 +213,9 @@ export default async function BuyerPayPage({
                 {sellerName} has set up multiple payment options. Pick one to continue.
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {methods.stripe ? (
-                  <Link
-                    href={`/nex-native/orders/${order.id}/pay/stripe`}
-                    data-nex-picker-stripe
-                    style={{
-                      display: "flex", alignItems: "center", justifyContent: "space-between",
-                      padding: "12px 14px",
-                      borderRadius: 12,
-                      background: "rgba(0,0,0,0.3)",
-                      border: `1.5px solid ${PALETTE.cardBorder}`,
-                      color: PALETTE.text,
-                      textDecoration: "none",
-                      fontSize: 13,
-                      fontWeight: 800,
-                    }}
-                  >
-                    <span>Stripe · card · Apple Pay · Google Pay</span>
-                    <span aria-hidden style={{ color: PALETTE.accent }}>→</span>
-                  </Link>
-                ) : null}
+                {/* Stripe deliberately absent · member subscriptions only ·
+                    shop checkout routes through PayPal + QR + QRIS per
+                    sealed 2026-11-10 gateway ownership rules */}
                 {methods.qr_manual ? (
                   <Link
                     href={`/nex-native/orders/${order.id}/pay?method=qr`}

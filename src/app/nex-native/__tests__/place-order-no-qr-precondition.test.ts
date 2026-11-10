@@ -87,7 +87,6 @@ vi.mock("@/lib/nex-native/payments/method-resolver-service", () => ({
   resolveCheckoutDestination: vi.fn(),
   CHECKOUT_URLS: {
     qr: (id: string) => `/nex-native/orders/${id}/pay`,
-    stripe: (id: string) => `/nex-native/orders/${id}/pay/stripe`,
     paypal: (id: string) => `/nex-native/orders/${id}/pay/paypal`,
     qris_dynamic: (id: string) => `/nex-native/orders/${id}/pay/qris`,
     picker: (id: string) => `/nex-native/orders/${id}/pay`,
@@ -209,10 +208,9 @@ async function runAndCaptureRedirect(
   throw new Error("expected a redirect, got a normal return");
 }
 
-function destinationFor(kind: "chat_only" | "qr" | "stripe" | "paypal" | "qris_dynamic" | "picker") {
+function destinationFor(kind: "chat_only" | "qr" | "paypal" | "qris_dynamic" | "picker") {
   const urls: Record<string, (id: string) => string> = {
     qr: (id) => `/nex-native/orders/${id}/pay`,
-    stripe: (id) => `/nex-native/orders/${id}/pay/stripe`,
     paypal: (id) => `/nex-native/orders/${id}/pay/paypal`,
     qris_dynamic: (id) => `/nex-native/orders/${id}/pay/qris`,
     picker: (id) => `/nex-native/orders/${id}/pay`,
@@ -220,13 +218,12 @@ function destinationFor(kind: "chat_only" | "qr" | "stripe" | "paypal" | "qris_d
   };
   return { kind, url: urls[kind], label: kind };
 }
-function methodsFor(kind: "chat_only" | "qr" | "stripe" | "paypal" | "qris_dynamic" | "picker") {
-  const base = { stripe: false, paypal: false, qr_manual: false, qris_dynamic: false, configured_count: 0, any_configured: false };
+function methodsFor(kind: "chat_only" | "qr" | "paypal" | "qris_dynamic" | "picker") {
+  const base = { paypal: false, qr_manual: false, qris_dynamic: false, configured_count: 0, any_configured: false };
   if (kind === "qr") return { ...base, qr_manual: true, configured_count: 1, any_configured: true };
-  if (kind === "stripe") return { ...base, stripe: true, configured_count: 1, any_configured: true };
   if (kind === "paypal") return { ...base, paypal: true, configured_count: 1, any_configured: true };
   if (kind === "qris_dynamic") return { ...base, qris_dynamic: true, configured_count: 1, any_configured: true };
-  if (kind === "picker") return { ...base, stripe: true, qr_manual: true, configured_count: 2, any_configured: true };
+  if (kind === "picker") return { ...base, paypal: true, qr_manual: true, configured_count: 2, any_configured: true };
   return base;
 }
 
@@ -272,17 +269,9 @@ describe("placeOrderAction · payment gateway routing", () => {
     expect(transitionOrderStateMock.mock.calls[0][1]).toBe("pending");
   });
 
-  test("Stripe-only · redirect = /pay/stripe · payment_method tag = stripe_checkout", async () => {
-    getCheckoutDestinationMock.mockResolvedValueOnce({
-      methods: methodsFor("stripe"),
-      destination: destinationFor("stripe"),
-    });
-    const { placeOrderAction } = await import("../_actions");
-    const url = await runAndCaptureRedirect(placeOrderAction);
-    expect(url).toBe("/nex-native/orders/order-created/pay/stripe");
-    expect(setPaymentMethodMock).toHaveBeenCalledWith("order-created", "stripe_checkout");
-    expect(transitionOrderStateMock).toHaveBeenCalled();
-  });
+  // Stripe-only shop checkout was removed 2026-11-10 · Stripe is now
+  // reserved for NEX member subscriptions only · shop paths route
+  // through PayPal + QR + QRIS.
 
   test("Multi-method picker · redirect = /pay · no payment_method tag yet", async () => {
     getCheckoutDestinationMock.mockResolvedValueOnce({
