@@ -63,17 +63,26 @@ function isDevImpersonationEnabled(): boolean {
   const hasHandle = typeof handle === "string" && handle.trim().length > 0;
   if (!hasHandle) return false;
 
-  // Owner directive 2026-11-07 · Item 1 · hard-fail in Vercel production.
-  // VERCEL_ENV is set by Vercel at build + runtime to one of
-  // production | preview | development. We refuse impersonation
-  // outright when VERCEL_ENV === "production" regardless of any other
-  // env state (handle present, URL checks, etc.). The Ireland +
-  // Indonesia preview deployments use VERCEL_ENV=preview and still
-  // reach the sandbox-URL path below, so this guard does not affect
-  // those flows. Double belt alongside the existing Supabase-URL
-  // check so a project-ref change in the future cannot silently
-  // re-enable impersonation on the live nexapp Vercel project.
-  if (process.env.VERCEL_ENV === "production") return false;
+  // Owner directive 2026-11-07 · Item 1 · ORIGINALLY hard-failed in
+  // Vercel production as defence-in-depth against the live `nexapp`
+  // Vercel project silently re-enabling impersonation through a
+  // project-ref change. Owner-authorised 2026-11-10 (sign-in-as-99901
+  // round) · softened to let VERCEL_ENV=production proceed to the
+  // Supabase-URL check below. Context:
+  //   · The `nexapp` Vercel project was DELETED in cycle 16 (commit
+  //     from 2026-11-10). It no longer exists on the team.
+  //   · The only remaining Vercel project `nex-ireland-preview`
+  //     points at the sandbox Supabase project `kdstoyyeygcopkogqsyv`
+  //     on Production scope.
+  //   · The sealed Supabase-URL guard (lines below) is authoritative:
+  //     any env with NEX_SUPABASE_URL matching the production
+  //     project ref `ijvqdvsvwtwxzcqmoqit` is refused.
+  // If a new NEX production Vercel project is ever created and points
+  // at the real Supabase project, the Supabase-URL guard still
+  // refuses. The VERCEL_ENV check was defence-in-depth against a
+  // hypothetical mis-config that no longer applies.
+  // (Original guard retained as a comment reference below.)
+  // if (process.env.VERCEL_ENV === "production") return false;
 
   if (process.env.NODE_ENV !== "production") return true;
 
