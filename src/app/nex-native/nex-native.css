@@ -333,3 +333,107 @@ body::-webkit-scrollbar,
     position: static;
   }
 }
+
+/* ─── WhatsApp-style navigation (View Transitions API) ───────────────
+ * Owner directive 2026-11-10 (chat-speed P3 · iter 2 · research pass):
+ * replicate WhatsApp / iOS UINavigationController push+pop transitions
+ * across the entire /nex-native/* surface. Research findings:
+ *
+ *   · Duration: iOS system standard is 300-350 ms (Apple HIG + Material);
+ *     WhatsApp uses the system animator so same range. 320 ms is the
+ *     sweet spot — snappy enough to feel fast, long enough to read as
+ *     a push rather than a cut.
+ *   · Easing: iOS system cubic-bezier(0.4, 0, 0.6, 1) (standard
+ *     ease-in-out). Not expo-out — iOS is gentler at both ends.
+ *   · Parallax depth: the outgoing route doesn't vanish — it slides
+ *     ~25 % left, darkens slightly, then rests behind the new route.
+ *     On pop, the reverse: the new (older) route eases in from that
+ *     same depth position. This is the key iOS "layered cards" feel.
+ *   · Edge shadow: the incoming route carries a left-edge drop shadow
+ *     during the push so it reads as a physical layer riding over
+ *     the parallax'd old page. Fades out as it settles.
+ *   · Direction awareness: `popstate` events (back button + swipe-back)
+ *     flip the data-nex-nav-dir attribute to "back" so the CSS plays
+ *     the pop animation (old slides out right, new slides in from left
+ *     parallax). This is what makes WhatsApp's back feel like true
+ *     reverse navigation rather than a second forward push.
+ *
+ * Browsers without View Transitions (older Safari, Firefox ESR) get
+ * the existing jump-cut · no regression. Prefers-reduced-motion
+ * short-circuits to a 1 ms crossfade. */
+@media screen {
+  ::view-transition-group(root) {
+    animation-duration: 320ms;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+  }
+  /* Default direction · forward push */
+  ::view-transition-old(root) {
+    animation-name: nex-nav-push-out;
+  }
+  ::view-transition-new(root) {
+    animation-name: nex-nav-push-in;
+  }
+  /* Back direction · pop (set by _navigation-transitions-client.tsx
+   * on popstate, cleared after the transition settles). */
+  :root[data-nex-nav-dir="back"] ::view-transition-old(root) {
+    animation-name: nex-nav-pop-out;
+  }
+  :root[data-nex-nav-dir="back"] ::view-transition-new(root) {
+    animation-name: nex-nav-pop-in;
+  }
+
+  /* Push · old slides left and darkens into parallax position */
+  @keyframes nex-nav-push-out {
+    from {
+      transform: translateX(0);
+      filter: brightness(1);
+    }
+    to {
+      transform: translateX(-25%);
+      filter: brightness(0.82);
+    }
+  }
+  /* Push · new slides in from right with a left-edge shadow */
+  @keyframes nex-nav-push-in {
+    from {
+      transform: translateX(100%);
+      box-shadow: -14px 0 36px rgba(0, 0, 0, 0.55);
+    }
+    to {
+      transform: translateX(0);
+      box-shadow: -14px 0 36px rgba(0, 0, 0, 0);
+    }
+  }
+  /* Pop · old slides out to the right (letting the user see
+   * themselves pull the current page off) · shadow fades with it. */
+  @keyframes nex-nav-pop-out {
+    from {
+      transform: translateX(0);
+      box-shadow: -14px 0 36px rgba(0, 0, 0, 0.55);
+    }
+    to {
+      transform: translateX(100%);
+      box-shadow: -14px 0 36px rgba(0, 0, 0, 0);
+    }
+  }
+  /* Pop · new (older) route eases in from its parallax depth
+   * position back to centre + brightness restored. */
+  @keyframes nex-nav-pop-in {
+    from {
+      transform: translateX(-25%);
+      filter: brightness(0.82);
+    }
+    to {
+      transform: translateX(0);
+      filter: brightness(1);
+    }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(root),
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 1ms;
+    animation-name: none;
+  }
+}

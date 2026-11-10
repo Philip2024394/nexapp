@@ -745,7 +745,7 @@ function DrawerHeader({
 }) {
   return (
     <div style={drawerHeaderStyle}>
-      <h2 style={drawerTitleStyle}>NEX Center</h2>
+      <h2 style={drawerTitleStyle}>NEX CENTER</h2>
       <button
         ref={closeRef}
         type="button"
@@ -932,9 +932,13 @@ function DrawerBody({
 function CopyIdentityButton({
   displayName,
   handle,
+  compact = false,
 }: {
   readonly displayName: string;
   readonly handle: string;
+  /** Owner directive 2026-11-10 · when true, render a smaller chip
+   *  sized to sit inline next to the NEX-handle on the same row. */
+  readonly compact?: boolean;
 }): React.JSX.Element {
   const [copied, setCopied] = React.useState(false);
   const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -988,7 +992,7 @@ function CopyIdentityButton({
       }
       title={copied ? "Copied" : "Copy name + ID"}
       data-nex-control-drawer-copy-identity
-      style={identityCopyBtnStyle}
+      style={compact ? identityCopyBtnCompactStyle : identityCopyBtnStyle}
     >
       {copied ? "Copied" : "Copy"}
     </button>
@@ -1087,29 +1091,29 @@ function IdentityBar({
       <div style={identityBarTextColumnStyle}>
         <div style={identityNameStyle}>{nameToRender}</div>
         {session.nexHandle ? (
-          <div style={identityHandleStyle}>
-            {/* Owner directive 2026-10-17 · the "nex-" prefix is a
-                brand mark · always rendered uppercase as "NEX-" ·
-                the numeric part is preserved exactly. Storage stays
-                lowercase (canonical column shape · validated by
-                `normaliseHandle` in bio/[nex_handle]/_handle.ts) ·
-                this is purely a display transform. */}
-            {session.nexHandle.replace(/^nex-/i, "NEX-")}
+          // Owner directive 2026-11-10 · NEX-handle row is now a
+          // single flex row carrying the ID on the left and a smaller
+          // Copy button on the right. Previously the Copy button sat
+          // in the outer identityBar · moved inline so the handle +
+          // Copy read as one metadata chip, tighter and clearer.
+          <div style={identityHandleRowStyle}>
+            <div style={identityHandleStyle}>
+              {/* Owner directive 2026-10-17 · the "nex-" prefix is a
+                  brand mark · always rendered uppercase as "NEX-" ·
+                  the numeric part is preserved exactly. Storage stays
+                  lowercase (canonical column shape · validated by
+                  `normaliseHandle` in bio/[nex_handle]/_handle.ts) ·
+                  this is purely a display transform. */}
+              {session.nexHandle.replace(/^nex-/i, "NEX-")}
+            </div>
+            <CopyIdentityButton
+              displayName={nameToRender}
+              handle={session.nexHandle.replace(/^nex-/i, "NEX-")}
+              compact
+            />
           </div>
         ) : null}
       </div>
-      {/* Owner directive 2026-10-22 (afternoon) · solid blue Copy
-          button pinned to the right-centre of the identity bar.
-          One tap copies BOTH the display name AND the NEX ID in a
-          two-line clipboard payload. When the account has an active
-          chat theme thumbnail, the Copy button sits to the LEFT of
-          it so both affordances fit without crowding. */}
-      {session.nexHandle ? (
-        <CopyIdentityButton
-          displayName={nameToRender}
-          handle={session.nexHandle.replace(/^nex-/i, "NEX-")}
-        />
-      ) : null}
       {/* Owner directive 2026-10-20 · right-side thumbnail of the
           account's currently-active chat theme wallpaper · tap to
           jump to /nex-native/chat-themes-library and pick a new one.
@@ -1601,6 +1605,40 @@ const identityCopyBtnStyle: React.CSSProperties = {
   cursor: "pointer",
   fontFamily: "inherit",
   boxShadow: "0 2px 8px rgba(0, 175, 255, 0.35)",
+};
+// Owner directive 2026-11-10 · compact Copy chip sized to sit inline
+// on the NEX-handle row. Smaller min-width/height, tighter padding,
+// lighter shadow. Same colour vocabulary as the full-size chip.
+const identityCopyBtnCompactStyle: React.CSSProperties = {
+  flexShrink: 0,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minWidth: 48,
+  minHeight: 24,
+  padding: "0 8px",
+  background: "var(--nex-world-secondary, #00AFFF)",
+  border: "1px solid var(--nex-world-secondary, #00AFFF)",
+  borderRadius: 6,
+  color: "#001223",
+  fontSize: 10,
+  fontWeight: 800,
+  letterSpacing: 0.5,
+  textTransform: "uppercase",
+  cursor: "pointer",
+  fontFamily: "inherit",
+  boxShadow: "0 1px 4px rgba(0, 175, 255, 0.28)",
+};
+// Owner directive 2026-11-10 · NEX-handle + compact Copy chip share
+// one flex row inside the identity text column. `space-between` keeps
+// the handle on the left and the chip on the right.
+const identityHandleRowStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 10,
+  width: "100%",
+  marginTop: 2,
 };
 // Owner directive 2026-10-18 · the anon "Sign in to NEX" row now
 // splits into a left text-column + right round blue arrow button.

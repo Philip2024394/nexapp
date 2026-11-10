@@ -52,6 +52,13 @@ import { VisitorSessionBootstrap } from "@/components/nex-native/visitor-session
 // fired.
 import { VisitorInteractPopup } from "@/components/nex-native/visitor-session/visitor-interact-popup";
 import { DevImpersonationBanner } from "./_dev-impersonation-banner";
+// Owner directive 2026-11-10 (chat-speed P3) · global slide-in nav
+// transitions. Client component · intercepts internal <a> clicks and
+// wraps router.push() in document.startViewTransition() so every
+// /nex-native/* navigation animates (outgoing slides left, incoming
+// slides in from right). Falls back silently where the View
+// Transitions API isn't available.
+import { NexNavigationTransitions } from "./_navigation-transitions-client";
 // Owner-authorised 2026-10-31 · NEX World Engine · Stage 5A.
 // Server-resolves the active world + emits CSS vars scoped to
 // .nex-native-stage. Preview cookie takes precedence for owner only.
@@ -202,6 +209,10 @@ export default async function NexNativeLayout({
       <DevImpersonationBanner />
       {/* Owner-authorised 2026-10-31 · World Engine CSS vars. */}
       <WorldStylesheet />
+      {/* Owner directive 2026-11-10 (chat-speed P3) · slide-in navigation.
+          See _navigation-transitions-client.tsx. Zero DOM · purely a
+          document-level click interceptor. */}
+      <NexNavigationTransitions />
       <div
         className="nex-native-stage"
         data-nex-world={activeWorld.meta.id}

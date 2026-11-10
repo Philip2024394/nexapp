@@ -493,12 +493,14 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       // friendProfiles[i] · hand the real URL through; the UI falls back
       // to initials when null for accounts without a profile avatar.
       avatarUrl: profile?.avatar_url ?? null,
-      // Owner directive 2026-11-04 later-same-day · "the urls must be
-      // short" · contact cards emit the handle-based short URL where
-      // possible · /src/app/chat/[handle]/page.tsx resolves it to the
-      // canonical peer-chat path. UUID fallback preserved for accounts
-      // without a handle.
-      chatHref: a.nex_handle ? `/chat/${a.nex_handle}` : `/nex-native/chat/peer/${a.id}`,
+      // Owner directive 2026-11-10 (chat-speed P2.1) · contact rows now
+      // link DIRECTLY to the canonical peer-chat path. The short
+      // /chat/<handle> redirect route stays alive for QR codes and
+      // externally-shared links · but tapping a contact row inside the
+      // app no longer pays the round-trip cost of handle→UUID resolution
+      // followed by a second server navigation. Direct link also lets
+      // Next.js prefetch the real destination on hover/visibility.
+      chatHref: `/nex-native/chat/peer/${a.id}`,
       profileHref: a.nex_handle ? `/nex-native/u/${a.nex_handle}` : null,
       // Owner directive 2026-10-17 · "profession · headline" with
       // middle-dot · profession is required, headline optional ·
@@ -616,9 +618,9 @@ export default async function ContactsPage({ searchParams }: PageProps) {
         displayName: a.display_name,
         handle: a.nex_handle,
         avatarUrl: null,
-        chatHref: a.nex_handle
-          ? `/chat/${a.nex_handle}`
-          : `/nex-native/chat/peer/${a.id}`,
+        // 2026-11-10 (P2.1) · pending-invite row also links direct to
+        // the peer-chat UUID · same reasoning as the accepted branch above.
+        chatHref: `/nex-native/chat/peer/${a.id}`,
         profileHref: null,
         professionLine: "Invited · waiting for them to accept",
         pending: true,
