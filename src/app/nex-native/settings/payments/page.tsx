@@ -146,6 +146,62 @@ export default async function PaymentsSettingsPage() {
             NEX never holds your funds.
           </p>
 
+          {/* Gateway ownership banner · owner-sealed 2026-11-10 (revised) ·
+              clarifies that PayPal is the shop gateway and Stripe is for
+              NEX member subscriptions only. */}
+          <aside
+            data-nex-gateway-ownership-banner
+            style={{
+              marginTop: 14,
+              padding: "12px 14px",
+              borderRadius: 10,
+              background: "rgba(198, 161, 91, 0.08)",
+              border: `1px solid ${IRELAND.borderSoft}`,
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10,
+                letterSpacing: "0.14em",
+                color: IRELAND.secondary,
+                fontWeight: 900,
+                textTransform: "uppercase",
+              }}
+            >
+              How shop payments work on NEX
+            </div>
+            <ul
+              style={{
+                margin: 0,
+                paddingLeft: 18,
+                fontSize: 12.5,
+                color: IRELAND.primaryInk,
+                lineHeight: 1.55,
+                opacity: 0.95,
+              }}
+            >
+              <li>
+                <strong style={{ color: IRELAND.textPrimary }}>PayPal</strong>
+                {" "}is the shop payment gateway. Customers pay you directly ·
+                funds go straight to your PayPal business account.
+              </li>
+              <li>
+                <strong style={{ color: IRELAND.textPrimary }}>QR code</strong>
+                {" "}is the manual backup. You upload your payment QR · the
+                buyer scans it · you confirm receipt in the order dashboard.
+              </li>
+              <li>
+                <strong style={{ color: IRELAND.textPrimary }}>Stripe</strong>
+                {" "}is only used for your NEX Shop membership subscription.
+                It is <em>not</em> a shop checkout option for your customers.
+              </li>
+              <li>NEX never touches the money and never takes a fee.</li>
+            </ul>
+          </aside>
+
           {/* Activation summary · owner-sealed 2026-11-10 · what the
               buyer actually sees at checkout based on current config. */}
           {methods ? (
