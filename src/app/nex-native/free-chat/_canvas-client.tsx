@@ -221,10 +221,62 @@ export function FreeChatCanvasClient({
     );
   }, [bubbleCustomization, themeId]);
 
-  const peerFill = resolvedBubbleStyle.peerFill;
-  const peerRim = resolvedBubbleStyle.peerRim;
-  const selfFill = resolvedBubbleStyle.selfFill;
-  const selfRim = resolvedBubbleStyle.selfRim;
+  // Owner-authorised 2026-11-10 (rev 3) · solid-colour theme palettes.
+  // When the active theme is one of the 4 colour tiles (Cream / Gray /
+  // Fresh Green / Pink), the bubbles paint as SOLID surfaces with the
+  // prototype's palette (white-ish peer + accent self + dark/light
+  // text), not through the sealed glass-alpha renderer. This makes the
+  // free-chat canvas look like the prototype panel when a colour tile
+  // is applied. Image themes and nex-default fall through to the sealed
+  // glass bubble renderer unchanged.
+  const colorThemePalette = React.useMemo<null | {
+    peerBg: string;
+    peerText: string;
+    peerBorder: string;
+    selfBg: string;
+    selfText: string;
+    selfBorder: string;
+  }>(() => {
+    switch (themeId) {
+      case "theme-cream":
+        return {
+          peerBg: "#FFFFFF", peerText: "#1A1816", peerBorder: "#EBE2CB",
+          selfBg: "#D4A24F", selfText: "#1A1816", selfBorder: "#B88A3D",
+        };
+      case "theme-light-gray":
+        return {
+          peerBg: "#E9E9EB", peerText: "#1D1D1F", peerBorder: "#DCDCDE",
+          selfBg: "#007AFF", selfText: "#FFFFFF", selfBorder: "#0062CC",
+        };
+      case "theme-fresh-green":
+        return {
+          peerBg: "#FFFEF6", peerText: "#1F2E0A", peerBorder: "#A3D664",
+          selfBg: "#4A7B1E", selfText: "#FFFEF6", selfBorder: "#3A6318",
+        };
+      case "theme-pink-soft":
+        return {
+          peerBg: "#FFFFFF", peerText: "#2D1A20", peerBorder: "#F5D5E0",
+          selfBg: "#D44680", selfText: "#FFFFFF", selfBorder: "#B23A6D",
+        };
+      default:
+        return null;
+    }
+  }, [themeId]);
+
+  const peerFill = colorThemePalette?.peerBg ?? resolvedBubbleStyle.peerFill;
+  const peerRim = colorThemePalette?.peerBorder ?? resolvedBubbleStyle.peerRim;
+  const selfFill = colorThemePalette?.selfBg ?? resolvedBubbleStyle.selfFill;
+  const selfRim = colorThemePalette?.selfBorder ?? resolvedBubbleStyle.selfRim;
+  // Peer vs self text colour · defaults to the sealed NEX.text (light
+  // ink on glass bubbles) · overridden per-bubble when a colour theme
+  // is active.
+  const peerBubbleTextColor = colorThemePalette?.peerText ?? NEX.text;
+  const selfBubbleTextColor = colorThemePalette?.selfText ?? NEX.text;
+  // Glass backdrop-filter is removed on solid-colour theme bubbles
+  // because the solid fill is already opaque · the backdrop blur
+  // just adds a smeared halo. Image themes + nex-default keep the
+  // sealed glass effect.
+  const bubbleUsesGlass = colorThemePalette === null;
 
   // Owner directive 2026-10-21 (iteration 54) · wallpaper paints the
   // ENTIRE phone frame (header + canvas + composer), not just the
@@ -383,10 +435,10 @@ export function FreeChatCanvasClient({
               borderBottomLeftRadius: m.fromPeer ? 6 : 18,
               borderBottomRightRadius: m.fromPeer ? 18 : 6,
               background: m.fromPeer ? peerFill : selfFill,
-              color: NEX.text,
+              color: m.fromPeer ? peerBubbleTextColor : selfBubbleTextColor,
               border: `1px solid ${m.fromPeer ? peerRim : selfRim}`,
-              backdropFilter: "blur(10px) saturate(140%)",
-              WebkitBackdropFilter: "blur(10px) saturate(140%)",
+              backdropFilter: bubbleUsesGlass ? "blur(10px) saturate(140%)" : "none",
+              WebkitBackdropFilter: bubbleUsesGlass ? "blur(10px) saturate(140%)" : "none",
               fontSize: 14,
               lineHeight: 1.4,
               boxShadow: "0 6px 14px -8px rgba(0,0,0,0.6)",
