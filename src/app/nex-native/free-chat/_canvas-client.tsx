@@ -283,6 +283,16 @@ export function FreeChatCanvasClient({
   // sealed glass effect.
   const bubbleUsesGlass = colorThemePalette === null;
 
+  // Owner-authorised 2026-11-10 (rev 4) · when a colour theme is
+  // active, thread an "accent/text/card" palette into the chrome
+  // elements (header labels, avatar rim, tile active border, setup
+  // container panels, picker row backdrop). Falls through to the
+  // sealed NEX tokens when a wallpaper or the NEX default is active.
+  const chromeAccent = colorThemePalette?.selfBg ?? NEX.cyan;
+  const chromeText = colorThemePalette?.peerText ?? NEX.text;
+  const chromeCardBg = colorThemePalette?.peerBg ?? NEX.bg;
+  const chromeCardBorder = colorThemePalette?.peerBorder ?? "rgba(0, 175, 255, 0.28)";
+
   // Owner directive 2026-10-21 (iteration 54) · wallpaper paints the
   // ENTIRE phone frame (header + canvas + composer), not just the
   // chat canvas. The server page sets the initial background on
@@ -511,6 +521,11 @@ export function FreeChatCanvasClient({
           onPick={handlePickTheme}
           onViewAll={handleViewAll}
           onInfo={() => setHowItWorksOpen(true)}
+          chromeAccent={chromeAccent}
+          chromeCardBg={chromeCardBg}
+          chromeCardBorder={chromeCardBorder}
+          chromeText={chromeText}
+          colorThemeActive={colorThemePalette !== null}
         />
       )}
       {howItWorksOpen ? (
@@ -2258,13 +2273,26 @@ function FirstVisitThemeGrid({
   onPick,
   onViewAll,
   onInfo,
+  chromeAccent,
+  chromeCardBg,
+  chromeCardBorder,
+  chromeText,
+  colorThemeActive,
 }: {
   readonly themes: ReadonlyArray<FreeChatTheme>;
   readonly activeThemeId: string | null;
   readonly onPick: (theme: FreeChatTheme) => void;
   readonly onViewAll: () => void;
   readonly onInfo: () => void;
+  /** Owner-authorised 2026-11-10 (rev 4) · theme-accent/text/card
+   *  overrides piped from the canvas when a colour theme is active. */
+  readonly chromeAccent: string;
+  readonly chromeCardBg: string;
+  readonly chromeCardBorder: string;
+  readonly chromeText: string;
+  readonly colorThemeActive: boolean;
 }): React.JSX.Element {
+  void chromeText;
   return (
     <div
       data-nex-free-chat-first-visit-row
@@ -2272,8 +2300,11 @@ function FirstVisitThemeGrid({
       style={{
         marginTop: 8,
         padding: "10px 10px 12px",
-        background: "rgba(2, 9, 20, 0.55)",
-        border: `1px solid rgba(0, 175, 255, 0.14)`,
+        // Owner-authorised 2026-11-10 (rev 4) · when a colour theme is
+        // active, lift the dark-navy backdrop and use the theme's
+        // light card shade so the picker sits on the theme palette.
+        background: colorThemeActive ? chromeCardBg : "rgba(2, 9, 20, 0.55)",
+        border: `1px solid ${colorThemeActive ? chromeCardBorder : "rgba(0, 175, 255, 0.14)"}`,
         borderRadius: 12,
         backdropFilter: "blur(8px)",
         WebkitBackdropFilter: "blur(8px)",
@@ -2302,7 +2333,7 @@ function FirstVisitThemeGrid({
               fontWeight: 800,
               letterSpacing: 1.2,
               textTransform: "uppercase",
-              color: NEX.cyan,
+              color: colorThemeActive ? chromeAccent : NEX.cyan,
               lineHeight: 1,
             }}
           >
@@ -2345,9 +2376,11 @@ function FirstVisitThemeGrid({
             width: 22,
             height: 22,
             borderRadius: "50%",
-            background: "rgba(0, 175, 255, 0.14)",
-            border: `1px solid ${NEX.cyan}`,
-            color: NEX.cyan,
+            background: colorThemeActive
+              ? `${chromeAccent}22`
+              : "rgba(0, 175, 255, 0.14)",
+            border: `1px solid ${colorThemeActive ? chromeAccent : NEX.cyan}`,
+            color: colorThemeActive ? chromeAccent : NEX.cyan,
             cursor: "pointer",
             fontSize: 12,
             fontWeight: 800,
