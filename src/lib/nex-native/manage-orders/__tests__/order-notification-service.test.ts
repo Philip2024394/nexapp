@@ -69,7 +69,7 @@ describe("order-notification-service · P4", () => {
 
   afterEach(() => vi.resetModules());
 
-  it("payment_confirmed · push body contains amount + currency ONLY · no notes", async () => {
+  it("payment_confirmed · visible push body is the generic sentence · no amount / id / PII", async () => {
     const { notifyBuyerPaymentConfirmed } = await import(
       "../order-notification-service"
     );
@@ -83,15 +83,20 @@ describe("order-notification-service · P4", () => {
     expect(result.delivered).toBe(1);
 
     const sent = adapterSendMock.mock.calls[0][0];
-    expect(sent.subject).toMatch(/^Order #[A-F0-9]{8} · payment confirmed$/);
-    // Body must be currency + amount only. No notes. No buyer id. No addresses.
-    expect(sent.body).toBe("€19.99");
-    expect(sent.body).not.toContain("SECRET");
-    expect(sent.body).not.toContain("buyer-id");
+    // Subject + body are owner-sealed generic strings. No order id.
+    // No amount. No currency. No PII.
+    expect(sent.subject).toBe("NEX");
+    expect(sent.body).toBe("Your order payment has been confirmed.");
+    // Hard-check: the amount / currency / order-id prefix must NOT
+    // appear anywhere in subject or body.
+    expect(sent.subject).not.toMatch(/19\.99|€|EUR|ABCDEF12/i);
+    expect(sent.body).not.toMatch(/19\.99|€|EUR|ABCDEF12/i);
+    // Notes must not appear either.
     expect(sent.subject).not.toContain("SECRET");
+    expect(sent.body).not.toContain("SECRET");
   });
 
-  it("order_cancelled · body does not include reason", async () => {
+  it("order_cancelled · visible push body is the generic sentence · no reason / amount / id", async () => {
     const { notifyBuyerOrderCancelled } = await import(
       "../order-notification-service"
     );
@@ -103,11 +108,13 @@ describe("order-notification-service · P4", () => {
     const result = await notifyBuyerOrderCancelled(fakeOrder({ state: "cancelled" }));
     expect(result.delivered).toBe(1);
     const sent = adapterSendMock.mock.calls[0][0];
-    expect(sent.subject).toMatch(/· cancelled$/);
-    expect(sent.body).toBe("€19.99");
+    expect(sent.subject).toBe("NEX");
+    expect(sent.body).toBe("Your order has been cancelled.");
+    expect(sent.body).not.toMatch(/19\.99|€|EUR|ABCDEF12/i);
+    expect(sent.body).not.toContain("SECRET");
   });
 
-  it("new_order · resolves seller from nex_business · fans to seller subscriptions", async () => {
+  it("new_order · resolves seller · visible push body is the generic sentence · no amount / id", async () => {
     const { notifySellerNewOrder } = await import(
       "../order-notification-service"
     );
@@ -124,7 +131,9 @@ describe("order-notification-service · P4", () => {
     expect(listPushSubscriptionsMock).toHaveBeenCalledWith("seller-id");
     expect(result.delivered).toBe(1);
     const sent = adapterSendMock.mock.calls[0][0];
-    expect(sent.subject).toMatch(/^New order #[A-F0-9]{8}$/);
+    expect(sent.subject).toBe("NEX");
+    expect(sent.body).toBe("You have received a new order.");
+    expect(sent.body).not.toMatch(/19\.99|€|EUR|ABCDEF12/i);
   });
 
   it("env disable kill-switch · NEX_ORDER_NOTIFICATIONS_DISABLED=true skips everything", async () => {
@@ -165,7 +174,7 @@ describe("order-notification-service · P4", () => {
     expect(adapterSendMock).not.toHaveBeenCalled();
   });
 
-  it("push data payload · includes deep-link url + orderId · NOT buyer notes", async () => {
+  it("push data payload · orderId + deep-link + eventKind ONLY · no amount / notes / PII", async () => {
     const { notifyBuyerPaymentConfirmed } = await import(
       "../order-notification-service"
     );
@@ -181,7 +190,14 @@ describe("order-notification-service · P4", () => {
       "/nex-native/manage/orders/abcdef12-3456-7890-abcd-ef0123456789",
     );
     expect(sent.data.eventKind).toBe("payment_confirmed");
-    const serialised = JSON.stringify(sent);
-    expect(serialised).not.toContain("SECRET");
+    // The data payload must not carry amount, currency, or buyer / seller
+    // notes. The service worker displays data payload contents only
+    // AFTER user interaction + app auth · this still has to stay clean
+    // because logs, analytics, and future handlers may read it.
+    const dataKeys = Object.keys(sent.data).filter((k) => k !== "subscription");
+    expect(dataKeys.sort()).toEqual(["eventKind", "orderId", "url"]);
+    const serialisedData = JSON.stringify(sent.data);
+    expect(serialisedData).not.toContain("SECRET");
+    expect(serialisedData).not.toMatch(/19\.99|€|EUR/);
   });
 });

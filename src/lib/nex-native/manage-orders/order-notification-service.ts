@@ -3,17 +3,26 @@
 // NEX Merchant-Owned Payments · P4 · order event notifications.
 // Owner-authorised 2026-11-10 (local-only · no DB changes).
 //
-// Privacy contract (owner directive):
-//   · Push notification bodies carry ONLY:
-//       - order id prefix (first 8 hex chars · opaque)
-//       - state label (New order / Paid / Cancelled)
-//       - currency + amount
-//   · Push bodies do NOT carry:
+// Privacy contract (owner-tightened 2026-11-10 after review):
+//   · Visible push subject + body carry ONLY a generic event sentence.
+//     NOTHING identifying the order, the amount, or the party rides
+//     the lock-screen surface. Verbatim owner wording:
+//       - "You have received a new order."
+//       - "Your order payment has been confirmed."
+//       - "Your order has been cancelled."
+//   · Visible push does NOT carry:
+//       - order id (not even the opaque 8-char prefix)
+//       - currency or amount
 //       - buyer / seller full names
 //       - item names, variants, or quantities
 //       - delivery addresses or phone numbers
 //       - payment method details
 //       - merchant / buyer free-form notes
+//       - cancellation reason
+//   · The data payload (hidden until the service worker acts on it)
+//     carries orderId + deep-link URL + eventKind. The URL is used
+//     only after the user taps the notification and the app
+//     authenticates before rendering order details.
 //
 // Order push payloads are `kind: "system"` by construction — the sealed
 // notification-dispatch-service type system prevents them from carrying
@@ -67,26 +76,26 @@ function isDisabled(): boolean {
   return (process.env.NEX_ORDER_NOTIFICATIONS_DISABLED ?? "").toLowerCase() === "true";
 }
 
-function formatMoney(pence: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat("en", {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 2,
-    }).format(pence / 100);
-  } catch {
-    return `${currency} ${(pence / 100).toFixed(2)}`;
-  }
-}
-
-function orderIdShort(id: string): string {
-  return id.slice(0, 8).toUpperCase();
-}
-
-/** Minimum privacy-safe push body for order events. */
-function buildBody(order: NexOrderRow): string {
-  return formatMoney(order.price_pence, order.currency);
-}
+/**
+ * Generic, privacy-safe lock-screen copy per event type. NO per-order
+ * fields allowed in these strings · they must be identical for every
+ * order of the same kind so a lock-screen observer learns nothing
+ * about amount, parties, or contents.
+ */
+const VISIBLE_COPY: Record<OrderNotificationKind, { title: string; body: string }> = {
+  new_order: {
+    title: "NEX",
+    body: "You have received a new order.",
+  },
+  payment_confirmed: {
+    title: "NEX",
+    body: "Your order payment has been confirmed.",
+  },
+  order_cancelled: {
+    title: "NEX",
+    body: "Your order has been cancelled.",
+  },
+};
 
 /** Resolve the seller account_id from a business_id. */
 async function resolveSellerAccountId(
@@ -108,11 +117,10 @@ async function resolveSellerAccountId(
  */
 async function fanOutToAccount(
   recipientAccountId: NexUuid,
-  title: string,
-  body: string,
   orderId: NexUuid,
   kind: OrderNotificationKind,
 ): Promise<Omit<OrderNotificationResult, "kind" | "recipientAccountId">> {
+  const { title, body } = VISIBLE_COPY[kind];
   let subscriptions;
   try {
     subscriptions = await listPushSubscriptions(recipientAccountId);
@@ -192,13 +200,7 @@ export async function notifySellerNewOrder(
       skipped_reason: "no_recipient_resolved",
     };
   }
-  const result = await fanOutToAccount(
-    seller,
-    `New order #${orderIdShort(order.id)}`,
-    buildBody(order),
-    order.id,
-    "new_order",
-  );
+  const result = await fanOutToAccount(seller, order.id, "new_order");
   return { kind: "new_order", recipientAccountId: seller, ...result };
 }
 
@@ -221,8 +223,6 @@ export async function notifyBuyerPaymentConfirmed(
   }
   const result = await fanOutToAccount(
     order.customer_account_id,
-    `Order #${orderIdShort(order.id)} · payment confirmed`,
-    buildBody(order),
     order.id,
     "payment_confirmed",
   );
@@ -253,8 +253,6 @@ export async function notifyBuyerOrderCancelled(
   }
   const result = await fanOutToAccount(
     order.customer_account_id,
-    `Order #${orderIdShort(order.id)} · cancelled`,
-    buildBody(order),
     order.id,
     "order_cancelled",
   );
