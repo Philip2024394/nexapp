@@ -2449,27 +2449,71 @@ function ThemeTile({
         <span data-nex-free-chat-first-visit-tile-default-label>NEX</span>
       )}
       {hasColor && (
-        // Owner-authorised 2026-11-10 · solid-colour tile label. The
-        // label text contrast is derived from the background's
-        // luminance · dark text on light backgrounds (cream / gray /
-        // pink) and light-ish text on fresh green. Mirrors the
-        // readable-on-swatch pattern used in the colour drawer.
-        <span
-          data-nex-free-chat-first-visit-tile-color-label
-          style={{
-            fontSize: 12,
-            fontWeight: 800,
-            letterSpacing: 0.6,
-            color: theme.id === "theme-fresh-green" ? "#1F2E0A" : "#1D1D1F",
-            textShadow: "0 1px 1px rgba(255, 255, 255, 0.35)",
-            padding: "2px 8px",
-            borderRadius: 999,
-            background: "rgba(255, 255, 255, 0.55)",
-            backdropFilter: "blur(4px)",
-          }}
-        >
-          {theme.placeholderLabel ?? theme.label}
-        </span>
+        // Owner-authorised 2026-11-10 (rev 2) · colour tile now renders
+        // a mini chat preview inside the tile: incoming bubble top-
+        // left, outgoing bubble (in the theme's accent) centre-right,
+        // and the theme name at the bottom. Matches the prototype
+        // panels visually so the user sees the FULL theme vibe (not
+        // just the background hex) in each picker swatch.
+        <>
+          {/* Incoming (peer) bubble · top-left · white-ish card that
+              contrasts with the theme background. */}
+          <span
+            aria-hidden
+            data-nex-free-chat-tile-mini-bubble-in
+            style={{
+              position: "absolute",
+              top: "18%",
+              left: "12%",
+              width: "42%",
+              height: "16%",
+              borderRadius: "6px 6px 6px 2px",
+              background:
+                theme.id === "theme-fresh-green"
+                  ? "#FFFEF6"
+                  : theme.id === "theme-light-gray"
+                  ? "#E9E9EB"
+                  : "#FFFFFF",
+              boxShadow: "0 1px 2px rgba(0, 0, 0, 0.08)",
+            }}
+          />
+          {/* Outgoing (self) bubble · centre-right · theme accent so
+              the user sees which colour their own messages take. */}
+          <span
+            aria-hidden
+            data-nex-free-chat-tile-mini-bubble-out
+            style={{
+              position: "absolute",
+              top: "42%",
+              right: "12%",
+              width: "46%",
+              height: "16%",
+              borderRadius: "6px 6px 2px 6px",
+              background: theme.accentHex,
+              boxShadow: "0 1px 2px rgba(0, 0, 0, 0.12)",
+            }}
+          />
+          {/* Theme name · bottom label · dark text on all four themes
+              (fresh green also uses deep forest for legibility). */}
+          <span
+            data-nex-free-chat-first-visit-tile-color-label
+            style={{
+              position: "absolute",
+              bottom: 4,
+              left: 0,
+              right: 0,
+              textAlign: "center",
+              fontSize: 10,
+              fontWeight: 800,
+              letterSpacing: 0.4,
+              color:
+                theme.id === "theme-fresh-green" ? "#1F2E0A" : "#1D1D1F",
+              textShadow: "0 1px 1px rgba(255, 255, 255, 0.5)",
+            }}
+          >
+            {theme.label}
+          </span>
+        </>
       )}
       {!hasImage && !isDefault && !hasColor && (
         <span data-nex-free-chat-first-visit-tile-placeholder>
