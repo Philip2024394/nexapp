@@ -12,11 +12,20 @@ import { spawn } from "node:child_process";
 
 const [, , identity, port] = process.argv;
 if (!identity || !port) {
-  process.stderr.write("Usage: dev-with-identity.mjs <ireland|indonesia|hq> <port>\n");
+  process.stderr.write("Usage: dev-with-identity.mjs <ireland|indonesia|worldwide|hq> <port>\n");
   process.exit(2);
 }
 
-const country = { ireland: "IE", indonesia: "ID", hq: "" }[identity];
+// Owner directive 2026-11-10 (cycle 5) · worldwide added as a
+// distinct deployment identity (country intentionally unset, same
+// pattern as hq · see resolve-app-identity.ts). Indonesia retained
+// in this table so legacy dev:indonesia invocations still produce a
+// clear downstream fail-closed error at request time, rather than a
+// confusing "Unknown identity" here · the sealed 2026-11-03
+// Ireland-only consolidation removed indonesia from
+// REGISTERED_IDENTITIES so NEX_APP_IDENTITY=indonesia will throw
+// invalid-identity in production as expected.
+const country = { ireland: "IE", indonesia: "ID", worldwide: "", hq: "" }[identity];
 if (country === undefined) {
   process.stderr.write(`Unknown identity: ${identity}\n`);
   process.exit(2);

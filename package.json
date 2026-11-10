@@ -12,6 +12,7 @@
     "guard:hq-service-role": "node scripts/hq-service-role-guard.mjs",
     "dev:ireland": "node scripts/dev-with-identity.mjs ireland 3009",
     "dev:indonesia": "node scripts/dev-with-identity.mjs indonesia 3010",
+    "dev:worldwide": "node scripts/dev-with-identity.mjs worldwide 3011",
     "dev:hq": "node scripts/dev-with-identity.mjs hq 3008",
     "preview:all": "node scripts/local-identity-preview.mjs",
     "test:watch": "vitest",

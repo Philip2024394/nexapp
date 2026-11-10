@@ -32,14 +32,23 @@ afterEach(() => {
 // src/app/nex-native/_world-stylesheet.tsx. Keeps the test lightweight
 // (no React / Next.js runtime) while proving the env-first chrome
 // selection does what the SSR layout does.
+//
+// Owner directive 2026-11-03 · Ireland-only consolidation · Indonesia
+// no longer resolves. Owner directive 2026-11-10 (cycle 5) · worldwide
+// registered as a distinct no-country identity that reuses Ireland's
+// base palette (overridden at the stylesheet layer by
+// WORLDWIDE_PALETTE_OVERRIDES · not visible from this low-level
+// resolver test).
 function resolveWorldFromIdentity() {
   try {
     const id = resolveAppIdentity();
     if (id.identity === "ireland") return getWorldDefinition("ireland");
-    if (id.identity === "indonesia") return getWorldDefinition("indonesia");
+    // Worldwide and HQ fall through to the DB resolver (base world
+    // defaults to Ireland) · the identity-scoped overrides are applied
+    // one layer up in _world-stylesheet.tsx.
   } catch { /* fallthrough */ }
-  // HQ or dev-no-env → caller falls back to DB. Return null here to
-  // signal "no env override".
+  // HQ / worldwide / dev-no-env → caller falls back to DB. Return null
+  // here to signal "no env-forced country palette".
   return null;
 }
 
@@ -48,20 +57,19 @@ describe("country chrome switch · SSR integration", () => {
     setEnv("ireland", "IE");
     const w = resolveWorldFromIdentity();
     expect(w?.meta.id).toBe("ireland");
-    expect(w?.palette.primary).toBe("#1F8B4C"); // emerald
-    expect(w?.palette.backgroundBase).toBe("#FAF6EC"); // warm cream
-  });
-
-  it("Indonesia identity selects the Indonesia palette", () => {
-    setEnv("indonesia", "ID");
-    const w = resolveWorldFromIdentity();
-    expect(w?.meta.id).toBe("indonesia");
-    expect(w?.palette.primary).toBe("#C8102E"); // Garuda red
-    expect(w?.palette.secondary).toBe("#E0A020"); // turmeric gold
+    // Owner-sealed 2026-11-01 narrow premium palette · Forest / cream.
+    expect(w?.palette.primary).toBe("#1B5138");
+    expect(w?.palette.backgroundBase).toBe("#FAF8F4");
   });
 
   it("HQ identity does NOT override · falls through to DB resolver", () => {
     setEnv("hq", undefined);
+    const w = resolveWorldFromIdentity();
+    expect(w).toBeNull();
+  });
+
+  it("Worldwide identity does NOT force a country palette · falls through", () => {
+    setEnv("worldwide", undefined);
     const w = resolveWorldFromIdentity();
     expect(w).toBeNull();
   });
@@ -75,6 +83,9 @@ describe("country chrome switch · SSR integration", () => {
   });
 
   it("mismatched identity + country does NOT return any country palette", () => {
+    // ID is no longer a registered country post 2026-11-03 so this
+    // combo throws invalid-country · the catch-and-return-null path
+    // preserves the sealed "no env override on error" behaviour.
     setEnv("ireland", "ID");
     const w = resolveWorldFromIdentity();
     expect(w).toBeNull();

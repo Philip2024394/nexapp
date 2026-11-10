@@ -67,12 +67,40 @@ export async function resolveWorldForLayout(): Promise<WorldDefinition> {
   // but world selection is now a constant. The sealed fail-closed
   // behaviour of resolveAppIdentity() is preserved: an invalid env
   // in production still throws.
+  //
+  // Owner directive 2026-11-10 (cycle 5) · Worldwide identity is
+  // registered as a distinct deployment. For now it reuses the
+  // Ireland WorldDefinition as its base palette scaffolding (so no
+  // 19-file WorldId widening is required) · identity-specific
+  // overrides (data attribute, backdrop) are applied below in
+  // WorldStylesheet via resolveAppIdentity(). The owner will skin
+  // Worldwide further in a later authorised pass.
   const rawIdentity = (process.env.NEX_APP_IDENTITY ?? "").trim();
   if (rawIdentity.length > 0) {
     // Honour the sealed identity validator · invalid values still throw.
     resolveAppIdentity();
   }
   return getWorldDefinition("ireland");
+}
+
+/** Resolve the deployment-identity tag that should drive identity-
+ *  scoped chrome overrides (backdrop, data-nex-identity attribute).
+ *  Returns one of "ireland" | "hq" | "worldwide" | null (dev/no-env).
+ *  Never throws · errors mean "no identity override" and Ireland
+ *  chrome is used as the base. */
+function resolveIdentityTag():
+  | "ireland"
+  | "hq"
+  | "worldwide"
+  | null {
+  try {
+    const raw = (process.env.NEX_APP_IDENTITY ?? "").trim();
+    if (raw.length === 0) return null;
+    const id = resolveAppIdentity();
+    return id.identity;
+  } catch {
+    return null;
+  }
 }
 
 /** Owner-authorised 2026-11-03 · Ireland-only consolidation ·
@@ -98,9 +126,45 @@ const WORLD_DESKTOP_BACKDROP: Record<string, string> = {
   ireland: GLOBAL_DESKTOP_BACKDROP,
 };
 
+// Owner directive 2026-11-10 (cycle 5) · Per-identity desktop backdrop
+// override. Unlike WORLD_DESKTOP_BACKDROP (keyed by WorldId), this map
+// is keyed by AppIdentityId so worldwide can diverge from ireland
+// without widening WorldId. Worldwide falls through to the sealed
+// NEX Global Connection Experience backdrop for launch · the owner
+// will skin it in a later authorised pass.
+const IDENTITY_DESKTOP_BACKDROP: Record<string, string> = {
+  worldwide: GLOBAL_DESKTOP_BACKDROP,
+};
+
 export function getWorldDesktopBackdrop(worldId: string): string {
   return WORLD_DESKTOP_BACKDROP[worldId] ?? GLOBAL_DESKTOP_BACKDROP;
 }
+
+export function getIdentityDesktopBackdrop(identityId: string): string | null {
+  return IDENTITY_DESKTOP_BACKDROP[identityId] ?? null;
+}
+
+// Owner directive 2026-11-10 (cycle 5) · Worldwide identity palette.
+// Reuses the HQ-style neutral + emerald foundation (safe defaults) ·
+// emitted on `.nex-native-stage` AFTER the Ireland palette when
+// identity === "worldwide" so these take precedence. Owner will skin
+// this further in a later authorised pass.
+const WORLDWIDE_PALETTE_OVERRIDES: Record<string, string> = {
+  "--nex-world-primary": "#1F8B4C",            // Emerald (neutral foundation)
+  "--nex-world-secondary": "#0F766E",          // Teal
+  "--nex-world-tertiary": "#0F766E",           // Teal (doubled)
+  "--nex-world-background-base": "#0B0F14",    // Deep neutral (HQ-style)
+  "--nex-world-surface": "#121821",            // Slightly elevated neutral
+  "--nex-world-surface-sunken": "#0D1218",     // Deeper neutral
+  "--nex-world-text-primary": "#E8EEF4",       // Near-white neutral ink
+  "--nex-world-text-secondary": "#A7B1BC",     // Dim neutral ink
+  "--nex-world-text-muted": "#6B7682",         // Muted neutral ink
+  "--nex-world-border": "rgba(31, 139, 76, 0.18)",
+  "--nex-world-border-accent": "rgba(31, 139, 76, 0.42)",
+  "--nex-world-success": "#1F8B4C",
+  "--nex-world-warning": "#F59E0B",
+  "--nex-world-danger": "#B91C1C",
+};
 
 /** Emits a <style data-nex-world-root> block that scopes the world
  *  palette CSS vars to `.nex-native-stage`. Scoping to the stage
@@ -225,12 +289,27 @@ const WORLD_LIVE_DRAWER_FOOTER_IMAGE_URL: Record<string, string> = {
 
 export async function WorldStylesheet(): Promise<React.JSX.Element> {
   const world = await resolveWorldForLayout();
-  const vars = paletteToCssVars(world.palette);
+  const identityTag = resolveIdentityTag();
+  // Owner directive 2026-11-10 (cycle 5) · Worldwide identity layers
+  // its own palette variables on top of the base (Ireland) palette.
+  // The base palette is emitted first so unknown keys inherit cleanly;
+  // Worldwide overrides follow. Ireland + HQ keep the Ireland base
+  // unchanged (worldwideOverrides stays {} for those identities).
+  const worldwideOverrides =
+    identityTag === "worldwide" ? WORLDWIDE_PALETTE_OVERRIDES : {};
+  const vars = { ...paletteToCssVars(world.palette), ...worldwideOverrides };
   const declarations = Object.entries(vars)
     .map(([name, value]) => `  ${name}: ${value};`)
     .join("\n");
-  const backdropUrl = getWorldDesktopBackdrop(world.meta.id);
-  const pageBase = world.palette.backgroundBase;
+  const identityBackdrop = identityTag
+    ? getIdentityDesktopBackdrop(identityTag)
+    : null;
+  const backdropUrl = identityBackdrop ?? getWorldDesktopBackdrop(world.meta.id);
+  const pageBase = (
+    identityTag === "worldwide"
+      ? WORLDWIDE_PALETTE_OVERRIDES["--nex-world-background-base"]
+      : null
+  ) ?? world.palette.backgroundBase;
   const drawerBg = WORLD_DRAWER_BG[world.meta.id];
   const primaryInk = WORLD_PRIMARY_INK[world.meta.id];
   const mutedInk = WORLD_MUTED_INK[world.meta.id];
@@ -312,6 +391,7 @@ export async function WorldStylesheet(): Promise<React.JSX.Element> {
   return (
     <style
       data-nex-world-root={world.meta.id}
+      data-nex-identity={identityTag ?? "none"}
       // eslint-disable-next-line react/no-danger
       dangerouslySetInnerHTML={{ __html: css }}
     />

@@ -42,16 +42,18 @@ describe("resolveAppIdentity · happy paths", () => {
     expect(r).toEqual({ identity: "ireland", country: "IE", displayName: "NEX Ireland" });
   });
 
-  it("resolves indonesia + ID correctly", () => {
-    setEnv("indonesia", "ID", "production");
-    const r = resolveAppIdentity();
-    expect(r).toEqual({ identity: "indonesia", country: "ID", displayName: "NEX Indonesia" });
-  });
-
   it("resolves hq (country must be unset)", () => {
     setEnv("hq", undefined, "production");
     const r = resolveAppIdentity();
     expect(r).toEqual({ identity: "hq", country: null, displayName: "NEX HQ" });
+  });
+
+  // Owner directive 2026-11-10 (cycle 5) · worldwide is a registered
+  // identity with no country (like hq).
+  it("resolves worldwide (country must be unset)", () => {
+    setEnv("worldwide", undefined, "production");
+    const r = resolveAppIdentity();
+    expect(r).toEqual({ identity: "worldwide", country: null, displayName: "NEX Worldwide" });
   });
 
   it("trims + lowercases identity, trims + uppercases country", () => {
@@ -94,12 +96,15 @@ describe("resolveAppIdentity · fail-closed", () => {
     expect(err?.code).toBe("missing-country");
   });
 
-  it("ireland with ID throws identity-country-mismatch", () => {
+  // Owner directive 2026-11-03 · Ireland-only consolidation · ID is no
+  // longer a REGISTERED_COUNTRIES value so this combo now fails
+  // earlier with invalid-country (before the mismatch check).
+  it("ireland with ID throws invalid-country", () => {
     setEnv("ireland", "ID", "production");
     const err = (() => {
       try { resolveAppIdentity(); return null; } catch (e) { return e as AppIdentityError; }
     })();
-    expect(err?.code).toBe("identity-country-mismatch");
+    expect(err?.code).toBe("invalid-country");
   });
 
   it("hq with country set throws identity-country-mismatch", () => {
@@ -108,6 +113,27 @@ describe("resolveAppIdentity · fail-closed", () => {
       try { resolveAppIdentity(); return null; } catch (e) { return e as AppIdentityError; }
     })();
     expect(err?.code).toBe("identity-country-mismatch");
+  });
+
+  // Owner directive 2026-11-10 (cycle 5) · worldwide is a no-country
+  // identity · NEX_APP_COUNTRY must not be set (same rule as hq).
+  it("worldwide with country set throws identity-country-mismatch", () => {
+    setEnv("worldwide", "IE", "production");
+    const err = (() => {
+      try { resolveAppIdentity(); return null; } catch (e) { return e as AppIdentityError; }
+    })();
+    expect(err?.code).toBe("identity-country-mismatch");
+  });
+
+  // Owner directive 2026-11-03 · Indonesia was removed from
+  // REGISTERED_IDENTITIES. Attempting to use it must fail-closed with
+  // invalid-identity even though a country was supplied.
+  it("indonesia is no longer a registered identity · throws invalid-identity", () => {
+    setEnv("indonesia", "ID", "production");
+    const err = (() => {
+      try { resolveAppIdentity(); return null; } catch (e) { return e as AppIdentityError; }
+    })();
+    expect(err?.code).toBe("invalid-identity");
   });
 
   it("invalid country value throws invalid-country", () => {
@@ -133,7 +159,7 @@ describe("isHqDeployment", () => {
     expect(isHqDeployment()).toBe(true);
     setEnv("ireland", "IE", "production");
     expect(isHqDeployment()).toBe(false);
-    setEnv("indonesia", "ID", "production");
+    setEnv("worldwide", undefined, "production");
     expect(isHqDeployment()).toBe(false);
   });
 

@@ -124,7 +124,7 @@ describe("GET /api/nex-native/stripe/webhook", () => {
 describe("POST /api/nex-native/stripe/webhook", () => {
   it("valid signed checkout.session.completed → markOrderPaid + recordOrderEvent · 200", async () => {
     const body = checkoutCompletedBody();
-    const sig = signBody(body, WEBHOOK_SECRET, "1700000000");
+    const sig = signBody(body, WEBHOOK_SECRET, String(Math.floor(Date.now() / 1000)));
     const { status, json } = await invokePost(body, sig, {
       "stripe-account": CONNECTED_ACCOUNT_ID,
     });
@@ -156,7 +156,7 @@ describe("POST /api/nex-native/stripe/webhook", () => {
   it("invalid signature → 400 · no markOrderPaid · no recordOrderEvent", async () => {
     const body = checkoutCompletedBody();
     // Sign with a different secret so HMAC fails.
-    const badSig = signBody(body, "whsec_wrong_secret", "1700000000");
+    const badSig = signBody(body, "whsec_wrong_secret", String(Math.floor(Date.now() / 1000)));
     const { status, json } = await invokePost(body, badSig);
     expect(status).toBe(400);
     expect(json).toEqual({ ok: false, error: "invalid signature" });
@@ -174,7 +174,7 @@ describe("POST /api/nex-native/stripe/webhook", () => {
 
   it("tampered body (signature was valid for original) → 400 · no markOrderPaid", async () => {
     const originalBody = checkoutCompletedBody();
-    const sig = signBody(originalBody, WEBHOOK_SECRET, "1700000000");
+    const sig = signBody(originalBody, WEBHOOK_SECRET, String(Math.floor(Date.now() / 1000)));
     // Tamper AFTER signing so HMAC no longer matches.
     const tamperedBody = originalBody.replace(ORDER_ID, "ffffffff-ffff-4fff-8fff-ffffffffffff");
     const { status } = await invokePost(tamperedBody, sig);
@@ -184,7 +184,7 @@ describe("POST /api/nex-native/stripe/webhook", () => {
 
   it("duplicate signed event → markOrderPaid called TWICE (idempotency enforced by commerce-service)", async () => {
     const body = checkoutCompletedBody();
-    const sig = signBody(body, WEBHOOK_SECRET, "1700000000");
+    const sig = signBody(body, WEBHOOK_SECRET, String(Math.floor(Date.now() / 1000)));
 
     const a = await invokePost(body, sig);
     const b = await invokePost(body, sig);
@@ -204,7 +204,7 @@ describe("POST /api/nex-native/stripe/webhook", () => {
       type: "customer.created",
       data: { object: { id: "cus_1" } },
     });
-    const sig = signBody(body, WEBHOOK_SECRET, "1700000000");
+    const sig = signBody(body, WEBHOOK_SECRET, String(Math.floor(Date.now() / 1000)));
     const { status, json } = await invokePost(body, sig);
     expect(status).toBe(200);
     expect(json).toEqual({ ok: true, outcome: "unhandled" });
@@ -224,7 +224,7 @@ describe("POST /api/nex-native/stripe/webhook", () => {
         },
       },
     });
-    const sig = signBody(body, WEBHOOK_SECRET, "1700000000");
+    const sig = signBody(body, WEBHOOK_SECRET, String(Math.floor(Date.now() / 1000)));
     const { status, json } = await invokePost(body, sig);
     expect(status).toBe(200);
     expect(json).toEqual({ ok: true, outcome: "refund_logged" });
@@ -244,7 +244,7 @@ describe("POST /api/nex-native/stripe/webhook", () => {
       type: "checkout.session.completed",
       data: { object: { id: "cs_x", payment_status: "paid" } },
     });
-    const sig = signBody(body, WEBHOOK_SECRET, "1700000000");
+    const sig = signBody(body, WEBHOOK_SECRET, String(Math.floor(Date.now() / 1000)));
     const { status, json } = await invokePost(body, sig);
     expect(status).toBe(200);
     expect(json).toEqual({ ok: true, outcome: "no_order_ref" });
@@ -255,7 +255,7 @@ describe("POST /api/nex-native/stripe/webhook", () => {
     process.env = { ...ORIGINAL_ENV };
     delete (process.env as Record<string, string | undefined>).STRIPE_WEBHOOK_SECRET;
     const body = checkoutCompletedBody();
-    const sig = signBody(body, WEBHOOK_SECRET, "1700000000");
+    const sig = signBody(body, WEBHOOK_SECRET, String(Math.floor(Date.now() / 1000)));
     const { status, json } = await invokePost(body, sig);
     expect(status).toBe(500);
     expect(json).toEqual({ ok: false, error: "config_error" });
@@ -264,7 +264,7 @@ describe("POST /api/nex-native/stripe/webhook", () => {
 
   it("signed but malformed JSON body → 400 malformed_event", async () => {
     const body = "{not: valid json";
-    const sig = signBody(body, WEBHOOK_SECRET, "1700000000");
+    const sig = signBody(body, WEBHOOK_SECRET, String(Math.floor(Date.now() / 1000)));
     const { status, json } = await invokePost(body, sig);
     expect(status).toBe(400);
     expect(json).toEqual({ ok: false, error: "malformed_event" });
@@ -273,7 +273,7 @@ describe("POST /api/nex-native/stripe/webhook", () => {
   it("markOrderPaid throws → 500 processing_error · no echo of internal message", async () => {
     mocks.markOrderPaid.mockRejectedValueOnce(new Error("DB CONNECTION LOST · SECRET LEAK"));
     const body = checkoutCompletedBody();
-    const sig = signBody(body, WEBHOOK_SECRET, "1700000000");
+    const sig = signBody(body, WEBHOOK_SECRET, String(Math.floor(Date.now() / 1000)));
     const { status, json } = await invokePost(body, sig);
     expect(status).toBe(500);
     expect(json).toEqual({ ok: false, error: "processing_error" });
@@ -288,7 +288,7 @@ describe("POST /api/nex-native/stripe/webhook", () => {
   describe("hardening · byte-level tamper variants", () => {
     it("whitespace-only change after signing → 400 · no markOrderPaid", async () => {
       const body = checkoutCompletedBody();
-      const sig = signBody(body, WEBHOOK_SECRET, "1700000000");
+      const sig = signBody(body, WEBHOOK_SECRET, String(Math.floor(Date.now() / 1000)));
       // Insert a single space inside the metadata object · HMAC must fail.
       const tampered = body.replace('"metadata":{"nex_order_id"', '"metadata":{ "nex_order_id"');
       expect(tampered).not.toBe(body);
@@ -299,7 +299,7 @@ describe("POST /api/nex-native/stripe/webhook", () => {
 
     it("trailing newline added after signing → 400 · no markOrderPaid", async () => {
       const body = checkoutCompletedBody();
-      const sig = signBody(body, WEBHOOK_SECRET, "1700000000");
+      const sig = signBody(body, WEBHOOK_SECRET, String(Math.floor(Date.now() / 1000)));
       const { status } = await invokePost(`${body}\n`, sig);
       expect(status).toBe(400);
       expect(mocks.markOrderPaid).not.toHaveBeenCalled();
@@ -322,7 +322,7 @@ describe("POST /api/nex-native/stripe/webhook", () => {
           },
         },
       });
-      const sig = signBody(body, WEBHOOK_SECRET, "1700000000");
+      const sig = signBody(body, WEBHOOK_SECRET, String(Math.floor(Date.now() / 1000)));
       // Reorder top-level keys · bytes differ → HMAC fails.
       const reordered = JSON.stringify({
         type: "checkout.session.completed",
@@ -349,7 +349,7 @@ describe("POST /api/nex-native/stripe/webhook", () => {
       // per the Fetch spec · prove by handing the request a title-case name
       // and confirming the route still verifies and dispatches.
       const body = checkoutCompletedBody();
-      const sig = signBody(body, WEBHOOK_SECRET, "1700000000");
+      const sig = signBody(body, WEBHOOK_SECRET, String(Math.floor(Date.now() / 1000)));
       const req = new Request(
         "http://localhost:3008/api/nex-native/stripe/webhook",
         {
@@ -371,7 +371,7 @@ describe("POST /api/nex-native/stripe/webhook", () => {
   describe("hardening · error-response opacity (no signature or stack leak)", () => {
     it("invalid signature response NEVER contains the computed or received signature bytes", async () => {
       const body = checkoutCompletedBody();
-      const badSig = signBody(body, "whsec_wrong_secret", "1700000000");
+      const badSig = signBody(body, "whsec_wrong_secret", String(Math.floor(Date.now() / 1000)));
       const { status, json } = await invokePost(body, badSig);
       expect(status).toBe(400);
       const serialised = JSON.stringify(json);
@@ -380,7 +380,7 @@ describe("POST /api/nex-native/stripe/webhook", () => {
       expect(v1Part.length).toBeGreaterThan(10);
       expect(serialised).not.toContain(v1Part);
       // Computed (correct) signature must NOT appear either.
-      const correctSig = signBody(body, WEBHOOK_SECRET, "1700000000").split("v1=")[1] ?? "";
+      const correctSig = signBody(body, WEBHOOK_SECRET, String(Math.floor(Date.now() / 1000))).split("v1=")[1] ?? "";
       expect(serialised).not.toContain(correctSig);
       // Secret must never leak.
       expect(serialised).not.toContain(WEBHOOK_SECRET);
@@ -391,7 +391,7 @@ describe("POST /api/nex-native/stripe/webhook", () => {
       const err = new Error("INTERNAL: cannot reach supabase pooler at 10.0.0.1:5432");
       mocks.markOrderPaid.mockRejectedValueOnce(err);
       const body = checkoutCompletedBody();
-      const sig = signBody(body, WEBHOOK_SECRET, "1700000000");
+      const sig = signBody(body, WEBHOOK_SECRET, String(Math.floor(Date.now() / 1000)));
       const { status, json } = await invokePost(body, sig);
       expect(status).toBe(500);
       const serialised = JSON.stringify(json);
@@ -402,29 +402,33 @@ describe("POST /api/nex-native/stripe/webhook", () => {
     });
   });
 
-  describe("hardening · timestamp-age window (documented gap)", () => {
-    // NOTE (gap flagged for parent-agent): verifyStripeSignature in
-    // `stripe-webhook-service.ts` intentionally does NOT enforce Stripe's
-    // 5-minute tolerance window · the doc comment on verifyStripeSignature
-    // calls this out explicitly. These tests document the CURRENT behaviour
-    // (an old timestamp still verifies if the HMAC matches) so a future
-    // change to enforce age would surface as a failing test to be reviewed.
-    // Fixing this requires changing production code behaviour · NOT in
-    // scope of this additive-tests pass. Flagged in final report.
-    it("old timestamp with correct signature still verifies (current behaviour)", async () => {
+  describe("hardening · timestamp-age window (owner-approved 5-min tolerance)", () => {
+    // Owner-approved 2026-11-10 (Stripe Option B · cycle 5 decision).
+    // verifyStripeSignature now enforces Stripe's 5-minute window ·
+    // events older/newer than that are REJECTED even if the HMAC is
+    // correct. These two tests now assert the new behaviour.
+    it("old timestamp with correct signature is REJECTED", async () => {
       const body = checkoutCompletedBody();
-      // 1 hour old · Stripe's recommended tolerance is 5 min.
+      // 1 hour old · 12x the tolerance window.
       const oldTs = String(Math.floor(Date.now() / 1000) - 3600);
       const sig = signBody(body, WEBHOOK_SECRET, oldTs);
       const { status } = await invokePost(body, sig);
-      // Documents the gap · route currently accepts stale-but-signed events.
-      expect(status).toBe(200);
+      expect(status).toBe(400);
     });
 
-    it("future timestamp with correct signature still verifies (current behaviour)", async () => {
+    it("future timestamp with correct signature is REJECTED", async () => {
       const body = checkoutCompletedBody();
       const futureTs = String(Math.floor(Date.now() / 1000) + 3600);
       const sig = signBody(body, WEBHOOK_SECRET, futureTs);
+      const { status } = await invokePost(body, sig);
+      expect(status).toBe(400);
+    });
+
+    it("timestamp inside the 5-minute window with correct signature is accepted", async () => {
+      const body = checkoutCompletedBody();
+      // 60 seconds old · well within 300s tolerance.
+      const recentTs = String(Math.floor(Date.now() / 1000) - 60);
+      const sig = signBody(body, WEBHOOK_SECRET, recentTs);
       const { status } = await invokePost(body, sig);
       expect(status).toBe(200);
     });

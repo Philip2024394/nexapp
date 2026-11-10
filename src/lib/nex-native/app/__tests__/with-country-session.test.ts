@@ -96,13 +96,17 @@ describe("withCountrySession · T-POOL-3 happy path", () => {
   });
 
   it("GUC value is parameterised with the resolved country", async () => {
-    setEnv("indonesia", "ID");
+    // Owner directive 2026-11-03 · Ireland is the only registered
+    // country post-consolidation · this test previously used Indonesia
+    // but now proves the same parameterisation behaviour using the
+    // one supported combo.
+    setEnv("ireland", "IE");
     mockClient.query.mockResolvedValue({ rows: [], rowCount: 0 });
     await withCountrySession(async () => "ok");
     const setConfigCall = mockClient.query.mock.calls.find(
       (c) => (c[0] as string).includes("set_config"),
     );
-    expect(setConfigCall?.[1]).toEqual(["ID"]);
+    expect(setConfigCall?.[1]).toEqual(["IE"]);
   });
 });
 
@@ -160,7 +164,12 @@ describe("withCountrySession · T-POOL-5 explicit rollback by work", () => {
 });
 
 describe("withCountrySession · T-POOL-6 reused client between countries", () => {
-  it("second session's GUC overrides first (set_config transactional)", async () => {
+  // Owner directive 2026-11-03 · Ireland is the only registered
+  // country · the original Ireland-then-Indonesia reuse case now
+  // exercises Ireland twice to prove the same "GUC is re-emitted on
+  // every session" invariant without reintroducing the retired
+  // Indonesia identity.
+  it("each session re-emits SET LOCAL and releases the client", async () => {
     // Simulate the pool handing the same client twice.
     const shared = {
       query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
@@ -170,15 +179,13 @@ describe("withCountrySession · T-POOL-6 reused client between countries", () =>
 
     setEnv("ireland", "IE");
     await withCountrySession(async () => "ok");
-
-    setEnv("indonesia", "ID");
     await withCountrySession(async () => "ok");
 
     const setConfigCalls = shared.query.mock.calls
       .filter((c) => (c[0] as string).includes("set_config"))
       .map((c) => c[1]);
     expect(setConfigCalls[0]).toEqual(["IE"]);
-    expect(setConfigCalls[1]).toEqual(["ID"]);
+    expect(setConfigCalls[1]).toEqual(["IE"]);
     expect(shared.release).toHaveBeenCalledTimes(2);
   });
 });
@@ -186,6 +193,16 @@ describe("withCountrySession · T-POOL-6 reused client between countries", () =>
 describe("withCountrySession · T-POOL-2 fail-closed", () => {
   it("HQ identity (no country) throws CountrySessionError no-country", async () => {
     setEnv("hq", undefined);
+    await expect(
+      withCountrySession(async () => "ok"),
+    ).rejects.toMatchObject({ code: "no-country" });
+  });
+
+  // Owner directive 2026-11-10 (cycle 5) · worldwide is a no-country
+  // identity · withCountrySession must refuse it with the same
+  // fail-closed code as HQ.
+  it("Worldwide identity (no country) throws CountrySessionError no-country", async () => {
+    setEnv("worldwide", undefined);
     await expect(
       withCountrySession(async () => "ok"),
     ).rejects.toMatchObject({ code: "no-country" });

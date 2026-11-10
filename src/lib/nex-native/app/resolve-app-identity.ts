@@ -29,7 +29,16 @@ import "server-only";
 
 // Owner directive 2026-11-03 · Ireland-only consolidation ·
 // Indonesia removed as a registered deployment identity.
-export type AppIdentityId = "ireland" | "hq";
+//
+// Owner directive 2026-11-10 (cycle 5) · "worldwide" registered as a
+// distinct deployment identity for the global/no-country surface. It
+// behaves like `hq` with respect to country semantics (no country, no
+// NEX_APP_COUNTRY permitted) but is a separate identity so routing,
+// chrome palette, and per-deployment policy can distinguish the two.
+// Ireland identity resolution is UNCHANGED (ireland + IE still required).
+// Indonesia remains OFF the registered list per the 2026-11-03 seal ·
+// re-registering Indonesia requires a separate owner authorisation.
+export type AppIdentityId = "ireland" | "hq" | "worldwide";
 export type AppCountryCode = "IE";
 
 export interface AppIdentity {
@@ -55,6 +64,7 @@ export class AppIdentityError extends Error {
 const REGISTERED_IDENTITIES: ReadonlySet<AppIdentityId> = new Set([
   "ireland",
   "hq",
+  "worldwide",
 ]);
 const REGISTERED_COUNTRIES: ReadonlySet<AppCountryCode> = new Set(["IE"]);
 
@@ -63,11 +73,16 @@ const COUNTRY_FOR_IDENTITY: Readonly<
 > = {
   ireland: "IE",
   hq: null,
+  // Owner directive 2026-11-10 · worldwide is a no-country global
+  // deployment. NEX_APP_COUNTRY MUST NOT be set for this identity
+  // (same validation rule as hq · fail-closed on mismatch).
+  worldwide: null,
 };
 
 const DISPLAY_NAME: Readonly<Record<AppIdentityId, string>> = {
   ireland: "NEX Ireland",
   hq: "NEX HQ",
+  worldwide: "NEX Worldwide",
 };
 
 /**
@@ -96,14 +111,14 @@ export function resolveAppIdentity(): AppIdentity {
     }
     throw new AppIdentityError(
       "missing-identity",
-      "NEX_APP_IDENTITY is not set. Each production deployment MUST set this env var to one of: ireland, hq.",
+      "NEX_APP_IDENTITY is not set. Each production deployment MUST set this env var to one of: ireland, hq, worldwide.",
     );
   }
 
   if (!REGISTERED_IDENTITIES.has(rawIdentity as AppIdentityId)) {
     throw new AppIdentityError(
       "invalid-identity",
-      `NEX_APP_IDENTITY=${JSON.stringify(rawIdentity)} is not a registered identity. Valid values: ireland, hq.`,
+      `NEX_APP_IDENTITY=${JSON.stringify(rawIdentity)} is not a registered identity. Valid values: ireland, hq, worldwide.`,
     );
   }
 
@@ -114,7 +129,7 @@ export function resolveAppIdentity(): AppIdentity {
     if (rawCountry) {
       throw new AppIdentityError(
         "identity-country-mismatch",
-        `NEX_APP_IDENTITY=hq must NOT set NEX_APP_COUNTRY. Got NEX_APP_COUNTRY=${JSON.stringify(rawCountry)}.`,
+        `NEX_APP_IDENTITY=${identity} must NOT set NEX_APP_COUNTRY. Got NEX_APP_COUNTRY=${JSON.stringify(rawCountry)}.`,
       );
     }
     return { identity, country: null, displayName: DISPLAY_NAME[identity] };
@@ -130,7 +145,7 @@ export function resolveAppIdentity(): AppIdentity {
   if (!REGISTERED_COUNTRIES.has(rawCountry as AppCountryCode)) {
     throw new AppIdentityError(
       "invalid-country",
-      `NEX_APP_COUNTRY=${JSON.stringify(rawCountry)} is not a registered country. Valid values: IE, ID.`,
+      `NEX_APP_COUNTRY=${JSON.stringify(rawCountry)} is not a registered country. Valid values: IE.`,
     );
   }
 

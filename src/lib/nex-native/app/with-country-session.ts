@@ -73,11 +73,18 @@ export async function withCountrySession<T>(
   work: (ctx: CountrySessionContext) => Promise<T>,
 ): Promise<T> {
   // 1. Resolve deployment identity (fail-closed).
+  //
+  // Owner directive 2026-11-10 · worldwide is a no-country global
+  // deployment (like hq). This helper is strictly for country-scoped
+  // server actions that need to SET LOCAL nex.app_country for RLS ·
+  // so worldwide + hq are BOTH rejected here. Callers on worldwide
+  // deployments must either use a plain pool client (no country GUC)
+  // or a different helper when such a path is authorised.
   const identity = resolveAppIdentityOrThrow();
   if (identity.country === null) {
     throw new CountrySessionError(
       "no-country",
-      `withCountrySession called from a deployment without a country (identity=${identity.identity}). This wrapper is only for country deployments (ireland, indonesia). HQ pages must not use it.`,
+      `withCountrySession called from a deployment without a country (identity=${identity.identity}). This wrapper is only for country deployments (currently: ireland). HQ and worldwide deployments must not use it.`,
     );
   }
 

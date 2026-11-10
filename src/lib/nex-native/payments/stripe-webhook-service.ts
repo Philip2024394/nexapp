@@ -129,6 +129,9 @@ export function timingSafeHexEqual(a: string, b: string): boolean {
   }
 }
 
+/** Default Stripe-recommended timestamp tolerance (seconds). */
+export const STRIPE_DEFAULT_TOLERANCE_SECONDS = 300;
+
 /**
  * Verify a Stripe webhook signature using Node's built-in crypto HMAC.
  * Returns `true` only if:
@@ -136,15 +139,22 @@ export function timingSafeHexEqual(a: string, b: string): boolean {
  *   · signatureHeader parses into `t=...,v1=...`
  *   · at least one `v1=` value equals the expected HMAC of
  *     `${timestamp}.${rawBody}` under a timing-safe compare
+ *   · `|Date.now()/1000 - timestamp| <= toleranceSeconds`
  *
- * Does NOT enforce Stripe's 5-minute tolerance window. Replay protection
- * is handled at the application layer via the event id + idempotent
- * downstream writes (per owner doctrine · no in-route idempotency cache).
+ * Owner-sealed 2026-11-10 (cycle 5 Stripe Option B · 5-minute window).
+ * Follows Stripe's documented replay-protection recommendation.
+ * `toleranceSeconds` is parameterised for testing · production callers
+ * should accept the default (300s).
+ *
+ * `nowSeconds` is injectable for deterministic tests. Default is the
+ * real wall clock in seconds since epoch.
  */
 export function verifyStripeSignature(
   rawBody: string,
   signatureHeader: string | null | undefined,
   secret: string | null | undefined,
+  toleranceSeconds: number = STRIPE_DEFAULT_TOLERANCE_SECONDS,
+  nowSeconds: number = Math.floor(Date.now() / 1000),
 ): boolean {
   if (!secret || typeof secret !== "string") return false;
   if (!signatureHeader || typeof signatureHeader !== "string") return false;
@@ -152,6 +162,16 @@ export function verifyStripeSignature(
 
   const parsed = parseSignatureHeader(signatureHeader);
   if (!parsed) return false;
+
+  // Reject outside the tolerance window · Stripe docs recommend 5 min.
+  // A toleranceSeconds <= 0 disables the age check entirely (test-only
+  // escape hatch · production always uses the 300s default).
+  if (toleranceSeconds > 0) {
+    const t = Number(parsed.timestamp);
+    if (!Number.isFinite(t)) return false;
+    const ageSeconds = Math.abs(nowSeconds - t);
+    if (ageSeconds > toleranceSeconds) return false;
+  }
 
   const expected = computeStripeSignature(rawBody, parsed.timestamp, secret);
   for (const candidate of parsed.signatures) {

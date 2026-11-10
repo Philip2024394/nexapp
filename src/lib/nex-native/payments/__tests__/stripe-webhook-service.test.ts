@@ -40,7 +40,7 @@ describe("NEX_STRIPE_SYSTEM_ACTOR_ID", () => {
 describe("computeStripeSignature", () => {
   it("matches a hand-rolled HMAC-SHA256 of t.body", () => {
     const body = '{"id":"evt_1","type":"checkout.session.completed"}';
-    const ts = "1700000000";
+    const ts = String(Math.floor(Date.now() / 1000));
     const expected = createHmac("sha256", SECRET)
       .update(`${ts}.${body}`, "utf8")
       .digest("hex");
@@ -68,7 +68,7 @@ describe("timingSafeHexEqual", () => {
 
 describe("verifyStripeSignature", () => {
   const body = '{"id":"evt_abc","type":"checkout.session.completed","data":{"object":{"id":"cs_1"}}}';
-  const ts = "1700000000";
+  const ts = String(Math.floor(Date.now() / 1000));
 
   it("valid signature → true", () => {
     const header = signHeader(body, SECRET, ts);
