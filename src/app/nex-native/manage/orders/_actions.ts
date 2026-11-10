@@ -28,6 +28,10 @@ import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-imperson
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import * as orderService from "@/lib/nex-native/order-service";
 import * as commerceService from "@/lib/nex-native/commerce-service";
+import {
+  notifyBuyerOrderCancelled,
+  notifyBuyerPaymentConfirmed,
+} from "@/lib/nex-native/manage-orders/order-notification-service";
 import type { NexOrderRow } from "@/lib/nex-native/types";
 
 export type ManageOrderActionReason =
@@ -116,6 +120,11 @@ export async function sellerMarkOrderPaidAction(args: {
         from_state: guard.order.state,
       },
     });
+    // P4 · notify buyer. Fail-soft · a notification outage must never
+    // roll back a confirmed payment.
+    try {
+      await notifyBuyerPaymentConfirmed(order);
+    } catch { /* silent · logged by the service */ }
     return ok({ order });
   } catch (e) {
     return fail(mapError(e));
@@ -150,6 +159,10 @@ export async function sellerCancelOrderAction(args: {
       guard.accountId,
       args.reason,
     );
+    // P4 · notify buyer. Fail-soft.
+    try {
+      await notifyBuyerOrderCancelled(order);
+    } catch { /* silent */ }
     return ok({ order });
   } catch (e) {
     return fail(mapError(e));
