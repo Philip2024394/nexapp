@@ -265,7 +265,7 @@ const CREATE_ROWS: ReadonlyArray<MenuRow> = [
   {
     key: "create-product",
     label: "List a product",
-    subtitle: "Shoppable card · optional video background",
+    subtitle: "Shoppable card · optional video",
     href: "/nex-native/create/product/category",
     locked: false,
   },
@@ -275,21 +275,21 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
   {
     key: "profile",
     label: "My profile",
-    subtitle: "Identity and personal details",
+    subtitle: "Your identity details",
     href: "/nex-native/profile/me",
     locked: false,
   },
   {
     key: "chats-contacts",
     label: "Chats and contacts",
-    subtitle: "Return to your conversations",
+    subtitle: "Back to conversations",
     href: CONTACTS_HREF,
     locked: false,
   },
   {
     key: "chat-appearance",
     label: "Chat themes",
-    subtitle: "Themes and personalisation",
+    subtitle: "Themes and styles",
     href: "/nex-native/chat-themes-library",
     locked: false,
   },
@@ -299,7 +299,7 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
   {
     key: "payment-providers",
     label: "Payment Providers",
-    subtitle: "Connect, manage and receive payments",
+    subtitle: "Receive payments",
     href: "/nex-native/settings/payments",
     locked: false,
   },
@@ -307,7 +307,7 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
   {
     key: "my-orders",
     label: "My Orders",
-    subtitle: "Shop orders · confirm payments · track fulfilment",
+    subtitle: "Confirm and track orders",
     href: "/nex-native/manage/orders",
     locked: false,
   },
@@ -320,7 +320,7 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
   {
     key: "nex-store",
     label: "🛍  NEX Store",
-    subtitle: "Vault, themes and NEX extras",
+    subtitle: "Vault, themes, extras",
     href: "/nex-native/store",
     locked: false,
   },
@@ -339,7 +339,7 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
   {
     key: "discovery",
     label: "Discovery",
-    subtitle: "Discover NEX businesses and products",
+    subtitle: "Browse NEX businesses",
     href: "/nex-native/directory",
     locked: false,
   },
@@ -883,7 +883,7 @@ function DrawerBody({
             {
               key: "shared-media",
               label: "Shared media",
-              subtitle: "Photos · videos · voice · docs in this chat",
+              subtitle: "Photos, videos, docs",
               href: peerSharedMediaHref,
               locked: false,
             } as const,
@@ -1430,8 +1430,12 @@ const drawerStyle: React.CSSProperties = {
   // which confirmed the drawer-specific flex interaction.
   height: "100%",
   maxHeight: "100%",
-  width: "min(320px, 85%)",
-  maxWidth: 360,
+  // Owner directive 2026-11-10 · side drawer now extends 60% of the
+  // phone frame width (was 85%). Pairs with the Cycle 19 subtitle
+  // rewording that trimmed every row's gray subtitle to fit in a
+  // single line at the new narrower width.
+  width: "60%",
+  maxWidth: 240,
   // Owner-authorised 2026-11-04 later-same-day · NEX Ireland drawer trim.
   // Was `background: BG` which resolves to `--nex-world-background-base`
   // → Ireland's cream page base #FAF8F4 (correct for the page body,
