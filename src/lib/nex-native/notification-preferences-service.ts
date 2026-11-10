@@ -28,7 +28,8 @@ export type NotificationCategory =
   | "call"
   | "reaction"
   | "mention"
-  | "marketing";
+  | "marketing"
+  | "order";
 
 export interface NotificationPrefs {
   readonly message_enabled: boolean;
@@ -36,6 +37,10 @@ export interface NotificationPrefs {
   readonly reaction_enabled: boolean;
   readonly mention_enabled: boolean;
   readonly marketing_enabled: boolean;
+  /** Transactional order notifications · owner-sealed 2026-11-10 ·
+   *  migration 318 · TRUE by default (buyer/seller need operational
+   *  commerce events) · user may independently opt-OUT. */
+  readonly order_enabled: boolean;
 }
 
 /** Sealed defaults applied when a row does not yet exist for the
@@ -47,6 +52,7 @@ export const DEFAULT_PREFS: NotificationPrefs = {
   reaction_enabled: true,
   mention_enabled: true,
   marketing_enabled: false,
+  order_enabled: true,
 };
 
 /** Field name per category. Prevents the dispatch service from
@@ -65,6 +71,8 @@ export function categoryField(
       return "mention_enabled";
     case "marketing":
       return "marketing_enabled";
+    case "order":
+      return "order_enabled";
   }
 }
 
@@ -75,6 +83,11 @@ interface NotificationPrefsRow {
   reaction_enabled: boolean;
   mention_enabled: boolean;
   marketing_enabled: boolean;
+  /** Present only AFTER migration 318 applied. During the
+   *  deploy-order window the row may lack this column · the service
+   *  coalesces to DEFAULT_PREFS.order_enabled (TRUE) rather than
+   *  silently falling to false. */
+  order_enabled?: boolean;
   updated_at: string;
 }
 
@@ -106,6 +119,10 @@ export async function getNotificationPrefs(
     reaction_enabled: row.reaction_enabled,
     mention_enabled: row.mention_enabled,
     marketing_enabled: row.marketing_enabled,
+    // Coalesce covers the migration-first / code-second deploy
+    // window · if the column does not yet exist, we fall to the
+    // sealed default (TRUE) rather than treating undefined as false.
+    order_enabled: row.order_enabled ?? DEFAULT_PREFS.order_enabled,
   };
 }
 
@@ -137,6 +154,7 @@ export async function updateNotificationPrefs(
     reaction_enabled: patch.reaction_enabled ?? current.reaction_enabled,
     mention_enabled: patch.mention_enabled ?? current.mention_enabled,
     marketing_enabled: patch.marketing_enabled ?? current.marketing_enabled,
+    order_enabled: patch.order_enabled ?? current.order_enabled,
   };
   const { error } = await nexSupabaseAdmin
     .from("nex_account_notification_prefs")
@@ -148,6 +166,7 @@ export async function updateNotificationPrefs(
         reaction_enabled: next.reaction_enabled,
         mention_enabled: next.mention_enabled,
         marketing_enabled: next.marketing_enabled,
+        order_enabled: next.order_enabled,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "account_id" },

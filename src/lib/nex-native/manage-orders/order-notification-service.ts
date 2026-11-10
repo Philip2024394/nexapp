@@ -31,27 +31,20 @@
 // event · not conversation content · so Vault policy §P0.3 doesn't
 // apply.
 //
-// Category gating (current state · pending migration 318):
-//   · The sealed NotificationCategory union does NOT contain "order"
-//     yet · the proposed migration 318 adds `order_enabled` column +
-//     TS union member, defaulted TRUE.
-//   · Until migration 318 is approved + applied, this service
-//     bypasses `dispatchPushNotification` and talks to the push
-//     subscription store + web-push adapter directly. A cold-stop
-//     switch (NEX_ORDER_NOTIFICATIONS_DISABLED env) lets ops silence
-//     the fanout without a deploy if anything misbehaves.
-//
-// After migration 318 lands the plan is:
-//   · Add "order" to NotificationCategory
-//   · Add order_enabled to NotificationPrefs
-//   · Switch this service to call dispatchPushNotification(..., "order",
-//     { kind: "system", ... }) so category prefs apply consistently.
+// Category gating (post-migration-318 state, sealed 2026-11-10):
+//   · Migration 318 applied to sandbox adds `order_enabled` column
+//     to nex_account_notification_prefs (default TRUE). The sealed
+//     NotificationCategory union now includes "order". This service
+//     routes every order event through the standard
+//     `dispatchPushNotification(..., "order", { kind: "system", ... })`
+//     so the same fail-closed category gate applies to orders as to
+//     message / call / reaction / mention.
+//   · `NEX_ORDER_NOTIFICATIONS_DISABLED=true` remains as a cold-stop
+//     kill-switch independent of the per-user preference.
 
 import "server-only";
-import { listPushSubscriptions } from "../push-subscription-service";
+import { dispatchPushNotification } from "../notification-dispatch-service";
 import { nexSupabaseAdmin } from "../supabase-admin";
-import { getNotifications } from "@/lib/nex/notifications/registry";
-import type { NotificationMessage } from "@/lib/nex/notifications/types";
 import type { NexOrderRow, NexUuid } from "../types";
 
 export type OrderNotificationKind =
@@ -68,8 +61,11 @@ export interface OrderNotificationResult {
   readonly skipped_reason?:
     | "disabled_by_env"
     | "no_recipient_resolved"
+    | "disabled"
     | "no_subscriptions"
-    | "subscription_lookup_failed";
+    | "prefs_unavailable"
+    | "vault_check_failed"
+    | "vault_rejected";
 }
 
 function isDisabled(): boolean {
@@ -121,53 +117,22 @@ async function fanOutToAccount(
   kind: OrderNotificationKind,
 ): Promise<Omit<OrderNotificationResult, "kind" | "recipientAccountId">> {
   const { title, body } = VISIBLE_COPY[kind];
-  let subscriptions;
-  try {
-    subscriptions = await listPushSubscriptions(recipientAccountId);
-  } catch {
-    return {
-      attempted: 0,
-      delivered: 0,
-      failed: 0,
-      skipped_reason: "subscription_lookup_failed",
-    };
-  }
-  if (subscriptions.length === 0) {
-    return { attempted: 0, delivered: 0, failed: 0, skipped_reason: "no_subscriptions" };
-  }
-  const adapter = getNotifications("push");
-  let delivered = 0;
-  let failed = 0;
   const deepLink = `/nex-native/manage/orders/${orderId}`;
-  for (const sub of subscriptions) {
-    const message: NotificationMessage = {
-      channel: "push",
-      to: [],
-      kind: "transactional",
-      subject: title,
+  const result = await dispatchPushNotification(
+    recipientAccountId,
+    "order",
+    {
+      kind: "system",
+      title,
       body,
-      data: {
-        orderId,
-        url: deepLink,
-        eventKind: kind,
-        subscription: {
-          endpoint: sub.endpoint,
-          keys: { p256dh: sub.p256dh, auth: sub.auth },
-        },
-      },
-    };
-    try {
-      const result = await adapter.send(message);
-      if (result.ok) delivered += 1;
-      else failed += 1;
-    } catch {
-      failed += 1;
-    }
-  }
+      data: { orderId, url: deepLink, eventKind: kind },
+    },
+  );
   return {
-    attempted: subscriptions.length,
-    delivered,
-    failed,
+    attempted: result.attempted,
+    delivered: result.delivered,
+    failed: result.failed,
+    ...(result.skipped_reason ? { skipped_reason: result.skipped_reason } : {}),
   };
 }
 
