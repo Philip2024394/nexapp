@@ -137,7 +137,9 @@ export default async function HqCommunitiesPage() {
 
   return (
     <>
-      <style>{`html,body{background:${IRELAND.drawerBg} !important;}`}</style>
+      {/* HQ background sealed rule 2026-10-26 · hq/layout.tsx already
+          wraps us in .nex-admin-root which inherits the country
+          backdrop · do NOT override html/body background here. */}
       <main
         style={{
           minHeight: "100dvh",

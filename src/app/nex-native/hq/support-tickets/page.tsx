@@ -50,7 +50,9 @@ export default async function HqSupportTicketsPage(): Promise<React.JSX.Element>
 
   return (
     <>
-      <style>{`html, body { background: ${PALETTE.bg}; }`}</style>
+      {/* HQ background sealed rule 2026-10-26 · hq/layout.tsx already
+          wraps us in .nex-admin-root which inherits the country
+          backdrop · do NOT override html/body background here. */}
       <main
         data-nex-hq-support-tickets
         style={{

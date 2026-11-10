@@ -14,6 +14,7 @@ import type { NotificationAdapter, NotificationChannel } from "./types";
 import { isWhatsappMetaHealthy, whatsappMetaAdapter } from "./adapters/whatsapp_meta";
 import { isTwilioSmsHealthy, twilioSmsAdapter } from "./adapters/twilio_sms";
 import { isWebPushHealthy, webPushAdapter } from "./adapters/web_push";
+import { isResendHealthy, resendEmailAdapter } from "./adapters/resend_email";
 
 const cache = new Map<NotificationChannel, NotificationAdapter>();
 
@@ -31,6 +32,7 @@ function defaultProvider(channel: NotificationChannel): string {
     case "whatsapp": return "meta";
     case "sms":      return "twilio";
     case "push":     return "web-push";
+    case "email":    return "resend";
     case "in_app":   return "native";
   }
 }
@@ -39,6 +41,7 @@ function build(channel: NotificationChannel, provider: string): NotificationAdap
   if (channel === "whatsapp" && provider === "meta") return whatsappMetaAdapter;
   if (channel === "sms" && provider === "twilio") return twilioSmsAdapter;
   if (channel === "push" && provider === "web-push") return webPushAdapter;
+  if (channel === "email" && provider === "resend") return resendEmailAdapter;
   throw new Error(`[nex-notifications] no adapter for channel="${channel}" provider="${provider}" · check NEX_NOTIFICATIONS_${channel.toUpperCase()}_PROVIDER`);
 }
 
@@ -56,6 +59,7 @@ export function knownAdapters(): Array<{ channel: NotificationChannel; provider:
     whatsapp: (process.env.NEX_NOTIFICATIONS_WHATSAPP_PROVIDER ?? "meta").toLowerCase(),
     sms:      (process.env.NEX_NOTIFICATIONS_SMS_PROVIDER ?? "twilio").toLowerCase(),
     push:     (process.env.NEX_NOTIFICATIONS_PUSH_PROVIDER ?? "web-push").toLowerCase(),
+    email:    (process.env.NEX_NOTIFICATIONS_EMAIL_PROVIDER ?? "resend").toLowerCase(),
     in_app:   (process.env.NEX_NOTIFICATIONS_IN_APP_PROVIDER ?? "native").toLowerCase(),
   };
   return [
@@ -66,6 +70,7 @@ export function knownAdapters(): Array<{ channel: NotificationChannel; provider:
     { channel: "push",     provider: "web-push", label: "Push · Web Push VAPID",            status: "supported", active: active.push === "web-push" },
     { channel: "push",     provider: "fcm",      label: "Push · Firebase Cloud Messaging",  status: "planned",   active: active.push === "fcm" },
     { channel: "push",     provider: "apns",     label: "Push · Apple Push",                status: "planned",   active: active.push === "apns" },
+    { channel: "email",    provider: "resend",   label: "Email · Resend",                   status: "supported", active: active.email === "resend" },
     { channel: "in_app",   provider: "native",   label: "In-app · NEX native store",        status: "planned",   active: active.in_app === "native" },
   ];
 }
@@ -83,6 +88,10 @@ export async function isNotificationsChannelHealthy(channel: NotificationChannel
   if (adapter.name === "web-push") {
     const r = await isWebPushHealthy();
     return { ...r, provider: "web-push" };
+  }
+  if (adapter.name === "resend") {
+    const r = await isResendHealthy();
+    return { ...r, provider: "resend" };
   }
   return { healthy: false, detail: `no health probe for ${channel}/${adapter.name}`, provider: adapter.name };
 }

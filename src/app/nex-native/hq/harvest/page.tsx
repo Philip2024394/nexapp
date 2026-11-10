@@ -95,8 +95,10 @@ export default async function HarvestDashboardPage() {
     // layout no longer applies this wrapper HQ-wide (so /hq/worlds/
     // can keep the phone frame visible alongside its left-dock panel).
     <div className="nex-admin-root">
+      {/* HQ background sealed rule 2026-10-26 · .nex-admin-root inherits
+          the country backdrop · do NOT force html/body background here.
+          Scrollbar hiding is legitimate admin chrome · keep that part. */}
       <style>{`
-        html, body { background: ${NEX.bg} !important; }
         html, body { scrollbar-width: none; -ms-overflow-style: none; }
         html::-webkit-scrollbar, body::-webkit-scrollbar { width: 0; height: 0; display: none; }
       `}</style>

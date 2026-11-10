@@ -1,11 +1,11 @@
 // NEX Notifications Runtime · shared types
 //
-// Multi-channel outbound communication (whatsapp · sms · push · in_app).
+// Multi-channel outbound communication (whatsapp · sms · push · email · in_app).
 // Every send goes through this interface. Providers implement adapters
 // per (channel, provider) pair. No application code touches a provider
 // SDK directly — Runtime doctrine.
 
-export type NotificationChannel = "whatsapp" | "sms" | "push" | "in_app";
+export type NotificationChannel = "whatsapp" | "sms" | "push" | "email" | "in_app";
 
 export type NotificationKind = "marketing" | "transactional";
 

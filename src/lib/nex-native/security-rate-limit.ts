@@ -277,8 +277,71 @@ let TABLE_READY: boolean | null = null;
  *  claim atomic enforcement · the probe logs loudly on cache miss. */
 let RPC_READY: boolean | null = null;
 
+/** Owner directive 2026-11-08 · DB-backed path capability probe.
+ *  Follows the same shape as `detectConnectColumns()` in
+ *  `billing/stripe-connect-service.ts` · queries
+ *  `information_schema.columns` with service-role credentials to
+ *  confirm `nex_security_rate_limit` exists with the expected shape.
+ *  Service-role connections bypass RLS so the probe is authoritative.
+ *
+ *  Cached for the process lifetime · the schema does not change
+ *  mid-request and a Vercel deployment is a fresh process. Tests use
+ *  `_resetRateLimitDetectionForTests()` to force re-detection between
+ *  isolated runs.
+ *
+ *  Returns `false` when:
+ *    · information_schema returns an error (e.g. permissions, outage)
+ *    · the expected columns are missing (migration 290 not applied)
+ *    · the underlying client throws (mock chains, dev environments
+ *      with mismatched Supabase schema)
+ *
+ *  On `false` the service MUST degrade to the in-memory Map limiter.
+ *  Honest failure · never silently claim distributed enforcement. */
+let RATE_LIMIT_TABLE_DETECTED: boolean | null = null;
+
+async function detectRateLimitTable(): Promise<boolean> {
+  if (RATE_LIMIT_TABLE_DETECTED !== null) return RATE_LIMIT_TABLE_DETECTED;
+  try {
+    const { data, error } = await nexSupabaseAdmin
+      .from("information_schema.columns" as never)
+      .select("column_name")
+      .eq("table_schema", "public")
+      .eq("table_name", "nex_security_rate_limit")
+      .in("column_name", [
+        "key",
+        "action",
+        "window_started_at",
+        "count",
+      ]);
+    if (error) {
+      RATE_LIMIT_TABLE_DETECTED = false;
+      return false;
+    }
+    const rows = (data as Array<{ column_name: string }> | null) ?? [];
+    // The sealed migration 290 schema declares exactly these four
+    // columns · require all of them before claiming the table is
+    // ready. A partial match means the DB has drifted and we should
+    // stay on the fallback path rather than risk a bad write.
+    RATE_LIMIT_TABLE_DETECTED = rows.length >= 4;
+    return RATE_LIMIT_TABLE_DETECTED;
+  } catch {
+    RATE_LIMIT_TABLE_DETECTED = false;
+    return false;
+  }
+}
+
 async function ensureTableReady(): Promise<boolean> {
   if (TABLE_READY !== null) return TABLE_READY;
+  // Owner directive 2026-11-08 · prefer the information_schema-based
+  // detection (authoritative when service-role credentials are in
+  // play) · fall back to the direct `.from(...).limit(0)` probe when
+  // information_schema is unavailable (older mocks + unusual DB
+  // permission setups).
+  const infoSchemaAvailable = await detectRateLimitTable();
+  if (infoSchemaAvailable) {
+    TABLE_READY = true;
+    return true;
+  }
   try {
     const { error } = await nexSupabaseAdmin
       .from("nex_security_rate_limit")
@@ -306,6 +369,18 @@ async function ensureTableReady(): Promise<boolean> {
 export function _resetSecurityRateLimitProbeCacheForTests(): void {
   TABLE_READY = null;
   RPC_READY = null;
+  RATE_LIMIT_TABLE_DETECTED = null;
+}
+
+/** Owner directive 2026-11-08 · force re-detection of
+ *  `nex_security_rate_limit` so a test can simulate the migration-290
+ *  "absent → applied" transition inside a single process. Sibling to
+ *  `_resetSecurityRateLimitProbeCacheForTests()` · exposed separately
+ *  so tests that only care about the information_schema detection can
+ *  reset ONLY that cache without also clearing RPC_READY / TABLE_READY. */
+export function _resetRateLimitDetectionForTests(): void {
+  RATE_LIMIT_TABLE_DETECTED = null;
+  TABLE_READY = null;
 }
 
 /** Exposed so tests can observe which path is in use. */

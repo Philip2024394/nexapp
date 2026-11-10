@@ -32,6 +32,7 @@ class NotificationsQueue {
     whatsapp: { sent: 0, blocked: 0, failed: 0 },
     sms:      { sent: 0, blocked: 0, failed: 0 },
     push:     { sent: 0, blocked: 0, failed: 0 },
+    email:    { sent: 0, blocked: 0, failed: 0 },
     in_app:   { sent: 0, blocked: 0, failed: 0 },
   };
   private readonly maxRetries = DEFAULT_MAX_RETRIES;
