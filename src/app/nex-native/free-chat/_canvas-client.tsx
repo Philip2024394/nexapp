@@ -29,7 +29,6 @@ import {
   freeChatBackgroundCss,
   hexWithAlpha,
   resolveFreeChatAccentHex,
-  resolveFreeChatBackgroundHex,
   resolveFreeChatWallpaperUrl,
   resolveBubbleFillAndRim,
   defaultBubbleCustomizationForTheme,
@@ -221,77 +220,10 @@ export function FreeChatCanvasClient({
     );
   }, [bubbleCustomization, themeId]);
 
-  // Owner-authorised 2026-11-10 (rev 3) · solid-colour theme palettes.
-  // When the active theme is one of the 4 colour tiles (Cream / Gray /
-  // Fresh Green / Pink), the bubbles paint as SOLID surfaces with the
-  // prototype's palette (white-ish peer + accent self + dark/light
-  // text), not through the sealed glass-alpha renderer. This makes the
-  // free-chat canvas look like the prototype panel when a colour tile
-  // is applied. Image themes and nex-default fall through to the sealed
-  // glass bubble renderer unchanged.
-  const colorThemePalette = React.useMemo<null | {
-    peerBg: string;
-    peerText: string;
-    peerBorder: string;
-    selfBg: string;
-    selfText: string;
-    selfBorder: string;
-  }>(() => {
-    // Owner-specified palette 2026-11-10 · main page (bg) is the
-    // theme's canvas colour · cards (peer bubble + other containers)
-    // use the lighter sibling · text colour is the deep matching ink.
-    // self bubble takes the deep ink as fill so it reads like the
-    // emerald+gold NEX wordmark pattern · deep-of-same-family.
-    switch (themeId) {
-      case "theme-cream":
-        return {
-          peerBg: "#FAF6ED", peerText: "#453F35", peerBorder: "#E4DDC7",
-          selfBg: "#453F35", selfText: "#FAF6ED", selfBorder: "#2E2A24",
-        };
-      case "theme-light-gray":
-        return {
-          peerBg: "#F3F5F3", peerText: "#39443E", peerBorder: "#CCD3CF",
-          selfBg: "#39443E", selfText: "#F3F5F3", selfBorder: "#242B27",
-        };
-      case "theme-fresh-green":
-        return {
-          peerBg: "#E5F5C9", peerText: "#29452B", peerBorder: "#B4D788",
-          selfBg: "#29452B", selfText: "#E5F5C9", selfBorder: "#1A2D1C",
-        };
-      case "theme-pink-soft":
-        return {
-          peerBg: "#F9E4EB", peerText: "#593C49", peerBorder: "#E8B6C6",
-          selfBg: "#593C49", selfText: "#F9E4EB", selfBorder: "#3E2832",
-        };
-      default:
-        return null;
-    }
-  }, [themeId]);
-
-  const peerFill = colorThemePalette?.peerBg ?? resolvedBubbleStyle.peerFill;
-  const peerRim = colorThemePalette?.peerBorder ?? resolvedBubbleStyle.peerRim;
-  const selfFill = colorThemePalette?.selfBg ?? resolvedBubbleStyle.selfFill;
-  const selfRim = colorThemePalette?.selfBorder ?? resolvedBubbleStyle.selfRim;
-  // Peer vs self text colour · defaults to the sealed NEX.text (light
-  // ink on glass bubbles) · overridden per-bubble when a colour theme
-  // is active.
-  const peerBubbleTextColor = colorThemePalette?.peerText ?? NEX.text;
-  const selfBubbleTextColor = colorThemePalette?.selfText ?? NEX.text;
-  // Glass backdrop-filter is removed on solid-colour theme bubbles
-  // because the solid fill is already opaque · the backdrop blur
-  // just adds a smeared halo. Image themes + nex-default keep the
-  // sealed glass effect.
-  const bubbleUsesGlass = colorThemePalette === null;
-
-  // Owner-authorised 2026-11-10 (rev 4) · when a colour theme is
-  // active, thread an "accent/text/card" palette into the chrome
-  // elements (header labels, avatar rim, tile active border, setup
-  // container panels, picker row backdrop). Falls through to the
-  // sealed NEX tokens when a wallpaper or the NEX default is active.
-  const chromeAccent = colorThemePalette?.selfBg ?? NEX.cyan;
-  const chromeText = colorThemePalette?.peerText ?? NEX.text;
-  const chromeCardBg = colorThemePalette?.peerBg ?? NEX.bg;
-  const chromeCardBorder = colorThemePalette?.peerBorder ?? "rgba(0, 175, 255, 0.28)";
+  const peerFill = resolvedBubbleStyle.peerFill;
+  const peerRim = resolvedBubbleStyle.peerRim;
+  const selfFill = resolvedBubbleStyle.selfFill;
+  const selfRim = resolvedBubbleStyle.selfRim;
 
   // Owner directive 2026-10-21 (iteration 54) · wallpaper paints the
   // ENTIRE phone frame (header + canvas + composer), not just the
@@ -307,13 +239,6 @@ export function FreeChatCanvasClient({
   // other tile (wallpaper themes) ignores containerColor.
   const activeBackgroundFallback = React.useMemo<string>(() => {
     if (activeWallpaperUrl) return NEX.bg;
-    // Owner-authorised 2026-11-10 · solid-colour tiles (Cream · Light
-    // Gray · Fresh Green · Pink) carry a `backgroundHex` on the theme
-    // record · paint that hex as the chat background when the user
-    // picks one. Takes precedence over the bubble-customize
-    // containerColor (which stays scoped to the nex-default tile).
-    const themeHex = resolveFreeChatBackgroundHex(themeId);
-    if (themeHex) return themeHex;
     if (
       bubbleCustomization?.containerColor &&
       initialThemeId === "nex-default"
@@ -321,7 +246,7 @@ export function FreeChatCanvasClient({
       return bubbleCustomization.containerColor;
     }
     return NEX.bg;
-  }, [activeWallpaperUrl, bubbleCustomization, initialThemeId, themeId]);
+  }, [activeWallpaperUrl, bubbleCustomization, initialThemeId]);
 
   React.useEffect(() => {
     const main = document.querySelector<HTMLElement>(
@@ -450,10 +375,10 @@ export function FreeChatCanvasClient({
               borderBottomLeftRadius: m.fromPeer ? 6 : 18,
               borderBottomRightRadius: m.fromPeer ? 18 : 6,
               background: m.fromPeer ? peerFill : selfFill,
-              color: m.fromPeer ? peerBubbleTextColor : selfBubbleTextColor,
+              color: NEX.text,
               border: `1px solid ${m.fromPeer ? peerRim : selfRim}`,
-              backdropFilter: bubbleUsesGlass ? "blur(10px) saturate(140%)" : "none",
-              WebkitBackdropFilter: bubbleUsesGlass ? "blur(10px) saturate(140%)" : "none",
+              backdropFilter: "blur(10px) saturate(140%)",
+              WebkitBackdropFilter: "blur(10px) saturate(140%)",
               fontSize: 14,
               lineHeight: 1.4,
               boxShadow: "0 6px 14px -8px rgba(0,0,0,0.6)",
@@ -521,11 +446,6 @@ export function FreeChatCanvasClient({
           onPick={handlePickTheme}
           onViewAll={handleViewAll}
           onInfo={() => setHowItWorksOpen(true)}
-          chromeAccent={chromeAccent}
-          chromeCardBg={chromeCardBg}
-          chromeCardBorder={chromeCardBorder}
-          chromeText={chromeText}
-          colorThemeActive={colorThemePalette !== null}
         />
       )}
       {howItWorksOpen ? (
@@ -2273,26 +2193,13 @@ function FirstVisitThemeGrid({
   onPick,
   onViewAll,
   onInfo,
-  chromeAccent,
-  chromeCardBg,
-  chromeCardBorder,
-  chromeText,
-  colorThemeActive,
 }: {
   readonly themes: ReadonlyArray<FreeChatTheme>;
   readonly activeThemeId: string | null;
   readonly onPick: (theme: FreeChatTheme) => void;
   readonly onViewAll: () => void;
   readonly onInfo: () => void;
-  /** Owner-authorised 2026-11-10 (rev 4) · theme-accent/text/card
-   *  overrides piped from the canvas when a colour theme is active. */
-  readonly chromeAccent: string;
-  readonly chromeCardBg: string;
-  readonly chromeCardBorder: string;
-  readonly chromeText: string;
-  readonly colorThemeActive: boolean;
 }): React.JSX.Element {
-  void chromeText;
   return (
     <div
       data-nex-free-chat-first-visit-row
@@ -2300,11 +2207,8 @@ function FirstVisitThemeGrid({
       style={{
         marginTop: 8,
         padding: "10px 10px 12px",
-        // Owner-authorised 2026-11-10 (rev 4) · when a colour theme is
-        // active, lift the dark-navy backdrop and use the theme's
-        // light card shade so the picker sits on the theme palette.
-        background: colorThemeActive ? chromeCardBg : "rgba(2, 9, 20, 0.55)",
-        border: `1px solid ${colorThemeActive ? chromeCardBorder : "rgba(0, 175, 255, 0.14)"}`,
+        background: "rgba(2, 9, 20, 0.55)",
+        border: `1px solid rgba(0, 175, 255, 0.14)`,
         borderRadius: 12,
         backdropFilter: "blur(8px)",
         WebkitBackdropFilter: "blur(8px)",
@@ -2333,7 +2237,7 @@ function FirstVisitThemeGrid({
               fontWeight: 800,
               letterSpacing: 1.2,
               textTransform: "uppercase",
-              color: colorThemeActive ? chromeAccent : NEX.cyan,
+              color: NEX.cyan,
               lineHeight: 1,
             }}
           >
@@ -2364,7 +2268,7 @@ function FirstVisitThemeGrid({
                 boxShadow: "0 0 6px rgba(255, 114, 0, 0.8)",
               }}
             />
-            View image library
+            Today&apos;s featured picks · refreshed daily
           </p>
         </div>
         <button
@@ -2376,11 +2280,9 @@ function FirstVisitThemeGrid({
             width: 22,
             height: 22,
             borderRadius: "50%",
-            background: colorThemeActive
-              ? `${chromeAccent}22`
-              : "rgba(0, 175, 255, 0.14)",
-            border: `1px solid ${colorThemeActive ? chromeAccent : NEX.cyan}`,
-            color: colorThemeActive ? chromeAccent : NEX.cyan,
+            background: "rgba(0, 175, 255, 0.14)",
+            border: `1px solid ${NEX.cyan}`,
+            color: NEX.cyan,
             cursor: "pointer",
             fontSize: 12,
             fontWeight: 800,
@@ -2480,23 +2382,18 @@ function ThemeTile({
   readonly onPress: () => void;
 }): React.JSX.Element {
   const hasImage = theme.wallpaperUrl !== null;
-  // Owner directive 2026-10-21 (iteration 59) + 2026-11-10 addition ·
-  // four visual states:
-  //   · image theme      · tile paints the wallpaper
-  //   · NEX default      · tile paints the NEX navy page preview + "NEX"
-  //                        label + cyan border accent
-  //   · solid colour tile · tile paints `theme.backgroundHex` (Cream /
-  //                        Light Gray / Fresh Green / Pink) with the
-  //                        theme name as its label
-  //   · legacy placeholder · black tile with the numeric label
+  // Owner directive 2026-10-21 (iteration 59) · three visual states:
+  //   · image theme    · tile paints the wallpaper
+  //   · NEX default    · tile paints the NEX navy page preview (same
+  //                      colour the page reverts to) + "NEX" label +
+  //                      cyan border accent so it reads as the brand
+  //                      default, not an empty slot
+  //   · placeholder    · black tile with the numeric label (unchanged)
   const isDefault = theme.isDefault === true;
-  const hasColor = !hasImage && !isDefault && typeof theme.backgroundHex === "string";
   const background = hasImage
     ? `url("${theme.wallpaperUrl}") center / cover no-repeat, #000`
     : isDefault
     ? NEX.bg
-    : hasColor
-    ? (theme.backgroundHex as string)
     : "#000";
   // Owner directive 2026-10-21 (iteration 63) · active tile uses a
   // bright cyan rim at full opacity so it still reads as "selected"
@@ -2538,101 +2435,7 @@ function ThemeTile({
       {isDefault && (
         <span data-nex-free-chat-first-visit-tile-default-label>NEX</span>
       )}
-      {hasColor && (
-        // Owner-authorised 2026-11-10 (rev 3) · colour tile renders a
-        // mini container preview showing the "NEX" wordmark in the
-        // theme's accent colour on the main page shade · same pattern
-        // as "gold NEX on emerald green". Below the wordmark sits a
-        // light card showing the peer bubble colour. The outgoing
-        // bubble in the accent sits centre-right so the user sees all
-        // three theme colours (main + card + accent) in one tile.
-        (() => {
-          // Per-theme card shade from the owner-specified palette ·
-          // matches the colorThemePalette.peerBg exactly.
-          const cardShade =
-            theme.id === "theme-cream" ? "#FAF6ED"
-            : theme.id === "theme-light-gray" ? "#F3F5F3"
-            : theme.id === "theme-fresh-green" ? "#E5F5C9"
-            : theme.id === "theme-pink-soft" ? "#F9E4EB"
-            : "#FFFFFF";
-          return (
-            <>
-              {/* NEX wordmark · top · accent colour on main-page bg · same
-                  style as gold NEX on emerald in the sealed world backdrop. */}
-              <span
-                data-nex-free-chat-tile-nex-wordmark
-                aria-hidden
-                style={{
-                  position: "absolute",
-                  top: "16%",
-                  left: 0,
-                  right: 0,
-                  textAlign: "center",
-                  fontSize: 14,
-                  fontWeight: 900,
-                  letterSpacing: 2.2,
-                  color: theme.accentHex,
-                  textShadow: "0 1px 1px rgba(255, 255, 255, 0.35)",
-                }}
-              >
-                NEX
-              </span>
-              {/* Light card · underneath the wordmark · shows the peer
-                  bubble colour (what peer messages will look like). */}
-              <span
-                aria-hidden
-                data-nex-free-chat-tile-mini-card
-                style={{
-                  position: "absolute",
-                  top: "42%",
-                  left: "12%",
-                  width: "44%",
-                  height: "14%",
-                  borderRadius: 4,
-                  background: cardShade,
-                  boxShadow: "0 1px 2px rgba(0, 0, 0, 0.1)",
-                }}
-              />
-              {/* Outgoing bubble · accent colour · what self messages
-                  look like. */}
-              <span
-                aria-hidden
-                data-nex-free-chat-tile-mini-bubble-out
-                style={{
-                  position: "absolute",
-                  top: "60%",
-                  right: "12%",
-                  width: "46%",
-                  height: "14%",
-                  borderRadius: 4,
-                  background: theme.accentHex,
-                  boxShadow: "0 1px 2px rgba(0, 0, 0, 0.12)",
-                }}
-              />
-              {/* Theme name · bottom label · accent colour so it ties
-                  back to the wordmark above. */}
-              <span
-                data-nex-free-chat-first-visit-tile-color-label
-                style={{
-                  position: "absolute",
-                  bottom: 4,
-                  left: 0,
-                  right: 0,
-                  textAlign: "center",
-                  fontSize: 9,
-                  fontWeight: 800,
-                  letterSpacing: 0.4,
-                  color: theme.accentHex,
-                  textShadow: "0 1px 1px rgba(255, 255, 255, 0.4)",
-                }}
-              >
-                {theme.label}
-              </span>
-            </>
-          );
-        })()
-      )}
-      {!hasImage && !isDefault && !hasColor && (
+      {!hasImage && !isDefault && (
         <span data-nex-free-chat-first-visit-tile-placeholder>
           {theme.placeholderLabel}
         </span>
