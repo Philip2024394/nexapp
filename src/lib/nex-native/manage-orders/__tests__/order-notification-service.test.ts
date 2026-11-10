@@ -149,6 +149,22 @@ describe("order-notification-service · P4", () => {
     expect(adapterSendMock).not.toHaveBeenCalled();
   });
 
+  it("new_order · missing business row · no recipient · zero fanout · cannot notify another seller", async () => {
+    const { notifySellerNewOrder } = await import(
+      "../order-notification-service"
+    );
+    // Simulate business row missing (deleted, mis-pointed, orphaned).
+    // The service MUST return no_recipient_resolved and NEVER
+    // fall back to another account id.
+    supabaseMaybeSingleMock.mockResolvedValueOnce({ data: null });
+    const result = await notifySellerNewOrder(fakeOrder());
+    expect(result.recipientAccountId).toBe(null);
+    expect(result.attempted).toBe(0);
+    expect(result.skipped_reason).toBe("no_recipient_resolved");
+    expect(listPushSubscriptionsMock).not.toHaveBeenCalled();
+    expect(adapterSendMock).not.toHaveBeenCalled();
+  });
+
   it("push data payload · includes deep-link url + orderId · NOT buyer notes", async () => {
     const { notifyBuyerPaymentConfirmed } = await import(
       "../order-notification-service"

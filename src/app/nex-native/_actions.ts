@@ -67,6 +67,7 @@ import * as reportService from "@/lib/nex-native/report-service";
 import * as likedProductService from "@/lib/nex-native/liked-product-service";
 import * as orderService from "@/lib/nex-native/order-service";
 import * as commerceService from "@/lib/nex-native/commerce-service";
+import { notifySellerNewOrder } from "@/lib/nex-native/manage-orders/order-notification-service";
 import * as cartService from "@/lib/nex-native/cart-service";
 // Phase 1 · Slice 1D · owner-authorised 2026-10-24 · marketing-layer
 // signal writer. Fire-and-await after successful sendPeerMessage so
@@ -6909,6 +6910,15 @@ export async function placeOrderAction(formData: FormData): Promise<never> {
     const qs = new URLSearchParams({ e: "order_create_failed", m: msg });
     redirect(`/nex-native/${business.slug}?${qs.toString()}`);
   }
+
+  // P4 · notify the seller a new order has arrived. Fail-soft: a
+  // notification outage must never undo or block a confirmed order.
+  // The service resolves the recipient via nex_business.owner_account_id
+  // from order.business_id (snapshotted server-side in createOrder from
+  // the product record) · the buyer cannot inject a different seller.
+  try {
+    await notifySellerNewOrder(order);
+  } catch { /* silent · deliberate · order already persisted */ }
 
   try {
     const noteLine = customerNote ? `\nBuyer note: ${customerNote}` : "";
