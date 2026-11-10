@@ -370,35 +370,70 @@ export function NotificationsDrawer({
           </button>
         </header>
 
-        {/* Filter chips · horizontal scroll on narrow drawers */}
+        {/* Filter dropdown · owner-authorised 2026-11-10 · replaces the
+            horizontal chip row with a single native select for a cleaner
+            drawer header and native-picker UX on mobile. */}
         <nav
           aria-label="Filter notifications"
           style={{
-            display: "flex",
-            gap: 6,
             padding: "10px 14px 8px 14px",
-            overflowX: "auto",
-            scrollbarWidth: "none",
           }}
         >
-          <FilterChip
-            label="All"
-            active={filter === "all"}
-            onClick={() => setFilter("all")}
-          />
-          <FilterChip
-            label={`Unread${unreadCount > 0 ? ` · ${unreadCount}` : ""}`}
-            active={filter === "unread"}
-            onClick={() => setFilter("unread")}
-          />
-          {NOTIFICATION_SECTIONS.map((s) => (
-            <FilterChip
-              key={s.key}
-              label={s.label}
-              active={filter === s.key}
-              onClick={() => setFilter(s.key)}
-            />
-          ))}
+          <label
+            htmlFor="nex-notifications-filter"
+            style={{
+              display: "block",
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: 1.2,
+              textTransform: "uppercase",
+              color: MUTED,
+              marginBottom: 6,
+            }}
+          >
+            Filter
+          </label>
+          <select
+            id="nex-notifications-filter"
+            data-nex-notifications-filter-select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as FilterKey)}
+            style={{
+              width: "100%",
+              padding: "8px 36px 8px 12px",
+              borderRadius: 10,
+              background: "transparent",
+              border: `1px solid ${PANEL_BORDER}`,
+              color: TEXT,
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+              appearance: "none",
+              WebkitAppearance: "none",
+              MozAppearance: "none",
+              backgroundImage:
+                "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='none' stroke='%23F2F5F8' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5l5 5 5-5'/></svg>\")",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "right 12px center",
+              backgroundSize: "12px 8px",
+            }}
+          >
+            <option value="all" style={{ background: PANEL, color: TEXT }}>
+              All
+            </option>
+            <option value="unread" style={{ background: PANEL, color: TEXT }}>
+              {`Unread${unreadCount > 0 ? ` · ${unreadCount}` : ""}`}
+            </option>
+            {NOTIFICATION_SECTIONS.map((s) => (
+              <option
+                key={s.key}
+                value={s.key}
+                style={{ background: PANEL, color: TEXT }}
+              >
+                {s.label}
+              </option>
+            ))}
+          </select>
         </nav>
 
         {/* Body · scrollable groups */}
@@ -612,38 +647,9 @@ export function NotificationsDrawer({
 
 // ─── Subcomponents ─────────────────────────────────────────────────
 
-function FilterChip({
-  label,
-  active,
-  onClick,
-}: {
-  readonly label: string;
-  readonly active: boolean;
-  readonly onClick: () => void;
-}): React.JSX.Element {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      data-nex-notifications-filter-chip
-      data-active={active ? "true" : "false"}
-      style={{
-        flexShrink: 0,
-        padding: "6px 12px",
-        borderRadius: 999,
-        background: "transparent",
-        border: `1px solid ${PANEL_BORDER}`,
-        color: active ? "#0a0608" : TEXT,
-        fontSize: 12,
-        fontWeight: 600,
-        cursor: "pointer",
-        whiteSpace: "nowrap",
-      }}
-    >
-      {label}
-    </button>
-  );
-}
+// FilterChip removed 2026-11-10 · replaced with native select dropdown
+// inline in the drawer header. Retained as a comment anchor so a future
+// cycle can restore the chip row if the dropdown proves wrong on mobile.
 
 function NotificationRow({
   row,
