@@ -1,8 +1,9 @@
-# NEX Sandbox Activation Batch Plan · 2026-11-10
+# NEX Sandbox Activation Batch Plan · 2026-11-10 (revised for A1/A2 split)
 
-**Owner-authorisation state:** NONE of the migrations below are applied.
-This plan ORGANISES them into small reviewable batches. Each batch
-requires separate explicit owner authorisation.
+**Owner-authorisation state:** the mig 291 pre-activation comparison
+resolved the duplicate-file question (`_claim_rpc.sql` is canonical ·
+`_claim.sql` superseded). Batch A is split into A1 and A2 per owner
+directive 2026-11-10. Each sub-batch has its own GO/NO-GO.
 
 **Target:** sandbox `kdstoyyeygcopkogqsyv` only. Production
 `ijvqdvsvwtwxzcqmoqit` remains sealed under its own separate gates.
@@ -11,186 +12,189 @@ requires separate explicit owner authorisation.
 
 - **Sandbox-applied (previous cycles):** 1 · mig 318 (order_enabled)
 - **PROPOSAL · unapplied:** 36+ migrations total
-  - Chat security: 5 (290, 293, 295, 323, 324)
-  - Chat delivery: 3 (325, 326, 327)
-  - Chat CHECK rollout: 2 (328 NOT VALID · 329 VALIDATE)
-  - Payment merchant: 3 (319, 320, 321)
-  - Payment seller config: 1 (322)
-  - Existing P-RLS proposals: 26
-  - HQ admin overlay: 1 (P-RLS-HQ-admin-overlay)
-  - support_admin_grant defence-in-depth: 1 (P-RLS-nex_support_admin_grant)
+  - Rate-limit stack (A1): 290, 313, 291
+  - Audit + ciphertext stack (A2): 292, 293, 294, 295 + bucket
+  - Chat architecture (B): 323, 324, 325, 326, 327
+  - Chat CHECK rollout (F, G): 328 (NOT VALID), 329 (VALIDATE)
+  - Payment merchant (D): 319, 320, 321, 322
+  - RLS baseline (C): 26 P-RLS proposals + support_admin_grant
+  - HQ admin overlay (E): 1 (depends on C)
 
 ## Dependency graph (high level)
 
 ```
-                    318 (applied · order category)
-                     |
-Batch A ──► 290 ─┐  Batch D ──► 319 ──► 320 ──► 321 ──► 322
-             293 ┤                                 │
-                 └──► 295                          ▼
-                       │                       bucket create
-                       ▼                       (nex-merchant-qr)
-                 bucket create
-                 (nex-peer-chat-ciphertext)
-                                                   │
-Batch B ──► 323 ──► 324 ──► 325 ──► 326 ──► 327   │
-                                     │              │
-                                     ▼              │
-                              daily cron wiring    │
-                                                   │
-Batch C ──► 26 P-RLS proposals + support_admin_grant
-                                     │
-                                     ▼
-Batch E ──► HQ admin overlay (depends on Batch C baseline)
-                                     │
-                                     ▼
-Batch F ──► 328 (NOT VALID) ─── 14d burn-in ───► Batch G ──► 329 (VALIDATE)
+                         318 (applied · order category)
+                           │
+Batch A1 ──► 290 ──► 313 ──► canonical 291 (_claim_rpc.sql)
+                           │
+Batch A2 ──► 292 ──► 294 ──► 293 ──► 295 ──► bucket (nex-peer-chat-ciphertext)
+                           │
+Batch B  ──► 323 ──► 324 ──► 325 ──► 326 ──► 327 ──► daily cron wiring
+                           │
+Batch C  ──► 26 P-RLS proposals + support_admin_grant
+                           │
+Batch D  ──► 319 ──► 320 ──► 321 ──► 322 ──► bucket (nex-merchant-qr)
+                           │
+Batch E  ──► HQ admin overlay (requires Batch C baseline)
+                           │
+Batch F  ──► 328 (NOT VALID) ── 14d burn-in ─► Batch G ──► 329 (VALIDATE)
 ```
 
-## Batch A · Security foundations
+## Batch A1 · Rate-limit stack (foundational)
 
-**Purpose:** rate-limit DB + audit reconciliation RPC + ciphertext bucket.
-**Migrations:** 290, 293, 295 + bucket create `nex-peer-chat-ciphertext`.
+**Purpose:** install the distributed rate-limit counter + the atomic
+claim RPC that eliminates the sealed cold-bucket race in
+`src/lib/nex-native/security-rate-limit.ts`.
 
-**Dependencies:** none. Can apply first.
-**Rollback cost:** low. 290+293 are additive · 295 bucket deletion
-loses any sandbox-uploaded ciphertext objects (zero rows today).
+**Migrations (STRICT ORDER):**
+1. `290_nex_security_rate_limit.sql`
+2. `313_nex_security_rate_limit_hq_admin_grant.sql`
+3. `291_nex_security_rate_limit_claim_rpc.sql` (CANONICAL · 2026-11-09)
+
+**Why this order:** mig 290 creates the table + 8-value CHECK. Mig 313
+drops and re-creates the CHECK with 9 values (adds `hq_admin_grant`).
+Mig 291 inserts `(key, action, window_started_at, count)` rows and
+would violate the 8-value CHECK on any `hq_admin_grant` call unless
+313 ran first.
+
+**Why `_claim_rpc.sql` is canonical and not `_claim.sql`:** see the
+full comparison. Short version:
+- `_claim.sql` hardcodes an 8-value action enum inside the function
+  body · it REJECTS `hq_admin_grant` calls (returns `(false, 1)`) · 
+  the live caller then throws `SecurityRateLimitError` for every
+  legitimate HQ admin grant.
+- `_claim_rpc.sql` has no hardcoded enum · defers to the base-table
+  CHECK · works correctly once 313 is applied.
+- The old `_claim.sql` + its rollback have been renamed to
+  `.SUPERSEDED.sql` for audit clarity.
+
+**Caller-compatibility (verified against
+`src/lib/nex-native/security-rate-limit.ts` line 600-688):**
+| Attribute | Required by caller | `_claim_rpc.sql` provides |
+|---|---|---|
+| Name | `nex_security_rate_limit_claim` | ✓ |
+| Params | `_key text, _action text, _window_minutes int, _max_per_window int` | ✓ |
+| Returns | `TABLE (allowed boolean, retry_after_seconds integer)` | ✓ |
+| SECURITY DEFINER | required (bypasses RLS on counter table) | ✓ |
+| service_role-only EXECUTE | required | ✓ |
+
+**Known gap introduced by canonical choice:** the old `_claim.sql`
+also installed `nex_security_rate_limit_prune()` for nightly cron.
+`_claim_rpc.sql` does not. **Follow-up:** either add a prune function
+in a separate micro-migration, or operate the cron against the
+counter table directly. Not a Batch A1 blocker · logged here so it
+doesn't fall through.
+
+**Rollback cost:** low. Each migration has an inline rollback script.
+Reverse order: drop 291 function → drop 313 CHECK → drop 290 table.
+
 **Verification tests per migration:**
-- 290: existing `security-rate-limit-db-path.test.ts` already covers
-  the detection path. Live test = seed 2 identity keys and prove the
-  cap triggers across ≥3 request simulations.
-- 293: cron endpoint stops returning `function_not_available`. Seed
-  one mismatch in the audit log and confirm the RPC reconciles it.
-- 295: bucket privacy = `false`. Four deny-policies on
-  `storage.objects` return as expected via `pg_policies`. Upload a
-  byte blob via service-role · attempt read via anon / authenticated
-  → denied.
+- 290: history row present · table `nex_security_rate_limit` exists
+  with 5 columns · RLS enabled · service_role has DML · public/anon/
+  authenticated revoked · CHECK rejects an invalid action.
+- 313: history row present · `ck_sec_rl_action` accepts `hq_admin_grant`
+  · INSERT with `hq_admin_grant` succeeds · rollback restores 8-value.
+- 291: history row present · function signature exact · SECURITY
+  DEFINER + search_path pinned to `public, pg_temp` · EXECUTE granted
+  only to service_role · a seeded call to the RPC with 5 identical
+  arguments in the same window produces monotonically rising counts
+  and returns `allowed=false, retry_after≥1` after `max_per_window`.
 
-**Batch A go-ahead:** owner phrase `AUTHORISE SANDBOX BATCH A · APPLY 290 293 295 · CREATE CIPHERTEXT BUCKET`.
+**Preflight checks (apply refuses to run if any fails):**
+- target ref MUST equal `kdstoyyeygcopkogqsyv` (hard string match in
+  every apply script · production ref hard-rejected)
+- `nex_migration_history` row for the migration being applied MUST
+  NOT exist (idempotency guard in SQL)
+- 313 refuses apply unless 290 is applied; 291 refuses apply unless
+  290 is applied (313 dependency documented but not enforced by the
+  function body · the function body is safe without 313 as long as
+  no caller uses `hq_admin_grant` · 313 must still be applied for
+  correctness in the live service).
 
-## Batch B · Chat architecture foundation
+**Batch A1 go-ahead:** owner phrase
+`AUTHORISE SANDBOX BATCH A1 · APPLY 290 313 291`.
 
-**Purpose:** D1-D6 chat system support (retired_at · delivery_status ·
-adoption metric view · expiry sweep · orphan scan).
-**Migrations:** 323, 324, 325, 326, 327.
+## Batch A2 · Audit + ciphertext stack
 
-**Dependencies:** Batch A (the ciphertext bucket must exist before
-the orphan scan references it). Mig 324's `delivery_status` is an
-additive column · safe even if 323 isn't yet applied, but review
-order is simpler if 323 goes first.
-**Rollback cost:** low. All additive. 325 is a view · 326 is a
-function · 327 is a table.
+**Purpose:** install the security audit log · the pseudonymisation
+function for account deletion · the reconciliation RPC · the private
+ciphertext bucket for peer-chat attachments.
+
+**Migrations (STRICT ORDER):**
+1. `292_nex_security_audit_log.sql`
+2. `294_nex_security_audit_erase_actor.sql`
+3. `293_nex_security_audit_reconcile.sql`
+4. `295_nex_peer_chat_ciphertext_bucket.sql` + bucket create via
+   Supabase Storage admin API
+
+**Why mig 294 stays in A2 (not deferred):** account-deletion path
+`src/app/api/nex-native/security/account/delete/route.ts` IS
+reachable in sandbox · the deletion service calls
+`eraseActorIdentityInAudit` which invokes `nex_security_audit_erase_actor`
+· absent that function, the audit trail retains the `acct:<uuid>`
+snapshot of a deleted user · identifiability regression per owner
+directive. Including 294 keeps the audit trail honest from day one.
+
+**Why order 292 → 294 → 293:**
+- 292 creates the audit tables and retention table used by all three.
+- 294 is a pure function, no data dependency, but depends on 292's
+  `nex_security_audit_log.actor_identity` column.
+- 293 is a reconciliation RPC that depends on 292's reconciliation
+  staging table.
+- 295 is independent of the above but is grouped here because the
+  ciphertext-attachment pipeline + audit trail are the privacy
+  foundation on which private chat launches.
+
+**Rollback cost:**
+- 292 drop deletes audit staging tables (no data in sandbox today).
+- 294 drop removes the pseudonymisation function (deletion service
+  logs a warn and continues · falls back to not pseudonymising).
+- 293 drop removes reconciler RPC · cron starts returning
+  `function_not_available` (observable in cron logs).
+- 295 drop removes RLS policies AND the private bucket → any
+  ciphertext objects in the bucket are lost. Zero objects today.
+
 **Verification tests per migration:**
-- 323: `nex_device_key.retired_at` column exists · partial index
-  `nex_device_key_active` present. Insert a key · retire it · prove
-  the active-key query excludes it.
-- 324: `delivery_status` column exists · CHECK accepts the three
-  values. Default 'pending'.
-- 325: view returns a row per conversation last 14d · percentage
-  field computed correctly on a seed dataset.
-- 326: function expires rows > 30d old · leaves rows < 30d untouched
-  · idempotent on re-run.
-- 327: table exists · RLS enabled · service-role-only writes.
+- 292: 3 tables exist · DELETE/UPDATE/TRUNCATE revoked at role level
+  on `nex_security_audit_log` · only SECURITY DEFINER pseudonymiser
+  can write to the actor column after creation.
+- 294: function exists · UPDATE on real row changes actor_identity ·
+  cannot be invoked by anon/authenticated.
+- 293: function exists · SECURITY DEFINER · `search_path = pg_catalog, public`
+  · service_role-only EXECUTE · window seconds validated 60-3600 ·
+  seeded mismatch reconciles.
+- 295: bucket privacy = `false`/private · the 4 named policies exist
+  on `storage.objects` (service_role permissive · anon_deny ·
+  authenticated_deny · MIME whitelist) · upload via service-role
+  succeeds · read via anon returns 403 · read via authenticated
+  returns 403.
 
-**Batch B go-ahead:** owner phrase `AUTHORISE SANDBOX BATCH B · APPLY 323-327`.
+**Preflight checks:**
+- target ref = `kdstoyyeygcopkogqsyv`
+- 292 must apply before 294 (294 references column from 292)
+- 292 must apply before 293 (293 references reconciliation table)
+- 295 requires the bucket row to NOT already exist · creation script
+  raises explicit error if it does
 
-## Batch C · RLS foundation (26 P-RLS proposals)
+**Batch A2 go-ahead:** owner phrase
+`AUTHORISE SANDBOX BATCH A2 · APPLY 292 294 293 295 · CREATE CIPHERTEXT BUCKET`.
 
-**Purpose:** defence-in-depth RLS on every GAP-P0 / GAP-P1 table.
-Caller-trace (cycle 5) already validated zero live callers break.
+## Batches B through G
 
-**Migrations:** 26 × `P-RLS-*_PROPOSAL.sql` + `P-RLS-nex_support_admin_grant_PROPOSAL`.
+Batches B through G are unchanged from the 2026-11-10 original plan.
+See git history for `docs/doctrine/sandbox-activation-batch-plan-2026-11-10.md`
+pre-A1/A2-split version if cross-reference is needed.
 
-**Dependencies:** none against other batches. Each P-RLS file is
-independent · can apply in any order.
-**Rollback cost:** per-table ALTER DISABLE RLS. No data impact.
-**Verification tests:**
-- `rls-policy-validation.test.ts` (already passing 81/81 offline)
-  pins the structural shape. After apply, run the live-DB version
-  of the same tests.
-- Manual: as an anon or authenticated test user, try SELECT on each
-  P-RLS table · expect zero rows · owner (hq_role null) same ·
-  owner (hq_role set) sees rows ONLY after Batch E.
-
-**Batch C go-ahead:** owner phrase `AUTHORISE SANDBOX BATCH C · APPLY 27 P-RLS PROPOSALS`.
-
-## Batch D · P5 merchant payments
-
-**Purpose:** QR merchant commerce + payment settings persistence.
-
-**Migrations:** 319, 320, 321, 322 + bucket create `nex-merchant-qr`.
-
-**Dependencies:** none against other batches.
-**Rollback cost:** 319 (asset audit table · additive). 320 (nullable
-column · additive). 321 (bucket · losing bytes on delete). 322 (new
-table · additive).
-**Verification tests:** P5 sandbox verification procedure already
-documented at `nex-supabase/migrations/318_sandbox_verification_procedure.md`
-· V1-V12 with failed-path evidence.
-
-**Batch D go-ahead:** owner phrase `AUTHORISE SANDBOX P5 ACTIVATION — APPLY MIGRATIONS 319, 320, 321 AND CREATE PRIVATE BUCKET` (the exact phrase previously sealed).
-
-## Batch E · HQ admin overlay
-
-**Purpose:** database-level defence-in-depth for HQ admin reads of
-sensitive user data.
-
-**Migrations:** `P-RLS-HQ-admin-overlay_PROPOSAL`.
-
-**Dependencies:** Batch C MUST be applied first (admin policies
-overlay on top of baseline RLS from the 26 P-RLS files).
-**Rollback cost:** drop the `nex_is_hq_admin()` function + each
-admin SELECT policy. No data impact.
-**Verification tests:**
-- Baseline RLS still blocks non-admin sessions.
-- Admin session (hq_role = 'admin' or 'reviewer') can SELECT every
-  table in the overlay list.
-- `nex_pilot_operator_audit` + `nex_security_audit_log` remain
-  invisible to admin sessions (safety invariant).
-
-**Batch E go-ahead:** owner phrase `AUTHORISE SANDBOX BATCH E · APPLY HQ ADMIN OVERLAY`.
-
-## Batch F · Chat plaintext freeze test (NON-ENFORCING)
-
-**Purpose:** D6 phase 1 · 14-day sandbox burn-in with CHECK in
-non-enforcing (NOT VALID) mode.
-
-**Migrations:** 328.
-
-**Dependencies:** Batches A + B applied. `NEX_CHAT_PLAINTEXT_FREEZE=1`
-env flag must be set on sandbox deployment (not a DB change · a
-Vercel env-var change · separately gated).
-**Rollback cost:** ALTER DROP CONSTRAINT.
-**Verification tests:**
-- Query plans reference the CHECK.
-- EXISTING encrypted=false rows unaffected.
-- NEW inserts with encrypted=false DO NOT fail (NOT VALID semantics).
-- But the `peer-message-service` application-layer refusal (due to
-  env flag) DOES return `plaintext_sends_frozen` to callers.
-
-**Batch F go-ahead:** owner phrase `AUTHORISE SANDBOX BATCH F · APPLY 328 (NOT VALID)`. **Requires owner also flips NEX_CHAT_PLAINTEXT_FREEZE=1 on sandbox.**
-
-## Batch G · Chat plaintext freeze ENFORCE
-
-**Purpose:** D6 phase 3 · flip CHECK from NOT VALID to enforced.
-
-**Migrations:** 329.
-
-**Dependencies:** Batch F applied for ≥14 days AND the adoption
-metric from mig 325 shows ≥95% encrypted sends AND the observed
-plaintext-write rate on sandbox is zero.
-**Rollback cost:** ALTER DROP CONSTRAINT · NEW plaintext inserts
-immediately become possible again. Legacy rows unaffected.
-**Verification tests:**
-- `ALTER TABLE ... VALIDATE CONSTRAINT` succeeds (no violating rows).
-- Attempted insert with encrypted=false → DB error (NOT the
-  application-layer refusal).
-
-**Batch G go-ahead:** owner phrase `AUTHORISE SANDBOX BATCH G · APPLY 329 (VALIDATE)` **AND confirmation that Batch F burn-in metrics were clean.**
+- **Batch B** · Chat architecture foundation (323-327) · depends on A2.
+- **Batch C** · RLS baseline (26 P-RLS + support_admin_grant).
+- **Batch D** · Payment merchant (319-322 + merchant bucket).
+- **Batch E** · HQ admin overlay · depends on C.
+- **Batch F** · Chat plaintext freeze NOT VALID (328) · 14d burn-in.
+- **Batch G** · Chat plaintext freeze VALIDATE (329).
 
 ## Production stages (SEPARATE · PER-BATCH · never one-shot)
 
-After each sandbox batch's verification passes, the corresponding
+After each sandbox batch passes verification, the corresponding
 PRODUCTION batch requires its OWN owner authorisation phrase of the
 form `AUTHORISE PRODUCTION BATCH X · PROJECT ijvqdvsvwtwxzcqmoqit ·
 APPLY <list>`. Production gates stay sealed under CLAUDE.md §8 until
@@ -198,21 +202,21 @@ every one of those phrases is issued individually.
 
 ## What this plan deliberately DOES NOT propose
 
-- Applying any migration.
-- Creating any Supabase bucket.
+- Applying any migration to production.
+- Creating any production bucket.
 - Flipping any production feature flag.
 - Deploying to Vercel.
 - Pushing commits to GitHub.
-- Executing Phases 1-3 of the legacy plaintext transition (user-
-  driven · separate authorisation per phase per user).
+- Executing Phases 1-3 of the legacy plaintext transition.
 
-## Honest state (as of 2026-11-10 · 7 local commits ahead of remote)
+## Honest state (as of 2026-11-10 · 10 local commits ahead of remote)
 
 - mig 318 applied to sandbox · all other PROPOSAL migrations unapplied.
+- Mig 291 duplicate-file question resolved · `_claim_rpc.sql` canonical
+  · `_claim.sql` + its rollback renamed to `.SUPERSEDED.sql`.
+- Account-deletion route confirmed reachable · mig 294 stays in A2.
+- 5 missing apply scripts (290, 292, 293, 294, 295) + bucket script
+  authored this cycle · hard-refuse production ref · mirror the 313
+  template.
 - Local build + test state: Ireland + Worldwide + HQ builds all
-  compile successfully · 370+ cycle tests passing.
-- RLS 81/81 structural tests passing offline.
-- Chat crypto primitives + decision lock-in doctrine in place ·
-  integration is cycle 7 work in progress.
-- 7 owner decisions already approved · implementation state tracked
-  in `chat-decisions-locked-2026-11-10.md`.
+  compile · 370+ cycle tests passing.
