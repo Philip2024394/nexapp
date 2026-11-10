@@ -83,19 +83,21 @@ export function ContactsShell({ children }: ContactsShellProps) {
         />
       </div>
 
-      {/* Layer 2 · Owner directive 2026-11-09 · Contacts background
-          switched to emerald green. The Ireland studio photo below
-          stays as subtle texture · the overlay sits at 95%+ opacity
-          with the sealed world-primary emerald so the dominant tone
-          of the page reads as green. Previous dark-glass overlay was
-          retired in this pass. */}
+      {/* Layer 2 · Owner directive 2026-11-10 · Contacts background
+          is fully-opaque emerald. Earlier 2026-11-09 iteration let
+          ~4 % of the Ireland studio photo bleed through for "subtle
+          texture"; owner caught the bleed-through on the narrow
+          iPhone preview (<500 px viewport) and asked for zero
+          show-through. Both gradient stops switched to alpha 1.0.
+          Layer 1 (studio photo) remains below for future opacity
+          tweaks but is fully masked at the current setting. */}
       <div
         aria-hidden
         style={{
           position: "absolute",
           inset: 0,
           background:
-            "linear-gradient(135deg, rgba(18, 61, 43, 0.96) 0%, rgba(27, 81, 56, 0.98) 100%)",
+            "linear-gradient(135deg, rgb(18, 61, 43) 0%, rgb(27, 81, 56) 100%)",
           zIndex: 1,
         }}
       />

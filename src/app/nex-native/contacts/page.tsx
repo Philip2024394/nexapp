@@ -430,6 +430,58 @@ export default async function ContactsPage({ searchParams }: PageProps) {
         ? `${stale} · ${baseProfession}`
         : stale
       : baseProfession;
+
+    // Owner directive 2026-11-10 · "mock contacts must have full profile
+    // · where they are from · what time were they online · as if real" ·
+    // real accounts still follow sealed D1 (city hidden) + D2 (no
+    // presence dot) doctrine · but mock-persona accounts
+    // (is_mock_persona=true, sandbox-only seed) opt in to the full tile
+    // treatment so the preview deployment shows a representative
+    // populated layout. Derivation is deterministic from the account's
+    // UUID so the states are stable across refreshes but varied across
+    // rows (some online · some away · some offline).
+    // Type-assert against the DB-level shape · the exported
+    // `NexAccountRow` type lags migrations 046+266 (added
+    // is_mock_persona + last_known_city_label) · we access them
+    // here only to decide mock-row enrichment, so a narrow local
+    // cast keeps the broader type untouched.
+    const accountRecord = a as unknown as typeof a & {
+      is_mock_persona?: boolean;
+      last_known_city_label?: string | null;
+    };
+    const isMock = accountRecord.is_mock_persona === true;
+    let mockCity: string | null = null;
+    let mockPresence: ContactRowDisplay["presence"] | undefined;
+    let mockLastSeenMinsAgo: number | null | undefined;
+    if (isMock) {
+      // Pull the city portion (first comma-separated segment) from
+      // the profile's location_label · falls back to the account's
+      // last_known_city_label · null when neither is set.
+      const rawLocation =
+        profile?.location_label ?? accountRecord.last_known_city_label ?? null;
+      mockCity = rawLocation
+        ? rawLocation.split(",")[0]?.trim() || null
+        : null;
+      // Deterministic seed · last hex digit of the UUID drives the
+      // presence bucket + minutes-ago · gives us a reproducible spread
+      // across the mock set without storing presence in the DB.
+      const seed = parseInt(a.id.slice(-1), 16) || 0;
+      const bucket = seed % 3; // 0=online · 1=away · 2=offline
+      if (bucket === 0) {
+        mockPresence = "online";
+        mockLastSeenMinsAgo = null;
+      } else if (bucket === 1) {
+        mockPresence = "away";
+        // 3 · 11 · 19 · 27 · 35 · 43 minute spread
+        mockLastSeenMinsAgo = 3 + seed * 8;
+      } else {
+        mockPresence = "offline";
+        // 1h · 4h · 12h · 1d · 2d · 5d spread
+        const offlineSteps = [60, 240, 720, 1440, 2880, 7200];
+        mockLastSeenMinsAgo = offlineSteps[seed % offlineSteps.length] ?? 60;
+      }
+    }
+
     return {
       id: a.id,
       kind: "friend" as const,
@@ -463,6 +515,12 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       // a shop · no UI change required at the card layer.
       hasShop: Boolean(badge),
       shopHref: badge ? `/nex-native/${badge.slug}` : null,
+      // Mock-persona enrichment · see block above · real accounts
+      // leave these undefined and the card omits the city/presence
+      // affordances entirely (honest absence).
+      city: mockCity,
+      presence: mockPresence,
+      lastSeenMinsAgo: mockLastSeenMinsAgo,
     };
   });
 

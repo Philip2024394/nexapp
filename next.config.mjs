@@ -20,7 +20,15 @@ const nextConfig = {
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "ijvqdvsvwtwxzcqmoqit.supabase.co" },
+      { protocol: "https", hostname: "kdstoyyeygcopkogqsyv.supabase.co" },
       { protocol: "https", hostname: "ik.imagekit.io" },
+      // Owner directive 2026-11-10 · mock-persona avatars + covers on
+      // the sandbox preview deployment · dicebear provides stable PNG
+      // faces (free, no key), picsum.photos provides stable cover
+      // banners. Both are seed-URL only · never used for real users.
+      { protocol: "https", hostname: "api.dicebear.com" },
+      { protocol: "https", hostname: "picsum.photos" },
+      { protocol: "https", hostname: "fastly.picsum.photos" },
     ],
   },
   async redirects() {
