@@ -68,6 +68,7 @@ import * as likedProductService from "@/lib/nex-native/liked-product-service";
 import * as orderService from "@/lib/nex-native/order-service";
 import * as commerceService from "@/lib/nex-native/commerce-service";
 import { notifySellerNewOrder } from "@/lib/nex-native/manage-orders/order-notification-service";
+import { getActiveQrAsset } from "@/lib/nex-native/merchant-qr/qr-asset-service";
 import * as cartService from "@/lib/nex-native/cart-service";
 // Phase 1 · Slice 1D · owner-authorised 2026-10-24 · marketing-layer
 // signal writer. Fire-and-await after successful sendPeerMessage so
@@ -6892,6 +6893,29 @@ export async function placeOrderAction(formData: FormData): Promise<never> {
     const qs = new URLSearchParams({
       e: "long_note",
       m: "note too long · max 500 characters",
+    });
+    redirect(`/nex-native/${business.slug}?${qs.toString()}`);
+  }
+
+  // P5 pre-activation review · owner-sealed 2026-11-10 ·
+  // Prevent ghost orders. Buyer checkout today is qr_manual-only
+  // (P2 Stripe Checkout remains gated). Refuse to CREATE an order
+  // when the seller has no active payment QR · otherwise the order
+  // would persist in `pending` with no payable surface.
+  // Fail-safe: if the merchant-qr table is not yet applied (returns
+  // from a pre-mig-319 environment) OR the lookup raises, we treat
+  // that as "no QR" and refuse rather than creating a ghost order.
+  let hasActiveQr = false;
+  try {
+    const activeQr = await getActiveQrAsset(business.id);
+    hasActiveQr = activeQr !== null;
+  } catch {
+    hasActiveQr = false;
+  }
+  if (!hasActiveQr) {
+    const qs = new URLSearchParams({
+      e: "seller_payment_qr_missing",
+      m: "The seller has not configured a payment method yet. Message them to arrange payment before placing an order.",
     });
     redirect(`/nex-native/${business.slug}?${qs.toString()}`);
   }

@@ -169,6 +169,48 @@ export default async function BuyerPayPage({
             </div>
           </section>
 
+          {/* Buyer-protection banner · owner-sealed 2026-11-10 ·
+              high-prominence warning displayed ABOVE the QR card so
+              the buyer reads it before scanning. */}
+          {qr && qrSignedUrl ? (
+            <section
+              data-nex-buyer-warning
+              role="alert"
+              style={{
+                padding: "12px 14px",
+                borderRadius: 12,
+                background: "rgba(255, 175, 64, 0.12)",
+                border: `2px solid ${PALETTE.warn}`,
+                display: "flex",
+                gap: 10,
+                alignItems: "flex-start",
+              }}
+            >
+              <span aria-hidden style={{ fontSize: 22, lineHeight: 1 }}>⚠️</span>
+              <div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 900,
+                    color: PALETTE.warn,
+                    letterSpacing: "0.03em",
+                    textTransform: "uppercase",
+                    marginBottom: 4,
+                  }}
+                >
+                  Verify before you pay
+                </div>
+                <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.5, color: PALETTE.text }}>
+                  Scanning a QR is NOT proof that it belongs to the
+                  seller you ordered from. <strong>Check the merchant
+                  name and amount your banking app shows before you
+                  confirm the payment.</strong> If anything looks
+                  unfamiliar, do not pay · message the seller.
+                </p>
+              </div>
+            </section>
+          ) : null}
+
           {/* QR card */}
           {qr && qrSignedUrl ? (
             <section
