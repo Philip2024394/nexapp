@@ -2300,11 +2300,14 @@ function FirstVisitThemeGrid({
       style={{
         marginTop: 8,
         padding: "10px 10px 12px",
-        // Owner-authorised 2026-11-10 (rev 4) · when a colour theme is
-        // active, lift the dark-navy backdrop and use the theme's
-        // light card shade so the picker sits on the theme palette.
-        background: colorThemeActive ? chromeCardBg : "rgba(2, 9, 20, 0.55)",
-        border: `1px solid ${colorThemeActive ? chromeCardBorder : "rgba(0, 175, 255, 0.14)"}`,
+        // Owner-authorised 2026-11-10 (rev 5) · when a colour theme is
+        // active, the picker container becomes SOLID BLACK with the
+        // theme accent used for the title + urgency text and border.
+        // Black provides consistent contrast against any of the 4
+        // light theme backgrounds (cream · grey · green · pink) and
+        // the themed text pops clearly.
+        background: colorThemeActive ? "#000000" : "rgba(2, 9, 20, 0.55)",
+        border: `1px solid ${colorThemeActive ? chromeAccent : "rgba(0, 175, 255, 0.14)"}`,
         borderRadius: 12,
         backdropFilter: "blur(8px)",
         WebkitBackdropFilter: "blur(8px)",
@@ -2346,7 +2349,7 @@ function FirstVisitThemeGrid({
               fontSize: 10,
               fontWeight: 600,
               letterSpacing: 0.4,
-              color: "#FF7200",
+              color: colorThemeActive ? chromeAccent : "#FF7200",
               lineHeight: 1,
               display: "inline-flex",
               alignItems: "center",
@@ -2360,8 +2363,10 @@ function FirstVisitThemeGrid({
                 width: 6,
                 height: 6,
                 borderRadius: "50%",
-                background: "#FF7200",
-                boxShadow: "0 0 6px rgba(255, 114, 0, 0.8)",
+                background: colorThemeActive ? chromeAccent : "#FF7200",
+                boxShadow: colorThemeActive
+                  ? `0 0 6px ${chromeAccent}cc`
+                  : "0 0 6px rgba(255, 114, 0, 0.8)",
               }}
             />
             Today&apos;s featured picks · refreshed daily
