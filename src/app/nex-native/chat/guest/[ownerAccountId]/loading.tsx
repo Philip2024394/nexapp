@@ -1,10 +1,7 @@
-// src/app/nex-native/chat/guest/[ownerAccountId]/loading.tsx · R32b ·
-// guest chat surface (anonymous buyer → shop owner) · 7 awaits for
-// owner profile + consent + encryption keys. Critical for the "closed
-// shop · chat with owner" soft-landing flow.
+// src/app/nex-native/chat/guest/[ownerAccountId]/loading.tsx
+//
+// Owner directive 2026-11-11 · all loading animations retired across
+// /nex-native/*. This route now re-exports the shared SilentLoading
+// component · see src/app/nex-native/_silent-loading.tsx for rationale.
 
-import { NexLoadingSkeleton } from "@/components/nex-native/nex-loading-skeleton";
-
-export default function GuestChatLoading() {
-  return <NexLoadingSkeleton label="Chat" rows={4} />;
-}
+export { SilentLoading as default } from "@/app/nex-native/_silent-loading";

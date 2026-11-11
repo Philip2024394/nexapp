@@ -33,6 +33,39 @@ export async function getAccountById(id: NexUuid): Promise<NexAccountRow | null>
   return (data as NexAccountRow) ?? null;
 }
 
+/** Owner directive 2026-11-11 (Cycle 22 · P1+P2 N+1 fix) · batch
+ *  account lookup. Replaces per-id `getAccountById()` loops in chat/peer
+ *  side-drawer hydration + contacts page + notifications. Returns a Map
+ *  keyed by id for O(1) consumer lookups. Missing ids simply don't
+ *  appear in the Map (caller decides how to handle absence).
+ *
+ *  Why a Map and not an ordered array: callers iterate their own id
+ *  lists in a specific order (e.g. "current peer first" in chat
+ *  side-nav). A Map lets the caller preserve their ordering while this
+ *  service runs exactly ONE query regardless of batch size. */
+export async function getAccountsByIds(
+  ids: ReadonlyArray<NexUuid>,
+): Promise<Map<NexUuid, NexAccountRow>> {
+  const out = new Map<NexUuid, NexAccountRow>();
+  if (ids.length === 0) return out;
+  // Dedupe · avoid sending the same id twice when the caller's list
+  // has e.g. "peer first" + "friends after" with peer appearing in both.
+  const unique = Array.from(new Set(ids));
+  const { data, error } = await nexSupabaseAdmin
+    .from("nex_account")
+    .select("*")
+    .in("id", unique);
+  if (error) {
+    throw new Error(
+      `account-service.getAccountsByIds(${unique.length}): ${error.message}`,
+    );
+  }
+  for (const row of (data ?? []) as NexAccountRow[]) {
+    out.set(row.id as NexUuid, row);
+  }
+  return out;
+}
+
 /** Read one account by public nex_handle · null when not found. Handle
  *  format is validated app-side (^nex-[0-9]{5,}$) before the query. */
 export async function getAccountByNexHandle(handle: string): Promise<NexAccountRow | null> {

@@ -1,12 +1,7 @@
-// src/app/nex-native/manage/shop/setup/loading.tsx · R32c · covers
-// ALL wizard children (identity · category · contact · location · hours
-// · story · policies · request-category · finish) via Next.js route-
-// segment inheritance. Seller moves between 9 steps · each step reads
-// nex_business · without this skeleton the step-to-step transition
-// blanks out.
+// src/app/nex-native/manage/shop/setup/loading.tsx
+//
+// Owner directive 2026-11-11 · all loading animations retired across
+// /nex-native/*. This route now re-exports the shared SilentLoading
+// component · see src/app/nex-native/_silent-loading.tsx for rationale.
 
-import { NexLoadingSkeleton } from "@/components/nex-native/nex-loading-skeleton";
-
-export default function ShopSetupLoading() {
-  return <NexLoadingSkeleton label="Shop setup" rows={5} />;
-}
+export { SilentLoading as default } from "@/app/nex-native/_silent-loading";

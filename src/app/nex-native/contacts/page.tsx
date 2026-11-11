@@ -242,17 +242,20 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       ? edge.b_account_id
       : edge.a_account_id,
   );
-  const pendingPeerAccountsSettled = await Promise.allSettled(
-    pendingPeerIds.map((id) => accountService.getAccountById(id)),
+  // Owner directive 2026-11-11 (Cycle 22 · P2 N+1 fix) · pending-peer
+  // + friend account hydration now runs as TWO batch queries (one
+  // Supabase `.in(id, […])` per group) instead of 2N `getAccountById`
+  // calls. Semantics preserved: missing accounts resolve to null and
+  // the row filters them out downstream. Both batches run in parallel.
+  const [pendingPeerAccountMap, friendAccountMap] = await Promise.all([
+    accountService.getAccountsByIds(pendingPeerIds).catch(() => new Map()),
+    accountService.getAccountsByIds(friendIds).catch(() => new Map()),
+  ]);
+  const pendingPeerAccounts = pendingPeerIds.map(
+    (id) => pendingPeerAccountMap.get(id) ?? null,
   );
-  const pendingPeerAccounts = pendingPeerAccountsSettled.map((r) =>
-    r.status === "fulfilled" ? r.value : null,
-  );
-  const friendAccountsSettled = await Promise.allSettled(
-    friendIds.map((id) => accountService.getAccountById(id)),
-  );
-  const friendAccounts = friendAccountsSettled.map((r) =>
-    r.status === "fulfilled" ? r.value : null,
+  const friendAccounts = friendIds.map(
+    (id) => friendAccountMap.get(id) ?? null,
   );
 
   // Business contacts · derive from conversation-service · dedup
@@ -322,21 +325,20 @@ export default async function ContactsPage({ searchParams }: PageProps) {
     }
   }
 
-  // Owner directive 2026-10-17 · identity-card layout · fetch
-  // profession + headline for each friend in parallel. getProfileByAccountId
-  // returns null when the account hasn't filled out a profile · we honour
-  // that by leaving professionLine null (card omits the line entirely).
-  //
-  // P0 engineering pass 2026-11-03 · profile hydration already had
-  // per-call `.catch(() => null)` · preserved as-is (one bad profile
-  // doesn't drop the row).
+  // Owner directive 2026-11-11 (Cycle 22 · P2 N+1 fix) · profile
+  // hydration now batched. Previously this ran N parallel
+  // `getProfileByAccountId()` round-trips (one per friend) inside a
+  // Promise.all · the batch runs ONE `.in("account_id", [...])` query
+  // regardless of friend count. Semantics preserved: missing profiles
+  // still resolve to null, which the row renderer handles.
   const liveFriendAccounts = friendAccounts.filter(
     (a): a is NonNullable<typeof a> => a !== null,
   );
-  const friendProfiles = await Promise.all(
-    liveFriendAccounts.map((a) =>
-      accountProfileService.getProfileByAccountId(a.id).catch(() => null),
-    ),
+  const friendProfileMap = await accountProfileService
+    .getProfilesByAccountIds(liveFriendAccounts.map((a) => a.id))
+    .catch(() => new Map());
+  const friendProfiles = liveFriendAccounts.map(
+    (a) => friendProfileMap.get(a.id) ?? null,
   );
 
   // Owner-authored 2026-11-05 · real unread-chat counts per friend row.

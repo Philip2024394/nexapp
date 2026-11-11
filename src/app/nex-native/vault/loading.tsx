@@ -1,11 +1,7 @@
-// src/app/nex-native/vault/loading.tsx · instant-paint boundary for
-// the Vault entry + home + setup surfaces. Covers /vault and nested
-// /vault/home, /vault/setup, /vault/settings routes. The sealed
-// Vault layout already enforces its own unlock gate · this skeleton
-// only covers the SSR gap before the real surface renders.
+// src/app/nex-native/vault/loading.tsx
+//
+// Owner directive 2026-11-11 · all loading animations retired across
+// /nex-native/*. This route now re-exports the shared SilentLoading
+// component · see src/app/nex-native/_silent-loading.tsx for rationale.
 
-import { NexLoadingSkeleton } from "@/components/nex-native/nex-loading-skeleton";
-
-export default function VaultLoading() {
-  return <NexLoadingSkeleton label="Vault" rows={4} />;
-}
+export { SilentLoading as default } from "@/app/nex-native/_silent-loading";

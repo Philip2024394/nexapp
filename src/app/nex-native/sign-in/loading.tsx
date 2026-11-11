@@ -1,8 +1,7 @@
-// src/app/nex-native/sign-in/loading.tsx · instant-paint boundary
-// for the Sign-In surface · covers the Supabase client-init gap.
+// src/app/nex-native/sign-in/loading.tsx
+//
+// Owner directive 2026-11-11 · all loading animations retired across
+// /nex-native/*. This route now re-exports the shared SilentLoading
+// component · see src/app/nex-native/_silent-loading.tsx for rationale.
 
-import { NexLoadingSkeleton } from "@/components/nex-native/nex-loading-skeleton";
-
-export default function SignInLoading() {
-  return <NexLoadingSkeleton label="Sign in" rows={3} />;
-}
+export { SilentLoading as default } from "@/app/nex-native/_silent-loading";

@@ -588,17 +588,15 @@ export function NotificationsDrawer({
           width: 36,
           height: 36,
           borderRadius: "50%",
-          // Owner directive 2026-11-05 later-same-day iter 2 · when
-          // mounted inline in the chat header the bell is SOLID BLACK
-          // (no translucency, no blur) matching the new `+` trigger
-          // and lower 3-dot FAB. Floating (non-inline) surfaces keep
-          // the sealed transparent cyan look.
-          background: inline ? "#000000" : "transparent",
-          border: inline ? "1px solid rgba(255, 255, 255, 0.14)" : "none",
-          color: inline ? "#FFFFFF" : CYAN,
-          boxShadow: inline
-            ? "0 6px 18px rgba(0,0,0,0.55), inset 0 0 0 1px color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 24%, transparent)"
-            : undefined,
+          // Owner directive 2026-11-10 · header bell flipped from
+          // solid black + white icon to transparent + black icon on
+          // the inline chat-header mount. Matches the side-drawer +
+          // magnifier treatment on the new Warm Ivory canvas.
+          // Floating (non-inline) surfaces unchanged.
+          background: "transparent",
+          border: "none",
+          color: inline ? "#000000" : CYAN,
+          boxShadow: "none",
           cursor: "pointer",
           padding: 0,
           display: "inline-flex",
@@ -608,7 +606,7 @@ export function NotificationsDrawer({
           WebkitTapHighlightColor: "transparent",
         }}
       >
-        <BellGlyph accent={inline ? "#FFFFFF" : CYAN} />
+        <BellGlyph accent={inline ? "#000000" : CYAN} />
         {unreadCount > 0 ? (
           <span
             data-nex-notifications-trigger-badge
@@ -942,7 +940,7 @@ function SectionGlyph({
   glyph,
   accent,
 }: {
-  readonly glyph: "chat" | "live" | "shop" | "order" | "follow";
+  readonly glyph: "chat" | "shop" | "order" | "follow";
   readonly accent: string;
 }): React.JSX.Element {
   // Owner directive 2026-11-05 iter 16 · section glyphs are OUTLINED
@@ -965,13 +963,9 @@ function SectionGlyph({
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
       );
-    case "live":
-      return (
-        <svg viewBox="0 0 24 24" {...common}>
-          <circle cx="12" cy="12" r="3" fill={accent} stroke="none" />
-          <circle cx="12" cy="12" r="7" />
-        </svg>
-      );
+    // Owner directive 2026-11-11 · "live" glyph retired with the Live
+    // section. Switch fall-through impossible since the union no
+    // longer allows "live".
     case "shop":
       return (
         <svg viewBox="0 0 24 24" {...common}>

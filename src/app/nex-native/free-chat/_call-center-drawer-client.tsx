@@ -113,15 +113,15 @@ export function FreeChatCallCenterDrawerClient(): React.JSX.Element {
           width: 36,
           height: 36,
           borderRadius: "50%",
-          // Owner directive 2026-11-05 later-same-day iter 6 · solid
-          // black + white glyph matching peer chat's ShopDrawer FAB
-          // and the header buttons. White hairline + gold inner ring
-          // preserved for definition over the chat wallpaper.
-          background: "#000000",
+          // Owner directive 2026-11-10 · Call Centre 3-dot FAB
+          // flipped from solid black + white glyph to solid NEX
+          // Orange + white glyph · matches the composer + button
+          // + header orange CTAs. Unified orange language on the
+          // ivory canvas.
+          background: "#FF7200",
           color: "#FFFFFF",
-          border: "1px solid rgba(255, 255, 255, 0.14)",
-          boxShadow:
-            "0 6px 18px rgba(0,0,0,0.55), inset 0 0 0 1px color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 24%, transparent)",
+          border: "1px solid #FF7200",
+          boxShadow: "0 4px 14px rgba(255, 114, 0, 0.5)",
           cursor: "pointer",
           display: "inline-flex",
           alignItems: "center",

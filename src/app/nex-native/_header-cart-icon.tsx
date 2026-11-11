@@ -124,13 +124,21 @@ export function HeaderCartIcon({
           count > 0 ? `Open cart · ${count} item${count === 1 ? "" : "s"}` : "Open cart"
         }
         style={{
+          // Owner directive 2026-11-10 iter 3 · cart icon now fills
+          // SOLID NEX ORANGE with a WHITE glyph · matches the side-
+          // drawer trigger's new orange puck treatment so both header
+          // affordances read as orange CTAs on the ivory canvas.
           position: "relative",
           display: "inline-grid",
           placeItems: "center",
-          padding: 6,
+          width: 36,
+          height: 36,
+          padding: 0,
+          borderRadius: "50%",
+          background: "#FF7200",
           color: "#FFFFFF",
           textDecoration: "none",
-          filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.65))",
+          boxShadow: "0 2px 8px rgba(255, 114, 0, 0.35)",
         }}
       >
         {svg}
@@ -140,14 +148,21 @@ export function HeaderCartIcon({
   }
 
   // "fixed" · 44 (P2 menu) + 16 (right inset) + 8 (gap) = 68px right offset.
+  // Owner directive 2026-11-10 iter 3 · fixed-variant cart also goes
+  // solid orange + white glyph · drops the dark neutral-900/80 puck.
   return (
     <Link
       href="/nex-native/cart"
       aria-label={
         count > 0 ? `Open cart · ${count} item${count === 1 ? "" : "s"}` : "Open cart"
       }
-      className="fixed z-40 inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-neutral-900/80 text-white shadow-md backdrop-blur hover:bg-neutral-900"
-      style={{ right: 68, top: 16 }}
+      className="fixed z-40 inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-white"
+      style={{
+        right: 68,
+        top: 16,
+        background: "#FF7200",
+        boxShadow: "0 2px 10px rgba(255, 114, 0, 0.4)",
+      }}
     >
       {svg}
       {badge}

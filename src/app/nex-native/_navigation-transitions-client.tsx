@@ -52,10 +52,19 @@ function setNavDirection(dir: "back" | null): void {
 
 function getStartViewTransition(): StartViewTransitionFn | null {
   if (typeof document === "undefined") return null;
-  const fn = (document as unknown as {
+  // Owner directive 2026-11-10 (runtime fix) · Chrome's View
+  // Transitions API is a native DOM method on `document`. When we
+  // extracted `document.startViewTransition` into a bare variable
+  // and invoked it, we lost the `this === document` binding and
+  // Chrome threw `Illegal invocation`. `Function.prototype.bind`
+  // pins `document` as the receiver so the method works whether
+  // we call it via `document.startViewTransition(...)` or through
+  // the extracted reference.
+  const doc = document as unknown as {
     startViewTransition?: StartViewTransitionFn;
-  }).startViewTransition;
-  return typeof fn === "function" ? fn : null;
+  };
+  const fn = doc.startViewTransition;
+  return typeof fn === "function" ? fn.bind(document) : null;
 }
 
 export function NexNavigationTransitions(): null {

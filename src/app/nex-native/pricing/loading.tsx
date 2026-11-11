@@ -1,9 +1,7 @@
-// src/app/nex-native/pricing/loading.tsx · R32 · marketing surface ·
-// first impression for buyers landing on /pricing · no white flash
-// between tap and the price-table render.
+// src/app/nex-native/pricing/loading.tsx
+//
+// Owner directive 2026-11-11 · all loading animations retired across
+// /nex-native/*. This route now re-exports the shared SilentLoading
+// component · see src/app/nex-native/_silent-loading.tsx for rationale.
 
-import { NexLoadingSkeleton } from "@/components/nex-native/nex-loading-skeleton";
-
-export default function PricingLoading() {
-  return <NexLoadingSkeleton label="NEX Pricing" rows={4} />;
-}
+export { SilentLoading as default } from "@/app/nex-native/_silent-loading";

@@ -862,13 +862,24 @@ function ProductSheet({
             onClick={onClose}
             aria-label="Close"
             style={{
-              background: "transparent",
-              border: "none",
-              color: "rgba(244,247,252,0.5)",
-              fontSize: 24,
+              // Owner directive 2026-11-10 · guest-chat product sheet
+              // × now a solid NEX Orange puck with a white glyph ·
+              // matches the shop-drawer × + How-It-Works close.
+              width: 32,
+              height: 32,
+              borderRadius: "50%",
+              background: "#FF7200",
+              border: "1px solid #FF7200",
+              color: "#FFFFFF",
+              fontSize: 18,
+              fontWeight: 800,
               cursor: "pointer",
-              padding: "4px 8px",
+              padding: 0,
               lineHeight: 1,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 2px 8px rgba(255, 114, 0, 0.35)",
             }}
           >
             ×

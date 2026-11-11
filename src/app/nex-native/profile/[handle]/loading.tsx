@@ -1,9 +1,6 @@
-// src/app/nex-native/profile/[handle]/loading.tsx · R32b · dynamic
-// public profile page · 14 awaits · instant paint prevents white
-// flash on handle lookup + profile + business + badges resolution.
+// src/app/nex-native/profile/[handle]/loading.tsx
+//
+// Cycle 22 Priority 4 · shape-matching skeleton. Cover band + avatar
+// + name block + bio lines + interest pills + section cards.
 
-import { NexLoadingSkeleton } from "@/components/nex-native/nex-loading-skeleton";
-
-export default function ProfileHandleLoading() {
-  return <NexLoadingSkeleton label="Profile" rows={5} />;
-}
+export { ProfileSkeleton as default } from "@/components/nex-native/skeletons/profile-skeleton";

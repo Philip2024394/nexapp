@@ -6087,7 +6087,7 @@ export async function createLivePostAction(formData: FormData): Promise<never> {
     redirectToManageLiveWithBanner("live_create_failed", msg);
   }
   revalidatePath("/nex-native/manage/live");
-  revalidatePath("/nex-native/nex-feed");
+  // Owner directive 2026-11-11 · nex-feed route retired per Scope Reduction sealed 2026-11-06 · revalidatePath removed (was a no-op since the route no longer exists).
   revalidatePath(`/nex-native/${business.slug}`);
   redirectToManageLiveWithBanner("live_created", body.slice(0, 60));
 }
@@ -6114,7 +6114,7 @@ export async function expireLivePostAction(formData: FormData): Promise<never> {
     redirectToManageLiveWithBanner("live_expire_failed", msg);
   }
   revalidatePath("/nex-native/manage/live");
-  revalidatePath("/nex-native/nex-feed");
+  // Owner directive 2026-11-11 · nex-feed route retired per Scope Reduction sealed 2026-11-06 · revalidatePath removed (was a no-op since the route no longer exists).
   const business = owned.find((b) => b.id === post.business_id);
   if (business) revalidatePath(`/nex-native/${business.slug}`);
   redirectToManageLiveWithBanner("live_expired", "post retired");
@@ -6146,7 +6146,7 @@ export async function updateLivePostBodyAction(formData: FormData): Promise<neve
     redirectToManageLiveWithBanner("live_body_update_failed", msg);
   }
   revalidatePath("/nex-native/manage/live");
-  revalidatePath("/nex-native/nex-feed");
+  // Owner directive 2026-11-11 · nex-feed route retired per Scope Reduction sealed 2026-11-06 · revalidatePath removed (was a no-op since the route no longer exists).
   const business = owned.find((b) => b.id === post.business_id);
   if (business) revalidatePath(`/nex-native/${business.slug}`);
   redirectToManageLiveWithBanner("live_body_updated", post.id.slice(0, 8));
@@ -6164,7 +6164,7 @@ export async function extendLivePostExpiryAction(formData: FormData): Promise<ne
     redirectToManageLiveWithBanner("live_extend_failed", msg);
   }
   revalidatePath("/nex-native/manage/live");
-  revalidatePath("/nex-native/nex-feed");
+  // Owner directive 2026-11-11 · nex-feed route retired per Scope Reduction sealed 2026-11-06 · revalidatePath removed (was a no-op since the route no longer exists).
   const business = owned.find((b) => b.id === post.business_id);
   if (business) revalidatePath(`/nex-native/${business.slug}`);
   redirectToManageLiveWithBanner("live_expiry_extended", `+${hours}h`);

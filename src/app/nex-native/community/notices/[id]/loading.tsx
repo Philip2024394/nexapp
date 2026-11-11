@@ -1,10 +1,7 @@
-// src/app/nex-native/community/notices/[id]/loading.tsx · R32c ·
-// community notice detail · 5 awaits for notice + zone + author
-// profile. Dynamic segment needs its own skeleton (parent /community
-// loading does not inherit through the [id] boundary).
+// src/app/nex-native/community/notices/[id]/loading.tsx
+//
+// Owner directive 2026-11-11 · all loading animations retired across
+// /nex-native/*. This route now re-exports the shared SilentLoading
+// component · see src/app/nex-native/_silent-loading.tsx for rationale.
 
-import { NexLoadingSkeleton } from "@/components/nex-native/nex-loading-skeleton";
-
-export default function CommunityNoticeLoading() {
-  return <NexLoadingSkeleton label="Notice" rows={4} />;
-}
+export { SilentLoading as default } from "@/app/nex-native/_silent-loading";

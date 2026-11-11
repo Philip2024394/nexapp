@@ -381,7 +381,7 @@ export function defaultBubbleCustomizationForTheme(
     peerDarken: 0,
     selfColor: accent,
     selfDarken: 0,
-    containerColor: supportsBackgroundPicker ? "#123D2B" : null,
+    containerColor: supportsBackgroundPicker ? "#FFF9E9" : null,
   };
 }
 
@@ -529,7 +529,7 @@ export const BUBBLE_PALETTE: readonly {
  *  overlay, not a theme accent. */
 export function freeChatBackgroundCss(
   wallpaperUrl: string | null,
-  baseFallback: string = "var(--nex-world-drawer-bg, #020914)",
+  baseFallback: string = "var(--nex-world-background-base, #FFF9E9)",
 ): string {
   if (!wallpaperUrl) return baseFallback;
   return `linear-gradient(rgba(2, 9, 20, 0.35), rgba(2, 9, 20, 0.55)), url("${wallpaperUrl}") center / cover no-repeat, ${baseFallback}`;

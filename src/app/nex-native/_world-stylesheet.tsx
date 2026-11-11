@@ -194,24 +194,19 @@ const WORLDWIDE_PALETTE_OVERRIDES: Record<string, string> = {
  *  per-country: `--nex-world-desktop-backdrop` + `--nex-world-page-base`.
  *  These two live on :root (not .nex-native-stage) because the body
  *  background is painted on html/body — ancestors of the stage. */
-// Owner-sealed 2026-11-01 (updated · narrow premium palette) · per-world
-// music/live side-drawer background. Ireland uses Emerald #123D2B
-// (supersedes the earlier Irish Green #02AD04 seal from the same date).
-// Other worlds leave this unset and fall through to the pre-existing
-// drawer bg (var(--nex-world-background-base) with navy fallback), so
-// nex-original + Indonesia chrome stays unchanged.
+// Owner-sealed 2026-11-10 · NEX Ireland light-theme palette.
+// Sidebar / side-drawer background switched from Emerald #123D2B to
+// Pale Ivory #F5EDD3. Matches palette.surfaceSunken in world-registry
+// so the drawer, panels, and sunken surfaces read as one surface.
 const WORLD_DRAWER_BG: Record<string, string> = {
-  ireland: "#123D2B",
+  ireland: "#F5EDD3",
 };
 
-// Owner-sealed 2026-11-01 (narrow premium palette update) · per-world
-// primary-ink colour for button text / primary ink. Ireland uses Sage
-// #AFC5B5 so Forest primary buttons get Sage text. This is NOT a
-// WorldPalette field — country-scoped by design, so it does not ripple
-// across other worlds or require per-palette ink values on Indonesia /
-// nex-original. Consumers opt-in with var(--nex-world-primary-ink, <fallback>).
+// Owner-sealed 2026-11-10 · primary-ink flipped from Sage #AFC5B5
+// (readable on Forest buttons) to dark warm brown #2A1F0F so Amber
+// primary buttons carry readable dark text in the new light theme.
 const WORLD_PRIMARY_INK: Record<string, string> = {
-  ireland: "#AFC5B5",
+  ireland: "#2A1F0F",
 };
 
 // Owner-authorised 2026-11-04 later-same-day · NEX Ireland drawer trim +

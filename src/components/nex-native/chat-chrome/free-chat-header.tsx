@@ -299,19 +299,19 @@ export function FreeChatHeader({
             peerSharedMediaHref={peerSharedMediaHref}
             currentSurface={currentSurface}
             drawerVisitor={drawerVisitor}
-            /* Owner directive 2026-11-05 later-same-day iter 2 ·
-               header buttons go SOLID BLACK (no translucency, no
-               blur). Hairline white border + gold inner ring kept
-               for definition against the chat wallpaper. */
+            /* Owner directive 2026-11-10 iter 3 · the side-drawer
+               trigger "+" is now SOLID NEX ORANGE with a WHITE icon.
+               (Previous iter was transparent + black; owner wanted
+               the cart + side-drawer to pop against the ivory canvas,
+               so both get the orange primary-CTA treatment.) */
             triggerStyle={{
               width: 36,
               height: 36,
               borderRadius: "50%",
-              background: "#000000",
-              border: "1px solid rgba(255, 255, 255, 0.14)",
+              background: "#FF7200",
+              border: "1px solid #FF7200",
               color: "#FFFFFF",
-              boxShadow:
-                "0 6px 18px rgba(0,0,0,0.55), inset 0 0 0 1px color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 24%, transparent)",
+              boxShadow: "0 2px 8px rgba(255, 114, 0, 0.35)",
             }}
           />
         </div>

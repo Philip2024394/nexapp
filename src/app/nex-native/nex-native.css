@@ -337,48 +337,113 @@ body::-webkit-scrollbar,
 /* ─── WhatsApp-style navigation (View Transitions API) ───────────────
  * Owner directive 2026-11-10 (chat-speed P3 · iter 2 · research pass):
  * replicate WhatsApp / iOS UINavigationController push+pop transitions
- * across the entire /nex-native/* surface. Research findings:
+ * across the entire /nex-native/* surface. Iter 3 (2026-11-11): scope
+ * the slide to ONLY the phone-frame contents instead of the entire
+ * document. Previously `::view-transition-group(root)` animated the
+ * whole viewport, which on desktop ≥500 px dragged the sealed country
+ * backdrop (html/body background image) along with the page content.
+ * Owner reported "desktop screen slides over the app screen" — exactly
+ * that. Fix: give `.nex-native-frame` its own `view-transition-name`
+ * so only the phone frame slides; the backdrop + stage stay still.
  *
+ * Research findings preserved:
  *   · Duration: iOS system standard is 300-350 ms (Apple HIG + Material);
  *     WhatsApp uses the system animator so same range. 320 ms is the
  *     sweet spot — snappy enough to feel fast, long enough to read as
  *     a push rather than a cut.
  *   · Easing: iOS system cubic-bezier(0.4, 0, 0.6, 1) (standard
  *     ease-in-out). Not expo-out — iOS is gentler at both ends.
- *   · Parallax depth: the outgoing route doesn't vanish — it slides
- *     ~25 % left, darkens slightly, then rests behind the new route.
- *     On pop, the reverse: the new (older) route eases in from that
- *     same depth position. This is the key iOS "layered cards" feel.
- *   · Edge shadow: the incoming route carries a left-edge drop shadow
- *     during the push so it reads as a physical layer riding over
- *     the parallax'd old page. Fades out as it settles.
- *   · Direction awareness: `popstate` events (back button + swipe-back)
- *     flip the data-nex-nav-dir attribute to "back" so the CSS plays
- *     the pop animation (old slides out right, new slides in from left
- *     parallax). This is what makes WhatsApp's back feel like true
- *     reverse navigation rather than a second forward push.
+ *   · Parallax depth: outgoing route ~25 % left + brightness darken.
+ *   · Edge shadow on the incoming frame during push.
  *
  * Browsers without View Transitions (older Safari, Firefox ESR) get
  * the existing jump-cut · no regression. Prefers-reduced-motion
  * short-circuits to a 1 ms crossfade. */
+[data-nex-page-slide-root] {
+  /* Owner directive 2026-11-11 iter 2 · the view-transition is scoped
+   * to the INNER page-slide root (a bare div wrapping {children} in
+   * layout.tsx). Phone frame + bezel stay static · only the route
+   * content swaps + slides. Keyframes target
+   * `::view-transition-group(nex-frame)` below.
+   *
+   * CRITICAL: must be a `position: relative` + `overflow: hidden`
+   * containing block, otherwise page.tsx children that use
+   * `position: absolute; inset: 0` (free-chat page, contacts shell,
+   * chat/peer) resolve against the next positioned ancestor (the
+   * phone frame itself), causing their paint to extend beyond this
+   * element · the View Transitions API then snapshots the broader
+   * paint tree and the whole frame drags along. Pinning position +
+   * overflow keeps every child paint bound to this snapshot box. */
+  view-transition-name: nex-frame;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  isolation: isolate;
+}
 @media screen {
-  ::view-transition-group(root) {
+  /* Owner directive 2026-11-11 iter 3 · fully DISABLE the root group
+   * animation so the desktop backdrop (body background-image on
+   * ≥500 px) stays completely still during route transitions. Prior
+   * 1 ms crossfade was still visible on desktop. `animation: none`
+   * stops all root motion · only the explicit `nex-frame` group
+   * below is allowed to animate. `!important` wins against any
+   * inherited default.
+   *
+   * Give html + body + .nex-native-stage + .nex-native-frame their
+   * OWN names so the browser snapshots them as named groups with
+   * no-op animations, rather than lumping them into root (where a
+   * mismatch could still animate). */
+  html {
+    view-transition-name: nex-page-html;
+  }
+  body {
+    view-transition-name: nex-page-body;
+  }
+  .nex-native-stage {
+    view-transition-name: nex-page-stage;
+  }
+  .nex-native-frame {
+    view-transition-name: nex-page-frame;
+  }
+  ::view-transition-group(root),
+  ::view-transition-old(root),
+  ::view-transition-new(root),
+  ::view-transition-group(nex-page-html),
+  ::view-transition-old(nex-page-html),
+  ::view-transition-new(nex-page-html),
+  ::view-transition-group(nex-page-body),
+  ::view-transition-old(nex-page-body),
+  ::view-transition-new(nex-page-body),
+  ::view-transition-group(nex-page-stage),
+  ::view-transition-old(nex-page-stage),
+  ::view-transition-new(nex-page-stage),
+  ::view-transition-group(nex-page-frame),
+  ::view-transition-old(nex-page-frame),
+  ::view-transition-new(nex-page-frame) {
+    animation: none !important;
+  }
+  /* The phone-frame slide is the ONLY animated layer now. */
+  ::view-transition-group(nex-frame) {
     animation-duration: 320ms;
     animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
   }
   /* Default direction · forward push */
-  ::view-transition-old(root) {
+  ::view-transition-old(nex-frame) {
     animation-name: nex-nav-push-out;
   }
-  ::view-transition-new(root) {
+  ::view-transition-new(nex-frame) {
     animation-name: nex-nav-push-in;
   }
-  /* Back direction · pop (set by _navigation-transitions-client.tsx
-   * on popstate, cleared after the transition settles). */
-  :root[data-nex-nav-dir="back"] ::view-transition-old(root) {
+  /* Back direction · pop (data-nex-nav-dir flag set by
+   * _navigation-transitions-client.tsx on popstate). */
+  :root[data-nex-nav-dir="back"] ::view-transition-old(nex-frame) {
     animation-name: nex-nav-pop-out;
   }
-  :root[data-nex-nav-dir="back"] ::view-transition-new(root) {
+  :root[data-nex-nav-dir="back"] ::view-transition-new(nex-frame) {
     animation-name: nex-nav-pop-in;
   }
 
@@ -432,7 +497,10 @@ body::-webkit-scrollbar,
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(root),
   ::view-transition-old(root),
-  ::view-transition-new(root) {
+  ::view-transition-new(root),
+  ::view-transition-group(nex-frame),
+  ::view-transition-old(nex-frame),
+  ::view-transition-new(nex-frame) {
     animation-duration: 1ms;
     animation-name: none;
   }

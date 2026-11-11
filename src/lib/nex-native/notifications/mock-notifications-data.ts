@@ -22,9 +22,11 @@
 //   · Same rule applies to any encrypted media (voice notes, photos,
 //     documents): subtitle names the KIND, never the content.
 
+// Owner directive 2026-11-11 · "Live" section retired from the
+// notifications drawer. Section key union + section array + mock rows
+// + glyph case trimmed in one sweep.
 export type NotificationSectionKey =
   | "chats"
-  | "live"
   | "shop"
   | "orders"
   | "follows";
@@ -72,12 +74,11 @@ export interface NotificationItem {
 export interface NotificationSectionMeta {
   readonly key: NotificationSectionKey;
   readonly label: string;
-  readonly glyph: "chat" | "live" | "shop" | "order" | "follow";
+  readonly glyph: "chat" | "shop" | "order" | "follow";
 }
 
 export const NOTIFICATION_SECTIONS: ReadonlyArray<NotificationSectionMeta> = [
   { key: "chats",   label: "Chats",   glyph: "chat"   },
-  { key: "live",    label: "Live",    glyph: "live"   },
   { key: "shop",    label: "Shop",    glyph: "shop"   },
   { key: "orders",  label: "Orders",  glyph: "order"  },
   { key: "follows", label: "Follows", glyph: "follow" },
@@ -117,26 +118,8 @@ export const MOCK_NOTIFICATIONS: ReadonlyArray<NotificationItem> = [
     unread: true,
     thumbnailUrl: null,
   },
-  {
-    id: "notif-live-1",
-    section: "live",
-    title: "Niamh",
-    subtitle: "is live now · 24 viewers",
-    href: "/nex-native/nex-feed?kind=music",
-    createdAt: new Date(Date.now() - 6 * 60 * 1000).toISOString(),
-    unread: true,
-    thumbnailUrl: null,
-  },
-  {
-    id: "notif-live-2",
-    section: "live",
-    title: "Live Ireland",
-    subtitle: "3 broadcasts starting soon",
-    href: "/nex-native/nex-feed?country=IE",
-    createdAt: new Date(Date.now() - 42 * 60 * 1000).toISOString(),
-    unread: false,
-    thumbnailUrl: null,
-  },
+  // Owner directive 2026-11-11 · Live notification rows retired
+  // alongside the Live section (Live surface is removed from NEX).
   {
     id: "notif-shop-1",
     section: "shop",

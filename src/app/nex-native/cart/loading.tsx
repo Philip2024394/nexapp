@@ -1,9 +1,7 @@
 // src/app/nex-native/cart/loading.tsx
-// Owner-authorised 2026-11-09 · closes audit-reported white-screen gap
-// on the buyer checkout path.
+//
+// Owner directive 2026-11-11 · all loading animations retired across
+// /nex-native/*. This route now re-exports the shared SilentLoading
+// component · see src/app/nex-native/_silent-loading.tsx for rationale.
 
-import { NexLoadingSkeleton } from "@/components/nex-native/nex-loading-skeleton";
-
-export default function Loading() {
-  return <NexLoadingSkeleton label="Loading cart" rows={4} />;
-}
+export { SilentLoading as default } from "@/app/nex-native/_silent-loading";

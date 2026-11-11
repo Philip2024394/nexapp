@@ -241,7 +241,14 @@ export default async function NexNativeLayout({
               a visitor. Routes "Create account" to /create-account?
               claim=<provisional_id> for commit 5's atomic claim. */}
           <VisitorInteractPopup />
-          {children}
+          {/* Owner directive 2026-11-11 · phone-frame scoped view
+              transitions. Previously `view-transition-name` sat on
+              `.nex-native-frame` itself, which made the whole frame
+              (bezel + content) slide on route change. Owner wants
+              the PHONE to stay static and only the SCREEN CONTENT to
+              slide. Moved the name onto this inner wrapper so the
+              frame chrome holds still while just the children swap. */}
+          <div data-nex-page-slide-root>{children}</div>
           {/* Owner directive 2026-10-16 · the IncomingCallHub +
               PushSubscribeHub are mounted INSIDE the frame (not as
               layout-root siblings) so their position-absolute children

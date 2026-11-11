@@ -77,6 +77,10 @@ export function HowItWorksSheet({
       />
       <article
         style={{
+          // Owner directive 2026-11-10 · How It Works sheet now paints
+          // solid BLACK background (was dark-navy 88% alpha). Orange
+          // bullets + orange CTA give the sheet a brand-aligned warm
+          // emphasis against the pure-black card.
           position: "relative",
           maxWidth: 460,
           width: "min(92vw, 460px)",
@@ -84,12 +88,10 @@ export function HowItWorksSheet({
           overflowY: "auto",
           padding: "22px 22px 20px",
           borderRadius: 20,
-          background: "rgba(6, 15, 28, 0.88)",
-          border: "1px solid " + GOLD,
+          background: "#000000",
+          border: "1px solid rgba(255, 114, 0, 0.55)",
           boxShadow:
-            "0 24px 60px rgba(0, 0, 0, 0.6), 0 0 40px color-mix(in srgb, " +
-            GOLD +
-            " 25%, transparent)",
+            "0 24px 60px rgba(0, 0, 0, 0.7), 0 0 40px rgba(255, 114, 0, 0.22)",
           color: INK,
         }}
       >
@@ -211,19 +213,22 @@ export function HowItWorksSheet({
           type="button"
           onClick={onClose}
           style={{
+            // Owner directive 2026-11-10 · "Got it · let's pick" CTA
+            // flipped from Gold/Amber to solid NEX Orange with white
+            // text so it matches the new orange header buttons + the
+            // orange bullet accents.
             marginTop: 22,
             width: "100%",
             minHeight: 46,
             padding: "0 20px",
             borderRadius: 999,
-            background: GOLD,
-            color: "#0a1a0a",
-            border: "1px solid " + GOLD,
+            background: "#FF7200",
+            color: "#FFFFFF",
+            border: "1px solid #FF7200",
             fontSize: 14,
             fontWeight: 800,
             cursor: "pointer",
-            boxShadow:
-              "0 0 20px color-mix(in srgb, " + GOLD + " 40%, transparent)",
+            boxShadow: "0 4px 18px rgba(255, 114, 0, 0.5)",
           }}
         >
           Got it · let&apos;s pick
@@ -251,7 +256,14 @@ function BenefitLine({
     >
       <span
         aria-hidden
-        style={{ color: GOLD, fontSize: 16, lineHeight: 1.2 }}
+        style={{
+          // Owner directive 2026-11-10 · bullet accent flipped from
+          // Gold to NEX Orange to match the sheet's new orange CTA +
+          // the overall header orange language.
+          color: "#FF7200",
+          fontSize: 16,
+          lineHeight: 1.2,
+        }}
       >
         ✦
       </span>

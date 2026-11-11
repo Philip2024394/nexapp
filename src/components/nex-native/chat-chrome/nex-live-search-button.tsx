@@ -56,6 +56,10 @@ export function NexLiveSearchButton(): React.JSX.Element {
         aria-expanded={open}
         data-nex-live-search-trigger
         style={{
+          // Owner directive 2026-11-10 · header magnifier flipped
+          // from solid black + white icon to transparent + black
+          // icon · matches the side-drawer trigger treatment on
+          // the new Warm Ivory canvas.
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
@@ -63,12 +67,11 @@ export function NexLiveSearchButton(): React.JSX.Element {
           height: 36,
           padding: 0,
           borderRadius: "50%",
-          background: "#000000",
-          border: "1px solid rgba(255,255,255,0.14)",
-          color: "#FFFFFF",
+          background: "transparent",
+          border: "none",
+          color: "#000000",
           cursor: "pointer",
-          boxShadow:
-            "0 6px 18px rgba(0,0,0,0.55), inset 0 0 0 1px color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 24%, transparent)",
+          boxShadow: "none",
           WebkitTapHighlightColor: "transparent",
         }}
       >

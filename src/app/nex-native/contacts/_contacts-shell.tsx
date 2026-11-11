@@ -83,21 +83,17 @@ export function ContactsShell({ children }: ContactsShellProps) {
         />
       </div>
 
-      {/* Layer 2 · Owner directive 2026-11-10 · Contacts background
-          is fully-opaque emerald. Earlier 2026-11-09 iteration let
-          ~4 % of the Ireland studio photo bleed through for "subtle
-          texture"; owner caught the bleed-through on the narrow
-          iPhone preview (<500 px viewport) and asked for zero
-          show-through. Both gradient stops switched to alpha 1.0.
-          Layer 1 (studio photo) remains below for future opacity
-          tweaks but is fully masked at the current setting. */}
+      {/* Layer 2 · Owner directive 2026-11-11 · Contacts background
+          unified to a single Pale Ivory #F5EDD3 to match the main
+          chat background + the side drawer. Earlier two-tone
+          gradient (Warm Ivory → Pale Ivory) retired. Fully opaque
+          · studio photo in Layer 1 remains fully masked. */}
       <div
         aria-hidden
         style={{
           position: "absolute",
           inset: 0,
-          background:
-            "linear-gradient(135deg, rgb(18, 61, 43) 0%, rgb(27, 81, 56) 100%)",
+          background: "#F5EDD3",
           zIndex: 1,
         }}
       />

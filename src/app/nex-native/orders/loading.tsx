@@ -1,8 +1,7 @@
-// src/app/nex-native/orders/loading.tsx · R32 · instant-paint for
-// the buyer order history list.
+// src/app/nex-native/orders/loading.tsx
+//
+// Owner directive 2026-11-11 · all loading animations retired across
+// /nex-native/*. This route now re-exports the shared SilentLoading
+// component · see src/app/nex-native/_silent-loading.tsx for rationale.
 
-import { NexLoadingSkeleton } from "@/components/nex-native/nex-loading-skeleton";
-
-export default function OrdersLoading() {
-  return <NexLoadingSkeleton label="Orders" rows={4} />;
-}
+export { SilentLoading as default } from "@/app/nex-native/_silent-loading";

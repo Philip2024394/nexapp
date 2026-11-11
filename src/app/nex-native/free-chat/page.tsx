@@ -99,25 +99,24 @@ import { readBubbleCustomization } from "./_customize-actions";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Owner-authorised 2026-11-02 · Ireland theme routing · the free-chat
-// chrome is a dark surface. Route colour-themed fields through
-// --nex-world-* CSS vars with the current hex as fallback so Ireland
-// (identity-sealed Emerald #123D2B · Forest #1B5138 · Gold #C6A15B)
-// renders without touching the Worldwide / Indonesia experience. Text
-// ink + self-bubble treatment + orangeInk stay universal for legibility
-// on dark surfaces · same pattern as ControlDrawer (sealed 2026-11-01).
+// Owner directive 2026-11-10 · NEX Ireland light-theme palette.
+// Free-chat canvas is now a LIGHT surface:
+//   bg   → --nex-world-background-base (Warm Ivory #FFF9E9)
+//   panel → derived from --nex-world-drawer-bg (Pale Ivory #F5EDD3)
+//   text → dark warm-brown trio for legibility on ivory
+// Previous assumption (dark surface · light text) retired.
 const NEX = {
-  bg: "var(--nex-world-drawer-bg, #020914)",
-  panel: "color-mix(in srgb, var(--nex-world-drawer-bg, #071525) 92%, white 8%)",
-  panelSoft: "color-mix(in srgb, var(--nex-world-drawer-bg, #071525) 84%, transparent)",
-  border: "color-mix(in srgb, var(--nex-world-secondary, #00AFFF) 25%, transparent)",
-  cyan: "var(--nex-world-secondary, #00AFFF)",
-  cyanSoft: "color-mix(in srgb, var(--nex-world-secondary, #00AFFF) 35%, transparent)",
-  cyanBubble: "color-mix(in srgb, var(--nex-world-secondary, #00AFFF) 15%, transparent)",
-  text: "#F2F5F8",
-  textDim: "#B5C3D6",
-  textMute: "#7D9BC0",
-  orange: "var(--nex-world-secondary, #FF7200)",
+  bg: "var(--nex-world-background-base, #FFF9E9)",
+  panel: "color-mix(in srgb, var(--nex-world-drawer-bg, #F5EDD3) 92%, white 8%)",
+  panelSoft: "color-mix(in srgb, var(--nex-world-drawer-bg, #F5EDD3) 84%, transparent)",
+  border: "color-mix(in srgb, var(--nex-world-secondary, #D4A24F) 25%, transparent)",
+  cyan: "var(--nex-world-secondary, #D4A24F)",
+  cyanSoft: "color-mix(in srgb, var(--nex-world-secondary, #D4A24F) 35%, transparent)",
+  cyanBubble: "color-mix(in srgb, var(--nex-world-secondary, #D4A24F) 15%, transparent)",
+  text: "var(--nex-world-text-primary, #2A1F0F)",
+  textDim: "var(--nex-world-text-secondary, #5A4A2E)",
+  textMute: "var(--nex-world-text-muted, #8A7A5E)",
+  orange: "var(--nex-world-secondary, #D4A24F)",
   // Owner directive 2026-10-21 (iteration 47 · V15 adoption) · self
   // bubble now uses the Charcoal glass variant from the prototypes:
   // dark charcoal 35% fill + bright white 65% 1px rim. Reads as a

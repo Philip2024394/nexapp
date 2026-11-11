@@ -1,10 +1,7 @@
 // src/app/nex-native/settings/profile/loading.tsx
-// Owner-authorised 2026-11-09 · fills white-screen gap on the profile
-// surface · high traffic post-signup and from every drawer "My profile"
-// row across all three NEX deployments.
+//
+// Owner directive 2026-11-11 · all loading animations retired across
+// /nex-native/*. This route now re-exports the shared SilentLoading
+// component · see src/app/nex-native/_silent-loading.tsx for rationale.
 
-import { NexLoadingSkeleton } from "@/components/nex-native/nex-loading-skeleton";
-
-export default function Loading() {
-  return <NexLoadingSkeleton label="Loading profile" rows={5} />;
-}
+export { SilentLoading as default } from "@/app/nex-native/_silent-loading";

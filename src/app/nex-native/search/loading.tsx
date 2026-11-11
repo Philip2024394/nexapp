@@ -1,8 +1,7 @@
-// src/app/nex-native/search/loading.tsx · instant-paint boundary for
-// the search surface.
+// src/app/nex-native/search/loading.tsx
+//
+// Owner directive 2026-11-11 · all loading animations retired across
+// /nex-native/*. This route now re-exports the shared SilentLoading
+// component · see src/app/nex-native/_silent-loading.tsx for rationale.
 
-import { NexLoadingSkeleton } from "@/components/nex-native/nex-loading-skeleton";
-
-export default function SearchLoading() {
-  return <NexLoadingSkeleton label="Search" rows={3} />;
-}
+export { SilentLoading as default } from "@/app/nex-native/_silent-loading";

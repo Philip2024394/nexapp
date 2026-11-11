@@ -1088,22 +1088,18 @@ function IdentityBar({
       : session.displayName;
   return (
     <div style={identityBarStyle} data-nex-control-drawer-identity>
-      <div style={identityBarTextColumnStyle}>
-        <div style={identityNameStyle}>{nameToRender}</div>
+      {/* Owner directive 2026-11-10 iter 3 · NEX identity row is now
+          ONE row carrying display name + NEX-handle + Copy chip
+          together. Prior layout stacked name on row 1 + handle/Copy
+          on row 2; owner wants them collapsed to a single line. */}
+      <div style={identityOneRowStyle}>
+        <div style={identityNameInlineStyle}>{nameToRender}</div>
         {session.nexHandle ? (
-          // Owner directive 2026-11-10 · NEX-handle row is now a
-          // single flex row carrying the ID on the left and a smaller
-          // Copy button on the right. Previously the Copy button sat
-          // in the outer identityBar · moved inline so the handle +
-          // Copy read as one metadata chip, tighter and clearer.
-          <div style={identityHandleRowStyle}>
+          <>
             <div style={identityHandleStyle}>
               {/* Owner directive 2026-10-17 · the "nex-" prefix is a
                   brand mark · always rendered uppercase as "NEX-" ·
-                  the numeric part is preserved exactly. Storage stays
-                  lowercase (canonical column shape · validated by
-                  `normaliseHandle` in bio/[nex_handle]/_handle.ts) ·
-                  this is purely a display transform. */}
+                  the numeric part is preserved exactly. */}
               {session.nexHandle.replace(/^nex-/i, "NEX-")}
             </div>
             <CopyIdentityButton
@@ -1111,7 +1107,7 @@ function IdentityBar({
               handle={session.nexHandle.replace(/^nex-/i, "NEX-")}
               compact
             />
-          </div>
+          </>
         ) : null}
       </div>
       {/* Owner directive 2026-10-20 · right-side thumbnail of the
@@ -1386,23 +1382,26 @@ const DANGER_INK = "#1A0505";
 // bundle doesn't keep unused colour tokens around.
 
 const triggerButtonStyle: React.CSSProperties = {
+  // Owner directive 2026-11-10 iter 3 · the 3-dot / default drawer
+  // trigger now fills SOLID NEX ORANGE with a WHITE glyph · matches
+  // the cart + side-drawer "+" treatment so every header drawer
+  // trigger reads as an orange CTA on the ivory canvas. The earlier
+  // 2026-10-18 "no container line" fix is preserved via `outline:
+  // none` + `boxShadow` managed below + `WebkitTapHighlightColor:
+  // transparent`.
   width: 36,
   height: 36,
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  background: "transparent",
-  border: "none",
-  // Owner directive 2026-10-18 · the 3-dots button in the welcome
-  // header was still rendering a visible "container line" — the
-  // browser's default focus-visible outline + the mobile tap-
-  // highlight square that persists after tap. Kill both at the
-  // style layer so no chrome lingers around the icon.
+  background: "#FF7200",
+  border: "1px solid #FF7200",
+  borderRadius: "50%",
   outline: "none",
-  boxShadow: "none",
+  boxShadow: "0 2px 8px rgba(255, 114, 0, 0.35)",
   WebkitTapHighlightColor: "transparent",
   cursor: "pointer",
-  color: TEXT,
+  color: "#FFFFFF",
   padding: 0,
 };
 
@@ -1639,6 +1638,30 @@ const identityHandleRowStyle: React.CSSProperties = {
   gap: 10,
   width: "100%",
   marginTop: 2,
+};
+// Owner directive 2026-11-10 iter 3 · identity bar collapsed to a
+// SINGLE row: display name + NEX handle + Copy chip. Previous layout
+// stacked name above handle+chip; owner wants all three side-by-side.
+const identityOneRowStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  width: "100%",
+  minWidth: 0,
+};
+// Name inline on the one-row identity layout · truncates when space
+// runs out so the handle + Copy stay visible on narrow drawers.
+const identityNameInlineStyle: React.CSSProperties = {
+  color: "#F2F5F8",
+  fontSize: 14,
+  fontWeight: 700,
+  lineHeight: 1.1,
+  letterSpacing: 0.1,
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  minWidth: 0,
+  flex: "0 1 auto",
 };
 // Owner directive 2026-10-18 · the anon "Sign in to NEX" row now
 // splits into a left text-column + right round blue arrow button.

@@ -32,41 +32,42 @@ const IRELAND: WorldDefinition = {
     byline: "Emerald · Forest · Gold · Sage",
     glyph: "☘️",
   },
-  // Owner-sealed 2026-11-01 (narrow premium palette update) ·
-  // NEX Ireland "set colors main":
-  //   Emerald #123D2B — drawer background, chrome surface
-  //                     (emitted via WORLD_DRAWER_BG.ireland in
-  //                      _world-stylesheet.tsx)
-  //   Forest  #1B5138 — primary buttons, interactive accents
-  //                     (palette.primary below)
-  //   Gold    #C6A15B — premium accent, "Premium Irish experience"
-  //                     tagline (palette.secondary + palette.tertiary)
-  //   Sage    #AFC5B5 — button text / primary ink
-  //                     (emitted via WORLD_PRIMARY_INK.ireland in
-  //                      _world-stylesheet.tsx — country-scoped,
-  //                      NOT a WorldPalette field)
+  // Owner-sealed 2026-11-10 · NEX Ireland light-theme palette.
+  // Supersedes the 2026-11-01 Emerald/Forest/Gold seal (and every
+  // earlier Irish Green iteration). From now on NEX Ireland is a
+  // warm, light-ivory surface with Amber as the single accent.
   //
-  // Supersedes the earlier 2026-11-01 Irish Green #02AD04 /
-  // Golden Orange #F5A623 / White seal.
+  //   Warm Ivory #FFF9E9 — main chat background (backgroundBase)
+  //   Pale Ivory #F5EDD3 — sidebar + panels (surfaceSunken ·
+  //                       mirrored to WORLD_DRAWER_BG.ireland in
+  //                       _world-stylesheet.tsx)
+  //   NEX Amber  #D4A24F — accent · primary buttons · outgoing
+  //                       message bubbles (palette.primary /
+  //                       secondary / tertiary all unified to this)
+  //   Pure White #FFFFFF — incoming message bubbles + card
+  //                       surfaces (palette.surface)
   //
-  // Narrow-update scope · ONLY primary/secondary/tertiary change here.
-  // Preserved as-is per owner directive: cream backgroundBase, white
-  // surfaces, text colours, border rgba (still tinted on the earlier
-  // Irish Green until a wider pass is authorised), success/warning/danger.
+  // Text stays dark-on-ivory. Border rgba retinted to Amber so
+  // card outlines feel coherent with the new accent.
   palette: {
-    primary: "#1B5138",              // Forest · primary buttons, interactive accents
-    secondary: "#C6A15B",            // Gold · premium accent (hover/link/secondary CTA)
-    tertiary: "#C6A15B",             // Gold · doubled with secondary (continues the earlier Ireland pattern)
-    backgroundBase: "#FAF8F4",       // Trade Centre cream (page bg · unchanged)
-    surface: "#FFFFFF",              // White (unchanged)
-    surfaceSunken: "#F2EDDE",        // soft cream (unchanged)
-    textPrimary: "#102013",          // unchanged
-    textSecondary: "#3F5742",        // unchanged
-    textMuted: "#7A8C7E",            // unchanged
-    border: "rgba(2, 173, 4, 0.14)", // unchanged per narrow scope (still Irish-Green tinted)
-    borderAccent: "rgba(2, 173, 4, 0.4)", // unchanged per narrow scope (still Irish-Green tinted)
-    success: "#02AD04",              // unchanged per narrow scope (still Irish Green)
-    warning: "#F5A623",              // unchanged per narrow scope (still Golden Orange)
+    primary: "#D4A24F",              // NEX Amber · primary buttons, outgoing bubble rim
+    secondary: "#D4A24F",            // NEX Amber · accent (hover / link / secondary CTA)
+    tertiary: "#D4A24F",             // NEX Amber · doubled with secondary
+    // Owner directive 2026-11-11 · main chat background unified with
+    // the side-drawer tone · both now paint Pale Ivory so the drawer
+    // feels like part of the same surface rather than a different
+    // layer sitting on top. Earlier spec used Warm Ivory #FFF9E9 for
+    // the canvas; that two-tone look has been retired.
+    backgroundBase: "#F5EDD3",       // Pale Ivory · main chat background (= drawer bg)
+    surface: "#FFFFFF",              // Pure White · card surfaces + incoming bubbles
+    surfaceSunken: "#F5EDD3",        // Pale Ivory · panels / sunken surfaces
+    textPrimary: "#2A1F0F",          // dark warm brown · readable on ivory
+    textSecondary: "#5A4A2E",        // mid warm brown · secondary ink
+    textMuted: "#8A7A5E",            // soft brown · muted ink
+    border: "rgba(212, 162, 79, 0.18)",   // Amber-tinted divider
+    borderAccent: "rgba(212, 162, 79, 0.45)", // Amber-tinted active border
+    success: "#02AD04",              // unchanged (Irish Green reserved for state only)
+    warning: "#F5A623",              // unchanged
     danger: "#9B1C1C",               // unchanged
   },
 };

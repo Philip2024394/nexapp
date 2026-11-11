@@ -164,6 +164,38 @@ function normaliseArray(v: unknown, maxItems: number, label: string): string[] {
   return cleaned;
 }
 
+/** Owner directive 2026-11-11 (Cycle 22 · P1+P2 N+1 fix) · batch
+ *  profile lookup keyed by account_id. Chat/peer side-drawer + contacts
+ *  friend hydration + notifications used to call `getProfileByAccountId`
+ *  per id inside Promise.all, firing N DB round-trips. This runs ONE
+ *  query. Missing profiles simply don't appear in the Map · caller
+ *  decides fallback (initials, null avatar, etc.).
+ *
+ *  Does NOT apply the NEX1 brand-mark fallback from `getProfileByAccountId`
+ *  · callers that render NEX1 should handle the fallback themselves
+ *  (or the single-id reader still works for that one case). Keeps the
+ *  batch read focused on the common hot path. */
+export async function getProfilesByAccountIds(
+  accountIds: ReadonlyArray<NexUuid>,
+): Promise<Map<NexUuid, NexAccountProfileRow>> {
+  const out = new Map<NexUuid, NexAccountProfileRow>();
+  if (accountIds.length === 0) return out;
+  const unique = Array.from(new Set(accountIds));
+  const { data, error } = await nexSupabaseAdmin
+    .from("nex_account_profile")
+    .select("*")
+    .in("account_id", unique);
+  if (error) {
+    throw new Error(
+      `account-profile-service.getProfilesByAccountIds(${unique.length}): ${error.message}`,
+    );
+  }
+  for (const row of (data ?? []) as NexAccountProfileRow[]) {
+    out.set(row.account_id as NexUuid, row);
+  }
+  return out;
+}
+
 /** Read one profile by account_id · returns null when no row exists. */
 export async function getProfileByAccountId(
   accountId: NexUuid,

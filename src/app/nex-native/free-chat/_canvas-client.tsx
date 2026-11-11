@@ -68,22 +68,23 @@ export interface FreeChatCanvasClientProps {
   readonly initialBubbleCustomization?: BubbleCustomization | null;
 }
 
-// Owner-authorised 2026-11-02 · Ireland theme routing · mirrors the
-// page.tsx NEX palette so the free-chat chrome paints the Ireland
-// Emerald/Gold palette on Ireland and preserves Worldwide/Indonesia
-// navy/cyan via the fallbacks. Self-bubble + text ink stay universal
-// (dark-surface legibility).
+// Owner directive 2026-11-10 · NEX Ireland light-theme palette.
+// Canvas bg flipped from --nex-world-drawer-bg (now Pale Ivory
+// sidebar colour) to --nex-world-background-base (Warm Ivory
+// #FFF9E9 main chat bg). Text ink + accent routed through the
+// world palette CSS vars so Ireland reads dark-on-ivory and other
+// worlds still inherit their own tokens.
 const NEX = {
-  bg: "var(--nex-world-drawer-bg, #020914)",
-  text: "#F2F5F8",
-  textDim: "#B5C3D6",
-  textMute: "#7D9BC0",
-  cyan: "var(--nex-world-secondary, #00AFFF)",
-  cyanSoft: "color-mix(in srgb, var(--nex-world-secondary, #00AFFF) 35%, transparent)",
-  cyanBubble: "color-mix(in srgb, var(--nex-world-secondary, #00AFFF) 15%, transparent)",
+  bg: "var(--nex-world-background-base, #FFF9E9)",
+  text: "var(--nex-world-text-primary, #2A1F0F)",
+  textDim: "var(--nex-world-text-secondary, #5A4A2E)",
+  textMute: "var(--nex-world-text-muted, #8A7A5E)",
+  cyan: "var(--nex-world-secondary, #D4A24F)",
+  cyanSoft: "color-mix(in srgb, var(--nex-world-secondary, #D4A24F) 35%, transparent)",
+  cyanBubble: "color-mix(in srgb, var(--nex-world-secondary, #D4A24F) 15%, transparent)",
   selfGrayGlass: "rgba(55, 65, 81, 0.35)",
   selfCyanHairline: "rgba(255, 255, 255, 0.65)",
-  orange: "var(--nex-world-secondary, #FF7200)",
+  orange: "var(--nex-world-secondary, #D4A24F)",
   orangeInk: "#1A0808",
 };
 
@@ -1941,16 +1942,20 @@ function PickedThemeActionBar({
       role="group"
       aria-label="Confirm or change chat theme"
       style={{
+        // Owner directive 2026-11-10 · light-theme palette · the
+        // Keep + View Themes action bar now paints WHITE with an
+        // Amber-tinted border. Matches the Choose 1 Free Theme
+        // container above so the picker reads as one continuous
+        // light card stack.
         marginTop: 8,
         padding: "10px 10px",
         display: "grid",
         gridTemplateColumns: "1fr 1fr",
         gap: 8,
-        background: "rgba(2, 9, 20, 0.65)",
-        border: `1px solid rgba(0, 175, 255, 0.22)`,
+        background: "#FFFFFF",
+        border: "1px solid rgba(212, 162, 79, 0.32)",
         borderRadius: 12,
-        backdropFilter: "blur(8px)",
-        WebkitBackdropFilter: "blur(8px)",
+        boxShadow: "0 2px 10px rgba(42, 31, 15, 0.08)",
       }}
     >
       <button
@@ -1981,25 +1986,25 @@ function PickedThemeActionBar({
         onClick={onViewAll}
         data-nex-free-chat-picked-theme-view-all
         style={{
+          // Owner directive 2026-11-10 · View Themes button now fills
+          // SOLID NEX Orange (was transparent + orange rim). Reads as
+          // the primary "go browse the library" CTA against the new
+          // white action bar.
           minHeight: 40,
           padding: "0 12px",
           borderRadius: 10,
-          background: "transparent",
-          color: NEX.text,
-          // Owner directive 2026-11-03 · View Themes rim swapped from
-          // NEX cyan to NEX Orange so the browse CTA reads with the
-          // same orange language as the "Today's featured picks"
-          // urgency dot above and the sealed close buttons across
-          // modals.
-          border: `1px solid rgba(255, 114, 0, 0.72)`,
+          background: "#FF7200",
+          color: "#FFFFFF",
+          border: "1px solid #FF7200",
           fontSize: 13,
-          fontWeight: 700,
+          fontWeight: 800,
           letterSpacing: 0.3,
           textDecoration: "none",
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
           fontFamily: "inherit",
+          boxShadow: "0 2px 8px rgba(255, 114, 0, 0.35)",
           WebkitTapHighlightColor: "transparent",
         }}
       >
@@ -2205,13 +2210,16 @@ function FirstVisitThemeGrid({
       data-nex-free-chat-first-visit-row
       aria-label="Pick a chat background theme"
       style={{
+        // Owner directive 2026-11-10 · light-theme palette · the
+        // "Choose 1 Free Theme" container now paints WHITE with an
+        // Amber-tinted border (was dark navy 55% alpha + cyan
+        // hairline). Readable on the Warm Ivory canvas.
         marginTop: 8,
         padding: "10px 10px 12px",
-        background: "rgba(2, 9, 20, 0.55)",
-        border: `1px solid rgba(0, 175, 255, 0.14)`,
+        background: "#FFFFFF",
+        border: "1px solid rgba(212, 162, 79, 0.28)",
         borderRadius: 12,
-        backdropFilter: "blur(8px)",
-        WebkitBackdropFilter: "blur(8px)",
+        boxShadow: "0 2px 10px rgba(42, 31, 15, 0.08)",
       }}
     >
       {/* Owner directive 2026-11-03 · header row holds the title +
@@ -2243,33 +2251,10 @@ function FirstVisitThemeGrid({
           >
             Choose 1 Free Theme
           </h3>
-          <p
-            data-nex-free-chat-first-visit-urgency
-            style={{
-              margin: 0,
-              fontSize: 10,
-              fontWeight: 600,
-              letterSpacing: 0.4,
-              color: "#FF7200",
-              lineHeight: 1,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-            }}
-          >
-            <span
-              aria-hidden
-              style={{
-                display: "inline-block",
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                background: "#FF7200",
-                boxShadow: "0 0 6px rgba(255, 114, 0, 0.8)",
-              }}
-            />
-            Today&apos;s featured picks · refreshed daily
-          </p>
+          {/* Owner directive 2026-11-10 · "Today's featured picks ·
+              refreshed daily" urgency line removed per owner request.
+              Pulse keyframe still defined below for compatibility but
+              no longer renders (selector matches nothing). */}
         </div>
         <button
           type="button"
@@ -2313,16 +2298,23 @@ function FirstVisitThemeGrid({
           the animation scoped to this surface so it never affects any
           other theme-tile elsewhere in the app. */}
       <style>{`
+        /* Owner directive 2026-11-10 · the active-tile heartbeat glow
+         * was cyan rgba(0,175,255,X) sealed for the dark-Emerald era.
+         * On the new Warm Ivory + Amber palette it read as a
+         * blue-green halo (cyan on ivory). Swapped to NEX Orange
+         * rgba(255,114,0,X) so the selection glow matches the new
+         * orange CTAs and the composer send button.
+         */
         @keyframes nex-free-chat-tile-heartbeat {
           0%, 100% {
             box-shadow:
-              0 0 0 0 rgba(0, 175, 255, 0.6),
-              0 0 8px 1px rgba(0, 175, 255, 0.45);
+              0 0 0 0 rgba(255, 114, 0, 0.6),
+              0 0 8px 1px rgba(255, 114, 0, 0.45);
           }
           50% {
             box-shadow:
-              0 0 0 4px rgba(0, 175, 255, 0.0),
-              0 0 18px 3px rgba(0, 175, 255, 0.9);
+              0 0 0 4px rgba(255, 114, 0, 0.0),
+              0 0 18px 3px rgba(255, 114, 0, 0.9);
           }
         }
         [data-nex-free-chat-first-visit-tile-active="true"] {
@@ -2440,41 +2432,13 @@ function ThemeTile({
           {theme.placeholderLabel}
         </span>
       )}
-      {/* Owner directive 2026-11-03 · spotlight tiles pulled from the
-          paid Theme Library carry a €3.99 badge with a RED STRIKE
-          line through the price · reads as "this would normally cost
-          €3.99 but it's included as your free first pick". After the
-          user picks + creates account + hits Live, subsequent library
-          buys render at full price (no strike) on the Theme Library
-          page. Pinned plain tiles never render this badge. */}
-      {theme.isSpotlight ? (
-        <span
-          data-nex-free-chat-tile-spotlight-badge
-          aria-hidden
-          style={{
-            position: "absolute",
-            top: 4,
-            right: 4,
-            padding: "2px 6px",
-            borderRadius: 999,
-            background: "rgba(0, 0, 0, 0.72)",
-            border: `1px solid rgba(198, 161, 91, 0.9)`,
-            color: "#F2F5F8",
-            fontSize: 9,
-            fontWeight: 700,
-            letterSpacing: 0.3,
-            lineHeight: 1,
-            backdropFilter: "blur(4px)",
-            WebkitBackdropFilter: "blur(4px)",
-            textDecoration: "line-through",
-            textDecorationColor: "#FF4F70",
-            textDecorationThickness: 2,
-            textDecorationSkipInk: "none",
-          }}
-        >
-          €3.99
-        </span>
-      ) : null}
+      {/* Owner directive 2026-11-10 · price badge removed from theme
+          tiles. The earlier "€3.99 (strike)" spotlight treatment is
+          retired · the first free pick is already explicit in the
+          "Choose 1 Free Theme" container header, so the per-tile
+          price badge was redundant noise. Spotlight-vs-pinned data
+          still flows through `theme.isSpotlight` for rotation logic;
+          only the visual badge is dropped. */}
     </button>
   );
 }

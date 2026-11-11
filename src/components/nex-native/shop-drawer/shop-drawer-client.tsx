@@ -291,19 +291,25 @@ export function ShopDrawer({
               aria-label="Close shop"
               onClick={closeDrawer}
               style={{
+                // Owner directive 2026-11-10 · shop-drawer × now a
+                // solid NEX Orange puck with a white glyph · matches
+                // the How-It-Works sheet close + the chat-header
+                // orange CTA language.
                 width: 32,
                 height: 32,
                 borderRadius: "50%",
-                background: "transparent",
-                border: `1px solid ${PANEL_BORDER}`,
-                color: TEXT,
+                background: "#FF7200",
+                border: "1px solid #FF7200",
+                color: "#FFFFFF",
                 cursor: "pointer",
                 padding: 0,
                 fontSize: 18,
+                fontWeight: 800,
                 lineHeight: 1,
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
+                boxShadow: "0 2px 8px rgba(255, 114, 0, 0.35)",
               }}
             >
               ×

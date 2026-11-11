@@ -49,8 +49,12 @@ const NEX = {
   cyan: "var(--nex-world-secondary, #00AFFF)",
   text: "#F2F5F8",
   textMute: "#7D9BC0",
-  orange: "var(--nex-world-secondary, #FF7200)",
-  orangeInk: "#1A0808",
+  // Owner directive 2026-11-10 · pin the send-button accent to the
+  // literal NEX Orange #FF7200 with WHITE ink (was routed through
+  // --nex-world-secondary which now resolves to Amber on the light
+  // Ireland theme · owner wants send-button to stay NEX Orange).
+  orange: "#FF7200",
+  orangeInk: "#FFFFFF",
   // Owner directive 2026-10-22 (afternoon · follow-up pass 4) · solid
   // NEX navy used by the attach-panel action buttons so they read as
   // dark chips against the accent-tinted panel background.
@@ -1177,17 +1181,18 @@ export function FreeChatComposerClient({
         aria-expanded={attachOpen}
         data-nex-free-chat-composer-attach
         style={{
+          // Owner directive 2026-11-10 · composer `+` attach button
+          // flipped from solid black + white glyph to solid NEX
+          // Orange + white glyph · matches the header + and the
+          // cart + 3-dot FAB · unified orange CTA language.
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
           width: 32,
           height: 32,
           borderRadius: "50%",
-          // Owner directive 2026-11-05 later-same-day iter 6 · solid
-          // black + white glyph matching peer chat composer's `+`
-          // button and all other floating chat chrome buttons.
-          background: "#000000",
-          border: "1px solid rgba(255, 255, 255, 0.14)",
+          background: "#FF7200",
+          border: "1px solid #FF7200",
           color: "#FFFFFF",
           fontSize: 20,
           fontWeight: 300,
@@ -1196,6 +1201,7 @@ export function FreeChatComposerClient({
           padding: 0,
           lineHeight: 1,
           fontFamily: "inherit",
+          boxShadow: "0 2px 8px rgba(255, 114, 0, 0.35)",
           transition: "transform 180ms ease, background 180ms ease",
           transform: attachOpen ? "rotate(45deg)" : "rotate(0deg)",
         }}
@@ -1259,12 +1265,16 @@ export function FreeChatComposerClient({
           aria-label="Message"
           data-nex-free-chat-composer-input
           style={{
+            // Owner directive 2026-11-10 · composer input pill now
+            // paints WHITE (was dark-navy rgba(2,9,20,0.6)) so the
+            // text field reads as a clean input on the Warm Ivory
+            // canvas. Ink stays NEX.text (dark warm brown).
             width: "100%",
             padding: "10px 50px 10px 48px",
-            background: "rgba(2,9,20,0.6)",
+            background: "#FFFFFF",
             color: NEX.text,
             fontSize: 14,
-            border: `1px solid ${NEX.border}`,
+            border: "1px solid rgba(212, 162, 79, 0.42)",
             borderRadius: 999,
             outline: "none",
             fontFamily: "inherit",

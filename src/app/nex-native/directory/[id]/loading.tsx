@@ -1,9 +1,7 @@
-// src/app/nex-native/directory/[id]/loading.tsx · R32b · directory
-// detail page · 11 awaits for business + evidence + reviews. Critical
-// for the "tap directory tile" UX · user expects instant acknowledgement.
+// src/app/nex-native/directory/[id]/loading.tsx
+//
+// Owner directive 2026-11-11 · all loading animations retired across
+// /nex-native/*. This route now re-exports the shared SilentLoading
+// component · see src/app/nex-native/_silent-loading.tsx for rationale.
 
-import { NexLoadingSkeleton } from "@/components/nex-native/nex-loading-skeleton";
-
-export default function DirectoryDetailLoading() {
-  return <NexLoadingSkeleton label="Directory" rows={5} />;
-}
+export { SilentLoading as default } from "@/app/nex-native/_silent-loading";

@@ -1,12 +1,7 @@
 // src/app/nex-native/profile/me/loading.tsx
 //
-// Route-level Suspense boundary for /nex-native/profile/me.
-// Owner-authorised 2026-11-09 · fills a white-screen gap caught in the
-// drawer audit. Uses the sealed NexLoadingSkeleton primitive · no new
-// visual design · matches every other route's loading shell.
+// Owner directive 2026-11-11 · all loading animations retired across
+// /nex-native/*. This route now re-exports the shared SilentLoading
+// component · see src/app/nex-native/_silent-loading.tsx for rationale.
 
-import { NexLoadingSkeleton } from "@/components/nex-native/nex-loading-skeleton";
-
-export default function Loading() {
-  return <NexLoadingSkeleton label="Loading profile" rows={5} />;
-}
+export { SilentLoading as default } from "@/app/nex-native/_silent-loading";

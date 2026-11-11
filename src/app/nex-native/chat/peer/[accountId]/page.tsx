@@ -704,89 +704,89 @@ export default async function PeerChatPage({
   // hop between peer chats without leaving the chat surface. Best-
   // effort · if any lookup fails we return an empty list rather than
   // block the page render.
-  const contacts: SideNavContact[] = await (async () => {
-    try {
-      const friendIds = await friendService.listFriends(session.account.id);
-      const others = friendIds.filter((id) => id !== peer.id);
-      // Put the current peer FIRST so it's obvious you're in that
-      // chat when the drawer opens · include ALL friends after.
-      const orderedIds = [peer.id, ...others];
-      const list = await Promise.all(
-        orderedIds.map(async (id) => {
-          const [acc, profile] = await Promise.all([
-            accountService.getAccountById(id),
-            (async () => {
-              try {
-                const svc = await import(
-                  "@/lib/nex-native/account-profile-service"
-                );
-                return await svc.getProfileByAccountId(id);
-              } catch {
-                return null;
-              }
-            })(),
-          ]);
-          if (!acc) return null;
-          const professionShort = profile?.profession
-            ? profile.profession.split(/[\s·,/-]+/).filter(Boolean)[0] ?? null
+  // Owner directive 2026-11-11 (Cycle 22 · P1 N+1 fix) · side-drawer
+  // contacts + pending-invite hydration now runs in TWO batch queries
+  // per group (accounts + profiles) regardless of friend count.
+  // Previously this fired 2 × N DB round-trips per render inside
+  // Promise.all. Behaviour preserved: missing accounts filter out,
+  // missing profiles fall back to null. Both groups' lookups share the
+  // same accountProfileService batch.
+  const [contacts, pendingInvites]: [SideNavContact[], PendingInvite[]] =
+    await (async () => {
+      try {
+        // Kick both friend + pending-edge list queries in parallel so
+        // neither blocks the other.
+        const [friendIds, pendingEdges] = await Promise.all([
+          friendService.listFriends(session.account.id),
+          friendService.listPendingIncoming(session.account.id),
+        ]);
+        const pendingOtherIds = pendingEdges.map((edge) =>
+          edge.a_account_id === session.account.id
+            ? edge.b_account_id
+            : edge.a_account_id,
+        );
+        // All account IDs we need in ONE batch · dedupe handled inside
+        // the batch helper.
+        const allIds = [peer.id, ...friendIds, ...pendingOtherIds];
+        const svcProfile = await import(
+          "@/lib/nex-native/account-profile-service"
+        );
+        const [accountMap, profileMap] = await Promise.all([
+          accountService.getAccountsByIds(allIds).catch(() => new Map()),
+          svcProfile
+            .getProfilesByAccountIds(allIds)
+            .catch(() => new Map()),
+        ]);
+        const professionShort = (
+          profession: string | null | undefined,
+        ): string | null =>
+          profession
+            ? profession.split(/[\s·,/-]+/).filter(Boolean)[0] ?? null
             : null;
-          return {
-            id: acc.id,
-            name: acc.display_name,
-            profession: professionShort,
-            avatarUrl: profile?.avatar_url ?? null,
-            href: `/nex-native/chat/peer/${acc.id}`,
-            isCurrent: acc.id === peer.id,
-          };
-        }),
-      );
-      return list.filter((c): c is SideNavContact => !!c);
-    } catch {
-      return [];
-    }
-  })();
 
-  // Pending friend invites the viewer can accept · shown at the top
-  // of the header drawer.
-  const pendingInvites: PendingInvite[] = await (async () => {
-    try {
-      const edges = await friendService.listPendingIncoming(session.account.id);
-      const rows = await Promise.all(
-        edges.map(async (edge) => {
-          const otherId =
-            edge.a_account_id === session.account.id
-              ? edge.b_account_id
-              : edge.a_account_id;
-          const [acc, profile] = await Promise.all([
-            accountService.getAccountById(otherId),
-            (async () => {
-              try {
-                const svc = await import(
-                  "@/lib/nex-native/account-profile-service"
-                );
-                return await svc.getProfileByAccountId(otherId);
-              } catch {
-                return null;
-              }
-            })(),
-          ]);
-          if (!acc) return null;
-          const professionShort = profile?.profession
-            ? profile.profession.split(/[\s·,/-]+/).filter(Boolean)[0] ?? null
-            : null;
-          return {
-            otherAccountId: acc.id,
-            name: acc.display_name,
-            avatarUrl: profile?.avatar_url ?? null,
-            profession: professionShort,
-          };
-        }),
-      );
-      return rows.filter((r): r is PendingInvite => !!r);
-    } catch {
-      return [];
-    }
-  })();
+        // Build side-drawer contacts · peer first, then everyone else.
+        const others = friendIds.filter((id) => id !== peer.id);
+        const orderedIds = [peer.id, ...others];
+        const contactsList: SideNavContact[] = orderedIds
+          .map((id) => {
+            const acc = accountMap.get(id);
+            if (!acc) return null;
+            const profile = profileMap.get(id) ?? null;
+            return {
+              id: acc.id,
+              name: acc.display_name,
+              profession: professionShort(profile?.profession),
+              avatarUrl: profile?.avatar_url ?? null,
+              href: `/nex-native/chat/peer/${acc.id}`,
+              isCurrent: acc.id === peer.id,
+            };
+          })
+          .filter((c): c is SideNavContact => c !== null);
+
+        // Build pending-invites list · dedupe on other-account id.
+        const invitesList: PendingInvite[] = pendingEdges
+          .map((edge) => {
+            const otherId =
+              edge.a_account_id === session.account.id
+                ? edge.b_account_id
+                : edge.a_account_id;
+            const acc = accountMap.get(otherId);
+            if (!acc) return null;
+            const profile = profileMap.get(otherId) ?? null;
+            return {
+              otherAccountId: acc.id,
+              name: acc.display_name,
+              avatarUrl: profile?.avatar_url ?? null,
+              profession: professionShort(profile?.profession),
+            };
+          })
+          .filter((r): r is PendingInvite => r !== null);
+
+        return [contactsList, invitesList];
+      } catch {
+        return [[], []];
+      }
+    })();
 
   const presenceKind: PortraitBloomPresenceKind = isOffline
     ? "offline"
@@ -1026,48 +1026,68 @@ export default async function PeerChatPage({
   //
   // Privacy: subtitle is a metadata string ("3 unread messages"), NEVER
   // the plaintext body. Honours the sealed Phase 1 E2E posture.
+  // Owner directive 2026-11-11 (Cycle 22 · P1 N+1 fix) · unread-chat
+  // notification hydration now batches the per-conversation
+  // `getAccountById` into ONE `getAccountsByIds` lookup. The unread
+  // counts still fire per-conversation (no batch RPC for that yet),
+  // but the account hydration is N → 1. Semantics preserved: zero-
+  // unread conversations still filter out, missing accounts filter out.
   let unreadChatNotifs: NotificationItem[] = [];
   try {
     const myConversations =
       await peerConversationService.listPeerConversationsForAccount(
         session.account.id,
       );
-    const unreadRaw = await Promise.all(
-      myConversations
-        .filter((c) => c.id !== conversation.id)
-        .map(async (c) => {
-          const n = await peerMessageService.countUnreadPeerMessages(
-            c.id,
-            session.account.id,
-          );
-          if (n === 0) return null;
-          const otherId =
-            c.participant_a_id === session.account.id
-              ? c.participant_b_id
-              : c.participant_a_id;
-          const other = await accountService.getAccountById(otherId);
-          if (!other) return null;
-          return {
-            id: `unread-${c.id}`,
-            section: "chats" as const,
-            title: other.display_name,
-            subtitle: n === 1 ? "1 new message" : `${n} new messages`,
-            href: other.nex_handle
-              ? `/chat/${other.nex_handle}`
-              : `/nex-native/chat/peer/${other.id}`,
-            createdAt: c.last_message_at ?? c.created_at,
-            unread: true,
-            thumbnailUrl: null,
-            senderAccountId: other.id,
-            profileHref: other.nex_handle
-              ? `/nex-native/u/${other.nex_handle}`
-              : null,
-          };
-        }),
+    const otherConvos = myConversations.filter(
+      (c) => c.id !== conversation.id,
     );
-    unreadChatNotifs = unreadRaw.filter(
-      (x): x is NonNullable<typeof x> => x !== null,
+    // First pass · parallel unread counts (still N queries · service
+    // doesn't expose a batch count RPC yet · tracked as REMAINING).
+    const unreadCounts = await Promise.all(
+      otherConvos.map((c) =>
+        peerMessageService
+          .countUnreadPeerMessages(c.id, session.account.id)
+          .catch(() => 0),
+      ),
     );
+    // Build the "has unread > 0" subset + batch-load their other-
+    // participant accounts in ONE query.
+    const withUnread = otherConvos
+      .map((c, i) => ({
+        conv: c,
+        unread: unreadCounts[i] ?? 0,
+        otherId:
+          c.participant_a_id === session.account.id
+            ? c.participant_b_id
+            : c.participant_a_id,
+      }))
+      .filter((r) => r.unread > 0);
+    const otherAccountsMap = await accountService
+      .getAccountsByIds(withUnread.map((r) => r.otherId))
+      .catch(() => new Map());
+    unreadChatNotifs = withUnread
+      .map((r) => {
+        const other = otherAccountsMap.get(r.otherId);
+        if (!other) return null;
+        return {
+          id: `unread-${r.conv.id}`,
+          section: "chats" as const,
+          title: other.display_name,
+          subtitle:
+            r.unread === 1 ? "1 new message" : `${r.unread} new messages`,
+          href: other.nex_handle
+            ? `/chat/${other.nex_handle}`
+            : `/nex-native/chat/peer/${other.id}`,
+          createdAt: r.conv.last_message_at ?? r.conv.created_at,
+          unread: true,
+          thumbnailUrl: null,
+          senderAccountId: other.id,
+          profileHref: other.nex_handle
+            ? `/nex-native/u/${other.nex_handle}`
+            : null,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn("peer-chat · unread-chats build failed:", err);
