@@ -870,16 +870,36 @@ export default async function ContactsPage({ searchParams }: PageProps) {
           header is now a transparent icon strip · no title text, no
           Emerald background, no gold border-bottom · just the shamrock
           glyph on the left and the Search/Add icons on the right. */}
+      {/* Owner directive 2026-11-11 (Cycle 31) · header pinned to the
+          top of the Contacts scroll surface via position: sticky.
+          Content scrolls underneath while the wave backdrop (owned
+          by _contacts-shell.tsx Layer A) stays still below. Semi-
+          opaque Pale Ivory + backdrop-blur masks scrolling content
+          so the title + cart + "+" always read cleanly. The sealed
+          negative-margin + overscroll-top padding pattern is kept
+          so the header still bleeds edge-to-edge of the frame. */}
       <header
         style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 5,
           display: "flex",
           alignItems: "center",
           gap: 10,
           padding: "calc(env(safe-area-inset-top, 0) + 16px) 16px 14px",
-          background: "transparent",
+          background: "rgba(245, 237, 211, 0.82)",
+          backdropFilter: "blur(14px)",
+          WebkitBackdropFilter: "blur(14px)",
           color: "var(--nex-world-primary-ink, #AFC5B5)",
           borderBottom: "none",
-          margin: "calc(0px - env(safe-area-inset-top, 0) - 28px) -14px 10px",
+          // Owner directive 2026-11-11 (Cycle 31 v2) · keep the
+          // horizontal bleed (-14px side margins) so the header
+          // reaches the frame edges, but drop the sealed negative
+          // top-margin: with position: sticky the negative margin
+          // pushed the title 28px above the scroll-container top
+          // and clipped "Contacts" on scroll. 0 top-margin lets
+          // sticky pin cleanly at top: 0.
+          margin: "0 -14px 10px",
         }}
       >
         <h1
@@ -1150,7 +1170,12 @@ export default async function ContactsPage({ searchParams }: PageProps) {
           gap: 14,
           padding: "16px 18px",
           borderRadius: 16,
-          background: "var(--nex-world-secondary, #C6A15B)",
+          // Owner directive 2026-11-11 (Cycle 32) · explicit Ireland
+          // Gold #C6A15B to match the notifications-drawer shop
+          // section shade (Treaty Bar row). The CSS variable above
+          // resolves to the world's amber #D4A24F in Ireland so we
+          // bypass it with a hard-coded value for this specific CTA.
+          background: "#C6A15B",
           color: "var(--nex-world-drawer-bg, #123D2B)",
           border: "2px solid var(--nex-world-drawer-bg, #123D2B)",
           boxShadow: "0 6px 20px rgba(10, 31, 21, 0.35)",
