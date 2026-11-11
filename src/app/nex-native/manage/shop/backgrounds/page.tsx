@@ -88,6 +88,37 @@ export default async function ShopBackgroundsPage(): Promise<React.JSX.Element> 
         >
           <ControlDrawer session={drawerSession} />
         </div>
+        {/* Owner directive 2026-11-11 · Phase 1 unified NEX Visual
+            Library · deep-link CTA at top of the existing shop
+            picker. Lets the owner browse the shared catalog with a
+            shop preview. Writes go through the library's own shop
+            action (applyFromLibraryShopAction), which uses the same
+            nex_business.shop_cover_image_url + shop_cover_tint_hex
+            columns as the legacy applyShopPresetBackgroundAction,
+            so this picker remains fully functional alongside it. */}
+        {business ? (
+          <div style={{ padding: "8px 2px 0" }}>
+            <a
+              href={`/nex-native/library/backgrounds?context=shop&businessId=${encodeURIComponent(business.id)}&returnTo=${encodeURIComponent("/nex-native/manage/shop/backgrounds")}`}
+              data-nex-shop-library-cta
+              style={{
+                display: "block",
+                padding: "10px 14px",
+                borderRadius: 10,
+                background: "#FF7200",
+                color: "#FFFFFF",
+                textDecoration: "none",
+                fontWeight: 900,
+                fontSize: 13,
+                letterSpacing: "0.04em",
+                textAlign: "center",
+                textTransform: "uppercase",
+              }}
+            >
+              Browse NEX Visual Library
+            </a>
+          </div>
+        ) : null}
         <ShopBackgroundsClient
           businessId={business?.id ?? null}
           currentImageUrl={overrides.imageUrl}
