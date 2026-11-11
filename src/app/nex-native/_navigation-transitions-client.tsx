@@ -2,50 +2,47 @@
 
 // src/app/nex-native/_navigation-transitions-client.tsx
 //
-// Owner directive 2026-11-11 (Cycle 23 iter 3) · READY-BEFORE-SLIDE
-// navigation. Previously the slide fired IMMEDIATELY on click and the
-// destination's loading.tsx (skeleton) slid in from the right while
-// the real content was still streaming. Owner wants the destination
-// to be READY before the slide begins · so the user sees their real
-// contacts list / real chat / real profile slide in, not a skeleton.
+// Phase A (persistent-shell performance) · owner-sealed 2026-11-11.
+// -----------------------------------------------------------------
+// This replaces the iter-3 "warm-wait before slide" regression that
+// manually fetched the destination RSC payload, hit Next.js's
+// `Cache-Control: no-cache` wall, then let `router.push` re-fetch
+// the same URL · a confirmed double-fetch.
 //
-// Implementation:
+// Phase A behaviour:
 //
-// 1. Hover + touchstart PREFETCH · as soon as the user gestures
-//    towards a link we fire `router.prefetch(href)` so most clicks
-//    hit a warm Next.js router cache. Zero cost on already-prefetched
-//    routes.
+//   1. HOVER + TOUCHSTART prefetch · for PUBLIC-ALLOWLISTED routes
+//      only (see `public-route-allowlist.ts`). Populates the Next.js
+//      router cache so a subsequent click hits a warm destination
+//      with zero additional network requests. Private routes (chat,
+//      contacts, orders, settings, cart, etc.) are NEVER prefetched
+//      per the owner's 2026-11-11 directive.
 //
-// 2. Click → WARM-WAIT → SLIDE · on click we:
-//    a. preventDefault
-//    b. mark the DOM `data-nex-nav-pending="true"` so the current
-//       page can show subtle feedback (a thin amber progress line)
-//       if the wait exceeds 1200 ms. Current page stays INTERACTIVE
-//       — no blocking overlay.
-//    c. fire a manual RSC fetch of the destination URL with Next.js's
-//       sealed RSC + Next-Router-Prefetch headers. We await the
-//       response body drain so the browser has the full payload in
-//       its HTTP cache.
-//    d. clear the pending flag.
-//    e. fire startViewTransition(router.push). Because the browser
-//       cache + Next.js router cache are now warm, router.push
-//       commits almost synchronously · the "after" snapshot is the
-//       real destination content, not the loading skeleton.
+//   2. CLICK → IMMEDIATE SLIDE · the slide fires synchronously via
+//      startViewTransition(router.push). No manual fetch. No warm-
+//      wait. No second request. If the destination was prefetched
+//      and is in the router cache, the slide reveals real content;
+//      otherwise it reveals loading.tsx briefly while the RSC
+//      streams in. Either way we never fetch the same URL twice.
 //
-// 3. Safety · if the RSC fetch fails or takes > 4 seconds (user can
-//    be on a terrible network), we abort the warm-wait and fire the
-//    transition anyway with the streaming loading.tsx as destination
-//    snapshot. Never leave the user staring at their old page
-//    indefinitely.
+//   3. SLOW-NETWORK FEEDBACK · if the transition is still in flight
+//      after 1200 ms we flag `data-nex-nav-slow="true"` on <html>
+//      so CSS can reveal a subtle progress indicator. The current
+//      page stays interactive · no blocking overlay.
 //
-// 4. E2E + auth posture preserved · the RSC fetch hits the SAME
-//    server endpoint the full navigation would, so every privacy
-//    gate, RLS rule, and auth check fires identically. We just
-//    front-load the latency into the "current page still visible"
-//    window instead of the "destination shell visible" window.
+// E2E + auth posture preserved · Next.js's own prefetch uses the
+// same session cookie as the eventual navigation, so every privacy
+// gate, RLS rule and auth check fires identically.
+//
+// Related: the shell also mounts `<PublicRoutePrefetcher />` which
+// proactively warms a tiny set of public destinations on idle so
+// first-visit nav is also fast.
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+
+import { isPublicPrefetchablePath } from "@/lib/nex-native/navigation/public-route-allowlist";
+import { prefetchFull } from "@/lib/nex-native/navigation/prefetch-full";
 
 type StartViewTransitionFn = (
   callback: () => void | Promise<void>,
@@ -55,7 +52,6 @@ const NAV_DIR_ATTR = "nexNavDir";
 const NAV_PENDING_ATTR = "nexNavPending";
 const NAV_SLOW_ATTR = "nexNavSlow";
 const SLOW_FEEDBACK_MS = 1200;
-const MAX_WARM_WAIT_MS = 4000;
 
 function setNavDirection(dir: "back" | null): void {
   if (typeof document === "undefined") return;
@@ -86,58 +82,10 @@ function getStartViewTransition(): StartViewTransitionFn | null {
   return typeof fn === "function" ? fn.bind(document) : null;
 }
 
-/** Fire a manual RSC fetch of the destination URL so Next.js's router
- *  cache + the browser's HTTP cache are warm before we invoke
- *  router.push. Awaits body-drain so we know the full payload arrived.
- *  Caller is responsible for the slow-wait timeout. */
-async function warmDestination(fullHref: string): Promise<void> {
-  const url = new URL(fullHref, window.location.href);
-  const response = await fetch(url.toString(), {
-    method: "GET",
-    headers: {
-      RSC: "1",
-      "Next-Router-Prefetch": "1",
-    },
-    credentials: "same-origin",
-    cache: "default",
-  });
-  // Drain the body stream so the response is fully received before
-  // we resolve. A non-drained stream looks "complete" to fetch but
-  // the RSC payload may still be in-flight.
-  if (response.body) {
-    const reader = response.body.getReader();
-    for (;;) {
-      const { done } = await reader.read();
-      if (done) break;
-    }
-  }
-}
-
-/** Wrap a promise with a hard timeout · resolves to `timeout` sentinel
- *  so callers can tell whether the warm fetch completed or we gave up. */
-function withTimeout<T>(
-  promise: Promise<T>,
-  ms: number,
-): Promise<T | "timeout"> {
-  return new Promise((resolve) => {
-    const t = window.setTimeout(() => resolve("timeout"), ms);
-    promise
-      .then((v) => {
-        window.clearTimeout(t);
-        resolve(v);
-      })
-      .catch(() => {
-        window.clearTimeout(t);
-        resolve("timeout");
-      });
-  });
-}
-
 export function NexNavigationTransitions(): null {
   const router = useRouter();
 
-  // ── Hover / touchstart prefetch · warm the destination as early as
-  //    possible so most clicks hit a cache. ──────────────────────────
+  // ── Hover / touchstart prefetch · PUBLIC ALLOWLIST ONLY ────────
   useEffect(() => {
     if (typeof document === "undefined") return;
 
@@ -149,17 +97,39 @@ export function NexNavigationTransitions(): null {
       if (!anchor) return;
       const hrefAttr = anchor.getAttribute("href");
       if (!hrefAttr) return;
-      if (
-        !hrefAttr.startsWith("/nex-native/") &&
-        !hrefAttr.startsWith("/chat/")
-      )
-        return;
-      if (prefetched.has(hrefAttr)) return;
-      prefetched.add(hrefAttr);
+
+      // Normalise to a pathname · relative hrefs resolve against
+      // location, absolute hrefs check origin.
+      let path: string;
       try {
-        router.prefetch(hrefAttr);
+        const u = new URL(hrefAttr, window.location.href);
+        if (u.origin !== window.location.origin) return;
+        path = u.pathname;
       } catch {
-        /* ignore · network transient */
+        return;
+      }
+
+      // Owner-sealed 2026-11-11 · Phase A · public allowlist only.
+      // Private routes (chat/contacts/orders/settings/cart/home/
+      // free-chat/manage/vault/call/community/hq/etc.) are NEVER
+      // prefetched · the user pays cold-nav latency for those by
+      // design.
+      if (!isPublicPrefetchablePath(path)) return;
+
+      // Dedupe · a given pathname only needs one prefetch per mount.
+      if (prefetched.has(path)) return;
+      prefetched.add(path);
+      try {
+        // kind: "full" prefetches the full render (not just the
+        // partial stub). Needed for dynamic routes (every
+        // /nex-native/* page has `export const dynamic = "force-
+        // dynamic"`) so router.push on click hits a fully warm
+        // segment cache with zero additional fetches. Only
+        // allowlisted public routes reach this line.
+        prefetchFull(router, path);
+      } catch {
+        /* non-fatal · a failed prefetch just means cold nav for that
+           destination */
       }
     };
 
@@ -176,21 +146,17 @@ export function NexNavigationTransitions(): null {
     });
     return () => {
       document.removeEventListener("mouseenter", onMouseEnter, true);
-      document.removeEventListener(
-        "touchstart",
-        onTouchStart,
-        true,
-      );
+      document.removeEventListener("touchstart", onTouchStart, true);
     };
   }, [router]);
 
-  // ── Forward push · warm-wait before firing the slide ─────────────
+  // ── Click handler · immediate slide, no warm-wait ──────────────
   useEffect(() => {
     if (typeof document === "undefined") return;
     const startViewTransition = getStartViewTransition();
     if (!startViewTransition) return;
 
-    const onClick = async (event: MouseEvent): Promise<void> => {
+    const onClick = (event: MouseEvent): void => {
       if (
         event.defaultPrevented ||
         event.metaKey ||
@@ -230,43 +196,36 @@ export function NexNavigationTransitions(): null {
       setNavDirection(null);
       setPending(true);
 
-      // Slow-feedback timer · flips data-nex-nav-slow after
-      // SLOW_FEEDBACK_MS so CSS can reveal a subtle amber progress bar
-      // at the top of the phone frame. Current page stays interactive.
+      // Slow-feedback timer · flips `data-nex-nav-slow` after
+      // SLOW_FEEDBACK_MS so CSS can reveal a subtle amber progress
+      // bar. The current page stays interactive.
       const slowTimer = window.setTimeout(() => {
         document.documentElement.dataset[NAV_SLOW_ATTR] = "true";
       }, SLOW_FEEDBACK_MS);
 
-      // Warm the destination · await either the fetch or the max timeout.
-      const warmResult = await withTimeout(
-        warmDestination(path + destUrl.search + destUrl.hash),
-        MAX_WARM_WAIT_MS,
-      );
-      void warmResult;
-
-      window.clearTimeout(slowTimer);
-      setPending(false);
-
-      // Fire the transition · destination is now cached, the "after"
-      // snapshot should capture real content, not the loading skeleton.
-      startViewTransition(() => {
+      // IMMEDIATE slide · no warm-wait. If the destination was
+      // prefetched, this commits with zero network requests. If
+      // not, Next.js fetches the RSC once and streams through
+      // loading.tsx. Either way · exactly ONE fetch per nav.
+      const transition = startViewTransition(() => {
         router.push(path + destUrl.search + destUrl.hash);
       });
+
+      transition.finished
+        .catch(() => { /* aborted transitions are fine */ })
+        .finally(() => {
+          window.clearTimeout(slowTimer);
+          setPending(false);
+        });
     };
 
-    const onClickWrapper = (event: MouseEvent): void => {
-      void onClick(event);
-    };
-    document.addEventListener("click", onClickWrapper, { capture: true });
+    document.addEventListener("click", onClick, { capture: true });
     return () => {
-      document.removeEventListener("click", onClickWrapper, {
-        capture: true,
-      });
+      document.removeEventListener("click", onClick, { capture: true });
     };
   }, [router]);
 
   // ── Back pop: INTENTIONALLY DISABLED ─────────────────────────────
   // Native browser back · reliable jump-cut · no custom animation.
-  // See 2026-11-10 verification-pass note in earlier iterations.
   return null;
 }

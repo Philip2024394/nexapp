@@ -16,7 +16,7 @@
 
 import { test, expect } from "@playwright/test";
 
-const BASE = "http://localhost:3009";
+const BASE = process.env.NEX_TEST_BASE ?? "http://localhost:3009";
 
 test.describe("NEX phone-frame visual isolation", () => {
   test.use({

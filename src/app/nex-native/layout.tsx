@@ -59,6 +59,13 @@ import { DevImpersonationBanner } from "./_dev-impersonation-banner";
 // slides in from right). Falls back silently where the View
 // Transitions API isn't available.
 import { NexNavigationTransitions } from "./_navigation-transitions-client";
+// Owner-sealed 2026-11-11 · Phase A (persistent-shell performance).
+// Mounts in the persistent shell so it fires once per session. Warms
+// a small allowlisted set of public destinations on idle via
+// `router.prefetch` · populates the Next.js router cache so taps on
+// those destinations commit without a cold RSC round-trip. Private
+// routes are never prefetched · see public-route-allowlist.ts.
+import { PublicRoutePrefetcher } from "./_public-route-prefetcher";
 // Owner-authorised 2026-10-31 · NEX World Engine · Stage 5A.
 // Server-resolves the active world + emits CSS vars scoped to
 // .nex-native-stage. Preview cookie takes precedence for owner only.
@@ -213,6 +220,10 @@ export default async function NexNativeLayout({
           See _navigation-transitions-client.tsx. Zero DOM · purely a
           document-level click interceptor. */}
       <NexNavigationTransitions />
+      {/* Owner-sealed 2026-11-11 · Phase A · idle-time prefetch of
+          allowlisted public destinations. Zero DOM · see
+          _public-route-prefetcher.tsx. */}
+      <PublicRoutePrefetcher />
       <div
         className="nex-native-stage"
         data-nex-world={activeWorld.meta.id}

@@ -1,44 +1,54 @@
 // scripts/_tmp/verify-ready-before-slide.spec.ts
 //
-// Cycle 23 iter 3 · "ready-before-slide" navigation proof.
+// Phase A regression spec · owner-sealed 2026-11-11.
+// --------------------------------------------------
+// Asserts the two non-negotiable invariants of the Phase A
+// navigation rewrite:
 //
-// Confirms:
-//   1. Tapping a link does NOT immediately swap the page.
-//   2. The CURRENT page stays visible during the warm-wait window.
-//   3. The slide animation begins AFTER the destination RSC payload
-//      has landed in the browser cache.
-//   4. The destination's "after" snapshot contains REAL content
-//      (not the loading.tsx skeleton) when the warm-cache path wins.
-//   5. Slow destinations show a subtle progress bar (data-nex-nav-slow)
-//      and the current page remains visible, not blanked.
+//   1. EXACTLY ONE RSC fetch per cold navigation. The iter-3
+//      double-fetch regression (manual warm-fetch + router.push
+//      refetch) must stay dead.
+//
+//   2. The slide fires IMMEDIATELY on click · no warm-wait. Current
+//      page may still be visible under the slide-out but the view
+//      transition must have started before the destination RSC has
+//      arrived (otherwise we're back to the warm-wait regression).
+//
+// Keeps the test running in dev mode so it's cheap to re-run while
+// iterating. Production timing/measurement lives in
+// `verify-phase-a-perf.spec.ts`.
+//
+// Run with:
+//   npm run dev:ireland  # terminal 1
+//   npx playwright test scripts/_tmp/verify-ready-before-slide.spec.ts \
+//     --config=scripts/_tmp/verify-phone-frame.config.ts
 
 import { test, expect } from "@playwright/test";
 
 const BASE = "http://localhost:3009";
 
-test.describe("Ready-before-slide navigation", () => {
+test.describe("Phase A nav regression", () => {
   test.use({
     viewport: { width: 1440, height: 900 },
     extraHTTPHeaders: { cookie: "nex_dev_override=nex-99901" },
   });
 
-  test("current page stays visible until destination is warm, then slide", async ({
+  test("click fires one RSC fetch and starts the view transition", async ({
     page,
   }, testInfo) => {
     const outDir = testInfo.outputDir;
 
-    // 1. Land on free-chat.
     await page.goto(`${BASE}/nex-native/free-chat`, {
       waitUntil: "domcontentloaded",
     });
     await page.waitForSelector(".nex-native-frame", { timeout: 20_000 });
     await page.waitForTimeout(500);
 
-    // Inject a navigation link at the top-left (bypasses the drawer so
-    // the test is deterministic across any UI drift).
+    // Inject a direct link to a known PUBLIC route · directory. This
+    // avoids the drawer and lets us measure one specific nav.
     await page.evaluate(() => {
       const a = document.createElement("a");
-      a.href = "/nex-native/contacts";
+      a.href = "/nex-native/directory";
       a.id = "test-nav-link";
       a.textContent = "GO";
       a.style.cssText =
@@ -46,56 +56,65 @@ test.describe("Ready-before-slide navigation", () => {
       document.body.appendChild(a);
     });
 
-    // Record timings for key moments: click fired, warm-fetch
-    // observed, viewTransition start.
     const timings = await page.evaluate(() => {
       return new Promise<{
         clickAt: number;
-        rscFetchAt: number | null;
-        rscFetchDoneAt: number | null;
         vtStartAt: number | null;
+        rscFetchStartAt: number | null;
+        rscFetchDoneAt: number | null;
+        rscFetchCount: number;
       }>((resolve) => {
         const result = {
           clickAt: 0,
-          rscFetchAt: null as number | null,
-          rscFetchDoneAt: null as number | null,
           vtStartAt: null as number | null,
+          rscFetchStartAt: null as number | null,
+          rscFetchDoneAt: null as number | null,
+          rscFetchCount: 0,
         };
 
-        // Watch the fetch API to detect the RSC prefetch warming the
-        // destination.
+        // Instrument window.fetch · count RSC fetches to the
+        // destination so we can prove no double-fetch.
         const origFetch = window.fetch.bind(window);
         window.fetch = async (
           input: RequestInfo | URL,
           init?: RequestInit,
-        ) => {
+        ): Promise<Response> => {
           const url =
             typeof input === "string"
               ? input
               : input instanceof URL
                 ? input.toString()
                 : input.url;
-          if (
-            url.includes("/nex-native/contacts") &&
-            init?.headers &&
-            (init.headers as Record<string, string>).RSC === "1"
-          ) {
-            result.rscFetchAt = performance.now();
+          let hasRsc = false;
+          const h = init?.headers;
+          if (h) {
+            if (h instanceof Headers) hasRsc = h.get("RSC") === "1";
+            else if (Array.isArray(h))
+              hasRsc = h.some(
+                ([k, v]) => k.toLowerCase() === "rsc" && v === "1",
+              );
+            else hasRsc = (h as Record<string, string>).RSC === "1";
+          }
+          const matches = url.includes("/nex-native/directory") && hasRsc;
+          if (matches) {
+            result.rscFetchCount += 1;
+            if (result.rscFetchStartAt === null) {
+              result.rscFetchStartAt = performance.now();
+            }
           }
           const res = await origFetch(input, init);
-          if (
-            url.includes("/nex-native/contacts") &&
-            init?.headers &&
-            (init.headers as Record<string, string>).RSC === "1"
-          ) {
+          if (matches && result.rscFetchDoneAt === null) {
             result.rscFetchDoneAt = performance.now();
           }
           return res;
         };
 
-        // Shim startViewTransition to mark when the transition begins.
+        // Shim startViewTransition so we can prove the slide fired
+        // IMMEDIATELY on click (not after a warm-wait).
         const doc = document as unknown as {
-          startViewTransition?: (cb: () => void) => { finished: Promise<void> };
+          startViewTransition?: (
+            cb: () => void,
+          ) => { finished: Promise<void> };
         };
         const origStart = doc.startViewTransition;
         if (origStart) {
@@ -108,7 +127,6 @@ test.describe("Ready-before-slide navigation", () => {
           };
         }
 
-        // Fire the click and resolve 2s later so we capture the timeline.
         const link = document.getElementById("test-nav-link");
         if (!link) {
           resolve(result);
@@ -121,47 +139,44 @@ test.describe("Ready-before-slide navigation", () => {
     });
 
     await page.waitForTimeout(500);
+    await page.screenshot({ path: `${outDir}/01-after-nav.png` });
 
-    // Capture the destination post-settle.
-    await page.screenshot({ path: `${outDir}/01-after-ready-slide.png` });
+    const dtVt =
+      timings.vtStartAt !== null
+        ? timings.vtStartAt - timings.clickAt
+        : null;
+    const dtFetchStart =
+      timings.rscFetchStartAt !== null
+        ? timings.rscFetchStartAt - timings.clickAt
+        : null;
+    const dtFetchDone =
+      timings.rscFetchDoneAt !== null
+        ? timings.rscFetchDoneAt - timings.clickAt
+        : null;
 
-    // Assertions · the warm-fetch should have completed BEFORE the
-    // view transition started.
     console.log("Timeline (ms from click):");
-    console.log(
-      `  RSC fetch started:  ${
-        timings.rscFetchAt
-          ? (timings.rscFetchAt - timings.clickAt).toFixed(1)
-          : "n/a"
-      }`,
-    );
-    console.log(
-      `  RSC fetch done:     ${
-        timings.rscFetchDoneAt
-          ? (timings.rscFetchDoneAt - timings.clickAt).toFixed(1)
-          : "n/a"
-      }`,
-    );
-    console.log(
-      `  View Transition:    ${
-        timings.vtStartAt
-          ? (timings.vtStartAt - timings.clickAt).toFixed(1)
-          : "n/a"
-      }`,
-    );
-    if (timings.rscFetchDoneAt !== null && timings.vtStartAt !== null) {
-      const gap = timings.vtStartAt - timings.rscFetchDoneAt;
-      console.log(`  Gap (fetch→VT):     ${gap.toFixed(1)} ms`);
-      // The VT should start AFTER the RSC fetch completed. Negative
-      // gap would mean the slide fired before the destination was
-      // warm · not allowed.
-      expect(
-        gap,
-        "View Transition must fire AFTER the destination RSC payload lands",
-      ).toBeGreaterThanOrEqual(-5); // 5ms grace for clock skew
-    }
+    console.log(`  View Transition started: ${dtVt?.toFixed(1) ?? "n/a"}`);
+    console.log(`  RSC fetch started:       ${dtFetchStart?.toFixed(1) ?? "n/a"}`);
+    console.log(`  RSC fetch done:          ${dtFetchDone?.toFixed(1) ?? "n/a"}`);
+    console.log(`  RSC fetch count:         ${timings.rscFetchCount}`);
 
-    // Landed page assertion · the final URL should be contacts.
-    expect(page.url()).toContain("/nex-native/contacts");
+    // Invariant 1: exactly ONE fetch per navigation (iter-3 fired 2).
+    // Dev mode may serve the route from the router cache if a hover
+    // prefetch landed earlier · in that case 0 is also acceptable.
+    expect(
+      timings.rscFetchCount,
+      "Destination RSC must be fetched 0 or 1 times · never twice",
+    ).toBeLessThanOrEqual(1);
+
+    // Invariant 2: slide fired IMMEDIATELY on click (within 50 ms).
+    // If this exceeds 50 ms we're back to a warm-wait regression.
+    expect(
+      dtVt,
+      "View transition must start synchronously on click, not after a warm-wait",
+    ).not.toBeNull();
+    expect(dtVt!).toBeLessThan(50);
+
+    // Landed URL assertion.
+    expect(page.url()).toContain("/nex-native/directory");
   });
 });
