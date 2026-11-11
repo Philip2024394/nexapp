@@ -72,11 +72,17 @@ function rowToAsset(row: Record<string, unknown>): BackgroundAsset {
   };
 }
 
-/** List assets approved for the caller's context. Server-side.
- *  The context param is mandatory · shop callers cannot accidentally see
- *  chat-only assets and vice versa. */
+/** List ALL active assets · owner directive 2026-11-11.
+ *  Both pickers (shop and chat) see every asset in the catalog so users
+ *  can freely browse the whole 450-asset library.
+ *
+ *  The `context` parameter is retained because downstream rendering may
+ *  want to badge or sort by "primary context", but it is NO LONGER used
+ *  as a hard filter. Entitlement is still enforced at save time by the
+ *  appropriate action (`applyFromLibraryShopAction` or
+ *  `applyFromLibraryChatAction`). */
 export async function listBackgroundAssets(params: ListParams): Promise<readonly BackgroundAsset[]> {
-  const { context, category, tier, limit = 500, offset = 0 } = params;
+  const { category, tier, limit = 500, offset = 0 } = params;
 
   let query = nexSupabaseAdmin
     .from("nex_background_asset")
@@ -84,7 +90,6 @@ export async function listBackgroundAssets(params: ListParams): Promise<readonly
       "id, storage_url, preview_url, label, tint_hex, categories, contexts, tier, is_active, sort_order, source",
     )
     .eq("is_active", true)
-    .contains("contexts", [context])
     .order("sort_order", { ascending: true })
     .order("label", { ascending: true })
     .range(offset, offset + limit - 1);
@@ -99,13 +104,16 @@ export async function listBackgroundAssets(params: ListParams): Promise<readonly
   return (data ?? []).map(rowToAsset);
 }
 
-/** Fetch a single asset, rejecting cross-context access.
- *  If an asset exists but does NOT include the caller's context, returns
- *  null · prevents a shop picker from silently surfacing a chat-only asset
- *  when the caller supplies an arbitrary id. */
+/** Fetch a single asset by id · owner directive 2026-11-11.
+ *  Cross-context access is now ALLOWED: both Shop and Chat pickers may
+ *  select any asset in the catalog. Entitlement (shop tier / Themes
+ *  Plus) is still enforced at the save-action layer; this function
+ *  returns the asset row if it exists and is active, regardless of
+ *  its original context tag. The second argument is retained for
+ *  API compatibility but is no longer used as a filter. */
 export async function getBackgroundAsset(
   id: string,
-  params: { readonly context: BackgroundContext },
+  _params?: { readonly context?: BackgroundContext },
 ): Promise<BackgroundAsset | null> {
   const { data, error } = await nexSupabaseAdmin
     .from("nex_background_asset")
@@ -120,13 +128,7 @@ export async function getBackgroundAsset(
     throw new Error(`catalog-service.getBackgroundAsset: ${error.message}`);
   }
   if (!data) return null;
-  const asset = rowToAsset(data);
-  if (!asset.contexts.includes(params.context)) {
-    // Caller asked for an asset not approved in their context · treat as
-    // not found so the picker UI's "not found" path handles it gracefully.
-    return null;
-  }
-  return asset;
+  return rowToAsset(data);
 }
 
 /** Shop picker categories derived from the existing shop PRESETS taxonomy

@@ -83,24 +83,24 @@ describe("NEX Unified Visual Library · structural isolation (compile-time)", ()
 });
 
 describe("NEX Unified Visual Library · catalog-service context filter", () => {
-  it("Isolation #1b · listBackgroundAssets({context:'shop'}) uses contains('contexts', ['shop'])", () => {
+  it("Isolation #1b · listBackgroundAssets returns ALL 450 assets (no context filter)", () => {
     const serviceSrc = readFileSync(
       resolve(__dirname, "..", "..", "..", "..", "..", "lib", "nex-native", "library", "catalog-service.ts"),
       "utf8",
     );
-    // The listBackgroundAssets function must filter on contexts via the
-    // supplied context param. Verify the containment call is parameterised.
-    expect(serviceSrc).toMatch(/\.contains\(\s*"contexts"\s*,\s*\[\s*context\s*\]\s*\)/);
+    // Owner directive 2026-11-11 · context filter removed. Both pickers
+    // now see the full catalog. Entitlement is enforced at save time.
+    expect(serviceSrc).not.toMatch(/\.contains\(\s*"contexts"\s*,\s*\[\s*context\s*\]\s*\)/);
   });
 
-  it("Isolation #2b · getBackgroundAsset rejects cross-context reads", () => {
+  it("Isolation #2b · getBackgroundAsset allows cross-context access (entitlement enforced at save)", () => {
     const serviceSrc = readFileSync(
       resolve(__dirname, "..", "..", "..", "..", "..", "lib", "nex-native", "library", "catalog-service.ts"),
       "utf8",
     );
-    // Must check asset.contexts.includes(params.context) and return null
-    // when not approved for the caller's context.
-    expect(serviceSrc).toMatch(
+    // Owner directive 2026-11-11 · cross-context reads are allowed.
+    // The cross-context rejection block must be removed from the lookup.
+    expect(serviceSrc).not.toMatch(
       /if\s*\(\s*!asset\.contexts\.includes\(\s*params\.context\s*\)\s*\)/,
     );
   });

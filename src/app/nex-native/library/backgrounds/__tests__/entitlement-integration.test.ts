@@ -212,18 +212,19 @@ describe.skipIf(SKIP_SANDBOX)("Phase 3 · Themes Plus entitlement scenarios", ()
     expect(d3.allow).toBe(true);
   });
 
-  it("#8 · Forged asset id or wrong context is rejected by getBackgroundAsset", async () => {
+  it("#8 · Cross-context access allowed; nonexistent id rejected (entitlement gates at save)", async () => {
     const { getBackgroundAsset } = await import(
       "@/lib/nex-native/library/catalog-service"
     );
-    // Shop asset requested with chat context → null
-    const wrongCtx = await getBackgroundAsset("shop:dynamic-nex-shopping-showcase", { context: "chat" });
-    expect(wrongCtx).toBeNull();
-    // Chat asset requested with shop context → null
-    const wrongCtx2 = await getBackgroundAsset("chat:library-ireland-1", { context: "shop" });
-    expect(wrongCtx2).toBeNull();
-    // Nonexistent id → null
-    const ghost = await getBackgroundAsset("chat:this-does-not-exist", { context: "chat" });
+    // Shop asset requested from chat caller · now ALLOWED (owner directive 2026-11-11)
+    const shopFromChat = await getBackgroundAsset("shop:dynamic-nex-shopping-showcase");
+    expect(shopFromChat).not.toBeNull();
+    expect(shopFromChat!.id).toBe("shop:dynamic-nex-shopping-showcase");
+    // Chat asset accessed via catalog service · also allowed
+    const chatAsset = await getBackgroundAsset("chat:library-ireland-1");
+    expect(chatAsset).not.toBeNull();
+    // Nonexistent id → null (still rejected)
+    const ghost = await getBackgroundAsset("chat:this-does-not-exist");
     expect(ghost).toBeNull();
   });
 });

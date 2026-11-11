@@ -139,18 +139,24 @@ describe.skipIf(SKIP_SANDBOX_TESTS)("sandbox mig 337 runtime", () => {
     expect(rows[0].n).toBeGreaterThanOrEqual(160);
   });
 
-  it("Spot check · getBackgroundAsset cross-context rejection works at the DB level", async () => {
-    // Fetch a shop-only asset directly; assert contexts does not include chat.
+  it("Spot check · catalog retains context metadata but both pickers see all 450", async () => {
+    // Owner directive 2026-11-11 · context arrays still describe the
+    // asset's ORIGIN (useful for future badging) but are no longer a
+    // visibility filter. Both pickers surface all 450 via listBackgroundAssets.
     const { rows } = await db.query(
       `SELECT id, contexts FROM nex_background_asset
         WHERE id = 'shop:dynamic-nex-shopping-showcase' LIMIT 1`,
     );
     expect(rows[0].contexts).toEqual(["shop"]);
-    // Do the same for a chat-only asset.
     const { rows: chat } = await db.query(
       `SELECT id, contexts FROM nex_background_asset
         WHERE id = 'chat:library-ireland-1' LIMIT 1`,
     );
     expect(chat[0].contexts).toEqual(["chat"]);
+    // Active catalog size check
+    const total = await db.query(
+      `SELECT count(*)::int AS n FROM nex_background_asset WHERE is_active = true`,
+    );
+    expect(total.rows[0].n).toBe(450);
   });
 });

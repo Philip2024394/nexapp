@@ -130,7 +130,7 @@ describe.skipIf(SKIP_SANDBOX)("Shop happy path · disposable bisnis subscriber",
     }
   });
 
-  it("two-business isolation · each disposable biz keeps its own bg", async () => {
+  it("two-business isolation · each disposable biz keeps its own bg", { timeout: 20_000 }, async () => {
     const accId = (await db.query(`SELECT gen_random_uuid() AS u`)).rows[0].u;
     const biz1 = (await db.query(`SELECT gen_random_uuid() AS u`)).rows[0].u;
     const biz2 = (await db.query(`SELECT gen_random_uuid() AS u`)).rows[0].u;
@@ -174,6 +174,35 @@ describe.skipIf(SKIP_SANDBOX)("Shop happy path · disposable bisnis subscriber",
       mockAccountRef.tier = "gratis";
       mockAccountRef.bisnis = null;
       await db.query(`DELETE FROM nex_business WHERE id IN ($1, $2)`, [biz1, biz2]);
+      await db.query(`DELETE FROM nex_account WHERE id = $1`, [accId]);
+    }
+  });
+
+  it("CRITICAL · cross-context · gratis chat user picking a SHOP asset for chat = DENIED (Themes Plus required)", async () => {
+    // Owner directive 2026-11-11 · all 450 assets visible in both
+    // pickers · but entitlement is still enforced. Shop assets applied
+    // as chat theme get a lazy-inserted nex_chat_theme row with
+    // tier='bisnis', so a gratis chat user (no Themes Plus) is denied.
+    const accId = (await db.query(`SELECT gen_random_uuid() AS u`)).rows[0].u;
+    const handle = `nex-${86000 + Math.floor(Math.random() * 1000)}`;
+    try {
+      await db.query(
+        `INSERT INTO nex_account (id, nex_handle, display_name) VALUES ($1, $2, 'Gratis Chat User')`,
+        [accId, handle],
+      );
+      mockAccountRef.id = accId;
+      mockAccountRef.tier = "gratis";
+      mockAccountRef.bisnis = null;
+
+      const { applyFromLibraryChatAction } = await import("../_actions");
+      const result = await applyFromLibraryChatAction("shop:dynamic-nex-shopping-showcase");
+      expect(result).toEqual({ ok: false, error: "themes_plus_required" });
+    } finally {
+      mockAccountRef.id = null;
+      // Clean the lazy-inserted nex_chat_theme row too
+      await db.query(
+        `DELETE FROM nex_chat_theme WHERE id = 's-dynamic-nex-shopping-showcase'`,
+      );
       await db.query(`DELETE FROM nex_account WHERE id = $1`, [accId]);
     }
   });

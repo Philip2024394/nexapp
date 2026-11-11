@@ -65,8 +65,8 @@ export async function applyFromLibraryShopAction(
     return { ok: false, error: "shop-tier-required" };
   }
 
-  const asset = await getBackgroundAsset(assetId, { context: "shop" });
-  if (!asset) return { ok: false, error: "asset-not-found-or-wrong-context" };
+  const asset = await getBackgroundAsset(assetId);
+  if (!asset) return { ok: false, error: "asset-not-found" };
 
   try {
     await assertOwnsBusiness(businessId, session.account.id);
@@ -108,23 +108,56 @@ export async function applyFromLibraryChatAction(
   const session = await resolveSessionWithDevOverride();
   if (!session) return { ok: false, error: "not-signed-in" };
 
-  const asset = await getBackgroundAsset(assetId, { context: "chat" });
-  if (!asset) return { ok: false, error: "asset-not-found-or-wrong-context" };
+  const asset = await getBackgroundAsset(assetId);
+  if (!asset) return { ok: false, error: "asset-not-found" };
 
-  // Strip the "chat:" prefix to get the canonical chat_theme id that
-  // nex_account.chat_theme stores and chatThemeService.getThemeById reads.
-  const chatThemeId = asset.id.replace(/^chat:/, "");
+  // Owner directive 2026-11-11 · all 450 assets browsable in both
+  // pickers. Translate the catalog id to a valid nex_chat_theme id.
+  // The nex_chat_theme CHECK constraint enforces
+  // `^[a-z][a-z0-9_-]{1,30}$` (max 31 chars, no colons).
+  //
+  //   · chat-native assets keep their bare id (stripped "chat:" prefix,
+  //     already compliant e.g. library-ireland-1)
+  //   · shop-native assets get a short "s-" prefix + first 29 chars
+  //     of the slug so they fit within the 31-char limit and never
+  //     collide with chat-native ids
+  const chatThemeId = asset.id.startsWith("chat:")
+    ? asset.id.replace(/^chat:/, "")
+    : asset.id.startsWith("shop:")
+      ? `s-${asset.id.replace(/^shop:/, "").slice(0, 29)}`
+      : asset.id;
 
-  // Verify the chat theme row exists (seeded by mig 337). Read tier so
-  // the premium gate can enforce correctly.
-  const { data: themeRow, error: themeErr } = await nexSupabaseAdmin
+  // Load or lazy-insert the nex_chat_theme row so the existing chat
+  // shell + updateChatThemeAction validator find it.
+  let themeRow = (await nexSupabaseAdmin
     .from("nex_chat_theme")
     .select("id, is_active, tier")
     .eq("id", chatThemeId)
-    .maybeSingle<{ id: string; is_active: boolean; tier: "gratis" | "bisnis" | "pro" }>();
-  if (themeErr) return { ok: false, error: themeErr.message };
+    .maybeSingle<{ id: string; is_active: boolean; tier: "gratis" | "bisnis" | "pro" }>()).data;
+
   if (!themeRow || themeRow.is_active !== true) {
-    return { ok: false, error: "chat-theme-not-seeded" };
+    // Shop-origin asset chosen for chat · create the chat_theme row
+    // with tier='bisnis' so the Themes Plus gate still applies (Shop
+    // subscription must NOT unlock premium chat themes · owner-sealed
+    // commercial separation). This preserves the entitlement model
+    // while allowing all 450 to be browsable.
+    const { error: upsertErr } = await nexSupabaseAdmin
+      .from("nex_chat_theme")
+      .upsert(
+        {
+          id: chatThemeId,
+          name: asset.label,
+          accent_hex: asset.tintHex ?? "#C6A15B",
+          tier: "bisnis",
+          category: "premium",
+          hero_image_url: asset.storageUrl,
+          is_active: true,
+          sort_order: 400,
+        },
+        { onConflict: "id" },
+      );
+    if (upsertErr) return { ok: false, error: upsertErr.message };
+    themeRow = { id: chatThemeId, is_active: true, tier: "bisnis" };
   }
 
   // Premium gate · owner-sealed commercial separation.
