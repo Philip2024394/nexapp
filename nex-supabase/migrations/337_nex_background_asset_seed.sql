@@ -1,6 +1,3 @@
-[extract] shop presets found: 279
-[extract] chat library · total: 171 · local: 74 · supabase: 97 · free-pool ids seeded: 3
-[extract] total rows to seed: 450
 -- AUTO-GENERATED SEED · see scripts/extract-background-asset-seed.mjs
 -- Total rows: 450 · Shop: 279 · Chat library: 171
 -- Zero URL collisions between the two sets (verified)

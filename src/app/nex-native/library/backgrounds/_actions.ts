@@ -29,6 +29,10 @@ import { updateShopCoverTint } from "@/lib/nex-native/shop-cover-service";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { effectiveTier } from "@/lib/nex-native/account-service";
 import { getBackgroundAsset } from "@/lib/nex-native/library/catalog-service";
+import {
+  canAccessChatTheme,
+  loadThemesPlusUntil,
+} from "@/lib/nex-native/library/entitlement-service";
 
 type ActionResult = { ok: true; assetId: string } | { ok: false; error: string };
 
@@ -117,15 +121,23 @@ export async function applyFromLibraryChatAction(
     .from("nex_chat_theme")
     .select("id, is_active, tier")
     .eq("id", chatThemeId)
-    .maybeSingle();
+    .maybeSingle<{ id: string; is_active: boolean; tier: "gratis" | "bisnis" | "pro" }>();
   if (themeErr) return { ok: false, error: themeErr.message };
   if (!themeRow || themeRow.is_active !== true) {
     return { ok: false, error: "chat-theme-not-seeded" };
   }
 
-  // Premium gate · identical semantics to updateChatThemeAction.
-  if (themeRow.tier === "bisnis" && effectiveTier(session.account) !== "bisnis") {
-    return { ok: false, error: "themes-plus-required" };
+  // Premium gate · owner-sealed commercial separation.
+  // Does NOT consult effectiveTier() · shop subscribers must NOT
+  // automatically unlock premium chat themes. Reads only Themes Plus
+  // signals (themes_plus_until + legacy ownership).
+  const themesPlusUntil = await loadThemesPlusUntil(session.account.id);
+  const decision = await canAccessChatTheme(
+    { id: themeRow.id, tier: themeRow.tier },
+    { id: session.account.id, themes_plus_until: themesPlusUntil },
+  );
+  if (!decision.allow) {
+    return { ok: false, error: decision.reason };
   }
 
   const { error } = await nexSupabaseAdmin

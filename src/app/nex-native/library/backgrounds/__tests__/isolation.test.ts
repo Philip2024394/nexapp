@@ -27,21 +27,23 @@ const actionsSrc = readFileSync(
   "utf8",
 );
 
-describe("NEX Unified Visual Library · structural isolation (compile-time)", () => {
-  // Extract a function body by slicing from its signature to its matching
-  // top-level closing brace. We find the next "\n}\n" after the function's
-  // signature · the first such line-start-anchored brace closes the function.
-  // Doc comments belonging to the next function are deliberately excluded.
-  function extractFnBody(name: string): string {
-    const start = actionsSrc.indexOf(`export async function ${name}`);
-    if (start < 0) throw new Error(`fn ${name} not found`);
-    const closeIdx = actionsSrc.indexOf("\n}\n", start);
-    if (closeIdx < 0) return actionsSrc.slice(start);
-    return actionsSrc.slice(start, closeIdx + 3);
-  }
+// Extract a function body by slicing from its signature to its matching
+// top-level closing brace. We find the next "\n}\n" after the function's
+// signature · the first such line-start-anchored brace closes the function.
+// Doc comments belonging to the next function are deliberately excluded.
+// Hoisted to module scope so BOTH describe blocks can reach it.
+function extractFnBody(name: string): string {
+  const start = actionsSrc.indexOf(`export async function ${name}`);
+  if (start < 0) throw new Error(`fn ${name} not found`);
+  const closeIdx = actionsSrc.indexOf("\n}\n", start);
+  if (closeIdx < 0) return actionsSrc.slice(start);
+  return actionsSrc.slice(start, closeIdx + 3);
+}
 
-  const shopBody = extractFnBody("applyFromLibraryShopAction");
-  const chatBody = extractFnBody("applyFromLibraryChatAction");
+const shopBody = extractFnBody("applyFromLibraryShopAction");
+const chatBody = extractFnBody("applyFromLibraryChatAction");
+
+describe("NEX Unified Visual Library · structural isolation (compile-time)", () => {
 
   it("Isolation #1 · applyFromLibraryShopAction does NOT reference chat_theme or nex_chat_theme", () => {
     expect(shopBody).not.toContain("chat_theme");
@@ -104,30 +106,19 @@ describe("NEX Unified Visual Library · catalog-service context filter", () => {
   });
 });
 
-describe("NEX Unified Visual Library · runtime DB tests (require sandbox apply)", () => {
-  it.skip("Isolation #3 · refresh preserves both selections", () => {
-    // REQUIRES: migration 337 applied to sandbox + test account with
-    // both a business row (shop_cover_image_url set) and chat_theme set.
-    // Flow: GET /library/backgrounds?context=shop · assert
-    //       selectedShopAssetUrl matches nex_business row.
-    //       GET /library/backgrounds?context=chat · assert
-    //       selectedChatThemeId matches nex_account.chat_theme.
-    // Covered by Playwright spec once sandbox migration is applied.
+describe("NEX Unified Visual Library · Themes Plus commercial separation", () => {
+  // These structural checks verify the chat action uses the entitlement
+  // service (not effectiveTier) for gating premium chat themes.
+  it("Chat action imports canAccessChatTheme + loadThemesPlusUntil (not effectiveTier for chat gate)", () => {
+    // Entitlement service is the gate for chat
+    expect(chatBody).toContain("canAccessChatTheme");
+    expect(chatBody).toContain("loadThemesPlusUntil");
+    // Chat body must NOT fall back to effectiveTier (which would re-couple to shop tier)
+    expect(chatBody).not.toContain("effectiveTier(session.account)");
+    // Shop body still uses effectiveTier for shop tier gate (expected)
+    expect(shopBody).toContain("effectiveTier(session.account)");
   });
 
-  it.skip("Isolation #4 · logout + login preserves both selections", () => {
-    // REQUIRES: sandbox apply + Playwright e2e. Covered by
-    // scripts/_tmp/verify-library-session.spec.ts in Phase 1 final.
-  });
-
-  it.skip("Isolation #8 · two businesses retain independent shop backgrounds", () => {
-    // REQUIRES: sandbox apply + test account with 2+ nex_business rows.
-    // Flow: write shop_cover_image_url=A on business1; write =B on business2;
-    //       assert business1.shop_cover_image_url remains A.
-  });
-
-  it.skip("Isolation #9 · existing chat_theme selections survive migration", () => {
-    // REQUIRES: pre-migration SELECT of nex_account.chat_theme values +
-    // post-migration SELECT · must match row-for-row.
-  });
+  // Runtime DB tests #3, #8, #9 are covered in sandbox-db.test.ts.
+  // Test #4 (logout + login) is covered by Playwright e2e only.
 });
