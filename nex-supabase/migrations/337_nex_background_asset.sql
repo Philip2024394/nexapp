@@ -13,22 +13,46 @@
 --   · This migration does NOT alter either of those columns
 --   · Zero coupling · library UI dispatches to the existing two writers
 --
--- Phase 1 seed:
+-- Phase 1 seed (reconciled 2026-11-11 against actual source files):
 --   · 279 shop backgrounds · extracted from PRESETS array
 --     (src/app/nex-native/manage/shop/backgrounds/_client.tsx)
---   · 74 chat library wallpapers (LOCAL assets only) · extracted from
+--     · earlier audit stated 297 · real count verified at 279 via
+--       `grep -cE 'url: "/nex-brand' inside PRESETS region`
+--   · 171 chat library wallpapers · ALL entries extracted from
 --     LIBRARY_THEMES (src/app/nex-native/chat-themes-library/_catalog.ts)
---   · 97 chat library wallpapers hosted on prod Supabase storage are
---     EXCLUDED · they remain in the legacy LIBRARY_THEMES array until a
---     later phase authorises moving them
+--     · 74 local assets (/nex-themes/library/preview/*.png)
+--     · 97 Supabase-hosted assets (public bucket at
+--       ijvqdvsvwtwxzcqmoqit.supabase.co) · reachable from sandbox
+--       because the bucket is PUBLIC READ · prod project is NOT
+--       accessed by this migration · only its public asset URLs are
+--       stored as text in storage_url
 --   · Zero URL collisions verified between the two sets · zero basename
 --     collisions · each asset uses a namespaced id ("shop:<id>" or
 --     "chat:<id>") to prevent cross-source collisions
+--   · Total catalog rows: 450 (279 + 171)
+--
+-- Themes Plus reconciliation (owner directive 2026-11-11):
+--   · 3 chat library ids are in the owner-approved Themes Plus free
+--     pool: library-ireland-1, library-pattern-2, library-pets-1
+--   · The companion nex_chat_theme seed for these 3 uses
+--     tier='gratis' + category='standard' so the existing
+--     updateChatThemeAction tier gate correctly permits any signed-in
+--     viewer to set them
+--   · The other 168 library ids seed with tier='bisnis' +
+--     category='premium' so the existing tier gate requires
+--     effectiveTier='bisnis'
+--   · Themes Plus Phase 1 (separate migration, deferred) will
+--     introduce the nex.themes_plus_approved_free table + the
+--     canAccessTheme() service that replaces the tier-only gate
+--     with the 5-gate contract. Until then, the tier flag on these
+--     rows is the sole gate · consistent with existing behaviour
 --
 -- Scope-restricted per owner directive 2026-11-11:
---   · NO change to nex_account, nex_business, nex_chat_theme,
---     nex_theme_subscription, or any existing writer
---   · NO change to Themes Plus commercial model
+--   · NO change to nex_account, nex_business, or any existing writer
+--   · nex_chat_theme is EXTENDED by 171 rows (consistent with how it
+--     is currently used by updateChatThemeAction)
+--   · NO change to Themes Plus commercial model (free-pool ids keep
+--     their free status; premium ids stay premium)
 --   · NO change to Shop subscription rules
 --
 -- NOT YET APPLIED to sandbox. Review-only. Requires separate explicit
@@ -133,10 +157,12 @@ CREATE POLICY nex_background_asset_public_read
 INSERT INTO nex_migration_history (version, description, notes)
 VALUES (
   '337',
-  'nex_background_asset · unified NEX Visual Library catalog + 353-row seed',
+  'nex_background_asset · unified NEX Visual Library catalog + 450-row seed',
   'Phase 1 of the unified library per owner directive 2026-11-11. '
-  'Shop (279) + Chat library local (74) assets seeded with strictly disjoint '
-  'contexts. Existing selection columns (nex_account.chat_theme, '
+  'Shop (279) + Chat library (171 · 74 local + 97 Supabase-public) assets '
+  'seeded with strictly disjoint contexts. nex_chat_theme extended by 171 '
+  'companion rows (3 Themes Plus free-pool ids as gratis, 168 as bisnis). '
+  'Existing selection columns (nex_account.chat_theme, '
   'nex_business.shop_cover_image_url, shop_cover_tint_hex) unchanged.'
 )
 ON CONFLICT (version) DO NOTHING;

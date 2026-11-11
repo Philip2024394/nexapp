@@ -88,10 +88,16 @@ export async function applyFromLibraryShopAction(
 }
 
 /** CHAT CONTEXT · writes nex_account.chat_theme.
- *  Never touches nex_business. Entitlement: tier validation is deferred to
- *  Themes Plus Phase 1 (which introduces the canAccessTheme gate); this
- *  action currently permits any chat-context asset for signed-in users.
- *  When Themes Plus lands its canAccessTheme service, insert the gate here. */
+ *  Never touches nex_business.
+ *
+ *  Entitlement gate · matches the existing updateChatThemeAction
+ *  (_actions.ts:5888) so this library save path is not a weaker surface:
+ *   · If the chat_theme row has tier='gratis' · any signed-in viewer
+ *     may set it.
+ *   · If the chat_theme row has tier='bisnis' · the viewer's
+ *     effectiveTier must be 'bisnis'.
+ *  When Themes Plus Phase 1 introduces canAccessTheme(), swap the gate
+ *  here to call that service for the 5-gate contract. */
 export async function applyFromLibraryChatAction(
   assetId: string,
 ): Promise<ActionResult> {
@@ -105,16 +111,21 @@ export async function applyFromLibraryChatAction(
   // nex_account.chat_theme stores and chatThemeService.getThemeById reads.
   const chatThemeId = asset.id.replace(/^chat:/, "");
 
-  // Verify the chat theme row exists (seeded by mig 337). If not present,
-  // fail honestly rather than writing an unresolvable value.
+  // Verify the chat theme row exists (seeded by mig 337). Read tier so
+  // the premium gate can enforce correctly.
   const { data: themeRow, error: themeErr } = await nexSupabaseAdmin
     .from("nex_chat_theme")
-    .select("id, is_active")
+    .select("id, is_active, tier")
     .eq("id", chatThemeId)
     .maybeSingle();
   if (themeErr) return { ok: false, error: themeErr.message };
   if (!themeRow || themeRow.is_active !== true) {
     return { ok: false, error: "chat-theme-not-seeded" };
+  }
+
+  // Premium gate · identical semantics to updateChatThemeAction.
+  if (themeRow.tier === "bisnis" && effectiveTier(session.account) !== "bisnis") {
+    return { ok: false, error: "themes-plus-required" };
   }
 
   const { error } = await nexSupabaseAdmin

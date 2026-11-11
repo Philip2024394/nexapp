@@ -154,6 +154,31 @@ export function FullLibraryClient(): React.JSX.Element {
           >
             {LIBRARY_THEMES.length} themes · page {page + 1} of {totalPages}
           </p>
+          {/* Owner directive 2026-11-11 · Phase 1 unified NEX Visual
+              Library CTA. Deep-links to the shared library route with
+              chat context pre-selected. Save goes through the
+              library's chat action which writes nex_account.chat_theme
+              (same column as updateChatThemeAction) and enforces the
+              existing effectiveTier gate on premium themes. */}
+          <Link
+            href="/nex-native/library/backgrounds?context=chat&returnTo=%2Fnex-native%2Fchat-themes-library%2Fall"
+            data-nex-chat-library-cta
+            style={{
+              display: "inline-block",
+              marginTop: 10,
+              padding: "8px 14px",
+              borderRadius: 999,
+              background: "#FF7200",
+              color: "#FFFFFF",
+              textDecoration: "none",
+              fontSize: 12,
+              fontWeight: 900,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            Browse NEX Visual Library
+          </Link>
         </header>
 
         <ul

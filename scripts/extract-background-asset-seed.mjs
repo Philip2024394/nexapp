@@ -54,34 +54,55 @@ console.error(`[extract] shop presets found: ${shopAssets.length}`);
 
 // ─── Chat library themes ──────────────────────────────────────────
 const chatText = readFileSync(chatPath, "utf8");
-// Each theme is one line (compact literal) with wallpaperUrl pointing at a local path.
-// We only extract LOCAL assets (wallpaperUrl starts with "/nex-themes/library/preview/").
-// The 97 Supabase-hosted entries point at prod storage · excluded from Phase 1 seed.
-const chatLineRe = /\{\s*id:\s*"([^"]+)",\s*label:\s*"([^"]+)",\s*wallpaperUrl:\s*"(\/nex-themes\/library\/preview\/[^"]+)",\s*oneTimePriceEUR:\s*[\d.]+,\s*accentHex:\s*"([^"]+)",\s*downloads:\s*\d+(?:,\s*isNew:\s*true)?[\s,]*\}/g;
+// Match BOTH double-quoted (74 local entries) and single-quoted (97
+// Supabase-hosted entries). Full reconciliation per owner directive
+// 2026-11-11 · accept any wallpaperUrl shape including prod Supabase
+// public bucket paths (public bucket, no auth required).
+// Themes Plus free pool · the 5 owner-approved free themes retain
+// tier='gratis' in nex_chat_theme. The 3 library ids in that pool
+// (library-ireland-1, library-pattern-2, library-pets-1) are handled
+// below via FREE_POOL_IDS.
+const FREE_POOL_IDS = new Set(["library-ireland-1", "library-pattern-2", "library-pets-1"]);
+
+const chatLineReAny = /\{\s*id:\s*["']([^"']+)["'],\s*label:\s*["']([^"']+)["'],\s*wallpaperUrl:\s*["']([^"']+)["'],\s*oneTimePriceEUR:\s*[\d.]+,\s*accentHex:\s*["']([^"']+)["'],\s*downloads:\s*\d+(?:,\s*isNew:\s*true)?[\s,]*\}/g;
 const chatAssets = [];
-while ((m = chatLineRe.exec(chatText)) !== null) {
+let localCount = 0, supabaseCount = 0, freePoolCount = 0;
+while ((m = chatLineReAny.exec(chatText)) !== null) {
   const [, id, label, wallpaperUrl, accentHex] = m;
+  const isLocal = wallpaperUrl.startsWith("/");
+  const isSupabase = wallpaperUrl.startsWith("https://");
+  if (isLocal) localCount++;
+  else if (isSupabase) supabaseCount++;
+
+  const isFree = FREE_POOL_IDS.has(id);
+  if (isFree) freePoolCount++;
+
   // Derive a single category from the id prefix heuristic
-  let cat = "scenery";                 // default
+  let cat = "scenery";
   if (id.includes("pattern") || id.includes("celtic")) cat = "pattern";
   else if (id.includes("pets")) cat = "pets";
   else if (id.includes("pub") || id.includes("leprechaun") || id.includes("highlander")) cat = "scene";
+  else if (/^theme-o/.test(id)) cat = "luxury";
   else if (id.includes("ireland")) cat = "scenery";
-  else if (/^library-m-/.test(id) || /^library-y-/.test(id) || /^library-this-/.test(id)) cat = "scenery";
+
   chatAssets.push({
     id: `chat:${id}`,
+    bareId: id,                // for nex_chat_theme seed
     storage_url: wallpaperUrl,
     preview_url: wallpaperUrl,
     label,
     tint_hex: accentHex,
     categories: [cat, "chat-wallpaper"],
     contexts: ["chat"],
-    tier: "bisnis",                  // chat library entries are premium (gated by Themes Plus per Phase 0)
-    source: "nex_catalog_chat_library",
+    // Themes Plus reconciliation · free-pool ids get gratis; all
+    // others stay bisnis (gated by the existing updateChatThemeAction
+    // tier check until Themes Plus Phase 1 lands canAccessTheme).
+    tier: isFree ? "gratis" : "bisnis",
+    source: isLocal ? "nex_catalog_chat_library_local" : "nex_catalog_chat_library_supabase",
     sort_order: 200,
   });
 }
-console.error(`[extract] chat library (local) themes found: ${chatAssets.length}`);
+console.error(`[extract] chat library · total: ${chatAssets.length} · local: ${localCount} · supabase: ${supabaseCount} · free-pool ids seeded: ${freePoolCount}`);
 
 // ─── Emit SQL ─────────────────────────────────────────────────────
 const all = [...shopAssets, ...chatAssets];
@@ -114,12 +135,24 @@ console.log(`-- updateChatThemeAction validator accepts them when saved via the`
 console.log(`-- unified library UI. Ids match the catalog (unprefixed) to interop`);
 console.log(`-- with the existing chat shell theme resolver. 74 rows · all local`);
 console.log(`-- assets · tier='bisnis' · category='premium'.`);
+// Themes Plus reconciliation: the 3 library ids in the owner-approved
+// 5-theme free pool (library-ireland-1, library-pattern-2, library-pets-1)
+// seed with tier='gratis' + category='standard' so the existing
+// updateChatThemeAction tier gate correctly permits any signed-in user.
+// All other 168 library ids seed with tier='bisnis' + category='premium'
+// so the existing gate requires effectiveTier='bisnis' (shop or future
+// Themes Plus subscription).
+// default + theme-0 are NOT seeded here (default already exists at
+// sandbox mig 048; theme-0 is a Themes Plus Phase 1 concern).
 const chatThemeRows = chatAssets.map(a => {
-  const bareId = a.id.replace(/^chat:/, "");
+  const bareId = a.bareId;
   const label = a.label;
   const accent = a.tint_hex ?? "#C6A15B";
   const heroUrl = a.storage_url;
-  return `  (${sqlQuote(bareId)}, ${sqlQuote(label)}, ${sqlQuote(accent)}, 'bisnis', 'premium', ${sqlQuote(heroUrl)}, true, 300)`;
+  const isFree = FREE_POOL_IDS.has(bareId);
+  const tier = isFree ? "gratis" : "bisnis";
+  const category = isFree ? "standard" : "premium";
+  return `  (${sqlQuote(bareId)}, ${sqlQuote(label)}, ${sqlQuote(accent)}, ${sqlQuote(tier)}, ${sqlQuote(category)}, ${sqlQuote(heroUrl)}, true, 300)`;
 });
 console.log(`INSERT INTO nex_chat_theme (id, name, accent_hex, tier, category, hero_image_url, is_active, sort_order)
 VALUES`);
