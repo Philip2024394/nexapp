@@ -43,6 +43,10 @@ import { useEffect } from "react";
 
 import { isPublicPrefetchablePath } from "@/lib/nex-native/navigation/public-route-allowlist";
 import { prefetchFull } from "@/lib/nex-native/navigation/prefetch-full";
+import {
+  prepareDestination,
+  waitForCachePrewarm,
+} from "@/lib/nex-native/navigation/prepare-destination";
 
 type StartViewTransitionFn = (
   callback: () => void | Promise<void>,
@@ -198,25 +202,79 @@ export function NexNavigationTransitions(): null {
 
       // Slow-feedback timer · flips `data-nex-nav-slow` after
       // SLOW_FEEDBACK_MS so CSS can reveal a subtle amber progress
-      // bar. The current page stays interactive.
+      // bar. Owner directive 2026-11-11 (C24.C1 refinement) · the
+      // prewarm phase now runs BEFORE the view transition, so the
+      // OLD DOM is live during the wait and the CSS attached to
+      // `.nex-native-frame::before` can render normally.
       const slowTimer = window.setTimeout(() => {
         document.documentElement.dataset[NAV_SLOW_ATTR] = "true";
       }, SLOW_FEEDBACK_MS);
 
-      // IMMEDIATE slide · no warm-wait. If the destination was
-      // prefetched, this commits with zero network requests. If
-      // not, Next.js fetches the RSC once and streams through
-      // loading.tsx. Either way · exactly ONE fetch per nav.
-      const transition = startViewTransition(() => {
-        router.push(path + destUrl.search + destUrl.hash);
-      });
+      const clearProgressFeedback = (): void => {
+        window.clearTimeout(slowTimer);
+        delete document.documentElement.dataset[NAV_SLOW_ATTR];
+      };
 
-      transition.finished
-        .catch(() => { /* aborted transitions are fine */ })
-        .finally(() => {
-          window.clearTimeout(slowTimer);
+      // Cycle 24 Option B · owner-sealed 2026-11-11 · refined C24.C1.
+      // PREWARM BEFORE VIEW TRANSITION.
+      //
+      // Phase 1 · warm the router cache while OLD page stays LIVE.
+      //   `waitForCachePrewarm` fires router.prefetch(path, {kind:"full"})
+      //   and awaits the destination's RSC payload via a one-shot
+      //   window.fetch monitor. During this wait the browser has NOT
+      //   entered a view transition, so the amber progress-bar CSS
+      //   (bound to [data-nex-nav-slow] on <html>) renders normally
+      //   if the user crosses SLOW_FEEDBACK_MS. User can still click
+      //   around OLD page · the wait does not freeze the UI.
+      //
+      // Phase 2 · animate using the warm cache.
+      //   startViewTransition's async callback calls router.push.
+      //   Because the router cache is now warm, Next.js commits the
+      //   destination tree without another RSC round-trip. The
+      //   defence-in-depth `prepareDestination()` guards against a
+      //   case where React's commit lands a microtask late · its
+      //   MutationObserver resolves when the slide-root actually
+      //   contains real content, so the browser's "new" snapshot
+      //   captures real content, not a transient fallback.
+      (async () => {
+        // Phase 1 · prewarm (OLD live · amber bar renders if slow).
+        await waitForCachePrewarm(
+          (href) => prefetchFull(router, href),
+          path + destUrl.search + destUrl.hash,
+          { maxWaitMs: 1500 },
+        );
+        // Clear the slow-feedback attribute BEFORE entering the view
+        // transition so the OLD snapshot does not capture the amber
+        // bar · otherwise the bar would persist into the animation
+        // and look wrong. The bar only communicates "we're waiting"
+        // and that window is over.
+        clearProgressFeedback();
+
+        if (!startViewTransition) {
+          router.push(path + destUrl.search + destUrl.hash);
           setPending(false);
+          return;
+        }
+
+        // Phase 2 · animate from the warm cache.
+        const transition = startViewTransition(async () => {
+          router.push(path + destUrl.search + destUrl.hash);
+          await prepareDestination({ maxWaitMs: 500 });
         });
+        transition.finished
+          .catch(() => { /* aborted transitions are fine */ })
+          .finally(() => {
+            setPending(false);
+          });
+      })().catch(() => {
+        // Phase 1 threw · clear progress + reset pending so the user
+        // isn't stranded. Fall back to a plain router.push.
+        clearProgressFeedback();
+        try {
+          router.push(path + destUrl.search + destUrl.hash);
+        } catch { /* ignore */ }
+        setPending(false);
+      });
     };
 
     document.addEventListener("click", onClick, { capture: true });
