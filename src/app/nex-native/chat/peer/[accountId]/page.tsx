@@ -321,48 +321,72 @@ export default async function PeerChatPage({
   // resolves the sticker from the peer's chat_theme.
   const bindSticker = sendPeerStickerAction.bind(null, peer.id);
 
-  // Bridge · shop icon in header · when the peer owns a business
-  // with live products, the header renders a shop button that
-  // opens the product grid modal. Fully fails safe · any service
-  // error just hides the shop icon.
-  const peerBusinesses = await businessService
-    .listBusinessesByOwner(peer.id)
-    .catch(() => [] as Awaited<ReturnType<typeof businessService.listBusinessesByOwner>>);
+  // Owner directive 2026-11-11 (Cycle 23 · P1 parallelization) ·
+  // Wave 1: two independent queries that only need `peer` + `session`
+  // run concurrently. Previously peerBusinesses awaited before
+  // viewerBusinesses even started · now Promise.all.
+  const [peerBusinesses, viewerBusinesses] = await Promise.all([
+    businessService
+      .listBusinessesByOwner(peer.id)
+      .catch(
+        () =>
+          [] as Awaited<
+            ReturnType<typeof businessService.listBusinessesByOwner>
+          >,
+      ),
+    businessService
+      .listBusinessesByOwner(session.account.id)
+      .catch(
+        () =>
+          [] as Awaited<
+            ReturnType<typeof businessService.listBusinessesByOwner>
+          >,
+      ),
+  ]);
   const peerBusiness = peerBusinesses[0] ?? null;
-
-  // Sealed 2026-10-01 · first-time shop-setup chooser · when the
-  // VIEWER has no business of their own, tapping the shop icon
-  // opens the 3-button chooser (Sell Products / Sell Food / Affiliate)
-  // so new NEX users have an obvious on-ramp to selling. Viewers who
-  // already run a shop go straight to the peer's product grid.
-  const viewerBusinesses = await businessService
-    .listBusinessesByOwner(session.account.id)
-    .catch(() => [] as Awaited<ReturnType<typeof businessService.listBusinessesByOwner>>);
   const viewerHasBusiness = viewerBusinesses.length > 0;
-  const peerProducts = peerBusiness
-    ? await productService
-        .listProductsByBusiness(peerBusiness.id, "live")
-        .catch(() => [] as Awaited<ReturnType<typeof productService.listProductsByBusiness>>)
-    : [];
-  // Bridge 51 · food sellers (restaurant / cafe / bakery / bar / …)
-  // keep their SKUs in nex_menu_item, not nex_product. Load menu items
-  // when the peer's business is a venue category so the same slider
-  // populates for every seller · one unified "browse what they sell"
-  // grid regardless of whether they're a product seller or a food
-  // seller. Founder direction 2026-09-29.
-  const peerMenuItems =
-    peerBusiness && isVenueCategory(peerBusiness.business_category)
-      ? await menuService
-          .listMenuItemsByBusiness(peerBusiness.id, { status: "live" })
-          .catch(() => [] as Awaited<ReturnType<typeof menuService.listMenuItemsByBusiness>>)
-      : [];
-  // Bridge 16b · JIT safe-trade consent gate. Fires only when the
-  // peer owns a business (i.e. this is a commerce chat) AND the
-  // viewer hasn't yet acknowledged the current terms version. The
-  // modal blocks the surface until they tick + submit.
-  const needsSafeTradeConsent = peerBusiness
-    ? !(await hasCurrentSafeTradeConsent(session.account.id).catch(() => true))
-    : false;
+
+  // Owner directive 2026-11-11 (Cycle 23 · P1 parallelization) ·
+  // Wave 2: once peerBusiness is known, products + menu items +
+  // safe-trade consent are all independent of each other. Run in
+  // parallel. Non-business chats short-circuit to empty arrays
+  // without incurring a DB round-trip.
+  const [peerProducts, peerMenuItems, needsSafeTradeConsent] =
+    await Promise.all([
+      peerBusiness
+        ? productService
+            .listProductsByBusiness(peerBusiness.id, "live")
+            .catch(
+              () =>
+                [] as Awaited<
+                  ReturnType<typeof productService.listProductsByBusiness>
+                >,
+            )
+        : Promise.resolve(
+            [] as Awaited<
+              ReturnType<typeof productService.listProductsByBusiness>
+            >,
+          ),
+      peerBusiness && isVenueCategory(peerBusiness.business_category)
+        ? menuService
+            .listMenuItemsByBusiness(peerBusiness.id, { status: "live" })
+            .catch(
+              () =>
+                [] as Awaited<
+                  ReturnType<typeof menuService.listMenuItemsByBusiness>
+                >,
+            )
+        : Promise.resolve(
+            [] as Awaited<
+              ReturnType<typeof menuService.listMenuItemsByBusiness>
+            >,
+          ),
+      peerBusiness
+        ? hasCurrentSafeTradeConsent(session.account.id)
+            .then((v) => !v)
+            .catch(() => false)
+        : Promise.resolve(false),
+    ]);
 
   // Bridge 17e · report affordance moved to /nex-native/report/[id]
   // and surfaced from the /friends list next to Remove / Block · no

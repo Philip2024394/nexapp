@@ -252,41 +252,34 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
 
   if (!HANDLE_REGEX.test(handle)) notFound();
 
-  const profileAccount = await accountService.getAccountByNexHandle(handle);
+  // Owner directive 2026-11-11 (Cycle 23 · P3 parallelization) ·
+  // handle lookup + session resolve are independent · run concurrently.
+  const [profileAccount, session] = await Promise.all([
+    accountService.getAccountByNexHandle(handle),
+    resolveSessionWithDevOverride().catch(() => null),
+  ]);
   if (!profileAccount) notFound();
 
-  const session = await resolveSessionWithDevOverride().catch(() => null);
   const viewerAccountId = session?.account.id ?? null;
   const isOwner = viewerAccountId === profileAccount.id;
 
-  // Phase 3A gate (sealed · do not weaken).
+  // Owner directive 2026-11-11 (Cycle 23 · P3 parallelization) ·
+  // Phase 3A gate (sealed · do not weaken) + R10 Stage 5 visibility
+  // gate both only need profileAccount.id · run concurrently. Previously
+  // these were two sequential awaits.
   //
-  // 2026-11-01 fix · the gate used to read `is_discoverable` off the
-  // `nex_account` row, but migration 134 only ever added that column
-  // to `nex_account_profile`. The cast silently resolved to `undefined`
-  // → Boolean(undefined) === false → every non-owner viewer 404'd
-  // regardless of the real opt-in state. Now we fetch the authoritative
-  // field directly. Behaviour for existing profiles is strictly better:
-  // discoverable accounts become visible to non-owners (as intended),
-  // non-discoverable accounts stay 404 (unchanged intent).
-  const profileRow = await accountProfileService.getProfileByAccountId(
-    profileAccount.id,
-  );
+  // 2026-11-01 fix retained: `is_discoverable` lives on
+  // `nex_account_profile`, not `nex_account`. The profileRow fetch here
+  // doubles as the hydration read used by downstream rendering · we
+  // pass it through `profilePromise` below (was redundantly re-fetched).
+  const [profileRow, visibility] = await Promise.all([
+    accountProfileService
+      .getProfileByAccountId(profileAccount.id)
+      .catch(() => null),
+    resolveProfileVisibilityForViewer(viewerAccountId, profileAccount.id),
+  ]);
   const isDiscoverable = Boolean(profileRow?.is_discoverable);
   if (!isOwner && !isDiscoverable) notFound();
-
-  // R10 Stage 5 profile_visibility gate (sealed · migration 200 unapplied).
-  // 2026-10-28 · TS2554 fix · the service takes 2 positional args
-  // (viewerAccountId, profileOwnerAccountId) — not a single options
-  // object. Caller was passing the wrong shape so the call blew up
-  // at runtime: `viewerAccountId` arrived as the whole object and
-  // `profileOwnerAccountId` was undefined, so the owner-equality
-  // short-circuit silently flipped and the DB read either threw or
-  // mis-targeted. Correct order per service signature.
-  const visibility = await resolveProfileVisibilityForViewer(
-    viewerAccountId,
-    profileAccount.id,
-  );
   if (!visibility.visible && !isOwner) notFound();
 
   // Non-owner trying to view edit mode · drop the flag silently.
@@ -294,10 +287,10 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
     redirect(`/nex-native/profile/${handle}`);
   }
 
-  // Hydrate everything we need in parallel.
-  const profilePromise = accountProfileService
-    .getProfileByAccountId(profileAccount.id)
-    .catch(() => null);
+  // Owner directive 2026-11-11 (Cycle 23 · P3 dedup) · reuse the
+  // profileRow we already fetched for the is_discoverable gate rather
+  // than firing a second getProfileByAccountId. One fewer DB round-trip.
+  const profilePromise = Promise.resolve(profileRow);
   const businessesPromise = NEX_COMMERCE_ENABLED
     ? businessService.listBusinessesByOwner(profileAccount.id).catch(() => [])
     : Promise.resolve([]);
@@ -467,24 +460,29 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
       })
     : null;
 
-  // Hydrate mutual-friend preview accounts (small set · parallel-safe).
-  let mutualPreview: MutualPreviewAccount[] =
-    mutualResult.previewIds.length > 0
-      ? (
-          await Promise.all(
-            mutualResult.previewIds.map((id) =>
-              accountService.getAccountById(id).catch(() => null),
-            ),
-          )
-        )
-          .filter((a): a is NonNullable<typeof a> => a !== null)
-          .map((a) => ({
-            id: a.id,
-            displayName: a.display_name ?? "friend",
-            // avatar_url lives on nex_account_profile · deferred.
-            avatarUrl: null,
-          }))
-      : [];
+  // Owner directive 2026-11-11 (Cycle 23 · N+1 fix) · mutual-friend
+  // preview accounts now use the batch `getAccountsByIds` helper · one
+  // query regardless of preview count instead of N per-id lookups.
+  // Explicit param types also unblock TS tuple inference on the big
+  // Promise.all destructure above.
+  let mutualPreview: MutualPreviewAccount[] = [];
+  if (mutualResult.previewIds.length > 0) {
+    const previewMap = await accountService
+      .getAccountsByIds(mutualResult.previewIds as string[])
+      .catch(() => new Map());
+    mutualPreview = (mutualResult.previewIds as string[])
+      .map((id: string) => previewMap.get(id))
+      .filter(
+        (a: ReturnType<typeof previewMap.get>): a is NonNullable<typeof a> =>
+          a != null,
+      )
+      .map((a) => ({
+        id: a.id,
+        displayName: a.display_name ?? "friend",
+        // avatar_url lives on nex_account_profile · deferred.
+        avatarUrl: null,
+      }));
+  }
   let effectiveMutualCount = mutualResult.count;
 
   // Philip mock · inject mock mutuals + preview portraits when the

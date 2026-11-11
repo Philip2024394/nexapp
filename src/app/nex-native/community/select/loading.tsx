@@ -1,7 +1,5 @@
 // src/app/nex-native/community/select/loading.tsx
 //
-// Owner directive 2026-11-11 · all loading animations retired across
-// /nex-native/*. This route now re-exports the shared SilentLoading
-// component · see src/app/nex-native/_silent-loading.tsx for rationale.
+// Cycle 23 Priority 5 · shape-matching skeleton (county-grid).
 
-export { SilentLoading as default } from "@/app/nex-native/_silent-loading";
+export { CommunitySkeleton as default } from "@/components/nex-native/skeletons/community-skeleton";
