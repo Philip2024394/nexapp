@@ -36,7 +36,11 @@ const DEST_SIGNED_OUT = "/nex-native/free-chat?show-themes=1";
 // Owner directive 2026-11-09 · splash auto-divert tightened from 3s
 // to 2s. Activated-emergency users have this cancelled client-side
 // (see _splash-client.tsx which removes the meta refresh on mount).
-const SPLASH_SECONDS = 2;
+//
+// Owner directive 2026-11-11 (later) · bumped from 2s to 5s alongside
+// the new NEX Chat & Shop App Poster artwork · owner wants the branded
+// first moment to breathe before the auto-divert.
+const SPLASH_SECONDS = 5;
 
 export default async function Page(): Promise<React.JSX.Element> {
   const session = await resolveNexAppSessionFromContext();

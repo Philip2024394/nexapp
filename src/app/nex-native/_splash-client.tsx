@@ -26,7 +26,11 @@ import { useRouter } from "next/navigation";
 import { hasActivatedEmergency } from "@/lib/nex-native/emergency/emergency-activation";
 import { SplashEmergencyUI } from "./_splash-emergency-ui-client";
 
-const SPLASH_MS = 2_000;
+// Owner directive 2026-11-11 (later) · bumped from 2_000 (2s) to
+// 5_000 (5s) alongside the new NEX Chat & Shop App Poster artwork.
+// Must stay in sync with SPLASH_SECONDS in page.tsx so the JS timer
+// and the <meta http-equiv="refresh"> no-JS fallback agree.
+const SPLASH_MS = 5_000;
 
 type ActivationState = "unknown" | "activated" | "not-activated";
 
