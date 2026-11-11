@@ -18,6 +18,15 @@ import path from "node:path";
 const srcDir = fileURLToPath(new URL("./src", import.meta.url));
 
 export default defineConfig({
+  test: {
+    // Load .env.local into process.env BEFORE any test module resolves.
+    // Needed because some library modules throw at import time if their
+    // required Supabase env vars are missing (e.g., supabase-admin.ts).
+    // Added 2026-11-11 for the unified visual library Phase 3 tests.
+    setupFiles: [
+      fileURLToPath(new URL("./scripts/vitest-stubs/env-loader.ts", import.meta.url)),
+    ],
+  },
   resolve: {
     alias: {
       "@": srcDir,

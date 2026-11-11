@@ -5882,18 +5882,37 @@ export async function updateChatThemeAction(formData: FormData): Promise<never> 
       });
       redirect(`/nex-native/chat-themes-library?${qs.toString()}`);
     }
-    // Phase 1 premium gate · only runs when the catalogue returned a
-    // row (which means we also know its tier). Static-list fallback
-    // themes are all `gratis` by construction so they skip this check.
-    if (row && row.tier === "bisnis") {
-      // Re-read the viewer's latest tier state (session may be stale
-      // if a trial was just activated in another tab).
-      const viewer = await accountService.getAccountById(session.account.id);
-      const viewerTier = viewer ? accountService.effectiveTier(viewer) : "gratis";
-      if (viewerTier !== "bisnis" && viewerTier !== "pro") {
+    // Owner directive 2026-11-11 (Phase 3) · Themes Plus commercial
+    // separation. The authoritative gate is now
+    // canAccessChatTheme(theme, account) in
+    // src/lib/nex-native/library/entitlement-service.ts · same service
+    // the unified library uses · ensures ONE consistent rule across
+    // both chat save paths (legacy and library).
+    //
+    // Replaces the previous effectiveTier-based check which allowed
+    // Shop subscribers (bisnis tier via shop) to unlock premium Chat
+    // themes. That coupling is now broken: only Themes Plus (nex_account
+    // .themes_plus_until > now()) OR verified historical ownership
+    // (nex_theme_ownership) grants premium access.
+    //
+    // Preserved semantics:
+    //   · Static-list fallback themes (NEX_CHAT_THEMES) skip the check
+    //     because they are gratis by construction.
+    //   · Live-world themes skip the check (not in nex_chat_theme).
+    //   · Catalogued gratis themes pass via Gate 1 of the service.
+    if (row && row.tier !== "gratis") {
+      const { canAccessChatTheme, loadThemesPlusUntil } = await import(
+        "@/lib/nex-native/library/entitlement-service"
+      );
+      const themesPlusUntil = await loadThemesPlusUntil(session.account.id);
+      const decision = await canAccessChatTheme(
+        { id: row.id, tier: row.tier as "gratis" | "bisnis" | "pro" },
+        { id: session.account.id, themes_plus_until: themesPlusUntil },
+      );
+      if (!decision.allow) {
         const qs = new URLSearchParams({
           e: "premium_required",
-          m: `${row.name} is a premium theme · start a 7-day trial or subscribe to apply it`,
+          m: `${row.name} requires NEX Themes Plus · Shop subscription does not unlock premium Chat themes`,
         });
         redirect(`/nex-native/chat-themes-library?${qs.toString()}`);
       }
