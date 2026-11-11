@@ -426,17 +426,54 @@ body::-webkit-scrollbar,
   ::view-transition-new(nex-page-frame) {
     animation: none !important;
   }
-  /* The phone-frame slide is the ONLY animated layer now. */
+  /* Owner directive 2026-11-11 iter 4 · ROOT CAUSE FIX for
+   * "desktop background slides over the app" bug.
+   *
+   * The View Transitions API extracts the animated element into a
+   * DETACHED pseudo-element layer (`::view-transition-group`) that's
+   * positioned at the element's viewport coordinates but is NOT a
+   * child of the original DOM parent. `overflow: hidden` on the
+   * phone frame does NOT clip the detached snapshot during the
+   * transition. When the snapshot translates (-25 % / +100 %) it
+   * freely escapes the phone-frame box on desktop, appearing as
+   * "the desktop is sliding".
+   *
+   * Fix: apply `overflow: clip` directly to the view-transition
+   * group + image-pair pseudo-elements. These ARE the detached
+   * layers · clipping them clips the snapshot to the phone-frame
+   * viewport regardless of translate offsets.
+   *
+   * `contain: paint` on the group gives the browser an extra hint
+   * that paint should stay inside the group's bounding box.
+   *
+   * On <500 px mobile the frame fills the viewport, so these rules
+   * are no-ops · they only matter on desktop where the frame is
+   * clamped to 288×624 and surrounded by backdrop. */
   ::view-transition-group(nex-frame) {
+    overflow: clip !important;
+    contain: paint !important;
     animation-duration: 320ms;
     animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+  }
+  ::view-transition-image-pair(nex-frame) {
+    overflow: clip !important;
+    isolation: isolate;
   }
   /* Default direction · forward push */
   ::view-transition-old(nex-frame) {
     animation-name: nex-nav-push-out;
+    /* Fill the image-pair exactly · no object-fit overflow. */
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top left;
   }
   ::view-transition-new(nex-frame) {
     animation-name: nex-nav-push-in;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top left;
   }
   /* Back direction · pop (data-nex-nav-dir flag set by
    * _navigation-transitions-client.tsx on popstate). */

@@ -8,6 +8,13 @@ const nextConfig = {
   turbopack: { root: __dirname },
   devIndicators: false,
   typescript: { ignoreBuildErrors: true },
+  // Owner directive 2026-11-11 · phone-on-same-WiFi testing was
+  // blocked because Next.js 16 ships a cross-origin dev-asset guard
+  // by default · HMR + JS bundles never reached the phone browser so
+  // pages hydrated as "dead HTML" (buttons visible, no event handlers
+  // attached). Allow the local LAN host explicitly for dev only. This
+  // config is dev-mode scoped · prod builds ignore allowedDevOrigins.
+  allowedDevOrigins: ["192.168.1.4", "localhost"],
   serverExternalPackages: [
     "unzipper",
     "tesseract.js",
