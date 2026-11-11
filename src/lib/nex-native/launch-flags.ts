@@ -156,6 +156,13 @@ export const NEX_CONTACTS_V2_ENABLED: boolean = (() => {
       return true;
     }
   }
-  // Unset env · dev-mode default-on · production default-off.
-  return process.env.NODE_ENV !== "production";
+  // Owner directive 2026-11-11 (Cycle 27 C27.2) · default flipped to
+  // ON in production too. Previous prod-off default caused a
+  // server-side redirect ping-pong (/contacts → /chat?tab=friends →
+  // /contacts → …) on any deploy that forgot to set
+  // NEX_CONTACTS_V2_ENABLED=1, which manifested as page "flashing".
+  // Explicit "0" / "false" / "no" still disables (opt-out path kept
+  // for emergency rollback). Owner confirmed 2026-11-11 the contacts
+  // v2 surface is the shipping product.
+  return true;
 })();

@@ -20,13 +20,17 @@ import Link from "next/link";
 import type { MockGroup } from "./_mock-groups";
 import { formatMinutesAgo } from "./_mock-groups";
 
+// Owner directive 2026-11-11 (Cycle 26) · unified with the filter-
+// button + contact-row palette: filled Pale Ivory bg + navy
+// primary-ink border + navy ink text. Supersedes the dark-panel +
+// cyan-rim treatment.
 const NEX = {
-  bgPanel: "rgba(2,9,20,0.92)",
+  bgPanel: "var(--nex-world-background-base, #F5EDD3)",
   pink: "#FF4FD7",
   cyan: "var(--nex-world-secondary, #00AFFF)",
   orange: "#FF7200",
-  text: "#F2F5F8",
-  textMute: "#7D9BC0",
+  text: "var(--nex-world-primary-ink, #2A1F0F)",
+  textMute: "rgba(42, 31, 15, 0.62)",
   unreadRed: "#B30000",
 };
 
@@ -284,8 +288,8 @@ export function GroupCard({
     boxSizing: "border-box",
     borderRadius: 10,
     background: NEX.bgPanel,
-    border: `1.5px solid ${accentHex}`,
-    boxShadow: "0 2px 10px rgba(0,0,0,0.4)",
+    border: `1px solid var(--nex-world-primary-ink, #2A1F0F)`,
+    boxShadow: "0 1px 3px rgba(42, 31, 15, 0.08)",
     textDecoration: "none",
     color: NEX.text,
     overflow: "visible",

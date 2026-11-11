@@ -46,9 +46,11 @@ const CARD_PADDING_X = 14;
 const CARD_GAP = 12;
 const CARD_MIN_HEIGHT = 90;
 
+// Owner directive 2026-11-11 (Cycle 26) · unified with the filter-
+// button + contact-row + group-card palette. Dark-on-ivory text.
 const NEX = {
-  text: "#F2F5F8",
-  textMute: "var(--nex-world-text-muted, #7D9BC0)",
+  text: "var(--nex-world-primary-ink, #2A1F0F)",
+  textMute: "rgba(42, 31, 15, 0.62)",
   unreadRed: "#B30000",
   // Toggle active colour · falls back to brand cyan but on Ireland
   // resolves to Gold via --nex-world-secondary.
@@ -431,10 +433,10 @@ export function CommunityNoticeCard({
     width: "100%",
     maxWidth: "100%",
     boxSizing: "border-box",
-    background: "var(--nex-world-drawer-bg, rgba(2,9,20,0.92))",
-    border: `1.5px solid ${NEX.accentHex}`,
+    background: "var(--nex-world-background-base, #F5EDD3)",
+    border: `1px solid var(--nex-world-primary-ink, #2A1F0F)`,
     borderRadius: 12,
-    boxShadow: "0 4px 12px rgba(0,0,0,0.35)",
+    boxShadow: "0 1px 3px rgba(42, 31, 15, 0.08)",
     textDecoration: "none",
     color: NEX.text,
     WebkitTapHighlightColor: "transparent",

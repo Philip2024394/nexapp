@@ -121,20 +121,21 @@ export function ContactRow({ row, accentHex }: ContactRowProps): React.JSX.Eleme
         width: "100%",
         maxWidth: "100%",
         boxSizing: "border-box",
-        // Owner directive 2026-11-11 (Cycle 25 C25.5) · card bg is now
-        // transparent so it inherits the page's Pale Ivory colour, and
-        // the card is distinguished by a 1px hairline rim at 12%
-        // primary-ink opacity. Supersedes the 2026-10-29 Emerald card
-        // bg + Gold accent rim treatment. Pending state keeps the gold
-        // tint hint so invites still read differently from live rows.
+        // Owner directive 2026-11-11 (Cycle 26 C26.1 · supersedes C25.5
+        // transparent + hairline) · unify with the filter-button
+        // palette: filled Pale Ivory bg + 1px navy primary-ink border
+        // + navy ink text. Same aesthetic now applies to group cards +
+        // business cards so the three card types read as one family.
+        // Pending state keeps the gold tint hint for the "invited ·
+        // waiting" affordance.
         background: row.pending
-          ? "color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 8%, transparent)"
-          : "transparent",
-        border: `1px solid ${row.pending ? "var(--nex-world-secondary, #C6A15B)" : "rgba(42, 31, 15, 0.12)"}`,
+          ? "color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 12%, var(--nex-world-background-base, #F5EDD3))"
+          : "var(--nex-world-background-base, #F5EDD3)",
+        border: `1px solid ${row.pending ? "var(--nex-world-secondary, #C6A15B)" : "var(--nex-world-primary-ink, #2A1F0F)"}`,
         borderRadius: 12,
         boxShadow: row.pending
           ? "0 2px 6px rgba(198, 161, 91, 0.15)"
-          : "none",
+          : "0 1px 3px rgba(42, 31, 15, 0.08)",
         textDecoration: "none",
         color: NEX.text,
         WebkitTapHighlightColor: "transparent",
@@ -288,7 +289,11 @@ export function ContactRow({ row, accentHex }: ContactRowProps): React.JSX.Eleme
               fontSize: 15,
               fontWeight: 800,
               lineHeight: 1.2,
-              color: "#F5A623",
+              // Owner directive 2026-11-11 (Cycle 27 C27.3) · name
+              // text switched from gold #F5A623 to primary-ink navy
+              // so it reads on the Pale Ivory card bg from C26.1 and
+              // matches the filter-button palette.
+              color: "var(--nex-world-primary-ink, #2A1F0F)",
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -420,7 +425,12 @@ export function ContactRow({ row, accentHex }: ContactRowProps): React.JSX.Eleme
 
       {/* Owner directive 2026-11-10 · "Active now" / presence label
           absolute-positioned at the bottom-right of the whole card ·
-          same position as the time text on chat bubbles. */}
+          same position as the time text on chat bubbles.
+          Owner directive 2026-11-11 (Cycle 30) · when the label
+          starts with "Active" (online + away buckets) prepend a
+          green dot so the live-presence affordance reads at a
+          glance. Offline labels keep the dot-less treatment so the
+          two states remain visually distinct. */}
       {lastOnlineLabel ? (
         <span
           aria-hidden
@@ -429,6 +439,9 @@ export function ContactRow({ row, accentHex }: ContactRowProps): React.JSX.Eleme
             position: "absolute",
             right: 10,
             bottom: 6,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
             fontSize: 10,
             fontWeight: 700,
             letterSpacing: 0.2,
@@ -438,6 +451,19 @@ export function ContactRow({ row, accentHex }: ContactRowProps): React.JSX.Eleme
               "ui-monospace, 'SF Mono', Consolas, 'Liberation Mono', monospace",
           }}
         >
+          {lastOnlineLabel.startsWith("Active") ? (
+            <span
+              aria-hidden
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: PRESENCE.online,
+                boxShadow: `0 0 4px ${PRESENCE.online}`,
+                flexShrink: 0,
+              }}
+            />
+          ) : null}
           {lastOnlineLabel}
         </span>
       ) : null}

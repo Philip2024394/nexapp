@@ -41,9 +41,23 @@ export function ContactsShell({ children }: ContactsShellProps) {
       data-nex-contacts-root
       style={{
         position: "relative",
-        minHeight: "100dvh",
+        // Owner directive 2026-11-11 (Cycle 28 · scroll fix v2) · DOM
+        // probe showed the real clip boundary is the sealed
+        // [data-nex-page-slide-root] which has fixed height: 100%
+        // (844px) + overflow: hidden (needed for VT snapshot clipping
+        // during slide animations · documented in nex-native.css).
+        // The frame's own overflow-y: auto cannot reveal the extra
+        // content because the slide-root doesn't expand.
+        //
+        // Fix: make THIS main its own scroll container. Height is
+        // 100% of the slide-root (so it fills the frame), and
+        // overflow-y: auto lets the user scroll through the 950+
+        // pixels of category buttons + invite card + 6 contact rows
+        // inside the sealed 844px viewport box. The slide-root's VT
+        // clip is preserved; the main becomes the scroll surface.
+        height: "100%",
+        overflowY: "auto",
         color: NEX.textPrimary,
-        overflow: "hidden",
         isolation: "isolate",
       }}
     >
@@ -53,13 +67,14 @@ export function ContactsShell({ children }: ContactsShellProps) {
           visual change. */}
       <style>{CONTACT_ROW_HEARTBEAT_KEYFRAMES}</style>
 
-      {/* Layer 1 · Ireland studio photo backdrop.
-          P2 engineering pass 2026-11-03 · swapped from a CSS `background-
-          image: url(...)` on a 2.5MB PNG to `<Image fill priority>` so
-          Next.js serves responsive AVIF/WebP variants with explicit
-          `sizes` on first paint. Preserves the exact visual position
-          (cover + center) and keeps the layer non-interactive via
-          `aria-hidden` + `pointer-events: none`. */}
+      {/* Owner directive 2026-11-11 (Cycle 29) · Contacts page
+          background swapped to the owner-supplied Cream & Gold
+          Abstract Wave UI Background artwork. Replaces both the
+          2026-11-03 Ireland studio photo AND the 2026-11-11 Pale
+          Ivory opaque mask · now a single image layer painted full-
+          bleed behind the content column. Cards + filter buttons
+          sit on top with their sealed Pale Ivory fills, picking up
+          the cream + gold hint around their edges. */}
       <div
         aria-hidden
         style={{
@@ -70,33 +85,18 @@ export function ContactsShell({ children }: ContactsShellProps) {
         }}
       >
         <Image
-          src="/nex-brand/hq/ireland-studio.png"
+          src="/nex-native/contacts/page-background.png"
           alt=""
           fill
           priority
           sizes="(max-width: 480px) 100vw, 480px"
-          quality={70}
+          quality={80}
           style={{
             objectFit: "cover",
             objectPosition: "center",
           }}
         />
       </div>
-
-      {/* Layer 2 · Owner directive 2026-11-11 · Contacts background
-          unified to a single Pale Ivory #F5EDD3 to match the main
-          chat background + the side drawer. Earlier two-tone
-          gradient (Warm Ivory → Pale Ivory) retired. Fully opaque
-          · studio photo in Layer 1 remains fully masked. */}
-      <div
-        aria-hidden
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: "#F5EDD3",
-          zIndex: 1,
-        }}
-      />
 
       {/* Layer 3 · Content column · sits above the glass. */}
       <div

@@ -237,6 +237,11 @@ function FilterTab({
   return (
     <Link
       href={`/nex-native/contacts?${params.toString()}`}
+      // Owner directive 2026-11-11 (Cycle 27 C27.1) · same
+      // retry-loop fix as the category buttons in page.tsx. These
+      // tab-switch Links are self-referential (same route, query
+      // change only) · default viewport prefetch was looping.
+      prefetch={false}
       data-nex-contacts-filter-pill={opt.value}
       data-nex-contacts-filter-pill-state={isActive ? "active" : "inactive"}
       data-nex-contacts-filter-pill-unread={hasUnread ? "true" : "false"}

@@ -16,18 +16,23 @@
 import type * as React from "react";
 import Link from "next/link";
 
+// Owner directive 2026-11-11 (Cycle 26) · unified with filter-button
+// + contact-row + group-card palette: filled Pale Ivory bg + navy
+// primary-ink border + navy ink text.
 const NEX = {
   cyan: "var(--nex-world-secondary, #00AFFF)",
-  cyanSoft: "rgba(0, 175, 255, 0.30)",
-  textPrimary: "#F2F5F8",
-  textMuted: "#7D9BC0",
-  panel: "rgba(3, 16, 29, 0.80)",
+  cyanSoft: "var(--nex-world-primary-ink, #2A1F0F)",
+  textPrimary: "var(--nex-world-primary-ink, #2A1F0F)",
+  textMuted: "rgba(42, 31, 15, 0.62)",
+  panel: "var(--nex-world-background-base, #F5EDD3)",
 };
 
 export function MyGroupsCard() {
   return (
     <Link
       href="/nex-native/contacts?tab=groups"
+      // Cycle 27 C27.1 · self-referential Link (same route).
+      prefetch={false}
       data-nex-contacts-groups-card
       aria-label="My Groups · coming soon"
       style={{

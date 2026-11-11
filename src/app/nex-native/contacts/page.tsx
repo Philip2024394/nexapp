@@ -631,14 +631,24 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       };
     });
 
-  // D7 filter · All = merged + sorted by displayName
-  // Friends = friends only · Business = businesses only
-  // Dating + Groups are visually present but return empty rows (D5/D6)
-  // Pending rows always render at the TOP · owner directive 2026-11-05.
+  // D7 filter · All = merged · Friends = friends only · Business =
+  // businesses only · Dating + Groups are visually present but
+  // return empty rows (D5/D6) · Pending rows always render at the
+  // TOP · owner directive 2026-11-05.
+  //
+  // Owner directive 2026-11-11 (Cycle 30) · sort is PRESENCE FIRST
+  // (online → busy → offline → null) with displayName as the
+  // alphabetical tiebreaker inside each bucket. Supersedes the
+  // 2026-11-05 displayName-only sort which was overriding the
+  // friendRows/businessRows presence sort applied above.
   const nonPendingRows: ContactRowDisplay[] = [
     ...friendRows,
     ...businessRows,
-  ].sort((a, b) => a.displayName.localeCompare(b.displayName));
+  ].sort((a, b) => {
+    const diff = presenceRank(a.presence ?? null) - presenceRank(b.presence ?? null);
+    if (diff !== 0) return diff;
+    return a.displayName.localeCompare(b.displayName);
+  });
   const allRows: ContactRowDisplay[] = [...pendingRows, ...nonPendingRows];
 
   // Owner directive 2026-11-05 iter 15 · pending-share follow-up ·
@@ -841,18 +851,17 @@ export default async function ContactsPage({ searchParams }: PageProps) {
           through the sealed `accentHex` prop stays (we no longer
           override border-color) · text colours lift to Orange (name)
           and Sage (secondary) for contrast on the Forest body. */}
+      {/* Owner directive 2026-11-11 (Cycle 27 C27.4) · the earlier
+          scoped CSS override forced every ContactRow to Forest-green
+          bg + Gold name text via !important. That override is now
+          retired · it was contradicting the Cycle 26 unified card
+          palette (Pale Ivory bg + navy border + navy ink) and
+          winning via specificity. The ContactRow component's own
+          inline styles are now the source of truth · they match the
+          filter-button world-class palette. */}
       <style>{`
-        [data-nex-contacts-root] [data-nex-contacts-row] {
-          background: var(--nex-world-primary, #1B5138) !important;
-        }
         [data-nex-contacts-root] [data-nex-contacts-row-name] {
-          color: #F5A623 !important;
-        }
-        [data-nex-contacts-root] [data-nex-contacts-row-profession],
-        [data-nex-contacts-root] [data-nex-contacts-row-location],
-        [data-nex-contacts-root] [data-nex-contacts-row-last-online] {
-          color: var(--nex-world-primary-ink, #AFC5B5) !important;
-          opacity: 0.9;
+          color: var(--nex-world-primary-ink, #2A1F0F) !important;
         }
       `}</style>
 
@@ -873,10 +882,6 @@ export default async function ContactsPage({ searchParams }: PageProps) {
           margin: "calc(0px - env(safe-area-inset-top, 0) - 28px) -14px 10px",
         }}
       >
-        {/* Owner directive 2026-11-11 (Cycle 25 C25.1) · left-side
-            shamrock icon removed · header starts directly at the
-            "Contacts" title. Supersedes the 2026-11-03 "shamrock in
-            header enlarge" directive. */}
         <h1
           style={{
             margin: 0,
@@ -893,14 +898,32 @@ export default async function ContactsPage({ searchParams }: PageProps) {
             button removed. Supersedes the 2026-11-10 "cart opens buyer
             cart" directive. Cart surface stays reachable via direct
             route /nex-native/cart; just not from this header. */}
+        {/* Cycle 28 · drawer trigger · black bg + white "+" glyph.
+            ControlDrawer's default triggerButtonStyle hard-codes
+            background: #FF7200 + border: 1px solid #FF7200 on the
+            inner button (control-drawer-client.tsx:1397), which paints
+            over the wrapper's black bg. Force both to black + the SVG
+            stroke/color to white so the "+" reads clearly. */}
         <style>{`
-          [data-nex-contacts-global-drawer] button,
+          [data-nex-contacts-global-drawer] button {
+            background: #000000 !important;
+            border: none !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45) !important;
+            color: #FFFFFF !important;
+            /* Cycle 30 · shrink inner button + glyph so it reads
+               cleanly inside the 32px outer wrapper (was 40). */
+            width: 32px !important;
+            height: 32px !important;
+            font-size: 20px !important;
+          }
           [data-nex-contacts-global-drawer] svg {
-            color: #FF7200 !important;
-            stroke: #FF7200 !important;
+            color: #FFFFFF !important;
+            stroke: #FFFFFF !important;
+            width: 14px !important;
+            height: 14px !important;
           }
           [data-nex-contacts-global-drawer] svg * {
-            stroke: #FF7200 !important;
+            stroke: #FFFFFF !important;
           }
         `}</style>
         {/* Owner directive 2026-11-11 (Cycle 25 C25.2) · global
@@ -908,14 +931,54 @@ export default async function ContactsPage({ searchParams }: PageProps) {
             "+" glyph. Matches the updated TRIGGER_STYLE in
             _page-header-drawer-button-client.tsx so every drawer
             trigger across the app reads the same. */}
+        {/* Owner directive 2026-11-11 (Cycle 30) · cart moved to the
+            RIGHT of the header · sits just LEFT of the drawer "+"
+            button so the two trailing circular controls read as a
+            pair. Size reduced from 40 → 32 to lighten the header.
+            Same black bg + white glyph vocabulary. */}
+        <Link
+          href="/nex-native/cart"
+          aria-label="Open shopping cart"
+          data-nex-contacts-cart-trigger
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: "50%",
+            background: "#000000",
+            color: "#FFFFFF",
+            display: "grid",
+            placeItems: "center",
+            flexShrink: 0,
+            textDecoration: "none",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.45)",
+          }}
+        >
+          <svg
+            width={14}
+            height={14}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <circle cx={9} cy={21} r={1} />
+            <circle cx={20} cy={21} r={1} />
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+          </svg>
+        </Link>
         <span
           data-nex-contacts-global-drawer
           style={{
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            width: 40,
-            height: 40,
+            // Cycle 30 · shrunk from 40 → 32 to match the new cart
+            // button size. Same black bg + white glyph vocabulary.
+            width: 32,
+            height: 32,
             borderRadius: "50%",
             background: "#000000",
             border: "none",
@@ -966,6 +1029,19 @@ export default async function ContactsPage({ searchParams }: PageProps) {
             <Link
               key={btn.id}
               href={btn.href}
+              // Owner directive 2026-11-11 (Cycle 27 C27.1) · kill the
+              // /contacts retry-loop. These 3 category-button Links
+              // all point back to /nex-native/contacts?tab=X · same
+              // route, just a query-string switch. Next.js's default
+              // viewport-prefetch of a self-referential Link was
+              // re-firing an identical RSC request on every parent
+              // re-render (confirmed in Cycle 24 investigation: 30+
+              // identical ?_rsc=gehJgqWf0vfueNVT fetches). Setting
+              // prefetch={false} skips the IntersectionObserver
+              // registration · the Link still works, just without
+              // the loop. The shell is already loaded; there's
+              // nothing to prefetch.
+              prefetch={false}
               aria-label={`Filter by ${btn.label}`}
               aria-current={btn.active ? "page" : undefined}
               style={{
