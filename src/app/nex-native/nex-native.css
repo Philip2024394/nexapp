@@ -359,6 +359,42 @@ body::-webkit-scrollbar,
  * Browsers without View Transitions (older Safari, Firefox ESR) get
  * the existing jump-cut · no regression. Prefers-reduced-motion
  * short-circuits to a 1 ms crossfade. */
+/* Owner directive 2026-11-11 (Cycle 23 iter 3) · ready-before-slide
+ * pending-feedback indicator. When the user taps a link we warm the
+ * destination's RSC payload BEFORE invoking the view transition. The
+ * current page stays interactive during that wait · but if the warm
+ * takes > SLOW_FEEDBACK_MS (1200 ms in the client · typically slow
+ * network or cold cache), we flip `:root[data-nex-nav-slow="true"]`
+ * so CSS can reveal a subtle amber progress stripe along the top of
+ * the phone frame. Reads as "we're preparing the next page" without
+ * blocking the current page.
+ *
+ * Nothing shows during fast navigations · the indicator never fires
+ * for warm-cache clicks (which complete in < 50 ms typically). */
+@keyframes nex-nav-slow-progress {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+:root[data-nex-nav-slow="true"] .nex-native-frame::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--nex-world-secondary, #D4A24F);
+  z-index: 200;
+  pointer-events: none;
+  animation: nex-nav-slow-progress 1200ms linear infinite;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-nex-nav-slow="true"] .nex-native-frame::before {
+    animation: none;
+    opacity: 0.8;
+  }
+}
+
 [data-nex-page-slide-root] {
   /* Owner directive 2026-11-11 iter 2 · the view-transition is scoped
    * to the INNER page-slide root (a bare div wrapping {children} in

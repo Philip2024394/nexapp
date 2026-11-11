@@ -5,7 +5,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: ".",
-  testMatch: /verify-phone-frame-stays-still\.spec\.ts/,
+  testMatch: /verify-(phone-frame-stays-still|ready-before-slide)\.spec\.ts/,
   timeout: 90_000,
   reporter: [["list"]],
   use: {
