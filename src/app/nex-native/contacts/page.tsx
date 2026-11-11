@@ -873,13 +873,10 @@ export default async function ContactsPage({ searchParams }: PageProps) {
           margin: "calc(0px - env(safe-area-inset-top, 0) - 28px) -14px 10px",
         }}
       >
-        {/* Owner directive 2026-11-03 · "shamrock in header enlarge
-            and header text enlarge and buttons" · shamrock 20 → 28 ·
-            title 17 → 22 · buttons stay in their own components
-            with their own enlarged sizes. */}
-        <span style={{ fontSize: 28, lineHeight: 1 }} aria-hidden>
-          ☘️
-        </span>
+        {/* Owner directive 2026-11-11 (Cycle 25 C25.1) · left-side
+            shamrock icon removed · header starts directly at the
+            "Contacts" title. Supersedes the 2026-11-03 "shamrock in
+            header enlarge" directive. */}
         <h1
           style={{
             margin: 0,
@@ -892,41 +889,25 @@ export default async function ContactsPage({ searchParams }: PageProps) {
         >
           Contacts
         </h1>
-        {/* Owner directive 2026-11-10 · Discover overlay retired · the
-            grid trigger is now a Cart button that opens the buyer cart
-            (/nex-native/cart). The custom ContactsPlusDrawer is replaced
-            by the sealed global UnifiedDrawer on the right so every
-            surface uses the same drawer. */}
-        <Link
-          href="/nex-native/cart"
-          aria-label="Open shopping cart"
-          data-nex-contacts-cart-trigger
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: "50%",
-            background: "var(--nex-world-secondary, #C6A15B)",
-            color: "var(--nex-world-drawer-bg, #123D2B)",
-            display: "grid",
-            placeItems: "center",
-            flexShrink: 0,
-            textDecoration: "none",
-            fontSize: 20,
-            boxShadow: "0 6px 14px rgba(0, 0, 0, 0.35)",
-          }}
-        >
-          🛒
-        </Link>
+        {/* Owner directive 2026-11-11 (Cycle 25 C25.1) · header cart
+            button removed. Supersedes the 2026-11-10 "cart opens buyer
+            cart" directive. Cart surface stays reachable via direct
+            route /nex-native/cart; just not from this header. */}
         <style>{`
           [data-nex-contacts-global-drawer] button,
           [data-nex-contacts-global-drawer] svg {
-            color: #061710 !important;
-            stroke: #061710 !important;
+            color: #FF7200 !important;
+            stroke: #FF7200 !important;
           }
           [data-nex-contacts-global-drawer] svg * {
-            stroke: #061710 !important;
+            stroke: #FF7200 !important;
           }
         `}</style>
+        {/* Owner directive 2026-11-11 (Cycle 25 C25.2) · global
+            drawer trigger wrapper repainted: black background + orange
+            "+" glyph. Matches the updated TRIGGER_STYLE in
+            _page-header-drawer-button-client.tsx so every drawer
+            trigger across the app reads the same. */}
         <span
           data-nex-contacts-global-drawer
           style={{
@@ -936,9 +917,9 @@ export default async function ContactsPage({ searchParams }: PageProps) {
             width: 40,
             height: 40,
             borderRadius: "50%",
-            background: "#C6A15B",
-            border: "1.5px solid #8B6A32",
-            boxShadow: "0 6px 14px rgba(0, 0, 0, 0.55)",
+            background: "#000000",
+            border: "none",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.45)",
             flexShrink: 0,
           }}
         >
@@ -967,28 +948,20 @@ export default async function ContactsPage({ searchParams }: PageProps) {
         }}
       >
         {categoryButtons.map((btn) => {
+          // Owner directive 2026-11-11 (Cycle 25 C25.4) · world-class
+          // repaint: Pale Ivory card + navy primary-ink border + navy
+          // label. Active state inverts to navy bg + ivory label to
+          // read unambiguously. Supersedes the 2026-11-10 Gold/Forest
+          // treatment. Dark-red (#991B1B) pill count for every state
+          // so unread + count affordances use one shade.
           const bg = btn.active
-            ? "var(--nex-world-secondary, #C6A15B)"
-            : "var(--nex-world-primary, #1B5138)";
+            ? "var(--nex-world-primary-ink, #2A1F0F)"
+            : "var(--nex-world-background-base, #F5EDD3)";
           const fg = btn.active
-            ? "var(--nex-world-drawer-bg, #123D2B)"
-            : "var(--nex-world-primary-ink, #AFC5B5)";
-          // Owner directive 2026-11-10 · red pill when the category
-          // has unread messages · overrides the active/inactive tint
-          // so unread status always reads first.
-          // Dark red (#8B0000) per owner directive 2026-11-10 · matches
-          // the drawer Close + Logout chips so unread signals use one
-          // consistent shade across the app.
-          const countBg = btn.hasUnread
-            ? "#8B0000"
-            : btn.active
-              ? "rgba(18, 61, 43, 0.18)"
-              : "rgba(198, 161, 91, 0.22)";
-          const countFg = btn.hasUnread
-            ? "#FFFFFF"
-            : btn.active
-              ? "var(--nex-world-drawer-bg, #123D2B)"
-              : "var(--nex-world-secondary, #C6A15B)";
+            ? "var(--nex-world-background-base, #F5EDD3)"
+            : "var(--nex-world-primary-ink, #2A1F0F)";
+          const countBg = "#991B1B";
+          const countFg = "#FFFFFF";
           return (
             <Link
               key={btn.id}
@@ -1008,11 +981,11 @@ export default async function ContactsPage({ searchParams }: PageProps) {
                 background: bg,
                 color: fg,
                 border: btn.active
-                  ? "2.5px solid var(--nex-world-drawer-bg, #123D2B)"
-                  : "1.5px solid var(--nex-world-secondary, #C6A15B)",
+                  ? "1.5px solid var(--nex-world-primary-ink, #2A1F0F)"
+                  : "1px solid var(--nex-world-primary-ink, #2A1F0F)",
                 boxShadow: btn.active
-                  ? "0 6px 18px rgba(10, 31, 21, 0.35)"
-                  : "0 2px 6px rgba(10, 31, 21, 0.18)",
+                  ? "0 2px 6px rgba(42, 31, 15, 0.18)"
+                  : "none",
                 textDecoration: "none",
                 fontFamily: "inherit",
                 textAlign: "center",

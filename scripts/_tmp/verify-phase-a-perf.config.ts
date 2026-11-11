@@ -8,7 +8,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: ".",
-  testMatch: /verify-(phase-a-(perf|diag|mobile-diag|slide-investigation)|phone-frame-stays-still|c24-(route-matrix|option-b|option-b-validation|asset-swap)|free-chat-flashing-diag|vault-longer)\.spec\.ts/,
+  testMatch: /verify-(phase-a-(perf|diag|mobile-diag|slide-investigation)|phone-frame-stays-still|c24-(route-matrix|option-b|option-b-validation|asset-swap)|free-chat-flashing-diag|vault-longer|backdrop-swap|live-asset-swap|live-contacts-snapshot|c25-contacts-ui|backdrop-promo-banner)\.spec\.ts/,
   timeout: 120_000,
   reporter: [["list"]],
   use: {

@@ -47,16 +47,28 @@ import type * as React from "react";
 import Link from "next/link";
 import type { ContactRowDisplay } from "./_contacts-list";
 
-/** Sealed presence vocabulary · universal across worlds · 2026-10-29. */
+/** Sealed presence vocabulary · universal across worlds · 2026-10-29.
+ *  Owner directive 2026-11-11 (Cycle 25 C25.3) · busy recoloured from
+ *  orange #FF7200 to amber #F59E0B so the three states read as the
+ *  owner's spec: green = online, yellow = busy, red = offline. The
+ *  rim is driven by `row.presence` which is populated from mock
+ *  contacts' derived state in page.tsx (real accounts have presence
+ *  = null until nex_presence infrastructure exists · they show the
+ *  sealed neutral rim · see D2 memory). */
 const PRESENCE = {
   online: "#16D66B",
-  busy: "#FF7200",
+  busy: "#F59E0B",
   offline: "#A60000",
 } as const;
 
+// Owner directive 2026-11-11 (Cycle 25 C25.5) · text palette switched
+// from light-on-dark to dark-on-ivory to pair with the new transparent
+// card background. `text` is the sealed primary-ink colour; `textMute`
+// falls back to a mid-brown on the ivory canvas so secondary metadata
+// stays readable without competing with the name.
 const NEX = {
-  text: "#F2F5F8",
-  textMute: "var(--nex-world-text-muted, #7D9BC0)",
+  text: "var(--nex-world-primary-ink, #2A1F0F)",
+  textMute: "rgba(42, 31, 15, 0.62)",
   unreadRed: "#B30000",
 };
 
@@ -109,14 +121,20 @@ export function ContactRow({ row, accentHex }: ContactRowProps): React.JSX.Eleme
         width: "100%",
         maxWidth: "100%",
         boxSizing: "border-box",
+        // Owner directive 2026-11-11 (Cycle 25 C25.5) · card bg is now
+        // transparent so it inherits the page's Pale Ivory colour, and
+        // the card is distinguished by a 1px hairline rim at 12%
+        // primary-ink opacity. Supersedes the 2026-10-29 Emerald card
+        // bg + Gold accent rim treatment. Pending state keeps the gold
+        // tint hint so invites still read differently from live rows.
         background: row.pending
-          ? "color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 10%, var(--nex-world-drawer-bg, rgba(2,9,20,0.92)))"
-          : "var(--nex-world-drawer-bg, rgba(2,9,20,0.92))",
-        border: `1.5px solid ${row.pending ? "var(--nex-world-secondary, #C6A15B)" : accentHex}`,
+          ? "color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 8%, transparent)"
+          : "transparent",
+        border: `1px solid ${row.pending ? "var(--nex-world-secondary, #C6A15B)" : "rgba(42, 31, 15, 0.12)"}`,
         borderRadius: 12,
         boxShadow: row.pending
-          ? "0 4px 12px rgba(198,161,91,0.25)"
-          : "0 4px 12px rgba(0,0,0,0.35)",
+          ? "0 2px 6px rgba(198, 161, 91, 0.15)"
+          : "none",
         textDecoration: "none",
         color: NEX.text,
         WebkitTapHighlightColor: "transparent",

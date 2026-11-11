@@ -39,16 +39,22 @@ export interface PageHeaderDrawerButtonClientProps {
   readonly session?: ControlDrawerSession | null;
 }
 
+// Owner directive 2026-11-11 (Cycle 25) · GLOBAL page-header +
+// button repainted to black background with an orange "+" glyph.
+// Supersedes the gold-on-emerald palette · applies to every
+// NexPageHeader surface (Home · Chat · Directory · Pricing · etc).
+// The contacts page has its own inline header + wrapper · updated in
+// contacts/page.tsx to match.
 const TRIGGER_STYLE: React.CSSProperties = {
   width: 40,
   height: 40,
   borderRadius: "50%",
-  background: "var(--nex-world-secondary, #C6A15B)",
-  color: "var(--nex-world-drawer-bg, #123D2B)",
+  background: "#000000",
+  color: "#FF7200",
   fontSize: 26,
   fontWeight: 900,
   lineHeight: 1,
-  boxShadow: "0 2px 8px rgba(10, 31, 21, 0.35)",
+  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.45)",
   border: "none",
 };
 
