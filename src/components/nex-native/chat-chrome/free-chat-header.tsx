@@ -103,7 +103,11 @@ export interface FreeChatHeaderProps {
   } | null;
 }
 
-const DEFAULT_PING_ACCENT = "var(--nex-world-secondary, #00AFFF)";
+// Owner directive 2026-11-11 · chat header ping is GREEN across every
+// theme · matches the sealed presence-online colour used in contacts
+// and the preview-modal theme pings. Overrides the per-world accent
+// so the ping is a consistent presence signal, not a theme accent.
+const DEFAULT_PING_ACCENT = "#16D66B";
 const DEFAULT_TEXT = "#F2F5F8";
 const DEFAULT_SUBTITLE = "#B5C3D6";
 

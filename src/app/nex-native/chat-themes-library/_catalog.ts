@@ -34,6 +34,13 @@ export interface LibraryTheme {
 }
 
 export const LIBRARY_THEMES: readonly LibraryTheme[] = [
+  // ── Release · 2026-11-11 (NEX heritage drop · pinned free tiles) ─
+  // Owner directive 2026-11-11 · the three NEX-branded wallpapers
+  // that power slots 2-4 of the Ireland free-chat picker are also
+  // surfaced in the paid library (branded as NEW releases).
+  { id: "library-nex-teddy",    label: "NEX · Teddy Bear Shopping", wallpaperUrl: "/nex-themes/ireland/teddy-bear-shopping.png", oneTimePriceEUR: 3.99, accentHex: "#C6A15B", downloads: 0, isNew: true },
+  { id: "library-nex-puppy",    label: "NEX · Puppy & Kitten Cuddle", wallpaperUrl: "/nex-themes/ireland/puppy-kitten-cuddle.png", oneTimePriceEUR: 3.99, accentHex: "#C6A15B", downloads: 0, isNew: true },
+  { id: "library-nex-supercar", label: "NEX · Sunset Supercar Showdown", wallpaperUrl: "/nex-themes/ireland/sunset-supercar.png", oneTimePriceEUR: 3.99, accentHex: "#C6A15B", downloads: 0, isNew: true },
   // ── Release 1 · 2026-11-02 (Ireland first drop) ─────────────────
   { id: "library-ireland-1", label: "Ireland · Dawn",     wallpaperUrl: "/nex-themes/library/preview/ireland-1.png", oneTimePriceEUR: 3.99, accentHex: "#C6A15B", downloads: 2847 },
   { id: "library-ireland-2", label: "Ireland · Dusk",     wallpaperUrl: "/nex-themes/library/preview/ireland-2.png", oneTimePriceEUR: 3.99, accentHex: "#C6A15B", downloads: 2104 },

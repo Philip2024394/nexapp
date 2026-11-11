@@ -150,11 +150,13 @@ export const SHOP_CATEGORIES: readonly { id: string; label: string; emoji: strin
 ];
 
 /** Chat picker categories. Smaller taxonomy at launch · owner-sealed
- *  Phase 1 2026-11-11. */
+ *  Phase 1 2026-11-11. Luxury added 2026-11-11 after scanning the
+ *  97 Supabase-hosted theme-o* entries in LIBRARY_THEMES. */
 export const CHAT_CATEGORIES: readonly { id: string; label: string; emoji: string }[] = [
   { id: "all",             label: "All wallpapers",   emoji: "🖼️" },
   { id: "scenery",         label: "Scenery",          emoji: "🏞" },
   { id: "pattern",         label: "Patterns",         emoji: "🧩" },
   { id: "scene",           label: "Scenes",           emoji: "🎭" },
   { id: "pets",            label: "Pets",             emoji: "🐾" },
+  { id: "luxury",          label: "Luxury",           emoji: "✨" },
 ];

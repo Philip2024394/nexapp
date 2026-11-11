@@ -34,11 +34,22 @@ export interface HeroPreviewProps {
    *  the Buy footer never pushes it off-screen). Default keeps the
    *  sealed entry-page sizing. */
   readonly maxWidthCss?: string;
+  /** Owner directive 2026-11-11 · optional black-overlay opacity on
+   *  the wallpaper (0–1). The preview modal exposes this via a scale
+   *  bar under the phone so the user can judge how the theme reads at
+   *  different shade levels before applying. */
+  readonly wallpaperDarken?: number;
+  /** Optional aspect-ratio override for the device · lets the preview
+   *  modal render a shorter phone silhouette than the sealed 9/18
+   *  entry-page shape. */
+  readonly aspectRatio?: string;
 }
 
 export function HeroPreview({
   theme,
   maxWidthCss,
+  wallpaperDarken = 0,
+  aspectRatio,
 }: HeroPreviewProps): React.JSX.Element {
   const widthCss = maxWidthCss ?? "min(78vw, 300px)";
   return (
@@ -55,7 +66,7 @@ export function HeroPreview({
         style={{
           position: "relative",
           width: widthCss,
-          aspectRatio: "9 / 18",
+          aspectRatio: aspectRatio ?? "9 / 18",
           borderRadius: 36,
           padding: 6,
           background: FRAME_BEZEL,
@@ -96,6 +107,21 @@ export function HeroPreview({
               zIndex: 0,
             }}
           />
+          {/* Owner directive 2026-11-11 · darken overlay driven by the
+              preview scale bar · live-previews how the theme reads at
+              varying shade levels before the user applies it. */}
+          {wallpaperDarken > 0 ? (
+            <div
+              aria-hidden
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: `rgba(0, 0, 0, ${Math.min(1, Math.max(0, wallpaperDarken))})`,
+                zIndex: 0,
+                pointerEvents: "none",
+              }}
+            />
+          ) : null}
           {/* Status notch · minimal pill */}
           <div
             aria-hidden
@@ -112,35 +138,81 @@ export function HeroPreview({
             }}
           />
 
-          {/* Overlay header · floats directly on the wallpaper · no
-              glass bar · avatar + name + subtitle only. Matches the
-              sealed /nex-native/free-chat header (iteration 32 removed
-              the panel bg + backdrop blur + bottom border there too).
-              position:relative + zIndex:1 keeps chrome above the
-              z-index:0 wallpaper <img> below. */}
+          {/* Overlay header · owner directive 2026-11-11 · mirrors the
+              sealed FreeChatHeader shape. 48px avatar slot carrying a
+              NexPingBadge-style ring (2px gold rim · soft pulse halo
+              when "online"), portrait avatar overlaid at 42×42 inside
+              the rim · name + "online" subtitle · ⋯ on the right. */}
           <header
             style={{
               position: "relative",
               zIndex: 1,
               display: "flex",
               alignItems: "center",
-              gap: 8,
+              gap: 10,
               padding: "28px 12px 10px",
               color: INK,
             }}
           >
+            {/* Owner directive 2026-11-11 · all theme-preview pings use
+                GREEN rim + GREEN pulse + GREEN inside (no-avatar state).
+                Mirrors the sealed presence-online colour used across the
+                live chat surfaces. */}
             <span
               aria-hidden
+              data-nex-hero-preview-ping
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: "50%",
-                background: `linear-gradient(135deg, ${PRIMARY}, ${ACCENT})`,
-                border: `2px solid ${ACCENT}`,
+                position: "relative",
+                width: 48,
+                height: 48,
                 flexShrink: 0,
-                boxShadow: `0 0 10px color-mix(in srgb, ${ACCENT} 45%, transparent)`,
               }}
-            />
+            >
+              <span
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  inset: -3,
+                  borderRadius: "50%",
+                  border: "2px solid #16D66B",
+                  opacity: 0.55,
+                  animation: "nex-hero-ping 1.8s ease-out infinite",
+                }}
+              />
+              <span
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  borderRadius: "50%",
+                  border: "2px solid #16D66B",
+                  background: "rgba(22, 214, 107, 0.2)",
+                  boxShadow: "0 0 12px rgba(22, 214, 107, 0.55)",
+                }}
+              />
+              <span
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  top: 3,
+                  left: 3,
+                  width: 42,
+                  height: 42,
+                  borderRadius: "50%",
+                  background:
+                    "radial-gradient(circle at 35% 30%, #16D66B 0%, #0F9B4E 60%, #05311A 100%)",
+                  color: INK,
+                  fontSize: 15,
+                  fontWeight: 800,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textShadow: "0 1px 2px rgba(0,0,0,0.65)",
+                }}
+              >
+                S
+              </span>
+            </span>
             <div style={{ minWidth: 0, flex: 1 }}>
               <p
                 style={{
@@ -179,6 +251,13 @@ export function HeroPreview({
               ⋯
             </span>
           </header>
+          <style>{`
+            @keyframes nex-hero-ping {
+              0%   { transform: scale(1);   opacity: 0.55; }
+              70%  { transform: scale(1.35); opacity: 0;    }
+              100% { transform: scale(1.35); opacity: 0;    }
+            }
+          `}</style>
 
           {/* Bubble stream · one peer, one self · bottom-anchored */}
           <section
@@ -193,11 +272,14 @@ export function HeroPreview({
               justifyContent: "flex-end",
             }}
           >
+            {/* Peer bubble · owner directive 2026-11-11 · includes HH:MM
+                timestamp pinned bottom-right (matches the sealed standard
+                bubble in chat-standard/_surfaces/_bubble.tsx). */}
             <div style={{ display: "flex", justifyContent: "flex-start" }}>
               <div
                 style={{
                   maxWidth: "78%",
-                  padding: "8px 11px",
+                  padding: "8px 11px 6px",
                   borderRadius: 16,
                   borderBottomLeftRadius: 4,
                   background: `color-mix(in srgb, ${ACCENT} 14%, transparent)`,
@@ -211,18 +293,34 @@ export function HeroPreview({
                   textShadow: "0 1px 2px rgba(0, 0, 0, 0.5)",
                 }}
               >
-                Fancy a cup of tea?
+                <div>Fancy a cup of tea?</div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    alignItems: "center",
+                    fontSize: 9,
+                    opacity: 0.7,
+                    marginTop: 2,
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  09:42
+                </div>
               </div>
             </div>
+            {/* Owner bubble · owner directive 2026-11-11 · black-tinted
+                smoked glass so the user's own bubble is visually distinct
+                from the peer's accent-tinted bubble. */}
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
               <div
                 style={{
                   maxWidth: "78%",
-                  padding: "8px 11px",
+                  padding: "8px 11px 6px",
                   borderRadius: 16,
                   borderBottomRightRadius: 4,
-                  background: `color-mix(in srgb, ${ACCENT} 18%, transparent)`,
-                  border: `1px solid color-mix(in srgb, ${ACCENT} 72%, transparent)`,
+                  background: "rgba(0, 0, 0, 0.42)",
+                  border: `1px solid color-mix(in srgb, ${ACCENT} 55%, transparent)`,
                   color: INK,
                   fontSize: 12,
                   lineHeight: 1.4,
@@ -232,66 +330,144 @@ export function HeroPreview({
                   textShadow: "0 1px 2px rgba(0, 0, 0, 0.5)",
                 }}
               >
-                Grand, I&apos;ll put the kettle on.
+                <div>Grand, I&apos;ll put the kettle on.</div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    alignItems: "center",
+                    gap: 4,
+                    fontSize: 9,
+                    opacity: 0.85,
+                    marginTop: 2,
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  <span>09:43</span>
+                  <span
+                    aria-hidden
+                    style={{
+                      display: "inline-flex",
+                      color: ACCENT,
+                      fontSize: 11,
+                      lineHeight: 1,
+                      letterSpacing: "-0.25em",
+                      paddingRight: "0.25em",
+                      fontWeight: 700,
+                    }}
+                  >
+                    ✓✓
+                  </span>
+                </div>
               </div>
             </div>
           </section>
 
-          {/* Composer footer · single floating pill · no full-width
-              glass bar · matches the sealed ChatComposerPill shape
-              (translucent navy pill + accent rim + round send). */}
+          {/* Composer footer · owner directive 2026-11-11 · no footer
+              container · composer floats directly on the wallpaper.
+              Matches the real NEX free-chat composer architecture. */}
           <footer
             style={{
               position: "relative",
               zIndex: 1,
               display: "flex",
               alignItems: "center",
-              gap: 6,
-              padding: "6px 10px calc(env(safe-area-inset-bottom, 0px) + 10px)",
+              gap: 8,
+              padding:
+                "6px 8px calc(env(safe-area-inset-bottom, 0px) + 10px)",
             }}
           >
-            <div
+            <span
+              aria-hidden
               style={{
-                flex: 1,
-                minHeight: 36,
-                padding: "7px 14px",
-                borderRadius: 18,
-                background: COMPOSER_BG,
-                border: `1px solid color-mix(in srgb, ${ACCENT} 55%, transparent)`,
-                color: INK_DIM,
-                fontSize: 11,
-                lineHeight: 1.3,
-                textShadow: "0 1px 2px rgba(0, 0, 0, 0.5)",
-                display: "flex",
-                alignItems: "center",
-                boxShadow: `0 0 10px color-mix(in srgb, ${ACCENT} 20%, transparent)`,
-              }}
-            >
-              Type a message…
-            </div>
-            <button
-              type="button"
-              aria-label="Send"
-              disabled
-              style={{
-                width: 36,
-                height: 36,
+                width: 22,
+                height: 22,
                 borderRadius: "50%",
-                background: ACCENT,
-                color: "#0a1a0a",
-                border: "none",
-                cursor: "default",
+                background: "#FF7200",
+                border: "1px solid #FF7200",
+                color: "#FFFFFF",
                 flexShrink: 0,
-                display: "flex",
+                display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: 15,
-                fontWeight: 800,
-                boxShadow: `0 0 14px color-mix(in srgb, ${ACCENT} 55%, transparent)`,
+                fontSize: 14,
+                fontWeight: 300,
+                lineHeight: 1,
+                boxShadow: "0 2px 8px rgba(255, 114, 0, 0.35)",
               }}
             >
-              →
-            </button>
+              +
+            </span>
+            <div
+              style={{
+                position: "relative",
+                flex: 1,
+                minWidth: 0,
+                height: 28,
+                padding: "0 36px 0 32px",
+                borderRadius: 999,
+                // Owner directive 2026-11-11 · slight tinted-black pill ·
+                // soft smoked-glass over any wallpaper, works on both
+                // bright and dark themes.
+                background: "rgba(0, 0, 0, 0.22)",
+                backdropFilter: "blur(8px) saturate(140%)",
+                WebkitBackdropFilter: "blur(8px) saturate(140%)",
+                border: "1px solid rgba(212, 162, 79, 0.42)",
+                color: "rgba(255, 255, 255, 0.82)",
+                fontSize: 11,
+                lineHeight: 1,
+                display: "flex",
+                alignItems: "center",
+                boxShadow: "0 1px 4px rgba(0,0,0,0.25)",
+                textShadow: "0 1px 2px rgba(0,0,0,0.6)",
+              }}
+            >
+              {/* Emoji icon · real sealed asset used by the live chat
+                  composer (/nex-free-chat/composer-emoji.png) · owner
+                  directive 2026-11-11 · evoke the actual live chat
+                  emoji, not a stand-in. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/nex-free-chat/composer-emoji.png"
+                alt=""
+                aria-hidden
+                draggable={false}
+                style={{
+                  position: "absolute",
+                  left: 4,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  width: 24,
+                  height: 24,
+                  objectFit: "contain",
+                  pointerEvents: "none",
+                }}
+              />
+              <span style={{ opacity: 0.75 }}>Say something…</span>
+              {/* Orange round send · inside the pill on the right */}
+              <span
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  right: 2,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  width: 24,
+                  height: 24,
+                  borderRadius: "50%",
+                  background: "#FF7200",
+                  color: "#FFFFFF",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 12,
+                  fontWeight: 800,
+                  boxShadow: "0 2px 6px rgba(255,114,0,0.45)",
+                }}
+              >
+                →
+              </span>
+            </div>
           </footer>
         </div>
       </div>

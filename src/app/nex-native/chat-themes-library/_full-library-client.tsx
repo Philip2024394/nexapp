@@ -13,6 +13,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import type { ControlDrawerSession } from "@/components/nex-native/control-drawer/control-drawer-client";
+import type { EarnedBadges } from "@/lib/nex-native/creator/creator-badges";
+import { UnifiedDrawer } from "@/components/nex-native/drawer/UnifiedDrawer";
 import {
   LIBRARY_THEMES,
   formatDownloads,
@@ -29,14 +32,30 @@ const NEX_INK = "#F2F5F8";
 const NEX_INK_DIM = "#B5C3D6";
 const NEX_INK_MUTE = "#7D9BC0";
 
-export function FullLibraryClient(): React.JSX.Element {
+interface FullLibraryClientProps {
+  readonly drawerSession: ControlDrawerSession | null;
+  readonly viewerCreatorBadges: EarnedBadges;
+  /** Owner directive 2026-11-11 · when provided, overrides the frozen
+   *  LIBRARY_THEMES code catalog (171 entries) with the full set from
+   *  the unified nex_background_asset table (450 entries · 279 shop +
+   *  171 chat). Falls back to LIBRARY_THEMES when empty for safety. */
+  readonly themesOverride?: readonly LibraryTheme[];
+}
+
+export function FullLibraryClient({
+  drawerSession,
+  viewerCreatorBadges,
+  themesOverride,
+}: FullLibraryClientProps): React.JSX.Element {
+  const ACTIVE_THEMES: readonly LibraryTheme[] =
+    themesOverride && themesOverride.length > 0 ? themesOverride : LIBRARY_THEMES;
   // Owner-authorised 2026-11-03 · pagination is driven by `?page=N`
   // in the URL so each page gets its own shareable address + browser
   // back/forward respects history. Clamped to [1, totalPages].
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const totalPages = Math.max(1, Math.ceil(LIBRARY_THEMES.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(ACTIVE_THEMES.length / PAGE_SIZE));
   const parsedPage = Number.parseInt(searchParams?.get("page") ?? "1", 10);
   const page =
     Number.isFinite(parsedPage) && parsedPage >= 1 && parsedPage <= totalPages
@@ -66,44 +85,107 @@ export function FullLibraryClient(): React.JSX.Element {
 
   const start = page * PAGE_SIZE;
   const end = start + PAGE_SIZE;
-  const slice = LIBRARY_THEMES.slice(start, end);
+  const slice = ACTIVE_THEMES.slice(start, end);
 
   return (
     <>
-      {/* Top bar · back to entry */}
-      <div
+      {/* Owner directive 2026-11-11 (Cycle 38) · top bar swapped from
+          back-button to the shared NEX chrome used on Contacts:
+          "Chat Themes" title (left) · black cart pill · black "+"
+          drawer trigger (right). Supersedes the Cycle 37 back
+          button. The CSS override below forces the inner
+          UnifiedDrawer button to black bg + 32px square + white "+"
+          (ControlDrawer's default triggerButtonStyle hard-codes
+          orange + 40px). */}
+      <style>{`
+        [data-nex-chat-themes-global-drawer] button {
+          background: #000000 !important;
+          border: none !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45) !important;
+          color: #FFFFFF !important;
+          width: 32px !important;
+          height: 32px !important;
+          font-size: 20px !important;
+        }
+        [data-nex-chat-themes-global-drawer] svg {
+          color: #FFFFFF !important;
+          stroke: #FFFFFF !important;
+          width: 14px !important;
+          height: 14px !important;
+        }
+        [data-nex-chat-themes-global-drawer] svg * {
+          stroke: #FFFFFF !important;
+        }
+      `}</style>
+      <header
         style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
+          gap: 10,
           marginBottom: 12,
           flexShrink: 0,
         }}
       >
+        {/* Owner directive 2026-11-11 · "Chat Themes" header title
+            removed per request. Cart + "+" drawer trigger still sit
+            at the right · spacer keeps the row layout balanced. */}
+        <div style={{ flex: 1 }} />
+
         <Link
-          href="/nex-native/chat-themes-library"
-          aria-label="Back to entry"
+          href="/nex-native/cart"
+          aria-label="Open shopping cart"
           style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "6px 12px",
-            borderRadius: 999,
-            background: "rgba(6, 15, 28, 0.72)",
-            border: `1px solid ${NEX_ACCENT}`,
-            color: NEX_INK,
-            fontSize: 13,
-            fontWeight: 700,
+            width: 32,
+            height: 32,
+            borderRadius: "50%",
+            background: "#000000",
+            color: "#FFFFFF",
+            display: "grid",
+            placeItems: "center",
+            flexShrink: 0,
             textDecoration: "none",
-            lineHeight: 1,
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.45)",
           }}
         >
-          <span aria-hidden>←</span>
-          <span>Back</span>
+          <svg
+            width={14}
+            height={14}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <circle cx={9} cy={21} r={1} />
+            <circle cx={20} cy={21} r={1} />
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+          </svg>
         </Link>
-        <span style={{ width: 60 }} />
-      </div>
+        {drawerSession ? (
+          <span
+            data-nex-chat-themes-global-drawer
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 32,
+              height: 32,
+              borderRadius: "50%",
+              background: "#000000",
+              border: "none",
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.45)",
+              flexShrink: 0,
+            }}
+          >
+            <UnifiedDrawer
+              session={drawerSession}
+              viewerEarnedBadges={viewerCreatorBadges}
+            />
+          </span>
+        ) : null}
+      </header>
 
       {/* Scrollable body · scrollRef drives scroll-to-top on page change.
           Owner directive 2026-11-03 · explicit width + min-width:0 so
@@ -123,13 +205,17 @@ export function FullLibraryClient(): React.JSX.Element {
         }}
       >
         <header style={{ textAlign: "center", marginBottom: 18 }}>
+          {/* Owner directive 2026-11-11 · eyebrow repainted BLACK
+              for stronger contrast against the orange Full Library
+              title. */}
           <p
             style={{
               margin: 0,
               fontSize: 11,
               letterSpacing: 2,
               textTransform: "uppercase",
-              color: NEX_INK_MUTE,
+              color: "#000000",
+              fontWeight: 800,
             }}
           >
             NEX Chat Themes
@@ -139,7 +225,10 @@ export function FullLibraryClient(): React.JSX.Element {
               margin: "6px 0 0",
               fontSize: 24,
               fontWeight: 700,
-              color: NEX_INK,
+              // Owner directive 2026-11-11 (Cycle 37) · title repainted
+              // NEX orange #FF7200 to read as a brand accent against
+              // the dark emerald/navy library background.
+              color: "#FF7200",
               textShadow: "0 2px 10px rgba(0, 0, 0, 0.6)",
             }}
           >
@@ -152,33 +241,16 @@ export function FullLibraryClient(): React.JSX.Element {
               color: NEX_INK_MUTE,
             }}
           >
-            {LIBRARY_THEMES.length} themes · page {page + 1} of {totalPages}
+            {ACTIVE_THEMES.length} themes · page {page + 1} of {totalPages}
           </p>
-          {/* Owner directive 2026-11-11 · Phase 1 unified NEX Visual
-              Library CTA. Deep-links to the shared library route with
-              chat context pre-selected. Save goes through the
-              library's chat action which writes nex_account.chat_theme
-              (same column as updateChatThemeAction) and enforces the
-              existing effectiveTier gate on premium themes. */}
-          <Link
-            href="/nex-native/library/backgrounds?context=chat&returnTo=%2Fnex-native%2Fchat-themes-library%2Fall"
-            data-nex-chat-library-cta
-            style={{
-              display: "inline-block",
-              marginTop: 10,
-              padding: "8px 14px",
-              borderRadius: 999,
-              background: "#FF7200",
-              color: "#FFFFFF",
-              textDecoration: "none",
-              fontSize: 12,
-              fontWeight: 900,
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-            }}
-          >
-            Browse NEX Visual Library
-          </Link>
+          {/* Owner directive 2026-11-11 · "Browse NEX Visual Library"
+              CTA converted to a dropdown. Clicking the pill reveals the
+              5 chat-wallpaper categories (Scenery / Patterns / Scenes
+              / Pets / Luxury) plus an "All" option. Each option deep-
+              links to the unified library at /library/backgrounds with
+              the category pre-filtered. Same orange pill shape, now
+              with a ▾ arrow. */}
+          <BrowseLibraryDropdown />
         </header>
 
         <ul
@@ -231,9 +303,9 @@ export function FullLibraryClient(): React.JSX.Element {
               width: 44,
               height: 44,
               borderRadius: "50%",
-              background: "rgba(6, 15, 28, 0.72)",
-              border: `1px solid ${NEX_ACCENT}`,
-              color: NEX_INK,
+              background: "#000",
+              border: "1px solid #000",
+              color: "#FFFFFF",
               cursor: page === 0 ? "not-allowed" : "pointer",
               opacity: page === 0 ? 0.35 : 1,
               fontSize: 20,
@@ -267,9 +339,9 @@ export function FullLibraryClient(): React.JSX.Element {
               width: 44,
               height: 44,
               borderRadius: "50%",
-              background: "rgba(6, 15, 28, 0.72)",
-              border: `1px solid ${NEX_ACCENT}`,
-              color: NEX_INK,
+              background: "#000",
+              border: "1px solid #000",
+              color: "#FFFFFF",
               cursor: page >= totalPages - 1 ? "not-allowed" : "pointer",
               opacity: page >= totalPages - 1 ? 0.35 : 1,
               fontSize: 20,
@@ -306,14 +378,9 @@ export function FullLibraryClient(): React.JSX.Element {
       ) : null}
 
       {previewTheme ? (
-        <PhonePreviewModal
+        <ApplyPreviewModal
           theme={previewTheme}
           onClose={() => setPreviewTheme(null)}
-          onBuy={() => {
-            const t = previewTheme;
-            setPreviewTheme(null);
-            setSheet(t);
-          }}
         />
       ) : null}
     </>
@@ -326,6 +393,325 @@ export function FullLibraryClient(): React.JSX.Element {
 // selected theme. User can tap backdrop / Esc / × to close, or Buy
 // to swap into the payment placeholder.
 
+/** Owner directive 2026-11-11 · FULL-SCREEN phone preview modal.
+ *  Shows the selected theme as it would look on a chat phone (via
+ *  HeroPreview) plus a footer with two buttons: "Use theme" (applies
+ *  via applyFromLibraryChatAction) and "Close". */
+function ApplyPreviewModal({
+  theme,
+  onClose,
+}: {
+  readonly theme: LibraryTheme;
+  readonly onClose: () => void;
+}): React.JSX.Element {
+  const [applying, setApplying] = React.useState(false);
+  const [result, setResult] = React.useState<string | null>(null);
+  // Owner directive 2026-11-11 · scale bar under the phone darkens the
+  // wallpaper so the user can judge contrast before applying. 0 = no
+  // overlay · 1 = fully black · default 0.
+  const [darken, setDarken] = React.useState<number>(0);
+
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+
+  async function handleApply() {
+    if (applying) return;
+    setApplying(true);
+    setResult(null);
+    try {
+      // LIBRARY_THEMES ids are unprefixed; the unified library chat
+      // action expects the "chat:<id>" form so it resolves via
+      // nex_background_asset. All 171 library ids were seeded under
+      // that namespace in mig 337.
+      const { applyFromLibraryChatAction } = await import(
+        "@/app/nex-native/library/backgrounds/_actions"
+      );
+      // When the themesOverride has loaded from the unified catalog,
+      // theme.id is already the fully-prefixed form (e.g.
+      // "chat:library-ireland-1" or "shop:global-cart-glow"). For the
+      // legacy frozen LIBRARY_THEMES array, ids are unprefixed and
+      // need the "chat:" prefix prepended to match the seeded rows.
+      const assetId = theme.id.includes(":") ? theme.id : `chat:${theme.id}`;
+      const r = await applyFromLibraryChatAction(assetId);
+      if (r.ok) {
+        setResult(`Applied · ${theme.label}`);
+      } else {
+        setResult(`Could not apply · ${r.error}`);
+      }
+    } catch (e) {
+      setResult(`Could not apply · ${(e as Error).message}`);
+    } finally {
+      setApplying(false);
+    }
+  }
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${theme.label} preview`}
+      data-nex-library-phone-preview
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1000,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        // Owner directive 2026-11-11 · modal bg flipped from Emerald
+        // to Pale Ivory #F5EDD3 to match the library page background
+        // (Ireland --nex-world-drawer-bg). One continuous cream
+        // surface · header + phone body + footer all on the same
+        // colour with no banding.
+        background: "#F5EDD3",
+      }}
+    >
+      {/* Invisible tap-anywhere dismiss behind the phone frame + footer */}
+      <button
+        type="button"
+        aria-label="Close preview"
+        onClick={onClose}
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "transparent",
+          border: "none",
+          padding: 0,
+          cursor: "pointer",
+          zIndex: 1,
+        }}
+      />
+
+      {/* Header overlay · owner directive 2026-11-11 · title + download
+          count sit ABOVE the phone on the cream modal base (not over
+          the phone bezel). Ink switches back to black since they now
+          paint on Pale Ivory, not on the dark wallpaper. */}
+      <div
+        style={{
+          position: "absolute",
+          top: "calc(env(safe-area-inset-top, 0px) + 14px)",
+          left: 56,
+          right: 56,
+          zIndex: 3,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 4,
+          pointerEvents: "none",
+        }}
+      >
+        <h2
+          style={{
+            margin: 0,
+            fontSize: 18,
+            fontWeight: 800,
+            color: "#000",
+            textAlign: "center",
+          }}
+        >
+          {theme.label}
+        </h2>
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 12,
+            fontWeight: 600,
+            color: "#000",
+          }}
+        >
+          <IconDownload size={13} />
+          <span>{formatDownloads(theme.downloads)}</span>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Close"
+        style={{
+          position: "absolute",
+          top: "calc(env(safe-area-inset-top, 0px) + 10px)",
+          right: 12,
+          zIndex: 4,
+          width: 40,
+          height: 40,
+          borderRadius: "50%",
+          background: "#FF7200",
+          border: "1px solid rgba(0, 0, 0, 0.35)",
+          color: "#1a0a00",
+          cursor: "pointer",
+          fontSize: 22,
+          fontWeight: 800,
+          lineHeight: 1,
+          padding: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0 4px 10px rgba(255, 114, 0, 0.5)",
+        }}
+      >
+        ×
+      </button>
+
+      {/* Full-phone preview · owner directive 2026-11-11 · aspect kept
+          at the sealed 9/18 so HeroPreview's header + bubble stream +
+          composer render proportionally (shorter aspects squeezed the
+          composer against the bezel). "Shorter phone" achieved by a
+          smaller max width + vertical gap · scale bar + button fit
+          below without clipping. */}
+      <div
+        style={{
+          position: "relative",
+          flex: "1 1 auto",
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 14,
+          padding:
+            "calc(env(safe-area-inset-top, 0px) + 72px) 24px calc(env(safe-area-inset-bottom, 0px) + 80px)",
+          overflow: "hidden",
+          zIndex: 2,
+        }}
+      >
+        <div style={{ pointerEvents: "none" }}>
+          <HeroPreview
+            theme={theme}
+            maxWidthCss="min(62vw, 240px, calc((100vh - 320px) * 9 / 18))"
+            wallpaperDarken={darken}
+          />
+        </div>
+
+        {/* Scale bar · darkens the wallpaper live · owner directive
+            2026-11-11 · width matches the phone silhouette so the bar
+            sits within the device's screen edges, not spilling past. */}
+        <div
+          style={{
+            width: "min(62vw, 240px, calc((100vh - 320px) * 9 / 18))",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "stretch",
+            gap: 12,
+          }}
+        >
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            value={Math.round(darken * 100)}
+            onChange={(e) =>
+              setDarken(Math.min(1, Math.max(0, Number(e.target.value) / 100)))
+            }
+            aria-label="Darken wallpaper"
+            data-nex-library-darken-slider
+            style={{
+              width: "100%",
+              accentColor: "#FF7200",
+              cursor: "pointer",
+            }}
+          />
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              fontSize: 10,
+              fontWeight: 600,
+              color: "#000",
+              opacity: 0.7,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+            }}
+          >
+            <span>Light</span>
+            <span>Dark</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Floating Select button · owner directive 2026-11-11 · no
+          container strip · button hovers directly over the modal base
+          at the bottom. × top-right still handles dismiss. */}
+      <button
+        type="button"
+        onClick={handleApply}
+        disabled={applying}
+        data-nex-library-apply="chat"
+        style={{
+          position: "absolute",
+          left: 20,
+          right: 20,
+          bottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)",
+          zIndex: 3,
+          minHeight: 46,
+          padding: "0 18px",
+          borderRadius: 999,
+          background: applying ? "rgba(255,114,0,0.5)" : "#FF7200",
+          color: "#FFFFFF",
+          border: "none",
+          cursor: applying ? "default" : "pointer",
+          fontWeight: 900,
+          fontSize: 13,
+          letterSpacing: "0.04em",
+          textTransform: "uppercase",
+          boxShadow: "0 6px 18px rgba(255, 114, 0, 0.35)",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+        }}
+      >
+        <svg
+          aria-hidden
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={3}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M5 12l5 5 9-11" />
+        </svg>
+        <span>{applying ? "Applying..." : "Select Theme"}</span>
+      </button>
+
+      {result ? (
+        <div
+          style={{
+            position: "absolute",
+            bottom: "calc(env(safe-area-inset-bottom, 0px) + 76px)",
+            left: 0,
+            right: 0,
+            zIndex: 4,
+            textAlign: "center",
+            fontSize: 12,
+            color: result.startsWith("Applied") ? "#16D66B" : "#FF6B6B",
+          }}
+        >
+          {result}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/* Legacy PhonePreviewModal retained below · no longer rendered but
+ * kept on disk · reversible if owner wants to restore the full-screen
+ * phone-frame preview. */
 function PhonePreviewModal({
   theme,
   onClose,
@@ -534,8 +920,12 @@ function ThemeCard({
         gap: 4,
         padding: 8,
         borderRadius: 14,
-        background: "rgba(6, 15, 28, 0.72)",
-        border: `1px solid rgba(198, 161, 91, 0.22)`,
+        // Owner directive 2026-11-11 (Cycle 37) · theme tile bg
+        // switched from translucent dark-navy to Ireland Gold
+        // #C6A15B to match the WhatsApp invite button on the
+        // Contacts page.
+        background: "#C6A15B",
+        border: `1px solid rgba(198, 161, 91, 0.6)`,
         boxShadow: "0 4px 14px rgba(0, 0, 0, 0.35)",
         minWidth: 0,
         width: "100%",
@@ -654,35 +1044,299 @@ function ThemeCard({
       >
         {theme.label}
       </h3>
+      {/* Owner directive 2026-11-11 · download count row · black
+          ink + download icon · number only (no "downloads" word). */}
       <p
         style={{
           margin: 0,
           fontSize: 10,
-          color: NEX_INK_MUTE,
+          color: "#000000",
           lineHeight: 1.2,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
+          fontWeight: 700,
         }}
       >
-        {formatDownloads(theme.downloads)}
+        <svg
+          width={10}
+          height={10}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#000000"
+          strokeWidth={2.4}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden
+        >
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+        {theme.downloads.toLocaleString("en-IE")}
       </p>
+      {/* Owner directive 2026-11-11 · free-pool themes display "Free"
+          · all other themes keep the one-time price pill. Button
+          chrome · black background + NEX orange ink/border. */}
       <button
         type="button"
         onClick={onBuy}
-        aria-label={`Buy ${theme.label} for €${theme.oneTimePriceEUR.toFixed(2)}`}
+        aria-label={
+          FREE_POOL_THEME_IDS.has(theme.id)
+            ? `Apply ${theme.label} free`
+            : `Buy ${theme.label} for €${theme.oneTimePriceEUR.toFixed(2)}`
+        }
         style={{
           marginTop: 2,
           minHeight: 32,
           padding: "0 10px",
           borderRadius: 999,
-          background: "transparent",
-          color: NEX_INK,
-          border: `1px solid ${NEX_ACCENT}`,
+          background: "#000000",
+          color: "#FF7200",
+          border: "1px solid #FF7200",
           fontSize: 12,
-          fontWeight: 700,
+          fontWeight: 900,
           cursor: "pointer",
+          letterSpacing: "0.04em",
+          // Owner directive 2026-11-11 · keep "Buy · €3.99" on ONE
+          // line · never wrap to a second row.
+          whiteSpace: "nowrap",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          lineHeight: 1,
         }}
       >
-        Buy · €{theme.oneTimePriceEUR.toFixed(2)}
+        {FREE_POOL_THEME_IDS.has(theme.id)
+          ? "Free"
+          : `Buy · €${theme.oneTimePriceEUR.toFixed(2)}`}
       </button>
     </article>
+  );
+}
+
+/** Owner-approved free-pool theme ids (Phase 1 unified library) ·
+ *  appear as "Free" on the library tiles instead of the one-time
+ *  price. Source of truth: migration 337 seed · see also
+ *  src/lib/nex-native/library/catalog-service.ts. */
+const FREE_POOL_THEME_IDS = new Set<string>([
+  "library-ireland-1",
+  "library-pattern-2",
+  "library-pets-1",
+]);
+
+/** Owner directive 2026-11-11 · world-class category dropdown.
+ *  Categories derived from a live scan of all 450 assets in
+ *  nex_background_asset · ordered by count (largest first) so users
+ *  hit the most popular groups first. Each option deep-links to
+ *  /library/backgrounds with the category pre-selected. */
+interface BrowseOption {
+  readonly id: string;
+  readonly label: string;
+  readonly count: number;
+  readonly icon: (color: string) => React.JSX.Element;
+}
+
+// Professional stroke-icon set · 16px · lucide/feather style.
+function Icon({ d, size = 16 }: { d: string; size?: number }): React.JSX.Element {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d={d} />
+    </svg>
+  );
+}
+function IconGrid() { return <Icon d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" />; }
+function IconMountain() { return <Icon d="M8 3l-6 12h12zM14 9l-4 10h14zM16 3v2" />; }
+function IconShirt() { return <Icon d="M20 7l-5-4-3 2-3-2-5 4 2 3h2v9h10V10h2z" />; }
+function IconUtensils() { return <Icon d="M4 3v10a3 3 0 006 0V3M7 11v10M14 3c-2 0-3 3-3 6s1 4 3 4v8M14 7h4" />; }
+function IconGem() { return <Icon d="M12 2l10 8-10 12L2 10zM12 2l-5 8h10zM2 10h20" />; }
+function IconSparkles() { return <Icon d="M12 3v3M12 18v3M4 12h3M17 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2" />; }
+function IconWrench() { return <Icon d="M14 6l-2 2-4-4-4 4 4 4 2-2 8 8-2 2-4-4-2 2 4 4 2-2 4-4-10-10z" />; }
+function IconPlane() { return <Icon d="M22 2L2 12l7 2 2 7 11-19zM11 14l6-6" />; }
+function IconLaptop() { return <Icon d="M3 7h18v10H3zM2 20h20M8 11h8" />; }
+function IconTag() { return <Icon d="M21 12l-9 9-9-9V3h9zM8 8h0" />; }
+function IconPaw() { return <Icon d="M7 10c0-2-1-3-2-3s-2 1-2 3 1 3 2 3 2-1 2-3zM11 6c0-2-1-3-2-3S7 4 7 6s1 3 2 3 2-1 2-3zM17 6c0-2-1-3-2-3s-2 1-2 3 1 3 2 3 2-1 2-3zM21 10c0-2-1-3-2-3s-2 1-2 3 1 3 2 3 2-1 2-3zM12 12c-4 0-6 4-6 7 0 2 2 3 6 3s6-1 6-3c0-3-2-7-6-7z" />; }
+function IconPattern() { return <Icon d="M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3zM15 15h6v6h-6zM9 9l6 6M15 9l-6 6" />; }
+function IconDownload({ size = 14 }: { size?: number } = {}) {
+  return <Icon d="M12 3v12M6 11l6 6 6-6M4 21h16" size={size} />;
+}
+
+const BROWSE_OPTIONS: ReadonlyArray<BrowseOption> = [
+  { id: "all",         label: "All wallpapers", count: 450, icon: () => <IconGrid /> },
+  { id: "luxury",      label: "Luxury",         count: 97,  icon: () => <IconGem /> },
+  { id: "fashion",     label: "Fashion",        count: 72,  icon: () => <IconShirt /> },
+  { id: "food",        label: "Food & Drink",   count: 65,  icon: () => <IconUtensils /> },
+  { id: "scenery",     label: "Scenery",        count: 59,  icon: () => <IconMountain /> },
+  { id: "showcase",    label: "Showcase",       count: 49,  icon: () => <IconSparkles /> },
+  { id: "tools",       label: "Tools & Trade",  count: 35,  icon: () => <IconWrench /> },
+  { id: "travel",      label: "Travel",         count: 18,  icon: () => <IconPlane /> },
+  { id: "electronics", label: "Electronics",    count: 16,  icon: () => <IconLaptop /> },
+  { id: "sale",        label: "Sale",           count: 7,   icon: () => <IconTag /> },
+  { id: "pets",        label: "Pets",           count: 4,   icon: () => <IconPaw /> },
+  { id: "pattern",     label: "Patterns",       count: 3,   icon: () => <IconPattern /> },
+];
+
+function BrowseLibraryDropdown(): React.JSX.Element {
+  const [open, setOpen] = React.useState(false);
+  const rootRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Close on outside click.
+  React.useEffect(() => {
+    if (!open) return;
+    function onDoc(e: MouseEvent) {
+      if (!rootRef.current) return;
+      if (!rootRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  const returnTo = encodeURIComponent("/nex-native/chat-themes-library/all");
+
+  return (
+    <div
+      ref={rootRef}
+      data-nex-chat-library-cta
+      style={{
+        position: "relative",
+        display: "inline-block",
+        marginTop: 10,
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "8px 14px",
+          borderRadius: 999,
+          background: "#FF7200",
+          color: "#FFFFFF",
+          border: "none",
+          fontSize: 12,
+          fontWeight: 900,
+          letterSpacing: "0.04em",
+          textTransform: "uppercase",
+          cursor: "pointer",
+          fontFamily: "inherit",
+        }}
+      >
+        <span>Browse NEX Visual Library</span>
+        <span
+          aria-hidden
+          style={{
+            display: "inline-block",
+            transition: "transform 150ms ease-out",
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            lineHeight: 1,
+            fontSize: 10,
+          }}
+        >
+          ▾
+        </span>
+      </button>
+
+      {open ? (
+        <div
+          role="menu"
+          style={{
+            position: "absolute",
+            top: "calc(100% + 8px)",
+            left: "50%",
+            transform: "translateX(-50%)",
+            minWidth: 260,
+            maxHeight: "min(70vh, 460px)",
+            overflowY: "auto",
+            background: "#0A1526",
+            border: `1px solid ${NEX_ACCENT}55`,
+            borderRadius: 14,
+            padding: 6,
+            boxShadow: "0 16px 40px rgba(0,0,0,0.65)",
+            zIndex: 20,
+            // Subtle chrome header inside the menu
+          }}
+        >
+          <div
+            style={{
+              padding: "8px 12px 10px",
+              borderBottom: `1px solid rgba(255,255,255,0.08)`,
+              marginBottom: 4,
+              fontSize: 10,
+              fontWeight: 900,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "rgba(255,255,255,0.55)",
+            }}
+          >
+            Browse by category
+          </div>
+          {BROWSE_OPTIONS.map((opt) => (
+            <Link
+              key={opt.id}
+              role="menuitem"
+              href={`/nex-native/library/backgrounds?context=chat${
+                opt.id === "all" ? "" : `&category=${encodeURIComponent(opt.id)}`
+              }&returnTo=${returnTo}`}
+              onClick={() => setOpen(false)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "10px 12px",
+                borderRadius: 10,
+                color: NEX_INK,
+                textDecoration: "none",
+                fontSize: 14,
+                fontWeight: 600,
+                letterSpacing: "0.01em",
+                textAlign: "left",
+                transition: "background 120ms ease-out, color 120ms ease-out",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(255,114,0,0.14)";
+                e.currentTarget.style.color = "#FFFFFF";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.color = NEX_INK;
+              }}
+            >
+              <span
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 8,
+                  background: "rgba(255,114,0,0.12)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#FF7200",
+                  flexShrink: 0,
+                }}
+              >
+                {opt.icon("#FF7200")}
+              </span>
+              <span style={{ flex: 1 }}>{opt.label}</span>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "rgba(255,255,255,0.45)",
+                  fontVariantNumeric: "tabular-nums",
+                  minWidth: 32,
+                  textAlign: "right",
+                }}
+              >
+                {opt.count}
+              </span>
+            </Link>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }

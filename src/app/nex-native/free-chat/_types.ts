@@ -71,9 +71,12 @@ export const FREE_CHAT_THEMES: readonly FreeChatTheme[] = [
   // ireland-8). Accent hex uses the sealed Ireland Gold (#C6A15B) ·
   // the sealed premium Irish accent · matches the Visit Shop badge,
   // the drawer edge-light, and the Live Side Drawer gold detail.
-  { id: "ireland-1", label: "Ireland 1", wallpaperUrl: "/nex-themes/ireland/ire3.png",       placeholderLabel: null, accentHex: "#C6A15B", identity: "ireland" },
-  { id: "ireland-2", label: "Ireland 2", wallpaperUrl: "/nex-themes/ireland/ire2.png",       placeholderLabel: null, accentHex: "#C6A15B", identity: "ireland" },
-  { id: "ireland-3", label: "Ireland 3", wallpaperUrl: "/nex-themes/ireland/ireland-7.png",  placeholderLabel: null, accentHex: "#C6A15B", identity: "ireland" },
+  // Owner directive 2026-11-11 · Ireland fixed free-tile sequence ·
+  // slot 2 Teddy Bear Shopping, slot 3 Puppy & Kitten Cuddle, slot 4
+  // Sunset Supercar Showdown · all pinned, none rotate.
+  { id: "ireland-1", label: "Teddy Bear Shopping", wallpaperUrl: "/nex-themes/ireland/teddy-bear-shopping.png", placeholderLabel: null, accentHex: "#C6A15B", identity: "ireland" },
+  { id: "ireland-2", label: "Puppy & Kitten Cuddle", wallpaperUrl: "/nex-themes/ireland/puppy-kitten-cuddle.png", placeholderLabel: null, accentHex: "#C6A15B", identity: "ireland" },
+  { id: "ireland-3", label: "Sunset Supercar Showdown", wallpaperUrl: "/nex-themes/ireland/sunset-supercar.png", placeholderLabel: null, accentHex: "#C6A15B", identity: "ireland" },
   // Owner directive 2026-11-02 (revision 7) · the container-colour
   // concept was retired · ireland-4 reverts to a standard wallpaper
   // tile (ireland-8.png · the 5th Ireland asset the owner shipped).
@@ -125,13 +128,18 @@ import { LIBRARY_THEMES } from "../chat-themes-library/_catalog";
 // normal price doesn't apply yet". After the user picks + creates
 // account + hits Live, subsequent library buys are at full price
 // (strike line disappears · enforced at the Theme Library page).
+// Owner directive 2026-11-11 · Ireland now has FOUR fixed tiles ·
+// slot 1 nex-default (cream) + slot 2 ireland-1 (Teddy Bear Shopping) +
+// slot 3 ireland-2 (Puppy & Kitten Cuddle) + slot 4 ireland-3 (Sunset
+// Supercar Showdown) · all remain across the daily spotlight rotation.
+// Spotlight slots drop to 2 to keep the total tile count at 6.
 const PINNED_TILES_BY_IDENTITY: Record<string, readonly string[]> = {
-  ireland: ["nex-default"],
+  ireland: ["nex-default", "ireland-1", "ireland-2", "ireland-3"],
   worldwide: [],
   indonesia: [],
 };
 
-const SPOTLIGHT_SLOTS = 5;
+const SPOTLIGHT_SLOTS = 2;
 
 /** FNV-1a 32-bit hash · deterministic + fast · just enough variance
  *  for a date → index-sequence seed. */
