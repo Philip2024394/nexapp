@@ -404,6 +404,7 @@ function ApplyPreviewModal({
   readonly theme: LibraryTheme;
   readonly onClose: () => void;
 }): React.JSX.Element {
+  const router = useRouter();
   const [applying, setApplying] = React.useState(false);
   const [result, setResult] = React.useState<string | null>(null);
   // Owner directive 2026-11-11 · scale bar under the phone darkens the
@@ -444,10 +445,16 @@ function ApplyPreviewModal({
       const assetId = theme.id.includes(":") ? theme.id : `chat:${theme.id}`;
       const r = await applyFromLibraryChatAction(assetId);
       if (r.ok) {
-        setResult(`Applied · ${theme.label}`);
-      } else {
-        setResult(`Could not apply · ${r.error}`);
+        // Owner directive 2026-11-12 · on success, close the preview
+        // and route to the chat screen so the user sees the newly
+        // applied theme live. No success toast · the chat canvas
+        // repainting with the new background is the confirmation.
+        onClose();
+        router.replace("/nex-native/free-chat");
+        router.refresh();
+        return;
       }
+      setResult(`Could not apply · ${r.error}`);
     } catch (e) {
       setResult(`Could not apply · ${(e as Error).message}`);
     } finally {

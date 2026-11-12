@@ -18,6 +18,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   applyFromLibraryShopAction,
   applyFromLibraryChatAction,
@@ -72,10 +73,16 @@ const SANS =
 
 export function LibraryClient(props: Props): React.JSX.Element {
   const { context, categories, initialCategory, assets } = props;
+  const router = useRouter();
   const [category, setCategory] = React.useState(initialCategory);
   const [focused, setFocused] = React.useState<ClientAsset | null>(null);
   const [applying, setApplying] = React.useState(false);
   const [applyResult, setApplyResult] = React.useState<string | null>(null);
+  // Owner directive 2026-11-12 · lightbox state for the round orange
+  // magnifier button inside the preview modal · lets the user view the
+  // raw wallpaper image at viewport size without the chat/shop preview
+  // overlay baked into the tile.
+  const [zoomed, setZoomed] = React.useState(false);
 
   const filtered = React.useMemo(() => {
     if (category === "all") return assets;
@@ -108,6 +115,17 @@ export function LibraryClient(props: Props): React.JSX.Element {
         result = await applyFromLibraryChatAction(a.id);
       }
       if (result.ok) {
+        // Owner directive 2026-11-12 · chat-side success routes to
+        // the chat canvas so the user sees the new theme live · no
+        // success toast. Shop-side falls back to its existing
+        // in-place confirmation since the shop cover preview is
+        // already visible on this surface.
+        if (context === "chat") {
+          setFocused(null);
+          router.replace("/nex-native/free-chat");
+          router.refresh();
+          return;
+        }
         setApplyResult(`Applied · ${a.label}`);
       } else {
         setApplyResult(`Could not apply · ${result.error}`);
@@ -132,18 +150,19 @@ export function LibraryClient(props: Props): React.JSX.Element {
         overflow: "hidden",
       }}
     >
-      {/* Header */}
-      <header
+      {/* Owner directive 2026-11-12 · "NEX Visual Library" header +
+          Shop/Chat context badge removed · page starts with the
+          category dropdown and (if a return path exists) a small back
+          chip. */}
+      <div
+        data-nex-library-top-bar
         style={{
           display: "flex",
           alignItems: "center",
           gap: 10,
-          padding: "calc(env(safe-area-inset-top, 0) + 14px) 16px 10px",
-          background: "rgba(10, 21, 38, 0.82)",
-          backdropFilter: "blur(14px)",
-          WebkitBackdropFilter: "blur(14px)",
+          padding:
+            "calc(env(safe-area-inset-top, 0) + 14px) 14px 10px",
           flexShrink: 0,
-          borderBottom: `1px solid ${NEX.accent}22`,
         }}
       >
         {props.returnTo ? (
@@ -165,78 +184,49 @@ export function LibraryClient(props: Props): React.JSX.Element {
             ←
           </Link>
         ) : null}
-        <h1
+
+        {/* Owner directive 2026-11-12 · dropdown picker replaces the
+            horizontally scrolling chip row. Mirrors the dropdown style
+            used by the main /chat-themes-library/all page. */}
+        <select
+          aria-label="Category"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          data-nex-library-category-select
           style={{
-            margin: 0,
-            fontSize: 18,
-            fontWeight: 800,
-            letterSpacing: "0.02em",
             flex: 1,
-          }}
-        >
-          NEX Visual Library
-        </h1>
-        <span
-          data-nex-library-context-pill={context}
-          style={{
-            padding: "4px 10px",
+            minWidth: 0,
+            height: 40,
+            padding: "0 36px 0 14px",
+            background: NEX.card,
+            border: `1px solid ${NEX.accent}66`,
             borderRadius: 999,
-            background: context === "shop" ? NEX.orange : NEX.accent,
-            color: context === "shop" ? NEX.white : NEX.black,
-            fontSize: 11,
-            fontWeight: 900,
-            textTransform: "uppercase",
-            letterSpacing: "0.08em",
+            color: NEX.ink,
+            fontSize: 13,
+            fontWeight: 700,
+            fontFamily: SANS,
+            appearance: "none",
+            backgroundImage:
+              "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%232A1F0F' d='M6 8L0 0h12z'/></svg>\")",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "right 14px center",
+            cursor: "pointer",
           }}
         >
-          {context}
-        </span>
-      </header>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.emoji} {c.label}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      {/* Category chips */}
-      <nav
-        aria-label="Categories"
-        style={{
-          display: "flex",
-          gap: 8,
-          padding: "10px 14px",
-          overflowX: "auto",
-          flexShrink: 0,
-          borderBottom: `1px solid ${NEX.accent}15`,
-        }}
-      >
-        {categories.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            onClick={() => setCategory(c.id)}
-            data-nex-library-category-chip={c.id}
-            data-nex-library-category-active={category === c.id ? "true" : "false"}
-            style={{
-              all: "unset",
-              cursor: "pointer",
-              padding: "6px 12px",
-              borderRadius: 999,
-              background: category === c.id ? NEX.card : "transparent",
-              color: category === c.id ? NEX.ink : NEX.white,
-              border: `1px solid ${category === c.id ? NEX.card : NEX.accent + "44"}`,
-              fontSize: 12,
-              fontWeight: 700,
-              whiteSpace: "nowrap",
-              flexShrink: 0,
-            }}
-          >
-            {c.emoji} {c.label}
-          </button>
-        ))}
-      </nav>
-
-      {/* Asset count */}
+      {/* Asset count · owner directive 2026-11-12 · explicit gray */}
       <div
         style={{
-          padding: "8px 14px",
+          padding: "6px 16px 10px",
           fontSize: 11,
-          color: "rgba(255,255,255,0.6)",
+          color: "#808080",
           flexShrink: 0,
         }}
       >
@@ -348,7 +338,10 @@ export function LibraryClient(props: Props): React.JSX.Element {
         <div
           role="dialog"
           aria-modal="true"
-          onClick={() => setFocused(null)}
+          onClick={() => {
+            setZoomed(false);
+            setFocused(null);
+          }}
           style={{
             position: "fixed",
             inset: 0,
@@ -373,23 +366,76 @@ export function LibraryClient(props: Props): React.JSX.Element {
               border: `1px solid ${NEX.accent}44`,
             }}
           >
+            {/* Owner directive 2026-11-12 · modal header row ·
+                title gray · round orange × on the right · round
+                orange magnifier on the left opens the full-screen
+                image viewer so the user can see the wallpaper at
+                its real size. */}
             <div
               style={{
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
+                gap: 10,
                 marginBottom: 10,
               }}
             >
-              <div style={{ fontSize: 15, fontWeight: 800 }}>{focused.label}</div>
               <button
                 type="button"
-                onClick={() => setFocused(null)}
+                onClick={() => setZoomed(true)}
+                aria-label="View larger"
+                data-nex-library-zoom
                 style={{
                   all: "unset",
                   cursor: "pointer",
-                  padding: "4px 10px",
+                  width: 34,
+                  height: 34,
+                  borderRadius: "50%",
+                  background: NEX.orange,
+                  color: NEX.white,
+                  display: "grid",
+                  placeItems: "center",
+                  flexShrink: 0,
+                  fontSize: 15,
+                  fontWeight: 900,
+                  boxShadow: "0 4px 10px rgba(255, 114, 0, 0.4)",
+                }}
+              >
+                🔍
+              </button>
+              <div
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  fontSize: 15,
+                  fontWeight: 700,
+                  color: "#808080",
+                  textAlign: "center",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {focused.label}
+              </div>
+              <button
+                type="button"
+                onClick={() => setFocused(null)}
+                aria-label="Close"
+                style={{
+                  all: "unset",
+                  cursor: "pointer",
+                  width: 34,
+                  height: 34,
+                  borderRadius: "50%",
+                  background: NEX.orange,
+                  color: NEX.white,
+                  display: "grid",
+                  placeItems: "center",
+                  flexShrink: 0,
                   fontSize: 20,
+                  fontWeight: 900,
+                  boxShadow: "0 4px 10px rgba(255, 114, 0, 0.4)",
                 }}
               >
                 ×
@@ -450,6 +496,68 @@ export function LibraryClient(props: Props): React.JSX.Element {
               </div>
             ) : null}
           </div>
+
+          {/* Owner directive 2026-11-12 · full-screen lightbox for
+              "view larger" · opens on magnifier tap, closes on any
+              tap or on the orange × in the top-right. */}
+          {zoomed ? (
+            <div
+              data-nex-library-lightbox
+              onClick={(e) => {
+                e.stopPropagation();
+                setZoomed(false);
+              }}
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(0, 0, 0, 0.92)",
+                zIndex: 60,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "40px 16px",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={focused.storageUrl}
+                alt={focused.label}
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "100%",
+                  objectFit: "contain",
+                  borderRadius: 10,
+                }}
+              />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setZoomed(false);
+                }}
+                aria-label="Close larger view"
+                style={{
+                  all: "unset",
+                  cursor: "pointer",
+                  position: "absolute",
+                  top: "calc(env(safe-area-inset-top, 0) + 14px)",
+                  right: 14,
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  background: NEX.orange,
+                  color: NEX.white,
+                  display: "grid",
+                  placeItems: "center",
+                  fontSize: 22,
+                  fontWeight: 900,
+                  boxShadow: "0 4px 12px rgba(255, 114, 0, 0.5)",
+                }}
+              >
+                ×
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </main>
