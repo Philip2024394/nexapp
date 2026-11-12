@@ -731,9 +731,12 @@ function ShopProductCard(props: {
             fontSize: 13,
             fontWeight: 700,
             lineHeight: 1.3,
-            whiteSpace: "nowrap",
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
             overflow: "hidden",
-            textOverflow: "ellipsis",
+            minHeight: "calc(1.3em * 2)",
+            wordBreak: "break-word",
             color: "#F2F5F8",
           }}
         >

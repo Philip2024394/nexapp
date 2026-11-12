@@ -60,7 +60,18 @@ export default async function Page({
                 a link. Wire a replacement when a new destination exists. */}
             @{business.slug}.nex
           </p>
-          <h1 className="text-xl font-semibold text-[var(--nex-neutral-900)]">
+          <h1
+            className="text-xl font-semibold text-[var(--nex-neutral-900)]"
+            style={{
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+              lineHeight: 1.25,
+              minHeight: "calc(1.25em * 2)",
+              wordBreak: "break-word",
+            }}
+          >
             {product.name}
           </h1>
           <p className="mt-1 text-sm text-[var(--nex-neutral-700)]">
