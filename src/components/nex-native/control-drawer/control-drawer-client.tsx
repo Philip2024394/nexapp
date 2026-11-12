@@ -272,13 +272,11 @@ const CREATE_ROWS: ReadonlyArray<MenuRow> = [
 ];
 
 const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
-  {
-    key: "profile",
-    label: "My profile",
-    subtitle: "Your identity details",
-    href: "/nex-native/profile/me",
-    locked: false,
-  },
+  // Owner directive 2026-11-12 · "Chats and contacts" promoted to the
+  // top of the drawer so it's the first link on every surface · lets
+  // the user bail back to their conversation list from any page with
+  // one tap. Supersedes the previous ordering where My profile sat
+  // first.
   {
     key: "chats-contacts",
     label: "Chats and contacts",
@@ -287,10 +285,52 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
     locked: false,
   },
   {
+    key: "profile",
+    label: "My profile",
+    subtitle: "Your identity details",
+    href: "/nex-native/profile/me",
+    locked: false,
+  },
+  // Owner directive 2026-11-12 · dedicated "Edit Profile" row routes
+  // straight to the full profile edit form (/settings/profile/edit)
+  // with every field pre-filled from nex_account + nex_account_profile.
+  // Supersedes the former pattern of View-then-tap-Edit · one tap now
+  // lands the owner on the editable surface.
+  {
+    key: "edit-profile",
+    label: "Edit Profile",
+    subtitle: "Name · country · interests · socials",
+    href: "/nex-native/settings/profile/edit",
+    locked: false,
+  },
+  // Owner directive 2026-11-12 · dedicated "Manage Shop" row routes
+  // to the sealed /nex-native/manage landing · three tiles (Edit Shop,
+  // Edit Products, Edit Shop Theme) that each reuse their existing
+  // surface. Sellers with no business row yet are redirected by the
+  // landing to the sealed shop-setup dispatcher · no broken state.
+  {
+    key: "manage-shop",
+    label: "Manage Shop",
+    subtitle: "Edit shop · products · theme",
+    href: "/nex-native/manage",
+    locked: false,
+  },
+  {
     key: "chat-appearance",
     label: "Chat themes",
     subtitle: "Themes and styles",
     href: "/nex-native/chat-themes-library",
+    locked: false,
+  },
+  // Owner directive 2026-11-12 · one drawer row routes to the existing
+  // Chat Settings hub (/nex-native/settings/chat-settings) which carries
+  // links on-page for everything chat-related, including the new
+  // "My chat screen" preview (how your chat looks to another NEX user).
+  {
+    key: "chat-settings",
+    label: "Chat Settings",
+    subtitle: "Visibility · themes · preview",
+    href: "/nex-native/settings/chat-settings",
     locked: false,
   },
   // Owner directive 2026-11-10 · Payment Providers central hub ·
@@ -360,7 +400,21 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
 // clobbering the pre-existing `/nex-native/support` branching help
 // landing (Bridge 16c). Chat interface loads with a welcome bubble
 // from NEX Support on first visit.
+//
+// Owner directive 2026-11-11 (Cycle 36) · Settings reinstated. The
+// 2026-11-04 trim removed it after audit showed Settings routes were
+// reachable by URL only; today's direction is to surface it from the
+// drawer so users can reach the 7-group hub (Your account · Your NEX
+// · Messages · Privacy & Safety · Storage & Data · Payments & NEX
+// Wallet · Help) without typing the URL. Links to the sealed landing
+// at /nex-native/settings which reads from _sections.ts.
 const PREFERENCES_ROWS: ReadonlyArray<MenuRow> = [
+  {
+    key: "settings",
+    label: "Settings",
+    subtitle: "Profile · privacy · payments · more",
+    href: "/nex-native/settings",
+  },
   {
     key: "nex-1",
     label: "NEX 1",

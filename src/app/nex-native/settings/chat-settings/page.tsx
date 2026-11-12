@@ -128,6 +128,14 @@ export default async function ChatSettingsPage({
           <SettingsGroupHeader>Visibility to others</SettingsGroupHeader>
           <ChatSettingsClient prefs={prefs} />
 
+          <SettingsGroupHeader>My chat screen</SettingsGroupHeader>
+          <LinkCard
+            href="/nex-native/chat/preview/my-view"
+            emoji="👁"
+            title="How your chat looks to others"
+            subtitle="Preview the chat screen the way another NEX user sees it when they open a chat with you · your avatar, name, and sample bubbles against the neutral emerald NEX theme."
+          />
+
           <SettingsGroupHeader>Who sees your theme</SettingsGroupHeader>
           <LinkCard
             href="/nex-native/settings/see-my-theme"
