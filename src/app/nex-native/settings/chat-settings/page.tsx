@@ -1,63 +1,42 @@
 // src/app/nex-native/settings/chat-settings/page.tsx
 //
-// NEX Chat Settings · comprehensive hub · owner-authorised 2026-11-07.
+// NEX Chat Settings · control-centre layout · owner-authorised 2026-11-12.
 // -----------------------------------------------------------------------------
-// Replaces the previous Coming-Soon shell with a full settings hub
-// covering every control the owner specified + extras derived from
-// WhatsApp + iMessage research.
+// Rebuild of the previous Chat Settings hub into a visual control centre
+// that matches the established NEX settings palette. Six sections top to
+// bottom:
 //
-// Sections:
+//   1. My Chat Page  – mini preview card with avatar, display_name, and
+//                       the viewer's actual chat_theme (hero image) +
+//                       sample bubbles · deep-link to full preview.
+//   2. Chat Appearance – chat theme, per-contact theme sharing, bubble
+//                       colour customiser.
+//   3. Privacy & Visibility – reciprocal read receipts, typing, last-seen,
+//                       online status, blocked contacts.
+//   4. Message Controls – disappearing-messages default timer + per-chat
+//                       overrides note.
+//   5. Chat Experience – font, background sync, screenshot protection,
+//                       notification preview (some Coming Soon).
+//   6. Honest State – note explaining what is actually wired vs planned.
 //
-//   1 · Visibility to others
-//       · Read receipts (reciprocal) · toggle
-//       · Typing indicator · toggle
-//       · Last-seen visibility · everyone / contacts / nobody
-//       · Online status visibility · everyone / contacts / nobody
-//       · Reset section → sealed defaults
-//       Backend: nex_account cols from migration 199 (fail-closed read
-//       via chat-preferences-service · sealed defaults when 199 unapplied)
+// Every section links to an EXISTING route · nothing new is invented.
+// All reads are DB-wired (chat-preferences-service · account-service ·
+// account-profile-service · chat-theme-service · disappearing-messages-
+// service) per the 2026-11-12 DB-wired directive.
 //
-//   2 · Theme sharing (per-contact)
-//       · Link → /settings/see-my-theme (opt-out per contact · when OFF,
-//         that contact sees the standard emerald World theme)
-//
-//   3 · Disappearing messages (COMING SOON · no backend yet)
-//       · Default timer selector · Off / Immediately after view / 5m / 30m
-//         / 1h / 24h / 7d (owner-specified set)
-//       · Requires nex_peer_message.expires_at + per-message TTL purge job
-//         — authored in a separate cycle
-//
-//   4 · Blocked contacts
-//       · Link → /settings/blocked (fully functional via friend-service)
-//       · When blocked, that user cannot see your presence or online
-//         status · total privacy (per owner directive)
-//
-//   5 · Screenshot & copy protection (COMING SOON · no backend yet)
-//       · Toggle · when ON, chat UI applies CSS user-select:none +
-//         JS clipboard interception + mobile screenshot detection
-//         (where OS permits · web platform cannot fully block)
-//
-//   6 · Chat font (COMING SOON · no backend yet)
-//       · Font family picker (3-5 options)
-//       · Font size slider (sm / md / lg)
-//       · Reset to default
-//
-//   7 · Background sync (COMING SOON · no backend yet)
-//       · "Use my shop cover as chat background" · toggle
-//       · "Use my chat theme image as shop cover" · toggle
-//       · Reset
-//
-// WhatsApp/iMessage research notes:
-//   · Media auto-download → existing /settings/data-usage row in IA
-//   · Chat backup encryption → separate Vault doorway (not here)
-//   · App lock (fingerprint/face) → separate Security surface
-//   · Advanced chat privacy (blocks forward/export) → folded into
-//     Section 5 "Screenshot & copy protection" above
+// Session resolver uses resolveSessionWithDevOverride so the 99901 dev
+// persona lands here (matches the 2026-11-12 upload-bounce-to-sign-in
+// resolver fix pattern).
 
 import type * as React from "react";
 import { redirect } from "next/navigation";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { getChatPreferences } from "@/lib/nex-native/chat-preferences-service";
+import { getAccountById } from "@/lib/nex-native/account-service";
+import { getProfileByAccountId } from "@/lib/nex-native/account-profile-service";
+import { getThemeById } from "@/lib/nex-native/chat-theme-service";
+import { getDisappearingDefaultSafe } from "@/lib/nex-native/disappearing-messages-service";
+import { DISAPPEARING_PRESETS } from "@/lib/nex-native/disappearing-messages-constants";
 import { NexPageHeader } from "../../_page-header";
 import {
   NEX_SETTINGS,
@@ -75,10 +54,8 @@ export default async function ChatSettingsPage({
 }: {
   searchParams: Promise<{ s?: string }>;
 }): Promise<React.JSX.Element> {
-  // Owner directive 2026-11-12 · dev-impersonation parity · use
-  // resolveSessionWithDevOverride so NEX_DEV_IMPERSONATE_HANDLE=nex-99901
-  // reaches this surface instead of bouncing the dev persona to sign-in.
-  // Same bug class as the 2026-11-12 upload bounce.
+  // Owner directive 2026-11-12 · dev-impersonation parity (NEX_DEV_
+  // IMPERSONATE_HANDLE=nex-99901 must reach this surface).
   const session = await resolveSessionWithDevOverride();
   if (!session) {
     redirect("/nex-native/sign-in?next=/nex-native/settings/chat-settings");
@@ -86,8 +63,25 @@ export default async function ChatSettingsPage({
   const sp = await searchParams;
   const status = typeof sp.s === "string" ? sp.s : null;
 
-  // Read live preferences · sealed defaults when migration 199 is unapplied.
-  const prefs = await getChatPreferences(session.account.id);
+  // Parallel DB reads · all fail-safe · the page still renders if any
+  // individual read errors (service degraded defaults).
+  const [prefs, account, profile, defaultSeconds] = await Promise.all([
+    getChatPreferences(session.account.id),
+    getAccountById(session.account.id).catch(() => null),
+    getProfileByAccountId(session.account.id).catch(() => null),
+    getDisappearingDefaultSafe(session.account.id),
+  ]);
+  const currentThemeId = account?.chat_theme ?? null;
+  const currentTheme = currentThemeId
+    ? await getThemeById(currentThemeId).catch(() => null)
+    : null;
+
+  const displayName = account?.display_name?.trim() || "Your name";
+  const avatarUrl = profile?.avatar_url?.trim() || null;
+
+  const disappearingLabel =
+    DISAPPEARING_PRESETS.find((p) => p.value === defaultSeconds)?.label ??
+    "Custom";
 
   return (
     <>
@@ -123,41 +117,56 @@ export default async function ChatSettingsPage({
                 color: NEX_SETTINGS.textSecondary,
               }}
             >
-              Control how your chats behave for you and the people you message.
+              Personalise how your chats look, feel and behave.
             </p>
           </header>
 
           {status ? <StatusBanner status={status} /> : null}
 
-          <SettingsGroupHeader>Visibility to others</SettingsGroupHeader>
-          <ChatSettingsClient prefs={prefs} />
-
-          <SettingsGroupHeader>My chat screen</SettingsGroupHeader>
-          <LinkCard
-            href="/nex-native/chat/preview/my-view"
-            emoji="👁"
-            title="How your chat looks to others"
-            subtitle="Preview the chat screen the way another NEX user sees it when they open a chat with you · your avatar, name, and sample bubbles against the neutral emerald NEX theme."
+          {/* ─── 1 · My Chat Page ────────────────────────────────── */}
+          <SettingsGroupHeader>My chat page</SettingsGroupHeader>
+          <MyChatPagePreviewCard
+            displayName={displayName}
+            avatarUrl={avatarUrl}
+            heroImageUrl={currentTheme?.hero_image_url ?? null}
+            accentHex={currentTheme?.accent_hex ?? NEX_SETTINGS.cyan}
+            themeName={currentTheme?.name ?? "NEX default"}
           />
 
-          <SettingsGroupHeader>Who sees your theme</SettingsGroupHeader>
+          {/* ─── 2 · Chat Appearance ─────────────────────────────── */}
+          <SettingsGroupHeader>Chat appearance</SettingsGroupHeader>
+          <LinkCard
+            href="/nex-native/chat-themes-library"
+            emoji="🎨"
+            title="Chat theme"
+            subtitle={
+              currentTheme
+                ? `Current · ${currentTheme.name}. Tap to browse the library.`
+                : "Pick a chat background and accent from the NEX library."
+            }
+            rightLabel="Change"
+          />
           <LinkCard
             href="/nex-native/settings/see-my-theme"
-            emoji="🎨"
-            title="See My Theme · per-contact"
-            subtitle="Choose which contacts see your personal chat theme. When OFF for a contact, they see the standard emerald NEX theme."
-            comingSoon
+            emoji="👥"
+            title="Show my theme to contacts"
+            subtitle="Choose per-contact which friends see your personal chat theme. When OFF for a contact, they see the standard NEX theme · your own theme never changes."
           />
-
-          <SettingsGroupHeader>Disappearing messages</SettingsGroupHeader>
           <LinkCard
-            href="/nex-native/settings/disappearing-messages"
-            emoji="⏳"
-            title="Default message timer"
-            subtitle="Off · Immediately after view · 5 min · 30 min · 1 hour · 24 hours · 7 days. Applies to messages YOU send · per-chat overrides deferred to a later update."
+            href={
+              currentThemeId
+                ? `/nex-native/free-chat/bubble-customize?theme=${encodeURIComponent(currentThemeId)}`
+                : "/nex-native/free-chat/bubble-customize"
+            }
+            emoji="🎈"
+            title="Bubble colours"
+            subtitle="Separate colours for your sent bubbles and received bubbles · live preview on the customiser page."
           />
 
-          <SettingsGroupHeader>Blocked contacts</SettingsGroupHeader>
+          {/* ─── 3 · Privacy & Visibility ────────────────────────── */}
+          <SettingsGroupHeader>Privacy & visibility</SettingsGroupHeader>
+          <ChatSettingsClient prefs={prefs} />
+          <div style={{ height: 10 }} />
           <LinkCard
             href="/nex-native/settings/blocked"
             emoji="🚫"
@@ -165,34 +174,47 @@ export default async function ChatSettingsPage({
             subtitle="Manage people you've blocked. When blocked, they cannot see your presence, online status, typing or receipts · total privacy."
           />
 
-          <SettingsGroupHeader>Screenshot & copy protection</SettingsGroupHeader>
+          {/* ─── 4 · Message Controls ────────────────────────────── */}
+          <SettingsGroupHeader>Message controls</SettingsGroupHeader>
           <LinkCard
-            href="/nex-native/settings/chat-protection"
-            emoji="📷"
-            title="Block screenshot and copy"
-            subtitle="Viewer-side CSS + context-menu + copy-keystroke blocks on your chat UI. Honest about OS-level screenshot limits."
+            href="/nex-native/settings/disappearing-messages"
+            emoji="⏳"
+            title="Disappearing messages"
+            subtitle={`Default timer for new chats · currently ${disappearingLabel}. Per-chat overrides are preserved.`}
+            rightLabel={disappearingLabel}
           />
 
-          <SettingsGroupHeader>Chat font</SettingsGroupHeader>
+          {/* ─── 5 · Chat Experience ─────────────────────────────── */}
+          <SettingsGroupHeader>Chat experience</SettingsGroupHeader>
           <LinkCard
             href="/nex-native/settings/chat-font"
             emoji="🔤"
             title="Font style and size"
-            subtitle="Pick a chat font family and size for YOUR view. Reset to default any time. Contacts never see a different font because of this."
+            subtitle="Pick a chat font family and size for YOUR view. Contacts never see a different font because of this."
           />
-
-          <SettingsGroupHeader>Background sync</SettingsGroupHeader>
           <LinkCard
             href="/nex-native/settings/chat-background-sync"
             emoji="🪞"
             title="Shop cover ↔ chat background"
-            subtitle="Two independent toggles: (1) use your shop cover as your chat background, (2) use your chat theme image as your shop cover. Reset either independently."
+            subtitle="Two independent toggles: (1) use your shop cover as chat background, (2) use your chat theme image as shop cover. Reset either independently."
+          />
+          <LinkCard
+            href="/nex-native/settings/chat-protection"
+            emoji="📷"
+            title="Screenshot & copy protection"
+            subtitle="Viewer-side CSS + context-menu + copy-keystroke blocks on your chat UI. Honest about OS-level screenshot limits."
+            comingSoon
           />
 
+          {/* ─── 6 · Honest State ────────────────────────────────── */}
           <SettingsGroupHeader>Honest state</SettingsGroupHeader>
           <HonestNote
             text={
-              "The Visibility controls above write to your account preferences. The Coming Soon rows have no backend yet · the controls are shown so you know what's planned, but toggling them has no effect until the matching migration + service land."
+              "Visibility · read receipts · typing · last-seen · online status: wired (migration 199 defaults apply when unapplied). " +
+              "Theme sharing: per-contact only · a global on/off switch is tracked as follow-up. " +
+              "Bubble colours: wired via the per-theme customiser (saved locally) · cross-device persistence is a follow-up. " +
+              "Disappearing messages: wired via migration 282 presets (max 7 days today). " +
+              "Rows marked Soon do not yet have a backend."
             }
           />
 
@@ -203,7 +225,193 @@ export default async function ChatSettingsPage({
   );
 }
 
-// ─── Status banner ────────────────────────────────────────────────────
+// ─── My Chat Page preview card ────────────────────────────────────────
+
+function MyChatPagePreviewCard({
+  displayName,
+  avatarUrl,
+  heroImageUrl,
+  accentHex,
+  themeName,
+}: {
+  displayName: string;
+  avatarUrl: string | null;
+  heroImageUrl: string | null;
+  accentHex: string;
+  themeName: string;
+}): React.JSX.Element {
+  const initial = displayName.trim().slice(0, 1).toUpperCase();
+  const firstName = displayName.split(/\s+/)[0] ?? "Friend";
+  return (
+    <div
+      data-nex-chat-settings-preview-card
+      style={{
+        position: "relative",
+        padding: 0,
+        background: NEX_SETTINGS.panel,
+        border: `1px solid ${NEX_SETTINGS.panelAccent}`,
+        borderRadius: 14,
+        overflow: "hidden",
+      }}
+    >
+      {/* Preview strip · theme hero backdrop + mock bubbles */}
+      <div
+        aria-hidden
+        style={{
+          position: "relative",
+          height: 220,
+          background: heroImageUrl
+            ? `linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.55)), url(${heroImageUrl}) center / cover no-repeat`
+            : "#0A1526",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        {/* Peer-chat-style header */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "10px 12px",
+            background: "rgba(0,0,0,0.3)",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+          }}
+        >
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: "50%",
+              background: avatarUrl
+                ? `url(${avatarUrl}) center / cover no-repeat`
+                : "#1F2D40",
+              border: "1px solid rgba(255,255,255,0.18)",
+              display: "grid",
+              placeItems: "center",
+              color: "#F2F5F8",
+              fontWeight: 800,
+              fontSize: 13,
+            }}
+          >
+            {!avatarUrl ? initial : null}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                color: "#F2F5F8",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {displayName}
+            </div>
+            <div style={{ fontSize: 10, color: "#B5C3D6" }}>
+              <span
+                aria-hidden
+                style={{
+                  display: "inline-block",
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: "#16D66B",
+                  marginRight: 4,
+                  verticalAlign: "middle",
+                }}
+              />
+              online
+            </div>
+          </div>
+        </div>
+        {/* Sample bubbles · YOUR (incoming to them) on left · their reply on right */}
+        <div
+          style={{
+            flex: 1,
+            padding: "12px 10px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+          }}
+        >
+          <PreviewBubble side="in" text={`Hey, it's ${firstName} 👋`} />
+          <PreviewBubble side="out" text="Hi!" accentHex={accentHex} />
+          <PreviewBubble side="in" text="Nice to meet you on NEX." />
+        </div>
+      </div>
+      {/* Explainer + CTA */}
+      <div style={{ padding: "12px 14px 14px" }}>
+        <div
+          style={{
+            fontSize: 12,
+            color: NEX_SETTINGS.textSecondary,
+            lineHeight: 1.45,
+          }}
+        >
+          Preview of how your chat appears to another contact · avatar,
+          name, and <strong style={{ color: NEX_SETTINGS.textPrimary }}>{themeName}</strong>{" "}
+          background. Each recipient sees their own theme on their device
+          unless they choose yours.
+        </div>
+        <a
+          href="/nex-native/chat/preview/my-view"
+          data-nex-chat-settings-preview-cta
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            marginTop: 12,
+            padding: "10px 16px",
+            background: NEX_SETTINGS.cyan,
+            color: "#031018",
+            borderRadius: 999,
+            textDecoration: "none",
+            fontWeight: 800,
+            fontSize: 12,
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
+          }}
+        >
+          See my chat page →
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function PreviewBubble({
+  side,
+  text,
+  accentHex,
+}: {
+  side: "in" | "out";
+  text: string;
+  accentHex?: string;
+}): React.JSX.Element {
+  const isOut = side === "out";
+  return (
+    <div
+      style={{
+        alignSelf: isOut ? "flex-end" : "flex-start",
+        maxWidth: "70%",
+        padding: "6px 10px",
+        borderRadius: isOut ? "10px 10px 2px 10px" : "10px 10px 10px 2px",
+        background: isOut ? accentHex ?? NEX_SETTINGS.cyan : "rgba(255,255,255,0.14)",
+        color: isOut ? "#031018" : "#F2F5F8",
+        fontSize: 11,
+        fontWeight: 600,
+        lineHeight: 1.3,
+        boxShadow: "0 1px 2px rgba(0,0,0,0.25)",
+      }}
+    >
+      {text}
+    </div>
+  );
+}
+
+// ─── Status banner (unchanged) ────────────────────────────────────────
 
 function StatusBanner({ status }: { status: string }): React.JSX.Element {
   const isError = status.startsWith("err_");
@@ -237,7 +445,7 @@ function StatusBanner({ status }: { status: string }): React.JSX.Element {
   );
 }
 
-// ─── Reusable cards (local · simpler shape than the hub version) ──────
+// ─── Link card (simpler shape than the hub version) ───────────────────
 
 function LinkCard({
   href,
@@ -245,12 +453,14 @@ function LinkCard({
   title,
   subtitle,
   comingSoon,
+  rightLabel,
 }: {
   href: string;
   emoji: string;
   title: string;
   subtitle: string;
   comingSoon?: boolean;
+  rightLabel?: string;
 }): React.JSX.Element {
   return (
     <a
@@ -270,6 +480,7 @@ function LinkCard({
         textDecoration: "none",
         color: NEX_SETTINGS.textPrimary,
         minHeight: 72,
+        marginBottom: 10,
       }}
     >
       <div
@@ -310,6 +521,20 @@ function LinkCard({
               Soon
             </span>
           ) : null}
+          {rightLabel ? (
+            <span
+              style={{
+                marginLeft: "auto",
+                fontSize: 10,
+                color: NEX_SETTINGS.cyan,
+                fontWeight: 700,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+              }}
+            >
+              {rightLabel}
+            </span>
+          ) : null}
         </div>
         <div
           style={{
@@ -332,99 +557,6 @@ function LinkCard({
         →
       </div>
     </a>
-  );
-}
-
-function ComingSoonCard({
-  emoji,
-  title,
-  subtitle,
-  rightLabel,
-}: {
-  emoji: string;
-  title: string;
-  subtitle: string;
-  rightLabel?: string;
-}): React.JSX.Element {
-  return (
-    <div
-      data-nex-chat-settings-coming-soon-card
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 14,
-        padding: "14px 16px",
-        background: NEX_SETTINGS.panel,
-        border: `1px solid rgba(255,114,0,0.30)`,
-        borderRadius: 12,
-        color: NEX_SETTINGS.textPrimary,
-        minHeight: 72,
-        opacity: 0.85,
-      }}
-    >
-      <div
-        aria-hidden
-        style={{
-          flexShrink: 0,
-          width: 44,
-          height: 44,
-          borderRadius: 12,
-          background: NEX_SETTINGS.panelFaint,
-          color: NEX_SETTINGS.orange,
-          display: "grid",
-          placeItems: "center",
-          fontSize: 20,
-        }}
-      >
-        {emoji}
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-          <span style={{ fontSize: 15, fontWeight: 500 }}>{title}</span>
-          <span
-            aria-label="coming soon"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              padding: "1px 6px",
-              fontSize: 9,
-              fontWeight: 600,
-              letterSpacing: "0.14em",
-              textTransform: "uppercase",
-              color: NEX_SETTINGS.orange,
-              border: `1px solid ${NEX_SETTINGS.orange}`,
-              borderRadius: 4,
-            }}
-          >
-            Soon
-          </span>
-          {rightLabel ? (
-            <span
-              style={{
-                marginLeft: "auto",
-                fontSize: 10,
-                color: NEX_SETTINGS.textSecondary,
-                fontWeight: 600,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-              }}
-            >
-              {rightLabel} (soon)
-            </span>
-          ) : null}
-        </div>
-        <div
-          style={{
-            marginTop: 3,
-            fontSize: 12,
-            color: NEX_SETTINGS.textSecondary,
-            lineHeight: 1.4,
-          }}
-        >
-          {subtitle}
-        </div>
-      </div>
-    </div>
   );
 }
 
