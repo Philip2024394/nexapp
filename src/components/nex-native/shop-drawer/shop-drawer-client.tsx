@@ -123,10 +123,13 @@ export function ShopDrawer({
     if (visible) closeRef.current?.focus();
   }, [visible]);
 
-  // Gate · if the viewer has no shop, don't render ANYTHING · not the
-  // FAB, not the drawer. The chat surface loses its bottom-right FAB
-  // entirely for buyer accounts. Call Centre remains reachable via +.
-  if (!viewerHasShop) return null;
+  // Owner directive 2026-11-12 · prior gate hid the entire drawer and
+  // FAB for viewers without a shop. The new behaviour keeps the FAB
+  // visible AND lets the drawer open · the body shows an "Activate
+  // your shop" container with a CTA so buyers-who-are-not-yet-sellers
+  // can learn about shop sharing in-context. Call Centre remains
+  // reachable via + regardless.
+  const noShopMode = !viewerHasShop;
 
   const overlay = (
     <>
@@ -323,16 +326,23 @@ export function ShopDrawer({
               letterSpacing: "0.02em",
             }}
           >
-            Tap a product to send it to{" "}
-            <span style={{ color: TEXT }}>{peerDisplayName}</span>
+            {noShopMode ? (
+              <>Never been as easy to impress and seal the deal.</>
+            ) : (
+              <>
+                Tap a product to send it to{" "}
+                <span style={{ color: TEXT }}>{peerDisplayName}</span>
+              </>
+            )}
           </p>
 
-          {/* Search · sticky under header */}
+          {/* Search · sticky under header · hidden in noShopMode since
+              there is nothing to search yet. */}
           <div
             style={{
+              display: noShopMode ? "none" : "flex",
               marginTop: 10,
               position: "relative",
-              display: "flex",
               alignItems: "center",
             }}
           >
@@ -386,7 +396,9 @@ export function ShopDrawer({
             gap: 16,
           }}
         >
-          {filtered.length === 0 ? (
+          {noShopMode ? (
+            <ActivateShopContainer onClose={closeDrawer} />
+          ) : filtered.length === 0 ? (
             <EmptyState hasQuery={query.trim().length > 0} />
           ) : (
             filtered.map((product) => (
@@ -566,17 +578,20 @@ function ProductCard({
           </span>
         </div>
 
-        {/* Title · one line */}
+        {/* Title · up to two lines · min-height reserved so cards don't
+            jump between one- and two-line names. */}
         <span
           style={{
-            display: "block",
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
             fontSize: 14,
             fontWeight: 600,
             color: TEXT,
             lineHeight: 1.25,
             overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
+            minHeight: "calc(1.25em * 2)",
+            wordBreak: "break-word",
           }}
         >
           {product.name}
@@ -651,6 +666,92 @@ function EmptyState({
           ? "Try a different term, or clear the search to see everything."
           : "Products you list for sale will appear here · tap any one to share it in this chat for instant selling."}
       </p>
+    </div>
+  );
+}
+
+// Owner directive 2026-11-12 · Activate-your-shop container · rendered
+// in the drawer body when the viewer has no shop set up yet. The 3-dot
+// trigger still opens the drawer so non-sellers can discover the shop
+// feature in-context; the body explains the pitch and offers a CTA to
+// start the Shop setup. Palette matches the sealed Emerald drawer.
+function ActivateShopContainer({
+  onClose,
+}: {
+  readonly onClose: () => void;
+}): React.JSX.Element {
+  return (
+    <div
+      data-nex-shop-drawer-activate
+      style={{
+        padding: "4px 2px 0",
+        display: "flex",
+        flexDirection: "column",
+        gap: 14,
+      }}
+    >
+      <div
+        aria-hidden
+        style={{
+          width: 64,
+          height: 64,
+          borderRadius: "50%",
+          background: "rgba(255, 114, 0, 0.14)",
+          border: `1px solid ${PANEL_BORDER}`,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#FF7200",
+          alignSelf: "center",
+        }}
+      >
+        <ShopGlyph accent="#FF7200" size={26} />
+      </div>
+      <p
+        style={{
+          margin: 0,
+          fontSize: 14,
+          fontWeight: 700,
+          lineHeight: 1.3,
+          color: TEXT,
+          textAlign: "center",
+        }}
+      >
+        Activate your shop to see products in this area for sharing to
+        your customers on chat.
+      </p>
+      <p
+        style={{
+          margin: 0,
+          fontSize: 12,
+          lineHeight: 1.45,
+          color: MUTED,
+          textAlign: "center",
+        }}
+      >
+        Never been as easy to impress and seal the deal.
+      </p>
+      <a
+        href="/nex-native/manage/shop"
+        onClick={() => onClose()}
+        data-nex-shop-drawer-activate-cta
+        style={{
+          marginTop: 2,
+          padding: "12px 18px",
+          borderRadius: 999,
+          background: "#FF7200",
+          color: "#FFFFFF",
+          fontWeight: 900,
+          fontSize: 13,
+          letterSpacing: "0.04em",
+          textTransform: "uppercase",
+          textDecoration: "none",
+          textAlign: "center",
+          boxShadow: "0 4px 14px rgba(255, 114, 0, 0.4)",
+        }}
+      >
+        Activate your shop
+      </a>
     </div>
   );
 }
