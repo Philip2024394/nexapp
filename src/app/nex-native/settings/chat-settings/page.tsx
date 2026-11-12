@@ -56,7 +56,7 @@
 
 import type * as React from "react";
 import { redirect } from "next/navigation";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { getChatPreferences } from "@/lib/nex-native/chat-preferences-service";
 import { NexPageHeader } from "../../_page-header";
 import {
@@ -75,7 +75,11 @@ export default async function ChatSettingsPage({
 }: {
   searchParams: Promise<{ s?: string }>;
 }): Promise<React.JSX.Element> {
-  const session = await resolveNexAppSessionFromContext();
+  // Owner directive 2026-11-12 · dev-impersonation parity · use
+  // resolveSessionWithDevOverride so NEX_DEV_IMPERSONATE_HANDLE=nex-99901
+  // reaches this surface instead of bouncing the dev persona to sign-in.
+  // Same bug class as the 2026-11-12 upload bounce.
+  const session = await resolveSessionWithDevOverride();
   if (!session) {
     redirect("/nex-native/sign-in?next=/nex-native/settings/chat-settings");
   }

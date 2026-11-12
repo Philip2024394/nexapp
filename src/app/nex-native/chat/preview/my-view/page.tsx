@@ -21,7 +21,7 @@
 
 import type * as React from "react";
 import { redirect } from "next/navigation";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { getAccountById } from "@/lib/nex-native/account-service";
 import { getProfileByAccountId } from "@/lib/nex-native/account-profile-service";
 
@@ -39,7 +39,12 @@ const BUBBLE_OUTGOING = "#128C7E";
 const AVATAR_PLACEHOLDER = "#1F2D40";
 
 export default async function MyChatScreenPreviewPage(): Promise<React.JSX.Element> {
-  const session = await resolveNexAppSessionFromContext();
+  // Owner directive 2026-11-12 · dev-impersonation parity · use
+  // resolveSessionWithDevOverride so NEX_DEV_IMPERSONATE_HANDLE=nex-99901
+  // reaches this surface. Must match the resolver used upstream on
+  // /nex-native/settings/chat-settings to avoid the bounce-to-sign-in
+  // mismatch class seen 2026-11-12.
+  const session = await resolveSessionWithDevOverride();
   if (!session) {
     redirect("/nex-native/sign-in?next=/nex-native/chat/preview/my-view");
   }
