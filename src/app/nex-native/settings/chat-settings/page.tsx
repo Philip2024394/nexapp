@@ -37,7 +37,6 @@ import { getProfileByAccountId } from "@/lib/nex-native/account-profile-service"
 import { getThemeById } from "@/lib/nex-native/chat-theme-service";
 import { getDisappearingDefaultSafe } from "@/lib/nex-native/disappearing-messages-service";
 import { DISAPPEARING_PRESETS } from "@/lib/nex-native/disappearing-messages-constants";
-import { probeBubbleColoursSchemaReady } from "@/lib/nex-native/bubble-colours-service";
 import { NexPageHeader } from "../../_page-header";
 import {
   NEX_SETTINGS,
@@ -67,16 +66,10 @@ export default async function ChatSettingsPage({
 
   // Parallel DB reads · all fail-safe · the page still renders if any
   // individual read errors (service degraded defaults).
-  const [
-    prefs,
-    account,
-    defaultSeconds,
-    schemaReadyBubbleColours,
-  ] = await Promise.all([
+  const [prefs, account, defaultSeconds] = await Promise.all([
     getChatPreferences(session.account.id),
     getAccountById(session.account.id).catch(() => null),
     getDisappearingDefaultSafe(session.account.id),
-    probeBubbleColoursSchemaReady(),
   ]);
   const currentThemeId = account?.chat_theme ?? null;
   const currentTheme = currentThemeId
@@ -172,7 +165,7 @@ export default async function ChatSettingsPage({
             href="/nex-native/chat/preview/my-view"
             emoji="💬"
             title="Chat Interface"
-            subtitle="Your Chat Page"
+            subtitle="Your Chat Screen"
           />
 
           {/* ─── 2 · Chat Appearance ─────────────────────────────── */}
@@ -226,33 +219,13 @@ export default async function ChatSettingsPage({
             subtitle="Change chat font"
           />
           <LinkCard
-            href="/nex-native/settings/chat-background-sync"
-            emoji="🪞"
-            title="Shop cover ↔ chat background"
-            subtitle="Two independent toggles: (1) use your shop cover as chat background, (2) use your chat theme image as shop cover. Reset either independently."
-          />
-          <LinkCard
             href="/nex-native/settings/chat-protection"
             emoji="📷"
-            title="Screenshot & copy protection"
-            subtitle="Viewer-side CSS + context-menu + copy-keystroke blocks on your chat UI. Honest about OS-level screenshot limits."
-            comingSoon
+            title="Screen Copying"
+            subtitle="Prevent screen copy"
           />
 
-          {/* ─── 6 · Honest State ────────────────────────────────── */}
-          <DashedDivider />
-          <HonestNote
-            text={
-              "Visibility · read receipts · typing · last-seen · online status: wired against migration 199 (sealed defaults apply when unapplied). " +
-              "Theme sharing: per-contact via Block My Chat theme → See My Theme (migration 340 column reserved for a future global switch). " +
-              (schemaReadyBubbleColours
-                ? "Bubble colours: live cross-device (migration 341 applied · per-theme customiser also writes here). "
-                : "Bubble colours: per-theme customiser saves locally via cookie today · cross-device sync drafted (migration 341 not yet applied). ") +
-              "Disappearing messages: wired via migration 282 presets · 90-day option added (code-only, no migration needed). " +
-              "Rows marked Soon do not yet have a backend."
-            }
-          />
-
+          <div style={{ height: 14 }} />
           <SettingsBackLink />
         </div>
       </main>
@@ -475,21 +448,3 @@ function RoundIcon({ emoji }: { emoji: string }): React.JSX.Element {
   );
 }
 
-function HonestNote({ text }: { text: string }): React.JSX.Element {
-  return (
-    <div
-      data-nex-chat-settings-honest-note
-      style={{
-        padding: "14px 16px",
-        background: CARD_BG,
-        border: `1px dashed ${CARD_RIM}`,
-        borderRadius: 10,
-        color: CARD_INK_DIM,
-        fontSize: 11.5,
-        lineHeight: 1.5,
-      }}
-    >
-      {text}
-    </div>
-  );
-}
