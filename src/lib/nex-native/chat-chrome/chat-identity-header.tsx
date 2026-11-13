@@ -214,8 +214,22 @@ export function ChatIdentityHeader(
       </AvatarShell>
 
       {/* Right column · name over subtitle · reserved width so action
-          clusters at the absolute edge don't force the name to overflow. */}
-      <div style={{ minWidth: 0, flex: 1, paddingRight: rightReserve }}>
+          clusters at the absolute edge don't force the name to overflow.
+          Owner directive 2026-11-13 · explicit flex column so the
+          subtitle ("Shop · tap to open") always stacks UNDER the name
+          regardless of name length, avoiding any browser default-block
+          quirks where the subtitle could land flush next to a short
+          name on certain scales. */}
+      <div
+        style={{
+          minWidth: 0,
+          flex: 1,
+          paddingRight: rightReserve,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-start",
+        }}
+      >
         <div
           style={{
             display: "flex",

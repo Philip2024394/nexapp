@@ -139,6 +139,14 @@ const CONTACTS = [
       // escrow · no direct bank transfer (per the sealed safe-trade
       // doctrine · five paths only).
       acceptedPaymentMethods: ["cod", "qris_delivery", "escrow"],
+      // Owner directive 2026-11-13 · populate shop social handles so
+      // the CoverIdentityRail footer renders real Instagram / TikTok /
+      // Facebook / X icons · placeholder handles obviously belonging
+      // to the mock persona, owner can rename via the shop profile
+      // editor once that surface gains a social-handle section.
+      instagramHandle: "handbags.direct.id",
+      tiktokHandle: "handbagsdirect_id",
+      facebookHandle: "HandbagsDirectID",
       // Taxonomy · mig 239 requires department_id + category_id NOT NULL
       // on every nex_product · fashion_clothing / bags_luggage covers
       // every handbag SKU below.
@@ -259,6 +267,11 @@ const CONTACTS = [
         "escrow",
         "paypal",
       ],
+      // Owner directive 2026-11-13 · placeholder shop socials.
+      instagramHandle: "watch.warehouse.id",
+      tiktokHandle: "watchwarehouse_id",
+      facebookHandle: "WatchWarehouseID",
+      xHandle: "watchwarehouseID",
       productDepartment: "jewellery_watches",
       productCategory: "watches",
       products: [
@@ -425,9 +438,10 @@ try {
         `INSERT INTO nex_business (
            owner_account_id, display_name, slug,
            description, business_category, city, logo_url,
-           shop_cover_image_url, address, hours, accepted_payment_methods
+           shop_cover_image_url, address, hours, accepted_payment_methods,
+           instagram_handle, tiktok_handle, facebook_handle, x_handle
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::text[])
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::text[], $12, $13, $14, $15)
          ON CONFLICT (slug) DO UPDATE SET
            display_name              = EXCLUDED.display_name,
            owner_account_id          = EXCLUDED.owner_account_id,
@@ -439,6 +453,10 @@ try {
            address                   = COALESCE(EXCLUDED.address, nex_business.address),
            hours                     = COALESCE(EXCLUDED.hours, nex_business.hours),
            accepted_payment_methods  = COALESCE(EXCLUDED.accepted_payment_methods, nex_business.accepted_payment_methods),
+           instagram_handle          = COALESCE(EXCLUDED.instagram_handle, nex_business.instagram_handle),
+           tiktok_handle             = COALESCE(EXCLUDED.tiktok_handle, nex_business.tiktok_handle),
+           facebook_handle           = COALESCE(EXCLUDED.facebook_handle, nex_business.facebook_handle),
+           x_handle                  = COALESCE(EXCLUDED.x_handle, nex_business.x_handle),
            updated_at                = now()
          RETURNING id`,
         [
@@ -453,6 +471,10 @@ try {
           b.address ?? null,
           b.hours ? JSON.stringify(b.hours) : null,
           b.acceptedPaymentMethods ?? null,
+          b.instagramHandle ?? null,
+          b.tiktokHandle ?? null,
+          b.facebookHandle ?? null,
+          b.xHandle ?? null,
         ],
       );
       const businessId = businessResult.rows[0].id;

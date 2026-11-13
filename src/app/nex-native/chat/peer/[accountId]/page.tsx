@@ -1425,7 +1425,18 @@ export default async function PeerChatPage({
       rippleColor={themeColours.accent}
       bubbleRimColor={themeColours.bubbleRim}
       composerRimColor={themeColours.composerRim}
-      wallpaperUrl={peerThemeRow?.hero_image_url ?? null}
+      // Owner directive 2026-11-13 · "the owners shop chat window back
+      // ground must be the same as their shop page back ground". When
+      // the peer owns a business with a shop cover image, use it as
+      // the chat wallpaper so the visitor's chat surface visually
+      // continues the shop they just left. Falls back to the peer's
+      // chat theme hero when the shop has no cover · keeps non-shop
+      // peer chats visually unchanged.
+      wallpaperUrl={
+        peerBusiness?.shop_cover_image_url ??
+        peerThemeRow?.hero_image_url ??
+        null
+      }
       wallpaperConfig={peerThemeRow?.wallpaper_config ?? null}
       backHref="/nex-native/chat"
       messages={bloomMessages}

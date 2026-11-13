@@ -120,7 +120,11 @@ function resolveIdentityTag():
 // single desktop/tablet backdrop painted behind the sealed phone
 // frame on viewports ≥500 px (see nex-native.css global-desktop-
 // hero block).
-const GLOBAL_DESKTOP_BACKDROP = "/nex-brand/nex-global-connection-experience.png";
+// Owner directive 2026-11-13 · desktop/tablet backdrop swapped to the
+// cream + gold abstract wave so the area around the 360×780 phone
+// frame matches the Shop Centre + Chat Settings surface treatment.
+// Asset at /public/nex-native/cream-gold-wave-bg.png (1.5 MB).
+const GLOBAL_DESKTOP_BACKDROP = "/nex-native/cream-gold-wave-bg.png";
 
 const WORLD_DESKTOP_BACKDROP: Record<string, string> = {
   ireland: GLOBAL_DESKTOP_BACKDROP,
