@@ -18,8 +18,8 @@ import * as React from "react";
 import { toggleThemeShareForContactAction } from "./_actions";
 import type { ContactRow } from "./page";
 
-const AVATAR_SIZE = 40;
-const CARD_MIN_HEIGHT = 60;
+const AVATAR_SIZE = 60;
+const CARD_MIN_HEIGHT = 76;
 const INK = "#2A1F0F";
 const INK_MUTE = "rgba(42,31,15,0.62)";
 const NEUTRAL_RIM = "rgba(42,31,15,0.35)";
