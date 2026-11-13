@@ -176,6 +176,17 @@ export default async function BusinessConversationPage({
   // chain · shop_cover_image_url → themeRow.hero_image_url → none.
   const wallpaperUrl =
     business.shop_cover_image_url ?? themeRow?.hero_image_url ?? null;
+  // Owner directive 2026-11-13 (iter 8) · same accent-resolution formula
+  // as the public shop surface (`/[businessSlug]/page.tsx` line 258-262)
+  // · shop_cover_tint_hex when the owner set one · else themeRow accent
+  // · else the sealed NEX gold fallback. Validates the hex shape before
+  // accepting a user-set tint so a malformed value can't paint a broken
+  // gradient.
+  const accentHex =
+    business.shop_cover_tint_hex &&
+    /^#[0-9A-Fa-f]{6}$/.test(business.shop_cover_tint_hex)
+      ? business.shop_cover_tint_hex
+      : (themeRow?.accent_hex ?? "#C6A15B");
   // Owner directive 2026-11-13 · country flag badge on the avatar rim.
   // Customer view = shop's operating country · owner view = customer's
   // profile country (fail-safe: empty string means render nothing).
@@ -411,6 +422,7 @@ export default async function BusinessConversationPage({
         businessId={business.id}
         businessDisplayName={business.display_name}
         businessCategory={business.business_category ?? null}
+        accentHex={accentHex}
         shopProducts={products}
         initialMessages={messages}
         viewerSide={viewerParticipant.side}

@@ -61,6 +61,12 @@ interface Props {
   readonly businessId: string;
   readonly businessDisplayName: string;
   readonly businessCategory: string | null;
+  // Owner directive 2026-11-13 (iter 8) · shop theme accent · drives
+  // the gold/brand hex used in the products drawer (section label,
+  // chevron tails, placeholder glyph, hover border). Resolved on the
+  // server from business.shop_cover_tint_hex ?? themeRow.accent_hex
+  // so the shop chat visually matches the shop surface.
+  readonly accentHex: string;
   readonly shopProducts: ReadonlyArray<{
     id: string;
     name: string;
@@ -98,6 +104,7 @@ export function BusinessConversationClient({
   businessId: _businessId,
   businessDisplayName,
   businessCategory,
+  accentHex,
   shopProducts,
   initialMessages,
   viewerSide,
@@ -562,6 +569,7 @@ export function BusinessConversationClient({
         <ShopProductsDrawer
           businessDisplayName={businessDisplayName}
           businessCategory={businessCategory}
+          accentHex={accentHex}
           products={shopProducts}
           onClose={() => setProductsDrawerOpen(false)}
           onSelect={(product) => {
@@ -683,12 +691,14 @@ function ProductCardBubble({
 function ShopProductsDrawer({
   businessDisplayName,
   businessCategory,
+  accentHex,
   products,
   onClose,
   onSelect,
 }: {
   businessDisplayName: string;
   businessCategory: string | null;
+  accentHex: string;
   products: Props["shopProducts"];
   onClose: () => void;
   onSelect: (p: Props["shopProducts"][number]) => void;
@@ -712,7 +722,11 @@ function ShopProductsDrawer({
         inset: 0,
         zIndex: 40,
         display: "flex",
-      }}
+        // Owner directive 2026-11-13 (iter 8) · shop accent surfaced
+        // as a CSS variable so the :hover rule in the style block
+        // below can use it without inline-style gymnastics.
+        ["--nex-biz-accent" as string]: accentHex,
+      } as React.CSSProperties}
     >
       {/* Backdrop · tap to close */}
       <div
@@ -763,7 +777,8 @@ function ShopProductsDrawer({
                 fontSize: 15,
                 fontWeight: 800,
                 letterSpacing: "0.03em",
-                color: "var(--nex-world-secondary, #C6A15B)",
+                // Owner directive 2026-11-13 (iter 8) · shop accent.
+                color: accentHex,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
@@ -821,6 +836,12 @@ function ShopProductsDrawer({
                 ? p.price_pence
                 : (p.price_pence / 100).toFixed(2);
               return (
+                // Owner directive 2026-11-13 (iter 7) · each product
+                // sits in its own WHITE card with BLACK name text ·
+                // reads like a proper product card against the dark-
+                // green drawer body. When image_url is null we paint
+                // a cream placeholder tile with a shopping-bag glyph
+                // so empty rows still read as "product".
                 <button
                   key={p.id}
                   type="button"
@@ -829,19 +850,21 @@ function ShopProductsDrawer({
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: 12,
-                    padding: "10px 20px",
-                    width: "100%",
-                    background: "transparent",
-                    color: "#F2F5F8",
-                    border: "none",
-                    borderLeft: "3px solid transparent",
+                    gap: 10,
+                    padding: 8,
+                    margin: "6px 12px",
+                    width: "calc(100% - 24px)",
+                    background: "#FFFFFF",
+                    color: "#0A1526",
+                    border: "1px solid rgba(0,0,0,0.08)",
+                    borderRadius: 10,
                     fontSize: 14,
-                    fontWeight: 600,
+                    fontWeight: 700,
                     fontFamily: "inherit",
                     textAlign: "left",
                     cursor: "pointer",
-                    transition: "background 150ms ease-out",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
+                    transition: "transform 120ms ease-out, box-shadow 120ms ease-out",
                   }}
                 >
                   {p.image_url ? (
@@ -849,11 +872,11 @@ function ShopProductsDrawer({
                     <img
                       src={p.image_url}
                       alt={p.name}
-                      width={44}
-                      height={44}
+                      width={48}
+                      height={48}
                       style={{
-                        width: 44,
-                        height: 44,
+                        width: 48,
+                        height: 48,
                         objectFit: "cover",
                         borderRadius: 8,
                         flexShrink: 0,
@@ -863,17 +886,38 @@ function ShopProductsDrawer({
                     <div
                       aria-hidden
                       style={{
-                        width: 44,
-                        height: 44,
+                        width: 48,
+                        height: 48,
                         borderRadius: 8,
-                        background: "rgba(255,255,255,0.08)",
+                        // Owner directive 2026-11-13 (iter 8) · placeholder
+                        // tile tints toward the shop accent (semi-transparent)
+                        // so even the missing-image fallback reads as part
+                        // of the shop brand.
+                        background: `${accentHex}22`,
+                        display: "grid",
+                        placeItems: "center",
+                        color: accentHex,
                         flexShrink: 0,
                       }}
-                    />
+                    >
+                      {/* shopping-bag glyph · stand-in product image */}
+                      <svg width={26} height={26} viewBox="0 0 24 24" fill="none" aria-hidden>
+                        <path
+                          d="M6 7h12l-1 13H7L6 7z M9 7a3 3 0 1 1 6 0"
+                          stroke="currentColor"
+                          strokeWidth={1.75}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </div>
                   )}
                   <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
                     <span
                       style={{
+                        color: "#000000",
+                        fontSize: 14,
+                        fontWeight: 700,
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
@@ -883,10 +927,9 @@ function ShopProductsDrawer({
                     </span>
                     <span
                       style={{
-                        fontSize: 11,
-                        fontWeight: 500,
-                        color: "var(--nex-world-primary-ink, #AFC5B5)",
-                        opacity: 0.85,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "#5A6578",
                       }}
                     >
                       {p.currency} {price}
@@ -895,9 +938,9 @@ function ShopProductsDrawer({
                   <span
                     aria-hidden
                     style={{
-                      fontSize: 14,
-                      color: "var(--nex-world-secondary, #C6A15B)",
-                      opacity: 0.5,
+                      fontSize: 16,
+                      fontWeight: 800,
+                      color: accentHex,
                     }}
                   >
                     ›
@@ -909,8 +952,13 @@ function ShopProductsDrawer({
         </nav>
         <style>{`
           [data-nex-shop-products-drawer-list] button:hover {
-            background: color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 8%, transparent);
-            border-left-color: var(--nex-world-secondary, #C6A15B) !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+            border-color: var(--nex-biz-accent, #C6A15B) !important;
+          }
+          [data-nex-shop-products-drawer-list] button:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
           }
         `}</style>
       </aside>
