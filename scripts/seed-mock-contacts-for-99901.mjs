@@ -116,6 +116,23 @@ const CONTACTS = [
       category: "product-brand",
       city: "Yogyakarta",
       logoUrl: cover("handbags-direct-logo"),
+      shopCoverImageUrl: cover("handbags-direct-cover"),
+      address: "Jl. Prawirotaman No. 12, Yogyakarta, DIY 55153, Indonesia",
+      // Weekly hours · null on a day means "closed". Rosa's workshop
+      // opens Tue–Sat 10:00–18:00, closed Sun–Mon for prep + markets.
+      hours: {
+        mon: null,
+        tue: { open: "10:00", close: "18:00" },
+        wed: { open: "10:00", close: "18:00" },
+        thu: { open: "10:00", close: "18:00" },
+        fri: { open: "10:00", close: "18:00" },
+        sat: { open: "10:00", close: "18:00" },
+        sun: null,
+      },
+      // Safe-trade payment paths · COD + QRIS-on-delivery + Rekber
+      // escrow · no direct bank transfer (per the sealed safe-trade
+      // doctrine · five paths only).
+      acceptedPaymentMethods: ["cod", "qris_delivery", "escrow"],
       // Taxonomy · mig 239 requires department_id + category_id NOT NULL
       // on every nex_product · fashion_clothing / bags_luggage covers
       // every handbag SKU below.
@@ -215,6 +232,27 @@ const CONTACTS = [
       category: "ecommerce",
       city: "Jakarta",
       logoUrl: cover("watch-warehouse-logo"),
+      shopCoverImageUrl: cover("watch-warehouse-cover"),
+      address: "Jl. Pasar Baru Selatan No. 8, Gambir, Jakarta Pusat 10710, Indonesia",
+      // Warehouse open Mon–Sat 09:00–18:00, closed Sun.
+      hours: {
+        mon: { open: "09:00", close: "18:00" },
+        tue: { open: "09:00", close: "18:00" },
+        wed: { open: "09:00", close: "18:00" },
+        thu: { open: "09:00", close: "18:00" },
+        fri: { open: "09:00", close: "18:00" },
+        sat: { open: "09:00", close: "18:00" },
+        sun: null,
+      },
+      // Five safe paths + PayPal for international orders. No direct
+      // bank transfer · safe-trade doctrine.
+      acceptedPaymentMethods: [
+        "cod",
+        "qris_delivery",
+        "courier_cod",
+        "escrow",
+        "paypal",
+      ],
       productDepartment: "jewellery_watches",
       productCategory: "watches",
       products: [
@@ -373,20 +411,29 @@ try {
     // re-run via ON CONFLICT (slug).
     if (c.business) {
       const b = c.business;
+      // Owner directive 2026-11-13 · shop depth · 4 new columns on the
+      // business row: cover image · address · weekly hours JSONB ·
+      // accepted payment methods (safe-trade paths only · no direct
+      // bank transfer per the sealed doctrine).
       const businessResult = await client.query(
         `INSERT INTO nex_business (
            owner_account_id, display_name, slug,
-           description, business_category, city, logo_url
+           description, business_category, city, logo_url,
+           shop_cover_image_url, address, hours, accepted_payment_methods
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::text[])
          ON CONFLICT (slug) DO UPDATE SET
-           display_name      = EXCLUDED.display_name,
-           owner_account_id  = EXCLUDED.owner_account_id,
-           description       = COALESCE(EXCLUDED.description, nex_business.description),
-           business_category = COALESCE(EXCLUDED.business_category, nex_business.business_category),
-           city              = COALESCE(EXCLUDED.city, nex_business.city),
-           logo_url          = COALESCE(EXCLUDED.logo_url, nex_business.logo_url),
-           updated_at        = now()
+           display_name              = EXCLUDED.display_name,
+           owner_account_id          = EXCLUDED.owner_account_id,
+           description               = COALESCE(EXCLUDED.description, nex_business.description),
+           business_category         = COALESCE(EXCLUDED.business_category, nex_business.business_category),
+           city                      = COALESCE(EXCLUDED.city, nex_business.city),
+           logo_url                  = COALESCE(EXCLUDED.logo_url, nex_business.logo_url),
+           shop_cover_image_url      = COALESCE(EXCLUDED.shop_cover_image_url, nex_business.shop_cover_image_url),
+           address                   = COALESCE(EXCLUDED.address, nex_business.address),
+           hours                     = COALESCE(EXCLUDED.hours, nex_business.hours),
+           accepted_payment_methods  = COALESCE(EXCLUDED.accepted_payment_methods, nex_business.accepted_payment_methods),
+           updated_at                = now()
          RETURNING id`,
         [
           c.id,
@@ -396,6 +443,10 @@ try {
           b.category ?? null,
           b.city ?? null,
           b.logoUrl ?? null,
+          b.shopCoverImageUrl ?? null,
+          b.address ?? null,
+          b.hours ? JSON.stringify(b.hours) : null,
+          b.acceptedPaymentMethods ?? null,
         ],
       );
       const businessId = businessResult.rows[0].id;
@@ -459,6 +510,10 @@ try {
             b.business_category,
             b.city         AS shop_city,
             (b.logo_url IS NOT NULL) AS has_logo,
+            (b.shop_cover_image_url IS NOT NULL) AS has_cover,
+            (b.address IS NOT NULL) AS has_address,
+            (b.hours IS NOT NULL) AS has_hours,
+            coalesce(array_length(b.accepted_payment_methods, 1), 0) AS payment_methods_count,
             (SELECT count(*) FROM nex_product px
               WHERE px.business_id = b.id AND px.status = 'live')::int AS live_products
      FROM nex_account a
