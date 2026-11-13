@@ -71,9 +71,12 @@ export default async function DisappearingMessagesPage({
       <main
         data-nex-disappearing-messages-page
         style={{
-          minHeight: "100dvh",
-          background: NEX_SETTINGS.bg,
-          color: NEX_SETTINGS.textPrimary,
+          height: "100%",
+          overflowY: "auto",
+          overflowX: "hidden",
+          WebkitOverflowScrolling: "touch",
+          background: "#F5EDD3",
+          color: "#0A0608",
           fontFamily: NEX_SETTINGS_FONT,
           padding: "16px 20px 32px",
         }}
@@ -86,8 +89,9 @@ export default async function DisappearingMessagesPage({
               style={{
                 margin: 0,
                 fontSize: 22,
-                fontWeight: 600,
+                fontWeight: 700,
                 letterSpacing: "0.005em",
+                color: "#FF7200",
               }}
             >
               Disappearing messages

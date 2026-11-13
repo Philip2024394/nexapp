@@ -45,9 +45,12 @@ export default async function ChatProtectionPage({
       <main
         data-nex-chat-protection-page
         style={{
-          minHeight: "100dvh",
-          background: NEX_SETTINGS.bg,
-          color: NEX_SETTINGS.textPrimary,
+          height: "100%",
+          overflowY: "auto",
+          overflowX: "hidden",
+          WebkitOverflowScrolling: "touch",
+          background: "#F5EDD3",
+          color: "#0A0608",
           fontFamily: NEX_SETTINGS_FONT,
           padding: "16px 20px 32px",
         }}
@@ -55,7 +58,15 @@ export default async function ChatProtectionPage({
         <div style={{ maxWidth: 480, margin: "0 auto" }}>
           <NexPageHeader dataScope="settings-chat-protection" />
           <header style={{ margin: "20px 0 6px", textAlign: "center" }}>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600 }}>
+            <h1
+              style={{
+                margin: 0,
+                fontSize: 22,
+                fontWeight: 700,
+                letterSpacing: "0.005em",
+                color: "#FF7200",
+              }}
+            >
               Screenshot &amp; copy protection
             </h1>
             <p
@@ -231,29 +242,32 @@ const subtitleStyle: React.CSSProperties = {
   lineHeight: 1.4,
 };
 
+// Owner directive 2026-11-13 · sealed green/red toggle · same visual
+// as the Chat Settings controls.
 function pillButtonStyle(on: boolean): React.CSSProperties {
   return {
     flexShrink: 0,
-    width: 52,
-    height: 30,
+    width: 42,
+    height: 22,
     borderRadius: 999,
     border: "none",
     cursor: "pointer",
-    background: on ? NEX_SETTINGS.cyan : "rgba(125,155,192,0.20)",
+    background: on ? "#0E6B3A" : "#7F1D1D",
     position: "relative",
-    transition: "background 160ms ease",
+    boxShadow: "inset 0 1px 2px rgba(0,0,0,0.25)",
+    padding: 0,
   };
 }
 function pillKnobStyle(on: boolean): React.CSSProperties {
   return {
     position: "absolute",
-    top: 3,
-    left: on ? 25 : 3,
-    width: 24,
-    height: 24,
+    top: 2,
+    left: on ? 22 : 2,
+    width: 18,
+    height: 18,
     borderRadius: "50%",
-    background: "#F2F5F8",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+    background: "#FFFFFF",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.35)",
     transition: "left 160ms ease",
   };
 }

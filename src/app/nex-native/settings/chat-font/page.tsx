@@ -48,9 +48,12 @@ export default async function ChatFontPage({
       <main
         data-nex-chat-font-page
         style={{
-          minHeight: "100dvh",
-          background: NEX_SETTINGS.bg,
-          color: NEX_SETTINGS.textPrimary,
+          height: "100%",
+          overflowY: "auto",
+          overflowX: "hidden",
+          WebkitOverflowScrolling: "touch",
+          background: "#F5EDD3",
+          color: "#0A0608",
           fontFamily: NEX_SETTINGS_FONT,
           padding: "16px 20px 32px",
         }}
@@ -58,7 +61,15 @@ export default async function ChatFontPage({
         <div style={{ maxWidth: 480, margin: "0 auto" }}>
           <NexPageHeader dataScope="settings-chat-font" />
           <header style={{ margin: "20px 0 6px", textAlign: "center" }}>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 600 }}>
+            <h1
+              style={{
+                margin: 0,
+                fontSize: 22,
+                fontWeight: 700,
+                letterSpacing: "0.005em",
+                color: "#FF7200",
+              }}
+            >
               Chat font
             </h1>
             <p
