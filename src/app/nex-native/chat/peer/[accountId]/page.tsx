@@ -1342,14 +1342,13 @@ export default async function PeerChatPage({
           cycle · Esc or × closes. */}
       <SearchClient />
 
-      {needsSafeTradeConsent && (
-        <SafeTradeConsentModal
-          action={acknowledgeSafeTradeAction}
-          nextHref={`/nex-native/chat/peer/${peer.id}`}
-          termsVersion={CURRENT_SAFE_TRADE_TERMS_VERSION}
-          strings={safeTradeStrings}
-        />
-      )}
+      {/* Owner directive 2026-11-13 · retired the "🛡 Before you start"
+          consent gate · the modal no longer fires when a buyer opens
+          a commerce chat for the first time. The underlying consent
+          service (safe-trade-consent-service · acknowledgeSafeTradeAction
+          · CURRENT_SAFE_TRADE_TERMS_VERSION) stays wired so the stamp
+          can be re-enabled later if required · only the blocking UI
+          is retired. */}
       {/* 2026-10-28 · Chat error banner consumer (C-01…C-04) · surfaces
           sanitised message_error / sticker_error / upload_error /
           delete_error with calm, actionable copy. Renders null when

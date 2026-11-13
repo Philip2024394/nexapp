@@ -107,19 +107,27 @@ export function ContactRow({ row, accentHex }: ContactRowProps): React.JSX.Eleme
   const hasShop = row.hasShop === true;
   const lastOnlineLabel = presenceLabel(row);
 
+  // Owner directive 2026-11-13 · split the card into two tap zones:
+  //   · main area (avatar + text) → row.chatHref (opens chat)
+  //   · 🛒 button on the right    → row.shopHref (opens the shop)
+  // Previous root was a single <Link> that captured every tap · a
+  // nested <Link> inside it would break the HTML spec, so the root
+  // is now a <div> with two sibling <Link>s. Visual styling + sealed
+  // absolute-positioned chips (pending / presence) are unchanged.
+  const shopTapHref =
+    hasShop && typeof row.shopHref === "string" && row.shopHref.length > 0
+      ? row.shopHref
+      : null;
   return (
-    <Link
-      href={row.chatHref}
-      aria-label={`Open chat with ${row.displayName}`}
+    <div
       data-nex-contacts-row
       data-nex-contacts-row-kind={row.kind}
       data-nex-contacts-row-pending={row.pending ? "true" : undefined}
       style={{
         position: "relative",
         display: "flex",
-        alignItems: "center",
-        gap: CARD_GAP,
-        padding: `${CARD_PADDING_Y}px ${CARD_PADDING_X}px`,
+        alignItems: "stretch",
+        gap: 0,
         minHeight: CARD_MIN_HEIGHT,
         width: "100%",
         maxWidth: "100%",
@@ -139,11 +147,26 @@ export function ContactRow({ row, accentHex }: ContactRowProps): React.JSX.Eleme
         boxShadow: row.pending
           ? "0 2px 6px rgba(198, 161, 91, 0.15)"
           : "0 1px 3px rgba(42, 31, 15, 0.08)",
-        textDecoration: "none",
         color: NEX.text,
-        WebkitTapHighlightColor: "transparent",
       }}
     >
+      <Link
+        href={row.chatHref}
+        aria-label={`Open chat with ${row.displayName}`}
+        data-nex-contacts-row-chat-link
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          gap: CARD_GAP,
+          padding: `${CARD_PADDING_Y}px ${CARD_PADDING_X}px`,
+          paddingRight: shopTapHref ? 4 : CARD_PADDING_X,
+          minWidth: 0,
+          textDecoration: "none",
+          color: NEX.text,
+          WebkitTapHighlightColor: "transparent",
+        }}
+      >
       {row.pending ? (
         <span
           aria-hidden
@@ -433,30 +456,59 @@ export function ContactRow({ row, accentHex }: ContactRowProps): React.JSX.Eleme
         ) : null}
       </div>
 
-      {/* ===== RIGHT-HAND ACTIONS · shop marker only (last-online
-            lives in the location row per the owner's directive). ===== */}
+      </Link>
+
+      {/* ===== RIGHT-HAND ACTIONS · shop marker · now a separate Link ·
+            owner directive 2026-11-13 "activate that area around the
+            cart image on the contacts cards · when user will select
+            the cart icon on the contacts card . that contacts shop
+            page must open . but if the user selects the card then
+            chat opens". Drop-shadow retired per the paired directive
+            "cart image clear view no shade". When shopTapHref is null
+            (edge case · hasShop true but no slug) the icon renders as
+            a decorative span so it still shows the brand marker. ===== */}
       {hasShop ? (
-        <div
-          style={{
-            flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            minHeight: AVATAR_SIZE,
-          }}
-        >
-          <span
-            aria-label={`Has shop · ${row.displayName}`}
-            data-nex-contacts-row-shop-marker
+        shopTapHref ? (
+          <Link
+            href={shopTapHref}
+            aria-label={`Open shop · ${row.displayName}`}
+            data-nex-contacts-row-shop-link
+            prefetch={false}
             style={{
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              alignSelf: "stretch",
+              padding: `${CARD_PADDING_Y}px ${CARD_PADDING_X}px`,
+              textDecoration: "none",
+              color: NEX.text,
               fontSize: 22,
               lineHeight: 1,
-              filter: `drop-shadow(0 2px 4px rgba(0,0,0,0.6))`,
+              WebkitTapHighlightColor: "transparent",
             }}
           >
+            <span aria-hidden data-nex-contacts-row-shop-marker>
+              🛒
+            </span>
+          </Link>
+        ) : (
+          <div
+            aria-hidden
+            style={{
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: `${CARD_PADDING_Y}px ${CARD_PADDING_X}px`,
+              fontSize: 22,
+              lineHeight: 1,
+            }}
+            data-nex-contacts-row-shop-marker
+          >
             🛒
-          </span>
-        </div>
+          </div>
+        )
       ) : null}
 
       {/* Owner directive 2026-11-10 · "Active now" / presence label
@@ -504,7 +556,7 @@ export function ContactRow({ row, accentHex }: ContactRowProps): React.JSX.Eleme
         </span>
       ) : null}
 
-    </Link>
+    </div>
   );
 }
 
