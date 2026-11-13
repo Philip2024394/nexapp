@@ -975,18 +975,27 @@ export default async function PeerChatPage({
     };
   });
 
-  // Owner-sealed 2026-11-13 · shop-to-customer contact flow · when the
-  // conversation has zero real messages AND the peer owns a business,
-  // prepend a pseudo-bubble containing the shop's intro message. Reads
-  // nex_business.shop_intro_message (or default template) via
-  // resolveShopIntroMessage. NEVER stored in nex_peer_message · the
-  // server reads only a shop-level text column · preserves the device-
-  // only E2E seal (2026-11-09 Phase 2 doctrine). The pseudo-ID uses a
-  // `shop-intro:` prefix so downstream action guards (edit / delete /
-  // reply) can filter it out if the user attempts to act on the bubble.
-  if (bloomMessages.length === 0 && peerBusiness) {
+  // Owner-sealed 2026-11-13 (iter 2) · shop-to-customer contact flow ·
+  // when the peer owns a business, ALWAYS prepend a pseudo-bubble
+  // containing the shop's intro message at the TOP of the thread
+  // (owner directive · "this must be top of the chat · Rosa · Hand
+  // Craft · <intro body>"). The pseudo-bubble carries the SHOP's
+  // sender identity so the sealed sender header (name + profession)
+  // paints above it. Reads nex_business.shop_intro_message (or
+  // default template) via resolveShopIntroMessage. NEVER stored in
+  // nex_peer_message · server reads only a shop-level text column ·
+  // preserves the device-only E2E seal (2026-11-09 Phase 2 doctrine).
+  // The pseudo-ID uses a `shop-intro:` prefix so downstream action
+  // guards (edit / delete / reply) can filter it out if the user
+  // attempts to act on the bubble.
+  //
+  // Timestamp pins the intro to EARLIEST (business.created_at · set
+  // when the shop was created, strictly before any peer message
+  // could exist) so even on a populated conversation the intro reads
+  // as the oldest bubble at the top of the scroll.
+  if (peerBusiness) {
     const introBody = businessService.resolveShopIntroMessage(peerBusiness);
-    bloomMessages.push({
+    bloomMessages.unshift({
       id: `shop-intro:${peerBusiness.id}`,
       body: introBody,
       sent_at: peerBusiness.created_at ?? new Date().toISOString(),

@@ -895,19 +895,22 @@ export function PortraitBloomShell({
       <main
         data-nex-bloom-scope={scope}
         style={{
-          /* Owner directive 2026-10-18 · theme-preview scope respects
-             the `.nex-native-frame` phone-frame on desktop (iPhone
-             preview mode). Real chat surfaces (peer / guest / vault /
-             business) keep the fixed-viewport mount so composer +
-             name never slip off screen under mobile browser chrome.
-             scope === "theme-preview" is the signal from the viewer
-             route and is the ONLY surface that drops `position: fixed`. */
-          position: scope === "theme-preview" ? "absolute" : "fixed",
+          /* Owner directive 2026-11-13 (supersedes 2026-10-18) · "fix
+             the footer text fild fitting inside screen height". The
+             chat main now uses `position: absolute` + `height: 100%`
+             on EVERY scope so the composer at bottom:0 always sits
+             inside the `.nex-native-frame` 288×624 phone-frame on
+             desktop/tablet · previously `position: fixed` + `100dvh`
+             scoped to the viewport, which on desktop extended past
+             the frame and pushed the composer below the visible
+             phone-frame area. Mobile is unaffected · the frame
+             itself is `height: 100dvh` under the ≤500px media query,
+             so `100%` on the main inherits correct dvh behaviour
+             (URL-bar collapse still recomputes the frame + main
+             together). */
+          position: "absolute",
           inset: 0,
-          // dvh accounts for mobile browser chrome (URL bar collapse/
-          // expand) on real chat. Preview mode uses 100% because the
-          // frame already clips to the correct viewport.
-          height: scope === "theme-preview" ? "100%" : "100dvh",
+          height: "100%",
           background: NEX.bg,
           color: NEX.text,
           fontFamily:
