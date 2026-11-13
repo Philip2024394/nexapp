@@ -113,10 +113,19 @@ export default async function ChatSettingsPage({
           overflowY: "auto",
           overflowX: "hidden",
           WebkitOverflowScrolling: "touch",
-          // Owner directive 2026-11-13 · page bg lifted from dark navy
-          // to warm cream so the white + orange cards don't fight the
-          // panel. Matches the Ireland --nex-world-drawer-bg cream.
-          background: "#F5EDD3",
+          // Owner directive 2026-11-13 · cream + gold abstract wave
+          // backdrop · asset at /nex-native/cream-gold-wave-bg.png.
+          // backgroundColor keeps the cream fallback if the image fails
+          // to load; background-attachment: local scrolls the wave with
+          // the content (acts as a hero surface fading into cream on
+          // long pages rather than a fixed overlay that'd fight the
+          // phone-frame scroll container).
+          backgroundColor: "#F5EDD3",
+          backgroundImage: "url(/nex-native/cream-gold-wave-bg.png)",
+          backgroundRepeat: "no-repeat",
+          backgroundSize: "cover",
+          backgroundPosition: "top center",
+          backgroundAttachment: "local",
           color: "#0A0608",
           fontFamily: NEX_SETTINGS_FONT,
           padding: "16px 20px 32px",

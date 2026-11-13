@@ -115,7 +115,15 @@ export default async function ShopManagementCentre(): Promise<React.JSX.Element>
         overflowY: "auto",
         overflowX: "hidden",
         WebkitOverflowScrolling: "touch",
-        background: PAGE_BG,
+        // Owner directive 2026-11-13 · cream + gold abstract wave backdrop ·
+        // same asset + treatment as Chat Settings so the two hub surfaces
+        // read as one design family.
+        backgroundColor: PAGE_BG,
+        backgroundImage: "url(/nex-native/cream-gold-wave-bg.png)",
+        backgroundRepeat: "no-repeat",
+        backgroundSize: "cover",
+        backgroundPosition: "top center",
+        backgroundAttachment: "local",
         color: INK,
         fontFamily:
           "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
