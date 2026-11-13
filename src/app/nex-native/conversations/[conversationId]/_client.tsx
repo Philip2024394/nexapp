@@ -130,6 +130,41 @@ export function BusinessConversationClient({
 
   const peerReady = !!peerAccountId;
 
+  // Owner directive 2026-11-13 (iter 13) · product-share cooldown.
+  // Once the viewer sends a product card, the "open products" trigger
+  // stays LOCKED until the other side replies with ANY message. This
+  // stops the user from spam-sharing the same product (or different
+  // products) before the shop owner has had a chance to respond.
+  //
+  // Derivation (reactive · reads liveMessages):
+  //   · find my most recent product-share timestamp
+  //   · if no peer message has arrived after it → locked
+  //   · if peer has replied (any message) after it → unlocked
+  //   · never any self-product-share → unlocked
+  const productShareLocked = React.useMemo(() => {
+    let lastMineProductAt: string | null = null;
+    for (const m of liveMessages) {
+      if (
+        m.sender_account_id === selfAccountId &&
+        m.attachment_type === "product"
+      ) {
+        if (!lastMineProductAt || m.created_at > lastMineProductAt) {
+          lastMineProductAt = m.created_at;
+        }
+      }
+    }
+    if (!lastMineProductAt) return false;
+    for (const m of liveMessages) {
+      if (
+        m.sender_account_id !== selfAccountId &&
+        m.created_at > lastMineProductAt
+      ) {
+        return false;
+      }
+    }
+    return true;
+  }, [liveMessages, selfAccountId]);
+
   // ── Helper · decrypt one row if addressed to this device ─────────
   const decryptRow = React.useCallback(
     async (m: MessageRow): Promise<string | null> => {
@@ -382,13 +417,17 @@ export function BusinessConversationClient({
                   maxWidth: "78%",
                   padding: "10px 14px",
                   borderRadius: 14,
+                  // Owner directive 2026-11-13 (iter 11) · chat bubbles
+                  // tinted BLACK · mine is deeper opacity (owns the
+                  // thread edge) · theirs slightly softer so the two
+                  // sides remain distinguishable on the same wallpaper.
                   background: mine
-                    ? "rgba(198, 161, 91, 0.92)"
-                    : "rgba(10, 21, 38, 0.82)",
-                  color: mine ? "#0A1526" : "#F2F5F8",
+                    ? "rgba(0, 0, 0, 0.78)"
+                    : "rgba(0, 0, 0, 0.58)",
+                  color: "#F2F5F8",
                   fontSize: 14,
                   lineHeight: 1.4,
-                  boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
                 }}
               >
                 {isProductCard && productEnvelope ? (
@@ -452,11 +491,19 @@ export function BusinessConversationClient({
         )}
       </div>
 
-      {/* Owner directive 2026-11-13 (iter 2) · composer strip stays
-          transparent (no full-width dark bar) but the controls get a
-          solid white input + solid gold send button so they read
-          clearly over the shop wallpaper. Previous "lift the paint"
-          made the input + buttons effectively invisible. */}
+      {/* Owner directive 2026-11-13 (iter 10) · composer layout:
+            [ 3-dots button · ORANGE ]  [ text pill with embedded send ]
+          The 3-dots lives outside the pill as a solid orange
+          circle (overrides the shop accent so the trigger is always
+          visible against any shop theme). The send button sits
+          INSIDE the input pill, pinned to the right. */}
+      <style>{`
+        @keyframes nex-biz-dots-flash {
+          0%   { opacity: 0.55; transform: scale(1); }
+          50%  { opacity: 1;    transform: scale(1.08); }
+          100% { opacity: 0.55; transform: scale(1); }
+        }
+      `}</style>
       <div
         style={{
           position: "sticky",
@@ -471,51 +518,28 @@ export function BusinessConversationClient({
           borderTop: "none",
         }}
       >
-        <input
-          type="text"
-          placeholder={peerReady ? "Message…" : "Loading…"}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey && canSend) {
-              e.preventDefault();
-              void doSend(draft);
-            }
-          }}
-          disabled={!peerReady}
-          style={{
-            flex: 1,
-            padding: "10px 14px",
-            borderRadius: 999,
-            // Solid white pill · reads clearly over the shop wallpaper.
-            background: "#FFFFFF",
-            border: "1px solid rgba(198,161,91,0.55)",
-            color: "#0A1526",
-            fontSize: 14,
-            fontFamily: "inherit",
-            outline: "none",
-            boxShadow: "0 2px 6px rgba(0, 0, 0, 0.28)",
-          }}
-        />
-        {/* 3-dot products trigger · bare glyph, flashing, right side. */}
-        <style>{`
-          @keyframes nex-biz-dots-flash {
-            0%   { opacity: 0.55; transform: scale(1); }
-            50%  { opacity: 1;    transform: scale(1.08); }
-            100% { opacity: 0.55; transform: scale(1); }
-          }
-        `}</style>
-        {/* Owner directive 2026-11-13 (iter 9) · 3-dots gets the SAME
-            filled accent circle as the send button · both footer
-            controls now read as solid, tappable, shop-branded
-            buttons. The pulse animation stays — now applied to the
-            circle, not a bare glyph. */}
         <button
           type="button"
-          aria-label={productsDrawerOpen ? "Close shop products" : "Open shop products"}
+          aria-label={
+            productShareLocked
+              ? "Waiting for shop reply before sharing another product"
+              : productsDrawerOpen
+                ? "Close shop products"
+                : "Open shop products"
+          }
           aria-expanded={productsDrawerOpen}
-          onClick={() => setProductsDrawerOpen((v) => !v)}
+          title={
+            productShareLocked
+              ? "Waiting for the shop to reply before you can share again"
+              : undefined
+          }
+          disabled={productShareLocked}
+          onClick={() => {
+            if (productShareLocked) return;
+            setProductsDrawerOpen((v) => !v);
+          }}
           data-nex-business-conv-dots
+          data-nex-business-conv-dots-locked={productShareLocked ? "true" : "false"}
           style={{
             width: 44,
             height: 44,
@@ -523,15 +547,25 @@ export function BusinessConversationClient({
             padding: 0,
             display: "grid",
             placeItems: "center",
-            background: accentHex,
+            // Owner directive 2026-11-13 (iter 10) · ORANGE override ·
+            // overrides the shop accent so the products trigger is
+            // always obvious + brand-consistent across themes.
+            // (iter 13) · when locked (awaiting shop reply after a
+            // product share) the circle dims + the pulse stops · a
+            // quiet "tap-to-send-again" signal.
+            background: productShareLocked ? "#F9731659" : "#F97316",
             border: "none",
-            color: "#0A1526",
-            cursor: "pointer",
+            color: "#FFFFFF",
+            cursor: productShareLocked ? "not-allowed" : "pointer",
+            opacity: productShareLocked ? 0.7 : 1,
             flexShrink: 0,
-            boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
-            animation: productsDrawerOpen
+            boxShadow: productShareLocked
               ? "none"
-              : "nex-biz-dots-flash 1800ms ease-in-out infinite",
+              : "0 2px 6px rgba(0,0,0,0.35)",
+            animation:
+              productShareLocked || productsDrawerOpen
+                ? "none"
+                : "nex-biz-dots-flash 1800ms ease-in-out infinite",
           }}
         >
           <svg width={22} height={22} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -540,27 +574,73 @@ export function BusinessConversationClient({
             <circle cx="12" cy="19" r="2.6" />
           </svg>
         </button>
-        <button
-          type="button"
-          onClick={() => void doSend(draft)}
-          disabled={!canSend}
-          data-nex-business-conv-send
+        {/* Composer pill · relative wrapper so the send button can sit
+            absolutely INSIDE the input on the right. padding-right on
+            the input reserves room for the embedded circle. */}
+        <div
           style={{
-            width: 44,
-            height: 44,
-            borderRadius: "50%",
-            border: "none",
-            background: canSend ? accentHex : `${accentHex}59`,
-            color: "#0A1526",
-            cursor: canSend ? "pointer" : "default",
-            fontSize: 18,
-            fontWeight: 700,
-            flexShrink: 0,
-            boxShadow: canSend ? "0 2px 6px rgba(0,0,0,0.3)" : "none",
+            position: "relative",
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
           }}
         >
-          ↑
-        </button>
+          <input
+            type="text"
+            placeholder={peerReady ? "Message…" : "Loading…"}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey && canSend) {
+                e.preventDefault();
+                void doSend(draft);
+              }
+            }}
+            disabled={!peerReady}
+            style={{
+              width: "100%",
+              boxSizing: "border-box",
+              padding: "10px 46px 10px 14px",
+              borderRadius: 999,
+              background: "#FFFFFF",
+              border: "1px solid rgba(198,161,91,0.55)",
+              color: "#0A1526",
+              fontSize: 14,
+              fontFamily: "inherit",
+              outline: "none",
+              boxShadow: "0 2px 6px rgba(0, 0, 0, 0.28)",
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => void doSend(draft)}
+            disabled={!canSend}
+            data-nex-business-conv-send
+            aria-label="Send message"
+            style={{
+              position: "absolute",
+              right: 4,
+              top: "50%",
+              transform: "translateY(-50%)",
+              width: 34,
+              height: 34,
+              borderRadius: "50%",
+              border: "none",
+              background: canSend ? accentHex : `${accentHex}59`,
+              color: "#0A1526",
+              cursor: canSend ? "pointer" : "default",
+              fontSize: 16,
+              fontWeight: 800,
+              padding: 0,
+              display: "grid",
+              placeItems: "center",
+              boxShadow: canSend ? "0 1px 4px rgba(0,0,0,0.3)" : "none",
+              transition: "background 120ms ease-out",
+            }}
+          >
+            ↑
+          </button>
+        </div>
       </div>
 
       {sendError ? (
@@ -798,8 +878,10 @@ function ShopProductsDrawer({
                 fontSize: 15,
                 fontWeight: 800,
                 letterSpacing: "0.03em",
-                // Owner directive 2026-11-13 (iter 8) · shop accent.
-                color: accentHex,
+                // Owner directive 2026-11-13 (iter 12) · drawer shop name
+                // ORANGE · matches the orange 3-dots trigger that
+                // opens this drawer · the two are a visual pair.
+                color: "#F97316",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
@@ -816,14 +898,19 @@ function ShopProductsDrawer({
               width: 32,
               height: 32,
               borderRadius: "50%",
-              background: "transparent",
-              color: "#F2F5F8",
-              border: "1px solid rgba(255,255,255,0.2)",
+              // Owner directive 2026-11-13 (iter 12) · close (×) button
+              // BLACK · solid black circle so it reads as a decisive
+              // dismiss control against the green drawer.
+              background: "#000000",
+              color: "#FFFFFF",
+              border: "1px solid rgba(255,255,255,0.18)",
               fontSize: 16,
+              fontWeight: 700,
               cursor: "pointer",
               display: "grid",
               placeItems: "center",
               flexShrink: 0,
+              boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
             }}
           >
             ×

@@ -388,8 +388,11 @@ export default async function BusinessConversationPage({
               width: 40,
               height: 40,
               borderRadius: "50%",
-              background: "rgba(10, 21, 38, 0.55)",
-              border: "1px solid rgba(198, 161, 91, 0.55)",
+              // Owner directive 2026-11-13 (iter 11) · shop button
+              // header BLACK · solid black circle, gold glyph reads
+              // over it cleanly regardless of wallpaper behind.
+              background: "#000000",
+              border: "1px solid rgba(255,255,255,0.12)",
               display: "grid",
               placeItems: "center",
               color: "#C6A15B",
