@@ -39,9 +39,7 @@ interface Props {
 const CARD_BG = "#FFFFFF";
 const CARD_INK = "#6B2A1F";
 const CARD_INK_DIM = "#7D5A3A";
-const ICON_BG = "#1D2432";
 const ICON_RING = "#FF7200";
-const CONTROL_BG = "#1D2432";
 const CONTROL_ACTIVE = "#FF7200";
 
 type OpenSheet =
@@ -67,7 +65,7 @@ export function ChatSettingsClient({
     v === "everyone" ? "on" : v === "nobody" ? "off" : "partial";
 
   return (
-    <div style={{ display: "grid", gap: 8 }}>
+    <div style={{ display: "grid", gap: 0 }}>
       <ControlCard
         emoji="✓✓"
         title="Read receipts"
@@ -162,17 +160,18 @@ function ControlCard({
   emoji,
   title,
   subtitle,
-  rightLabel,
   rightIndicator,
   onClick,
 }: {
   emoji: string;
   title: string;
   subtitle: string;
-  rightLabel?: string;
+  rightLabel?: string; // kept for API compatibility · ignored in minimal row
   rightIndicator?: "on" | "off" | "partial";
   onClick: () => void;
 }): React.JSX.Element {
+  // Owner directive 2026-11-13 · minimalist row style per
+  // adsASDADS.png reference · no card, no shadow, no dark icon cell.
   return (
     <button
       type="button"
@@ -180,17 +179,15 @@ function ControlCard({
       data-nex-chat-settings-control={title.toLowerCase().replace(/\s+/g, "-")}
       style={{
         display: "flex",
-        alignItems: "center",
-        gap: 12,
+        alignItems: "flex-start",
+        gap: 16,
         width: "100%",
-        padding: "12px 14px",
-        background: CARD_BG,
+        padding: "16px 4px",
+        background: "transparent",
         border: "none",
-        borderRadius: 14,
         color: CARD_INK,
         textAlign: "left",
         cursor: "pointer",
-        boxShadow: "0 1px 2px rgba(74,32,24,0.10)",
         fontFamily: "inherit",
       }}
     >
@@ -198,24 +195,21 @@ function ControlCard({
         aria-hidden
         style={{
           flexShrink: 0,
-          width: 40,
-          height: 40,
-          borderRadius: "50%",
-          background: ICON_BG,
-          border: `1.5px solid ${ICON_RING}`,
+          width: 28,
           display: "grid",
           placeItems: "center",
-          fontSize: 18,
-          color: "#F2E5CC",
+          fontSize: 22,
+          lineHeight: 1,
+          paddingTop: 2,
         }}
       >
         {emoji}
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
         <div
           style={{
-            fontSize: 15,
-            fontWeight: 800,
+            fontSize: 16,
+            fontWeight: 700,
             color: CARD_INK,
             letterSpacing: "0.005em",
           }}
@@ -224,7 +218,7 @@ function ControlCard({
         </div>
         <div
           style={{
-            marginTop: 2,
+            marginTop: 3,
             fontSize: 12,
             color: CARD_INK_DIM,
             lineHeight: 1.4,
@@ -239,44 +233,33 @@ function ControlCard({
           data-nex-chat-settings-control-indicator={rightIndicator}
           style={{
             flexShrink: 0,
-            width: 28,
-            height: 28,
-            borderRadius: "50%",
-            background:
+            alignSelf: "center",
+            padding: "4px 10px",
+            borderRadius: 999,
+            background: "transparent",
+            border: `1px solid ${
+              rightIndicator === "on"
+                ? "#16D66B"
+                : rightIndicator === "off"
+                  ? "#D82A2A"
+                  : "#FFB300"
+            }`,
+            color:
               rightIndicator === "on"
                 ? "#16D66B"
                 : rightIndicator === "off"
                   ? "#D82A2A"
                   : "#FFB300",
-            color: "#FFFFFF",
-            display: "grid",
-            placeItems: "center",
-            fontSize: 14,
+            fontSize: 10,
             fontWeight: 900,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
+            letterSpacing: "0.14em",
           }}
         >
           {rightIndicator === "on"
-            ? "✓"
+            ? "ON"
             : rightIndicator === "off"
-              ? "✕"
-              : "•"}
-        </span>
-      ) : rightLabel ? (
-        <span
-          style={{
-            flexShrink: 0,
-            padding: "5px 10px",
-            borderRadius: 999,
-            background: CONTROL_BG,
-            color: CONTROL_ACTIVE,
-            fontSize: 10,
-            fontWeight: 800,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-          }}
-        >
-          {rightLabel}
+              ? "OFF"
+              : "SOME"}
         </span>
       ) : null}
     </button>

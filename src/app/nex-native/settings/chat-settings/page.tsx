@@ -209,7 +209,6 @@ export default async function ChatSettingsPage({
             }
           />
 
-          <div style={{ height: 8 }} />
           <LinkCard
             href="/nex-native/settings/disappearing-messages"
             emoji="⏳"
@@ -283,14 +282,16 @@ function StatusBanner({ status }: { status: string }): React.JSX.Element {
   );
 }
 
-// ─── Link card (simpler shape than the hub version) ───────────────────
+// ─── Link row · minimalist style per owner directive 2026-11-13 ─────
+// Reference: adsASDADS.png · simple icon + title + small subtitle on
+// a direct bg row (no card container, no shadow). Optional ON/OFF
+// indicator pill on the right for toggleable items.
 
 function LinkCard({
   href,
   title,
   subtitle,
   comingSoon,
-  rightLabel,
   rightIndicator,
   emoji,
 }: {
@@ -298,7 +299,7 @@ function LinkCard({
   title: string;
   subtitle?: string;
   comingSoon?: boolean;
-  rightLabel?: string;
+  rightLabel?: string; // kept for API compatibility · ignored in minimal row
   rightIndicator?: "on" | "off" | "partial";
   emoji?: string;
 }): React.JSX.Element {
@@ -309,45 +310,30 @@ function LinkCard({
       data-nex-chat-settings-link-coming-soon={comingSoon ? "true" : undefined}
       style={{
         display: "flex",
-        alignItems: "center",
-        gap: 12,
-        padding: "12px 14px",
-        background: CARD_BG,
-        border: "none",
-        borderRadius: 14,
+        alignItems: "flex-start",
+        gap: 16,
+        padding: "16px 4px",
         textDecoration: "none",
         color: CARD_INK,
-        marginBottom: 8,
-        boxShadow: "0 1px 2px rgba(74,32,24,0.10)",
-        opacity: comingSoon ? 0.8 : 1,
+        opacity: comingSoon ? 0.7 : 1,
       }}
     >
-      {emoji ? <RoundIcon emoji={emoji} /> : null}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      {emoji ? <LineIconCell emoji={emoji} /> : null}
+      <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
         <div
           style={{
-            display: "flex",
-            alignItems: "baseline",
-            gap: 8,
-            flexWrap: "wrap",
+            fontSize: 16,
+            fontWeight: 700,
+            color: CARD_INK,
+            letterSpacing: "0.005em",
           }}
         >
-          <span
-            style={{
-              fontSize: 15,
-              fontWeight: 800,
-              color: CARD_INK,
-              letterSpacing: "0.005em",
-            }}
-          >
-            {title}
-          </span>
+          {title}
           {comingSoon ? (
             <span
               aria-label="coming soon"
               style={{
-                display: "inline-flex",
-                alignItems: "center",
+                marginLeft: 8,
                 padding: "1px 6px",
                 fontSize: 9,
                 fontWeight: 700,
@@ -356,6 +342,7 @@ function LinkCard({
                 color: ICON_RING,
                 border: `1px solid ${ICON_RING}`,
                 borderRadius: 4,
+                verticalAlign: "middle",
               }}
             >
               Soon
@@ -365,7 +352,7 @@ function LinkCard({
         {subtitle ? (
           <div
             style={{
-              marginTop: 2,
+              marginTop: 3,
               fontSize: 12,
               color: CARD_INK_DIM,
               lineHeight: 1.4,
@@ -375,88 +362,59 @@ function LinkCard({
           </div>
         ) : null}
       </div>
-      {rightIndicator ? (
-        <span
-          aria-hidden
-          data-nex-chat-settings-link-indicator={rightIndicator}
-          style={{
-            flexShrink: 0,
-            width: 28,
-            height: 28,
-            borderRadius: "50%",
-            background:
-              rightIndicator === "on"
-                ? "#16D66B"
-                : rightIndicator === "off"
-                  ? "#D82A2A"
-                  : "#FFB300",
-            color: "#FFFFFF",
-            display: "grid",
-            placeItems: "center",
-            fontSize: 14,
-            fontWeight: 900,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
-          }}
-        >
-          {rightIndicator === "on"
-            ? "✓"
-            : rightIndicator === "off"
-              ? "✕"
-              : "•"}
-        </span>
-      ) : rightLabel ? (
-        <span
-          style={{
-            flexShrink: 0,
-            padding: "6px 10px",
-            borderRadius: 999,
-            background: CONTROL_BG,
-            color: CONTROL_INK,
-            fontSize: 11,
-            fontWeight: 800,
-            letterSpacing: "0.04em",
-          }}
-        >
-          {rightLabel}
-        </span>
-      ) : (
-        <div
-          aria-hidden
-          style={{
-            color: CARD_INK,
-            fontSize: 20,
-            fontWeight: 300,
-            flexShrink: 0,
-            opacity: 0.6,
-          }}
-        >
-          →
-        </div>
-      )}
+      {rightIndicator ? <StateIndicator value={rightIndicator} /> : null}
     </a>
   );
 }
 
-// ─── Round icon cell · dark circle + emoji · thin orange ring ─────
-function RoundIcon({ emoji }: { emoji: string }): React.JSX.Element {
+// ─── Minimal line-icon cell · no container · ink-coloured emoji ─────
+function LineIconCell({ emoji }: { emoji: string }): React.JSX.Element {
   return (
     <div
       aria-hidden
       style={{
         flexShrink: 0,
-        width: 40,
-        height: 40,
-        borderRadius: "50%",
-        background: ICON_BG,
-        border: `1.5px solid ${ICON_RING}`,
+        width: 28,
         display: "grid",
         placeItems: "center",
-        fontSize: 18,
-        color: "#F2E5CC",
+        fontSize: 22,
+        lineHeight: 1,
+        paddingTop: 2,
       }}
     >
       {emoji}
     </div>
+  );
+}
+
+// ─── State indicator · small ON/OFF/PARTIAL text in the row-right ─
+function StateIndicator({
+  value,
+}: {
+  value: "on" | "off" | "partial";
+}): React.JSX.Element {
+  const label = value === "on" ? "ON" : value === "off" ? "OFF" : "SOME";
+  const colour =
+    value === "on" ? "#16D66B" : value === "off" ? "#D82A2A" : "#FFB300";
+  return (
+    <span
+      aria-hidden
+      data-nex-chat-settings-link-indicator={value}
+      style={{
+        flexShrink: 0,
+        alignSelf: "center",
+        padding: "4px 10px",
+        borderRadius: 999,
+        background: "transparent",
+        border: `1px solid ${colour}`,
+        color: colour,
+        fontSize: 10,
+        fontWeight: 900,
+        letterSpacing: "0.14em",
+      }}
+    >
+      {label}
+    </span>
   );
 }
 
