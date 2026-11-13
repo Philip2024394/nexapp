@@ -17,7 +17,6 @@ import {
   NEX_SETTINGS_FONT,
 } from "../_settings-shell";
 import {
-  resetChatFontAction,
   setChatFontFamilyAction,
   setChatFontSizeAction,
 } from "./_actions";
@@ -86,20 +85,19 @@ export default async function ChatFontPage({
 
           {status ? <StatusBanner status={status} /> : null}
 
-          {/* Live preview card · tinted black per owner directive 2026-11-13. */}
+          {/* Live preview card · cream to match the page bg · orange rim. */}
           <div
             data-nex-chat-font-preview
             style={{
               margin: "14px 0",
               padding: "14px 16px",
-              background: "#1D2432",
+              background: "#F5EDD3",
               border: "1px solid #FF7200",
               borderRadius: 12,
               fontFamily: resolveFontFamilyCss(currentFamily),
               fontSize: resolveFontSizeCss(currentSize),
-              color: "#F2E5CC",
+              color: "#0A0608",
               lineHeight: 1.5,
-              boxShadow: "0 1px 3px rgba(42, 31, 15, 0.12)",
             }}
           >
             <div
@@ -108,10 +106,9 @@ export default async function ChatFontPage({
                 fontWeight: 700,
                 letterSpacing: "0.14em",
                 textTransform: "uppercase",
-                color: "#F3E3C6",
+                color: "#7D5A3A",
                 fontFamily: NEX_SETTINGS_FONT,
                 marginBottom: 8,
-                opacity: 0.7,
               }}
             >
               Preview
@@ -147,7 +144,7 @@ export default async function ChatFontPage({
                           style={{
                             marginTop: 2,
                             fontSize: 12,
-                            color: "rgba(243, 227, 198, 0.75)",
+                            color: "#7D5A3A",
                           }}
                         >
                           {f.description}
@@ -187,7 +184,7 @@ export default async function ChatFontPage({
                           style={{
                             marginTop: 2,
                             fontSize: 12,
-                            color: "rgba(243, 227, 198, 0.75)",
+                            color: "#7D5A3A",
                           }}
                         >
                           {f.description}
@@ -199,12 +196,6 @@ export default async function ChatFontPage({
               );
             })}
           </ul>
-
-          <form action={resetChatFontAction} style={resetWrapperStyle}>
-            <button type="submit" style={resetButtonStyle}>
-              Reset to default
-            </button>
-          </form>
 
           <div
             data-nex-chat-font-poweredby
@@ -234,6 +225,8 @@ function StatusBanner({ status }: { status: string }): React.JSX.Element {
   } else if (status === "ok_reset") text = "Reset to default · medium";
   else if (status.startsWith("ok_family_")) text = `Font family · ${status.replace("ok_family_", "")}`;
   else if (status.startsWith("ok_size_")) text = `Font size · ${status.replace("ok_size_", "")}`;
+  // Owner directive 2026-11-13 · success banner uses NEX orange ink so
+  // e.g. "Font size · large" reads as a brand confirmation on cream.
   return (
     <div
       role="status"
@@ -241,13 +234,14 @@ function StatusBanner({ status }: { status: string }): React.JSX.Element {
       style={{
         margin: "14px 0 0",
         padding: "10px 14px",
-        background: "#FFFFFF",
+        background: "#F5EDD3",
         border: `1px solid ${isError ? "#D82A2A" : "#FF7200"}`,
         borderRadius: 10,
-        color: isError ? "#7F1D1D" : "#0A0608",
+        color: isError ? "#7F1D1D" : "#FF7200",
         fontSize: 12,
-        fontWeight: 700,
+        fontWeight: 800,
         textAlign: "center",
+        letterSpacing: "0.02em",
       }}
     >
       {text}
@@ -312,9 +306,9 @@ const listStyle: React.CSSProperties = {
   gap: 8,
 };
 
-// Owner directive 2026-11-13 · cards tinted black. Active option is
-// the same dark navy with an orange rim; inactive uses a softer tone
-// so the choice stays obvious on the cream page.
+// Owner directive 2026-11-13 iter 2 · cards use the page bg (cream)
+// with an orange rim when active. Dark ink on cream · matches the
+// Chat Settings landing card family.
 function optionButtonStyle(active: boolean): React.CSSProperties {
   return {
     width: "100%",
@@ -322,33 +316,15 @@ function optionButtonStyle(active: boolean): React.CSSProperties {
     display: "flex",
     alignItems: "center",
     gap: 14,
-    background: "#1D2432",
-    border: `1px solid ${active ? "#FF7200" : "rgba(29, 36, 50, 0.6)"}`,
+    background: "#F5EDD3",
+    border: `1px solid ${active ? "#FF7200" : "rgba(107, 42, 31, 0.18)"}`,
     borderRadius: 12,
     cursor: "pointer",
     minHeight: 64,
-    color: "#F2E5CC",
+    color: "#0A0608",
     fontFamily: "inherit",
     boxShadow: active
-      ? "0 2px 8px rgba(255, 114, 0, 0.25)"
-      : "0 1px 2px rgba(42, 31, 15, 0.10)",
+      ? "0 2px 8px rgba(255, 114, 0, 0.18)"
+      : "0 1px 2px rgba(42, 31, 15, 0.08)",
   };
 }
-
-const resetWrapperStyle: React.CSSProperties = {
-  marginTop: 14,
-  display: "flex",
-  justifyContent: "flex-end",
-};
-const resetButtonStyle: React.CSSProperties = {
-  padding: "8px 14px",
-  fontSize: 11,
-  fontWeight: 800,
-  letterSpacing: "0.1em",
-  textTransform: "uppercase",
-  color: "#F3E3C6",
-  background: "#1D2432",
-  border: "none",
-  borderRadius: 999,
-  cursor: "pointer",
-};
