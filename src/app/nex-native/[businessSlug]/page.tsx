@@ -22,9 +22,22 @@
 //     product=<productId> (existing peer-chat flow)
 
 import type * as React from "react";
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import * as businessService from "@/lib/nex-native/business-service";
+// Owner directive 2026-11-13 · the public shop country flag was
+// hard-coded to "IE" so Indonesian shops (Rosa / Tri) rendered with
+// the 🇮🇪 flag. Load the owner account so we can read their
+// last_known_country_iso and derive the flag honestly.
+import { getAccountById } from "@/lib/nex-native/account-service";
+import {
+  buildBreadcrumbList,
+  buildLocalBusiness,
+  renderJsonLd,
+} from "@/lib/nex-native/seo/json-ld";
+import { nexCanonicalUrl } from "@/lib/nex-native/seo/site-url-resolver";
+import { buildShopProductJsonLdStrings } from "@/lib/nex-native/seo/shop-product-json-ld";
 // Owner directive 2026-11-08 (round 5) · traffic analytics tracer ·
 // fires once per server response (no client re-render double-count).
 // Sandbox-only until migration 303 is applied in prod.
@@ -60,7 +73,11 @@ import {
   isValidCoverLayoutId,
   type CoverLayoutId,
 } from "../cover/layout-ids";
-import type { CoverProduct, CoverSection } from "../cover/primitives";
+import type {
+  CoverProduct,
+  CoverSection,
+  CoverSocialLinks,
+} from "../cover/primitives";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -76,6 +93,49 @@ interface PageProps {
   params: Promise<{ businessSlug: string }>;
 }
 
+// Owner directive 2026-11-11 (SEO B2) · dynamic per-shop metadata ·
+// carries the business name + description + canonical URL so each shop
+// renders a unique head in HTML, instead of inheriting the generic
+// nex-native layout title. OG + Twitter cards emit the same unique
+// strings · the per-shop OG image is wired in B4 via opengraph-image.tsx.
+// Zero fabricated fields · if a shop hasn't supplied a description, the
+// default is a neutral platform-level fallback that doesn't invent facts.
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { businessSlug } = await params;
+  const business = await businessService
+    .getBusinessBySlug(businessSlug)
+    .catch(() => null);
+  if (!business) {
+    return { title: "Shop · NEX" };
+  }
+  const canonical = nexCanonicalUrl(`/nex-native/${business.slug}`);
+  const title = `${business.display_name} · NEX`;
+  const descriptionRaw = business.description?.trim();
+  const description =
+    descriptionRaw && descriptionRaw.length > 0
+      ? descriptionRaw
+      : `${business.display_name} on NEX — online shop and business profile.`;
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url: canonical,
+      siteName: "NEX",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
+  };
+}
+
 export default async function PublicShopPage({
   params,
 }: PageProps): Promise<React.JSX.Element> {
@@ -87,7 +147,7 @@ export default async function PublicShopPage({
 
   // Parallel loads · all fail-soft so a transient Supabase blip
   // doesn't crash the shop surface.
-  const [products, coverContent, themeRow, viewerSession] =
+  const [products, coverContent, themeRow, viewerSession, ownerAccount] =
     await Promise.all([
       productService
         .listProductsByBusiness(business.id, "live")
@@ -95,7 +155,17 @@ export default async function PublicShopPage({
       getShopCoverContent(business.id).catch(() => null),
       chatThemeService.getThemeById(DEFAULT_THEME).catch(() => null),
       resolveSessionWithDevOverride().catch(() => null),
+      // Owner directive 2026-11-13 · flag source · read the owner's
+      // ISO so Indonesian shops render 🇮🇩 instead of 🇮🇪.
+      getAccountById(business.owner_account_id).catch(() => null),
     ]);
+  // Owner directive 2026-11-13 · derive the shop's country flag from
+  // the owner's last_known_country_iso. Previously hard-coded to "IE"
+  // so Indonesian shops rendered the wrong flag. Fallback kept so the
+  // MockCoverContent.countryCode stays a plain string.
+  const ownerCountryIso: string =
+    (ownerAccount as { last_known_country_iso?: string | null } | null)
+      ?.last_known_country_iso ?? "IE";
 
   // Owner directive 2026-11-06 readiness fill · viewer-is-owner check
   // powers the "Your shop is empty · add products →" banner that only
@@ -178,12 +248,16 @@ export default async function PublicShopPage({
     ? await listThemeEmojis(themeRow.id).catch(() => [])
     : [];
 
-  const socialHandles = {
-    instagram: business.instagram_handle ?? undefined,
-    tiktok: business.tiktok_handle ?? undefined,
-    facebook: business.facebook_handle ?? undefined,
-    whatsapp: business.public_phone ?? undefined,
-    website: business.website_url ?? undefined,
+  // Owner directive 2026-11-13 · socialHandles typed as
+  // CoverSocialLinks · optional string fields · previously inferred as
+  // `string | undefined` which didn't match the interface and produced
+  // a wide excess-property error on the content object assignment.
+  const socialHandles: CoverSocialLinks = {
+    ...(business.instagram_handle ? { instagram: business.instagram_handle } : {}),
+    ...(business.tiktok_handle ? { tiktok: business.tiktok_handle } : {}),
+    ...(business.facebook_handle ? { facebook: business.facebook_handle } : {}),
+    ...(business.public_phone ? { whatsapp: business.public_phone } : {}),
+    ...(business.website_url ? { website: business.website_url } : {}),
   };
 
   const content = {
@@ -197,7 +271,18 @@ export default async function PublicShopPage({
     social: socialHandles,
     sections,
     sectionTitle: null,
-    shippingScope: business.shipping_scope ?? null,
+    // business.shipping_scope is typed as `string | null` in the DB
+    // layer; MockCoverContent requires the sealed enum. Narrow cast is
+    // honest because business-service validates against
+    // NEX_SHIPPING_SCOPES on write.
+    shippingScope: (business.shipping_scope ?? null) as
+      | "local_delivery"
+      | "local_and_export"
+      | "international_only"
+      | "pickup_only"
+      | "dine_in"
+      | "digital"
+      | null,
     products: coverProducts,
     services: [],
     reviews: [],
@@ -219,7 +304,7 @@ export default async function PublicShopPage({
     hours: business.hours_display ?? "",
     address: business.address ?? "",
     atmosphereLine: "",
-    countryCode: "IE",
+    countryCode: ownerCountryIso,
     themeEmojis: themeEmojis.map((row) => ({
       slug: row.slug,
       imageUrl: row.image_url,
@@ -227,8 +312,65 @@ export default async function PublicShopPage({
     })),
   };
 
+  // Owner directive 2026-11-11 (SEO B2) · emit LocalBusiness +
+  // BreadcrumbList JSON-LD so Google + AI assistants can parse this shop.
+  // Zero fabricated ratings / reviews / prices · only fields that exist
+  // on the row are surfaced.
+  const localBusinessLd = renderJsonLd(
+    buildLocalBusiness({
+      slug: business.slug,
+      displayName: business.display_name,
+      description: business.description,
+      logoUrl: business.logo_url,
+      coverImageUrl: null,
+      address: business.address,
+      publicPhone: business.public_phone,
+      publicEmail: business.public_email,
+      websiteUrl: business.website_url,
+    }),
+  );
+  const breadcrumbLd = renderJsonLd(
+    buildBreadcrumbList([
+      { name: "NEX", path: "/nex-native" },
+      { name: "Directory", path: "/nex-native/directory" },
+      { name: business.display_name, path: `/nex-native/${business.slug}` },
+    ]),
+  );
+
+  // Owner directive 2026-11-11 (B2 closeout) · emit Product JSON-LD for
+  // every LIVE product. Private/draft/archived statuses, missing names
+  // and missing ids are silently dropped by the helper. Availability is
+  // never inferred · only mapped when stock_status carries a known value.
+  const productLds: readonly string[] = buildShopProductJsonLdStrings(
+    business.slug,
+    products,
+  );
+
   return (
     <>
+      {localBusinessLd ? (
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: localBusinessLd }}
+        />
+      ) : null}
+      {breadcrumbLd ? (
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: breadcrumbLd }}
+        />
+      ) : null}
+      {productLds.map((body, i) => (
+        <script
+          key={`product-ld-${i}`}
+          type="application/ld+json"
+          data-nex-seo="product"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: body }}
+        />
+      ))}
       <PhoneFrame>
         <CoverThemeSkin
           accentHex={accentHex}
