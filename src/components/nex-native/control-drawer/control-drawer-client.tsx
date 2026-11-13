@@ -45,6 +45,7 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { signOutAction } from "@/app/nex-native/_actions";
 // Owner directive 2026-10-18 · guest viewers see a sealed 3D lock
 // icon next to any row that requires an account. Reusing the
@@ -509,6 +510,24 @@ export function ControlDrawer({
     setOpen(false);
   }, []);
 
+  // Owner directive 2026-11-13 · the drawer previously had no mechanism
+  // to close on navigation · a row tap that fired `router.push` left the
+  // drawer visibly open on top of the new page (which bled through as
+  // "the Chats and contacts link doesn't work · drawer stays open" from
+  // the owner's test surface). Two complementary closers now run:
+  //   (1) `usePathname` watcher · closes on any route change (covers
+  //       Next.js Link, interceptor-driven view transitions, and
+  //       server-action redirects).
+  //   (2) row-level `closeDrawer` callback passed into SectionGroup ·
+  //       closes the drawer IMMEDIATELY on tap, including same-path
+  //       taps (e.g. tapping "Chats and contacts" while already on
+  //       /contacts · otherwise pathname never changes, (1) never
+  //       fires, drawer never closes).
+  const pathname = usePathname();
+  React.useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
   // Owner directive 2026-11-01 · Batch D++ · the sealed-sheet tap
   // callback. Opens the shade AND closes the drawer underneath so the
   // viewer isn't stacking two overlays. The slide-out + sheet fade-in
@@ -914,6 +933,7 @@ function DrawerBody({
         rows={CREATE_ROWS}
         isGuest={effectiveIsGuest}
         devUnlockMode={devUnlock}
+        closeDrawer={close}
       />
 
       <SectionGroup
@@ -946,6 +966,7 @@ function DrawerBody({
         })()}
         isGuest={effectiveIsGuest}
         devUnlockMode={devUnlock}
+        closeDrawer={close}
       />
 
       {/* Owner-authorised 2026-11-04 later-same-day · NEX Ireland drawer
@@ -963,6 +984,7 @@ function DrawerBody({
         rows={PREFERENCES_ROWS}
         isGuest={effectiveIsGuest}
         devUnlockMode={devUnlock}
+        closeDrawer={close}
       />
 
       {session !== null ? (
@@ -1198,6 +1220,7 @@ function SectionGroup({
   rows,
   isGuest,
   devUnlockMode = false,
+  closeDrawer,
 }: {
   readonly title: string;
   /** Owner directive 2026-11-09 · emoji glyph shown before the title
@@ -1215,6 +1238,10 @@ function SectionGroup({
    *  (e.g. /nex-native/contacts synthesizes a stub session when
    *  ?dev=1 arrives). Production ignores this flag entirely. */
   readonly devUnlockMode?: boolean;
+  /** Owner directive 2026-11-13 · invoked on any row tap so the drawer
+   *  closes immediately · covers same-path taps where the pathname
+   *  watcher never fires. */
+  readonly closeDrawer?: () => void;
 }) {
   return (
     <section style={sectionStyle}>
@@ -1250,6 +1277,11 @@ function SectionGroup({
                       window.dispatchEvent(new CustomEvent(row.dispatchEvent));
                     }
                   }
+                  // Owner directive 2026-11-13 · close the drawer on
+                  // every row tap · belt-and-braces alongside the
+                  // pathname-watcher (which doesn't fire on same-path
+                  // taps).
+                  closeDrawer?.();
                 }}
               >
                 <div style={rowTextColumnStyle}>
