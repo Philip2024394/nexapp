@@ -235,10 +235,20 @@ export function ChatActionDots({
         </div>
       )}
 
-      {/* 3-dots floating trigger · bare icon · no round chip.
-          Founder direction 2026-10-04: drop the glass container
-          around the dots so the trigger reads as just the dots on
-          the atmosphere, not as a button chip stacked on top of it. */}
+      {/* Owner directive 2026-11-13 · "3 lower 3 dots button · dots
+          little bigger and flashing and move to right side". Chip
+          chrome was already retired per sealed 2026-10-04 · dots
+          sized up from 22→28 with r 2.3→2.6 · flash animation
+          nex-chat-dots-flash pulses the opacity when the panel is
+          closed (idle "tap me" cue). Position unchanged · still
+          right:14 bottom:108 inside the phone-frame. */}
+      <style>{`
+        @keyframes nex-chat-dots-flash {
+          0%   { opacity: 0.55; transform: scale(1); }
+          50%  { opacity: 1;    transform: scale(1.08); }
+          100% { opacity: 0.55; transform: scale(1); }
+        }
+      `}</style>
       <button
         type="button"
         aria-label={open ? "Close chat actions" : "Open chat actions"}
@@ -258,6 +268,9 @@ export function ChatActionDots({
           border: "none",
           color: accent,
           cursor: "pointer",
+          animation: open
+            ? "none"
+            : "nex-chat-dots-flash 1800ms ease-in-out infinite",
           // Multi-layer drop-shadow: a dark halo for contrast against
           // any busy atmosphere, plus a tight shadow for depth. Keeps
           // the "no chip" look while making the dots legible.
@@ -297,11 +310,13 @@ function withAlpha(hex: string, alpha: number): string {
 // --- icons -----------------------------------------------------------
 
 function DotsVerticalIcon() {
+  // Owner directive 2026-11-13 · bumped 22→28 and r 2.3→2.6 so the
+  // dots read without a chip backdrop. Three vertical dots preserved.
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <circle cx="12" cy="5"  r="2.3" />
-      <circle cx="12" cy="12" r="2.3" />
-      <circle cx="12" cy="19" r="2.3" />
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <circle cx="12" cy="5"  r="2.6" />
+      <circle cx="12" cy="12" r="2.6" />
+      <circle cx="12" cy="19" r="2.6" />
     </svg>
   );
 }
