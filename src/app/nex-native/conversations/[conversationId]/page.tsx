@@ -465,6 +465,15 @@ export default async function BusinessConversationPage({
         businessDisplayName={business.display_name}
         businessCategory={business.business_category ?? null}
         accentHex={accentHex}
+        // Owner directive 2026-11-13 (iter 15) · peer identity for the
+        // owner-view avatar lane · reads the customer's avatar from
+        // their profile row, handle from their account row, display
+        // name from the account row. On the customer face these are
+        // still passed so the client contract stays uniform, but the
+        // client only renders the avatar when viewerSide === "business".
+        peerAvatarUrl={otherProfile?.avatar_url ?? null}
+        peerHandle={otherAccount?.nex_handle ?? null}
+        peerDisplayName={otherAccount?.display_name ?? null}
         shopProducts={products}
         initialMessages={messages}
         viewerSide={viewerParticipant.side}

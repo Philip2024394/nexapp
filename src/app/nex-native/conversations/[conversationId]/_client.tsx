@@ -10,6 +10,7 @@
 // shop identity header (see page.tsx).
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import naclUtil from "tweetnacl-util";
 import {
@@ -67,6 +68,15 @@ interface Props {
   // server from business.shop_cover_tint_hex ?? themeRow.accent_hex
   // so the shop chat visually matches the shop surface.
   readonly accentHex: string;
+  // Owner directive 2026-11-13 (iter 15) · owner-view only · the
+  // customer's avatar + handle · used to render a tiny 28px avatar
+  // beside the customer's bubbles (OWNER viewing) · tap routes to
+  // /profile/<handle>. On the customer face these stay null · we do
+  // NOT render the shop's avatar beside each shop bubble (the header
+  // already carries the shop identity).
+  readonly peerAvatarUrl: string | null;
+  readonly peerHandle: string | null;
+  readonly peerDisplayName: string | null;
   readonly shopProducts: ReadonlyArray<{
     id: string;
     name: string;
@@ -105,6 +115,9 @@ export function BusinessConversationClient({
   businessDisplayName,
   businessCategory,
   accentHex,
+  peerAvatarUrl,
+  peerHandle,
+  peerDisplayName,
   shopProducts,
   initialMessages,
   viewerSide,
@@ -351,31 +364,36 @@ export function BusinessConversationClient({
           gap: 8,
         }}
       >
-        {liveMessages.length === 0 ? (
-          <div
-            style={{
-              margin: "auto",
-              textAlign: "center",
-              color: "rgba(242,245,248,0.65)",
-              fontSize: 13,
-              lineHeight: 1.5,
-              padding: "32px 20px",
-            }}
-          >
-            <div style={{ fontSize: 48, marginBottom: 8 }}>
-              {categoryIcon(businessCategory)}
-            </div>
-            <div style={{ fontWeight: 700, color: "#F2F5F8", marginBottom: 6 }}>
-              {businessDisplayName}
-            </div>
-            <div>
-              Say hello · ask about a product · all messages end-to-end
-              encrypted.
-            </div>
-          </div>
-        ) : (
-          liveMessages.map((m) => {
+        {/* Owner directive 2026-11-13 (iter 15) · welcome panel always
+            at the TOP of the thread. System primer · client-rendered
+            only · NEVER written to nex_message so we don't fake-sign
+            a message from the shop. Muted panel style so it reads as
+            onboarding, not a message. Visible even once the thread
+            has real messages · stays as the thread's intro card. */}
+        <WelcomeBubble
+          businessDisplayName={businessDisplayName}
+          businessCategory={businessCategory}
+          accentHex={accentHex}
+          viewerSide={viewerSide}
+        />
+
+        {liveMessages.length === 0 ? null : (
+          liveMessages.map((m, i) => {
             const mine = m.sender_account_id === selfAccountId;
+            const prev = i > 0 ? liveMessages[i - 1] : null;
+            const firstInRun =
+              !prev || prev.sender_account_id !== m.sender_account_id;
+            // Owner directive 2026-11-13 (iter 15) · owner-view only ·
+            // show the customer's avatar on the first bubble of each
+            // of their runs so the shop can see WHO is writing and
+            // tap through to their profile. Customer face NEVER sees
+            // avatars beside shop bubbles (header already shows the
+            // shop).
+            const showPeerAvatar =
+              !mine &&
+              viewerSide === "business" &&
+              firstInRun &&
+              !!peerAvatarUrl;
             const decrypted = plaintextById[m.id] ?? (m.encrypted ? null : m.body);
             // Owner directive 2026-11-13 (iter 2) · product envelope
             // lives INSIDE the decrypted plaintext · only decoded on
@@ -407,14 +425,58 @@ export function BusinessConversationClient({
               renderedText = decrypted ?? "⋯";
             }
             const isProductCard = !!productEnvelope;
+            // Avatar lane reserved only on OWNER view so customer's
+            // bubbles align consistently (first-of-run shows avatar,
+            // rest show a 28px spacer).
+            const reserveAvatarLane = viewerSide === "business" && !mine;
             return (
               <div
                 key={m.id}
+                data-nex-business-conv-row={m.id}
+                style={{
+                  alignSelf: mine ? "flex-end" : "flex-start",
+                  maxWidth: "88%",
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "flex-end",
+                  gap: 6,
+                }}
+              >
+                {reserveAvatarLane ? (
+                  showPeerAvatar && peerAvatarUrl && peerHandle ? (
+                    <Link
+                      href={`/nex-native/profile/${peerHandle}`}
+                      aria-label={`Open ${peerDisplayName ?? "customer"} profile`}
+                      data-nex-business-conv-peer-avatar
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: "50%",
+                        overflow: "hidden",
+                        flexShrink: 0,
+                        display: "block",
+                        textDecoration: "none",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
+                        border: `1.5px solid ${accentHex}`,
+                      }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={peerAvatarUrl}
+                        alt={peerDisplayName ?? "customer"}
+                        width={28}
+                        height={28}
+                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                      />
+                    </Link>
+                  ) : (
+                    <div aria-hidden style={{ width: 28, flexShrink: 0 }} />
+                  )
+                ) : null}
+              <div
                 data-nex-business-conv-bubble={m.id}
                 data-nex-bubble-mine={mine ? "true" : "false"}
                 style={{
-                  alignSelf: mine ? "flex-end" : "flex-start",
-                  maxWidth: "78%",
                   padding: "10px 14px",
                   borderRadius: 14,
                   // Owner directive 2026-11-13 (iter 11) · chat bubbles
@@ -428,6 +490,8 @@ export function BusinessConversationClient({
                   fontSize: 14,
                   lineHeight: 1.4,
                   boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+                  flex: "0 1 auto",
+                  minWidth: 0,
                 }}
               >
                 {isProductCard && productEnvelope ? (
@@ -485,6 +549,7 @@ export function BusinessConversationClient({
                         minute: "2-digit",
                       })}
                 </div>
+              </div>
               </div>
             );
           })
@@ -1078,6 +1143,85 @@ function ShopProductsDrawer({
           }
         `}</style>
       </aside>
+    </div>
+  );
+}
+
+// ─── Welcome / onboarding bubble ────────────────────────────────────
+//
+// Owner directive 2026-11-13 (iter 15) · system primer always at the
+// top of the thread. Client-rendered only · NEVER persisted in
+// nex_message so we never fake-sign a message from the shop. On the
+// customer face the copy prompts the visitor to ask about any product
+// AND reminds them that a free NEX account is what unlocks receiving
+// replies. On the owner (business) face the primer tells the shop
+// owner that the thread is encrypted and replies route back to the
+// customer's chat.
+
+function WelcomeBubble({
+  businessDisplayName,
+  businessCategory,
+  accentHex,
+  viewerSide,
+}: {
+  businessDisplayName: string;
+  businessCategory: string | null;
+  accentHex: string;
+  viewerSide: "customer" | "business";
+}): React.JSX.Element {
+  const isCustomer = viewerSide === "customer";
+  return (
+    <div
+      data-nex-business-conv-welcome
+      style={{
+        alignSelf: "center",
+        maxWidth: "92%",
+        padding: "12px 14px",
+        borderRadius: 14,
+        background: "rgba(0, 0, 0, 0.55)",
+        border: `1px solid ${accentHex}55`,
+        color: "#F2F5F8",
+        fontSize: 12.5,
+        lineHeight: 1.5,
+        textAlign: "center",
+        marginBottom: 6,
+        boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
+      }}
+    >
+      <div
+        aria-hidden
+        style={{ fontSize: 28, marginBottom: 6, lineHeight: 1 }}
+      >
+        {categoryIcon(businessCategory)}
+      </div>
+      <div
+        style={{
+          fontWeight: 800,
+          color: accentHex,
+          fontSize: 14,
+          marginBottom: 4,
+          letterSpacing: "0.01em",
+        }}
+      >
+        Welcome to {businessDisplayName}
+      </div>
+      {isCustomer ? (
+        <>
+          <div style={{ marginBottom: 6 }}>
+            Ask about any product · the shop will reply right here.
+          </div>
+          <div style={{ fontSize: 11.5, opacity: 0.85 }}>
+            Tip · create your free NEX account so you can receive replies
+            and pick the conversation back up next time you visit. All
+            messages are end-to-end encrypted.
+          </div>
+        </>
+      ) : (
+        <div style={{ fontSize: 12 }}>
+          A customer is reaching out · reply here to answer their
+          questions. Messages are end-to-end encrypted on both sides.
+        </div>
+      )}
     </div>
   );
 }
