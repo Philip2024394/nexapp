@@ -36,7 +36,7 @@ export function ChatSettingsClient({ prefs }: Props): React.JSX.Element {
         name="enabled"
         emoji="✓✓"
         title="Read receipts"
-        subtitle="Reciprocal · when OFF, nobody sees your receipts and you don't see theirs."
+        subtitle="Hide when viewing chat"
         current={prefs.read_receipts_enabled}
       />
       <ToggleRow
