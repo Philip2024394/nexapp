@@ -151,22 +151,35 @@ const CONTACTS = [
     phoneNat: "874445566",
   },
   {
+    // Owner directive 2026-11-13 · swapped the Belfast textile persona
+    // for an Indonesian watch dealer. Second mock to carry a real
+    // `business` entry · shop badge + public shop URL now resolve via
+    // nex_business (/nex-native/watch-warehouse).
     id: "11111111-1111-4111-8111-111111111116",
     handle: "nex-99906",
-    display: "Saoirse Doyle",
-    headline: "Textile designer · Belfast",
-    bio: "Hand-woven throws, mending kits and weekend darning classes out of the Cathedral Quarter. Everything repairable, nothing precious.",
-    profession: "Textile designer",
+    display: "Tri",
+    headline: "Watch Dealer · Indonesia",
+    bio: "Vintage and modern watches direct from Jakarta — Seiko, Casio, G-Shock, Timex and a rotating case of pre-owned mechanicals. Warehouse pricing, worldwide shipping.",
+    profession: "Watch Dealer",
     kind: "business_owner",
     dailyActivity: "self_employed",
-    skills: ["hand-weaving", "visible-mending", "natural-dye", "pattern-drafting", "teaching"],
-    lookingFor: ["retail-partners", "workshop-venues", "collaborators"],
-    locationLabel: "Belfast, Northern Ireland",
-    lastCity: "Belfast",
-    interests: ["textiles", "weaving", "belfast", "slow-making", "repair"],
-    avatar: avatar("saoirse-doyle-textile"),
-    cover: cover("saoirse-belfast-loom"),
-    phoneNat: "855556677",
+    skills: ["watch-sourcing", "authentication", "vintage-trade", "warehouse-logistics", "worldwide-shipping"],
+    lookingFor: ["bulk-buyers", "international-orders", "collector-partners"],
+    locationLabel: "Indonesia",
+    lastCity: "Indonesia",
+    // Indonesia overrides · same pattern as Rosa (nex-99903).
+    locale: "id",
+    phoneCountry: "+62",
+    countryIso: "ID",
+    interests: ["watches", "vintage", "indonesia", "collectibles", "trade"],
+    avatar: avatar("tri-watch-dealer"),
+    cover: cover("tri-jakarta-warehouse"),
+    phoneNat: "81234567890",
+    // Shop · nex_business row · public URL /nex-native/watch-warehouse.
+    business: {
+      displayName: "watch warehouse",
+      slug: "watch-warehouse",
+    },
   },
   {
     id: "11111111-1111-4111-8111-111111111117",
