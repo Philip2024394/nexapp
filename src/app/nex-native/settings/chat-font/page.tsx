@@ -267,20 +267,23 @@ function SectionHeader({ children }: { children: React.ReactNode }): React.JSX.E
 }
 
 function Radio({ active }: { active: boolean }): React.JSX.Element {
-  return (
-    <div
-      aria-hidden
-      style={{
-        flexShrink: 0,
-        width: 24,
-        height: 24,
-        borderRadius: "50%",
-        border: `2px solid ${active ? "#FF7200" : "rgba(243, 227, 198, 0.35)"}`,
-        background: active ? "#FF7200" : "transparent",
-        position: "relative",
-      }}
-    >
-      {active ? (
+  // Owner directive 2026-11-13 · when the container is NOT selected
+  // render a thumb/fingerprint icon in the left slot (tap affordance).
+  // When selected, render the filled orange radio dot.
+  if (active) {
+    return (
+      <div
+        aria-hidden
+        style={{
+          flexShrink: 0,
+          width: 24,
+          height: 24,
+          borderRadius: "50%",
+          border: "2px solid #FF7200",
+          background: "#FF7200",
+          position: "relative",
+        }}
+      >
         <span
           aria-hidden
           style={{
@@ -293,8 +296,35 @@ function Radio({ active }: { active: boolean }): React.JSX.Element {
             background: "#FFFFFF",
           }}
         />
-      ) : null}
-    </div>
+      </div>
+    );
+  }
+  return <FingerprintIcon />;
+}
+
+function FingerprintIcon(): React.JSX.Element {
+  return (
+    <svg
+      aria-hidden
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#7D5A3A"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ flexShrink: 0 }}
+    >
+      {/* Simple fingerprint · nested arcs + ridge whorl */}
+      <path d="M12 3a9 9 0 0 1 9 9" />
+      <path d="M3 12a9 9 0 0 1 14.7-6.9" />
+      <path d="M12 7a5 5 0 0 1 5 5v2" />
+      <path d="M7 12a5 5 0 0 1 2.5-4.3" />
+      <path d="M12 11v3a5 5 0 0 1-2 4" />
+      <path d="M15 14v1a4 4 0 0 1-4 4" />
+      <path d="M12 21v-1" />
+    </svg>
   );
 }
 
