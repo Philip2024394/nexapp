@@ -245,17 +245,17 @@ function ControlCard({
             background: "transparent",
             border: `1px solid ${
               rightIndicator === "on"
-                ? "#16D66B"
+                ? "#0E6B3A"
                 : rightIndicator === "off"
-                  ? "#D82A2A"
-                  : "#FFB300"
+                  ? "#7F1D1D"
+                  : "#B45309"
             }`,
             color:
               rightIndicator === "on"
-                ? "#16D66B"
+                ? "#0E6B3A"
                 : rightIndicator === "off"
-                  ? "#D82A2A"
-                  : "#FFB300",
+                  ? "#7F1D1D"
+                  : "#B45309",
             fontSize: 10,
             fontWeight: 900,
             letterSpacing: "0.14em",

@@ -407,7 +407,7 @@ function StateIndicator({
 }): React.JSX.Element {
   const label = value === "on" ? "ON" : value === "off" ? "OFF" : "SOME";
   const colour =
-    value === "on" ? "#16D66B" : value === "off" ? "#D82A2A" : "#FFB300";
+    value === "on" ? "#0E6B3A" : value === "off" ? "#7F1D1D" : "#B45309";
   return (
     <span
       aria-hidden
