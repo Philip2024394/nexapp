@@ -213,7 +213,7 @@ export default async function ChatSettingsPage({
             href="/nex-native/settings/disappearing-messages"
             emoji="⏳"
             title="Disappearing messages"
-            subtitle={`Default timer for new chats · currently ${disappearingLabel}. Per-chat overrides are preserved.`}
+            subtitle="Set time zone"
             rightLabel={disappearingLabel}
           />
 
