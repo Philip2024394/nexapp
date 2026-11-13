@@ -22,7 +22,26 @@ const AVATAR_SIZE = 60;
 const CARD_MIN_HEIGHT = 76;
 const INK = "#2A1F0F";
 const INK_MUTE = "rgba(42,31,15,0.62)";
-const NEUTRAL_RIM = "rgba(42,31,15,0.35)";
+const RIM_COLOUR = "#16D66B"; // live-presence green · matches the
+                              // Contacts card heartbeat ring.
+/** Owner directive 2026-11-13 · handles render without the "@" prefix
+ *  and always capitalise the "Nex-" segment · e.g. "nex-99901" renders
+ *  as "Nex-99901". */
+function formatNexHandle(raw: string): string {
+  const trimmed = raw.trim().replace(/^@+/, "");
+  if (/^nex-/i.test(trimmed)) {
+    return "Nex-" + trimmed.slice(4);
+  }
+  return trimmed;
+}
+
+const PING_KEYFRAMES = `
+  @keyframes nex-theme-visibility-ping {
+    0% { transform: scale(1); opacity: 0.85; }
+    75% { transform: scale(1.35); opacity: 0; }
+    100% { transform: scale(1.35); opacity: 0; }
+  }
+`;
 
 interface Props {
   readonly rows: ReadonlyArray<ContactRow>;
@@ -49,6 +68,7 @@ export function SeeMyThemeClient({ rows }: Props): React.JSX.Element {
 
   return (
     <>
+      <style>{PING_KEYFRAMES}</style>
       {/* Search bar · X/Y count on the right. Always rendered so the
           page feels consistent regardless of friend count. */}
       <div
@@ -144,8 +164,8 @@ export function SeeMyThemeClient({ rows }: Props): React.JSX.Element {
                 <input type="hidden" name="contact_id" value={row.accountId} />
                 <input type="hidden" name="enabled" value={next} />
 
-                {/* Avatar · 60px circle with neutral rim · initials
-                    fall-through · matches the contacts card. */}
+                {/* Avatar · 60px circle with pulsing presence ping ·
+                    initials fall-through · matches the Contacts card. */}
                 <div
                   aria-hidden
                   style={{
@@ -160,7 +180,7 @@ export function SeeMyThemeClient({ rows }: Props): React.JSX.Element {
                       position: "absolute",
                       inset: 0,
                       borderRadius: "50%",
-                      border: `2px solid ${NEUTRAL_RIM}`,
+                      border: `2px solid ${RIM_COLOUR}`,
                       overflow: "hidden",
                       background:
                         "linear-gradient(135deg, #C6A15Bcc 0%, #180012 65%, #050F1E 100%)",
@@ -199,6 +219,19 @@ export function SeeMyThemeClient({ rows }: Props): React.JSX.Element {
                       </span>
                     )}
                   </div>
+                  {/* Pulsing ping · 1200ms loop · matches the Contacts
+                      row heartbeat ring. */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: -3,
+                      borderRadius: "50%",
+                      border: `2px solid ${RIM_COLOUR}`,
+                      animation:
+                        "nex-theme-visibility-ping 1200ms cubic-bezier(0.4,0,0.2,1) infinite",
+                      pointerEvents: "none",
+                    }}
+                  />
                 </div>
 
                 {/* Identity · name + handle */}
@@ -232,7 +265,7 @@ export function SeeMyThemeClient({ rows }: Props): React.JSX.Element {
                         fontFamily: "ui-monospace, Menlo, Consolas, monospace",
                       }}
                     >
-                      @{row.nexHandle}
+                      {formatNexHandle(row.nexHandle)}
                     </div>
                   ) : null}
                 </div>
