@@ -39,7 +39,9 @@ export default async function ChatProtectionPage({
 
   return (
     <>
-      <style>{`html, body { background: ${NEX_SETTINGS.bg} !important; }`}</style>
+      {/* Owner directive 2026-11-13 · no html/body bg override so the
+          desktop + tablet hero backdrop (--nex-world-desktop-backdrop)
+          paints above and below the phone frame on ≥500px viewports. */}
       <main
         data-nex-chat-protection-page
         style={{

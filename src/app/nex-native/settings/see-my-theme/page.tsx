@@ -1,43 +1,24 @@
 // src/app/nex-native/settings/see-my-theme/page.tsx
 //
-// NEX Settings → See My Theme · per-contact theme-share surface.
-// Owner-authorised 2026-11-07 (Priority 1 follow-on to the Chat
-// Settings Hub).
+// NEX Settings → Theme Visibility · per-contact theme-share surface.
+// Owner-sealed 2026-11-13 iter 2 · contact-row look + scrolling.
 // -----------------------------------------------------------------------------
-// Mobile-first list of the caller's accepted friends. Each row carries
-// an inline toggle that calls `toggleThemeShareForContactAction` →
-// `relationship-service.setThemeVisibilityPreference` (grandfather-init
-// semantics preserved). Blocked contacts are filtered out upstream so
-// the UI never offers a toggle for someone the caller has blocked.
+// Each row renders in the same visual vocabulary as the Contacts page
+// (peach/ivory card · navy border · large circular avatar with a rim).
+// The green/red toggle on the right controls whether this contact can
+// see the viewer's personal chat theme.
 //
-// Semantics (sealed 2026-10-16 · reinforced by owner 2026-11-07):
-//   · ON   · the contact CAN see the caller's personal chat theme.
-//   · OFF  · the contact sees the standard Emerald NEX theme instead.
-//   · Grandfather · a relationship with NO prefs row yet renders as
-//     ON by default (preserves pre-feature visibility). Owner's first
-//     explicit toggle writes the row and locks the state.
-//
-// AND-rule enforcement at chat-render time lives in
-// `isThemeMutuallyVisibleSafe` · this page is the per-contact
-// VISIBILITY control the user owns for their side.
-//
-// States handled:
-//   · Loading  · Next.js server render · "Loading your contacts" never
-//     shows because the page is a single server fetch; empty-state
-//     carries the equivalent honest message.
-//   · Empty    · "You haven't accepted any contacts yet" with an
-//     explain-what-this-is panel.
-//   · Error    · resolver throw → honest error panel with retry link.
-//   · Success  · list + status banner on toggle.
+// Resolver uses resolveSessionWithDevOverride so 99901 lands.
 
 import type * as React from "react";
 import { redirect } from "next/navigation";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { listBlockedByMe, listFriends } from "@/lib/nex-native/friend-service";
-import { getAccountById } from "@/lib/nex-native/account-service";
+import { getAccountsByIds } from "@/lib/nex-native/account-service";
 import { getActorToggleState } from "@/lib/nex-native/relationship-service";
+import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import { NexPageHeader } from "../../_page-header";
-import { NEX_SETTINGS, NEX_SETTINGS_FONT, SettingsBackLink } from "../_settings-shell";
+import { NEX_SETTINGS_FONT } from "../_settings-shell";
 import { SeeMyThemeClient } from "./_client";
 
 export const runtime = "nodejs";
@@ -47,28 +28,17 @@ export interface ContactRow {
   readonly accountId: string;
   readonly displayName: string;
   readonly nexHandle: string | null;
+  readonly avatarUrl: string | null;
+  readonly initials: string;
   readonly shareOn: boolean;
 }
 
-export default async function SeeMyThemePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ s?: string }>;
-}): Promise<React.JSX.Element> {
-  // Owner directive 2026-11-13 · dev-impersonation parity · match the
-  // chat-settings resolver so NEX_DEV_IMPERSONATE_HANDLE=nex-99901
-  // reaches this surface instead of bouncing to sign-in.
+export default async function SeeMyThemePage(): Promise<React.JSX.Element> {
   const session = await resolveSessionWithDevOverride();
   if (!session) {
     redirect("/nex-native/sign-in?next=/nex-native/settings/see-my-theme");
   }
-  const sp = await searchParams;
-  const status = typeof sp.s === "string" ? sp.s : null;
 
-  // Resolve friend set + blocked set in parallel. Blocked contacts
-  // are excluded so the UI never renders a toggle for someone the
-  // caller has blocked (the server action also rejects non-friends
-  // defensively).
   let resolverError: string | null = null;
   let friendIds: string[] = [];
   let blockedIds: string[] = [];
@@ -86,19 +56,46 @@ export default async function SeeMyThemePage({
   const blockedSet = new Set(blockedIds);
   const visibleFriendIds = friendIds.filter((id) => !blockedSet.has(id));
 
-  // Resolve display info + current toggle state for each friend
-  // (parallel). Missing accounts fall back to a safe placeholder so
-  // one bad row doesn't blank the whole page.
+  // Batch account read + batch avatar lookup from nex_account_profile.
+  // getAccountsByIds returns a Map so lookup is O(1) per row.
+  let accountMap = new Map<string, { id: string; display_name?: string; nex_handle?: string | null }>();
+  let avatarMap = new Map<string, string | null>();
+  if (visibleFriendIds.length > 0) {
+    try {
+      const m = await getAccountsByIds(visibleFriendIds);
+      accountMap = m as Map<string, { id: string; display_name?: string; nex_handle?: string | null }>;
+    } catch {
+      accountMap = new Map();
+    }
+    try {
+      const { data } = await nexSupabaseAdmin
+        .from("nex_account_profile")
+        .select("account_id, avatar_url")
+        .in("account_id", visibleFriendIds);
+      for (const r of (data ?? []) as Array<{
+        account_id: string;
+        avatar_url: string | null;
+      }>) {
+        avatarMap.set(r.account_id, r.avatar_url ?? null);
+      }
+    } catch {
+      /* avatars optional */
+    }
+  }
+
   const rows: ContactRow[] = await Promise.all(
     visibleFriendIds.map(async (id): Promise<ContactRow> => {
-      const [acct, shareOn] = await Promise.all([
-        getAccountById(id).catch(() => null),
-        getActorToggleState(session.account.id, id).catch(() => true),
-      ]);
+      const acct = accountMap.get(id) ?? null;
+      const shareOn = await getActorToggleState(session.account.id, id).catch(
+        () => true,
+      );
+      const displayName = acct?.display_name ?? "NEX contact";
       return {
         accountId: id,
-        displayName: acct?.display_name ?? "NEX contact",
+        displayName,
         nexHandle: acct?.nex_handle ?? null,
+        avatarUrl: avatarMap.get(id) ?? null,
+        initials: initialsFromName(displayName),
         shareOn,
       };
     }),
@@ -106,96 +103,81 @@ export default async function SeeMyThemePage({
   rows.sort((a, b) => a.displayName.localeCompare(b.displayName));
 
   return (
-    <>
-      <style>{`html, body { background: ${NEX_SETTINGS.bg} !important; }`}</style>
-      <main
-        data-nex-see-my-theme-page
-        style={{
-          minHeight: "100dvh",
-          background: NEX_SETTINGS.bg,
-          color: NEX_SETTINGS.textPrimary,
-          fontFamily: NEX_SETTINGS_FONT,
-          padding: "16px 20px 32px",
-        }}
-      >
-        <div style={{ maxWidth: 480, margin: "0 auto" }}>
-          <NexPageHeader dataScope="settings-see-my-theme" />
+    <main
+      data-nex-see-my-theme-page
+      style={{
+        height: "100%",
+        overflowY: "auto",
+        overflowX: "hidden",
+        WebkitOverflowScrolling: "touch",
+        background: "#F5EDD3",
+        color: "#0A0608",
+        fontFamily: NEX_SETTINGS_FONT,
+        padding: "16px 20px 32px",
+      }}
+    >
+      <div style={{ maxWidth: 480, margin: "0 auto" }}>
+        <NexPageHeader dataScope="settings-see-my-theme" />
 
-          <header style={{ margin: "20px 0 6px", textAlign: "center" }}>
-            <h1
-              style={{
-                margin: 0,
-                fontSize: 22,
-                fontWeight: 600,
-                letterSpacing: "0.005em",
-              }}
-            >
-              See My Theme
-            </h1>
-            <p
-              style={{
-                margin: "6px 0 0",
-                fontSize: 12,
-                color: NEX_SETTINGS.textSecondary,
-                lineHeight: 1.5,
-              }}
-            >
-              Choose which of your contacts can see your personal chat theme.
-              When OFF, that contact sees the standard Emerald NEX theme.
-            </p>
-          </header>
+        <header style={{ margin: "20px 0 6px", textAlign: "center" }}>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: 22,
+              fontWeight: 700,
+              letterSpacing: "0.005em",
+              color: "#FF7200",
+            }}
+          >
+            Theme Visibility
+          </h1>
+          <p
+            style={{
+              margin: "6px 0 0",
+              fontSize: 12,
+              color: "#7D5A3A",
+              lineHeight: 1.5,
+            }}
+          >
+            Choose which of your contacts can see your personal chat theme.
+            When OFF, that contact sees the standard Emerald NEX theme.
+          </p>
+        </header>
 
-          {status ? <StatusBanner status={status} /> : null}
+        <div style={{ height: 10 }} />
 
-          {resolverError ? (
-            <ErrorPanel message={resolverError} />
-          ) : rows.length === 0 ? (
-            <EmptyPanel />
-          ) : (
-            <SeeMyThemeClient rows={rows} />
-          )}
+        {resolverError ? (
+          <ErrorPanel message={resolverError} />
+        ) : rows.length === 0 ? (
+          <EmptyPanel />
+        ) : (
+          <SeeMyThemeClient rows={rows} />
+        )}
 
-          <HonestNote />
-
-          <SettingsBackLink />
+        <div
+          data-nex-see-my-theme-poweredby
+          style={{
+            marginTop: 20,
+            textAlign: "center",
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: "0.22em",
+            textTransform: "uppercase",
+            color: "#7D5A3A",
+          }}
+        >
+          Powered by NEX
         </div>
-      </main>
-    </>
+      </div>
+    </main>
   );
 }
 
-// ─── Status banner ────────────────────────────────────────────────────
-
-function StatusBanner({ status }: { status: string }): React.JSX.Element {
-  const isError = status.startsWith("err_");
-  const prefix = isError ? "Couldn't save" : "Saved";
-  const text = isError
-    ? `${prefix} · ${status.replace("err_", "").replace(/_/g, " ")}`
-    : `${prefix} · theme share ${status.replace("ok_", "")}`;
-  return (
-    <div
-      role="status"
-      aria-live="polite"
-      data-nex-see-my-theme-status={status}
-      style={{
-        margin: "14px 0 10px",
-        padding: "10px 14px",
-        background: isError
-          ? "rgba(216,42,42,0.12)"
-          : "rgba(0,175,255,0.10)",
-        border: `1px solid ${
-          isError ? "rgba(216,42,42,0.45)" : NEX_SETTINGS.panelAccent
-        }`,
-        borderRadius: 10,
-        color: isError ? "#F2B3B3" : NEX_SETTINGS.textPrimary,
-        fontSize: 12,
-        fontWeight: 600,
-        textAlign: "center",
-      }}
-    >
-      {text}
-    </div>
-  );
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
+  return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
 }
 
 function EmptyPanel(): React.JSX.Element {
@@ -204,36 +186,23 @@ function EmptyPanel(): React.JSX.Element {
       data-nex-see-my-theme-empty
       style={{
         margin: "24px 0",
-        padding: "20px 16px",
-        background: NEX_SETTINGS.panel,
-        border: `1px solid ${NEX_SETTINGS.panelAccent}`,
+        padding: "22px 18px",
+        background: "#FFFFFF",
+        border: "1px solid #2A1F0F",
         borderRadius: 14,
         textAlign: "center",
+        color: "#2A1F0F",
       }}
     >
       <div aria-hidden style={{ fontSize: 28, marginBottom: 8 }}>
         🎨
       </div>
-      <h2
-        style={{
-          margin: "0 0 6px",
-          fontSize: 16,
-          fontWeight: 600,
-          color: NEX_SETTINGS.textPrimary,
-        }}
-      >
+      <h2 style={{ margin: "0 0 6px", fontSize: 16, fontWeight: 800 }}>
         No contacts to configure yet
       </h2>
-      <p
-        style={{
-          margin: 0,
-          fontSize: 12,
-          color: NEX_SETTINGS.textSecondary,
-          lineHeight: 1.5,
-        }}
-      >
-        Once you've added friends on NEX, they'll appear here with an
-        individual on/off switch for your chat theme.
+      <p style={{ margin: 0, fontSize: 12, color: "#7D5A3A", lineHeight: 1.5 }}>
+        Once you&apos;ve added friends on NEX, they&apos;ll appear here with
+        an individual on/off switch for your chat theme.
       </p>
     </div>
   );
@@ -247,16 +216,16 @@ function ErrorPanel({ message }: { message: string }): React.JSX.Element {
       style={{
         margin: "24px 0",
         padding: "16px 14px",
-        background: "rgba(216,42,42,0.10)",
-        border: "1px solid rgba(216,42,42,0.45)",
+        background: "#FFFFFF",
+        border: "1px solid #7F1D1D",
         borderRadius: 14,
-        color: "#F2B3B3",
+        color: "#7F1D1D",
       }}
     >
-      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
+      <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 4 }}>
         We couldn&rsquo;t load your contacts
       </div>
-      <div style={{ fontSize: 11, color: "#C5B2B2", lineHeight: 1.5 }}>
+      <div style={{ fontSize: 11, lineHeight: 1.5, color: "#7F1D1D" }}>
         {message}
       </div>
       <div style={{ marginTop: 10 }}>
@@ -270,9 +239,9 @@ function ErrorPanel({ message }: { message: string }): React.JSX.Element {
             fontWeight: 700,
             letterSpacing: "0.12em",
             textTransform: "uppercase",
-            color: NEX_SETTINGS.textPrimary,
-            background: "rgba(216,42,42,0.25)",
-            border: "1px solid rgba(216,42,42,0.45)",
+            color: "#FFFFFF",
+            background: "#7F1D1D",
+            border: "none",
             borderRadius: 999,
             textDecoration: "none",
           }}
@@ -280,35 +249,6 @@ function ErrorPanel({ message }: { message: string }): React.JSX.Element {
           Retry
         </a>
       </div>
-    </div>
-  );
-}
-
-function HonestNote(): React.JSX.Element {
-  return (
-    <div
-      data-nex-see-my-theme-honest-note
-      style={{
-        marginTop: 16,
-        padding: "12px 14px",
-        background: "rgba(0,175,255,0.06)",
-        border: `1px dashed ${NEX_SETTINGS.panelAccent}`,
-        borderRadius: 10,
-        color: NEX_SETTINGS.textSecondary,
-        fontSize: 11.5,
-        lineHeight: 1.55,
-      }}
-    >
-      <div style={{ marginBottom: 4 }}>
-        <strong style={{ color: NEX_SETTINGS.textPrimary }}>
-          How this works
-        </strong>
-      </div>
-      Theme visibility is mutual · the chat only paints your theme if
-      BOTH you and your contact have this turned ON. Blocked contacts
-      never see your theme (block overrides every other setting). This
-      setting does not change your own selected chat theme · just who
-      sees it.
     </div>
   );
 }

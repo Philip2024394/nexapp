@@ -37,7 +37,8 @@ export default async function ChatBackgroundSyncPage({
 
   return (
     <>
-      <style>{`html, body { background: ${NEX_SETTINGS.bg} !important; }`}</style>
+      {/* Owner directive 2026-11-13 · no html/body bg override so the
+          desktop + tablet hero backdrop paints above/below the frame. */}
       <main
         data-nex-chat-bg-sync-page
         style={{
