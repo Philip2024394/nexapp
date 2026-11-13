@@ -602,6 +602,15 @@ export interface NexBusinessRow {
    *  business's shop page only. Nullable · falls back to the theme
    *  default. CHECK-constrained to the standard hex pattern. */
   shop_cover_tint_hex?: string | null;
+  /** Owner-sealed 2026-11-13 · migration 344 · editable introduction
+   *  message shown as the shop owner's first chat bubble when a
+   *  visitor opens the public shop chat. NULL = fall back to the
+   *  default template (resolveShopIntroMessage resolves it client-
+   *  side). CHECK-constrained to <=500 chars at the DB. Never stored
+   *  as a real nex_peer_message row · the client paints it as a
+   *  pseudo-bubble when the conversation is empty · preserves the
+   *  2026-11-09 device-only E2E seal. */
+  shop_intro_message?: string | null;
   /** Bridge 16e · single-line city / neighbourhood · migration 072.
    *  Shown on the About panel with a 📍 pin. Free-text 1-80 chars
    *  when set. Directory facet reads this via lower(city) index. */

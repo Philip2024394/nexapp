@@ -489,9 +489,15 @@ export default async function CoverLayoutPreview({
             button bottom right on screen". Replaces the burger's
             Chat row with a dedicated FAB · send-first, signup
             contextual flow. */}
+        {/* Preview surface · no live business UUID · pass ownerAccountId
+            as null so the FAB renders visually but doesn't navigate.
+            isSignedIn=false so the registration popup appears on tap
+            (matches the signed-out buyer's real experience). */}
         <ShopChatFab
-          ownerHandle={ownerHandle}
+          ownerAccountId={ownerHandle}
           shopName={shopContent?.displayName ?? null}
+          shopSlug={null}
+          isSignedIn={false}
           accentHex={effectiveAccent}
         />
         {/* Owner directive 2026-11-07 · ShopSideChatDrawer unmounted ·

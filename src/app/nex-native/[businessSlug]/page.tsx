@@ -91,6 +91,14 @@ const DEFAULT_LAYOUT: CoverLayoutId = "cafe";
 
 interface PageProps {
   params: Promise<{ businessSlug: string }>;
+  // Owner-sealed 2026-11-13 · `open-chat=1` triggers the signed-in
+  // auto-redirect into the peer chat with the shop owner · set by
+  // the registration popup so the visitor lands back on the shop
+  // after sign-up / sign-in and immediately opens the chat.
+  searchParams?: Promise<{
+    openChat?: string;
+    "open-chat"?: string;
+  }>;
 }
 
 // Owner directive 2026-11-11 (SEO B2) · dynamic per-shop metadata ·
@@ -138,12 +146,22 @@ export async function generateMetadata({
 
 export default async function PublicShopPage({
   params,
+  searchParams,
 }: PageProps): Promise<React.JSX.Element> {
   const { businessSlug } = await params;
   const business = await businessService.getBusinessBySlug(businessSlug);
   if (!business) {
     notFound();
   }
+  // Owner-sealed 2026-11-13 · shop-to-customer return flow. When the
+  // visitor arrives with `?open-chat=1` AND they're signed in, bounce
+  // them straight into the peer chat with the shop owner. Keeps the
+  // post-sign-in landing clean: the registration popup set
+  // ?next=/nex-native/<slug>?open-chat=1 so the final destination is
+  // this page WITH the param · the auth flow preserves it and this
+  // guard completes the journey.
+  const sp = (await searchParams) ?? {};
+  const openChatIntent = sp.openChat === "1" || sp["open-chat"] === "1";
 
   // Parallel loads · all fail-soft so a transient Supabase blip
   // doesn't crash the shop surface.
@@ -159,6 +177,20 @@ export default async function PublicShopPage({
       // ISO so Indonesian shops render 🇮🇩 instead of 🇮🇪.
       getAccountById(business.owner_account_id).catch(() => null),
     ]);
+
+  // Owner-sealed 2026-11-13 · complete the return journey. If the
+  // visitor is now signed in (just created an account or signed in via
+  // the popup's CTAs) AND they carry `?open-chat=1`, redirect straight
+  // into the peer chat with the shop owner. Server-side redirect so
+  // the URL bar updates cleanly and the chat surface loads without an
+  // intermediate render of the shop page. Shop owners viewing their own
+  // shop skip this bounce · the intent is specifically "visitor reaches
+  // the shop and wants to message the seller".
+  if (openChatIntent && viewerSession && viewerSession.account.id !== business.owner_account_id) {
+    const { redirect } = await import("next/navigation");
+    redirect(`/nex-native/chat/peer/${business.owner_account_id}`);
+  }
+
   // Owner directive 2026-11-13 · derive the shop's country flag from
   // the owner's last_known_country_iso. Previously hard-coded to "IE"
   // so Indonesian shops rendered the wrong flag. Fallback kept so the
@@ -395,9 +427,16 @@ export default async function PublicShopPage({
           accentHex={accentHex}
           content={coverContent}
         />
+        {/* Owner-sealed 2026-11-13 · shop-to-customer contact flow ·
+            tap routes signed-in visitors directly to peer chat with
+            the owner; signed-out visitors see the registration popup
+            that brings them back to /nex-native/<slug>?open-chat=1
+            after authentication. */}
         <ShopChatFab
-          ownerHandle={business.owner_account_id}
+          ownerAccountId={business.owner_account_id}
           shopName={business.display_name}
+          shopSlug={business.slug}
+          isSignedIn={viewerSession !== null}
           accentHex={accentHex}
         />
         {/* Owner directive 2026-11-07 · ShopSideChatDrawer unmounted ·

@@ -253,6 +253,14 @@ export default async function ShopManagementCentre(): Promise<React.JSX.Element>
           title="Contact & NEX Chat"
           subtitle="Email · phone · website · socials · customers reach you via NEX Chat"
         />
+        {/* Owner-sealed 2026-11-13 · editable first-bubble intro that
+            visitors see when they tap the shop Chat button. */}
+        <LinkCard
+          href="/nex-native/manage/shop/intro"
+          icon={<IconMail />}
+          title="Chat intro message"
+          subtitle="The first bubble visitors see when they open your shop chat"
+        />
         <LinkCard
           href="/nex-native/manage/shop/setup/policies"
           icon={<IconScroll />}

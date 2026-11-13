@@ -975,6 +975,42 @@ export default async function PeerChatPage({
     };
   });
 
+  // Owner-sealed 2026-11-13 · shop-to-customer contact flow · when the
+  // conversation has zero real messages AND the peer owns a business,
+  // prepend a pseudo-bubble containing the shop's intro message. Reads
+  // nex_business.shop_intro_message (or default template) via
+  // resolveShopIntroMessage. NEVER stored in nex_peer_message · the
+  // server reads only a shop-level text column · preserves the device-
+  // only E2E seal (2026-11-09 Phase 2 doctrine). The pseudo-ID uses a
+  // `shop-intro:` prefix so downstream action guards (edit / delete /
+  // reply) can filter it out if the user attempts to act on the bubble.
+  if (bloomMessages.length === 0 && peerBusiness) {
+    const introBody = businessService.resolveShopIntroMessage(peerBusiness);
+    bloomMessages.push({
+      id: `shop-intro:${peerBusiness.id}`,
+      body: introBody,
+      sent_at: peerBusiness.created_at ?? new Date().toISOString(),
+      read_at: null,
+      mine: false,
+      reply_to_id: null,
+      reply_preview: null,
+      deleted_for_everyone: false,
+      attachment_url: null,
+      attachment_type: null,
+      attachment_call_invite: null,
+      attachment_product: null,
+      attachment_menu_item: null,
+      attachment_cart: null,
+      attachment_meta: null,
+      edited_at: null,
+      sticker_slug: null,
+      encrypted: false,
+      recipient_device_id: null,
+      sender_account_id: peer.id,
+      message_group_id: null,
+    } as unknown as (typeof bloomMessages)[number]);
+  }
+
   // Owner-authorised 2026-11-05 · drawer identity for the shared "+"
   // ControlDrawer rendered inside FreeChatHeader. Sourced from the
   // server-resolved session · null if session resolution failed (would

@@ -1514,3 +1514,71 @@ export async function updateBusinessHours(
   }
   return data as NexBusinessRow;
 }
+
+// ---------------------------------------------------------------------------
+// Shop intro message · owner-sealed 2026-11-13.
+// ---------------------------------------------------------------------------
+
+/** Maximum length of the stored intro message · mirrors the DB CHECK
+ *  constraint in migration 344. UI should mirror this cap. */
+export const SHOP_INTRO_MESSAGE_MAX = 500;
+
+/** Default template rendered when a shop owner hasn't customised
+ *  their intro. `[Shop Name]` is substituted at render time from the
+ *  passed display name so owners see what their visitors see without
+ *  the server ever having to backfill the column. */
+const SHOP_INTRO_DEFAULT_TEMPLATE =
+  "Hi! Welcome to {shop}. Thanks for visiting our shop. If you have any questions about our products, prices or services, just send us a message. We're happy to help!";
+
+/** Resolve the first-bubble intro message the visitor will see when
+ *  they open the shop chat. Returns the owner's customised message
+ *  when present (trimmed, not empty), otherwise fills the default
+ *  template with the shop display name.
+ *
+ *  Deliberately pure · no DB read · callers pass the business row
+ *  they already have (listBusinessesByOwner, getBusinessBySlug,
+ *  etc.). Keeps the pseudo-bubble render path cheap. */
+export function resolveShopIntroMessage(
+  business: Pick<NexBusinessRow, "display_name" | "shop_intro_message">,
+): string {
+  const stored = business.shop_intro_message?.trim();
+  if (stored && stored.length > 0) return stored;
+  return SHOP_INTRO_DEFAULT_TEMPLATE.replace(
+    "{shop}",
+    business.display_name || "our shop",
+  );
+}
+
+/** Persist the shop owner's intro message. Pass an empty string to
+ *  clear the custom message (NULL in DB · falls back to default).
+ *  Caller is responsible for ownership check. */
+export async function updateShopIntroMessage(
+  id: NexUuid,
+  message: string | null,
+): Promise<NexBusinessRow> {
+  const next =
+    message === null
+      ? null
+      : (() => {
+          const trimmed = message.trim();
+          if (trimmed.length === 0) return null;
+          if (trimmed.length > SHOP_INTRO_MESSAGE_MAX) {
+            throw new Error(
+              `business-service.updateShopIntroMessage(${id}): message exceeds ${SHOP_INTRO_MESSAGE_MAX} chars`,
+            );
+          }
+          return trimmed;
+        })();
+  const { data, error } = await nexSupabaseAdmin
+    .from("nex_business")
+    .update({ shop_intro_message: next })
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error || !data) {
+    throw new Error(
+      `business-service.updateShopIntroMessage(${id}): ${error?.message ?? "no row returned"}`,
+    );
+  }
+  return data as NexBusinessRow;
+}
