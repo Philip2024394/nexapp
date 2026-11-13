@@ -34,6 +34,16 @@ import {
 // sent_at) · zero plaintext + zero ciphertext travels over the
 // broadcast channel.
 import { emitMessageArrival } from "@/lib/nex-native/realtime/message-arrival";
+// Owner directive 2026-11-13 (iter 22) · dispatch a push notification
+// to every participant on the conversation EXCEPT the sender so the
+// shop (or buyer) receives a badge even when their chat tab is
+// closed. Service enforces fail-closed preference reads and the Vault
+// boundary · we pass ONLY a generic preview string · the decrypted
+// plaintext body never leaves the device.
+import { dispatchPushNotification } from "@/lib/nex-native/notification-dispatch-service";
+import { listParticipants } from "@/lib/nex-native/conversation-service";
+import { getAccountById } from "@/lib/nex-native/account-service";
+import { resolveAccountLocale, t as tI18n } from "@/lib/nex/i18n/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -156,15 +166,72 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   try {
     const ids = await sendEncryptedBusinessMessages(inserts);
+    const conversationId = inserts[0]!.conversation_id;
+    const attachmentType = inserts[0]!.attachment_type ?? null;
     // Fire-and-forget arrival nudge · reuses the sealed Bridge 73
     // broadcast · payload is conversation_id + group_id + timestamp
     // only (no row data, no ciphertext). Receivers pull from /since.
     const sentAtIso = new Date().toISOString();
     void emitMessageArrival({
-      conversationId: inserts[0]!.conversation_id,
+      conversationId,
       messageGroupId: body.message_group_id,
       sentAtIso,
     });
+
+    // Owner directive 2026-11-13 (iter 22) · push notification fan-out
+    // to every participant except the sender. Fire-and-forget · a
+    // dispatch failure MUST NOT flip this successful send into a
+    // failed send. The body preview is a generic localised string ·
+    // NEVER the decrypted ciphertext. dispatchPushNotification
+    // enforces the Vault boundary + fail-closed category prefs.
+    void (async () => {
+      try {
+        const [participants, senderAccount] = await Promise.all([
+          listParticipants(conversationId).catch(() => []),
+          getAccountById(session.account.id).catch(() => null),
+        ]);
+        const senderDisplayName = senderAccount?.display_name || "Someone";
+        const previewKey =
+          attachmentType === "image"
+            ? "push.body.sentYouAPhoto"
+            : attachmentType === "video"
+              ? "push.body.sentYouAVideo"
+              : attachmentType === "audio"
+                ? "push.body.sentYouAVoiceNote"
+                : attachmentType === "product"
+                  ? "push.body.sentYouAMessage"
+                  : "push.body.sentYouAMessage";
+        const recipients = participants.filter(
+          (p) => p.account_id !== session.account.id,
+        );
+        for (const recipient of recipients) {
+          try {
+            const recipientAccount = await getAccountById(
+              recipient.account_id,
+            ).catch(() => null);
+            const locale = resolveAccountLocale(recipientAccount?.locale);
+            const previewBody = tI18n(previewKey, locale);
+            await dispatchPushNotification(recipient.account_id, "message", {
+              kind: "conversation",
+              conversationId,
+              title: senderDisplayName,
+              body: previewBody,
+              data: {
+                type: "business_message",
+                conversationId,
+                messageGroupId: body.message_group_id,
+                senderAccountId: session.account.id,
+              },
+            });
+          } catch {
+            /* per-recipient failures swallowed · continue the fan-out */
+          }
+        }
+      } catch {
+        /* fire-and-forget · errors are swallowed by design */
+      }
+    })();
+
     return NextResponse.json({ ok: true, ids });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

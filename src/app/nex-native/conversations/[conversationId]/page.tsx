@@ -73,12 +73,30 @@ export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ conversationId: string }>;
+  // Owner directive 2026-11-13 (iter 22) · draft stash arriving from
+  // the anon signup return flow. Base64 utf-8 encoded. Decoded and
+  // passed to the client as initialDraft · the client auto-sends it
+  // once the device key resolves, then clears the URL param.
+  searchParams?: Promise<{ draft?: string }>;
 }
 
 export default async function BusinessConversationPage({
   params,
+  searchParams,
 }: PageProps): Promise<React.JSX.Element> {
   const { conversationId } = await params;
+  const sp = (await searchParams) ?? {};
+  // Server-side decode of the base64 utf-8 draft stash. Uses Buffer
+  // (Node runtime). If decoding fails we silently fall through with
+  // an empty draft so a malformed URL never crashes the page.
+  let initialDraft = "";
+  if (typeof sp.draft === "string" && sp.draft.length > 0) {
+    try {
+      initialDraft = Buffer.from(sp.draft, "base64").toString("utf8");
+    } catch {
+      initialDraft = "";
+    }
+  }
 
   const session = await resolveSessionWithDevOverride();
   if (!session) {
@@ -516,6 +534,7 @@ export default async function BusinessConversationPage({
         shopProducts={products}
         initialMessages={messages}
         viewerSide={viewerParticipant.side}
+        initialDraft={initialDraft}
       />
     </main>
   );

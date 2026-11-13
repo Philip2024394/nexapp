@@ -81,6 +81,11 @@ interface Props {
   // means render a non-tappable avatar.
   readonly peerLinkHref: string | null;
   readonly peerDisplayName: string | null;
+  // Owner directive 2026-11-13 (iter 22) · optional draft stash from
+  // the anon signup return flow. If non-empty, the client auto-sends
+  // it exactly ONCE after the device key resolves, then clears the
+  // URL param so a reload doesn't re-send.
+  readonly initialDraft?: string;
   readonly shopProducts: ReadonlyArray<{
     id: string;
     name: string;
@@ -122,6 +127,7 @@ export function BusinessConversationClient({
   peerAvatarUrl,
   peerLinkHref,
   peerDisplayName,
+  initialDraft,
   shopProducts,
   initialMessages,
   viewerSide,
@@ -238,6 +244,32 @@ export function BusinessConversationClient({
     },
     [],
   );
+
+  // Owner directive 2026-11-13 (iter 22) · auto-send the stashed draft
+  // from the anonymous signup return flow EXACTLY ONCE. We wait for
+  // selfDeviceId so encryption can actually run, then fire doSend. A
+  // ref guards against StrictMode double-invocation + any subsequent
+  // state-driven re-run. We also clean the URL so a reload doesn't
+  // re-send. Non-encrypted plaintext body goes through the same
+  // doSend path as a normal tap-send · nothing special server-side.
+  const autoSendFiredRef = React.useRef<boolean>(false);
+  React.useEffect(() => {
+    if (autoSendFiredRef.current) return;
+    if (!initialDraft || !initialDraft.trim()) return;
+    if (!selfDeviceId) return;
+    if (!peerReady) return;
+    autoSendFiredRef.current = true;
+    void doSend(initialDraft.trim());
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has("draft")) {
+        url.searchParams.delete("draft");
+        window.history.replaceState({}, "", url.pathname + (url.search || ""));
+      }
+    }
+    // intentional · we fire once on first ready state
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selfDeviceId, peerReady, initialDraft]);
 
   // ── Decrypt INITIAL messages (first paint) ───────────────────────
   React.useEffect(() => {
