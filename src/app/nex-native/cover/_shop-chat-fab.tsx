@@ -93,22 +93,18 @@ export function ShopChatFab({
   }, [showPopup]);
 
   function onTap(): void {
-    // Owner directive 2026-11-13 · the FAB now routes through the
-    // business-scoped conversation system (nex_conversation keyed by
-    // business_id) instead of the personal peer chat. When signed in,
-    // the shop page's `?open-chat=1` server-side redirect handles the
-    // findOrCreate + navigation (see peer page + openShopChatAction),
-    // so a FAB tap on a shop page the viewer is ALREADY on just
-    // reloads with ?open-chat=1 · the shop page then calls
-    // openShopChatAction(slug) which resolves the correct shop
-    // conversation and redirects to /conversations/<id>. Falls back
-    // to the sealed registration popup when signed out.
+    // Owner directive 2026-11-13 (iter 21) · sign-up gate moved to
+    // first SEND. Anonymous visitors now route to the chat preview
+    // page `/nex-native/<slug>/chat` so they can see the shop
+    // identity, welcome message, and products BEFORE being asked to
+    // sign up. The popup fires from the preview's composer when
+    // they tap send for the first time. Signed-in flow is unchanged.
     if (!shopSlug) return;
     if (isSignedIn) {
       router.push(`/nex-native/${shopSlug}?open-chat=1`);
       return;
     }
-    setShowPopup(true);
+    router.push(`/nex-native/${shopSlug}/chat`);
   }
 
   const shopLabel = shopName?.trim() || "this shop";
