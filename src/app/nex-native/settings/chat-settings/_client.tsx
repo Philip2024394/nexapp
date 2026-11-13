@@ -96,7 +96,7 @@ export function ChatSettingsClient({
       />
       <ControlCard
         emoji="📷"
-        title="Screenshot Protection"
+        title="Screenshot"
         subtitle="Prevent screen copy"
         rightIndicator={screenshotProtection ? "on" : "off"}
         onClick={() => setOpen({ kind: "boolean", id: "screenshot" })}
@@ -109,7 +109,7 @@ export function ChatSettingsClient({
               ? "Read receipts"
               : open.id === "typing"
                 ? "Typing Indicator"
-                : "Screenshot Protection"
+                : "Screenshot"
           }
           current={
             open.id === "receipts"
