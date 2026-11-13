@@ -41,6 +41,8 @@ export const LIBRARY_THEMES: readonly LibraryTheme[] = [
   { id: "library-nex-teddy",    label: "NEX · Teddy Bear Shopping", wallpaperUrl: "/nex-themes/ireland/teddy-bear-shopping.png", oneTimePriceEUR: 3.99, accentHex: "#C6A15B", downloads: 0, isNew: true },
   { id: "library-nex-puppy",    label: "NEX · Puppy & Kitten Cuddle", wallpaperUrl: "/nex-themes/ireland/puppy-kitten-cuddle.png", oneTimePriceEUR: 3.99, accentHex: "#C6A15B", downloads: 0, isNew: true },
   { id: "library-nex-supercar", label: "NEX · Sunset Supercar Showdown", wallpaperUrl: "/nex-themes/ireland/sunset-supercar.png", oneTimePriceEUR: 3.99, accentHex: "#C6A15B", downloads: 0, isNew: true },
+  { id: "library-nex-luxury",    label: "NEX · Luxury Shopping Showcase",  wallpaperUrl: "/nex-themes/ireland/luxury-shopping.png",   oneTimePriceEUR: 3.99, accentHex: "#C6A15B", downloads: 0, isNew: true },
+  { id: "library-nex-racehorse", label: "NEX · Golden-Hour Racehorse Sprint", wallpaperUrl: "/nex-themes/ireland/racehorse-sprint.png", oneTimePriceEUR: 3.99, accentHex: "#C6A15B", downloads: 0, isNew: true },
   // ── Release 1 · 2026-11-02 (Ireland first drop) ─────────────────
   { id: "library-ireland-1", label: "Ireland · Dawn",     wallpaperUrl: "/nex-themes/library/preview/ireland-1.png", oneTimePriceEUR: 3.99, accentHex: "#C6A15B", downloads: 2847 },
   { id: "library-ireland-2", label: "Ireland · Dusk",     wallpaperUrl: "/nex-themes/library/preview/ireland-2.png", oneTimePriceEUR: 3.99, accentHex: "#C6A15B", downloads: 2104 },

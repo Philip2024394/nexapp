@@ -1,16 +1,20 @@
 // src/app/nex-native/settings/page.tsx
 //
 // NEX Settings landing · gear icon in the shared page header points here.
-// Hero row: three equal icon tiles (Emergency Help · Family Safe · Community
-// Noticeboard) → the three safety-adjacent destinations. Below the hero:
+// Hero row: two equal icon tiles (Emergency Help · Community Noticeboard) →
+// the two safety-adjacent destinations. Owner directive 2026-11-12 ·
+// Family Safe tile removed · child-safe surfaces retired from the app.
+// Below the hero:
 // every sealed Settings group and row rendered from the single source of
 // truth at `./_sections.ts` (SETTINGS_GROUPS). No inline duplication of row
 // definitions.
 //
-// Settings is a FUNCTIONAL control surface · it uses the solid NEX palette
-// (navy #020914 bg, cyan #00AFFF accent, orange #FF7200 brand). Never
-// theme Settings per active World · the sealed universal theme controls
-// doctrine applies here. (Regression anchor read by _settings-ia.test.ts § E.)
+// Settings is a FUNCTIONAL control surface · owner directive 2026-11-12
+// swapped the palette to Pale Ivory #F5EDD3 bg + white #FFFFFF panel +
+// orange #FF7200 primary + amber #C6A15B secondary accent. No blue, no
+// navy anywhere on this surface. Never theme Settings per active World ·
+// the sealed universal theme controls doctrine applies here.
+// (Regression anchor read by _settings-ia.test.ts § E.)
 //
 // 2026-10-15 · Phase 0 discoverability refresh. The landing now walks
 // SETTINGS_GROUPS and renders every legitimate row with its sealed
@@ -29,14 +33,19 @@
 // (settings.rows.<key>.title / settings.groups.<key>.label) so adding
 // a new row forces a translation pack update at compile time.
 
-import type * as React from "react";
+import * as React from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// Owner directive 2026-11-11 (Cycle 39) · switched from
+// resolveNexAppSessionFromContext to resolveSessionWithDevOverride so
+// the dev impersonation cookie (`nex_dev_override=nex-99901`) is
+// honoured on /settings the same way it is on /contacts and other
+// authed surfaces. Without this, dev sessions were bouncing to
+// /sign-in even though the viewer had a valid override.
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { NexPageHeader } from "../_page-header";
 import { signOutAction } from "../_actions";
-import { isFamilySafetyEnabled } from "@/lib/nex-native/family-safety/feature-flag";
 import { isAffiliateAccount } from "@/lib/nex-native/affiliate-service";
 import { SETTINGS_GROUPS, type SettingsRowDef } from "./_sections";
 import { resolveServerLocale, tFor } from "@/lib/nex/i18n/server";
@@ -45,20 +54,26 @@ import type { I18nKey } from "@/lib/nex/i18n/keys";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Owner directive 2026-11-12 · Settings palette · no blue, no navy.
+// Backdrop is the sealed Pale Ivory #F5EDD3 country base; rows live
+// in a white panel; accents are orange / amber / earthy brown.
 const NEX = {
-  bg: "var(--nex-world-background-base, #020914)",
-  panel: "#03101D",
-  panelHi: "#0A1A2D",
-  textPrimary: "#F2F5F8",
-  textSecondary: "#7D9BC0",
-  textMuted: "#4B6683",
-  cyan: "#00AFFF",
-  cyanSoft: "rgba(0, 175, 255, 0.35)",
-  cyanFaint: "rgba(0, 175, 255, 0.12)",
+  bg: "#F5EDD3",
+  panel: "#FFFFFF",
+  panelHi: "#FFF7E0",
+  textPrimary: "#1A1512",
+  textSecondary: "#5A4F42",
+  textMuted: "#8A7F72",
+  // Owner directive 2026-11-12 · retained key names to avoid changing
+  // every callsite below; former "cyan" slot now carries the warm amber
+  // used as the primary accent on light surfaces.
+  cyan: "#C6A15B",
+  cyanSoft: "rgba(198, 161, 91, 0.35)",
+  cyanFaint: "rgba(198, 161, 91, 0.12)",
   orange: "#FF7200",
   orangeFaint: "rgba(255, 114, 0, 0.14)",
-  danger: "#FF4D5E",
-  dangerFaint: "rgba(255, 77, 94, 0.14)",
+  danger: "#B91C1C",
+  dangerFaint: "rgba(185, 28, 28, 0.12)",
 };
 
 type T = (key: I18nKey) => string;
@@ -97,7 +112,7 @@ export default async function SettingsIndex({
 }: {
   searchParams: Promise<{ lang?: string }>;
 }) {
-  const session = await resolveNexAppSessionFromContext();
+  const session = await resolveSessionWithDevOverride();
   if (!session) redirect("/nex-native/sign-in");
 
   // Phase 1 · universal locale resolution. Precedence sealed in
@@ -115,9 +130,12 @@ export default async function SettingsIndex({
   });
   const t: T = tFor(locale);
 
-  const familyEnabled = isFamilySafetyEnabled();
   const joinedAffiliate = await isAffiliateAccount(session.account.id).catch(() => false);
 
+  // Owner directive 2026-11-12 · Family Safe hero tile removed ·
+  // isFamilySafetyEnabled() + the Family Safe entry are retired from
+  // the settings landing. Service library and DB tables kept untouched
+  // per owner-sealed "UI + nav only" removal scope.
   const heroTiles: HeroTile[] = [
     {
       href: "/nex-native/emergency-help",
@@ -125,18 +143,6 @@ export default async function SettingsIndex({
       titleKey: "settings.hero.emergencyHelp",
       tone: "danger",
     },
-    ...(familyEnabled
-      ? [
-          {
-            href: "/nex-native/family-safety",
-            icon: "🛡",
-            titleKey: "settings.hero.familySafe" as const,
-            tone: "cyan" as const,
-            pilotLabelKey: "settings.hero.familySafePilot.label" as const,
-            pilotAriaKey: "settings.hero.familySafePilot.aria" as const,
-          },
-        ]
-      : []),
     {
       href: "/nex-native/community",
       icon: "🏘",
@@ -181,79 +187,207 @@ export default async function SettingsIndex({
 
   return (
     <>
+      {/* Owner directive 2026-11-12 · settings page bg = Pale Ivory
+          country base · no blue, no navy anywhere on this surface.
+          The warm radial from before (cyan tint) is retired. */}
       <style>{`html, body { background: ${NEX.bg} !important; }`}</style>
       <main
         style={{
-          minHeight: "100dvh",
+          // Owner fix 2026-11-12 · page is mounted inside the sealed
+          // nex-native-frame which has overflow: hidden + fixed height
+          // on desktop. Main must OWN its own scroll so the top strip
+          // can be sticky · otherwise rows below the fold (including
+          // the share-link row for see-my-theme) are clipped off and
+          // the user cannot reach them.
+          height: "100%",
+          maxHeight: "100dvh",
+          overflowY: "auto",
+          WebkitOverflowScrolling: "touch",
           background: NEX.bg,
           color: NEX.textPrimary,
           fontFamily:
             "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-          padding: "16px 20px 32px",
           position: "relative",
-          overflow: "hidden",
         }}
       >
+        {/* Owner directive 2026-11-12 · sticky top strip · stays pinned
+            when the user scrolls through the settings list. Left: the
+            "Settings" wordmark. Right: the drawer trigger (orange + pill)
+            delegated to NexPageHeader with brand + search hidden. */}
         <div
-          aria-hidden
+          data-nex-settings-sticky-header
           style={{
-            position: "absolute",
-            inset: 0,
-            background:
-              "radial-gradient(60% 40% at 50% 0%, rgba(0,175,255,0.09), transparent 70%)",
-            pointerEvents: "none",
+            position: "sticky",
+            top: 0,
+            zIndex: 20,
+            background: NEX.bg,
+            padding:
+              "calc(env(safe-area-inset-top, 0px) + 10px) 20px 12px",
           }}
-        />
-        <div style={{ position: "relative", maxWidth: 480, margin: "0 auto" }}>
-          <NexPageHeader dataScope="settings" />
+        >
+          <div
+            style={{
+              maxWidth: 480,
+              margin: "0 auto",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <h1
+              style={{
+                margin: 0,
+                fontSize: 22,
+                fontWeight: 800,
+                color: NEX.textPrimary,
+                letterSpacing: "-0.01em",
+              }}
+            >
+              Settings
+            </h1>
+            <div style={{ flexShrink: 0 }}>
+              <NexPageHeader
+                dataScope="settings"
+                hideBrand
+                hideSearch
+              />
+            </div>
+          </div>
+        </div>
 
-          <h1
-            style={{
-              margin: "24px 0 6px",
-              textAlign: "center",
-              fontSize: 22,
-              fontWeight: 500,
-              letterSpacing: "0.005em",
-            }}
-          >
-            {t("settings.page.title")}
-          </h1>
-          <p
-            style={{
-              margin: "0 0 22px",
-              textAlign: "center",
-              fontSize: 12,
-              color: NEX.textSecondary,
-            }}
-          >
-            {t("settings.page.signedInAs")}{" "}
-            <span style={{ color: NEX.textPrimary }}>
-              {session.account.display_name}
-            </span>
-            {session.account.nex_handle && (
-              <>
-                {" · "}
-                <code style={{ fontFamily: "ui-monospace, monospace", color: NEX.cyan }}>
-                  {session.account.nex_handle}
-                </code>
-              </>
-            )}
-          </p>
+        <div
+          style={{
+            position: "relative",
+            maxWidth: 480,
+            margin: "0 auto",
+            padding: "0 20px 32px",
+          }}
+        >
 
-          <section
-            aria-label={t("settings.hero.ariaLabel")}
-            data-nex-settings-hero="true"
+          {/* Owner directive 2026-11-12 · wrap the whole settings list
+              in ONE tall white container. Small landscape rows live
+              inside. The page bg is Pale Ivory and the panel is pure
+              white so the rows read as a scrollable card deck. */}
+          <div
+            data-nex-settings-panel
             style={{
-              display: "grid",
-              gridTemplateColumns: `repeat(${heroTiles.length}, minmax(0, 1fr))`,
-              gap: 10,
-              marginBottom: 24,
+              marginTop: 18,
+              background: NEX.panel,
+              border: "1px solid rgba(26, 21, 18, 0.08)",
+              borderRadius: 18,
+              boxShadow: "0 6px 20px rgba(26, 21, 18, 0.06)",
+              padding: "18px 14px 24px",
             }}
           >
-            {heroTiles.map((tile) => (
-              <HeroTileCard key={tile.href} tile={tile} t={t} />
-            ))}
-          </section>
+            {/* Owner directive 2026-11-12 · page title is now in the
+                sticky top strip above · just the signed-in-as line
+                renders at the top of the panel. */}
+            <p
+              style={{
+                margin: "0 0 20px",
+                textAlign: "center",
+                fontSize: 12,
+                color: NEX.textSecondary,
+              }}
+            >
+              {t("settings.page.signedInAs")}{" "}
+              <span style={{ color: NEX.textPrimary, fontWeight: 600 }}>
+                {session.account.display_name}
+              </span>
+              {session.account.nex_handle && (
+                <>
+                  {" · "}
+                  <code style={{ fontFamily: "ui-monospace, monospace", color: NEX.orange }}>
+                    {session.account.nex_handle}
+                  </code>
+                </>
+              )}
+            </p>
+
+            <section
+              aria-label={t("settings.hero.ariaLabel")}
+              data-nex-settings-hero="true"
+              style={{
+                display: "grid",
+                gridTemplateColumns: `repeat(${heroTiles.length}, minmax(0, 1fr))`,
+                gap: 10,
+                marginBottom: 22,
+              }}
+            >
+              {heroTiles.map((tile) => (
+                <HeroTileCard key={tile.href} tile={tile} t={t} />
+              ))}
+            </section>
+
+            {/* Owner directive 2026-11-12 · landscape master row for
+                controlling whether your contacts see your chat theme.
+                Links to the existing /settings/see-my-theme page where
+                the per-contact toggles live. When ALL per-contact
+                toggles are OFF, contacts see the standard cream default
+                instead of the user's selected theme. */}
+            <Link
+              href="/nex-native/settings/see-my-theme"
+              data-nex-settings-theme-share-row
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+                padding: "14px 16px",
+                marginBottom: 22,
+                background: NEX.panelHi,
+                border: "none",
+                borderRadius: 14,
+                textDecoration: "none",
+                color: NEX.textPrimary,
+              }}
+            >
+              <span
+                aria-hidden
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  background: NEX.orange,
+                  color: "#FFFFFF",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 18,
+                  flexShrink: 0,
+                }}
+              >
+                🎨
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: NEX.textPrimary,
+                  }}
+                >
+                  Show my chat theme to contacts
+                </div>
+                <div
+                  style={{
+                    marginTop: 2,
+                    fontSize: 12,
+                    color: NEX.textSecondary,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  Turn off to show the standard cream theme to any
+                  contact instead of your selected theme.
+                </div>
+              </div>
+              <span
+                aria-hidden
+                style={{ color: NEX.textMuted, fontSize: 18 }}
+              >
+                ›
+              </span>
+            </Link>
 
           {SETTINGS_GROUPS.map((group) => {
             const groupLabelKey = `settings.groups.${group.key}.label` as I18nKey;
@@ -281,10 +415,34 @@ export default async function SettingsIndex({
                   <span>{t(groupLabelKey)}</span>
                   <span style={{ flex: 1, height: 1, background: `${NEX.textMuted}22` }} />
                 </div>
-                <div style={{ display: "grid", gap: 10 }}>
-                  {group.rows.map((raw) => {
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    // Owner directive 2026-11-12 · rows live inside a
+                    // clean vertical stack separated by hairline
+                    // dividers · no card borders, no tinted backgrounds.
+                    background: NEX.panel,
+                    borderRadius: 14,
+                    padding: "2px 14px",
+                  }}
+                >
+                  {group.rows.map((raw, idx) => {
                     const r = resolveRow(raw);
-                    return <SettingsRowCard key={r.key} row={r} t={t} />;
+                    return (
+                      <React.Fragment key={r.key}>
+                        {idx > 0 ? (
+                          <div
+                            aria-hidden
+                            style={{
+                              height: 1,
+                              background: "rgba(26, 21, 18, 0.08)",
+                            }}
+                          />
+                        ) : null}
+                        <SettingsRowCard row={r} t={t} />
+                      </React.Fragment>
+                    );
                   })}
                 </div>
               </section>
@@ -316,8 +474,8 @@ export default async function SettingsIndex({
                 minHeight: 44,
                 borderRadius: 10,
                 background: "transparent",
-                border: `1px solid ${NEX.cyanSoft ?? "rgba(0,175,255,0.35)"}`,
-                color: NEX.cyan ?? "#00AFFF",
+                border: `1px solid ${NEX.cyanSoft}`,
+                color: NEX.textPrimary,
                 fontSize: 13,
                 fontWeight: 600,
                 textDecoration: "none",
@@ -343,6 +501,8 @@ export default async function SettingsIndex({
               {t("settings.page.signOut")}
             </button>
           </form>
+          {/* close data-nex-settings-panel */}
+          </div>
         </div>
       </main>
     </>
@@ -366,14 +526,18 @@ function SettingsRowCard({ row, t }: { row: ResolvedRow; t: T }) {
   // Horizontal fit: the chevron now sits tighter against the right
   // edge (fontSize 18, no marginLeft) to free a few pixels on narrow
   // phone viewports and keep the whole card inside the content column.
+  // Owner directive 2026-11-12 · rimless rows · no border, no card
+  // outline · just emoji tile + text + chevron. Tap target still 44px+
+  // via minHeight. Rows get an inside horizontal rule below via the
+  // parent `divide` style, not per-card borders.
   const style: React.CSSProperties = {
     display: "flex",
     alignItems: "center",
     gap: 12,
-    padding: "12px 14px",
-    background: NEX.panel,
-    border: `1px solid ${isComingSoon ? "rgba(0,175,255,0.18)" : NEX.cyanSoft}`,
-    borderRadius: 12,
+    padding: "14px 4px",
+    background: "transparent",
+    border: "none",
+    borderRadius: 0,
     textDecoration: "none",
     color: NEX.textPrimary,
     // minHeight preserves the 44px touch-target floor while allowing

@@ -18,9 +18,10 @@ import { listBusinessesByOwner } from "@/lib/nex-native/business-service";
 import { getShopCoverOverrides } from "@/lib/nex-native/shop-cover-service";
 import { effectiveTier } from "@/lib/nex-native/account-service";
 import {
-  ControlDrawer,
-  type ControlDrawerSession,
-} from "@/components/nex-native/control-drawer/control-drawer-client";
+  COVER_LAYOUT_IDS,
+  type CoverLayoutId,
+} from "@/app/nex-native/cover/layout-ids";
+import { NexPageHeader } from "../../../_page-header";
 import { ShopBackgroundsClient } from "./_client";
 
 export const runtime = "nodejs";
@@ -43,15 +44,27 @@ export default async function ShopBackgroundsPage(): Promise<React.JSX.Element> 
     ? await getShopCoverOverrides(business.id)
     : { imageUrl: null, tintHex: null };
 
-  // Owner directive 2026-11-07 · shared ControlDrawer in the header's
-  // right-side slot so the user can navigate away from the backgrounds
-  // library without leaving the phone-frame shell. Same shape mounted
-  // on /cover-themes-library + /directory/landing + /contacts.
-  const drawerSession: ControlDrawerSession = {
-    displayName: session.account.display_name,
-    nexHandle: session.account.nex_handle,
-    isBisnis: effectiveTier(session.account) === "bisnis",
-  };
+  // Owner directive 2026-11-12 (fifth pass) · the preview popup on
+  // this page needs to render the user's PREVIOUSLY SELECTED template
+  // (nex_business.cover_layout_id) with the candidate background
+  // painted behind it · same iframe route (`?embed=1`) as the themes
+  // picker. "cafe" is the sealed first-visit default (matches
+  // /manage/shop/themes/page.tsx line 72).
+  const currentLayoutId: CoverLayoutId =
+    business?.cover_layout_id &&
+    (COVER_LAYOUT_IDS as readonly string[]).includes(business.cover_layout_id)
+      ? (business.cover_layout_id as CoverLayoutId)
+      : "cafe";
+
+  // Owner directive 2026-11-12 · shared NexPageHeader (brand chip +
+  // global black "+" drawer button) replaces the custom drawer slot +
+  // orange "Browse NEX Visual Library" CTA. Supersedes the 2026-11-07
+  // custom-drawer and the 2026-11-11 library CTA at the top of this
+  // page · both read as chrome noise on the simplified launch surface.
+  // tier()/effectiveTier helpers remain imported in case NexPageHeader
+  // ever needs the Bisnis flag; today it auto-resolves via
+  // resolveSessionWithDevOverride.
+  void effectiveTier;
 
   return (
     <>
@@ -68,60 +81,44 @@ export default async function ShopBackgroundsPage(): Promise<React.JSX.Element> 
           flexDirection: "column",
           overflow: "hidden",
           padding:
-            "calc(env(safe-area-inset-top, 0px) + 14px) 20px calc(env(safe-area-inset-bottom, 0px) + 14px)",
+            "calc(env(safe-area-inset-top, 0px) + 10px) 14px calc(env(safe-area-inset-bottom, 0px) + 14px)",
           boxSizing: "border-box",
         }}
       >
-        {/* Owner directive 2026-11-07 · absolute drawer slot anchored
-            top-right of the page so it stays above the scrollable grid
-            inside _client without reserving a row in the client layout.
-            z-index above the client content · tap target 36×36 (sealed
-            ControlDrawer trigger size). */}
-        <div
-          data-nex-shop-backgrounds-drawer-slot
-          style={{
-            position: "absolute",
-            top: "calc(env(safe-area-inset-top, 0px) + 14px)",
-            right: 20,
-            zIndex: 20,
-          }}
-        >
-          <ControlDrawer session={drawerSession} />
-        </div>
-        {/* Owner directive 2026-11-11 · Phase 1 unified NEX Visual
-            Library · deep-link CTA at top of the existing shop
-            picker. Lets the owner browse the shared catalog with a
-            shop preview. Writes go through the library's own shop
-            action (applyFromLibraryShopAction), which uses the same
-            nex_business.shop_cover_image_url + shop_cover_tint_hex
-            columns as the legacy applyShopPresetBackgroundAction,
-            so this picker remains fully functional alongside it. */}
-        {business ? (
-          <div style={{ padding: "8px 2px 0" }}>
-            <a
-              href={`/nex-native/library/backgrounds?context=shop&businessId=${encodeURIComponent(business.id)}&returnTo=${encodeURIComponent("/nex-native/manage/shop/backgrounds")}`}
-              data-nex-shop-library-cta
+        {/* Owner directive 2026-11-12 (third pass) · header title
+            "Shop Backgrounds" now lives INSIDE the global NexPageHeader
+            (left slot via `brandSlot`) · promoted from the h1 hero
+            that sat below the header. The hero slot below shrinks to
+            a subtitle ("Choose Shop background"). Brand ping-badge
+            still hidden · the backgrounds library reads as a gallery
+            not an identity surface. */}
+        <NexPageHeader
+          dataScope="shop-backgrounds"
+          hideSearch
+          brandSlot={
+            <div
+              data-nex-shop-bg-header-title
               style={{
-                display: "block",
-                padding: "10px 14px",
-                borderRadius: 10,
-                background: "#FF7200",
-                color: "#FFFFFF",
-                textDecoration: "none",
+                fontSize: 18,
                 fontWeight: 900,
-                fontSize: 13,
-                letterSpacing: "0.04em",
-                textAlign: "center",
-                textTransform: "uppercase",
+                color: "#000000",
+                letterSpacing: "-0.01em",
+                lineHeight: 1.1,
+                minWidth: 0,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
               }}
             >
-              Browse NEX Visual Library
-            </a>
-          </div>
-        ) : null}
+              Shop Backgrounds
+            </div>
+          }
+        />
         <ShopBackgroundsClient
           businessId={business?.id ?? null}
           currentImageUrl={overrides.imageUrl}
+          currentLayoutId={currentLayoutId}
+          currentTintHex={overrides.tintHex}
         />
       </main>
     </>

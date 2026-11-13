@@ -93,7 +93,21 @@ export const viewport: Viewport = {
   themeColor: "#020914",
 };
 
+import { nexSiteUrl } from "@/lib/nex-native/seo/site-url-resolver";
+
+// Owner directive 2026-11-11 (SEO B1) · metadataBase resolves from
+// NEX_PUBLIC_SITE_URL_IE / _WW with dev fallback. canonical defaults
+// to the root nex-native path · child routes override via their own
+// alternates.canonical when relevant. In production, a missing env
+// var throws at build time (sealed safeguard) rather than silently
+// emitting a localhost URL.
+const SEO_BASE_URL = nexSiteUrl();
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SEO_BASE_URL),
+  alternates: {
+    canonical: "/nex-native",
+  },
   title: {
     default: "NEX · Chat that's yours",
     template: "%s · NEX",
@@ -211,9 +225,11 @@ export default async function NexNativeLayout({
     <I18nProvider initialLang={initialLang}>
       {/* Preload the country backdrop. See activeBackdropUrl above. */}
       <link rel="preload" as="image" href={activeBackdropUrl} />
-      {/* Dev-only banner · see _dev-impersonation-banner.tsx. Renders
-          `null` in production so there is zero prod footprint. */}
-      <DevImpersonationBanner />
+      {/* Owner directive 2026-11-12 · DevImpersonationBanner (the
+          blue "Impersonating nex-99901" strip at the top) is no
+          longer mounted · the strip was visually intrusive even in
+          dev. The banner component + env-var check stay on disk in
+          case a future diagnostic needs it, but the surface is off. */}
       {/* Owner-authorised 2026-10-31 · World Engine CSS vars. */}
       <WorldStylesheet />
       {/* Owner directive 2026-11-10 (chat-speed P3) · slide-in navigation.

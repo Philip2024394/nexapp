@@ -33,7 +33,7 @@ import {
   FAMILY_HOME_SNAPSHOT_SAFE_DEFAULT,
   type FamilyHomeSnapshot,
   type FamilyMembershipState,
-} from "@/components/nex-native/family-safety/types";
+} from "./_ui-types";
 
 // ─────────────────────────────────────────────────────────────────────
 // Pending-invitation count · READ-ONLY · default 0

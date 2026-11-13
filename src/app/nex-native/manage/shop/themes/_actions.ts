@@ -65,10 +65,20 @@ export async function applyShopTintAction(
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }
-  const result = tintHex
-    ? await updateShopCoverTint(businessId, tintHex)
-    : await clearShopCoverTint(businessId);
-  if (!result.ok) return { ok: false, error: result.error ?? "update-failed" };
+  // Owner fix 2026-11-12 · updateShopCoverTint / clearShopCoverTint
+  // return `void` (service-layer throws on failure) · the prior code
+  // treated the result as { ok, error } and crashed at runtime
+  // (digest 4005073838 in the dev log). Wrap in try/catch and return
+  // the discriminated union the client expects.
+  try {
+    if (tintHex) {
+      await updateShopCoverTint(businessId, tintHex);
+    } else {
+      await clearShopCoverTint(businessId);
+    }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message || "update-failed" };
+  }
   revalidatePath("/nex-native/manage/shop/themes");
   return { ok: true };
 }

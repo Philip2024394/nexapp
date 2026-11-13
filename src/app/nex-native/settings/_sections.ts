@@ -119,6 +119,19 @@ export const SETTINGS_GROUPS: readonly SettingsGroupDef[] = [
         subtitle: "Create your own paid intro video",
         highlighted: true,
       },
+      {
+        // Owner directive 2026-11-11 (Cycle 41) · surface the real
+        // chat-background-sync preference page. Ties the shop cover
+        // image and the chat background together in either direction;
+        // each direction is independent. Natural neighbour of Chat
+        // World and the intro rows.
+        key: "chat-background-sync",
+        href: "/nex-native/settings/chat-background-sync",
+        emoji: "🖼️",
+        title: "Background sync",
+        subtitle: "Link your shop cover to your chat background",
+        comingSoon: false,
+      },
     ],
   },
   {
@@ -156,6 +169,34 @@ export const SETTINGS_GROUPS: readonly SettingsGroupDef[] = [
         title: "Chat settings",
         subtitle:
           "Read receipts, online status, typing visibility and chat behaviour",
+        comingSoon: false,
+      },
+      {
+        // Owner directive 2026-11-11 (Cycle 40) · surface the
+        // disappearing-messages preference page that was already built
+        // but never linked from the Settings landing. Real route at
+        // /nex-native/settings/disappearing-messages renders a per-
+        // account default timer the user chooses for their own
+        // outgoing messages; the server deletes them when the timer
+        // elapses. Each contact's inbound messages honour that
+        // contact's own default.
+        key: "disappearing-messages",
+        href: "/nex-native/settings/disappearing-messages",
+        emoji: "⏳",
+        title: "Disappearing messages",
+        subtitle: "Set a default timer for messages you send",
+        comingSoon: false,
+      },
+      {
+        // Owner directive 2026-11-11 (Cycle 41) · surface the chat-
+        // font preference page. Lets the viewer pick the font used in
+        // their own chat UI. Reads/writes the account's chat_font
+        // column only · not applied to other users' chats.
+        key: "chat-font",
+        href: "/nex-native/settings/chat-font",
+        emoji: "🔤",
+        title: "Chat font",
+        subtitle: "Pick the font used in your chat",
         comingSoon: false,
       },
     ],
@@ -208,6 +249,20 @@ export const SETTINGS_GROUPS: readonly SettingsGroupDef[] = [
         emoji: "🔐",
         title: "Security",
         subtitle: "Account and sign-in security",
+        comingSoon: false,
+      },
+      {
+        // Owner directive 2026-11-11 (Cycle 41) · surface the chat-
+        // protection preference page. Viewer-side screenshot + copy
+        // block: when ON, the chat UI blocks text selection, right-
+        // click, and the copy keyboard shortcut on YOUR screen.
+        // Honest copy about scope (it's a viewer-side guard, not a
+        // server-enforced DRM).
+        key: "chat-protection",
+        href: "/nex-native/settings/chat-protection",
+        emoji: "🛡️",
+        title: "Screenshot & copy protection",
+        subtitle: "Block screenshot and copy inside your chat",
         comingSoon: false,
       },
     ],
@@ -263,6 +318,18 @@ export const SETTINGS_GROUPS: readonly SettingsGroupDef[] = [
     key: "payments-wallet",
     label: "Payments & NEX Wallet",
     rows: [
+      {
+        // Owner directive 2026-11-11 (Cycle 41) · surface the payment
+        // provider setup page from Settings in addition to the drawer
+        // link. Lets sellers connect Stripe / PayPal / QR codes for
+        // receiving payments on their shop orders.
+        key: "payments",
+        href: "/nex-native/settings/payments",
+        emoji: "💳",
+        title: "Payment providers",
+        subtitle: "Connect Stripe, PayPal and QR codes to receive payments",
+        comingSoon: false,
+      },
       {
         key: "wallet",
         href: null,

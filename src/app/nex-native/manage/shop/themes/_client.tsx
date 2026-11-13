@@ -27,11 +27,13 @@
 
 import * as React from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import {
   applyShopLayoutAction,
   applyShopPresetBackgroundAction,
   applyShopTintAction,
 } from "./_actions";
+import { SuggestedTintChip } from "./_suggested-tint-chip";
 import type { CoverLayoutId } from "@/app/nex-native/cover/layout-ids";
 
 const GOLD = "var(--nex-world-secondary, #C6A15B)";
@@ -52,14 +54,15 @@ const PAD_CREAM = "#FAF8F4";
 const PAD_INK = "#1A120A";
 const PAD_INK_DIM = "#5F4A2C";
 
-// Owner directive 2026-11-09 · replaces the earlier cc1.png cream +
-// gold canvas with the new emerald e-commerce backdrop. The Step 1
-// template picker paints every template on this backdrop so sellers
-// see each template's structure on a consistent brand canvas. The
-// owner's real saved background (currentImageUrl) still composes on
-// their public /{slug} shop · Step 2 (/backgrounds) is where they
-// pick it. PICKER + FULLSCREEN previews only · never written to the DB.
-const DEFAULT_PREVIEW_BG = "/nex-native/shop-themes-bg.png";
+// Owner directive 2026-11-12 · default picker backdrop swapped to the
+// sealed NEX Golden Holiday Shopping Scene. Used ONLY when the user
+// hasn't picked their own cover image yet · once they have one
+// (currentImageUrl), the picker previews ON THEIR IMAGE so what they
+// see in the picker matches their real shop. Written to disk only
+// (public/nex-native/shop-themes-default-bg.png) · never persisted to
+// the DB. The prior cream canvas lives at /nex-native/shop-themes-bg.png
+// in case a future surface wants the neutral canvas back.
+const DEFAULT_PREVIEW_BG = "/nex-native/shop-themes-default-bg.png";
 
 interface Props {
   readonly businessId: string | null;
@@ -84,14 +87,13 @@ export function ShopThemesClient({
   // Background + tint carry through unchanged so a save re-persists
   // whatever the owner last picked on /manage/shop/backgrounds.
   const imageUrl = currentImageUrl;
-  // Owner directive 2026-11-07 clarified · on the Step 1 template
-  // picker the preview ALWAYS paints on DEFAULT_PREVIEW_BG so
-  // sellers see each template on a neutral cream+gold canvas
-  // regardless of any background they may have already saved
-  // elsewhere. The real composed look (template + their chosen bg)
-  // renders on their public /{slug} shop · Step 2 (/backgrounds)
-  // is where they pick that background.
-  const previewImageUrl = DEFAULT_PREVIEW_BG;
+  // Owner directive 2026-11-12 · if the user has already picked their
+  // own shop background (currentImageUrl set), preview templates ON
+  // THEIR IMAGE so what they see here matches the real public shop.
+  // Only when they haven't picked one yet does the sealed Golden
+  // Holiday default (DEFAULT_PREVIEW_BG) paint behind the templates.
+  // Supersedes the 2026-11-07 "ALWAYS default" rule.
+  const previewImageUrl = currentImageUrl ?? DEFAULT_PREVIEW_BG;
   // Owner directive 2026-11-09 revision 2 · default tint updated to
   // the sealed NEX gold (#C6A15B) to pair with the new emerald e-
   // commerce background. The previous default #123D2B dark-emerald was
@@ -108,6 +110,13 @@ export function ShopThemesClient({
     | { kind: "error"; message: string }
   >({ kind: "idle" });
   const [pending, startTransition] = React.useTransition();
+  // Owner directive 2026-11-12 · after "Select template" lands, the
+  // owner is auto-advanced to /manage/shop/backgrounds to pick a
+  // background · the backgrounds page then redirects back here so the
+  // composed preview (template + background + tint) renders in the
+  // live iframe. This closes the flow:
+  //   themes → backgrounds → themes (with composed preview) → done.
+  const router = useRouter();
   const [fullscreen, setFullscreen] = React.useState(false);
 
   // No business row yet → soft empty state.
@@ -154,8 +163,16 @@ export function ShopThemesClient({
       }
       setStatus({
         kind: "ok",
-        message: "Template activated · your shop is live.",
+        message: "Template saved · choose your background next.",
       });
+      // Owner directive 2026-11-12 · auto-advance to the shop
+      // background library (chat-themes-style tile grid) so the
+      // owner picks their cover image next. The backgrounds page
+      // writes the pick + redirects back here · the live preview
+      // then composes template + background + tint. router.push is
+      // used instead of a server-side redirect because the action
+      // completes inside startTransition (client context).
+      router.push("/nex-native/manage/shop/backgrounds");
     });
   }
 
@@ -219,12 +236,15 @@ export function ShopThemesClient({
           borderBottom: `1px solid ${BORDER}`,
         }}
       >
+        {/* Owner directive 2026-11-12 (second pass) · "Shop Template"
+            heading repainted BLACK (was gray). Owner wanted it to
+            read as a clear anchor, not a muted subhead. */}
         <h1
           style={{
             margin: 0,
             fontSize: 20,
             fontWeight: 900,
-            color: GOLD,
+            color: "#000000",
             letterSpacing: "-0.01em",
           }}
         >
@@ -235,13 +255,13 @@ export function ShopThemesClient({
           style={{
             fontSize: 10,
             fontWeight: 900,
-            color: INK_MUTED,
+            color: "#9A9A9A",
             letterSpacing: "0.14em",
             textTransform: "uppercase",
             marginTop: 2,
           }}
         >
-          Step 1 of 2
+          Model Template - #1
         </span>
       </header>
 
@@ -252,11 +272,47 @@ export function ShopThemesClient({
           areas of the template render show cream through). Page
           chrome stays on the sealed dark Ireland NEX_BG. */}
 
+      {/* Owner directive 2026-11-12 (fourth pass) · "View large
+          screen" chip lives ABOVE the phone silhouette · centred row
+          outside the phone frame · supersedes the earlier overlay
+          placement inside the silhouette. */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          marginBottom: 6,
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setFullscreen(true)}
+          data-nex-template-fullscreen
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "6px 14px",
+            fontSize: 10.5,
+            fontWeight: 800,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "#1A120A",
+            background: "#FFD600",
+            border: "1px solid #E6B800",
+            borderRadius: 999,
+            cursor: "pointer",
+            fontFamily: "inherit",
+          }}
+        >
+          <span aria-hidden style={{ fontSize: 13, lineHeight: 1 }}>⤢</span>
+          View large screen
+        </button>
+      </div>
+
       {/* ── PHONE FRAME LIVE PREVIEW ─────────────────────────────
           Sealed 9:19.5 silhouette · narrow max-width keeps the frame
           tall + phone-shaped. Interior bg is off-white (PAD_CREAM)
-          per owner 2026-11-07. Fullscreen trigger (⤢) overlays the
-          top-right. */}
+          per owner 2026-11-07. */}
       <section
         aria-label="Live preview"
         style={{
@@ -272,10 +328,21 @@ export function ShopThemesClient({
           // stretches to fit both axes so no side bars and no vertical
           // crop · aspect ratio of image may distort slightly, that's
           // intentional per owner request. Solid gold rim all round.
-          background: "url('/nex-native/shop-themes-bg.png') center / 100% 100% no-repeat",
+          // Owner directive 2026-11-12 · silhouette backdrop swapped
+          // to the new sealed shop-themes-default-bg.png and now
+          // displays FULL HEIGHT (background-size: cover + center
+          // position · overflow is already hidden on the parent so
+          // horizontal overflow is cropped cleanly). The prior
+          // `100% 100%` size distorted the image on non-9:19.5
+          // ratios; `cover` preserves aspect.
+          background: `url('${DEFAULT_PREVIEW_BG}') center / cover no-repeat`,
           border: `2px solid ${GOLD}`,
           overflow: "hidden",
-          boxShadow: "0 18px 46px rgba(0, 0, 0, 0.4)",
+          // Owner directive 2026-11-12 · drop shadow removed so the
+          // phone silhouette sits on the page without a darker pool
+          // beneath it · page is now one consistent colour top to
+          // bottom.
+          boxShadow: "none",
           boxSizing: "border-box",
         }}
       >
@@ -308,6 +375,11 @@ export function ShopThemesClient({
             cue reads even without interaction. Not scroll-synced ·
             scope-contained. Full-screen overlay + public shop pages
             do NOT render this element. */}
+        {/* Owner directive 2026-11-12 · scroll-hint track + thumb now
+            inherit the current theme tint (`tintHex`) instead of the
+            hard-coded Ireland gold. Supersedes the 2026-11-07 gold
+            seal · the moving bar reads as part of the chosen theme's
+            palette so changing the tint colour changes the hint. */}
         <div
           aria-hidden
           data-nex-template-scroll-hint
@@ -318,7 +390,7 @@ export function ShopThemesClient({
             right: 5,
             width: 3,
             borderRadius: 999,
-            background: "rgba(198, 161, 91, 0.22)",
+            background: `${tintHex}38`,
             pointerEvents: "none",
             overflow: "hidden",
           }}
@@ -331,7 +403,7 @@ export function ShopThemesClient({
               width: "100%",
               height: "28%",
               borderRadius: 999,
-              background: GOLD,
+              background: tintHex,
               opacity: 0.85,
               animation: "nexTemplateScrollHint 3.6s ease-in-out infinite",
             }}
@@ -346,43 +418,6 @@ export function ShopThemesClient({
         `}</style>
       </section>
 
-      {/* Owner directive 2026-11-07 · "view large screen - must be
-          outside the phone the button and must open in screen size".
-          Labelled pill sits outside the phone frame · the full-
-          screen dialog portals to document.body and covers the
-          whole viewport. */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => setFullscreen(true)}
-          data-nex-template-fullscreen
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "8px 16px",
-            fontSize: 11,
-            fontWeight: 800,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            color: GOLD,
-            background: "rgba(5, 15, 28, 0.9)",
-            border: `1.5px solid ${BORDER_HI}`,
-            borderRadius: 999,
-            cursor: "pointer",
-            fontFamily: "inherit",
-          }}
-        >
-          <span aria-hidden style={{ fontSize: 14, lineHeight: 1 }}>⤢</span>
-          View large screen
-        </button>
-      </div>
-
       {/* ── Prev / count / next row under the phone ──────────── */}
       <div
         style={{
@@ -393,12 +428,15 @@ export function ShopThemesClient({
         }}
       >
         <ArrowPill direction="left" onClick={prevLayout} />
+        {/* Owner directive 2026-11-12 · counter text repainted gray
+            so the eye reads the orange arrow pills first and the
+            template number as the secondary label. */}
         <span
           data-nex-template-counter
           style={{
             fontSize: 14,
             fontWeight: 900,
-            color: INK,
+            color: "#9A9A9A",
             letterSpacing: "0.04em",
             fontVariantNumeric: "tabular-nums",
             minWidth: 150,
@@ -409,6 +447,13 @@ export function ShopThemesClient({
         </span>
         <ArrowPill direction="right" onClick={nextLayout} />
       </div>
+
+      {/* Owner directive 2026-11-12 · SuggestedTintChip removed.
+          The tint is auto-picked server-side in
+          applyShopPresetBackgroundAction (paired tint in
+          PRESET_BACKGROUND_META), so there's no need to ask the
+          owner to confirm. The chip + its client-side extractor
+          component stay on disk but unmounted. */}
 
       {/* ── Activate Shop CTA ─────────────────────────────────── */}
       <section
@@ -421,6 +466,10 @@ export function ShopThemesClient({
           paddingTop: 2,
         }}
       >
+        {/* Owner directive 2026-11-12 · Select template CTA repainted
+            NEX Orange with white ink + a soft orange glow. Matches
+            the other primary CTAs in the signup flow (Activate on
+            profile edit · Yes I'm in on /welcome/shop-offer). */}
         <button
           type="button"
           onClick={onApplyAll}
@@ -434,13 +483,14 @@ export function ShopThemesClient({
             fontWeight: 900,
             letterSpacing: "0.1em",
             textTransform: "uppercase",
-            color: "#1A120A",
-            background: GOLD,
+            color: "#FFFFFF",
+            background: "#FF7200",
             border: "none",
             borderRadius: 999,
             fontFamily: "inherit",
             cursor: pending || status.kind === "applying" ? "wait" : "pointer",
-            boxShadow: "0 12px 26px rgba(198,161,91,0.35)",
+            boxShadow:
+              "0 4px 14px rgba(255, 114, 0, 0.45), 0 0 20px rgba(255, 114, 0, 0.25)",
           }}
         >
           {status.kind === "applying"
@@ -522,22 +572,24 @@ function ArrowPill({
       onClick={onClick}
       aria-label={direction === "left" ? "Previous template" : "Next template"}
       style={{
-        width: 44,
-        height: 44,
+        // Owner directive 2026-11-12 (third pass) · prev/next buttons
+        // repainted as filled black circles with a white glyph ·
+        // supersedes the plain-text glyph pass earlier the same day.
+        width: 40,
+        height: 40,
         borderRadius: 999,
-        // Sits on the dark Ireland page bg · dark fill with gold
-        // ring + gold glyph reads cleanly on NEX_BG.
-        background: "rgba(5, 15, 28, 0.9)",
-        border: `1.5px solid ${BORDER_HI}`,
-        color: GOLD,
+        background: "#000000",
+        border: "none",
+        color: "#FFFFFF",
         display: "grid",
         placeItems: "center",
         cursor: "pointer",
-        fontSize: 20,
+        fontSize: 16,
         fontWeight: 900,
         lineHeight: 1,
         fontFamily: "inherit",
         padding: 0,
+        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.45)",
       }}
     >
       {direction === "left" ? "◀" : "▶"}
@@ -562,6 +614,10 @@ function TemplateLoadingOverlay({
   timedOut: boolean;
   onRetry: () => void;
 }): React.JSX.Element {
+  // Owner directive 2026-11-12 · delay state is a plain white page
+  // with a small circular spinner · no gold trim, no uppercase badge,
+  // no "Loading Template N" chrome. Timeout branch keeps the retry
+  // affordance but on the same white surface.
   return (
     <div
       aria-live="polite"
@@ -570,13 +626,13 @@ function TemplateLoadingOverlay({
       style={{
         position: "absolute",
         inset: 0,
-        background: "var(--nex-world-primary, #123D2B)",
-        color: CREAM,
+        background: "#FFFFFF",
+        color: "#1A1512",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        gap: 18,
+        gap: 10,
         opacity: visible ? 1 : 0,
         transition: "opacity 240ms ease-out",
         pointerEvents: visible ? "auto" : "none",
@@ -586,30 +642,19 @@ function TemplateLoadingOverlay({
     >
       {timedOut ? (
         <>
-          <span aria-hidden style={{ fontSize: 28, lineHeight: 1 }}>⚠️</span>
-          <div style={{ textAlign: "center", padding: "0 16px" }}>
-            <div
-              style={{
-                fontSize: 14,
-                fontWeight: 900,
-                color: GOLD,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-              }}
-            >
-              Template {templateNumber} is taking longer than usual
-            </div>
-            <div
-              style={{
-                fontSize: 11,
-                color: CREAM,
-                opacity: 0.8,
-                marginTop: 4,
-                lineHeight: 1.4,
-              }}
-            >
-              Check your connection and try again.
-            </div>
+          <span aria-hidden style={{ fontSize: 22, lineHeight: 1 }}>⚠️</span>
+          <div
+            style={{
+              textAlign: "center",
+              padding: "0 16px",
+              fontSize: 12,
+              fontWeight: 600,
+              color: "#1A1512",
+              lineHeight: 1.45,
+            }}
+          >
+            Template {templateNumber} is taking longer than usual.<br />
+            Check your connection and try again.
           </div>
           <button
             type="button"
@@ -620,12 +665,15 @@ function TemplateLoadingOverlay({
               fontWeight: 800,
               letterSpacing: "0.1em",
               textTransform: "uppercase",
-              color: "#1A120A",
-              background: GOLD,
+              color: "#FFFFFF",
+              background: "#FF7200",
               border: "none",
               borderRadius: 999,
               cursor: "pointer",
               fontFamily: "inherit",
+              marginTop: 4,
+              boxShadow:
+                "0 4px 14px rgba(255, 114, 0, 0.45), 0 0 20px rgba(255, 114, 0, 0.25)",
             }}
           >
             Try again
@@ -633,47 +681,94 @@ function TemplateLoadingOverlay({
         </>
       ) : (
         <>
+          {/* Owner directive 2026-11-12 · nicer loading animation ·
+              layered spinner · outer soft ring rotates slow, inner
+              orange ring counter-rotates fast, centre dot pulses.
+              Reads as "NEX preparing your view" without being busy. */}
           <div
             data-nex-template-spinner
             aria-hidden
+            aria-label="Preparing your shop preview"
             style={{
-              width: 44,
-              height: 44,
-              borderRadius: 999,
-              border: "3px solid rgba(250, 248, 244, 0.22)",
-              borderTopColor: GOLD,
-              animation: "nexTemplateSpin 900ms linear infinite",
+              position: "relative",
+              width: 56,
+              height: 56,
             }}
-          />
-          <div style={{ textAlign: "center" }}>
+          >
+            {/* Outer ring · slow · soft gray */}
             <div
               style={{
-                fontSize: 13.5,
-                fontWeight: 900,
-                color: GOLD,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
+                position: "absolute",
+                inset: 0,
+                borderRadius: 999,
+                border: "3px solid rgba(26, 21, 18, 0.10)",
+                borderTopColor: "rgba(26, 21, 18, 0.45)",
+                animation: "nexTplSpinA 1400ms linear infinite",
               }}
-            >
-              Loading Template {templateNumber}
-            </div>
+            />
+            {/* Inner ring · counter-rotating · orange accent */}
             <div
               style={{
-                fontSize: 11,
-                color: CREAM,
-                opacity: 0.75,
-                marginTop: 4,
+                position: "absolute",
+                inset: 8,
+                borderRadius: 999,
+                border: "2.5px solid rgba(255, 114, 0, 0.14)",
+                borderBottomColor: "#FF7200",
+                animation: "nexTplSpinB 900ms linear infinite",
               }}
-            >
-              Preparing your shop preview…
-            </div>
+            />
+            {/* Centre dot · gentle pulse */}
+            <div
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                width: 6,
+                height: 6,
+                marginTop: -3,
+                marginLeft: -3,
+                borderRadius: 999,
+                background: "#FF7200",
+                boxShadow: "0 0 10px rgba(255, 114, 0, 0.55)",
+                animation: "nexTplPulse 1600ms ease-in-out infinite",
+              }}
+            />
           </div>
+          <p
+            style={{
+              margin: "14px 0 0",
+              fontSize: 11.5,
+              fontWeight: 700,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "rgba(26, 21, 18, 0.55)",
+            }}
+          >
+            Preparing your shop preview
+          </p>
         </>
       )}
       <style>{`
+        @keyframes nexTplSpinA {
+          0%   { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes nexTplSpinB {
+          0%   { transform: rotate(360deg); }
+          100% { transform: rotate(0deg); }
+        }
+        @keyframes nexTplPulse {
+          0%, 100% { transform: scale(1);   opacity: 1;   }
+          50%      { transform: scale(1.6); opacity: 0.5; }
+        }
         @keyframes nexTemplateSpin {
           0%   { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          [data-nex-template-spinner] > div {
+            animation: none !important;
+          }
         }
       `}</style>
     </div>
@@ -748,7 +843,14 @@ function FullscreenTemplate({
           aspectRatio: "9 / 19.5",
           maxHeight: "96vh",
           borderRadius: 32,
-          background: "url('/nex-native/shop-themes-bg.png') center / 100% 100% no-repeat",
+          // Owner directive 2026-11-12 · silhouette backdrop swapped
+          // to the new sealed shop-themes-default-bg.png and now
+          // displays FULL HEIGHT (background-size: cover + center
+          // position · overflow is already hidden on the parent so
+          // horizontal overflow is cropped cleanly). The prior
+          // `100% 100%` size distorted the image on non-9:19.5
+          // ratios; `cover` preserves aspect.
+          background: `url('${DEFAULT_PREVIEW_BG}') center / cover no-repeat`,
           border: `2px solid ${GOLD}`,
           overflow: "hidden",
           boxShadow: "0 24px 60px rgba(0,0,0,0.55)",
@@ -797,11 +899,15 @@ function FullscreenTemplate({
             fontWeight: 800,
             letterSpacing: "0.12em",
             textTransform: "uppercase",
-            color: CREAM,
-            background: "rgba(5, 15, 28, 0.88)",
-            backdropFilter: "blur(6px)",
-            WebkitBackdropFilter: "blur(6px)",
-            border: `1.5px solid ${GOLD}`,
+            // Owner directive 2026-11-12 · large-view close chip now
+            // paints NEX Yellow with a dark-brown ink + subtle gold
+            // border · matches the "⤢ View large screen" open chip so
+            // the pair reads as a single toggle in the sealed yellow
+            // palette. Supersedes the dark-navy/translucent pill +
+            // cream ink used on 2026-11-07.
+            color: "#1A120A",
+            background: "#FFD600",
+            border: "1px solid #E6B800",
             borderRadius: 999,
             cursor: "pointer",
             fontFamily: "inherit",

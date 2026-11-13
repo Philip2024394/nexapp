@@ -189,6 +189,11 @@ export async function loadCoverContent(
     instagram: business.instagram_handle ?? undefined,
     tiktok: business.tiktok_handle ?? undefined,
     facebook: business.facebook_handle ?? undefined,
+    // Owner directive 2026-11-12 · x + youtube pulled from the same
+    // nex_business row so the shop template can render all 5 branded
+    // platforms when the seller has configured them.
+    x: (business as { x_handle?: string | null }).x_handle ?? undefined,
+    youtube: (business as { youtube_handle?: string | null }).youtube_handle ?? undefined,
     whatsapp: business.public_phone ?? undefined,
     website: business.website_url ?? undefined,
   };

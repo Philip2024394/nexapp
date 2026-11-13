@@ -33,6 +33,12 @@ import {
   uploadOnboardingLogo,
   NEX_SHIPPING_METHODS,
 } from "@/lib/nex-native/business-service";
+// Owner directive 2026-11-12 · nexSupabaseAdmin hoisted here from the
+// legacy-only import at line ~510 so the new saveShopBusinessDetails
+// action can persist display_name directly (that field is missing
+// from NexBusinessProfilePatch so updateBusinessProfile silently
+// drops it).
+import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import { NEX_WEEK_DAYS } from "@/lib/nex-native/types";
 import type { NexWeeklyHours } from "@/lib/nex-native/types";
 import { narrowCountryCode } from "@/lib/nex-native/country-catalogue";
@@ -98,15 +104,141 @@ export async function saveShopIdentityAction(
   const biz = await requireBusiness();
   if (!biz.ok) return biz;
   try {
-    await updateBusinessProfile(biz.businessId, {
-      display_name: displayName,
-      logo_url: logoUrl,
-    });
+    // Owner directive 2026-11-12 · legacy identity action used to pass
+    // display_name through updateBusinessProfile, but NexBusinessProfilePatch
+    // doesn't include that field (types.ts:758) · so the typed writer
+    // silently dropped renamed shop names. Direct nex_business update
+    // fixes the silent-drop without touching the shared type (backward-
+    // compatible with every other caller of updateBusinessProfile).
+    // businessId was resolved by requireBusiness() which only returns
+    // businesses owned by the authenticated session · the write is
+    // scoped to that row via .eq("id", ...).
+    const { error: nameErr } = await nexSupabaseAdmin
+      .from("nex_business")
+      .update({ display_name: displayName })
+      .eq("id", biz.businessId);
+    if (nameErr) {
+      return { ok: false, error: nameErr.message };
+    }
+    // logo_url stays on updateBusinessProfile · it validates URL shape
+    // and handles the null-clear case. null explicit clear is passed
+    // through when the seller removed the logo.
+    await updateBusinessProfile(biz.businessId, { logo_url: logoUrl });
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }
   revalidatePath("/nex-native/manage/shop/setup");
   return { ok: true, nextHref: "/nex-native/manage/shop/setup/location" };
+}
+
+// ─── Step 1 (new 4-step journey) · Combined Business Details ──────────
+// Owner-authorised 2026-11-12 · supersedes the 8-step Identity +
+// Location + Category chain for the initial shop-creation journey.
+// Writes display_name + logo_url + operating_country_code + city +
+// address + {category, subtype} in ONE round-trip. Each field uses the
+// same validation as the standalone step actions above · fails fast on
+// the first bad field (name length → country → city → address →
+// category) so the client can highlight the exact cell without needing
+// a server-side aggregate error map. Shop name is the only required
+// field. Everything else may be blank at this stage and filled in
+// later via Manage Shop. All 8 original /setup/* routes stay alive
+// (deep-linkable from Manage Shop) · this action is additive, not a
+// replacement for the single-step writers.
+export async function saveShopBusinessDetailsAction(
+  formData: FormData,
+): Promise<ActionResult> {
+  const displayName = String(formData.get("displayName") ?? "").trim();
+  if (displayName.length < 2 || displayName.length > 40) {
+    return { ok: false, error: "shop-name-length" };
+  }
+  const logoUrl = String(formData.get("logoUrl") ?? "").trim() || null;
+  const countryRaw = String(formData.get("operatingCountryCode") ?? "").trim();
+  const country: string | null = (() => {
+    if (countryRaw.length === 0) return null;
+    return narrowCountryCode(countryRaw);
+  })();
+  if (countryRaw.length > 0 && country === null) {
+    return { ok: false, error: "country-invalid" };
+  }
+  const city = String(formData.get("city") ?? "").trim() || null;
+  if (city && (city.length < 1 || city.length > 80)) {
+    return { ok: false, error: "city-length" };
+  }
+  const address = String(formData.get("address") ?? "").trim() || null;
+  if (address && address.length > 500) {
+    return { ok: false, error: "address-too-long" };
+  }
+  // Category + subtype are validated as a pair · both-or-neither.
+  const categoryRaw = String(formData.get("category") ?? "").trim();
+  const subtypeRaw = String(formData.get("subtype") ?? "").trim();
+  const hasCategoryPair = categoryRaw.length > 0 || subtypeRaw.length > 0;
+  let categoryPair:
+    | { category: BusinessCategory; subtype: BusinessSubtype }
+    | null = null;
+  if (hasCategoryPair) {
+    if (!categoryRaw || !subtypeRaw) {
+      return { ok: false, error: "category-required" };
+    }
+    if (!isBusinessCategory(categoryRaw)) {
+      return { ok: false, error: "unknown-category" };
+    }
+    if (!isBusinessSubtype(subtypeRaw)) {
+      return { ok: false, error: "unknown-subtype" };
+    }
+    const category = categoryRaw as BusinessCategory;
+    const subtype = subtypeRaw as BusinessSubtype;
+    if (BUSINESS_SUBTYPE_CATEGORY[subtype] !== category) {
+      return { ok: false, error: "subtype-mismatch" };
+    }
+    categoryPair = { category, subtype };
+  }
+  const biz = await requireBusiness();
+  if (!biz.ok) return biz;
+  try {
+    // Identity · display_name is NOT part of NexBusinessProfilePatch
+    // (confirmed in types.ts line 758 · the legacy identity action
+    // was silently dropping this field). Use a direct nex_business
+    // update to persist the name the seller actually typed. Logo
+    // URL continues to flow through updateBusinessProfile which
+    // validates URL shape.
+    const { error: nameErr } = await nexSupabaseAdmin
+      .from("nex_business")
+      .update({ display_name: displayName })
+      .eq("id", biz.businessId);
+    if (nameErr) {
+      return { ok: false, error: nameErr.message };
+    }
+    if (logoUrl !== null) {
+      await updateBusinessProfile(biz.businessId, { logo_url: logoUrl });
+    } else if (logoUrl === null) {
+      // Explicit null clears the stored logo · seller removed it.
+      await updateBusinessProfile(biz.businessId, { logo_url: null });
+    }
+    // Location · country + address go via updateBusinessProfile;
+    // city goes via updateBusinessCityAndHours to keep the hours-
+    // display derivation intact. Matches saveShopLocationAction.
+    const locationPatch: Parameters<typeof updateBusinessProfile>[1] = {};
+    if (country !== null) locationPatch.operating_country_code = country;
+    if (address !== null) locationPatch.address = address;
+    if (Object.keys(locationPatch).length > 0) {
+      await updateBusinessProfile(biz.businessId, locationPatch);
+    }
+    if (city !== null) {
+      await updateBusinessCityAndHours(biz.businessId, { city });
+    }
+    // Category · only when both fields present. setBusinessPrimaryProfile
+    // mirrors subtype → legacy business_category where overlapped.
+    if (categoryPair) {
+      await setBusinessPrimaryProfile(biz.businessId, categoryPair);
+    }
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+  revalidatePath("/nex-native/manage/shop/setup");
+  // Hand control back to the dispatcher · it inspects the newly-
+  // saved row and decides whether to send the seller to appearance,
+  // first-product or review next.
+  return { ok: true, nextHref: "/nex-native/manage/shop/setup" };
 }
 
 /** Separate upload action so the client can POST a File directly to
@@ -396,7 +528,9 @@ export async function saveShopPoliciesAction(
 // returning a soft-fail that the client can show as "Noted · the
 // team will review" without claiming the request was saved.
 
-import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
+// nexSupabaseAdmin now imported at the top of this file (see the
+// combined-business-details note). Keep this re-export surface
+// stable by leaving just the categories import here.
 import { isBusinessCategory as isBusinessCategoryValue } from "@/lib/nex-native/business/categories";
 
 let CATEGORY_REQUEST_TABLE_READY: boolean | null = null;
@@ -498,10 +632,18 @@ export async function saveShopContactAction(
   const biz = await requireBusiness();
   if (!biz.ok) return biz;
   try {
+    // Owner directive 2026-11-12 · X added to the shop social set (the
+    // shop schema already supports x_handle via NexBusinessProfilePatch
+    // · types.ts line 774). YouTube isn't yet a shop column so it's not
+    // persisted here · if a future migration adds youtube_handle to
+    // nex_business, extend this writer in step. All writes go through
+    // updateBusinessProfile which only touches nex_business · the chat
+    // profile at nex_account_profile is never modified by this action.
     await updateBusinessProfile(biz.businessId, {
       instagram_handle: str("instagramHandle"),
       facebook_handle: str("facebookHandle"),
       tiktok_handle: str("tiktokHandle"),
+      x_handle: str("xHandle"),
       website_url: str("websiteUrl"),
       public_phone: str("publicPhone"),
       public_email: str("publicEmail"),

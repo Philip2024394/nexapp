@@ -40,8 +40,18 @@
 // Server Component · all resolution + privacy gates run server-side ·
 // client-only pieces (SafeTradeSheet, ConnectButton form) hydrate inside.
 
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import * as accountServiceForSeo from "@/lib/nex-native/account-service";
+import * as accountProfileServiceForSeo from "@/lib/nex-native/account-profile-service";
+import {
+  buildBreadcrumbList,
+  buildPerson,
+  renderJsonLd,
+} from "@/lib/nex-native/seo/json-ld";
+import { nexCanonicalUrl } from "@/lib/nex-native/seo/site-url-resolver";
+import { ProfileJsonLdScripts } from "./_profile-json-ld";
 // 2026-10-28 · dev-impersonation parity · without this Hendra
 // signed in via NEX_DEV_IMPERSONATE_HANDLE renders as a non-owner
 // viewer of his own profile · zero prod risk per sealed module.
@@ -60,6 +70,7 @@ import { NEX_COMMERCE_ENABLED } from "@/lib/nex-native/launch-flags";
 import type { ControlDrawerSession } from "@/components/nex-native/control-drawer/control-drawer-client";
 import { sendFriendInviteAction } from "../../_actions";
 import { ProfileChrome } from "./_profile-chrome";
+import { NexPageHeader } from "../../_page-header";
 import { CoverPhoto } from "./_cover-photo";
 import { IdentityHero } from "./_identity-hero";
 import { InterestsPills } from "./_interests-pills";
@@ -68,6 +79,7 @@ import { ActionButtons, type ConnectState } from "./_action-buttons";
 import { FollowButtonWithShamrock } from "@/components/nex-native/country-flare/FollowButtonWithShamrock";
 import { isAccountIrishAction } from "@/lib/nex-native/country/country-actions";
 import { FollowersCountChip } from "@/components/nex-native/follow/FollowersCountChip";
+import { SocialBrandIcon } from "@/components/nex-native/social/brand-icon";
 import { readFollowCounts, getFollowState } from "@/lib/nex-native/follow/follow-repository";
 // SafeTradeCard import retired 2026-10-17 · the hero icon owns
 // the sole entry to the Safe Trade sheet · bottom card removed.
@@ -85,6 +97,53 @@ import type {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+// Owner directive 2026-11-11 (SEO B2) · profile metadata respects the
+// sealed privacy chain (handle format · is_discoverable gate). When the
+// account has not opted in to public discovery, we emit a generic title
+// with no name/handle/bio and NO JSON-LD · matching the audit ceiling
+// that profile visibility is privacy-gated.
+export async function generateMetadata(props: {
+  params: Promise<{ handle: string }>;
+}): Promise<Metadata> {
+  const { handle: rawHandle } = await props.params;
+  const handle = (rawHandle || "").toLowerCase().trim();
+  if (!/^[a-z0-9_.-]{2,32}$/.test(handle)) {
+    return { title: "Profile · NEX" };
+  }
+  const account = await accountServiceForSeo
+    .getAccountByNexHandle(handle)
+    .catch(() => null);
+  if (!account) return { title: "Profile · NEX" };
+  const profile = await accountProfileServiceForSeo
+    .getProfileByAccountId(account.id)
+    .catch(() => null);
+  if (!profile || profile.is_discoverable !== true) {
+    return { title: "Profile · NEX" };
+  }
+  const canonical = nexCanonicalUrl(`/nex-native/profile/${handle}`);
+  const displayName = account.display_name?.trim() || `@${handle}`;
+  const bio = profile.bio?.trim();
+  const description =
+    bio && bio.length > 0 ? bio : `${displayName} on NEX.`;
+  return {
+    title: `${displayName} · NEX`,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      type: "profile",
+      title: `${displayName} · NEX`,
+      description,
+      url: canonical,
+      siteName: "NEX",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${displayName} · NEX`,
+      description,
+    },
+  };
+}
 
 interface PageProps {
   params: Promise<{ handle: string }>;
@@ -558,7 +617,15 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
       }
     : null;
 
-  const editMode = isOwner && sp.mode === "edit";
+  // Owner directive 2026-11-12 · inline edit mode on the profile
+  // view page RETIRED · the dedicated drawer row "Edit Profile" →
+  // /settings/profile/edit is now the single entry point to profile
+  // editing. The ?mode=edit query is ignored on this surface (the
+  // handler below forces editMode=false for every viewer, including
+  // the owner). OwnerEditShell + cover camera picker + avatar
+  // camera picker + inline fields all stay on disk for possible
+  // revival but never render here.
+  const editMode = false as const;
   const editError = typeof sp.error === "string" ? sp.error : null;
 
   // Resolve the effective field values used to seed the edit form
@@ -570,8 +637,41 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
     profile?.headline ?? (philipMockActive ? PHILIP_MOCK.headline : null);
   const effectiveLocation =
     profile?.location_label ?? (philipMockActive ? PHILIP_MOCK.locationLabel : null);
+  // Owner directive 2026-11-12 · address is pulled from the sealed
+  // Edit Profile save path · shown on the hero location row when
+  // location_label is null.
+  const effectiveAddress =
+    (profile as { address?: string | null } | null)?.address ?? null;
+  // Owner directive 2026-11-12 · five sealed socials from
+  // nex_account_profile · migration 273 columns. Each handle
+  // flows through to the footer row which only renders a brand
+  // icon for platforms the user has set.
+  const profileSocials = profile as {
+    instagram_handle?: string | null;
+    facebook_handle?: string | null;
+    tiktok_handle?: string | null;
+    x_handle?: string | null;
+    youtube_handle?: string | null;
+  } | null;
+  const socialInstagram = profileSocials?.instagram_handle ?? null;
+  const socialFacebook = profileSocials?.facebook_handle ?? null;
+  const socialTiktok = profileSocials?.tiktok_handle ?? null;
+  const socialX = profileSocials?.x_handle ?? null;
+  const socialYoutube = profileSocials?.youtube_handle ?? null;
+  // Owner directive 2026-11-12 · about-me is the canonical source of
+  // the long-form self-description · written by the sealed Edit
+  // Profile form into nex_account_profile.about_me (migration 274).
+  // The older `bio` column is legacy and may hold stale seeded values
+  // (e.g. the "Irish folk + traditional covers. Dublin." test string
+  // that was in there before migration 274 landed). We prefer about_me
+  // whenever it's non-empty · fall back to bio for pre-migration rows ·
+  // mock-fallback only when neither is set.
+  const profileAboutMe =
+    (profile as { about_me?: string | null } | null)?.about_me ?? null;
   const effectiveBio =
-    profile?.bio ?? (philipMockActive ? PHILIP_MOCK.bio : null);
+    (profileAboutMe && profileAboutMe.trim().length > 0 ? profileAboutMe : null) ??
+    profile?.bio ??
+    (philipMockActive ? PHILIP_MOCK.bio : null);
   const effectiveInterests = interests;
 
   /* Owner directive 2026-10-18 · profile opens in the SAME theme
@@ -580,9 +680,17 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
      --nex-profile-accent CSS var so any theme-aware descendant can
      pick it up. Null (no param, bad hex) renders the sealed navy. */
   const themeAccent = parseThemeAccent(sp.themeAccent);
+  // Owner directive 2026-11-12 (third pass) · scroll container is
+  // the sealed .nex-native-frame itself (overflow-y:auto defined in
+  // nex-native.css line 245). Main does NOT own its own scroll · it
+  // sizes to its natural content height and lets the frame scroll
+  // the whole column. Nested-scroll pattern was swallowing the
+  // sticky header + hiding overflow. The sticky header below pins
+  // to the frame's top edge because the frame is now the nearest
+  // scrolling ancestor.
   const mainStyle: React.CSSProperties = {
     position: "relative",
-    minHeight: "100dvh",
+    minHeight: "100%",
     background: themeAccent
       ? `linear-gradient(180deg, ${themeAccent}44 0%, ${themeAccent}22 180px, ${NEX.bg} 400px, ${NEX.bg} 100%)`
       : NEX.bg,
@@ -590,12 +698,18 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
     fontFamily: SANS,
     display: "flex",
     flexDirection: "column",
-    paddingBottom: 32,
+    paddingBottom: 12,
     ["--nex-profile-accent" as unknown as string]:
       themeAccent ?? "#00AFFF",
   };
 
   return (
+    <>
+      {/* Owner directive 2026-11-11 (SEO B2 closeout) · visibility-gated
+          Person + BreadcrumbList JSON-LD · re-runs discoverability check
+          server-side so non-discoverable profiles never emit structured
+          data regardless of the branch mounting this component. */}
+      <ProfileJsonLdScripts handle={handle} />
     <main
       data-nex-profile-root
       data-nex-profile-mode={isOwner ? "owner" : "viewer"}
@@ -647,12 +761,27 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
           }}
         />
       )}
-      <ProfileChrome
-        viewerAvatarUrl={viewerProfile?.avatar_url ?? null}
-        viewerDisplayName={session?.account.display_name ?? null}
-        viewerNexHandle={session?.account.nex_handle ?? null}
-        drawerSession={drawerSession}
-      />
+      {/* Owner directive 2026-11-12 (fifth pass) · header drawer
+          button renders IN FLOW at the top · plain block positioning
+          · sticky trick was hiding the hero on initial render. The
+          frame itself scrolls the whole column, so the drawer
+          button scrolls away as the user moves down the page (they
+          scroll back up to reach it · same behaviour as every
+          other NEX surface). Header + cover both visible at the
+          top of main on first paint. */}
+      <div
+        style={{
+          padding: "calc(env(safe-area-inset-top,0) + 8px) 14px 8px",
+          flexShrink: 0,
+        }}
+      >
+        <NexPageHeader dataScope="profile-view" />
+      </div>
+      {/* Owner directive 2026-11-12 (third pass) · ProfileChrome
+          removed · NexPageHeader above is the single owner of the
+          top-right drawer button. Previously both rendered their
+          own ControlDrawer trigger, which showed TWO buttons on the
+          profile view. Component kept on disk for possible reuse. */}
       {/* Owner directive 2026-10-17 Phase 2.0 · honest post-submit
           confirmation banner. Rendered server-side from the URL
           query string · the ?report=sent flag is ONLY reachable via
@@ -724,6 +853,12 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
             effectiveProfession={effectiveProfession}
             effectiveHeadline={effectiveHeadline}
             effectiveLocation={effectiveLocation}
+            effectiveAddress={effectiveAddress}
+            socialInstagram={socialInstagram}
+            socialFacebook={socialFacebook}
+            socialTiktok={socialTiktok}
+            socialX={socialX}
+            socialYoutube={socialYoutube}
             effectiveBio={effectiveBio}
             avatarUrl={profile?.avatar_url ?? (philipMockActive ? PHILIP_MOCK.avatarUrl : null)}
             isOwner={isOwner}
@@ -766,6 +901,12 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
           effectiveProfession={effectiveProfession}
           effectiveHeadline={effectiveHeadline}
           effectiveLocation={effectiveLocation}
+          effectiveAddress={effectiveAddress}
+          socialInstagram={socialInstagram}
+          socialFacebook={socialFacebook}
+          socialTiktok={socialTiktok}
+          socialX={socialX}
+          socialYoutube={socialYoutube}
           effectiveBio={effectiveBio}
           avatarUrl={profile?.avatar_url ?? null}
           isOwner={isOwner}
@@ -800,6 +941,7 @@ export default async function CanonicalProfilePage({ params, searchParams }: Pag
         />
       )}
     </main>
+    </>
   );
 }
 
@@ -816,6 +958,16 @@ function ProfileBody(props: {
   effectiveProfession: string | null;
   effectiveHeadline: string | null;
   effectiveLocation: string | null;
+  // Owner directive 2026-11-12 · saved street address from
+  // nex_account_profile.address · fallback for the hero location row
+  // when location_label is null.
+  effectiveAddress: string | null;
+  // Owner directive 2026-11-12 · 5 socials flow from profile → ProfileBody → ProfileFooterSection.
+  socialInstagram: string | null;
+  socialFacebook: string | null;
+  socialTiktok: string | null;
+  socialX: string | null;
+  socialYoutube: string | null;
   effectiveBio: string | null;
   avatarUrl: string | null;
   isOwner: boolean;
@@ -885,40 +1037,12 @@ function ProfileBody(props: {
         isOwner={props.isOwner}
         showCoverUploadAffordance={showUploadAffordances}
       />
-      {/* Safe Trade hero icon · owner directive 2026-10-17 · floating
-          round shield button on the cover's top-left. Opens the
-          sealed 4-state SafeTradeSheet which NOW mounts the Trust
-          Record panel (sealed Phase 1) for eligible sellers + the
-          Report-flip card for signed-in non-owner viewers. */}
-      <SafeTradeHeroIcon
-        snapshot={props.safeTradeSnapshot}
-        business={
-          props.primaryBusiness
-            ? {
-                id: props.primaryBusiness.id,
-                slug: props.primaryBusiness.slug,
-                displayName: props.primaryBusiness.display_name,
-              }
-            : null
-        }
-        profileDisplayName={props.displayNameForActions}
-        chatHref={props.chatHref}
-        trust={{
-          profileAccountId: props.profileAccountId,
-          accountTier: props.trustAccountTier,
-          memberSinceIso: props.trustMemberSinceIso,
-          shopActiveSinceIso: props.trustShopActiveSinceIso,
-          verification: props.trustVerification,
-          marketReach: props.trustMarketReach,
-          reportsOnFile: props.trustReportsOnFile,
-          tradingSince: props.safeTradeSnapshot?.tradingSince ?? null,
-          reportAction: submitSafeTradeReportAction,
-          viewerIsSignedIn: props.viewerIsSignedIn,
-          viewerIsOwner: props.isOwner,
-        }}
-        trustScore={props.trustScore ?? null}
-        ownerClaimedAtIso={props.ownerClaimedAtIso ?? null}
-      />
+      {/* Owner directive 2026-11-12 · Safe Trade hero shield removed
+          from the profile view. "The user's account is their own."
+          A tiny NEX-member tick next to the display name is the only
+          remaining membership signal. Backend counters + SafeTradeSheet
+          component files stay for other surfaces until explicitly
+          retired. */}
       <IdentityHero
         displayName={props.displayName}
         nexHandle={props.profileAccountNexHandle}
@@ -926,6 +1050,7 @@ function ProfileBody(props: {
         profession={props.effectiveProfession}
         headline={props.effectiveHeadline}
         locationLabel={props.effectiveLocation}
+        address={props.effectiveAddress}
         bio={props.effectiveBio}
         isOwner={props.isOwner}
         isVerified={props.isVerified}
@@ -935,7 +1060,11 @@ function ProfileBody(props: {
         supportSettings={props.creatorSupportSettings}
       />
       <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 10 }}>
-        <InterestsPills interests={props.interests} isOwner={props.isOwner} />
+        <InterestsPills
+          interests={props.interests}
+          isOwner={props.isOwner}
+          bio={props.effectiveBio}
+        />
         <MutualFriends count={props.mutualCount} preview={props.mutualPreview} />
         {/* Owner directive 2026-11-02 · Connect + Message action
          *  pills retired from the profile hero · Follow-only is the
@@ -947,12 +1076,19 @@ function ProfileBody(props: {
             (§13.6). Count chip renders for all viewers (including
             the owner · they see their own counts). FollowButton
             renders only for non-owner signed-in viewers. */}
+        {/* Owner directive 2026-11-12 · Followers / Following row
+            now centered on the page · supersedes the space-between
+            layout that pushed the count chip left and the Follow
+            button right. The chip renders centered; the optional
+            Follow button sits beneath it on its own centered row so
+            both elements remain visible without competing for the
+            edges. */}
         <div
           style={{
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
+            gap: 10,
             paddingTop: 4,
           }}
         >
@@ -992,6 +1128,12 @@ function ProfileBody(props: {
           safeTradeSnapshot={props.safeTradeSnapshot}
           trustReportsOnFile={props.trustReportsOnFile}
           displayName={props.displayName}
+          instagramHandle={props.socialInstagram}
+          facebookHandle={props.socialFacebook}
+          tiktokHandle={props.socialTiktok}
+          xHandle={props.socialX}
+          youtubeHandle={props.socialYoutube}
+          dateJoinedNexIso={props.trustMemberSinceIso}
         />
         {/* Footer Safe Trade card RETIRED 2026-10-17 per owner
             directive · the Safe Trade shield icon on the hero top-
@@ -1075,53 +1217,13 @@ function DemoEmmaRender(): React.JSX.Element {
         paddingBottom: 32,
       }}
     >
-      {/* Demo-mode chrome · fake viewer NEX-05345 to match the owner-
-          supplied reference's "NEX · ID 5345" top bar. ControlDrawer
-          session is null in demo (not production viewer-auth). */}
-      <ProfileChrome
-        viewerAvatarUrl={null}
-        viewerDisplayName="Demo Viewer"
-        viewerNexHandle="nex-05345"
-        drawerSession={{
-          displayName: "Demo Viewer",
-          nexHandle: "nex-05345",
-          isBisnis: false,
-        }}
-      />
+      {/* Owner directive 2026-11-12 (third pass) · demo-mode
+          ProfileChrome also removed · matches the real-path
+          removal above so both code paths show exactly ONE drawer
+          button (the one from NexPageHeader at the top). */}
       <CoverPhoto coverImageUrl={d.coverImageUrl} isOwner={false} />
-      {/* Hero Safe Trade icon on the demo path too · reuses the real
-          SafeTradeSheet with VERIFIED snapshot so the demo matches
-          the viewer-mode screenshot flow end-to-end. */}
-      <SafeTradeHeroIcon
-        snapshot={{
-          status: "VERIFIED",
-          variant: "trade",
-          completedTrades: null,
-          openDisputes: null,
-          tradingSince: "2024-03-01",
-          summary: "Eligible NEX Directory seller",
-        }}
-        business={{
-          id: "demo-emma-business",
-          slug: "emma-wilson-marketing",
-          displayName: "Emma Wilson Marketing",
-        }}
-        profileDisplayName={d.displayName}
-        chatHref="/nex-native/sign-in"
-        trust={{
-          profileAccountId: "demo-emma-account",
-          accountTier: "Premium",
-          memberSinceIso: "2024-01-15T00:00:00Z",
-          shopActiveSinceIso: "2024-03-01T00:00:00Z",
-          verification: "Eligible Directory seller",
-          marketReach: "Local and export",
-          reportsOnFile: 0,
-          tradingSince: "2024-03-01",
-          reportAction: submitSafeTradeReportAction,
-          viewerIsSignedIn: true,
-          viewerIsOwner: false,
-        }}
-      />
+      {/* Owner directive 2026-11-12 · demo path matches real path ·
+          SafeTradeHeroIcon mount removed. */}
       <IdentityHero
         displayName={d.displayName}
         nexHandle={d.nexHandle}
@@ -1134,7 +1236,11 @@ function DemoEmmaRender(): React.JSX.Element {
         isVerified={d.isVerified}
       />
       <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 10 }}>
-        <InterestsPills interests={[...d.interests]} isOwner={false} />
+        <InterestsPills
+          interests={[...d.interests]}
+          isOwner={false}
+          bio={d.bio}
+        />
         <MutualFriends count={d.mutualCount} preview={[...d.mutualPreview]} />
         {/* Owner directive 2026-11-02 · demo Connect + Message pills
          *  retired to match the main viewer path · Follow-only is
@@ -1160,6 +1266,19 @@ function ProfileFooterSection(props: {
   readonly safeTradeSnapshot: SafeTradeSnapshot | null;
   readonly trustReportsOnFile: number;
   readonly displayName: string;
+  // Owner directive 2026-11-12 · 5 social handles pulled from
+  // nex_account_profile · null means the user hasn't set that
+  // platform · footer only renders icons for handles that are set.
+  readonly instagramHandle?: string | null;
+  readonly facebookHandle?: string | null;
+  readonly tiktokHandle?: string | null;
+  readonly xHandle?: string | null;
+  readonly youtubeHandle?: string | null;
+  // Owner directive 2026-11-12 · supersedes the bio paragraph that
+  // used to sit here · footer now reports when the account joined
+  // NEX instead (bio moved under the interests grid). ISO 8601
+  // timestamp from `nex_account.created_at`.
+  readonly dateJoinedNexIso?: string | null;
 }): React.JSX.Element | null {
   // Owner directive 2026-11-02 · Safe Trade Report panel ALWAYS
   // renders on every profile (buyer should always be able to see
@@ -1167,12 +1286,9 @@ function ProfileFooterSection(props: {
   // the profile is not a seller). Section itself never short-circuits
   // now · it always has at least the Safe Trade panel.
 
-  // Trim bio to a safe single-paragraph footprint. Full bio stays in
-  // the data model + edit flow; the footer only shows a short preview.
-  const shortBio =
-    props.bio && props.bio.length > 180
-      ? `${props.bio.slice(0, 178).trimEnd()}…`
-      : props.bio;
+  // Owner directive 2026-11-12 · bio no longer rendered in the footer
+  // (moved under the interests grid) · shortBio reference retired.
+  void props.bio;
 
   // Account status mapping · the three states the owner asked for
   // (active / moderate / regular) map onto the sealed SafeTradeStatus:
@@ -1212,205 +1328,105 @@ function ProfileFooterSection(props: {
         padding: "16px 14px 0",
       }}
     >
-      {shortBio ? (
+      {/* Owner directive 2026-11-12 · bio render REPLACED here with
+          a "Date joined NEX" line · the bio itself now surfaces
+          directly under the interests grid (see InterestsPills).
+          `shortBio` remains computed above for future callers · it
+          just isn't painted in this footer. */}
+      {props.dateJoinedNexIso ? (
         <p
-          data-nex-profile-footer-description
+          data-nex-profile-footer-date-joined
           style={{
+            // Owner directive 2026-11-12 · both the "Date joined NEX"
+            // prefix AND the formatted date paint in the same muted
+            // gray (#9A9A9A). Supersedes the earlier white-bold span
+            // on the date value · the whole line now reads as one
+            // calm gray metadata row.
             margin: 0,
-            fontSize: 13,
+            fontSize: 12,
             lineHeight: 1.4,
-            color: "#B5C3D6",
+            color: "#9A9A9A",
             fontFamily:
               "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
             textAlign: "center",
           }}
         >
-          {shortBio}
+          Date joined NEX · {formatDateJoined(props.dateJoinedNexIso)}
         </p>
       ) : null}
 
-      {/* Social media icons row · placeholder empty state. Each icon
-       *  is a muted link stub · owner's edit flow would wire the
-       *  real URLs. Keeping the row visible at low opacity signals
-       *  "ready to be configured" without pretending links exist. */}
-      <div
-        data-nex-profile-footer-socials
-        style={{
-          display: "flex",
-          gap: 14,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        {(
+      {/* Owner directive 2026-11-12 · social icons row rebuilt.
+          Supersedes the hardcoded emoji glyph placeholders (📷 ⓕ 𝕏
+          ▶ ♪) that rendered regardless of whether handles were set.
+          New rule: only render a brand icon when the user has saved
+          that platform's handle · each icon is an external anchor
+          to the platform. Zero placeholder clutter · hidden row
+          when no socials are set. Uses the sealed 5-brand PNG set
+          from /nex-social/. */}
+      {(() => {
+        const items = (
           [
-            { label: "Instagram", glyph: "📷" },
-            { label: "Facebook", glyph: "ⓕ" },
-            { label: "X / Twitter", glyph: "𝕏" },
-            { label: "YouTube", glyph: "▶" },
-            { label: "TikTok", glyph: "♪" },
+            { platform: "instagram", handle: props.instagramHandle, url: (h: string) => `https://instagram.com/${h}` },
+            { platform: "facebook", handle: props.facebookHandle, url: (h: string) => `https://facebook.com/${h}` },
+            { platform: "tiktok", handle: props.tiktokHandle, url: (h: string) => `https://tiktok.com/@${h}` },
+            { platform: "x", handle: props.xHandle, url: (h: string) => `https://x.com/${h}` },
+            { platform: "youtube", handle: props.youtubeHandle, url: (h: string) => `https://youtube.com/@${h}` },
           ] as const
-        ).map((s) => (
-          <span
-            key={s.label}
-            aria-label={s.label}
-            data-nex-profile-footer-social={s.label.toLowerCase()}
-            style={{
-              display: "inline-grid",
-              placeItems: "center",
-              width: 28,
-              height: 28,
-              borderRadius: "50%",
-              background: "rgba(125, 155, 192, 0.10)",
-              color: "#7D9BC0",
-              fontSize: 14,
-              fontWeight: 700,
-              userSelect: "none",
-            }}
-          >
-            {s.glyph}
-          </span>
-        ))}
-      </div>
-
-      {/* Safe Trade Report facts panel · ALWAYS visible. For sellers
-       *  it shows status + three honest facts (complaints, flagged
-       *  posts, account status). For non-sellers it shows a clear
-       *  "No shop active yet" row so the viewer knows the profile
-       *  is not a seller · same shape, honest emptiness. */}
-      {true ? (
-        <div
-          data-nex-profile-footer-safe-trade-report
-          data-nex-profile-safe-trade-seller={props.isSeller ? "yes" : "no"}
-          style={{
-            marginTop: 4,
-            borderRadius: 14,
-            background: "rgba(10, 21, 38, 0.72)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
-            padding: "14px 14px 12px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 10,
-          }}
-        >
+        ).filter((s) => (s.handle ?? "").trim().length > 0);
+        if (items.length === 0) return null;
+        return (
           <div
+            data-nex-profile-footer-socials
             style={{
               display: "flex",
+              gap: 14,
+              justifyContent: "center",
               alignItems: "center",
-              justifyContent: "space-between",
-              gap: 10,
             }}
           >
-            <h3
-              style={{
-                margin: 0,
-                fontSize: 13,
-                fontWeight: 800,
-                letterSpacing: "0.03em",
-                color: "#F2F5F8",
-                fontFamily:
-                  "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-              }}
-            >
-              Safe Trade Report
-            </h3>
-            <span
-              data-nex-profile-footer-safe-trade-status={
-                props.isSeller ? statusGroup : "none"
-              }
-              style={{
-                fontSize: 11,
-                fontWeight: 800,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                padding: "4px 10px",
-                borderRadius: 999,
-                background: props.isSeller
-                  ? palette.bg
-                  : "rgba(125, 155, 192, 0.14)",
-                border: `1px solid ${
-                  props.isSeller ? palette.ring : "#7D9BC0"
-                }`,
-                color: props.isSeller ? palette.ink : "#7D9BC0",
-              }}
-            >
-              {props.isSeller ? statusGroup : "no shop"}
-            </span>
+            {items.map((s) => (
+              <a
+                key={s.platform}
+                href={s.url(s.handle!.trim().replace(/^@/, ""))}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`${s.platform} · @${s.handle!.trim().replace(/^@/, "")}`}
+                data-nex-profile-footer-social={s.platform}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textDecoration: "none",
+                  lineHeight: 0,
+                }}
+              >
+                <SocialBrandIcon platform={s.platform} size={32} />
+              </a>
+            ))}
           </div>
-          {props.isSeller ? (
-            <ul
-              style={{
-                listStyle: "none",
-                margin: 0,
-                padding: 0,
-                display: "flex",
-                flexDirection: "column",
-                gap: 6,
-              }}
-            >
-              <SafeTradeFactRow
-                label="Complaints filed"
-                value={
-                  openDisputes === null
-                    ? "No complaints recorded yet"
-                    : openDisputes === 0
-                      ? "0"
-                      : String(openDisputes)
-                }
-              />
-              <SafeTradeFactRow
-                label="Posts flagged"
-                value={
-                  reportsOnFile === 0 ? "0" : String(reportsOnFile)
-                }
-              />
-              <SafeTradeFactRow
-                label="Account status"
-                value={
-                  statusGroup === "active"
-                    ? "Active · in good standing"
-                    : statusGroup === "moderate"
-                      ? "Moderate · buyer caution advised"
-                      : "Regular · baseline"
-                }
-              />
-            </ul>
-          ) : (
-            <p
-              data-nex-profile-footer-safe-trade-no-shop
-              style={{
-                margin: 0,
-                fontSize: 12,
-                lineHeight: 1.4,
-                color: "#B5C3D6",
-                fontFamily:
-                  "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-              }}
-            >
-              {props.displayName} has no shop active on NEX yet · this
-              profile is not a seller, so there is no trade record
-              to display.
-            </p>
-          )}
-          <p
-            style={{
-              margin: "4px 0 0",
-              fontSize: 11,
-              lineHeight: 1.4,
-              color: "#7D9BC0",
-              fontFamily:
-                "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-            }}
-          >
-            Facts only · no reviews.{" "}
-            {props.isSeller
-              ? `${props.displayName}'s standing on NEX based on actual trade events.`
-              : "The Safe Trade Report always shows real trade history, never ratings."}
-          </p>
-        </div>
-      ) : null}
+        );
+      })()}
+
+      {/* Owner directive 2026-11-12 · Safe Trade Report block
+          removed from the profile view (per owner feedback "remove
+          this Safe Trade Report … from app"). The DB-side counters
+          (nex_safe_trade_report, dispute + flag counters) remain
+          untouched · only the UI render is retired. If a future
+          surface needs the honesty counters back, revive the block
+          from git history. The SafeTradeFactRow helper below is now
+          unused and can be deleted in a cleanup pass. */}
     </section>
   );
+}
+
+// Owner directive 2026-11-12 · formats the "Date joined NEX" line
+// (e.g. "May 2026") · locale-agnostic month + year so it reads the
+// same across markets. Returns null-safe empty string when the ISO
+// can't be parsed so the paragraph just omits the value.
+function formatDateJoined(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
 }
 
 function SafeTradeFactRow(props: {

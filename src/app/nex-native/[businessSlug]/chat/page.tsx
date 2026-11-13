@@ -38,12 +38,6 @@ export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ businessSlug: string }>;
-  // Owner directive 2026-11-13 (iter 22) · draft stash. The anon
-  // preview popup carries ?draft=<base64 utf-8> into the signup
-  // href. After signup completes the user returns here signed-in ·
-  // we pass the draft on through to /<slug>?open-chat=1 which hands
-  // it to the real conversation page for auto-send.
-  searchParams?: Promise<{ draft?: string }>;
 }
 
 function countryCodeToFlag(iso2: string | null | undefined): string {
@@ -61,22 +55,19 @@ function countryCodeToFlag(iso2: string | null | undefined): string {
 
 export default async function ShopChatEntryPage({
   params,
-  searchParams,
 }: PageProps): Promise<React.JSX.Element> {
   const { businessSlug } = await params;
-  const sp = (await searchParams) ?? {};
-  const draftB64 = typeof sp.draft === "string" ? sp.draft : "";
   const business = await businessService.getBusinessBySlug(businessSlug);
   if (!business) notFound();
 
   const session = await resolveSessionWithDevOverride().catch(() => null);
   if (session) {
-    // Signed-in visitor · hand off to the real conversation creator.
-    // Carry the draft through so the conversation page can auto-send.
-    const q = draftB64
-      ? `&draft=${encodeURIComponent(draftB64)}`
-      : "";
-    redirect(`/nex-native/${businessSlug}?open-chat=1${q}`);
+    // Owner directive 2026-11-13 (iter 23) · draft stash migrated
+    // from URL param to same-origin sessionStorage. Server-side
+    // redirect no longer carries the draft · the client reads it
+    // from sessionStorage after mount. Keeps drafts out of URLs,
+    // server logs, Referer headers, analytics.
+    redirect(`/nex-native/${businessSlug}?open-chat=1`);
   }
 
   // Anonymous visitor · render the preview shell. Load everything the

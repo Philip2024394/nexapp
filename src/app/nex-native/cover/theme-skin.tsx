@@ -267,15 +267,18 @@ export function CoverThemeSkin(props: CoverThemeSkinProps): React.JSX.Element {
           position: "relative",
           minHeight: "100dvh",
           overflow: "hidden",
-          /* Owner directive 2026-10-20 · creates a containing block
-             for every descendant `position: fixed` layer below ·
-             scopes wallpaper + scrim + glow + motion overlays to
-             the phone-frame container on desktop (420×909 inside
-             .nex-native-frame) instead of escaping to the full
-             browser viewport. On actual mobile the viewport IS the
-             frame so this is a visual no-op. */
-          transform: "translateZ(0)",
-          willChange: "transform",
+          /* Owner directive 2026-11-12 · supersedes 2026-10-20 ·
+             transform + will-change REMOVED so position:fixed
+             descendants scope to the sealed .nex-native-frame
+             (which has its own transform:translateZ(0) that pins
+             fixed elements to the phone viewport, including the
+             chat composer). The prior transform here created a
+             nested containing block scoped to the skin's full
+             min-height:100dvh content area · composer rode off-
+             screen as content grew. Wallpaper / scrim / glow
+             descendants still use inset:0 so they continue to
+             cover the full phone viewport via the frame's
+             containing block. */
         }}
       >
         {/* Wallpaper composition · fixed to the phone-screen containing
@@ -289,6 +292,13 @@ export function CoverThemeSkin(props: CoverThemeSkinProps): React.JSX.Element {
             lets the themes-picker ?embed=1 preview override the Ken
             Burns transform + swap background-size to "100% 100%" so
             the chosen preset paints edge-to-edge on both axes. */}
+        {/* Owner directive 2026-11-12 · wallpaper paints at FULL
+            opacity (1.0 · was 0.35) so the owner-chosen background
+            reads as itself, not a muted version of itself. Legibility
+            scrim removed · the "always dim with a gradient" behaviour
+            is gone. If a template needs a scrim for text contrast
+            later, it should be opted-in per-theme rather than applied
+            globally to every shop background. */}
         <div
           aria-hidden
           data-nex-cover-wallpaper
@@ -296,7 +306,7 @@ export function CoverThemeSkin(props: CoverThemeSkinProps): React.JSX.Element {
             position: "fixed",
             inset: 0,
             zIndex: 0,
-            opacity: wallpaperUrl ? 0.35 : 1,
+            opacity: 1,
             animation: wallpaperUrl
               ? "nex-cover-kenburns 26s ease-in-out infinite alternate"
               : undefined,
@@ -305,35 +315,10 @@ export function CoverThemeSkin(props: CoverThemeSkinProps): React.JSX.Element {
           }}
         />
 
-        {/* Legibility scrim · deeper at top and bottom so header and
-            sticky bar always read cleanly regardless of wallpaper. */}
-        <div
-          aria-hidden
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 0,
-            background:
-              "linear-gradient(180deg, rgba(3,8,20,0.50) 0%, rgba(3,8,20,0.18) 22%, rgba(3,8,20,0.18) 78%, rgba(3,8,20,0.58) 100%)",
-            pointerEvents: "none",
-          }}
-        />
-
-        {/* Accent glow · a subtle radial tint anchored top-centre so
-            the hero identity block always feels lit by the theme
-            colour. Uses --nex-accent-glow so a theme change repaints
-            the whole page's atmosphere. */}
-        <div
-          aria-hidden
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 0,
-            background:
-              "radial-gradient(60% 40% at 50% 8%, var(--nex-accent-glow), transparent 65%)",
-            pointerEvents: "none",
-          }}
-        />
+        {/* Owner directive 2026-11-12 · accent-glow radial removed ·
+            shop background now reads as itself (no theme-coloured
+            top-centre halo). Supersedes the "always lit by theme
+            colour" rule. */}
 
         {/* Motion overlays · same code path as PortraitBloomShell so
             wallpaper animation is identical across chat + cover. Only

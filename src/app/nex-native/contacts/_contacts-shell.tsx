@@ -106,7 +106,16 @@ export function ContactsShell({ children }: ContactsShellProps) {
             position: "relative",
             maxWidth: 480,
             margin: "0 auto",
-            padding: "calc(env(safe-area-inset-top, 0) + 28px) 14px 24px",
+            // Owner directive 2026-11-11 (Cycle 33) · drop the sealed
+            // 28px + safe-area top padding on the content column so
+            // the sticky header starts pinned at the scroll-container
+            // top from first paint. Previously the header rendered
+            // 28px below the frame edge then snapped UP to top:0 as
+            // soon as the user scrolled past the 28px threshold,
+            // which read as the header "jumping" into place. Header
+            // owns its own 16px + safe-area internal top padding so
+            // the title still breathes from the frame edge.
+            padding: "0 14px 24px",
             display: "flex",
             flexDirection: "column",
             gap: 10,

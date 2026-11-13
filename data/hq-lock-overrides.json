@@ -1,0 +1,21 @@
+{
+  "/nex-native": true,
+  "/nex-native/call-centre": true,
+  "/nex-native/call/dial": true,
+  "/nex-native/call/preview": true,
+  "/nex-native/call/voice-preview": true,
+  "/nex-native/chat": true,
+  "/nex-native/chat-themes-library/all": true,
+  "/nex-native/chat/guest/[ownerAccountId]": true,
+  "/nex-native/chat/peer/[accountId]/forward/[messageId]": true,
+  "/nex-native/free-chat/call": true,
+  "/nex-native/live-commerce/studio": true,
+  "/nex-native/live-commerce/guidelines": true,
+  "/nex-native/help": true,
+  "/nex-native/friends": true,
+  "/nex-native/home": true,
+  "/nex-native/free-chat/bubble-customize": true,
+  "/nex-native/community/select": true,
+  "/nex-native/settings/payments": true,
+  "/nex-native/ireland-entry": true
+}

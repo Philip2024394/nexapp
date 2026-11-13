@@ -61,6 +61,81 @@ export function LocationStepClient({
     { kind: "idle" } | { kind: "saving" } | { kind: "error"; message: string }
   >({ kind: "idle" });
 
+  // Owner directive 2026-11-12 · "Set my location" button auto-fills
+  // city + address + country via browser geolocation + OpenStreetMap
+  // Nominatim reverse-geocode. Nominatim is free + no key · hitting
+  // it from the browser is OK for low-traffic onboarding flows. If
+  // this ever becomes a hot path we proxy through a server route
+  // with a shared User-Agent + rate limit.
+  const [locating, setLocating] = React.useState(false);
+  const [geoError, setGeoError] = React.useState<string | null>(null);
+  async function detectLocation() {
+    setGeoError(null);
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setGeoError("Your browser doesn't support geolocation.");
+      return;
+    }
+    setLocating(true);
+    try {
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: false,
+          timeout: 12_000,
+          maximumAge: 60_000,
+        });
+      });
+      const { latitude, longitude } = pos.coords;
+      const r = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+        {
+          headers: { Accept: "application/json" },
+        },
+      );
+      if (!r.ok) throw new Error(`reverse-geocode-${r.status}`);
+      const data = (await r.json()) as {
+        address?: Record<string, string | undefined>;
+        display_name?: string;
+      };
+      const addr = data.address ?? {};
+      const resolvedCity =
+        addr.city ||
+        addr.town ||
+        addr.village ||
+        addr.municipality ||
+        addr.county ||
+        "";
+      const resolvedCountry = (addr.country_code ?? "").toUpperCase();
+      const street = [
+        [addr.house_number, addr.road].filter(Boolean).join(" "),
+        addr.suburb || addr.neighbourhood,
+        addr.postcode,
+      ]
+        .filter(Boolean)
+        .join(", ");
+      if (resolvedCity) setCity(resolvedCity);
+      if (street) setAddress(street);
+      else if (data.display_name) setAddress(data.display_name);
+      if (
+        resolvedCountry &&
+        resolvedCountry.length === 2 &&
+        lookupCountry(resolvedCountry)
+      ) {
+        setCountryCode(resolvedCountry);
+      }
+    } catch (e) {
+      const msg = (e as GeolocationPositionError | Error).message ?? "";
+      if (/denied|permission/i.test(msg)) {
+        setGeoError("Location permission denied · you can type it instead.");
+      } else if (/timeout/i.test(msg)) {
+        setGeoError("Location timed out · try again or type it in.");
+      } else {
+        setGeoError("Couldn't detect location · you can type it instead.");
+      }
+    } finally {
+      setLocating(false);
+    }
+  }
+
   const selectedCountry = lookupCountry(countryCode);
   const divergesFromAccount =
     accountProfileCountryCode !== null &&
@@ -211,6 +286,60 @@ export function LocationStepClient({
             overlays and SEO will follow the shop&rsquo;s country.
           </div>
         ) : null}
+
+        {/* Owner directive 2026-11-12 · "Set my location" one-tap
+            geolocation + Nominatim reverse-geocode fills city +
+            address + country in one go. Sits above the city input
+            so the owner sees it before they start typing. Error row
+            renders inline beneath so permission denial / timeout is
+            visible without a toast. */}
+        <div>
+          <button
+            type="button"
+            onClick={detectLocation}
+            disabled={locating}
+            data-nex-shop-location-detect
+            style={{
+              width: "100%",
+              padding: "12px 16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              fontSize: 12,
+              fontWeight: 800,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              color: "#FFFFFF",
+              background: locating ? "rgba(255, 114, 0, 0.7)" : "#FF7200",
+              border: "1px solid #E66800",
+              borderRadius: 999,
+              cursor: locating ? "wait" : "pointer",
+              fontFamily: "inherit",
+              boxShadow: "0 4px 14px rgba(255, 114, 0, 0.25)",
+            }}
+          >
+            <span aria-hidden style={{ fontSize: 14 }}>📍</span>
+            {locating ? "Detecting…" : "Set my location"}
+          </button>
+          {geoError ? (
+            <span
+              style={{
+                ...HINT_STYLE,
+                color: "#F3C56B",
+                marginTop: 6,
+                display: "block",
+              }}
+            >
+              {geoError}
+            </span>
+          ) : (
+            <span style={{ ...HINT_STYLE, marginTop: 6, display: "block" }}>
+              One-tap fill for city + address + country. You can still
+              edit each field below.
+            </span>
+          )}
+        </div>
 
         {/* City. */}
         <div>

@@ -13,7 +13,7 @@
 //   · soft rule: profile saves fine without an image · an initials-
 //     style placeholder shows until the user uploads one.
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { uploadAvatarAction } from "./_avatar-actions";
 
 const GOLD = "#C6A15B";
@@ -31,13 +31,48 @@ export function AvatarPicker({ currentUrl, displayInitial }: Props): React.React
   const fileRef = useRef<HTMLInputElement>(null);
   const uploadFormRef = useRef<HTMLFormElement>(null);
   const [pending, setPending] = useState(false);
+  // Owner directive 2026-11-12 · optimistic preview · the moment the
+  // user picks a file we show it in the avatar circle via a local
+  // blob URL, instead of waiting ~2s for the Supabase round-trip
+  // (upload → DB upsert → revalidate). The real public URL replaces
+  // the blob on next render once the server action completes. Blob
+  // URL is revoked on unmount to avoid leaking.
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // Owner directive 2026-11-12 (second pass) · the rim indicator now
+  // also fires while the DB-backed profile image is loading from the
+  // network · not only during upload. Starts true when there's a
+  // currentUrl to fetch (so the rim shows immediately on first paint),
+  // flips to false on the <img onLoad>. Local blob previews skip the
+  // indicator since they resolve synchronously.
+  const [imageLoading, setImageLoading] = useState<boolean>(
+    Boolean(currentUrl),
+  );
+  // If currentUrl changes (e.g. post-save) re-arm the loading state
+  // so the new image gets its own rim pass while it fetches.
+  useEffect(() => {
+    if (currentUrl) setImageLoading(true);
+    else setImageLoading(false);
+  }, [currentUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
   function openPicker() {
     fileRef.current?.click();
   }
 
   function onFileChange() {
-    if (!fileRef.current?.files || fileRef.current.files.length === 0) return;
+    const files = fileRef.current?.files;
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    if (file) {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
     setPending(true);
     uploadFormRef.current?.requestSubmit();
   }
@@ -75,40 +110,67 @@ export function AvatarPicker({ currentUrl, displayInitial }: Props): React.React
         @keyframes nex-avatar-rim-fallback { to { transform: rotate(360deg); } }
       `}</style>
       <div
-        data-nex-avatar-rim={pending ? "loading" : "idle"}
+        data-nex-avatar-rim={
+          pending ? "uploading" : imageLoading ? "loading" : "idle"
+        }
         style={{
+          // Owner directive 2026-11-12 (second pass) · rim indicator
+          // fires in TWO states now: (a) during upload (`pending`) and
+          // (b) while the DB-backed profile image is loading from the
+          // network (`imageLoading`). Both states paint the same spinning
+          // conic-gradient ring + gold halo so the user always has a
+          // visible "working" signal. Idle state (image loaded, no
+          // upload in flight) stays transparent with no ring.
           position: "relative",
           width: 112,
           height: 112,
           borderRadius: "50%",
-          padding: 3,
-          background: pending
-            ? `conic-gradient(from var(--nex-avatar-rim-angle, 0deg), ${GOLD} 0deg, ${FOREST} 90deg, ${EMERALD} 180deg, ${SAGE} 270deg, ${GOLD} 360deg)`
-            : GOLD,
-          boxShadow: pending
-            ? `0 0 24px ${GOLD}66`
-            : `0 0 20px ${GOLD}33`,
+          padding: pending || imageLoading ? 3 : 0,
+          background:
+            pending || imageLoading
+              ? `conic-gradient(from var(--nex-avatar-rim-angle, 0deg), ${GOLD} 0deg, ${FOREST} 90deg, ${EMERALD} 180deg, ${SAGE} 270deg, ${GOLD} 360deg)`
+              : "transparent",
+          boxShadow:
+            pending || imageLoading ? `0 0 24px ${GOLD}66` : "none",
           flexShrink: 0,
-          animation: pending ? "nex-avatar-rim-spin 1200ms linear infinite" : "none",
+          animation:
+            pending || imageLoading
+              ? "nex-avatar-rim-spin 1200ms linear infinite"
+              : "none",
           transition: "box-shadow 220ms ease",
         }}
       >
         <div
           style={{
+            // Owner directive 2026-11-12 · circle background removed.
+            // Only the image (emblem placeholder or uploaded avatar)
+            // paints inside the circle · no green fill behind it.
+            // When the user uploads their own photo it becomes the
+            // sole profile image.
             position: "relative",
             width: "100%",
             height: "100%",
             borderRadius: "50%",
             overflow: "hidden",
-            background: FOREST,
+            background: "transparent",
             display: "grid",
             placeItems: "center",
           }}
         >
-          {currentUrl ? (
+          {previewUrl || currentUrl ? (
+            // Owner directive 2026-11-12 · local preview (blob URL)
+            // wins over the DB-persisted URL so the avatar circle
+            // reflects the pick instantly · falls back to currentUrl
+            // on first mount / on next render after save. onLoad /
+            // onError clear the rim indicator once the image resolves
+            // (both success + 404 kill the spinner so it doesn't
+            // spin forever on a stale URL).
+            // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={currentUrl}
+              src={previewUrl ?? currentUrl ?? ""}
               alt="Your profile photo"
+              onLoad={() => setImageLoading(false)}
+              onError={() => setImageLoading(false)}
               style={{
                 width: "100%",
                 height: "100%",
@@ -117,18 +179,24 @@ export function AvatarPicker({ currentUrl, displayInitial }: Props): React.React
               }}
             />
           ) : (
-            <span
+            // Owner directive 2026-11-12 · default avatar placeholder
+            // flipped from the initials-circle to the sealed NEX Global
+            // Tech Emblem. Displays until the user uploads their own
+            // photo via the orange "Upload photo" button below.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src="/nex-profile/default-avatar.png"
+              alt=""
               aria-hidden
+              draggable={false}
               style={{
-                fontSize: 44,
-                fontWeight: 800,
-                color: SAGE,
-                letterSpacing: "-0.02em",
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: "block",
                 userSelect: "none",
               }}
-            >
-              {displayInitial.slice(0, 1).toUpperCase() || "N"}
-            </span>
+            />
           )}
           {pending ? (
             <div
@@ -171,10 +239,14 @@ export function AvatarPicker({ currentUrl, displayInitial }: Props): React.React
             onClick={openPicker}
             disabled={pending}
             style={{
+              // Owner directive 2026-11-12 · Upload photo / Change photo
+              // button paints NEX Orange with a white glyph (was Gold on
+              // Emerald). Matches the primary-CTA language used on the
+              // free-chat composer + settings share-link + drawer "+".
               padding: "10px 16px",
               borderRadius: 999,
-              background: GOLD,
-              color: EMERALD,
+              background: "#FF7200",
+              color: "#FFFFFF",
               border: "none",
               fontSize: 13,
               fontWeight: 800,
@@ -182,6 +254,9 @@ export function AvatarPicker({ currentUrl, displayInitial }: Props): React.React
               textTransform: "uppercase",
               cursor: pending ? "wait" : "pointer",
               opacity: pending ? 0.6 : 1,
+              boxShadow: pending
+                ? "none"
+                : "0 4px 10px rgba(255, 114, 0, 0.35)",
             }}
           >
             {currentUrl ? "Change photo" : "Upload photo"}
@@ -198,7 +273,7 @@ export function AvatarPicker({ currentUrl, displayInitial }: Props): React.React
             textAlign: "center",
           }}
         >
-          A photo helps your community recognise you.
+          STAND OUT IN A BUSY CROWD
         </p>
       ) : null}
     </section>

@@ -42,7 +42,7 @@ const SANS =
 export default async function ShopStartPage({
   searchParams,
 }: {
-  searchParams: Promise<{ preview?: string }>;
+  searchParams: Promise<{ preview?: string; from?: string }>;
 }): Promise<React.JSX.Element> {
   const session = await resolveSessionWithDevOverride();
   if (!session) {
@@ -55,6 +55,11 @@ export default async function ShopStartPage({
   // without affecting their business or triggering the redirect-to-
   // themes shortcut. Matches the sealed /welcome?preview=1 pattern.
   const previewMode = sp.preview === "1";
+  // Owner directive 2026-11-12 · ?from=signup marks the user as still
+  // in the first-time signup flow · an extra "Skip for now" footer
+  // button offers a graceful exit to /welcome/account-active while
+  // the standard "Create my shop" CTA leads into the setup wizard.
+  const fromSignup = sp.from === "signup";
   const businesses = await listBusinessesByOwner(session.account.id);
   if (businesses[0] && !previewMode) {
     // Already onboarded · drop them straight into the picker.
@@ -102,7 +107,7 @@ export default async function ShopStartPage({
               landing. Function definition below retained in case
               owner reinstates it later. */}
 
-          <Footer />
+          <Footer signupSkip={fromSignup} />
         </div>
       </main>
       {/* Owner directive 2026-11-07 · first-impression welcome pop-up ·
@@ -494,7 +499,7 @@ function Guarantee(): React.JSX.Element {
 }
 
 // ─── Footer · secondary CTA ──────────────────────────────────────────
-function Footer(): React.JSX.Element {
+function Footer({ signupSkip }: { signupSkip?: boolean }): React.JSX.Element {
   return (
     <footer
       style={{
@@ -524,6 +529,31 @@ function Footer(): React.JSX.Element {
       >
         Create my shop →
       </Link>
+      {signupSkip ? (
+        // Owner directive 2026-11-12 · in the signup flow, surface a
+        // graceful exit to the account-active congratulations page so
+        // users who don't want a shop aren't funnelled into the wizard.
+        <Link
+          href="/nex-native/welcome/account-active"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "10px 20px",
+            fontSize: 11,
+            fontWeight: 800,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color: INK_DIM,
+            background: "transparent",
+            border: `1px solid ${BORDER}`,
+            textDecoration: "none",
+            borderRadius: 999,
+          }}
+        >
+          Skip for now
+        </Link>
+      ) : null}
       <span style={{ fontSize: 10, color: INK_MUTED }}>
         You can skip any step · come back to finish any time.
       </span>

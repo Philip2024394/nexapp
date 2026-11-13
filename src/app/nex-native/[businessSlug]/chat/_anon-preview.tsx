@@ -44,6 +44,7 @@ interface Props {
 
 export function AnonymousChatPreview({
   businessSlug,
+  businessId,
   businessDisplayName,
   businessCategory,
   businessCity,
@@ -59,29 +60,35 @@ export function AnonymousChatPreview({
   const [productsDrawerOpen, setProductsDrawerOpen] = React.useState(false);
 
   function requestSignup(reason: "send" | "product"): void {
-    // Stash the current draft so the signup href carries it in ?next.
-    // Only capture on "send" · product shares don't carry a draft.
-    if (reason === "send") setPendingDraft(draft);
-    else setPendingDraft("");
+    // Owner directive 2026-11-13 (iter 23) · stash draft in SAME-ORIGIN
+    // sessionStorage, not the URL. sessionStorage survives in-tab
+    // navigation (including the signup roundtrip) but is wiped on
+    // tab/browser close · recovery across tab close is NOT guaranteed
+    // and must not be claimed. Keyed by businessId so one shop can
+    // never read another shop's draft.
+    if (reason === "send" && draft.trim().length > 0) {
+      try {
+        if (typeof window !== "undefined") {
+          window.sessionStorage.setItem(
+            `nex-anon-chat-draft:${businessId}`,
+            draft,
+          );
+        }
+      } catch {
+        /* sessionStorage disabled (private mode quota, etc.) · fall
+           through · the user will simply need to retype after signup */
+      }
+    }
     setPopupOpen(true);
     setProductsDrawerOpen(false);
   }
 
-  // Owner directive 2026-11-13 (iter 22) · draft stash in URL. When
-  // the visitor opens the signup popup, carry the typed draft (and
-  // optional product_id if a product-share is pending) so the
-  // conversation page can auto-send after the account + device key
-  // are provisioned. Base64url encode the draft so arbitrary text
-  // (emoji, line breaks) survives the URL hops.
-  const [pendingDraft, setPendingDraft] = React.useState<string>("");
-  // base64url-encode the draft (btoa handles ASCII · wrap in encodeURIComponent
-  // + unescape so non-ASCII utf-8 roundtrips cleanly). Keeps emoji intact.
-  const draftB64 = pendingDraft
-    ? btoa(unescape(encodeURIComponent(pendingDraft)))
-    : "";
-  const returnPath =
-    `/nex-native/${businessSlug}/chat` +
-    (draftB64 ? `?draft=${encodeURIComponent(draftB64)}` : "");
+  // Owner directive 2026-11-13 (iter 23) · draft NEVER travels in the
+  // URL. The signup links carry only `next=/<slug>/chat` so Referer
+  // headers, server logs, and CDN logs can't record user-typed text.
+  // The draft itself lives in same-origin sessionStorage (written by
+  // requestSignup above, read by the conversation client after mount).
+  const returnPath = `/nex-native/${businessSlug}/chat`;
   const signUpHref = `/nex-native/sign-up?next=${encodeURIComponent(returnPath)}`;
   const signInHref = `/nex-native/sign-in?next=${encodeURIComponent(returnPath)}`;
 

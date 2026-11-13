@@ -2,95 +2,47 @@
 //
 // Shared NEX-native page header · applied to EVERY dark-navy surface.
 // -------------------------------------------------------------------------
-//   · Left  · NEX ping badge → /nex-native (session-aware router: signed-in
-//              lands on /home, signed-out lands on /create-account).
-//              Replaces the plain "NEX" wordmark 2026-10-17 · owner-
-//              authorised shared-header upgrade. The pulsing-ring badge
-//              is the same identity primitive used by the Welcome,
-//              Sign-in, Landing, and Create-Account hero surfaces.
-//   · Right · magnifying glass → /nex-native/search (NEX Discover · the
-//                               shop-finder that lists NEX users with
-//                               shops or menus · location-gated · opens
-//                               Chat with owner on tap)
-//            three dots       → shared drawer with Home, Contacts, Chat,
-//                               Calls, Search, Settings, Sign out. The
-//                               drawer is the single navigation surface
-//                               for every destination that used to live
-//                               as a header icon · owner-authorised
-//                               2026-10-17 · Home + Settings icons
-//                               retired from the header globally.
+// Owner directive 2026-11-12 · supersedes the three-slot header
+// (brand ping-badge left · magnifier middle · drawer right). Both the
+// NEX profile image circle and the blue magnifying glass are now
+// globally retired. The header renders a SINGLE element: the drawer
+// button on the right. No per-page hide-flag is required · every
+// surface gets the stripped header automatically.
 //
-// NOTE 2026-10-17 · the SettingsHeaderSlot (3D lock + account-gate
-// probe + CreateAccountPrompt modal) is NO LONGER mounted in the
-// header. The sealed /nex-native/settings route still fires the
-// gate server-side for signed-in-no-account visitors who follow the
-// drawer link · the gate still works, just via one path instead
-// of two. The SettingsHeaderSlot component itself is preserved at
-// src/components/nex-native/account-gate/SettingsHeaderSlot.tsx
-// for any future surface that needs the inline lock affordance.
-//
-// Server Component · no hooks · uses inline styles keyed to the NEX
-// dark-navy palette. Signed-out pages that render the header link the
-// icons at auth-gated destinations · following them just bounces the
-// visitor to /sign-in, which is the correct behaviour.
+// Legacy props (brandAvatarUrl · brandAccent · brandSlot · hideSearch
+// · hideBrand · searchStyle) are kept on the interface so the dozens
+// of existing call-sites still type-check, but they are NO-OPS. New
+// callers should omit them.
 
-import Link from "next/link";
-// Account-gate · the Settings-slot client component is self-contained
-// and fetches the gate state via a lightweight route handler so this
-// header stays SYNC and importable by both Server and Client
-// components (`calls/_calls-client.tsx` still imports it today).
-//
-// `SettingsHeaderSlot` is no longer mounted here (owner directive
-// 2026-10-17 · settings icon removed from the shared header) · the
-// component lives at `src/components/nex-native/account-gate/
-// SettingsHeaderSlot.tsx` for any future surface that needs it.
-import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
+// Owner directive 2026-11-12 · drawer identity auto-resolves here so
+// every mounting page shows the signed-in bar without each page
+// manually threading `drawerSession`. Uses the dev-override resolver
+// so NEX_DEV_IMPERSONATE_HANDLE (e.g. nex-99901) is honoured on the
+// drawer identity bar across every surface. Falls back to the real
+// resolver in production automatically.
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { PageHeaderDrawerButtonClient } from "./_page-header-drawer-button-client";
 import type { ControlDrawerSession } from "@/components/nex-native/control-drawer/control-drawer-client";
-// Owner fix 2026-11-05 · page-section grid button for Community etc ·
-// reuses the sealed free-chat HeaderSearch overlay (6 Live tiles).
-// Opt-in via `searchStyle="grid"` · default remains the magnifying
-// glass → /directory/landing.
-import { HeaderSearch } from "@/components/nex-native/chat-chrome/header-search";
-
-const NEX = {
-  textPrimary: "#F2F5F8",
-  textSecondary: "#7D9BC0",
-  cyan: "#00AFFF",
-  cyanSoft: "rgba(0, 175, 255, 0.35)",
-  orange: "#FF7200",
-};
 
 interface NexPageHeaderProps {
   /** Optional data-attr for tests / analytics. */
   dataScope?: string;
-  /** Owner directive 2026-11-03 · scope-specific brand image inside
-   *  the ping badge (e.g. Community badge on /community/* surfaces).
-   *  Falls back to the sealed "NEX" wordmark when null/undefined. */
+  /** Legacy prop · retained for backward compat · now a no-op (the
+   *  brand ping-badge slot has been globally removed per owner
+   *  directive 2026-11-12). */
   brandAvatarUrl?: string | null;
-  /** Owner directive 2026-11-03 · scope-specific accent colour for
-   *  the ping ring + halo. Defaults to NEX cyan. Community surfaces
-   *  pass green so the ping always reads as presence-online. */
+  /** Legacy prop · retained for backward compat · now a no-op. */
   brandAccent?: string;
-  /** Owner directive 2026-11-04 · replaces the left ping-badge slot
-   *  entirely with custom content. Used on the create-profile page
-   *  to show the user's NEX ID in place of the cyan brand badge.
-   *  All other callers leave this unset and keep the sealed badge. */
+  /** Legacy prop · retained for backward compat · now a no-op. */
   brandSlot?: React.ReactNode;
-  /** Owner directive 2026-11-04 · hide the magnifying-glass search
-   *  icon on surfaces that provide their own in-page navigation
-   *  grid (e.g. create-profile). Default false → icon stays. */
+  /** Legacy prop · retained for backward compat · now a no-op (the
+   *  magnifying-glass search icon has been globally removed per
+   *  owner directive 2026-11-12). */
   hideSearch?: boolean;
-  /** Owner fix 2026-11-05 · hide the left ping-badge brand entirely
-   *  (overrides brandSlot + brandAvatarUrl + brandAccent). Used on
-   *  Community surfaces where the owner removed the profile image
-   *  and promoted the page title to primary identity. Default false → badge stays. */
+  /** Legacy prop · retained for backward compat · now a no-op (brand
+   *  slot is always empty). */
   hideBrand?: boolean;
-  /** Owner fix 2026-11-05 · swap the magnifying glass for the sealed
-   *  free-chat HeaderSearch grid button (opens the 6-tile Live overlay
-   *  for page-section navigation). Opt-in only · all existing callers
-   *  default to "search" and keep byte-identical behaviour.
-   *  Ignored when `hideSearch === true`. */
+  /** Legacy prop · retained for backward compat · now a no-op. */
   searchStyle?: "search" | "grid";
   /** Owner fix 2026-11-05 · drawer unification · session identity for
    *  the shared ControlDrawer's identity bar. Page resolves server-side
@@ -100,17 +52,46 @@ interface NexPageHeaderProps {
   drawerSession?: ControlDrawerSession | null;
 }
 
-export function NexPageHeader({
+export async function NexPageHeader({
   dataScope,
-  brandAvatarUrl,
-  brandAccent,
-  brandSlot,
-  hideSearch,
-  hideBrand,
-  searchStyle,
+  brandAvatarUrl: _brandAvatarUrl,
+  brandAccent: _brandAccent,
+  brandSlot: _brandSlot,
+  hideSearch: _hideSearch,
+  hideBrand: _hideBrand,
+  searchStyle: _searchStyle,
   drawerSession,
 }: NexPageHeaderProps) {
-  const useGrid = searchStyle === "grid";
+  // Owner directive 2026-11-12 · auto-resolve the drawer session when
+  // the mounting page didn't pass one. Explicit `null` is respected
+  // (pages that KNOW they are anonymous · e.g. sign-in / welcome).
+  // Explicit `undefined` or missing prop → resolve now via the dev-
+  // override resolver so the drawer identity bar stops showing the
+  // "Sign in to NEX" prompt on every surface that forgot to thread.
+  let resolvedDrawerSession: ControlDrawerSession | null;
+  if (drawerSession === undefined) {
+    const sess = await resolveSessionWithDevOverride();
+    resolvedDrawerSession = sess
+      ? {
+          displayName:
+            sess.account.display_name ?? sess.account.nex_handle ?? "NEX user",
+          nexHandle: sess.account.nex_handle ?? null,
+          isBisnis: false,
+        }
+      : null;
+  } else {
+    resolvedDrawerSession = drawerSession;
+  }
+  // Silence unused-destructured warnings · these props stay in the
+  // interface for backward compat with existing callers but intentionally
+  // don't render anything.
+  void _brandAvatarUrl;
+  void _brandAccent;
+  void _brandSlot;
+  void _hideSearch;
+  void _hideBrand;
+  void _searchStyle;
+
   return (
     <header
       data-nex-page-header
@@ -119,96 +100,11 @@ export function NexPageHeader({
         paddingTop: "max(env(safe-area-inset-top, 0px), 8px)",
         display: "flex",
         alignItems: "center",
-        justifyContent: hideBrand ? "flex-end" : "space-between",
+        justifyContent: "flex-end",
         gap: 12,
       }}
     >
-      {hideBrand ? null : (
-        brandSlot ?? (
-          <Link
-            href="/nex-native"
-            aria-label="NEX home"
-            data-nex-page-header-brand
-            style={{
-              textDecoration: "none",
-              display: "inline-flex",
-              alignItems: "center",
-              lineHeight: 0,
-              borderRadius: "50%",
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            <NexPingBadge
-              size={56}
-              accent={brandAccent ?? NEX.cyan}
-              avatarUrl={brandAvatarUrl ?? null}
-              dataTestId="page-header-nex"
-            />
-          </Link>
-        )
-      )}
-
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        {/* Owner-authorised 2026-10-17 · Home + Settings icons
-            removed from the shared header globally. Home is reachable
-            via the three-dots drawer. Settings is reachable via the
-            drawer AND the sealed /nex-native/settings route still
-            fires its own account-gate prompt for signed-in-no-account
-            users (the CreateAccountPrompt + 3D-lock behaviour is
-            inside SettingsHeaderSlot which lives at
-            src/components/nex-native/account-gate/SettingsHeaderSlot.tsx
-            · still mountable from other surfaces if needed).
-            Owner fix 2026-11-05 · when searchStyle==="grid" we mount
-            the sealed free-chat HeaderSearch button here instead of the
-            magnifying-glass Link · same overlay, same 6 Live tiles,
-            same keyboard controls. */}
-        {hideSearch ? null : useGrid ? (
-          <HeaderSearch />
-        ) : (
-          <Link
-            href="/nex-native/directory/landing"
-            aria-label="NEX Directory · shops · services · food · trades"
-            data-nex-page-header-search
-            style={iconLinkStyle}
-          >
-            <SearchIcon />
-          </Link>
-        )}
-        <PageHeaderDrawerButtonClient session={drawerSession ?? null} />
-      </div>
+      <PageHeaderDrawerButtonClient session={resolvedDrawerSession} />
     </header>
   );
 }
-
-const iconLinkStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: 40,
-  height: 40,
-  borderRadius: "50%",
-  border: `1px solid ${NEX.cyanSoft}`,
-  background: "transparent",
-  color: NEX.cyan,
-  textDecoration: "none",
-};
-
-function SearchIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <circle cx="11" cy="11" r="7" />
-      <line x1="21" y1="21" x2="16.65" y2="16.65" />
-    </svg>
-  );
-}
-

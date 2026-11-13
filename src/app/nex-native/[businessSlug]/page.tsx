@@ -98,10 +98,6 @@ interface PageProps {
   searchParams?: Promise<{
     openChat?: string;
     "open-chat"?: string;
-    // Owner directive 2026-11-13 (iter 22) · draft stash from the
-    // anon signup flow · passed through to /conversations/<id> so
-    // the client can auto-send after device-key provisioning.
-    draft?: string;
   }>;
 }
 
@@ -166,7 +162,6 @@ export default async function PublicShopPage({
   // guard completes the journey.
   const sp = (await searchParams) ?? {};
   const openChatIntent = sp.openChat === "1" || sp["open-chat"] === "1";
-  const draftB64 = typeof sp.draft === "string" ? sp.draft : "";
 
   // Parallel loads · all fail-soft so a transient Supabase blip
   // doesn't crash the shop surface.
@@ -200,8 +195,10 @@ export default async function PublicShopPage({
       business.id,
       business.owner_account_id,
     );
-    const q = draftB64 ? `?draft=${encodeURIComponent(draftB64)}` : "";
-    redirect(`/nex-native/conversations/${conversationId}${q}`);
+    // Owner directive 2026-11-13 (iter 23) · draft stash migrated
+    // off the URL. No draft param carried through · client reads
+    // same-origin sessionStorage after mount.
+    redirect(`/nex-native/conversations/${conversationId}`);
   }
 
   // Owner directive 2026-11-13 · derive the shop's country flag from

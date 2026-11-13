@@ -81,11 +81,6 @@ interface Props {
   // means render a non-tappable avatar.
   readonly peerLinkHref: string | null;
   readonly peerDisplayName: string | null;
-  // Owner directive 2026-11-13 (iter 22) · optional draft stash from
-  // the anon signup return flow. If non-empty, the client auto-sends
-  // it exactly ONCE after the device key resolves, then clears the
-  // URL param so a reload doesn't re-send.
-  readonly initialDraft?: string;
   readonly shopProducts: ReadonlyArray<{
     id: string;
     name: string;
@@ -127,7 +122,6 @@ export function BusinessConversationClient({
   peerAvatarUrl,
   peerLinkHref,
   peerDisplayName,
-  initialDraft,
   shopProducts,
   initialMessages,
   viewerSide,
@@ -245,31 +239,72 @@ export function BusinessConversationClient({
     [],
   );
 
-  // Owner directive 2026-11-13 (iter 22) · auto-send the stashed draft
-  // from the anonymous signup return flow EXACTLY ONCE. We wait for
-  // selfDeviceId so encryption can actually run, then fire doSend. A
-  // ref guards against StrictMode double-invocation + any subsequent
-  // state-driven re-run. We also clean the URL so a reload doesn't
-  // re-send. Non-encrypted plaintext body goes through the same
-  // doSend path as a normal tap-send · nothing special server-side.
+  // Owner directive 2026-11-13 (iter 23) · auto-resume the anonymous
+  // visitor's stashed draft EXACTLY ONCE after they complete signup.
+  //
+  // Storage contract: same-origin sessionStorage keyed by
+  // `nex-anon-chat-draft:${businessId}`. Written by the anon preview
+  // on send-tap · read here on mount · cleared ONLY after confirmed
+  // successful delivery. sessionStorage survives in-tab navigation
+  // (including the signup roundtrip) but DOES NOT survive tab/browser
+  // close · no recovery guarantee across tab close is implied.
+  //
+  // Reliability contract:
+  //   · Wait for both selfDeviceId AND peerReady · encryption needs a
+  //     published device key and a resolved peer participant.
+  //   · Fire doSend once · autoSendFiredRef blocks re-entry across
+  //     every re-render (StrictMode, prop/state changes).
+  //   · AWAIT the {ok} outcome. On ok · clear sessionStorage + idle.
+  //     On failure · KEEP sessionStorage so a reload / remount
+  //     retries · populate the composer so the user can retry
+  //     manually · show the sealed sendError banner.
+  //   · "Sending your first message…" indicator visible while in
+  //     flight so the customer knows auto-resume is happening.
   const autoSendFiredRef = React.useRef<boolean>(false);
+  const [autoSending, setAutoSending] = React.useState<boolean>(false);
+  const [autoSendFailed, setAutoSendFailed] = React.useState<boolean>(false);
   React.useEffect(() => {
     if (autoSendFiredRef.current) return;
-    if (!initialDraft || !initialDraft.trim()) return;
     if (!selfDeviceId) return;
     if (!peerReady) return;
-    autoSendFiredRef.current = true;
-    void doSend(initialDraft.trim());
-    if (typeof window !== "undefined") {
-      const url = new URL(window.location.href);
-      if (url.searchParams.has("draft")) {
-        url.searchParams.delete("draft");
-        window.history.replaceState({}, "", url.pathname + (url.search || ""));
-      }
+    if (typeof window === "undefined") return;
+
+    let stashed: string | null = null;
+    try {
+      stashed = window.sessionStorage.getItem(
+        `nex-anon-chat-draft:${_businessId}`,
+      );
+    } catch {
+      stashed = null;
     }
-    // intentional · we fire once on first ready state
+    if (!stashed || !stashed.trim()) return;
+
+    autoSendFiredRef.current = true;
+    setAutoSending(true);
+    setAutoSendFailed(false);
+
+    void (async () => {
+      const result = await doSend(stashed.trim());
+      if (result.ok) {
+        try {
+          window.sessionStorage.removeItem(
+            `nex-anon-chat-draft:${_businessId}`,
+          );
+        } catch {
+          /* best-effort · successful send is still the source of truth */
+        }
+        setAutoSending(false);
+      } else {
+        // Keep sessionStorage so a refresh retries the auto-send.
+        // Populate the composer so the user can also retry manually.
+        setDraft(stashed);
+        setAutoSending(false);
+        setAutoSendFailed(true);
+      }
+    })();
+    // intentional · we fire once · ref guard blocks re-entry.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selfDeviceId, peerReady, initialDraft]);
+  }, [selfDeviceId, peerReady, _businessId]);
 
   // ── Decrypt INITIAL messages (first paint) ───────────────────────
   React.useEffect(() => {
@@ -366,20 +401,25 @@ export function BusinessConversationClient({
   }, [conversationId, selfAccountId, fetchSince]);
 
   // ── Send encrypted message ────────────────────────────────────────
+  // Owner directive 2026-11-13 (iter 23) · doSend returns an explicit
+  // {ok} result so callers (specifically the auto-send effect for the
+  // anon-signup draft stash) can make decisions ONLY after confirmed
+  // delivery. Existing tap-send callers ignore the return value, so
+  // their behaviour is unchanged.
   async function doSend(
     body: string,
     opts?: {
       attachmentType?: "product";
       attachmentMeta?: Record<string, unknown>;
     },
-  ): Promise<void> {
+  ): Promise<{ ok: boolean }> {
     if (!peerAccountId) {
       setSendState("error");
       setSendError("No business participant resolved · cannot send");
-      return;
+      return { ok: false };
     }
     const trimmed = body.trim();
-    if (!trimmed && !opts?.attachmentType) return;
+    if (!trimmed && !opts?.attachmentType) return { ok: false };
     setSendState("sending");
     setSendError(null);
     const outcome = await sendEncryptedBusinessMessage({
@@ -393,10 +433,27 @@ export function BusinessConversationClient({
     if (outcome.ok) {
       setDraft("");
       setSendState("idle");
+      // Owner directive 2026-11-13 (iter 24) · defect #6 fix · clear
+      // the anon-signup draft stash + failure flag on ANY successful
+      // send, not only on the auto-send-effect path. Without this, a
+      // manual retry after an auto-send failure would succeed but
+      // leave the sessionStorage key in place, and a later remount
+      // in the same tab would replay the auto-send → duplicate
+      // message in nex_message.
+      try {
+        if (typeof window !== "undefined") {
+          window.sessionStorage.removeItem(
+            `nex-anon-chat-draft:${_businessId}`,
+          );
+        }
+      } catch {
+        /* best-effort · the successful DB row is still the source of truth */
+      }
+      setAutoSendFailed(false);
       // Owner directive 2026-11-13 (iter 2) · router.refresh() retired.
       // Realtime subscription above picks up the INSERTed row and
       // appends it to liveMessages · no reload needed.
-      return;
+      return { ok: true };
     }
     setSendState("error");
     setSendError(
@@ -406,6 +463,7 @@ export function BusinessConversationClient({
           ? "Your device hasn't published its key yet · retry in a moment"
           : (outcome.message ?? outcome.error),
     );
+    return { ok: false };
   }
 
   const canSend = sendState !== "sending" && draft.trim().length > 0 && peerReady;
@@ -848,6 +906,56 @@ export function BusinessConversationClient({
           }}
         >
           {sendError}
+        </div>
+      ) : null}
+
+      {/* Owner directive 2026-11-13 (iter 23) · transient indicator for
+          the anonymous-signup draft auto-resume. Shown ONLY while the
+          first message is actually in flight · hidden on success or
+          failure. On failure, sendError above carries the reason. */}
+      {autoSending ? (
+        <div
+          role="status"
+          data-nex-business-conv-auto-sending
+          style={{
+            position: "fixed",
+            bottom: 72,
+            left: 16,
+            right: 16,
+            padding: "10px 14px",
+            background: "rgba(10, 21, 38, 0.92)",
+            border: `1px solid ${accentHex}80`,
+            borderRadius: 10,
+            color: "#F2F5F8",
+            fontSize: 12,
+            textAlign: "center",
+            zIndex: 20,
+            boxShadow: "0 4px 14px rgba(0,0,0,0.4)",
+          }}
+        >
+          Sending your first message…
+        </div>
+      ) : null}
+      {autoSendFailed && !autoSending && !sendError ? (
+        <div
+          role="status"
+          data-nex-business-conv-auto-send-failed
+          style={{
+            position: "fixed",
+            bottom: 72,
+            left: 16,
+            right: 16,
+            padding: "10px 14px",
+            background: "rgba(127, 29, 29, 0.92)",
+            border: "1px solid rgba(255,100,100,0.5)",
+            borderRadius: 10,
+            color: "#FFEAEA",
+            fontSize: 12,
+            textAlign: "center",
+            zIndex: 20,
+          }}
+        >
+          Couldn't auto-send your first message · tap send to try again.
         </div>
       ) : null}
 

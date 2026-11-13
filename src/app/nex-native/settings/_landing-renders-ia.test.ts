@@ -348,9 +348,12 @@ describe("J · hero tiles and preserved controls remain on the landing", () => {
     expect(LANDING_CODE).toContain('data-nex-settings-hero-tile=');
   });
 
-  test("hero tile · Family Safe is wired behind the feature flag", () => {
-    expect(LANDING_CODE).toContain('"/nex-native/family-safety"');
-    expect(LANDING_CODE).toMatch(/isFamilySafetyEnabled\(\)/);
+  test("hero tile · Family Safe tile retired · owner directive 2026-11-12", () => {
+    // Owner directive 2026-11-12 · Family Safe hero tile removed from
+    // the Settings landing. Child-safe UI surfaces retired from the
+    // app · the service library stays for data continuity.
+    expect(LANDING_CODE).not.toContain('"/nex-native/family-safety"');
+    expect(LANDING_CODE).not.toMatch(/isFamilySafetyEnabled\(\)/);
   });
 
   test("hero tile · Community is wired", () => {

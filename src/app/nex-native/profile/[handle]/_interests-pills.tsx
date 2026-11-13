@@ -36,6 +36,10 @@ const SANS =
 export interface InterestsPillsProps {
   readonly interests: ReadonlyArray<string>;
   readonly isOwner: boolean;
+  /** Owner directive 2026-11-12 · "about me" text saved on the sealed
+   *  Edit Profile form (`nex_account_profile.bio`) renders directly
+   *  under the interests grid. Null / empty = no section. */
+  readonly bio?: string | null;
 }
 
 export function InterestsPills(props: InterestsPillsProps): React.JSX.Element | null {
@@ -54,39 +58,83 @@ export function InterestsPills(props: InterestsPillsProps): React.JSX.Element | 
     >
       <h2
         style={{
+          // Owner directive 2026-11-12 · Interests heading now paints
+          // NEX Orange (#FF7200) · supersedes the themeAccent-aware
+          // rule so the label is consistent on every profile surface
+          // regardless of chat-theme accent.
           margin: 0,
           fontSize: 14,
           fontWeight: 700,
-          /* Owner directive 2026-10-18 · Shared Interests heading
-             picks up the profile accent via --nex-profile-accent CSS
-             var (set by profile root from ?themeAccent) · falls back
-             to NEX.text (white) when no theme param. Theme accent is
-             high-contrast enough on navy to replace white here · AA
-             text still reads clean on both pink and green bgs. */
-          color: `var(--nex-profile-accent, ${NEX.text})`,
+          color: "#FF7200",
         }}
       >
-        Shared Interests
+        Interests
       </h2>
       {hasInterests ? (
-        // Owner directive 2026-10-17 · "remove the badges · 2 rows ·
-        // left side and right side" · interests now render as a plain
-        // two-column grid of text rows (one row per interest, icon +
-        // label), split evenly between a left and right column. No
-        // pill chrome, no border, no fill. Compact + scannable.
-        <div
-          data-nex-profile-interests-grid
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            columnGap: 20,
-            rowGap: 10,
-          }}
-        >
-          {props.interests.map((raw) => (
-            <InterestRow key={raw} label={raw.trim()} />
-          ))}
-        </div>
+        <>
+          {/* Owner directive 2026-10-17 · "remove the badges · 2 rows
+              · left side and right side" · interests now render as a
+              plain two-column grid of text rows (one row per interest,
+              icon + label), split evenly between a left and right
+              column. No pill chrome, no border, no fill. Compact +
+              scannable. */}
+          <div
+            data-nex-profile-interests-grid
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              columnGap: 20,
+              rowGap: 10,
+            }}
+          >
+            {props.interests.map((raw) => (
+              <InterestRow key={raw} label={raw.trim()} />
+            ))}
+          </div>
+          {/* Owner directive 2026-11-12 · "about me" (bio) renders
+              directly under the interests grid · pulled from
+              nex_account_profile.bio via the Edit Profile save path. */}
+          {(props.bio ?? "").trim().length > 0 ? (
+            <div
+              data-nex-profile-about-me
+              style={{
+                marginTop: 6,
+                paddingTop: 10,
+                borderTop: "1px solid rgba(125, 155, 192, 0.14)",
+              }}
+            >
+              {/* Owner directive 2026-11-12 · "About me" heading
+                  now matches the Interests heading dimensions (14px
+                  / weight 700) and paints black. Supersedes the
+                  smaller muted-uppercase eyebrow. */}
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: "#000000",
+                  marginBottom: 6,
+                }}
+              >
+                About me
+              </div>
+              <p
+                style={{
+                  // Owner directive 2026-11-12 · about-me body paints
+                  // gray (#9A9A9A) so it reads as supporting metadata
+                  // under the Interests grid · supersedes the white
+                  // NEX.text rule.
+                  margin: 0,
+                  fontSize: 13,
+                  lineHeight: 1.45,
+                  color: "#9A9A9A",
+                  whiteSpace: "pre-wrap",
+                }}
+              >
+                {props.bio}
+              </p>
+            </div>
+          ) : null}
+        </>
       ) : (
         <Link
           href="/nex-native/profile/me?mode=edit&focus=interests"
@@ -120,10 +168,15 @@ function InterestRow({ label }: { readonly label: string }): React.JSX.Element {
     <div
       data-nex-profile-interest-row
       style={{
+        // Owner directive 2026-11-12 · interest label text paints
+        // black · supersedes the NEX.text (white) rule so the label
+        // reads clearly against the cream/light sections of the
+        // profile body. Icon stays as-is (emoji · colour determined
+        // by the glyph).
         display: "inline-flex",
         alignItems: "center",
         gap: 8,
-        color: NEX.text,
+        color: "#000000",
         fontSize: 13,
         fontWeight: 500,
         minWidth: 0,
@@ -148,6 +201,14 @@ function InterestRow({ label }: { readonly label: string }): React.JSX.Element {
 
 function iconForInterest(raw: string): string {
   const k = raw.trim().toLowerCase();
+  // Owner directive 2026-11-12 · rugby gets its own ball icon · the
+  // generic sparkle fallback was reading as a "star" next to the
+  // label and lost the specific-sport signal.
+  if (/rugby/.test(k)) return "🏉";
+  if (/football|soccer/.test(k)) return "⚽";
+  if (/tennis/.test(k)) return "🎾";
+  if (/cricket/.test(k)) return "🏏";
+  if (/basketball/.test(k)) return "🏀";
   if (/travel|travelling|wander/.test(k)) return "✈️";
   if (/photo/.test(k)) return "📷";
   if (/food|cook|dining|cuisine/.test(k)) return "🍴";

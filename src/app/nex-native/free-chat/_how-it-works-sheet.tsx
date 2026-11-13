@@ -18,9 +18,13 @@
 
 import * as React from "react";
 
-const INK = "#F2F5F8";
-const INK_DIM = "#B5C3D6";
-const INK_MUTE = "#7D9BC0";
+// Owner directive 2026-11-12 · How It Works sheet repalettes from
+// black + navy ink to cream (Pale Ivory #F5EDD3) + warm brown ink.
+// Orange bullets + close × + CTA all stay on brand against the cream
+// card. No blue, no navy anywhere on this surface.
+const INK = "#1A1512";
+const INK_DIM = "#5A4F42";
+const INK_MUTE = "#8A7F72";
 const GOLD = "var(--nex-world-secondary, #C6A15B)";
 const SANS =
   "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
@@ -77,10 +81,11 @@ export function HowItWorksSheet({
       />
       <article
         style={{
-          // Owner directive 2026-11-10 · How It Works sheet now paints
-          // solid BLACK background (was dark-navy 88% alpha). Orange
-          // bullets + orange CTA give the sheet a brand-aligned warm
-          // emphasis against the pure-black card.
+          // Owner directive 2026-11-12 · How It Works sheet now paints
+          // Pale Ivory (cream) #F5EDD3 (was solid black 2026-11-10).
+          // Orange bullets + orange CTA + orange close × stay for brand
+          // warmth · ink flips to dark warm brown for readability on
+          // the cream card.
           position: "relative",
           maxWidth: 460,
           width: "min(92vw, 460px)",
@@ -88,10 +93,10 @@ export function HowItWorksSheet({
           overflowY: "auto",
           padding: "22px 22px 20px",
           borderRadius: 20,
-          background: "#000000",
-          border: "1px solid rgba(255, 114, 0, 0.55)",
+          background: "#F5EDD3",
+          border: "1px solid rgba(26, 21, 18, 0.10)",
           boxShadow:
-            "0 24px 60px rgba(0, 0, 0, 0.7), 0 0 40px rgba(255, 114, 0, 0.22)",
+            "0 24px 60px rgba(26, 21, 18, 0.18), 0 0 30px rgba(255, 114, 0, 0.18)",
           color: INK,
         }}
       >
@@ -101,8 +106,8 @@ export function HowItWorksSheet({
           aria-label="Close"
           style={{
             position: "absolute",
-            top: 12,
-            right: 12,
+            top: 22,
+            right: 16,
             width: 32,
             height: 32,
             borderRadius: "50%",

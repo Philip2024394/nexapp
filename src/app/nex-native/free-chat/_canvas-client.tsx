@@ -179,6 +179,28 @@ export function FreeChatCanvasClient({
   // from the ⓘ button next to the "Choose 1 Free Theme" header.
   const [howItWorksOpen, setHowItWorksOpen] = React.useState<boolean>(false);
 
+  // Owner directive 2026-11-12 · theme-preview countdown. When the
+  // user taps a theme tile, the theme activates on the chat background
+  // immediately (handlePickTheme still fires) AND the picker container
+  // + Keep/View Themes action bar hide for 5 seconds. A small countdown
+  // overlay floats above the composer during the preview so the user
+  // sees their choice take over the page. When the counter hits 0,
+  // both containers reappear.
+  const [previewCountdown, setPreviewCountdown] = React.useState<number | null>(
+    null,
+  );
+  React.useEffect(() => {
+    if (previewCountdown === null) return;
+    if (previewCountdown <= 0) {
+      setPreviewCountdown(null);
+      return;
+    }
+    const t = window.setTimeout(() => {
+      setPreviewCountdown((v) => (v === null ? null : v - 1));
+    }, 1000);
+    return () => window.clearTimeout(t);
+  }, [previewCountdown]);
+
   const activeWallpaperUrl = React.useMemo(
     () => resolveFreeChatWallpaperUrl(themeId),
     [themeId],
@@ -293,6 +315,11 @@ export function FreeChatCanvasClient({
         }),
       );
     }
+    // Owner directive 2026-11-12 · after any theme pick, reset the
+    // preview countdown to 5 so the picker + action bar hide and the
+    // user sees their chosen theme take over the page. Tapping another
+    // tile mid-preview restarts the countdown.
+    setPreviewCountdown(5);
   }, []);
 
   // Owner-authorised 2026-11-02 · Keep Theme diverts STRAIGHT to the
@@ -439,8 +466,10 @@ export function FreeChatCanvasClient({
 
       {/* Picker stage · owner directive 2026-10-21 (iteration 66) ·
           2x3 theme tile grid · active tile heartbeat-glows · stays
-          visible even after the user picks a tile so they can swap. */}
-      {stage === "picker" && (
+          visible even after the user picks a tile so they can swap.
+          Owner directive 2026-11-12 · hidden for 5 seconds after any
+          pick so the user sees the theme take over the page. */}
+      {stage === "picker" && previewCountdown === null && (
         <FirstVisitThemeGrid
           themes={themes}
           activeThemeId={themeId}
@@ -457,13 +486,110 @@ export function FreeChatCanvasClient({
           2026-10-21 (iteration 60) · visible only during the picker
           stage AND only after a theme is picked. Keep Theme now
           transitions the picker container into the chat-setup form
-          (iteration 66) · View Themes routes to the library. */}
-      {stage === "picker" && themeId !== null && (
-        <PickedThemeActionBar
-          onKeep={handleKeepTheme}
-          onViewAll={handleViewAll}
-        />
-      )}
+          (iteration 66) · View Themes routes to the library.
+          Owner directive 2026-11-12 · also hidden during the 5-second
+          preview countdown. */}
+      {stage === "picker" &&
+        themeId !== null &&
+        previewCountdown === null && (
+          <PickedThemeActionBar
+            onKeep={handleKeepTheme}
+            onViewAll={handleViewAll}
+          />
+        )}
+
+      {/* Owner directive 2026-11-12 · 5-second theme-preview countdown
+          overlay · appears above the composer while the picker and
+          action bar are hidden. Shows "Previewing · N" with a growing
+          orange progress ring driven by the countdown value. */}
+      {stage === "picker" && previewCountdown !== null ? (
+        <div
+          data-nex-free-chat-preview-countdown
+          aria-live="polite"
+          style={{
+            position: "fixed",
+            left: "50%",
+            bottom: "calc(env(safe-area-inset-bottom, 0px) + 76px)",
+            transform: "translateX(-50%)",
+            zIndex: 90,
+            pointerEvents: "none",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          <div
+            style={{
+              position: "relative",
+              width: 56,
+              height: 56,
+              borderRadius: "50%",
+              background: "rgba(0, 0, 0, 0.72)",
+              display: "grid",
+              placeItems: "center",
+              color: "#FFFFFF",
+              fontWeight: 900,
+              fontSize: 22,
+              letterSpacing: "-0.02em",
+              boxShadow: "0 6px 18px rgba(0, 0, 0, 0.35)",
+            }}
+          >
+            {/* Progress ring · SVG stroke animates each tick */}
+            <svg
+              aria-hidden
+              width={56}
+              height={56}
+              viewBox="0 0 56 56"
+              style={{ position: "absolute", inset: 0 }}
+            >
+              <circle
+                cx={28}
+                cy={28}
+                r={24}
+                fill="none"
+                stroke="rgba(255, 114, 0, 0.25)"
+                strokeWidth={4}
+              />
+              <circle
+                cx={28}
+                cy={28}
+                r={24}
+                fill="none"
+                stroke="#FF7200"
+                strokeWidth={4}
+                strokeLinecap="round"
+                strokeDasharray={2 * Math.PI * 24}
+                strokeDashoffset={
+                  2 * Math.PI * 24 * (1 - Math.max(0, previewCountdown) / 5)
+                }
+                transform="rotate(-90 28 28)"
+                style={{
+                  transition: "stroke-dashoffset 900ms linear",
+                }}
+              />
+            </svg>
+            <span style={{ position: "relative" }}>
+              {Math.max(0, previewCountdown)}
+            </span>
+          </div>
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "#FFFFFF",
+              background: "rgba(0, 0, 0, 0.72)",
+              padding: "4px 10px",
+              borderRadius: 999,
+              boxShadow: "0 4px 10px rgba(0, 0, 0, 0.25)",
+            }}
+          >
+            Previewing
+          </div>
+        </div>
+      ) : null}
 
       {/* Setup stage · owner directive 2026-10-21 (iteration 66) ·
           after Keep Theme the picker container morphs into this form:
@@ -1981,7 +2107,7 @@ function PickedThemeActionBar({
         Keep Theme
       </button>
       <Link
-        href="/nex-native/chat-themes-library"
+        href="/nex-native/chat-themes-library/all"
         aria-label="View all chat themes"
         onClick={onViewAll}
         data-nex-free-chat-picked-theme-view-all
@@ -2249,7 +2375,7 @@ function FirstVisitThemeGrid({
               lineHeight: 1,
             }}
           >
-            Choose 1 Free Theme
+            First Theme On Us · Free
           </h3>
           {/* Owner directive 2026-11-10 · "Today's featured picks ·
               refreshed daily" urgency line removed per owner request.
@@ -2262,12 +2388,16 @@ function FirstVisitThemeGrid({
           aria-label="How theme picking works"
           data-nex-free-chat-first-visit-info
           style={{
+            // Owner directive 2026-11-12 · info "i" chip flipped to
+            // yellow · bright attention-getter against the cream card
+            // and the orange tile glow, now distinct from the orange
+            // CTAs and the previous cyan treatment.
             width: 22,
             height: 22,
             borderRadius: "50%",
-            background: "rgba(0, 175, 255, 0.14)",
-            border: `1px solid ${NEX.cyan}`,
-            color: NEX.cyan,
+            background: "#FFD600",
+            border: "1px solid #E6B800",
+            color: "#1A1512",
             cursor: "pointer",
             fontSize: 12,
             fontWeight: 800,

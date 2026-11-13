@@ -31,10 +31,17 @@ interface ContactInitial {
   instagramHandle: string;
   facebookHandle: string;
   tiktokHandle: string;
+  xHandle: string;
   websiteUrl: string;
   publicPhone: string;
   publicEmail: string;
 }
+
+type SocialKey =
+  | "instagramHandle"
+  | "facebookHandle"
+  | "tiktokHandle"
+  | "xHandle";
 
 interface SocialField {
   name: keyof ContactInitial;
@@ -68,6 +75,16 @@ const FIELDS: ReadonlyArray<SocialField> = [
     hint: "Just the handle.",
   },
   {
+    // Owner directive 2026-11-12 · X added to the shop social set to
+    // match the Chat profile (migration 339 added x_handle to
+    // nex_account_profile). Shop column is x_handle on nex_business.
+    name: "xHandle",
+    label: "X",
+    prefix: "@",
+    placeholder: "irishpride",
+    hint: "Just the handle.",
+  },
+  {
     name: "publicPhone",
     label: "Contact number",
     prefix: "+",
@@ -95,17 +112,55 @@ const FIELDS: ReadonlyArray<SocialField> = [
 
 export function ContactStepClient({
   initial,
+  copiedFromProfile,
+  profileYoutubeHandle,
 }: {
   initial: ContactInitial;
+  // Owner directive 2026-11-12 · per-field flag indicating whether the
+  // value shown was copied from the Chat profile (shop field was empty)
+  // vs. already set on the shop. Used to paint a small "from your
+  // profile" badge so the seller knows the source · the badge clears
+  // the moment the seller types a new value.
+  copiedFromProfile?: Readonly<Record<SocialKey, boolean>>;
+  // YouTube is on the Chat profile but not yet a shop column · we
+  // show a passive "Also on YouTube · not yet on NEX shops" note if
+  // the chat profile has one so the seller knows we see it.
+  profileYoutubeHandle?: string | null;
 }): React.JSX.Element {
   const router = useRouter();
   const [values, setValues] = React.useState<ContactInitial>(initial);
+  // Local "dirty" tracking · once the seller types into a pre-filled
+  // field the badge clears so they know their edit is now persisted.
+  const [touched, setTouched] = React.useState<Set<string>>(new Set());
   const [status, setStatus] = React.useState<
     { kind: "idle" } | { kind: "saving" } | { kind: "error"; message: string }
   >({ kind: "idle" });
 
   function set(name: keyof ContactInitial, value: string) {
     setValues((v) => ({ ...v, [name]: value }));
+    setTouched((t) => {
+      if (t.has(name)) return t;
+      const next = new Set(t);
+      next.add(name);
+      return next;
+    });
+  }
+
+  function showCopiedBadge(name: keyof ContactInitial): boolean {
+    if (touched.has(name)) return false;
+    if (!copiedFromProfile) return false;
+    // Only the 4 social keys carry the pre-fill signal; everything
+    // else (phone, email, website) is shop-specific and never
+    // pre-filled from the profile.
+    if (
+      name !== "instagramHandle" &&
+      name !== "facebookHandle" &&
+      name !== "tiktokHandle" &&
+      name !== "xHandle"
+    ) {
+      return false;
+    }
+    return copiedFromProfile[name] === true;
   }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -139,56 +194,113 @@ export function ContactStepClient({
         onSubmit={onSubmit}
         style={{ display: "flex", flexDirection: "column", gap: 14 }}
       >
-        {FIELDS.map((field) => (
-          <div key={field.name}>
-            <label htmlFor={`shop-${field.name}`} style={LABEL_STYLE}>
-              {field.label}
-            </label>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "stretch",
-                borderRadius: 10,
-                overflow: "hidden",
-                border: "1px solid rgba(198, 161, 91, 0.55)",
-                background: "rgba(5, 15, 28, 0.9)",
-              }}
-            >
-              <span
-                aria-hidden
+        {FIELDS.map((field) => {
+          const copied = showCopiedBadge(field.name);
+          return (
+            <div key={field.name}>
+              <div
                 style={{
-                  display: "grid",
-                  placeItems: "center",
-                  padding: "0 10px",
-                  fontSize: 12,
-                  fontWeight: 900,
-                  color: GOLD,
-                  background: "rgba(198, 161, 91, 0.12)",
-                  minWidth: 50,
-                  letterSpacing: "0.02em",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 8,
                 }}
               >
-                {field.prefix}
-              </span>
-              <input
-                id={`shop-${field.name}`}
-                type={field.type ?? "text"}
-                placeholder={field.placeholder}
-                value={values[field.name]}
-                onChange={(e) => set(field.name, e.currentTarget.value)}
+                <label htmlFor={`shop-${field.name}`} style={LABEL_STYLE}>
+                  {field.label}
+                </label>
+                {copied ? (
+                  <span
+                    data-nex-contact-copied-from-profile
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 900,
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      color: "#1A120A",
+                      background: "#FFD600",
+                      border: "1px solid #E6B800",
+                      borderRadius: 999,
+                      padding: "2px 8px",
+                      marginBottom: 6,
+                    }}
+                  >
+                    From your profile
+                  </span>
+                ) : null}
+              </div>
+              <div
                 style={{
-                  ...FIELD_STYLE,
-                  flex: 1,
-                  border: "none",
-                  background: "transparent",
-                  padding: "12px 12px",
-                  borderRadius: 0,
+                  display: "flex",
+                  alignItems: "stretch",
+                  borderRadius: 10,
+                  overflow: "hidden",
+                  border: "1px solid rgba(198, 161, 91, 0.55)",
+                  background: "rgba(5, 15, 28, 0.9)",
                 }}
-              />
+              >
+                <span
+                  aria-hidden
+                  style={{
+                    display: "grid",
+                    placeItems: "center",
+                    padding: "0 10px",
+                    fontSize: 12,
+                    fontWeight: 900,
+                    color: GOLD,
+                    background: "rgba(198, 161, 91, 0.12)",
+                    minWidth: 50,
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  {field.prefix}
+                </span>
+                <input
+                  id={`shop-${field.name}`}
+                  type={field.type ?? "text"}
+                  placeholder={field.placeholder}
+                  value={values[field.name]}
+                  onChange={(e) => set(field.name, e.currentTarget.value)}
+                  style={{
+                    ...FIELD_STYLE,
+                    flex: 1,
+                    border: "none",
+                    background: "transparent",
+                    padding: "12px 12px",
+                    borderRadius: 0,
+                  }}
+                />
+              </div>
+              <span style={HINT_STYLE}>
+                {field.hint}
+                {copied
+                  ? " · copied from your profile · edit to make it shop-specific."
+                  : ""}
+              </span>
             </div>
-            <span style={HINT_STYLE}>{field.hint}</span>
+          );
+        })}
+
+        {/* YouTube passive note · shown when the chat profile has a
+            handle but the shop schema doesn't yet support one. */}
+        {profileYoutubeHandle ? (
+          <div
+            data-nex-contact-youtube-note
+            style={{
+              padding: "8px 10px",
+              fontSize: 10.5,
+              color: INK_MUTED,
+              background: "rgba(5, 15, 28, 0.6)",
+              border: "1px dashed rgba(198, 161, 91, 0.3)",
+              borderRadius: 8,
+              lineHeight: 1.5,
+            }}
+          >
+            Your profile also has <strong>YouTube · @{profileYoutubeHandle}</strong>.
+            NEX shops don&rsquo;t surface YouTube yet · we&rsquo;ll light it up when
+            the shop schema catches up.
           </div>
-        ))}
+        ) : null}
 
         {status.kind === "error" ? (
           <div

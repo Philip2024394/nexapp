@@ -1,32 +1,23 @@
 // src/app/nex-native/sign-in/page.tsx
 //
-// NEX sign-in surface · owner-authorised template-match 2026-10-15.
-// -----------------------------------------------------------------------------
-// Matches the owner-supplied template at c:/Users/Victus/Pictures/az4.png:
-//   · Full-viewport Earth-explorer backdrop (owner-supplied PNG)
-//   · NEX brand header (ping badge + wordmark + taglines)
-//   · "Welcome to NEX" split headline (NEX in cyan)
-//   · "Chat. Discover. Connect." + body paragraph
-//   · 4 capability icon tiles (reuse landing-icon-set.png)
-//   · Email + password sign-in form (REAL signInAction preserved)
-//   · Remember me + Forgot password controls
-//   · Blue "Sign In →" primary button
-//   · "Don't have an account? Sign up" link
+// NEX sign-in surface · owner directive 2026-11-12 · repainted as a
+// compact modal card floating over a dimmed Earth-explorer backdrop
+// (was a full-page hero + 4-tile icon set + large welcome column).
+// Rationale: when a user is "requested to sign in" (session expired,
+// hit an auth-gated page) the modal-over-backdrop feel is less
+// disorienting than a full marketing page. All authentication paths
+// are preserved · only the shell JSX changes.
 //
-// Deliberate deviation from the template:
-//   · The template shows "Continue with Google" and "Continue with
-//     Apple" buttons. OAuth is NOT implemented in this codebase (only
-//     email+password + WebAuthn face sign-in). Shipping fake social-
-//     sign-in buttons that produce no auth session would be a mock
-//     success state (forbidden by the NEX honesty guardrails). Those
-//     buttons are omitted · a sealed future pass can enable them
-//     once Supabase OAuth providers are wired.
+// Preserved functionality:
+//   · signInAction form (email + password + remember + next)
+//   · Error banner (?e=<code>&m=<message>)
+//   · Dev Pass button (localhost only · hidden in production)
+//   · WebAuthn face sign-in (when hasFaceOnDevice cookie present)
+//   · Forgot password + Sign up links
 //
-// Authentication actions preserved: signInAction + WebAuthn face
-// sign-in. The one-click `signInAsDevAdminAction` form was removed
-// per owner directive 2026-10-16; dev-admin provisioning still exists
-// via `scripts/nex-provision-dev-admin.mts` but the one-click sign-in
-// surface is gone.
+// Deliberate omission (unchanged from earlier template-match):
+//   · OAuth buttons · not wired in this codebase · shipping them
+//     would be a mock success state (forbidden by NEX honesty rule).
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -37,7 +28,6 @@ import { isAdminSession } from "@/lib/nex-native/app/admin";
 import { signInAction, devPassAction } from "../_actions";
 import { SignInFaceButton } from "./_face-button";
 import { SignInPasswordInput } from "./_password-input";
-import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -80,13 +70,6 @@ const NEX = {
 
 const SANS =
   "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
-
-const ICON_TILES: ReadonlyArray<{ title: string; subtitle: string }> = [
-  { title: "Chat", subtitle: "With friends, family & more" },
-  { title: "Themes", subtitle: "Make it yours" },
-  { title: "Shop", subtitle: "Discover local businesses" },
-  { title: "Community", subtitle: "Real people. Real connections." },
-];
 
 export default async function SignInPage({ searchParams }: PageProps) {
   const session = await resolveNexAppSessionFromContext();
@@ -175,10 +158,9 @@ export default async function SignInPage({ searchParams }: PageProps) {
           overflow: "hidden",
         }}
       >
-        {/* Full-viewport Earth-explorer backdrop · owner-supplied PNG
-            (referenced via <img src>; the character art lives inside
-            the owner's own asset, not drawn via code). Scrolls with
-            the page so long content doesn't crop the hero. */}
+        {/* Owner directive 2026-11-12 · modal-over-backdrop layout.
+            Earth-explorer backdrop stays, but the overlay is now a
+            heavier dim so the centred card feels like a true pop-up. */}
         <img
           src="/nex-native/auth-hero-backdrop.png"
           alt=""
@@ -196,15 +178,14 @@ export default async function SignInPage({ searchParams }: PageProps) {
             userSelect: "none",
           }}
         />
-        {/* Subtle dark gradient on top of the backdrop so form text
-            stays legible against the brighter image areas. */}
         <div
           aria-hidden
           style={{
             position: "absolute",
             inset: 0,
-            background:
-              "linear-gradient(180deg, rgba(2,9,20,0.1) 0%, rgba(2,9,20,0.45) 55%, rgba(2,9,20,0.85) 100%)",
+            background: "rgba(2, 9, 20, 0.72)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
             zIndex: 1,
             pointerEvents: "none",
           }}
@@ -212,195 +193,81 @@ export default async function SignInPage({ searchParams }: PageProps) {
 
         <div
           style={{
-            // Owner directive 2026-10-18 · wrapper fills the locked
-            // 100dvh main · flex-column so hero + icons settle above
-            // and the form occupies the bottom without page scroll.
+            // Centered modal card over the dimmed backdrop. Scrolls
+            // internally on short viewports so Dev Pass + face sign-in
+            // stay reachable without pushing the page.
             position: "relative",
             zIndex: 2,
             height: "100%",
             maxWidth: 420,
             margin: "0 auto",
             padding:
-              "calc(env(safe-area-inset-top, 0px) + 10px) 20px calc(env(safe-area-inset-bottom, 0px) + 14px)",
+              "calc(env(safe-area-inset-top, 0px) + 16px) 16px calc(env(safe-area-inset-bottom, 0px) + 20px)",
             display: "flex",
             flexDirection: "column",
-            overflow: "hidden",
+            justifyContent: "center",
+            alignItems: "center",
             boxSizing: "border-box",
           }}
         >
-          {/* ── Top brand header · badge + wordmark + taglines ── */}
-          <header
-            data-nex-sign-in-brand-header
+          <div
+            role="dialog"
+            aria-labelledby="nex-sign-in-heading"
             style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 12,
-              marginBottom: 4,
-              flexShrink: 0,
+              width: "100%",
+              maxWidth: 340,
+              background: "rgba(5, 15, 28, 0.92)",
+              border: `1px solid ${NEX.borderSoft}`,
+              borderRadius: 18,
+              padding: "20px 20px 22px",
+              boxShadow:
+                "0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255,255,255,0.03) inset",
+              backdropFilter: "blur(14px)",
+              WebkitBackdropFilter: "blur(14px)",
+              maxHeight: "calc(100dvh - 32px)",
+              overflowY: "auto",
+              WebkitOverflowScrolling: "touch",
             }}
           >
-            <NexPingBadge size={56} accent={NEX.cyan} dataTestId="sign-in-nex" />
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 2,
-                marginTop: 14,
-                minWidth: 0,
-              }}
-            >
-              <span
-                style={{
-                  fontSize: 26,
-                  fontWeight: 900,
-                  letterSpacing: "-0.01em",
-                  color: NEX.textPrimary,
-                  lineHeight: 1,
-                  textShadow: "0 2px 10px rgba(0,0,0,0.6)",
-                }}
-              >
-                NEX
-              </span>
-              <span
-                style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: NEX.textPrimary,
-                  textShadow: "0 1px 3px rgba(0,0,0,0.55)",
-                }}
-              >
-                More than chat.
-              </span>
-              <span
-                style={{
-                  fontSize: 13,
-                  fontWeight: 700,
-                  background:
-                    "linear-gradient(90deg, #00AFFF 0%, #B47CFF 55%, #FF5BAE 100%)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                  textShadow: "0 1px 3px rgba(0,0,0,0.35)",
-                }}
-              >
-                Your world, connected.
-              </span>
-            </div>
-          </header>
-
-          {/* ── Headline · "Welcome to NEX" · narrow left column so the
-                backdrop character stays visible on the right ── */}
-          <section
-            data-nex-sign-in-hero
-            style={{
-              maxWidth: 240,
-              marginTop: 8,
-              marginBottom: 8,
-              flexShrink: 0,
-            }}
-          >
-            <h1
-              style={{
-                margin: 0,
-                fontSize: 26,
-                fontWeight: 800,
-                lineHeight: 1.05,
-                letterSpacing: "-0.02em",
-                color: NEX.textPrimary,
-                textShadow: "0 2px 10px rgba(0,0,0,0.6)",
-              }}
-            >
-              <span style={{ display: "block" }}>Welcome to</span>
+            <header style={{ textAlign: "center", marginBottom: 16 }}>
               <img
                 src="/nex-native/landing-nex-wordmark.png"
                 alt="NEX"
-                data-nex-sign-in-wordmark
                 style={{
-                  display: "block",
-                  height: 60,
+                  display: "inline-block",
+                  height: 36,
                   width: "auto",
-                  marginTop: 2,
-                  filter: "drop-shadow(0 6px 20px rgba(180,124,255,0.4))",
+                  filter: "drop-shadow(0 4px 14px rgba(180,124,255,0.4))",
                   userSelect: "none",
                   pointerEvents: "none",
                 }}
               />
-            </h1>
-            <div
-              style={{
-                marginTop: 6,
-                fontSize: 15,
-                fontWeight: 700,
-                color: NEX.textPrimary,
-                textShadow: "0 1px 4px rgba(0,0,0,0.6)",
-              }}
-            >
-              Chat. Discover. Connect.
-            </div>
-          </section>
+              <h1
+                id="nex-sign-in-heading"
+                style={{
+                  margin: "10px 0 2px",
+                  fontSize: 18,
+                  fontWeight: 800,
+                  letterSpacing: "-0.01em",
+                  color: NEX.textPrimary,
+                }}
+              >
+                Welcome back
+              </h1>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 12,
+                  color: NEX.textMuted,
+                  lineHeight: 1.45,
+                }}
+              >
+                Sign in to continue.
+              </p>
+            </header>
 
-          {/* ── 4-capability icon tile · reuse landing icon set ── */}
-          <section
-            data-nex-sign-in-icon-set
-            style={{ marginBottom: 10, width: "100%", flexShrink: 0 }}
-          >
-            <img
-              src="/nex-native/landing-icon-set.png"
-              alt="NEX capabilities · Chat · Themes · Shop · Community"
-              style={{
-                display: "block",
-                width: "100%",
-                height: "auto",
-                userSelect: "none",
-                pointerEvents: "none",
-              }}
-            />
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(4, 1fr)",
-                gap: 4,
-                marginTop: 2,
-                padding: "0 2px",
-              }}
-            >
-              {ICON_TILES.map((tile) => (
-                <div
-                  key={tile.title}
-                  style={{
-                    textAlign: "center",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 2,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: NEX.textPrimary,
-                      textShadow: "0 1px 3px rgba(0,0,0,0.6)",
-                    }}
-                  >
-                    {tile.title}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 9.5,
-                      lineHeight: 1.25,
-                      color: "rgba(255,255,255,0.78)",
-                      textShadow: "0 1px 2px rgba(0,0,0,0.55)",
-                    }}
-                  >
-                    {tile.subtitle}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* ── Error banner from signInAction failure ── */}
-          {banner && (
+            {/* ── Error banner from signInAction failure ── */}
+            {banner && (
             <div
               role="status"
               style={{
@@ -634,34 +501,32 @@ export default async function SignInPage({ searchParams }: PageProps) {
                 success state. Enable in a sealed follow-up once
                 Supabase OAuth providers are configured. ── */}
 
-          {/* ── Sign-up link ── */}
-          <p
-            style={{
-              marginTop: 22,
-              textAlign: "center",
-              fontSize: 13,
-              color: NEX.textPrimary,
-              textShadow: "0 1px 3px rgba(0,0,0,0.6)",
-            }}
-          >
-            Don&apos;t have an account?{" "}
-            <Link
-              href="/nex-native/create-account"
+            {/* ── Sign-up link ── */}
+            <p
               style={{
-                color: NEX.cyan,
-                textDecoration: "none",
-                fontWeight: 800,
+                marginTop: 20,
+                marginBottom: 0,
+                textAlign: "center",
+                fontSize: 13,
+                color: NEX.textPrimary,
               }}
             >
-              Sign Up
-            </Link>
-          </p>
+              Don&apos;t have an account?{" "}
+              <Link
+                href="/nex-native/create-account"
+                style={{
+                  color: NEX.cyan,
+                  textDecoration: "none",
+                  fontWeight: 800,
+                }}
+              >
+                Sign Up
+              </Link>
+            </p>
 
-          {/* Dev-admin one-click sign-in removed · owner directive
-              2026-10-16. Normal credential sign-in is the only path.
-              The NEX_ALLOW_DEV_ADMIN env flag + the Settings-gear
-              elevation (SettingsHeaderSlot `isAdmin`) remain untouched
-              for signed-in admin accounts that provisioned separately. */}
+            {/* Dev-admin one-click sign-in removed · owner directive
+                2026-10-16. Normal credential sign-in is the only path. */}
+          </div>
         </div>
       </main>
     </>

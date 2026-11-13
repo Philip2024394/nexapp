@@ -23,6 +23,18 @@ const nextConfig = {
   ],
   experimental: {
     turbopackFileSystemCacheForBuild: true,
+    // Owner directive 2026-11-12 · raise the Next.js 16 default
+    // server-action body limit (1 MB) to 6 MB so the sealed
+    // `uploadAvatarAction` can accept files up to its own 5 MB cap
+    // (`MAX_BYTES` in _avatar-actions.ts). Prior default was 1 MB so
+    // any avatar larger than 1 MB was rejected before the handler
+    // ran · the digest `3545357314@E394` incident in the dev log is
+    // the exact symptom. 6 MB headroom lets a 5 MB JPEG + multipart
+    // overhead through without re-tuning when a user picks a photo
+    // straight from a modern phone (3-4 MB typical).
+    serverActions: {
+      bodySizeLimit: "6mb",
+    },
   },
   images: {
     remotePatterns: [

@@ -110,7 +110,7 @@ export function AddressWithLocation({ defaultValue }: Props): React.ReactElement
         }}
         maxLength={300}
         rows={3}
-        placeholder="e.g. Lacken House, New Ross, Co Wexford · Eircode Y34 X678"
+        placeholder="Type your full address"
       />
       <div
         style={{

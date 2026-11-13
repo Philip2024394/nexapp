@@ -87,9 +87,13 @@ export default async function ShopThemesPage(): Promise<React.JSX.Element> {
       <main
         data-nex-shop-themes
         style={{
+          // Owner directive 2026-11-12 · page backdrop swapped to the
+          // sealed NEX Golden Holiday Shopping Scene · fills the phone
+          // frame via `cover` + center position with the dark NEX_BG
+          // as a solid fallback behind it (if the asset ever misses).
           position: "absolute",
           inset: 0,
-          background: NEX_BG,
+          background: `${NEX_BG} url('/nex-native/shop-themes-page-bg.png') center / cover no-repeat`,
           color: NEX_TEXT,
           fontFamily: SANS,
           display: "flex",
@@ -114,24 +118,23 @@ export default async function ShopThemesPage(): Promise<React.JSX.Element> {
             zIndex: 20,
           }}
         >
-          {/* Owner directive 2026-11-07 · "add cream button for the +
-              side drawer round". Trigger rendered as a cream circle
-              with warm-ink + glyph so it reads as a friendly action
-              against the sealed dark Ireland world chrome. */}
+          {/* Owner directive 2026-11-12 · "+" side-drawer trigger
+              matches the sealed global black trigger (NexPageHeader
+              uses the same style everywhere else). Supersedes the
+              2026-11-07 cream/gold variant. */}
           <ControlDrawer
             session={drawerSession}
             triggerStyle={{
               width: 40,
               height: 40,
-              borderRadius: 999,
-              // Owner directive 2026-11-07 · "why is the button side
-              // drawer not same color button as Shop Template" · the
-              // trigger now matches the gold "Shop Template" heading
-              // colour. Round gold circle with warm-ink + glyph.
-              background: "var(--nex-world-secondary, #C6A15B)",
-              color: "#1A120A",
+              borderRadius: "50%",
+              background: "#000000",
+              color: "#FFFFFF",
+              fontSize: 26,
+              fontWeight: 900,
+              lineHeight: 1,
               border: "none",
-              boxShadow: "0 6px 16px rgba(0, 0, 0, 0.35)",
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.45)",
             }}
           />
         </div>

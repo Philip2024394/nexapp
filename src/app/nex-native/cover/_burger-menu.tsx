@@ -31,7 +31,8 @@
 // ancestor · PhoneFrame has one).
 
 import * as React from "react";
-import { HeaderCartIcon } from "../_header-cart-icon";
+// Owner directive 2026-11-12 · HeaderCartIcon import retired · the
+// mount was removed from the burger-menu header.
 import type { ShopCoverContent } from "@/lib/nex-native/shop-cover-service";
 
 interface BurgerMenuProps {
@@ -144,33 +145,11 @@ export function BurgerMenu({
 
   return (
     <>
-      {/* Top-right cluster · owner directive 2026-11-06 (revised) ·
-          cart icon enlarged alongside the burger · burger button
-          chrome removed (no dark circle, no gold ring) so it reads
-          as just a bold stroke-3 glyph like the cart. Both icons
-          drop-shadow for legibility over any background. Burger
-          sits against the right edge; cart sits ~30px to its left. */}
-      <div
-        style={{
-          position: "absolute",
-          /* Owner directive 2026-11-06 (refined) · "cart icon move
-             up little same row as burger icon". The 1.6× scale +
-             top-right transform origin pushed the cart's visible
-             centre below the burger's · drop top from 10 → 4 so
-             both icons sit on a shared horizontal row. */
-          top: 4,
-          right: 56,
-          zIndex: 50,
-          display: "inline-flex",
-          color: CREAM,
-          filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.75))",
-          transform: "scale(1.6)",
-          transformOrigin: "top right",
-        }}
-        data-nex-shop-header-cart
-      >
-        <HeaderCartIcon variant="inline" />
-      </div>
+      {/* Owner directive 2026-11-12 · HeaderCartIcon removed from the
+          shop template header. Supersedes the 2026-11-06 "cart icon
+          enlarged alongside the burger" rule. Only the burger menu
+          remains top-right · buyers reach the cart via the global
+          drawer "My Orders" row or the direct /nex-native/cart URL. */}
       <button
         type="button"
         aria-label="Shop menu"

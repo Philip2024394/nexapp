@@ -76,6 +76,11 @@ export interface IdentityHeroProps {
   readonly profession: string | null;
   readonly headline: string | null;
   readonly locationLabel: string | null;
+  /** Owner directive 2026-11-12 · saved address from
+   *  nex_account_profile.address · shown in the location row when
+   *  locationLabel is empty · supersedes the "+ Add your location"
+   *  CTA that used to prompt owners to fill the field. */
+  readonly address?: string | null;
   readonly bio: string | null;
   readonly isOwner: boolean;
   /** True when the account owns ≥1 Safe-Trade-VERIFIED business ·
@@ -139,6 +144,10 @@ export function IdentityHero(props: IdentityHeroProps): React.JSX.Element {
           height: 128,
         }}
       >
+        {/* Owner directive 2026-11-12 · cyan rim removed from the
+            profile portrait on the view page · the avatar sits clean
+            inside its circle with no outer ring. Supersedes the
+            earlier 4px NEX-cyan border rule. */}
         {props.avatarUrl ? (
           <img
             src={props.avatarUrl}
@@ -150,9 +159,14 @@ export function IdentityHero(props: IdentityHeroProps): React.JSX.Element {
               height: 128,
               borderRadius: "50%",
               objectFit: "cover",
-              border: `4px solid ${NEX.cyan}`,
-              background: NEX.cyanFaint,
-              boxShadow: `0 6px 24px -8px rgba(0,0,0,0.8)`,
+              // Owner directive 2026-11-12 (third pass) · explicit
+              // outline + boxShadow suppression so NO white/blue rim
+              // leaks from any default browser ring, focus state or
+              // inherited CSS. Supersedes the cyan-border removal.
+              border: "none",
+              outline: "none",
+              boxShadow: "none",
+              background: "transparent",
             }}
           />
         ) : (
@@ -165,39 +179,21 @@ export function IdentityHero(props: IdentityHeroProps): React.JSX.Element {
               borderRadius: "50%",
               display: "grid",
               placeItems: "center",
-              border: `4px solid ${NEX.cyan}`,
+              border: "none",
               background: NEX.cyanFaint,
               color: NEX.cyan,
               fontSize: 38,
               fontWeight: 800,
               letterSpacing: "0.04em",
               fontFamily: SANS,
-              boxShadow: `0 6px 24px -8px rgba(0,0,0,0.8)`,
             }}
           >
             {initials}
           </div>
         )}
-        {props.isVerified ? (
-          <div
-            aria-label="Verified NEX seller"
-            data-nex-profile-avatar-verified
-            style={{
-              position: "absolute",
-              right: 6,
-              bottom: 6,
-              width: 28,
-              height: 28,
-              borderRadius: "50%",
-              background: NEX.verifiedBlue,
-              display: "grid",
-              placeItems: "center",
-              border: `3px solid ${NEX.bg}`,
-            }}
-          >
-            <CheckIcon color="#FFFFFF" size={14} />
-          </div>
-        ) : null}
+        {/* Owner directive 2026-11-12 · large avatar-corner "Verified"
+            badge removed · "the users account is their own". A tiny
+            NEX-member tick stays next to the display name below. */}
         {/* Owner directive 2026-10-17 · camera-icon overlay on the
             avatar when edit mode is active · tap opens a native file
             picker that submits to the sealed `uploadAvatarAction` ·
@@ -226,30 +222,10 @@ export function IdentityHero(props: IdentityHeroProps): React.JSX.Element {
         }}
       >
         {props.displayName}
-        {props.isVerified ? (
-          <span
-            aria-hidden
-            data-nex-profile-name-verified
-            style={{
-              display: "inline-grid",
-              placeItems: "center",
-              width: 20,
-              height: 20,
-              borderRadius: "50%",
-              background: NEX.verifiedBlue,
-            }}
-          >
-            <CheckIcon color="#FFFFFF" size={11} />
-          </span>
-        ) : null}
-        {props.trustTier && props.trustTier !== "unknown" ? (
-          <TrustShield
-            tier={props.trustTier}
-            size="sm"
-            showLabel={false}
-            titlePrefix={props.displayName}
-          />
-        ) : null}
+        {/* Owner directive 2026-11-12 (second pass) · NEX-member tick
+            removed from after the display name · "the users account
+            is their own" supersedes the earlier tick mount. No badge
+            renders next to the name now. */}
       </h1>
 
       {/* Owner directive 2026-11-02 · the profile owner's Nex-ID
@@ -271,7 +247,13 @@ export function IdentityHero(props: IdentityHeroProps): React.JSX.Element {
             letterSpacing: "0.03em",
           }}
         >
-          {props.nexHandle}
+          {/* Owner directive 2026-11-12 · display the handle with a
+              capital "N" prefix ("Nex-99901" not "nex-99901"). The
+              DB storage stays lowercase (slug / URL / canonical ID
+              rules unchanged) · this is a cosmetic uppercase of the
+              "nex-" literal only · the digits + hyphen + any trailing
+              characters are preserved exactly. */}
+          {props.nexHandle.replace(/^nex-/i, "Nex-")}
         </div>
       ) : null}
 
@@ -287,7 +269,13 @@ export function IdentityHero(props: IdentityHeroProps): React.JSX.Element {
        *  cyan map pin · the bio paragraph has been retired in favour
        *  of a dedicated description section placed under the
        *  follower-stats row (follow-up commit). */}
-      {props.locationLabel ? (
+      {/* Owner directive 2026-11-12 (second pass) · "+ Add your
+          location" empty-state CTA removed · we now show the saved
+          nex_account_profile.address when locationLabel is null, and
+          render nothing when neither is set. The address flows from
+          the Edit Profile save path · /settings/profile/edit writes
+          it, this row reads it. */}
+      {props.locationLabel ?? props.address ? (
         <div
           data-nex-profile-location
           style={{
@@ -301,27 +289,8 @@ export function IdentityHero(props: IdentityHeroProps): React.JSX.Element {
           }}
         >
           <MapIcon color="#E31C25" />
-          <span>{props.locationLabel}</span>
+          <span>{props.locationLabel ?? props.address}</span>
         </div>
-      ) : props.isOwner ? (
-        <Link
-          href={`/nex-native/profile/${(props.nexHandle ?? "").toLowerCase()}?mode=edit&focus=location`}
-          data-nex-profile-location-empty-cta
-          style={{
-            fontSize: 12,
-            color: NEX.textMuted,
-            fontFamily: SANS,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            textDecoration: "none",
-            padding: "4px 10px",
-            borderRadius: 999,
-            border: `1px dashed ${NEX.cyanSoft}`,
-          }}
-        >
-          <MapIcon color="#E31C25" /> + Add your location
-        </Link>
       ) : null}
 
       {/* Owner-authorised 2026-10-31 · Creator badges · yellow NEX
@@ -395,12 +364,16 @@ function initialsFromName(name: string): string {
 }
 
 function buildProfessionLine(profession: string | null, headline: string | null): string | null {
+  // Owner directive 2026-11-12 · headline is legacy-only · the sealed
+  // Edit Profile form writes `profession` as the canonical "what you
+  // do" field · headline is no longer surfaced on the profile view
+  // (stale seeded values like "NEX IE · creator · Irish Pride" were
+  // leaking into the hero subtitle via the old `${profession} · ${headline}`
+  // join). Keeping the headline param on the signature so existing
+  // callers don't break · it just isn't rendered.
+  void headline;
   const p = (profession ?? "").trim();
-  const h = (headline ?? "").trim();
-  if (p.length === 0 && h.length === 0) return null;
-  if (p.length === 0) return h;
-  if (h.length === 0) return p;
-  return `${p} · ${h}`;
+  return p.length > 0 ? p : null;
 }
 
 function BriefcaseIcon({ color }: { readonly color: string }): React.JSX.Element {

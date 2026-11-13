@@ -27,15 +27,22 @@ const SURFACE = "rgba(5, 15, 28, 0.72)";
 const BORDER = "rgba(198, 161, 91, 0.25)";
 const BORDER_HI = "rgba(198, 161, 91, 0.55)";
 
+// Owner directive 2026-11-12 · WIZARD_STEPS collapsed from 8 steps to
+// 4 per the simplification review. Progress bar now reads "Step N of
+// 4". The old 4 optional pages (hours · story · policies · contact)
+// still render via the shell when deep-linked from Manage Shop ·
+// those callers pass stepNumber=1 so the progress bar + step label
+// read sensibly ("Business Details") even though the content is a
+// different section. Any Manage Shop deep-link should NOT display a
+// confusing "Step 3 of 4" label when the user is editing hours in
+// isolation · we may thread an optional override later, but for now
+// the shell stays stable and the single-step pages don't lie about
+// where they sit in the ladder.
 export const WIZARD_STEPS: ReadonlyArray<{ slug: string; title: string }> = [
-  { slug: "identity", title: "Shop identity" },
-  { slug: "location", title: "Location" },
-  { slug: "category", title: "Category" },
-  { slug: "hours", title: "Opening hours" },
-  { slug: "story", title: "Your story" },
-  { slug: "policies", title: "Policies" },
-  { slug: "contact", title: "Contact" },
-  { slug: "template", title: "Pick template" },
+  { slug: "business-details", title: "Business details" },
+  { slug: "appearance", title: "Shop appearance" },
+  { slug: "first-product", title: "Add first product" },
+  { slug: "review", title: "Review" },
 ];
 
 export interface WizardShellProps {

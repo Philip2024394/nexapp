@@ -74,28 +74,13 @@ export function OwnerEditShell(props: OwnerEditShellProps): React.JSX.Element {
   const editHref = `${viewHref}?mode=edit`;
 
   if (!props.editMode) {
-    // View mode · just render children with a floating "Edit" pill in
-    // the top-right of the cover photo. The pill is absolute-positioned
-    // against the shell's root which sits at the top of the main.
-    return (
-      <>
-        <Link
-          href={editHref}
-          data-nex-profile-owner-edit-toggle
-          data-nex-profile-owner-edit-mode="off"
-          aria-label="Edit profile"
-          /* Owner directive 2026-10-18 · Edit pill picks up the
-             profile accent (CSS var set by profile root from
-             ?themeAccent). Falls back to NEX cyan when no theme
-             param · fg stays NEX.bg (navy) for contrast across
-             both pink and green accents. */
-          style={pillStyle(`var(--nex-profile-accent, ${NEX.cyan})`, NEX.bg)}
-        >
-          <PencilIcon /> Edit
-        </Link>
-        {props.children}
-      </>
-    );
+    // Owner directive 2026-11-12 · view-mode "Edit" pill retired ·
+    // the drawer row "Edit Profile" → /settings/profile/edit is the
+    // single entry point to profile editing. Only renders children;
+    // zero chrome. editHref retained in scope above for possible
+    // future revival but not used.
+    void editHref;
+    return <>{props.children}</>;
   }
 
   // Edit mode · wrap children in a form that posts to the server action.

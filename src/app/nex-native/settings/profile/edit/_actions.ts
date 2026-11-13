@@ -26,7 +26,10 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// Owner directive 2026-11-12 · dev-override resolver so Nex-99901 and
+// other dev-impersonated personas can save the profile from the local
+// dev build. Falls back to the real resolver in production.
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import { isKnownInterestId } from "@/lib/nex-native/profile/interests-registry";
 
@@ -55,7 +58,7 @@ function textOrNull(raw: FormDataEntryValue | null, max: number): string | null 
 }
 
 export async function saveProfileFieldsAction(formData: FormData): Promise<void> {
-  const session = await resolveNexAppSessionFromContext();
+  const session = await resolveSessionWithDevOverride();
   if (!session) redirect("/nex-native/sign-in");
   const accountId = session.account.id;
 
@@ -133,8 +136,16 @@ export async function saveProfileFieldsAction(formData: FormData): Promise<void>
       .from("nex_account_profile")
       .upsert({ ...basePatch, about_me: aboutMe }, { onConflict: "account_id" })
   ).error;
-  if (profileErr && /column.*about_me/i.test(profileErr.message)) {
-    // Migration 274 not yet applied · retry without about_me.
+  // Owner directive 2026-11-12 · regex widened to catch both PostgREST
+  // phrasings: "column.*about_me" (older driver) + "about_me.*column"
+  // (current PGRST204 shape · "Could not find the 'about_me' column").
+  // Prior regex missed the newer shape and every save dropped to the
+  // profile_upsert_failed banner even though the retry path would work.
+  if (profileErr && /about_me/i.test(profileErr.message)) {
+    // Migration 274 not yet applied · retry without about_me so saves
+    // succeed. About me silently drops until the migration lands. This
+    // is a bridge · the long-term fix is to apply migration 274 to
+    // the Supabase project the dev `.env.local` points at.
     profileErr = (
       await nexSupabaseAdmin
         .from("nex_account_profile")
@@ -166,17 +177,18 @@ export async function saveProfileFieldsAction(formData: FormData): Promise<void>
   revalidatePath("/nex-native/profile/[handle]", "page");
   revalidatePath("/nex-native/chat/peer/[accountId]", "page");
 
-  // Owner directive 2026-11-04 later-same-day · unified post-save redirect
-  // to /creator/join so every user who completes their profile sees the
-  // NEX Creator programme. The page honours "Set up later" so users who
-  // don't want Creator features aren't trapped. The `from` param tells
-  // the landing where to send a Set up later tap:
-  //   · from=signup-saved      → /free-chat  (new user's natural home)
-  //   · from=profile-saved     → /free-chat  (already in the app · home)
+  // Owner directive 2026-11-12 · post-save redirect retargeted (again).
+  //   · signup flow → /welcome/shop-offer
+  //       Interstitial with the sealed Golden Holiday Shopping backdrop
+  //       pitching the €4.99/mo shop + Google-listed presence. Two
+  //       buttons: "Yes I'm in" → /manage/shop/setup?from=signup, or
+  //       "Skip for now" → /welcome/account-active.
+  //   · edit flow   → /profile/me?m=saved
+  //       Returning user who edited their profile goes back to the
+  //       profile view they came from.
   const from = formData.get("from");
-  const fromParam =
-    typeof from === "string" && from === "signup"
-      ? "signup-saved"
-      : "profile-saved";
-  redirect(`/nex-native/creator/join?from=${fromParam}`);
+  if (typeof from === "string" && from === "signup") {
+    redirect("/nex-native/welcome/shop-offer");
+  }
+  redirect("/nex-native/profile/me?m=saved");
 }

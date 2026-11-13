@@ -1205,11 +1205,20 @@ const PRESETS_PER_PAGE = 20;
 interface Props {
   readonly businessId: string | null;
   readonly currentImageUrl: string | null;
+  // Owner directive 2026-11-12 (fifth pass) · the preview overlay
+  // renders the user's previously chosen template with the candidate
+  // background behind it. Both come from nex_business via the server
+  // page. tintHex is optional · when null the template's own accent
+  // paints through.
+  readonly currentLayoutId: string;
+  readonly currentTintHex: string | null;
 }
 
 export function ShopBackgroundsClient({
   businessId,
   currentImageUrl,
+  currentLayoutId,
+  currentTintHex,
 }: Props): React.JSX.Element {
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
@@ -1223,18 +1232,56 @@ export function ShopBackgroundsClient({
     | { kind: "error"; message: string }
   >({ kind: "idle" });
 
+  // Owner directive 2026-11-12 · tile tap no longer applies the
+  // background directly · it opens a container-view preview that
+  // paints the chosen image full-bleed inside the sealed phone
+  // silhouette. The user confirms with "Use background" (which then
+  // hits applyShopPresetBackgroundAction) or dismisses with the
+  // top-right close button. Keeps the tile grid clean of accidental
+  // taps and gives the user a proper "try before you apply" step.
+  const [preview, setPreview] = React.useState<ShopBackgroundPreset | null>(
+    null,
+  );
+
   // Reset to page 0 when the category filter changes so the owner
   // always lands on the first page of the newly filtered set.
   React.useEffect(() => {
     setPage(0);
   }, [selectedCategory]);
 
+  // Owner directive 2026-11-12 · "All" view (first visit default)
+  // now paints a mixed deck of backgrounds across every category so
+  // the owner sees variety immediately instead of a long run of one
+  // category at the top. Shuffle is session-stable (memoised once per
+  // mount) so pagination stays coherent while the user is browsing.
+  // Fisher-Yates with a mulberry32 PRNG seeded from a per-mount
+  // random so it looks different each visit but doesn't reshuffle
+  // mid-browse.
+  const shuffleSeed = React.useRef<number>(Math.floor(Math.random() * 0xffffffff));
+  const shuffledAll = React.useMemo(() => {
+    const out = [...PRESETS];
+    // mulberry32 · tiny, fast, deterministic from the seed
+    let s = shuffleSeed.current >>> 0;
+    const rand = () => {
+      s = (s + 0x6D2B79F5) >>> 0;
+      let t = s;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [out[i]!, out[j]!] = [out[j]!, out[i]!];
+    }
+    return out;
+  }, []);
+
   const filtered = React.useMemo(
     () =>
       selectedCategory === "all"
-        ? PRESETS
+        ? shuffledAll
         : PRESETS.filter((p) => p.category === selectedCategory),
-    [selectedCategory],
+    [selectedCategory, shuffledAll],
   );
   const totalPages = Math.max(
     1,
@@ -1250,8 +1297,18 @@ export function ShopBackgroundsClient({
     [filtered, pageSafe],
   );
 
+  // Owner directive 2026-11-12 · onPick is now a preview opener,
+  // NOT an apply action. Previews ALWAYS open on tap · even when
+  // businessId is null (first-visit / pre-business-row flows) so the
+  // owner can always see the chosen background against their template.
+  // The DB-write guard now lives in onConfirmPreview below.
   function onPick(preset: ShopBackgroundPreset) {
-    if (!businessId) return;
+    setPreview(preset);
+  }
+
+  function onConfirmPreview() {
+    const preset = preview;
+    if (!preset || !businessId) return;
     setStatus({ kind: "applying", id: preset.id });
     startTransition(async () => {
       const result = await applyShopPresetBackgroundAction(
@@ -1260,11 +1317,22 @@ export function ShopBackgroundsClient({
       );
       if (result.ok) {
         setStatus({ kind: "ok", id: preset.id });
+        // Owner directive 2026-11-12 (eleventh pass) · after "Use
+        // Theme" success the owner lands on the sealed shop-setup
+        // dispatcher (`/manage/shop/setup`), which 307s to the FIRST
+        // INCOMPLETE step of the 8-step wizard (identity → location
+        // → category → hours → story → policies → contact → finish).
+        // Previously the flow dropped back to /manage/shop/themes,
+        // which stranded new sellers before they'd entered their
+        // shop name · logo · address · category · hours. The smart
+        // dispatcher ensures each seller finishes the setup ladder
+        // in order, with partial progress preserved across resumes.
         setTimeout(() => {
-          router.push("/nex-native/manage/shop/themes");
+          router.push("/nex-native/manage/shop/setup");
         }, 650);
       } else {
         setStatus({ kind: "error", message: result.error });
+        setPreview(null);
       }
     });
   }
@@ -1280,57 +1348,30 @@ export function ShopBackgroundsClient({
         overflow: "auto",
       }}
     >
-      {/* Back · header */}
-      <nav style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <Link
-          href="/nex-native/manage/shop/themes"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 4,
-            padding: "4px 8px",
-            fontSize: 11,
-            fontWeight: 700,
-            color: GOLD,
-            textDecoration: "none",
-            border: `1px solid ${BORDER}`,
-            borderRadius: 6,
-          }}
-        >
-          ← Shop Themes
-        </Link>
-      </nav>
-      <header
+      {/* Owner directive 2026-11-12 (third pass) · hero text now reads
+          as a small subtitle ("Choose Shop background") · the main
+          "Shop Backgrounds" title has been promoted into the global
+          NexPageHeader on page.tsx. This keeps the hero slot airy and
+          doesn't double up on the title. */}
+      <h2
         style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 4,
-          paddingBottom: 8,
-          borderBottom: `1px solid ${BORDER}`,
+          margin: 0,
+          fontSize: 13,
+          fontWeight: 700,
+          color: "#000000",
+          letterSpacing: "0.01em",
+          lineHeight: 1.3,
         }}
       >
-        <h1
-          style={{
-            margin: 0,
-            fontSize: 22,
-            fontWeight: 900,
-            color: GOLD,
-            letterSpacing: "-0.01em",
-          }}
-        >
-          Shop Backgrounds
-        </h1>
-        <p style={{ margin: 0, fontSize: 12, color: INK_DIM, lineHeight: 1.45 }}>
-          Choose a background · tap once to apply · theme colour matches
-          the image automatically.
-        </p>
-      </header>
+        Choose Shop background
+      </h2>
 
-      {/* Category dropdown · world-standard native select on mobile,
-          styled consistent with the gold rim so it reads as part of
-          the surface. All presets are scanned/assigned a category on
-          upload (future uploads will auto-classify · for now the
-          catalogue above carries explicit categories). */}
+      {/* Owner directive 2026-11-12 · dropdown restyled to the
+          chat-themes picker shape · orange label · pill trigger with
+          dark surface + orange chevron · no per-option emoji. Native
+          <select> kept so mobile keeps its OS-level overlay instead
+          of a bespoke popover · visual parity is close without the
+          added complexity of a custom panel. */}
       <section aria-label="Filter by category">
         <label
           htmlFor="nex-shop-bg-category"
@@ -1340,7 +1381,7 @@ export function ShopBackgroundsClient({
             fontWeight: 800,
             letterSpacing: "0.12em",
             textTransform: "uppercase",
-            color: GOLD,
+            color: "#FF7200",
             marginBottom: 6,
           }}
         >
@@ -1359,19 +1400,24 @@ export function ShopBackgroundsClient({
             onChange={(e) => setSelectedCategory(e.currentTarget.value)}
             data-nex-shop-bg-category-select
             style={{
+              // Owner directive 2026-11-12 · dropdown pill now paints
+              // NEX Orange (#FF7200) with white ink · supersedes the
+              // dark-navy fill from 2026-11-12 first pass. Chevron
+              // swaps to white to stay legible on the orange ground.
               appearance: "none",
               WebkitAppearance: "none",
               MozAppearance: "none",
               width: "100%",
-              padding: "10px 36px 10px 14px",
-              background: SURFACE_HI,
-              color: INK,
-              border: `1px solid ${BORDER_HI}`,
-              borderRadius: 10,
+              padding: "12px 42px 12px 18px",
+              background: "#FF7200",
+              color: "#FFFFFF",
+              border: "1px solid #E66800",
+              borderRadius: 999,
               fontSize: 13,
-              fontWeight: 700,
+              fontWeight: 800,
               fontFamily: "inherit",
               cursor: "pointer",
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.35)",
             }}
           >
             {CATEGORIES.map((c) => {
@@ -1381,7 +1427,7 @@ export function ShopBackgroundsClient({
                   : PRESETS.filter((p) => p.category === c.id).length;
               return (
                 <option key={c.id} value={c.id}>
-                  {c.emoji}  {c.label} · {count}
+                  {c.label} · {count}
                 </option>
               );
             })}
@@ -1390,9 +1436,11 @@ export function ShopBackgroundsClient({
             aria-hidden
             style={{
               position: "absolute",
-              right: 14,
+              right: 16,
               pointerEvents: "none",
-              color: GOLD,
+              // Owner directive 2026-11-12 · chevron paints white
+              // to stay legible on the new orange pill ground.
+              color: "#FFFFFF",
               fontSize: 10,
               fontWeight: 900,
             }}
@@ -1423,7 +1471,12 @@ export function ShopBackgroundsClient({
               status.kind === "applying" && status.id === preset.id
             }
             isApplied={status.kind === "ok" && status.id === preset.id}
-            disabled={pending || !businessId}
+            // Owner directive 2026-11-12 · tiles stay tappable even
+            // when businessId is null so the preview popup ALWAYS
+            // opens · user needs to see the template + background
+            // combination before anything else. `pending` still
+            // disables every tile while a write is mid-flight.
+            disabled={pending}
             businessId={businessId}
             onPick={onPick}
           />
@@ -1547,9 +1600,264 @@ export function ShopBackgroundsClient({
           lineHeight: 1.5,
         }}
       >
-        Theme colour auto-matches each background · pick again any time
-        from <Link href="/nex-native/manage/shop/themes" style={{ color: GOLD }}>Shop Themes</Link>.
+        powered by NEX
       </footer>
+
+      {/* Owner directive 2026-11-12 (sixth pass) · preview overlay
+          renders INSIDE the phone-frame (no portal) so it stays
+          clipped to the sealed .nex-native-frame app surface and
+          never extends beyond the phone silhouette. Previously
+          portaled to document.body · owner reported the overlay
+          was painting the full desktop viewport instead of staying
+          inside the app screen. */}
+      {preview ? (
+        <ShopBackgroundPreview
+          preset={preview}
+          layoutId={currentLayoutId}
+          tintHex={currentTintHex}
+          applying={
+            status.kind === "applying" && status.id === preview.id
+          }
+          onClose={() => setPreview(null)}
+          onConfirm={onConfirmPreview}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+// ─── Background preview container ───────────────────────────────────
+// Owner directive 2026-11-12 (fifth pass) · the preview is no longer a
+// static image swap · it paints the user's PREVIOUSLY SELECTED shop
+// template (nex_business.cover_layout_id) with the candidate
+// background behind it, so the owner sees the exact combined result
+// before confirming. Same iframe + ?embed=1 mechanism as the themes
+// picker. Close × dismisses without applying; "Use Theme" fires
+// applyShopPresetBackgroundAction and redirects back to /manage/shop/
+// themes. The owner can close and pick another tile · the overlay
+// re-opens with the newly chosen background on the same saved
+// template.
+
+function ShopBackgroundPreview({
+  preset,
+  layoutId,
+  tintHex,
+  applying,
+  onClose,
+  onConfirm,
+}: {
+  preset: ShopBackgroundPreset;
+  layoutId: string;
+  tintHex: string | null;
+  applying: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}): React.JSX.Element {
+  React.useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  // Owner directive 2026-11-12 (tenth pass) · tint source corrected.
+  // The preview MUST show the preset's own auto-match tint
+  // (preset.tintSwatch) · that's what applyShopPresetBackgroundAction
+  // actually writes to the DB via PRESET_BACKGROUND_META. Before this
+  // fix the preview was threading `currentTintHex` (the user's PRIOR
+  // saved tint) · so every popup painted the same stale colour
+  // regardless of which background was chosen. The `tintHex` prop is
+  // retained on the component for future "preserve current tint"
+  // callers but isn't used in the preview URL today.
+  const effectiveTintHex = preset.tintSwatch;
+  // Keep tintHex referenced so TS doesn't drop it from the Props
+  // surface · it still carries a valid signal for other UI (e.g.
+  // the Shop Themes picker) that may want the user's prior tint.
+  void tintHex;
+  const previewSrc = React.useMemo(() => {
+    const bgParam = `&bg=${encodeURIComponent(preset.url)}`;
+    const tintParam = effectiveTintHex
+      ? `&tint=${encodeURIComponent(effectiveTintHex)}`
+      : "";
+    return `/nex-native/cover/preview/${layoutId}?embed=1${bgParam}${tintParam}`;
+  }, [layoutId, preset.url, effectiveTintHex]);
+
+  return (
+    <div
+      data-nex-shop-bg-preview
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Preview template with ${preset.label}`}
+      style={{
+        // Owner directive 2026-11-12 (sixth pass) · overlay is now
+        // absolute (not fixed) so it scopes to the parent `main`
+        // (position:absolute inset:0 inside the sealed phone-frame).
+        // That clips the popup to the app screen · no spill into the
+        // desktop viewport outside the phone silhouette.
+        position: "absolute",
+        inset: 0,
+        zIndex: 60,
+        background: "#FAF8F4",
+        display: "flex",
+        flexDirection: "column",
+        padding: "10px 12px",
+        gap: 10,
+        boxSizing: "border-box",
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      {/* Owner directive 2026-11-12 (eighth pass) · page-level header
+          sits ABOVE the phone-shaped preview · label on the left, an
+          orange × close button on the right. Lives outside the iframe
+          container so close is always reachable without competing
+          with the template content inside. */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+          flexShrink: 0,
+        }}
+      >
+        {/* Owner directive 2026-11-12 (ninth pass) · header text
+            promoted to a two-line stack · bold "Back Ground Theme"
+            label on top, the preset's full name (e.g. "Online Sale ·
+            Gold Phone") underneath in a smaller, lighter weight. */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+            minWidth: 0,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 13,
+              fontWeight: 900,
+              letterSpacing: "0.04em",
+              color: "#1A120A",
+              lineHeight: 1.1,
+            }}
+          >
+            Back Ground Theme
+          </div>
+          <div
+            style={{
+              fontSize: 10.5,
+              fontWeight: 600,
+              letterSpacing: "0.02em",
+              color: "#5A4A33",
+              lineHeight: 1.2,
+              minWidth: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {preset.label}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close preview"
+          data-nex-shop-bg-preview-close
+          style={{
+            flexShrink: 0,
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            background: "#FF7200",
+            color: "#FFFFFF",
+            border: "none",
+            fontSize: 22,
+            fontWeight: 900,
+            lineHeight: 1,
+            cursor: "pointer",
+            display: "grid",
+            placeItems: "center",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.25)",
+          }}
+        >
+          ×
+        </button>
+      </div>
+
+      {/* Phone-shaped preview container · flex-1 · fills the middle
+          between the header and the footer. No overlay controls
+          inside · the iframe paints edge-to-edge. */}
+      <div
+        style={{
+          position: "relative",
+          flex: 1,
+          minHeight: 0,
+          width: "100%",
+          maxWidth: 420,
+          aspectRatio: "9 / 19.5",
+          margin: "0 auto",
+          borderRadius: 24,
+          overflow: "hidden",
+          background: "#020914",
+          boxShadow:
+            "0 16px 36px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.08) inset",
+        }}
+      >
+        <iframe
+          src={previewSrc}
+          title={`Template preview with ${preset.label}`}
+          loading="eager"
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            border: "none",
+            background: "transparent",
+          }}
+        />
+      </div>
+
+      {/* Owner directive 2026-11-12 (eighth pass) · page-level footer
+          · orange "Use Theme" pill centred. Only this button writes
+          to the DB · close dismisses with no persistence. */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          flexShrink: 0,
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        }}
+      >
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={applying}
+          data-nex-shop-bg-preview-use
+          style={{
+            padding: "12px 32px",
+            fontSize: 13,
+            fontWeight: 900,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "#FFFFFF",
+            background: applying
+              ? "rgba(255, 114, 0, 0.7)"
+              : "#FF7200",
+            border: "1px solid #E66800",
+            borderRadius: 999,
+            cursor: applying ? "wait" : "pointer",
+            fontFamily: "inherit",
+            boxShadow: "0 6px 18px rgba(255, 114, 0, 0.35)",
+          }}
+        >
+          {applying ? "Applying…" : "Use Theme"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -1586,38 +1894,51 @@ function PresetTile({
       data-nex-shop-bg-preset-tile={preset.id}
       aria-current={isCurrent ? "true" : undefined}
       style={{
+        // Owner directive 2026-11-12 · tiles match the sealed chat-
+        // themes-library phone-silhouette card: transparent outer
+        // (no SURFACE pad), active state uses the preset's tint
+        // swatch as the border + glow colour (was gold for all).
         display: "flex",
         flexDirection: "column",
         gap: 0,
         padding: 0,
-        background: SURFACE,
-        border: `2px solid ${isCurrent || isApplied ? GOLD : BORDER}`,
-        borderRadius: 14,
-        cursor: businessId ? "pointer" : "not-allowed",
+        background: "transparent",
+        border: "none",
+        // Owner directive 2026-11-12 · cursor stays pointer even
+        // without a saved business row · tap always opens the
+        // preview popup. The "Use Theme" confirm button is where
+        // the businessId guard now lives.
+        cursor: "pointer",
         color: INK,
         textAlign: "left",
-        overflow: "hidden",
-        boxShadow:
-          isCurrent || isApplied
-            ? "0 0 0 3px rgba(198, 161, 91, 0.18)"
-            : "none",
+        overflow: "visible",
         transition:
           "border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease",
       }}
     >
       <div
         aria-hidden
-        /* Owner directive 2026-11-06 · tiles must fit the
-           image at full height AND full width · source
-           images are portrait 9:16-ish · tile aspect matches
-           + background-size:100% 100% guarantees the whole
-           image paints edge-to-edge with no crop. */
+        /* Owner directive 2026-11-12 · phone-silhouette inner card ·
+           matches chat-themes-library tile (9:18 aspect, 20px radius,
+           dark NEX bg, cyan border by default / tint border + glow
+           when current). Image paints full-bleed with cover. */
         style={{
           position: "relative",
           width: "100%",
-          aspectRatio: "9 / 16",
+          aspectRatio: "9 / 18",
+          borderRadius: 20,
+          overflow: "hidden",
+          background: "#020914",
+          border:
+            isCurrent || isApplied
+              ? `1px solid ${preset.tintSwatch}`
+              : "1px solid rgba(0, 175, 255, 0.28)",
+          boxShadow:
+            isCurrent || isApplied
+              ? `0 0 18px ${preset.tintSwatch}55`
+              : "0 2px 10px rgba(0, 0, 0, 0.35)",
           backgroundImage: `url(${preset.url})`,
-          backgroundSize: "100% 100%",
+          backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
         }}
@@ -1648,13 +1969,51 @@ function PresetTile({
             Applying…
           </span>
         ) : preset.isNew ? (
-          /* Owner directive 2026-11-06 · NEW badge on a subset of
-             recent uploads so the catalogue looks like a drip of
-             fresh themes, not a batch drop. */
-          <span style={{ ...pillStyle, background: GOLD, color: "#1A120A" }}>
+          /* Owner directive 2026-11-12 · NEW badge repainted NEX
+             yellow (#FFD600) · supersedes the 2026-11-06 gold fill.
+             Dark-ink glyph keeps the label legible on the bright
+             yellow pill. */
+          <span style={{ ...pillStyle, background: "#FFD600", color: "#1A120A" }}>
             New
           </span>
         ) : null}
+
+        {/* Owner directive 2026-11-12 · download count + 📥 glyph
+            moved from the bottom row to an overlay on the image's
+            bottom-left corner. Semi-transparent dark pill so it reads
+            over any backdrop. Supersedes the 2026-11-06 under-image
+            placement. */}
+        <div
+          data-nex-shop-bg-downloads={preset.id}
+          style={{
+            position: "absolute",
+            bottom: 8,
+            left: 8,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+            padding: "3px 8px",
+            borderRadius: 999,
+            background: "rgba(0, 0, 0, 0.55)",
+            backdropFilter: "blur(4px)",
+            WebkitBackdropFilter: "blur(4px)",
+            fontSize: 10.5,
+            fontWeight: 700,
+            color: "#FFFFFF",
+          }}
+        >
+          <span aria-hidden style={{ fontSize: 11 }}>📥</span>
+          <span
+            style={{
+              fontWeight: 900,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {/* Owner-sealed 2026-11-07 · pin locale to en-US · same
+                hydration-mismatch fix as /manage/shop/themes _client. */}
+            {downloads.toLocaleString("en-US")}
+          </span>
+        </div>
       </div>
       <div
         style={{
@@ -1664,45 +2023,38 @@ function PresetTile({
           gap: 3,
         }}
       >
-        <div style={{ fontSize: 12, fontWeight: 800 }}>{preset.label}</div>
+        {/* Owner directive 2026-11-12 · tile caption · preset label
+            paints black · category subtitle paints gray so the two
+            lines read as a quiet two-tone footer below the image.
+            Second pass: force single-line with ellipsis overflow so
+            long names like "Celebration · Champagne Gold" don't wrap
+            and wreck the row rhythm. */}
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 800,
+            color: "#000000",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+          title={preset.label}
+        >
+          {preset.label}
+        </div>
         <div
           style={{
             fontSize: 10,
-            color: INK_DIM,
+            color: "#9A9A9A",
             letterSpacing: "0.05em",
             textTransform: "uppercase",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
           }}
         >
           {CATEGORIES.find((c) => c.id === preset.category)?.label ??
             preset.category}
-        </div>
-        {/* Owner directive 2026-11-06 · per-preset download count
-            with inbox glyph · drifts up on random 3h/16h/24h
-            intervals so each tile feels alive. */}
-        <div
-          data-nex-shop-bg-downloads={preset.id}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 4,
-            fontSize: 10.5,
-            fontWeight: 700,
-            color: INK_DIM,
-            marginTop: 2,
-          }}
-        >
-          <span aria-hidden style={{ fontSize: 12 }}>📥</span>
-          <span
-            style={{
-              color: GOLD,
-              fontWeight: 900,
-              fontVariantNumeric: "tabular-nums",
-            }}
-          >
-            {/* Owner-sealed 2026-11-07 · pin locale to en-US · same
-                hydration-mismatch fix as /manage/shop/themes _client. */}
-            {downloads.toLocaleString("en-US")}
-          </span>
         </div>
       </div>
     </button>
@@ -1726,20 +2078,27 @@ function PageArrow({
       onClick={onClick}
       disabled={disabled}
       style={{
+        // Owner directive 2026-11-12 · pagination arrows paint SOLID
+        // BLACK with white glyphs · matches the sealed global "+"
+        // drawer button + the themes-picker arrow pills. Supersedes
+        // the translucent-navy + gold variant that was hard to read
+        // on the Golden Holiday backdrop.
         appearance: "none",
-        width: 34,
-        height: 34,
+        width: 40,
+        height: 40,
         borderRadius: "50%",
-        border: `1px solid ${BORDER_HI}`,
-        background: "rgba(0,0,0,0.35)",
-        color: GOLD,
-        fontSize: 18,
+        border: "none",
+        background: "#000000",
+        color: "#FFFFFF",
+        fontSize: 22,
         fontWeight: 900,
+        lineHeight: 1,
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.35 : 1,
         display: "grid",
         placeItems: "center",
         transition: "opacity 140ms ease",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.45)",
       }}
     >
       {direction === "prev" ? "‹" : "›"}

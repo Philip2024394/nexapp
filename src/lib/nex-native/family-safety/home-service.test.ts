@@ -10,7 +10,7 @@ import { describe, expect, it, vi } from "vitest";
 // Pure test-infrastructure fix · no product behaviour touched.
 vi.mock("server-only", () => ({}));
 import { getFamilyHomeSnapshot } from "./home-service";
-import { FAMILY_HOME_SNAPSHOT_SAFE_DEFAULT } from "@/components/nex-native/family-safety/types";
+import { FAMILY_HOME_SNAPSHOT_SAFE_DEFAULT } from "./_ui-types";
 
 const VIEWER = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const OTHER = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";

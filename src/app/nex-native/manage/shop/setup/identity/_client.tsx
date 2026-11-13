@@ -64,6 +64,40 @@ export function IdentityStepClient({
     trimmedName.length <= 40 &&
     status.kind !== "saving";
 
+  // Owner directive 2026-11-12 · live URL preview under the shop
+  // name field. Client-side mirror of generateBusinessSlug in
+  // business-service.ts (kept short + duplicated here so this
+  // component doesn't need a server-import for a cosmetic preview).
+  // The REAL slug is still generated server-side on save · this is
+  // just a preview so the owner sees their public URL as they type.
+  const slugPreview = React.useMemo(() => {
+    const base = trimmedName
+      .replace(/^@/, "")
+      .replace(/^nex-/i, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 40);
+    return base.length > 0 ? base : "";
+  }, [trimmedName]);
+  const publicHost = React.useMemo(() => {
+    if (typeof window === "undefined") return "nexapp.app";
+    return window.location.host;
+  }, []);
+  const [copied, setCopied] = React.useState(false);
+  async function copyPreviewUrl() {
+    if (!slugPreview) return;
+    try {
+      await navigator.clipboard.writeText(
+        `${window.location.origin}/${slugPreview}`,
+      );
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1400);
+    } catch {
+      /* clipboard denied · ignore silently */
+    }
+  }
+
   async function onFilePicked(file: File) {
     setUploading(true);
     setStatus({ kind: "idle" });
@@ -154,6 +188,78 @@ export function IdentityStepClient({
               {trimmedName.length} / 40 characters · you can rename later.
             </span>
           )}
+
+          {/* Owner directive 2026-11-12 · live URL preview under the
+              shop name. Auto-updates as the owner types · shows the
+              full public share URL + a one-tap copy button. Appears
+              only once the name is at least 2 chars so it doesn't
+              flash in on first keystroke. */}
+          {slugPreview && trimmedName.length >= 2 ? (
+            <div
+              data-nex-shop-url-preview
+              style={{
+                marginTop: 10,
+                padding: "10px 12px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+                background: "rgba(198, 161, 91, 0.08)",
+                border: "1px solid rgba(198, 161, 91, 0.45)",
+                borderRadius: 10,
+              }}
+            >
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div
+                  style={{
+                    fontSize: 9,
+                    fontWeight: 900,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    color: GOLD,
+                    marginBottom: 3,
+                  }}
+                >
+                  Your share link
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: CREAM,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    fontFamily:
+                      "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+                  }}
+                >
+                  {publicHost}/<span style={{ color: GOLD }}>{slugPreview}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={copyPreviewUrl}
+                aria-label="Copy share link"
+                style={{
+                  flexShrink: 0,
+                  padding: "6px 12px",
+                  fontSize: 10.5,
+                  fontWeight: 800,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: copied ? "#1A120A" : GOLD,
+                  background: copied ? "#FFD600" : "transparent",
+                  border: `1px solid ${copied ? "#E6B800" : GOLD}`,
+                  borderRadius: 999,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
+          ) : null}
         </div>
 
         {/* Logo picker · optional. */}

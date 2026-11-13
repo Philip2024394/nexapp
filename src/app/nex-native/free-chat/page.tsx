@@ -503,7 +503,7 @@ export default async function FreeChatPage({
           subtitle={headerSubtitle}
           avatarUrl={headerAvatarUrl}
           drawerSession={drawerSession}
-          pingBadgeAccent={NEX.cyan}
+          pingBadgeAccent="#16D66B"
           textColor={NEX.text}
           subtitleColor={NEX.textDim}
           hideMagnifier={true}

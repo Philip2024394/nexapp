@@ -53,6 +53,24 @@ export function PhoneFrame({ children }: { children: React.ReactNode }): React.J
           min-height: 100dvh !important;
           background: transparent !important;
         }
+        /* Owner directive 2026-11-12 (reinforced) · neither the
+           device nor the inner scroll container may create a
+           containing block for position:fixed · if either does, the
+           sealed CoverComposer scrolls with content instead of
+           staying pinned to the iframe viewport (the buyer-facing
+           chat button). Keep both free of transform / filter /
+           perspective / backdrop-filter / will-change / contain. */
+        [data-nex-phone-frame],
+        [data-nex-phone-frame] [data-nex-phone-device],
+        [data-nex-phone-frame] [data-nex-phone-scroll] {
+          transform: none !important;
+          filter: none !important;
+          perspective: none !important;
+          backdrop-filter: none !important;
+          -webkit-backdrop-filter: none !important;
+          will-change: auto !important;
+          contain: none !important;
+        }
         [data-nex-phone-frame] [data-nex-phone-device] {
           width: 100% !important;
           height: auto !important;
@@ -62,7 +80,10 @@ export function PhoneFrame({ children }: { children: React.ReactNode }): React.J
           border: none !important;
           box-shadow: none !important;
           animation: none !important;
-          transform: translateZ(0);
+          /* Legacy note · the earlier translateZ GPU hint on this
+             rule was itself the containing-block bug. Sticky rule
+             block above now covers it safely. */
+          transform: none !important;
         }
         [data-nex-phone-frame] [data-nex-phone-notch] { display: none !important; }
         [data-nex-phone-frame] [data-nex-phone-home]  { display: none !important; }
