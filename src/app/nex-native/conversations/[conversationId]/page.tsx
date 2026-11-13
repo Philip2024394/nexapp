@@ -35,14 +35,32 @@
 //     CUSTOMER face · opposite side from the customer's view.
 
 import type * as React from "react";
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import * as productService from "@/lib/nex-native/product-service";
 import * as businessService from "@/lib/nex-native/business-service";
+import * as chatThemeService from "@/lib/nex-native/chat-theme-service";
 import { getAccountById } from "@/lib/nex-native/account-service";
 import { getProfileByAccountId } from "@/lib/nex-native/account-profile-service";
 import { listBusinessMessages } from "@/lib/nex-native/business-message-service";
+
+// Owner directive 2026-11-13 · ISO 3166-1 alpha-2 → regional-indicator
+// flag emoji · same mechanic the rest of the app uses to render
+// country flags without a CDN hit. Returns "" for unknown codes.
+function countryCodeToFlag(iso2: string | null | undefined): string {
+  if (!iso2 || iso2.length !== 2) return "";
+  const up = iso2.toUpperCase();
+  const base = 0x1f1e6;
+  const a = up.charCodeAt(0);
+  const b = up.charCodeAt(1);
+  if (a < 65 || a > 90 || b < 65 || b > 90) return "";
+  return (
+    String.fromCodePoint(base + (a - 65)) +
+    String.fromCodePoint(base + (b - 65))
+  );
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -107,8 +125,12 @@ export default async function BusinessConversationPage({
     (p) => p.account_id !== session.account.id,
   );
 
-  // ── Load the shop + its live products (parallel) ──────────────────
-  const [business, products, otherAccount] = await Promise.all([
+  // ── Load the shop + its live products + fallback theme (parallel) ─
+  // Owner directive 2026-11-13 · wallpaper must match what the public
+  // shop page paints · same fallback chain
+  // `shop_cover_image_url ?? themeRow.hero_image_url` as the shop
+  // surface at /[businessSlug] uses.
+  const [business, products, otherAccount, themeRow] = await Promise.all([
     businessService.getBusinessById(conversation.business_id).catch(() => null),
     productService
       .listProductsByBusiness(conversation.business_id, "live")
@@ -116,6 +138,7 @@ export default async function BusinessConversationPage({
     otherParticipant
       ? getAccountById(otherParticipant.account_id).catch(() => null)
       : Promise.resolve(null),
+    chatThemeService.getThemeById("nex-flat").catch(() => null),
   ]);
 
   if (!business) {
@@ -135,8 +158,11 @@ export default async function BusinessConversationPage({
   const headerName = viewerIsCustomer
     ? business.display_name
     : (otherAccount?.display_name ?? "Customer");
+  // Owner directive 2026-11-13 · subtitle shows the shop's city (was
+  // the fixed "Shop · tap to open" string). Falls back to a quiet
+  // "Shop" when the owner hasn't filled the city field yet.
   const headerSubtitle = viewerIsCustomer
-    ? "Shop · tap to open"
+    ? ((business.city ?? "").trim() || "Shop")
     : (business.display_name
         ? `Customer · ${business.display_name}`
         : "Customer");
@@ -146,15 +172,27 @@ export default async function BusinessConversationPage({
   const headerAvatarUrl = viewerIsCustomer
     ? (business.logo_url ?? null)
     : (otherProfile?.avatar_url ?? null);
-  const wallpaperUrl = business.shop_cover_image_url ?? null;
+  // Owner directive 2026-11-13 · match the shop page wallpaper fallback
+  // chain · shop_cover_image_url → themeRow.hero_image_url → none.
+  const wallpaperUrl =
+    business.shop_cover_image_url ?? themeRow?.hero_image_url ?? null;
+  // Owner directive 2026-11-13 · country flag badge on the avatar rim.
+  // Customer view = shop's operating country · owner view = customer's
+  // profile country (fail-safe: empty string means render nothing).
+  const flagIso = viewerIsCustomer
+    ? (business.operating_country_code ?? null)
+    : (otherProfile?.country_code ?? null);
+  const flagEmoji = countryCodeToFlag(flagIso);
 
-  // Apply the 2-word stack rule when framing shows the SHOP name.
+  // Owner directive 2026-11-13 (iter 4) · shop name sits on ONE line
+  // when it fits next to the shop icon · CSS wraps to 2 lines only when
+  // the title column is too tight. Previously we hard-forced a newline
+  // between the first two words (pre-line + \n) which always rendered
+  // two rows even when a single row fit comfortably. Now we let CSS do
+  // the work via `overflow-wrap: break-word` on a `min-width: 0` title
+  // column — natural word-boundary wrapping, no manual splitting.
   const displayNameStacked = viewerIsCustomer
-    ? (() => {
-        const w = (business.display_name ?? "").trim().split(/\s+/);
-        if (w.length <= 1) return business.display_name ?? "";
-        return `${w[0]}\n${w[1]}`;
-      })()
+    ? (business.display_name ?? "")
     : headerName;
 
   return (
@@ -180,11 +218,16 @@ export default async function BusinessConversationPage({
         flexDirection: "column",
       }}
     >
-      {/* Owner directive 2026-11-13 · "remove the container from header
-          and footer" · dark backdrop-blur container retired · header
-          paints directly over the shop wallpaper · the per-text
-          text-shadow on the title + subtitle keeps them legible on
-          any background. */}
+      {/* Owner directive 2026-11-13 (iter 3) · header carries three
+          affordances:
+            · Avatar w/ green ring + pulsing ping (presence tell) + a
+              small round country-flag badge pinned to the rim.
+            · Title sized up a notch · subtitle now reads the shop city.
+            · Right-side shop-glyph button that routes the customer to
+              the shop's public surface (/nex-native/<slug>).
+          Container chrome (dark backdrop-blur bar + border) retired
+          earlier · header still paints transparently over the shop
+          wallpaper. */}
       <header
         style={{
           position: "sticky",
@@ -198,43 +241,111 @@ export default async function BusinessConversationPage({
           borderBottom: "none",
         }}
       >
-        {headerAvatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={headerAvatarUrl}
-            alt={headerName}
-            width={44}
-            height={44}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: "50%",
-              border: "1.5px solid rgba(198, 161, 91, 0.55)",
-              objectFit: "cover",
-              flexShrink: 0,
-            }}
-          />
-        ) : (
-          <div
+        {/* Avatar block · 48px square so the green ring + ping sit
+            correctly without clipping. The ping is a sibling ring that
+            animates scale + opacity · the solid ring is the inner
+            green border on the avatar itself. */}
+        <div
+          data-nex-business-conv-avatar
+          style={{
+            position: "relative",
+            width: 48,
+            height: 48,
+            flexShrink: 0,
+          }}
+        >
+          <span
             aria-hidden
             style={{
-              width: 44,
-              height: 44,
+              position: "absolute",
+              inset: -2,
               borderRadius: "50%",
-              background: "rgba(255,255,255,0.08)",
-              flexShrink: 0,
+              border: "2px solid #22C55E",
+              opacity: 0.85,
+              animation: "nex-biz-conv-ping 1600ms cubic-bezier(0.22, 1, 0.36, 1) infinite",
+              pointerEvents: "none",
             }}
           />
-        )}
+          {headerAvatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={headerAvatarUrl}
+              alt={headerName}
+              width={48}
+              height={48}
+              style={{
+                position: "relative",
+                width: 48,
+                height: 48,
+                borderRadius: "50%",
+                border: "2.5px solid #22C55E",
+                objectFit: "cover",
+                display: "block",
+              }}
+            />
+          ) : (
+            <div
+              aria-hidden
+              style={{
+                position: "relative",
+                width: 48,
+                height: 48,
+                borderRadius: "50%",
+                background: "rgba(255,255,255,0.08)",
+                border: "2.5px solid #22C55E",
+              }}
+            />
+          )}
+          {flagEmoji ? (
+            <span
+              aria-label={flagIso ?? undefined}
+              title={flagIso ?? undefined}
+              style={{
+                position: "absolute",
+                right: -2,
+                bottom: -2,
+                width: 20,
+                height: 20,
+                borderRadius: "50%",
+                background: "#FFFFFF",
+                display: "grid",
+                placeItems: "center",
+                fontSize: 13,
+                lineHeight: 1,
+                boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
+                border: "1.5px solid rgba(0,0,0,0.15)",
+                overflow: "hidden",
+              }}
+            >
+              {flagEmoji}
+            </span>
+          ) : null}
+        </div>
+        {/* Keyframes for the ping · scoped inline so we don't touch any
+            global stylesheet · identical cadence/easing to the sealed
+            heartbeat on the contacts page. */}
+        <style>{`
+          @keyframes nex-biz-conv-ping {
+            0%   { transform: scale(1);    opacity: 0.85; }
+            70%  { transform: scale(1.35); opacity: 0;    }
+            100% { transform: scale(1.35); opacity: 0;    }
+          }
+        `}</style>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             data-nex-business-conv-header-title
             style={{
-              fontSize: 17,
-              fontWeight: 700,
+              fontSize: 16,
+              fontWeight: 800,
               lineHeight: 1.1,
               letterSpacing: "-0.005em",
-              whiteSpace: "pre-line",
+              // Owner directive 2026-11-13 (iter 5) · natural wrap.
+              // Title stays on one row when it fits · wraps on word
+              // boundary only when the column is too narrow for the
+              // shop-icon column.
+              whiteSpace: "normal",
+              wordBreak: "normal",
+              overflowWrap: "break-word",
               textShadow: "0 1px 3px rgba(0,0,0,0.6)",
             }}
           >
@@ -242,7 +353,7 @@ export default async function BusinessConversationPage({
           </div>
           <div
             style={{
-              marginTop: 2,
+              marginTop: 3,
               fontSize: 12,
               fontWeight: 500,
               color: "#B5C3D6",
@@ -253,6 +364,41 @@ export default async function BusinessConversationPage({
             {headerSubtitle}
           </div>
         </div>
+        {/* Right-side shop icon · taps through to the public shop page
+            for the business the customer is chatting with. Only shown
+            on the CUSTOMER face (an owner in their own thread doesn't
+            need a shortcut to their own shop surface). */}
+        {viewerIsCustomer ? (
+          <Link
+            href={`/nex-native/${business.slug}`}
+            aria-label={`Open ${business.display_name} shop page`}
+            data-nex-business-conv-shop-link
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              background: "rgba(10, 21, 38, 0.55)",
+              border: "1px solid rgba(198, 161, 91, 0.55)",
+              display: "grid",
+              placeItems: "center",
+              color: "#C6A15B",
+              flexShrink: 0,
+              textDecoration: "none",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.5)",
+            }}
+          >
+            {/* storefront glyph · currentColor so it inherits the gold */}
+            <svg width={22} height={22} viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M4 9l1.2-4h13.6L20 9M4 9h16M4 9v10h6v-6h4v6h6V9"
+                stroke="currentColor"
+                strokeWidth={1.75}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </Link>
+        ) : null}
       </header>
 
       {/* Message list + composer are wired through a client component

@@ -433,11 +433,11 @@ export function BusinessConversationClient({
         )}
       </div>
 
-      {/* Owner directive 2026-11-13 · "fix the footer width and remove
-          the container from header and footer" · composer footer is
-          now a transparent full-width strip · paints over the shop
-          wallpaper. width:100% + box-sizing:border-box so the input
-          + buttons share the full phone-frame width. */}
+      {/* Owner directive 2026-11-13 (iter 2) · composer strip stays
+          transparent (no full-width dark bar) but the controls get a
+          solid white input + solid gold send button so they read
+          clearly over the shop wallpaper. Previous "lift the paint"
+          made the input + buttons effectively invisible. */}
       <div
         style={{
           position: "sticky",
@@ -468,12 +468,14 @@ export function BusinessConversationClient({
             flex: 1,
             padding: "10px 14px",
             borderRadius: 999,
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(198,161,91,0.35)",
-            color: "#F2F5F8",
+            // Solid white pill · reads clearly over the shop wallpaper.
+            background: "#FFFFFF",
+            border: "1px solid rgba(198,161,91,0.55)",
+            color: "#0A1526",
             fontSize: 14,
             fontFamily: "inherit",
             outline: "none",
+            boxShadow: "0 2px 6px rgba(0, 0, 0, 0.28)",
           }}
         />
         {/* 3-dot products trigger · bare glyph, flashing, right side. */}
@@ -723,71 +725,82 @@ function ShopProductsDrawer({
           WebkitBackdropFilter: "blur(4px)",
         }}
       />
-      {/* Drawer panel · slides from the left */}
+      {/* Drawer panel · slides from the left · owner directive
+          2026-11-13 (iter 6) · palette now matches the sealed
+          ContactsPlusDrawer: dark-green glass body, gold section
+          label, gold-tinted hover left-border, softened subcopy ink. */}
       <aside
         style={{
           position: "relative",
-          width: "78%",
-          maxWidth: 320,
+          width: "min(320px, 85%)",
           height: "100%",
-          background: "#0A1526",
-          borderRight: "1.5px solid rgba(198,161,91,0.4)",
-          boxShadow: "6px 0 24px rgba(0,0,0,0.5)",
+          background: "var(--nex-world-drawer-bg, #123D2B)",
+          borderRight: "1px solid rgba(255,255,255,0.08)",
+          boxShadow: "6px 0 32px rgba(0,0,0,0.6)",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
+          color: "#F2F5F8",
         }}
       >
         <header
           style={{
             display: "flex",
             alignItems: "center",
+            justifyContent: "space-between",
             gap: 10,
-            padding: "14px 14px 10px",
-            borderBottom: "1px solid rgba(255,255,255,0.06)",
+            padding: "calc(env(safe-area-inset-top, 0) + 18px) 18px 14px",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
           }}
         >
-          <span aria-hidden style={{ fontSize: 22 }}>
-            {categoryIcon(businessCategory)}
-          </span>
-          <span
-            style={{
-              fontSize: 14,
-              fontWeight: 700,
-              letterSpacing: 0.2,
-              color: "#F2F5F8",
-              flex: 1,
-              minWidth: 0,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {businessDisplayName}
-          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
+            <span aria-hidden style={{ fontSize: 22, lineHeight: 1 }}>
+              {categoryIcon(businessCategory)}
+            </span>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: 15,
+                fontWeight: 800,
+                letterSpacing: "0.03em",
+                color: "var(--nex-world-secondary, #C6A15B)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {businessDisplayName}
+            </h2>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label="Close products"
             style={{
               width: 32,
               height: 32,
               borderRadius: "50%",
               background: "transparent",
-              border: "none",
-              color: "#8BA9D1",
-              fontSize: 20,
+              color: "#F2F5F8",
+              border: "1px solid rgba(255,255,255,0.2)",
+              fontSize: 16,
               cursor: "pointer",
+              display: "grid",
+              placeItems: "center",
+              flexShrink: 0,
             }}
           >
             ×
           </button>
         </header>
-        <div
+        <nav
+          data-nex-shop-products-drawer-list
           style={{
             flex: 1,
             overflowY: "auto",
-            padding: "8px 8px 16px",
+            padding: "8px 0",
+            display: "flex",
+            flexDirection: "column",
           }}
         >
           {products.length === 0 ? (
@@ -795,7 +808,7 @@ function ShopProductsDrawer({
               style={{
                 padding: "24px 16px",
                 textAlign: "center",
-                color: "rgba(242,245,248,0.65)",
+                color: "var(--nex-world-primary-ink, #AFC5B5)",
                 fontSize: 13,
               }}
             >
@@ -814,19 +827,21 @@ function ShopProductsDrawer({
                   onClick={() => onSelect(p)}
                   data-nex-shop-products-drawer-item={p.id}
                   style={{
-                    width: "100%",
                     display: "flex",
-                    gap: 10,
                     alignItems: "center",
-                    padding: 8,
-                    marginBottom: 6,
-                    borderRadius: 10,
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.08)",
+                    gap: 12,
+                    padding: "10px 20px",
+                    width: "100%",
+                    background: "transparent",
                     color: "#F2F5F8",
+                    border: "none",
+                    borderLeft: "3px solid transparent",
+                    fontSize: 14,
+                    fontWeight: 600,
                     fontFamily: "inherit",
                     textAlign: "left",
                     cursor: "pointer",
+                    transition: "background 150ms ease-out",
                   }}
                 >
                   {p.image_url ? (
@@ -834,11 +849,11 @@ function ShopProductsDrawer({
                     <img
                       src={p.image_url}
                       alt={p.name}
-                      width={48}
-                      height={48}
+                      width={44}
+                      height={44}
                       style={{
-                        width: 48,
-                        height: 48,
+                        width: 44,
+                        height: 44,
                         objectFit: "cover",
                         borderRadius: 8,
                         flexShrink: 0,
@@ -848,35 +863,56 @@ function ShopProductsDrawer({
                     <div
                       aria-hidden
                       style={{
-                        width: 48,
-                        height: 48,
+                        width: 44,
+                        height: 44,
                         borderRadius: 8,
                         background: "rgba(255,255,255,0.08)",
                         flexShrink: 0,
                       }}
                     />
                   )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
+                  <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+                    <span
                       style={{
-                        fontSize: 13,
-                        fontWeight: 700,
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
                       }}
                     >
                       {p.name}
-                    </div>
-                    <div style={{ fontSize: 11, color: "#8BA9D1" }}>
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 500,
+                        color: "var(--nex-world-primary-ink, #AFC5B5)",
+                        opacity: 0.85,
+                      }}
+                    >
                       {p.currency} {price}
-                    </div>
-                  </div>
+                    </span>
+                  </span>
+                  <span
+                    aria-hidden
+                    style={{
+                      fontSize: 14,
+                      color: "var(--nex-world-secondary, #C6A15B)",
+                      opacity: 0.5,
+                    }}
+                  >
+                    ›
+                  </span>
                 </button>
               );
             })
           )}
-        </div>
+        </nav>
+        <style>{`
+          [data-nex-shop-products-drawer-list] button:hover {
+            background: color-mix(in srgb, var(--nex-world-secondary, #C6A15B) 8%, transparent);
+            border-left-color: var(--nex-world-secondary, #C6A15B) !important;
+          }
+        `}</style>
       </aside>
     </div>
   );
