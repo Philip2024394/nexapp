@@ -246,7 +246,13 @@ export function FreeChatHeader({
             lineHeight: 1.1,
             textShadow: "0 1px 3px rgba(0,0,0,0.5)",
             overflow: "hidden",
-            whiteSpace: "nowrap",
+            // Owner directive 2026-11-13 · pre-line honours the `\n`
+            // in shop display names ("Handbags\ndirect") so 2-word
+            // shop names stack above the subtitle instead of
+            // truncating to one line. Names without `\n` behave
+            // identically to the retired `nowrap` for all non-shop
+            // chat surfaces.
+            whiteSpace: "pre-line",
             display: "block",
           }}
         >
@@ -303,19 +309,20 @@ export function FreeChatHeader({
             peerSharedMediaHref={peerSharedMediaHref}
             currentSurface={currentSurface}
             drawerVisitor={drawerVisitor}
-            /* Owner directive 2026-11-10 iter 3 · the side-drawer
-               trigger "+" is now SOLID NEX ORANGE with a WHITE icon.
-               (Previous iter was transparent + black; owner wanted
-               the cart + side-drawer to pop against the ivory canvas,
-               so both get the orange primary-CTA treatment.) */
+            /* Owner directive 2026-11-12 · side-drawer trigger "+"
+               flipped to BLACK with WHITE icon globally. Matches the
+               sealed TRIGGER_STYLE in _page-header-drawer-button-client
+               so Settings / Directory / Contacts / Chat / Free Chat
+               all carry the same drawer button treatment. Previous
+               2026-11-10 iter 3 orange is retired. */
             triggerStyle={{
               width: 36,
               height: 36,
               borderRadius: "50%",
-              background: "#FF7200",
-              border: "1px solid #FF7200",
+              background: "#000000",
+              border: "none",
               color: "#FFFFFF",
-              boxShadow: "0 2px 8px rgba(255, 114, 0, 0.35)",
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.45)",
             }}
           />
         </div>
