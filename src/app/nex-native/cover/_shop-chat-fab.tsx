@@ -93,9 +93,19 @@ export function ShopChatFab({
   }, [showPopup]);
 
   function onTap(): void {
-    if (!ownerAccountId) return;
+    // Owner directive 2026-11-13 · the FAB now routes through the
+    // business-scoped conversation system (nex_conversation keyed by
+    // business_id) instead of the personal peer chat. When signed in,
+    // the shop page's `?open-chat=1` server-side redirect handles the
+    // findOrCreate + navigation (see peer page + openShopChatAction),
+    // so a FAB tap on a shop page the viewer is ALREADY on just
+    // reloads with ?open-chat=1 · the shop page then calls
+    // openShopChatAction(slug) which resolves the correct shop
+    // conversation and redirects to /conversations/<id>. Falls back
+    // to the sealed registration popup when signed out.
+    if (!shopSlug) return;
     if (isSignedIn) {
-      router.push(`/nex-native/chat/peer/${ownerAccountId}`);
+      router.push(`/nex-native/${shopSlug}?open-chat=1`);
       return;
     }
     setShowPopup(true);

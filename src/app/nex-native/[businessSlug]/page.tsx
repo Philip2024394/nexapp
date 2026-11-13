@@ -178,17 +178,24 @@ export default async function PublicShopPage({
       getAccountById(business.owner_account_id).catch(() => null),
     ]);
 
-  // Owner-sealed 2026-11-13 · complete the return journey. If the
-  // visitor is now signed in (just created an account or signed in via
-  // the popup's CTAs) AND they carry `?open-chat=1`, redirect straight
-  // into the peer chat with the shop owner. Server-side redirect so
-  // the URL bar updates cleanly and the chat surface loads without an
-  // intermediate render of the shop page. Shop owners viewing their own
-  // shop skip this bounce · the intent is specifically "visitor reaches
-  // the shop and wants to message the seller".
+  // Owner-sealed 2026-11-13 (iter 2) · complete the return journey
+  // via the BUSINESS-SCOPED conversation system (nex_conversation
+  // keyed by business_id) instead of the personal peer chat. Each
+  // shop owns its own customer conversation thread · multiple shops
+  // per owner get independent conversations. Falls through to the
+  // normal shop page render when the viewer isn't signed in or is
+  // the shop owner themselves (they skip the bounce).
   if (openChatIntent && viewerSession && viewerSession.account.id !== business.owner_account_id) {
+    const { getOrCreateBusinessConversation } = await import(
+      "@/lib/nex-native/business-message-service"
+    );
     const { redirect } = await import("next/navigation");
-    redirect(`/nex-native/chat/peer/${business.owner_account_id}`);
+    const conversationId = await getOrCreateBusinessConversation(
+      viewerSession.account.id,
+      business.id,
+      business.owner_account_id,
+    );
+    redirect(`/nex-native/conversations/${conversationId}`);
   }
 
   // Owner directive 2026-11-13 · derive the shop's country flag from
