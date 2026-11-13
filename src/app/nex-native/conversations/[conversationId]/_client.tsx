@@ -421,6 +421,10 @@ export function BusinessConversationClient({
                     {renderedText}
                   </div>
                 ) : null}
+                {/* Owner directive 2026-11-13 (iter 9) · product cards
+                    get a full date + time stamp so the shop + buyer can
+                    see exactly when the item was shared. Plain-text
+                    bubbles stay time-only to avoid timeline noise. */}
                 <div
                   style={{
                     marginTop: 4,
@@ -429,10 +433,18 @@ export function BusinessConversationClient({
                     textAlign: "right",
                   }}
                 >
-                  {new Date(m.created_at).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {isProductCard
+                    ? new Date(m.created_at).toLocaleString([], {
+                        weekday: "short",
+                        day: "2-digit",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : new Date(m.created_at).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                 </div>
               </div>
             );
@@ -493,6 +505,11 @@ export function BusinessConversationClient({
             100% { opacity: 0.55; transform: scale(1); }
           }
         `}</style>
+        {/* Owner directive 2026-11-13 (iter 9) · 3-dots gets the SAME
+            filled accent circle as the send button · both footer
+            controls now read as solid, tappable, shop-branded
+            buttons. The pulse animation stays — now applied to the
+            circle, not a bare glyph. */}
         <button
           type="button"
           aria-label={productsDrawerOpen ? "Close shop products" : "Open shop products"}
@@ -502,19 +519,22 @@ export function BusinessConversationClient({
           style={{
             width: 44,
             height: 44,
+            borderRadius: "50%",
             padding: 0,
             display: "grid",
             placeItems: "center",
-            background: "transparent",
+            background: accentHex,
             border: "none",
-            color: "#C6A15B",
+            color: "#0A1526",
             cursor: "pointer",
+            flexShrink: 0,
+            boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
             animation: productsDrawerOpen
               ? "none"
               : "nex-biz-dots-flash 1800ms ease-in-out infinite",
           }}
         >
-          <svg width={28} height={28} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <svg width={22} height={22} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
             <circle cx="12" cy="5" r="2.6" />
             <circle cx="12" cy="12" r="2.6" />
             <circle cx="12" cy="19" r="2.6" />
@@ -530,12 +550,13 @@ export function BusinessConversationClient({
             height: 44,
             borderRadius: "50%",
             border: "none",
-            background: canSend ? "#C6A15B" : "rgba(198,161,91,0.35)",
+            background: canSend ? accentHex : `${accentHex}59`,
             color: "#0A1526",
             cursor: canSend ? "pointer" : "default",
             fontSize: 18,
             fontWeight: 700,
             flexShrink: 0,
+            boxShadow: canSend ? "0 2px 6px rgba(0,0,0,0.3)" : "none",
           }}
         >
           ↑
