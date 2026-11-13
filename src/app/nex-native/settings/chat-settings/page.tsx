@@ -399,15 +399,20 @@ function LineIconCell({
   );
 }
 
-// ─── State indicator · small ON/OFF/PARTIAL text in the row-right ─
+// ─── State indicator · green/red toggle switch in the row-right ────
+// Owner directive 2026-11-13 · the row shows the saved state as an
+// actual toggle (green when ON, red when OFF, amber knob-centre when
+// PARTIAL for the visibility middle state). Tap target stays the full
+// row · the toggle itself is visual-only · tapping either opens the
+// popup / navigates to the sub-page.
 function StateIndicator({
   value,
 }: {
   value: "on" | "off" | "partial";
 }): React.JSX.Element {
-  const label = value === "on" ? "ON" : value === "off" ? "OFF" : "SOME";
-  const colour =
+  const trackColour =
     value === "on" ? "#0E6B3A" : value === "off" ? "#7F1D1D" : "#B45309";
+  const knobLeft = value === "on" ? 22 : value === "off" ? 2 : 12;
   return (
     <span
       aria-hidden
@@ -415,17 +420,27 @@ function StateIndicator({
       style={{
         flexShrink: 0,
         alignSelf: "center",
-        padding: "4px 10px",
+        position: "relative",
+        width: 42,
+        height: 22,
         borderRadius: 999,
-        background: "transparent",
-        border: `1px solid ${colour}`,
-        color: colour,
-        fontSize: 10,
-        fontWeight: 900,
-        letterSpacing: "0.14em",
+        background: trackColour,
+        boxShadow: "inset 0 1px 2px rgba(0,0,0,0.25)",
       }}
     >
-      {label}
+      <span
+        style={{
+          position: "absolute",
+          top: 2,
+          left: knobLeft,
+          width: 18,
+          height: 18,
+          borderRadius: "50%",
+          background: "#FFFFFF",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.35)",
+          transition: "left 160ms ease",
+        }}
+      />
     </span>
   );
 }

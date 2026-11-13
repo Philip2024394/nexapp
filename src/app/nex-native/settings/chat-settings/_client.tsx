@@ -163,6 +163,47 @@ export function ChatSettingsClient({
 
 // ─── Uniform control card ────────────────────────────────────────────
 
+// ─── Toggle indicator · green ON · red OFF · amber-centre PARTIAL ──
+function ToggleIndicator({
+  value,
+}: {
+  value: "on" | "off" | "partial";
+}): React.JSX.Element {
+  const trackColour =
+    value === "on" ? "#0E6B3A" : value === "off" ? "#7F1D1D" : "#B45309";
+  const knobLeft = value === "on" ? 22 : value === "off" ? 2 : 12;
+  return (
+    <span
+      aria-hidden
+      data-nex-chat-settings-control-indicator={value}
+      style={{
+        flexShrink: 0,
+        alignSelf: "center",
+        position: "relative",
+        width: 42,
+        height: 22,
+        borderRadius: 999,
+        background: trackColour,
+        boxShadow: "inset 0 1px 2px rgba(0,0,0,0.25)",
+      }}
+    >
+      <span
+        style={{
+          position: "absolute",
+          top: 2,
+          left: knobLeft,
+          width: 18,
+          height: 18,
+          borderRadius: "50%",
+          background: "#FFFFFF",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.35)",
+          transition: "left 160ms ease",
+        }}
+      />
+    </span>
+  );
+}
+
 function ControlCard({
   icon,
   title,
@@ -233,41 +274,7 @@ function ControlCard({
           {subtitle}
         </div>
       </div>
-      {rightIndicator ? (
-        <span
-          aria-hidden
-          data-nex-chat-settings-control-indicator={rightIndicator}
-          style={{
-            flexShrink: 0,
-            alignSelf: "center",
-            padding: "4px 10px",
-            borderRadius: 999,
-            background: "transparent",
-            border: `1px solid ${
-              rightIndicator === "on"
-                ? "#0E6B3A"
-                : rightIndicator === "off"
-                  ? "#7F1D1D"
-                  : "#B45309"
-            }`,
-            color:
-              rightIndicator === "on"
-                ? "#0E6B3A"
-                : rightIndicator === "off"
-                  ? "#7F1D1D"
-                  : "#B45309",
-            fontSize: 10,
-            fontWeight: 900,
-            letterSpacing: "0.14em",
-          }}
-        >
-          {rightIndicator === "on"
-            ? "ON"
-            : rightIndicator === "off"
-              ? "OFF"
-              : "SOME"}
-        </span>
-      ) : null}
+      {rightIndicator ? <ToggleIndicator value={rightIndicator} /> : null}
     </button>
   );
 }
