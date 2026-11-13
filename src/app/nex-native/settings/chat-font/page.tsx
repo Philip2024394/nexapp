@@ -15,7 +15,6 @@ import { NexPageHeader } from "../../_page-header";
 import {
   NEX_SETTINGS,
   NEX_SETTINGS_FONT,
-  SettingsBackLink,
 } from "../_settings-shell";
 import {
   resetChatFontAction,
@@ -76,7 +75,7 @@ export default async function ChatFontPage({
               style={{
                 margin: "6px 0 0",
                 fontSize: 12,
-                color: NEX_SETTINGS.textSecondary,
+                color: "#7D5A3A",
                 lineHeight: 1.5,
               }}
             >
@@ -87,19 +86,20 @@ export default async function ChatFontPage({
 
           {status ? <StatusBanner status={status} /> : null}
 
-          {/* Live preview card */}
+          {/* Live preview card · tinted black per owner directive 2026-11-13. */}
           <div
             data-nex-chat-font-preview
             style={{
               margin: "14px 0",
               padding: "14px 16px",
-              background: NEX_SETTINGS.panel,
-              border: `1px solid ${NEX_SETTINGS.panelAccent}`,
+              background: "#1D2432",
+              border: "1px solid #FF7200",
               borderRadius: 12,
               fontFamily: resolveFontFamilyCss(currentFamily),
               fontSize: resolveFontSizeCss(currentSize),
-              color: NEX_SETTINGS.textPrimary,
+              color: "#F2E5CC",
               lineHeight: 1.5,
+              boxShadow: "0 1px 3px rgba(42, 31, 15, 0.12)",
             }}
           >
             <div
@@ -108,9 +108,10 @@ export default async function ChatFontPage({
                 fontWeight: 700,
                 letterSpacing: "0.14em",
                 textTransform: "uppercase",
-                color: NEX_SETTINGS.textSecondary,
+                color: "#F3E3C6",
                 fontFamily: NEX_SETTINGS_FONT,
                 marginBottom: 8,
+                opacity: 0.7,
               }}
             >
               Preview
@@ -146,7 +147,7 @@ export default async function ChatFontPage({
                           style={{
                             marginTop: 2,
                             fontSize: 12,
-                            color: NEX_SETTINGS.textSecondary,
+                            color: "rgba(243, 227, 198, 0.75)",
                           }}
                         >
                           {f.description}
@@ -186,7 +187,7 @@ export default async function ChatFontPage({
                           style={{
                             marginTop: 2,
                             fontSize: 12,
-                            color: NEX_SETTINGS.textSecondary,
+                            color: "rgba(243, 227, 198, 0.75)",
                           }}
                         >
                           {f.description}
@@ -205,7 +206,20 @@ export default async function ChatFontPage({
             </button>
           </form>
 
-          <SettingsBackLink />
+          <div
+            data-nex-chat-font-poweredby
+            style={{
+              marginTop: 24,
+              textAlign: "center",
+              fontSize: 10,
+              fontWeight: 800,
+              letterSpacing: "0.22em",
+              textTransform: "uppercase",
+              color: "#7D5A3A",
+            }}
+          >
+            Powered by NEX
+          </div>
         </div>
       </main>
     </>
@@ -227,14 +241,12 @@ function StatusBanner({ status }: { status: string }): React.JSX.Element {
       style={{
         margin: "14px 0 0",
         padding: "10px 14px",
-        background: isError ? "rgba(216,42,42,0.12)" : "rgba(0,175,255,0.10)",
-        border: `1px solid ${
-          isError ? "rgba(216,42,42,0.45)" : NEX_SETTINGS.panelAccent
-        }`,
+        background: "#FFFFFF",
+        border: `1px solid ${isError ? "#D82A2A" : "#FF7200"}`,
         borderRadius: 10,
-        color: isError ? "#F2B3B3" : NEX_SETTINGS.textPrimary,
+        color: isError ? "#7F1D1D" : "#0A0608",
         fontSize: 12,
-        fontWeight: 600,
+        fontWeight: 700,
         textAlign: "center",
       }}
     >
@@ -249,10 +261,10 @@ function SectionHeader({ children }: { children: React.ReactNode }): React.JSX.E
       style={{
         margin: "18px 2px 8px",
         fontSize: 10,
-        fontWeight: 700,
+        fontWeight: 800,
         letterSpacing: "0.18em",
         textTransform: "uppercase",
-        color: NEX_SETTINGS.textSecondary,
+        color: "#7D5A3A",
       }}
     >
       {children}
@@ -269,8 +281,8 @@ function Radio({ active }: { active: boolean }): React.JSX.Element {
         width: 24,
         height: 24,
         borderRadius: "50%",
-        border: `2px solid ${active ? NEX_SETTINGS.cyan : "rgba(125,155,192,0.35)"}`,
-        background: active ? NEX_SETTINGS.cyan : "transparent",
+        border: `2px solid ${active ? "#FF7200" : "rgba(243, 227, 198, 0.35)"}`,
+        background: active ? "#FF7200" : "transparent",
         position: "relative",
       }}
     >
@@ -284,7 +296,7 @@ function Radio({ active }: { active: boolean }): React.JSX.Element {
             width: 14,
             height: 14,
             borderRadius: "50%",
-            background: "#F2F5F8",
+            background: "#FFFFFF",
           }}
         />
       ) : null}
@@ -300,6 +312,9 @@ const listStyle: React.CSSProperties = {
   gap: 8,
 };
 
+// Owner directive 2026-11-13 · cards tinted black. Active option is
+// the same dark navy with an orange rim; inactive uses a softer tone
+// so the choice stays obvious on the cream page.
 function optionButtonStyle(active: boolean): React.CSSProperties {
   return {
     width: "100%",
@@ -307,13 +322,16 @@ function optionButtonStyle(active: boolean): React.CSSProperties {
     display: "flex",
     alignItems: "center",
     gap: 14,
-    background: active ? "rgba(0,175,255,0.14)" : NEX_SETTINGS.panel,
-    border: `1px solid ${active ? NEX_SETTINGS.cyan : NEX_SETTINGS.panelAccent}`,
+    background: "#1D2432",
+    border: `1px solid ${active ? "#FF7200" : "rgba(29, 36, 50, 0.6)"}`,
     borderRadius: 12,
     cursor: "pointer",
     minHeight: 64,
-    color: NEX_SETTINGS.textPrimary,
+    color: "#F2E5CC",
     fontFamily: "inherit",
+    boxShadow: active
+      ? "0 2px 8px rgba(255, 114, 0, 0.25)"
+      : "0 1px 2px rgba(42, 31, 15, 0.10)",
   };
 }
 
@@ -325,12 +343,12 @@ const resetWrapperStyle: React.CSSProperties = {
 const resetButtonStyle: React.CSSProperties = {
   padding: "8px 14px",
   fontSize: 11,
-  fontWeight: 700,
+  fontWeight: 800,
   letterSpacing: "0.1em",
   textTransform: "uppercase",
-  color: NEX_SETTINGS.textSecondary,
-  background: "transparent",
-  border: `1px solid ${NEX_SETTINGS.panelAccent}`,
+  color: "#F3E3C6",
+  background: "#1D2432",
+  border: "none",
   borderRadius: 999,
   cursor: "pointer",
 };

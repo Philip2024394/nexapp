@@ -51,26 +51,28 @@ export type {
 } from "./chat-view-preferences";
 
 // ─── Column probe · safe degradation before migration 285 is applied ──
-
-let viewPrefsColumnProbeCache: boolean | null = null;
+//
+// Owner directive 2026-11-13 (hotfix): module-level cache removed. It
+// got stuck at `false` after a dev-server render that happened BEFORE
+// mig 285 was applied, and subsequent requests kept returning the
+// cached `false` long after the columns landed. The probe is a single
+// SELECT with `.limit(0)` · no rows pulled · cheap enough to run per
+// call without a cache.
 
 export async function hasChatViewPrefsColumns(): Promise<boolean> {
-  if (viewPrefsColumnProbeCache !== null) return viewPrefsColumnProbeCache;
   try {
     const { error } = await nexSupabaseAdmin
       .from("nex_account")
       .select("screenshot_copy_protection_enabled")
       .limit(0);
-    viewPrefsColumnProbeCache = !error;
-    return viewPrefsColumnProbeCache;
+    return !error;
   } catch {
-    viewPrefsColumnProbeCache = false;
     return false;
   }
 }
 
 export function _resetChatViewPrefsColumnProbeCacheForTests(): void {
-  viewPrefsColumnProbeCache = null;
+  /* no-op · cache removed 2026-11-13 */
 }
 
 // ─── Row mapper ──────────────────────────────────────────────────────
