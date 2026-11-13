@@ -303,14 +303,17 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
     href: "/nex-native/settings/profile/edit",
     locked: false,
   },
-  // Owner directive 2026-11-12 · dedicated "Manage Shop" row routes
+  // Owner directive 2026-11-12 · dedicated "Shop Settings" row routes
   // to the sealed /nex-native/manage landing · three tiles (Edit Shop,
   // Edit Products, Edit Shop Theme) that each reuse their existing
   // surface. Sellers with no business row yet are redirected by the
   // landing to the sealed shop-setup dispatcher · no broken state.
+  // Renamed from "Manage Shop" to "Shop Settings" 2026-11-13 so the
+  // drawer reads as a pair with Chat Settings · both are the hub
+  // entry for their domain.
   {
     key: "manage-shop",
-    label: "Manage Shop",
+    label: "Shop Settings",
     subtitle: "Edit shop · products · theme",
     href: "/nex-native/manage",
     locked: false,
