@@ -38,10 +38,12 @@ import {
   CoverProductCard,
   CoverIdentityRail,
 } from "./primitives";
-// Bridge 99 Stage 8 · every cover theme footer is now the Pink-Dream-style
-// composer wired to POST /api/nex-native/first-message. Theme accent flows
-// through via CSS vars so each theme paints the composer in its own colors.
-import { CoverComposer } from "./_composer/CoverComposer";
+// Owner-sealed 2026-11-13 · CoverComposer retired from every shop
+// template (see the 10 removal comments inline). The component file
+// stays on disk for the /cover/preview playground that still mounts
+// it for internal design preview · retiring it there is a separate
+// decision. Shop-to-customer contact now flows exclusively through
+// the floating ShopChatFab bottom-right.
 // Category Tabs (2026-09-30) · CoverCatalog wraps CoverProductGrid with the
 // one-word category tab bar. Drop-in replacement for the primary product grid
 // in each layout. Restaurant keeps its secondary "Signature mains" cut as a
@@ -196,30 +198,16 @@ export function LayoutCafe({ content, themeId }: LayoutProps): React.JSX.Element
           themeId={themeId}
         />
       </CoverPage>
-      <CoverComposer
-        ownerAccountId={content.ownerAccountId}
-        ownerBusinessId={null}
-        ownerDisplayName={content.businessName}
-        themeEmojis={content.themeEmojis}
-        infoTrayContent={{
-          pages: content.infoPages ?? null,
-          aboutUs: content.aboutUs ?? null,
-          yearEstablished: content.yearEstablished ?? null,
-          ownerName: content.ownerName ?? null,
-          ownerPosition: content.ownerPosition ?? null,
-          ownerAvatarUrl: content.ownerAvatarUrl ?? null,
-          hours: content.hours,
-          hoursByDay: content.hoursByDay ?? null,
-          address: content.address,
-          paymentMethodLabels: content.paymentMethodLabels ?? [],
-          qrCodeImageUrl: content.qrCodeImageUrl ?? null,
-          acceptsQrisDelivery: content.acceptsQrisDelivery ?? false,
-          returnPolicyBody: content.returnPolicyBody ?? null,
-          eventsBody: content.eventsBody ?? null,
-          galleryUrls: content.galleryUrls ?? [],
-          isVenue: content.isVenue ?? false,
-        }}
-      />
+      {/* Owner-sealed 2026-11-13 · CoverComposer (footer text-input +
+          emoji picker + info-tray + first-message POST) retired from
+          every shop template. Shop-to-customer contact is now handled
+          exclusively by the floating ShopChatFab bottom-right, which
+          opens peer chat with the shop owner's intro bubble as the
+          first message. Address / hours / policies are accessible via
+          the burger menu's "Visit us" slider · no duplicate info-tray
+          surface. Keeping the import so the module stays warm for the
+          /cover/preview playground, which still mounts the composer
+          for internal design previews only. */}
     </>
   );
 }
@@ -303,30 +291,16 @@ export function LayoutCafeRound({ content, themeId }: LayoutProps): React.JSX.El
           themeId={themeId}
         />
       </CoverPage>
-      <CoverComposer
-        ownerAccountId={content.ownerAccountId}
-        ownerBusinessId={null}
-        ownerDisplayName={content.businessName}
-        themeEmojis={content.themeEmojis}
-        infoTrayContent={{
-          pages: content.infoPages ?? null,
-          aboutUs: content.aboutUs ?? null,
-          yearEstablished: content.yearEstablished ?? null,
-          ownerName: content.ownerName ?? null,
-          ownerPosition: content.ownerPosition ?? null,
-          ownerAvatarUrl: content.ownerAvatarUrl ?? null,
-          hours: content.hours,
-          hoursByDay: content.hoursByDay ?? null,
-          address: content.address,
-          paymentMethodLabels: content.paymentMethodLabels ?? [],
-          qrCodeImageUrl: content.qrCodeImageUrl ?? null,
-          acceptsQrisDelivery: content.acceptsQrisDelivery ?? false,
-          returnPolicyBody: content.returnPolicyBody ?? null,
-          eventsBody: content.eventsBody ?? null,
-          galleryUrls: content.galleryUrls ?? [],
-          isVenue: content.isVenue ?? false,
-        }}
-      />
+      {/* Owner-sealed 2026-11-13 · CoverComposer (footer text-input +
+          emoji picker + info-tray + first-message POST) retired from
+          every shop template. Shop-to-customer contact is now handled
+          exclusively by the floating ShopChatFab bottom-right, which
+          opens peer chat with the shop owner's intro bubble as the
+          first message. Address / hours / policies are accessible via
+          the burger menu's "Visit us" slider · no duplicate info-tray
+          surface. Keeping the import so the module stays warm for the
+          /cover/preview playground, which still mounts the composer
+          for internal design previews only. */}
     </>
   );
 }
@@ -525,30 +499,16 @@ export function LayoutAccommodation({
           themeId={themeId}
         />
       </CoverPage>
-      <CoverComposer
-        ownerAccountId={content.ownerAccountId}
-        ownerBusinessId={null}
-        ownerDisplayName={content.businessName}
-        themeEmojis={content.themeEmojis}
-        infoTrayContent={{
-          pages: content.infoPages ?? null,
-          aboutUs: content.aboutUs ?? null,
-          yearEstablished: content.yearEstablished ?? null,
-          ownerName: content.ownerName ?? null,
-          ownerPosition: content.ownerPosition ?? null,
-          ownerAvatarUrl: content.ownerAvatarUrl ?? null,
-          hours: content.hours,
-          hoursByDay: content.hoursByDay ?? null,
-          address: content.address,
-          paymentMethodLabels: content.paymentMethodLabels ?? [],
-          qrCodeImageUrl: content.qrCodeImageUrl ?? null,
-          acceptsQrisDelivery: content.acceptsQrisDelivery ?? false,
-          returnPolicyBody: content.returnPolicyBody ?? null,
-          eventsBody: content.eventsBody ?? null,
-          galleryUrls: content.galleryUrls ?? [],
-          isVenue: content.isVenue ?? false,
-        }}
-      />
+      {/* Owner-sealed 2026-11-13 · CoverComposer (footer text-input +
+          emoji picker + info-tray + first-message POST) retired from
+          every shop template. Shop-to-customer contact is now handled
+          exclusively by the floating ShopChatFab bottom-right, which
+          opens peer chat with the shop owner's intro bubble as the
+          first message. Address / hours / policies are accessible via
+          the burger menu's "Visit us" slider · no duplicate info-tray
+          surface. Keeping the import so the module stays warm for the
+          /cover/preview playground, which still mounts the composer
+          for internal design previews only. */}
       {/* Reference the terminology helper so the unused-var linter
           stays happy · future variants can swap labels per vertical. */}
       <span data-nex-terminology-key={t.section_location_label} hidden />
@@ -628,30 +588,16 @@ export function LayoutProductRound({ content, themeId }: LayoutProps): React.JSX
           themeId={themeId}
         />
       </CoverPage>
-      <CoverComposer
-        ownerAccountId={content.ownerAccountId}
-        ownerBusinessId={null}
-        ownerDisplayName={content.businessName}
-        themeEmojis={content.themeEmojis}
-        infoTrayContent={{
-          pages: content.infoPages ?? null,
-          aboutUs: content.aboutUs ?? null,
-          yearEstablished: content.yearEstablished ?? null,
-          ownerName: content.ownerName ?? null,
-          ownerPosition: content.ownerPosition ?? null,
-          ownerAvatarUrl: content.ownerAvatarUrl ?? null,
-          hours: content.hours,
-          hoursByDay: content.hoursByDay ?? null,
-          address: content.address,
-          paymentMethodLabels: content.paymentMethodLabels ?? [],
-          qrCodeImageUrl: content.qrCodeImageUrl ?? null,
-          acceptsQrisDelivery: content.acceptsQrisDelivery ?? false,
-          returnPolicyBody: content.returnPolicyBody ?? null,
-          eventsBody: content.eventsBody ?? null,
-          galleryUrls: content.galleryUrls ?? [],
-          isVenue: content.isVenue ?? false,
-        }}
-      />
+      {/* Owner-sealed 2026-11-13 · CoverComposer (footer text-input +
+          emoji picker + info-tray + first-message POST) retired from
+          every shop template. Shop-to-customer contact is now handled
+          exclusively by the floating ShopChatFab bottom-right, which
+          opens peer chat with the shop owner's intro bubble as the
+          first message. Address / hours / policies are accessible via
+          the burger menu's "Visit us" slider · no duplicate info-tray
+          surface. Keeping the import so the module stays warm for the
+          /cover/preview playground, which still mounts the composer
+          for internal design previews only. */}
     </>
   );
 }
@@ -799,30 +745,16 @@ export function LayoutCafeLandscape({ content, themeId }: LayoutProps): React.JS
           themeId={themeId}
         />
       </CoverPage>
-      <CoverComposer
-        ownerAccountId={content.ownerAccountId}
-        ownerBusinessId={null}
-        ownerDisplayName={content.businessName}
-        themeEmojis={content.themeEmojis}
-        infoTrayContent={{
-          pages: content.infoPages ?? null,
-          aboutUs: content.aboutUs ?? null,
-          yearEstablished: content.yearEstablished ?? null,
-          ownerName: content.ownerName ?? null,
-          ownerPosition: content.ownerPosition ?? null,
-          ownerAvatarUrl: content.ownerAvatarUrl ?? null,
-          hours: content.hours,
-          hoursByDay: content.hoursByDay ?? null,
-          address: content.address,
-          paymentMethodLabels: content.paymentMethodLabels ?? [],
-          qrCodeImageUrl: content.qrCodeImageUrl ?? null,
-          acceptsQrisDelivery: content.acceptsQrisDelivery ?? false,
-          returnPolicyBody: content.returnPolicyBody ?? null,
-          eventsBody: content.eventsBody ?? null,
-          galleryUrls: content.galleryUrls ?? [],
-          isVenue: content.isVenue ?? false,
-        }}
-      />
+      {/* Owner-sealed 2026-11-13 · CoverComposer (footer text-input +
+          emoji picker + info-tray + first-message POST) retired from
+          every shop template. Shop-to-customer contact is now handled
+          exclusively by the floating ShopChatFab bottom-right, which
+          opens peer chat with the shop owner's intro bubble as the
+          first message. Address / hours / policies are accessible via
+          the burger menu's "Visit us" slider · no duplicate info-tray
+          surface. Keeping the import so the module stays warm for the
+          /cover/preview playground, which still mounts the composer
+          for internal design previews only. */}
     </>
   );
 }
@@ -935,30 +867,16 @@ export function LayoutProduct({ content, themeId }: LayoutProps): React.JSX.Elem
           themeId={themeId}
         />
       </CoverPage>
-      <CoverComposer
-        ownerAccountId={content.ownerAccountId}
-        ownerBusinessId={null}
-        ownerDisplayName={content.businessName}
-        themeEmojis={content.themeEmojis}
-        infoTrayContent={{
-          pages: content.infoPages ?? null,
-          aboutUs: content.aboutUs ?? null,
-          yearEstablished: content.yearEstablished ?? null,
-          ownerName: content.ownerName ?? null,
-          ownerPosition: content.ownerPosition ?? null,
-          ownerAvatarUrl: content.ownerAvatarUrl ?? null,
-          hours: content.hours,
-          hoursByDay: content.hoursByDay ?? null,
-          address: content.address,
-          paymentMethodLabels: content.paymentMethodLabels ?? [],
-          qrCodeImageUrl: content.qrCodeImageUrl ?? null,
-          acceptsQrisDelivery: content.acceptsQrisDelivery ?? false,
-          returnPolicyBody: content.returnPolicyBody ?? null,
-          eventsBody: content.eventsBody ?? null,
-          galleryUrls: content.galleryUrls ?? [],
-          isVenue: content.isVenue ?? false,
-        }}
-      />
+      {/* Owner-sealed 2026-11-13 · CoverComposer (footer text-input +
+          emoji picker + info-tray + first-message POST) retired from
+          every shop template. Shop-to-customer contact is now handled
+          exclusively by the floating ShopChatFab bottom-right, which
+          opens peer chat with the shop owner's intro bubble as the
+          first message. Address / hours / policies are accessible via
+          the burger menu's "Visit us" slider · no duplicate info-tray
+          surface. Keeping the import so the module stays warm for the
+          /cover/preview playground, which still mounts the composer
+          for internal design previews only. */}
     </>
   );
 }
@@ -1064,30 +982,16 @@ export function LayoutProductLandscape({ content, themeId }: LayoutProps): React
           themeId={themeId}
         />
       </CoverPage>
-      <CoverComposer
-        ownerAccountId={content.ownerAccountId}
-        ownerBusinessId={null}
-        ownerDisplayName={content.businessName}
-        themeEmojis={content.themeEmojis}
-        infoTrayContent={{
-          pages: content.infoPages ?? null,
-          aboutUs: content.aboutUs ?? null,
-          yearEstablished: content.yearEstablished ?? null,
-          ownerName: content.ownerName ?? null,
-          ownerPosition: content.ownerPosition ?? null,
-          ownerAvatarUrl: content.ownerAvatarUrl ?? null,
-          hours: content.hours,
-          hoursByDay: content.hoursByDay ?? null,
-          address: content.address,
-          paymentMethodLabels: content.paymentMethodLabels ?? [],
-          qrCodeImageUrl: content.qrCodeImageUrl ?? null,
-          acceptsQrisDelivery: content.acceptsQrisDelivery ?? false,
-          returnPolicyBody: content.returnPolicyBody ?? null,
-          eventsBody: content.eventsBody ?? null,
-          galleryUrls: content.galleryUrls ?? [],
-          isVenue: content.isVenue ?? false,
-        }}
-      />
+      {/* Owner-sealed 2026-11-13 · CoverComposer (footer text-input +
+          emoji picker + info-tray + first-message POST) retired from
+          every shop template. Shop-to-customer contact is now handled
+          exclusively by the floating ShopChatFab bottom-right, which
+          opens peer chat with the shop owner's intro bubble as the
+          first message. Address / hours / policies are accessible via
+          the burger menu's "Visit us" slider · no duplicate info-tray
+          surface. Keeping the import so the module stays warm for the
+          /cover/preview playground, which still mounts the composer
+          for internal design previews only. */}
     </>
   );
 }
@@ -1240,30 +1144,16 @@ export function LayoutPersonalBrand({ content, themeId }: LayoutProps): React.JS
           themeId={themeId}
         />
       </CoverPage>
-      <CoverComposer
-        ownerAccountId={content.ownerAccountId}
-        ownerBusinessId={null}
-        ownerDisplayName={content.businessName}
-        themeEmojis={content.themeEmojis}
-        infoTrayContent={{
-          pages: content.infoPages ?? null,
-          aboutUs: content.aboutUs ?? null,
-          yearEstablished: content.yearEstablished ?? null,
-          ownerName: content.ownerName ?? null,
-          ownerPosition: content.ownerPosition ?? null,
-          ownerAvatarUrl: content.ownerAvatarUrl ?? null,
-          hours: content.hours,
-          hoursByDay: content.hoursByDay ?? null,
-          address: content.address,
-          paymentMethodLabels: content.paymentMethodLabels ?? [],
-          qrCodeImageUrl: content.qrCodeImageUrl ?? null,
-          acceptsQrisDelivery: content.acceptsQrisDelivery ?? false,
-          returnPolicyBody: content.returnPolicyBody ?? null,
-          eventsBody: content.eventsBody ?? null,
-          galleryUrls: content.galleryUrls ?? [],
-          isVenue: content.isVenue ?? false,
-        }}
-      />
+      {/* Owner-sealed 2026-11-13 · CoverComposer (footer text-input +
+          emoji picker + info-tray + first-message POST) retired from
+          every shop template. Shop-to-customer contact is now handled
+          exclusively by the floating ShopChatFab bottom-right, which
+          opens peer chat with the shop owner's intro bubble as the
+          first message. Address / hours / policies are accessible via
+          the burger menu's "Visit us" slider · no duplicate info-tray
+          surface. Keeping the import so the module stays warm for the
+          /cover/preview playground, which still mounts the composer
+          for internal design previews only. */}
     </>
   );
 }
@@ -1594,11 +1484,14 @@ function CoverCartButton(): React.JSX.Element {
         aria-expanded={open}
         data-nex-cover-cart-button
         style={{
+          // Owner directive 2026-11-12 · cart button shrunk again to
+          // 26×26 (was 32). Still tap-friendly at 26 px when paired
+          // with the sibling drawer "+" mounted outside the cover.
           position: "absolute",
           top: "max(env(safe-area-inset-top, 44px), 44px)",
           right: 20,
-          width: 44,
-          height: 44,
+          width: 26,
+          height: 26,
           borderRadius: 999,
           background: "rgba(2, 9, 20, 0.72)",
           border: "1px solid var(--nex-accent-soft)",
@@ -1608,7 +1501,7 @@ function CoverCartButton(): React.JSX.Element {
           justifyContent: "center",
           backdropFilter: "blur(10px)",
           WebkitBackdropFilter: "blur(10px)",
-          boxShadow: "0 6px 16px rgba(0,0,0,0.4)",
+          boxShadow: "0 4px 10px rgba(0,0,0,0.35)",
           zIndex: 20,
           cursor: "pointer",
           touchAction: "manipulation",
@@ -1617,8 +1510,8 @@ function CoverCartButton(): React.JSX.Element {
         }}
       >
         <svg
-          width={20}
-          height={20}
+          width={13}
+          height={13}
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -2190,13 +2083,12 @@ function CoverPage({ children }: { children: React.ReactNode }): React.JSX.Eleme
         paddingBottom: "calc(env(safe-area-inset-bottom, 0) + 96px)",
       }}
     >
-      {/* Owner directive 2026-10-22 · cart icon on every shop template
-          header · reads live cart count from localStorage · routes to
-          the sealed /nex-native/cart checkout page where
-          sendCartOrderAction posts the order into the owner's chat.
-          Floating top-right so it sits above the identity badge
-          without disturbing any sealed layout spacing. */}
-      <CoverCartButton />
+      {/* Owner directive 2026-11-12 · CoverCartButton removed from the
+          shop template header per owner feedback ("move the remove the
+          button from cart icon in header shop templates"). The buyer
+          still has /nex-native/cart as a direct route and the My
+          Orders row in the global drawer. CoverCartButton function
+          + drawer kept on disk for possible later reinstatement. */}
       {children}
     </div>
   );
@@ -2339,30 +2231,16 @@ export function LayoutPersonalBrandLandscape({
           themeId={themeId}
         />
       </CoverPage>
-      <CoverComposer
-        ownerAccountId={content.ownerAccountId}
-        ownerBusinessId={null}
-        ownerDisplayName={content.businessName}
-        themeEmojis={content.themeEmojis}
-        infoTrayContent={{
-          pages: content.infoPages ?? null,
-          aboutUs: content.aboutUs ?? null,
-          yearEstablished: content.yearEstablished ?? null,
-          ownerName: content.ownerName ?? null,
-          ownerPosition: content.ownerPosition ?? null,
-          ownerAvatarUrl: content.ownerAvatarUrl ?? null,
-          hours: content.hours,
-          hoursByDay: content.hoursByDay ?? null,
-          address: content.address,
-          paymentMethodLabels: content.paymentMethodLabels ?? [],
-          qrCodeImageUrl: content.qrCodeImageUrl ?? null,
-          acceptsQrisDelivery: content.acceptsQrisDelivery ?? false,
-          returnPolicyBody: content.returnPolicyBody ?? null,
-          eventsBody: content.eventsBody ?? null,
-          galleryUrls: content.galleryUrls ?? [],
-          isVenue: content.isVenue ?? false,
-        }}
-      />
+      {/* Owner-sealed 2026-11-13 · CoverComposer (footer text-input +
+          emoji picker + info-tray + first-message POST) retired from
+          every shop template. Shop-to-customer contact is now handled
+          exclusively by the floating ShopChatFab bottom-right, which
+          opens peer chat with the shop owner's intro bubble as the
+          first message. Address / hours / policies are accessible via
+          the burger menu's "Visit us" slider · no duplicate info-tray
+          surface. Keeping the import so the module stays warm for the
+          /cover/preview playground, which still mounts the composer
+          for internal design previews only. */}
     </>
   );
 }
@@ -2504,30 +2382,16 @@ export function LayoutPersonalBrandRound({
           themeId={themeId}
         />
       </CoverPage>
-      <CoverComposer
-        ownerAccountId={content.ownerAccountId}
-        ownerBusinessId={null}
-        ownerDisplayName={content.businessName}
-        themeEmojis={content.themeEmojis}
-        infoTrayContent={{
-          pages: content.infoPages ?? null,
-          aboutUs: content.aboutUs ?? null,
-          yearEstablished: content.yearEstablished ?? null,
-          ownerName: content.ownerName ?? null,
-          ownerPosition: content.ownerPosition ?? null,
-          ownerAvatarUrl: content.ownerAvatarUrl ?? null,
-          hours: content.hours,
-          hoursByDay: content.hoursByDay ?? null,
-          address: content.address,
-          paymentMethodLabels: content.paymentMethodLabels ?? [],
-          qrCodeImageUrl: content.qrCodeImageUrl ?? null,
-          acceptsQrisDelivery: content.acceptsQrisDelivery ?? false,
-          returnPolicyBody: content.returnPolicyBody ?? null,
-          eventsBody: content.eventsBody ?? null,
-          galleryUrls: content.galleryUrls ?? [],
-          isVenue: content.isVenue ?? false,
-        }}
-      />
+      {/* Owner-sealed 2026-11-13 · CoverComposer (footer text-input +
+          emoji picker + info-tray + first-message POST) retired from
+          every shop template. Shop-to-customer contact is now handled
+          exclusively by the floating ShopChatFab bottom-right, which
+          opens peer chat with the shop owner's intro bubble as the
+          first message. Address / hours / policies are accessible via
+          the burger menu's "Visit us" slider · no duplicate info-tray
+          surface. Keeping the import so the module stays warm for the
+          /cover/preview playground, which still mounts the composer
+          for internal design previews only. */}
     </>
   );
 }
