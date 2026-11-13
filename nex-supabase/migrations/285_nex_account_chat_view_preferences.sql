@@ -69,13 +69,26 @@ alter table nex_account
 alter table nex_account
   add column if not exists shop_cover_from_chat_theme boolean not null default false;
 
-alter table nex_account
-  add constraint if not exists nex_account_chat_font_family_valid
-    check (chat_font_family in ('default', 'system', 'serif', 'monospace', 'handwritten'));
-
-alter table nex_account
-  add constraint if not exists nex_account_chat_font_size_valid
-    check (chat_font_size in ('small', 'medium', 'large'));
+-- Owner directive 2026-11-13 hotfix · Postgres doesn't support
+-- `ADD CONSTRAINT IF NOT EXISTS` on CHECK constraints · wrap in a DO
+-- block that probes pg_constraint first.
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'nex_account_chat_font_family_valid'
+  ) then
+    alter table nex_account
+      add constraint nex_account_chat_font_family_valid
+      check (chat_font_family in ('default', 'system', 'serif', 'monospace', 'handwritten'));
+  end if;
+  if not exists (
+    select 1 from pg_constraint where conname = 'nex_account_chat_font_size_valid'
+  ) then
+    alter table nex_account
+      add constraint nex_account_chat_font_size_valid
+      check (chat_font_size in ('small', 'medium', 'large'));
+  end if;
+end $$;
 
 comment on column nex_account.screenshot_copy_protection_enabled is
   'Owner-sealed 2026-11-07 · when TRUE the viewer''s chat UI applies
