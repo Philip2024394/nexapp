@@ -223,7 +223,7 @@ export default async function ChatSettingsPage({
             href="/nex-native/settings/chat-font"
             emoji="🔤"
             title="Font style and size"
-            subtitle="Pick a chat font family and size for YOUR view. Contacts never see a different font because of this."
+            subtitle="Change chat font"
           />
           <LinkCard
             href="/nex-native/settings/chat-background-sync"
