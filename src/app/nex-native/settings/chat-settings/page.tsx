@@ -44,6 +44,15 @@ import {
   NEX_SETTINGS_FONT,
 } from "../_settings-shell";
 import { ChatSettingsClient } from "./_client";
+import {
+  IconBlocked,
+  IconBubbles,
+  IconChatInterface,
+  IconFont,
+  IconHourglass,
+  IconTheme,
+  IconVisibility,
+} from "./_icons";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -164,7 +173,7 @@ export default async function ChatSettingsPage({
           {/* ─── 1 · My Chat Page ────────────────────────────────── */}
           <LinkCard
             href="/nex-native/chat/preview/my-view"
-            emoji="💬"
+            icon={<IconChatInterface />}
             title="Chat Interface"
             subtitle="Your Chat Screen"
           />
@@ -172,31 +181,31 @@ export default async function ChatSettingsPage({
           {/* ─── 2 · Chat Appearance ─────────────────────────────── */}
           <LinkCard
             href="/nex-native/chat-themes-library"
-            emoji="🎨"
+            icon={<IconTheme />}
             title="Chat Theme"
             subtitle="Theme Backgrounds"
           />
           <LinkCard
             href="/nex-native/settings/see-my-theme"
-            emoji="👥"
+            icon={<IconVisibility />}
             title="Theme Visibility"
             subtitle="Who see's theme"
           />
           <LinkCard
             href="/nex-native/settings/chat-settings/bubble-colours"
-            emoji="🎈"
+            icon={<IconBubbles />}
             title="Bubble Colours"
             subtitle="Change colors"
           />
           <LinkCard
             href="/nex-native/settings/blocked"
-            emoji="🚫"
+            icon={<IconBlocked />}
             title="Blocked Contacts"
             subtitle="Contacts connection"
           />
           <LinkCard
             href="/nex-native/settings/chat-font"
-            emoji="🔤"
+            icon={<IconFont />}
             title="Font style and size"
             subtitle="Change chat font"
           />
@@ -211,7 +220,7 @@ export default async function ChatSettingsPage({
 
           <LinkCard
             href="/nex-native/settings/disappearing-messages"
-            emoji="⏳"
+            icon={<IconHourglass />}
             title="Disappearing Messages"
             subtitle="Set time zone"
             rightIndicator={defaultSeconds > 0 ? "on" : "off"}
@@ -293,7 +302,7 @@ function LinkCard({
   subtitle,
   comingSoon,
   rightIndicator,
-  emoji,
+  icon,
 }: {
   href: string;
   title: string;
@@ -301,7 +310,7 @@ function LinkCard({
   comingSoon?: boolean;
   rightLabel?: string; // kept for API compatibility · ignored in minimal row
   rightIndicator?: "on" | "off" | "partial";
-  emoji?: string;
+  icon?: React.ReactNode;
 }): React.JSX.Element {
   return (
     <a
@@ -318,7 +327,7 @@ function LinkCard({
         opacity: comingSoon ? 0.7 : 1,
       }}
     >
-      {emoji ? <LineIconCell emoji={emoji} /> : null}
+      {icon ? <LineIconCell>{icon}</LineIconCell> : null}
       <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
         <div
           style={{
@@ -367,8 +376,12 @@ function LinkCard({
   );
 }
 
-// ─── Minimal line-icon cell · no container · ink-coloured emoji ─────
-function LineIconCell({ emoji }: { emoji: string }): React.JSX.Element {
+// ─── Minimal line-icon cell · no container · ink-coloured SVG ──────
+function LineIconCell({
+  children,
+}: {
+  children: React.ReactNode;
+}): React.JSX.Element {
   return (
     <div
       aria-hidden
@@ -377,12 +390,11 @@ function LineIconCell({ emoji }: { emoji: string }): React.JSX.Element {
         width: 28,
         display: "grid",
         placeItems: "center",
-        fontSize: 22,
-        lineHeight: 1,
+        color: CARD_INK,
         paddingTop: 2,
       }}
     >
-      {emoji}
+      {children}
     </div>
   );
 }

@@ -22,6 +22,13 @@ import {
   setTypingIndicatorAction,
 } from "./_actions";
 import { setChatProtectionAction } from "../chat-protection/_actions";
+import {
+  IconCamera,
+  IconClock,
+  IconOnlineDot,
+  IconReadReceipts,
+  IconTyping,
+} from "./_icons";
 import type {
   ChatPreferences,
   VisibilityLevel,
@@ -67,35 +74,35 @@ export function ChatSettingsClient({
   return (
     <div style={{ display: "grid", gap: 0 }}>
       <ControlCard
-        emoji="✓✓"
+        icon={<IconReadReceipts />}
         title="Read receipts"
         subtitle="Hide when viewing chat"
         rightIndicator={prefs.read_receipts_enabled ? "on" : "off"}
         onClick={() => setOpen({ kind: "boolean", id: "receipts" })}
       />
       <ControlCard
-        emoji="💭"
+        icon={<IconTyping />}
         title="Typing Indicator"
         subtitle="Typing animation"
         rightIndicator={prefs.typing_indicator_enabled ? "on" : "off"}
         onClick={() => setOpen({ kind: "boolean", id: "typing" })}
       />
       <ControlCard
-        emoji="🕒"
+        icon={<IconClock />}
         title="Last-seen"
         subtitle="Who can see when you were last active"
         rightIndicator={visibilityIndicator(prefs.last_seen_visibility)}
         onClick={() => setOpen({ kind: "visibility", id: "last-seen" })}
       />
       <ControlCard
-        emoji="🟢"
+        icon={<IconOnlineDot />}
         title="Online status"
         subtitle="Who can see when you're currently online"
         rightIndicator={visibilityIndicator(prefs.online_status_visibility)}
         onClick={() => setOpen({ kind: "visibility", id: "online" })}
       />
       <ControlCard
-        emoji="📷"
+        icon={<IconCamera />}
         title="Screenshot"
         subtitle="Prevent screen copy"
         rightIndicator={screenshotProtection ? "on" : "off"}
@@ -157,13 +164,13 @@ export function ChatSettingsClient({
 // ─── Uniform control card ────────────────────────────────────────────
 
 function ControlCard({
-  emoji,
+  icon,
   title,
   subtitle,
   rightIndicator,
   onClick,
 }: {
-  emoji: string;
+  icon: React.ReactNode;
   title: string;
   subtitle: string;
   rightLabel?: string; // kept for API compatibility · ignored in minimal row
@@ -198,12 +205,11 @@ function ControlCard({
           width: 28,
           display: "grid",
           placeItems: "center",
-          fontSize: 22,
-          lineHeight: 1,
+          color: CARD_INK,
           paddingTop: 2,
         }}
       >
-        {emoji}
+        {icon}
       </div>
       <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
         <div
