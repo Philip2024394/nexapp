@@ -80,22 +80,39 @@ const CONTACTS = [
     phoneNat: "871112233",
   },
   {
+    // Owner directive 2026-11-13 · swapped the Galway field-recordist
+    // persona for an Indonesian hand-craft business owner. First mock
+    // to carry a real `business` entry · shop badge + public shop URL
+    // now resolve via nex_business (not fabricated in the UI layer).
     id: "11111111-1111-4111-8111-111111111113",
     handle: "nex-99903",
-    display: "Cian O'Reilly",
-    headline: "Field recordist · Galway",
-    bio: "Wax-cylinder-era recordings of west-coast weather, surf-breaks and the occasional trad session. Available for scoring short films + podcast beds.",
-    profession: "Field recordist",
-    kind: "professional",
+    display: "Rosa",
+    headline: "Hand Craft · Indonesia",
+    bio: "Hand-stitched handbags from Yogyakarta — small batch, natural leathers, traditional motifs. Direct to buyer, no middle shops.",
+    profession: "Hand Craft",
+    kind: "business_owner",
     dailyActivity: "self_employed",
-    skills: ["field-recording", "sound-design", "trad-scoring", "foley", "mix-mastering"],
-    lookingFor: ["scoring-work", "label-interest", "collaborators"],
-    locationLabel: "Galway, Ireland",
-    lastCity: "Galway",
-    interests: ["field-recording", "trad", "galway", "soundscapes", "west-coast"],
-    avatar: avatar("cian-oreilly-recordist"),
-    cover: cover("cian-galway-coast"),
-    phoneNat: "852223344",
+    skills: ["handmade-handbags", "leatherwork", "hand-stitching", "pattern-making", "small-batch"],
+    lookingFor: ["retail-partners", "international-orders", "collaborators"],
+    locationLabel: "Indonesia",
+    lastCity: "Indonesia",
+    // Owner directive 2026-11-13 · locale + country overrides so Rosa
+    // reads as an Indonesian persona end-to-end · default Ireland
+    // values apply to every entry that OMITS these fields.
+    locale: "id",
+    phoneCountry: "+62",
+    countryIso: "ID",
+    interests: ["handmade", "indonesia", "handbags", "craft", "leatherwork"],
+    avatar: avatar("rosa-handcraft-handbags"),
+    cover: cover("rosa-yogyakarta-studio"),
+    phoneNat: "81223456789",
+    // Shop data · creates a nex_business row owned by this persona.
+    // `resolveShopBadges` lights up the 🏪 marker on contact rows + the
+    // public shop URL at /nex-native/handbags-direct starts resolving.
+    business: {
+      displayName: "Handbags direct",
+      slug: "handbags-direct",
+    },
   },
   {
     id: "11111111-1111-4111-8111-111111111114",
@@ -188,6 +205,12 @@ console.log("Owner found:", ownerCheck.rows[0]);
 await client.query("BEGIN");
 try {
   for (const c of CONTACTS) {
+    // Owner directive 2026-11-13 · locale / phone country / country ISO
+    // are now per-contact with Ireland defaults, so Rosa (Indonesia)
+    // reads correctly while the five Irish personas stay unchanged.
+    const locale = c.locale ?? "en";
+    const phoneCountry = c.phoneCountry ?? "+353";
+    const countryIso = c.countryIso ?? "IE";
     await client.query(
       `INSERT INTO nex_account (
          id, display_name, nex_handle, tier, is_mock_persona,
@@ -196,8 +219,8 @@ try {
          social_intents, world_intro_enabled, created_at
        ) VALUES (
          $1, $2, $3, 'gratis', true,
-         'en', '+353', $4,
-         $5, 'IE', 'manual_city', now(),
+         $4, $5, $6,
+         $7, $8, 'manual_city', now(),
          ARRAY['business','new_friends']::text[], true, now()
        )
        ON CONFLICT (id) DO UPDATE SET
@@ -212,7 +235,7 @@ try {
          last_known_set_at         = EXCLUDED.last_known_set_at,
          social_intents            = EXCLUDED.social_intents,
          world_intro_enabled       = EXCLUDED.world_intro_enabled`,
-      [c.id, c.display, c.handle, c.phoneNat, c.lastCity],
+      [c.id, c.display, c.handle, locale, phoneCountry, c.phoneNat, c.lastCity, countryIso],
     );
 
     await client.query(
@@ -267,6 +290,25 @@ try {
        ON CONFLICT (a_account_id, b_account_id) DO NOTHING`,
       [OWNER_ID, c.id],
     );
+
+    // Owner directive 2026-11-13 · activate shops for seeded mocks like
+    // real users · when a persona carries `business`, seed a nex_business
+    // row owned by them. Minimum columns only (id/owner/display/slug) ·
+    // later migrations added many optional columns (logo, description,
+    // address, hours, payment methods etc.) that default to NULL and
+    // can be populated by the owner later from the Shop Settings surface.
+    // Idempotent on re-run via ON CONFLICT on the unique slug.
+    if (c.business) {
+      await client.query(
+        `INSERT INTO nex_business (owner_account_id, display_name, slug)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (slug) DO UPDATE SET
+           display_name = EXCLUDED.display_name,
+           owner_account_id = EXCLUDED.owner_account_id,
+           updated_at = now()`,
+        [c.id, c.business.displayName, c.business.slug],
+      );
+    }
   }
 
   await client.query("COMMIT");
@@ -279,9 +321,12 @@ try {
             array_length(p.looking_for, 1) AS looking_count,
             array_length(p.interests, 1) AS interest_count,
             (p.avatar_url IS NOT NULL) AS has_avatar,
-            (p.cover_image_url IS NOT NULL) AS has_cover
+            (p.cover_image_url IS NOT NULL) AS has_cover,
+            b.display_name AS shop_name,
+            b.slug         AS shop_slug
      FROM nex_account a
      JOIN nex_account_profile p ON p.account_id = a.id
+     LEFT JOIN nex_business b ON b.owner_account_id = a.id
      WHERE a.id = ANY($1)
      ORDER BY a.nex_handle`,
     [CONTACTS.map((c) => c.id)],
