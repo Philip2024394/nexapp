@@ -2,16 +2,17 @@
 
 // src/app/nex-native/settings/chat-settings/_client.tsx
 //
-// NEX Chat settings · interactive visibility controls (Section 1).
-// Owner-authorised 2026-11-07.
+// NEX Chat settings · visibility controls · popup variant.
+// Owner-sealed 2026-11-13 iter 5.
 // -----------------------------------------------------------------------------
-// Four form submissions bind to the sealed chat-preferences-service via
-// the server actions in ./_actions.ts. Each toggle/segmented-control is
-// its own form so progressive enhancement works without JS.
+// Each privacy preference renders as a uniform LinkCard-style row that
+// shows the current value as a right-side pill. Tapping the card opens
+// a small popup in which the viewer picks an option · the chosen value
+// writes through the existing sealed chat-preferences server actions
+// and the popup closes.
 //
-// Pattern · one <form action={serverAction}> per control. The server
-// action redirects back with ?s=<status> so the page shows a non-blocking
-// confirmation banner.
+// The cards all share one visual shape so the Chat Settings page reads
+// as a consistent stack regardless of control type.
 
 import * as React from "react";
 import {
@@ -21,223 +22,440 @@ import {
   setReadReceiptsAction,
   setTypingIndicatorAction,
 } from "./_actions";
-import { NEX_SETTINGS } from "../_settings-shell";
-import type { ChatPreferences, VisibilityLevel } from "@/lib/nex-native/chat-preferences-service";
+import type {
+  ChatPreferences,
+  VisibilityLevel,
+} from "@/lib/nex-native/chat-preferences-service";
 
 interface Props {
   readonly prefs: ChatPreferences;
 }
 
+// Owner directive 2026-11-13 iter 2 · peach-then-white palette.
+const CARD_BG = "#FFFFFF";
+const CARD_INK = "#6B2A1F";
+const CARD_INK_DIM = "#7D5A3A";
+const ICON_BG = "#1D2432";
+const ICON_RING = "#FF7200";
+const CONTROL_BG = "#1D2432";
+const CONTROL_INK = "#F3E3C6";
+const CONTROL_ACTIVE = "#FF7200";
+
+type OpenSheet =
+  | null
+  | { kind: "boolean"; id: "receipts" | "typing" }
+  | { kind: "visibility"; id: "last-seen" | "online" };
+
+const VIS_OPTIONS: ReadonlyArray<{ value: VisibilityLevel; label: string }> = [
+  { value: "everyone", label: "Everyone" },
+  { value: "contacts", label: "Contacts" },
+  { value: "nobody", label: "Nobody" },
+];
+
 export function ChatSettingsClient({ prefs }: Props): React.JSX.Element {
+  const [open, setOpen] = React.useState<OpenSheet>(null);
+
+  const visibilityLabel = (v: VisibilityLevel): string =>
+    VIS_OPTIONS.find((o) => o.value === v)?.label ?? "Nobody";
+
   return (
-    <div style={{ display: "grid", gap: 10 }}>
-      <ToggleRow
-        action={setReadReceiptsAction}
-        name="enabled"
+    <div style={{ display: "grid", gap: 8 }}>
+      <ControlCard
         emoji="✓✓"
         title="Read receipts"
         subtitle="Hide when viewing chat"
-        current={prefs.read_receipts_enabled}
+        rightLabel={prefs.read_receipts_enabled ? "ON" : "OFF"}
+        onClick={() => setOpen({ kind: "boolean", id: "receipts" })}
       />
-      <ToggleRow
-        action={setTypingIndicatorAction}
-        name="enabled"
+      <ControlCard
         emoji="💭"
         title="Typing Indicator"
         subtitle="Typing animation"
-        current={prefs.typing_indicator_enabled}
+        rightLabel={prefs.typing_indicator_enabled ? "ON" : "OFF"}
+        onClick={() => setOpen({ kind: "boolean", id: "typing" })}
       />
-      <SegmentedRow
-        action={setLastSeenVisibilityAction}
-        name="value"
+      <ControlCard
         emoji="🕒"
         title="Last-seen"
-        subtitle="Who can see the time you were last active on NEX."
-        current={prefs.last_seen_visibility}
+        subtitle="Who can see when you were last active"
+        rightLabel={visibilityLabel(prefs.last_seen_visibility)}
+        onClick={() => setOpen({ kind: "visibility", id: "last-seen" })}
       />
-      <SegmentedRow
-        action={setOnlineStatusVisibilityAction}
-        name="value"
+      <ControlCard
         emoji="🟢"
         title="Online status"
-        subtitle="Who can see when you're currently online."
-        current={prefs.online_status_visibility}
+        subtitle="Who can see when you're currently online"
+        rightLabel={visibilityLabel(prefs.online_status_visibility)}
+        onClick={() => setOpen({ kind: "visibility", id: "online" })}
       />
-      <ResetRow action={resetVisibilitySectionAction} />
+
+      <ResetRow />
+
+      {open?.kind === "boolean" ? (
+        <BooleanSheet
+          title={
+            open.id === "receipts" ? "Read receipts" : "Typing Indicator"
+          }
+          current={
+            open.id === "receipts"
+              ? prefs.read_receipts_enabled
+              : prefs.typing_indicator_enabled
+          }
+          action={
+            open.id === "receipts"
+              ? setReadReceiptsAction
+              : setTypingIndicatorAction
+          }
+          onClose={() => setOpen(null)}
+        />
+      ) : null}
+
+      {open?.kind === "visibility" ? (
+        <VisibilitySheet
+          title={open.id === "last-seen" ? "Last-seen" : "Online status"}
+          current={
+            open.id === "last-seen"
+              ? prefs.last_seen_visibility
+              : prefs.online_status_visibility
+          }
+          action={
+            open.id === "last-seen"
+              ? setLastSeenVisibilityAction
+              : setOnlineStatusVisibilityAction
+          }
+          onClose={() => setOpen(null)}
+        />
+      ) : null}
     </div>
   );
 }
 
-// ─── Reusable rows ────────────────────────────────────────────────────
+// ─── Uniform control card ────────────────────────────────────────────
 
-function ToggleRow({
-  action,
-  name,
+function ControlCard({
   emoji,
   title,
   subtitle,
-  current,
+  rightLabel,
+  onClick,
 }: {
-  action: (formData: FormData) => Promise<never>;
-  name: string;
-  emoji: string;
-  title: string;
-  subtitle?: string;
-  current: boolean;
-}): React.JSX.Element {
-  const next = current ? "off" : "on";
-  return (
-    <form
-      action={action}
-      data-nex-chat-settings-toggle={title.toLowerCase().replace(/\s+/g, "-")}
-      style={rowStyle}
-    >
-      <IconCell emoji={emoji} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={titleStyle}>{title}</div>
-        {subtitle ? <div style={subtitleStyle}>{subtitle}</div> : null}
-      </div>
-      <input type="hidden" name={name} value={next} />
-      <button
-        type="submit"
-        aria-pressed={current}
-        aria-label={`${title} · currently ${current ? "on" : "off"} · tap to turn ${next}`}
-        style={{
-          position: "absolute",
-          bottom: 10,
-          right: 12,
-          minWidth: 46,
-          height: 24,
-          padding: "0 8px 0 24px",
-          borderRadius: 999,
-          border: "none",
-          cursor: "pointer",
-          background: CONTROL_BG,
-          color: current ? CONTROL_ACTIVE : CONTROL_INK,
-          fontSize: 9,
-          fontWeight: 800,
-          letterSpacing: "0.1em",
-          transition: "color 160ms ease",
-          textAlign: "right",
-        }}
-      >
-        <span
-          aria-hidden
-          style={{
-            position: "absolute",
-            top: 2,
-            left: current ? 24 : 2,
-            width: 20,
-            height: 20,
-            borderRadius: "50%",
-            background: current ? CONTROL_ACTIVE : "#8A7563",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
-            transition: "left 160ms ease, background 160ms ease",
-          }}
-        />
-        {current ? "ON" : "OFF"}
-      </button>
-    </form>
-  );
-}
-
-function SegmentedRow({
-  action,
-  name,
-  emoji,
-  title,
-  subtitle,
-  current,
-}: {
-  action: (formData: FormData) => Promise<never>;
-  name: string;
   emoji: string;
   title: string;
   subtitle: string;
-  current: VisibilityLevel;
+  rightLabel: string;
+  onClick: () => void;
 }): React.JSX.Element {
-  const options: ReadonlyArray<{ value: VisibilityLevel; label: string }> = [
-    { value: "everyone", label: "Everyone" },
-    { value: "contacts", label: "Contacts" },
-    { value: "nobody", label: "Nobody" },
-  ];
   return (
-    <div
-      data-nex-chat-settings-segmented={title.toLowerCase().replace(/\s+/g, "-")}
+    <button
+      type="button"
+      onClick={onClick}
+      data-nex-chat-settings-control={title.toLowerCase().replace(/\s+/g, "-")}
       style={{
-        ...rowStyle,
-        flexDirection: "column",
-        alignItems: "stretch",
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        width: "100%",
+        padding: "12px 14px",
+        background: CARD_BG,
+        border: "none",
+        borderRadius: 14,
+        color: CARD_INK,
+        textAlign: "left",
+        cursor: "pointer",
+        boxShadow: "0 1px 2px rgba(74,32,24,0.10)",
+        fontFamily: "inherit",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        <IconCell emoji={emoji} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={titleStyle}>{title}</div>
-          <div style={subtitleStyle}>{subtitle}</div>
-        </div>
-      </div>
       <div
-        role="radiogroup"
-        aria-label={title}
+        aria-hidden
         style={{
-          marginTop: 12,
+          flexShrink: 0,
+          width: 40,
+          height: 40,
+          borderRadius: "50%",
+          background: ICON_BG,
+          border: `1.5px solid ${ICON_RING}`,
           display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: 0,
-          borderRadius: 999,
-          overflow: "hidden",
-          background: CONTROL_BG,
+          placeItems: "center",
+          fontSize: 18,
+          color: "#F2E5CC",
         }}
       >
-        {options.map((opt, i) => {
-          const isActive = opt.value === current;
-          const isFirst = i === 0;
-          const isLast = i === options.length - 1;
-          return (
-            <form action={action} key={opt.value} style={{ margin: 0 }}>
-              <input type="hidden" name={name} value={opt.value} />
-              <button
-                type="submit"
-                role="radio"
-                aria-checked={isActive}
-                data-nex-chat-settings-segmented-option={opt.value}
-                style={{
-                  width: "100%",
-                  padding: "10px 10px",
-                  fontSize: 12,
-                  fontWeight: 800,
-                  border: "none",
-                  background: isActive ? CONTROL_ACTIVE : "transparent",
-                  color: isActive ? "#1D2432" : CONTROL_INK,
-                  cursor: "pointer",
-                  letterSpacing: "0.02em",
-                  borderTopLeftRadius: isFirst ? 999 : 0,
-                  borderBottomLeftRadius: isFirst ? 999 : 0,
-                  borderTopRightRadius: isLast ? 999 : 0,
-                  borderBottomRightRadius: isLast ? 999 : 0,
-                }}
-              >
-                {opt.label}
-              </button>
-            </form>
-          );
-        })}
+        {emoji}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 15,
+            fontWeight: 800,
+            color: CARD_INK,
+            letterSpacing: "0.005em",
+          }}
+        >
+          {title}
+        </div>
+        <div
+          style={{
+            marginTop: 2,
+            fontSize: 12,
+            color: CARD_INK_DIM,
+            lineHeight: 1.4,
+          }}
+        >
+          {subtitle}
+        </div>
+      </div>
+      <span
+        style={{
+          flexShrink: 0,
+          padding: "5px 10px",
+          borderRadius: 999,
+          background: CONTROL_BG,
+          color: CONTROL_ACTIVE,
+          fontSize: 10,
+          fontWeight: 800,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+        }}
+      >
+        {rightLabel}
+      </span>
+    </button>
+  );
+}
+
+// ─── Popup sheets ────────────────────────────────────────────────────
+
+function SheetShell({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      data-nex-chat-settings-sheet
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(10, 6, 8, 0.55)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 60,
+        padding: 20,
+      }}
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "100%",
+          maxWidth: 320,
+          background: CARD_BG,
+          borderRadius: 16,
+          boxShadow: "0 18px 48px -12px rgba(0,0,0,0.5)",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div
+          style={{
+            padding: "14px 18px",
+            borderBottom: `1px solid ${ICON_RING}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 800,
+              color: CARD_INK,
+              letterSpacing: "0.02em",
+            }}
+          >
+            {title}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 999,
+              background: "rgba(107,42,31,0.08)",
+              border: "none",
+              color: CARD_INK,
+              fontSize: 14,
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            ✕
+          </button>
+        </div>
+        <div style={{ padding: "14px 16px 16px" }}>{children}</div>
       </div>
     </div>
   );
 }
 
-function ResetRow({
+function BooleanSheet({
+  title,
+  current,
   action,
+  onClose,
 }: {
-  action: () => Promise<never>;
+  title: string;
+  current: boolean;
+  action: (formData: FormData) => Promise<never>;
+  onClose: () => void;
+}): React.JSX.Element {
+  async function handlePick(nextOn: boolean) {
+    const fd = new FormData();
+    fd.set("enabled", nextOn ? "on" : "off");
+    try {
+      await action(fd);
+    } catch {
+      /* redirect expected */
+    }
+    onClose();
+  }
+  return (
+    <SheetShell title={title} onClose={onClose}>
+      <div style={{ display: "grid", gap: 8 }}>
+        <SheetOptionButton
+          label="ON"
+          isActive={current}
+          onClick={() => void handlePick(true)}
+        />
+        <SheetOptionButton
+          label="OFF"
+          isActive={!current}
+          onClick={() => void handlePick(false)}
+        />
+      </div>
+    </SheetShell>
+  );
+}
+
+function VisibilitySheet({
+  title,
+  current,
+  action,
+  onClose,
+}: {
+  title: string;
+  current: VisibilityLevel;
+  action: (formData: FormData) => Promise<never>;
+  onClose: () => void;
+}): React.JSX.Element {
+  async function handlePick(next: VisibilityLevel) {
+    const fd = new FormData();
+    fd.set("value", next);
+    try {
+      await action(fd);
+    } catch {
+      /* redirect expected */
+    }
+    onClose();
+  }
+  return (
+    <SheetShell title={title} onClose={onClose}>
+      <div style={{ display: "grid", gap: 8 }}>
+        {VIS_OPTIONS.map((opt) => (
+          <SheetOptionButton
+            key={opt.value}
+            label={opt.label}
+            isActive={opt.value === current}
+            onClick={() => void handlePick(opt.value)}
+          />
+        ))}
+      </div>
+    </SheetShell>
+  );
+}
+
+function SheetOptionButton({
+  label,
+  isActive,
+  onClick,
+}: {
+  label: string;
+  isActive: boolean;
+  onClick: () => void;
 }): React.JSX.Element {
   return (
-    <form
-      action={action}
-      style={{ marginTop: 4 }}
+    <button
+      type="button"
+      onClick={onClick}
+      data-nex-chat-settings-sheet-option={label}
+      aria-pressed={isActive}
+      style={{
+        width: "100%",
+        padding: "12px 14px",
+        borderRadius: 12,
+        border: `1px solid ${isActive ? CONTROL_ACTIVE : "rgba(107,42,31,0.18)"}`,
+        background: isActive ? "rgba(255,114,0,0.08)" : CARD_BG,
+        color: CARD_INK,
+        fontSize: 14,
+        fontWeight: 800,
+        letterSpacing: "0.02em",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 10,
+        fontFamily: "inherit",
+      }}
     >
+      <span>{label}</span>
+      {isActive ? (
+        <span
+          aria-hidden
+          style={{
+            width: 18,
+            height: 18,
+            borderRadius: "50%",
+            background: CONTROL_ACTIVE,
+            display: "grid",
+            placeItems: "center",
+            color: "#FFFFFF",
+            fontSize: 11,
+            fontWeight: 900,
+          }}
+        >
+          ✓
+        </span>
+      ) : null}
+    </button>
+  );
+}
+
+// ─── Reset button ────────────────────────────────────────────────────
+
+function ResetRow(): React.JSX.Element {
+  return (
+    <form action={resetVisibilitySectionAction} style={{ marginTop: 4 }}>
       <button
         type="submit"
         data-nex-chat-settings-reset="visibility"
@@ -278,63 +496,3 @@ function ResetRow({
     </form>
   );
 }
-
-function IconCell({ emoji }: { emoji: string }): React.JSX.Element {
-  return (
-    <div
-      aria-hidden
-      style={{
-        flexShrink: 0,
-        width: 40,
-        height: 40,
-        borderRadius: "50%",
-        background: ICON_BG,
-        border: `1.5px solid ${ICON_RING}`,
-        display: "grid",
-        placeItems: "center",
-        fontSize: 18,
-        color: "#F2E5CC",
-      }}
-    >
-      {emoji}
-    </div>
-  );
-}
-
-// Owner directive 2026-11-13 iter 2 · peach card + dark round icon +
-// dark pill controls. Mirrors the hhhhh.png / Untitledase.png reference.
-const CARD_BG = "#FFFFFF";
-const CARD_INK = "#6B2A1F";
-const CARD_INK_DIM = "#5A3A20";
-const ICON_BG = "#1D2432";
-const ICON_RING = "#FF7200";
-const CONTROL_BG = "#1D2432";
-const CONTROL_INK = "#F3E3C6";
-const CONTROL_ACTIVE = "#FF7200";
-
-const rowStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 12,
-  padding: "12px 14px 36px",
-  background: CARD_BG,
-  border: "none",
-  borderRadius: 14,
-  minHeight: 68,
-  boxShadow: "0 1px 2px rgba(74,32,24,0.10)",
-  position: "relative",
-};
-
-const titleStyle: React.CSSProperties = {
-  fontSize: 15,
-  fontWeight: 800,
-  color: CARD_INK,
-  letterSpacing: "0.005em",
-};
-
-const subtitleStyle: React.CSSProperties = {
-  marginTop: 2,
-  fontSize: 12,
-  color: CARD_INK_DIM,
-  lineHeight: 1.4,
-};
