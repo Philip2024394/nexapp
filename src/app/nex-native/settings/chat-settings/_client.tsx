@@ -43,8 +43,8 @@ export function ChatSettingsClient({ prefs }: Props): React.JSX.Element {
         action={setTypingIndicatorAction}
         name="enabled"
         emoji="💭"
-        title="Typing indicator"
-        subtitle="Show the 'typing…' bubble to the other person while you're composing. 1:1 chats only in this release."
+        title="Typing Indicator"
+        subtitle="Display effect when typing"
         current={prefs.typing_indicator_enabled}
       />
       <SegmentedRow
