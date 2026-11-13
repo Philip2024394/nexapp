@@ -536,15 +536,22 @@ export function BusinessConversationClient({
                     textAlign: "right",
                   }}
                 >
+                  {/* Owner directive 2026-11-13 (iter 19) · locked
+                      locale "en-US" · the default [] locale picked
+                      the server's system locale (24-hour, dot
+                      separator) while the browser used 12-hour, so
+                      server + client disagreed and React threw a
+                      hydration mismatch. Pinning "en-US" produces
+                      the same "06:35 PM" string on both sides. */}
                   {isProductCard
-                    ? new Date(m.created_at).toLocaleString([], {
+                    ? new Date(m.created_at).toLocaleString("en-US", {
                         weekday: "short",
                         day: "2-digit",
                         month: "short",
                         hour: "2-digit",
                         minute: "2-digit",
                       })
-                    : new Date(m.created_at).toLocaleTimeString([], {
+                    : new Date(m.created_at).toLocaleTimeString("en-US", {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
