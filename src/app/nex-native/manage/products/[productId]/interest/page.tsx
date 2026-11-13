@@ -29,7 +29,9 @@
 
 import type * as React from "react";
 import { notFound, redirect } from "next/navigation";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// Owner directive 2026-11-13 · dev-override resolver so 99901 can reach
+// the per-product interest dashboard from the product detail drill-in.
+import { resolveSessionWithDevOverride as resolveNexAppSessionFromContext } from "@/lib/nex-native/app/dev-impersonation";
 import * as productService from "@/lib/nex-native/product-service";
 import { getPerProductInterestSummary } from "@/lib/nex-native/seller-insights/seller-insight-service";
 import { InterestDashboard } from "./_interest-dashboard";

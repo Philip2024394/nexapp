@@ -14,7 +14,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// Owner directive 2026-11-13 · dev-override resolver so 99901 (Hammerex)
+// can toggle stock / visibility / restore on their own products from
+// the Shop Centre. Page already uses the dev-override resolver; the
+// matching action-side resolver closes the pair required by the
+// 2026-11-12 "both page AND server actions" rule.
+import { resolveSessionWithDevOverride as resolveNexAppSessionFromContext } from "@/lib/nex-native/app/dev-impersonation";
 import * as businessService from "@/lib/nex-native/business-service";
 import * as productService from "@/lib/nex-native/product-service";
 import { guardRestoreProduct } from "@/lib/nex-native/billing/shop-tier-guard";

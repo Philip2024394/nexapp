@@ -14,7 +14,10 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// Owner directive 2026-11-13 · dev-override resolver so 99901 (Hammerex)
+// can reach the Shop Profile editor from the Shop Centre hub without
+// being bounced to /sign-in. Pairs with the hub's own resolver.
+import { resolveSessionWithDevOverride as resolveNexAppSessionFromContext } from "@/lib/nex-native/app/dev-impersonation";
 import * as businessService from "@/lib/nex-native/business-service";
 import * as productService from "@/lib/nex-native/product-service";
 import {

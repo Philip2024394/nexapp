@@ -13,7 +13,9 @@
 import type * as React from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// Owner directive 2026-11-13 · dev-override resolver so 99901 can land
+// on the Specifications editor from the Shop Centre → Products drill-in.
+import { resolveSessionWithDevOverride as resolveNexAppSessionFromContext } from "@/lib/nex-native/app/dev-impersonation";
 import * as productService from "@/lib/nex-native/product-service";
 import * as businessService from "@/lib/nex-native/business-service";
 import * as productSectionService from "@/lib/nex-native/product-section-service";
