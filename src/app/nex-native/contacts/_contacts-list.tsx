@@ -70,6 +70,16 @@ export interface ContactRowDisplay {
    *  still works (lands on the peer's chat page which shows the welcome
    *  pill until they accept). */
   readonly pending?: boolean;
+  /** Owner directive 2026-11-13 · dormant-nudge chip · when set, the
+   *  row shows a quiet "Haven't spoken in Nd" chip so the viewer sees
+   *  which relationships have gone quiet. NULL means either they're
+   *  active (last message within 30 days) or there has never been a
+   *  conversation (we don't label never-chatted contacts as dormant —
+   *  it would be noisy for new friends). Computed server-side from
+   *  nex_peer_conversation.last_message_at · reads only the timestamp,
+   *  never the message body (respects the 2026-11-09 device-only E2E
+   *  seal). */
+  readonly dormantDays?: number | null;
 }
 
 const NEX = {

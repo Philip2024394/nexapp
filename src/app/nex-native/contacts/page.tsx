@@ -82,6 +82,12 @@ import { ContactsHeader } from "./_contacts-header";
 import { type ContactsFilter } from "./_contacts-filter-pills";
 import { type ContactRowDisplay } from "./_contacts-list";
 import { ContactRow } from "./_contact-row";
+// Owner directive 2026-11-13 · ContactsSearchBar was imported-but-
+// unrendered on this surface (the header-mounted test at
+// __tests__/header-mounted.test.ts expects a `<ContactsSearchBar />`
+// tag). Mount it just under the sticky header so the viewer can filter
+// before scrolling · pairs with the compact-card pass in _contact-row.
+import { ContactsSearchBar } from "./_contacts-search-bar";
 import Link from "next/link";
 import { ContactsPlusDrawer } from "./_contacts-plus-drawer";
 import { ContactsLiveWorldTrigger } from "./_contacts-live-world-trigger";
@@ -525,6 +531,11 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       city: mockCity,
       presence: mockPresence,
       lastSeenMinsAgo: mockLastSeenMinsAgo,
+      // Owner directive 2026-11-13 · dormant-nudge chip · pass the
+      // computed days-since-last-message through. The row renders a
+      // 💤 chip when this value is >= 30 (complements the existing
+      // 21-day ⏳ prepend on professionLine · sealed).
+      dormantDays: friendStaleDays[i] ?? null,
     };
   });
 
@@ -1013,6 +1024,13 @@ export default async function ContactsPage({ searchParams }: PageProps) {
           />
         </span>
       </header>
+
+      {/* Owner directive 2026-11-13 · sticky search bar directly under
+          the header · lets the viewer filter before scrolling. Client
+          component owns the debounced CustomEvent that ContactsList
+          already listens for (see _contacts-list.tsx). White field on
+          the Ireland cream backdrop per the 2026-11-13 follow-up. */}
+      <ContactsSearchBar />
 
       {/* ===== ROW 1 · THREE FIXED CATEGORY BUTTONS =====
             Owner directive 2026-11-03 (revised) · three equal-width

@@ -73,14 +73,17 @@ const NEX = {
 };
 
 /** Avatar visual sizing · consistent across every row.
- *  Owner directive 2026-11-03 · "enlarge the profile image 25%" ·
- *  base 48 × 1.25 = 60. Card min-height bumped from 76 → 90 so the
- *  larger avatar has room without crowding the metadata rows. */
-const AVATAR_SIZE = 60;
-const CARD_PADDING_Y = 12;
+ *  Owner directive 2026-11-13 · "slightly reduce the card height and
+ *  allow more contacts to appear on the screen." Compact pass: avatar
+ *  trimmed from 60 → 52, min-height from 90 → 76, Y padding from
+ *  12 → 10. Picks up ~15% more rows per viewport without cramping the
+ *  metadata (profession + city + presence label still fit at 2 lines).
+ *  Supersedes the 2026-11-03 "enlarge 25%" sizing. */
+const AVATAR_SIZE = 52;
+const CARD_PADDING_Y = 10;
 const CARD_PADDING_X = 14;
 const CARD_GAP = 12;
-const CARD_MIN_HEIGHT = 90;
+const CARD_MIN_HEIGHT = 76;
 
 interface ContactRowProps {
   readonly row: ContactRowDisplay;
@@ -368,6 +371,39 @@ export function ContactRow({ row, accentHex }: ContactRowProps): React.JSX.Eleme
             <MapPinIcon color={NEX.unreadRed} />
             <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
               {row.city}
+            </span>
+          </div>
+        ) : null}
+
+        {/* Owner directive 2026-11-13 · dormant-nudge chip · subtle
+            amber text when the viewer hasn't exchanged a message with
+            this contact for 30+ days. Reads ONLY the timestamp from
+            nex_peer_conversation.last_message_at (no body ever leaves
+            the device per the 2026-11-09 device-only E2E seal). Never
+            shown when dormantDays is null · a fresh contact without
+            any chat history is NOT labelled dormant. */}
+        {typeof row.dormantDays === "number" && row.dormantDays >= 30 ? (
+          <div
+            data-nex-contacts-row-dormant
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: 0.1,
+              color: "#B45309",
+              lineHeight: 1.2,
+              whiteSpace: "nowrap",
+            }}
+          >
+            <span aria-hidden>💤</span>
+            <span>
+              {row.dormantDays >= 365
+                ? `Haven't spoken in ${Math.floor(row.dormantDays / 365)}y`
+                : row.dormantDays >= 60
+                  ? `Haven't spoken in ${Math.floor(row.dormantDays / 30)}mo`
+                  : `Haven't spoken in ${row.dormantDays}d`}
             </span>
           </div>
         ) : null}

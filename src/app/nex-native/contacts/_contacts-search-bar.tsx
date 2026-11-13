@@ -13,12 +13,17 @@
 
 import * as React from "react";
 
+// Owner directive 2026-11-13 · "search groups contacts white field" ·
+// swapped the sealed dark-navy pill treatment for a white input on the
+// Ireland cream backdrop. Text now reads as navy ink + navy caret so
+// the field matches the page family (same vocabulary as the sealed
+// filter buttons on this surface).
 const NEX = {
-  textPrimary: "#F2F5F8",
-  textSecondary: "#7D9BC0",
-  cyan: "var(--nex-world-secondary, #00AFFF)",
-  cyanSoft: "rgba(0, 175, 255, 0.18)",
-  panel: "rgba(3, 16, 29, 0.72)",
+  textPrimary: "var(--nex-world-primary-ink, #2A1F0F)",
+  textSecondary: "rgba(42, 31, 15, 0.55)",
+  cyan: "var(--nex-world-primary-ink, #2A1F0F)",
+  cyanSoft: "var(--nex-world-primary-ink, #2A1F0F)",
+  panel: "#FFFFFF",
 };
 
 const SEARCH_EVENT = "nex-contacts-search" as const;
@@ -47,6 +52,7 @@ export function ContactsSearchBar() {
         borderRadius: 999,
         background: NEX.panel,
         border: `1px solid ${NEX.cyanSoft}`,
+        boxShadow: "0 1px 3px rgba(42, 31, 15, 0.12)",
       }}
     >
       <SearchIcon color={NEX.cyan} />
