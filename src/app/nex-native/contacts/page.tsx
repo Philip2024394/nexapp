@@ -88,16 +88,6 @@ import { ContactRow } from "./_contact-row";
 // tag). Mount it just under the sticky header so the viewer can filter
 // before scrolling · pairs with the compact-card pass in _contact-row.
 import { ContactsSearchBar } from "./_contacts-search-bar";
-// Owner directive 2026-11-13 · sub-filter pills · All / Active /
-// Favourites. Sits below the invite banner and filters the visible
-// rows by relationship state. Favourites is UI-complete but shows an
-// honest empty state until the `nex_friend_link.is_favourite` column
-// migration lands.
-import {
-  ContactsSubFilterPills,
-  isValidSubFilter,
-  type ContactsSubFilter,
-} from "./_contacts-sub-filter-pills";
 import Link from "next/link";
 import { ContactsPlusDrawer } from "./_contacts-plus-drawer";
 import { ContactsLiveWorldTrigger } from "./_contacts-live-world-trigger";
@@ -131,9 +121,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  // Owner directive 2026-11-13 · `sub` sub-filter (All / Active /
-  // Favourites) narrows the current category tab · default "all".
-  searchParams: Promise<{ tab?: string; share?: string; sub?: string }>;
+  searchParams: Promise<{ tab?: string; share?: string }>;
 }
 
 export default async function ContactsPage({ searchParams }: PageProps) {
@@ -201,11 +189,6 @@ export default async function ContactsPage({ searchParams }: PageProps) {
   const sp = await searchParams;
   const requestedTab = (sp.tab ?? "all") as string;
   const activeFilter: ContactsFilter = isValidFilter(requestedTab) ? requestedTab : "all";
-  // Owner directive 2026-11-13 · sub-filter (All / Active / Favourites)
-  // narrows the chosen category tab. Default "all".
-  const activeSub: ContactsSubFilter = isValidSubFilter(sp.sub)
-    ? sp.sub
-    : "all";
 
   // Owner directive 2026-11-05 later-same-day iter 15 · pending-share
   // flow · when /free-chat's ShopDrawer bounces the viewer here with
@@ -698,7 +681,7 @@ export default async function ContactsPage({ searchParams }: PageProps) {
     }
   }
 
-  const baseVisibleRows: ContactRowDisplay[] =
+  const visibleRows: ContactRowDisplay[] =
     activeFilter === "friends"
       ? [...pendingRows, ...friendRows]
       : activeFilter === "business"
@@ -706,38 +689,6 @@ export default async function ContactsPage({ searchParams }: PageProps) {
         : activeFilter === "dating" || activeFilter === "groups"
           ? []
           : allRows;
-
-  // Owner directive 2026-11-13 · sub-filter logic:
-  //   all        → everything in baseVisibleRows
-  //   active     → presence === "online" OR dormantDays < 7 · reads
-  //                only existing signals (no schema change · respects
-  //                the device-only E2E seal because last_message_at
-  //                is a timestamp, not message content)
-  //   favourites → requires `nex_friend_link.is_favourite` column ·
-  //                migration NOT YET APPLIED · returns empty list ·
-  //                the UI renders an honest "no favourites yet" state
-  //                so the pill works today and the backing lands as
-  //                a follow-up migration
-  function matchesActive(r: ContactRowDisplay): boolean {
-    if (r.presence === "online") return true;
-    const d = r.dormantDays;
-    if (typeof d === "number" && d < 7) return true;
-    return false;
-  }
-  function matchesFavourite(_r: ContactRowDisplay): boolean {
-    return false; // column pending · see above
-  }
-  const subFilterCounts = {
-    all: baseVisibleRows.length,
-    active: baseVisibleRows.filter(matchesActive).length,
-    favourites: baseVisibleRows.filter(matchesFavourite).length,
-  } as const;
-  const visibleRows: ContactRowDisplay[] =
-    activeSub === "active"
-      ? baseVisibleRows.filter(matchesActive)
-      : activeSub === "favourites"
-        ? baseVisibleRows.filter(matchesFavourite)
-        : baseVisibleRows;
 
   const totalCount = allRows.length;
   const ownHandle = session.account.nex_handle ?? null;
@@ -888,6 +839,10 @@ export default async function ContactsPage({ searchParams }: PageProps) {
   const showInviteCard = activeFilter !== "groups";
 
 
+  // Owner directive 2026-11-13 · section label simplified · default
+  // tab now reads just "Contacts" (no count) · pills + "All · N"
+  // retired on the same directive. Category tabs still show their
+  // count for context.
   const sectionLabel =
     activeFilter === "business"
       ? `Business · ${businessRows.length}`
@@ -896,7 +851,7 @@ export default async function ContactsPage({ searchParams }: PageProps) {
         : activeFilter === "dating"
           ? "Dating · Soon"
           : activeFilter === "all"
-            ? `All · ${allRows.length}`
+            ? "Contacts"
             : `Friends · ${friendRows.length}`;
 
   const IRISH_GOLD = "#C6A15B";
@@ -1293,18 +1248,6 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       </a>
       ) : null}
 
-      {/* Owner directive 2026-11-13 · sub-filter pills · All / Active /
-          Favourites · hidden on the Groups tab (that tab renders its
-          own Community surface above). URL-driven via ?sub= so
-          bookmarks + deep links work. */}
-      {activeFilter !== "groups" ? (
-        <ContactsSubFilterPills
-          activeTab={activeFilter}
-          activeSub={activeSub}
-          counts={subFilterCounts}
-        />
-      ) : null}
-
       {/* ===== Section Label ·  Owner directive 2026-11-03 · "the
             friends text enlarge and move down little" · fontSize 11 →
             16 · marginTop 12 adds breathing room below the tile grid. ===== */}
@@ -1371,25 +1314,6 @@ export default async function ContactsPage({ searchParams }: PageProps) {
                 </div>
                 <div style={{ opacity: 0.75 }}>
                   We'll surface Dating here once it's ready.
-                </div>
-              </>
-            ) : activeSub === "favourites" ? (
-              <>
-                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
-                  No favourites yet.
-                </div>
-                <div style={{ opacity: 0.75 }}>
-                  Tap the ★ on any contact to pin them here — favourite
-                  pinning lands with the next update.
-                </div>
-              </>
-            ) : activeSub === "active" ? (
-              <>
-                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
-                  No active contacts right now.
-                </div>
-                <div style={{ opacity: 0.75 }}>
-                  Active means online now or messaged in the last 7 days.
                 </div>
               </>
             ) : (
