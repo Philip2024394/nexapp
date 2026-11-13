@@ -32,7 +32,12 @@
 //     plaintext path · returns [] when the peer has no E2E devices.
 
 import { NextResponse } from "next/server";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// Owner directive 2026-11-13 URGENT · dev-override resolver · see
+// encrypted/route.ts for rationale. Public-key lookup needed before
+// the client can encrypt a message · without the swap, dev-
+// impersonated callers can't fetch the peer's device keys and the
+// client-side encryption step fails before any send fires.
+import { resolveSessionWithDevOverride as resolveNexAppSessionFromContext } from "@/lib/nex-native/app/dev-impersonation";
 import { findPeerConversation } from "@/lib/nex-native/peer-conversation-service";
 import { lookupActiveDeviceKeys } from "@/lib/nex-native/crypto/device-key-lookup";
 

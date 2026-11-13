@@ -24,7 +24,11 @@
 //     that misses the broadcast still catches up through this GET.
 
 import { NextResponse, type NextRequest } from "next/server";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// Owner directive 2026-11-13 URGENT · dev-override resolver · see
+// encrypted/route.ts for rationale. This is the polling fallback for
+// missed messages when realtime fails · without the swap, dev-
+// impersonated callers never see any missed messages either.
+import { resolveSessionWithDevOverride as resolveNexAppSessionFromContext } from "@/lib/nex-native/app/dev-impersonation";
 import { getPeerConversationById } from "@/lib/nex-native/peer-conversation-service";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 

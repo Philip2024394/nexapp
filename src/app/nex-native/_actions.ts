@@ -16,10 +16,19 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import {
-  nexAppSsrServerClient,
-  resolveNexAppSessionFromContext,
-} from "@/lib/nex-native/app/session";
+import { nexAppSsrServerClient } from "@/lib/nex-native/app/session";
+// Owner directive 2026-11-13 URGENT · Rosa ↔ customer chat delivered
+// zero messages · nex_peer_message empty despite conversation row
+// present. Root cause: every server action in this file resolved the
+// session via `resolveNexAppSessionFromContext` (legacy), which
+// returns null for dev-impersonated callers (NEX_DEV_IMPERSONATE_HANDLE
+// = nex-99901) · the sealed 2026-11-12 parity rule requires the
+// dev-override resolver on BOTH page AND server actions · without it,
+// every action redirects to /sign-in before writing. Aliasing the
+// dev-override resolver to the legacy name preserves all 104 existing
+// call-sites in this file unchanged · production sessions fall through
+// to the real resolver automatically.
+import { resolveSessionWithDevOverride as resolveNexAppSessionFromContext } from "@/lib/nex-native/app/dev-impersonation";
 import * as conversationService from "@/lib/nex-native/conversation-service";
 import * as peerConversationService from "@/lib/nex-native/peer-conversation-service";
 import * as peerMessageService from "@/lib/nex-native/peer-message-service";

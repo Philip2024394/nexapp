@@ -15,7 +15,13 @@
 // correctly for one logical "send."
 
 import { NextResponse, type NextRequest } from "next/server";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// Owner directive 2026-11-13 URGENT · dev-override resolver so
+// dev-impersonated 99901 can authenticate against this E2E send
+// endpoint. The legacy resolver returned null for impersonated
+// callers → 401 before write → zero messages ever delivered.
+// Production unaffected · falls through to the real resolver when
+// NEX_DEV_IMPERSONATE_HANDLE is unset.
+import { resolveSessionWithDevOverride as resolveNexAppSessionFromContext } from "@/lib/nex-native/app/dev-impersonation";
 import {
   sendEncryptedPeerMessages,
   type EncryptedPeerMessageInsert,

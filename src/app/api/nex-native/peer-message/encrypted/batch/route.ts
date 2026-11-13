@@ -29,7 +29,9 @@
 //   · I-6 · atomicity + consistency via the atomic multi-insert.
 
 import { NextResponse, type NextRequest } from "next/server";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+// Owner directive 2026-11-13 URGENT · dev-override resolver · see
+// encrypted/route.ts for rationale.
+import { resolveSessionWithDevOverride as resolveNexAppSessionFromContext } from "@/lib/nex-native/app/dev-impersonation";
 import {
   sendEncryptedPeerMessages,
   type EncryptedPeerMessageInsert,
