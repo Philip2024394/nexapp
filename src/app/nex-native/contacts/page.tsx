@@ -1064,18 +1064,20 @@ export default async function ContactsPage({ searchParams }: PageProps) {
         }}
       >
         {categoryButtons.map((btn) => {
-          // Owner directive 2026-11-13 · "change pill to orange colour"
-          // on all three category buttons. Both states use NEX orange
-          // (#FF7200) as the brand accent; the active state deepens
-          // to a darker burnt-orange (#C84A00) with a lifted shadow so
-          // the selected tab reads unambiguously without inverting to
-          // navy. Count badge sits on white with orange text for a
-          // high-contrast trailing chip. Supersedes the 2026-11-11
-          // Cycle 25 cream+navy treatment on this surface.
-          const bg = btn.active ? "#C84A00" : "#FF7200";
-          const fg = "#FFFFFF";
-          const countBg = "#FFFFFF";
-          const countFg = "#FF7200";
+          // Owner directive 2026-11-13 (clarification) · ONLY the count
+          // badge goes orange · the button body stays on the sealed
+          // Cycle 25 cream+navy treatment ("the pill orange colour ·
+          // with message count not button"). Count badge = NEX orange
+          // #FF7200 fill + white text so the number reads as the brand
+          // accent trailing each cream pill.
+          const bg = btn.active
+            ? "var(--nex-world-primary-ink, #2A1F0F)"
+            : "var(--nex-world-background-base, #F5EDD3)";
+          const fg = btn.active
+            ? "var(--nex-world-background-base, #F5EDD3)"
+            : "var(--nex-world-primary-ink, #2A1F0F)";
+          const countBg = "#FF7200";
+          const countFg = "#FFFFFF";
           return (
             <Link
               key={btn.id}
@@ -1107,16 +1109,16 @@ export default async function ContactsPage({ searchParams }: PageProps) {
                 borderRadius: 14,
                 background: bg,
                 color: fg,
-                // Owner directive 2026-11-13 · orange pill family · the
-                // border now matches the fill shade so the pill reads
-                // as a solid brand chip rather than a navy-outlined
-                // button. Active state lifts with a stronger shadow.
+                // Owner directive 2026-11-13 (clarification) · button
+                // border + shadow restored to the sealed Cycle 25
+                // navy-outline treatment · only the trailing count
+                // badge carries the orange accent.
                 border: btn.active
-                  ? "1.5px solid #C84A00"
-                  : "1px solid #FF7200",
+                  ? "1.5px solid var(--nex-world-primary-ink, #2A1F0F)"
+                  : "1px solid var(--nex-world-primary-ink, #2A1F0F)",
                 boxShadow: btn.active
-                  ? "0 4px 12px rgba(255, 114, 0, 0.35)"
-                  : "0 2px 6px rgba(255, 114, 0, 0.22)",
+                  ? "0 2px 6px rgba(42, 31, 15, 0.18)"
+                  : "none",
                 textDecoration: "none",
                 fontFamily: "inherit",
                 textAlign: "center",
