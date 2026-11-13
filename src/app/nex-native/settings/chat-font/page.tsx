@@ -3,7 +3,7 @@
 
 import type * as React from "react";
 import { redirect } from "next/navigation";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import {
   CHAT_FONT_FAMILIES,
   CHAT_FONT_SIZES,
@@ -31,7 +31,7 @@ export default async function ChatFontPage({
 }: {
   searchParams: Promise<{ s?: string }>;
 }): Promise<React.JSX.Element> {
-  const session = await resolveNexAppSessionFromContext();
+  const session = await resolveSessionWithDevOverride();
   if (!session) {
     redirect("/nex-native/sign-in?next=/nex-native/settings/chat-font");
   }

@@ -5,7 +5,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import {
   resetChatBackgroundSync,
   updateChatViewPreferences,
@@ -21,7 +21,7 @@ function redirectBack(status: string): never {
 export async function setChatBgFromShopCoverAction(
   formData: FormData,
 ): Promise<never> {
-  const session = await resolveNexAppSessionFromContext();
+  const session = await resolveSessionWithDevOverride();
   if (!session) redirect("/nex-native/sign-in?next=" + RETURN_PATH);
   const raw = String(formData.get("enabled") ?? "");
   const on = raw === "on" || raw === "true" || raw === "1";
@@ -41,7 +41,7 @@ export async function setChatBgFromShopCoverAction(
 export async function setShopCoverFromChatThemeAction(
   formData: FormData,
 ): Promise<never> {
-  const session = await resolveNexAppSessionFromContext();
+  const session = await resolveSessionWithDevOverride();
   if (!session) redirect("/nex-native/sign-in?next=" + RETURN_PATH);
   const raw = String(formData.get("enabled") ?? "");
   const on = raw === "on" || raw === "true" || raw === "1";
@@ -59,7 +59,7 @@ export async function setShopCoverFromChatThemeAction(
 }
 
 export async function resetChatBackgroundSyncAction(): Promise<never> {
-  const session = await resolveNexAppSessionFromContext();
+  const session = await resolveSessionWithDevOverride();
   if (!session) redirect("/nex-native/sign-in?next=" + RETURN_PATH);
   try {
     await resetChatBackgroundSync(session.account.id);

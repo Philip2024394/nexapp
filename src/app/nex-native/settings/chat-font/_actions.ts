@@ -5,7 +5,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import {
   CHAT_FONT_FAMILIES,
   CHAT_FONT_SIZES,
@@ -32,7 +32,7 @@ function narrowSize(raw: string): ChatFontSize | null {
 }
 
 export async function setChatFontFamilyAction(formData: FormData): Promise<never> {
-  const session = await resolveNexAppSessionFromContext();
+  const session = await resolveSessionWithDevOverride();
   if (!session) redirect("/nex-native/sign-in?next=" + RETURN_PATH);
   const value = narrowFamily(String(formData.get("value") ?? ""));
   if (!value) redirectBack("err_bad_value");
@@ -48,7 +48,7 @@ export async function setChatFontFamilyAction(formData: FormData): Promise<never
 }
 
 export async function setChatFontSizeAction(formData: FormData): Promise<never> {
-  const session = await resolveNexAppSessionFromContext();
+  const session = await resolveSessionWithDevOverride();
   if (!session) redirect("/nex-native/sign-in?next=" + RETURN_PATH);
   const value = narrowSize(String(formData.get("value") ?? ""));
   if (!value) redirectBack("err_bad_value");
@@ -64,7 +64,7 @@ export async function setChatFontSizeAction(formData: FormData): Promise<never> 
 }
 
 export async function resetChatFontAction(): Promise<never> {
-  const session = await resolveNexAppSessionFromContext();
+  const session = await resolveSessionWithDevOverride();
   if (!session) redirect("/nex-native/sign-in?next=" + RETURN_PATH);
   try {
     await resetChatFont(session.account.id);

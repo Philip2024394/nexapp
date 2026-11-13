@@ -26,7 +26,7 @@
 
 import type * as React from "react";
 import { redirect } from "next/navigation";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import {
   DISAPPEARING_PRESETS,
   getDisappearingDefault,
@@ -44,7 +44,7 @@ export default async function DisappearingMessagesPage({
 }: {
   searchParams: Promise<{ s?: string }>;
 }): Promise<React.JSX.Element> {
-  const session = await resolveNexAppSessionFromContext();
+  const session = await resolveSessionWithDevOverride();
   if (!session) {
     redirect(
       "/nex-native/sign-in?next=/nex-native/settings/disappearing-messages",

@@ -144,14 +144,37 @@ export async function setGlobalThemeSharingAction(
   redirectBack(`ok_global_theme_share_${next ? "on" : "off"}`);
 }
 
+/** Bubble-colour save result · owner directive 2026-11-13 · the
+ *  appearance slider dragged through the server action's redirect()
+ *  and the whole page remounted mid-drag, losing the slider state.
+ *  Returning a plain result keeps the client state stable so drags
+ *  stream cleanly. */
+export type BubbleColoursSaveResult =
+  | { readonly ok: true }
+  | {
+      readonly ok: false;
+      readonly reason:
+        | "schema_missing"
+        | "invalid_hex"
+        | "db_error"
+        | "unauthorized";
+    };
+
 /** Owner directive 2026-11-12 · cross-device bubble colour write
  *  (migration 341). Accepts partial updates: pass `self_hex` and/or
  *  `peer_hex` fields on the FormData. Empty string clears the
- *  override (restores theme default). */
+ *  override (restores theme default).
+ *
+ *  Owner directive 2026-11-13 (hotfix) · returns a plain result object
+ *  instead of redirecting. The Bubble Colours surface debounces slider
+ *  changes · a redirect mid-drag remounted the page and dropped the
+ *  drag state. The client now handles the result locally. */
 export async function setBubbleColoursAction(
   formData: FormData,
-): Promise<never> {
-  const { accountId } = await requireSession();
+): Promise<BubbleColoursSaveResult> {
+  const session = await resolveSessionWithDevOverride();
+  if (!session) return { ok: false, reason: "unauthorized" };
+  const accountId = session.account.id;
   const rawSelf = formData.has("self_hex")
     ? String(formData.get("self_hex") ?? "")
     : undefined;
@@ -181,37 +204,30 @@ export async function setBubbleColoursAction(
     patch.peerAppearance = Number.isFinite(n) ? n : null;
   }
   const result = await setBubbleColours(accountId, patch);
-  if (!result.ok) {
-    redirectBack(
-      result.reason === "schema_missing"
-        ? "err_bubble_colours_schema_missing"
-        : result.reason === "invalid_hex"
-          ? "err_bubble_colours_invalid_hex"
-          : "err_bubble_colours_db",
-    );
-  }
-  revalidatePath(RETURN_PATH);
-  redirectBack("ok_bubble_colours_saved");
+  if (!result.ok) return { ok: false, reason: result.reason };
+  // Revalidate without redirecting · the chat-settings landing
+  // picks up the fresh row on the next render.
+  revalidatePath("/nex-native/settings/chat-settings");
+  revalidatePath("/nex-native/settings/chat-settings/bubble-colours");
+  return { ok: true };
 }
 
 /** Clear BOTH bubble colour overrides and restore theme defaults.
  *  Separate action so the UI can offer a single "Reset" button
- *  without juggling two hidden inputs. */
-export async function resetBubbleColoursAction(): Promise<never> {
-  const { accountId } = await requireSession();
-  const result = await setBubbleColours(accountId, {
+ *  without juggling two hidden inputs. Returns a plain result so
+ *  the Bubble Colours surface can stay mounted during the reset. */
+export async function resetBubbleColoursAction(): Promise<BubbleColoursSaveResult> {
+  const session = await resolveSessionWithDevOverride();
+  if (!session) return { ok: false, reason: "unauthorized" };
+  const result = await setBubbleColours(session.account.id, {
     self: null,
     peer: null,
     selfAppearance: null,
     peerAppearance: null,
   });
-  if (!result.ok) {
-    redirectBack(
-      result.reason === "schema_missing"
-        ? "err_bubble_colours_schema_missing"
-        : "err_bubble_colours_db",
-    );
-  }
-  revalidatePath(RETURN_PATH);
-  redirectBack("ok_bubble_colours_reset");
+  if (!result.ok) return { ok: false, reason: result.reason };
+  revalidatePath("/nex-native/settings/chat-settings");
+  revalidatePath("/nex-native/settings/chat-settings/bubble-colours");
+  return { ok: true };
 }
+

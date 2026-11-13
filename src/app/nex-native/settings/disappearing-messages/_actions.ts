@@ -7,7 +7,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import {
   DISAPPEARING_PRESETS,
   setDisappearingDefault,
@@ -34,7 +34,7 @@ function narrowFromForm(raw: string): DisappearingSeconds | null {
 export async function setDisappearingDefaultAction(
   formData: FormData,
 ): Promise<never> {
-  const session = await resolveNexAppSessionFromContext();
+  const session = await resolveSessionWithDevOverride();
   if (!session) {
     redirect(
       "/nex-native/sign-in?next=/nex-native/settings/disappearing-messages",
@@ -61,7 +61,7 @@ export async function setDisappearingDefaultAction(
 }
 
 export async function resetDisappearingDefaultAction(): Promise<never> {
-  const session = await resolveNexAppSessionFromContext();
+  const session = await resolveSessionWithDevOverride();
   if (!session) {
     redirect(
       "/nex-native/sign-in?next=/nex-native/settings/disappearing-messages",
