@@ -339,6 +339,22 @@ export function UniversalChatControls({
             <CallIcon />
           </button>
         </div>
+        {/* Owner directive 2026-11-13 · "turn vertical and remove the
+            button but dots little bigger and flashing and move to
+            right side". Dots were housed inside the standard circle
+            chip (background + border). Retire the chip chrome so the
+            3 vertical dots read as a bare glyph. Dots grown from 18
+            → 28. Gentle pulse animation (nex-dots-flash) signals
+            interactivity without a solid button. Sits at the right
+            edge via the existing CHROME_RIGHT anchor · keep the 10px
+            safe-area inset so it doesn't touch the frame bezel. */}
+        <style>{`
+          @keyframes nex-dots-flash {
+            0%   { opacity: 0.55; transform: scale(1); }
+            50%  { opacity: 1;    transform: scale(1.08); }
+            100% { opacity: 0.55; transform: scale(1); }
+          }
+        `}</style>
         <button
           type="button"
           aria-label={actionsOpen ? "Close actions" : "Open actions"}
@@ -346,9 +362,19 @@ export function UniversalChatControls({
           data-nex-universal-chat-actions-toggle={actionsOpen ? "open" : "closed"}
           onClick={() => setActionsOpen((v) => !v)}
           style={{
-            ...circle,
-            ...toggleActive,
-            transition: "background 180ms ease-out, border 180ms ease-out",
+            background: "transparent",
+            border: "none",
+            padding: 0,
+            width: 40,
+            height: 40,
+            display: "grid",
+            placeItems: "center",
+            cursor: "pointer",
+            color: accent,
+            animation: actionsOpen
+              ? "none"
+              : "nex-dots-flash 1800ms ease-in-out infinite",
+            transition: "color 180ms ease-out",
           }}
         >
           <DotsVerticalIcon />
@@ -370,17 +396,21 @@ export function UniversalChatControls({
 // ─── Icons · self-contained · no engine dependency ─────────────────
 
 function DotsVerticalIcon(): React.JSX.Element {
+  // Owner directive 2026-11-13 · "dots little bigger" · bumped from
+  // 18 × 18 with r=1.9 to 28 × 28 with r=2.6 so the glyph reads
+  // without the button chrome around it. Vertical alignment preserved
+  // · still three dots on the Y axis.
   return (
     <svg
-      width="18"
-      height="18"
+      width="28"
+      height="28"
       viewBox="0 0 24 24"
       fill="currentColor"
       aria-hidden
     >
-      <circle cx="12" cy="5" r="1.9" />
-      <circle cx="12" cy="12" r="1.9" />
-      <circle cx="12" cy="19" r="1.9" />
+      <circle cx="12" cy="5" r="2.6" />
+      <circle cx="12" cy="12" r="2.6" />
+      <circle cx="12" cy="19" r="2.6" />
     </svg>
   );
 }
