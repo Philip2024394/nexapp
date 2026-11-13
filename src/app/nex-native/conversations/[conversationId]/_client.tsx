@@ -22,6 +22,18 @@ import {
   getSharedSecret,
   openWithSharedSecret,
 } from "@/lib/nex-native/crypto/shared-secret";
+// Owner directive 2026-11-13 (iter 2) · reuses the sealed Bridge 73
+// broadcast pattern already serving peer chat. The channel carries
+// ROUTING METADATA ONLY (conversation_id + group_id + timestamp) ·
+// zero plaintext + zero ciphertext travels over the broadcast · on
+// arrival the client fetches new rows via /api/nex-native/chat/
+// encrypted/since (participant-guarded, server-side) and appends to
+// liveMessages locally. Reconnection handled by openNexChannel's
+// built-in lifecycle + onSubscribed catch-up (same as peer chat).
+import {
+  openMessageEventsChannel,
+  type MessageEventsChannel,
+} from "@/lib/nex-native/realtime/message-events";
 
 const BIZ_CATEGORY_ICON: Record<string, string> = {
   "product-brand": "👜",
@@ -77,6 +89,8 @@ interface Props {
   readonly viewerSide: "customer" | "business";
 }
 
+type MessageRow = Props["initialMessages"][number];
+
 export function BusinessConversationClient({
   conversationId,
   selfAccountId,
@@ -98,58 +112,142 @@ export function BusinessConversationClient({
   const [plaintextById, setPlaintextById] = React.useState<
     Record<string, string>
   >({});
+  // Owner directive 2026-11-13 (iter 2) · live messages array owned by
+  // the client · seeded from server-rendered initialMessages, then
+  // appended via Supabase Realtime INSERT events scoped to this
+  // conversation_id. Dedup by id · no refresh needed.
+  const [liveMessages, setLiveMessages] = React.useState<MessageRow[]>(
+    () => [...initialMessages],
+  );
+  const seenIds = React.useRef<Set<string>>(new Set(initialMessages.map((m) => m.id)));
 
   const peerReady = !!peerAccountId;
 
-  // ── Decrypt messages addressed to THIS device ─────────────────────
+  // ── Helper · decrypt one row if addressed to this device ─────────
+  const decryptRow = React.useCallback(
+    async (m: MessageRow): Promise<string | null> => {
+      if (!m.encrypted) return m.body;
+      if (
+        !m.ciphertext ||
+        !m.nonce ||
+        !m.sender_public_key ||
+        !m.sender_device_id
+      ) {
+        return null;
+      }
+      try {
+        const self = await ensureDeviceKey();
+        if (m.recipient_device_id !== self.deviceId) return null;
+        const secret = getSharedSecret(
+          self.secretKey,
+          m.sender_account_id,
+          m.sender_device_id,
+          m.sender_public_key,
+        );
+        const ct = naclUtil.decodeBase64(m.ciphertext);
+        const nonce = naclUtil.decodeBase64(m.nonce);
+        const pt = openWithSharedSecret(ct, nonce, secret);
+        return pt ? naclUtil.encodeUTF8(pt) : null;
+      } catch {
+        return null;
+      }
+    },
+    [],
+  );
+
+  // ── Decrypt INITIAL messages (first paint) ───────────────────────
   React.useEffect(() => {
     let cancelled = false;
     void (async () => {
-      try {
-        const self = await ensureDeviceKey();
-        const nextMap: Record<string, string> = {};
-        for (const m of initialMessages) {
-          if (!m.encrypted) {
-            if (m.body) nextMap[m.id] = m.body;
-            continue;
-          }
-          if (
-            !m.ciphertext ||
-            !m.nonce ||
-            !m.sender_public_key ||
-            !m.sender_device_id ||
-            m.recipient_device_id !== self.deviceId
-          ) {
-            continue; // not addressed to this device · skip quietly
-          }
-          try {
-            const senderPub = naclUtil.decodeBase64(m.sender_public_key);
-            const senderAccountId = m.sender_account_id;
-            const secret = getSharedSecret(
-              self.secretKey,
-              senderAccountId,
-              m.sender_device_id,
-              naclUtil.encodeBase64(senderPub),
-            );
-            const ct = naclUtil.decodeBase64(m.ciphertext);
-            const nonce = naclUtil.decodeBase64(m.nonce);
-            const pt = openWithSharedSecret(ct, nonce, secret);
-            if (pt) nextMap[m.id] = naclUtil.encodeUTF8(pt);
-          } catch {
-            // Decryption failed · the row stays hidden from this
-            // viewer (classic behaviour · don't surface ciphertext)
-          }
-        }
-        if (!cancelled) setPlaintextById(nextMap);
-      } catch {
-        /* no local device key yet · initial paint shows ciphertext
-         * placeholders · a page reload after key publish will decrypt */
+      const next: Record<string, string> = {};
+      for (const m of liveMessages) {
+        const pt = await decryptRow(m);
+        if (pt !== null) next[m.id] = pt;
       }
+      if (!cancelled) setPlaintextById((prev) => ({ ...prev, ...next }));
     })();
     return () => {
       cancelled = true;
     };
-  }, [initialMessages]);
+    // initialMessages is captured on mount · live rows get decrypted
+    // in the Realtime handler below
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Live delivery · arrival nudge → /since fetch → append ────────
+  const watermarkRef = React.useRef<string>(
+    initialMessages.length > 0
+      ? initialMessages[initialMessages.length - 1]!.created_at
+      : new Date(0).toISOString(),
+  );
+  const inFlightFetchRef = React.useRef<boolean>(false);
+
+  const fetchSince = React.useCallback(async () => {
+    if (inFlightFetchRef.current) return;
+    inFlightFetchRef.current = true;
+    try {
+      const resp = await fetch(
+        `/api/nex-native/chat/encrypted/since?conversationId=${encodeURIComponent(
+          conversationId,
+        )}&since=${encodeURIComponent(watermarkRef.current)}`,
+        { credentials: "include" },
+      );
+      if (!resp.ok) return;
+      const json = (await resp.json()) as {
+        ok: boolean;
+        messages?: MessageRow[];
+        watermark?: string;
+      };
+      if (!json.ok || !json.messages) return;
+      const fresh = json.messages.filter((m) => !seenIds.current.has(m.id));
+      if (fresh.length === 0) {
+        if (json.watermark) watermarkRef.current = json.watermark;
+        return;
+      }
+      for (const m of fresh) seenIds.current.add(m.id);
+      setLiveMessages((prev) => [...prev, ...fresh]);
+      if (json.watermark) watermarkRef.current = json.watermark;
+      // Decrypt new rows locally.
+      void (async () => {
+        const next: Record<string, string> = {};
+        for (const m of fresh) {
+          const pt = await decryptRow(m);
+          if (pt !== null) next[m.id] = pt;
+        }
+        if (Object.keys(next).length > 0) {
+          setPlaintextById((p) => ({ ...p, ...next }));
+        }
+      })();
+    } catch {
+      /* fail-soft · next arrival nudge or visibility change retries */
+    } finally {
+      inFlightFetchRef.current = false;
+    }
+  }, [conversationId, decryptRow]);
+
+  React.useEffect(() => {
+    const channel: MessageEventsChannel = openMessageEventsChannel({
+      conversationId,
+      selfAccountId,
+      onPeerMessageArrival: () => {
+        void fetchSince();
+      },
+      // onSubscribed fires on initial subscribe + every reconnect ·
+      // triggers a catch-up fetch so a tab that was asleep or lost
+      // its WebSocket immediately reconciles.
+      onSubscribed: () => {
+        void fetchSince();
+      },
+    });
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void fetchSince();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      void channel.close();
+    };
+  }, [conversationId, selfAccountId, fetchSince]);
 
   // ── Send encrypted message ────────────────────────────────────────
   async function doSend(
@@ -179,7 +277,9 @@ export function BusinessConversationClient({
     if (outcome.ok) {
       setDraft("");
       setSendState("idle");
-      router.refresh();
+      // Owner directive 2026-11-13 (iter 2) · router.refresh() retired.
+      // Realtime subscription above picks up the INSERTed row and
+      // appends it to liveMessages · no reload needed.
       return;
     }
     setSendState("error");
@@ -209,7 +309,7 @@ export function BusinessConversationClient({
           gap: 8,
         }}
       >
-        {initialMessages.length === 0 ? (
+        {liveMessages.length === 0 ? (
           <div
             style={{
               margin: "auto",
@@ -232,21 +332,39 @@ export function BusinessConversationClient({
             </div>
           </div>
         ) : (
-          initialMessages.map((m) => {
+          liveMessages.map((m) => {
             const mine = m.sender_account_id === selfAccountId;
-            const text = plaintextById[m.id] ?? (m.encrypted ? "⋯" : (m.body ?? ""));
-            const meta = m.attachment_meta as
+            const decrypted = plaintextById[m.id] ?? (m.encrypted ? null : m.body);
+            // Owner directive 2026-11-13 (iter 2) · product envelope
+            // lives INSIDE the decrypted plaintext · only decoded on
+            // this device after local decryption. attachment_type on
+            // the row is the server-visible marker; the actual
+            // product data (name/price/image) is private payload.
+            let productEnvelope:
               | {
-                  product_id?: string;
+                  kind: "product";
+                  product_id: string;
                   name?: string;
                   price_pence?: number;
                   currency?: string;
-                  image_url?: string;
+                  image_url?: string | null;
                 }
-              | null
-              | undefined;
-            const isProductCard =
-              m.attachment_type === "product" && meta && meta.product_id;
+              | null = null;
+            let renderedText: string = "";
+            if (m.attachment_type === "product" && decrypted) {
+              try {
+                const parsed = JSON.parse(decrypted);
+                if (parsed && parsed.kind === "product" && typeof parsed.product_id === "string") {
+                  productEnvelope = parsed;
+                }
+              } catch {
+                // not a product envelope · fall through to plain text
+                renderedText = decrypted;
+              }
+            } else {
+              renderedText = decrypted ?? "⋯";
+            }
+            const isProductCard = !!productEnvelope;
             return (
               <div
                 key={m.id}
@@ -266,17 +384,34 @@ export function BusinessConversationClient({
                   boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
                 }}
               >
-                {isProductCard ? (
+                {isProductCard && productEnvelope ? (
                   <ProductCardBubble
-                    name={meta?.name ?? "Product"}
-                    pricePence={meta?.price_pence ?? 0}
-                    currency={meta?.currency ?? "IDR"}
-                    imageUrl={meta?.image_url ?? null}
+                    name={productEnvelope.name ?? "Product"}
+                    pricePence={productEnvelope.price_pence ?? 0}
+                    currency={productEnvelope.currency ?? "IDR"}
+                    imageUrl={productEnvelope.image_url ?? null}
                   />
+                ) : m.attachment_type === "product" ? (
+                  // Encrypted product share · we can't decrypt the
+                  // product envelope on this device · render a muted
+                  // placeholder so the viewer knows "a product was
+                  // shared" without exposing anything.
+                  <div
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: 8,
+                      background: "rgba(0,0,0,0.12)",
+                      fontSize: 12,
+                      opacity: 0.7,
+                      marginBottom: 4,
+                    }}
+                  >
+                    🛍️ Product shared · open on this device to view
+                  </div>
                 ) : null}
-                {text ? (
+                {renderedText ? (
                   <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                    {text}
+                    {renderedText}
                   </div>
                 ) : null}
                 <div
@@ -425,14 +560,30 @@ export function BusinessConversationClient({
           onClose={() => setProductsDrawerOpen(false)}
           onSelect={(product) => {
             setProductsDrawerOpen(false);
-            void doSend("", {
+            // Owner directive 2026-11-13 (iter 2) · minimum public
+            // product reference in attachment_meta (server-visible)
+            // · full product snapshot lives ONLY inside the encrypted
+            // plaintext body. On decrypt, the client parses the JSON
+            // envelope and renders the product card. If a viewer
+            // can't decrypt, they see the attachment_type='product'
+            // marker + id (opaque reference) but NOT the product's
+            // name/price/image unless they fetch it themselves from
+            // the public shop catalogue.
+            const productEnvelope = JSON.stringify({
+              kind: "product",
+              product_id: product.id,
+              name: product.name,
+              price_pence: product.price_pence,
+              currency: product.currency,
+              image_url: product.image_url ?? null,
+            });
+            void doSend(productEnvelope, {
               attachmentType: "product",
               attachmentMeta: {
+                // Server sees ONLY the bare reference. Enough for
+                // "look up this product in the public catalogue"
+                // but not the private pricing snapshot at send-time.
                 product_id: product.id,
-                name: product.name,
-                price_pence: product.price_pence,
-                currency: product.currency,
-                image_url: product.image_url ?? null,
               },
             });
           }}

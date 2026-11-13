@@ -27,6 +27,13 @@ import {
   sendEncryptedBusinessMessages,
   type EncryptedBusinessMessageInsert,
 } from "@/lib/nex-native/business-message-service";
+// Owner directive 2026-11-13 (iter 2) · reuse the sealed Bridge 73
+// broadcast nudge · fire-and-forget after the DB insert so receivers
+// on the same conversation_id channel pull new rows via /since. The
+// payload is routing metadata ONLY (conversation_id, message_group_id,
+// sent_at) · zero plaintext + zero ciphertext travels over the
+// broadcast channel.
+import { emitMessageArrival } from "@/lib/nex-native/realtime/message-arrival";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -149,6 +156,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   try {
     const ids = await sendEncryptedBusinessMessages(inserts);
+    // Fire-and-forget arrival nudge · reuses the sealed Bridge 73
+    // broadcast · payload is conversation_id + group_id + timestamp
+    // only (no row data, no ciphertext). Receivers pull from /since.
+    const sentAtIso = new Date().toISOString();
+    void emitMessageArrival({
+      conversationId: inserts[0]!.conversation_id,
+      messageGroupId: body.message_group_id,
+      sentAtIso,
+    });
     return NextResponse.json({ ok: true, ids });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
