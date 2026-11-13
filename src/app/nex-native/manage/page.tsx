@@ -32,7 +32,6 @@ import { listOrdersByBusiness } from "@/lib/nex-native/order-service";
 import { isVenueCategory } from "@/lib/nex-native/types";
 import { NexPageHeader } from "../_page-header";
 import {
-  IconBed,
   IconCard,
   IconClipboard,
   IconCompass,
@@ -85,7 +84,12 @@ export default async function ShopManagementCentre(): Promise<React.JSX.Element>
   // Shop-type-specific rows · only display what's relevant.
   const category = business.business_category ?? null;
   const showMenu = isVenueCategory(category) && category !== "hotel";
-  const showRooms = category === "hotel";
+  // Owner directive 2026-11-13 (hotfix) · Rooms row hidden until the
+  // /manage/accommodation list page is built. The audit found only the
+  // per-room detail route exists today · leaving the row visible would
+  // dead-link hotel owners. Re-enable by flipping showRooms when the
+  // list route lands.
+  const showRooms = false;
 
   // Setup-incomplete probe · surface the wizard shortcut only when
   // a core profile field is missing. Keeps the hub focused once the
@@ -210,14 +214,8 @@ export default async function ShopManagementCentre(): Promise<React.JSX.Element>
             subtitle="Sections, items, dietary tags and availability"
           />
         ) : null}
-        {showRooms ? (
-          <LinkCard
-            href="/nex-native/manage/accommodation"
-            icon={<IconBed />}
-            title="Rooms"
-            subtitle="Rooms, capacity, pricing and amenities"
-          />
-        ) : null}
+        {/* Owner directive 2026-11-13 · Rooms row removed until the
+            /manage/accommodation list page exists (see showRooms above). */}
 
         <SectionLabel>Orders & Fulfilment</SectionLabel>
         <LinkCard
@@ -242,10 +240,10 @@ export default async function ShopManagementCentre(): Promise<React.JSX.Element>
 
         <SectionLabel>Customer Experience & Policies</SectionLabel>
         <LinkCard
-          href="/nex-native/manage/shop"
+          href="/nex-native/manage/shop/setup/contact"
           icon={<IconMail />}
           title="Contact & NEX Chat"
-          subtitle="Customers reach you through NEX Chat using your shop contact"
+          subtitle="Email · phone · website · socials · customers reach you via NEX Chat"
         />
         <LinkCard
           href="/nex-native/manage/shop/setup/policies"
@@ -271,10 +269,10 @@ export default async function ShopManagementCentre(): Promise<React.JSX.Element>
 
         <SectionLabel>Share & Publish</SectionLabel>
         <LinkCard
-          href="/nex-native/manage/shop"
+          href="/nex-native/manage/share"
           icon={<IconShare />}
           title="Share Shop"
-          subtitle={`Public link · ${publicShopHref}`}
+          subtitle={`Public link + QR · ${publicShopHref}`}
         />
 
         <div
