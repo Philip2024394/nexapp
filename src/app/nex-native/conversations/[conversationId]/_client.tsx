@@ -1176,16 +1176,19 @@ function WelcomeBubble({
       style={{
         alignSelf: "center",
         maxWidth: "92%",
-        padding: "12px 14px",
+        padding: "14px 16px",
         borderRadius: 14,
-        background: "rgba(0, 0, 0, 0.55)",
+        // Owner directive 2026-11-13 (iter 16) · welcome panel SOLID
+        // BLACK · reads as a decisive onboarding card over any shop
+        // wallpaper · accent border keeps the shop brand touch.
+        background: "#000000",
         border: `1px solid ${accentHex}55`,
         color: "#F2F5F8",
         fontSize: 12.5,
         lineHeight: 1.5,
         textAlign: "center",
         marginBottom: 6,
-        boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
+        boxShadow: "0 3px 10px rgba(0,0,0,0.5)",
       }}
     >
       <div
