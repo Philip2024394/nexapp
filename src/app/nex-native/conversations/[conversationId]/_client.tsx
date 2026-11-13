@@ -626,19 +626,27 @@ export function BusinessConversationClient({
               height: 34,
               borderRadius: "50%",
               border: "none",
-              background: canSend ? accentHex : `${accentHex}59`,
-              color: "#0A1526",
+              // Owner directive 2026-11-13 (iter 14) · send button is
+              // SOLID ORANGE with a play/arrow glyph · matches the
+              // orange 3-dots trigger so the composer reads as one
+              // pair of branded controls. Disabled state keeps the
+              // orange tint but drops opacity so the button is still
+              // visible as the "send here" affordance.
+              background: "#F97316",
+              color: "#FFFFFF",
               cursor: canSend ? "pointer" : "default",
-              fontSize: 16,
-              fontWeight: 800,
+              opacity: canSend ? 1 : 0.55,
               padding: 0,
               display: "grid",
               placeItems: "center",
-              boxShadow: canSend ? "0 1px 4px rgba(0,0,0,0.3)" : "none",
-              transition: "background 120ms ease-out",
+              boxShadow: canSend ? "0 1px 4px rgba(0,0,0,0.35)" : "none",
+              transition: "opacity 120ms ease-out",
             }}
           >
-            ↑
+            {/* play/arrow triangle · points right · reads as "send" */}
+            <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+              <path d="M6 4l14 8-14 8V4z" />
+            </svg>
           </button>
         </div>
       </div>

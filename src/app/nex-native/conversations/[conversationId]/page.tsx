@@ -45,6 +45,12 @@ import * as chatThemeService from "@/lib/nex-native/chat-theme-service";
 import { getAccountById } from "@/lib/nex-native/account-service";
 import { getProfileByAccountId } from "@/lib/nex-native/account-profile-service";
 import { listBusinessMessages } from "@/lib/nex-native/business-message-service";
+// Owner directive 2026-11-13 (iter 14) · fallback flag resolver ·
+// when nex_business.operating_country_code is missing (sandbox has
+// not applied migration 286) we derive the ISO2 from the owner's
+// phone dialling prefix. Keeps the rim flag honest without needing
+// a schema migration.
+import { iso2FromPhoneCountryCode } from "@/lib/nex-native/country-catalogue";
 
 // Owner directive 2026-11-13 · ISO 3166-1 alpha-2 → regional-indicator
 // flag emoji · same mechanic the rest of the app uses to render
@@ -188,12 +194,24 @@ export default async function BusinessConversationPage({
       ? business.shop_cover_tint_hex
       : (themeRow?.accent_hex ?? "#C6A15B");
   // Owner directive 2026-11-13 · country flag badge on the avatar rim.
-  // Customer view = shop's operating country · owner view = customer's
-  // profile country (fail-safe: empty string means render nothing).
+  // Customer view · shop's operating country if set · else derive from
+  // the owner's phone dialling prefix (handles sandbox rows that
+  // pre-date mig 286). Owner view · customer's profile country first,
+  // then phone-prefix fallback.
   const flagIso = viewerIsCustomer
-    ? (business.operating_country_code ?? null)
-    : (otherProfile?.country_code ?? null);
+    ? (business.operating_country_code ??
+        iso2FromPhoneCountryCode(otherAccount?.phone_country_code ?? null))
+    : (otherProfile?.country_code ??
+        iso2FromPhoneCountryCode(otherAccount?.phone_country_code ?? null));
   const flagEmoji = countryCodeToFlag(flagIso);
+  // Owner directive 2026-11-13 (iter 14) · tapping the avatar opens
+  // the relevant profile page. Customer side → shop public surface
+  // (/<slug>). Owner side → customer's nex-handle profile.
+  const avatarHref = viewerIsCustomer
+    ? `/nex-native/${business.slug}`
+    : otherAccount?.nex_handle
+      ? `/nex-native/profile/${otherAccount.nex_handle}`
+      : null;
 
   // Owner directive 2026-11-13 (iter 4) · shop name sits on ONE line
   // when it fits next to the shop icon · CSS wraps to 2 lines only when
@@ -255,83 +273,104 @@ export default async function BusinessConversationPage({
         {/* Avatar block · 48px square so the green ring + ping sit
             correctly without clipping. The ping is a sibling ring that
             animates scale + opacity · the solid ring is the inner
-            green border on the avatar itself. */}
-        <div
-          data-nex-business-conv-avatar
-          style={{
+            green border on the avatar itself.
+            Owner directive 2026-11-13 (iter 14) · when the viewer is
+            the customer the whole avatar routes to the shop public
+            surface. Owner-side routes to the customer's nex-handle
+            profile. No href = non-tappable (fallback). */}
+        {(() => {
+          const avatarInner = (
+            <>
+              <span
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  inset: -2,
+                  borderRadius: "50%",
+                  border: "2px solid #22C55E",
+                  opacity: 0.85,
+                  animation:
+                    "nex-biz-conv-ping 1600ms cubic-bezier(0.22, 1, 0.36, 1) infinite",
+                  pointerEvents: "none",
+                }}
+              />
+              {headerAvatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={headerAvatarUrl}
+                  alt={headerName}
+                  width={48}
+                  height={48}
+                  style={{
+                    position: "relative",
+                    width: 48,
+                    height: 48,
+                    borderRadius: "50%",
+                    border: "2.5px solid #22C55E",
+                    objectFit: "cover",
+                    display: "block",
+                  }}
+                />
+              ) : (
+                <div
+                  aria-hidden
+                  style={{
+                    position: "relative",
+                    width: 48,
+                    height: 48,
+                    borderRadius: "50%",
+                    background: "rgba(255,255,255,0.08)",
+                    border: "2.5px solid #22C55E",
+                  }}
+                />
+              )}
+              {flagEmoji ? (
+                <span
+                  aria-label={flagIso ?? undefined}
+                  title={flagIso ?? undefined}
+                  style={{
+                    position: "absolute",
+                    right: -2,
+                    bottom: -2,
+                    width: 20,
+                    height: 20,
+                    borderRadius: "50%",
+                    background: "#FFFFFF",
+                    display: "grid",
+                    placeItems: "center",
+                    fontSize: 13,
+                    lineHeight: 1,
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
+                    border: "1.5px solid rgba(0,0,0,0.15)",
+                    overflow: "hidden",
+                  }}
+                >
+                  {flagEmoji}
+                </span>
+              ) : null}
+            </>
+          );
+          const wrapperStyle: React.CSSProperties = {
             position: "relative",
             width: 48,
             height: 48,
             flexShrink: 0,
-          }}
-        >
-          <span
-            aria-hidden
-            style={{
-              position: "absolute",
-              inset: -2,
-              borderRadius: "50%",
-              border: "2px solid #22C55E",
-              opacity: 0.85,
-              animation: "nex-biz-conv-ping 1600ms cubic-bezier(0.22, 1, 0.36, 1) infinite",
-              pointerEvents: "none",
-            }}
-          />
-          {headerAvatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={headerAvatarUrl}
-              alt={headerName}
-              width={48}
-              height={48}
-              style={{
-                position: "relative",
-                width: 48,
-                height: 48,
-                borderRadius: "50%",
-                border: "2.5px solid #22C55E",
-                objectFit: "cover",
-                display: "block",
-              }}
-            />
-          ) : (
-            <div
-              aria-hidden
-              style={{
-                position: "relative",
-                width: 48,
-                height: 48,
-                borderRadius: "50%",
-                background: "rgba(255,255,255,0.08)",
-                border: "2.5px solid #22C55E",
-              }}
-            />
-          )}
-          {flagEmoji ? (
-            <span
-              aria-label={flagIso ?? undefined}
-              title={flagIso ?? undefined}
-              style={{
-                position: "absolute",
-                right: -2,
-                bottom: -2,
-                width: 20,
-                height: 20,
-                borderRadius: "50%",
-                background: "#FFFFFF",
-                display: "grid",
-                placeItems: "center",
-                fontSize: 13,
-                lineHeight: 1,
-                boxShadow: "0 1px 3px rgba(0,0,0,0.5)",
-                border: "1.5px solid rgba(0,0,0,0.15)",
-                overflow: "hidden",
-              }}
+          };
+          return avatarHref ? (
+            <Link
+              href={avatarHref}
+              aria-label={`Open ${headerName} profile`}
+              data-nex-business-conv-avatar-link
+              style={{ ...wrapperStyle, display: "block", textDecoration: "none" }}
             >
-              {flagEmoji}
-            </span>
-          ) : null}
-        </div>
+              {avatarInner}
+            </Link>
+          ) : (
+            <div data-nex-business-conv-avatar style={wrapperStyle}>
+              {avatarInner}
+            </div>
+          );
+        })()}
         {/* Keyframes for the ping · scoped inline so we don't touch any
             global stylesheet · identical cadence/easing to the sealed
             heartbeat on the contacts page. */}
