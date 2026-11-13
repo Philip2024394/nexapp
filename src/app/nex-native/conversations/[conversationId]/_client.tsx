@@ -612,21 +612,20 @@ export function BusinessConversationClient({
             padding: 0,
             display: "grid",
             placeItems: "center",
-            // Owner directive 2026-11-13 (iter 10) · ORANGE override ·
-            // overrides the shop accent so the products trigger is
-            // always obvious + brand-consistent across themes.
-            // (iter 13) · when locked (awaiting shop reply after a
-            // product share) the circle dims + the pulse stops · a
-            // quiet "tap-to-send-again" signal.
-            background: productShareLocked ? "#F9731659" : "#F97316",
+            // Owner directive 2026-11-13 (iter 10 + iter 17) · ORANGE
+            // override · overrides the shop accent so the products
+            // trigger is always obvious + brand-consistent across
+            // themes. iter 17 · circle stays SOLID orange in every
+            // state · the cooldown lock still disables tap (handler
+            // + `disabled` + aria-label), but the colour never dims.
+            // The pulse animation is the only visible state tell ·
+            // it stops when locked or the drawer is already open.
+            background: "#F97316",
             border: "none",
             color: "#FFFFFF",
             cursor: productShareLocked ? "not-allowed" : "pointer",
-            opacity: productShareLocked ? 0.7 : 1,
             flexShrink: 0,
-            boxShadow: productShareLocked
-              ? "none"
-              : "0 2px 6px rgba(0,0,0,0.35)",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
             animation:
               productShareLocked || productsDrawerOpen
                 ? "none"
@@ -691,21 +690,20 @@ export function BusinessConversationClient({
               height: 34,
               borderRadius: "50%",
               border: "none",
-              // Owner directive 2026-11-13 (iter 14) · send button is
-              // SOLID ORANGE with a play/arrow glyph · matches the
-              // orange 3-dots trigger so the composer reads as one
-              // pair of branded controls. Disabled state keeps the
-              // orange tint but drops opacity so the button is still
-              // visible as the "send here" affordance.
+              // Owner directive 2026-11-13 (iter 14 + iter 17) · send
+              // button is SOLID ORANGE with a play/arrow glyph ·
+              // matches the orange 3-dots trigger so the composer
+              // reads as one pair of branded controls. iter 17 ·
+              // colour + opacity stay constant regardless of enabled
+              // state · the `disabled` attribute still blocks tap
+              // when the draft is empty · we never dim the fill.
               background: "#F97316",
               color: "#FFFFFF",
               cursor: canSend ? "pointer" : "default",
-              opacity: canSend ? 1 : 0.55,
               padding: 0,
               display: "grid",
               placeItems: "center",
-              boxShadow: canSend ? "0 1px 4px rgba(0,0,0,0.35)" : "none",
-              transition: "opacity 120ms ease-out",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.35)",
             }}
           >
             {/* play/arrow triangle · points right · reads as "send" */}
