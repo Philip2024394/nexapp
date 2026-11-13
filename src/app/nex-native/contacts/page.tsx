@@ -690,6 +690,17 @@ export default async function ContactsPage({ searchParams }: PageProps) {
           ? []
           : allRows;
 
+  // Owner directive 2026-11-13 · "Active N" chip on the Contacts
+  // section label · counts rows that are either currently online or
+  // exchanged a message within the last 7 days. Reads only presence
+  // + the dormant-day timestamp (no message body) so the device-only
+  // E2E seal (2026-11-09) is untouched.
+  const activeCount = visibleRows.filter((r) => {
+    if (r.presence === "online") return true;
+    const d = r.dormantDays;
+    return typeof d === "number" && d < 7;
+  }).length;
+
   const totalCount = allRows.length;
   const ownHandle = session.account.nex_handle ?? null;
   const inviteUrl = ownHandle
@@ -1053,20 +1064,18 @@ export default async function ContactsPage({ searchParams }: PageProps) {
         }}
       >
         {categoryButtons.map((btn) => {
-          // Owner directive 2026-11-11 (Cycle 25 C25.4) · world-class
-          // repaint: Pale Ivory card + navy primary-ink border + navy
-          // label. Active state inverts to navy bg + ivory label to
-          // read unambiguously. Supersedes the 2026-11-10 Gold/Forest
-          // treatment. Dark-red (#991B1B) pill count for every state
-          // so unread + count affordances use one shade.
-          const bg = btn.active
-            ? "var(--nex-world-primary-ink, #2A1F0F)"
-            : "var(--nex-world-background-base, #F5EDD3)";
-          const fg = btn.active
-            ? "var(--nex-world-background-base, #F5EDD3)"
-            : "var(--nex-world-primary-ink, #2A1F0F)";
-          const countBg = "#991B1B";
-          const countFg = "#FFFFFF";
+          // Owner directive 2026-11-13 · "change pill to orange colour"
+          // on all three category buttons. Both states use NEX orange
+          // (#FF7200) as the brand accent; the active state deepens
+          // to a darker burnt-orange (#C84A00) with a lifted shadow so
+          // the selected tab reads unambiguously without inverting to
+          // navy. Count badge sits on white with orange text for a
+          // high-contrast trailing chip. Supersedes the 2026-11-11
+          // Cycle 25 cream+navy treatment on this surface.
+          const bg = btn.active ? "#C84A00" : "#FF7200";
+          const fg = "#FFFFFF";
+          const countBg = "#FFFFFF";
+          const countFg = "#FF7200";
           return (
             <Link
               key={btn.id}
@@ -1098,12 +1107,16 @@ export default async function ContactsPage({ searchParams }: PageProps) {
                 borderRadius: 14,
                 background: bg,
                 color: fg,
+                // Owner directive 2026-11-13 · orange pill family · the
+                // border now matches the fill shade so the pill reads
+                // as a solid brand chip rather than a navy-outlined
+                // button. Active state lifts with a stronger shadow.
                 border: btn.active
-                  ? "1.5px solid var(--nex-world-primary-ink, #2A1F0F)"
-                  : "1px solid var(--nex-world-primary-ink, #2A1F0F)",
+                  ? "1.5px solid #C84A00"
+                  : "1px solid #FF7200",
                 boxShadow: btn.active
-                  ? "0 2px 6px rgba(42, 31, 15, 0.18)"
-                  : "none",
+                  ? "0 4px 12px rgba(255, 114, 0, 0.35)"
+                  : "0 2px 6px rgba(255, 114, 0, 0.22)",
                 textDecoration: "none",
                 fontFamily: "inherit",
                 textAlign: "center",
@@ -1267,6 +1280,10 @@ export default async function ContactsPage({ searchParams }: PageProps) {
             gap: 10,
           }}
         >
+          {/* Owner directive 2026-11-13 · green heartbeat dot on the
+              left · reuses the sealed contact-row heartbeat keyframes
+              (CONTACT_ROW_HEARTBEAT_KEYFRAMES is already injected by
+              ContactsShell). Same green as the presence=online rim. */}
           <span
             aria-hidden
             style={{
@@ -1274,10 +1291,50 @@ export default async function ContactsPage({ searchParams }: PageProps) {
               width: 10,
               height: 10,
               borderRadius: "50%",
-              background: "var(--nex-world-secondary, #C6A15B)",
+              background: "#16D66B",
+              boxShadow: "0 0 0 2px rgba(22, 214, 107, 0.25)",
+              animation:
+                "nex-contact-row-heartbeat 1200ms cubic-bezier(0.4,0,0.2,1) infinite",
             }}
           />
-          {sectionLabel}
+          <span style={{ flex: 1 }}>{sectionLabel}</span>
+          {/* Owner directive 2026-11-13 · "Active N" chip right-aligned ·
+              small secondary text showing how many visible contacts
+              count as active (online now or messaged within 7 days). */}
+          <span
+            aria-hidden
+            data-nex-contacts-section-active-count
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.04em",
+              textTransform: "none",
+              color: "rgba(42, 31, 15, 0.7)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+            }}
+          >
+            <span>Active</span>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minWidth: 18,
+                height: 16,
+                padding: "0 5px",
+                borderRadius: 999,
+                background: "rgba(22, 214, 107, 0.16)",
+                color: "#0E6B3A",
+                fontSize: 10,
+                fontWeight: 800,
+                lineHeight: 1,
+              }}
+            >
+              {activeCount}
+            </span>
+          </span>
         </div>
       ) : null}
 
