@@ -1548,15 +1548,14 @@ export function PortraitBloomShell({
                                 fontSize: 12,
                                 fontWeight: 700,
                                 // Sealed 2026-10-01 · bubble sender
-                                // name reads in the theme accent
-                                // (acid green on Joker) · the subtitle
-                                // (skill / profession) below reads in
-                                // muted gray so identity + role are
-                                // instantly scannable without the two
-                                // competing.
+                                // name reads in the theme accent. Owner
+                                // directive 2026-11-13 · pre-line here
+                                // too so the 2-word shop name ("Handbags
+                                // \n direct") stacks instead of
+                                // truncating to "Handbags…".
                                 color: rippleColor,
                                 letterSpacing: "0.02em",
-                                whiteSpace: "nowrap",
+                                whiteSpace: "pre-line",
                                 overflow: "hidden",
                                 textOverflow: "ellipsis",
                                 textShadow:
@@ -1953,6 +1952,19 @@ export function PortraitBloomShell({
                         //   6+       → 22px
                         //   any text letters alongside → normal 15px.
                         const jumboSize = computeJumboEmojiSize(m.body);
+                        // Owner directive 2026-11-13 · the "(encrypted)"
+                        // sentinel is an internal placeholder the
+                        // decryptor swaps out when it can decode the
+                        // ciphertext locally. On mock-persona test
+                        // flows the decryptor sometimes can't (fresh
+                        // IndexedDB keypair · no matching wrapped copy)
+                        // which leaves the literal "(encrypted)" text
+                        // on screen · owner-visible. Swap to a muted
+                        // ⋯ placeholder so the bubble still reads as
+                        // "Rosa sent something" without the leaky
+                        // internal label.
+                        const renderedBody =
+                          m.body === "(encrypted)" ? "⋯" : m.body;
                         return (
                           <div
                             /* Bridge 76 · marker so the decryptor can
@@ -1962,19 +1974,12 @@ export function PortraitBloomShell({
                             style={{
                               fontSize: jumboSize ?? undefined,
                               lineHeight: jumboSize ? 1.15 : undefined,
-                              // Sealed 2026-10-01 · proto #05 applied ·
-                              // body text uses the muted neutral gray
-                              // (#B4BAC3) with the dual TV-broadcast
-                              // shadow so messages read as cinematic
-                              // noir on the alley wallpaper · every
-                              // letter carries its own dark edge for
-                              // legibility against busy backdrops.
                               color: "#B4BAC3",
                               textShadow:
                                 "0 0 2px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,0.5)",
                             }}
                           >
-                            {m.body}
+                            {renderedBody}
                           </div>
                         );
                       })()}
