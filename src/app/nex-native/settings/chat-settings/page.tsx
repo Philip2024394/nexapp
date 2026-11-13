@@ -34,13 +34,10 @@ import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-imperson
 import { getChatPreferences } from "@/lib/nex-native/chat-preferences-service";
 import { getAccountById } from "@/lib/nex-native/account-service";
 import { getProfileByAccountId } from "@/lib/nex-native/account-profile-service";
-import { getThemeById, resolveThemeColours } from "@/lib/nex-native/chat-theme-service";
+import { getThemeById } from "@/lib/nex-native/chat-theme-service";
 import { getDisappearingDefaultSafe } from "@/lib/nex-native/disappearing-messages-service";
 import { DISAPPEARING_PRESETS } from "@/lib/nex-native/disappearing-messages-constants";
-import {
-  getBubbleColours,
-  probeBubbleColoursSchemaReady,
-} from "@/lib/nex-native/bubble-colours-service";
+import { probeBubbleColoursSchemaReady } from "@/lib/nex-native/bubble-colours-service";
 import { NexPageHeader } from "../../_page-header";
 import {
   NEX_SETTINGS,
@@ -48,7 +45,6 @@ import {
   SettingsBackLink,
 } from "../_settings-shell";
 import { ChatSettingsClient } from "./_client";
-import { AppearanceControls } from "./_appearance-client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -73,25 +69,17 @@ export default async function ChatSettingsPage({
     prefs,
     account,
     defaultSeconds,
-    bubbleColours,
     schemaReadyBubbleColours,
   ] = await Promise.all([
     getChatPreferences(session.account.id),
     getAccountById(session.account.id).catch(() => null),
     getDisappearingDefaultSafe(session.account.id),
-    getBubbleColours(session.account.id),
     probeBubbleColoursSchemaReady(),
   ]);
   const currentThemeId = account?.chat_theme ?? null;
   const currentTheme = currentThemeId
     ? await getThemeById(currentThemeId).catch(() => null)
     : null;
-
-  // Resolve theme bubble defaults for the inline preview + swatch
-  // fallback. resolveThemeColours is a pure function · safe on null.
-  const themeColours = currentTheme
-    ? resolveThemeColours(currentTheme)
-    : { accent: "#00AFFF", bubbleRim: "#00AFFF", composerRim: "#00AFFF" };
 
   const disappearingLabel =
     DISAPPEARING_PRESETS.find((p) => p.value === defaultSeconds)?.label ??
@@ -196,16 +184,15 @@ export default async function ChatSettingsPage({
             title="Block My Chat theme"
             subtitle="Control who see's your theme"
           />
-          <AppearanceControls
-            bubbleSelfHex={bubbleColours.self}
-            bubblePeerHex={bubbleColours.peer}
-            bubbleSelfAppearance={bubbleColours.selfAppearance}
-            bubblePeerAppearance={bubbleColours.peerAppearance}
-            themeSelfHex={themeColours.bubbleRim}
-            themePeerHex={themeColours.accent}
-            schemaReadyBubbleColours={schemaReadyBubbleColours}
-            themeHeroImageUrl={currentTheme?.hero_image_url ?? null}
-            themeName={currentTheme?.name ?? "NEX default"}
+          <LinkCard
+            href="/nex-native/settings/chat-settings/bubble-colours"
+            emoji="🎈"
+            title="Bubble colours"
+            subtitle={
+              currentTheme
+                ? `Design each bubble against your own ${currentTheme.name} background. Both colour and glass-to-solid appearance save to your account · follows you across devices.`
+                : "Design each bubble against your own chat theme background. Both colour and glass-to-solid appearance save to your account · follows you across devices."
+            }
           />
 
           {/* ─── 3 · Privacy & Visibility ────────────────────────── */}
