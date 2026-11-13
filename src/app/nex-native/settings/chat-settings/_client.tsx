@@ -44,6 +44,7 @@ export function ChatSettingsClient({ prefs }: Props): React.JSX.Element {
         name="enabled"
         emoji="💭"
         title="Typing Indicator"
+        subtitle="Typing animation"
         current={prefs.typing_indicator_enabled}
       />
       <SegmentedRow
