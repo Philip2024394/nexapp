@@ -180,7 +180,11 @@ export default async function BusinessConversationPage({
         flexDirection: "column",
       }}
     >
-      {/* Sticky shop identity header. */}
+      {/* Owner directive 2026-11-13 · "remove the container from header
+          and footer" · dark backdrop-blur container retired · header
+          paints directly over the shop wallpaper · the per-text
+          text-shadow on the title + subtitle keeps them legible on
+          any background. */}
       <header
         style={{
           position: "sticky",
@@ -190,10 +194,8 @@ export default async function BusinessConversationPage({
           alignItems: "center",
           gap: 12,
           padding: "calc(env(safe-area-inset-top, 0px) + 12px) 16px 12px",
-          background: "rgba(10, 21, 38, 0.78)",
-          backdropFilter: "blur(14px)",
-          WebkitBackdropFilter: "blur(14px)",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          background: "transparent",
+          borderBottom: "none",
         }}
       >
         {headerAvatarUrl ? (

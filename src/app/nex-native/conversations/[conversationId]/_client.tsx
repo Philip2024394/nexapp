@@ -433,19 +433,23 @@ export function BusinessConversationClient({
         )}
       </div>
 
-      {/* ── Composer + 3-dot products trigger ────────────────────── */}
+      {/* Owner directive 2026-11-13 · "fix the footer width and remove
+          the container from header and footer" · composer footer is
+          now a transparent full-width strip · paints over the shop
+          wallpaper. width:100% + box-sizing:border-box so the input
+          + buttons share the full phone-frame width. */}
       <div
         style={{
           position: "sticky",
           bottom: 0,
+          width: "100%",
+          boxSizing: "border-box",
           display: "flex",
           alignItems: "center",
           gap: 8,
           padding: "10px 12px calc(env(safe-area-inset-bottom, 0px) + 10px)",
-          background: "rgba(10, 21, 38, 0.92)",
-          backdropFilter: "blur(14px)",
-          WebkitBackdropFilter: "blur(14px)",
-          borderTop: "1px solid rgba(255,255,255,0.06)",
+          background: "transparent",
+          borderTop: "none",
         }}
       >
         <input
