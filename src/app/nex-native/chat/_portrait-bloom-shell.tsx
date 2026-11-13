@@ -1227,7 +1227,20 @@ export function PortraitBloomShell({
         >
           <div
             style={{
-              marginTop: "auto",
+              // Owner directive 2026-11-13 · the shop intro pseudo-
+              // bubble must sit UNDER the header, not pushed to the
+              // bottom of the chat viewport. When the thread contains
+              // ONLY the intro pseudo (id prefix `shop-intro:`), stop
+              // pushing to the bottom · align from the top so the
+              // welcome reads immediately. Real multi-message threads
+              // keep the classic push-to-bottom UX so the newest
+              // message is always above the composer.
+              marginTop:
+                messages.length === 1 &&
+                typeof messages[0]?.id === "string" &&
+                messages[0].id.startsWith("shop-intro:")
+                  ? 0
+                  : "auto",
               display: "flex",
               flexDirection: "column",
               // Explicit per-message spacing replaces the flex gap ·
