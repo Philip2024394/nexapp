@@ -1,265 +1,295 @@
 // src/app/nex-native/settings/blocked/page.tsx
 //
-// NEX Settings · Blocked contacts · Stage 1 real surface sealed
-// 2026-10-15.
+// NEX Settings · Contacts connection · owner-sealed 2026-11-13.
+// Replaces the blocked-only list with a two-section view of every
+// contact on the viewer's account: Contacts (personal) + Business
+// contacts (shop owners). Each row carries a Block / Unblock toggle so
+// the viewer can manage the relationship from a single surface.
 //
-// Replaces the previous ComingSoonSettingsPage shell. Lists every
-// account the current session has blocked and offers an Unblock
-// action per row.
+// Backend contract:
+//   · friend-service.listFriends(viewerId) · accepted friend edges only
+//   · friend-service.listBlockedByMe(viewerId) · blocks we placed
+//   · account-service.getAccountsByIds([...]) · batch display info
+//   · nex_business table · partition "business" accounts by owner_account_id
 //
-// Backend contract (all sealed · never re-implemented here):
-//   · `friend-service.listBlockedByMe(actor)` filters
-//     `status='blocked' AND requested_by=actor` · ownership is
-//     database-enforced, we only ever see blocks WE placed.
-//   · `account-service.getAccountById(id)` resolves each blocked
-//     UUID to its display info. Missing accounts fall through to
-//     a safe placeholder row rather than throwing.
-//   · `unblockAccountAction` (./ _actions.ts) delegates to the
-//     sealed `friend-service.unblockAccount` which enforces
-//     "only the blocker can lift the block".
-//
-// Honest state copy: when the list is empty we say exactly that
-// and explain what blocking does. We never pretend an empty list
-// is a disabled feature.
+// Resolver uses resolveSessionWithDevOverride so the 99901 dev persona
+// lands successfully (parity with Chat Settings).
 
 import type * as React from "react";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
-import { listBlockedByMe } from "@/lib/nex-native/friend-service";
-import { getAccountById } from "@/lib/nex-native/account-service";
-import { NexPageHeader } from "../../_page-header";
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import {
-  NEX_SETTINGS,
-  NEX_SETTINGS_FONT,
-  SettingsBackLink,
-} from "../_settings-shell";
-import { resolveServerLocale, tFor } from "@/lib/nex/i18n/server";
-import type { I18nKey } from "@/lib/nex/i18n/keys";
-import { UnblockButton } from "./_unblock-button";
+  listBlockedByMe,
+  listFriends,
+} from "@/lib/nex-native/friend-service";
+import { getAccountsByIds } from "@/lib/nex-native/account-service";
+import type { NexAccountRow } from "@/lib/nex-native/types";
+import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
+import { NexPageHeader } from "../../_page-header";
+import { NEX_SETTINGS_FONT, SettingsBackLink } from "../_settings-shell";
+import { ContactRowButton } from "./_contact-row-button";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type T = (key: I18nKey) => string;
+const CARD_BG = "#FFFFFF";
+const CARD_INK = "#6B2A1F";
+const CARD_INK_DIM = "#7D5A3A";
+const ICON_BG = "#1D2432";
+const ICON_RING = "#FF7200";
 
-interface BlockedRow {
-  accountId: string;
-  displayName: string;
-  nexHandle: string | null;
+interface ContactRow {
+  readonly accountId: string;
+  readonly displayName: string;
+  readonly nexHandle: string | null;
+  readonly isBusiness: boolean;
+  readonly isBlocked: boolean;
 }
 
-export default async function BlockedContactsSettingsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ lang?: string }>;
-}): Promise<React.JSX.Element> {
-  const session = await resolveNexAppSessionFromContext();
-  if (!session) redirect("/nex-native/sign-in");
+export default async function ContactsConnectionPage(): Promise<React.JSX.Element> {
+  const session = await resolveSessionWithDevOverride();
+  if (!session) redirect("/nex-native/sign-in?next=/nex-native/settings/blocked");
 
-  const sp = await searchParams;
-  const acceptLanguage = (await headers()).get("accept-language");
-  const locale = resolveServerLocale({
-    urlParam: sp.lang ?? null,
-    accountLocale: session.account.locale ?? null,
-    acceptLanguage,
-  });
-  const t: T = tFor(locale);
+  const viewerId = session.account.id;
 
-  // Sealed service: filters `status='blocked' AND requested_by === actor`
-  // so the UI never sees a block someone else placed on us (that block
-  // would exist with requested_by set to the OTHER party).
-  const blockedIds = await listBlockedByMe(session.account.id);
+  const [friendIds, blockedIds] = await Promise.all([
+    listFriends(viewerId).catch(() => [] as string[]),
+    listBlockedByMe(viewerId).catch(() => [] as string[]),
+  ]);
 
-  // Resolve each UUID to display info. Any that fail resolution fall
-  // back to a safe placeholder row rather than throwing · the
-  // Unblock action still works because it uses the account id.
-  const rows: BlockedRow[] = await Promise.all(
-    blockedIds.map(async (id): Promise<BlockedRow> => {
-      try {
-        const acct = await getAccountById(id);
-        return {
-          accountId: id,
-          displayName: acct?.display_name ?? t("settings.blocked.row.nameFallback"),
-          nexHandle: acct?.nex_handle ?? null,
-        };
-      } catch {
-        return {
-          accountId: id,
-          displayName: t("settings.blocked.row.nameFallback"),
-          nexHandle: null,
-        };
-      }
-    }),
-  );
+  // Union · every row the viewer has a relationship with (friend or
+  // block). listFriends returns accepted edges only, so blocked rows
+  // may not appear in it · union guarantees they're surfaced too.
+  const allIds = Array.from(new Set<string>([...friendIds, ...blockedIds]));
+  const blockedSet = new Set(blockedIds);
+
+  let accountMap: Map<string, NexAccountRow> = new Map();
+  let businessOwnerSet = new Set<string>();
+  if (allIds.length > 0) {
+    accountMap = await getAccountsByIds(allIds).catch(() => new Map());
+    // Partition "business contacts" · any account that owns a row in
+    // nex_business is treated as a business contact. Shop subscription
+    // status is NOT the signal · the presence of an owned business is.
+    try {
+      const { data } = await nexSupabaseAdmin
+        .from("nex_business")
+        .select("owner_account_id")
+        .in("owner_account_id", allIds);
+      businessOwnerSet = new Set(
+        (data ?? []).map(
+          (r: { owner_account_id: string | null }) => r.owner_account_id ?? "",
+        ),
+      );
+    } catch {
+      businessOwnerSet = new Set();
+    }
+  }
+
+  const rows: ContactRow[] = allIds
+    .map((id): ContactRow => {
+      const acct = accountMap.get(id) ?? null;
+      return {
+        accountId: id,
+        displayName: acct?.display_name?.trim() || "NEX user",
+        nexHandle: acct?.nex_handle ?? null,
+        isBusiness: businessOwnerSet.has(id),
+        isBlocked: blockedSet.has(id),
+      };
+    })
+    .sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+  const personal = rows.filter((r) => !r.isBusiness);
+  const business = rows.filter((r) => r.isBusiness);
 
   return (
-    <>
-      <style>{`html, body { background: ${NEX_SETTINGS.bg} !important; }`}</style>
-      <main
-        data-nex-settings-page="blocked"
-        style={{
-          minHeight: "100dvh",
-          background: NEX_SETTINGS.bg,
-          color: NEX_SETTINGS.textPrimary,
-          fontFamily: NEX_SETTINGS_FONT,
-          padding: "16px 20px 32px",
-        }}
-      >
-        <div style={{ maxWidth: 480, margin: "0 auto" }}>
-          <NexPageHeader dataScope="settings-blocked" />
-          <SettingsBackLink />
+    <main
+      data-nex-contacts-connection-page
+      style={{
+        height: "100%",
+        overflowY: "auto",
+        overflowX: "hidden",
+        WebkitOverflowScrolling: "touch",
+        background: "#F5EDD3",
+        color: "#0A0608",
+        fontFamily: NEX_SETTINGS_FONT,
+        padding: "16px 20px 32px",
+      }}
+    >
+      <div style={{ maxWidth: 480, margin: "0 auto" }}>
+        <NexPageHeader dataScope="settings-blocked" />
 
-          <div
-            style={{
-              marginTop: 14,
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.18em",
-              textTransform: "uppercase",
-              color: NEX_SETTINGS.textSecondary,
-            }}
-          >
-            {t("settings.blocked.header.eyebrow")}
-          </div>
-
+        <header style={{ margin: "20px 0 6px", textAlign: "center" }}>
           <h1
             style={{
-              margin: "6px 0 6px",
-              fontSize: 24,
-              fontWeight: 600,
-              letterSpacing: "-0.01em",
+              margin: 0,
+              fontSize: 22,
+              fontWeight: 700,
+              letterSpacing: "0.005em",
+              color: "#0A0608",
             }}
           >
-            {t("settings.rows.blocked.title")}
+            Contacts connection
           </h1>
-
           <p
             style={{
-              margin: "0 0 20px",
-              fontSize: 13,
-              color: NEX_SETTINGS.textSecondary,
-              lineHeight: 1.55,
+              margin: "6px 0 0",
+              fontSize: 12,
+              color: "#7D5A3A",
             }}
           >
-            {t("settings.blocked.header.subtitle")}
+            Manage who can reach you. Blocking hides your presence, read
+            receipts, typing and online status from that contact.
           </p>
+        </header>
 
-          {rows.length === 0 ? (
-            <div
-              data-nex-settings-blocked-empty
-              style={{
-                padding: "20px 18px",
-                borderRadius: 14,
-                background: NEX_SETTINGS.panel,
-                border: `1px solid ${NEX_SETTINGS.divider}`,
-              }}
-            >
-              <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 8 }}>
-                {t("settings.blocked.empty.title")}
-              </div>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: 13,
-                  color: NEX_SETTINGS.textSecondary,
-                  lineHeight: 1.55,
-                }}
-              >
-                {t("settings.blocked.empty.body")}
-              </p>
-            </div>
-          ) : (
-            <ul
-              data-nex-settings-blocked-list
-              aria-label={t("settings.blocked.list.ariaLabel")}
-              style={{
-                listStyle: "none",
-                margin: 0,
-                padding: 0,
-                display: "grid",
-                gap: 10,
-              }}
-            >
-              {rows.map((row) => (
-                <li
-                  key={row.accountId}
-                  data-nex-settings-blocked-row={row.accountId}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: "14px 16px",
-                    borderRadius: 12,
-                    background: NEX_SETTINGS.panel,
-                    border: `1px solid ${NEX_SETTINGS.divider}`,
-                    minHeight: 72,
-                  }}
-                >
-                  <div
-                    aria-hidden
-                    style={{
-                      flexShrink: 0,
-                      width: 44,
-                      height: 44,
-                      borderRadius: 999,
-                      background: NEX_SETTINGS.panelFaint,
-                      color: NEX_SETTINGS.orange,
-                      display: "grid",
-                      placeItems: "center",
-                      fontSize: 20,
-                      border: `1px solid ${NEX_SETTINGS.panelAccent}`,
-                    }}
-                  >
-                    🚫
-                  </div>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div
-                      data-nex-settings-blocked-name
-                      style={{
-                        fontSize: 15,
-                        fontWeight: 500,
-                        color: NEX_SETTINGS.textPrimary,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {row.displayName}
-                    </div>
-                    <div
-                      style={{
-                        marginTop: 2,
-                        fontSize: 12,
-                        color: NEX_SETTINGS.textSecondary,
-                      }}
-                    >
-                      {row.nexHandle ? (
-                        <code
-                          style={{
-                            fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace",
-                            color: NEX_SETTINGS.cyan,
-                          }}
-                        >
-                          @{row.nexHandle}
-                        </code>
-                      ) : (
-                        t("settings.blocked.row.handleFallback")
-                      )}
-                    </div>
-                  </div>
-                  <UnblockButton
-                    otherAccountId={row.accountId}
-                    unblockLabel={t("settings.blocked.row.unblock")}
-                    unblockingLabel={t("settings.blocked.row.unblocking")}
-                    genericError={t("settings.blocked.error.generic")}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
+        <div style={{ height: 14 }} />
+
+        <ContactsSection
+          label="Contacts"
+          empty="No personal contacts yet."
+          rows={personal}
+        />
+
+        <div style={{ height: 14 }} />
+
+        <ContactsSection
+          label="Business contacts"
+          empty="No business contacts yet."
+          rows={business}
+        />
+
+        <div style={{ height: 20 }} />
+        <SettingsBackLink />
+      </div>
+    </main>
+  );
+}
+
+function ContactsSection({
+  label,
+  empty,
+  rows,
+}: {
+  label: string;
+  empty: string;
+  rows: ReadonlyArray<ContactRow>;
+}): React.JSX.Element {
+  return (
+    <section data-nex-contacts-connection-section={label.toLowerCase().replace(/\s+/g, "-")}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          margin: "8px 2px 8px",
+          fontSize: 10,
+          fontWeight: 800,
+          letterSpacing: "0.18em",
+          textTransform: "uppercase",
+          color: CARD_INK_DIM,
+        }}
+      >
+        <span>{label}</span>
+        <span
+          style={{
+            flex: 1,
+            height: 1,
+            background: "rgba(107,42,31,0.2)",
+          }}
+        />
+        <span>{rows.length}</span>
+      </div>
+      {rows.length === 0 ? (
+        <div
+          style={{
+            padding: "14px 16px",
+            borderRadius: 14,
+            background: CARD_BG,
+            color: CARD_INK_DIM,
+            fontSize: 12,
+            boxShadow: "0 1px 2px rgba(74,32,24,0.10)",
+          }}
+        >
+          {empty}
         </div>
-      </main>
-    </>
+      ) : (
+        <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 8 }}>
+          {rows.map((row) => (
+            <ContactCard key={row.accountId} row={row} />
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function ContactCard({ row }: { row: ContactRow }): React.JSX.Element {
+  const initial = row.displayName.trim().slice(0, 1).toUpperCase() || "N";
+  return (
+    <li
+      data-nex-contacts-connection-row={row.accountId}
+      data-nex-contacts-connection-blocked={row.isBlocked ? "true" : undefined}
+      data-nex-contacts-connection-business={row.isBusiness ? "true" : undefined}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "12px 14px 36px",
+        background: CARD_BG,
+        borderRadius: 14,
+        minHeight: 68,
+        boxShadow: "0 1px 2px rgba(74,32,24,0.10)",
+        position: "relative",
+      }}
+    >
+      <div
+        aria-hidden
+        style={{
+          flexShrink: 0,
+          width: 40,
+          height: 40,
+          borderRadius: "50%",
+          background: ICON_BG,
+          border: `1.5px solid ${ICON_RING}`,
+          display: "grid",
+          placeItems: "center",
+          color: "#F2E5CC",
+          fontSize: 16,
+          fontWeight: 900,
+        }}
+      >
+        {row.isBusiness ? "🏪" : initial}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 15,
+            fontWeight: 800,
+            color: CARD_INK,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {row.displayName}
+        </div>
+        {row.nexHandle ? (
+          <div
+            style={{
+              marginTop: 2,
+              fontSize: 11,
+              color: CARD_INK_DIM,
+              fontFamily: "ui-monospace, Menlo, Consolas, monospace",
+            }}
+          >
+            @{row.nexHandle}
+          </div>
+        ) : null}
+      </div>
+      <ContactRowButton
+        otherAccountId={row.accountId}
+        isBlocked={row.isBlocked}
+      />
+    </li>
   );
 }

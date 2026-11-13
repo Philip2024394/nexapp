@@ -102,19 +102,20 @@ function ToggleRow({
         aria-pressed={current}
         aria-label={`${title} · currently ${current ? "on" : "off"} · tap to turn ${next}`}
         style={{
-          flexShrink: 0,
-          minWidth: 60,
-          height: 32,
-          padding: "0 12px 0 30px",
+          position: "absolute",
+          bottom: 10,
+          right: 12,
+          minWidth: 46,
+          height: 24,
+          padding: "0 8px 0 24px",
           borderRadius: 999,
           border: "none",
           cursor: "pointer",
           background: CONTROL_BG,
           color: current ? CONTROL_ACTIVE : CONTROL_INK,
-          fontSize: 11,
+          fontSize: 9,
           fontWeight: 800,
-          letterSpacing: "0.12em",
-          position: "relative",
+          letterSpacing: "0.1em",
           transition: "color 160ms ease",
           textAlign: "right",
         }}
@@ -123,10 +124,10 @@ function ToggleRow({
           aria-hidden
           style={{
             position: "absolute",
-            top: 3,
-            left: current ? 32 : 3,
-            width: 26,
-            height: 26,
+            top: 2,
+            left: current ? 24 : 2,
+            width: 20,
+            height: 20,
             borderRadius: "50%",
             background: current ? CONTROL_ACTIVE : "#8A7563",
             boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
@@ -314,12 +315,13 @@ const rowStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: 12,
-  padding: "12px 14px",
+  padding: "12px 14px 36px",
   background: CARD_BG,
   border: "none",
   borderRadius: 14,
   minHeight: 68,
   boxShadow: "0 1px 2px rgba(74,32,24,0.10)",
+  position: "relative",
 };
 
 const titleStyle: React.CSSProperties = {

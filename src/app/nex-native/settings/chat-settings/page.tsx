@@ -60,8 +60,10 @@ export default async function ChatSettingsPage({
   if (!session) {
     redirect("/nex-native/sign-in?next=/nex-native/settings/chat-settings");
   }
-  const sp = await searchParams;
-  const status = typeof sp.s === "string" ? sp.s : null;
+  // Owner directive 2026-11-13 · status banner retired · searchParams
+  // no longer consumed on this page. The server actions still redirect
+  // with ?s=... for navigation but the UI simply ignores it.
+  await searchParams;
 
   // Parallel DB reads · all fail-safe · the page still renders if any
   // individual read errors (service degraded defaults).
@@ -160,7 +162,10 @@ export default async function ChatSettingsPage({
             </p>
           </header>
 
-          {status ? <StatusBanner status={status} /> : null}
+          {/* Owner directive 2026-11-13 · status banner removed · the
+              toggles already repaint on save so the "Saved · …" ribbon
+              was redundant noise. Status querystring is still accepted
+              by the server actions for navigation; just not rendered. */}
 
           {/* ─── 1 · My Chat Page ────────────────────────────────── */}
           <LinkCard
@@ -181,18 +186,14 @@ export default async function ChatSettingsPage({
           <LinkCard
             href="/nex-native/settings/see-my-theme"
             emoji="👥"
-            title="Block My Chat theme"
-            subtitle="Control who see's your theme"
+            title="Block Chat theme"
+            subtitle="Who see's theme"
           />
           <LinkCard
             href="/nex-native/settings/chat-settings/bubble-colours"
             emoji="🎈"
-            title="Bubble colours"
-            subtitle={
-              currentTheme
-                ? `Design each bubble against your own ${currentTheme.name} background. Both colour and glass-to-solid appearance save to your account · follows you across devices.`
-                : "Design each bubble against your own chat theme background. Both colour and glass-to-solid appearance save to your account · follows you across devices."
-            }
+            title="Chat Containers"
+            subtitle="Change colors"
           />
 
           {/* ─── 3 · Privacy & Visibility ────────────────────────── */}
@@ -340,7 +341,7 @@ function LinkCard({
 }: {
   href: string;
   title: string;
-  subtitle: string;
+  subtitle?: string;
   comingSoon?: boolean;
   rightLabel?: string;
   emoji?: string;
@@ -405,16 +406,18 @@ function LinkCard({
             </span>
           ) : null}
         </div>
-        <div
-          style={{
-            marginTop: 2,
-            fontSize: 12,
-            color: CARD_INK_DIM,
-            lineHeight: 1.4,
-          }}
-        >
-          {subtitle}
-        </div>
+        {subtitle ? (
+          <div
+            style={{
+              marginTop: 2,
+              fontSize: 12,
+              color: CARD_INK_DIM,
+              lineHeight: 1.4,
+            }}
+          >
+            {subtitle}
+          </div>
+        ) : null}
       </div>
       {rightLabel ? (
         <span

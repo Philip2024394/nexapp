@@ -19,12 +19,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
-import { unblockAccount } from "@/lib/nex-native/friend-service";
+// Owner directive 2026-11-13 · dev-impersonation parity so 99901 reaches
+// the block / unblock actions from the Contacts connection surface.
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
+import { blockAccount, unblockAccount } from "@/lib/nex-native/friend-service";
 
 export type UnblockActionResult =
   | { ok: true }
   | { ok: false; reason: "unauthorized" | "invalid_request" | "service_error"; message?: string };
+
+export type BlockActionResult = UnblockActionResult;
 
 /**
  * Unblock an account that the current session has previously blocked.
@@ -40,7 +44,7 @@ export type UnblockActionResult =
 export async function unblockAccountAction(
   formData: FormData,
 ): Promise<UnblockActionResult> {
-  const session = await resolveNexAppSessionFromContext();
+  const session = await resolveSessionWithDevOverride();
   if (!session) {
     return { ok: false, reason: "unauthorized" };
   }
@@ -52,6 +56,36 @@ export async function unblockAccountAction(
 
   try {
     await unblockAccount(session.account.id, otherAccountId);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, reason: "service_error", message };
+  }
+
+  revalidatePath("/nex-native/settings/blocked");
+  return { ok: true };
+}
+
+/**
+ * Block an account the current session has chosen to block. The sealed
+ * friend-service.blockAccount enforces: self-check, UUID canonical pair,
+ * requested_by stamp. On success revalidates the blocked route so the
+ * row flips immediately.
+ */
+export async function blockAccountAction(
+  formData: FormData,
+): Promise<BlockActionResult> {
+  const session = await resolveSessionWithDevOverride();
+  if (!session) {
+    return { ok: false, reason: "unauthorized" };
+  }
+
+  const otherAccountId = formData.get("other_account_id");
+  if (typeof otherAccountId !== "string" || otherAccountId.length === 0) {
+    return { ok: false, reason: "invalid_request" };
+  }
+
+  try {
+    await blockAccount(session.account.id, otherAccountId);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return { ok: false, reason: "service_error", message };
