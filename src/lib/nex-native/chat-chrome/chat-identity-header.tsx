@@ -264,7 +264,14 @@ export function ChatIdentityHeader(
               // maxNameLines=1 so overlong theme names ellipsis
               // instead of wrapping ("Crispy Chicken" is the
               // reference max · ~14 chars).
-              whiteSpace: (props.maxNameLines ?? 2) === 1 ? "nowrap" : "normal",
+              // Owner directive 2026-11-13 · pre-line honours explicit
+              // `\n` in displayName (shop-face 2-word names pass
+              // "Handbags\ndirect" so the second word sits under the
+              // first instead of truncating to "Handbags dir…").
+              // Existing names without `\n` behave the same as the
+              // retired `normal` value · word-boundary line breaks
+              // still work naturally.
+              whiteSpace: (props.maxNameLines ?? 2) === 1 ? "nowrap" : "pre-line",
               display: "-webkit-box",
               WebkitBoxOrient: "vertical",
               WebkitLineClamp: props.maxNameLines ?? 2,

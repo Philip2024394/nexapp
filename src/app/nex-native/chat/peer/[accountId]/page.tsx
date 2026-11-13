@@ -1205,8 +1205,19 @@ export default async function PeerChatPage({
   const viewerBusiness = viewerBusinesses[0] ?? null;
   const showShopFace =
     peerBusiness && peer.id !== session.account.id;
+  // Owner directive 2026-11-13 · "when names are 2 words 1 word under
+  // the under in header . max 2 words allowed for show headder names
+  // Handbags dir". When the chat shows the SHOP face, split the first
+  // two words of the display name with a newline so the chat identity
+  // header paints them stacked ("Handbags" over "direct") instead of
+  // truncating to one ellipsised line. Names with more than 2 words
+  // are clamped to the first 2 (owner rule · max 2 words allowed).
   const effectivePeerDisplayName = showShopFace
-    ? peerBusiness!.display_name
+    ? (() => {
+        const words = peerBusiness!.display_name.trim().split(/\s+/);
+        if (words.length <= 1) return peerBusiness!.display_name;
+        return `${words[0]}\n${words[1]}`;
+      })()
     : peerFirstName;
   const effectivePeerAvatarUrl = showShopFace
     ? peerBusiness!.logo_url ?? null

@@ -1159,32 +1159,43 @@ function IdentityBar({
       </Link>
     );
   }
-  const nameToRender =
-    identityNameOverride && identityNameOverride.trim().length > 0
-      ? identityNameOverride.trim()
-      : session.displayName;
+  // Owner directive 2026-11-13 · "side drawer remove this Hammerex
+  // Products / NEX-99901 / Copy · under header side drawer add the
+  // Nex Id NEX CENTER". The display name + Copy chip are retired ·
+  // the identity bar now reads as the branded eyebrow "NEX CENTER"
+  // above the Nex ID (e.g. NEX-99901). `nameToRender` + Copy stay
+  // defined in the file for revert-safety but are no longer rendered.
+  void identityNameOverride;
+  void session.displayName;
   return (
     <div style={identityBarStyle} data-nex-control-drawer-identity>
-      {/* Owner directive 2026-11-10 iter 3 · NEX identity row is now
-          ONE row carrying display name + NEX-handle + Copy chip
-          together. Prior layout stacked name on row 1 + handle/Copy
-          on row 2; owner wants them collapsed to a single line. */}
-      <div style={identityOneRowStyle}>
-        <div style={identityNameInlineStyle}>{nameToRender}</div>
+      <div
+        style={{
+          ...identityOneRowStyle,
+          flexDirection: "column",
+          alignItems: "flex-start",
+          gap: 2,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: "0.22em",
+            textTransform: "uppercase",
+            color: "var(--nex-world-secondary, #C6A15B)",
+            lineHeight: 1,
+          }}
+        >
+          NEX CENTER
+        </div>
         {session.nexHandle ? (
-          <>
-            <div style={identityHandleStyle}>
-              {/* Owner directive 2026-10-17 · the "nex-" prefix is a
-                  brand mark · always rendered uppercase as "NEX-" ·
-                  the numeric part is preserved exactly. */}
-              {session.nexHandle.replace(/^nex-/i, "NEX-")}
-            </div>
-            <CopyIdentityButton
-              displayName={nameToRender}
-              handle={session.nexHandle.replace(/^nex-/i, "NEX-")}
-              compact
-            />
-          </>
+          <div style={identityHandleStyle}>
+            {/* Owner directive 2026-10-17 · the "nex-" prefix is a
+                brand mark · always rendered uppercase as "NEX-" · the
+                numeric part is preserved exactly. */}
+            {session.nexHandle.replace(/^nex-/i, "NEX-")}
+          </div>
         ) : null}
       </div>
       {/* Owner directive 2026-10-20 · right-side thumbnail of the

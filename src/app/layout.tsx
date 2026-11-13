@@ -6,7 +6,19 @@ export const metadata = {
   description: "NEX app",
 };
 
-const ROOT_BG = "#020914";
+// Owner directive 2026-11-13 · "desktop back ground image and tablet
+// back ground image not showing". Root cause was inline background:
+// #020914 on html + body, which won over the !important CSS wave
+// backdrop in nex-native.css even with !important (inline + CSS cascade
+// edge case where shorthand background with `fixed` attachment may not
+// take over opaque inline). Switched inline to transparent so the
+// sealed nex-native.css @media (min-width: 500px) rule paints the
+// cream+gold wave on desktop/tablet. Mobile viewports (<500px) are
+// full-bleed and the .nex-native-frame covers the body entirely, so
+// the transparent body isn't visible there · the dark fallback the
+// previous solid bg provided becomes the frame's own bg (sealed
+// `--nex-world-background-base`) which already matches on every world.
+const ROOT_BG = "transparent";
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
