@@ -16,7 +16,6 @@
 
 import * as React from "react";
 import {
-  resetVisibilitySectionAction,
   setLastSeenVisibilityAction,
   setOnlineStatusVisibilityAction,
   setReadReceiptsAction,
@@ -38,7 +37,6 @@ const CARD_INK_DIM = "#7D5A3A";
 const ICON_BG = "#1D2432";
 const ICON_RING = "#FF7200";
 const CONTROL_BG = "#1D2432";
-const CONTROL_INK = "#F3E3C6";
 const CONTROL_ACTIVE = "#FF7200";
 
 type OpenSheet =
@@ -90,8 +88,6 @@ export function ChatSettingsClient({ prefs }: Props): React.JSX.Element {
         rightIndicator={visibilityIndicator(prefs.online_status_visibility)}
         onClick={() => setOpen({ kind: "visibility", id: "online" })}
       />
-
-      <ResetRow />
 
       {open?.kind === "boolean" ? (
         <BooleanSheet
@@ -486,48 +482,3 @@ function SheetOptionButton({
   );
 }
 
-// ─── Reset button ────────────────────────────────────────────────────
-
-function ResetRow(): React.JSX.Element {
-  return (
-    <form action={resetVisibilitySectionAction} style={{ marginTop: 4 }}>
-      <button
-        type="submit"
-        data-nex-chat-settings-reset="visibility"
-        style={{
-          width: "100%",
-          padding: "13px 14px",
-          fontSize: 12,
-          fontWeight: 800,
-          letterSpacing: "0.1em",
-          color: CONTROL_INK,
-          background: CONTROL_BG,
-          border: "none",
-          borderRadius: 14,
-          cursor: "pointer",
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
-          boxShadow: "0 1px 2px rgba(74,32,24,0.10)",
-        }}
-      >
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2.4}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden
-        >
-          <path d="M1 4v6h6" />
-          <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
-        </svg>
-        Reset visibility to defaults
-      </button>
-    </form>
-  );
-}

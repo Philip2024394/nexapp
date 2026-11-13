@@ -42,7 +42,6 @@ import { NexPageHeader } from "../../_page-header";
 import {
   NEX_SETTINGS,
   NEX_SETTINGS_FONT,
-  SettingsBackLink,
 } from "../_settings-shell";
 import { ChatSettingsClient } from "./_client";
 
@@ -189,32 +188,29 @@ export default async function ChatSettingsPage({
             title="Chat Containers"
             subtitle="Change colors"
           />
-
-          {/* ─── 3 · Privacy & Visibility ────────────────────────── */}
-          <ChatSettingsClient prefs={prefs} />
-          <div style={{ height: 10 }} />
           <LinkCard
             href="/nex-native/settings/blocked"
             emoji="🚫"
             title="Block Contacts"
             subtitle="Contacts connection"
           />
+          <LinkCard
+            href="/nex-native/settings/chat-font"
+            emoji="🔤"
+            title="Font style and size"
+            subtitle="Change chat font"
+          />
 
-          {/* ─── 4 · Message Controls ────────────────────────────── */}
+          {/* Privacy & Visibility · ControlCards + popups */}
+          <ChatSettingsClient prefs={prefs} />
+
+          <div style={{ height: 8 }} />
           <LinkCard
             href="/nex-native/settings/disappearing-messages"
             emoji="⏳"
             title="Delete Message"
             subtitle="Set time zone"
             rightIndicator={defaultSeconds > 0 ? "on" : "off"}
-          />
-
-          {/* ─── 5 · Chat Experience ─────────────────────────────── */}
-          <LinkCard
-            href="/nex-native/settings/chat-font"
-            emoji="🔤"
-            title="Font style and size"
-            subtitle="Change chat font"
           />
           <LinkCard
             href="/nex-native/settings/chat-protection"
@@ -226,8 +222,20 @@ export default async function ChatSettingsPage({
             }
           />
 
-          <div style={{ height: 14 }} />
-          <SettingsBackLink />
+          <div
+            data-nex-chat-settings-poweredby
+            style={{
+              marginTop: 20,
+              textAlign: "center",
+              fontSize: 10,
+              fontWeight: 800,
+              letterSpacing: "0.22em",
+              textTransform: "uppercase",
+              color: "#7D5A3A",
+            }}
+          >
+            Powered by NEX
+          </div>
         </div>
       </main>
     </>
