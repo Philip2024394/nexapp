@@ -44,7 +44,6 @@ export function ChatSettingsClient({ prefs }: Props): React.JSX.Element {
         name="enabled"
         emoji="💭"
         title="Typing Indicator"
-        subtitle="Display effect when typing"
         current={prefs.typing_indicator_enabled}
       />
       <SegmentedRow
@@ -82,7 +81,7 @@ function ToggleRow({
   name: string;
   emoji: string;
   title: string;
-  subtitle: string;
+  subtitle?: string;
   current: boolean;
 }): React.JSX.Element {
   const next = current ? "off" : "on";
@@ -95,7 +94,7 @@ function ToggleRow({
       <IconCell emoji={emoji} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={titleStyle}>{title}</div>
-        <div style={subtitleStyle}>{subtitle}</div>
+        {subtitle ? <div style={subtitleStyle}>{subtitle}</div> : null}
       </div>
       <input type="hidden" name={name} value={next} />
       <button

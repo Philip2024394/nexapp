@@ -202,8 +202,8 @@ export default async function ChatSettingsPage({
           <LinkCard
             href="/nex-native/settings/blocked"
             emoji="🚫"
-            title="Blocked contacts"
-            subtitle="Manage people you've blocked. When blocked, they cannot see your presence, online status, typing or receipts · total privacy."
+            title="Block Contacts"
+            subtitle="Contacts connection"
           />
 
           {/* ─── 4 · Message Controls ────────────────────────────── */}
