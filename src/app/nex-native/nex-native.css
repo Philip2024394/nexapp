@@ -196,14 +196,20 @@ body::-webkit-scrollbar,
   .nex-native-stage {
     display: flex;
     justify-content: center;
-    /* Centre the phone frame vertically on tall desktop screens so
-     * the NEX hero backdrop (on body) appears above AND below the
-     * phone rather than only below. Stage itself is transparent so
-     * the body-level hero bg shows through. */
+    /* Owner directive 2026-11-13 · desktop/tablet hero is now painted
+     * on the stage itself (in addition to html/body) so the backdrop
+     * surfaces reliably even when upstream inline styles on <body>
+     * win the specificity contest (seen on fresh dev-server boots
+     * before HMR re-applies the sealed !important rule). Same image
+     * + sizing contract · just a redundant paint. */
     align-items: center;
     height: 100dvh;
     min-height: 0;
-    background: transparent;
+    background:
+      var(--nex-world-page-base, #020914)
+      var(--nex-world-desktop-backdrop, url("/nex-desktop-hero.png"))
+      center center / 100% 100%
+      no-repeat fixed;
     overflow: hidden;
   }
   .nex-native-frame {
