@@ -61,8 +61,12 @@ END $$;
 COMMENT ON COLUMN public.nex_business.shop_intro_message IS
   'Shop owner''s editable first-bubble introduction for the public shop chat. NULL = fall back to the default template (client-side). Max 500 chars.';
 
-INSERT INTO nex_migration_history (version, applied_at)
-VALUES ('344', now())
+INSERT INTO nex_migration_history (version, applied_at, description)
+VALUES (
+  '344',
+  now(),
+  'nex_business.shop_intro_message · editable first-bubble intro for public shop chat · 500-char CHECK'
+)
 ON CONFLICT (version) DO NOTHING;
 
 COMMIT;
