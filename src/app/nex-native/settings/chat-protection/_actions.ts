@@ -5,7 +5,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import {
   resetChatProtection,
   updateChatViewPreferences,
@@ -19,7 +19,7 @@ function redirectBack(status: string): never {
 }
 
 export async function setChatProtectionAction(formData: FormData): Promise<never> {
-  const session = await resolveNexAppSessionFromContext();
+  const session = await resolveSessionWithDevOverride();
   if (!session) redirect("/nex-native/sign-in?next=" + RETURN_PATH);
   const raw = String(formData.get("enabled") ?? "");
   const on = raw === "on" || raw === "true" || raw === "1";
@@ -33,11 +33,12 @@ export async function setChatProtectionAction(formData: FormData): Promise<never
     redirectBack(`err_${(e as Error).name ?? "update"}`);
   }
   revalidatePath(RETURN_PATH);
+  revalidatePath("/nex-native/settings/chat-settings");
   redirectBack(`ok_${on ? "on" : "off"}`);
 }
 
 export async function resetChatProtectionAction(): Promise<never> {
-  const session = await resolveNexAppSessionFromContext();
+  const session = await resolveSessionWithDevOverride();
   if (!session) redirect("/nex-native/sign-in?next=" + RETURN_PATH);
   try {
     await resetChatProtection(session.account.id);
@@ -47,5 +48,6 @@ export async function resetChatProtectionAction(): Promise<never> {
     redirectBack(`err_${(e as Error).name ?? "reset"}`);
   }
   revalidatePath(RETURN_PATH);
+  revalidatePath("/nex-native/settings/chat-settings");
   redirectBack("ok_reset");
 }

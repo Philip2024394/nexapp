@@ -202,7 +202,12 @@ export default async function ChatSettingsPage({
           />
 
           {/* Privacy & Visibility · ControlCards + popups */}
-          <ChatSettingsClient prefs={prefs} />
+          <ChatSettingsClient
+            prefs={prefs}
+            screenshotProtection={
+              viewPrefs?.screenshot_copy_protection_enabled ?? false
+            }
+          />
 
           <div style={{ height: 8 }} />
           <LinkCard
@@ -211,15 +216,6 @@ export default async function ChatSettingsPage({
             title="Disappearing Messages"
             subtitle="Set time zone"
             rightIndicator={defaultSeconds > 0 ? "on" : "off"}
-          />
-          <LinkCard
-            href="/nex-native/settings/chat-protection"
-            emoji="📷"
-            title="Screenshot Protection"
-            subtitle="Prevent screen copy"
-            rightIndicator={
-              viewPrefs?.screenshot_copy_protection_enabled ? "on" : "off"
-            }
           />
 
           <div

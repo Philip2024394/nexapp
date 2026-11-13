@@ -21,6 +21,7 @@ import {
   setReadReceiptsAction,
   setTypingIndicatorAction,
 } from "./_actions";
+import { setChatProtectionAction } from "../chat-protection/_actions";
 import type {
   ChatPreferences,
   VisibilityLevel,
@@ -28,6 +29,10 @@ import type {
 
 interface Props {
   readonly prefs: ChatPreferences;
+  /** Owner directive 2026-11-13 · screenshot/copy protection state so
+   *  the viewer can toggle it from a popup on Chat Settings without
+   *  routing to the dedicated sub-page. */
+  readonly screenshotProtection?: boolean;
 }
 
 // Owner directive 2026-11-13 iter 2 · peach-then-white palette.
@@ -41,7 +46,7 @@ const CONTROL_ACTIVE = "#FF7200";
 
 type OpenSheet =
   | null
-  | { kind: "boolean"; id: "receipts" | "typing" }
+  | { kind: "boolean"; id: "receipts" | "typing" | "screenshot" }
   | { kind: "visibility"; id: "last-seen" | "online" };
 
 const VIS_OPTIONS: ReadonlyArray<{ value: VisibilityLevel; label: string }> = [
@@ -50,7 +55,10 @@ const VIS_OPTIONS: ReadonlyArray<{ value: VisibilityLevel; label: string }> = [
   { value: "nobody", label: "Nobody" },
 ];
 
-export function ChatSettingsClient({ prefs }: Props): React.JSX.Element {
+export function ChatSettingsClient({
+  prefs,
+  screenshotProtection = false,
+}: Props): React.JSX.Element {
   const [open, setOpen] = React.useState<OpenSheet>(null);
 
   const visibilityIndicator = (
@@ -88,21 +96,41 @@ export function ChatSettingsClient({ prefs }: Props): React.JSX.Element {
         rightIndicator={visibilityIndicator(prefs.online_status_visibility)}
         onClick={() => setOpen({ kind: "visibility", id: "online" })}
       />
+      <ControlCard
+        emoji="📷"
+        title="Screenshot Protection"
+        subtitle="Prevent screen copy"
+        rightIndicator={screenshotProtection ? "on" : "off"}
+        onClick={() => setOpen({ kind: "boolean", id: "screenshot" })}
+      />
 
       {open?.kind === "boolean" ? (
         <BooleanSheet
           title={
-            open.id === "receipts" ? "Read receipts" : "Typing Indicator"
+            open.id === "receipts"
+              ? "Read receipts"
+              : open.id === "typing"
+                ? "Typing Indicator"
+                : "Screenshot Protection"
           }
           current={
             open.id === "receipts"
               ? prefs.read_receipts_enabled
-              : prefs.typing_indicator_enabled
+              : open.id === "typing"
+                ? prefs.typing_indicator_enabled
+                : screenshotProtection
           }
           action={
             open.id === "receipts"
               ? setReadReceiptsAction
-              : setTypingIndicatorAction
+              : open.id === "typing"
+                ? setTypingIndicatorAction
+                : setChatProtectionAction
+          }
+          note={
+            open.id === "screenshot"
+              ? "NEX can restrict copying and some viewer-side actions, but cannot guarantee prevention of operating-system screenshots or external photography."
+              : undefined
           }
           onClose={() => setOpen(null)}
         />
@@ -354,11 +382,13 @@ function BooleanSheet({
   title,
   current,
   action,
+  note,
   onClose,
 }: {
   title: string;
   current: boolean;
   action: (formData: FormData) => Promise<never>;
+  note?: string;
   onClose: () => void;
 }): React.JSX.Element {
   async function handlePick(nextOn: boolean) {
@@ -385,7 +415,28 @@ function BooleanSheet({
           onClick={() => void handlePick(false)}
         />
       </div>
+      {note ? <SheetNote text={note} /> : null}
     </SheetShell>
+  );
+}
+
+function SheetNote({ text }: { text: string }): React.JSX.Element {
+  return (
+    <div
+      data-nex-chat-settings-sheet-note
+      style={{
+        marginTop: 14,
+        padding: "10px 12px",
+        borderRadius: 10,
+        background: "rgba(255,114,0,0.08)",
+        border: "1px dashed rgba(255,114,0,0.5)",
+        color: CARD_INK_DIM,
+        fontSize: 11,
+        lineHeight: 1.45,
+      }}
+    >
+      {text}
+    </div>
   );
 }
 
@@ -435,6 +486,10 @@ function SheetOptionButton({
   isActive: boolean;
   onClick: () => void;
 }): React.JSX.Element {
+  // Owner directive 2026-11-13 · active option renders as a solid NEX
+  // orange CTA pill with white ink · inactive stays as a neutral white
+  // card with brown ink. Clear primary/secondary hierarchy in every
+  // popup regardless of control type.
   return (
     <button
       type="button"
@@ -443,20 +498,25 @@ function SheetOptionButton({
       aria-pressed={isActive}
       style={{
         width: "100%",
-        padding: "12px 14px",
-        borderRadius: 12,
-        border: `1px solid ${isActive ? CONTROL_ACTIVE : "rgba(107,42,31,0.18)"}`,
-        background: isActive ? "rgba(255,114,0,0.08)" : CARD_BG,
-        color: CARD_INK,
+        padding: "13px 16px",
+        borderRadius: 14,
+        border: isActive
+          ? "1px solid transparent"
+          : "1px solid rgba(107,42,31,0.18)",
+        background: isActive ? CONTROL_ACTIVE : CARD_BG,
+        color: isActive ? "#FFFFFF" : CARD_INK,
         fontSize: 14,
-        fontWeight: 800,
-        letterSpacing: "0.02em",
+        fontWeight: 900,
+        letterSpacing: "0.04em",
         cursor: "pointer",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
         gap: 10,
         fontFamily: "inherit",
+        boxShadow: isActive
+          ? "0 4px 14px -4px rgba(255,114,0,0.55), 0 1px 2px rgba(0,0,0,0.12)"
+          : "0 1px 2px rgba(74,32,24,0.10)",
       }}
     >
       <span>{label}</span>
@@ -464,14 +524,14 @@ function SheetOptionButton({
         <span
           aria-hidden
           style={{
-            width: 18,
-            height: 18,
+            width: 20,
+            height: 20,
             borderRadius: "50%",
-            background: CONTROL_ACTIVE,
+            background: "rgba(255,255,255,0.22)",
             display: "grid",
             placeItems: "center",
             color: "#FFFFFF",
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 900,
           }}
         >
