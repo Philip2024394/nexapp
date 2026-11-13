@@ -138,15 +138,41 @@ export function E2eComposerIntercept(
         if (outcome.ok) {
           setStatus("idle");
           setE2eReady(true);
-          const textarea = form.querySelector<HTMLTextAreaElement>(
+          // Owner-visible bug 2026-11-13 · the composer is now wrapped
+          // in a custom NexInput · the marker landed on a non-textarea
+          // host element, so Object.getOwnPropertyDescriptor(
+          // HTMLTextAreaElement.prototype, "value").set.call(host, "")
+          // threw TypeError: Illegal invocation AFTER the encrypted
+          // POST had already succeeded, which the dev-server logged as
+          // unhandledRejection. Narrow the clear to real native text
+          // controls · when the marker is on a custom host we just
+          // skip (NexInput owns its own value state and clears via
+          // the native InputEvent that still dispatches below).
+          const el = form.querySelector(
             "[data-nex-composer-textarea]",
           );
-          if (textarea) {
-            const setter = Object.getOwnPropertyDescriptor(
-              HTMLTextAreaElement.prototype, "value",
-            )?.set;
-            setter?.call(textarea, "");
-            textarea.dispatchEvent(new Event("input", { bubbles: true }));
+          const nativeField =
+            el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement
+              ? el
+              : null;
+          if (nativeField) {
+            const proto =
+              nativeField instanceof HTMLTextAreaElement
+                ? HTMLTextAreaElement.prototype
+                : HTMLInputElement.prototype;
+            const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set;
+            try {
+              setter?.call(nativeField, "");
+            } catch {
+              // Last-resort fallback · some custom descriptors may
+              // still reject · assign directly.
+              nativeField.value = "";
+            }
+            nativeField.dispatchEvent(new Event("input", { bubbles: true }));
+          } else if (el) {
+            // Custom composer host · dispatch the input event anyway
+            // so controlled components tied to the marker react.
+            el.dispatchEvent(new Event("input", { bubbles: true }));
           }
           // Bridge 88 · clear the sessionStorage stash for this
           // attachment · the content key is no longer needed once
