@@ -179,7 +179,7 @@ export default async function ChatSettingsPage({
           <LinkCard
             href="/nex-native/settings/see-my-theme"
             emoji="👥"
-            title="Theme Sharing & Visibility"
+            title="Theme Visibility"
             subtitle="Who see's theme"
           />
           <LinkCard
