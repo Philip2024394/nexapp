@@ -41,7 +41,8 @@ import { HeaderRightCluster } from "./_header-right-cluster";
 import { UniversalChatControls } from "./_universal-chat-controls";
 import { ImageQrProbe } from "./_qr-image-scanner";
 import { ThemeIntroInterstitial } from "./_theme-intro-interstitial";
-import { TradeAgreementCard } from "./_trade-agreement-card";
+// Owner directive 2026-11-13 · Safe Trade retired · TradeAgreementCard
+// import removed. The component file stays on disk for revert-safety.
 import { ChatIdentityHeader } from "@/lib/nex-native/chat-chrome/chat-identity-header";
 import { NexPingBadge } from "@/lib/nex-native/nex-ping-badge-client";
 
@@ -1231,12 +1232,15 @@ export function PortraitBloomShell({
               gap: 0,
             }}
           >
-            {tradeAgreementSellerName && (
-              <TradeAgreementCard
-                sellerName={tradeAgreementSellerName}
-                activated={!!tradeAgreementActivated}
-              />
-            )}
+            {/* Owner directive 2026-11-13 · Safe Trade retired entirely
+                · "we dont have safe trade any more . users and owners
+                trade at their own private accounts no more dafe trade"
+                · the TradeAgreementCard banner that warned "<Seller>
+                has not yet activated Safe Trade" no longer renders in
+                any chat surface. The underlying columns + service stay
+                in place (nex_business.safe_trade_activated etc.) so
+                schema is untouched · only the chat-time banner UI is
+                retired. */}
             {messages.length === 0 ? (
               <FirstConnectionEmpty
                 peerName={displayName}

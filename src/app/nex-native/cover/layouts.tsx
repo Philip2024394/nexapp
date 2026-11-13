@@ -107,90 +107,7 @@ export function LayoutCafe({ content, themeId }: LayoutProps): React.JSX.Element
             search) · hours of operation sit below. Seller edits the
             location via SellerLocationEditor on /manage/shop which
             persists lat/lng to nex_business.location_lat / _lng. */}
-        <a
-          href={
-            content.locationLat != null && content.locationLng != null
-              ? `https://www.google.com/maps/dir/?api=1&destination=${content.locationLat},${content.locationLng}`
-              : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-                  content.address,
-                )}`
-          }
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: "block",
-            marginTop: 20,
-            padding: "16px 18px",
-            borderRadius: 14,
-            border: "1px dashed var(--nex-accent-soft)",
-            background:
-              "linear-gradient(180deg, var(--nex-accent-faint), rgba(3,8,20,0.35))",
-            textDecoration: "none",
-            color: "inherit",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "baseline",
-              justifyContent: "space-between",
-              gap: 10,
-              marginBottom: 6,
-            }}
-          >
-            <div
-              style={{
-                fontSize: 10,
-                letterSpacing: "0.14em",
-                textTransform: "uppercase",
-                color: "var(--nex-accent)",
-                fontWeight: 700,
-              }}
-            >
-              {t.section_location_label}
-            </div>
-            <div
-              style={{
-                fontSize: 10,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: "var(--nex-accent)",
-                fontWeight: 700,
-              }}
-              aria-hidden
-            >
-              Directions ↗
-            </div>
-          </div>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 8,
-              fontFamily: "var(--nex-font-display)",
-              fontSize: 15,
-              lineHeight: 1.35,
-              fontWeight: 600,
-              color: "var(--nex-text)",
-            }}
-          >
-            <span aria-hidden style={{ flex: "0 0 auto" }}>📍</span>
-            <span style={{ flex: 1 }}>{content.address}</span>
-          </div>
-          <div
-            style={{
-              marginTop: 8,
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 12,
-              color: "var(--nex-text-dim)",
-            }}
-          >
-            <span aria-hidden>🕐</span>
-            <span>{content.hours}</span>
-          </div>
-        </a>
+        {/* Owner-sealed 2026-11-13 · Visit Us card retired from the footer · address + hours now live only in the burger menu's Visit Us slider · socials below are the sole footer chrome. */}
         <CoverIdentityRail
           handle={content.handle}
           location={content.location}
@@ -249,41 +166,7 @@ export function LayoutCafeRound({ content, themeId }: LayoutProps): React.JSX.El
             variant="round"
           />
         </div>
-        <a
-          href={
-            content.locationLat != null && content.locationLng != null
-              ? `https://www.google.com/maps/dir/?api=1&destination=${content.locationLat},${content.locationLng}`
-              : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-                  content.address,
-                )}`
-          }
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: "block",
-            marginTop: 20,
-            padding: "16px 18px",
-            borderRadius: 14,
-            border: "1px dashed var(--nex-accent-soft)",
-            background:
-              "linear-gradient(180deg, var(--nex-accent-faint), rgba(3,8,20,0.35))",
-            textDecoration: "none",
-            color: "inherit",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, marginBottom: 6 }}>
-            <div style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--nex-accent)", fontWeight: 700 }}>{t.section_location_label}</div>
-            <div aria-hidden style={{ fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--nex-accent)", fontWeight: 700 }}>Directions ↗</div>
-          </div>
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 8, fontFamily: "var(--nex-font-display)", fontSize: 15, lineHeight: 1.35, fontWeight: 600, color: "var(--nex-text)" }}>
-            <span aria-hidden style={{ flex: "0 0 auto" }}>📍</span>
-            <span style={{ flex: 1 }}>{content.address}</span>
-          </div>
-          <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--nex-text-dim)" }}>
-            <span aria-hidden>🕐</span>
-            <span>{content.hours}</span>
-          </div>
-        </a>
+        {/* Owner-sealed 2026-11-13 · Visit Us card retired from the footer · address + hours now live only in the burger menu's Visit Us slider · socials below are the sole footer chrome. */}
         <CoverIdentityRail
           handle={content.handle}
           location={content.location}
@@ -402,96 +285,7 @@ export function LayoutAccommodation({
         {/* Visit Us · same Google Maps directions pattern as Café ·
             label swapped to "Where you'll stay" and the hours row
             becomes a check-in / check-out line. */}
-        <a
-          href={
-            content.locationLat != null && content.locationLng != null
-              ? `https://www.google.com/maps/dir/?api=1&destination=${content.locationLat},${content.locationLng}`
-              : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-                  content.address,
-                )}`
-          }
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: "block",
-            marginTop: 20,
-            padding: "16px 18px",
-            borderRadius: 14,
-            border: "1px dashed var(--nex-accent-soft)",
-            background:
-              "linear-gradient(180deg, var(--nex-accent-faint), rgba(3,8,20,0.35))",
-            textDecoration: "none",
-            color: "inherit",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "baseline",
-              justifyContent: "space-between",
-              gap: 10,
-              marginBottom: 6,
-            }}
-          >
-            <div
-              style={{
-                fontSize: 10,
-                letterSpacing: "0.14em",
-                textTransform: "uppercase",
-                color: "var(--nex-accent)",
-                fontWeight: 700,
-              }}
-            >
-              Where you&apos;ll stay
-            </div>
-            <div
-              style={{
-                fontSize: 10,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: "var(--nex-accent)",
-                fontWeight: 700,
-              }}
-              aria-hidden
-            >
-              Directions ↗
-            </div>
-          </div>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 8,
-              fontFamily: "var(--nex-font-display)",
-              fontSize: 15,
-              lineHeight: 1.35,
-              fontWeight: 600,
-              color: "var(--nex-text)",
-            }}
-          >
-            <span aria-hidden style={{ flex: "0 0 auto" }}>📍</span>
-            <span style={{ flex: 1 }}>{content.address}</span>
-          </div>
-          <div
-            style={{
-              marginTop: 8,
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              fontSize: 12,
-              color: "var(--nex-text-dim)",
-            }}
-          >
-            <span>
-              <span aria-hidden>🛬</span>{" "}
-              Check-in <strong style={{ color: "var(--nex-text)" }}>2 PM</strong>
-            </span>
-            <span>
-              <span aria-hidden>🛫</span>{" "}
-              Check-out <strong style={{ color: "var(--nex-text)" }}>11 AM</strong>
-            </span>
-          </div>
-        </a>
+        {/* Owner-sealed 2026-11-13 · Visit Us card retired from the footer · address + hours now live only in the burger menu's Visit Us slider · socials below are the sole footer chrome. */}
         <CoverIdentityRail
           handle={content.handle}
           location={content.location}
@@ -654,90 +448,7 @@ export function LayoutCafeLandscape({ content, themeId }: LayoutProps): React.JS
             variant="landscape"
           />
         </div>
-        <a
-          href={
-            content.locationLat != null && content.locationLng != null
-              ? `https://www.google.com/maps/dir/?api=1&destination=${content.locationLat},${content.locationLng}`
-              : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-                  content.address,
-                )}`
-          }
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: "block",
-            marginTop: 20,
-            padding: "16px 18px",
-            borderRadius: 14,
-            border: "1px dashed var(--nex-accent-soft)",
-            background:
-              "linear-gradient(180deg, var(--nex-accent-faint), rgba(3,8,20,0.35))",
-            textDecoration: "none",
-            color: "inherit",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "baseline",
-              justifyContent: "space-between",
-              gap: 10,
-              marginBottom: 6,
-            }}
-          >
-            <div
-              style={{
-                fontSize: 10,
-                letterSpacing: "0.14em",
-                textTransform: "uppercase",
-                color: "var(--nex-accent)",
-                fontWeight: 700,
-              }}
-            >
-              {t.section_location_label}
-            </div>
-            <div
-              style={{
-                fontSize: 10,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: "var(--nex-accent)",
-                fontWeight: 700,
-              }}
-              aria-hidden
-            >
-              Directions ↗
-            </div>
-          </div>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 8,
-              fontFamily: "var(--nex-font-display)",
-              fontSize: 15,
-              lineHeight: 1.35,
-              fontWeight: 600,
-              color: "var(--nex-text)",
-            }}
-          >
-            <span aria-hidden style={{ flex: "0 0 auto" }}>📍</span>
-            <span style={{ flex: 1 }}>{content.address}</span>
-          </div>
-          <div
-            style={{
-              marginTop: 8,
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 12,
-              color: "var(--nex-text-dim)",
-            }}
-          >
-            <span aria-hidden>🕐</span>
-            <span>{content.hours}</span>
-          </div>
-        </a>
+        {/* Owner-sealed 2026-11-13 · Visit Us card retired from the footer · address + hours now live only in the burger menu's Visit Us slider · socials below are the sole footer chrome. */}
         <CoverIdentityRail
           handle={content.handle}
           location={content.location}
@@ -1041,100 +752,11 @@ export function LayoutPersonalBrand({ content, themeId }: LayoutProps): React.JS
             peerAccountId={content.ownerAccountId}
             orderingCopy={content.infoPages?.delivery_details ?? null}
             galleryImages={content.galleryImages}
-            productsFooter={
-              // Founder direction 2026-09-30 · Visit Us renders ONLY
-              // when the Products tab is active · slotted inside the
-              // tabs component via the productsFooter prop. Same
-              // block Template 01 Café uses.
-              <a
-                href={
-                  content.locationLat != null && content.locationLng != null
-                    ? `https://www.google.com/maps/dir/?api=1&destination=${content.locationLat},${content.locationLng}`
-                    : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-                        content.address,
-                      )}`
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: "block",
-                  marginTop: 20,
-                  padding: "16px 18px",
-                  borderRadius: 14,
-                  border: "1px dashed var(--nex-accent-soft)",
-                  background:
-                    "linear-gradient(180deg, var(--nex-accent-faint), rgba(3,8,20,0.35))",
-                  textDecoration: "none",
-                  color: "inherit",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "baseline",
-                    justifyContent: "space-between",
-                    gap: 10,
-                    marginBottom: 6,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 10,
-                      letterSpacing: "0.14em",
-                      textTransform: "uppercase",
-                      color: "var(--nex-accent)",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {t.section_location_label}
-                  </div>
-                  <div
-                    aria-hidden
-                    style={{
-                      fontSize: 10,
-                      letterSpacing: "0.08em",
-                      textTransform: "uppercase",
-                      color: "var(--nex-accent)",
-                      fontWeight: 700,
-                    }}
-                  >
-                    Directions ↗
-                  </div>
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: 8,
-                    fontFamily: "var(--nex-font-display)",
-                    fontSize: 15,
-                    lineHeight: 1.35,
-                    fontWeight: 600,
-                    color: "var(--nex-text)",
-                  }}
-                >
-                  <span aria-hidden style={{ flex: "0 0 auto" }}>📍</span>
-                  <span style={{ flex: 1 }}>{content.address}</span>
-                </div>
-                <div
-                  style={{
-                    marginTop: 8,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    fontSize: 12,
-                    color: "var(--nex-text-dim)",
-                  }}
-                >
-                  <span aria-hidden>🕐</span>
-                  <span>
-                    {formatTodayHoursLabel(content.hoursByDay, content.hours) ??
-                      content.hours ??
-                      "Hours to be confirmed"}
-                  </span>
-                </div>
-              </a>
-            }
+            // Owner-sealed 2026-11-13 · productsFooter retired · it
+            // previously held the Visit Us card which is now removed
+            // from every shop template · socials via CoverIdentityRail
+            // below carry the remaining footer chrome.
+            productsFooter={null}
           />
         </div>
         <CoverIdentityRail
@@ -2132,96 +1754,9 @@ export function LayoutPersonalBrandLandscape({
             orderingCopy={content.infoPages?.delivery_details ?? null}
             galleryImages={content.galleryImages}
             productsVariant="landscape"
-            productsFooter={
-              <a
-                href={
-                  content.locationLat != null && content.locationLng != null
-                    ? `https://www.google.com/maps/dir/?api=1&destination=${content.locationLat},${content.locationLng}`
-                    : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-                        content.address,
-                      )}`
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: "block",
-                  marginTop: 20,
-                  padding: "16px 18px",
-                  borderRadius: 14,
-                  border: "1px dashed var(--nex-accent-soft)",
-                  background:
-                    "linear-gradient(180deg, var(--nex-accent-faint), rgba(3,8,20,0.35))",
-                  textDecoration: "none",
-                  color: "inherit",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "baseline",
-                    justifyContent: "space-between",
-                    gap: 10,
-                    marginBottom: 6,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 10,
-                      letterSpacing: "0.14em",
-                      textTransform: "uppercase",
-                      color: "var(--nex-accent)",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {t.section_location_label}
-                  </div>
-                  <div
-                    aria-hidden
-                    style={{
-                      fontSize: 10,
-                      letterSpacing: "0.08em",
-                      textTransform: "uppercase",
-                      color: "var(--nex-accent)",
-                      fontWeight: 700,
-                    }}
-                  >
-                    Directions ↗
-                  </div>
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: 8,
-                    fontFamily: "var(--nex-font-display)",
-                    fontSize: 15,
-                    lineHeight: 1.35,
-                    fontWeight: 600,
-                    color: "var(--nex-text)",
-                  }}
-                >
-                  <span aria-hidden style={{ flex: "0 0 auto" }}>📍</span>
-                  <span style={{ flex: 1 }}>{content.address}</span>
-                </div>
-                <div
-                  style={{
-                    marginTop: 8,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    fontSize: 12,
-                    color: "var(--nex-text-dim)",
-                  }}
-                >
-                  <span aria-hidden>🕐</span>
-                  <span>
-                    {formatTodayHoursLabel(content.hoursByDay, content.hours) ??
-                      content.hours ??
-                      "Hours to be confirmed"}
-                  </span>
-                </div>
-              </a>
-            }
+            // Owner-sealed 2026-11-13 · productsFooter retired per the
+            // Visit Us footer removal directive.
+            productsFooter={null}
           />
         </div>
         <CoverIdentityRail
@@ -2283,96 +1818,9 @@ export function LayoutPersonalBrandRound({
             orderingCopy={content.infoPages?.delivery_details ?? null}
             galleryImages={content.galleryImages}
             productsVariant="round"
-            productsFooter={
-              <a
-                href={
-                  content.locationLat != null && content.locationLng != null
-                    ? `https://www.google.com/maps/dir/?api=1&destination=${content.locationLat},${content.locationLng}`
-                    : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-                        content.address,
-                      )}`
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: "block",
-                  marginTop: 20,
-                  padding: "16px 18px",
-                  borderRadius: 14,
-                  border: "1px dashed var(--nex-accent-soft)",
-                  background:
-                    "linear-gradient(180deg, var(--nex-accent-faint), rgba(3,8,20,0.35))",
-                  textDecoration: "none",
-                  color: "inherit",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "baseline",
-                    justifyContent: "space-between",
-                    gap: 10,
-                    marginBottom: 6,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 10,
-                      letterSpacing: "0.14em",
-                      textTransform: "uppercase",
-                      color: "var(--nex-accent)",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {t.section_location_label}
-                  </div>
-                  <div
-                    aria-hidden
-                    style={{
-                      fontSize: 10,
-                      letterSpacing: "0.08em",
-                      textTransform: "uppercase",
-                      color: "var(--nex-accent)",
-                      fontWeight: 700,
-                    }}
-                  >
-                    Directions ↗
-                  </div>
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: 8,
-                    fontFamily: "var(--nex-font-display)",
-                    fontSize: 15,
-                    lineHeight: 1.35,
-                    fontWeight: 600,
-                    color: "var(--nex-text)",
-                  }}
-                >
-                  <span aria-hidden style={{ flex: "0 0 auto" }}>📍</span>
-                  <span style={{ flex: 1 }}>{content.address}</span>
-                </div>
-                <div
-                  style={{
-                    marginTop: 8,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    fontSize: 12,
-                    color: "var(--nex-text-dim)",
-                  }}
-                >
-                  <span aria-hidden>🕐</span>
-                  <span>
-                    {formatTodayHoursLabel(content.hoursByDay, content.hours) ??
-                      content.hours ??
-                      "Hours to be confirmed"}
-                  </span>
-                </div>
-              </a>
-            }
+            // Owner-sealed 2026-11-13 · productsFooter retired per the
+            // Visit Us footer removal directive.
+            productsFooter={null}
           />
         </div>
         <CoverIdentityRail

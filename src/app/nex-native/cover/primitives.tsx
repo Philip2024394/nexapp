@@ -24,6 +24,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { SocialBrandIcon } from "@/components/nex-native/social/brand-icon";
 
 // ─── Charm glyph registry ────────────────────────────────────────────
 // One SVG per theme "family." Themes without a bespoke charm get a
@@ -198,15 +199,13 @@ function countryCodeToFlagEmoji(code: string | null | undefined): string | null 
 export function CoverIdentityBadge(
   props: CoverIdentityBadgeProps,
 ): React.JSX.Element {
-  // Founder direction 2026-09-30 (revised · sealed) · hero and
-  // compact now render IDENTICALLY so every cover template shows
-  // the same identity block. Reference is Template 03 (Product
-  // Seller): portrait 80 · name 15/700 · subtitle 12 · flag badge
-  // 36 · online marker 10/700. The `size` prop is kept for API
-  // stability but no longer changes anything.
+  // Owner directive 2026-11-12 (second pass) · portrait grown 20%
+  // from 48 → 58. Still smaller than the sealed 80 reference but
+  // noticeably bigger than the chat-header 48 so the shop identity
+  // reads as the anchor on the template.
   const isHero = false;
   void props.size;
-  const portraitSize = 80;
+  const portraitSize = 58;
   return (
     <>
       <style>{`
@@ -241,12 +240,12 @@ export function CoverIdentityBadge(
             flexShrink: 0,
           }}
         >
-          {props.presenceOnline && (
-            <>
-              <span aria-hidden data-nex-cover-ping />
-              <span aria-hidden data-nex-cover-ping data-nex-cover-ping-2 />
-            </>
-          )}
+          {/* Owner directive 2026-11-12 · shop portrait ALWAYS wears a
+              green rim + green ping · supersedes the presence-gated
+              model. Shop identity on NEX reads as "live and reachable"
+              as a brand standard, not as a conditional presence cue. */}
+          <span aria-hidden data-nex-cover-ping />
+          <span aria-hidden data-nex-cover-ping data-nex-cover-ping-2 />
           <div
             aria-hidden
             style={{
@@ -259,9 +258,11 @@ export function CoverIdentityBadge(
                 : `linear-gradient(135deg, var(--nex-accent-soft) 0%, var(--nex-panel) 100%)`,
               backgroundSize: "cover",
               backgroundPosition: "center 30%",
-              border: "2px solid var(--nex-accent)",
+              // Owner directive 2026-11-12 · rim locked to NEX presence
+              // green (#16D66B) across all themes · was theme accent.
+              border: "2px solid #16D66B",
               boxShadow:
-                "0 6px 22px rgba(0,0,0,0.45), 0 0 18px var(--nex-accent-glow)",
+                "0 6px 22px rgba(0,0,0,0.45), 0 0 18px rgba(22, 214, 107, 0.45)",
               display: "grid",
               placeItems: "center",
               color: "var(--nex-text)",
@@ -1286,6 +1287,13 @@ export interface CoverSocialLinks {
   instagram?: string;
   tiktok?: string;
   facebook?: string;
+  // Owner directive 2026-11-12 · X + YouTube added so the sealed
+  // 5-platform brand-icon sprite can render everywhere. The DB
+  // (nex_account_profile, nex_business) already stores these handles
+  // (migrations 026/027 + 339) · they were never wired into the cover
+  // render until now.
+  x?: string;
+  youtube?: string;
   whatsapp?: string;
   website?: string;
   other?: { label: string; url: string }[];
@@ -1302,14 +1310,20 @@ export function CoverIdentityRail({
   social: CoverSocialLinks | null;
   themeId: string;
 }): React.JSX.Element {
+  // Owner directive 2026-11-12 · shop templates render ONLY the 5
+  // branded platforms (Instagram, TikTok, X, YouTube, Facebook) via
+  // the owner-provided sprite. WhatsApp + Website rows are removed
+  // per owner feedback: "we dont have on shop templates - website url
+  // or whats app". Other-link (uncommon custom links) also drops.
+  // Backend columns stay intact · this is a render cut, not a data
+  // cut · they can be re-shown later if needed.
   const icons = social
     ? [
-        social.instagram && { key: "ig", label: "Instagram", url: `https://instagram.com/${strip(social.instagram)}`, glyph: <IconInstagram /> },
-        social.tiktok && { key: "tt", label: "TikTok", url: `https://tiktok.com/@${strip(social.tiktok).replace(/^@/, "")}`, glyph: <IconTikTok /> },
-        social.facebook && { key: "fb", label: "Facebook", url: `https://facebook.com/${strip(social.facebook)}`, glyph: <IconFacebook /> },
-        social.whatsapp && { key: "wa", label: "WhatsApp", url: `https://wa.me/${strip(social.whatsapp).replace(/[^\d+]/g, "").replace(/^\+/, "")}`, glyph: <IconWhatsApp /> },
-        social.website && { key: "web", label: "Website", url: social.website, glyph: <IconGlobe /> },
-        ...(social.other ?? []).map((o) => ({ key: o.url, label: o.label, url: o.url, glyph: <IconLink /> })),
+        social.instagram && { kind: "brand" as const, key: "ig", platform: "instagram" as const, label: "Instagram", url: `https://instagram.com/${strip(social.instagram)}` },
+        social.tiktok    && { kind: "brand" as const, key: "tt", platform: "tiktok"    as const, label: "TikTok",    url: `https://tiktok.com/@${strip(social.tiktok).replace(/^@/, "")}` },
+        social.x         && { kind: "brand" as const, key: "x",  platform: "x"         as const, label: "X",         url: `https://x.com/${strip(social.x).replace(/^@/, "")}` },
+        social.youtube   && { kind: "brand" as const, key: "yt", platform: "youtube"   as const, label: "YouTube",   url: `https://youtube.com/@${strip(social.youtube).replace(/^@/, "")}` },
+        social.facebook  && { kind: "brand" as const, key: "fb", platform: "facebook"  as const, label: "Facebook",  url: `https://facebook.com/${strip(social.facebook)}` },
       ].filter(Boolean)
     : [];
   return (
@@ -1324,19 +1338,12 @@ export function CoverIdentityRail({
         // above without a divider line.
       }}
     >
-      {handle && (
-        <div
-          style={{
-            fontFamily: "var(--nex-font-display)",
-            fontSize: 15,
-            fontWeight: 700,
-            letterSpacing: "-0.005em",
-            color: "var(--nex-text)",
-          }}
-        >
-          {handle}
-        </div>
-      )}
+      {/* Owner-sealed 2026-11-13 · handle line retired from the footer
+          · the shop identity header already carries the shop name ·
+          @handle in the footer was duplicating the burger-menu
+          "@handbags-direct" line. `handle` prop kept for API stability
+          so every call-site can stay unchanged. */}
+      {false && handle ? <span /> : null}
       {icons.length > 0 && (
         <div
           style={{
@@ -1356,64 +1363,36 @@ export function CoverIdentityRail({
             paddingRight: 4,
           }}
         >
-          {icons.map((it) => it && (
-            <a
-              key={it.key}
-              href={it.url}
-              target="_blank"
-              rel="noreferrer noopener"
-              aria-label={it.label}
-              title={it.label}
-              /* Owner directive 2026-11-06 (revised) · "Social Links
-                 need solid color buttons". Solid gold fill
-                 (var(--nex-world-secondary)) with warm ink glyph so
-                 the brand icons pop instead of reading as outline
-                 chips. No gloss, no gradient, no shadow · matches
-                 the new solid Choose Background CTA. */
-              style={{
-                width: 30,
-                height: 30,
-                flexShrink: 0,
-                borderRadius: 9,
-                display: "grid",
-                placeItems: "center",
-                background: "var(--nex-world-secondary, #C6A15B)",
-                border: "none",
-                color: "#1A120A",
-                textDecoration: "none",
-                boxShadow: "none",
-              }}
-            >
-              {it.glyph}
-            </a>
-          ))}
+          {icons.map((it) => {
+            if (!it) return null;
+            // Owner directive 2026-11-12 · only the 5 branded
+            // platforms render here · the sprite image is the icon,
+            // so the link is a bare wrapper with no gold pill.
+            return (
+              <a
+                key={it.key}
+                href={it.url}
+                target="_blank"
+                rel="noreferrer noopener"
+                aria-label={it.label}
+                title={it.label}
+                style={{
+                  flexShrink: 0,
+                  display: "inline-flex",
+                  textDecoration: "none",
+                  lineHeight: 0,
+                }}
+              >
+                <SocialBrandIcon platform={it.platform} size={30} />
+              </a>
+            );
+          })}
         </div>
       )}
-      {location && (
-        <div
-          style={{
-            fontSize: 11,
-            color: "var(--nex-text-dim)",
-            letterSpacing: "0.03em",
-            // Founder direction 2026-09-30 · long addresses (e.g.
-            // "Jl. Industri Raya No. 345, City West Park, Bali 80361")
-            // must hang-indent so wrapped lines align under the address
-            // text, NOT under the 📍 icon. Flex-row · icon in its own
-            // fixed-width cell · address flex-grows into its own column
-            // that wraps within its own left edge.
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 6,
-          }}
-        >
-          <span aria-hidden style={{ flex: "0 0 auto" }}>
-            📍
-          </span>
-          <span style={{ flex: "1 1 auto", minWidth: 0 }}>
-            {location}
-          </span>
-        </div>
-      )}
+      {/* Owner-sealed 2026-11-13 · footer location line (📍 city)
+          retired · address now lives only in the burger menu's Visit
+          Us slider · `location` prop kept for API stability. */}
+      {false && location ? <span /> : null}
       <div
         style={{
           marginTop: 4,
