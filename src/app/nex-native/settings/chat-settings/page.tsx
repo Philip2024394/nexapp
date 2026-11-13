@@ -212,7 +212,7 @@ export default async function ChatSettingsPage({
           <LinkCard
             href="/nex-native/settings/disappearing-messages"
             emoji="⏳"
-            title="Disappearing messages"
+            title="Delete Message"
             subtitle="Set time zone"
             rightLabel={disappearingLabel}
           />
