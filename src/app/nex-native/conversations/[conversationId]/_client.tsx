@@ -75,7 +75,11 @@ interface Props {
   // NOT render the shop's avatar beside each shop bubble (the header
   // already carries the shop identity).
   readonly peerAvatarUrl: string | null;
-  readonly peerHandle: string | null;
+  // Owner directive 2026-11-13 (iter 20) · fully resolved href for the
+  // avatar tap · server decides whether to route to the shop slug
+  // (customer face) or the /profile/<handle> page (owner face). null
+  // means render a non-tappable avatar.
+  readonly peerLinkHref: string | null;
   readonly peerDisplayName: string | null;
   readonly shopProducts: ReadonlyArray<{
     id: string;
@@ -116,7 +120,7 @@ export function BusinessConversationClient({
   businessCategory,
   accentHex,
   peerAvatarUrl,
-  peerHandle,
+  peerLinkHref,
   peerDisplayName,
   shopProducts,
   initialMessages,
@@ -142,6 +146,31 @@ export function BusinessConversationClient({
   const seenIds = React.useRef<Set<string>>(new Set(initialMessages.map((m) => m.id)));
 
   const peerReady = !!peerAccountId;
+
+  // Owner directive 2026-11-13 (iter 20) · track this device's id so
+  // we can collapse fan-out duplicates. sendEncryptedBusinessMessage
+  // emits one row per recipient device (peer devices + sender's own
+  // other devices) · all sharing a message_group_id. Only ONE of
+  // those rows is addressed to THIS device (recipient_device_id ===
+  // selfDeviceId) · the others can't be decrypted here and render
+  // as "⋯" fallbacks. The device id resolves asynchronously via
+  // ensureDeviceKey() so we store it in state once known and filter
+  // the message list on it.
+  const [selfDeviceId, setSelfDeviceId] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const self = await ensureDeviceKey();
+        if (!cancelled) setSelfDeviceId(self.deviceId);
+      } catch {
+        /* no key yet · list stays unfiltered until a key resolves */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Owner directive 2026-11-13 (iter 13) · product-share cooldown.
   // Once the viewer sends a product card, the "open products" trigger
@@ -377,23 +406,58 @@ export function BusinessConversationClient({
           viewerSide={viewerSide}
         />
 
-        {liveMessages.length === 0 ? null : (
-          liveMessages.map((m, i) => {
+        {(() => {
+          // Owner directive 2026-11-13 (iter 20) · fan-out dedup.
+          // Group rows by message_group_id · keep only the row
+          // addressed to THIS device (recipient_device_id ===
+          // selfDeviceId). Non-encrypted rows pass through as-is.
+          // Groups that have no row for this device fall through
+          // with their first row so the sender still sees the
+          // message (plaintext is in local send state anyway for
+          // mine, or the "⋯" fallback for peer-only rows).
+          // Before selfDeviceId resolves we render unfiltered to
+          // avoid a flash of empty content.
+          const filtered: typeof liveMessages = [];
+          if (!selfDeviceId) {
+            filtered.push(...liveMessages);
+          } else {
+            const seenGroup = new Set<string>();
+            for (const m of liveMessages) {
+              if (!m.encrypted) {
+                filtered.push(m);
+                continue;
+              }
+              const gid = m.message_group_id;
+              // If the row is addressed to this device · always keep.
+              if (m.recipient_device_id === selfDeviceId) {
+                if (gid) seenGroup.add(gid);
+                filtered.push(m);
+                continue;
+              }
+              // Else · only keep if no group-mate has already landed
+              // (prevents the "⋯" copies). Groupless rows (gid null)
+              // pass through so legacy data still renders.
+              if (!gid) {
+                filtered.push(m);
+                continue;
+              }
+              if (seenGroup.has(gid)) continue;
+              seenGroup.add(gid);
+              filtered.push(m);
+            }
+          }
+          return filtered.length === 0 ? null : filtered.map((m, i) => {
             const mine = m.sender_account_id === selfAccountId;
-            const prev = i > 0 ? liveMessages[i - 1] : null;
+            const prev = i > 0 ? filtered[i - 1] : null;
             const firstInRun =
               !prev || prev.sender_account_id !== m.sender_account_id;
-            // Owner directive 2026-11-13 (iter 15) · owner-view only ·
-            // show the customer's avatar on the first bubble of each
-            // of their runs so the shop can see WHO is writing and
-            // tap through to their profile. Customer face NEVER sees
-            // avatars beside shop bubbles (header already shows the
-            // shop).
+            // Owner directive 2026-11-13 (iter 20) · peer avatar shows
+            // on BOTH views now · customer face sees the shop logo
+            // beside shop bubbles · owner face sees the customer
+            // avatar beside customer bubbles. Only on the first
+            // bubble of a run to keep the rail clean.
             const showPeerAvatar =
-              !mine &&
-              viewerSide === "business" &&
-              firstInRun &&
-              !!peerAvatarUrl;
+              !mine && firstInRun && !!peerAvatarUrl;
             const decrypted = plaintextById[m.id] ?? (m.encrypted ? null : m.body);
             // Owner directive 2026-11-13 (iter 2) · product envelope
             // lives INSIDE the decrypted plaintext · only decoded on
@@ -425,10 +489,13 @@ export function BusinessConversationClient({
               renderedText = decrypted ?? "⋯";
             }
             const isProductCard = !!productEnvelope;
-            // Avatar lane reserved only on OWNER view so customer's
-            // bubbles align consistently (first-of-run shows avatar,
-            // rest show a 28px spacer).
-            const reserveAvatarLane = viewerSide === "business" && !mine;
+            // Owner directive 2026-11-13 (iter 20) · avatar lane
+            // reserved on BOTH views now · the peer avatar lane sits
+            // to the left of every "theirs" bubble (customer sees
+            // shop logo, owner sees customer avatar). First-of-run
+            // shows the avatar · subsequent in-run bubbles show a
+            // 28px spacer so the column stays aligned.
+            const reserveAvatarLane = !mine;
             return (
               <div
                 key={m.id}
@@ -443,10 +510,10 @@ export function BusinessConversationClient({
                 }}
               >
                 {reserveAvatarLane ? (
-                  showPeerAvatar && peerAvatarUrl && peerHandle ? (
+                  showPeerAvatar && peerAvatarUrl && peerLinkHref ? (
                     <Link
-                      href={`/nex-native/profile/${peerHandle}`}
-                      aria-label={`Open ${peerDisplayName ?? "customer"} profile`}
+                      href={peerLinkHref}
+                      aria-label={`Open ${peerDisplayName ?? "peer"} profile`}
                       data-nex-business-conv-peer-avatar
                       style={{
                         width: 28,
@@ -559,8 +626,8 @@ export function BusinessConversationClient({
               </div>
               </div>
             );
-          })
-        )}
+          });
+        })()}
       </div>
 
       {/* Owner directive 2026-11-13 (iter 10) · composer layout:

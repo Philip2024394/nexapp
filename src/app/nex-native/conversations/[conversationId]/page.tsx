@@ -490,15 +490,29 @@ export default async function BusinessConversationPage({
         businessDisplayName={business.display_name}
         businessCategory={business.business_category ?? null}
         accentHex={accentHex}
-        // Owner directive 2026-11-13 (iter 15) · peer identity for the
-        // owner-view avatar lane · reads the customer's avatar from
-        // their profile row, handle from their account row, display
-        // name from the account row. On the customer face these are
-        // still passed so the client contract stays uniform, but the
-        // client only renders the avatar when viewerSide === "business".
-        peerAvatarUrl={otherProfile?.avatar_url ?? null}
-        peerHandle={otherAccount?.nex_handle ?? null}
-        peerDisplayName={otherAccount?.display_name ?? null}
+        // Owner directive 2026-11-13 (iter 20) · peer identity on BOTH
+        // viewer sides · customer face sees the SHOP LOGO beside shop
+        // bubbles (matches the header avatar) · owner face sees the
+        // CUSTOMER's profile avatar beside customer bubbles. Tap →
+        // relevant profile surface (shop slug for customer, nex-handle
+        // for owner).
+        peerAvatarUrl={
+          viewerParticipant.side === "customer"
+            ? (business.logo_url ?? null)
+            : (otherProfile?.avatar_url ?? null)
+        }
+        peerLinkHref={
+          viewerParticipant.side === "customer"
+            ? `/nex-native/${business.slug}`
+            : otherAccount?.nex_handle
+              ? `/nex-native/profile/${otherAccount.nex_handle}`
+              : null
+        }
+        peerDisplayName={
+          viewerParticipant.side === "customer"
+            ? business.display_name
+            : (otherAccount?.display_name ?? null)
+        }
         shopProducts={products}
         initialMessages={messages}
         viewerSide={viewerParticipant.side}
