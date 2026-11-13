@@ -112,6 +112,38 @@ const CONTACTS = [
     business: {
       displayName: "Handbags direct",
       slug: "handbags-direct",
+      description: "Hand-stitched handbags from Yogyakarta — small batch, natural leathers, traditional motifs. Direct to buyer, no middle shops.",
+      category: "product-brand",
+      city: "Yogyakarta",
+      logoUrl: cover("handbags-direct-logo"),
+      // Taxonomy · mig 239 requires department_id + category_id NOT NULL
+      // on every nex_product · fashion_clothing / bags_luggage covers
+      // every handbag SKU below.
+      productDepartment: "fashion_clothing",
+      productCategory: "bags_luggage",
+      products: [
+        {
+          name: "Classic hand-stitched leather tote",
+          description: "Full-grain natural leather, hand-stitched edges, unlined interior with one slip pocket. Carries a laptop and a notebook.",
+          pricePence: 450000,
+          currency: "IDR",
+          imageUrl: cover("rosa-product-tote"),
+        },
+        {
+          name: "Rattan weave crossbody",
+          description: "Hand-woven rattan body with leather strap and brass hardware. Comes with a cotton dust bag.",
+          pricePence: 325000,
+          currency: "IDR",
+          imageUrl: cover("rosa-product-rattan-crossbody"),
+        },
+        {
+          name: "Batik-lined evening clutch",
+          description: "Leather clutch with hand-dyed batik lining. Magnetic snap closure. Pairs with the rattan crossbody as a 2-piece set.",
+          pricePence: 275000,
+          currency: "IDR",
+          imageUrl: cover("rosa-product-batik-clutch"),
+        },
+      ],
     },
   },
   {
@@ -179,6 +211,35 @@ const CONTACTS = [
     business: {
       displayName: "watch warehouse",
       slug: "watch-warehouse",
+      description: "Vintage and modern watches direct from Jakarta — Seiko, Casio, G-Shock, Timex and a rotating case of pre-owned mechanicals. Warehouse pricing, worldwide shipping.",
+      category: "ecommerce",
+      city: "Jakarta",
+      logoUrl: cover("watch-warehouse-logo"),
+      productDepartment: "jewellery_watches",
+      productCategory: "watches",
+      products: [
+        {
+          name: "Seiko SKX007 diver (pre-owned)",
+          description: "Classic 42mm diver · 7S26 automatic · Hardlex crystal · 200m water resistance · comes on the original Jubilee bracelet. Fully serviced before despatch.",
+          pricePence: 2850000,
+          currency: "IDR",
+          imageUrl: cover("tri-product-seiko-skx"),
+        },
+        {
+          name: "Casio G-Shock DW-5600E",
+          description: "Original square · resin case + strap · 200m water resistance · 7-year battery · standard module.",
+          pricePence: 1250000,
+          currency: "IDR",
+          imageUrl: cover("tri-product-gshock-5600"),
+        },
+        {
+          name: "Timex Weekender 38mm",
+          description: "Field-style quartz · NATO strap (choose black / olive / navy on checkout) · Indiglo backlight · brass case.",
+          pricePence: 850000,
+          currency: "IDR",
+          imageUrl: cover("tri-product-timex-weekender"),
+        },
+      ],
     },
   },
   {
@@ -305,22 +366,80 @@ try {
     );
 
     // Owner directive 2026-11-13 · activate shops for seeded mocks like
-    // real users · when a persona carries `business`, seed a nex_business
-    // row owned by them. Minimum columns only (id/owner/display/slug) ·
-    // later migrations added many optional columns (logo, description,
-    // address, hours, payment methods etc.) that default to NULL and
-    // can be populated by the owner later from the Shop Settings surface.
-    // Idempotent on re-run via ON CONFLICT on the unique slug.
+    // real users. When a persona carries `business`, seed a nex_business
+    // row owned by them · optional `description / category / city /
+    // logoUrl` populate the shop profile so the public /nex-native/<slug>
+    // page renders a real storefront, not an empty shell. Idempotent on
+    // re-run via ON CONFLICT (slug).
     if (c.business) {
-      await client.query(
-        `INSERT INTO nex_business (owner_account_id, display_name, slug)
-         VALUES ($1, $2, $3)
+      const b = c.business;
+      const businessResult = await client.query(
+        `INSERT INTO nex_business (
+           owner_account_id, display_name, slug,
+           description, business_category, city, logo_url
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
          ON CONFLICT (slug) DO UPDATE SET
-           display_name = EXCLUDED.display_name,
-           owner_account_id = EXCLUDED.owner_account_id,
-           updated_at = now()`,
-        [c.id, c.business.displayName, c.business.slug],
+           display_name      = EXCLUDED.display_name,
+           owner_account_id  = EXCLUDED.owner_account_id,
+           description       = COALESCE(EXCLUDED.description, nex_business.description),
+           business_category = COALESCE(EXCLUDED.business_category, nex_business.business_category),
+           city              = COALESCE(EXCLUDED.city, nex_business.city),
+           logo_url          = COALESCE(EXCLUDED.logo_url, nex_business.logo_url),
+           updated_at        = now()
+         RETURNING id`,
+        [
+          c.id,
+          b.displayName,
+          b.slug,
+          b.description ?? null,
+          b.category ?? null,
+          b.city ?? null,
+          b.logoUrl ?? null,
+        ],
       );
+      const businessId = businessResult.rows[0].id;
+
+      // Owner directive 2026-11-13 · seed `products` array into nex_product.
+      // Deterministic on re-run via a composite uniqueness check: delete
+      // any prior rows the seed previously created for this business,
+      // then re-insert the current set. Keeps the catalogue aligned with
+      // whatever the seed file declares without accumulating orphans.
+      if (Array.isArray(b.products) && b.products.length > 0) {
+        // Clean slate for products owned by this seeded business so edits
+        // to the script re-sync cleanly. Only touches products with a
+        // matching name among the current seed set, so manually-added
+        // products (if the owner creates any via the Shop UI later) are
+        // not disturbed.
+        await client.query(
+          `DELETE FROM nex_product
+           WHERE business_id = $1 AND name = ANY($2::text[])`,
+          [businessId, b.products.map((p) => p.name)],
+        );
+        for (const p of b.products) {
+          await client.query(
+            `INSERT INTO nex_product (
+               business_id, name, description,
+               price_pence, currency, status, image_url,
+               department_id, category_id
+             ) VALUES ($1, $2, $3, $4, $5, 'live', $6, $7, $8)`,
+            [
+              businessId,
+              p.name,
+              p.description ?? null,
+              p.pricePence,
+              p.currency,
+              p.imageUrl ?? null,
+              // mig 239 · department_id + category_id NOT NULL. Shop-wide
+              // defaults set on the business block; per-product overrides
+              // still wired (none used today but future SKUs can split
+              // across categories without touching the loop).
+              p.department ?? b.productDepartment ?? "everything_else",
+              p.category ?? b.productCategory ?? "other",
+            ],
+          );
+        }
+      }
     }
   }
 
@@ -336,7 +455,12 @@ try {
             (p.avatar_url IS NOT NULL) AS has_avatar,
             (p.cover_image_url IS NOT NULL) AS has_cover,
             b.display_name AS shop_name,
-            b.slug         AS shop_slug
+            b.slug         AS shop_slug,
+            b.business_category,
+            b.city         AS shop_city,
+            (b.logo_url IS NOT NULL) AS has_logo,
+            (SELECT count(*) FROM nex_product px
+              WHERE px.business_id = b.id AND px.status = 'live')::int AS live_products
      FROM nex_account a
      JOIN nex_account_profile p ON p.account_id = a.id
      LEFT JOIN nex_business b ON b.owner_account_id = a.id
