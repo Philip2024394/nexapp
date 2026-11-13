@@ -198,7 +198,16 @@ export function HeaderRightCluster({
   // and the Cart link surfaces only after a client-side useEffect
   // flips `hydrated=true`. forceShowCart still works on both.
   const showCart = forceShowCart || (hydrated && NEX_COMMERCE_ENABLED);
-  const showShop = (NEX_COMMERCE_ENABLED || forceShowCart) && !!shop;
+  // Owner hydration fix 2026-11-13 · showShop was still reading
+  // NEX_COMMERCE_ENABLED directly, which the server resolves from
+  // process.env but the client bundle sees as `undefined`. That split
+  // produced the same server/client mismatch as showCart previously
+  // did · classic "Open <Shop>'s shop" button on the SSR snapshot vs
+  // missing on initial client render. Mirror the showCart pattern:
+  // gate on `hydrated` so both renders match (both omit on first
+  // paint, then the shop button surfaces after useEffect flips).
+  const showShop =
+    !!shop && (forceShowCart || (hydrated && NEX_COMMERCE_ENABLED));
   const hasShopProducts = !!shop && shop.products.length > 0;
   const shopAriaLabel = shop
     ? shop.isVenue
