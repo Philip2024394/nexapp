@@ -32,6 +32,7 @@ import type * as React from "react";
 import { redirect } from "next/navigation";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { getChatPreferences } from "@/lib/nex-native/chat-preferences-service";
+import { getChatViewPreferencesSafe } from "@/lib/nex-native/chat-view-preferences-service";
 import { getAccountById } from "@/lib/nex-native/account-service";
 import { getProfileByAccountId } from "@/lib/nex-native/account-profile-service";
 import { getThemeById } from "@/lib/nex-native/chat-theme-service";
@@ -66,10 +67,11 @@ export default async function ChatSettingsPage({
 
   // Parallel DB reads · all fail-safe · the page still renders if any
   // individual read errors (service degraded defaults).
-  const [prefs, account, defaultSeconds] = await Promise.all([
+  const [prefs, account, defaultSeconds, viewPrefs] = await Promise.all([
     getChatPreferences(session.account.id),
     getAccountById(session.account.id).catch(() => null),
     getDisappearingDefaultSafe(session.account.id),
+    getChatViewPreferencesSafe(session.account.id).catch(() => null),
   ]);
   const currentThemeId = account?.chat_theme ?? null;
   const currentTheme = currentThemeId
@@ -204,7 +206,7 @@ export default async function ChatSettingsPage({
             emoji="⏳"
             title="Delete Message"
             subtitle="Set time zone"
-            rightLabel={disappearingLabel}
+            rightIndicator={defaultSeconds > 0 ? "on" : "off"}
           />
 
           {/* ─── 5 · Chat Experience ─────────────────────────────── */}
@@ -219,6 +221,9 @@ export default async function ChatSettingsPage({
             emoji="📷"
             title="Screen Copying"
             subtitle="Prevent screen copy"
+            rightIndicator={
+              viewPrefs?.screenshot_copy_protection_enabled ? "on" : "off"
+            }
           />
 
           <div style={{ height: 14 }} />
@@ -282,6 +287,7 @@ function LinkCard({
   subtitle,
   comingSoon,
   rightLabel,
+  rightIndicator,
   emoji,
 }: {
   href: string;
@@ -289,6 +295,7 @@ function LinkCard({
   subtitle?: string;
   comingSoon?: boolean;
   rightLabel?: string;
+  rightIndicator?: "on" | "off" | "partial";
   emoji?: string;
 }): React.JSX.Element {
   return (
@@ -364,7 +371,36 @@ function LinkCard({
           </div>
         ) : null}
       </div>
-      {rightLabel ? (
+      {rightIndicator ? (
+        <span
+          aria-hidden
+          data-nex-chat-settings-link-indicator={rightIndicator}
+          style={{
+            flexShrink: 0,
+            width: 28,
+            height: 28,
+            borderRadius: "50%",
+            background:
+              rightIndicator === "on"
+                ? "#16D66B"
+                : rightIndicator === "off"
+                  ? "#D82A2A"
+                  : "#FFB300",
+            color: "#FFFFFF",
+            display: "grid",
+            placeItems: "center",
+            fontSize: 14,
+            fontWeight: 900,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
+          }}
+        >
+          {rightIndicator === "on"
+            ? "✓"
+            : rightIndicator === "off"
+              ? "✕"
+              : "•"}
+        </span>
+      ) : rightLabel ? (
         <span
           style={{
             flexShrink: 0,

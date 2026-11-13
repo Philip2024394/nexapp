@@ -55,8 +55,10 @@ const VIS_OPTIONS: ReadonlyArray<{ value: VisibilityLevel; label: string }> = [
 export function ChatSettingsClient({ prefs }: Props): React.JSX.Element {
   const [open, setOpen] = React.useState<OpenSheet>(null);
 
-  const visibilityLabel = (v: VisibilityLevel): string =>
-    VIS_OPTIONS.find((o) => o.value === v)?.label ?? "Nobody";
+  const visibilityIndicator = (
+    v: VisibilityLevel,
+  ): "on" | "off" | "partial" =>
+    v === "everyone" ? "on" : v === "nobody" ? "off" : "partial";
 
   return (
     <div style={{ display: "grid", gap: 8 }}>
@@ -64,28 +66,28 @@ export function ChatSettingsClient({ prefs }: Props): React.JSX.Element {
         emoji="✓✓"
         title="Read receipts"
         subtitle="Hide when viewing chat"
-        rightLabel={prefs.read_receipts_enabled ? "ON" : "OFF"}
+        rightIndicator={prefs.read_receipts_enabled ? "on" : "off"}
         onClick={() => setOpen({ kind: "boolean", id: "receipts" })}
       />
       <ControlCard
         emoji="💭"
         title="Typing Indicator"
         subtitle="Typing animation"
-        rightLabel={prefs.typing_indicator_enabled ? "ON" : "OFF"}
+        rightIndicator={prefs.typing_indicator_enabled ? "on" : "off"}
         onClick={() => setOpen({ kind: "boolean", id: "typing" })}
       />
       <ControlCard
         emoji="🕒"
         title="Last-seen"
         subtitle="Who can see when you were last active"
-        rightLabel={visibilityLabel(prefs.last_seen_visibility)}
+        rightIndicator={visibilityIndicator(prefs.last_seen_visibility)}
         onClick={() => setOpen({ kind: "visibility", id: "last-seen" })}
       />
       <ControlCard
         emoji="🟢"
         title="Online status"
         subtitle="Who can see when you're currently online"
-        rightLabel={visibilityLabel(prefs.online_status_visibility)}
+        rightIndicator={visibilityIndicator(prefs.online_status_visibility)}
         onClick={() => setOpen({ kind: "visibility", id: "online" })}
       />
 
@@ -137,12 +139,14 @@ function ControlCard({
   title,
   subtitle,
   rightLabel,
+  rightIndicator,
   onClick,
 }: {
   emoji: string;
   title: string;
   subtitle: string;
-  rightLabel: string;
+  rightLabel?: string;
+  rightIndicator?: "on" | "off" | "partial";
   onClick: () => void;
 }): React.JSX.Element {
   return (
@@ -205,21 +209,52 @@ function ControlCard({
           {subtitle}
         </div>
       </div>
-      <span
-        style={{
-          flexShrink: 0,
-          padding: "5px 10px",
-          borderRadius: 999,
-          background: CONTROL_BG,
-          color: CONTROL_ACTIVE,
-          fontSize: 10,
-          fontWeight: 800,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-        }}
-      >
-        {rightLabel}
-      </span>
+      {rightIndicator ? (
+        <span
+          aria-hidden
+          data-nex-chat-settings-control-indicator={rightIndicator}
+          style={{
+            flexShrink: 0,
+            width: 28,
+            height: 28,
+            borderRadius: "50%",
+            background:
+              rightIndicator === "on"
+                ? "#16D66B"
+                : rightIndicator === "off"
+                  ? "#D82A2A"
+                  : "#FFB300",
+            color: "#FFFFFF",
+            display: "grid",
+            placeItems: "center",
+            fontSize: 14,
+            fontWeight: 900,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
+          }}
+        >
+          {rightIndicator === "on"
+            ? "✓"
+            : rightIndicator === "off"
+              ? "✕"
+              : "•"}
+        </span>
+      ) : rightLabel ? (
+        <span
+          style={{
+            flexShrink: 0,
+            padding: "5px 10px",
+            borderRadius: 999,
+            background: CONTROL_BG,
+            color: CONTROL_ACTIVE,
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+          }}
+        >
+          {rightLabel}
+        </span>
+      ) : null}
     </button>
   );
 }
