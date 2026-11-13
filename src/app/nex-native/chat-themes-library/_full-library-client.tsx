@@ -32,6 +32,20 @@ const NEX_INK = "#F2F5F8";
 const NEX_INK_DIM = "#B5C3D6";
 const NEX_INK_MUTE = "#7D9BC0";
 
+/** Owner directive 2026-11-13 · entitlement props threaded from the
+ *  server page so the preview modal can render the correct CTA
+ *  (Apply / First theme free / Subscribe to Themes+ / Join waitlist)
+ *  without a round-trip when the modal opens. */
+export interface LibraryEntitlementProps {
+  /** `themes_plus_until > now()` on nex_account. */
+  readonly themesPlusActive: boolean;
+  /** Viewer has NO `source='first_free'` ownership row yet. */
+  readonly canClaimFirstFree: boolean;
+  /** Pre-formatted Themes+ monthly price for the viewer's region, or
+   *  null when the region is not a launch market (shows waitlist CTA). */
+  readonly themesPlusPriceLabel: string | null;
+}
+
 interface FullLibraryClientProps {
   readonly drawerSession: ControlDrawerSession | null;
   readonly viewerCreatorBadges: EarnedBadges;
@@ -40,12 +54,17 @@ interface FullLibraryClientProps {
    *  the unified nex_background_asset table (450 entries · 279 shop +
    *  171 chat). Falls back to LIBRARY_THEMES when empty for safety. */
   readonly themesOverride?: readonly LibraryTheme[];
+  /** Owner directive 2026-11-13 · Themes+ entitlement state for the
+   *  signed-in viewer. Optional for backward compatibility; when
+   *  omitted the modal falls back to its legacy "Apply" single CTA. */
+  readonly entitlement?: LibraryEntitlementProps;
 }
 
 export function FullLibraryClient({
   drawerSession,
   viewerCreatorBadges,
   themesOverride,
+  entitlement,
 }: FullLibraryClientProps): React.JSX.Element {
   const ACTIVE_THEMES: readonly LibraryTheme[] =
     themesOverride && themesOverride.length > 0 ? themesOverride : LIBRARY_THEMES;
@@ -276,6 +295,16 @@ export function FullLibraryClient({
                 theme={t}
                 onBuy={() => setSheet(t)}
                 onPreview={() => setPreviewTheme(t)}
+                locked={
+                  !!entitlement &&
+                  !entitlement.themesPlusActive &&
+                  !entitlement.canClaimFirstFree
+                }
+                firstFreeEligible={
+                  !!entitlement &&
+                  !entitlement.themesPlusActive &&
+                  entitlement.canClaimFirstFree
+                }
               />
             </li>
           ))}
@@ -381,6 +410,7 @@ export function FullLibraryClient({
         <ApplyPreviewModal
           theme={previewTheme}
           onClose={() => setPreviewTheme(null)}
+          entitlement={entitlement}
         />
       ) : null}
     </>
@@ -400,13 +430,32 @@ export function FullLibraryClient({
 function ApplyPreviewModal({
   theme,
   onClose,
+  entitlement,
 }: {
   readonly theme: LibraryTheme;
   readonly onClose: () => void;
+  readonly entitlement?: LibraryEntitlementProps;
 }): React.JSX.Element {
   const router = useRouter();
   const [applying, setApplying] = React.useState(false);
   const [result, setResult] = React.useState<string | null>(null);
+
+  // Owner directive 2026-11-13 · derive the CTA state from the
+  // threaded entitlement props. Four branches:
+  //   · themes-plus       → apply fires directly
+  //   · first-free        → apply fires with claimFirstFree:true
+  //   · subscribe (launch)→ Themes+ subscribe CTA (payment coming soon · Phase A)
+  //   · waitlist          → non-launch region · payment surface not offered
+  const ctaState: "themes_plus" | "first_free" | "subscribe" | "waitlist" =
+    !entitlement
+      ? "themes_plus" // legacy path · behave as before when entitlement not threaded
+      : entitlement.themesPlusActive
+        ? "themes_plus"
+        : entitlement.canClaimFirstFree
+          ? "first_free"
+          : entitlement.themesPlusPriceLabel
+            ? "subscribe"
+            : "waitlist";
   // Owner directive 2026-11-11 · scale bar under the phone darkens the
   // wallpaper so the user can judge contrast before applying. 0 = no
   // overlay · 1 = fully black · default 0.
@@ -443,7 +492,13 @@ function ApplyPreviewModal({
       // legacy frozen LIBRARY_THEMES array, ids are unprefixed and
       // need the "chat:" prefix prepended to match the seeded rows.
       const assetId = theme.id.includes(":") ? theme.id : `chat:${theme.id}`;
-      const r = await applyFromLibraryChatAction(assetId);
+      // Owner directive 2026-11-13 · first-free grant. When the CTA
+      // state is first_free, pass claimFirstFree:true so the action
+      // writes the `nex_theme_ownership` source='first_free' row
+      // before applying.
+      const r = await applyFromLibraryChatAction(assetId, {
+        claimFirstFree: ctaState === "first_free",
+      });
       if (r.ok) {
         // Owner directive 2026-11-12 · on success, close the preview
         // and route to the chat screen so the user sees the newly
@@ -648,59 +703,57 @@ function ApplyPreviewModal({
         </div>
       </div>
 
-      {/* Floating Select button · owner directive 2026-11-11 · no
-          container strip · button hovers directly over the modal base
-          at the bottom. × top-right still handles dismiss. */}
-      <button
-        type="button"
-        onClick={handleApply}
-        disabled={applying}
-        data-nex-library-apply="chat"
+      {/* Floating CTA block · owner directive 2026-11-13 · renders one of
+          four states derived from the entitlement props above. Apply /
+          First-free trigger the server action directly · Subscribe is a
+          payment-coming-soon CTA (Stripe not authorised yet) · Waitlist
+          surfaces for non-launch regions and offers no payment path. */}
+      <div
+        data-nex-library-cta-block
+        data-nex-library-cta-state={ctaState}
         style={{
           position: "absolute",
           left: 20,
           right: 20,
           bottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)",
           zIndex: 3,
-          minHeight: 46,
-          padding: "0 18px",
-          borderRadius: 999,
-          background: applying ? "rgba(255,114,0,0.5)" : "#FF7200",
-          color: "#FFFFFF",
-          border: "none",
-          cursor: applying ? "default" : "pointer",
-          fontWeight: 900,
-          fontSize: 13,
-          letterSpacing: "0.04em",
-          textTransform: "uppercase",
-          boxShadow: "0 6px 18px rgba(255, 114, 0, 0.35)",
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "stretch",
           gap: 8,
         }}
       >
-        <svg
-          aria-hidden
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={3}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M5 12l5 5 9-11" />
-        </svg>
-        <span>{applying ? "Applying..." : "Select Theme"}</span>
-      </button>
+        {ctaState === "themes_plus" ? (
+          <CtaPrimary
+            label={applying ? "Applying..." : "Select Theme"}
+            disabled={applying}
+            onClick={handleApply}
+          />
+        ) : null}
+
+        {ctaState === "first_free" ? (
+          <CtaPrimary
+            label={applying ? "Applying..." : "Apply · First theme free"}
+            disabled={applying}
+            onClick={handleApply}
+            badge="Free"
+          />
+        ) : null}
+
+        {ctaState === "subscribe" && entitlement?.themesPlusPriceLabel ? (
+          <CtaSubscribePlaceholder
+            priceLabel={entitlement.themesPlusPriceLabel}
+          />
+        ) : null}
+
+        {ctaState === "waitlist" ? <CtaWaitlist /> : null}
+      </div>
 
       {result ? (
         <div
           style={{
             position: "absolute",
-            bottom: "calc(env(safe-area-inset-bottom, 0px) + 76px)",
+            bottom: "calc(env(safe-area-inset-bottom, 0px) + 96px)",
             left: 0,
             right: 0,
             zIndex: 4,
@@ -712,6 +765,183 @@ function ApplyPreviewModal({
           {result}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+// ─── CTA helpers for the preview modal · owner directive 2026-11-13 ─
+
+function CtaPrimary({
+  label,
+  disabled,
+  onClick,
+  badge,
+}: {
+  label: string;
+  disabled: boolean;
+  onClick: () => void;
+  badge?: string;
+}): React.JSX.Element {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      data-nex-library-apply="chat"
+      style={{
+        minHeight: 46,
+        padding: "0 18px",
+        borderRadius: 999,
+        background: disabled ? "rgba(255,114,0,0.5)" : "#FF7200",
+        color: "#FFFFFF",
+        border: "none",
+        cursor: disabled ? "default" : "pointer",
+        fontWeight: 900,
+        fontSize: 13,
+        letterSpacing: "0.04em",
+        textTransform: "uppercase",
+        boxShadow: "0 6px 18px rgba(255, 114, 0, 0.35)",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+      }}
+    >
+      <svg
+        aria-hidden
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={3}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M5 12l5 5 9-11" />
+      </svg>
+      <span>{label}</span>
+      {badge ? (
+        <span
+          data-nex-library-apply-badge
+          style={{
+            marginLeft: 6,
+            padding: "2px 7px",
+            borderRadius: 999,
+            background: "#16D66B",
+            color: "#031018",
+            fontSize: 9,
+            fontWeight: 900,
+            letterSpacing: "0.12em",
+          }}
+        >
+          {badge}
+        </span>
+      ) : null}
+    </button>
+  );
+}
+
+function CtaSubscribePlaceholder({
+  priceLabel,
+}: {
+  priceLabel: string;
+}): React.JSX.Element {
+  return (
+    <div
+      data-nex-library-subscribe-placeholder
+      style={{
+        padding: "12px 16px",
+        borderRadius: 14,
+        background: "#FFFFFF",
+        border: "1px solid #FF7200",
+        color: "#0A0608",
+        boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+      }}
+    >
+      <div
+        aria-hidden
+        style={{
+          flexShrink: 0,
+          width: 34,
+          height: 34,
+          borderRadius: "50%",
+          background: "#FF7200",
+          color: "#FFFFFF",
+          display: "grid",
+          placeItems: "center",
+          fontSize: 14,
+          fontWeight: 900,
+        }}
+      >
+        +
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.2 }}>
+          Subscribe to Themes+ · {priceLabel}/mo
+        </div>
+        <div
+          style={{
+            marginTop: 2,
+            fontSize: 11,
+            color: "#7D5A3A",
+            lineHeight: 1.35,
+          }}
+        >
+          One subscription unlocks every paid chat theme. Payment opens shortly.
+        </div>
+      </div>
+      <span
+        aria-label="payment coming soon"
+        style={{
+          flexShrink: 0,
+          padding: "2px 8px",
+          borderRadius: 999,
+          background: "rgba(255,114,0,0.14)",
+          border: "1px solid #FF7200",
+          color: "#FF7200",
+          fontSize: 9,
+          fontWeight: 800,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+        }}
+      >
+        Soon
+      </span>
+    </div>
+  );
+}
+
+function CtaWaitlist(): React.JSX.Element {
+  return (
+    <div
+      data-nex-library-waitlist
+      style={{
+        padding: "12px 16px",
+        borderRadius: 14,
+        background: "#FFFFFF",
+        border: "1px dashed #FF7200",
+        color: "#0A0608",
+        boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
+      }}
+    >
+      <div style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.2 }}>
+        Not yet in your region
+      </div>
+      <div
+        style={{
+          marginTop: 2,
+          fontSize: 11,
+          color: "#7D5A3A",
+          lineHeight: 1.4,
+        }}
+      >
+        Themes+ is rolling out in Ireland, UK, USA, Indonesia and Australia
+        first. We&apos;ll let you know when your country goes live.
+      </div>
     </div>
   );
 }
@@ -913,14 +1143,26 @@ function ThemeCard({
   theme,
   onBuy,
   onPreview,
+  locked,
+  firstFreeEligible,
 }: {
   readonly theme: LibraryTheme;
   readonly onBuy: () => void;
   readonly onPreview: () => void;
+  /** Owner directive 2026-11-13 · viewer has no Themes+ access AND has
+   *  already consumed their first-free perk · tile shows a lock
+   *  indicator so they know Themes+ gates it. */
+  readonly locked?: boolean;
+  /** Owner directive 2026-11-13 · viewer still has their first-free
+   *  perk available · tile shows a green "First free" badge instead
+   *  of the lock. */
+  readonly firstFreeEligible?: boolean;
 }): React.JSX.Element {
   return (
     <article
       data-nex-library-full-tile={theme.id}
+      data-nex-library-full-tile-locked={locked ? "true" : undefined}
+      data-nex-library-full-tile-first-free={firstFreeEligible ? "true" : undefined}
       style={{
         display: "flex",
         flexDirection: "column",
@@ -993,6 +1235,61 @@ function ThemeCard({
             }}
           >
             New
+          </span>
+        ) : null}
+        {/* Owner directive 2026-11-13 · Themes+ gating badges (top-left).
+            `firstFreeEligible` wins over `locked` because tapping the
+            tile gives the user their free perk. */}
+        {firstFreeEligible ? (
+          <span
+            data-nex-library-tile-first-free-badge
+            aria-label="First theme free"
+            style={{
+              position: "absolute",
+              top: 8,
+              left: 8,
+              padding: "3px 8px",
+              borderRadius: 999,
+              background: "#16D66B",
+              color: "#031018",
+              fontSize: 10,
+              fontWeight: 800,
+              letterSpacing: 0.6,
+              textTransform: "uppercase",
+              lineHeight: 1,
+              boxShadow: "0 2px 8px rgba(22, 214, 107, 0.55)",
+              border: "1px solid rgba(22, 214, 107, 0.9)",
+              zIndex: 1,
+            }}
+          >
+            Free
+          </span>
+        ) : locked ? (
+          <span
+            data-nex-library-tile-lock-badge
+            aria-label="Themes+ required"
+            style={{
+              position: "absolute",
+              top: 8,
+              left: 8,
+              padding: "3px 8px",
+              borderRadius: 999,
+              background: "#FF7200",
+              color: "#FFFFFF",
+              fontSize: 10,
+              fontWeight: 800,
+              letterSpacing: 0.6,
+              textTransform: "uppercase",
+              lineHeight: 1,
+              boxShadow: "0 2px 8px rgba(255, 114, 0, 0.55)",
+              border: "1px solid rgba(255, 114, 0, 0.9)",
+              zIndex: 1,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+            }}
+          >
+            🔒 Themes+
           </span>
         ) : null}
         {/* Owner-authorised 2026-11-03 · small orange Preview button ·

@@ -34,6 +34,7 @@
 // nex_theme_ownership. None of those contain chat body data.
 
 import { nexSupabaseAdmin } from "../supabase-admin";
+import type { NexUuid } from "../types";
 
 /** Minimum theme fields the gate needs. */
 export interface ThemeEntitlementInput {
@@ -137,4 +138,106 @@ export function isThemesPlusActive(themesPlusUntil: string | null): boolean {
   const ms = Date.parse(themesPlusUntil);
   if (!Number.isFinite(ms)) return false;
   return ms > Date.now();
+}
+
+// ─── First free theme perk · owner-sealed 2026-11-13 ─────────────────
+//
+// Every account gets ONE paid theme free, permanently. Implemented as
+// a row in `nex_theme_ownership` with `source='first_free'`. The row
+// is written at apply-time by `applyFromLibraryChatAction` when the
+// caller explicitly requests the first-free grant AND the account is
+// eligible. Existing legacy ownership rows (source='stripe_one_time')
+// do NOT consume the first-free perk because `canClaimFirstFreeTheme`
+// specifically looks for a row with source='first_free'.
+//
+// Fail-safe: when the `source` column isn't yet present (older mig 194
+// snapshots), the reader returns `true` (unclaimed · can still grant)
+// and the writer returns `{ok:false, reason:'schema_missing'}`. UI is
+// expected to fall back to the standard Themes+ subscribe CTA.
+
+/** First-free source string constant · DO NOT typo · the string is
+ *  hard-matched against `nex_theme_ownership.acquired_via`. Schema
+ *  probed 2026-11-13 sandbox-only · the column is `acquired_via`
+ *  (NOT NULL text), NOT `source`. */
+export const FIRST_FREE_SOURCE = "first_free" as const;
+
+export type ClaimFirstFreeResult =
+  | { readonly ok: true; readonly themeId: string }
+  | {
+      readonly ok: false;
+      readonly reason:
+        | "already_claimed"
+        | "schema_missing"
+        | "db_error"
+        | "invalid_theme";
+    };
+
+/** True when the account has NO `first_free` ownership row yet · the
+ *  first-paid-theme perk is still available. Safe to call before the
+ *  ownership table / acquired_via column exists · catches the
+ *  missing-column error and returns `true` so the UI keeps offering
+ *  the grant (the writer below returns `schema_missing` in that state ·
+ *  the apply flow handles it honestly). */
+export async function canClaimFirstFreeTheme(
+  accountId: NexUuid,
+): Promise<boolean> {
+  try {
+    const { data, error } = await nexSupabaseAdmin
+      .from("nex_theme_ownership")
+      .select("id")
+      .eq("account_id", accountId)
+      .eq("acquired_via", FIRST_FREE_SOURCE)
+      .is("revoked_at", null)
+      .limit(1);
+    if (error) return true;
+    return !data || data.length === 0;
+  } catch {
+    return true;
+  }
+}
+
+/** Idempotent insert of the `first_free` ownership row for the account
+ *  + themeId. Returns `already_claimed` when a non-revoked first-free
+ *  row already exists for the account · `schema_missing` when the
+ *  table / column is absent · `db_error` on everything else.
+ *  `acquired_at` is explicitly stamped because the column is NOT NULL
+ *  per the mig 194 schema probed 2026-11-13. */
+export async function claimFirstFreeTheme(
+  accountId: NexUuid,
+  themeId: string,
+): Promise<ClaimFirstFreeResult> {
+  if (!themeId || themeId.length > 64) {
+    return { ok: false, reason: "invalid_theme" };
+  }
+  // Idempotency check · if the account already has any first_free row
+  // we refuse. Deliberately separate from the UI-level check so the
+  // writer stays race-safe when two tabs race.
+  const alreadyClaimed = !(await canClaimFirstFreeTheme(accountId));
+  if (alreadyClaimed) {
+    return { ok: false, reason: "already_claimed" };
+  }
+  try {
+    const { error } = await nexSupabaseAdmin
+      .from("nex_theme_ownership")
+      .insert({
+        account_id: accountId,
+        theme_id: themeId,
+        acquired_via: FIRST_FREE_SOURCE,
+        acquired_at: new Date().toISOString(),
+      });
+    if (error) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        (error as { code?: string }).code === "42703"
+      ) {
+        return { ok: false, reason: "schema_missing" };
+      }
+      return { ok: false, reason: "db_error" };
+    }
+    return { ok: true, themeId };
+  } catch {
+    return { ok: false, reason: "schema_missing" };
+  }
 }

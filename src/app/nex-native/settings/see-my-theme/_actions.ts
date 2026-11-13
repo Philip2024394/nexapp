@@ -27,7 +27,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { listFriends } from "@/lib/nex-native/friend-service";
 import { setThemeVisibilityPreference } from "@/lib/nex-native/relationship-service";
 
@@ -45,7 +45,9 @@ function redirectBack(status: string): never {
 export async function toggleThemeShareForContactAction(
   formData: FormData,
 ): Promise<never> {
-  const session = await resolveNexAppSessionFromContext();
+  // Owner directive 2026-11-13 · dev-impersonation parity on the action
+  // too · page uses the dev-override resolver, so the toggle must match.
+  const session = await resolveSessionWithDevOverride();
   if (!session) {
     redirect("/nex-native/sign-in?next=/nex-native/settings/see-my-theme");
   }

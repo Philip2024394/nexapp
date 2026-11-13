@@ -106,10 +106,14 @@ export const SHOP_ANNUAL: TierPricing = {
   ],
 };
 
-// ─── Chat Themes (one-time, per theme) ──────────────────────────────
-// Per-region pricing preserved from earlier sealed decision. IE row
-// stays live; launch-market rows (GB · US · ID) flipped `active: true`
-// per 2026-11-08 single-package rollout. Non-launch regions unchanged.
+// ─── Chat Themes (one-time, per theme) · RETIRED for new customers ──
+// Owner directive 2026-11-13 (restating 2026-11-11) · the per-theme
+// one-time purchase model is replaced by the Themes+ monthly
+// subscription below. Pricing table kept in code so legacy
+// `nex_theme_ownership` rows with `source='stripe_one_time'` still
+// resolve · UI must NOT offer this as a purchase option for new
+// customers. New entitlement flows go through Themes+ OR the
+// first-free grant.
 export const CHAT_THEME_PRICING: ReadonlyArray<RegionalPrice> = [
   { region: "IE", currency: "EUR", amountMinor: 349, active: true },
   { region: "GB", currency: "GBP", amountMinor: 299, active: true },
@@ -121,6 +125,32 @@ export const CHAT_THEME_PRICING: ReadonlyArray<RegionalPrice> = [
   { region: "IN", currency: "INR", amountMinor: 149, active: false },
   { region: "PH", currency: "PHP", amountMinor: 79, active: false },
 ];
+
+// ─── Themes+ · monthly subscription · SEALED 2026-11-13 ─────────────
+// Single subscription unlocks ALL paid chat themes. Every user keeps
+// their first paid theme free permanently via a `source='first_free'`
+// row in `nex_theme_ownership`. NO free trial at launch.
+// Supersedes CHAT_THEME_PRICING as the default offer for new customers.
+//
+// Launch markets (IE / GB / US / ID / AU) are `active: true`. Every
+// other region row MUST stay `active: false` so UI renders a WAITLIST
+// card · owner directive: "Unsupported regions must show a waitlist.
+// Do not fall back to USD."
+export const THEMES_PLUS_MONTHLY: TierPricing = {
+  tier: "shop", // reuse enum · ShopTier currently has no "themes_plus" member · acceptable because this constant is market-gated by name
+  interval: "month",
+  prices: [
+    { region: "IE", currency: "EUR", amountMinor: 249, active: true },
+    { region: "GB", currency: "GBP", amountMinor: 199, active: true },
+    { region: "US", currency: "USD", amountMinor: 249, active: true },
+    { region: "ID", currency: "IDR", amountMinor: 19000, active: true },
+    { region: "AU", currency: "AUD", amountMinor: 399, active: true },
+    { region: "CA", currency: "CAD", amountMinor: 0, active: false },
+    { region: "JP", currency: "JPY", amountMinor: 0, active: false },
+    { region: "IN", currency: "INR", amountMinor: 0, active: false },
+    { region: "PH", currency: "PHP", amountMinor: 0, active: false },
+  ],
+};
 
 // ─── Capacity add-on packs ──────────────────────────────────────────
 // Sold separately from storage so a busy shop is priced correctly on

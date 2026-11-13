@@ -16,9 +16,17 @@ import type { ControlDrawerSession } from "@/components/nex-native/control-drawe
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { resolveCreatorBadges, EMPTY_EARNED_BADGES } from "@/lib/nex-native/creator/creator-badges";
 import { effectiveTier } from "@/lib/nex-native/account-service";
-import { FullLibraryClient } from "../_full-library-client";
+import { FullLibraryClient, type LibraryEntitlementProps } from "../_full-library-client";
 import { listBackgroundAssets } from "@/lib/nex-native/library/catalog-service";
 import type { LibraryTheme } from "../_catalog";
+import {
+  canClaimFirstFreeTheme,
+  isThemesPlusActive,
+  loadThemesPlusUntil,
+} from "@/lib/nex-native/library/entitlement-service";
+import { getProfileByAccountId } from "@/lib/nex-native/account-profile-service";
+import { getThemesPlusMonthlyForMarket } from "@/lib/nex-native/commercial/themes-plus-pricing";
+import type { SupportedRegion } from "@/lib/nex-native/commercial/regional-pricing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,6 +37,29 @@ const NEX_BG = "var(--nex-world-drawer-bg, #020914)";
 const NEX_TEXT = "#F2F5F8";
 const SANS =
   "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+
+/** Owner directive 2026-11-13 · map an ISO-2 country code from
+ *  `nex_account_profile.country_code` to a SupportedRegion the pricing
+ *  catalogue recognises. Unknown / missing codes return `null` so the
+ *  UI falls back to the waitlist CTA (never a USD price). */
+function normaliseRegion(iso2: string | null): SupportedRegion | null {
+  if (!iso2) return null;
+  const u = iso2.trim().toUpperCase();
+  switch (u) {
+    case "IE":
+    case "GB":
+    case "US":
+    case "ID":
+    case "AU":
+    case "CA":
+    case "JP":
+    case "IN":
+    case "PH":
+      return u;
+    default:
+      return null;
+  }
+}
 
 export default async function FullLibraryPage(): Promise<React.ReactElement> {
   const session = await resolveSessionWithDevOverride();
@@ -73,6 +104,25 @@ export default async function FullLibraryPage(): Promise<React.ReactElement> {
     (a, b) => stableHash(a.id) - stableHash(b.id),
   );
 
+  // Owner directive 2026-11-13 · resolve Themes+ entitlement state
+  // server-side so the client modal can render the correct CTA
+  // immediately when a tile is tapped. Parallel reads · all fail-safe.
+  let entitlement: LibraryEntitlementProps | undefined;
+  if (session) {
+    const [themesPlusUntil, canClaimFirstFree, profile] = await Promise.all([
+      loadThemesPlusUntil(session.account.id),
+      canClaimFirstFreeTheme(session.account.id),
+      getProfileByAccountId(session.account.id).catch(() => null),
+    ]);
+    const region = normaliseRegion(profile?.country_code ?? null);
+    const price = region ? getThemesPlusMonthlyForMarket(region) : null;
+    entitlement = {
+      themesPlusActive: isThemesPlusActive(themesPlusUntil),
+      canClaimFirstFree,
+      themesPlusPriceLabel: price?.label ?? null,
+    };
+  }
+
   return (
     <>
       {/* Owner directive 2026-11-03 · no !important so the ≥500px
@@ -99,6 +149,7 @@ export default async function FullLibraryPage(): Promise<React.ReactElement> {
           drawerSession={drawerSession}
           viewerCreatorBadges={viewerCreatorBadges}
           themesOverride={themes}
+          entitlement={entitlement}
         />
       </main>
     </>

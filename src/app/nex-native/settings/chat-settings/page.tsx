@@ -34,17 +34,21 @@ import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-imperson
 import { getChatPreferences } from "@/lib/nex-native/chat-preferences-service";
 import { getAccountById } from "@/lib/nex-native/account-service";
 import { getProfileByAccountId } from "@/lib/nex-native/account-profile-service";
-import { getThemeById } from "@/lib/nex-native/chat-theme-service";
+import { getThemeById, resolveThemeColours } from "@/lib/nex-native/chat-theme-service";
 import { getDisappearingDefaultSafe } from "@/lib/nex-native/disappearing-messages-service";
 import { DISAPPEARING_PRESETS } from "@/lib/nex-native/disappearing-messages-constants";
+import {
+  getBubbleColours,
+  probeBubbleColoursSchemaReady,
+} from "@/lib/nex-native/bubble-colours-service";
 import { NexPageHeader } from "../../_page-header";
 import {
   NEX_SETTINGS,
   NEX_SETTINGS_FONT,
   SettingsBackLink,
-  SettingsGroupHeader,
 } from "../_settings-shell";
 import { ChatSettingsClient } from "./_client";
+import { AppearanceControls } from "./_appearance-client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -65,19 +69,29 @@ export default async function ChatSettingsPage({
 
   // Parallel DB reads · all fail-safe · the page still renders if any
   // individual read errors (service degraded defaults).
-  const [prefs, account, profile, defaultSeconds] = await Promise.all([
+  const [
+    prefs,
+    account,
+    defaultSeconds,
+    bubbleColours,
+    schemaReadyBubbleColours,
+  ] = await Promise.all([
     getChatPreferences(session.account.id),
     getAccountById(session.account.id).catch(() => null),
-    getProfileByAccountId(session.account.id).catch(() => null),
     getDisappearingDefaultSafe(session.account.id),
+    getBubbleColours(session.account.id),
+    probeBubbleColoursSchemaReady(),
   ]);
   const currentThemeId = account?.chat_theme ?? null;
   const currentTheme = currentThemeId
     ? await getThemeById(currentThemeId).catch(() => null)
     : null;
 
-  const displayName = account?.display_name?.trim() || "Your name";
-  const avatarUrl = profile?.avatar_url?.trim() || null;
+  // Resolve theme bubble defaults for the inline preview + swatch
+  // fallback. resolveThemeColours is a pure function · safe on null.
+  const themeColours = currentTheme
+    ? resolveThemeColours(currentTheme)
+    : { accent: "#00AFFF", bubbleRim: "#00AFFF", composerRim: "#00AFFF" };
 
   const disappearingLabel =
     DISAPPEARING_PRESETS.find((p) => p.value === defaultSeconds)?.label ??
@@ -85,13 +99,32 @@ export default async function ChatSettingsPage({
 
   return (
     <>
-      <style>{`html, body { background: ${NEX_SETTINGS.bg} !important; }`}</style>
+      {/* Owner directive 2026-11-13 · the previous
+          `html, body { background: ... !important }` override wiped out
+          the desktop + tablet hero backdrop (--nex-world-desktop-backdrop
+          on html/body, see nex-native.css lines 156-195). The main's
+          own solid-navy bg below paints the inside of the phone frame,
+          so removing the global override lets the hero appear above
+          and below the frame on ≥500px viewports without changing the
+          inside look. */}
       <main
         data-nex-chat-settings-page
         style={{
-          minHeight: "100dvh",
-          background: NEX_SETTINGS.bg,
-          color: NEX_SETTINGS.textPrimary,
+          // Owner directive 2026-11-12 (hotfix) · the layout slide-root
+          // wrapper has `overflow: hidden` to scope view-transitions to
+          // the phone frame, so a `minHeight: 100dvh` main gets clipped
+          // instead of scrolling. Pattern that actually scrolls: flex
+          // the main to fill the slide-root (height 100%) and own the
+          // scroll locally. Same pattern as chat-themes-library.
+          height: "100%",
+          overflowY: "auto",
+          overflowX: "hidden",
+          WebkitOverflowScrolling: "touch",
+          // Owner directive 2026-11-13 · page bg lifted from dark navy
+          // to warm cream so the white + orange cards don't fight the
+          // panel. Matches the Ireland --nex-world-drawer-bg cream.
+          background: "#F5EDD3",
+          color: "#0A0608",
           fontFamily: NEX_SETTINGS_FONT,
           padding: "16px 20px 32px",
         }}
@@ -104,17 +137,35 @@ export default async function ChatSettingsPage({
               style={{
                 margin: 0,
                 fontSize: 22,
-                fontWeight: 600,
+                fontWeight: 700,
                 letterSpacing: "0.005em",
+                color: "#0A0608",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 10,
               }}
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/nex-native/settings/chat-settings-icon.png"
+                alt=""
+                aria-hidden
+                width={32}
+                height={32}
+                style={{
+                  width: 32,
+                  height: 32,
+                  objectFit: "contain",
+                  flexShrink: 0,
+                }}
+              />
               Chat settings
             </h1>
             <p
               style={{
                 margin: "6px 0 0",
                 fontSize: 12,
-                color: NEX_SETTINGS.textSecondary,
+                color: "#7D5A3A",
               }}
             >
               Personalise how your chats look, feel and behave.
@@ -124,47 +175,41 @@ export default async function ChatSettingsPage({
           {status ? <StatusBanner status={status} /> : null}
 
           {/* ─── 1 · My Chat Page ────────────────────────────────── */}
-          <SettingsGroupHeader>My chat page</SettingsGroupHeader>
-          <MyChatPagePreviewCard
-            displayName={displayName}
-            avatarUrl={avatarUrl}
-            heroImageUrl={currentTheme?.hero_image_url ?? null}
-            accentHex={currentTheme?.accent_hex ?? NEX_SETTINGS.cyan}
-            themeName={currentTheme?.name ?? "NEX default"}
+          <LinkCard
+            href="/nex-native/chat/preview/my-view"
+            emoji="💬"
+            title="Chat Interface"
+            subtitle="Your Chat Page"
           />
 
           {/* ─── 2 · Chat Appearance ─────────────────────────────── */}
-          <SettingsGroupHeader>Chat appearance</SettingsGroupHeader>
+          <DashedDivider />
           <LinkCard
             href="/nex-native/chat-themes-library"
             emoji="🎨"
-            title="Chat theme"
-            subtitle={
-              currentTheme
-                ? `Current · ${currentTheme.name}. Tap to browse the library.`
-                : "Pick a chat background and accent from the NEX library."
-            }
-            rightLabel="Change"
+            title="Chat Theme"
+            subtitle="Theme Backgrounds"
           />
           <LinkCard
             href="/nex-native/settings/see-my-theme"
             emoji="👥"
-            title="Show my theme to contacts"
-            subtitle="Choose per-contact which friends see your personal chat theme. When OFF for a contact, they see the standard NEX theme · your own theme never changes."
+            title="Block My Chat theme"
+            subtitle="Control who see's your theme"
           />
-          <LinkCard
-            href={
-              currentThemeId
-                ? `/nex-native/free-chat/bubble-customize?theme=${encodeURIComponent(currentThemeId)}`
-                : "/nex-native/free-chat/bubble-customize"
-            }
-            emoji="🎈"
-            title="Bubble colours"
-            subtitle="Separate colours for your sent bubbles and received bubbles · live preview on the customiser page."
+          <AppearanceControls
+            bubbleSelfHex={bubbleColours.self}
+            bubblePeerHex={bubbleColours.peer}
+            bubbleSelfAppearance={bubbleColours.selfAppearance}
+            bubblePeerAppearance={bubbleColours.peerAppearance}
+            themeSelfHex={themeColours.bubbleRim}
+            themePeerHex={themeColours.accent}
+            schemaReadyBubbleColours={schemaReadyBubbleColours}
+            themeHeroImageUrl={currentTheme?.hero_image_url ?? null}
+            themeName={currentTheme?.name ?? "NEX default"}
           />
 
           {/* ─── 3 · Privacy & Visibility ────────────────────────── */}
-          <SettingsGroupHeader>Privacy & visibility</SettingsGroupHeader>
+          <DashedDivider />
           <ChatSettingsClient prefs={prefs} />
           <div style={{ height: 10 }} />
           <LinkCard
@@ -175,7 +220,7 @@ export default async function ChatSettingsPage({
           />
 
           {/* ─── 4 · Message Controls ────────────────────────────── */}
-          <SettingsGroupHeader>Message controls</SettingsGroupHeader>
+          <DashedDivider />
           <LinkCard
             href="/nex-native/settings/disappearing-messages"
             emoji="⏳"
@@ -185,7 +230,7 @@ export default async function ChatSettingsPage({
           />
 
           {/* ─── 5 · Chat Experience ─────────────────────────────── */}
-          <SettingsGroupHeader>Chat experience</SettingsGroupHeader>
+          <DashedDivider />
           <LinkCard
             href="/nex-native/settings/chat-font"
             emoji="🔤"
@@ -207,13 +252,15 @@ export default async function ChatSettingsPage({
           />
 
           {/* ─── 6 · Honest State ────────────────────────────────── */}
-          <SettingsGroupHeader>Honest state</SettingsGroupHeader>
+          <DashedDivider />
           <HonestNote
             text={
-              "Visibility · read receipts · typing · last-seen · online status: wired (migration 199 defaults apply when unapplied). " +
-              "Theme sharing: per-contact only · a global on/off switch is tracked as follow-up. " +
-              "Bubble colours: wired via the per-theme customiser (saved locally) · cross-device persistence is a follow-up. " +
-              "Disappearing messages: wired via migration 282 presets (max 7 days today). " +
+              "Visibility · read receipts · typing · last-seen · online status: wired against migration 199 (sealed defaults apply when unapplied). " +
+              "Theme sharing: per-contact via Block My Chat theme → See My Theme (migration 340 column reserved for a future global switch). " +
+              (schemaReadyBubbleColours
+                ? "Bubble colours: live cross-device (migration 341 applied · per-theme customiser also writes here). "
+                : "Bubble colours: per-theme customiser saves locally via cookie today · cross-device sync drafted (migration 341 not yet applied). ") +
+              "Disappearing messages: wired via migration 282 presets · 90-day option added (code-only, no migration needed). " +
               "Rows marked Soon do not yet have a backend."
             }
           />
@@ -225,193 +272,46 @@ export default async function ChatSettingsPage({
   );
 }
 
-// ─── My Chat Page preview card ────────────────────────────────────────
+// ─── Card palette · owner directive 2026-11-13 iter 2 ──────────────
+// Peach container · dark round icon cells · dark warm-red title ink ·
+// dark pill controls on the right. Replaces the previous white + orange
+// rim scheme per the hhhhh.png reference.
 
-function MyChatPagePreviewCard({
-  displayName,
-  avatarUrl,
-  heroImageUrl,
-  accentHex,
-  themeName,
-}: {
-  displayName: string;
-  avatarUrl: string | null;
-  heroImageUrl: string | null;
-  accentHex: string;
-  themeName: string;
-}): React.JSX.Element {
-  const initial = displayName.trim().slice(0, 1).toUpperCase();
-  const firstName = displayName.split(/\s+/)[0] ?? "Friend";
+const CARD_BG = "#FFFFFF";
+const CARD_INK = "#6B2A1F";
+const CARD_INK_DIM = "#5A3A20";
+const CARD_RIM = "rgba(107,42,31,0.18)";
+const ICON_BG = "#1D2432";
+const ICON_RING = "#FF7200";
+const CONTROL_BG = "#1D2432";
+const CONTROL_INK = "#F3E3C6";
+const CONTROL_ACCENT = "#FFD54A";
+
+// ─── Section divider · short centered dashed line ──────────────────
+
+function DashedDivider(): React.JSX.Element {
   return (
     <div
-      data-nex-chat-settings-preview-card
+      aria-hidden
+      data-nex-chat-settings-divider
       style={{
-        position: "relative",
-        padding: 0,
-        background: NEX_SETTINGS.panel,
-        border: `1px solid ${NEX_SETTINGS.panelAccent}`,
-        borderRadius: 14,
-        overflow: "hidden",
+        display: "flex",
+        justifyContent: "center",
+        padding: "16px 0",
       }}
     >
-      {/* Preview strip · theme hero backdrop + mock bubbles */}
-      <div
-        aria-hidden
+      <span
         style={{
-          position: "relative",
-          height: 220,
-          background: heroImageUrl
-            ? `linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.55)), url(${heroImageUrl}) center / cover no-repeat`
-            : "#0A1526",
-          display: "flex",
-          flexDirection: "column",
+          display: "block",
+          width: 60,
+          borderTop: "1.5px dashed rgba(107,42,31,0.45)",
         }}
-      >
-        {/* Peer-chat-style header */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "10px 12px",
-            background: "rgba(0,0,0,0.3)",
-            borderBottom: "1px solid rgba(255,255,255,0.08)",
-          }}
-        >
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: "50%",
-              background: avatarUrl
-                ? `url(${avatarUrl}) center / cover no-repeat`
-                : "#1F2D40",
-              border: "1px solid rgba(255,255,255,0.18)",
-              display: "grid",
-              placeItems: "center",
-              color: "#F2F5F8",
-              fontWeight: 800,
-              fontSize: 13,
-            }}
-          >
-            {!avatarUrl ? initial : null}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 700,
-                color: "#F2F5F8",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {displayName}
-            </div>
-            <div style={{ fontSize: 10, color: "#B5C3D6" }}>
-              <span
-                aria-hidden
-                style={{
-                  display: "inline-block",
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  background: "#16D66B",
-                  marginRight: 4,
-                  verticalAlign: "middle",
-                }}
-              />
-              online
-            </div>
-          </div>
-        </div>
-        {/* Sample bubbles · YOUR (incoming to them) on left · their reply on right */}
-        <div
-          style={{
-            flex: 1,
-            padding: "12px 10px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 6,
-          }}
-        >
-          <PreviewBubble side="in" text={`Hey, it's ${firstName} 👋`} />
-          <PreviewBubble side="out" text="Hi!" accentHex={accentHex} />
-          <PreviewBubble side="in" text="Nice to meet you on NEX." />
-        </div>
-      </div>
-      {/* Explainer + CTA */}
-      <div style={{ padding: "12px 14px 14px" }}>
-        <div
-          style={{
-            fontSize: 12,
-            color: NEX_SETTINGS.textSecondary,
-            lineHeight: 1.45,
-          }}
-        >
-          Preview of how your chat appears to another contact · avatar,
-          name, and <strong style={{ color: NEX_SETTINGS.textPrimary }}>{themeName}</strong>{" "}
-          background. Each recipient sees their own theme on their device
-          unless they choose yours.
-        </div>
-        <a
-          href="/nex-native/chat/preview/my-view"
-          data-nex-chat-settings-preview-cta
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            marginTop: 12,
-            padding: "10px 16px",
-            background: NEX_SETTINGS.cyan,
-            color: "#031018",
-            borderRadius: 999,
-            textDecoration: "none",
-            fontWeight: 800,
-            fontSize: 12,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-          }}
-        >
-          See my chat page →
-        </a>
-      </div>
+      />
     </div>
   );
 }
 
-function PreviewBubble({
-  side,
-  text,
-  accentHex,
-}: {
-  side: "in" | "out";
-  text: string;
-  accentHex?: string;
-}): React.JSX.Element {
-  const isOut = side === "out";
-  return (
-    <div
-      style={{
-        alignSelf: isOut ? "flex-end" : "flex-start",
-        maxWidth: "70%",
-        padding: "6px 10px",
-        borderRadius: isOut ? "10px 10px 2px 10px" : "10px 10px 10px 2px",
-        background: isOut ? accentHex ?? NEX_SETTINGS.cyan : "rgba(255,255,255,0.14)",
-        color: isOut ? "#031018" : "#F2F5F8",
-        fontSize: 11,
-        fontWeight: 600,
-        lineHeight: 1.3,
-        boxShadow: "0 1px 2px rgba(0,0,0,0.25)",
-      }}
-    >
-      {text}
-    </div>
-  );
-}
-
-// ─── Status banner (unchanged) ────────────────────────────────────────
+// ─── Status banner ────────────────────────────────────────────────────
 
 function StatusBanner({ status }: { status: string }): React.JSX.Element {
   const isError = status.startsWith("err_");
@@ -427,16 +327,12 @@ function StatusBanner({ status }: { status: string }): React.JSX.Element {
       style={{
         margin: "14px 0 0",
         padding: "10px 14px",
-        background: isError
-          ? "rgba(216,42,42,0.12)"
-          : "rgba(0,175,255,0.10)",
-        border: `1px solid ${
-          isError ? "rgba(216,42,42,0.45)" : NEX_SETTINGS.panelAccent
-        }`,
+        background: CARD_BG,
+        border: `1px solid ${isError ? "#D82A2A" : CARD_RIM}`,
         borderRadius: 10,
-        color: isError ? "#F2B3B3" : NEX_SETTINGS.textPrimary,
+        color: isError ? "#D82A2A" : CARD_INK,
         fontSize: 12,
-        fontWeight: 600,
+        fontWeight: 700,
         textAlign: "center",
       }}
     >
@@ -449,18 +345,18 @@ function StatusBanner({ status }: { status: string }): React.JSX.Element {
 
 function LinkCard({
   href,
-  emoji,
   title,
   subtitle,
   comingSoon,
   rightLabel,
+  emoji,
 }: {
   href: string;
-  emoji: string;
   title: string;
   subtitle: string;
   comingSoon?: boolean;
   rightLabel?: string;
+  emoji?: string;
 }): React.JSX.Element {
   return (
     <a
@@ -470,38 +366,38 @@ function LinkCard({
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 14,
-        padding: "14px 16px",
-        background: NEX_SETTINGS.panel,
-        border: `1px solid ${
-          comingSoon ? "rgba(255,114,0,0.35)" : NEX_SETTINGS.panelAccent
-        }`,
-        borderRadius: 12,
+        gap: 12,
+        padding: "12px 14px",
+        background: CARD_BG,
+        border: "none",
+        borderRadius: 14,
         textDecoration: "none",
-        color: NEX_SETTINGS.textPrimary,
-        minHeight: 72,
-        marginBottom: 10,
+        color: CARD_INK,
+        marginBottom: 8,
+        boxShadow: "0 1px 2px rgba(74,32,24,0.10)",
+        opacity: comingSoon ? 0.8 : 1,
       }}
     >
-      <div
-        aria-hidden
-        style={{
-          flexShrink: 0,
-          width: 44,
-          height: 44,
-          borderRadius: 12,
-          background: NEX_SETTINGS.panelFaint,
-          color: comingSoon ? NEX_SETTINGS.orange : NEX_SETTINGS.cyan,
-          display: "grid",
-          placeItems: "center",
-          fontSize: 20,
-        }}
-      >
-        {emoji}
-      </div>
+      {emoji ? <RoundIcon emoji={emoji} /> : null}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-          <span style={{ fontSize: 15, fontWeight: 500 }}>{title}</span>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: 8,
+            flexWrap: "wrap",
+          }}
+        >
+          <span
+            style={{
+              fontSize: 15,
+              fontWeight: 800,
+              color: CARD_INK,
+              letterSpacing: "0.005em",
+            }}
+          >
+            {title}
+          </span>
           {comingSoon ? (
             <span
               aria-label="coming soon"
@@ -510,53 +406,82 @@ function LinkCard({
                 alignItems: "center",
                 padding: "1px 6px",
                 fontSize: 9,
-                fontWeight: 600,
+                fontWeight: 700,
                 letterSpacing: "0.14em",
                 textTransform: "uppercase",
-                color: NEX_SETTINGS.orange,
-                border: `1px solid ${NEX_SETTINGS.orange}`,
+                color: ICON_RING,
+                border: `1px solid ${ICON_RING}`,
                 borderRadius: 4,
               }}
             >
               Soon
             </span>
           ) : null}
-          {rightLabel ? (
-            <span
-              style={{
-                marginLeft: "auto",
-                fontSize: 10,
-                color: NEX_SETTINGS.cyan,
-                fontWeight: 700,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-              }}
-            >
-              {rightLabel}
-            </span>
-          ) : null}
         </div>
         <div
           style={{
-            marginTop: 3,
+            marginTop: 2,
             fontSize: 12,
-            color: NEX_SETTINGS.textSecondary,
+            color: CARD_INK_DIM,
             lineHeight: 1.4,
           }}
         >
           {subtitle}
         </div>
       </div>
-      <div
-        aria-hidden
-        style={{
-          color: comingSoon ? NEX_SETTINGS.textSecondary : NEX_SETTINGS.cyan,
-          fontSize: 18,
-        }}
-      >
-        →
-      </div>
+      {rightLabel ? (
+        <span
+          style={{
+            flexShrink: 0,
+            padding: "6px 10px",
+            borderRadius: 999,
+            background: CONTROL_BG,
+            color: CONTROL_INK,
+            fontSize: 11,
+            fontWeight: 800,
+            letterSpacing: "0.04em",
+          }}
+        >
+          {rightLabel}
+        </span>
+      ) : (
+        <div
+          aria-hidden
+          style={{
+            color: CARD_INK,
+            fontSize: 20,
+            fontWeight: 300,
+            flexShrink: 0,
+            opacity: 0.6,
+          }}
+        >
+          →
+        </div>
+      )}
     </a>
+  );
+}
+
+// ─── Round icon cell · dark circle + emoji · thin orange ring ─────
+function RoundIcon({ emoji }: { emoji: string }): React.JSX.Element {
+  return (
+    <div
+      aria-hidden
+      style={{
+        flexShrink: 0,
+        width: 40,
+        height: 40,
+        borderRadius: "50%",
+        background: ICON_BG,
+        border: `1.5px solid ${ICON_RING}`,
+        display: "grid",
+        placeItems: "center",
+        fontSize: 18,
+        color: "#F2E5CC",
+      }}
+    >
+      {emoji}
+    </div>
   );
 }
 
@@ -565,11 +490,11 @@ function HonestNote({ text }: { text: string }): React.JSX.Element {
     <div
       data-nex-chat-settings-honest-note
       style={{
-        padding: "12px 14px",
-        background: "rgba(0,175,255,0.06)",
-        border: `1px dashed ${NEX_SETTINGS.panelAccent}`,
+        padding: "14px 16px",
+        background: CARD_BG,
+        border: `1px dashed ${CARD_RIM}`,
         borderRadius: 10,
-        color: NEX_SETTINGS.textSecondary,
+        color: CARD_INK_DIM,
         fontSize: 11.5,
         lineHeight: 1.5,
       }}

@@ -30,6 +30,14 @@ import {
   parseBubbleCustomization,
   type BubbleCustomization,
 } from "./_types";
+// Owner directive 2026-11-12 · cross-device bubble colour persistence
+// (migration 341). The cookie remains the per-theme device cache so
+// offline rendering keeps working, AND the chosen peerColor/selfColor
+// writes through to nex_account so the preference loads on any device
+// the viewer signs in on. Writes degrade silently when mig 341 is not
+// yet applied · cookie-only continues to work until the column lands.
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
+import { setBubbleColours } from "@/lib/nex-native/bubble-colours-service";
 
 const COOKIE_MAX_AGE_SECONDS = 365 * 24 * 60 * 60;
 
@@ -77,10 +85,28 @@ export async function saveBubbleCustomizationAction(
     sameSite: "lax",
     path: "/",
   });
+  // Owner directive 2026-11-12 · write through to nex_account so the
+  // choice follows the viewer across devices. Writer is fail-safe ·
+  // it returns schema_missing when mig 341 isn't yet applied, which
+  // we deliberately ignore here (cookie persistence covers the local
+  // device) so the Save button keeps working during the staged
+  // rollout. Account-level persistence lands when mig 341 applies.
+  try {
+    const session = await resolveSessionWithDevOverride();
+    if (session) {
+      await setBubbleColours(session.account.id, {
+        self: safe.selfColor,
+        peer: safe.peerColor,
+      });
+    }
+  } catch {
+    // Silent · cookie still saved. UI continues to work.
+  }
   // Revalidate the surfaces that consume the cookie so the next
   // navigation paints the updated colours without a hard refresh.
   revalidatePath("/nex-native/free-chat");
   revalidatePath("/nex-native/free-chat/bubble-customize");
+  revalidatePath("/nex-native/settings/chat-settings");
   return { ok: true };
 }
 
@@ -103,8 +129,20 @@ export async function resetBubbleCustomizationAction(
     sameSite: "lax",
     path: "/",
   });
+  // Clear account-level overrides too so the theme defaults reassert
+  // on the viewer's other devices. Fail-safe · ignored when mig 341
+  // isn't yet applied.
+  try {
+    const session = await resolveSessionWithDevOverride();
+    if (session) {
+      await setBubbleColours(session.account.id, { self: null, peer: null });
+    }
+  } catch {
+    /* silent */
+  }
   revalidatePath("/nex-native/free-chat");
   revalidatePath("/nex-native/free-chat/bubble-customize");
+  revalidatePath("/nex-native/settings/chat-settings");
   return { ok: true };
 }
 

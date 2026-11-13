@@ -216,6 +216,26 @@ export async function isThemeMutuallyVisibleSafe(
   }
   if (!acceptedFriend) return false;
 
+  // Owner directive 2026-11-12 (clarification revision) · global
+  // "Show my theme to contacts" toggle (migration 340) gates ONLY the
+  // theme OWNER's side. Whether `viewer` can see `other`'s theme
+  // depends on `other.theme_sharing_globally_enabled`, NOT on the
+  // viewer's own flag. Rationale: turning off my sharing means I
+  // don't want other people to see MY theme — it does not mean I
+  // give up seeing THEIR themes.
+  //
+  // Reciprocal per-contact rule is preserved below (sealed 2026-10-16
+  // mutual-consent semantics): BOTH per-contact toggles must be ON,
+  // or the prefs row must be absent (grandfather).
+  //
+  // Reader is fail-SAFE (returns TRUE on missing column / DB error)
+  // so pre-migration behaviour is preserved exactly.
+  const { getGlobalThemeSharingEnabled } = await import(
+    "./theme-sharing-service"
+  );
+  const ownerGlobal = await getGlobalThemeSharingEnabled(other);
+  if (ownerGlobal === false) return false;
+
   // Prefs row · fail-OPEN to grandfather so an outage never silently
   // flips existing visible-theme chats to NEX default.
   try {

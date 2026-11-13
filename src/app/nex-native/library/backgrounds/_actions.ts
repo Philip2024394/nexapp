@@ -31,10 +31,14 @@ import { effectiveTier } from "@/lib/nex-native/account-service";
 import { getBackgroundAsset } from "@/lib/nex-native/library/catalog-service";
 import {
   canAccessChatTheme,
+  canClaimFirstFreeTheme,
+  claimFirstFreeTheme,
   loadThemesPlusUntil,
 } from "@/lib/nex-native/library/entitlement-service";
 
-type ActionResult = { ok: true; assetId: string } | { ok: false; error: string };
+type ActionResult =
+  | { ok: true; assetId: string; firstFreeClaimed?: boolean }
+  | { ok: false; error: string };
 
 // Replicates the local requireOwnedBusiness check pattern from
 // src/app/nex-native/manage/shop/themes/_actions.ts. Kept local so the
@@ -104,6 +108,7 @@ export async function applyFromLibraryShopAction(
  *  here to call that service for the 5-gate contract. */
 export async function applyFromLibraryChatAction(
   assetId: string,
+  options?: { readonly claimFirstFree?: boolean },
 ): Promise<ActionResult> {
   const session = await resolveSessionWithDevOverride();
   if (!session) return { ok: false, error: "not-signed-in" };
@@ -169,7 +174,28 @@ export async function applyFromLibraryChatAction(
     { id: themeRow.id, tier: themeRow.tier },
     { id: session.account.id, themes_plus_until: themesPlusUntil },
   );
-  if (!decision.allow) {
+
+  // Owner directive 2026-11-13 · first-free perk. When the standard
+  // gate denies because the viewer has no Themes+ access AND the
+  // caller explicitly requested the first-free grant AND the viewer
+  // is still eligible (no prior first_free row), claim the ownership
+  // row and continue to apply. Single theme per account, permanent.
+  let firstFreeClaimed = false;
+  if (
+    !decision.allow &&
+    decision.reason === "themes_plus_required" &&
+    options?.claimFirstFree === true
+  ) {
+    const eligible = await canClaimFirstFreeTheme(session.account.id);
+    if (!eligible) {
+      return { ok: false, error: "first_free_already_claimed" };
+    }
+    const claim = await claimFirstFreeTheme(session.account.id, themeRow.id);
+    if (!claim.ok) {
+      return { ok: false, error: `first_free_${claim.reason}` };
+    }
+    firstFreeClaimed = true;
+  } else if (!decision.allow) {
     return { ok: false, error: decision.reason };
   }
 
@@ -182,5 +208,5 @@ export async function applyFromLibraryChatAction(
   revalidatePath("/nex-native/chat-themes-library");
   revalidatePath("/nex-native/chat-themes-library/all");
   revalidatePath("/nex-native/library/backgrounds");
-  return { ok: true, assetId: asset.id };
+  return { ok: true, assetId: asset.id, firstFreeClaimed };
 }

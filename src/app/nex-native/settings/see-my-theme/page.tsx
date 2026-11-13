@@ -32,7 +32,7 @@
 
 import type * as React from "react";
 import { redirect } from "next/navigation";
-import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
+import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { listBlockedByMe, listFriends } from "@/lib/nex-native/friend-service";
 import { getAccountById } from "@/lib/nex-native/account-service";
 import { getActorToggleState } from "@/lib/nex-native/relationship-service";
@@ -55,7 +55,10 @@ export default async function SeeMyThemePage({
 }: {
   searchParams: Promise<{ s?: string }>;
 }): Promise<React.JSX.Element> {
-  const session = await resolveNexAppSessionFromContext();
+  // Owner directive 2026-11-13 · dev-impersonation parity · match the
+  // chat-settings resolver so NEX_DEV_IMPERSONATE_HANDLE=nex-99901
+  // reaches this surface instead of bouncing to sign-in.
+  const session = await resolveSessionWithDevOverride();
   if (!session) {
     redirect("/nex-native/sign-in?next=/nex-native/settings/see-my-theme");
   }

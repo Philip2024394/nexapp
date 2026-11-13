@@ -16,10 +16,18 @@ export type DisappearingSeconds =
   | 3600
   | 86400
   | 604800
+  | 7776000
   | number;
 
-/** Owner-locked preset set exposed in the UI. Keep in sync with the
- *  CHECK-allowed sentinels in migration 282. */
+/** Owner-locked preset set exposed in the UI. Migration 282's CHECK
+ *  constraint is `default_disappearing_messages_seconds >= -1`, so the
+ *  list below can be extended without a schema change.
+ *
+ *  Owner directive 2026-11-12 · 90-day preset (7776000 seconds) added
+ *  per the Chat Settings Control Centre spec. Default-timer change in
+ *  the UI MUST NOT silently rewrite existing per-chat timers · the
+ *  server-side disappearing-messages-service only resolves the default
+ *  for NEW sends where no per-chat override exists. */
 export const DISAPPEARING_PRESETS: ReadonlyArray<{
   readonly value: DisappearingSeconds;
   readonly label: string;
@@ -40,6 +48,12 @@ export const DISAPPEARING_PRESETS: ReadonlyArray<{
     value: 604800,
     label: "7 days",
     description: "Expire 7 days after send.",
+  },
+  {
+    value: 7776000,
+    label: "90 days",
+    description:
+      "Expire 90 days after send. Does not touch existing per-chat timer overrides.",
   },
 ];
 

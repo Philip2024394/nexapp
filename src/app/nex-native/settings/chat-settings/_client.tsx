@@ -104,14 +104,20 @@ function ToggleRow({
         aria-label={`${title} · currently ${current ? "on" : "off"} · tap to turn ${next}`}
         style={{
           flexShrink: 0,
-          width: 52,
-          height: 30,
+          minWidth: 60,
+          height: 32,
+          padding: "0 12px 0 30px",
           borderRadius: 999,
           border: "none",
           cursor: "pointer",
-          background: current ? NEX_SETTINGS.cyan : "rgba(125,155,192,0.20)",
+          background: CONTROL_BG,
+          color: current ? CONTROL_ACTIVE : CONTROL_INK,
+          fontSize: 11,
+          fontWeight: 800,
+          letterSpacing: "0.12em",
           position: "relative",
-          transition: "background 160ms ease",
+          transition: "color 160ms ease",
+          textAlign: "right",
         }}
       >
         <span
@@ -119,15 +125,16 @@ function ToggleRow({
           style={{
             position: "absolute",
             top: 3,
-            left: current ? 25 : 3,
-            width: 24,
-            height: 24,
+            left: current ? 32 : 3,
+            width: 26,
+            height: 26,
             borderRadius: "50%",
-            background: "#F2F5F8",
+            background: current ? CONTROL_ACTIVE : "#8A7563",
             boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
-            transition: "left 160ms ease",
+            transition: "left 160ms ease, background 160ms ease",
           }}
         />
+        {current ? "ON" : "OFF"}
       </button>
     </form>
   );
@@ -176,11 +183,16 @@ function SegmentedRow({
           marginTop: 12,
           display: "grid",
           gridTemplateColumns: "repeat(3, 1fr)",
-          gap: 6,
+          gap: 0,
+          borderRadius: 999,
+          overflow: "hidden",
+          background: CONTROL_BG,
         }}
       >
-        {options.map((opt) => {
+        {options.map((opt, i) => {
           const isActive = opt.value === current;
+          const isFirst = i === 0;
+          const isLast = i === options.length - 1;
           return (
             <form action={action} key={opt.value} style={{ margin: 0 }}>
               <input type="hidden" name={name} value={opt.value} />
@@ -191,20 +203,18 @@ function SegmentedRow({
                 data-nex-chat-settings-segmented-option={opt.value}
                 style={{
                   width: "100%",
-                  padding: "8px 10px",
+                  padding: "10px 10px",
                   fontSize: 12,
-                  fontWeight: 600,
-                  borderRadius: 8,
-                  border: `1px solid ${
-                    isActive ? NEX_SETTINGS.cyan : "rgba(125,155,192,0.22)"
-                  }`,
-                  background: isActive
-                    ? "rgba(0,175,255,0.14)"
-                    : "transparent",
-                  color: isActive
-                    ? NEX_SETTINGS.textPrimary
-                    : NEX_SETTINGS.textSecondary,
+                  fontWeight: 800,
+                  border: "none",
+                  background: isActive ? CONTROL_ACTIVE : "transparent",
+                  color: isActive ? "#1D2432" : CONTROL_INK,
                   cursor: "pointer",
+                  letterSpacing: "0.02em",
+                  borderTopLeftRadius: isFirst ? 999 : 0,
+                  borderBottomLeftRadius: isFirst ? 999 : 0,
+                  borderTopRightRadius: isLast ? 999 : 0,
+                  borderBottomRightRadius: isLast ? 999 : 0,
                 }}
               >
                 {opt.label}
@@ -225,28 +235,43 @@ function ResetRow({
   return (
     <form
       action={action}
-      style={{
-        display: "flex",
-        justifyContent: "flex-end",
-        marginTop: 2,
-      }}
+      style={{ marginTop: 4 }}
     >
       <button
         type="submit"
         data-nex-chat-settings-reset="visibility"
         style={{
-          padding: "8px 14px",
-          fontSize: 11,
-          fontWeight: 700,
+          width: "100%",
+          padding: "13px 14px",
+          fontSize: 12,
+          fontWeight: 800,
           letterSpacing: "0.1em",
-          textTransform: "uppercase",
-          color: NEX_SETTINGS.textSecondary,
-          background: "transparent",
-          border: `1px solid ${NEX_SETTINGS.panelAccent}`,
-          borderRadius: 999,
+          color: CONTROL_INK,
+          background: CONTROL_BG,
+          border: "none",
+          borderRadius: 14,
           cursor: "pointer",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+          boxShadow: "0 1px 2px rgba(74,32,24,0.10)",
         }}
       >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.4}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden
+        >
+          <path d="M1 4v6h6" />
+          <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+        </svg>
         Reset visibility to defaults
       </button>
     </form>
@@ -259,15 +284,15 @@ function IconCell({ emoji }: { emoji: string }): React.JSX.Element {
       aria-hidden
       style={{
         flexShrink: 0,
-        width: 44,
-        height: 44,
-        borderRadius: 12,
-        background: NEX_SETTINGS.panelFaint,
-        color: NEX_SETTINGS.cyan,
+        width: 40,
+        height: 40,
+        borderRadius: "50%",
+        background: ICON_BG,
+        border: `1.5px solid ${ICON_RING}`,
         display: "grid",
         placeItems: "center",
         fontSize: 18,
-        fontWeight: 700,
+        color: "#F2E5CC",
       }}
     >
       {emoji}
@@ -275,26 +300,39 @@ function IconCell({ emoji }: { emoji: string }): React.JSX.Element {
   );
 }
 
+// Owner directive 2026-11-13 iter 2 · peach card + dark round icon +
+// dark pill controls. Mirrors the hhhhh.png / Untitledase.png reference.
+const CARD_BG = "#FFFFFF";
+const CARD_INK = "#6B2A1F";
+const CARD_INK_DIM = "#5A3A20";
+const ICON_BG = "#1D2432";
+const ICON_RING = "#FF7200";
+const CONTROL_BG = "#1D2432";
+const CONTROL_INK = "#F3E3C6";
+const CONTROL_ACTIVE = "#FF7200";
+
 const rowStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: 14,
-  padding: "14px 16px",
-  background: NEX_SETTINGS.panel,
-  border: `1px solid ${NEX_SETTINGS.panelAccent}`,
-  borderRadius: 12,
-  minHeight: 72,
+  gap: 12,
+  padding: "12px 14px",
+  background: CARD_BG,
+  border: "none",
+  borderRadius: 14,
+  minHeight: 68,
+  boxShadow: "0 1px 2px rgba(74,32,24,0.10)",
 };
 
 const titleStyle: React.CSSProperties = {
   fontSize: 15,
-  fontWeight: 500,
-  color: NEX_SETTINGS.textPrimary,
+  fontWeight: 800,
+  color: CARD_INK,
+  letterSpacing: "0.005em",
 };
 
 const subtitleStyle: React.CSSProperties = {
   marginTop: 2,
   fontSize: 12,
-  color: NEX_SETTINGS.textSecondary,
+  color: CARD_INK_DIM,
   lineHeight: 1.4,
 };
