@@ -315,13 +315,11 @@ const YOUR_NEX_ROWS: ReadonlyArray<MenuRow> = [
     href: "/nex-native/manage",
     locked: false,
   },
-  {
-    key: "chat-appearance",
-    label: "Chat themes",
-    subtitle: "Themes and styles",
-    href: "/nex-native/chat-themes-library",
-    locked: false,
-  },
+  // Owner directive 2026-11-13 · standalone "Chat themes" drawer row
+  // retired · Chat Settings now hosts the Chat Theme link on-page so
+  // the drawer stays lean. Direct URL /nex-native/chat-themes-library
+  // still works for external deep links.
+  //
   // Owner directive 2026-11-12 · one drawer row routes to the existing
   // Chat Settings hub (/nex-native/settings/chat-settings) which carries
   // links on-page for everything chat-related, including the new
