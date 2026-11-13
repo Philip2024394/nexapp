@@ -140,7 +140,7 @@ export default async function SeeMyThemePage(): Promise<React.JSX.Element> {
             }}
           >
             Choose which of your contacts can see your personal chat theme.
-            When OFF, that contact sees the standard Emerald NEX theme.
+            When OFF, that contact sees the standard cream NEX theme.
           </p>
         </header>
 
