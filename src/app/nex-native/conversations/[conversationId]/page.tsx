@@ -409,8 +409,33 @@ export default async function BusinessConversationPage({
               color: "#B5C3D6",
               letterSpacing: "0.02em",
               textShadow: "0 1px 2px rgba(0,0,0,0.5)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
             }}
           >
+            {/* Owner directive 2026-11-13 (iter 18) · red map-pin
+                icon beside the city line · same visual language the
+                shop page uses in its About block. */}
+            {viewerIsCustomer ? (
+              <svg
+                width={12}
+                height={12}
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden
+                style={{ flexShrink: 0 }}
+              >
+                <path
+                  d="M12 22s-7-7.5-7-13a7 7 0 1 1 14 0c0 5.5-7 13-7 13z"
+                  fill="#EF4444"
+                  stroke="#000000"
+                  strokeWidth={1}
+                  strokeLinejoin="round"
+                />
+                <circle cx="12" cy="9" r="2.5" fill="#FFFFFF" />
+              </svg>
+            ) : null}
             {headerSubtitle}
           </div>
         </div>

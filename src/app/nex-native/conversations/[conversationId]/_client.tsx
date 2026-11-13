@@ -651,6 +651,15 @@ export function BusinessConversationClient({
         >
           <input
             type="text"
+            // Owner directive 2026-11-13 (iter 18) · maximise mobile
+            // keypad behaviour · inputMode + enterKeyHint help iOS +
+            // Android pick the right layout and labelled Enter key.
+            // autoComplete off so password managers don't hijack.
+            inputMode="text"
+            enterKeyHint="send"
+            autoComplete="off"
+            autoCorrect="on"
+            spellCheck
             placeholder={peerReady ? "Message…" : "Loading…"}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
