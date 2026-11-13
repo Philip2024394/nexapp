@@ -18,8 +18,8 @@ import * as React from "react";
 import { toggleThemeShareForContactAction } from "./_actions";
 import type { ContactRow } from "./page";
 
-const AVATAR_SIZE = 60;
-const CARD_MIN_HEIGHT = 90;
+const AVATAR_SIZE = 40;
+const CARD_MIN_HEIGHT = 60;
 const INK = "#2A1F0F";
 const INK_MUTE = "rgba(42,31,15,0.62)";
 const NEUTRAL_RIM = "rgba(42,31,15,0.35)";
@@ -132,12 +132,12 @@ export function SeeMyThemeClient({ rows }: Props): React.JSX.Element {
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 12,
-                  padding: "12px 14px",
+                  gap: 10,
+                  padding: "8px 12px",
                   minHeight: CARD_MIN_HEIGHT,
                   background: "#F5EDD3",
                   border: `1px solid ${INK}`,
-                  borderRadius: 12,
+                  borderRadius: 10,
                   boxShadow: "0 1px 3px rgba(42, 31, 15, 0.08)",
                 }}
               >
