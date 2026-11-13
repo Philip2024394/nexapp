@@ -103,7 +103,12 @@ const CONTACTS = [
     phoneCountry: "+62",
     countryIso: "ID",
     interests: ["handmade", "indonesia", "handbags", "craft", "leatherwork"],
-    avatar: avatar("rosa-handcraft-handbags"),
+    // Owner directive 2026-11-13 · Rosa's real imagery dropped into
+    // public/nex-native/rosa/ supersedes the Dicebear/Picsum stubs.
+    //   · avatar.png     → nex_account_profile.avatar_url
+    //   · shop-logo.png  → nex_business.logo_url
+    //   · shop-hero.png  → nex_business.shop_cover_image_url
+    avatar: "/nex-native/rosa/avatar.png",
     cover: cover("rosa-yogyakarta-studio"),
     phoneNat: "81223456789",
     // Shop data · creates a nex_business row owned by this persona.
@@ -115,8 +120,9 @@ const CONTACTS = [
       description: "Hand-stitched handbags from Yogyakarta — small batch, natural leathers, traditional motifs. Direct to buyer, no middle shops.",
       category: "product-brand",
       city: "Yogyakarta",
-      logoUrl: cover("handbags-direct-logo"),
-      shopCoverImageUrl: cover("handbags-direct-cover"),
+      // Real imagery · see Rosa persona block for file locations.
+      logoUrl: "/nex-native/rosa/shop-logo.png",
+      shopCoverImageUrl: "/nex-native/rosa/shop-hero.png",
       address: "Jl. Prawirotaman No. 12, Yogyakarta, DIY 55153, Indonesia",
       // Weekly hours · null on a day means "closed". Rosa's workshop
       // opens Tue–Sat 10:00–18:00, closed Sun–Mon for prep + markets.
