@@ -179,19 +179,19 @@ export default async function ChatSettingsPage({
           <LinkCard
             href="/nex-native/settings/see-my-theme"
             emoji="👥"
-            title="Block Chat theme"
+            title="Theme Sharing & Visibility"
             subtitle="Who see's theme"
           />
           <LinkCard
             href="/nex-native/settings/chat-settings/bubble-colours"
             emoji="🎈"
-            title="Chat Containers"
+            title="Bubble Colours"
             subtitle="Change colors"
           />
           <LinkCard
             href="/nex-native/settings/blocked"
             emoji="🚫"
-            title="Block Contacts"
+            title="Blocked Contacts"
             subtitle="Contacts connection"
           />
           <LinkCard
@@ -208,14 +208,14 @@ export default async function ChatSettingsPage({
           <LinkCard
             href="/nex-native/settings/disappearing-messages"
             emoji="⏳"
-            title="Delete Message"
+            title="Disappearing Messages"
             subtitle="Set time zone"
             rightIndicator={defaultSeconds > 0 ? "on" : "off"}
           />
           <LinkCard
             href="/nex-native/settings/chat-protection"
             emoji="📷"
-            title="Screen Copying"
+            title="Screenshot Protection"
             subtitle="Prevent screen copy"
             rightIndicator={
               viewPrefs?.screenshot_copy_protection_enabled ? "on" : "off"
