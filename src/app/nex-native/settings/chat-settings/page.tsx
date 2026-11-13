@@ -169,7 +169,6 @@ export default async function ChatSettingsPage({
           />
 
           {/* ─── 2 · Chat Appearance ─────────────────────────────── */}
-          <DashedDivider />
           <LinkCard
             href="/nex-native/chat-themes-library"
             emoji="🎨"
@@ -190,7 +189,6 @@ export default async function ChatSettingsPage({
           />
 
           {/* ─── 3 · Privacy & Visibility ────────────────────────── */}
-          <DashedDivider />
           <ChatSettingsClient prefs={prefs} />
           <div style={{ height: 10 }} />
           <LinkCard
@@ -201,7 +199,6 @@ export default async function ChatSettingsPage({
           />
 
           {/* ─── 4 · Message Controls ────────────────────────────── */}
-          <DashedDivider />
           <LinkCard
             href="/nex-native/settings/disappearing-messages"
             emoji="⏳"
@@ -211,7 +208,6 @@ export default async function ChatSettingsPage({
           />
 
           {/* ─── 5 · Chat Experience ─────────────────────────────── */}
-          <DashedDivider />
           <LinkCard
             href="/nex-native/settings/chat-font"
             emoji="🔤"
@@ -247,30 +243,6 @@ const ICON_RING = "#FF7200";
 const CONTROL_BG = "#1D2432";
 const CONTROL_INK = "#F3E3C6";
 const CONTROL_ACCENT = "#FFD54A";
-
-// ─── Section divider · short centered dashed line ──────────────────
-
-function DashedDivider(): React.JSX.Element {
-  return (
-    <div
-      aria-hidden
-      data-nex-chat-settings-divider
-      style={{
-        display: "flex",
-        justifyContent: "center",
-        padding: "16px 0",
-      }}
-    >
-      <span
-        style={{
-          display: "block",
-          width: 60,
-          borderTop: "1.5px dashed rgba(107,42,31,0.45)",
-        }}
-      />
-    </div>
-  );
-}
 
 // ─── Status banner ────────────────────────────────────────────────────
 
