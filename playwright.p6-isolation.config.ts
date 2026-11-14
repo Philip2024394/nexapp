@@ -28,5 +28,12 @@ export default defineConfig({
       use: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
       testMatch: /two-context-isolation\.spec\.ts/,
     },
+    {
+      // 2026-11-14 · browser verification of the two newly-built Vault
+      // surfaces (Contacts + Settings). Same mobile viewport.
+      name: "vault-surfaces-390",
+      use: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+      testMatch: /vault-surfaces\.spec\.ts/,
+    },
   ],
 });
