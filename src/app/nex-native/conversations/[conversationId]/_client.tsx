@@ -107,6 +107,20 @@ interface Props {
     message_group_id: string | null;
   }>;
   readonly viewerSide: "customer" | "business";
+  // Owner directive 2026-11-14 · optional "More Details" pending
+  // product context · resolved server-side from `?product=<id>` on
+  // the URL · shown as a pinned context chip above the composer so
+  // the customer knows exactly which product the shop will reply
+  // about. Null when no product id (direct FAB tap) or when the id
+  // didn't belong to this shop (silently refused server-side).
+  readonly pendingProduct: {
+    id: string;
+    name: string;
+    price_pence: number;
+    currency: string;
+    image_url: string | null;
+    description: string | null;
+  } | null;
 }
 
 type MessageRow = Props["initialMessages"][number];
@@ -125,6 +139,7 @@ export function BusinessConversationClient({
   shopProducts,
   initialMessages,
   viewerSide,
+  pendingProduct,
 }: Props): React.JSX.Element {
   const router = useRouter();
   const [draft, setDraft] = React.useState("");
@@ -719,6 +734,124 @@ export function BusinessConversationClient({
           });
         })()}
       </div>
+
+      {/* Owner directive 2026-11-14 · pending-product context chip ·
+          mounts above the composer when the customer arrived with
+          `?product=<id>` from the Product Detail Sheet's "More
+          Details" button. Shows thumbnail + name + price so the
+          customer knows exactly which product the shop will reply
+          about. Dismiss arrow routes back to the same conversation
+          without the query param (chip disappears). */}
+      {pendingProduct && viewerSide === "customer" && (
+        <div
+          data-nex-biz-conv-pending-product={pendingProduct.id}
+          style={{
+            position: "sticky",
+            bottom: 60,
+            marginLeft: 12,
+            marginRight: 12,
+            marginBottom: -6,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: 10,
+            borderRadius: 14,
+            background: "rgba(10, 21, 38, 0.92)",
+            border: `1px solid ${accentHex}66`,
+            boxShadow: "0 8px 20px rgba(0,0,0,0.35)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            zIndex: 6,
+          }}
+        >
+          <div
+            aria-hidden={!!pendingProduct.image_url}
+            role={pendingProduct.image_url ? undefined : "img"}
+            aria-label={
+              pendingProduct.image_url ? undefined : "Product image placeholder"
+            }
+            style={{
+              flexShrink: 0,
+              width: 44,
+              height: 44,
+              borderRadius: 10,
+              background: pendingProduct.image_url
+                ? `#000 center / cover no-repeat url("${pendingProduct.image_url}")`
+                : `linear-gradient(135deg, ${accentHex}44, rgba(0,0,0,0.4))`,
+              border: `1px solid ${accentHex}33`,
+            }}
+          />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: accentHex,
+              }}
+            >
+              You selected
+            </div>
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: "#F2F5F8",
+                marginTop: 2,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {pendingProduct.name}
+            </div>
+            <div
+              style={{
+                fontSize: 11,
+                color: "#B5C3D6",
+                marginTop: 1,
+              }}
+            >
+              {(() => {
+                try {
+                  return new Intl.NumberFormat(undefined, {
+                    style: "currency",
+                    currency: pendingProduct.currency,
+                    maximumFractionDigits: 0,
+                  }).format(pendingProduct.price_pence / 100);
+                } catch {
+                  return `${pendingProduct.currency} ${(pendingProduct.price_pence / 100).toFixed(0)}`;
+                }
+              })()}
+              {" · ask your question below"}
+            </div>
+          </div>
+          <button
+            type="button"
+            aria-label="Dismiss selected product"
+            onClick={() => {
+              router.replace(`/nex-native/conversations/${conversationId}`);
+            }}
+            style={{
+              flexShrink: 0,
+              width: 28,
+              height: 28,
+              borderRadius: "50%",
+              background: "rgba(0,0,0,0.42)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              color: "#F2F5F8",
+              cursor: "pointer",
+              fontSize: 16,
+              lineHeight: 1,
+              display: "grid",
+              placeItems: "center",
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* Owner directive 2026-11-13 (iter 10) · composer layout:
             [ 3-dots button · ORANGE ]  [ text pill with embedded send ]

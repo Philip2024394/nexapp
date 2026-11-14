@@ -29,6 +29,7 @@ import {
   type NexCartItem,
 } from "@/lib/nex-native/cart-types";
 import { writeShopPaymentMeta } from "../cart/_shop-payment-methods";
+import { openShopChatAction } from "../[businessSlug]/_open-shop-chat-action";
 
 const GOLD = "var(--nex-world-secondary, #C6A15B)";
 const CREAM = "#FAF8F4";
@@ -184,10 +185,17 @@ export function ProductDetailSheet({
     }
   }
 
-  // Owner directive 2026-11-14 · pending_product share-to-chat flow
-  // retired. The chat opens empty · the buyer can describe what they
-  // want once on the peer-chat surface.
-  const chatHref = `/nex-native/chat/peer/${shopOwnerAccountId}`;
+  // Owner directive 2026-11-14 · "More Details" opens the dedicated
+  // Shop Chat (/nex-native/conversations/<id>) with the selected
+  // product passed through via `?product=<id>`. The action resolves
+  // / creates the business conversation server-side so this is
+  // always the correct shop thread even if the customer has multiple
+  // shops with the same owner. The customer never lands in the
+  // owner's personal peer chat.
+  const openShopChatWithProduct = React.useMemo(
+    () => openShopChatAction.bind(null, shopSlug),
+    [shopSlug],
+  );
   const priceLabel = formatPrice(product.price_pence, product.currency);
   const totalLabel = formatPrice(product.price_pence * qty, product.currency);
 
@@ -509,7 +517,17 @@ export function ProductDetailSheet({
             </div>
           </div>
 
-          {/* CTA row */}
+          {/* Owner directive 2026-11-14 · two clear CTAs matching the
+              sealed customer journey:
+                · BUY NOW → add the product to the cart and route the
+                  customer straight to /cart to complete checkout. This
+                  preserves the sealed "payment on arrival" doctrine —
+                  NEX never handles money · the cart surface lists the
+                  shop's accepted payment methods for the arranger.
+                · MORE DETAILS → form-submit to openShopChatAction with
+                  the product_id so the dedicated Shop Chat opens with
+                  the product pinned above the composer. No personal
+                  peer-chat detour. */}
           <div
             style={{
               display: "grid",
@@ -519,25 +537,11 @@ export function ProductDetailSheet({
           >
             <button
               type="button"
-              onClick={addToCart}
-              style={{
-                padding: "12px 14px",
-                borderRadius: 12,
-                border: `1px solid ${accent}`,
-                background: "transparent",
-                color: accent,
-                fontSize: 12,
-                fontWeight: 900,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                cursor: "pointer",
-                fontFamily: "inherit",
+              onClick={() => {
+                addToCart();
+                router.push("/nex-native/cart");
               }}
-            >
-              {status.kind === "added" ? "Added ✓" : "Add to cart"}
-            </button>
-            <a
-              href={chatHref}
+              data-nex-product-sheet-buy-now={product.id}
               style={{
                 padding: "12px 14px",
                 borderRadius: 12,
@@ -548,13 +552,39 @@ export function ProductDetailSheet({
                 fontWeight: 900,
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
-                textAlign: "center",
-                textDecoration: "none",
+                cursor: "pointer",
+                fontFamily: "inherit",
                 boxShadow: "0 8px 20px rgba(198,161,91,0.22)",
               }}
             >
-              Buy now · chat
-            </a>
+              Buy Now
+            </button>
+            <form
+              action={openShopChatWithProduct}
+              style={{ display: "contents" }}
+            >
+              <input type="hidden" name="product_id" value={product.id} />
+              <button
+                type="submit"
+                data-nex-product-sheet-more-details={product.id}
+                style={{
+                  padding: "12px 14px",
+                  borderRadius: 12,
+                  border: `1px solid ${accent}`,
+                  background: "transparent",
+                  color: accent,
+                  fontSize: 12,
+                  fontWeight: 900,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  width: "100%",
+                }}
+              >
+                More Details
+              </button>
+            </form>
           </div>
           {status.kind === "error" ? (
             <span style={{ fontSize: 11, color: "#FF6B6B" }}>
@@ -568,7 +598,7 @@ export function ProductDetailSheet({
                 textAlign: "center",
               }}
             >
-              In your cart · tap the cart icon to check out with {shopName}.
+              In your cart · redirecting to checkout with {shopName}.
             </span>
           ) : null}
         </div>

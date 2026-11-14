@@ -73,12 +73,20 @@ export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ conversationId: string }>;
+  // Owner directive 2026-11-14 · optional product id carried in from
+  // the Product Detail Sheet's "More Details" button. Resolved to a
+  // snapshot below · only accepted when the product belongs to THIS
+  // conversation's shop so an attacker can't force-render a card
+  // from an unrelated shop by hand-editing the URL.
+  searchParams?: Promise<{ product?: string }>;
 }
 
 export default async function BusinessConversationPage({
   params,
+  searchParams,
 }: PageProps): Promise<React.JSX.Element> {
   const { conversationId } = await params;
+  const sp = searchParams ? await searchParams : {};
 
   const session = await resolveSessionWithDevOverride();
   if (!session) {
@@ -156,6 +164,54 @@ export default async function BusinessConversationPage({
     conversationId,
     session.account.id,
   );
+
+  // ── Resolve the optional ?product=<id> context card ────────────────
+  // Owner directive 2026-11-14 · "More Details" on the Product Detail
+  // Sheet brings the customer here with `?product=<id>`. We validate
+  // the shape, reject when the product doesn't belong to THIS shop,
+  // and hand a serialisable snapshot to the client shell so it can
+  // render a pinned context chip above the composer. Non-match or
+  // missing product silently falls through · the chat still opens.
+  const PRODUCT_UUID_SHAPE =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const pendingProductIdRaw = sp.product?.trim() ?? "";
+  const pendingProduct = await (async () => {
+    if (
+      !pendingProductIdRaw ||
+      !PRODUCT_UUID_SHAPE.test(pendingProductIdRaw)
+    ) {
+      return null;
+    }
+    // Shop-scope ownership check · the product MUST belong to this
+    // conversation's business or we refuse to render it (prevents URL
+    // tampering from showing a foreign-shop card in this chat).
+    const match = products.find((p) => p.id === pendingProductIdRaw);
+    if (match) {
+      return {
+        id: match.id,
+        name: match.name,
+        price_pence: match.price_pence,
+        currency: match.currency,
+        image_url: match.image_url ?? null,
+        description: match.description ?? null,
+      };
+    }
+    // Fall back to a direct lookup for products that may not be in
+    // the "live" list (archived / sold-out · still valid for a chat
+    // context card so the owner can answer questions about them).
+    const direct = await productService
+      .getProductById(pendingProductIdRaw)
+      .catch(() => null);
+    if (!direct || direct.business_id !== business.id) return null;
+    return {
+      id: direct.id,
+      name: direct.name,
+      price_pence: direct.price_pence,
+      currency: direct.currency,
+      image_url: direct.image_url ?? null,
+      description: direct.description ?? null,
+    };
+  })();
 
   // ── Resolve viewer-side identity framing ──────────────────────────
   // Customer viewing the shop    → sees shop name/logo + shop wallpaper
@@ -516,6 +572,7 @@ export default async function BusinessConversationPage({
         shopProducts={products}
         initialMessages={messages}
         viewerSide={viewerParticipant.side}
+        pendingProduct={pendingProduct}
       />
     </main>
   );
