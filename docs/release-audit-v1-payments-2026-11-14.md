@@ -205,3 +205,119 @@ No security guard, signature validation, authentication check, or failing test w
 **Flow B — Checkout in chat:** PASS (handler-layer + Playwright evidence).
 
 **This pass resolves payment questions only.** It does not alter the general-audit verdict (NOT READY), does not change the TS or test-suite baseline, and does not certify the full application as launch-ready. Credentials were not requested in chat and no secrets were committed. No live money was handled. No production settings were changed.
+
+---
+
+# Verification pass · 2026-11-14 (later same day)
+
+Second bounded pass per owner directive: *"Fix only reproduced payment launch blockers with minimal changes and focused regression tests. Preserve working behavior. No new features, redesigns, broad refactors, provider removal, live charges, production changes, deployments, pushes, destructive operations, migrations, or bucket changes."*
+
+## Environment
+
+- Branch: `release-audit-v1-2026-11-14`
+- HEAD before this pass: `c8e3b559`
+- HEAD after this pass: `12ceea43`
+- Supabase: sandbox `kdstoyyeygcopkogqsyv` only · production `ijvqdvsvwtwxzcqmoqit` NOT TOUCHED
+- Impersonation: `nex-99901` via `NEX_DEV_IMPERSONATE_HANDLE`
+- No prod deploy · no push · no migration · no bucket change · no live charge
+
+## Reproduced blocker #1 · FIXED
+
+**Symptom:** `POST /api/nex-native/billing/connect/stripe/create` returned HTTP 422 with `code=columns_not_applied` even when migration 311 was fully applied to the sandbox (verified: `stripe_connect_account_id`, `stripe_connect_account_status`, `stripe_connect_charges_enabled`, `stripe_connect_payouts_enabled`, `stripe_connect_country`, `stripe_connect_last_sync_at`, `stripe_connect_requirements_blob` all present on `nex_business`).
+
+**Root cause (file+line):** `src/lib/nex-native/billing/stripe-connect-service.ts` · `detectConnectColumns()` probed `information_schema.columns` via the Supabase REST client. PostgREST does not expose `information_schema` by default, so every call errored and the function returned `false`.
+
+**Fix (minimal · ~30 lines):** replaced the `information_schema` probe with a direct `SELECT stripe_connect_account_id FROM nex_business LIMIT 0`. Treat Postgres code `42703` or message matching `/does not exist/i` as "columns missing". Any other error now fails OPEN so a Supabase blip cannot mis-report an applied migration as unapplied.
+
+**Live verification (sandbox, dev-impersonation):**
+
+- Before fix: `HTTP 422 { code: "columns_not_applied" }` · WRONG, columns were present
+- After fix: `HTTP 500 { code: "stripe_account_create_failed", reason: "more_permissions_required" }` · the REAL Stripe error, surfacing a restricted-test-key scope issue (NOT a code bug · owner action required)
+
+**Regression test (new · 8/8 pass):** `src/lib/nex-native/billing/__tests__/stripe-connect-detect-columns.test.ts`
+- true on clean success
+- false on Postgres `42703`
+- false on error message `does not exist`
+- fails OPEN on unknown transient error (does not mis-report applied migration)
+- false when probe throws
+- queries `nex_business` NOT `information_schema.columns`
+- queries the sealed migration-311 column `stripe_connect_account_id`
+- uses `LIMIT 0` so the probe never pulls row data
+
+**Broader regression:** `src/lib/nex-native/billing/__tests__` = 233 passed / 233 total. Zero regressions.
+
+**Scoped TS check:** no errors on the touched file.
+
+**Commit:** `12ceea43` · scope: `src/lib/nex-native/billing/stripe-connect-service.ts` + new test file only.
+
+## Reproduced blocker #2 · NOT FIXABLE WITHOUT OWNER · founder action required
+
+After the above fix, the same endpoint returns `more_permissions_required` because the restricted Stripe TEST key currently in `.env.local` lacks the `connected_accounts:write` scope. This is an owner-controlled Stripe dashboard setting, not a code bug.
+
+## Reproduced blocker #3 · NOT FIXABLE WITHOUT OWNER · founder action required
+
+Live probe of `POST /api/nex-native/billing/checkout/shop` (Flow A subscription) returned HTTP 200 with a valid `cs_test_…` Checkout Session URL. The checkout session creates cleanly. However:
+
+- `STRIPE_WEBHOOK_SECRET` is still EMPTY in `.env.local`
+- Stripe CLI is NOT installed on this machine (cannot run `stripe listen` here)
+
+Without the webhook secret, the `checkout.session.completed` → `markSubscriptionActive` path cannot be end-to-end verified. Nothing to fix in code; signing-secret provisioning is an owner-controlled task.
+
+## Reproduced blocker #4 · DB schema prerequisite · founder authorisation required
+
+PayPal payee cross-check requires `nex_business.paypal_merchant_id`. This column does NOT exist in sandbox. Code expects it to exist when PayPal is enabled. Adding the column is a DB migration · sealed rule bars migrations without separate named authorisation. Not fixing. Documenting.
+
+## What was NOT tested (explicit)
+
+- End-to-end Flow A Checkout → webhook → `BillingStore.markSubscriptionActive` (blocked on webhook secret)
+- End-to-end Flow B Stripe Connect onboarding → test charge → `markOrderPaid` (blocked on key scope + webhook secret)
+- End-to-end Flow B PayPal (blocked on absent creds + absent DB column)
+- Any production migration · bucket · env · deploy
+
+---
+
+## 4-way verdict (final, after this pass)
+
+| # | Flow | Verdict | Evidence | Remaining unknown |
+|---|---|---|---|---|
+| 1 | Flow A · NEX subscription | **BLOCKED / UNVERIFIED** | Checkout session mint PASSES live (HTTP 200 + `cs_test_…`) | `STRIPE_WEBHOOK_SECRET` empty · no CLI · no e2e run |
+| 2 | Flow B · Stripe Connect (merchant-direct) | **BLOCKED / UNVERIFIED** | `detectConnectColumns` fix verified live (422 → 500) · regression test 8/8 green · 233/233 billing tests green | Restricted test key lacks `connected_accounts:write` · no Connect webhook secret · no onboarded test account |
+| 3 | Flow B · PayPal (merchant-direct) | **BLOCKED / UNVERIFIED** | Code path inspected; webhook verifier + payee cross-check present | ALL `PAYPAL_*` env vars empty · `nex_business.paypal_merchant_id` column absent · no sandbox app |
+| 4 | Flow B · QRIS | **NOT APPLICABLE to v1** | Route returns HTTP 503 `provider_scaffold_not_live` by design | Nothing required unless scope changes |
+| 5 | Flow B · Checkout in chat | **PASS** | Handler-layer tests + Playwright evidence (Stage 2 shop-chat flow) · no webhook required by design | — |
+
+**One-line summary:** payment flow A and merchant Stripe/PayPal remain BLOCKED on owner-controlled credentials and one DB-schema decision; one real code bug (Connect column detector) is now fixed and verified; checkout-in-chat is the only payment-related path at PASS.
+
+---
+
+## FOUNDER ACTIONS (unavoidable only · numbered · no secret values requested here)
+
+Each action is something only you can do. Nothing here is a code task.
+
+1. **Stripe webhook signing secret for Flow A (subscription).** In your Stripe dashboard (test mode), add webhook endpoint pointing at your dev URL for `/api/nex-native/billing/webhook/stripe` and copy the signing secret into `.env.local` as `STRIPE_WEBHOOK_SECRET`. **OR** install Stripe CLI (`winget install stripe.stripe-cli` on Windows) and run `stripe listen --forward-to localhost:3008/api/nex-native/billing/webhook/stripe` — it prints a `whsec_…` for the session.
+
+2. **Stripe restricted-key permissions for Flow B (Connect).** Decide one:
+   - 2a. In your Stripe dashboard, open the restricted TEST key currently in `.env.local` as `NEX_STRIPE_SECRET_KEY` and enable write permission on **Connected accounts**, then copy the new key value back into `.env.local`. **OR**
+   - 2b. Generate a `sk_test_…` secret key (full scope, test mode) and replace the restricted key with it for development only. Production is unaffected — no prod env is being changed in this pass.
+
+3. **Stripe webhook signing secret for Flow B (merchant-direct).** Add a SECOND webhook endpoint (distinct from action 1) pointing at `/api/nex-native/stripe/webhook` and copy its signing secret into `.env.local` as `NEX_STRIPE_CONNECT_WEBHOOK_SECRET`. These are different URLs and different webhook endpoints — the Connect one receives events with the `Stripe-Account` header for attribution.
+
+4. **PayPal — decide which path for v1.** Pick one:
+   - 4a. Create a free developer.paypal.com account, create a sandbox app, supply `PAYPAL_CLIENT_ID` + `PAYPAL_CLIENT_SECRET` + `PAYPAL_WEBHOOK_ID` for `.env.local`, AND authorise a new migration adding `nex_business.paypal_merchant_id`. **OR**
+   - 4b. Defer PayPal from v1 launch. Say "defer paypal from v1" and I will remove the PayPal path from the launch surface without touching the webhook code (so it remains available for a later revival).
+
+5. **Authorise one sandbox end-to-end test run after actions 1 and 2/3** so I can prove Flow A Checkout → webhook → `markSubscriptionActive` and Flow B Connect onboarding → test charge → `markOrderPaid` end to end. Named authorisation phrase of your choice.
+
+Do **not** paste any secret into chat. Store them only in `.env.local`. The audit does not need to see the values; it only needs to see the endpoints work.
+
+---
+
+## Guardrails honoured in this pass
+
+- No production changes. No prod migration. No prod bucket. No prod env.
+- No push. No deploy. No destructive operation.
+- No live charge. No real card. Dev-impersonation only.
+- No feature flag flipped. No provider removed. No new feature.
+- Only files touched: `src/lib/nex-native/billing/stripe-connect-service.ts` (1 exported helper) + new `src/lib/nex-native/billing/__tests__/stripe-connect-detect-columns.test.ts`.
+- Engineering ceiling held at VERIFIED. No LIVE-VERIFIED claim.
+
