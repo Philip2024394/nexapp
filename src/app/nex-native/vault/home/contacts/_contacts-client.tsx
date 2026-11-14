@@ -202,9 +202,19 @@ function renderRow(row: VaultContactRow, copy: Copy): React.ReactNode {
   if (row.conversationId) {
     // Not-vaulted with existing conversation · peer chat destination
     // + Move-to-Vault affordance (matches the sealed MoveToVaultAffordance
-    // kind contract).
+    // kind contract). The affordance renders the chip as an absolute-
+    // positioned button inside its wrapper; we wrap the FULL row so
+    // the chip overlays the row corner instead of getting covered by
+    // the Link.
     return (
-      <div style={{ position: "relative" }}>
+      <MoveToVaultAffordance
+        mode={{
+          kind: "move-conversation",
+          conversationId: row.conversationId,
+          friendName: row.name,
+        }}
+        showChip={true}
+      >
         <Link
           href={`/nex-native/chat/peer/${row.friendId}`}
           data-nex-vault-contact-row
@@ -216,17 +226,7 @@ function renderRow(row: VaultContactRow, copy: Copy): React.ReactNode {
           <Avatar name={row.name} />
           <Identity row={row} subLine={subLine} />
         </Link>
-        <MoveToVaultAffordance
-          mode={{
-            kind: "move-conversation",
-            conversationId: row.conversationId,
-            friendName: row.name,
-          }}
-          showChip={true}
-        >
-          <span aria-hidden style={{ display: "none" }} />
-        </MoveToVaultAffordance>
-      </div>
+      </MoveToVaultAffordance>
     );
   }
 

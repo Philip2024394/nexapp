@@ -35,5 +35,14 @@ export default defineConfig({
       use: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
       testMatch: /vault-surfaces\.spec\.ts/,
     },
+    {
+      // 2026-11-14 · bounded acceptance pass · drives the sealed
+      // setup wizard then asserts EXACT final paths + per-branch
+      // behavior for Contacts + Settings under a configured Vault.
+      name: "vault-acceptance-390",
+      use: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+      testMatch: /vault-acceptance\.spec\.ts/,
+      timeout: 240_000,
+    },
   ],
 });
