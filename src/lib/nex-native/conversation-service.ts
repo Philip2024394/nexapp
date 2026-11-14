@@ -125,7 +125,16 @@ export interface ConversationSummary {
   conversation: NexConversationRow;
   my_side: "business" | "customer";
   my_last_read_at: string | null;
-  business: { id: NexUuid; display_name: string; slug: string };
+  // Owner directive 2026-11-14 · `logo_url` added to the business sub-
+  // object so the contacts page's business-contact row can render the
+  // shop logo as the row avatar instead of falling back to initials.
+  // Honest null when the shop hasn't uploaded a logo yet.
+  business: {
+    id: NexUuid;
+    display_name: string;
+    slug: string;
+    logo_url: string | null;
+  };
   product: { id: NexUuid; name: string; price_pence: number; currency: string } | null;
   last_message: NexMessageRow | null;
   unread_count: number;
@@ -159,7 +168,7 @@ export async function listConversationsForAccount(
       conversation_id, account_id, side, joined_at, last_read_at,
       nex_conversation!inner (
         id, business_id, about_product_id, created_at,
-        nex_business!inner ( id, display_name, slug ),
+        nex_business!inner ( id, display_name, slug, logo_url ),
         nex_product ( id, name, price_pence, currency )
       )
     `
@@ -179,7 +188,12 @@ export async function listConversationsForAccount(
       business_id: NexUuid;
       about_product_id: NexUuid | null;
       created_at: string;
-      nex_business: { id: NexUuid; display_name: string; slug: string };
+      nex_business: {
+        id: NexUuid;
+        display_name: string;
+        slug: string;
+        logo_url: string | null;
+      };
       nex_product: { id: NexUuid; name: string; price_pence: number; currency: string } | null;
     };
   }>;

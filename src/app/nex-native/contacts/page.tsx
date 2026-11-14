@@ -277,6 +277,12 @@ export default async function ContactsPage({ searchParams }: PageProps) {
     {
       name: string;
       slug: string | null;
+      // Owner directive 2026-11-14 · shop logo threaded through so the
+      // business-contact row renders the real shop avatar from
+      // Supabase (nex_business.logo_url) instead of hardcoding null.
+      // Honest null when the shop hasn't uploaded a logo yet · the
+      // card falls back to initials via the existing avatar renderer.
+      logoUrl: string | null;
       conversationId: string;
       unread: number;
     }
@@ -305,6 +311,7 @@ export default async function ContactsPage({ searchParams }: PageProps) {
       businessContactsByBusinessId.set(c.business.id, {
         name: c.business.display_name,
         slug: c.business.slug ?? null,
+        logoUrl: c.business.logo_url ?? null,
         conversationId: c.conversation.id,
         unread: c.unread_count ?? 0,
       });
@@ -568,7 +575,12 @@ export default async function ContactsPage({ searchParams }: PageProps) {
         kind: "business" as const,
         displayName: b.name,
         handle: b.slug,
-        avatarUrl: null,
+        // Owner directive 2026-11-14 · render the shop's logo as the
+        // business-contact row avatar (sealed Supabase field
+        // nex_business.logo_url · threaded via listConversationsForAccount
+        // above). Honest null when the shop hasn't uploaded a logo ·
+        // the card variant falls back to initials.
+        avatarUrl: b.logoUrl,
         chatHref: `/nex-native/conversations/${b.conversationId}`,
         professionLine: "Shop · you follow",
         profileHref: b.slug ? `/nex-native/${b.slug}` : null,
