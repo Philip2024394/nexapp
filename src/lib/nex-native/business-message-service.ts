@@ -80,21 +80,39 @@ export interface NexBusinessMessageRow {
   delivery_status: string;
 }
 
-// ─── Participant guard ─────────────────────────────────────────────
+// ─── Participant + ownership guard ─────────────────────────────────
+//
+// Stage 8 · item 9 · 2026-11-14 · hardened.
+// The original guard refused any non-participant, which closed the
+// "random account sends into a conversation they're not on" vector.
+// Stage 8 adds a second check: when the sender is on the BUSINESS
+// side of the conversation (nex_conversation_participant.side ===
+// 'business'), we also verify that the sender IS the actual owner
+// of the shop the conversation is keyed to.
+//
+// Why this matters: without it, a compromised session with
+// participant.side='business' could impersonate the shop even if
+// the account was swapped into the business slot through a bug or
+// a stale row. Belt + braces on top of the sealed Phase-2 Interp 1
+// device-only E2E posture.
 
-async function ensureSenderIsParticipant(
+async function ensureSenderCanWriteAsSide(
   conversationId: NexUuid,
   senderAccountId: NexUuid,
 ): Promise<void> {
+  // One join · we need both participant.side AND the business's
+  // owner_account_id in a single round-trip.
   const { data, error } = await nexSupabaseAdmin
     .from("nex_conversation_participant")
-    .select("account_id")
+    .select(
+      "account_id, side, nex_conversation!inner ( business_id, nex_business!inner ( owner_account_id ) )",
+    )
     .eq("conversation_id", conversationId)
     .eq("account_id", senderAccountId)
     .maybeSingle();
   if (error) {
     throw new Error(
-      `business-message-service.ensureSenderIsParticipant: ${error.message}`,
+      `business-message-service.ensureSenderCanWriteAsSide: ${error.message}`,
     );
   }
   if (!data) {
@@ -102,6 +120,39 @@ async function ensureSenderIsParticipant(
       "only conversation participants can send business messages",
     );
   }
+  const row = data as unknown as {
+    account_id: NexUuid;
+    side: "customer" | "business";
+    nex_conversation: {
+      business_id: NexUuid;
+      nex_business: { owner_account_id: NexUuid };
+    };
+  };
+  if (row.side === "business") {
+    const ownerId = row.nex_conversation.nex_business.owner_account_id;
+    if (ownerId !== senderAccountId) {
+      // Compromised-session defence · the sender claims to be the
+      // shop side but the business row says a different account
+      // owns the shop. Refuse the write · log the gap so an audit
+      // trail exists even if the attempt was benign (e.g., stale
+      // participant row after a shop transfer).
+      throw new Error(
+        "business-side sender is not the registered shop owner",
+      );
+    }
+  }
+}
+
+// Owner directive 2026-11-14 · Stage 8 · retained export name is
+// `ensureSenderIsParticipant` so the existing P1.T07 participant-
+// guard test file keeps compiling (and still enforces the
+// non-participant throw). Behaviour is strictly stronger · the
+// previous invariant plus the new owner match.
+async function ensureSenderIsParticipant(
+  conversationId: NexUuid,
+  senderAccountId: NexUuid,
+): Promise<void> {
+  await ensureSenderCanWriteAsSide(conversationId, senderAccountId);
 }
 
 // ─── Encrypted send · atomic multi-row insert ──────────────────────

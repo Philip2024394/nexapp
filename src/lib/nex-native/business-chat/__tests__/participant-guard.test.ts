@@ -226,3 +226,82 @@ describe("participant guard · cross-row contract checks", () => {
     expect(participantSelectMock).not.toHaveBeenCalled();
   });
 });
+
+// Stage 8 · item 9 · 2026-11-14 · owner-ownership re-verify on
+// the business-side write path. ensureSenderIsParticipant was
+// hardened: when the resolved participant row has side='business',
+// the service ALSO verifies the business's owner_account_id matches
+// the sender. These three tests prove the new invariant.
+describe("participant guard · business-side ownership verify (Stage 8 item 9)", () => {
+  const OWNER = PARTICIPANT;
+  const WRONG_OWNER = NON_PARTICIPANT;
+
+  it("business-side sender who IS the registered shop owner · write proceeds", async () => {
+    participantSelectMock.mockResolvedValue({
+      data: {
+        account_id: OWNER,
+        side: "business",
+        nex_conversation: {
+          business_id: "biz-111",
+          nex_business: { owner_account_id: OWNER },
+        },
+      },
+      error: null,
+    });
+    messageInsertMock.mockResolvedValue({
+      data: [{ id: "row-9a" }],
+      error: null,
+    });
+    const ids = await sendEncryptedBusinessMessages([fakeEncryptedRow(OWNER)]);
+    expect(ids).toEqual(["row-9a"]);
+    expect(messageInsertMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("business-side sender who is NOT the registered shop owner · write refused", async () => {
+    // Compromised-session scenario: the participant row says this
+    // account is on the business side, but the shop's own owner_
+    // account_id points to a different account. The guard must
+    // refuse rather than let an impersonated shop reply land.
+    participantSelectMock.mockResolvedValue({
+      data: {
+        account_id: WRONG_OWNER,
+        side: "business",
+        nex_conversation: {
+          business_id: "biz-111",
+          nex_business: { owner_account_id: OWNER }, // different!
+        },
+      },
+      error: null,
+    });
+    await expect(
+      sendEncryptedBusinessMessages([fakeEncryptedRow(WRONG_OWNER)]),
+    ).rejects.toThrow(/not the registered shop owner/i);
+    // Critically, no write happens when ownership verification fails.
+    expect(messageInsertMock).not.toHaveBeenCalled();
+  });
+
+  it("customer-side sender · ownership check skipped (customers never own the shop)", async () => {
+    // Customers are NEVER the shop owner · asserting side='customer'
+    // skips the owner match. This confirms the new check only
+    // applies to the business write path and doesn't break any
+    // customer-side send.
+    participantSelectMock.mockResolvedValue({
+      data: {
+        account_id: PARTICIPANT,
+        side: "customer",
+        nex_conversation: {
+          business_id: "biz-111",
+          nex_business: { owner_account_id: "some-other-owner-id" },
+        },
+      },
+      error: null,
+    });
+    messageInsertMock.mockResolvedValue({
+      data: [{ id: "row-9c" }],
+      error: null,
+    });
+    const ids = await sendEncryptedBusinessMessages([fakeEncryptedRow(PARTICIPANT)]);
+    expect(ids).toEqual(["row-9c"]);
+    expect(messageInsertMock).toHaveBeenCalledTimes(1);
+  });
+});

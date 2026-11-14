@@ -202,6 +202,7 @@ export default async function ManageMenuPage({
 
         {/* --- New section form ---------------------------------------- */}
         <SectionCard>
+          <span id="add-section-anchor" style={{ display: "block", scrollMarginTop: 60 }} />
           <SectionEyebrow color={NEX.cyan}>New section</SectionEyebrow>
           <h2 style={h2Style}>Add a menu section</h2>
           <form
@@ -1078,6 +1079,29 @@ function EmptyMenuState() {
       No menu sections yet. Start with a section like{" "}
       <b style={{ color: NEX.textDim }}>Starters</b> or{" "}
       <b style={{ color: NEX.textDim }}>Drinks</b>, then add dishes underneath.
+      {/* Stage 10 · item 15e · 2026-11-14 · tappable CTA so owners
+          don't just see a muted sentence · scrolls to the sealed
+          add-section form above (which is already on this page). */}
+      <div style={{ marginTop: 14 }}>
+        <a
+          href="#add-section-anchor"
+          data-nex-menu-empty-cta
+          style={{
+            display: "inline-block",
+            padding: "10px 16px",
+            borderRadius: 999,
+            background: NEX.cyan,
+            color: "#0A1526",
+            fontSize: 12,
+            fontWeight: 800,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            textDecoration: "none",
+          }}
+        >
+          Start by adding a section
+        </a>
+      </div>
     </div>
   );
 }

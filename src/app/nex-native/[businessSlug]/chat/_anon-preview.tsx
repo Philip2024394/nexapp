@@ -20,7 +20,11 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { createPortal } from "react-dom";
+// Stage 7 · item 5 · 2026-11-14 · shared polished Stage-4 modal ·
+// replaces the inline SignupPopup that used to live at the bottom
+// of this file. Same honesty copy as the Product Detail Sheet and
+// the shop cover FAB · one shape across every anon entry point.
+import { ShopChatRegistrationPopup } from "@/components/nex-native/business-chat/ShopChatRegistrationPopup";
 
 interface Props {
   readonly businessSlug: string;
@@ -83,14 +87,13 @@ export function AnonymousChatPreview({
     setProductsDrawerOpen(false);
   }
 
-  // Owner directive 2026-11-13 (iter 23) · draft NEVER travels in the
-  // URL. The signup links carry only `next=/<slug>/chat` so Referer
-  // headers, server logs, and CDN logs can't record user-typed text.
-  // The draft itself lives in same-origin sessionStorage (written by
-  // requestSignup above, read by the conversation client after mount).
-  const returnPath = `/nex-native/${businessSlug}/chat`;
-  const signUpHref = `/nex-native/sign-up?next=${encodeURIComponent(returnPath)}`;
-  const signInHref = `/nex-native/sign-in?next=${encodeURIComponent(returnPath)}`;
+  // Stage 7 · item 5 · 2026-11-14 · the sealed Stage-4 popup builds
+  // its own `?next=` hrefs from the shop slug (and optional product
+  // id) via `buildShopChatRegistrationHrefs`. The local signUpHref /
+  // signInHref variables + returnPath are no longer needed · the
+  // ShopChatRegistrationPopup mounted below reads businessSlug and
+  // generates the same shape (just like the Product Detail Sheet
+  // and the shop cover FAB).
 
   return (
     <main
@@ -480,12 +483,12 @@ export function AnonymousChatPreview({
       ) : null}
 
       {popupOpen ? (
-        <SignupPopup
+        <ShopChatRegistrationPopup
           shopName={businessDisplayName}
-          signUpHref={signUpHref}
-          signInHref={signInHref}
-          accentHex={accentHex}
-          onClose={() => setPopupOpen(false)}
+          shopSlug={businessSlug}
+          productId={null}
+          accent={accentHex}
+          onDismiss={() => setPopupOpen(false)}
         />
       ) : null}
     </main>
@@ -730,163 +733,15 @@ function AnonProductsDrawer({
   );
 }
 
-// ─── Signup / sign-in registration popup ─────────────────────────────
+// Stage 7 · item 5 · 2026-11-14 · inline SignupPopup removed. The
+// polished Stage-4 modal now lives at
+// `@/components/nex-native/business-chat/ShopChatRegistrationPopup`
+// and is imported at the top of this file. One shape across the
+// Product Detail Sheet, the shop cover FAB, and this anon preview.
 
-function SignupPopup({
-  shopName,
-  signUpHref,
-  signInHref,
-  accentHex,
-  onClose,
-}: {
-  shopName: string;
-  signUpHref: string;
-  signInHref: string;
-  accentHex: string;
-  onClose: () => void;
-}): React.JSX.Element | null {
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
-  React.useEffect(() => {
-    const handler = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
-  if (!mounted || typeof document === "undefined") return null;
-
-  return createPortal(
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="nex-anon-chat-signup-title"
-      onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 9000,
-        display: "grid",
-        placeItems: "center",
-        padding: 20,
-        background: "rgba(10, 21, 38, 0.72)",
-        backdropFilter: "blur(6px)",
-        WebkitBackdropFilter: "blur(6px)",
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          position: "relative",
-          width: "100%",
-          maxWidth: 360,
-          background: "#FFFFFF",
-          borderRadius: 18,
-          padding: "24px 20px 20px",
-          color: "#0A1526",
-          boxShadow: "0 24px 56px rgba(0, 0, 0, 0.45)",
-          fontFamily:
-            "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-        }}
-      >
-        <button
-          type="button"
-          aria-label="Close"
-          onClick={onClose}
-          style={{
-            position: "absolute",
-            top: 12,
-            right: 12,
-            width: 32,
-            height: 32,
-            borderRadius: "50%",
-            background: "transparent",
-            border: "none",
-            fontSize: 20,
-            lineHeight: 1,
-            cursor: "pointer",
-            color: "#4B5468",
-          }}
-        >
-          ×
-        </button>
-
-        <h2
-          id="nex-anon-chat-signup-title"
-          style={{
-            margin: "0 0 10px",
-            fontSize: 18,
-            fontWeight: 800,
-            color: "#0A1526",
-            textAlign: "center",
-          }}
-        >
-          Create your free account to send
-        </h2>
-        <p
-          style={{
-            margin: "0 0 20px",
-            fontSize: 13,
-            lineHeight: 1.5,
-            color: "#4B5468",
-            textAlign: "center",
-          }}
-        >
-          A free NEX account is what lets {shopName} reply to your message
-          and deliver it securely. Takes under a minute.
-        </p>
-
-        <Link
-          href={signUpHref}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "14px 16px",
-            borderRadius: 14,
-            background: accentHex,
-            color: "#FAF8F4",
-            fontSize: 14,
-            fontWeight: 800,
-            letterSpacing: "0.04em",
-            textTransform: "uppercase",
-            textDecoration: "none",
-            boxShadow: `0 4px 12px ${accentHex}40`,
-            marginBottom: 10,
-          }}
-        >
-          Create Free Account
-        </Link>
-
-        <Link
-          href={signInHref}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "12px 16px",
-            borderRadius: 14,
-            background: "transparent",
-            color: "#0A1526",
-            fontSize: 13,
-            fontWeight: 700,
-            letterSpacing: "0.02em",
-            textDecoration: "none",
-            border: "1px solid rgba(75,84,104,0.27)",
-          }}
-        >
-          Sign In
-        </Link>
-      </div>
-    </div>,
-    document.body,
-  );
-}
-
-// ─── Shared: category → glyph ─────────────────────────────────────────
-// Mirrors the business-category → emoji table used elsewhere in the
-// conversation surface. Keeps anonymous preview visually in sync.
-
+// Owner directive 2026-11-13 · category → glyph · drives the anon
+// products-drawer header + the welcome-bubble icon. Preserved from
+// the pre-Stage-7 file after the inline SignupPopup was deleted.
 function categoryIcon(category: string | null): string {
   if (!category) return "🛍";
   const c = category.toLowerCase();

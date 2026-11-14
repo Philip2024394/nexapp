@@ -23,6 +23,7 @@
 
 import type * as React from "react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import * as businessService from "@/lib/nex-native/business-service";
@@ -105,6 +106,15 @@ interface PageProps {
     openChat?: string;
     "open-chat"?: string;
     product?: string;
+    // Stage 8 · item 10 · 2026-11-14 · owner preview mode. When the
+    // signed-in viewer IS the shop owner AND the URL carries
+    // `?preview=1`, we suppress owner-only chrome (empty-state
+    // prompt etc.) and paint a small "Preview" ribbon so the owner
+    // can see EXACTLY what a visitor would see before deciding to
+    // publish any pending changes. Non-owners that hit the URL with
+    // `?preview=1` see the regular shop surface · the gate is the
+    // viewer-is-owner check at the render site.
+    preview?: string;
   }>;
 }
 
@@ -239,7 +249,14 @@ export default async function PublicShopPage({
   // template render exactly as before (empty catalog · no banner).
   const isOwnerViewer =
     viewerSession?.account.id === business.owner_account_id;
-  const shouldShowOwnerEmptyPrompt = isOwnerViewer && products.length === 0;
+  // Stage 8 · item 10 · 2026-11-14 · owner preview mode. Owner can
+  // hit `?preview=1` on their own shop URL to see exactly what a
+  // visitor would see · we suppress the owner empty-state prompt
+  // and paint a dismissible "Preview" ribbon at the top. Guarded by
+  // isOwnerViewer so a random visitor can't fake the mode.
+  const isPreviewMode = isOwnerViewer && sp.preview === "1";
+  const shouldShowOwnerEmptyPrompt =
+    isOwnerViewer && products.length === 0 && !isPreviewMode;
 
   // Owner directive 2026-11-08 (round 5) · page-view tracer.
   // Fires EXACTLY ONCE per server render · no client callback · a
@@ -438,6 +455,47 @@ export default async function PublicShopPage({
         />
       ))}
       <PhoneFrame>
+        {/* Stage 8 · item 10 · 2026-11-14 · owner preview ribbon.
+            Only renders when (a) the signed-in viewer IS the shop
+            owner, AND (b) ?preview=1 is set. Dismiss returns to
+            /manage/shop. Non-owners who hit `?preview=1` never see
+            the ribbon · the gate above forces isPreviewMode=false. */}
+        {isPreviewMode ? (
+          <div
+            data-nex-shop-preview-ribbon
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              zIndex: 75,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "8px 12px calc(env(safe-area-inset-top, 0px) + 8px)",
+              background: "rgba(198, 161, 91, 0.95)",
+              color: "#0A1526",
+              fontSize: 12,
+              fontWeight: 900,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.35)",
+            }}
+          >
+            <span>Preview · you are viewing this shop as a visitor</span>
+            <Link
+              href="/nex-native/manage/shop"
+              style={{
+                color: "#0A1526",
+                textDecoration: "underline",
+                fontSize: 11,
+                fontWeight: 800,
+              }}
+            >
+              Back to Manage
+            </Link>
+          </div>
+        ) : null}
         <CoverThemeSkin
           accentHex={accentHex}
           bubbleRimHex={themeRow?.bubble_rim_hex ?? accentHex}

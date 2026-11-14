@@ -23,8 +23,6 @@
 // param so the URL returns to the clean shop surface.
 
 import * as React from "react";
-import { createPortal } from "react-dom";
-import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
   NEX_CART_STORAGE_KEY,
@@ -32,10 +30,12 @@ import {
 } from "@/lib/nex-native/cart-types";
 import { writeShopPaymentMeta } from "../cart/_shop-payment-methods";
 import { openShopChatAction } from "../[businessSlug]/_open-shop-chat-action";
-import {
-  getShopChatRegistrationCopy,
-  buildShopChatRegistrationHrefs,
-} from "@/lib/nex-native/business-chat/shop-chat-registration-popup";
+// Stage 7 · item 5 · 2026-11-14 · shared Stage-4 popup component
+// extracted to `@/components/nex-native/business-chat` so the shop
+// cover FAB and the anon preview chat can mount the SAME polished
+// modal · copy + hrefs still live in the pure helper the inline
+// version used.
+import { ShopChatRegistrationPopup } from "@/components/nex-native/business-chat/ShopChatRegistrationPopup";
 
 const GOLD = "var(--nex-world-secondary, #C6A15B)";
 const CREAM = "#FAF8F4";
@@ -655,203 +655,11 @@ export function ProductDetailSheet({
   );
 }
 
-// ─── Stage 4 · in-sheet registration popup ──────────────────────────
-//
-// Owner directive 2026-11-14 · when the viewer is NOT signed in and
-// taps "More Details" on a product, we open this polished modal
-// INSTEAD of bouncing them to /sign-in. The modal:
-//
-//   · Explains that NEX is their own free account, not the shop's
-//   · Promises replies arrive in the customer's own NEX Chat
-//   · Offers Create Free Account (primary) + Sign In (secondary)
-//   · Both buttons carry Stage 3's `?next=` so the selected product
-//     survives the auth round-trip + lands back in the correct Shop
-//     Chat with the chip pre-filled
-//   · Esc + backdrop + "Not now" all dismiss without navigating
-//
-// Honesty rules observed (per the Stage 4 spec):
-//   · We do NOT claim the account is phone-verified · the signup
-//     collects phone as metadata only.
-//   · We do NOT claim push notifications are enabled.
-//   · We DO make the customer-vs-shop account distinction explicit.
-
-function ShopChatRegistrationPopup({
-  shopName,
-  shopSlug,
-  productId,
-  accent,
-  onDismiss,
-}: {
-  shopName: string;
-  shopSlug: string;
-  productId: string;
-  accent: string;
-  onDismiss: () => void;
-}): React.JSX.Element | null {
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-  React.useEffect(() => {
-    if (typeof window === "undefined") return;
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") onDismiss();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onDismiss]);
-  const copy = React.useMemo(
-    () => getShopChatRegistrationCopy(shopName),
-    [shopName],
-  );
-  const hrefs = React.useMemo(
-    () => buildShopChatRegistrationHrefs(shopSlug, productId),
-    [shopSlug, productId],
-  );
-  if (!mounted || typeof document === "undefined") return null;
-  return createPortal(
-    <div
-      data-nex-shop-chat-registration-popup
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="nex-shop-chat-reg-headline"
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 300,
-        display: "grid",
-        placeItems: "center",
-        padding: 20,
-      }}
-    >
-      <div
-        aria-hidden
-        onClick={onDismiss}
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: "rgba(0,0,0,0.65)",
-          backdropFilter: "blur(3px)",
-          WebkitBackdropFilter: "blur(3px)",
-        }}
-      />
-      <section
-        style={{
-          position: "relative",
-          width: "100%",
-          maxWidth: 340,
-          background: "#FFFFFF",
-          color: "#0A1526",
-          borderRadius: 18,
-          padding: "22px 20px 18px",
-          boxShadow:
-            "0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08)",
-          fontFamily:
-            "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-        }}
-      >
-        <h2
-          id="nex-shop-chat-reg-headline"
-          style={{
-            margin: 0,
-            fontSize: 18,
-            fontWeight: 900,
-            letterSpacing: "-0.01em",
-            color: "#0A1526",
-          }}
-        >
-          {copy.headline}
-        </h2>
-        <p
-          style={{
-            margin: "10px 0 0",
-            fontSize: 13,
-            lineHeight: 1.45,
-            color: "#3B4A5C",
-          }}
-        >
-          {copy.explainer}
-        </p>
-        <p
-          data-nex-shop-chat-registration-reply-promise
-          style={{
-            margin: "8px 0 16px",
-            fontSize: 12,
-            lineHeight: 1.45,
-            color: "#5A6A7E",
-          }}
-        >
-          {copy.replyPromise}
-        </p>
-        <Link
-          href={hrefs.signUpHref}
-          data-nex-shop-chat-registration-primary
-          style={{
-            display: "block",
-            width: "100%",
-            padding: "12px 14px",
-            borderRadius: 12,
-            background: accent,
-            color: "#1A120A",
-            fontSize: 13,
-            fontWeight: 900,
-            letterSpacing: "0.06em",
-            textTransform: "uppercase",
-            textAlign: "center",
-            textDecoration: "none",
-            boxShadow: "0 8px 20px rgba(198,161,91,0.25)",
-            boxSizing: "border-box",
-          }}
-        >
-          {copy.primaryCta}
-        </Link>
-        <Link
-          href={hrefs.signInHref}
-          data-nex-shop-chat-registration-secondary
-          style={{
-            display: "block",
-            width: "100%",
-            marginTop: 8,
-            padding: "10px 14px",
-            borderRadius: 12,
-            background: "transparent",
-            color: "#0A1526",
-            fontSize: 12,
-            fontWeight: 800,
-            letterSpacing: "0.04em",
-            textAlign: "center",
-            textDecoration: "none",
-            border: `1px solid rgba(10,21,38,0.15)`,
-            boxSizing: "border-box",
-          }}
-        >
-          {copy.secondaryCta}
-        </Link>
-        <button
-          type="button"
-          data-nex-shop-chat-registration-dismiss
-          onClick={onDismiss}
-          style={{
-            display: "block",
-            margin: "12px auto 0",
-            padding: "6px 10px",
-            background: "transparent",
-            color: "#5A6A7E",
-            fontSize: 11,
-            fontWeight: 600,
-            letterSpacing: "0.04em",
-            border: "none",
-            cursor: "pointer",
-            fontFamily: "inherit",
-          }}
-        >
-          {copy.dismissLabel}
-        </button>
-      </section>
-    </div>,
-    document.body,
-  );
-}
+// Stage 7 · item 5 · 2026-11-14 · inline ShopChatRegistrationPopup
+// definition removed. The component now lives at
+// `@/components/nex-native/business-chat/ShopChatRegistrationPopup`
+// so the shop cover FAB and the anon chat preview can mount the
+// SAME polished modal. Copy + hrefs unchanged.
 
 const qtyBtnStyle: React.CSSProperties = {
   width: 36,

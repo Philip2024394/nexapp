@@ -170,8 +170,14 @@ export default async function BusinessConversationPage({
   // Sheet brings the customer here with `?product=<id>`. We validate
   // the shape, reject when the product doesn't belong to THIS shop,
   // and hand a serialisable snapshot to the client shell so it can
-  // render a pinned context chip above the composer. Non-match or
-  // missing product silently falls through · the chat still opens.
+  // render a pinned context chip above the composer.
+  //
+  // Stage 10 · item 18 · 2026-11-14 · when the URL CARRIED a product
+  // id but we couldn't resolve it (bad shape, deleted product, or
+  // cross-shop tamper), the client now gets `productResolutionFailed
+  // = true` so it can paint a non-alarming banner explaining the
+  // customer can just describe their question instead. Honest failure
+  // · never silently loses the user's intent.
   const PRODUCT_UUID_SHAPE =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const pendingProductIdRaw = sp.product?.trim() ?? "";
@@ -212,6 +218,12 @@ export default async function BusinessConversationPage({
       description: direct.description ?? null,
     };
   })();
+  // Stage 10 · item 18 · 2026-11-14 · "we tried but couldn't" marker
+  // so the client can render a soft banner instead of silently
+  // dropping the customer's intent. True when the URL carried a
+  // product id but we refused it (bad shape, foreign shop, deleted).
+  const productResolutionFailed =
+    pendingProductIdRaw.length > 0 && pendingProduct === null;
 
   // ── Resolve viewer-side identity framing ──────────────────────────
   // Customer viewing the shop    → sees shop name/logo + shop wallpaper
@@ -573,6 +585,16 @@ export default async function BusinessConversationPage({
         initialMessages={messages}
         viewerSide={viewerParticipant.side}
         pendingProduct={pendingProduct}
+        productResolutionFailed={productResolutionFailed}
+        /* Stage 7 · item 4 · 2026-11-14 · universal chat-controls
+           contract. scannedAccountId is intentionally NULL for the
+           business-scoped conversation (the subject is the SHOP, not
+           a peer account · there is no profile to "scan" into).
+           viewerAccountId carries the signed-in viewer identity so
+           universal chat-chrome can resolve its POV without a second
+           server lookup. Closes _universal-chat-controls.test.ts §D. */
+        scannedAccountId={null}
+        viewerAccountId={session.account.id}
       />
     </main>
   );

@@ -25,9 +25,18 @@ import { PeerComposer } from "./peer/[accountId]/_composer";
 import { EncryptedDocumentChip } from "./peer/[accountId]/_encrypted-document-chip";
 import { PrivateAttachmentDisplay } from "./peer/[accountId]/_private-attachment-display";
 import { ScrollToBottomOnMount } from "./_scroll-to-bottom";
+import dynamic from "next/dynamic";
 import { MessageBubbleClient } from "./_message-bubble-client";
 import { ReadTick } from "./_read-tick";
-import { ImageLightbox } from "./_image-lightbox";
+// Stage 10 · item 11 · 2026-11-14 · ImageLightbox lazy-loaded. The
+// component only mounts when the user taps an image attachment ·
+// lifting it to a dynamic import shaves its bundle weight off the
+// initial chat-shell render. `ssr: false` is safe · it never renders
+// on first paint (returns null until `lightboxUrl` is set).
+const ImageLightbox = dynamic(
+  () => import("./_image-lightbox").then((m) => m.ImageLightbox),
+  { ssr: false },
+);
 import { ReactionsChipRow, BubbleTopRightReaction } from "./_reactions";
 import {
   SideNavPanel,

@@ -44,6 +44,19 @@ import {
   PRIVATE_CIPHERTEXT_BUCKET,
   ensurePrivateBucketReady,
 } from "@/lib/nex-native/attachment/bucket-config";
+// Stage 6 · P0 safety net · item 3 · 2026-11-14 · rate-limit the
+// standard-send upload BEFORE buffering 25 MB of request body. Both
+// per-account AND per-IP keys to resist both flood-from-single-session
+// and distributed-session floods. Uses the sealed "chat_message"
+// policy (60 per hour) since this is part of the chat send pipeline.
+import {
+  accountRateLimitKey,
+  ipRateLimitKey,
+  isSecurityRateLimitError,
+  isSecurityUnavailableError,
+  recordIfAllowed,
+} from "@/lib/nex-native/security-rate-limit";
+import { readClientIp } from "@/lib/nex-native/app/security-request";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -100,6 +113,48 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       { ok: false, error: "not_signed_in" },
       { status: 401 },
     );
+  }
+
+  // Stage 6 · P0 safety net · item 3 · 2026-11-14 · rate-limit the
+  // upload BEFORE buffering 25 MB of request body. Belt + braces:
+  //   · Per-account key catches a compromised session spamming uploads.
+  //   · Per-IP key catches an attacker rotating sessions.
+  // The sealed "chat_message" policy is 60 per hour · same cap the
+  // encrypted send route rides.  429 (rate_limited) on throttle · 503
+  // (service_unavailable) when the limiter is down. Both responses
+  // include retry_after_seconds so the client can back off cleanly.
+  const clientIp = readClientIp(req);
+  try {
+    await recordIfAllowed(accountRateLimitKey(session.account.id), "chat_message");
+    await recordIfAllowed(ipRateLimitKey(clientIp), "chat_message");
+  } catch (e) {
+    if (isSecurityUnavailableError(e)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "service_unavailable",
+          retry_after_seconds: e.retryAfterSeconds,
+        },
+        {
+          status: 503,
+          headers: { "Retry-After": String(e.retryAfterSeconds) },
+        },
+      );
+    }
+    if (isSecurityRateLimitError(e)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "rate_limited",
+          retry_after_seconds: e.retryAfterSeconds,
+        },
+        {
+          status: 429,
+          headers: { "Retry-After": String(e.retryAfterSeconds) },
+        },
+      );
+    }
+    throw e;
   }
 
   const contentType = (req.headers.get("content-type") ?? "").toLowerCase();

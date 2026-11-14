@@ -23,6 +23,7 @@ import {
 } from "@/lib/nex-native/business-service";
 import { NexPageHeader } from "../../../_page-header";
 import { saveShopIntroMessageAction } from "./_actions";
+import { IntroSaveButton } from "./_save-button";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -221,29 +222,10 @@ export default async function ShopIntroEditorPage({
 
           <div style={{ height: 14 }} />
 
-          <button
-            type="submit"
-            data-nex-shop-intro-save
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "100%",
-              padding: "14px 16px",
-              borderRadius: 14,
-              background: ACCENT,
-              color: "#FFFFFF",
-              border: "none",
-              fontSize: 13,
-              fontWeight: 800,
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-              cursor: "pointer",
-              boxShadow: "0 2px 8px rgba(255, 114, 0, 0.25)",
-            }}
-          >
-            Save intro
-          </button>
+          {/* Stage 10 · item 15b · 2026-11-14 · swapped for the
+              pending-aware IntroSaveButton · same visual style but
+              now shows "Saving…" while the server action is in-flight. */}
+          <IntroSaveButton accent={ACCENT} />
         </form>
 
         <div

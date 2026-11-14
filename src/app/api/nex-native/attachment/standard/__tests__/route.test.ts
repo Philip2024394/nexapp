@@ -23,11 +23,13 @@ const {
   storageFromMock,
   uploadMock,
   ensurePrivateBucketReadyMock,
+  recordIfAllowedMock,
 } = vi.hoisted(() => ({
   resolveSessionMock: vi.fn(),
   storageFromMock: vi.fn(),
   uploadMock: vi.fn(),
   ensurePrivateBucketReadyMock: vi.fn(),
+  recordIfAllowedMock: vi.fn(),
 }));
 
 vi.mock("@/lib/nex-native/app/session", () => ({
@@ -47,6 +49,36 @@ vi.mock("@/lib/nex-native/attachment/bucket-config", () => ({
 }));
 vi.mock("@/lib/nex-native/peer-message-service", () => ({
   NEX_PEER_ATTACHMENT_MAX_BYTES: 25 * 1024 * 1024,
+}));
+// Stage 6 · P0 item 3 · 2026-11-14 · rate-limit path mocks. The route
+// now calls `recordIfAllowed` twice (account + IP keys). Tests set the
+// mock to resolve by default so the happy path is unaffected; the
+// 429/503 cases force the mock to throw a shaped error.
+class MockSecurityRateLimitError extends Error {
+  readonly retryAfterSeconds: number;
+  constructor(seconds: number) {
+    super("rate_limited");
+    this.name = "SecurityRateLimitError";
+    this.retryAfterSeconds = seconds;
+  }
+}
+class MockSecurityUnavailableError extends Error {
+  readonly retryAfterSeconds: number;
+  constructor(seconds: number) {
+    super("service_unavailable");
+    this.name = "SecurityUnavailableError";
+    this.retryAfterSeconds = seconds;
+  }
+}
+vi.mock("@/lib/nex-native/security-rate-limit", () => ({
+  recordIfAllowed: recordIfAllowedMock,
+  accountRateLimitKey: (id: string) => `acct:${id}`,
+  ipRateLimitKey: (ip: string | null) => `ip:${ip ?? "unknown"}`,
+  isSecurityRateLimitError: (e: unknown) => e instanceof MockSecurityRateLimitError,
+  isSecurityUnavailableError: (e: unknown) => e instanceof MockSecurityUnavailableError,
+}));
+vi.mock("@/lib/nex-native/app/security-request", () => ({
+  readClientIp: () => "127.0.0.1",
 }));
 
 import { POST } from "../route";
@@ -74,10 +106,14 @@ beforeEach(() => {
   storageFromMock.mockReset();
   uploadMock.mockReset();
   ensurePrivateBucketReadyMock.mockReset();
+  recordIfAllowedMock.mockReset();
   resolveSessionMock.mockResolvedValue(fakeSession());
   ensurePrivateBucketReadyMock.mockResolvedValue(true);
   uploadMock.mockResolvedValue({ error: null });
   storageFromMock.mockImplementation(() => ({ upload: uploadMock }));
+  // Default: rate limiter allows the upload. Individual tests that
+  // need the throttled path override with mockRejectedValueOnce.
+  recordIfAllowedMock.mockResolvedValue(undefined);
 });
 
 afterEach(() => vi.clearAllMocks());
@@ -278,5 +314,82 @@ describe("POST · success path", () => {
     );
     const [objectPath] = uploadMock.mock.calls[0];
     expect(objectPath).toMatch(/\.bin$/);
+  });
+});
+
+// Stage 6 · P0 safety net · item 3 · rate-limit path tests.
+describe("POST · rate limiting (Stage 6 item 3)", () => {
+  it("calls recordIfAllowed with BOTH account AND IP keys (defence in depth)", async () => {
+    await POST(
+      makeRequest(new Uint8Array([1, 2]), {
+        "content-type": "image/png",
+      }) as never,
+    );
+    expect(recordIfAllowedMock).toHaveBeenCalledTimes(2);
+    const calls = recordIfAllowedMock.mock.calls.map((c) => c[0]);
+    expect(calls).toContain(`acct:${SELF}`);
+    expect(calls).toContain("ip:127.0.0.1");
+    // Both calls use the sealed "chat_message" policy (60 per hour).
+    for (const call of recordIfAllowedMock.mock.calls) {
+      expect(call[1]).toBe("chat_message");
+    }
+  });
+
+  it("returns 429 with Retry-After when the limiter throws a rate-limit error", async () => {
+    recordIfAllowedMock.mockRejectedValueOnce(
+      new MockSecurityRateLimitError(120),
+    );
+    const resp = await POST(
+      makeRequest(new Uint8Array([1, 2]), {
+        "content-type": "image/png",
+      }) as never,
+    );
+    expect(resp.status).toBe(429);
+    expect(resp.headers.get("Retry-After")).toBe("120");
+    const body = await resp.json();
+    expect(body).toMatchObject({
+      ok: false,
+      error: "rate_limited",
+      retry_after_seconds: 120,
+    });
+    // CRITICAL: the upload must NEVER fire once the rate limit kicks
+    // in. A throttled request must NOT consume the 25 MB buffer read
+    // or hit Supabase storage.
+    expect(uploadMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 503 with Retry-After when the limiter is unavailable", async () => {
+    recordIfAllowedMock.mockRejectedValueOnce(
+      new MockSecurityUnavailableError(300),
+    );
+    const resp = await POST(
+      makeRequest(new Uint8Array([1, 2]), {
+        "content-type": "image/png",
+      }) as never,
+    );
+    expect(resp.status).toBe(503);
+    expect(resp.headers.get("Retry-After")).toBe("300");
+    const body = await resp.json();
+    expect(body).toMatchObject({
+      ok: false,
+      error: "service_unavailable",
+      retry_after_seconds: 300,
+    });
+    expect(uploadMock).not.toHaveBeenCalled();
+  });
+
+  it("rate-limit check runs BEFORE the 25 MB buffer read (no body consumed on throttle)", async () => {
+    recordIfAllowedMock.mockRejectedValueOnce(
+      new MockSecurityRateLimitError(60),
+    );
+    // Build a 25 MB payload. If the route buffered it before the
+    // limit check, the test would be slow AND would call upload.
+    // Neither should happen · throttle fires immediately.
+    const big = new Uint8Array(100); // small is enough · we only care about ordering
+    await POST(
+      makeRequest(big, { "content-type": "image/png" }) as never,
+    );
+    expect(uploadMock).not.toHaveBeenCalled();
+    expect(ensurePrivateBucketReadyMock).not.toHaveBeenCalled();
   });
 });

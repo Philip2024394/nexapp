@@ -1225,6 +1225,37 @@ export async function countUnreadPeerMessages(
   return count ?? 0;
 }
 
+/** Stage 9 · item 6 · 2026-11-14 · batched unread count for N
+ *  conversations. Replaces N individual `countUnreadPeerMessages`
+ *  round-trips with ONE query that pulls all unread rows across
+ *  every conversation id and tallies them in memory.
+ *
+ *  Returns a Map<conversationId, count>. Missing entries mean 0
+ *  unread · callers can default without a null check.
+ *
+ *  Fail-soft like the single-conversation variant: on query error
+ *  the function returns an empty Map rather than throwing · the
+ *  inbox UI still renders, just without the unread pips. */
+export async function listUnreadPeerCountsByConversation(
+  conversationIds: ReadonlyArray<NexUuid>,
+  viewerAccountId: NexUuid,
+): Promise<Map<NexUuid, number>> {
+  const out = new Map<NexUuid, number>();
+  if (conversationIds.length === 0) return out;
+  const unique = Array.from(new Set(conversationIds));
+  const { data, error } = await nexSupabaseAdmin
+    .from("nex_peer_message")
+    .select("conversation_id")
+    .in("conversation_id", unique)
+    .neq("sender_account_id", viewerAccountId)
+    .is("read_at", null);
+  if (error) return out;
+  for (const row of (data ?? []) as Array<{ conversation_id: NexUuid }>) {
+    out.set(row.conversation_id, (out.get(row.conversation_id) ?? 0) + 1);
+  }
+  return out;
+}
+
 /** Count TOTAL unread messages for a viewer across EVERY NON-VAULT
  *  peer conversation they participate in. Used for the home-screen
  *  app badge (owner directive 2026-10-16) and any UI that aggregates

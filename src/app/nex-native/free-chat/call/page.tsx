@@ -110,13 +110,21 @@ export default async function FreeChatCallPage({
   // /free-chat/call?peer=<handle>.
   if (peerArg.length === 0) {
     const friendIds = await friendService.listFriends(session.account.id);
-    const friends = await Promise.all(
-      friendIds.map(async (id) => {
-        const acc = await accountService.getAccountById(id).catch(() => null);
+    // Stage 9 · item 6 · 2026-11-14 · N+1 collapse. Was 2N queries
+    // per picker render (account + profile per friend) · now TWO
+    // batched queries total via getAccountsByIds +
+    // getProfilesByAccountIds.
+    const [accountById, profileById] = await Promise.all([
+      accountService.getAccountsByIds(friendIds).catch(() => new Map()),
+      accountProfileService
+        .getProfilesByAccountIds(friendIds)
+        .catch(() => new Map()),
+    ]);
+    const resolved = friendIds
+      .map((id) => {
+        const acc = accountById.get(id);
         if (!acc) return null;
-        const prof = await accountProfileService
-          .getProfileByAccountId(id)
-          .catch(() => null);
+        const prof = profileById.get(id) ?? null;
         return {
           accountId: id,
           handle: acc.nex_handle ?? null,
@@ -125,11 +133,10 @@ export default async function FreeChatCallPage({
           location: prof?.location_label ?? null,
           profession: prof?.profession ?? null,
         };
-      }),
-    );
-    const resolved = friends.filter(
-      (f): f is NonNullable<typeof f> => f !== null && f.handle !== null,
-    );
+      })
+      .filter(
+        (f): f is NonNullable<typeof f> => f !== null && f.handle !== null,
+      );
     return <FriendPickerShell friends={resolved} />;
   }
 

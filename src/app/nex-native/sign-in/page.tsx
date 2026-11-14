@@ -282,6 +282,38 @@ export default async function SignInPage({ searchParams }: PageProps) {
               data-nex-sign-in-banner={banner.code}
             >
               {banner.message}
+              {/* Stage 10 · item 14 · 2026-11-14 · email-confirmation
+                  dead-end UX fix. When createNexAccountAction redirects
+                  here with `email_confirmation_required`, explain the
+                  wait + how to continue. The actual resend endpoint is
+                  Supabase-provider-level · we expose a mailto fallback
+                  for the customer to reach support honestly. */}
+              {banner.code === "email_confirmation_required" ? (
+                <div
+                  data-nex-sign-in-email-confirm-help
+                  style={{
+                    marginTop: 10,
+                    paddingTop: 10,
+                    borderTop: `1px dashed ${NEX.orange}`,
+                    fontSize: 11.5,
+                    lineHeight: 1.5,
+                    color: NEX.textSecondary,
+                  }}
+                >
+                  <strong style={{ color: NEX.textPrimary }}>Next step:</strong>{" "}
+                  check the inbox + spam folder for an email from NEX. Tap the
+                  confirmation link, then come back here and sign in.
+                  <br />
+                  Still can&apos;t find it after a few minutes?{" "}
+                  <a
+                    href="mailto:asknexapp@gmail.com?subject=NEX%20email%20confirmation%20didn%27t%20arrive"
+                    style={{ color: NEX.cyan, textDecoration: "underline" }}
+                  >
+                    Email support
+                  </a>{" "}
+                  and we&apos;ll re-send manually.
+                </div>
+              ) : null}
             </div>
           )}
 

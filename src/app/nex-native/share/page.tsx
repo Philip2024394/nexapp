@@ -82,23 +82,28 @@ export default async function SharePage({
   const shareableIds = friendIds.filter(
     (id) => id !== session.account.id && id !== business.owner_account_id,
   );
-  const friends = await Promise.all(
-    shareableIds.map(async (id) => {
-      const account = await accountService
-        .getAccountById(id)
-        .catch(() => null);
-      const profile = await accountProfileService
-        .getProfileByAccountId(id)
-        .catch(() => null);
+  // Stage 9 · item 6 · 2026-11-14 · N+1 collapse. Was 2N queries
+  // per /share render (account + profile per shareable friend) ·
+  // now TWO batched reads via getAccountsByIds +
+  // getProfilesByAccountIds · single round-trip to each table.
+  const [accountById, profileById] = await Promise.all([
+    accountService.getAccountsByIds(shareableIds).catch(() => new Map()),
+    accountProfileService
+      .getProfilesByAccountIds(shareableIds)
+      .catch(() => new Map()),
+  ]);
+  const validFriends = shareableIds
+    .map((id) => {
+      const account = accountById.get(id) ?? null;
+      const profile = profileById.get(id) ?? null;
       return { account, profile };
-    }),
-  );
-  const validFriends = friends.filter(
-    (f): f is {
-      account: NonNullable<typeof f.account>;
-      profile: typeof f.profile;
-    } => f.account !== null,
-  );
+    })
+    .filter(
+      (f): f is {
+        account: NonNullable<typeof f.account>;
+        profile: typeof f.profile;
+      } => f.account !== null,
+    );
 
   return (
     <div

@@ -311,18 +311,36 @@ export default async function FreeChatPage({
         await peerConversationServiceForNotifs.listPeerConversationsForAccount(
           notifySessionAccountId,
         );
-      const raw = await Promise.all(
-        myConvos.map(async (c) => {
-          const n = await peerMessageServiceForNotifs.countUnreadPeerMessages(
-            c.id,
-            notifySessionAccountId,
-          );
+      // Stage 9 · item 6 · 2026-11-14 · N+1 collapse. Was 2N queries
+      // per inbox render (unread count + account lookup per convo).
+      // Now 2 queries total · one batched unread tally + one batched
+      // getAccountsByIds · identical UI output.
+      const unreadByConv =
+        await peerMessageServiceForNotifs.listUnreadPeerCountsByConversation(
+          myConvos.map((c) => c.id),
+          notifySessionAccountId,
+        );
+      const peerIds = Array.from(
+        new Set(
+          myConvos
+            .filter((c) => (unreadByConv.get(c.id) ?? 0) > 0)
+            .map((c) =>
+              c.participant_a_id === notifySessionAccountId
+                ? c.participant_b_id
+                : c.participant_a_id,
+            ),
+        ),
+      );
+      const peerById = await accountServiceForNotifs.getAccountsByIds(peerIds);
+      unreadChatNotifsFC = myConvos
+        .map((c) => {
+          const n = unreadByConv.get(c.id) ?? 0;
           if (n === 0) return null;
           const otherId =
             c.participant_a_id === notifySessionAccountId
               ? c.participant_b_id
               : c.participant_a_id;
-          const other = await accountServiceForNotifs.getAccountById(otherId);
+          const other = peerById.get(otherId);
           if (!other) return null;
           return {
             id: `unread-${c.id}`,
@@ -340,11 +358,8 @@ export default async function FreeChatPage({
               ? `/nex-native/u/${other.nex_handle}`
               : null,
           };
-        }),
-      );
-      unreadChatNotifsFC = raw.filter(
-        (x): x is NonNullable<typeof x> => x !== null,
-      );
+        })
+        .filter((x): x is NonNullable<typeof x> => x !== null);
     } catch {
       // soft-fail · same rationale as above
     }

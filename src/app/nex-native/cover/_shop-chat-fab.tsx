@@ -35,9 +35,11 @@
 //     were Phase-A placeholders never wired to real actions.
 
 import * as React from "react";
-import Link from "next/link";
-import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+// Stage 7 · item 5 · 2026-11-14 · shared polished Stage-4 popup.
+// Anon tap now mounts this instead of routing to the anon preview
+// page (one hop less · same "your own private NEX" honesty copy).
+import { ShopChatRegistrationPopup } from "@/components/nex-native/business-chat/ShopChatRegistrationPopup";
 
 interface Props {
   /** Business owner's UUID · drives the peer-chat destination.
@@ -93,26 +95,22 @@ export function ShopChatFab({
   }, [showPopup]);
 
   function onTap(): void {
-    // Owner directive 2026-11-13 (iter 21) · sign-up gate moved to
-    // first SEND. Anonymous visitors now route to the chat preview
-    // page `/nex-native/<slug>/chat` so they can see the shop
-    // identity, welcome message, and products BEFORE being asked to
-    // sign up. The popup fires from the preview's composer when
-    // they tap send for the first time. Signed-in flow is unchanged.
+    // Stage 7 · item 5 · 2026-11-14 · anon tap now opens the sealed
+    // polished Stage-4 modal IN-SHOP · same honesty copy as the
+    // Product Detail Sheet's More-Details popup. The older anon
+    // preview page at `/<slug>/chat` stays available but is no
+    // longer the first stop · it is still used as the return path
+    // via the `?next=` chain when the modal's Create / Sign-in
+    // buttons complete. Signed-in flow unchanged.
     if (!shopSlug) return;
     if (isSignedIn) {
       router.push(`/nex-native/${shopSlug}?open-chat=1`);
       return;
     }
-    router.push(`/nex-native/${shopSlug}/chat`);
+    setShowPopup(true);
   }
 
   const shopLabel = shopName?.trim() || "this shop";
-  const returnPath = shopSlug
-    ? `/nex-native/${shopSlug}?open-chat=1`
-    : "/nex-native/contacts";
-  const signUpHref = `/nex-native/sign-up?next=${encodeURIComponent(returnPath)}`;
-  const signInHref = `/nex-native/sign-in?next=${encodeURIComponent(returnPath)}`;
 
   return (
     <>
@@ -154,164 +152,22 @@ export function ShopChatFab({
         </svg>
       </button>
 
-      {showPopup ? (
-        <RegistrationPopup
-          shopName={shopLabel}
-          signUpHref={signUpHref}
-          signInHref={signInHref}
-          accentHex={accent}
-          onClose={() => setShowPopup(false)}
+      {showPopup && shopSlug ? (
+        <ShopChatRegistrationPopup
+          shopName={shopName ?? null}
+          shopSlug={shopSlug}
+          productId={null}
+          accent={accent}
+          onDismiss={() => setShowPopup(false)}
         />
       ) : null}
     </>
   );
 }
 
-// ─── Registration popup ────────────────────────────────────────────────
 
-function RegistrationPopup({
-  shopName,
-  signUpHref,
-  signInHref,
-  accentHex,
-  onClose,
-}: {
-  readonly shopName: string;
-  readonly signUpHref: string;
-  readonly signInHref: string;
-  readonly accentHex: string;
-  readonly onClose: () => void;
-}): React.JSX.Element | null {
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
-  if (!mounted || typeof document === "undefined") return null;
-
-  return createPortal(
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="nex-shop-chat-popup-title"
-      data-nex-shop-chat-popup
-      onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 9000,
-        display: "grid",
-        placeItems: "center",
-        padding: 20,
-        background: POPUP_BG,
-        backdropFilter: "blur(6px)",
-        WebkitBackdropFilter: "blur(6px)",
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: "100%",
-          maxWidth: 360,
-          background: CARD_BG,
-          borderRadius: 18,
-          padding: "24px 20px 20px",
-          color: INK,
-          boxShadow: "0 24px 56px rgba(0, 0, 0, 0.45)",
-          fontFamily:
-            "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-        }}
-      >
-        <button
-          type="button"
-          aria-label="Close"
-          onClick={onClose}
-          style={{
-            position: "absolute",
-            top: 12,
-            right: 12,
-            width: 32,
-            height: 32,
-            borderRadius: "50%",
-            background: "transparent",
-            border: "none",
-            fontSize: 20,
-            lineHeight: 1,
-            cursor: "pointer",
-            color: INK_MUTED,
-          }}
-        >
-          ×
-        </button>
-
-        <h2
-          id="nex-shop-chat-popup-title"
-          style={{
-            margin: "0 0 10px",
-            fontSize: 18,
-            fontWeight: 800,
-            letterSpacing: "0.005em",
-            color: INK,
-            textAlign: "center",
-          }}
-        >
-          Chat with {shopName}
-        </h2>
-        <p
-          style={{
-            margin: "0 0 20px",
-            fontSize: 13,
-            lineHeight: 1.5,
-            color: INK_MUTED,
-            textAlign: "center",
-          }}
-        >
-          Create your free NEX account to message this shop and receive
-          replies directly in NEX Chat.
-        </p>
-
-        <Link
-          href={signUpHref}
-          data-nex-shop-chat-popup-signup
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "14px 16px",
-            borderRadius: 14,
-            background: accentHex,
-            color: CREAM,
-            fontSize: 14,
-            fontWeight: 800,
-            letterSpacing: "0.04em",
-            textTransform: "uppercase",
-            textDecoration: "none",
-            boxShadow: `0 4px 12px ${accentHex}40`,
-            marginBottom: 10,
-          }}
-        >
-          Create Free Account
-        </Link>
-
-        <Link
-          href={signInHref}
-          data-nex-shop-chat-popup-signin
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "12px 16px",
-            borderRadius: 14,
-            background: "transparent",
-            color: INK,
-            fontSize: 13,
-            fontWeight: 700,
-            letterSpacing: "0.02em",
-            textDecoration: "none",
-            border: `1px solid ${INK_MUTED}44`,
-          }}
-        >
-          Sign In
-        </Link>
-      </div>
-    </div>,
-    document.body,
-  );
-}
+// Stage 7 · item 5 · 2026-11-14 · inline RegistrationPopup removed.
+// The polished Stage-4 modal now lives at
+// `@/components/nex-native/business-chat/ShopChatRegistrationPopup`
+// and is reused by the Product Detail Sheet, this FAB, and the anon
+// chat preview · one shape, one copy, one `?next=` chain.

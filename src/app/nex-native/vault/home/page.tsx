@@ -100,22 +100,27 @@ export default async function VaultWorkspaceHomePage() {
     vaultEntryService.listVaultedConversationsForAccount(session.account.id),
     vaultEntryService.listVaultedFriendIdsForAccount(session.account.id),
   ]);
+  // Stage 9 · item 6 · 2026-11-14 · N+1 collapse. Was N round-trips
+  // to getAccountById per vaulted conversation · now ONE batched
+  // getAccountsByIds call that hydrates every peer in a single
+  // PostgREST request.
+  const peerById = await accountService.getAccountsByIds(
+    vaultedConversations.map((v) => v.peerAccountId),
+  );
   const vaultedChatsRows: Array<{
     conversationId: string;
     peerAccountId: string;
     displayName: string;
     handle: string | null;
-  }> = await Promise.all(
-    vaultedConversations.map(async (v) => {
-      const peer = await accountService.getAccountById(v.peerAccountId);
-      return {
-        conversationId: v.conversation.id,
-        peerAccountId: v.peerAccountId,
-        displayName: peer?.display_name ?? "Private contact",
-        handle: peer?.nex_handle ?? null,
-      };
-    }),
-  );
+  }> = vaultedConversations.map((v) => {
+    const peer = peerById.get(v.peerAccountId);
+    return {
+      conversationId: v.conversation.id,
+      peerAccountId: v.peerAccountId,
+      displayName: peer?.display_name ?? "Private contact",
+      handle: peer?.nex_handle ?? null,
+    };
+  });
 
   return (
     <>

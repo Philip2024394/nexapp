@@ -54,28 +54,33 @@ export default async function VaultChatsFriendsRoom() {
   );
   const vaultedFriendSet = new Set(vaultedFriendIds);
 
-  // For each vaulted conversation whose peer is NOT a vaulted friend,
-  // hydrate a conversation row. (Conversations whose peer IS a vaulted
-  // friend are implicitly represented by the friend row — avoid double
-  // listing per D1.b.)
+  // Stage 9 · item 6 · 2026-11-14 · N+1 collapse. Was 2N queries
+  // per render (account + last message per vaulted conv). Batched
+  // account lookup pulls every peer in ONE query. Last-message
+  // read stays per-conversation for now (a batched RPC `window
+  // function per conv` is future work · noted in service comment).
+  const nonFriendConvs = vaultedConvs.filter(
+    (v) => !vaultedFriendSet.has(v.peerAccountId),
+  );
+  const peerByIdForChats = await accountService.getAccountsByIds(
+    nonFriendConvs.map((v) => v.peerAccountId),
+  );
   const conversationRows = await Promise.all(
-    vaultedConvs
-      .filter((v) => !vaultedFriendSet.has(v.peerAccountId))
-      .map(async (v) => {
-        const [peer, lastMsg] = await Promise.all([
-          accountService.getAccountById(v.peerAccountId),
-          peerMsgService.getLastPeerMessageInConversation(v.conversation.id),
-        ]);
-        return {
-          kind: "conversation" as const,
-          conversationId: v.conversation.id,
-          peerAccountId: v.peerAccountId,
-          displayName: peer?.display_name ?? "Unknown contact",
-          handle: peer?.nex_handle ?? null,
-          lastMessagePreview: previewFor(lastMsg),
-          movedAt: v.movedAt,
-        };
-      }),
+    nonFriendConvs.map(async (v) => {
+      const peer = peerByIdForChats.get(v.peerAccountId);
+      const lastMsg = await peerMsgService.getLastPeerMessageInConversation(
+        v.conversation.id,
+      );
+      return {
+        kind: "conversation" as const,
+        conversationId: v.conversation.id,
+        peerAccountId: v.peerAccountId,
+        displayName: peer?.display_name ?? "Unknown contact",
+        handle: peer?.nex_handle ?? null,
+        lastMessagePreview: previewFor(lastMsg),
+        movedAt: v.movedAt,
+      };
+    }),
   );
 
   const totalCount = friendRows.length + conversationRows.length;

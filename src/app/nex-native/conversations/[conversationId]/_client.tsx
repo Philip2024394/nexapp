@@ -110,6 +110,14 @@ interface Props {
     message_group_id: string | null;
   }>;
   readonly viewerSide: "customer" | "business";
+  // Stage 7 · item 4 · 2026-11-14 · universal chat-controls contract.
+  // For the business-scoped conversation, scannedAccountId is
+  // intentionally null (the subject is the SHOP, not a peer account).
+  // viewerAccountId carries the signed-in viewer identity so universal
+  // chrome (if ever mounted on this surface) can resolve POV without a
+  // second server lookup.
+  readonly scannedAccountId: string | null;
+  readonly viewerAccountId: string | null;
   // Owner directive 2026-11-14 · optional "More Details" pending
   // product context · resolved server-side from `?product=<id>` on
   // the URL · shown as a pinned context chip above the composer so
@@ -124,6 +132,11 @@ interface Props {
     image_url: string | null;
     description: string | null;
   } | null;
+  // Stage 10 · item 18 · 2026-11-14 · true when the URL carried a
+  // product id but server refused to resolve it (bad shape, deleted,
+  // foreign shop). Client paints a soft explainer so the customer
+  // knows the context card didn't materialise · they can still chat.
+  readonly productResolutionFailed?: boolean;
 }
 
 type MessageRow = Props["initialMessages"][number];
@@ -143,6 +156,13 @@ export function BusinessConversationClient({
   initialMessages,
   viewerSide,
   pendingProduct,
+  productResolutionFailed = false,
+  // Stage 7 · item 4 · 2026-11-14 · accepted so page.tsx can thread
+  // universal props through · unused by the business-chat shell today
+  // but reserved for universal chrome (search · profile scan · POV
+  // chips) that may mount on this surface later.
+  scannedAccountId: _scannedAccountId,
+  viewerAccountId: _viewerAccountId,
 }: Props): React.JSX.Element {
   const router = useRouter();
   const [draft, setDraft] = React.useState("");
@@ -817,6 +837,31 @@ export function BusinessConversationClient({
           the selection as a real encrypted product-card message in
           nex_message (same envelope the 3-dot drawer writes) so the
           conversation history carries the context, not just the URL. */}
+      {/* Stage 10 · item 18 · 2026-11-14 · soft banner when the URL
+          carried `?product=<id>` but the server refused to resolve
+          it (bad shape · deleted · foreign shop). Lets the customer
+          know the context card won't appear · they can still chat. */}
+      {productResolutionFailed && !pendingProduct && viewerSide === "customer" ? (
+        <div
+          data-nex-biz-conv-product-resolution-failed
+          style={{
+            marginLeft: 12,
+            marginRight: 12,
+            marginBottom: 8,
+            padding: "8px 12px",
+            borderRadius: 10,
+            background: "rgba(198, 161, 91, 0.12)",
+            border: "1px solid rgba(198, 161, 91, 0.35)",
+            color: "#F2F5F8",
+            fontSize: 12,
+            lineHeight: 1.45,
+          }}
+        >
+          Couldn&apos;t load the product card you selected · the shop may have
+          taken it down or the link is out of date. You can still ask about
+          it below.
+        </div>
+      ) : null}
       {pendingProduct && viewerSide === "customer" && (
         <div
           data-nex-biz-conv-pending-product={pendingProduct.id}
