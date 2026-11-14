@@ -282,10 +282,15 @@ describe("B.5 · move affordance · reuses sealed MoveToVaultAffordance", () => 
     expect(code).toMatch(/vaultEntryService\.moveFriendToVault/);
   });
 
-  test("inbox already mounts the affordance (sealed · unchanged by B.5)", () => {
+  test("vault chat index already mounts the affordance (sealed · unchanged by B.5)", () => {
+    // 2026-11-14 · updated to reflect that the sealed inbox surface
+    // for vault chat lives at src/app/nex-native/vault/home/chats/
+    // page.tsx (the former `chat/inbox/page.tsx` was removed by the
+    // Scope Reduction 2026-11-06). MoveToVaultAffordance is still
+    // mounted there · see the import in that file.
     const inbox = path.join(
       REPO_ROOT,
-      "src/app/nex-native/chat/inbox/page.tsx",
+      "src/app/nex-native/vault/home/chats/page.tsx",
     );
     const code = readFile(inbox);
     expect(code).toMatch(/MoveToVaultAffordance/);
