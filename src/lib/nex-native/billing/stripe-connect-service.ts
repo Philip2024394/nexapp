@@ -57,22 +57,39 @@ function makeStripeClient(): Stripe {
 
 /** Detect whether the sealed migration 311 columns exist. Returns
  *  false in a dev DB that hasn't had 311 applied yet · callers can
- *  then short-circuit with a clear error instead of SQL-crashing. */
-async function detectConnectColumns(): Promise<boolean> {
+ *  then short-circuit with a clear error instead of SQL-crashing.
+ *
+ *  Payment audit 2026-11-14 · bug fix. The prior implementation
+ *  queried `information_schema.columns` via the Supabase REST
+ *  client, but PostgREST does NOT expose the information_schema
+ *  by default. The call always errored → detectConnectColumns
+ *  returned false even on a DB where migration 311 was fully
+ *  applied. Downstream endpoints (`/billing/connect/stripe/create`,
+ *  `/disconnect`, webhook state updates) shed-faulted with
+ *  `columns_not_applied` 422 despite correct schema. Reproduced
+ *  against sandbox `kdstoyyeygcopkogqsyv` which has all 7 columns.
+ *
+ *  New probe · select ONE migration-311 column directly from
+ *  `nex_business` with `limit(0)` so no rows are returned. Postgres
+ *  signals a missing column with code `42703`; the REST client
+ *  surfaces it on `error.code` or in `error.message`. Any other
+ *  error is treated as transient and fails OPEN · Stripe downstream
+ *  will surface the real failure. */
+export async function detectConnectColumns(): Promise<boolean> {
   try {
-    const { data, error } = await nexSupabaseAdmin
-      .from("information_schema.columns" as never)
-      .select("column_name")
-      .eq("table_schema", "public")
-      .eq("table_name", "nex_business")
-      .in("column_name", [
-        "stripe_connect_account_id",
-        "stripe_connect_charges_enabled",
-        "stripe_connect_payouts_enabled",
-      ]);
-    if (error) return false;
-    const rows = (data as Array<{ column_name: string }> | null) ?? [];
-    return rows.length >= 3;
+    const { error } = await nexSupabaseAdmin
+      .from("nex_business")
+      .select("stripe_connect_account_id")
+      .limit(0);
+    if (!error) return true;
+    const code = (error as { code?: string } | null)?.code;
+    const message = (error as { message?: string } | null)?.message ?? "";
+    if (code === "42703" || /does not exist/i.test(message)) return false;
+    // Transient blip · fail OPEN so a Supabase hiccup doesn't block
+    // a sandbox dev or a real shop owner when the columns are
+    // present. Any real downstream failure is surfaced by the
+    // Stripe or pg update that runs after this probe.
+    return true;
   } catch {
     return false;
   }
