@@ -879,11 +879,22 @@ export default async function PeerChatPage({
     ? "Away · will see later"
     : "NEX · chatting with";
 
+  // Owner-authorised 2026-11-15 · SSR plaintext elimination · when
+  // this conversation is in the viewer's Vault, the server renders
+  // ZERO user messages. The Shell + the client-side vault gate still
+  // mount · the gate covers the composer + any decrypted artifacts
+  // the client might later produce (none, because there's no
+  // ciphertext to decrypt without messages). On unlock the gate's
+  // router.refresh() re-runs this server component and the real
+  // messages re-materialise. No schema change · no storage change.
+  const ssrMessages = isVaultedForViewer
+    ? ([] as typeof messages)
+    : messages;
   // Bridge 5 · resolve reply-preview snippets so bubbles can render
   // their quote header without an extra client round-trip. O(n²) but
   // conversations are small · we can index later if this ever gets hot.
-  const byId = new Map(messages.map((m) => [m.id, m]));
-  const bloomMessages = messages.map((m) => {
+  const byId = new Map(ssrMessages.map((m) => [m.id, m]));
+  const bloomMessages = ssrMessages.map((m) => {
     const quoted = m.reply_to_id ? byId.get(m.reply_to_id) : null;
     return {
       id: m.id,
@@ -1583,7 +1594,10 @@ export default async function PeerChatPage({
       pendingInvites={pendingInvites}
       replyTarget={(() => {
         if (!replyId) return null;
-        const target = messages.find((m) => m.id === replyId);
+        // Owner-authorised 2026-11-15 · route reply preview through
+        // ssrMessages so a vaulted conversation NEVER renders a
+        // reply quote body in SSR either.
+        const target = ssrMessages.find((m) => m.id === replyId);
         // Silently drop the reply target when the message is gone
         // or has been retracted · quoting a deleted message would
         // leak the original body back into the send flow.

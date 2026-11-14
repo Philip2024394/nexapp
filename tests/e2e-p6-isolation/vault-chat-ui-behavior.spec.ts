@@ -748,6 +748,40 @@ test.describe("Vault Privacy Completion Pass · sandbox UI journey", () => {
     expect(scopeText ?? "").not.toContain(sentinelDocBody);
   });
 
+  test("C2 · post-vault · RAW HTML source carries NO user plaintext (server-side skip)", async () => {
+    // Owner-authorised 2026-11-15 · verifies the server-side SSR
+    // skip. We fetch the page HTML directly (not via Playwright DOM
+    // scrub) and prove that none of the pre-vault sentinels appear
+    // anywhere in the SSR output · including the RSC payload <script>
+    // chunks. This is the acceptance criterion that `view-source`
+    // reveals no private content when a conversation is vaulted.
+    const cookies = await customerCtx.cookies();
+    const cookieHeader = cookies
+      .map((c) => `${c.name}=${c.value}`)
+      .join("; ");
+    const res = await fetch(
+      `http://localhost:3010/nex-native/chat/peer/${SELLER_ACCOUNT_ID}?e2e=1`,
+      {
+        headers: { cookie: cookieHeader },
+        redirect: "follow",
+      },
+    );
+    const raw = await res.text();
+    expect(res.status, "page HTTP status").toBe(200);
+    for (const sentinel of [
+      sentinelPlain,
+      sentinelPostVault,
+      sentinelPhotoBody,
+      sentinelVideoBody,
+      sentinelDocBody,
+    ]) {
+      expect(
+        raw.includes(sentinel),
+        `raw SSR must NOT contain ${sentinel}`,
+      ).toBe(false);
+    }
+  });
+
   test("E · Lock Now · gate blocks /chat/peer/* AND /vault/home/chats/* · direct URL, reload, back-nav", async () => {
     // E.1 direct URL to /chat/peer/<seller> → gate is locked
     await customerPage.goto(
