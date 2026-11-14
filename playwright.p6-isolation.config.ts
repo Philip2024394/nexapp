@@ -44,5 +44,14 @@ export default defineConfig({
       testMatch: /vault-acceptance\.spec\.ts/,
       timeout: 240_000,
     },
+    {
+      // 2026-11-14 · bounded chat-behavior pass · sends a real
+      // message via the sealed /chat/peer surface post-unlock, then
+      // observes the Lock Now gate at /vault/home/chats/[id].
+      name: "vault-chat-behavior-390",
+      use: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+      testMatch: /vault-chat-behavior\.spec\.ts/,
+      timeout: 300_000,
+    },
   ],
 });
