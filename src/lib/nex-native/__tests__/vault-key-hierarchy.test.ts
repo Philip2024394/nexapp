@@ -63,9 +63,11 @@ describe("key-hierarchy · constants and policy", () => {
     expect(SYMMETRIC_KEY_LENGTH).toBe(32);
   });
 
-  test("PIN length policy is 8-12 digits (founder-locked 2026-10-06)", () => {
-    expect(PIN_MIN_LENGTH).toBe(8);
-    expect(PIN_MAX_LENGTH).toBe(12);
+  test("PIN length policy is exactly 6 digits (owner-sealed 2026-11-09 override of 2026-10-06 founder-lock)", () => {
+    // Owner-sealed 2026-11-09 "finger press or 6 digit password" · see
+    // vault/key-hierarchy.ts:109-115 for the policy source.
+    expect(PIN_MIN_LENGTH).toBe(6);
+    expect(PIN_MAX_LENGTH).toBe(6);
   });
 
   test("passphrase minimum is 20 chars (design §K)", () => {
@@ -291,29 +293,31 @@ describe("key-hierarchy · wrapKey / unwrapKey envelope format", () => {
   });
 });
 
-describe("key-hierarchy · PIN validator (founder-locked 8-12 digits)", () => {
+describe("key-hierarchy · PIN validator (owner-sealed 2026-11-09 · exactly 6 digits)", () => {
+  // Policy reference: vault/key-hierarchy.ts:109-115 (owner-sealed
+  // 2026-11-09 override of the 2026-10-06 founder-lock).
+  test("rejects 5-digit PIN", () => {
+    expect(() => validatePin("12345")).toThrow();
+  });
+  test("accepts 6-digit PIN (the sealed policy)", () => {
+    expect(() => validatePin("123456")).not.toThrow();
+  });
   test("rejects 7-digit PIN", () => {
     expect(() => validatePin("1234567")).toThrow();
   });
-  test("rejects 6-digit PIN (the retracted prototype)", () => {
-    expect(() => validatePin("123456")).toThrow();
+  test("rejects 8-digit PIN (above the sealed upper bound)", () => {
+    expect(() => validatePin("12345678")).toThrow();
   });
-  test("accepts 8-digit PIN", () => {
-    expect(() => validatePin("12345678")).not.toThrow();
-  });
-  test("accepts 12-digit PIN", () => {
-    expect(() => validatePin("123456789012")).not.toThrow();
-  });
-  test("rejects 13-digit PIN", () => {
-    expect(() => validatePin("1234567890123")).toThrow();
+  test("rejects 12-digit PIN (above the sealed upper bound)", () => {
+    expect(() => validatePin("123456789012")).toThrow();
   });
   test("rejects non-digit characters", () => {
-    expect(() => validatePin("12345678a")).toThrow();
-    expect(() => validatePin("12345678 ")).toThrow();
-    expect(() => validatePin("1234-5678")).toThrow();
+    expect(() => validatePin("12345a")).toThrow();
+    expect(() => validatePin("12345 ")).toThrow();
+    expect(() => validatePin("12-456")).toThrow();
   });
   test("rejects non-string", () => {
-    expect(() => validatePin(12345678 as unknown as string)).toThrow();
+    expect(() => validatePin(123456 as unknown as string)).toThrow();
   });
 });
 
@@ -339,7 +343,7 @@ describe("key-hierarchy · Argon2id KEK derivation", () => {
   test("deriveKekFromPin returns a 32-byte key (reduced test profile)", async () => {
     const salt = generateArgon2Salt(16);
     const kek = await deriveKekFromPin({
-      pin: "12345678",
+      pin: "123456",
       salt,
       params: TEST_ARGON,
     });
@@ -348,26 +352,26 @@ describe("key-hierarchy · Argon2id KEK derivation", () => {
 
   test("deriveKekFromPin is deterministic for (pin, salt, params)", async () => {
     const salt = generateArgon2Salt(16);
-    const a = await deriveKekFromPin({ pin: "12345678", salt, params: TEST_ARGON });
-    const b = await deriveKekFromPin({ pin: "12345678", salt, params: TEST_ARGON });
+    const a = await deriveKekFromPin({ pin: "123456", salt, params: TEST_ARGON });
+    const b = await deriveKekFromPin({ pin: "123456", salt, params: TEST_ARGON });
     expect(a).toEqual(b);
   });
 
   test("different PIN produces different KEK (same salt)", async () => {
     const salt = generateArgon2Salt(16);
-    const a = await deriveKekFromPin({ pin: "12345678", salt, params: TEST_ARGON });
-    const b = await deriveKekFromPin({ pin: "12345679", salt, params: TEST_ARGON });
+    const a = await deriveKekFromPin({ pin: "123456", salt, params: TEST_ARGON });
+    const b = await deriveKekFromPin({ pin: "654321", salt, params: TEST_ARGON });
     expect(a).not.toEqual(b);
   });
 
   test("different salt produces different KEK (same PIN)", async () => {
     const a = await deriveKekFromPin({
-      pin: "12345678",
+      pin: "123456",
       salt: generateArgon2Salt(16),
       params: TEST_ARGON,
     });
     const b = await deriveKekFromPin({
-      pin: "12345678",
+      pin: "123456",
       salt: generateArgon2Salt(16),
       params: TEST_ARGON,
     });
@@ -384,7 +388,7 @@ describe("key-hierarchy · Argon2id KEK derivation", () => {
   test("deriveKekFromPin rejects short salt", async () => {
     await expect(
       deriveKekFromPin({
-        pin: "12345678",
+        pin: "123456",
         salt: new Uint8Array(8),
         params: TEST_ARGON,
       }),

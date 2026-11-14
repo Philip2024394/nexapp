@@ -338,13 +338,41 @@ describe("10 · happy path · encrypted outcome is unchanged in shape from v0", 
   });
 });
 
-// ─── BONUS · Document short-circuit (no upload attempt) ────────────────
+// ─── BONUS · Document kind · P1.T04 Phase 3 (2026-11-13) ──────────────
+//
+// The earlier short-circuit that returned "unsupported-mime" for every
+// document captureKind has been REMOVED by the sealed P1.T04 Phase 3
+// change (see attempt-encrypted-attachment.ts:52-58). Documents now
+// flow through the full encrypted pipeline; MIME classification is the
+// uploader's job, and genuinely unknown MIMEs still surface as the
+// "unsupported-mime" block via a thrown error there.
 
-describe("document kind · fast-fail without reading bytes", () => {
-  it("returns blocked/unsupported-mime without calling the upload helper", async () => {
-    uploadMock.mockRejectedValue(new Error("should not be called"));
+describe("document kind · P1.T04 Phase 3 (no short-circuit)", () => {
+  it("supported document MIME (PDF) flows through the encrypted pipeline", async () => {
+    uploadMock.mockResolvedValue({
+      storageUrl: "https://example.supabase.co/x/y/doc.bin",
+      storagePath: "enc/u1/doc",
+      contentType: "application/pdf",
+      sizeBytes: 2048,
+      kind: "document",
+      contentKey: new Uint8Array(32),
+      contentNonce: new Uint8Array(24),
+    });
     const outcome = await attemptEncryptedAttachment({
-      file: fakeFile("file.pdf", "application/pdf"),
+      file: fakeFile("file.pdf", "application/pdf", 2048),
+      captureKind: "document",
+      uploadQuality: "standard",
+    });
+    expect(outcome.kind).toBe("encrypted");
+    expect(uploadMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("genuinely unsupported MIME still returns blocked/unsupported-mime via uploader throw", async () => {
+    uploadMock.mockRejectedValue(
+      new Error("unsupported attachment mime 'application/x-xyz'"),
+    );
+    const outcome = await attemptEncryptedAttachment({
+      file: fakeFile("file.xyz", "application/x-xyz"),
       captureKind: "document",
       uploadQuality: "standard",
     });
@@ -353,7 +381,6 @@ describe("document kind · fast-fail without reading bytes", () => {
       expect(outcome.reason).toBe("unsupported-mime");
       expect(outcome.captureKind).toBe("document");
     }
-    expect(uploadMock).not.toHaveBeenCalled();
   });
 
   it("unsupported-mime allows plaintext opt-in but not retry", () => {
