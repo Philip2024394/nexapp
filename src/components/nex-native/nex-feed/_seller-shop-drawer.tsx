@@ -779,7 +779,10 @@ function ProductDetailSheet(props: {
 
   const { product, broadcaster, shop } = props;
   const price = formatPrice(product.pricePence, product.currency);
-  const chatHref = `/nex-native/chat/peer/${broadcaster.accountId}?pending_product=${encodeURIComponent(product.id)}`;
+  // Owner directive 2026-11-14 · pending_product share-to-chat flow
+  // retired. "Ask seller" now opens the plain chat surface without
+  // attaching a product snapshot.
+  const chatHref = `/nex-native/chat/peer/${broadcaster.accountId}`;
 
   const handleAddToCart = (): void => {
     try {

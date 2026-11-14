@@ -123,26 +123,6 @@ interface PeerComposerProps {
    *  through the client-side encrypted upload path. Disable for
    *  NEX1 (support chat is not E2E per doctrine). */
   encryptedUploadEnabled?: boolean;
-  /** Owner directive 2026-10-22 · Ask-Seller slice 2 · product
-   *  attachment chip rendered above the pill when the URL carries
-   *  ?pending_product=<id>. The peer page resolves the snapshot
-   *  server-side (name · price · image · shop) and passes it here.
-   *  Buyer can type an optional question or send the card alone.
-   *  Slice 3 wires the actual send through shareProductToContactAction. */
-  pendingProduct?: {
-    productId: string;
-    name: string;
-    priceLabel: string | null;
-    imageUrl: string | null;
-    shopName: string | null;
-    clearHref: string;
-    /** Owner directive 2026-10-22 · Live Commerce · when the enquiry
-     *  originated from a live stream, carries the client-generated
-     *  live session id so the composer can render a "📺 From Live"
-     *  badge and the eventual send-action can embed it in the
-     *  attachment_meta for owner-side analytics / context. */
-    liveSessionId?: string | null;
-  } | null;
   /** Bridge ThemeEmoji-B · sealed 2026-10-01 · per-theme emoji set
    *  loaded from nex_theme_emoji (Migration 116). When non-empty,
    *  the composer's emoji picker renders these image tiles instead
@@ -186,7 +166,6 @@ export function PeerComposer({
   replyTarget,
   uploadAction,
   pendingAttachment,
-  pendingProduct,
   encryptedUploadEnabled,
   themeEmojis,
   themeStickers,
@@ -938,150 +917,9 @@ export function PeerComposer({
           </>
         )}
 
-        {/* Owner directive 2026-10-22 · Ask-Seller slice 2 · pending
-            product chip · rendered when ?pending_product=<id> landed
-            the buyer here from the shop. Thumbnail · name · "from
-            {shopName}" · price · X to discard (navigates to clearHref
-            which drops the URL param). Hidden product_id input is
-            carried into the form so slice 3 can route through
-            shareProductToContactAction. */}
-        {pendingProduct && (
-          <>
-            <input
-              type="hidden"
-              name="product_id"
-              value={pendingProduct.productId}
-            />
-            {pendingProduct.liveSessionId && (
-              <input
-                type="hidden"
-                name="live_session_id"
-                value={pendingProduct.liveSessionId}
-              />
-            )}
-            <div
-              data-nex-composer-pending-product={pendingProduct.productId}
-              data-nex-composer-live-session-id={
-                pendingProduct.liveSessionId ?? undefined
-              }
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: 8,
-                borderRadius: 12,
-                background: "rgba(0,0,0,0.4)",
-                border: `1px solid ${
-                  themeAccent
-                    ? composerRim(themeAccent)
-                    : "rgba(0,159,239,0.5)"
-                }`,
-                marginBottom: -12,
-              }}
-            >
-              <div
-                aria-hidden={!!pendingProduct.imageUrl}
-                role={pendingProduct.imageUrl ? undefined : "img"}
-                aria-label={
-                  pendingProduct.imageUrl ? undefined : "Product image placeholder"
-                }
-                style={{
-                  flexShrink: 0,
-                  width: 44,
-                  height: 44,
-                  borderRadius: 10,
-                  background: pendingProduct.imageUrl
-                    ? `#000 center / cover no-repeat url("${pendingProduct.imageUrl}")`
-                    : "linear-gradient(135deg, rgba(0,159,239,0.35), rgba(0,0,0,0.4))",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                }}
-              />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    color: themeAccent ?? NEX.cyan,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                  }}
-                >
-                  <span>
-                    {pendingProduct.shopName
-                      ? `From ${pendingProduct.shopName}`
-                      : "Product"}
-                  </span>
-                  {pendingProduct.liveSessionId && (
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 3,
-                        padding: "1px 6px",
-                        borderRadius: 999,
-                        background: "rgba(255, 51, 85, 0.14)",
-                        border: "1px solid rgba(255, 51, 85, 0.42)",
-                        color: "#FF3355",
-                        fontSize: 9,
-                        fontWeight: 900,
-                        letterSpacing: 0.3,
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      📺 From Live
-                    </span>
-                  )}
-                </div>
-                <div
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: NEX.textPrimary,
-                    marginTop: 2,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {pendingProduct.name}
-                </div>
-                {pendingProduct.priceLabel && (
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color: NEX.textSecondary,
-                      marginTop: 1,
-                    }}
-                  >
-                    {pendingProduct.priceLabel} · ask a question or send card alone
-                  </div>
-                )}
-              </div>
-              <a
-                href={pendingProduct.clearHref}
-                aria-label="Discard product"
-                title="Discard product"
-                style={{
-                  flexShrink: 0,
-                  width: 28,
-                  height: 28,
-                  borderRadius: "50%",
-                  background: "rgba(0,0,0,0.42)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  color: NEX.textPrimary,
-                  display: "grid",
-                  placeItems: "center",
-                  textDecoration: "none",
-                }}
-              >
-                <ReplyCancelIcon />
-              </a>
-            </div>
-          </>
-        )}
+        {/* Owner directive 2026-11-14 · pending_product chip retired.
+            The composer no longer renders a product-card preview above
+            the pill · buyers describe their enquiry in plain text. */}
 
         {/* Sealed 2026-10-01 · composer Row 1 (floating 3-dot above
             the pill) retired · the + button inside the pill opens the

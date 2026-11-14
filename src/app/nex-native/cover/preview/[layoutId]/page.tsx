@@ -54,10 +54,10 @@ import { PhoneFrame } from "../_phone-frame";
 // renders ONLY in full-page preview mode (never when ?embed=1 is on,
 // so mini-phone iframes inside /cover-themes-library stay clean).
 import { CoverActionBar } from "./_cover-action-bar";
-// Owner directive 2026-10-22 · intercept product-card taps when
-// the preview is embedded with `?brand=` so the marketplace parent
-// can open its menu-item sheet instead of the sealed peer-chat flow.
-import { BrandTapBridge } from "./_brand-tap-bridge";
+// Owner directive 2026-11-14 · BrandTapBridge retired alongside the
+// pending_product share-to-chat flow (the bridge existed only to
+// intercept /chat/peer/<id>?pending_product=<id> taps when the
+// preview was embedded in the marketplace prototype iframe).
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -514,14 +514,10 @@ export default async function CoverLayoutPreview({
           library mini tiles) skips it entirely · the mini tiles
           stay chrome-free. */}
       {!isEmbedded && <CoverActionBar layoutId={layoutId} />}
-      {/* Owner directive 2026-10-22 · when the preview is embedded
-          with a brand id, intercept product-card clicks and post
-          them to the parent window. The sealed CoverCatalog + its
-          peer-chat navigation are untouched · the bridge only
-          fires inside an iframe with cross-document parent. */}
-      {typeof sp.brand === "string" && sp.brand.length > 0 && (
-        <BrandTapBridge brand={sp.brand} />
-      )}
+      {/* Owner directive 2026-11-14 · BrandTapBridge usage removed
+          alongside the pending_product share-to-chat flow retirement.
+          Marketplace iframe embedding now falls through to the
+          sealed CoverCatalog's own navigation. */}
     </>
   );
 }

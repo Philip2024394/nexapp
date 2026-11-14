@@ -189,11 +189,10 @@ export default async function PeerChatPage({
     focus_product?: string;
     /** Owner directive 2026-10-22 · Ask-Seller slice 2 · product id
      *  the buyer wants to ask the owner about. When present AND the
-     *  product resolves to a valid snapshot, the composer renders a
-     *  product-card chip above the pill (buyer can type an optional
-     *  question or send the card alone). Slice 3 will route send
-     *  through shareProductToContactAction. Unknown id falls through
-     *  silently · no chip appears · no error. */
+     *  Owner directive 2026-11-14 · pending_product share-to-chat
+     *  flow retired. The field is retained in the searchParams type
+     *  ONLY so stale in-flight URLs that still carry the param parse
+     *  cleanly · it is intentionally never read below. */
     pending_product?: string;
     /** Owner directive 2026-10-22 · Live Commerce · when the viewer
      *  taps "Order now" on a product overlay during a live stream,
@@ -229,22 +228,16 @@ export default async function PeerChatPage({
     typeof sp.focus_product === "string" && sp.focus_product.length > 0
       ? sp.focus_product
       : null;
-  // C-08 fix 2026-10-28 · pending_product must survive the sign-in
-  // redirect so an unsigned Ask-Seller tap still routes the buyer
-  // back to the exact product chip. Whitelist is explicit · only
-  // these two chat-page params are rebuilt into `next=…` to avoid
-  // reflecting attacker-supplied values back into the sign-in URL.
-  const pendingProductIdFromUrl =
-    typeof sp.pending_product === "string" && sp.pending_product.length > 0
-      ? sp.pending_product
-      : null;
+  // Owner directive 2026-11-14 · pending_product share-to-chat flow
+  // retired. Sign-in redirect no longer preserves `?pending_product=`
+  // (the C-08 2026-10-28 round-trip is removed). Only focus_product
+  // survives the auth bounce.
   // Owner directive 2026-10-26 · dev persona impersonation.
   const session = await resolveSessionWithDevOverride();
   if (!session) {
     const base = `/nex-native/chat/peer/${peerAccountId}`;
     const nextParams = new URLSearchParams();
     if (focusProductIdFromUrl) nextParams.set("focus_product", focusProductIdFromUrl);
-    if (pendingProductIdFromUrl) nextParams.set("pending_product", pendingProductIdFromUrl);
     const nextQs = nextParams.toString();
     const nextUrl = nextQs ? `${base}?${nextQs}` : base;
     redirect(`/nex-native/sign-in?next=${encodeURIComponent(nextUrl)}`);
@@ -582,59 +575,11 @@ export default async function PeerChatPage({
         }
       : null;
 
-  // Owner directive 2026-10-22 · Ask-Seller slice 2 · resolve the
-  // pending product snapshot from ?pending_product=<id>. Honest-null
-  // on any failure (unknown id, product deleted, missing business) ·
-  // the composer silently omits the chip. The product must belong to
-  // the peer's business so viewers can't inject arbitrary product
-  // ids into another person's chat (belt-and-braces · the next slice
-  // adds the server-side authorisation on send too).
-  const pendingProductIdRaw = sp.pending_product?.trim() ?? "";
-  // Owner directive 2026-10-22 · Live Commerce · optional
-  // live-session context carried through from the live viewer's
-  // "Order now" tap. Validated as strict UUID shape (same regex as
-  // the live-viewer page `?product=` guard and
-  // shareProductToContactAction's live_session_id guard). A malformed
-  // value is dropped silently · chip renders without the "From Live"
-  // badge · the server action also drops it on send.
-  const LIVE_SESSION_UUID_SHAPE =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  const liveSessionIdRaw = sp.live_session_id?.trim() ?? "";
-  const liveSessionIdValid =
-    liveSessionIdRaw.length > 0 && LIVE_SESSION_UUID_SHAPE.test(liveSessionIdRaw)
-      ? liveSessionIdRaw
-      : null;
-  const pendingProduct = await (async () => {
-    if (!pendingProductIdRaw || !peerBusiness) return null;
-    const product = await productService
-      .getProductById(pendingProductIdRaw)
-      .catch(() => null);
-    if (!product) return null;
-    if (product.business_id !== peerBusiness.id) return null;
-    const priceLabel = (() => {
-      try {
-        return new Intl.NumberFormat(undefined, {
-          style: "currency",
-          currency: product.currency,
-          maximumFractionDigits: 0,
-        }).format(product.price_pence / 100);
-      } catch {
-        return `${product.currency} ${(product.price_pence / 100).toFixed(0)}`;
-      }
-    })();
-    const clearParams = liveSessionIdValid
-      ? `?live_session_id=${encodeURIComponent(liveSessionIdValid)}`
-      : "";
-    return {
-      productId: product.id,
-      name: product.name,
-      priceLabel,
-      imageUrl: product.image_url ?? null,
-      shopName: peerBusiness.display_name,
-      clearHref: `/nex-native/chat/peer/${peer.id}${clearParams}`,
-      liveSessionId: liveSessionIdValid,
-    };
-  })();
+  // Owner directive 2026-11-14 · pending_product share-to-chat flow
+  // retired. The server-side product snapshot fetch (Ask-Seller slice
+  // 2 · 2026-10-22) and its Live Commerce `?live_session_id=` carrier
+  // are removed. The composer no longer renders a pre-attached
+  // product chip · buyers describe their enquiry in plain text.
 
   // See-My-Theme gate (sealed 2026-10-16) · AND-rule mutual visibility.
   // When either participant has disabled theme visibility for this
@@ -1534,7 +1479,6 @@ export default async function PeerChatPage({
       deleteAction={bindDelete}
       uploadAction={bindUpload}
       pendingAttachment={pendingAttachment}
-      pendingProduct={pendingProduct}
       encryptedUploadEnabled={!isNexOfficialAccount(peer.id)}
       themeEmojis={peerThemeEmojis}
       themeStickers={peerThemeStickers}

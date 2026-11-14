@@ -184,7 +184,10 @@ export function ProductDetailSheet({
     }
   }
 
-  const chatHref = `/nex-native/chat/peer/${shopOwnerAccountId}?pending_product=${encodeURIComponent(product.id)}`;
+  // Owner directive 2026-11-14 · pending_product share-to-chat flow
+  // retired. The chat opens empty · the buyer can describe what they
+  // want once on the peer-chat surface.
+  const chatHref = `/nex-native/chat/peer/${shopOwnerAccountId}`;
   const priceLabel = formatPrice(product.price_pence, product.currency);
   const totalLabel = formatPrice(product.price_pence * qty, product.currency);
 
