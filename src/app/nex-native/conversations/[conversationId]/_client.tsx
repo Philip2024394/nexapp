@@ -17,6 +17,9 @@ import {
   sendEncryptedBusinessMessage,
 } from "@/lib/nex-native/crypto/encrypted-business-send";
 import {
+  buildProductCardEnvelope,
+} from "@/lib/nex-native/business-chat/product-card-envelope";
+import {
   ensureDeviceKey,
 } from "@/lib/nex-native/crypto/device-key";
 import {
@@ -483,6 +486,76 @@ export function BusinessConversationClient({
 
   const canSend = sendState !== "sending" && draft.trim().length > 0 && peerReady;
 
+  // ── Stage 2 · 2026-11-14 · send the Stage 1 pending-product chip's
+  // selection into the conversation as a real encrypted product-card
+  // message. Reuses `doSend` (which routes through the sealed
+  // sendEncryptedBusinessMessage → /api/nex-native/chat/encrypted
+  // → nex_message pipeline) · no new endpoint. The envelope shape
+  // is the same one the 3-dot shop-products drawer writes, so the
+  // bubble renderer below paints an identical ProductCardBubble for
+  // either entry path.
+  //
+  // Guardrails:
+  //   · In-flight ref blocks double-tap / React-StrictMode re-entry.
+  //   · productShareLocked keeps the cooldown rule honest (one
+  //     product-share per peer-reply) · the Stage 1 chip respects
+  //     the same lock the 3-dot drawer uses.
+  //   · Failed send keeps the chip visible with an inline error so
+  //     the customer can retry · the `?product=<id>` URL stays set,
+  //     survives refresh, until a send is confirmed successful.
+  //   · On confirmed success we rewrite the URL WITHOUT `?product=`
+  //     so a reload doesn't re-offer the same prefilled chip. The
+  //     product-card bubble itself persists in nex_message via the
+  //     successful insert · no UI-only state.
+  const [pendingProductSending, setPendingProductSending] =
+    React.useState<boolean>(false);
+  const [pendingProductError, setPendingProductError] =
+    React.useState<string | null>(null);
+  const pendingProductInflightRef = React.useRef<boolean>(false);
+  const sendPendingProductCard = React.useCallback(async () => {
+    if (!pendingProduct) return;
+    if (pendingProductInflightRef.current) return;
+    if (!peerAccountId) {
+      setPendingProductError("Shop participant not resolved · cannot send");
+      return;
+    }
+    pendingProductInflightRef.current = true;
+    setPendingProductSending(true);
+    setPendingProductError(null);
+    const envelope = buildProductCardEnvelope({
+      id: pendingProduct.id,
+      name: pendingProduct.name,
+      price_pence: pendingProduct.price_pence,
+      currency: pendingProduct.currency,
+      image_url: pendingProduct.image_url,
+    });
+    const result = await doSend(envelope.plaintext, {
+      attachmentType: envelope.attachmentType,
+      attachmentMeta: envelope.attachmentMeta,
+    });
+    pendingProductInflightRef.current = false;
+    setPendingProductSending(false);
+    if (result.ok) {
+      // Clear the URL so the chip disappears and a refresh doesn't
+      // re-offer the same send. The actual product bubble is now in
+      // nex_message history · the realtime subscription + /since
+      // catch-up append it to liveMessages within a tick.
+      router.replace(`/nex-native/conversations/${conversationId}`);
+      return;
+    }
+    // Keep the chip visible · the customer can tap again.
+    setPendingProductError(
+      sendError ?? "Couldn't send · tap to retry",
+    );
+  }, [
+    pendingProduct,
+    peerAccountId,
+    doSend,
+    router,
+    conversationId,
+    sendError,
+  ]);
+
   return (
     <>
       {/* ── Message list ─────────────────────────────────────────── */}
@@ -740,11 +813,19 @@ export function BusinessConversationClient({
           `?product=<id>` from the Product Detail Sheet's "More
           Details" button. Shows thumbnail + name + price so the
           customer knows exactly which product the shop will reply
-          about. Dismiss arrow routes back to the same conversation
-          without the query param (chip disappears). */}
+          about. Stage 2 adds a "Send to shop" action that commits
+          the selection as a real encrypted product-card message in
+          nex_message (same envelope the 3-dot drawer writes) so the
+          conversation history carries the context, not just the URL. */}
       {pendingProduct && viewerSide === "customer" && (
         <div
           data-nex-biz-conv-pending-product={pendingProduct.id}
+          data-nex-biz-conv-pending-product-sending={
+            pendingProductSending ? "true" : "false"
+          }
+          data-nex-biz-conv-pending-product-locked={
+            productShareLocked ? "true" : "false"
+          }
           style={{
             position: "sticky",
             bottom: 60,
@@ -752,8 +833,8 @@ export function BusinessConversationClient({
             marginRight: 12,
             marginBottom: -6,
             display: "flex",
-            alignItems: "center",
-            gap: 10,
+            flexDirection: "column",
+            gap: 8,
             padding: 10,
             borderRadius: 14,
             background: "rgba(10, 21, 38, 0.92)",
@@ -764,6 +845,7 @@ export function BusinessConversationClient({
             zIndex: 6,
           }}
         >
+         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div
             aria-hidden={!!pendingProduct.image_url}
             role={pendingProduct.image_url ? undefined : "img"}
@@ -850,6 +932,67 @@ export function BusinessConversationClient({
           >
             ×
           </button>
+         </div>
+         {/* Owner directive 2026-11-14 · Stage 2 · "Send to shop" ·
+             commits the selected product as a real encrypted product-
+             card message in nex_message · identical envelope + bubble
+             renderer as the 3-dot shop-products drawer path. Disabled
+             while in-flight (double-tap guard) or while the cooldown
+             (productShareLocked) is active. Successful send → URL
+             param cleared → chip disappears. Failed send keeps the
+             chip + shows an inline retry label. */}
+         <button
+           type="button"
+           data-nex-biz-conv-pending-product-send
+           aria-label={
+             productShareLocked
+               ? "Waiting for shop reply before sharing another product"
+               : "Send this product as a message to the shop"
+           }
+           disabled={
+             pendingProductSending || productShareLocked || !peerAccountId
+           }
+           onClick={() => {
+             void sendPendingProductCard();
+           }}
+           style={{
+             padding: "10px 14px",
+             borderRadius: 10,
+             border: "none",
+             background: productShareLocked
+               ? "rgba(255,255,255,0.12)"
+               : accentHex,
+             color: productShareLocked ? "#B5C3D6" : "#1A120A",
+             fontSize: 12,
+             fontWeight: 900,
+             letterSpacing: "0.08em",
+             textTransform: "uppercase",
+             cursor:
+               pendingProductSending || productShareLocked
+                 ? "not-allowed"
+                 : "pointer",
+             width: "100%",
+             fontFamily: "inherit",
+           }}
+         >
+           {pendingProductSending
+             ? "Sending…"
+             : productShareLocked
+               ? "Waiting for shop reply"
+               : "Send to shop"}
+         </button>
+         {pendingProductError ? (
+           <span
+             data-nex-biz-conv-pending-product-error
+             style={{
+               fontSize: 11,
+               color: "#FF9A9A",
+               textAlign: "center",
+             }}
+           >
+             {pendingProductError}
+           </span>
+         ) : null}
         </div>
       )}
 

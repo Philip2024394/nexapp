@@ -35,6 +35,7 @@ import { redirect } from "next/navigation";
 import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-impersonation";
 import { getBusinessBySlug } from "@/lib/nex-native/business-service";
 import { getOrCreateBusinessConversation } from "@/lib/nex-native/business-message-service";
+import { buildSignedOutNextPath } from "@/lib/nex-native/business-chat/anon-next-path";
 
 /** Shape the form submits via hidden <input name="product_id"> when
  *  the entry point is the Product Detail Sheet "More Details" button.
@@ -44,12 +45,34 @@ export async function openShopChatAction(
   slug: string,
   formData?: FormData,
 ): Promise<void> {
+  // Owner directive 2026-11-14 · optional product-id carry-through ·
+  // parsed FIRST so BOTH the signed-out and signed-in branches can
+  // thread the same product reference through. UUID-shape only ·
+  // the destination page does the business-scope ownership check
+  // (products from other shops are refused · no cross-shop leak).
+  const productIdRaw =
+    typeof formData?.get("product_id") === "string"
+      ? String(formData.get("product_id")).trim()
+      : "";
+  const PRODUCT_UUID_SHAPE =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const productId =
+    productIdRaw.length > 0 && PRODUCT_UUID_SHAPE.test(productIdRaw)
+      ? productIdRaw
+      : null;
+
   const session = await resolveSessionWithDevOverride();
   if (!session) {
+    // Stage 3 · 2026-11-14 · preserve the selected product through
+    // the sign-up / sign-in round-trip. The next= URL points at the
+    // shop page with `?open-chat=1&product=<id>` · when the shop
+    // page loads post-auth the signed-in viewer is forwarded to
+    // `/conversations/<id>?product=<id>` so the Stage 1 chip paints
+    // with the original selection. Anonymous customers never lose
+    // the product they tapped before authenticating.
+    const nextPath = buildSignedOutNextPath(slug, productId);
     redirect(
-      `/nex-native/sign-in?next=${encodeURIComponent(
-        `/nex-native/${slug}?open-chat=1`,
-      )}`,
+      `/nex-native/sign-in?next=${encodeURIComponent(nextPath)}`,
     );
   }
   const business = await getBusinessBySlug(slug);
@@ -67,21 +90,12 @@ export async function openShopChatAction(
     business.owner_account_id,
   );
 
-  // Owner directive 2026-11-14 · optional product-id carry-through.
-  // Only basic shape validation here (UUID-ish, length bound) · the
-  // conversation page does the business-scope ownership check so we
-  // never leak arbitrary product ids into another shop's chat.
-  const productIdRaw =
-    typeof formData?.get("product_id") === "string"
-      ? String(formData.get("product_id")).trim()
-      : "";
-  const PRODUCT_UUID_SHAPE =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  const productId =
-    productIdRaw.length > 0 && PRODUCT_UUID_SHAPE.test(productIdRaw)
-      ? productIdRaw
-      : null;
-
   const base = `/nex-native/conversations/${conversationId}`;
   redirect(productId ? `${base}?product=${encodeURIComponent(productId)}` : base);
 }
+
+// buildSignedOutNextPath lives in a sibling module — see
+// `src/lib/nex-native/business-chat/anon-next-path.ts`. "use server"
+// enforces async-only exports, which a sync pure URL builder can't
+// satisfy. Stage 5's dev-server smoke caught the regression; the
+// helper was relocated without any contract change.

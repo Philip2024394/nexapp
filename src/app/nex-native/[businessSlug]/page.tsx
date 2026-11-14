@@ -95,9 +95,16 @@ interface PageProps {
   // auto-redirect into the peer chat with the shop owner · set by
   // the registration popup so the visitor lands back on the shop
   // after sign-up / sign-in and immediately opens the chat.
+  //
+  // Stage 3 · 2026-11-14 · `product=<id>` is the optional product
+  // reference forwarded from the Stage 1 "More Details" path when
+  // the visitor arrived unauthenticated. The open-chat handler
+  // below re-attaches it to the `/conversations/<id>` redirect so
+  // the Shop Chat chip paints with the originally-selected product.
   searchParams?: Promise<{
     openChat?: string;
     "open-chat"?: string;
+    product?: string;
   }>;
 }
 
@@ -198,7 +205,24 @@ export default async function PublicShopPage({
     // Owner directive 2026-11-13 (iter 23) · draft stash migrated
     // off the URL. No draft param carried through · client reads
     // same-origin sessionStorage after mount.
-    redirect(`/nex-native/conversations/${conversationId}`);
+    //
+    // Stage 3 · 2026-11-14 · when the visitor arrived via the Stage
+    // 1 "More Details" → sign-up / sign-in round-trip, the open-
+    // chat URL also carries `?product=<id>`. Forward it to the
+    // conversation page so the Stage 1 chip paints with the
+    // originally-selected product. UUID-shape validated here so
+    // junk input never reaches the conversation page's resolver.
+    const PRODUCT_UUID_SHAPE =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const productIdRaw = typeof sp.product === "string" ? sp.product.trim() : "";
+    const productId =
+      productIdRaw.length > 0 && PRODUCT_UUID_SHAPE.test(productIdRaw)
+        ? productIdRaw
+        : null;
+    const dest = productId
+      ? `/nex-native/conversations/${conversationId}?product=${encodeURIComponent(productId)}`
+      : `/nex-native/conversations/${conversationId}`;
+    redirect(dest);
   }
 
   // Owner directive 2026-11-13 · derive the shop's country flag from
@@ -492,6 +516,12 @@ export default async function PublicShopPage({
           }
           shopQrCodeImageUrl={business.qr_code_image_url ?? null}
           accentHex={accentHex}
+          /* Stage 4 · 2026-11-14 · when the viewer is NOT signed in,
+             the "More Details" button opens an in-sheet registration
+             popup (Create Free Account / Sign In) instead of doing a
+             full-page bounce to /sign-in. Signed-in viewers skip the
+             popup and submit straight through. */
+          isSignedIn={viewerSession !== null}
         />
       </PhoneFrame>
     </>

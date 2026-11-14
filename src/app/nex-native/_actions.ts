@@ -531,6 +531,30 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
       redirect(dest);
     }
   }
+  // Stage 3 · 2026-11-14 · honour `next=` after signup so the anon
+  // customer who tapped "More Details" on a product and was bumped
+  // into sign-up returns to the SAME Shop Chat with the selected
+  // product chip preserved. Mirrors the whitelist that
+  // `signInAction` already applies (defence-in-depth: a hand-crafted
+  // form post can't redirect outside /nex-native/ or sneak protocol
+  // characters through). Runs BEFORE the welcome-intent cookie
+  // branch so a specific continuation target wins over a generic
+  // onboarding chain · the welcome intent still fires for direct
+  // signups that did not carry a next= target.
+  {
+    const nextRaw = formData.get("next");
+    if (
+      typeof nextRaw === "string" &&
+      nextRaw.length > 0 &&
+      nextRaw.length <= 1024 &&
+      nextRaw.startsWith("/nex-native/") &&
+      !nextRaw.includes("//") &&
+      !nextRaw.includes("\\")
+    ) {
+      revalidatePath(nextRaw);
+      redirect(nextRaw);
+    }
+  }
   // 2026-10-27 · intent-aware post-signup routing.
   //
   // The 2026-10-22 (afternoon) sealed hard rule at
