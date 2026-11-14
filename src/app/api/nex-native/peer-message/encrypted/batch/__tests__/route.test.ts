@@ -27,8 +27,13 @@ const {
   lookupActiveDeviceKeysMock: vi.fn(),
 }));
 
-vi.mock("@/lib/nex-native/app/session", () => ({
-  resolveNexAppSessionFromContext: resolveSessionMock,
+// The route imports the session resolver from dev-impersonation (via an
+// alias), not app/session. Point the mock at the actual import path so
+// the handler gets the mock session and never reaches the real dev-
+// impersonation DB probe (which chains .eq().eq() and would collide
+// with this file's single-chain mock).
+vi.mock("@/lib/nex-native/app/dev-impersonation", () => ({
+  resolveSessionWithDevOverride: resolveSessionMock,
 }));
 
 vi.mock("@/lib/nex-native/peer-message-service", () => ({
