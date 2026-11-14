@@ -54,7 +54,15 @@ export function installVmk(bytes: Uint8Array): void {
   notify();
 }
 
-/** Clear VMK and zeroise the backing bytes. Idempotent. */
+/** Clear VMK and zeroise the backing bytes. Idempotent.
+ *
+ *  Owner-authorised 2026-11-14 · Vault Privacy Completion Pass.
+ *  Broadcasts a cross-tab "lock" notice via BroadcastChannel so other
+ *  open tabs of the same origin drop their own VMK too. Honest limit:
+ *  tabs can only hear the message while their JS is running · a tab
+ *  that was closed and reopened will re-read its OWN in-memory state
+ *  (always null on fresh load) and never knew it was supposed to lock.
+ */
 export function clearVmk(): void {
   if (state.vmk) {
     zeroiseBuffer(state.vmk);
@@ -62,6 +70,58 @@ export function clearVmk(): void {
   }
   state.unlockedAt = null;
   notify();
+  broadcastLock("local-clear");
+}
+
+// ── cross-tab lock propagation ──────────────────────────────────────
+
+const BROADCAST_CHANNEL_NAME = "nex-vault-lock-events";
+interface LockEvent {
+  readonly type: "lock";
+  readonly origin: "local-clear" | "cross-tab-echo";
+  readonly at: number;
+}
+
+function broadcastLock(reason: "local-clear"): void {
+  if (typeof window === "undefined") return;
+  if (typeof BroadcastChannel === "undefined") return;
+  try {
+    const bc = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+    bc.postMessage({ type: "lock", origin: reason, at: Date.now() } satisfies LockEvent);
+    bc.close();
+  } catch {
+    /* no-op · cross-tab is a best-effort defense in depth */
+  }
+}
+
+/** Install a BroadcastChannel listener that clears the local VMK when
+ *  another tab broadcasts a lock event. Call once from a top-level
+ *  client provider. Returns a teardown. Safe to call on servers (no-op). */
+export function startVaultCrossTabListener(): () => void {
+  if (typeof window === "undefined") return () => undefined;
+  if (typeof BroadcastChannel === "undefined") return () => undefined;
+  let bc: BroadcastChannel;
+  try {
+    bc = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+  } catch {
+    return () => undefined;
+  }
+  const onMessage = (ev: MessageEvent<LockEvent>) => {
+    if (!ev.data || ev.data.type !== "lock") return;
+    // Only clear if we are currently unlocked · avoid a re-broadcast
+    // loop by NOT calling clearVmk (which would broadcast again).
+    if (state.vmk) {
+      zeroiseBuffer(state.vmk);
+      state.vmk = null;
+      state.unlockedAt = null;
+      notify();
+    }
+  };
+  bc.addEventListener("message", onMessage);
+  return () => {
+    bc.removeEventListener("message", onMessage);
+    bc.close();
+  };
 }
 
 /** Snapshot current state (does not expose the VMK bytes). */

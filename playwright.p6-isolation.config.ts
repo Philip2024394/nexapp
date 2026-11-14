@@ -53,5 +53,15 @@ export default defineConfig({
       testMatch: /vault-chat-behavior\.spec\.ts/,
       timeout: 300_000,
     },
+    {
+      // 2026-11-14 pass 2 · UI-driven text + photo + document send
+      // via the sealed composer (keypad user-pref set to "os" to
+      // bypass the virtual keypad). Then observes exactly what the
+      // sealed standard chat does post-Lock-Now (reported honestly).
+      name: "vault-chat-ui-behavior-390",
+      use: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+      testMatch: /vault-chat-ui-behavior\.spec\.ts/,
+      timeout: 300_000,
+    },
   ],
 });

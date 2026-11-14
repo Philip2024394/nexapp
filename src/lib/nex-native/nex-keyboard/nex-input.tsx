@@ -119,6 +119,30 @@ export function NexInput({
 
   const closeKeypad = (): void => setKeypadOpen(false);
 
+  // Owner-authorised 2026-11-14 · Vault Privacy Completion Pass.
+  // When the sealed keypad is forced on (production composer path),
+  // direct DOM .value writes cannot update React state because the
+  // onChange handler no-ops on keypadActive. For dev/test builds
+  // only (NEXT_PUBLIC_NEX_E2E_HOOKS=1) we attach an escape-hatch
+  // function on the input DOM node that routes through the real
+  // React onChange setter. The _e2e-text-hook.tsx composer-text
+  // hook prefers this path over value-set-and-dispatch. This is a
+  // dev-only hatch · in production the env fold removes the effect.
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+  React.useEffect(() => {
+    if (process.env.NEXT_PUBLIC_NEX_E2E_HOOKS !== "1") return;
+    const el = inputRef.current;
+    if (!el) return;
+    (el as HTMLInputElement & {
+      __nexE2eSetValue?: (next: string) => void;
+    }).__nexE2eSetValue = (next: string) => onChange(next);
+    return () => {
+      delete (el as HTMLInputElement & {
+        __nexE2eSetValue?: (next: string) => void;
+      }).__nexE2eSetValue;
+    };
+  }, [onChange]);
+
   // Owner directive 2026-10-25 · ROOT-CAUSE FIX for the recurring
   // mobile text-field overflow (symmetric to NexTextarea). Default
   // `box-sizing: border-box` so a caller's `width: 100%` + padding
@@ -135,6 +159,15 @@ export function NexInput({
     <>
       <input
         {...nativeProps}
+        ref={(node) => {
+          inputRef.current = node;
+          const forwarded = nativeProps.ref as
+            | React.MutableRefObject<HTMLInputElement | null>
+            | ((n: HTMLInputElement | null) => void)
+            | undefined;
+          if (typeof forwarded === "function") forwarded(node);
+          else if (forwarded) forwarded.current = node;
+        }}
         style={mergedStyle}
         data-nex-keypad={keypadActive ? "true" : "false"}
         value={value}

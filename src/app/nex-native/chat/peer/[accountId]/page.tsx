@@ -85,6 +85,19 @@ import { PeerMessageEventsClient } from "./_message-events-client";
 import { DeviceKeyHub } from "./_device-key-hub";
 import { E2eDecryptor } from "./_e2e-decryptor";
 import { E2eComposerIntercept } from "./_e2e-composer-intercept";
+// Owner-authorised 2026-11-14 · Vault Privacy Completion Pass.
+// Standard /chat/peer/* now enforces the viewer's Vault unlock state
+// when the conversation has been moved into the viewer's Vault.
+// See _vault-gate-client.tsx for the boundary honesty disclaimer ·
+// this is a UI gate, not a cryptographic gate.
+import { PeerChatVaultGateClient } from "./_vault-gate-client";
+// Owner-authorised 2026-11-14 · dev/test-only composer text-insertion
+// hook. Mount is gated by NEXT_PUBLIC_NEX_E2E_HOOKS build-time env
+// AND the ?e2e=1 URL param · the global is absent in production
+// bundles. The hook does NOT bypass auth, authz, encryption, the
+// Vault gate, validation, or the real Send handler.
+import { E2eTextHook } from "./_e2e-text-hook";
+import { isConversationVaulted } from "@/lib/nex-native/vault-entry-service";
 import { ArchivePanel } from "./_archive-panel";
 import { FocusedShopSheet } from "./_focused-shop-sheet";
 // Owner fix 2026-11-05 · ContactPickerLauncher retired · import removed.
@@ -162,6 +175,12 @@ export default async function PeerChatPage({
     attachment_url?: string;
     attachment_type?: string;
     attachment_encrypted?: string;
+    /** Owner-authorised 2026-11-14 · encrypted private-bucket
+     *  attachments carry storage_path here (P1.T05 2026-11-13). The
+     *  pendingAttachment resolver reads this when attachment_url is
+     *  absent AND attachment_encrypted='1'. Legacy public uploads
+     *  continue to use attachment_url. */
+    attachment_path?: string;
     /** Stage A · owner-authorised 2026-11-03 · document meta forwarded
      *  by uploadPeerAttachmentAction on the redirect query string so
      *  the composer can smuggle filename/size/mime through to the
@@ -292,9 +311,19 @@ export default async function PeerChatPage({
       peer.id,
     );
 
-  const [messages] = await Promise.all([
+  // Owner-authorised 2026-11-14 · Vault Privacy Completion Pass.
+  // isVaultedForViewer gates the standard chat surface behind the
+  // vault-unlock state (see PeerChatVaultGateClient below). Read in
+  // parallel with the existing listPeerMessages + markPeerMessagesRead
+  // so the gate check does not add a round-trip to a hot path.
+  const [messages, isVaultedForViewer] = await Promise.all([
     peerMessageService.listPeerMessages(conversation.id),
-    peerMessageService.markPeerMessagesRead(conversation.id, session.account.id),
+    isConversationVaulted(session.account.id, conversation.id).catch(
+      () => false,
+    ),
+    peerMessageService
+      .markPeerMessagesRead(conversation.id, session.account.id)
+      .catch(() => undefined),
   ]);
 
   // Owner-authored 2026-11-05 · first-unread id computed BEFORE the mark
@@ -573,7 +602,32 @@ export default async function PeerChatPage({
           sizeBytes: attachSizeBytes,
           mime: attachMime,
         }
-      : null;
+      : // Owner-authorised 2026-11-14 · P1.T05 2026-11-13 moved the
+        // sealed encrypted uploader to the private bucket. The new
+        // uploader now emits only a stable `storage_path` identifier
+        // (no public URL). The sealed _media-capture `router.replace`
+        // writes that as `?attachment_path=<storage_path>` · but the
+        // server page here never adopted that read-back, so the
+        // composer dropped the attachment on the floor whenever the
+        // private-bucket path was taken. Read `attachment_path` as
+        // a fallback when `attachment_url` is absent · encrypted
+        // branch only (sp.attachment_encrypted === "1"), so legacy
+        // public uploads and "Send as standard" (private_path) keep
+        // their existing shapes.
+        sp.attachment_path?.trim() &&
+          attachKind &&
+          sp.attachment_encrypted === "1"
+        ? {
+            url: sp.attachment_path.trim(),
+            kind: attachKind,
+            clearHref: `/nex-native/chat/peer/${peer.id}`,
+            encrypted: true,
+            storagePath: sp.attachment_path.trim(),
+            filename: attachFilename,
+            sizeBytes: attachSizeBytes,
+            mime: attachMime,
+          }
+        : null;
 
   // Owner directive 2026-11-14 · pending_product share-to-chat flow
   // retired. The server-side product snapshot fetch (Ask-Seller slice
@@ -1261,7 +1315,26 @@ export default async function PeerChatPage({
   const chatViewPrefs = await getChatViewPreferencesSafe(session.account.id);
 
   return (
-    <div data-nex-peer-chat-prototype-wrap>
+    <div
+      data-nex-peer-chat-prototype-wrap
+      data-nex-peer-chat-is-vaulted-for-viewer={isVaultedForViewer ? "1" : "0"}
+      data-nex-peer-chat-conversation-id={conversation.id}
+    >
+      {/* Owner-authorised 2026-11-14 · Vault Privacy Completion Pass.
+          When this conversation is in the viewer's Vault AND the Vault
+          is locked, the gate overlay covers the chat surface, scrubs
+          plaintext from DOM, revokes decrypted blob URLs, and drops
+          the local plaintext cache for this conversation. It is a UI
+          gate · see _vault-gate-client.tsx for the honest boundary
+          disclaimer. */}
+      <PeerChatVaultGateClient
+        isVaultedForViewer={!!isVaultedForViewer}
+        conversationId={conversation.id}
+      />
+      {/* Owner-authorised 2026-11-14 · dev/test-only text-insertion
+          hook · absent in production bundles. Does not bypass auth,
+          Vault, encryption, or the real Send handler. */}
+      <E2eTextHook />
       <ChatViewPreferencesShell
         screenshot_copy_protection_enabled={
           chatViewPrefs.screenshot_copy_protection_enabled
@@ -1613,7 +1686,10 @@ export default async function PeerChatPage({
           replace the '(encrypted)' sentinel with plaintext in the
           bubble body · fires delivered-ack on success · Bridge 77
           caches the plaintext to IndexedDB for post-purge survival. */}
-      <E2eDecryptor conversationId={conversation.id} />
+      <E2eDecryptor
+        conversationId={conversation.id}
+        isVaultedForViewer={!!isVaultedForViewer}
+      />
       {/* Bridge 76 · intercept composer submits · encrypt + POST when
           both parties have device keys · silent plaintext fallback
           when they don't. Disabled for NEX1 per doctrine. */}
@@ -1622,6 +1698,7 @@ export default async function PeerChatPage({
         peerAccountId={peer.id}
         selfAccountId={session.account.id}
         disabled={isNexOfficialAccount(peer.id)}
+        isVaultedForViewer={!!isVaultedForViewer}
       />
       {/* Bridge 79 · surface IDB-only archived messages (Bridge 77
           cached rows the server has since purged via Bridge 78) as a

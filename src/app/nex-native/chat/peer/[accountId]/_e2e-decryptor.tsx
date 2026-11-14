@@ -34,15 +34,28 @@ import {
   isAttachmentEnvelope,
   type AttachmentEnvelope,
 } from "@/lib/nex-native/crypto/attachment-envelope";
+// Owner-authorised 2026-11-14 · Vault Privacy Completion Pass.
+// When the viewer has vaulted this conversation AND the Vault is
+// locked in this tab, the decryptor bails · no plaintext hits the DOM
+// and no new blob URLs are minted while gated. The surface gate also
+// scrubs any plaintext a prior unlock cycle left behind.
+import { useVaultSession } from "@/lib/nex-native/vault/client/vault-session";
 
 export interface E2eDecryptorProps {
   conversationId: string;
   disabled?: boolean;
+  /** Owner-authorised 2026-11-14 · when true, the viewer has vaulted
+   *  this conversation · the decryptor bails whenever the Vault is
+   *  locked in this tab. */
+  isVaultedForViewer?: boolean;
 }
 
 export function E2eDecryptor(props: E2eDecryptorProps): null {
+  const { unlocked: vaultUnlocked } = useVaultSession();
+  const vaultGated = !!props.isVaultedForViewer && !vaultUnlocked;
   React.useEffect(() => {
     if (props.disabled) return;
+    if (vaultGated) return;
 
     let cancelled = false;
     const runOnce = async () => {
@@ -190,7 +203,7 @@ export function E2eDecryptor(props: E2eDecryptorProps): null {
       cancelled = true;
       obs.disconnect();
     };
-  }, [props.disabled, props.conversationId]);
+  }, [props.disabled, props.conversationId, vaultGated]);
 
   return null;
 }

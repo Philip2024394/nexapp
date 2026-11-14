@@ -35,6 +35,12 @@ import {
   readEncryptedAttachmentKey,
   clearEncryptedAttachmentKey,
 } from "@/lib/nex-native/crypto/encrypted-attachment-stash";
+// Owner-authorised 2026-11-14 · Vault Privacy Completion Pass.
+// When the viewer has vaulted this conversation AND the Vault is
+// locked, the intercept blocks outbound send so no new plaintext or
+// ciphertext is minted from a locked tab. Defense in depth · the
+// surface-level gate overlay also prevents interaction.
+import { useVaultSession } from "@/lib/nex-native/vault/client/vault-session";
 
 const ATTACH_MAX_ATTEMPTS = 5;
 const ATTACH_INTERVAL_MS = 200;
@@ -45,12 +51,22 @@ export interface E2eComposerInterceptProps {
   selfAccountId: string;
   /** Skip entirely for NEX1 (no E2E for support chat per doctrine). */
   disabled?: boolean;
+  /** Owner-authorised 2026-11-14 · when true, the viewer has vaulted
+   *  this conversation · the intercept gates send on the Vault being
+   *  unlocked in this tab. Locked sends are preventDefault()-ed. */
+  isVaultedForViewer?: boolean;
 }
 
 export function E2eComposerIntercept(
   props: E2eComposerInterceptProps,
 ): React.JSX.Element | null {
   const router = useRouter();
+  const { unlocked: vaultUnlocked } = useVaultSession();
+  const vaultGated = !!props.isVaultedForViewer && !vaultUnlocked;
+  const vaultGatedRef = React.useRef(vaultGated);
+  React.useEffect(() => {
+    vaultGatedRef.current = vaultGated;
+  }, [vaultGated]);
   const [status, setStatus] = React.useState<
     "idle" | "sending" | "fallback" | "error"
   >("idle");
@@ -75,6 +91,17 @@ export function E2eComposerIntercept(
     const onSubmit = (evt: SubmitEvent) => {
       const form = evt.currentTarget as HTMLFormElement | null;
       if (!form) return;
+
+      // Owner-authorised 2026-11-14 · Vault Privacy Completion Pass.
+      // Halt any submit from a vault-locked tab. The surface-level
+      // gate overlay already covers the composer visually; this is
+      // defense in depth against programmatic submits (test harnesses,
+      // assistive tech, keyboard-driven forms).
+      if (vaultGatedRef.current) {
+        evt.preventDefault();
+        evt.stopImmediatePropagation();
+        return;
+      }
 
       const fd = new FormData(form);
       const bodyText = String(fd.get("body") ?? "").trim();

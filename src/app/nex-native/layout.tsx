@@ -31,6 +31,7 @@ import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import { I18nProvider } from "@/lib/nex/i18n/I18nProvider";
 import { resolveServerLocale } from "@/lib/nex/i18n/server";
 import { IncomingCallHub } from "./_incoming-call-hub";
+import { VaultCrossTabListener } from "./_vault-cross-tab-listener";
 import { IncomingGroupCallHub } from "./_incoming-group-call-hub";
 import { PushSubscribeHub } from "./_push-subscribe-hub";
 import { AppBadgeSyncClient } from "./_app-badge-sync-client";
@@ -287,6 +288,11 @@ export default async function NexNativeLayout({
                 selfAccountId={selfAccountId}
                 selfDisplayName={selfDisplayName}
               />
+              {/* Owner-authorised 2026-11-14 · Vault Privacy Completion
+                  Pass · listens for cross-tab lock broadcasts so Lock
+                  Now in one tab locks every other tab of this origin
+                  that is still running JS. */}
+              <VaultCrossTabListener />
               {/* Owner-authorised 2026-11-08 (round 27) · group-call
                   incoming hub · polls /api/nex-native/calls/incoming-
                   group every 15s. Sits alongside the sealed 1:1 hub

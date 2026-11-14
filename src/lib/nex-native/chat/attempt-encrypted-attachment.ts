@@ -78,18 +78,28 @@ export async function attemptEncryptedAttachment(
   const attemptPromise = (async (): Promise<AttachmentEncryptionOutcome> => {
     try {
       const result = await uploadEncryptedAttachment(uploadOpts);
-      if (!result.storageUrl || !result.storagePath) {
+      // Owner-authorised 2026-11-14 · P1.T05 2026-11-13 moved the
+      // sealed uploader to the private bucket · which no longer emits
+      // a `storage_url` (only `storage_path`). The legacy validator
+      // here still required BOTH fields, which flipped every private-
+      // bucket upload to `invalid-output` + blocked the UI. The sealed
+      // outcome interface already declares storageUrl optional
+      // (`storageUrl?: string`) · we drop it from the gate so the
+      // new private-bucket uploads flow through as "encrypted".
+      // Legacy public-bucket uploads (if any) still populate
+      // storageUrl and are not affected.
+      if (!result.storagePath) {
         return {
           kind: "blocked",
           reason: "invalid-output",
           captureKind: opts.captureKind,
           file: opts.file,
-          telemetry: "upload returned empty URL or path",
+          telemetry: "upload returned empty storage_path",
         };
       }
       return {
         kind: "encrypted",
-        storageUrl: result.storageUrl,
+        storageUrl: result.storageUrl ?? "",
         storagePath: result.storagePath,
         contentType: result.contentType,
         sizeBytes: result.sizeBytes,

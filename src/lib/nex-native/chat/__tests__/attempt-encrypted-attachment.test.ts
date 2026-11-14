@@ -145,9 +145,16 @@ describe("4 · recipient/sender key missing → blocked reasons", () => {
 // ─── 5 · Invalid encryption output blocks sending ──────────────────────
 
 describe("5 · invalid output → blocked reason 'invalid-output'", () => {
-  it("empty storageUrl is invalid-output", async () => {
+  // Owner-authorised 2026-11-14 · Vault Privacy Completion Pass · the
+  // sealed uploader moved to a private bucket that no longer emits
+  // `storage_url` (P1.T05 2026-11-13). The gate used to require BOTH
+  // storageUrl and storagePath, which flipped every private-bucket
+  // upload to invalid-output and broke the attachment UI. We now
+  // require ONLY storagePath. A storageUrl-is-empty-but-path-present
+  // response is a VALID private-bucket upload, not a failure.
+  it("empty storagePath is invalid-output (storageUrl absence is NOT)", async () => {
     uploadMock.mockResolvedValue({
-      storageUrl: "",
+      // storageUrl intentionally omitted (private bucket path)
       storagePath: "",
       contentType: "image/jpeg",
       sizeBytes: 1024,
@@ -164,6 +171,23 @@ describe("5 · invalid output → blocked reason 'invalid-output'", () => {
     if (outcome.kind === "blocked") {
       expect(outcome.reason).toBe("invalid-output");
     }
+  });
+
+  it("private-bucket response (storagePath present · storageUrl absent) is 'encrypted'", async () => {
+    uploadMock.mockResolvedValue({
+      storagePath: "enc/abc.bin",
+      contentType: "image/jpeg",
+      sizeBytes: 1024,
+      kind: "image",
+      contentKey: new Uint8Array(32),
+      contentNonce: new Uint8Array(24),
+    });
+    const outcome = await attemptEncryptedAttachment({
+      file: fakeFile(),
+      captureKind: "camera",
+      uploadQuality: "standard",
+    });
+    expect(outcome.kind).toBe("encrypted");
   });
 
   it("invalid-output copy does NOT allow plaintext opt-in (something is wrong)", () => {
