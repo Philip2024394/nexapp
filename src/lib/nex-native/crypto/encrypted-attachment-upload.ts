@@ -14,16 +14,22 @@
 
 import {
   encryptFileBytes,
+  encryptSmallBytes,
   type EncryptFileResult,
 } from "./attachment-envelope";
 
 export interface UploadedEncryptedAttachment {
-  /** Public URL of the ciphertext object in the storage bucket. */
-  storageUrl: string;
-  /** Bucket-relative path · used by Bridge 78 purge to delete the
-   *  object when its message row is purged. */
+  /** Legacy · public URL when the server emits one. P1.T05 2026-11-13 ·
+   *  the sealed private-bucket route no longer returns a storage_url
+   *  (new envelopes carry `storage_path` and recipients mint a short-
+   *  lived signed URL at read time). Retained as optional for the
+   *  pre-2026-11-08 upload surface whose legacy callers still read it. */
+  storageUrl?: string;
+  /** Bucket-relative path · PRIMARY identifier for new uploads · used
+   *  by the signed-URL mint endpoint + Bridge 78 purge. */
   storagePath: string;
-  /** File MIME · used by the render layer to pick img/video/audio. */
+  /** File MIME · used by the render layer to pick img/video/audio/
+   *  document rendering. */
   contentType: string;
   /** Original file size in bytes. */
   sizeBytes: number;
@@ -34,8 +40,15 @@ export interface UploadedEncryptedAttachment {
    *  so the recipient can decrypt. */
   contentNonce: Uint8Array;
   /** Kind classifier for the message row · matches the existing
-   *  NexPeerAttachmentKind enum. */
-  kind: "image" | "video" | "audio";
+   *  NexPeerAttachmentKind enum. Phase 3 adds "document". */
+  kind: "image" | "video" | "audio" | "document";
+  /** Phase 3 · document attachments only. The UTF-8 filename
+   *  encrypted with the SAME content key (distinct nonce). The
+   *  server never sees the plaintext filename · only this ciphertext
+   *  lands in attachment metadata and realtime routing never carries
+   *  the plaintext. Omitted for image/video/audio. */
+  encryptedFilename?: Uint8Array;
+  filenameNonce?: Uint8Array;
 }
 
 export interface UploadEncryptedAttachmentOptions {
@@ -135,9 +148,8 @@ export async function uploadEncryptedAttachment(
 
   // R14 Stage 6 · apply client-side image compression per the viewer's
   // upload_quality preference. Default to "standard" when the caller
-  // has not yet migrated to pass the opt (preserves historic bandwidth-
-  // conscious behaviour · same shape as the sealed default on migration
-  // 201).
+  // has not yet migrated to pass the opt. Compression is a no-op for
+  // non-image kinds (checked internally).
   const quality = opts.uploadQuality ?? "standard";
   const effectiveFile = await compressImageIfStandard(opts.file, quality);
   opts.onProgress?.(0.05);
@@ -147,10 +159,29 @@ export async function uploadEncryptedAttachment(
   const rawBytes = new Uint8Array(await effectiveFile.arrayBuffer());
   opts.onProgress?.(0.15);
 
-  // Encrypt · nacl.secretbox is streaming-ish but pure JS, so a 25MB
-  // file runs O(seconds) on modern devices. Acceptable for MVP.
+  // Encrypt · nacl.secretbox is streaming-ish but pure JS. Works for
+  // document bytes exactly the same way as media bytes · there is
+  // nothing kind-specific about the content-byte path.
   const enc: EncryptFileResult = encryptFileBytes(rawBytes);
   opts.onProgress?.(0.4);
+
+  // Phase 3 · for documents, encrypt the UTF-8-encoded filename with
+  // the SAME content key but a distinct random nonce. The server
+  // never sees the plaintext filename · only the ciphertext lands in
+  // attachment metadata when the sender composes the message.
+  let encryptedFilename: Uint8Array | undefined;
+  let filenameNonce: Uint8Array | undefined;
+  if (kind === "document") {
+    const rawFilename =
+      typeof effectiveFile.name === "string" ? effectiveFile.name : "";
+    // Truncate to 256 chars to mirror the sealed meta.filename cap
+    // · utf-8 encode · defensive bounds check against absurd lengths.
+    const truncated = rawFilename.slice(0, 256);
+    const filenameBytes = new TextEncoder().encode(truncated);
+    const fn = encryptSmallBytes(filenameBytes, enc.contentKey);
+    encryptedFilename = fn.ciphertext;
+    filenameNonce = fn.nonce;
+  }
 
   // Upload the ciphertext as raw bytes. Use the effective (possibly
   // compressed) file's MIME + size · recipients render based on the
@@ -162,7 +193,10 @@ export async function uploadEncryptedAttachment(
       "content-type": "application/octet-stream",
       "x-nex-enc-ext": ext,
     },
-    body: enc.ciphertext,
+    // Uint8Array is a valid BufferSource · the cast quiets a DOM-lib
+    // type overload picking that doesn't recognise it as BodyInit in
+    // this project's TS config. Runtime behaviour unchanged.
+    body: enc.ciphertext as unknown as BodyInit,
   });
   opts.onProgress?.(0.95);
   if (!resp.ok) {
@@ -175,31 +209,67 @@ export async function uploadEncryptedAttachment(
     storage_path?: string;
     error?: string;
   };
-  if (!json.ok || !json.storage_url || !json.storage_path) {
+  // P1.T05 2026-11-13 · the sealed private-bucket route returns
+  // `storage_path` only · the previous client validator required
+  // `storage_url` too, which made every encrypted upload throw
+  // "unknown_upload_error" on the live route. Now we require
+  // `storage_path` (primary identifier) and treat `storage_url` as
+  // optional for forward/back compat with any legacy path that still
+  // emits a public URL.
+  if (!json.ok || !json.storage_path) {
     throw new Error(json.error ?? "unknown_upload_error");
   }
 
   opts.onProgress?.(1);
   return {
-    storageUrl: json.storage_url,
+    // storageUrl present only if the server explicitly emits it (legacy
+    // public-bucket compat window). Primary id is storagePath.
+    ...(json.storage_url ? { storageUrl: json.storage_url } : {}),
     storagePath: json.storage_path,
     contentType: effectiveFile.type,
     sizeBytes: effectiveFile.size,
     contentKey: enc.contentKey,
     contentNonce: enc.contentNonce,
     kind,
+    encryptedFilename,
+    filenameNonce,
   };
 }
 
-function classifyMime(mime: string): "image" | "video" | "audio" | null {
+/** P1.T04 Phase 3 · 2026-11-13 · owner-approved document MIME allowlist.
+ *  Documents with recognised types route through the encrypted
+ *  attachment pipeline · ciphertext-only upload · recipient decrypts
+ *  locally + downloads with the original filename. Keep this list in
+ *  sync with the server route's safeExt whitelist and the composer's
+ *  file-picker accept hints. Exotic MIMEs that are not on this list
+ *  still return `null` so the block prompt fires "unsupported-mime". */
+export const SUPPORTED_DOCUMENT_MIMES: ReadonlySet<string> = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "text/plain",
+  "text/csv",
+  "application/csv",
+  "application/zip",
+  "application/x-zip-compressed",
+]);
+
+export function classifyMime(
+  mime: string,
+): "image" | "video" | "audio" | "document" | null {
   const m = mime.toLowerCase();
   if (m.startsWith("image/")) return "image";
   if (m.startsWith("video/")) return "video";
   if (m.startsWith("audio/")) return "audio";
+  if (SUPPORTED_DOCUMENT_MIMES.has(m)) return "document";
   return null;
 }
 
-function extForMime(mime: string): string {
+export function extForMime(mime: string): string {
   const map: Record<string, string> = {
     "image/png": "png",
     "image/jpeg": "jpg",
@@ -216,6 +286,20 @@ function extForMime(mime: string): string {
     "audio/webm": "webm",
     "audio/wav": "wav",
     "audio/opus": "opus",
+    // P1.T04 Phase 3 · document extensions · safe-list only · the
+    // server route echoes the same whitelist as a defence-in-depth.
+    "application/pdf": "pdf",
+    "application/msword": "doc",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+    "application/vnd.ms-excel": "xls",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+    "application/vnd.ms-powerpoint": "ppt",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
+    "text/plain": "txt",
+    "text/csv": "csv",
+    "application/csv": "csv",
+    "application/zip": "zip",
+    "application/x-zip-compressed": "zip",
   };
   return map[mime.toLowerCase()] ?? "bin";
 }

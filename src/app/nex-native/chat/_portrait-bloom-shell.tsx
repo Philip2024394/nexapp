@@ -21,6 +21,9 @@
 
 import * as React from "react";
 import { PeerComposer } from "./peer/[accountId]/_composer";
+// P1.T04 Phase 3 · recipient UI · owner-authorised 2026-11-13.
+import { EncryptedDocumentChip } from "./peer/[accountId]/_encrypted-document-chip";
+import { PrivateAttachmentDisplay } from "./peer/[accountId]/_private-attachment-display";
 import { ScrollToBottomOnMount } from "./_scroll-to-bottom";
 import { MessageBubbleClient } from "./_message-bubble-client";
 import { ReadTick } from "./_read-tick";
@@ -137,6 +140,20 @@ export interface PortraitBloomMessage {
     readonly filename?: string;
     readonly size_bytes?: number;
     readonly mime?: string;
+  } | null;
+  /** P1.T07 · 2026-11-13 · "Send as standard" private attachment
+   *  projected from `attachment_meta.private_attachment` by the page.
+   *  When present, `attachment_url` is NULL and the bytes live in the
+   *  sealed PRIVATE bucket (`nex-peer-chat-ciphertext/std/...`). The
+   *  render branch uses PrivateAttachmentDisplay to mint a signed URL
+   *  via the participant-gated `/api/nex-native/attachment/encrypted/
+   *  signed` endpoint. Never rendered as a public hyperlink · never
+   *  decrypted (bytes are plaintext but access-gated). */
+  attachment_private?: {
+    storage_path: string;
+    content_type: string | null;
+    size_bytes: number | null;
+    filename: string | null;
   } | null;
   /** Sealed 2026-10-11 · theme-emoji attachment · emoji that was
    *  picked from the composer's emoji picker and sent as its own
@@ -1864,6 +1881,19 @@ export function PortraitBloomShell({
                           />
                         </button>
                       ) : m.attachment_envelope_b64 &&
+                        m.attachment_type === "document" &&
+                        m.sender_account_id ? (
+                        /* P1.T04 Phase 3 · 2026-11-13 · encrypted
+                           document chip. Click-to-download · no
+                           auto-fetch · filename stays encrypted
+                           until the user taps. See
+                           _encrypted-document-chip.tsx. */
+                        <EncryptedDocumentChip
+                          envelopeB64={m.attachment_envelope_b64}
+                          senderAccountId={m.sender_account_id}
+                          sizeBytes={m.attachment_meta?.size_bytes ?? null}
+                        />
+                      ) : m.attachment_envelope_b64 &&
                         (m.attachment_type === "image" ||
                           m.attachment_type === "video" ||
                           m.attachment_type === "audio") ? (
@@ -1892,6 +1922,31 @@ export function PortraitBloomShell({
                         >
                           🔒 Decrypting…
                         </div>
+                      ) : m.attachment_private &&
+                        (m.attachment_type === "image" ||
+                          m.attachment_type === "video" ||
+                          m.attachment_type === "audio" ||
+                          m.attachment_type === "document") ? (
+                        /* P1.T07 · 2026-11-13 · "Send as standard"
+                           private attachment branch. Bytes live in
+                           the sealed PRIVATE bucket; access is
+                           participant-gated via a 900s signed URL
+                           minted through /api/nex-native/attachment/
+                           encrypted/signed. Must sit BEFORE the
+                           legacy MessageAttachment branch · never
+                           rendered as a public hyperlink. */
+                        <PrivateAttachmentDisplay
+                          storagePath={m.attachment_private.storage_path}
+                          kind={m.attachment_type}
+                          contentType={m.attachment_private.content_type}
+                          sizeBytes={m.attachment_private.size_bytes}
+                          filename={m.attachment_private.filename}
+                          onOpenImage={
+                            m.attachment_type === "image"
+                              ? setLightboxUrl
+                              : undefined
+                          }
+                        />
                       ) : m.attachment_url &&
                         (m.attachment_type === "image" ||
                           m.attachment_type === "video" ||

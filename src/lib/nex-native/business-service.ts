@@ -1307,7 +1307,14 @@ export async function uploadOnboardingLogo(
   const objectPath = `business-logo/onboarding/${accountId}/${Date.now()}-${Math.random()
     .toString(36)
     .slice(2, 8)}.${ext}`;
-  const bucket = nexSupabaseAdmin.storage.from("nex-peer-chat-attachments");
+  // P1.T03 Step 1 · 2026-11-13 · relocated from "nex-peer-chat-attachments"
+  // to "nex-business-assets". Shop logos are intended-public business
+  // assets, not private chat content. Bucket rename only · validation,
+  // path layout, MIME allowlist, size cap, upsert behaviour, and
+  // returned URL shape are unchanged. Existing logo URLs that still
+  // reference the old bucket continue to resolve against it · no
+  // historical object is moved by this change.
+  const bucket = nexSupabaseAdmin.storage.from("nex-business-assets");
   const bytes = new Uint8Array(await file.arrayBuffer());
   const { error } = await bucket.upload(objectPath, bytes, {
     contentType: file.type,
@@ -1321,10 +1328,15 @@ export async function uploadOnboardingLogo(
 }
 
 /** Bridge 23c · Upload a venue photo to Supabase storage and return
- *  the public URL. Reuses the existing nex-peer-chat-attachments
- *  bucket (public read, image MIMEs allowed, 25MB cap). Path prefix
- *  is `venue/<businessId>/…` so we can later run per-business
- *  cleanup without touching chat uploads.
+ *  the public URL. Writes to the sealed nex-business-assets bucket
+ *  (public read, image MIMEs allowed, 25MB cap) under the
+ *  `venue/<businessId>/…` prefix so per-business cleanup stays
+ *  independent of chat uploads.
+ *
+ *  P1.T03 Step 1 · 2026-11-13 · relocated from nex-peer-chat-attachments
+ *  to nex-business-assets. No historical venue photo is moved by this
+ *  change · existing URLs continue to resolve against the public chat
+ *  bucket until a separate migration retires them.
  *
  *  Only accepts images · videos / audio are rejected. Called from
  *  the /manage/venue gallery editor's file-picker path. */
@@ -1358,7 +1370,10 @@ export async function uploadVenuePhoto(
   const objectPath = `venue/${businessId}/${Date.now()}-${Math.random()
     .toString(36)
     .slice(2, 8)}.${ext}`;
-  const bucket = nexSupabaseAdmin.storage.from("nex-peer-chat-attachments");
+  // P1.T03 Step 1 · 2026-11-13 · see uploadOnboardingLogo above.
+  // Bucket switched from nex-peer-chat-attachments to nex-business-assets.
+  // Historical venue photos remain readable at their existing URLs.
+  const bucket = nexSupabaseAdmin.storage.from("nex-business-assets");
   const bytes = new Uint8Array(await file.arrayBuffer());
   const { error } = await bucket.upload(objectPath, bytes, {
     contentType: file.type,

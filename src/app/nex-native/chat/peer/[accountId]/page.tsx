@@ -22,6 +22,7 @@ import * as friendService from "@/lib/nex-native/friend-service";
 import * as relationshipService from "@/lib/nex-native/relationship-service";
 import * as peerConversationService from "@/lib/nex-native/peer-conversation-service";
 import * as peerMessageService from "@/lib/nex-native/peer-message-service";
+import { projectPrivateAttachment } from "@/lib/nex-native/attachment/private-attachment-form";
 import * as chatThemeService from "@/lib/nex-native/chat-theme-service";
 import { listThemeEmojis } from "@/lib/nex-native/theme-emoji-service";
 import { listThemeStickers } from "@/lib/nex-native/theme-sticker-service";
@@ -169,6 +170,16 @@ export default async function PeerChatPage({
     attachment_filename?: string;
     attachment_size?: string;
     attachment_mime?: string;
+    // P1.T07 · 2026-11-13 · owner-authorised. The explicit "Send as
+    // standard" private-bucket uploader surfaces these fields on the
+    // return URL. `attachment_private_path` is the SEALED
+    // storage-path identifier (not a public URL) · the composer
+    // smuggles it into the send form as a hidden field so
+    // sendPeerMessageAction persists attachment_meta.private_attachment.
+    attachment_private_path?: string;
+    attachment_private_mime?: string;
+    attachment_private_size?: string;
+    attachment_private_filename?: string;
     upload_error?: string;
     lang?: string;
     /** Phase 3 · product id to auto-open the shop sheet focused on.
@@ -505,8 +516,58 @@ export default async function PeerChatPage({
   })();
   const attachMime =
     attachKind === "document" ? sp.attachment_mime?.slice(0, 128) : undefined;
-  const pendingAttachment =
-    attachUrl && attachKind
+  // P1.T07 · 2026-11-13 · owner-authorised. Explicit "Send as
+  // standard" uploads now land in the sealed PRIVATE bucket with a
+  // `storage_path` (no public URL). The chat page reads the
+  // corresponding URL query params + builds a `pendingAttachment`
+  // whose `url` is the storage path and `private: true` flag so the
+  // composer renders the preview chip + the send submit stuffs the
+  // right hidden fields. Historical public-URL uploads (plaintext
+  // legacy + NEX1 Official) continue through the existing branch.
+  const attachPrivatePath = sp.attachment_private_path?.trim() || null;
+  const attachPrivateMimeRaw = sp.attachment_private_mime?.trim() || null;
+  const attachPrivateSizeRaw = sp.attachment_private_size?.trim() || null;
+  const attachPrivateFilenameRaw =
+    sp.attachment_private_filename?.trim() || null;
+  const attachPrivateSize = (() => {
+    if (!attachPrivateSizeRaw) return undefined;
+    const n = Number.parseInt(attachPrivateSizeRaw, 10);
+    if (!Number.isFinite(n) || n < 0 || n > 25 * 1024 * 1024 + 1024)
+      return undefined;
+    return n;
+  })();
+
+  const pendingAttachment: {
+    url: string;
+    kind: "image" | "video" | "audio" | "document";
+    clearHref: string;
+    encrypted?: boolean;
+    private?: boolean;
+    storagePath?: string;
+    filename?: string;
+    sizeBytes?: number;
+    mime?: string;
+  } | null = attachPrivatePath && attachKind
+    ? {
+        // P1.T07 · private standard-send · the `url` field carries the
+        // storage path (not a public URL) · composer flag `private`
+        // tells the recipient render + send intercept to treat it as
+        // mint-gated. Clearing the URL state returns the composer to
+        // its no-attachment shape.
+        url: attachPrivatePath,
+        kind: attachKind,
+        clearHref: `/nex-native/chat/peer/${peer.id}`,
+        private: true,
+        storagePath: attachPrivatePath,
+        ...(attachPrivateFilenameRaw
+          ? { filename: attachPrivateFilenameRaw.slice(0, 256) }
+          : {}),
+        ...(attachPrivateSize !== undefined ? { sizeBytes: attachPrivateSize } : {}),
+        ...(attachPrivateMimeRaw
+          ? { mime: attachPrivateMimeRaw.slice(0, 128) }
+          : {}),
+      }
+    : attachUrl && attachKind
       ? {
           url: attachUrl,
           kind: attachKind,
@@ -843,6 +904,14 @@ export default async function PeerChatPage({
       deleted_for_everyone: !!m.deleted_for_everyone,
       attachment_url: m.attachment_url ?? null,
       attachment_type: m.attachment_type ?? null,
+      // P1.T07 · 2026-11-13 · private "Send as standard" attachment ·
+      // the sender wrote plaintext bytes to `nex-peer-chat-ciphertext/
+      // std/...` through /api/nex-native/attachment/standard · the
+      // message row carries `attachment_meta.private_attachment.
+      // storage_path` and `attachment_url` stays NULL. Delegate the
+      // projection to a pure helper so the shape stays in sync with
+      // the server-side writer (`composePrivateAttachmentMeta`).
+      attachment_private: projectPrivateAttachment(m.attachment_meta),
       // Owner directive 2026-11-08 (round 22) · Call Center invite
       // flow · project the migration-306 attachment into a typed
       // slot so the message bubble can render an inline Accept
@@ -1006,6 +1075,7 @@ export default async function PeerChatPage({
       deleted_for_everyone: false,
       attachment_url: null,
       attachment_type: null,
+      attachment_private: null,
       attachment_call_invite: null,
       attachment_product: null,
       attachment_menu_item: null,

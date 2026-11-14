@@ -101,6 +101,15 @@ interface PeerComposerProps {
      *  send form so E2eComposerIntercept knows to look up the content
      *  key from sessionStorage. */
     encrypted?: boolean;
+    /** P1.T07 · 2026-11-13 · true when the pending attachment came in
+     *  through the explicit "Send as standard" PRIVATE-bucket path.
+     *  `url` carries the storage_path (not a public URL) · the send
+     *  form smuggles hidden fields `attachment_private_path`,
+     *  `attachment_private_mime`, `attachment_private_size`,
+     *  `attachment_private_filename` so sendPeerMessageAction persists
+     *  the correct attachment_meta.private_attachment on the row. */
+    private?: boolean;
+    storagePath?: string;
     /** Stage A · owner-authorised 2026-11-03 · document metadata the
      *  upload action forwarded on the redirect query string so the
      *  composer can smuggle it into the send form. Projected into
@@ -761,16 +770,60 @@ export function PeerComposer({
             inputs smuggle the URL + kind into the send form. */}
         {pendingAttachment && (
           <>
-            <input
-              type="hidden"
-              name="attachment_url"
-              value={pendingAttachment.url}
-            />
-            <input
-              type="hidden"
-              name="attachment_type"
-              value={pendingAttachment.kind}
-            />
+            {/* P1.T07 · 2026-11-13 · private standard-send carries the
+                storage_path as hidden fields · attachment_url is
+                deliberately empty so sendPeerMessageAction never
+                writes a public URL to the message row. Encrypted +
+                legacy public attachments retain their existing
+                hidden-field shape. */}
+            {pendingAttachment.private ? (
+              <>
+                <input
+                  type="hidden"
+                  name="attachment_private_path"
+                  value={pendingAttachment.storagePath ?? pendingAttachment.url}
+                />
+                <input
+                  type="hidden"
+                  name="attachment_type"
+                  value={pendingAttachment.kind}
+                />
+                {pendingAttachment.mime && (
+                  <input
+                    type="hidden"
+                    name="attachment_private_mime"
+                    value={pendingAttachment.mime}
+                  />
+                )}
+                {typeof pendingAttachment.sizeBytes === "number" && (
+                  <input
+                    type="hidden"
+                    name="attachment_private_size"
+                    value={String(pendingAttachment.sizeBytes)}
+                  />
+                )}
+                {pendingAttachment.filename && (
+                  <input
+                    type="hidden"
+                    name="attachment_private_filename"
+                    value={pendingAttachment.filename}
+                  />
+                )}
+              </>
+            ) : (
+              <>
+                <input
+                  type="hidden"
+                  name="attachment_url"
+                  value={pendingAttachment.url}
+                />
+                <input
+                  type="hidden"
+                  name="attachment_type"
+                  value={pendingAttachment.kind}
+                />
+              </>
+            )}
             {/* Bridge 88 · flag the send form so E2eComposerIntercept
                 looks up the stashed content key in sessionStorage
                 instead of routing this attachment through the

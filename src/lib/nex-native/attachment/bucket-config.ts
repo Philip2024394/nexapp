@@ -5,8 +5,12 @@
 // -----------------------------------------------------------------------------
 // NEX runs two attachment buckets:
 //   · PUBLIC_BUCKET   · nex-peer-chat-attachments · public read · hosts
-//     venue + business-logo images + LEGACY plaintext attachments.
-//     DO NOT upload new ciphertext here.
+//     LEGACY plaintext chat attachments only. P1.T03 Step 1
+//     (2026-11-13) relocated new venue + business-logo writes to the
+//     sealed nex-business-assets bucket · existing historical URLs in
+//     this bucket continue to resolve unchanged.
+//     DO NOT upload new ciphertext here · DO NOT upload new venue
+//     or logo content here.
 //   · PRIVATE_BUCKET  · nex-peer-chat-ciphertext · private · hosts all
 //     new encrypted ciphertext · readable only via SECURITY DEFINER
 //     signed-URL generation gated by conversation participation.

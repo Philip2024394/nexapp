@@ -155,12 +155,14 @@ async function main() {
       "image/png",
     );
     console.log(`      ${wallpaperUrl}`);
-    // Business logo · reuses the sealed onboarding-logo bucket
-    // (nex-peer-chat-attachments → business-logo/{slug}/logo.png)
-    // so the file lives alongside production-uploaded seller logos.
-    console.log(`[1a] uploading logo → nex-peer-chat-attachments/business-logo/${BUSINESS_SLUG}/logo.png`);
+    // P1.T03 Step 1 · 2026-11-13 · follow the production uploaders ·
+    // business logos now live in the nex-business-assets bucket, not
+    // the chat-attachments bucket. Path layout unchanged so prior
+    // seed runs that wrote to the old bucket are not perturbed by
+    // this dev-seed script.
+    console.log(`[1a] uploading logo → nex-business-assets/business-logo/${BUSINESS_SLUG}/logo.png`);
     const logoUrl = await uploadAsset(
-      "nex-peer-chat-attachments",
+      "nex-business-assets",
       ASSET_LOGO,
       `business-logo/${BUSINESS_SLUG}/logo.png`,
       "image/png",

@@ -129,6 +129,15 @@ function safeExt(raw: string | null): string {
     "png", "jpg", "jpeg", "webp", "gif", "avif",
     "mp4", "webm", "mov",
     "m4a", "mp3", "ogg", "wav", "opus",
+    // P1.T04 Phase 3 · 2026-11-13 · owner-approved document types.
+    // These extensions are only valid on ciphertext object names ·
+    // the bytes stored under them are nacl.secretbox ciphertext,
+    // never plaintext. The ext hint is cosmetic (it aids debugging
+    // the bucket listing); the bucket does not serve any of these
+    // for direct public rendering since the private-bucket policy
+    // only emits signed URLs after a participant check.
+    "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+    "txt", "csv", "zip",
   ]);
   return whitelist.has(cleaned) ? cleaned : "bin";
 }

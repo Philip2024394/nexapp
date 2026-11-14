@@ -27,7 +27,14 @@ export interface StashedEncryptedAttachmentKey {
   contentNonce: number[];
   contentType: string;
   sizeBytes: number;
-  kind: "image" | "video" | "audio";
+  kind: "image" | "video" | "audio" | "document";
+  /** P1.T04 Phase 3 · documents only · the UTF-8-encoded filename
+   *  encrypted with the SAME content key (distinct nonce). Stays in
+   *  sessionStorage between upload and send so the composer can
+   *  stuff the encrypted filename into the envelope at send time.
+   *  Omitted for image/video/audio. */
+  encryptedFilename?: number[];
+  filenameNonce?: number[];
 }
 
 export function stashEncryptedAttachmentKey(
@@ -54,7 +61,15 @@ export function readEncryptedAttachmentKey(
       !Array.isArray(parsed.contentNonce) ||
       typeof parsed.contentType !== "string" ||
       typeof parsed.sizeBytes !== "number" ||
-      !["image", "video", "audio"].includes(parsed.kind)
+      !["image", "video", "audio", "document"].includes(parsed.kind)
+    ) {
+      return null;
+    }
+    // Phase 3 · defensive shape-check for the optional document fields
+    // · reject if only one is present (envelope would be unusable).
+    if (
+      (parsed.encryptedFilename && !parsed.filenameNonce) ||
+      (!parsed.encryptedFilename && parsed.filenameNonce)
     ) {
       return null;
     }

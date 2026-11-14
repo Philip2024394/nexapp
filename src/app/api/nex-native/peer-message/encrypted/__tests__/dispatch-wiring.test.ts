@@ -30,6 +30,16 @@ const {
 vi.mock("@/lib/nex-native/app/session", () => ({
   resolveNexAppSessionFromContext: resolveSessionMock,
 }));
+// P1.T01 2026-11-13 · the route under test imports its resolver from
+// `app/dev-impersonation` (owner directive 2026-11-13 URGENT) · the
+// dev-override returns the real 99901 persona when NEX_DEV_IMPERSONATE_
+// HANDLE is set in .env.local, which happens in this workspace. Mock
+// the dev-impersonation entry point directly so the test session is
+// deterministic. The session.ts mock above is retained so any
+// transitive import also resolves to the test session.
+vi.mock("@/lib/nex-native/app/dev-impersonation", () => ({
+  resolveSessionWithDevOverride: resolveSessionMock,
+}));
 vi.mock("@/lib/nex-native/peer-message-service", () => ({
   sendEncryptedPeerMessages: sendEncryptedPeerMessagesMock,
 }));

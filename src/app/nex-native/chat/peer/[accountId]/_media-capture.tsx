@@ -34,8 +34,15 @@ import { useRouter, usePathname } from "next/navigation";
 import { stashEncryptedAttachmentKey } from "@/lib/nex-native/crypto/encrypted-attachment-stash";
 import { getMyDataUsagePrefsAction } from "@/lib/nex-native/data-usage/actions";
 import { attemptEncryptedAttachment } from "@/lib/nex-native/chat/attempt-encrypted-attachment";
+// P1.T07 · 2026-11-13 · owner-authorised. The explicit "Send as
+// standard" choice from the block prompt now routes through the
+// private-storage upload helper · it no longer invokes the public-
+// bucket server action. Encrypted uploads, the NEX1 Official
+// exception, and legacy historical URLs are untouched.
+import { uploadStandardPrivate } from "@/lib/nex-native/attachment/upload-standard-private";
 import {
   BLOCK_COPY,
+  type AttachmentBlockReason,
   type AttachmentBlockedOutcome,
 } from "@/lib/nex-native/chat/attachment-encryption-outcome";
 
@@ -180,18 +187,32 @@ export const MediaCapture = React.forwardRef<MediaCaptureHandle, Props>(
           uploadQuality,
         });
         if (outcome.kind === "encrypted") {
-          stashEncryptedAttachmentKey(outcome.storageUrl, {
+          // P1.T05 2026-11-13 · the sealed private-bucket uploader
+          // no longer emits a storage_url · key the stash by the
+          // stable `storagePath` identifier and carry it on the
+          // composer URL as `attachment_path`. The intercept picks
+          // the right param based on `attachment_encrypted=1`.
+          // Legacy storageUrl (if present) is also carried for the
+          // backwards-compat fallback path.
+          stashEncryptedAttachmentKey(outcome.storagePath, {
             contentKey: Array.from(outcome.contentKey),
             contentNonce: Array.from(outcome.contentNonce),
             contentType: outcome.contentType,
             sizeBytes: outcome.sizeBytes,
             kind: outcome.attachmentKind,
+            ...(outcome.encryptedFilename
+              ? { encryptedFilename: Array.from(outcome.encryptedFilename) }
+              : {}),
+            ...(outcome.filenameNonce
+              ? { filenameNonce: Array.from(outcome.filenameNonce) }
+              : {}),
           });
           const qs = new URLSearchParams({
-            attachment_url: outcome.storageUrl,
+            attachment_path: outcome.storagePath,
             attachment_type: outcome.attachmentKind,
             attachment_encrypted: "1",
           });
+          if (outcome.storageUrl) qs.set("attachment_url", outcome.storageUrl);
           router.replace(`${pathname}?${qs.toString()}`, { scroll: false });
           setUploading(null);
           return;
@@ -315,6 +336,80 @@ export const MediaCapture = React.forwardRef<MediaCaptureHandle, Props>(
       void runEncryptedAttempt(captureKind, file);
     }, [blocked, runEncryptedAttempt]);
 
+    // P1.T07 · 2026-11-13 · owner-authorised. When the sender explicitly
+    // taps "Send as standard" from the block prompt, upload the
+    // plaintext bytes to the SEALED PRIVATE bucket via the P1.T06
+    // helper. Retrieval is participant-gated signed-URL only. Never
+    // falls back to the public chat bucket · never automatically
+    // triggers this path · the user picks it deliberately. Failures
+    // surface a retry banner via the existing block-prompt state so
+    // the user can try again or cancel · we do NOT silently downgrade
+    // to any other storage path.
+    const runStandardSendPrivate = React.useCallback(
+      async (kind: CaptureKind, file: File): Promise<void> => {
+        setUploading(kind);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("nex-peer-upload-start", { detail: { kind } }),
+          );
+        }
+        const out = await uploadStandardPrivate({ file });
+        if (!out.ok) {
+          setUploading(null);
+          // Re-render the block prompt with a translated reason so the
+          // user can retry or cancel. Map the helper's typed errors
+          // onto the existing block-reason set where appropriate.
+          const reason: AttachmentBlockReason =
+            out.error === "too_large"
+              ? "invalid-output"
+              : out.error === "unsupported_mime"
+                ? "unsupported-mime"
+                : out.error === "not_signed_in"
+                  ? "upload-failed"
+                  : out.error === "private_bucket_unavailable"
+                    ? "upload-failed"
+                    : "upload-failed";
+          setBlocked({
+            kind: "blocked",
+            reason,
+            captureKind: kind,
+            file,
+            telemetry: `std-private:${out.error}`,
+          });
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("nex-peer-upload-blocked", {
+                detail: { reason, kind },
+              }),
+            );
+          }
+          return;
+        }
+        // Success · hand off to the composer by mirroring the URL
+        // query-state pattern used by the encrypted path. The chat
+        // page reads these params server-side on the next render +
+        // renders the composer preview chip. Hidden form fields on
+        // submit carry them into sendPeerMessageAction which persists
+        // attachment_meta.private_attachment on the message row.
+        const qs = new URLSearchParams({
+          attachment_private_path: out.storagePath,
+          attachment_private_mime: out.contentType,
+          attachment_private_size: String(out.sizeBytes),
+          attachment_type: kind,
+        });
+        const safeName =
+          typeof file.name === "string" && file.name.length > 0
+            ? file.name.slice(0, 256)
+            : "";
+        if (safeName) {
+          qs.set("attachment_private_filename", safeName);
+        }
+        router.replace(`${pathname}?${qs.toString()}`, { scroll: false });
+        setUploading(null);
+      },
+      [pathname, router],
+    );
+
     const onPromptSendStandard = React.useCallback(() => {
       if (!blocked) return;
       const copy = BLOCK_COPY[blocked.reason];
@@ -325,8 +420,15 @@ export const MediaCapture = React.forwardRef<MediaCaptureHandle, Props>(
       }
       const { captureKind, file } = blocked;
       setBlocked(null);
-      void runPlaintextWithFile(captureKind, file);
-    }, [blocked, runPlaintextWithFile]);
+      // P1.T07 · 2026-11-13 · the "Send as standard" choice now writes
+      // to the sealed PRIVATE bucket via uploadStandardPrivate (P1.T06).
+      // The old `runPlaintextWithFile` call path (public bucket) is
+      // retained ONLY for `encryptedUploadEnabled=false` surfaces
+      // (NEX1 Official, by sealed doctrine) · it is never reached via
+      // this handler because the block prompt only fires when
+      // `encryptedUploadEnabled=true`.
+      void runStandardSendPrivate(captureKind, file);
+    }, [blocked, runStandardSendPrivate]);
 
     const onPromptCancel = React.useCallback(() => {
       setBlocked(null);

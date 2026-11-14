@@ -201,6 +201,22 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
                 : attachmentType === "product"
                   ? "push.body.sentYouAMessage"
                   : "push.body.sentYouAMessage";
+        // P1.T01 2026-11-13 · strict participant check. Sender MUST
+        // be a participant of the conversation · if not (defence-in-
+        // depth against a service-role path that bypassed the
+        // service-layer guard in sendEncryptedBusinessMessages, or a
+        // test harness where session resolves to a persona outside
+        // the participant set), we abort the entire dispatch fan-
+        // out. Without this guard a non-participant sender would
+        // cause EVERY participant (including the one we'd expect to
+        // be the peer) to receive a notification · and if the sender
+        // IS somehow in the participants list under a different id,
+        // dispatch could fire to the sender themselves. Mirrors the
+        // peer-chat route hardening in the same commit.
+        const senderIsParticipant = participants.some(
+          (p) => p.account_id === session.account.id,
+        );
+        if (!senderIsParticipant) return;
         const recipients = participants.filter(
           (p) => p.account_id !== session.account.id,
         );

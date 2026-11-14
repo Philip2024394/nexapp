@@ -32,6 +32,10 @@ import { resolveSessionWithDevOverride as resolveNexAppSessionFromContext } from
 import * as conversationService from "@/lib/nex-native/conversation-service";
 import * as peerConversationService from "@/lib/nex-native/peer-conversation-service";
 import * as peerMessageService from "@/lib/nex-native/peer-message-service";
+import {
+  parsePrivateAttachmentFormFields,
+  composePrivateAttachmentMeta,
+} from "@/lib/nex-native/attachment/private-attachment-form";
 // R1 · universal live-messaging arrival nudge · fire-and-forget after
 // the canonical DB write succeeds. See
 // src/lib/nex-native/realtime/message-arrival.ts for the strict
@@ -980,16 +984,30 @@ export async function sendPeerMessageAction(
     attachmentType === "document" && attachmentDocMimeRaw.length > 0
       ? attachmentDocMimeRaw.slice(0, 128)
       : null;
-  const attachmentMeta =
+  const attachmentMetaBase =
     attachmentType === "document" &&
     (attachmentDocFilename || attachmentDocSize || attachmentDocMime)
       ? ({
           filename: attachmentDocFilename ?? undefined,
           size_bytes: attachmentDocSize ?? undefined,
           mime: attachmentDocMime ?? undefined,
-        } as const)
+        } as Record<string, unknown>)
       : null;
-  if (!body && !attachmentUrl) {
+
+  // P1.T07 · 2026-11-13 · owner-authorised. The explicit "Send as
+  // standard" private-bucket uploader surfaces its storage_path +
+  // mime + size + filename on hidden form fields. When present we
+  // persist them on the message row as attachment_meta.private_attachment
+  // and INTENTIONALLY leave attachment_url null so no public URL is
+  // ever written for the new standard-send flow. Parse + compose are
+  // delegated to pure helpers so the logic is unit-testable without
+  // mocking the whole send-action surface.
+  const { hasPrivateAttachment, block: attachmentPrivateBlock } =
+    parsePrivateAttachmentFormFields(formData, attachmentType);
+  const attachmentMeta: Record<string, unknown> | null =
+    composePrivateAttachmentMeta(attachmentMetaBase, attachmentPrivateBlock);
+
+  if (!body && !attachmentUrl && !hasPrivateAttachment) {
     redirect(`/nex-native/chat/peer/${peerAccountId}`);
   }
   // Optional reply target · when set, the message quotes the referenced

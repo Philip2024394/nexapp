@@ -41,8 +41,18 @@ export interface WrappedAttachmentKey {
  *  encrypted attachments. */
 export interface AttachmentEnvelope {
   version: 1;
-  /** Bucket-relative path or public URL of the encrypted ciphertext. */
-  storage_url: string;
+  /** Legacy · public URL of the ciphertext in the public attachment
+   *  bucket. P1.T05 2026-11-13 · OPTIONAL · present only on envelopes
+   *  written before the sealed private-bucket migration. New envelopes
+   *  carry `storage_path` instead · the recipient mints a short-lived
+   *  signed URL via /api/nex-native/attachment/encrypted/signed when
+   *  they need to download. One of `storage_url` or `storage_path`
+   *  MUST be present. */
+  storage_url?: string;
+  /** Private bucket-relative path. P1.T05 2026-11-13 · NEW primary
+   *  identifier · recipients call the signed-URL mint endpoint with
+   *  this path to obtain a short-lived fetchable URL. */
+  storage_path?: string;
   /** Nonce used with the content key to encrypt the file bytes. */
   content_nonce_b64: string;
   /** Sender's public key (base64) + device id at send time · needed
@@ -55,11 +65,20 @@ export interface AttachmentEnvelope {
    *  unwraps to recover the content key. */
   wrapped_keys: WrappedAttachmentKey[];
   /** Original file's MIME type so the render layer knows which
-   *  element to use (img / video / audio). Not sensitive · stored
-   *  in the envelope alongside the URL. */
+   *  element to use (img / video / audio / document). Not sensitive
+   *  by itself · the MIME alone does not reveal document contents or
+   *  the original filename. */
   content_type: string;
   /** Original file size · lets the receiver validate the fetch. */
   size_bytes: number;
+  /** Phase 3 · document attachments only. Ciphertext of the UTF-8
+   *  filename bytes, encrypted with the SAME content key using a
+   *  distinct random nonce. Absent for image/video/audio where the
+   *  OS-generated filename isn't user-identifying. The server never
+   *  sees the plaintext filename · it lands only after the recipient
+   *  unwraps the content key AND decrypts this blob locally. */
+  encrypted_filename_b64?: string;
+  filename_nonce_b64?: string;
 }
 
 export interface EncryptFileResult {
@@ -136,19 +155,65 @@ export function decryptFileBytes(
   return nacl.secretbox.open(ciphertext, contentNonce, contentKey);
 }
 
-/** Convenience: fetch ciphertext from storage_url, unwrap the
- *  key, decrypt the file, and return the decrypted bytes + the
- *  content_type so the render layer can build a blob URL. Returns
- *  null on any failure (tamper, wrong device, network). */
+/** Phase 3 · encrypt a short byte string (the UTF-8-encoded filename)
+ *  using the SAME content key as the file bytes but a DISTINCT random
+ *  nonce. Stored in the envelope so the recipient can recover the
+ *  original filename after unwrapping the content key. The server
+ *  never sees the plaintext filename. */
+export function encryptSmallBytes(
+  bytes: Uint8Array,
+  contentKey: Uint8Array,
+): { ciphertext: Uint8Array; nonce: Uint8Array } {
+  const nonce = nacl.randomBytes(nacl.secretbox.nonceLength);
+  const ciphertext = nacl.secretbox(bytes, nonce, contentKey);
+  return { ciphertext, nonce };
+}
+
+/** Phase 3 · inverse of encryptSmallBytes · returns null on tamper. */
+export function decryptSmallBytes(
+  ciphertextB64: string,
+  nonceB64: string,
+  contentKey: Uint8Array,
+): Uint8Array | null {
+  const ciphertext = naclUtil.decodeBase64(ciphertextB64);
+  const nonce = naclUtil.decodeBase64(nonceB64);
+  return nacl.secretbox.open(ciphertext, nonce, contentKey);
+}
+
+/** Convenience: fetch ciphertext, unwrap the key, decrypt the file,
+ *  and return the decrypted bytes + the content_type so the render
+ *  layer can build a blob URL.
+ *
+ *  P1.T05 2026-11-13 · resolves the ciphertext URL through the sealed
+ *  signed-URL mint when the envelope carries `storage_path` (private
+ *  bucket). Legacy envelopes with only `storage_url` continue to
+ *  fetch the public URL directly (backwards compat for pre-migration
+ *  content). Returns null on any failure · tamper, wrong device,
+ *  network, mint denial (non-participant) or expired URL. */
 export async function fetchAndDecryptAttachment(
   envelope: AttachmentEnvelope,
   self: NexDeviceKey,
   senderAccountId: string,
+  opts?: {
+    /** Test override · defaults to global fetch. */
+    fetchFn?: typeof fetch;
+    /** Test override · same hook as the resolver + the fetch call. */
+    signedUrlEndpoint?: string;
+  },
 ): Promise<{ bytes: Uint8Array; contentType: string } | null> {
   const contentKey = unwrapContentKey(envelope, self, senderAccountId);
   if (!contentKey) return null;
+  const { resolveCiphertextFetchUrl } = await import(
+    "./attachment-url-resolver"
+  );
+  const fetchUrl = await resolveCiphertextFetchUrl(
+    { storage_path: envelope.storage_path, storage_url: envelope.storage_url },
+    { fetchFn: opts?.fetchFn, signedUrlEndpoint: opts?.signedUrlEndpoint },
+  );
+  if (!fetchUrl) return null;
   try {
-    const resp = await fetch(envelope.storage_url);
+    const fetchFn = opts?.fetchFn ?? fetch;
+    const resp = await fetchFn(fetchUrl);
     if (!resp.ok) return null;
     const buf = new Uint8Array(await resp.arrayBuffer());
     const plain = decryptFileBytes(buf, envelope.content_nonce_b64, contentKey);
@@ -163,17 +228,29 @@ export async function fetchAndDecryptAttachment(
  *  Callers assemble the wrapped_keys array by looping over every
  *  target device and calling wrapContentKey. */
 export function buildEnvelope(opts: {
-  storageUrl: string;
+  /** P1.T05 2026-11-13 · at least ONE of storageUrl or storagePath
+   *  MUST be provided. Prefer `storagePath` for all new uploads ·
+   *  `storageUrl` stays for legacy-envelope compatibility. */
+  storageUrl?: string;
+  storagePath?: string;
   contentNonce: Uint8Array;
   senderPublicKey: string;
   senderDeviceId: string;
   wrappedKeys: WrappedAttachmentKey[];
   contentType: string;
   sizeBytes: number;
+  /** Phase 3 · optional for documents · ciphertext bytes of the UTF-8
+   *  filename encrypted under the SAME content key with a fresh nonce. */
+  encryptedFilename?: Uint8Array;
+  filenameNonce?: Uint8Array;
 }): AttachmentEnvelope {
-  return {
+  if (!opts.storageUrl && !opts.storagePath) {
+    throw new Error(
+      "buildEnvelope: at least one of storageUrl or storagePath is required",
+    );
+  }
+  const env: AttachmentEnvelope = {
     version: 1,
-    storage_url: opts.storageUrl,
     content_nonce_b64: naclUtil.encodeBase64(opts.contentNonce),
     sender_public_key: opts.senderPublicKey,
     sender_device_id: opts.senderDeviceId,
@@ -181,15 +258,28 @@ export function buildEnvelope(opts: {
     content_type: opts.contentType,
     size_bytes: opts.sizeBytes,
   };
+  if (opts.storageUrl) env.storage_url = opts.storageUrl;
+  if (opts.storagePath) env.storage_path = opts.storagePath;
+  if (opts.encryptedFilename && opts.filenameNonce) {
+    env.encrypted_filename_b64 = naclUtil.encodeBase64(opts.encryptedFilename);
+    env.filename_nonce_b64 = naclUtil.encodeBase64(opts.filenameNonce);
+  }
+  return env;
 }
 
-/** Type guard for arbitrary attachment_meta JSON. */
+/** Type guard for arbitrary attachment_meta JSON.
+ *  P1.T05 2026-11-13 · accepts envelopes with EITHER storage_url
+ *  (legacy) OR storage_path (new private-bucket) · requires at least
+ *  one. All other fields remain mandatory. */
 export function isAttachmentEnvelope(x: unknown): x is AttachmentEnvelope {
   if (!x || typeof x !== "object") return false;
   const o = x as Record<string, unknown>;
+  const hasUrl = typeof o.storage_url === "string" && o.storage_url.length > 0;
+  const hasPath =
+    typeof o.storage_path === "string" && o.storage_path.length > 0;
   return (
     o.version === 1 &&
-    typeof o.storage_url === "string" &&
+    (hasUrl || hasPath) &&
     typeof o.content_nonce_b64 === "string" &&
     typeof o.sender_public_key === "string" &&
     typeof o.sender_device_id === "string" &&

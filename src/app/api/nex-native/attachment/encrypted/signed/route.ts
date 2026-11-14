@@ -41,7 +41,7 @@ import {
   ensurePrivateBucketReady,
 } from "@/lib/nex-native/attachment/bucket-config";
 import {
-  isValidCiphertextPath,
+  isValidPrivateAttachmentPath,
   verifyParticipantForCiphertext,
 } from "@/lib/nex-native/attachment/attachment-participant";
 
@@ -58,8 +58,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
   const url = new URL(req.url);
   const path = url.searchParams.get("path") ?? "";
-  if (!isValidCiphertextPath(path)) {
+  if (!isValidPrivateAttachmentPath(path)) {
     // Non-revealing · malformed input treated like not-found.
+    // P1.T06 2026-11-13 · accepts both `enc/` (encrypted) and `std/`
+    // (standard-send private plaintext · explicit sender opt-in)
+    // path shapes. Both are participant-gated server-side.
     return NextResponse.json(
       { ok: false, error: "not_found" },
       { status: 404 },

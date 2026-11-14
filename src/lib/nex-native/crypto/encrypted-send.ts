@@ -45,7 +45,7 @@ export interface EncryptedSendOptions {
   replyToId?: string | null;
   attachmentUrl?: string | null;
   attachmentType?:
-    | "image" | "video" | "audio"
+    | "image" | "video" | "audio" | "document"
     | "product" | "menu_item" | "cart_order" | "product_share"
     | null;
   attachmentMeta?: unknown;
@@ -156,16 +156,29 @@ export async function sendEncryptedPeerMessage(
         t.public_key,
       ),
     );
+    // P1.T05 2026-11-13 · envelope carries storage_path (private
+    // bucket · sealed primary identifier) and legacy storage_url
+    // only when the uploader emitted one. P1.T04 Phase 3 · document
+    // kind also carries the encrypted filename blob.
     envelope = buildEnvelope({
-      storageUrl: enc.storageUrl,
+      ...(enc.storageUrl ? { storageUrl: enc.storageUrl } : {}),
+      storagePath: enc.storagePath,
       contentNonce: enc.contentNonce,
       senderPublicKey: selfPubB64,
       senderDeviceId: self.deviceId,
       wrappedKeys,
       contentType: enc.contentType,
       sizeBytes: enc.sizeBytes,
+      ...(enc.encryptedFilename
+        ? { encryptedFilename: enc.encryptedFilename }
+        : {}),
+      ...(enc.filenameNonce ? { filenameNonce: enc.filenameNonce } : {}),
     });
-    attachmentUrl = enc.storageUrl;
+    // attachment_url column on nex_peer_message stays populated for
+    // backward compat where the legacy value is still useful · for
+    // new private-bucket uploads it is empty (envelope carries the
+    // path). The recipient-side resolver picks path over url.
+    attachmentUrl = enc.storageUrl ?? null;
     attachmentType = enc.kind;
     // Merge the envelope into any pre-existing attachment_meta so
     // callers can still smuggle extra hints (e.g. dimensions) alongside.

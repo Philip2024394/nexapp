@@ -79,6 +79,10 @@ export function E2eComposerIntercept(
       const fd = new FormData(form);
       const bodyText = String(fd.get("body") ?? "").trim();
       const attachmentUrl = String(fd.get("attachment_url") ?? "").trim() || null;
+      // P1.T05 2026-11-13 · encrypted uploads now carry a stable
+      // storage_path (not a URL). Read both so legacy stashes keyed
+      // by URL still resolve.
+      const attachmentPath = String(fd.get("attachment_path") ?? "").trim() || null;
       const attachmentType = String(fd.get("attachment_type") ?? "").trim() || null;
       const attachmentEncrypted = String(fd.get("attachment_encrypted") ?? "") === "1";
 
@@ -88,31 +92,49 @@ export function E2eComposerIntercept(
       if (attachmentUrl && !attachmentEncrypted) return;
 
       // Nothing to send · defer.
-      if (!bodyText && !attachmentUrl) return;
+      if (!bodyText && !attachmentUrl && !attachmentPath) return;
 
       // Bridge 88 · pull the stashed content key if this is an
       // encrypted attachment · falls back to plaintext form if the
       // stash is missing (tab expired / user cleared sessionStorage).
       let encryptedAttachment = null as null | {
-        storageUrl: string;
+        storageUrl?: string;
         storagePath: string;
         contentType: string;
         sizeBytes: number;
         contentKey: Uint8Array;
         contentNonce: Uint8Array;
-        kind: "image" | "video" | "audio";
+        // P1.T04 Phase 3 · 2026-11-13 · "document" now flows through
+        // the same encrypted send path as media. The stash carries
+        // the encrypted filename for document kind · the composer
+        // intercept passes it through unchanged.
+        kind: "image" | "video" | "audio" | "document";
+        /** P1.T04 Phase 3 · optional · documents carry filename
+         *  ciphertext here · the envelope builder stuffs it in. */
+        encryptedFilename?: Uint8Array;
+        filenameNonce?: Uint8Array;
       };
-      if (attachmentUrl && attachmentEncrypted) {
-        const stashed = readEncryptedAttachmentKey(attachmentUrl);
+      if (attachmentEncrypted) {
+        // P1.T05 · prefer path (sealed new identifier) · fall back to
+        // URL for stash records written before the key-rename.
+        const stashKey = attachmentPath ?? attachmentUrl;
+        if (!stashKey) return;
+        const stashed = readEncryptedAttachmentKey(stashKey);
         if (!stashed) return; // fall through to plaintext form (unlikely path)
         encryptedAttachment = {
-          storageUrl: attachmentUrl,
-          storagePath: attachmentUrl, // not needed at send time
+          ...(attachmentUrl ? { storageUrl: attachmentUrl } : {}),
+          storagePath: attachmentPath ?? attachmentUrl ?? "",
           contentType: stashed.contentType,
           sizeBytes: stashed.sizeBytes,
           contentKey: new Uint8Array(stashed.contentKey),
           contentNonce: new Uint8Array(stashed.contentNonce),
           kind: stashed.kind,
+          ...(stashed.encryptedFilename
+            ? { encryptedFilename: new Uint8Array(stashed.encryptedFilename) }
+            : {}),
+          ...(stashed.filenameNonce
+            ? { filenameNonce: new Uint8Array(stashed.filenameNonce) }
+            : {}),
         };
       }
 
@@ -179,7 +201,12 @@ export function E2eComposerIntercept(
           // the wrapped copies are on the wire, and holding it in
           // sessionStorage past send is a small leak surface.
           if (encryptedAttachment) {
-            clearEncryptedAttachmentKey(encryptedAttachment.storageUrl);
+            // P1.T05 2026-11-13 · stash key is storage_path for new
+            // uploads · fall back to storage_url for legacy stashes
+            // written before the rename.
+            clearEncryptedAttachmentKey(
+              encryptedAttachment.storagePath || encryptedAttachment.storageUrl || "",
+            );
             // Also clear the URL query state so a browser back doesn't
             // re-attach the ciphertext.
             const cleanUrl = window.location.pathname;

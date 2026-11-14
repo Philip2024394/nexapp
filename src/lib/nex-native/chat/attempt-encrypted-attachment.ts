@@ -49,17 +49,13 @@ export async function attemptEncryptedAttachment(
   opts: AttemptOptions,
 ): Promise<AttachmentEncryptionOutcome> {
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  // Documents are a fast-fail on MIME classification · bypass the
-  // crypto pipeline entirely so we return "unsupported-mime" without
-  // reading file bytes. Phase 3 will close this.
-  if (opts.captureKind === "document") {
-    return {
-      kind: "blocked",
-      reason: "unsupported-mime",
-      captureKind: "document",
-      file: opts.file,
-    };
-  }
+  // P1.T04 Phase 3 · 2026-11-13 · owner-authorised. Documents now flow
+  // through the full encrypted pipeline (see SUPPORTED_DOCUMENT_MIMES
+  // in encrypted-attachment-upload.ts). The earlier short-circuit that
+  // returned "unsupported-mime" for every document has been removed.
+  // The uploader's classifyMime continues to return null for genuinely
+  // unknown MIMEs · those still reach the "unsupported-mime" block
+  // prompt via the thrown error in the uploader.
 
   const uploadOpts: UploadEncryptedAttachmentOptions = {
     file: opts.file,
@@ -100,6 +96,11 @@ export async function attemptEncryptedAttachment(
         attachmentKind: result.kind,
         contentKey: result.contentKey,
         contentNonce: result.contentNonce,
+        // Phase 3 · for documents only · the uploader also encrypted
+        // the UTF-8 filename with the same content key. Image / video
+        // / audio attachments leave these undefined.
+        encryptedFilename: result.encryptedFilename,
+        filenameNonce: result.filenameNonce,
       };
     } catch (err) {
       return {

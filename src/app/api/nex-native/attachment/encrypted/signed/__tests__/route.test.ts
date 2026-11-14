@@ -32,11 +32,20 @@ vi.mock("@/lib/nex-native/app/session", () => ({
   resolveNexAppSessionFromContext: () => Promise.resolve(state.session),
 }));
 
-vi.mock("@/lib/nex-native/attachment/attachment-participant", () => ({
-  isValidCiphertextPath: (p: string) =>
-    /^enc\/[0-9a-f-]{32,36}\/\d{10,16}-[a-z0-9]{6,12}\.[a-z0-9]{1,8}$/.test(p),
-  verifyParticipantForCiphertext: () => Promise.resolve(state.participantResult),
-}));
+vi.mock("@/lib/nex-native/attachment/attachment-participant", () => {
+  // P1.T06 2026-11-13 · the route's import switched from
+  // isValidCiphertextPath to isValidPrivateAttachmentPath which
+  // accepts both enc/ and std/ shapes. Export both from this mock so
+  // every helper the route might consume resolves.
+  const enc = /^enc\/[0-9a-f-]{32,36}\/\d{10,16}-[a-z0-9]{6,12}\.[a-z0-9]{1,8}$/;
+  const std = /^std\/[0-9a-f-]{32,36}\/\d{10,16}-[a-z0-9]{6,12}\.[a-z0-9]{1,8}$/;
+  return {
+    isValidCiphertextPath: (p: string) => enc.test(p),
+    isValidStandardPrivatePath: (p: string) => std.test(p),
+    isValidPrivateAttachmentPath: (p: string) => enc.test(p) || std.test(p),
+    verifyParticipantForCiphertext: () => Promise.resolve(state.participantResult),
+  };
+});
 
 vi.mock("@/lib/nex-native/attachment/bucket-config", () => ({
   PRIVATE_CIPHERTEXT_BUCKET: "nex-peer-chat-ciphertext",

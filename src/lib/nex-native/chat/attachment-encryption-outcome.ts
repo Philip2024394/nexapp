@@ -61,9 +61,15 @@ export interface AttachmentEncryptedOutcome {
   readonly storagePath: string;
   readonly contentType: string;
   readonly sizeBytes: number;
-  readonly attachmentKind: "image" | "video" | "audio";
+  readonly attachmentKind: "image" | "video" | "audio" | "document";
   readonly contentKey: Uint8Array;
   readonly contentNonce: Uint8Array;
+  /** P1.T04 Phase 3 · 2026-11-13 · documents only · the UTF-8-encoded
+   *  filename encrypted with the SAME content key but a distinct
+   *  random nonce. image/video/audio attachments omit these two
+   *  fields (the OS filename for a photo isn't user-identifying). */
+  readonly encryptedFilename?: Uint8Array;
+  readonly filenameNonce?: Uint8Array;
 }
 
 export interface AttachmentBlockedOutcome {
@@ -111,9 +117,14 @@ export const BLOCK_COPY: Record<
     allowSendStandard: true,
   },
   "unsupported-mime": {
-    title: "Documents aren't encrypted yet",
+    // P1.T04 Phase 3 · 2026-11-13 · documents are now encrypted.
+    // "unsupported-mime" now only fires for genuinely unrecognised
+    // MIMEs (exotic formats outside the PDF/Office/text/csv/zip
+    // allowlist). The copy used to say "Documents aren't encrypted
+    // yet" · it now explains the specific limitation.
+    title: "This file type isn't supported yet",
     body:
-      "Encrypted document attachments are coming in a future update. For now you can send this as a standard message (not encrypted), or cancel.",
+      "NEX Chat can send images, videos, voice notes, PDFs, Word/Excel/PowerPoint files, text files, CSVs and ZIPs end-to-end encrypted. This file isn't on the supported list yet. You can send it as a standard message (not encrypted), or cancel.",
     allowRetry: false,
     allowSendStandard: true,
   },

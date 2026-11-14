@@ -149,10 +149,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         const conversationId = inserts[0]!.conversation_id;
         const conv = await getPeerConversationById(conversationId);
         if (!conv) return;
-        const recipient =
-          session.account.id === conv.participant_a_id
-            ? conv.participant_b_id
-            : conv.participant_a_id;
+        // P1.T01 2026-11-13 · strict recipient derivation. Sender MUST
+        // be one of the two participants · if not (e.g. test harness
+        // where the session resolves to a persona that is not in the
+        // conversation, or defence-in-depth against a service-role
+        // caller that bypassed RLS), we DO NOT fall through to a
+        // participant id · we abort the dispatch. Previously the
+        // ternary silently returned `participant_a_id` when the
+        // sender matched neither participant, which caused the
+        // sender to receive the notification. CONFIRMED by
+        // dispatch-wiring.test.ts assertions expecting PEER but
+        // receiving SELF.
+        let recipient: string | null = null;
+        if (session.account.id === conv.participant_a_id) {
+          recipient = conv.participant_b_id;
+        } else if (session.account.id === conv.participant_b_id) {
+          recipient = conv.participant_a_id;
+        }
         if (!recipient || recipient === session.account.id) return;
         const recipientAccount = await getAccountById(recipient);
         const recipientLocale = resolveAccountLocale(recipientAccount?.locale);
