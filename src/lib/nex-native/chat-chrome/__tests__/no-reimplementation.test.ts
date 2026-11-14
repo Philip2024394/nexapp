@@ -53,18 +53,13 @@ const CONVERGED_CONSUMERS: Array<{ file: string; mustImport: string[] }> = [
     file: "src/app/nex-native/chat-standard/_standard-experience.tsx",
     mustImport: ["chat-identity-header"],
   },
-  {
-    file: "src/app/nex-native/themes/cyber-grid/page.tsx",
-    mustImport: ["chat-identity-header"],
-  },
-  {
-    file: "src/app/nex-native/themes/theme-1/page.tsx",
-    mustImport: ["chat-identity-header"],
-  },
-  {
-    file: "src/app/nex-native/themes/pink-dream/page.tsx",
-    mustImport: ["chat-identity-header"],
-  },
+  // 2026-11-14 · the sealed per-theme pages (themes/cyber-grid/,
+  // themes/theme-1/, themes/pink-dream/) were consolidated into a
+  // single dynamic route `themes/[id]/page.tsx`. The chrome contract
+  // is now carried by that dynamic viewer tree (see
+  // themes/[id]/_viewer.tsx and _guest-nex-avatar-overlay.tsx for the
+  // actual chat-identity-header import) · no per-theme page.tsx
+  // remains, so no per-theme entry is listed here.
 ];
 
 // ─── Known drift · files that reimplement chat chrome today, with the
@@ -74,27 +69,23 @@ const CONVERGED_CONSUMERS: Array<{ file: string; mustImport: string[] }> = [
 const KNOWN_DRIFT: Record<string, string> = {
   "src/app/nex-native/vault/home/chats/[conversationId]/_vault-chat-client.tsx":
     "Vault chat scope-locked per founder sealed memory 2026-10-07 · requires separate authorisation to touch",
+  // 2026-11-14 · references data-nex-chat-identity-header +
+  // data-nex-peer-composer in CSS selectors ONLY (prototype-wrap
+  // layout overrides) · does NOT implement its own chrome · still
+  // mounts the sealed primitives via the imported _composer.tsx +
+  // chat-identity-header. Allow-listed so the attribute-grep guard
+  // doesn't flag CSS selector references as reimplementations.
+  "src/app/nex-native/chat/peer/[accountId]/page.tsx":
+    "CSS selector references only · mounts the sealed primitives via imported _composer.tsx",
   // Legacy NexNativeChatClient entry removed 2026-11-06 together with
   // the [businessSlug] subtree deletion.
-  // Phase 3A entries removed 2026-10-14 (Standard Experience +
-  // cyber-grid + theme-1 + pink-dream now consume ChatIdentityHeader).
-  // See CONVERGED_CONSUMERS above.
-  "src/app/nex-native/chat/prototypes/portrait-bloom/page.tsx":
-    "Prototype preview · mounts sealed PortraitBloomShell + PeerComposer for isolated testing",
-  "src/app/nex-native/chat/prototypes/depth-cards/page.tsx":
-    "Design prototype · explores depth-card bubble styling · not a shipping surface",
-  "src/app/nex-native/chat/prototypes/nex-bubbles/page.tsx":
-    "Design prototype · explores NEX bubble treatments · not a shipping surface",
-  "src/app/nex-native/chat/prototypes/footers/page.tsx":
-    "Design prototype · explores composer footer variants · not a shipping surface",
-  "src/app/nex-native/chat/prototypes/haunted-hotel-effects/page.tsx":
-    "Design prototype · showcases Haunted Hotel atmosphere FX · not a shipping surface",
-  "src/app/nex-native/chat/prototypes/hauntedhoteltheme/page.tsx":
-    "Design prototype · Haunted Hotel theme preview · pending theme-viewer convergence",
-  "src/app/nex-native/chat/prototypes/direct-text/page.tsx":
-    "Design prototype · explores direct-text UI treatments · not a shipping surface",
-  "src/app/nex-native/dev/hotel-flow/chat/page.tsx":
-    "Dev-only prototype · not a shipping surface",
+  // Phase 3A entries removed 2026-10-14 (Standard Experience consumes
+  // ChatIdentityHeader · per-theme pages consolidated into themes/[id]).
+  // 2026-11-14 · the chat/prototypes/* subtree + dev/hotel-flow/*
+  // were deleted by the sealed 2026-11-06 Scope Reduction (prototypes
+  // and dev-live surfaces are out of v1). Their KNOWN_DRIFT entries
+  // are therefore removed · the "every KNOWN_DRIFT entry still exists
+  // on disk" assertion now reflects reality.
 };
 
 // ─── Attribute signatures that indicate a chat composer / identity ─────

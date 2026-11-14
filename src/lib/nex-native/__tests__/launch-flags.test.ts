@@ -204,53 +204,65 @@ describe("searchEnabledForRequest · development", () => {
 });
 
 // ─── searchEnabledForRequest · PRODUCTION (new containment) ────────
+//
+// `NEX_SEARCH_ENABLED` is a module-level constant evaluated at import
+// (see launch-flags.ts:91). The dev `.env.local` sets it to "1", which
+// would short-circuit `searchEnabledForRequest` before the NODE_ENV
+// refusal check. To exercise the production-refusal branch honestly
+// we reset the module graph with NEX_SEARCH_ENABLED cleared, then
+// re-import the function so the constant evaluates to false for the
+// duration of each test.
+
+async function importSearchFnWithProductionEnvs(): Promise<typeof searchEnabledForRequest> {
+  vi.resetModules();
+  vi.stubEnv("NODE_ENV", "production");
+  vi.stubEnv("NEX_SEARCH_ENABLED", "");
+  const mod = await import("../launch-flags");
+  return mod.searchEnabledForRequest;
+}
 
 describe("searchEnabledForRequest · production (B9/B10 containment)", () => {
-  it("REFUSES ?search=1 in production via URLSearchParams", () => {
-    vi.stubEnv("NODE_ENV", "production");
-    expect(
-      searchEnabledForRequest(new URLSearchParams("search=1")),
-    ).toBe(false);
+  it("REFUSES ?search=1 in production via URLSearchParams", async () => {
+    const fn = await importSearchFnWithProductionEnvs();
+    expect(fn(new URLSearchParams("search=1"))).toBe(false);
   });
 
-  it("REFUSES all search-param shapes in production", () => {
-    vi.stubEnv("NODE_ENV", "production");
-    expect(
-      searchEnabledForRequest(new URLSearchParams("search=true")),
-    ).toBe(false);
-    expect(searchEnabledForRequest({ search: "1" })).toBe(false);
-    expect(searchEnabledForRequest({ search: "true" })).toBe(false);
-    expect(searchEnabledForRequest({ search: ["1"] })).toBe(false);
-    expect(searchEnabledForRequest({ search: ["0", "true"] })).toBe(false);
+  it("REFUSES all search-param shapes in production", async () => {
+    const fn = await importSearchFnWithProductionEnvs();
+    expect(fn(new URLSearchParams("search=true"))).toBe(false);
+    expect(fn({ search: "1" })).toBe(false);
+    expect(fn({ search: "true" })).toBe(false);
+    expect(fn({ search: ["1"] })).toBe(false);
+    expect(fn({ search: ["0", "true"] })).toBe(false);
   });
 
-  it("REFUSES adversarial / unknown inputs in production", () => {
-    vi.stubEnv("NODE_ENV", "production");
-    expect(
-      searchEnabledForRequest(new URLSearchParams("search=%31")),
-    ).toBe(false);
-    expect(
-      searchEnabledForRequest(new URLSearchParams("search=TRUE")),
-    ).toBe(false);
-    expect(
-      searchEnabledForRequest(new URLSearchParams("SEARCH=1")),
-    ).toBe(false);
-    expect(searchEnabledForRequest({ search: "yes" })).toBe(false);
-    expect(searchEnabledForRequest({ search: "ok" })).toBe(false);
-    expect(searchEnabledForRequest({})).toBe(false);
-    expect(searchEnabledForRequest(null)).toBe(false);
-    expect(searchEnabledForRequest(undefined)).toBe(false);
+  it("REFUSES adversarial / unknown inputs in production", async () => {
+    const fn = await importSearchFnWithProductionEnvs();
+    expect(fn(new URLSearchParams("search=%31"))).toBe(false);
+    expect(fn(new URLSearchParams("search=TRUE"))).toBe(false);
+    expect(fn(new URLSearchParams("SEARCH=1"))).toBe(false);
+    expect(fn({ search: "yes" })).toBe(false);
+    expect(fn({ search: "ok" })).toBe(false);
+    expect(fn({})).toBe(false);
+    expect(fn(null)).toBe(false);
+    expect(fn(undefined)).toBe(false);
   });
 
-  it("search bypass does not conflate with commerce bypass", () => {
+  it("search bypass does not conflate with commerce bypass", async () => {
     // Separate-flags doctrine (launch-flags.ts:92-93 original comment):
-    // ?commerce=1 must not unlock search, and vice versa.
+    // ?commerce=1 must not unlock search, and vice versa. Reset the
+    // module with both NEX_*_ENABLED cleared so neither early-return
+    // short-circuits before the per-param check.
+    vi.resetModules();
     vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("NEX_SEARCH_ENABLED", "");
+    vi.stubEnv("NEX_COMMERCE_ENABLED", "");
+    const mod = await import("../launch-flags");
     expect(
-      searchEnabledForRequest(new URLSearchParams("commerce=1")),
+      mod.searchEnabledForRequest(new URLSearchParams("commerce=1")),
     ).toBe(false);
     expect(
-      commerceEnabledForRequest(new URLSearchParams("search=1")),
+      mod.commerceEnabledForRequest(new URLSearchParams("search=1")),
     ).toBe(false);
   });
 });

@@ -97,9 +97,12 @@ afterEach(() => {
 // ─── Preset catalogue ─────────────────────────────────────────────────
 
 describe("DISAPPEARING_PRESETS", () => {
-  it("exposes exactly the 7 owner-sealed options", () => {
+  it("exposes exactly the 8 owner-sealed options (90-day added 2026-11-12)", () => {
+    // 2026-11-12 owner directive · added the 90-day preset
+    // (7776000s) per Chat Settings Control Centre spec. See
+    // disappearing-messages-constants.ts:26-29.
     expect(DISAPPEARING_PRESETS.map((p) => p.value)).toEqual([
-      0, -1, 300, 1800, 3600, 86400, 604800,
+      0, -1, 300, 1800, 3600, 86400, 604800, 7776000,
     ]);
   });
   it("every preset has a non-empty label + description", () => {

@@ -66,8 +66,11 @@ const REMOVED_OLD_IDS = [
 /* ─── A · pure predicate truth table ──────────────────────────── */
 
 describe("isValidCoverLayoutId · accepts every sealed cover ID", () => {
-  it("accepts all 10 current sealed IDs from COVER_LAYOUT_IDS", () => {
-    expect(COVER_LAYOUT_IDS).toHaveLength(10);
+  it("accepts all 11 current sealed IDs from COVER_LAYOUT_IDS", () => {
+    // 2026-10-20 · owner directive added "accommodation" as the 11th
+    // sealed cover layout (hospitality / homestay / villa / hotel
+    // market). See src/app/nex-native/cover/layout-ids.ts.
+    expect(COVER_LAYOUT_IDS).toHaveLength(11);
     for (const id of COVER_LAYOUT_IDS) {
       expect(
         isValidCoverLayoutId(id),
@@ -77,8 +80,9 @@ describe("isValidCoverLayoutId · accepts every sealed cover ID", () => {
   });
 
   it("accepts each sealed id enumerated explicitly (defence-in-depth)", () => {
-    // Lock the exact ten strings so a silent change to COVER_LAYOUT_IDS
-    // can't quietly pass the first test by also removing entries.
+    // Lock the exact eleven strings so a silent change to
+    // COVER_LAYOUT_IDS can't quietly pass the first test by also
+    // removing entries.
     expect(isValidCoverLayoutId("cafe")).toBe(true);
     expect(isValidCoverLayoutId("cafe_landscape")).toBe(true);
     expect(isValidCoverLayoutId("cafe_round")).toBe(true);
@@ -89,6 +93,7 @@ describe("isValidCoverLayoutId · accepts every sealed cover ID", () => {
     expect(isValidCoverLayoutId("personal_brand")).toBe(true);
     expect(isValidCoverLayoutId("personal_brand_landscape")).toBe(true);
     expect(isValidCoverLayoutId("personal_brand_round")).toBe(true);
+    expect(isValidCoverLayoutId("accommodation")).toBe(true);
   });
 });
 
@@ -149,23 +154,33 @@ describe("business-service.ts · updateCoverLayoutId uses the canonical validato
     );
   });
 
-  it("does NOT re-introduce the removed-2026-09-30 old IDs as literals", () => {
-    // The service file must not contain any of the 7 removed IDs as
-    // valid-list literals. Comment references ARE allowed so the
-    // doctrine trail stays legible · we strip single-line comments
-    // before scanning so a documentary reference doesn't trip a
-    // regression.
+  it("does NOT re-introduce the removed-2026-09-30 old IDs as cover-layout literals", () => {
+    // The sealed concern is that the 7 removed COVER-LAYOUT ids
+    // (restaurant, tradesperson, salon, creator, fashion, street_food,
+    // premium_business) must not appear as a VALID-list literal
+    // guarding updateCoverLayoutId. 2026-11-07 Phase B legitimately
+    // re-introduced several of those strings as BUSINESS-CATEGORY
+    // slugs in REV6_SUBTYPE_TO_LEGACY_SLUG (a different domain
+    // entirely · maps subtype → legacy business_category column).
+    // So we scope this scan to the updateCoverLayoutId function body
+    // ONLY · the rest of the file is allowed to use the strings in
+    // other contexts.
+    const match = BUSINESS_SERVICE_SRC.match(
+      /export async function updateCoverLayoutId\([\s\S]*?\n\}/,
+    );
+    expect(match, "updateCoverLayoutId function body not found").not.toBeNull();
+    const fnBody = match![0];
     const stripComments = (src: string) =>
       src
         .split("\n")
         .map((line) => line.replace(/\/\/.*$/, ""))
         .join("\n")
         .replace(/\/\*[\s\S]*?\*\//g, "");
-    const code = stripComments(BUSINESS_SERVICE_SRC);
+    const code = stripComments(fnBody);
     for (const removed of REMOVED_OLD_IDS) {
       expect(
         code.includes(`"${removed}"`),
-        `must not contain quoted literal "${removed}" in code (comments ok)`,
+        `updateCoverLayoutId body must not contain quoted literal "${removed}" (comments ok, other functions ok)`,
       ).toBe(false);
     }
   });

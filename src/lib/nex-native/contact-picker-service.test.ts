@@ -89,7 +89,11 @@ describe("contact-picker-service.listContactPickerRowsForViewer", () => {
     expect(row!.nexHandle).toBe("nex-10002");
   });
 
-  it("uses NEX member fallback when profession is missing or blank", async () => {
+  it("returns empty-string profession when missing or blank (sealed 2026-11-04 · no fake NEX-member badge)", async () => {
+    // Owner directive 2026-11-04 (contact-picker-service.ts:84-86):
+    // when a friend has no profession set, return the empty string
+    // so the row renders without a profession line · do NOT
+    // substitute a fake "NEX member" badge.
     vi.mocked(friendService.listFriends).mockResolvedValue([FRIEND_A]);
     vi.mocked(accountService.getAccountById).mockResolvedValueOnce(
       stubAccount(FRIEND_A, "Alan Turing", "nex-10003"),
@@ -104,6 +108,6 @@ describe("contact-picker-service.listContactPickerRowsForViewer", () => {
     );
 
     const [row] = await listContactPickerRowsForViewer(VIEWER);
-    expect(row!.profession).toBe("NEX member");
+    expect(row!.profession).toBe("");
   });
 });

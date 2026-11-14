@@ -57,9 +57,11 @@ describe("country chrome switch · SSR integration", () => {
     setEnv("ireland", "IE");
     const w = resolveWorldFromIdentity();
     expect(w?.meta.id).toBe("ireland");
-    // Owner-sealed 2026-11-01 narrow premium palette · Forest / cream.
-    expect(w?.palette.primary).toBe("#1B5138");
-    expect(w?.palette.backgroundBase).toBe("#FAF8F4");
+    // Owner-sealed 2026-11-10 light-theme palette · Amber accent on
+    // Pale Ivory. Supersedes the 2026-11-01 Forest/Cream seal. Source
+    // of truth: src/lib/nex-worlds/world-registry.ts:35-73.
+    expect(w?.palette.primary).toBe("#D4A24F");
+    expect(w?.palette.backgroundBase).toBe("#F5EDD3");
   });
 
   it("HQ identity does NOT override · falls through to DB resolver", () => {
