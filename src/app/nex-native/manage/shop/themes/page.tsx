@@ -34,10 +34,7 @@ import { resolveSessionWithDevOverride } from "@/lib/nex-native/app/dev-imperson
 import { listBusinessesByOwner } from "@/lib/nex-native/business-service";
 import { getShopCoverOverrides } from "@/lib/nex-native/shop-cover-service";
 import { effectiveTier } from "@/lib/nex-native/account-service";
-import {
-  ControlDrawer,
-  type ControlDrawerSession,
-} from "@/components/nex-native/control-drawer/control-drawer-client";
+import type { ControlDrawerSession } from "@/components/nex-native/control-drawer/control-drawer-client";
 import {
   COVER_LAYOUT_IDS,
   COVER_LAYOUT_LABELS,
@@ -104,40 +101,10 @@ export default async function ShopThemesPage(): Promise<React.JSX.Element> {
           boxSizing: "border-box",
         }}
       >
-        {/* Owner directive 2026-11-07 · absolute drawer slot anchored
-            top-right of the page so it stays above the scrollable grid
-            inside _client without reserving a row in the client layout.
-            Triggers the sealed shared ControlDrawer · default + icon
-            trigger · opens the full navigation panel. */}
-        <div
-          data-nex-shop-themes-drawer-slot
-          style={{
-            position: "absolute",
-            top: "calc(env(safe-area-inset-top, 0px) + 14px)",
-            right: 20,
-            zIndex: 20,
-          }}
-        >
-          {/* Owner directive 2026-11-12 · "+" side-drawer trigger
-              matches the sealed global black trigger (NexPageHeader
-              uses the same style everywhere else). Supersedes the
-              2026-11-07 cream/gold variant. */}
-          <ControlDrawer
-            session={drawerSession}
-            triggerStyle={{
-              width: 40,
-              height: 40,
-              borderRadius: "50%",
-              background: "#000000",
-              color: "#FFFFFF",
-              fontSize: 26,
-              fontWeight: 900,
-              lineHeight: 1,
-              border: "none",
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.45)",
-            }}
-          />
-        </div>
+        {/* Owner directive 2026-11-14 · burger moved INTO the header
+            row inside ShopThemesClient so it sits on the same row as
+            the "Shop Template" heading. Supersedes the 2026-11-07
+            absolute top-right slot that floated it above the title. */}
         <ShopThemesClient
           businessId={business?.id ?? null}
           businessName={business?.display_name ?? null}
@@ -146,6 +113,7 @@ export default async function ShopThemesPage(): Promise<React.JSX.Element> {
           currentImageUrl={overrides.imageUrl}
           layoutIds={[...COVER_LAYOUT_IDS]}
           layoutLabels={COVER_LAYOUT_LABELS}
+          drawerSession={drawerSession}
         />
       </main>
     </>

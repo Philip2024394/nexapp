@@ -35,6 +35,10 @@ import {
 } from "./_actions";
 import { SuggestedTintChip } from "./_suggested-tint-chip";
 import type { CoverLayoutId } from "@/app/nex-native/cover/layout-ids";
+import {
+  ControlDrawer,
+  type ControlDrawerSession,
+} from "@/components/nex-native/control-drawer/control-drawer-client";
 
 const GOLD = "var(--nex-world-secondary, #C6A15B)";
 const EMERALD = "var(--nex-world-primary, #123D2B)";
@@ -72,6 +76,7 @@ interface Props {
   readonly currentImageUrl: string | null;
   readonly layoutIds: readonly CoverLayoutId[];
   readonly layoutLabels: Readonly<Record<CoverLayoutId, string>>;
+  readonly drawerSession: ControlDrawerSession;
 }
 
 export function ShopThemesClient({
@@ -81,6 +86,7 @@ export function ShopThemesClient({
   currentImageUrl,
   layoutIds,
   layoutLabels,
+  drawerSession,
 }: Props): React.JSX.Element {
   const [selectedLayout, setSelectedLayout] =
     React.useState<CoverLayoutId>(currentLayoutId);
@@ -227,42 +233,85 @@ export function ShopThemesClient({
       }}
     >
       {/* ── Header ───────────────────────────────────────────── */}
+      {/* Owner directive 2026-11-14 · burger trigger lives on the SAME
+          row as the "Shop Template" heading. Supersedes the earlier
+          absolute top-right slot (page.tsx) that floated the drawer
+          above the title. Title + step-indicator stack on the left
+          column · drawer trigger is the right flex item vertically
+          centered against the title row. */}
       <header
         style={{
           display: "flex",
-          flexDirection: "column",
-          gap: 2,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
           paddingBottom: 6,
           borderBottom: `1px solid ${BORDER}`,
         }}
       >
-        {/* Owner directive 2026-11-12 (second pass) · "Shop Template"
-            heading repainted BLACK (was gray). Owner wanted it to
-            read as a clear anchor, not a muted subhead. */}
-        <h1
+        <div
           style={{
-            margin: 0,
-            fontSize: 20,
-            fontWeight: 900,
-            color: "#000000",
-            letterSpacing: "-0.01em",
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+            minWidth: 0,
+            flex: 1,
           }}
         >
-          Shop Template
-        </h1>
-        <span
-          data-nex-step-indicator
-          style={{
-            fontSize: 10,
-            fontWeight: 900,
-            color: "#9A9A9A",
-            letterSpacing: "0.14em",
-            textTransform: "uppercase",
-            marginTop: 2,
-          }}
+          {/* Owner directive 2026-11-12 (second pass) · "Shop Template"
+              heading repainted BLACK (was gray). Owner wanted it to
+              read as a clear anchor, not a muted subhead. */}
+          <h1
+            style={{
+              margin: 0,
+              fontSize: 20,
+              fontWeight: 900,
+              color: "#000000",
+              letterSpacing: "-0.01em",
+            }}
+          >
+            Shop Template
+          </h1>
+          <span
+            data-nex-step-indicator
+            style={{
+              fontSize: 10,
+              fontWeight: 900,
+              color: "#9A9A9A",
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              marginTop: 2,
+            }}
+          >
+            Model Template - #1
+          </span>
+        </div>
+        {/* Owner directive 2026-11-14 · burger drops INTO the header
+            row at the same vertical rhythm as the title text. Uses
+            the sealed black "+" trigger style (same as NexPageHeader
+            everywhere else) · passed through from page.tsx so the
+            session context stays server-resolved. */}
+        <div
+          data-nex-shop-themes-drawer-slot
+          style={{ flexShrink: 0 }}
         >
-          Model Template - #1
-        </span>
+          <ControlDrawer
+            session={drawerSession}
+            triggerStyle={{
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              background: "#000000",
+              color: "#FFFFFF",
+              fontSize: 26,
+              fontWeight: 900,
+              lineHeight: 1,
+              border: "none",
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.45)",
+            }}
+          />
+        </div>
       </header>
 
       {/* Owner directive 2026-11-07 · "no undo white outside phone -
