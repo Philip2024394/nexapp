@@ -415,8 +415,15 @@ export function VaultChatClient(props: Props) {
   }, []);
 
   // First-mount: if already unlocked, boot.
+  // The phase useState initializer (line 152) seeds `phase = "loading"`
+  // when `vault.unlocked` is already true on mount (tab-scoped VMK
+  // singleton returns the current snapshot synchronously). A prior
+  // `phase === "locked"` guard here left boot() never-called in that
+  // path · the reactive effect below also requires "locked", so the UI
+  // would stay stuck on "loading" forever. bootRef inside boot() is the
+  // real re-entry guard.
   useEffect(() => {
-    if (vault.unlocked && phase === "locked") {
+    if (vault.unlocked) {
       bootRef.current = false;
       void boot();
     }

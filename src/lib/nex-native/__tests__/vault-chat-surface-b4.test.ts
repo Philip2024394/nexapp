@@ -339,3 +339,52 @@ describe("B.4 · sealed-phase isolation (one-way dependency)", () => {
     });
   }
 });
+
+// ---------------------------------------------------------------------------
+// H · first-mount boot regression (2026-11-15)
+// ---------------------------------------------------------------------------
+//
+// `useVaultSession` is a tab-scoped singleton that returns the unlocked
+// snapshot synchronously on first render. The phase useState initializer
+// seeds `phase = "loading"` when vault is already unlocked at mount. If
+// the first-mount useEffect guards boot() behind `phase === "locked"`,
+// the chat stays stuck on "loading" because the reactive effect also
+// requires "locked" to fire boot(). Guard against reintroducing this.
+
+describe("B.4 · first-mount boot does not gate on phase === locked", () => {
+  const client = readFile(CLIENT);
+
+  test("exactly one `vault.unlocked && phase === 'locked'` guard remains (the reactive effect's)", () => {
+    // Before the fix, BOTH the reactive effect AND the first-mount effect
+    // gated boot() on `vault.unlocked && phase === "locked"`. On first
+    // mount with vault already unlocked, phase initialises to "loading"
+    // (per the useState initializer), so neither effect called boot() —
+    // the chat sat stuck on "loading" forever. The first-mount effect
+    // must drop the phase === "locked" check.
+    const stripped = stripComments(client);
+    const matches = stripped.match(
+      /vault\.unlocked\s*&&\s*phase\s*===\s*["']locked["']/g,
+    );
+    expect(matches, "expected exactly one remaining guard (reactive effect)").toEqual(
+      ["vault.unlocked && phase === \"locked\""],
+    );
+  });
+
+  test("a first-mount useEffect with empty deps calls boot() without the phase === locked guard", () => {
+    // Double-check: find the empty-deps useEffect block (first-mount)
+    // and confirm its boot trigger does not require phase === "locked".
+    // Split by `}, []);` and keep chunks that mention `void boot();`.
+    const chunks = client.split(/\},\s*\[\]\s*\)/);
+    const bootChunks = chunks.filter((c) => /void boot\(\);/.test(c));
+    expect(bootChunks.length, "no empty-deps useEffect calls boot()").toBeGreaterThan(0);
+    // The last of these (closest to the `, []);` terminator) is the
+    // first-mount effect. Its `if (...)` condition must not reference
+    // phase === "locked".
+    const firstMountChunk = bootChunks[bootChunks.length - 1];
+    const effectStart = firstMountChunk.lastIndexOf("useEffect(");
+    expect(effectStart).toBeGreaterThan(-1);
+    const body = firstMountChunk.slice(effectStart);
+    expect(body).not.toMatch(/vault\.unlocked\s*&&\s*phase\s*===\s*["']locked["']/);
+    expect(body).toMatch(/if\s*\(\s*vault\.unlocked\s*\)/);
+  });
+});

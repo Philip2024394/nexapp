@@ -122,12 +122,50 @@ export default async function VaultSettingsPage(): Promise<React.JSX.Element> {
           i18n copy for its heading + body so future phases can swap the
           "coming" chip for a real affordance without re-wording the
           surface. */}
-      <ComingSoonRow
-        dataAttr="devices"
-        titleKey="vault.settings.devices.title"
-        bodyKey="vault.settings.devices.body"
-        t={t}
-      />
+      {/* Owner-authorised 2026-11-15 · Vault devices surface now shipped
+          at /vault/settings/devices. Replaces the prior ComingSoonRow so
+          the Waiting-for-authorisation screen's instruction ("open
+          Vault devices and approve this device") actually leads
+          somewhere. */}
+      <Link
+        href="/nex-native/vault/settings/devices"
+        data-nex-vault-settings-row="devices"
+        data-nex-vault-settings-row-link="devices"
+        style={{
+          ...GLASS,
+          padding: "14px 16px",
+          borderRadius: 18,
+          marginBottom: 10,
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          textDecoration: "none",
+          color: "inherit",
+        }}
+      >
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <SettingsRowHeader
+            title={t("vault.settings.devices.title")}
+            body={t("vault.settings.devices.body")}
+          />
+        </span>
+        <span
+          aria-hidden="true"
+          style={{
+            flexShrink: 0,
+            padding: "4px 10px",
+            borderRadius: 999,
+            background: NEX.accentSoft,
+            color: NEX.accent,
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+          }}
+        >
+          Manage
+        </span>
+      </Link>
       <ComingSoonRow
         dataAttr="recovery"
         titleKey="vault.settings.recovery.title"

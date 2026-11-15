@@ -71,5 +71,32 @@ export default defineConfig({
       testMatch: /vault-landing-tiles\.spec\.ts/,
       timeout: 240_000,
     },
+    {
+      // 2026-11-15 · Phase 5 (vault escrow/lockout) · drives 3 wrong
+      // PIN attempts and asserts the lockout screen landing. Pairs with
+      // migrations 346/347 + Phase 3 UI.
+      name: "vault-lockout-threshold-390",
+      use: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+      testMatch: /vault-lockout-threshold\.spec\.ts/,
+      timeout: 180_000,
+    },
+    {
+      // 2026-11-15 · Phase 5 · issue reset email → harvest token via
+      // the dev-only harness → consume at /vault/reset → assert
+      // success + 3 fresh attempts restored.
+      name: "vault-reset-flow-390",
+      use: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+      testMatch: /vault-reset-flow\.spec\.ts/,
+      timeout: 240_000,
+    },
+    {
+      // 2026-11-15 · Phase 5 · cross-account defence · a reset token
+      // for account A posted from a session signed in as account B must
+      // return `token_account_mismatch` and leave A's token still live.
+      name: "vault-cross-account-reset-390",
+      use: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+      testMatch: /vault-cross-account-reset\.spec\.ts/,
+      timeout: 300_000,
+    },
   ],
 });
