@@ -118,8 +118,18 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   // Success · route to the agreed default landing. `next` is honoured
   // only if it stays inside the app's own routes (same safeNext
   // policy as the sign-in page).
+  //
+  // Recovery flow (sealed 2026-11-16): a successful recovery-token
+  // verification signs the user in but their password is UNCHANGED.
+  // The only point of the recovery journey is to let them set a new
+  // password, so we HARD-OVERRIDE the destination to the new-password
+  // form regardless of any `next=` the forgot-page sent. This blocks
+  // the pre-sealed misroute where recovery landed on /contacts with
+  // the stale password still active.
   let dest = "/nex-native/contacts";
-  if (
+  if (type === "recovery") {
+    dest = "/nex-native/sign-in/new-password";
+  } else if (
     typeof nextParam === "string" &&
     nextParam.startsWith("/nex-native/") &&
     !nextParam.includes("//") &&

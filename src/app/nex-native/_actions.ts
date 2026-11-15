@@ -3209,6 +3209,50 @@ export async function sendCartOrderAction(
     send_intent_id: sendIntentId,
   });
 
+  // #14 real activation · sealed 2026-11-16 · owner-authorised fresh
+  // word-trigger "Wire the cart snapshot order id into the actual
+  // checkout creation path". Persist a deterministic nex_order row
+  // keyed by the EXACT UUID already stamped into
+  // attachment_meta.cart.order_id so the seller's manage/orders list
+  // and the per-order detail page resolve the originating cart
+  // snapshot via Tier 0 exact-UUID match (no heuristic fallback).
+  //
+  // Representative-product rule: the first `kind: "product"` item
+  // supplies product_id · price_pence · currency for the nex_order
+  // row's snapshot columns. The full item list + totals live in
+  // attachment_meta.cart (already written) and are rendered from
+  // there by the sealed order detail reader. For carts that contain
+  // no `kind: "product"` items (pure menu_item / food) we skip the
+  // insert · those flows continue to live entirely as peer-messages
+  // (no nex_order row, same as before this change).
+  //
+  // Fail-soft: the cart peer-message is already persisted. An
+  // order-row insert failure must not reverse the send. The user's
+  // chat always reflects the sent cart. A missing nex_order row for
+  // this cart means the seller sees it ONLY in chat (same pre-#14
+  // behaviour) · never a false-success.
+  const primaryProductItem = items.find((it) => it.kind === "product");
+  if (primaryProductItem?.id) {
+    try {
+      await orderService.createOrder({
+        id: futureOrderId,
+        customer_account_id: session.account.id,
+        product_id: primaryProductItem.id,
+        source_conversation_id: null,
+        idempotency_key: null,
+        customer_note:
+          typeof buyerNotes === "string" && buyerNotes.trim().length > 0
+            ? buyerNotes.trim().slice(0, 500)
+            : null,
+      });
+    } catch (e) {
+      console.warn(
+        "[cart-order #14] deterministic nex_order insert failed · cart message retained",
+        e instanceof Error ? e.message : e,
+      );
+    }
+  }
+
   // Phase 1 · Slice 1D · emit cart_sent after a confirmed cart
   // delivery. Metadata carries aggregate shape (item_count,
   // subtotal_pence, currency) + conversation + idempotency key.

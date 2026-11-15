@@ -186,7 +186,10 @@ test.describe("D2 · Order visibility (imaged + imageless) · CK5 disposable · 
         (await c.query(`SELECT now() AS t`)).rows[0].t,
       ).toISOString();
 
-      // Pre-clean any prior D2 widgets.
+      // Pre-clean any prior D2 widgets. Since #14 real activation
+      // (2026-11-16) the real UI cart-send path auto-inserts nex_order
+      // rows, so we must break the nex_order_event → nex_order →
+      // nex_product FK chain before removing the products.
       const leftovers = await c.query(
         `SELECT id, name FROM nex_product
          WHERE business_id = $1 AND name LIKE $2`,
@@ -197,6 +200,25 @@ test.describe("D2 · Order visibility (imaged + imageless) · CK5 disposable · 
           throw new Error(`pre-clean refuse · unexpected name ${row.name}`);
         }
       }
+      await c.query(
+        `DELETE FROM nex_order_event
+         WHERE order_id IN (
+           SELECT id FROM nex_order
+           WHERE business_id = $1 AND product_id IN (
+             SELECT id FROM nex_product
+             WHERE business_id = $1 AND name LIKE $2
+           )
+         )`,
+        [SELLER_BUSINESS_ID, `${PRODUCT_NAME_PREFIX} %`],
+      );
+      await c.query(
+        `DELETE FROM nex_order
+         WHERE business_id = $1 AND product_id IN (
+           SELECT id FROM nex_product
+           WHERE business_id = $1 AND name LIKE $2
+         )`,
+        [SELLER_BUSINESS_ID, `${PRODUCT_NAME_PREFIX} %`],
+      );
       await c.query(
         `DELETE FROM nex_product WHERE business_id = $1 AND name LIKE $2`,
         [SELLER_BUSINESS_ID, `${PRODUCT_NAME_PREFIX} %`],
@@ -252,9 +274,40 @@ test.describe("D2 · Order visibility (imaged + imageless) · CK5 disposable · 
           if (r.business_id !== SELLER_BUSINESS_ID || r.customer_account_id !== BUYER_ACCOUNT_ID) {
             throw new Error(`cleanup refuses · order id=${oid} drift`);
           }
+          await c.query(`DELETE FROM nex_order_event WHERE order_id = $1`, [oid]);
           await c.query(`DELETE FROM nex_order WHERE id = $1`, [oid]);
         }
       }
+
+      // #14 real-activation side-effect · sealed 2026-11-16 · the real
+      // UI cart-send path now creates nex_order rows automatically
+      // (one per cart). Clean any nex_order rows referencing the two
+      // prefix-matched products this spec seeded · guarded by
+      // (business_id, customer_account_id) to never touch other
+      // sellers' or other buyers' data.
+      await c.query(
+        `DELETE FROM nex_order_event
+         WHERE order_id IN (
+           SELECT id FROM nex_order
+           WHERE business_id = $1
+             AND customer_account_id = $2
+             AND product_id IN (
+               SELECT id FROM nex_product
+               WHERE business_id = $1 AND name LIKE $3
+             )
+         )`,
+        [SELLER_BUSINESS_ID, BUYER_ACCOUNT_ID, `${PRODUCT_NAME_PREFIX} %`],
+      );
+      await c.query(
+        `DELETE FROM nex_order
+         WHERE business_id = $1
+           AND customer_account_id = $2
+           AND product_id IN (
+             SELECT id FROM nex_product
+             WHERE business_id = $1 AND name LIKE $3
+           )`,
+        [SELLER_BUSINESS_ID, BUYER_ACCOUNT_ID, `${PRODUCT_NAME_PREFIX} %`],
+      );
 
       // Delete the two seeded products.
       const leftovers = await c.query(

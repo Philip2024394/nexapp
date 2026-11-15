@@ -197,8 +197,8 @@ export default async function ForgotPasswordPage(
               <br />
               If an account exists with that email, we just sent a
               password-reset link. Click it from the same device
-              you&apos;re on now and you&apos;ll be signed in
-              automatically.
+              you&apos;re on now and you&apos;ll choose a new
+              password.
             </div>
           ) : (
             <>

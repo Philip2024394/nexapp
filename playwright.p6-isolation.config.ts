@@ -164,6 +164,39 @@ export default defineConfig({
       timeout: 300_000,
     },
     {
+      // 2026-11-16 · #14 REAL activation · production code path
+      // creates nex_order from cart send via createOrder({ id }).
+      // Two identical carts → two distinct nex_order rows → Tier 0
+      // deterministic match on seller's /manage/orders/<id>. NO
+      // fixture INSERT of nex_order · everything via the real UI.
+      name: "cart-order-deterministic-390",
+      use: {
+        viewport: { width: 390, height: 844 },
+        deviceScaleFactor: 2,
+        baseURL:
+          process.env.PLAYWRIGHT_TEST_BASE_URL ?? "http://localhost:3008",
+      },
+      testMatch: /cart-order-deterministic\.spec\.ts/,
+      timeout: 360_000,
+    },
+    {
+      // 2026-11-16 · password-recovery FULL E2E · /sign-in/forgot →
+      // admin-generated recovery token → /auth/confirm (recovery
+      // override) → /sign-in/new-password form → updateUser →
+      // /contacts. Functional proof: old password rejected, new
+      // password accepted. Fresh disposable email (phillipofarrell
+      // +e2e-recovery-<stamp>@gmail.com) · admin-deleted in afterAll.
+      name: "password-recovery-flow-390",
+      use: {
+        viewport: { width: 390, height: 844 },
+        deviceScaleFactor: 2,
+        baseURL:
+          process.env.PLAYWRIGHT_TEST_BASE_URL ?? "http://localhost:3008",
+      },
+      testMatch: /password-recovery-flow\.spec\.ts/,
+      timeout: 300_000,
+    },
+    {
       // 2026-11-15 · agreed-journey missing-UI smokes · subscription
       // return/cancel · signup confirmation callback · /create/product
       // landing · any other 404 fall-through in the agreed flows.
