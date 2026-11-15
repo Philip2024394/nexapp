@@ -19,6 +19,7 @@ import {
   getVaultSetupForAccount,
 } from "@/lib/nex-native/vault/envelope-service";
 import { checkRecoveryRateLimit } from "@/lib/nex-native/vault/pin-rate-limit";
+import { getLockoutStatus } from "@/lib/nex-native/vault/security-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,6 +36,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const session = await resolveNexAppSession(req);
   if (!session) {
     return NextResponse.json({ ok: false, error: "not_signed_in" }, { status: 401 });
+  }
+
+  // Phase-1 lockout (sealed 3-strike) check · hard-blocks reset-required
+  // accounts BEFORE revealing material. Must run ahead of the sealed
+  // burst rate-limit so an already-locked account never gets a 429-
+  // formatted response it could mistake for "try again soon".
+  const lockout = await getLockoutStatus(session.account.id);
+  if (lockout.resetRequired) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "vault_locked_reset_required",
+        reset_required: true,
+        locked_at: lockout.lockedAt,
+      },
+      { status: 403 },
+    );
   }
 
   // Rate-limit check BEFORE revealing any material.
@@ -84,5 +102,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     nonce_hex: bytesToHex(envelope.nonce),
     algorithm: envelope.algorithm,
     generation: envelope.generation,
+    // Phase 3 extension (2026-11-15) · include the per-account PIN salt
+    // + Argon2id params so a successful recovery unlock can ALSO wrap
+    // the VMK under a fresh per-device PIN envelope, enabling fast
+    // repeat unlocks on this device. Both values are non-secrets ·
+    // they were already revealed to the owner's device at setup time
+    // (nex_vault_setup is readable to any authenticated session via
+    // other sealed paths). The server never sees PIN or VMK.
+    pin_salt_hex: bytesToHex(setup.pin_salt),
+    pin_argon_params: setup.pin_argon_params,
+    pin_mode: setup.pin_mode,
   });
 }

@@ -46,6 +46,11 @@ import { createServerClient } from "@supabase/ssr";
 import { nexSupabaseAdmin } from "../supabase-admin";
 import * as accountService from "../account-service";
 import type { NexAccountRow } from "../types";
+// Phase 4 (mig 348) · single-session enforcement.
+// isSessionSupersededByKey returns true when another sign-in on the
+// same account has claimed the single-session slot. Resolver treats
+// this identically to revoked_at · returns null (not signed in).
+import { isSessionSupersededByKey } from "./single-session-service";
 
 const url = process.env.NEX_SUPABASE_URL ?? process.env.NEXT_PUBLIC_NEX_SUPABASE_URL;
 const anonKey = process.env.NEXT_PUBLIC_NEX_SUPABASE_ANON_KEY;
@@ -243,6 +248,26 @@ async function resolveFromUser(
       )
     ) {
       return null;
+    }
+    // Phase 4 (mig 348) · single-session enforcement. If a newer
+    // sign-in on the same account claimed the single-session slot,
+    // this session's row carries superseded_at · reject identically
+    // to revoked_at. Fail-open on read error (same convention as the
+    // sibling checks above) · the catch keeps Bridge 2b flows working
+    // if the single-session service is temporarily unavailable.
+    try {
+      const superseded = await isSessionSupersededByKey({
+        accountId: account.id,
+        supabaseSessionKey: sessionKey,
+      });
+      if (superseded) {
+        return null;
+      }
+    } catch (err) {
+      console.warn(
+        `[nex-session] single-session check failed for account ${account.id}:`,
+        err instanceof Error ? err.message : err,
+      );
     }
   }
 

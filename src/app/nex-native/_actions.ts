@@ -682,6 +682,47 @@ export async function signInAction(formData: FormData): Promise<void> {
   if (error) {
     redirectToSignInWithError("sign_in_failed", error.message);
   }
+  // Phase 4 (mig 348) · single-session enforcement.
+  // After Supabase mints a fresh session (cookies now set), resolve it
+  // so the sealed touchNexSession path upserts the nex_session row,
+  // then claim the single-session slot · this atomically marks every
+  // OTHER live session on the account as superseded. Failures are
+  // logged + swallowed so sign-in never regresses on a transient DB
+  // issue; the next authenticated request will also attempt the write.
+  try {
+    const { resolveNexAppSessionFromContext } = await import(
+      "@/lib/nex-native/app/session"
+    );
+    const { claimSingleSession, sha256Hex } = await import(
+      "@/lib/nex-native/app/single-session-service"
+    );
+    const resolved = await resolveNexAppSessionFromContext();
+    if (resolved) {
+      const { data: sess } = await supabase.auth.getSession();
+      const accessToken = sess.session?.access_token ?? null;
+      if (accessToken) {
+        const sessionKey = sha256Hex(accessToken);
+        const { data: sessRow } = await nexSupabaseAdmin
+          .from("nex_session")
+          .select("id")
+          .eq("account_id", resolved.account.id)
+          .eq("supabase_session_key", sessionKey)
+          .maybeSingle();
+        const nexSessionId = (sessRow as { id?: string } | null)?.id;
+        if (nexSessionId) {
+          await claimSingleSession({
+            accountId: resolved.account.id,
+            nexSessionId,
+          });
+        }
+      }
+    }
+  } catch (claimErr) {
+    console.warn(
+      "[signInAction] single-session claim failed:",
+      claimErr instanceof Error ? claimErr.message : claimErr,
+    );
+  }
   // Account-wall continuation · same hook as createNexAccountAction so
   // an existing user who clicks "Already have one? Sign in" inside a
   // guest-mode wall is routed back to their intended action.

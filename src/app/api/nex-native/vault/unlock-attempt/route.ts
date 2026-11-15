@@ -37,8 +37,10 @@ import { resolveNexAppSession } from "@/lib/nex-native/app/session";
 import { nexSupabaseAdmin } from "@/lib/nex-native/supabase-admin";
 import {
   currentSessionKey,
+  readClientCountry,
   readClientIp,
   readUserAgent,
+  userAgentFamily,
 } from "@/lib/nex-native/app/security-request";
 import { logSignInEvent } from "@/lib/nex-native/security-service";
 import { lookupNexSessionId } from "@/lib/nex-native/vault/vault-status-service";
@@ -47,6 +49,13 @@ import {
   recordPinAttempt,
 } from "@/lib/nex-native/vault/pin-rate-limit";
 import { markVaultUnlocked } from "@/lib/nex-native/vault/step-up-service";
+import {
+  annotatePinAttemptContext,
+  bumpLockoutOnFailure,
+  clearLockoutOnSuccess,
+  emitPinAttemptEvent,
+  getLockoutStatus,
+} from "@/lib/nex-native/vault/security-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -109,6 +118,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
+  // Phase 1 · hard-refuse if already in reset_required. A stale client
+  // that bypassed the materials-route gate must not be able to further
+  // bump the counter or leak drawer events from a locked account.
+  const lockoutBefore = await getLockoutStatus(session.account.id);
+  if (lockoutBefore.resetRequired) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "vault_locked_reset_required",
+        reset_required: true,
+      },
+      { status: 403 },
+    );
+  }
+
   // Record the claim · ALWAYS, before any other side effect.
   await recordPinAttempt({
     accountId: session.account.id,
@@ -118,6 +142,20 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const ip = readClientIp(req);
   const ua = readUserAgent(req);
+  const network = {
+    ipAddress: ip,
+    ipCountry: readClientCountry(req),
+    userAgentFamily: userAgentFamily(ua),
+  };
+
+  // Phase 1 · backfill the attempt row with network context + source.
+  await annotatePinAttemptContext({
+    accountId: session.account.id,
+    deviceId,
+    success,
+    source: "device_pin",
+    network,
+  });
 
   if (success) {
     const sessionKey = currentSessionKey(req);
@@ -140,6 +178,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       ip_address: ip,
       user_agent: ua,
     });
+    // Phase 1 · clear the 3-strike counter. Known-device successes are
+    // NOT emitted to the drawer (would spam the owner on every daily
+    // unlock); the client passes isNewDevice=false when applicable.
+    await clearLockoutOnSuccess(session.account.id);
+    await emitPinAttemptEvent({
+      accountId: session.account.id,
+      deviceId,
+      success: true,
+      source: "device_pin",
+      network,
+      isNewDevice: false,
+    });
     return NextResponse.json({ ok: true, unlocked: true });
   }
 
@@ -150,6 +200,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     success: false,
     ip_address: ip,
     user_agent: ua,
+  });
+  // Phase 1 · bump the 3-strike lockout counter + emit drawer event.
+  const lockoutAfter = await bumpLockoutOnFailure({
+    accountId: session.account.id,
+    network,
+  });
+  await emitPinAttemptEvent({
+    accountId: session.account.id,
+    deviceId,
+    success: false,
+    source: "device_pin",
+    network,
   });
   const rate = await checkPinRateLimit({
     accountId: session.account.id,
@@ -162,6 +224,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       allowed: rate.allowed,
       reason: rate.reason,
       retry_after_seconds: rate.retryAfterSeconds,
+    },
+    lockout: {
+      attempts_remaining: lockoutAfter.attemptsRemaining,
+      reset_required: lockoutAfter.resetRequired,
     },
   });
 }

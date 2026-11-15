@@ -58,6 +58,45 @@ export function readUserAgent(req: NextRequest): string | null {
   return ua.trim().slice(0, 1024);
 }
 
+/** Two-letter ISO country code for the client, derived from edge
+ *  headers. Falls through: CF-IPCountry (Cloudflare) → X-Vercel-IP-Country
+ *  (Vercel edge). Returns null when no edge is in front (local dev) ·
+ *  callers should treat "unknown" as the honest state, not fabricate a
+ *  country. Shape is validated against the migration-346 CHECK
+ *  (^[A-Z]{2}$) so bad edge values are dropped. */
+export function readClientCountry(req: NextRequest): string | null {
+  const raw =
+    req.headers.get("cf-ipcountry") ??
+    req.headers.get("x-vercel-ip-country") ??
+    null;
+  if (!raw) return null;
+  const trimmed = raw.trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(trimmed)) return null;
+  if (trimmed === "XX" || trimmed === "T1") return null; // CF uses XX/T1 for unknown/Tor
+  return trimmed;
+}
+
+/** Collapse a full User-Agent string into a short "family" label we can
+ *  safely display in the side-drawer without leaking fingerprinting
+ *  detail. Covers the common desktop/mobile browsers; falls back to
+ *  "Other" for anything we can't cheaply recognise. Capped to 64 chars
+ *  to satisfy the migration-346 CHECK. */
+export function userAgentFamily(ua: string | null): string | null {
+  if (!ua) return null;
+  const s = ua.toLowerCase();
+  // Order matters: Edge/OPR/CriOS before Chrome; iPad/iPhone before Safari.
+  if (s.includes("edg/")) return "Edge";
+  if (s.includes("opr/") || s.includes("opera")) return "Opera";
+  if (s.includes("fxios")) return "Firefox (iOS)";
+  if (s.includes("firefox")) return "Firefox";
+  if (s.includes("crios")) return "Chrome (iOS)";
+  if (s.includes("chrome") && !s.includes("chromium")) return "Chrome";
+  if (s.includes("chromium")) return "Chromium";
+  if (s.includes("ipad") || s.includes("iphone")) return "Safari (iOS)";
+  if (s.includes("safari")) return "Safari";
+  return "Other";
+}
+
 // ---------------------------------------------------------------------------
 // Internal · cookie extraction (byte-equivalent to session.ts helper)
 // ---------------------------------------------------------------------------

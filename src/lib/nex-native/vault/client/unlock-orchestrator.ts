@@ -353,3 +353,230 @@ export async function lockVault(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export { withVmk };
+
+// ---------------------------------------------------------------------------
+// RECOVERY unlock (Phase 3 · 2026-11-15)
+// ---------------------------------------------------------------------------
+// Alternative unlock path used by a "new device" that signs into the
+// NEX account but has no device-PIN envelope here. Same crypto shape
+// as unlockVault() above · uses the recovery envelope (kind='recovery'
+// in nex_vault_key_envelope · target_device_id=NULL) which was written
+// at vault setup time. The user's 6-digit PIN is treated as a short
+// passphrase (deriveKekFromPassphrase + recovery_salt).
+//
+// Preconditions: user is signed in · vault IS configured · recovery
+// envelope IS configured (if not · route returns 404 recovery_not_
+// configured and the UI falls back to the device-approval A.4 path).
+//
+// On success: VMK is in tab-scoped memory · the caller can then route
+// to /vault/home. This function does NOT also create a device-PIN
+// envelope for this device · subsequent unlocks on the same browser
+// will re-use this same recovery path until a device envelope is
+// issued via A.4 approval or a future "install device PIN" flow.
+
+export interface RecoveryUnlockInput {
+  secret: string;
+  deviceId: string;
+}
+
+export type RecoveryUnlockResult =
+  | { ok: true }
+  | {
+      ok: false;
+      error: string;
+      rateLimited?: boolean;
+      retryAfterSeconds?: number;
+      resetRequired?: boolean;
+      attemptsRemaining?: number;
+    };
+
+interface RecoveryMaterialsResponse {
+  ok: boolean;
+  error?: string;
+  reason?: string | null;
+  retry_after_seconds?: number;
+  recovery_salt_hex?: string;
+  recovery_argon_params?: Record<string, unknown>;
+  wrapped_vmk_hex?: string;
+  nonce_hex?: string;
+  algorithm?: string;
+  generation?: number;
+  // Phase 3 extension · 2026-11-15. Server returns the per-account PIN
+  // salt + params so the client can ALSO wrap VMK under a device-PIN
+  // envelope for fast repeat unlocks on this browser.
+  pin_salt_hex?: string;
+  pin_argon_params?: Record<string, unknown>;
+  pin_mode?: VaultMode;
+}
+
+export async function unlockVaultViaRecovery(
+  input: RecoveryUnlockInput,
+): Promise<RecoveryUnlockResult> {
+  try {
+    validatePassphrase(input.secret);
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "invalid_secret",
+    };
+  }
+
+  // 1 · Fetch the opaque recovery envelope + non-secret derivation
+  // parameters. Server-side rate-limit + reset_required check gate
+  // this; a locked account gets 403 vault_locked_reset_required
+  // without ever revealing the envelope.
+  const matRes = await fetch(
+    "/api/nex-native/vault/unlock/recovery/materials",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({}),
+    },
+  );
+  const matBody = (await matRes.json().catch(
+    () => ({}),
+  )) as RecoveryMaterialsResponse;
+  if (matRes.status === 429) {
+    return {
+      ok: false,
+      error: "rate_limited",
+      rateLimited: true,
+      retryAfterSeconds: matBody.retry_after_seconds,
+    };
+  }
+  if (matRes.status === 403 && matBody.error === "vault_locked_reset_required") {
+    return { ok: false, error: "vault_locked_reset_required", resetRequired: true };
+  }
+  if (!matRes.ok || !matBody.ok) {
+    return { ok: false, error: matBody.error ?? `status_${matRes.status}` };
+  }
+  if (
+    !matBody.recovery_salt_hex ||
+    !matBody.wrapped_vmk_hex ||
+    !matBody.nonce_hex ||
+    !matBody.recovery_argon_params
+  ) {
+    return { ok: false, error: "incomplete_materials" };
+  }
+  if (matBody.algorithm !== PHASE_A_ALGORITHM) {
+    return { ok: false, error: "algorithm_mismatch" };
+  }
+
+  const salt = hexToBytes(matBody.recovery_salt_hex);
+  const wrappedCiphertext = hexToBytes(matBody.wrapped_vmk_hex);
+  const nonce = hexToBytes(matBody.nonce_hex);
+  const envelope = new Uint8Array(nonce.length + wrappedCiphertext.length);
+  envelope.set(nonce, 0);
+  envelope.set(wrappedCiphertext, nonce.length);
+
+  let kek: Uint8Array | null = null;
+  let vmk: Uint8Array | null = null;
+  let success = false;
+  try {
+    kek = await deriveKekFromPassphrase({
+      passphrase: input.secret,
+      salt,
+    });
+    try {
+      vmk = await unwrapKey({ envelope, kek });
+    } catch {
+      vmk = null;
+    }
+    if (vmk) {
+      const verified = await cryptographicallyVerifyVmk(vmk);
+      if (verified) {
+        installVmk(vmk);
+        success = true;
+      }
+    }
+
+    // Phase 3 extension · install a device-PIN envelope for this
+    // browser so the NEXT unlock on the same device uses the fast
+    // /unlock-materials path. Best-effort: a failure here does NOT
+    // regress the primary unlock (VMK is already in memory via
+    // installVmk). The device-PIN wrap happens BEFORE the claim POST
+    // so the fresh vault_unlock step-up is still active.
+    if (success && vmk && matBody.pin_salt_hex && matBody.pin_argon_params) {
+      try {
+        const pinSalt = hexToBytes(matBody.pin_salt_hex);
+        const pinKek = await deriveKekFromPin({
+          pin: input.secret,
+          salt: pinSalt,
+        });
+        try {
+          const { envelope: pinEnv, nonce: pinNonce } = await wrapKey({
+            keyToWrap: vmk,
+            kek: pinKek,
+          });
+          const pinWrappedCiphertext = pinEnv.slice(pinNonce.length);
+          await fetch(
+            "/api/nex-native/vault/escrow/install-device-pin",
+            {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({
+                device_id: input.deviceId,
+                wrapped_vmk_hex: bytesToHex(pinWrappedCiphertext),
+                nonce_hex: bytesToHex(pinNonce),
+              }),
+            },
+          ).catch(() => undefined);
+        } finally {
+          zeroiseBuffer(pinKek);
+        }
+      } catch {
+        // Fast-unlock installation is an optimisation · a failure here
+        // is intentionally swallowed so the primary recovery unlock
+        // still succeeds. Next unlock will hit the recovery path again.
+      }
+    }
+
+    // Claim the result (always). Server-side Phase 1 lockout bumps the
+    // 3-strike counter on failure and clears it on success.
+    const claim = await fetch(
+      "/api/nex-native/vault/unlock/recovery/attempt",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ device_id: input.deviceId, success }),
+      },
+    );
+    if (!success) {
+      const claimBody = (await claim.json().catch(() => ({}))) as {
+        rate?: { allowed: boolean; reason: string | null; retry_after_seconds: number };
+        lockout?: { attempts_remaining: number; reset_required: boolean };
+      };
+      if (claimBody.lockout?.reset_required) {
+        return {
+          ok: false,
+          error: "vault_locked_reset_required",
+          resetRequired: true,
+          attemptsRemaining: 0,
+        };
+      }
+      if (claimBody.rate && !claimBody.rate.allowed) {
+        return {
+          ok: false,
+          error: "rate_limited",
+          rateLimited: true,
+          retryAfterSeconds: claimBody.rate.retry_after_seconds,
+          attemptsRemaining: claimBody.lockout?.attempts_remaining,
+        };
+      }
+      return {
+        ok: false,
+        error: "wrong_secret",
+        attemptsRemaining: claimBody.lockout?.attempts_remaining,
+      };
+    }
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "unlock_failed",
+    };
+  } finally {
+    if (kek) zeroiseBuffer(kek);
+    if (vmk) zeroiseBuffer(vmk);
+  }
+}

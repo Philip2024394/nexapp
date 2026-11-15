@@ -29,6 +29,7 @@ import {
   getVaultSetupForAccount,
 } from "@/lib/nex-native/vault/envelope-service";
 import { checkPinRateLimit } from "@/lib/nex-native/vault/pin-rate-limit";
+import { getLockoutStatus } from "@/lib/nex-native/vault/security-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -87,6 +88,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (deviceRow.revoked_at !== null) {
     return NextResponse.json(
       { ok: false, error: "device_revoked" },
+      { status: 403 },
+    );
+  }
+
+  // Phase 1 · hard 3-strike lockout check. Blocks the salt + envelope
+  // from being returned to a reset_required account from ANY device.
+  const lockout = await getLockoutStatus(session.account.id);
+  if (lockout.resetRequired) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "vault_locked_reset_required",
+        reset_required: true,
+        locked_at: lockout.lockedAt,
+      },
       { status: 403 },
     );
   }
