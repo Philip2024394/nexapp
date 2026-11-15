@@ -511,7 +511,7 @@ test.describe("Vault acceptance · configured + unlocked (sandbox)", () => {
         (u) => u.pathname === "/nex-native/vault/home/contacts",
         { timeout: 60_000 },
       ),
-      customerPage.locator("a[data-nex-vault-contacts-entry-link]").click(),
+      customerPage.locator('[data-nex-vault-section="contacts"]').click(),
     ]);
     // Precondition: F2 renders in the not-vaulted branch and the DB
     // has NO vault entry for its conversation.
@@ -593,7 +593,7 @@ test.describe("Vault acceptance · configured + unlocked (sandbox)", () => {
         (u) => u.pathname === "/nex-native/vault/home/contacts",
         { timeout: 60_000 },
       ),
-      customerPage.locator("a[data-nex-vault-contacts-entry-link]").click(),
+      customerPage.locator('[data-nex-vault-section="contacts"]').click(),
     ]);
     const vaultedRow = customerPage.locator(
       `[data-nex-vault-contact-friend-id='${F2.accountId}'][data-nex-vault-contact-state='vaulted']`,

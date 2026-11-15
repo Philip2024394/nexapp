@@ -330,7 +330,6 @@ test.describe("Vault landing · six-tile grid + honest password panel", () => {
 // the Continue button is disabled until the checkbox is checked, and
 // unchecking it re-disables the button. Uses a fresh browser context
 // against a clean vault-setup state so the setup wizard is reachable.
-test.describe.configure({ mode: "serial" });
 test.describe("Vault setup · data-loss warning (Item 4.12)", () => {
   test.beforeAll(async () => {
     test.setTimeout(60_000);
