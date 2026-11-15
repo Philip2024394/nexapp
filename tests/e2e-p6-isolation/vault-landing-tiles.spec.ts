@@ -151,6 +151,15 @@ async function completeVaultSetup(page: Page, pin: string): Promise<void> {
   });
   await page.waitForLoadState("networkidle", { timeout: 30_000 }).catch(() => {});
   if (new URL(page.url()).pathname !== "/nex-native/vault/setup") return;
+  // Owner-authorised 2026-11-15 · Item 4.12 added a data-loss warning
+  // step BEFORE the PIN entry · drive past it when present.
+  const warnRoot = page.locator(
+    "[data-nex-vault-setup-root][data-nex-vault-setup-step='warn']",
+  );
+  if ((await warnRoot.count()) > 0) {
+    await page.locator("[data-nex-vault-setup-warn-acknowledge]").check();
+    await page.locator("[data-nex-vault-setup-warn-continue]").click();
+  }
   await expect(
     page.locator(
       "[data-nex-vault-setup-root][data-nex-vault-setup-step='enter']",
@@ -311,6 +320,81 @@ test.describe("Vault landing · six-tile grid + honest password panel", () => {
       await expect(
         page.locator(`[data-nex-vault-category="${key}"]`),
       ).toHaveCount(0);
+    }
+  });
+});
+
+// Owner-authorised 2026-11-15 · Item 4.12 fallback · the setup wizard
+// now opens on a data-loss warning screen with a confirm checkbox
+// gate. Testing that the warning renders with the correct wording,
+// the Continue button is disabled until the checkbox is checked, and
+// unchecking it re-disables the button. Uses a fresh browser context
+// against a clean vault-setup state so the setup wizard is reachable.
+test.describe.configure({ mode: "serial" });
+test.describe("Vault setup · data-loss warning (Item 4.12)", () => {
+  test.beforeAll(async () => {
+    test.setTimeout(60_000);
+    await resetVaultState();
+  });
+
+  test("warn step renders first, gates the Continue button on the checkbox", async ({
+    browser,
+  }) => {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const page = await ctx.newPage();
+    try {
+      await signIn(
+        page,
+        CUSTOMER_EMAIL,
+        CUSTOMER_PASSWORD,
+        "/nex-native/vault/setup",
+      );
+      await page.goto("/nex-native/vault/setup", {
+        waitUntil: "domcontentloaded",
+      });
+      await page.waitForLoadState("networkidle").catch(() => {});
+
+      // Warn step is the initial wizard step.
+      await expect(
+        page.locator(
+          "[data-nex-vault-setup-root][data-nex-vault-setup-step='warn']",
+        ),
+      ).toHaveCount(1);
+      await expect(
+        page.locator("[data-nex-vault-setup-warn-panel]"),
+      ).toHaveCount(1);
+
+      // The headline carries the honest loss statement.
+      const headline = await page
+        .locator("[data-nex-vault-setup-warn-headline]")
+        .textContent();
+      expect(headline ?? "").toMatch(/cannot be recovered/i);
+
+      // The Continue button is DISABLED until the checkbox is checked.
+      const continueBtn = page.locator(
+        "[data-nex-vault-setup-warn-continue]",
+      );
+      await expect(continueBtn).toBeDisabled();
+
+      // Checking the box enables the button.
+      const checkbox = page.locator("[data-nex-vault-setup-warn-acknowledge]");
+      await checkbox.check();
+      await expect(continueBtn).toBeEnabled();
+
+      // Unchecking re-disables it.
+      await checkbox.uncheck();
+      await expect(continueBtn).toBeDisabled();
+
+      // Re-check + click Continue → the wizard advances to the enter step.
+      await checkbox.check();
+      await continueBtn.click();
+      await expect(
+        page.locator(
+          "[data-nex-vault-setup-root][data-nex-vault-setup-step='enter']",
+        ),
+      ).toHaveCount(1);
+    } finally {
+      await ctx.close();
     }
   });
 });

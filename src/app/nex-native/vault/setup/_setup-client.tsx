@@ -37,8 +37,22 @@ import {
   PIN_MAX_LENGTH,
 } from "@/lib/nex-native/vault/key-hierarchy";
 import { ensureDeviceKey } from "@/lib/nex-native/crypto/device-key";
+import { DataLossWarningScreen } from "./_data-loss-warning-screen";
 
-type Step = "enter" | "confirm" | "popup" | "submitting" | "error";
+// Owner-authorised 2026-11-15 · Item 4 fallback (4.12) · the Recovery
+// key flow (4.11) is NOT built in this pass · see pass report for the
+// exact change needed (new UI only, no schema). As the honest fallback
+// the wizard now opens on a plain-language DATA LOSS WARNING with an
+// "I understand" confirm-checkbox gate before the user can type the
+// first PIN. Users who have already set up a Vault never see this
+// step (the server redirect at /vault doorway bypasses /vault/setup).
+type Step =
+  | "warn"
+  | "enter"
+  | "confirm"
+  | "popup"
+  | "submitting"
+  | "error";
 
 const DIGIT_COUNT = PIN_MAX_LENGTH;
 
@@ -70,10 +84,11 @@ const PALETTE = {
 
 export function SetupClient({ accountIdShort }: { accountIdShort: string }): React.ReactElement {
   const router = useRouter();
-  const [step, setStep] = React.useState<Step>("enter");
+  const [step, setStep] = React.useState<Step>("warn");
   const [pin, setPin] = React.useState("");
   const [confirmPin, setConfirmPin] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
+  const [acknowledgedLoss, setAcknowledgedLoss] = React.useState(false);
 
   const onPinChange = React.useCallback((value: string) => {
     const digits = value.replace(/\D/g, "").slice(0, DIGIT_COUNT);
@@ -200,6 +215,14 @@ export function SetupClient({ accountIdShort }: { accountIdShort: string }): Rea
           "Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
       }}
     >
+      {step === "warn" ? (
+        <DataLossWarningScreen
+          acknowledged={acknowledgedLoss}
+          onAcknowledgeChange={setAcknowledgedLoss}
+          onContinue={() => setStep("enter")}
+        />
+      ) : null}
+      {step === "warn" ? null : (
       <div
         style={{
           width: "100%",
@@ -352,6 +375,7 @@ export function SetupClient({ accountIdShort }: { accountIdShort: string }): Rea
           </div>
         </section>
       </div>
+      )}
 
       {step === "popup" ? (
         <StoreSafePopup

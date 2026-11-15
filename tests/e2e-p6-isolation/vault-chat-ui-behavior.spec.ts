@@ -210,6 +210,15 @@ async function completeVaultSetup(page: Page, pin: string): Promise<void> {
     .waitForLoadState("networkidle", { timeout: 30_000 })
     .catch(() => {});
   if (new URL(page.url()).pathname !== "/nex-native/vault/setup") return;
+  // Owner-authorised 2026-11-15 · Item 4.12 added a data-loss warning
+  // step BEFORE the PIN entry · drive past it when present.
+  const warnRoot = page.locator(
+    "[data-nex-vault-setup-root][data-nex-vault-setup-step='warn']",
+  );
+  if ((await warnRoot.count()) > 0) {
+    await page.locator("[data-nex-vault-setup-warn-acknowledge]").check();
+    await page.locator("[data-nex-vault-setup-warn-continue]").click();
+  }
   await expect(
     page.locator(
       "[data-nex-vault-setup-root][data-nex-vault-setup-step='enter']",
