@@ -142,11 +142,25 @@ async function loadPersonaAccount(handle: string): Promise<NexAccountRow | null>
 /** Owner directive 2026-10-26 · dev-only session override. Call sites
  *  that want persona impersonation to flow through them MUST swap
  *  their `resolveNexAppSessionFromContext()` call for this one. All
- *  other call sites remain untouched and see the real session. */
+ *  other call sites remain untouched and see the real session.
+ *
+ *  Owner-authorised 2026-11-15 · a REAL signed-in cookie session now
+ *  wins over the env-gated persona. Before, this helper ignored
+ *  cookies unconditionally, which broke multi-account browser flows
+ *  (two Playwright contexts explicitly signing in as different users
+ *  both resolved to the impersonation persona and crashed the
+ *  `peerAccountId === session.account.id` guard in chat/peer). The
+ *  dev walking-around experience is unchanged: visit the app
+ *  WITHOUT signing in and the persona still takes over. Explicit
+ *  sign-in now surfaces the real identity, which is what any sensible
+ *  signed-in dev or test expects. Production is unaffected
+ *  (`isDevImpersonationEnabled` already returns false against prod). */
 export async function resolveSessionWithDevOverride(): Promise<NexAppSession | null> {
   if (!isDevImpersonationEnabled()) {
     return resolveNexAppSessionFromContext();
   }
+  const realSession = await resolveNexAppSessionFromContext();
+  if (realSession) return realSession;
   const handle = (process.env[ENV_VAR] as string).trim();
   const account = await loadPersonaAccount(handle);
   if (!account) {
