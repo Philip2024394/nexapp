@@ -371,9 +371,15 @@ test.describe("Vault acceptance · configured + unlocked (sandbox)", () => {
     await customerPage.goto("/nex-native/vault/home", {
       waitUntil: "domcontentloaded",
     });
-    const tile = customerPage.locator(
-      "a[data-nex-vault-contacts-entry-link]",
-    );
+    // Owner-authorised 2026-11-15 · Part C of the bounded Vault audit
+    // retired the standalone ContactsEntryTile in favour of the
+    // sealed six-tile VaultSectionsGrid. The semantic tile (link to
+    // /vault/home/contacts) is unchanged · only the data-attribute
+    // moved from data-nex-vault-contacts-entry-link to
+    // data-nex-vault-section="contacts". All downstream assertions
+    // below (navigation target + Contacts client + friend fixtures)
+    // are unchanged.
+    const tile = customerPage.locator('[data-nex-vault-section="contacts"]');
     await expect(tile).toBeVisible({ timeout: 15_000 });
     await Promise.all([
       customerPage.waitForURL(

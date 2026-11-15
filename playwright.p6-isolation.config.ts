@@ -63,5 +63,13 @@ export default defineConfig({
       testMatch: /vault-chat-ui-behavior\.spec\.ts/,
       timeout: 300_000,
     },
+    {
+      // 2026-11-15 · Part C bounded audit · 6-tile landing grid +
+      // honest password-and-recovery panel.
+      name: "vault-landing-tiles-390",
+      use: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+      testMatch: /vault-landing-tiles\.spec\.ts/,
+      timeout: 240_000,
+    },
   ],
 });

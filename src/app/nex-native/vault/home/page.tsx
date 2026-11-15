@@ -29,32 +29,77 @@ import { LockVaultNowButton } from "./_lock-button-client";
 import { MigrationRunner } from "./_migration-runner-client";
 import {
   IconChats,
-  IconDocument,
-  IconImage,
   IconVideo,
   IconBlueprint,
-  IconLock,
   IconArchive,
 } from "./_room-icons";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-interface FileCategory {
+interface VaultSection {
   key: string;
   labelKey: I18nKey;
-  blurbKey: I18nKey;
+  /** Optional i18n blurb key · fall back to `blurb` plain string. */
+  blurbKey?: I18nKey;
+  /** Plain-string blurb · used when no i18n key is available yet.
+   *  Owner-authorised 2026-11-15 to unblock the 6-tile landing without
+   *  adding new i18n enum values. */
+  blurb?: string;
   icon: React.ReactNode;
   href: string;
 }
 
-const FILE_CATEGORIES: FileCategory[] = [
-  { key: "documents", labelKey: "vault.home.cat.documents.label", blurbKey: "vault.home.cat.documents.blurb", icon: <IconDocument  />, href: "/nex-native/vault/home/documents" },
-  { key: "photos",    labelKey: "vault.home.cat.photos.label",    blurbKey: "vault.home.cat.photos.blurb",    icon: <IconImage     />, href: "/nex-native/vault/home/photos" },
-  { key: "videos",    labelKey: "vault.home.cat.videos.label",    blurbKey: "vault.home.cat.videos.blurb",    icon: <IconVideo     />, href: "/nex-native/vault/home/videos" },
-  { key: "plans",     labelKey: "vault.home.cat.plans.label",     blurbKey: "vault.home.cat.plans.blurb",     icon: <IconBlueprint />, href: "/nex-native/vault/home/plans" },
-  { key: "important", labelKey: "vault.home.cat.important.label", blurbKey: "vault.home.cat.important.blurb", icon: <IconLock      />, href: "/nex-native/vault/home/important" },
-  { key: "archived",  labelKey: "vault.home.cat.archived.label",  blurbKey: "vault.home.cat.archived.blurb",  icon: <IconArchive   />, href: "/nex-native/vault/home/archived" },
+/** Owner-authorised 2026-11-15 · the Vault landing page surfaces
+ *  EXACTLY SIX tiles, each linking to an existing Vault section that
+ *  currently renders content. Broken placeholders (documents, photos,
+ *  important · which have no page.tsx and 404) are retired from the
+ *  landing · they can return once their routes are built.
+ *  The order groups Vault-social first (Chats, Contacts), then Vault-
+ *  files (Videos, Plans, Archived), then Vault-management (Settings). */
+const VAULT_SECTIONS: VaultSection[] = [
+  {
+    key: "chats",
+    labelKey: "vault.home.chats.sectionTitle",
+    blurb: "Protected conversations · unlock to read",
+    icon: <IconChats />,
+    href: "/nex-native/vault/home/chats",
+  },
+  {
+    key: "contacts",
+    labelKey: "vault.home.contacts.rowTitle",
+    blurbKey: "vault.home.contacts.rowBlurb",
+    icon: <Users size={20} strokeWidth={1.8} aria-hidden />,
+    href: "/nex-native/vault/home/contacts",
+  },
+  {
+    key: "videos",
+    labelKey: "vault.home.cat.videos.label",
+    blurbKey: "vault.home.cat.videos.blurb",
+    icon: <IconVideo />,
+    href: "/nex-native/vault/home/videos",
+  },
+  {
+    key: "plans",
+    labelKey: "vault.home.cat.plans.label",
+    blurbKey: "vault.home.cat.plans.blurb",
+    icon: <IconBlueprint />,
+    href: "/nex-native/vault/home/plans",
+  },
+  {
+    key: "archived",
+    labelKey: "vault.home.cat.archived.label",
+    blurbKey: "vault.home.cat.archived.blurb",
+    icon: <IconArchive />,
+    href: "/nex-native/vault/home/archived",
+  },
+  {
+    key: "settings",
+    labelKey: "vault.home.settingsLinkLabel",
+    blurb: "Lock Vault Now, devices, password status",
+    icon: <Settings size={20} strokeWidth={1.8} aria-hidden />,
+    href: "/nex-native/vault/settings",
+  },
 ];
 
 export default async function VaultWorkspaceHomePage() {
@@ -164,14 +209,21 @@ export default async function VaultWorkspaceHomePage() {
         >
           <MigrationRunner />
           <Hero t={t} />
-          <VaultedChatsSection
-            rows={vaultedChatsRows}
-            vaultedFriendCount={vaultedFriendIds.length}
+          {/* Owner-authorised 2026-11-15 · the Vault landing now shows
+              the sealed six-tile grid (Chats, Contacts, Videos, Plans,
+              Archived, Settings). The direct vaulted-chats list is
+              still reachable from the Chats tile · the old separate
+              VaultedChatsSection + ContactsEntryTile cards are retired
+              to avoid duplicating navigation. The Chats tile also
+              carries the live count of vaulted conversations so the
+              signal isn't lost. */}
+          <VaultSectionsGrid
             t={t}
+            vaultedChatCount={vaultedChatsRows.length}
+            vaultedFriendCount={vaultedFriendIds.length}
           />
-          <ContactsEntryTile t={t} />
+          <VaultPasswordLimitsPanel />
           <VaultQuickActions />
-          <FileCategoriesList t={t} />
         </main>
       </div>
     </>
@@ -621,11 +673,25 @@ function ContactsEntryTile({ t }: { t: (k: I18nKey) => string }) {
   );
 }
 
-function FileCategoriesList({ t }: { t: (k: I18nKey) => string }) {
+/** Owner-authorised 2026-11-15 · the sealed six-tile grid for the
+ *  Vault landing page. Each tile has a stable test hook
+ *  `data-nex-vault-section={key}` so Playwright can assert the exact
+ *  six sections render. The Chats tile shows a live count of
+ *  vaulted conversations as a secondary line to preserve the Phase-A
+ *  "how much is in your Vault" signal. */
+function VaultSectionsGrid({
+  t,
+  vaultedChatCount,
+  vaultedFriendCount,
+}: {
+  t: (k: I18nKey) => string;
+  vaultedChatCount: number;
+  vaultedFriendCount: number;
+}) {
   return (
     <section
-      data-nex-vault-categories
-      aria-label="File categories"
+      data-nex-vault-sections
+      aria-label="Vault sections"
       style={{
         marginTop: 24,
         display: "flex",
@@ -633,65 +699,166 @@ function FileCategoriesList({ t }: { t: (k: I18nKey) => string }) {
         gap: 10,
       }}
     >
-      {FILE_CATEGORIES.map((c) => (
-        <Link
-          key={c.key}
-          href={c.href}
-          data-nex-vault-category={c.key}
-          style={{
-            ...GLASS_CHIP,
-            display: "flex",
-            alignItems: "center",
-            gap: 14,
-            padding: "14px 16px",
-            borderRadius: 18,
-            minHeight: 64,
-            color: NEX.textPrimary,
-          }}
-        >
-          <span
-            aria-hidden
+      {VAULT_SECTIONS.map((c) => {
+        const blurb = c.blurbKey ? t(c.blurbKey) : (c.blurb ?? "");
+        const liveCountLabel =
+          c.key === "chats"
+            ? vaultedChatCount + vaultedFriendCount > 0
+              ? ` (${vaultedChatCount + vaultedFriendCount})`
+              : ""
+            : "";
+        return (
+          <Link
+            key={c.key}
+            href={c.href}
+            data-nex-vault-section={c.key}
             style={{
-              width: 42,
-              height: 42,
-              borderRadius: 12,
-              background: NEX.accentSoft,
-              color: NEX.accent,
+              ...GLASS_CHIP,
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-              border: `1px solid ${NEX.accentStrong}`,
+              gap: 14,
+              padding: "14px 16px",
+              borderRadius: 18,
+              minHeight: 64,
+              color: NEX.textPrimary,
             }}
           >
-            {c.icon}
-          </span>
-          <span style={{ flex: 1, minWidth: 0 }}>
             <span
+              aria-hidden
               style={{
-                display: "block",
-                fontSize: 14.5,
-                fontWeight: 600,
-                color: NEX.textPrimary,
+                width: 42,
+                height: 42,
+                borderRadius: 12,
+                background: NEX.accentSoft,
+                color: NEX.accent,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                border: `1px solid ${NEX.accentStrong}`,
               }}
             >
-              {t(c.labelKey)}
+              {c.icon}
             </span>
-            <span
-              style={{
-                display: "block",
-                fontSize: 12,
-                color: NEX.textSecondary,
-                marginTop: 2,
-                lineHeight: 1.3,
-              }}
-            >
-              {t(c.blurbKey)}
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span
+                style={{
+                  display: "block",
+                  fontSize: 14.5,
+                  fontWeight: 600,
+                  color: NEX.textPrimary,
+                }}
+              >
+                {t(c.labelKey)}
+                {liveCountLabel}
+              </span>
+              <span
+                style={{
+                  display: "block",
+                  fontSize: 12,
+                  color: NEX.textSecondary,
+                  marginTop: 2,
+                  lineHeight: 1.3,
+                }}
+              >
+                {blurb}
+              </span>
             </span>
-          </span>
-          <ChevronRight size={18} strokeWidth={1.8} color={NEX.textMuted} aria-hidden />
-        </Link>
-      ))}
+            <ChevronRight size={18} strokeWidth={1.8} color={NEX.textMuted} aria-hidden />
+          </Link>
+        );
+      })}
+    </section>
+  );
+}
+
+/** Owner-authorised 2026-11-15 · honest-limits panel for the Vault
+ *  landing page. States plainly what the password / recovery situation
+ *  is TODAY. Reset-password and Forgot-password full flows are NOT
+ *  implemented in this pass (would require new backend + new UI for
+ *  recovery-key creation at setup time · that is a separate pass).
+ *  The settings tile is the destination for the status detail · this
+ *  panel is the plain-language disclosure. */
+function VaultPasswordLimitsPanel() {
+  return (
+    <section
+      data-nex-vault-password-limits
+      aria-label="Vault password and recovery"
+      style={{
+        marginTop: 20,
+        padding: "16px 18px",
+        borderRadius: 18,
+        background: "rgba(255, 171, 64, 0.06)",
+        border: "1px solid rgba(255, 171, 64, 0.22)",
+        color: NEX.textPrimary,
+      }}
+    >
+      <p
+        style={{
+          margin: 0,
+          fontSize: 12.5,
+          fontWeight: 700,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          color: "rgba(255, 171, 64, 0.95)",
+        }}
+      >
+        Password and recovery
+      </p>
+      <ul
+        data-nex-vault-password-limits-list
+        style={{
+          margin: "10px 0 0",
+          padding: 0,
+          listStyle: "none",
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          fontSize: 12.5,
+          lineHeight: 1.45,
+          color: NEX.textSecondary,
+        }}
+      >
+        <li data-nex-vault-password-limit="create">
+          <strong style={{ color: NEX.textPrimary }}>
+            Create password
+          </strong>
+          {" · "}set during first Vault setup.{" "}
+          <Link
+            href="/nex-native/vault/setup"
+            data-nex-vault-create-password-link
+            style={{ color: NEX.accent, fontWeight: 600 }}
+          >
+            Go to setup
+          </Link>
+          .
+        </li>
+        <li data-nex-vault-password-limit="reset">
+          <strong style={{ color: NEX.textPrimary }}>
+            Reset password
+          </strong>
+          {" · "}change the password while you still know the current one
+          is <em>not yet available</em> in this release. Server-side
+          crypto for swapping the wrapped-VMK envelope has not shipped.
+        </li>
+        <li data-nex-vault-password-limit="forgot">
+          <strong style={{ color: NEX.textPrimary }}>
+            Forgot password
+          </strong>
+          {" · "}recovery via a recovery key is also <em>not yet
+          available</em>: the recovery-envelope setup step has not been
+          added to the Vault setup wizard, so there is no recovery key
+          on file for anyone today.
+        </li>
+        <li
+          data-nex-vault-password-limit="honest-loss"
+          style={{ color: "rgba(255, 171, 64, 0.95)", fontWeight: 600 }}
+        >
+          If you lose your password and no recovery key is on file,
+          your Vault content cannot be recovered. NEX does not keep a
+          copy and cannot unlock it for you.
+        </li>
+      </ul>
     </section>
   );
 }
