@@ -25,7 +25,7 @@ import { cookies } from "next/headers";
 import { resolveNexAppSessionFromContext } from "@/lib/nex-native/app/session";
 import { devPreviewOn } from "@/lib/nex-native/app/dev-preview";
 import { isAdminSession } from "@/lib/nex-native/app/admin";
-import { signInAction, devPassAction } from "../_actions";
+import { signInAction, devPassAction, createNexAccountAction } from "../_actions";
 import { SignInFaceButton } from "./_face-button";
 import { SignInPasswordInput } from "./_password-input";
 
@@ -33,7 +33,19 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  searchParams: Promise<{ e?: string; m?: string; next?: string }>;
+  searchParams: Promise<{
+    e?: string;
+    m?: string;
+    next?: string;
+    // 2026-11-15 · Checkpoint 2. The sealed-2026-11-04 directive
+    // ("signup now lives on the same URL as sign-in via the Ireland
+    // one-URL auth model") finally has a UI handler here. mode=signup
+    // flips the card to the sign-up form.
+    mode?: string;
+    preserve_email?: string;
+    error?: string;
+    retry_after?: string;
+  }>;
 }
 
 function safeNext(next: string | undefined): string | null {
@@ -82,8 +94,30 @@ export default async function SignInPage({ searchParams }: PageProps) {
     redirect("/nex-native/contacts");
   }
 
-  const banner = params.e && params.m ? { code: params.e, message: params.m } : null;
+  // 2026-11-15 · Checkpoint 2. Also accept the rate-limit `?error=`
+  // parameter the sealed enforceAccountCreateRateLimit redirect uses
+  // when throttled, so the throttled customer sees a banner instead
+  // of a blank form.
+  const banner =
+    params.e && params.m
+      ? { code: params.e, message: params.m }
+      : params.error === "rate_limited"
+        ? {
+            code: "rate_limited",
+            message: `Too many signup attempts from this network. Try again in ${params.retry_after ?? "a few"} seconds.`,
+          }
+        : params.error === "service_unavailable"
+          ? {
+              code: "service_unavailable",
+              message: `Account signup is temporarily unavailable. Try again in ${params.retry_after ?? "a few"} seconds.`,
+            }
+          : null;
   const nextParam = safeNext(params.next);
+  const isSignup = params.mode === "signup";
+  const preserveEmail =
+    typeof params.preserve_email === "string" && params.preserve_email.length > 0
+      ? params.preserve_email
+      : "";
 
   // Owner directive 2026-10-22 (afternoon) · one-click Dev Pass
   // button renders only when NODE_ENV !== "production" AND both
@@ -244,6 +278,7 @@ export default async function SignInPage({ searchParams }: PageProps) {
               />
               <h1
                 id="nex-sign-in-heading"
+                data-nex-sign-in-heading={isSignup ? "signup" : "signin"}
                 style={{
                   margin: "10px 0 2px",
                   fontSize: 18,
@@ -252,7 +287,7 @@ export default async function SignInPage({ searchParams }: PageProps) {
                   color: NEX.textPrimary,
                 }}
               >
-                Welcome back
+                {isSignup ? "Create your NEX account" : "Welcome back"}
               </h1>
               <p
                 style={{
@@ -262,7 +297,9 @@ export default async function SignInPage({ searchParams }: PageProps) {
                   lineHeight: 1.45,
                 }}
               >
-                Sign in to continue.
+                {isSignup
+                  ? "Name, email and a 6+ character password · we'll email you a confirmation link."
+                  : "Sign in to continue."}
               </p>
             </header>
 
@@ -317,7 +354,153 @@ export default async function SignInPage({ searchParams }: PageProps) {
             </div>
           )}
 
-          {/* ── Sign-in form · REAL signInAction preserved ── */}
+          {/* 2026-11-15 · Checkpoint 2. The sealed one-URL auth model
+              lives here now: ?mode=signup renders a signup form that
+              posts to the pre-existing createNexAccountAction. The
+              action still owns rate-limit, validation, Supabase
+              auth.signUp and the email-confirmation redirect back to
+              ?e=email_confirmation_required — none of that changes. */}
+          {isSignup ? (
+            <form action={createNexAccountAction} data-nex-sign-up-form>
+              {nextParam ? (
+                <input
+                  type="hidden"
+                  name="next"
+                  value={nextParam}
+                  data-nex-sign-up-next
+                />
+              ) : null}
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                  background: NEX.panel,
+                  border: `1px solid ${NEX.borderSoft}`,
+                  borderRadius: 14,
+                  padding: 14,
+                  backdropFilter: "blur(10px)",
+                  WebkitBackdropFilter: "blur(10px)",
+                }}
+              >
+                <IconInput
+                  label="Full name"
+                  icon={<UserIcon color={NEX.cyan} />}
+                  input={
+                    <input
+                      required
+                      type="text"
+                      name="full_name"
+                      placeholder="Your full name"
+                      autoComplete="name"
+                      aria-label="Full name"
+                      minLength={1}
+                      maxLength={128}
+                      data-nex-sign-up-input-name
+                      style={inputStyle}
+                    />
+                  }
+                />
+                <IconInput
+                  label="Email address"
+                  icon={<MailIcon color={NEX.cyan} />}
+                  input={
+                    <input
+                      required
+                      type="email"
+                      name="email"
+                      placeholder="you@example.com"
+                      autoComplete="email"
+                      aria-label="Email address"
+                      defaultValue={preserveEmail}
+                      data-nex-sign-up-input-email
+                      style={inputStyle}
+                    />
+                  }
+                />
+                <IconInput
+                  label="Password"
+                  icon={<LockIcon color={NEX.cyan} />}
+                  input={
+                    <input
+                      required
+                      type="password"
+                      name="password"
+                      placeholder="6+ characters"
+                      autoComplete="new-password"
+                      aria-label="Password"
+                      minLength={6}
+                      data-nex-sign-up-input-password
+                      style={inputStyle}
+                    />
+                  }
+                />
+              </div>
+
+              <p
+                style={{
+                  margin: "10px 2px 0",
+                  fontSize: 11,
+                  color: NEX.textMuted,
+                  lineHeight: 1.5,
+                }}
+              >
+                By tapping Sign Up you agree to the NEX{" "}
+                <Link
+                  href="/nex-native/about/terms"
+                  style={{ color: NEX.cyan, textDecoration: "none" }}
+                >
+                  terms
+                </Link>
+                . We&apos;ll email you a confirmation link before the
+                account is active.
+              </p>
+
+              <button
+                type="submit"
+                data-nex-sign-up-submit
+                style={{
+                  marginTop: 14,
+                  width: "100%",
+                  minHeight: 52,
+                  background:
+                    "linear-gradient(180deg, #00AFFF 0%, #0374B3 100%)",
+                  color: "#001A2E",
+                  border: "none",
+                  borderRadius: 999,
+                  fontSize: 15,
+                  fontWeight: 800,
+                  letterSpacing: "0.01em",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 10,
+                  boxShadow:
+                    "0 12px 32px -6px rgba(0,175,255,0.55), 0 1px 0 rgba(255,255,255,0.3) inset",
+                }}
+              >
+                Sign Up
+                <span
+                  aria-hidden
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 24,
+                    height: 24,
+                    borderRadius: "50%",
+                    background: "rgba(0,26,46,0.25)",
+                    fontSize: 14,
+                    fontWeight: 900,
+                  }}
+                >
+                  →
+                </span>
+              </button>
+            </form>
+          ) : (
+          /* ── Sign-in form · REAL signInAction preserved ── */
           <form action={signInAction} data-nex-sign-in-form>
             {nextParam ? (
               <input
@@ -451,6 +634,7 @@ export default async function SignInPage({ searchParams }: PageProps) {
               </span>
             </button>
           </form>
+          )}
 
           {/* ── Dev Pass · one-click admin sign-in (localhost only) ──
                 Renders only when NODE_ENV !== "production" AND both
@@ -459,7 +643,7 @@ export default async function SignInPage({ searchParams }: PageProps) {
                 because the server-side `devPassEmail` resolves to
                 null. The form posts into the sealed signInAction
                 exactly like the main form · identical server path. */}
-          {devPassEmail && (
+          {!isSignup && devPassEmail && (
             <form action={devPassAction} data-nex-dev-pass-form>
               <button
                 type="submit"
@@ -503,7 +687,7 @@ export default async function SignInPage({ searchParams }: PageProps) {
           )}
 
           {/* ── Face sign-in · only if device previously enrolled ── */}
-          {hasFaceOnDevice && (
+          {!isSignup && hasFaceOnDevice && (
             <>
               <div
                 style={{
@@ -533,7 +717,15 @@ export default async function SignInPage({ searchParams }: PageProps) {
                 success state. Enable in a sealed follow-up once
                 Supabase OAuth providers are configured. ── */}
 
-            {/* ── Sign-up link ── */}
+            {/* ── Mode-toggle link ──
+                2026-11-15 · Checkpoint 2. In signin mode: shows the
+                "Don't have an account? Sign Up" link pointing at the
+                sealed one-URL signup. In signup mode: inverts to
+                "Already have an account? Sign in" so the user can
+                flip back. The previous `/nex-native/create-account`
+                href was a dead link that fell through to the
+                `[businessSlug]` dynamic route and rendered a
+                business-profile skeleton. */}
             <p
               style={{
                 marginTop: 20,
@@ -543,17 +735,45 @@ export default async function SignInPage({ searchParams }: PageProps) {
                 color: NEX.textPrimary,
               }}
             >
-              Don&apos;t have an account?{" "}
-              <Link
-                href="/nex-native/create-account"
-                style={{
-                  color: NEX.cyan,
-                  textDecoration: "none",
-                  fontWeight: 800,
-                }}
-              >
-                Sign Up
-              </Link>
+              {isSignup ? (
+                <>
+                  Already have an account?{" "}
+                  <Link
+                    href={
+                      nextParam
+                        ? `/nex-native/sign-in?next=${encodeURIComponent(nextParam)}`
+                        : "/nex-native/sign-in"
+                    }
+                    data-nex-sign-up-flip-to-signin
+                    style={{
+                      color: NEX.cyan,
+                      textDecoration: "none",
+                      fontWeight: 800,
+                    }}
+                  >
+                    Sign in
+                  </Link>
+                </>
+              ) : (
+                <>
+                  Don&apos;t have an account?{" "}
+                  <Link
+                    href={
+                      nextParam
+                        ? `/nex-native/sign-in?mode=signup&next=${encodeURIComponent(nextParam)}`
+                        : "/nex-native/sign-in?mode=signup"
+                    }
+                    data-nex-sign-in-flip-to-signup
+                    style={{
+                      color: NEX.cyan,
+                      textDecoration: "none",
+                      fontWeight: 800,
+                    }}
+                  >
+                    Sign Up
+                  </Link>
+                </>
+              )}
             </p>
 
             {/* Dev-admin one-click sign-in removed · owner directive
@@ -605,6 +825,15 @@ function IconInput({
       </span>
       {input}
     </label>
+  );
+}
+
+function UserIcon({ color }: { color: string }): React.ReactElement {
+  return (
+    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx={12} cy={7} r={4} />
+    </svg>
   );
 }
 

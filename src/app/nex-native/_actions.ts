@@ -189,6 +189,13 @@ async function enforceAccountCreateRateLimit(
     // to a 503 when the DB-backed limiter has repeatedly failed. The
     // redirect lands BEFORE any Supabase auth.admin.createUser call ·
     // the handler never half-creates a user during DB brown-outs.
+    //
+    // 2026-11-15 · Checkpoint 2 fix. The target URL now carries an
+    // existing querystring (`/nex-native/sign-in?mode=signup`), so
+    // naive `${target}?error=...` concatenation would mint a malformed
+    // URL (`?mode=signup?error=...`). Use the correct separator based
+    // on whether the target already has a query component.
+    const sep = redirectToOnThrottle.includes("?") ? "&" : "?";
     if (isSecurityUnavailableError(e)) {
       void recordAuditEvent({
         event: "security.account.sign_up.denied",
@@ -200,7 +207,7 @@ async function enforceAccountCreateRateLimit(
         },
       }).catch(() => undefined);
       redirect(
-        `${redirectToOnThrottle}?error=service_unavailable&retry_after=${e.retryAfterSeconds}`,
+        `${redirectToOnThrottle}${sep}error=service_unavailable&retry_after=${e.retryAfterSeconds}`,
       );
     }
     if (isSecurityRateLimitError(e)) {
@@ -214,7 +221,7 @@ async function enforceAccountCreateRateLimit(
         },
       }).catch(() => undefined);
       redirect(
-        `${redirectToOnThrottle}?error=rate_limited&retry_after=${e.retryAfterSeconds}`,
+        `${redirectToOnThrottle}${sep}error=rate_limited&retry_after=${e.retryAfterSeconds}`,
       );
     }
     throw e;
@@ -225,7 +232,12 @@ export async function createNexAccountAction(formData: FormData): Promise<never>
   // Owner directive 2026-11-08 · Item 4 · per-IP throttle on account
   // creation (3 per hour per hashed IP) BEFORE any form parsing so
   // bot farms can't spin on bad input without cost.
-  await enforceAccountCreateRateLimit("/nex-native/create-account");
+  //
+  // 2026-11-15 · Checkpoint 2 fix. Rate-limit throttle redirects now
+  // land on the signup tab of the sealed one-URL sign-in surface
+  // (owner directive 2026-11-04 · /nex-native/create-account retired).
+  // The old target rendered the business-slug catch-all instead.
+  await enforceAccountCreateRateLimit("/nex-native/sign-in?mode=signup");
 
   const fullName = String(formData.get("full_name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
@@ -2827,7 +2839,15 @@ export async function sendCartOrderAction(
     }
     const it = raw as Record<string, unknown>;
     const kind = String(it.kind ?? "product");
-    const id = String(it.id ?? "").trim();
+    // Compat 2026-11-15 · the sealed cart UI (_checkout-sheet.tsx) serialises
+    // each item line with field `product_id`, but the fail-closed validator +
+    // unit tests in __tests__/send-cart-order-slice-0.test.ts both key by
+    // `id`. Historically this mismatch sent every real checkout down the
+    // ITEM_VERIFY_ERROR branch with the honest "Some items could not be
+    // verified" message. Accept BOTH names here so the reader is tolerant
+    // to the field the UI writes AND the field the tests write · the
+    // authoritative price lookup below still runs against the DB row.
+    const id = String(it.id ?? it.product_id ?? "").trim();
     const name = String(it.name ?? "").trim().slice(0, 200);
     const quantity = Math.max(
       1,

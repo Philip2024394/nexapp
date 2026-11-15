@@ -90,6 +90,44 @@ export default defineConfig({
       timeout: 240_000,
     },
     {
+      // 2026-11-15 · Checkpoint 2 · sealed one-URL signup flow.
+      // Drives /sign-in?mode=signup on disposable e2e-signup-* emails
+      // · hard refuses Hammerex / Rosa touches.
+      name: "sign-up-flow-390",
+      use: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+      testMatch: /sign-up-flow\.spec\.ts/,
+      timeout: 180_000,
+    },
+    {
+      // 2026-11-15 · Checkpoint 3 · seller onboarding + shop + products.
+      // Real-UI browser proof of the wizard, customization, product CRUD,
+      // and public storefront preview. Uses Rosa (nex-99903) for sign-in.
+      // Preserves Rosa's Vault state. Creates/removes synthetic products.
+      name: "seller-onboarding-flow-390",
+      use: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+      testMatch: /seller-onboarding-flow\.spec\.ts/,
+      timeout: 300_000,
+    },
+    {
+      // 2026-11-15 · Checkpoint 4 · customer → seller → order handoff.
+      // Real-UI two-context Playwright. Customer = Hammerex (nex-99901),
+      // Seller = Rosa (nex-99903). Sign-in only. No Vault state changes.
+      name: "customer-to-seller-order-390",
+      use: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+      testMatch: /customer-to-seller-order\.spec\.ts/,
+      timeout: 360_000,
+    },
+    {
+      // 2026-11-15 · CRUCIAL · session persistence across close / reopen.
+      // Verifies app session persists AND Vault stays separately locked
+      // after context close + reopen. Uses Hammerex (sign-in only; Vault
+      // state is preserved).
+      name: "session-persistence-390",
+      use: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+      testMatch: /session-persistence\.spec\.ts/,
+      timeout: 240_000,
+    },
+    {
       // 2026-11-15 · Phase 5 · cross-account defence · a reset token
       // for account A posted from a session signed in as account B must
       // return `token_account_mismatch` and leave A's token still live.

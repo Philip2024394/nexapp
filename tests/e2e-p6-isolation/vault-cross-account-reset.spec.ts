@@ -68,12 +68,21 @@ if (!DB_URL.includes("kdstoyyeygcopkogqsyv")) {
   throw new Error("vault-cross-account-reset refuses · not sandbox");
 }
 
-const A_EMAIL = process.env.PLAYWRIGHT_VA_CUSTOMER_EMAIL ?? "";
-const A_PASSWORD = process.env.PLAYWRIGHT_VA_CUSTOMER_PASSWORD ?? ""; // ****
-const A_ACCOUNT_ID = process.env.PLAYWRIGHT_VA_CUSTOMER_ACCOUNT_ID ?? "";
-const B_EMAIL = process.env.PLAYWRIGHT_VA_SELLER_EMAIL ?? "";
-const B_PASSWORD = process.env.PLAYWRIGHT_VA_SELLER_PASSWORD ?? ""; // ****
-const B_ACCOUNT_ID = process.env.PLAYWRIGHT_VA_SELLER_ACCOUNT_ID ?? "";
+// 2026-11-15 · Checkpoint 5. Switched from the shared Hammerex/Rosa
+// acceptance fixtures (PLAYWRIGHT_VA_*) to disposable CK5 accounts
+// seeded by `scripts/_tmp/seed-disposable-vault-accounts.mjs`. The
+// cross-account spec is destructive (clears vault_setup + envelopes
+// + lockout state as part of forceLockout + reset), so running it
+// against Hammerex/Rosa would violate the owner's "preserve all
+// account and Vault state" rule. CK5 accounts are explicit test
+// fixtures created via admin.createUser (fully disclosed · never
+// touches real users).
+const A_EMAIL = process.env.PLAYWRIGHT_CK5_A_EMAIL ?? "";
+const A_PASSWORD = process.env.PLAYWRIGHT_CK5_A_PASSWORD ?? ""; // ****
+const A_ACCOUNT_ID = process.env.PLAYWRIGHT_CK5_A_ACCOUNT_ID ?? "";
+const B_EMAIL = process.env.PLAYWRIGHT_CK5_B_EMAIL ?? "";
+const B_PASSWORD = process.env.PLAYWRIGHT_CK5_B_PASSWORD ?? ""; // ****
+const B_ACCOUNT_ID = process.env.PLAYWRIGHT_CK5_B_ACCOUNT_ID ?? "";
 
 for (const [k, v] of Object.entries({
   A_EMAIL,
@@ -361,7 +370,21 @@ test.describe("Vault · cross-account reset defence (sandbox)", () => {
     // so that when it visits A's reset URL the server sees "a signed-
     // in session for B" and routes through the token_account_mismatch
     // short-circuit (as opposed to "not_signed_in").
-    await signIn(bPage, B_EMAIL, B_PASSWORD /* **** */, "/nex-native/vault");
+    //
+    // 2026-11-15 race-fix · the earlier flake sent B to /nex-native/vault.
+    // When B's vault_setup row was absent, /vault redirected to
+    // /vault/setup, which mounts a setup client that fires async
+    // device-key generation + fetches. Firing `bPage.goto(resetUrl)`
+    // in the first test raced the still-in-flight setup-client work
+    // and produced ERR_ABORTED. Routing B to /contacts instead is
+    // the minimal, safe landing · no vault surfaces mounted · no
+    // background crypto work to race against.
+    await signIn(bPage, B_EMAIL, B_PASSWORD /* **** */, "/nex-native/contacts");
+    // Belt-and-braces: wait for the contacts landing to settle so no
+    // in-flight fetches run into the first `bPage.goto(resetUrl)`.
+    await bPage
+      .waitForLoadState("networkidle", { timeout: 20_000 })
+      .catch(() => undefined);
 
     // Harvest the plaintext reset URL for account A via the planned
     // dev-only test harness. Null → skip the cross-account test below.
@@ -392,6 +415,20 @@ test.describe("Vault · cross-account reset defence (sandbox)", () => {
       waitUntil: "domcontentloaded",
       timeout: 60_000,
     });
+
+    // Diagnostic on failure · capture the final URL + any data-nex-
+    // vault-reset-page value present to make the failure actionable.
+    const bodySnapshot = await bPage.evaluate(() => {
+      const url = window.location.href;
+      const states = Array.from(
+        document.querySelectorAll("[data-nex-vault-reset-page]"),
+      ).map((el) => (el as HTMLElement).dataset.nexVaultResetPage);
+      return { url, states, title: document.title };
+    });
+    // eslint-disable-next-line no-console
+    console.log(
+      `[DIAG] after goto(resetUrl) · url=${bodySnapshot.url} · states=${JSON.stringify(bodySnapshot.states)} · title=${bodySnapshot.title}`,
+    );
 
     // The reset client renders the error state.
     await expect(
