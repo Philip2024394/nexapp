@@ -1665,7 +1665,7 @@ export function PortraitBloomShell({
                           product cards get their own richer renderer
                           via MessageProductCard so the price + name
                           + shop context reads as commerce not media. */}
-                      {m.attachment_type === "product" && m.attachment_product ? (
+                      {m.attachment_product ? (
                         <>
                           {m.attachment_live_session_id && (
                             <div

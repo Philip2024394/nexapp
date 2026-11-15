@@ -7,13 +7,22 @@
 // `products/<business_id>/<timestamp-random>.<ext>`, returns the
 // public URL.
 //
+// Stream B · 2026-11-16 · S12 · MIME/size alignment with bucket DDL.
+//   Sandbox probe (evidence/stream-b/bucket-inventory.json) shows
+//   nex-business-assets is created by migration 110 with:
+//     file_size_limit = 2097152 (2 MiB)
+//     allowed_mime_types = image/png, image/jpeg, image/jpg, image/webp
+//   The 2026-10-31 header claimed "4 MB cap" but the bucket is
+//   authoritative at 2 MiB · a 2-4 MB upload would pass the app check
+//   and then fail at the bucket layer with a confusing error. The app
+//   cap is now 2 MiB to match the DB · same MIME set for parity.
+//   The DB remains authoritative (defence-in-depth).
+//
 // Design choices:
 //   · Reuses the existing nex-business-assets bucket (same ownership
 //     policy as the gallery-image-service) rather than creating a new
 //     bucket — no provisioning change required.
-//   · 4 MB cap, png/jpg/webp only. Mirrors the gallery-service rules
-//     with a slightly higher per-file cap because product photos tend
-//     to be larger than the business-branding gallery.
+//   · 2 MiB cap, png/jpg/webp only (matches bucket DDL).
 //   · Returns `{ url, objectPath }` so the client can store the URL
 //     and future cleanup can target the objectPath directly.
 
@@ -28,6 +37,18 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/** Stream B · 2026-11-16 · S12 · must match the DB-layer cap on the
+ *  `nex-business-assets` bucket (migration 110 · 2097152 bytes).
+ *  Keep this constant in sync with the bucket DDL · a future
+ *  authorisation to raise the bucket cap must update BOTH values. */
+const NEX_BUSINESS_ASSETS_MAX_BYTES = 2 * 1024 * 1024; // 2 MiB · bucket DDL authoritative
+const NEX_BUSINESS_ASSETS_ALLOWED_MIMES = new Set<string>([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+]);
 
 export async function POST(req: Request): Promise<Response> {
   const session = await resolveSessionWithDevOverride();
@@ -56,6 +77,34 @@ export async function POST(req: Request): Promise<Response> {
   const file = form.get("file");
   if (!(file instanceof File)) {
     return NextResponse.json({ ok: false, code: "invalid-input", message: "file is required" }, { status: 400 });
+  }
+
+  // Stream B · 2026-11-16 · S12 · app-cap enforced BEFORE the ownership
+  // or tier check so a malicious/oversize upload pays no DB cost.
+  // The DB bucket enforces the same limit (defence-in-depth) · the app
+  // layer exists so a user gets a precise error message instead of a
+  // generic storage 413.
+  if (file.size > NEX_BUSINESS_ASSETS_MAX_BYTES) {
+    const mb = (file.size / (1024 * 1024)).toFixed(2);
+    return NextResponse.json(
+      {
+        ok: false,
+        code: "file-too-large",
+        message: `Image is ${mb} MB · the limit is ${NEX_BUSINESS_ASSETS_MAX_BYTES / (1024 * 1024)} MB`,
+      },
+      { status: 400 },
+    );
+  }
+  const mimeType = (file.type ?? "").toLowerCase();
+  if (mimeType === "" || !NEX_BUSINESS_ASSETS_ALLOWED_MIMES.has(mimeType)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: "unsupported-type",
+        message: `Image type ${mimeType || "(unknown)"} is not supported · use png, jpg, or webp`,
+      },
+      { status: 400 },
+    );
   }
 
   // Ownership gate.

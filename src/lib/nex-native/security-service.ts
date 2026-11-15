@@ -43,12 +43,31 @@ export interface NexSessionRow {
 }
 
 export type SignInEventType =
+  // Sign-in surface events (original union · migration 139)
   | "password"
   | "webauthn"
   | "magic_link"
   | "remote_sign_out"
   | "password_change"
-  | "failure";
+  | "failure"
+  // Vault audit events · migration 141+ · security-relevant · append-only
+  // Added 2026-11-16 to close the type/runtime gap: ~20 vault routes emit
+  // these names at runtime but the TS union never listed them. The audit
+  // consumer (`src/app/nex-native/settings/security/activity/page.tsx`)
+  // already falls through to `default` for unknown kinds · the compliance
+  // engine switch (`src/lib/nex/compliance/engine.ts`) narrows a different
+  // `AnalyticsEvent.event_type` · no type-narrowing switch of this union
+  // exists · broadening is runtime-safe.
+  | "device_authorized"
+  | "device_revoked"
+  | "vault_unlock"
+  | "vault_unlock_failed"
+  | "vault_rotated"
+  | "vault_migrated"
+  | "recovery_configured"
+  | "step_up_required_blocked"
+  | "legacy_file_migrated"
+  | "legacy_file_migration_failed";
 
 export interface NexSignInEventRow {
   id: NexUuid;

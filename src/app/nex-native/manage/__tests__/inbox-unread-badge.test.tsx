@@ -93,13 +93,29 @@ describe("computeBadgeRender · honest-null + pluralisation", () => {
 });
 
 describe("parseUnreadCountBody · tolerant of bad input", () => {
-  test("accepts { count: n } where n is a finite number", () => {
-    expect(parseUnreadCountBody({ count: 7 })).toBe(7);
+  // Stream B · 2026-11-16 · the endpoint grew per-channel counts
+  // (chat + orders · S1/S10). The parser now returns an
+  // UnreadChannelCounts object · legacy bodies with just `count`
+  // still parse as `{ chat: count, orders: 0 }` for back-compat.
+
+  test("accepts { count: n } where n is a finite number (legacy chat-only shape)", () => {
+    expect(parseUnreadCountBody({ count: 7 })).toEqual({ chat: 7, orders: 0 });
+  });
+
+  test("accepts { chat, orders } shape (post-2026-11-16)", () => {
+    expect(parseUnreadCountBody({ count: 11, chat: 7, orders: 4 })).toEqual({
+      chat: 7,
+      orders: 4,
+    });
   });
 
   test("floors + clamps non-negative", () => {
-    expect(parseUnreadCountBody({ count: 7.9 })).toBe(7);
-    expect(parseUnreadCountBody({ count: -3 })).toBe(0);
+    expect(parseUnreadCountBody({ count: 7.9 })).toEqual({ chat: 7, orders: 0 });
+    expect(parseUnreadCountBody({ count: -3 })).toEqual({ chat: 0, orders: 0 });
+    expect(parseUnreadCountBody({ chat: 2.9, orders: 1.1 })).toEqual({
+      chat: 2,
+      orders: 1,
+    });
   });
 
   test("returns null for malformed body (non-numeric count)", () => {
@@ -120,6 +136,35 @@ describe("parseUnreadCountBody · tolerant of bad input", () => {
     expect(parseUnreadCountBody(undefined)).toBeNull();
     expect(parseUnreadCountBody("string body")).toBeNull();
     expect(parseUnreadCountBody(5)).toBeNull();
+  });
+});
+
+describe("computeBadgeRender · chat + orders channel combinations", () => {
+  // Stream B · 2026-11-16 · S1/S10 · the badge now sums chat + orders
+  // and the aria-label describes which channels contribute.
+
+  test("chat=3, orders=2 → '5' with mixed-channel aria-label", () => {
+    const r = computeBadgeRender({ chat: 3, orders: 2 });
+    expect(r).not.toBeNull();
+    expect(r!.text).toBe("5");
+    expect(r!.ariaLabel).toBe("3 unread conversations, 2 unseen orders");
+  });
+
+  test("chat=0, orders=1 → '1' with orders-only aria-label (singular)", () => {
+    const r = computeBadgeRender({ chat: 0, orders: 1 });
+    expect(r).not.toBeNull();
+    expect(r!.text).toBe("1");
+    expect(r!.ariaLabel).toBe("1 unseen order");
+  });
+
+  test("chat=0, orders=0 → null (honest-zero)", () => {
+    expect(computeBadgeRender({ chat: 0, orders: 0 })).toBeNull();
+  });
+
+  test("chat=200, orders=0 → '99+' with chat aria-label", () => {
+    const r = computeBadgeRender({ chat: 200, orders: 0 });
+    expect(r!.text).toBe("99+");
+    expect(r!.ariaLabel).toBe("200 unread conversations");
   });
 });
 

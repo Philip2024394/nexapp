@@ -179,18 +179,23 @@ Same `STRIPE_SECRET_KEY` as above.
 
 ### For price-registry resolution
 
-Base (worldwide / HQ fallback):
-- `STRIPE_PRICE_SHOP_STANDARD`
-- `STRIPE_PRICE_SHOP_UNLIMITED`
-- `STRIPE_PRICE_VAULT_5GB` (plus 25GB / 50GB / 100GB)
+**Canonical scheme (sealed 2026-11-08 Scope Reduction · Round 29h).** The
+Shop subscription ships as ONE package — the 2-tier `STANDARD` /
+`UNLIMITED` model is retired. Checkout at runtime reads the per-currency
+price IDs via `/api/nex-native/billing/checkout/shop/route.ts`:
 
-Ireland suffix:
-- `STRIPE_PRICE_SHOP_STANDARD_IE`
-- (same shape for every tier)
+- `NEX_STRIPE_PRICE_SHOP_EUR_MONTHLY` (Ireland · €)
+- `NEX_STRIPE_PRICE_SHOP_GBP_MONTHLY` (UK · £)
+- `NEX_STRIPE_PRICE_SHOP_USD_MONTHLY` (Worldwide · $)
+- `NEX_STRIPE_PRICE_SHOP_IDR_MONTHLY` (Indonesia · Rp)
 
-Indonesia suffix:
-- `STRIPE_PRICE_SHOP_STANDARD_ID`
-- (same shape for every tier)
+Vault + legacy Shop tiers (kept ONLY so webhook reverse-lookup can
+still resolve grandfathered subscriptions created before Scope
+Reduction · NEW subscriptions use the canonical scheme above):
+
+- `STRIPE_PRICE_SHOP_STANDARD` / `..._IE` / `..._ID` (grandfathered · do not use)
+- `STRIPE_PRICE_SHOP_UNLIMITED` / `..._IE` / `..._ID` (grandfathered · do not use)
+- `STRIPE_PRICE_VAULT_5GB` (plus 25GB / 50GB / 100GB) · per-identity suffixes supported
 
 ### For reconciliation cron
 
@@ -308,9 +313,11 @@ Breakdown:
 # 3 · Add to .env.local (NEVER commit · gitignored):
 #       STRIPE_SECRET_KEY=sk_test_...
 #       STRIPE_WEBHOOK_SECRET=whsec_...
-#       STRIPE_PRICE_SHOP_STANDARD=price_...
-#       STRIPE_PRICE_SHOP_UNLIMITED=price_...
-#       STRIPE_PRICE_VAULT_5GB=price_...
+#       NEX_STRIPE_PRICE_SHOP_EUR_MONTHLY=price_...   # canonical
+#       NEX_STRIPE_PRICE_SHOP_GBP_MONTHLY=price_...   # canonical
+#       NEX_STRIPE_PRICE_SHOP_USD_MONTHLY=price_...   # canonical
+#       NEX_STRIPE_PRICE_SHOP_IDR_MONTHLY=price_...   # canonical
+#       STRIPE_PRICE_VAULT_5GB=price_...              # Vault tiers
 # 4 · Run the local dev server
 npm run dev
 # 5 · Sign in to NEX locally

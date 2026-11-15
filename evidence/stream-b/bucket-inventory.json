@@ -1,0 +1,188 @@
+{
+  "timestamp": "2026-11-15T17:07:01.819Z",
+  "project_ref_from_url": "kdstoyyeygcopkogqsyv",
+  "buckets": [
+    {
+      "id": "nex-avatars",
+      "name": "nex-avatars",
+      "public": true,
+      "file_size_limit": null,
+      "allowed_mime_types": null,
+      "created_at": "2026-10-31T14:48:13.453Z"
+    },
+    {
+      "id": "nex-business-assets",
+      "name": "nex-business-assets",
+      "public": true,
+      "file_size_limit": "2097152",
+      "allowed_mime_types": [
+        "image/png",
+        "image/jpeg",
+        "image/jpg",
+        "image/webp"
+      ],
+      "created_at": "2026-10-31T14:48:56.400Z"
+    },
+    {
+      "id": "nex-chat-theme-hero",
+      "name": "nex-chat-theme-hero",
+      "public": true,
+      "file_size_limit": "5242880",
+      "allowed_mime_types": [
+        "image/png",
+        "image/jpeg",
+        "image/webp",
+        "image/avif"
+      ],
+      "created_at": "2026-10-31T14:48:16.056Z"
+    },
+    {
+      "id": "nex-community-photos",
+      "name": "nex-community-photos",
+      "public": true,
+      "file_size_limit": "2097152",
+      "allowed_mime_types": [
+        "image/webp",
+        "image/jpeg",
+        "image/png"
+      ],
+      "created_at": "2026-10-31T14:49:23.740Z"
+    },
+    {
+      "id": "nex-merchant-qr",
+      "name": "nex-merchant-qr",
+      "public": false,
+      "file_size_limit": "2097152",
+      "allowed_mime_types": [
+        "image/png",
+        "image/jpeg",
+        "image/webp"
+      ],
+      "created_at": "2026-11-10T05:35:35.924Z"
+    },
+    {
+      "id": "nex-music-media",
+      "name": "nex-music-media",
+      "public": false,
+      "file_size_limit": "20971520",
+      "allowed_mime_types": [
+        "audio/mpeg",
+        "audio/mp4",
+        "image/jpeg",
+        "image/png",
+        "image/webp"
+      ],
+      "created_at": "2026-10-31T15:13:20.840Z"
+    },
+    {
+      "id": "nex-peer-chat-attachments",
+      "name": "nex-peer-chat-attachments",
+      "public": true,
+      "file_size_limit": "26214400",
+      "allowed_mime_types": [
+        "image/png",
+        "image/jpeg",
+        "image/webp",
+        "image/avif",
+        "image/gif",
+        "video/mp4",
+        "video/webm",
+        "video/quicktime",
+        "audio/webm",
+        "audio/mp4",
+        "audio/mpeg",
+        "audio/ogg",
+        "audio/wav",
+        "application/octet-stream"
+      ],
+      "created_at": "2026-10-31T14:48:19.965Z"
+    },
+    {
+      "id": "nex-peer-chat-ciphertext",
+      "name": "nex-peer-chat-ciphertext",
+      "public": false,
+      "file_size_limit": "27262976",
+      "allowed_mime_types": [
+        "application/octet-stream"
+      ],
+      "created_at": "2026-11-08T01:46:35.182Z"
+    },
+    {
+      "id": "nex-theme-emoji",
+      "name": "nex-theme-emoji",
+      "public": true,
+      "file_size_limit": "524288",
+      "allowed_mime_types": [
+        "image/png",
+        "image/webp",
+        "image/gif"
+      ],
+      "created_at": "2026-10-31T14:49:00.373Z"
+    },
+    {
+      "id": "nex-theme-sticker",
+      "name": "nex-theme-sticker",
+      "public": true,
+      "file_size_limit": "2097152",
+      "allowed_mime_types": [
+        "image/png",
+        "image/webp",
+        "image/gif"
+      ],
+      "created_at": "2026-10-31T14:49:01.686Z"
+    },
+    {
+      "id": "nex-user-intros",
+      "name": "nex-user-intros",
+      "public": true,
+      "file_size_limit": "10485760",
+      "allowed_mime_types": [
+        "video/mp4"
+      ],
+      "created_at": "2026-10-31T15:13:06.487Z"
+    },
+    {
+      "id": "nex-user-wallpapers",
+      "name": "nex-user-wallpapers",
+      "public": true,
+      "file_size_limit": "5242880",
+      "allowed_mime_types": [
+        "image/png",
+        "image/jpeg",
+        "image/webp"
+      ],
+      "created_at": "2026-10-31T15:13:06.487Z"
+    },
+    {
+      "id": "nex-vault-files",
+      "name": "nex-vault-files",
+      "public": false,
+      "file_size_limit": null,
+      "allowed_mime_types": null,
+      "created_at": "2026-10-31T14:49:08.929Z"
+    }
+  ],
+  "nex_order_columns": [
+    "id",
+    "customer_account_id",
+    "business_id",
+    "product_id",
+    "source_conversation_id",
+    "state",
+    "price_pence",
+    "currency",
+    "idempotency_key",
+    "created_at",
+    "updated_at",
+    "customer_note",
+    "merchant_note",
+    "dispatch_tracking_url",
+    "payment_method"
+  ],
+  "has_seller_viewed_at": false,
+  "mig_320_payment_method_column": {
+    "column_name": "payment_method",
+    "data_type": "text",
+    "is_nullable": "YES"
+  }
+}

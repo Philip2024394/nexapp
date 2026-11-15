@@ -970,7 +970,12 @@ export default async function PeerChatPage({
             })()
           : null,
       attachment_product:
-        m.attachment_type === "product" &&
+        // Sealed 2026-11-16 · detect product inquiries by
+        // attachment_meta.product presence · NOT attachment_type.
+        // Mirrors the D2 cart detection above. The sealed CHECK
+        // (mig 306) does not permit 'product' on attachment_type ·
+        // the write path in _actions.ts leaves attachment_type NULL
+        // and parks the whole snapshot on attachment_meta.product.
         m.attachment_meta &&
         typeof m.attachment_meta === "object" &&
         "product" in m.attachment_meta &&

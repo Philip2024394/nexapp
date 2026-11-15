@@ -1,0 +1,75 @@
+{
+  "audit_date": "2026-11-16",
+  "stream": "B",
+  "scope": "src/app/nex-native/manage/*",
+  "sealed_reference": "Memory 2026-11-12 · dev-impersonation surfaces MUST use resolveSessionWithDevOverride on BOTH page AND server actions.",
+  "resolver_choices": {
+    "resolveNexAppSessionFromContext": "Plain cookie/auth resolver · pre-dev-impersonation. Safe for pages that must NEVER accept dev impersonation (billing webhooks, settings/security).",
+    "resolveSessionWithDevOverride": "Dev-impersonation wrapper. Required on seller-impersonable surfaces (dev-override lets Nex-99901 appear as signed-in seller via NEX_DEV_IMPERSONATE_HANDLE env-var)."
+  },
+  "note_on_stream_a_actions_file": "src/app/nex-native/_actions.ts imports `resolveSessionWithDevOverride as resolveNexAppSessionFromContext` (line 31). Every server-action in that file is dev-override under the hood despite the alias. Stream A owns this file; Stream B did not touch it. Pages that import actions from there and resolve via the PLAIN resolver introduce the sealed-bug pattern · they are flagged below as REMAINING.",
+  "stream_b_files_touched": [
+    {
+      "file": "src/app/nex-native/manage/accommodation/_actions.ts",
+      "before": "stub · redirect with e=room_editor_not_wired · no resolver call",
+      "after": "resolveSessionWithDevOverride · writes to accommodation-service.updateRoom",
+      "rationale": "seller-impersonable write · unify with dev-override"
+    },
+    {
+      "file": "src/app/nex-native/manage/accommodation/[roomId]/page.tsx",
+      "before": "resolveNexAppSessionFromContext",
+      "after": "resolveSessionWithDevOverride",
+      "rationale": "matches the write action in ../_actions.ts · prevents the 2026-11-12 upload-bounce-to-sign-in bug class"
+    }
+  ],
+  "remaining_mismatches_outside_stream_b_ownership": [
+    {
+      "page": "src/app/nex-native/manage/menu/page.tsx",
+      "page_resolver": "resolveNexAppSessionFromContext",
+      "writes_to": "src/app/nex-native/_actions.ts (createMenuSectionAction · updateMenuSectionAction · createMenuItemAction · deleteMenuItemAction · toggleMenuItemAvailableAction · toggleMenuItemFeaturedAction · deleteMenuSectionAction)",
+      "actions_resolver": "resolveSessionWithDevOverride (aliased at line 31)",
+      "mismatch": true,
+      "owner": "Stream A owns _actions.ts · page fix needs Stream A coordination",
+      "recommendation": "switch page to resolveSessionWithDevOverride"
+    },
+    {
+      "page": "src/app/nex-native/manage/menu/[itemId]/page.tsx",
+      "page_resolver": "resolveNexAppSessionFromContext",
+      "writes_to": "src/app/nex-native/_actions.ts",
+      "actions_resolver": "resolveSessionWithDevOverride (aliased)",
+      "mismatch": true,
+      "recommendation": "switch page to resolveSessionWithDevOverride"
+    },
+    {
+      "page": "src/app/nex-native/manage/products/page.tsx",
+      "page_resolver": "resolveNexAppSessionFromContext",
+      "writes_to": "src/app/nex-native/manage/products/_actions.ts",
+      "actions_resolver": "resolveNexAppSessionFromContext",
+      "mismatch": false,
+      "note": "page + action both plain · consistent but NOT dev-impersonation-friendly · owner should pick a side"
+    },
+    {
+      "page": "src/app/nex-native/manage/products/[productId]/page.tsx",
+      "page_resolver": "resolveNexAppSessionFromContext",
+      "writes_to": "src/app/nex-native/manage/products/[productId]/edit/_actions.ts",
+      "mismatch": "unknown · edit _actions.ts not inspected in Stream B scope"
+    },
+    {
+      "page": "src/app/nex-native/manage/shop/page.tsx",
+      "page_resolver": "resolveNexAppSessionFromContext",
+      "writes_to": [
+        "src/app/nex-native/manage/shop/_qr-code-action.ts · resolveNexAppSessionFromContext",
+        "src/app/nex-native/manage/shop/_cover-layout-action.ts · resolveNexAppSessionFromContext",
+        "src/app/nex-native/manage/shop/_shipping-scope-action.ts · resolveNexAppSessionFromContext"
+      ],
+      "mismatch": false,
+      "note": "page + all shop-scoped actions plain · consistent · but will not surface dev-impersonated seller (Nex-99901). Recommendation: unify on dev-override once owner authorises."
+    },
+    {
+      "page": "src/app/nex-native/manage/orders/page.tsx",
+      "writes_to": "src/app/nex-native/manage/orders/_actions.ts · resolveSessionWithDevOverride",
+      "note": "page not inspected · recommended audit"
+    }
+  ],
+  "action_taken_summary": "Stream B unified the accommodation surface (page + action) on resolveSessionWithDevOverride. The remaining mismatches are flagged for Stream A / future owner authorisation. This stream deliberately did NOT change the shop/products pages because their matching actions live outside Stream B's file-ownership envelope and a one-sided flip would introduce a new mismatch instead of removing one."
+}

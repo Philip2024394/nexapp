@@ -1,0 +1,90 @@
+-- ============================================================================
+-- Migration 322 PROPOSAL · nex_order.seller_viewed_at · 2026-11-16
+-- Stream B · S1 · Seller order-notification wiring.
+-- ============================================================================
+-- *** DO NOT APPLY *** · PROPOSAL ONLY.
+-- Awaiting explicit owner authorisation naming BOTH sandbox
+-- (kdstoyyeygcopkogqsyv) and production (ijvqdvsvwtwxzcqmoqit) before
+-- any sandbox/prod application. Prod remains sealed.
+-- ============================================================================
+--
+-- Purpose:
+--   Introduce a per-order `seller_viewed_at` timestamp so the unread-count
+--   endpoint can distinguish "order the seller has already acknowledged
+--   but has not actioned yet" from "order the seller has never seen".
+--
+-- Why the interim model works today (and this migration is deferred):
+--   The sealed Stream B wiring (2026-11-16) uses `nex_order.state =
+--   'created'` as the unread signal. 'created' is the buyer-side
+--   checkout write and transitions out of this state only via sealed
+--   /manage/orders/_actions.ts seller actions (markPaid / markCancelled
+--   / markPending). This means the seller SEEING the orders dashboard
+--   does NOT silently mark them read · a deliberate seller action is
+--   required · which honours the sealed privacy-by-default stance.
+--
+--   The weakness of the interim model: if a seller wants to take a
+--   break between acknowledging an order and acting on it, they have
+--   no way to "clear the notification" without a state transition.
+--   This proposal addresses that gap.
+--
+-- Proposed shape (for owner review · NOT yet authorised):
+--
+--   ALTER TABLE nex_order
+--     ADD COLUMN IF NOT EXISTS seller_viewed_at timestamptz;
+--
+--   COMMENT ON COLUMN nex_order.seller_viewed_at IS
+--     'Timestamp the seller first opened this order on
+--      /manage/orders/<orderId>. NULL = unseen. Written exclusively by
+--      the sealed order-view server action · a GET of the order page
+--      does NOT auto-stamp (deliberate action requirement).';
+--
+--   CREATE INDEX IF NOT EXISTS idx_nex_order_unseen
+--     ON nex_order (business_id)
+--     WHERE seller_viewed_at IS NULL AND state = 'created';
+--
+-- Open questions the owner must decide BEFORE authorisation:
+--
+--   Q1. Should the "view" write be implicit on page load, or require
+--       a deliberate "mark seen" tap? The interim model's strength is
+--       that opening the app does not silently mark orders read ·
+--       the implicit-on-load pattern would reintroduce that risk.
+--
+--   Q2. If Q1 answer is "deliberate tap", should the tap be a NEX-
+--       specific UI control (e.g. a tiny "✓ seen" chip on each row of
+--       /manage/orders) or an existing surface (e.g. the first scroll
+--       past the order)?
+--
+--   Q3. Should the unread-count endpoint prefer the
+--       `state='created' AND seller_viewed_at IS NULL` filter over the
+--       interim `state='created'` filter the day this migration lands?
+--       Switching the filter is a one-line change in
+--       src/lib/nex-native/manage-orders/order-unread-service.ts.
+--
+--   Q4. Is the partial index `WHERE seller_viewed_at IS NULL AND state
+--       = 'created'` tight enough for production, or should it also
+--       scope by recency (e.g. created_at > now() - interval '30 days')
+--       to keep the index tiny?
+--
+-- Sandbox verification plan (if authorised):
+--   1. Apply with `node scripts/apply-migration-322-sandbox.mjs`
+--      (hard-ref-check that refuses prod).
+--   2. Verify column + index exist in `kdstoyyeygcopkogqsyv`:
+--        SELECT column_name FROM information_schema.columns
+--         WHERE table_name = 'nex_order' AND column_name = 'seller_viewed_at';
+--        SELECT indexname FROM pg_indexes
+--         WHERE tablename = 'nex_order' AND indexname = 'idx_nex_order_unseen';
+--   3. Flip order-unread-service.ts to the richer filter and re-run
+--      the Stream B smoke test.
+--
+-- Rollback (if applied and later rejected):
+--   BEGIN;
+--     DELETE FROM nex_migration_history WHERE version = '322';
+--     DROP INDEX IF EXISTS idx_nex_order_unseen;
+--     ALTER TABLE nex_order DROP COLUMN IF EXISTS seller_viewed_at;
+--   COMMIT;
+--
+-- ============================================================================
+--
+-- *** NOT A LIVE MIGRATION ***  No SQL is emitted below.  No DDL runs.
+--
+-- ============================================================================

@@ -19,6 +19,54 @@
 // Toggling for a dev session: set the env var
 //   NEX_COMMERCE_ENABLED=1
 // in .env.local · a boolean-parsed truthy value flips this on.
+//
+// ---------------------------------------------------------------------
+// 2026-11-16 · Stream C B8 · document the "unavailable" state explicitly
+// ---------------------------------------------------------------------
+// Before this doc-pass every caller that found NEX_COMMERCE_ENABLED
+// off would silently `redirect("/nex-native/home")` with NO query
+// params explaining why — the visitor saw contacts and had no idea
+// their cart/orders tap was intentionally gated. The sealed
+// 2026-11-06 Scope Reduction keeps commerce surfaces hidden for the
+// chat+themes launch on purpose (NEX_COMMERCE_ENABLED default stays
+// FALSE · that behaviour is CORRECT and MUST NOT be flipped by this
+// pass). The audit's remediation is purely a visibility fix:
+//
+//   · callers that gate on commerceEnabledForRequest() and must
+//     bounce the visitor away should redirect to the URL produced by
+//     `commerceDisabledRedirectUrl()` (defined below) which carries
+//     `?e=commerce_disabled&m=…` so the destination can render an
+//     honest banner instead of silently swallowing the request.
+//
+// The destination banner renders when the destination page sees
+// `searchParams.e === "commerce_disabled"` (and optionally reads
+// `searchParams.m` for the user-facing message). Consumers of the
+// helper MUST route the destination page to read these query params
+// and render a small informational strip · never a toast, never a
+// modal (we don't want to block the chat surface they landed on).
+//
+// What this doc-pass intentionally does NOT do:
+//   · Does NOT flip NEX_COMMERCE_ENABLED default to true.
+//   · Does NOT change the return type of commerceEnabledForRequest.
+//   · Does NOT edit any caller site (those live outside Stream C's
+//     file-ownership envelope · a separate pass migrates them).
+//   · Does NOT affect NEX_SEARCH_ENABLED semantics.
+//
+// Rollout ordering:
+//   1. Land this helper + doc (this commit).
+//   2. Migrate orders/page.tsx caller to the new redirect target.
+//   3. Add banner renderer on /home (which 307s to /contacts, so
+//      either /home needs to forward the query params through its
+//      permanentRedirect — which it currently strips — OR migrate
+//      the redirect helper default to point directly at /contacts
+//      so the banner params survive).
+//
+// Verification harness (dev only, do NOT commit .env.local change):
+//   · temporarily unset NEX_COMMERCE_ENABLED in .env.local
+//   · hit `/nex-native/orders` → redirect must carry
+//     `?e=commerce_disabled&m=Commerce+will+be+available+soon`
+//   · destination page renders the banner
+//   · restore .env.local
 
 /** True when commerce surfaces (shop slider, cart, orders, direct
  *  price, share-to-earn, ladder, /cart, /orders, /[businessSlug],
@@ -64,6 +112,74 @@ export function commerceEnabledForRequest(
   if (Array.isArray(v)) return v.some((x) => x === "1" || x === "true");
   return false;
 }
+
+// ─── Commerce-disabled EXPLICIT redirect URL (Stream C B8 · 2026-11-16) ──
+//
+// Produces the canonical URL a caller should pass to Next's
+// `redirect()` when a commerce surface is turned OFF by
+// NEX_COMMERCE_ENABLED. The URL carries explicit `e=commerce_disabled`
+// + `m=…` query params so the destination page can render an honest
+// "Commerce will be available soon" banner instead of letting the
+// visitor wonder why their tap vanished into Contacts.
+//
+// Current destination
+// -------------------
+// Default is `/nex-native/home` to preserve the existing redirect
+// target. Callers can override `destinationPath` if their surface
+// has a more specific honest landing (e.g. /cart gated → maybe
+// /free-chat). Query params are APPENDED non-destructively · if the
+// destination already has a `?foo=bar` the helper preserves it.
+//
+// Why this is a function, not a const
+// -----------------------------------
+// The `m` message is user-facing copy · we want callers to pass a
+// context-specific sentence ("Shopping is coming soon", "Orders are
+// not available during the preview launch", etc.) rather than
+// hardcoding one line here. A sensible default is provided.
+//
+// Encoding
+// --------
+// `encodeURIComponent` is applied to `message`. The destination
+// page should treat the raw string as display text · no HTML.
+//
+// This helper is intentionally pure (no side-effects, no process.env
+// access) so it is safe to import from both server and client code,
+// and trivially testable.
+export interface CommerceDisabledRedirectOptions {
+  /** User-facing explanation. Default: "Commerce will be available
+   *  soon". Caller SHOULD pass a surface-specific message. */
+  readonly message?: string;
+  /** Override the default redirect destination. Default:
+   *  "/nex-native/home". */
+  readonly destinationPath?: string;
+  /** Override the error code reflected back in the URL. Default:
+   *  "commerce_disabled". Kept customisable so other launch gates
+   *  (search, etc.) can reuse the same helper pattern later. */
+  readonly code?: string;
+}
+
+export function commerceDisabledRedirectUrl(
+  options: CommerceDisabledRedirectOptions = {},
+): string {
+  const code = options.code ?? "commerce_disabled";
+  const message = options.message ?? "Commerce will be available soon";
+  const destinationPath = options.destinationPath ?? "/nex-native/home";
+  // Non-destructive query-string append · preserves any params that
+  // were already present on `destinationPath`.
+  const separator = destinationPath.includes("?") ? "&" : "?";
+  return `${destinationPath}${separator}e=${encodeURIComponent(code)}&m=${encodeURIComponent(message)}`;
+}
+
+/** Shape the destination page's `searchParams.e`/`searchParams.m` are
+ *  expected to arrive in · lets a page match on the code without
+ *  having to repeat the magic string.
+ *
+ *  Destination pages should render a banner when they observe
+ *  `searchParams.e === COMMERCE_DISABLED_BANNER_CODE`, treating
+ *  `searchParams.m` as DISPLAY-ONLY copy (no HTML, no further
+ *  parsing). The banner MUST NOT block the primary surface — a small
+ *  dismissible strip is correct · a modal is NOT. */
+export const COMMERCE_DISABLED_BANNER_CODE = "commerce_disabled" as const;
 
 // ─── NEX Search Phase 1 narrow launch gate · sealed 2026-10-04 ────
 //

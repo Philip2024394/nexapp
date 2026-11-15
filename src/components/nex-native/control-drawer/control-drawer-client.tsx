@@ -888,6 +888,23 @@ function DrawerBody({
   }, []);
   const effectiveIsGuest = session === null && !devUnlock;
 
+  // Stream B · 2026-11-16 · S1/S10 · poll the sealed unread-count
+  // endpoint and surface the "orders" channel as a cyan pill on the
+  // "My Orders" drawer row. Device-switch safe (server-sourced) ·
+  // opening the drawer does NOT silently mark orders read. Honest-
+  // null: a 503 preserves the previous value; guests get null.
+  const ordersUnread = useDrawerOrdersUnread(session !== null);
+  const rowBadges = React.useMemo<Record<string, { count: number; label: string } | null>>(() => {
+    const out: Record<string, { count: number; label: string } | null> = {};
+    if (ordersUnread !== null && ordersUnread > 0) {
+      const label = ordersUnread === 1
+        ? "1 unseen order"
+        : `${ordersUnread} unseen orders`;
+      out["my-orders"] = { count: ordersUnread, label };
+    }
+    return out;
+  }, [ordersUnread]);
+
   return (
     <div style={drawerBodyStyle}>
       {/* Owner directive 2026-10-24 · "over the container in side
@@ -939,6 +956,7 @@ function DrawerBody({
       <SectionGroup
         title="YOUR NEX"
         icon="👤"
+        rowBadges={rowBadges}
         rows={(() => {
           // Owner directive 2026-11-05 iter 26 · on NEX Live surfaces
           // the Discovery row self-hides · the viewer is already on
@@ -1223,6 +1241,72 @@ function IdentityBar({
   );
 }
 
+// ─── Stream B · 2026-11-16 · orders unread hook ────────────────────
+//
+// Polls `/api/nex-native/unread-count` (sealed endpoint · session-scoped
+// read · honest-null on 503) and exposes the `orders` channel so the
+// "My Orders" drawer row can surface a cyan unread pill.
+//
+// Design parity with the manage-inbox badge (sealed `_inbox-unread-
+// badge-client.tsx`): 60s poll, visible-only, visibilitychange re-sync,
+// inflight-guard, no fabrication of 0 on transient DB outage.
+//
+// Returns null when:
+//   · the viewer is anonymous (hook caller passes enabled=false), OR
+//   · the endpoint has not responded yet, OR
+//   · the endpoint returned 503 (preserve last value).
+// Returns 0 when the endpoint returned an honest-zero.
+
+function useDrawerOrdersUnread(enabled: boolean): number | null {
+  const [count, setCount] = React.useState<number | null>(null);
+  React.useEffect(() => {
+    if (!enabled) return;
+    if (typeof window === "undefined") return;
+    let cancelled = false;
+    let inflight = false;
+    const POLL_MS = 60_000;
+
+    const sync = async (): Promise<void> => {
+      if (inflight) return;
+      inflight = true;
+      try {
+        const res = await fetch("/api/nex-native/unread-count", {
+          credentials: "include",
+          cache: "no-store",
+          headers: { accept: "application/json" },
+        });
+        if (cancelled) return;
+        if (!res.ok) return; // honest-null · preserve previous value
+        const body = (await res.json()) as { orders?: unknown };
+        const raw = body?.orders;
+        if (typeof raw === "number" && Number.isFinite(raw)) {
+          setCount(Math.max(0, Math.floor(raw)));
+        }
+      } catch {
+        // network error · swallow · preserve previous value
+      } finally {
+        inflight = false;
+      }
+    };
+
+    void sync();
+    const onVisibility = (): void => {
+      if (document.visibilityState === "visible") void sync();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") void sync();
+    }, POLL_MS);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.clearInterval(interval);
+    };
+  }, [enabled]);
+  return count;
+}
+
 // ─── Section group · title + rows ──────────────────────────────────
 
 function SectionGroup({
@@ -1232,6 +1316,7 @@ function SectionGroup({
   isGuest,
   devUnlockMode = false,
   closeDrawer,
+  rowBadges,
 }: {
   readonly title: string;
   /** Owner directive 2026-11-09 · emoji glyph shown before the title
@@ -1253,6 +1338,11 @@ function SectionGroup({
    *  closes immediately · covers same-path taps where the pathname
    *  watcher never fires. */
   readonly closeDrawer?: () => void;
+  /** Stream B · 2026-11-16 · optional per-row unread pill map keyed by
+   *  row.key. When a row's key maps to a positive integer, a compact
+   *  cyan pill renders at the end of the row with aria-label describing
+   *  the count. Honest-null: absent keys or null values render nothing. */
+  readonly rowBadges?: Readonly<Record<string, { count: number; label: string } | null | undefined>>;
 }) {
   return (
     <section style={sectionStyle}>
@@ -1309,7 +1399,40 @@ function SectionGroup({
                       ariaLabel="Account required"
                     />
                   </span>
-                ) : null}
+                ) : (() => {
+                    // Stream B · 2026-11-16 · optional unread pill on
+                    // the right side of the row (e.g. "My Orders").
+                    // Honest-null: absent / null / <=0 renders nothing.
+                    const badge = rowBadges?.[row.key];
+                    if (!badge || !Number.isFinite(badge.count) || badge.count <= 0) {
+                      return null;
+                    }
+                    const n = Math.floor(badge.count);
+                    const text = n > 99 ? "99+" : String(n);
+                    return (
+                      <span
+                        aria-label={badge.label}
+                        data-nex-control-drawer-row-unread={row.key}
+                        style={{
+                          display: "inline-flex",
+                          minWidth: 20,
+                          height: 20,
+                          padding: "0 6px",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          borderRadius: 999,
+                          background: "#00AFFF",
+                          color: "#02121F",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          lineHeight: 1,
+                          marginLeft: 8,
+                        }}
+                      >
+                        {text}
+                      </span>
+                    );
+                  })()}
               </Link>
               {/* Owner directive 2026-11-09 revision 2 · broken gold
                   divider under EVERY row · 30% of the row width ·

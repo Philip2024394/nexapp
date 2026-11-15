@@ -81,4 +81,36 @@ describe("payment-method-resolver-service · routing (Stripe removed from shop p
     );
     expect(Object.keys(mod.CHECKOUT_URLS)).not.toContain("stripe");
   });
+
+  // 2026-11-16 · Stream E · readiness helper exposes honest per-method
+  // reason strings for dev/admin diagnostics. Never surfaced to buyers.
+  it("getSellerMethodReadiness returns per-method reasons (QR off path)", async () => {
+    getActiveQrAssetMock.mockResolvedValueOnce(null);
+    const { getSellerMethodReadiness } = await import(
+      "../method-resolver-service"
+    );
+    const r = await getSellerMethodReadiness("biz-1" as never);
+    expect(r.qr_manual.ready).toBe(false);
+    expect(r.qr_manual.reason).toBe("no_active_qr");
+    // Paid-provider paths hit at least one unmet gate in the test env.
+    // (schema_pending · credentials_missing · provider_pending ·
+    //  platform_webhook_secret_missing · reserved_for_subscriptions).
+    expect(r.paypal.ready).toBe(false);
+    expect(r.qris_dynamic.ready).toBe(false);
+    expect(r.stripe.ready).toBe(false);
+    // Stripe stays reserved for subscriptions regardless of env state.
+    expect(["platform_webhook_secret_missing", "reserved_for_subscriptions"]).toContain(
+      r.stripe.reason,
+    );
+  });
+
+  it("getSellerMethodReadiness · QR lookup throws yields lookup_failed", async () => {
+    getActiveQrAssetMock.mockRejectedValueOnce(new Error("relation does not exist"));
+    const { getSellerMethodReadiness } = await import(
+      "../method-resolver-service"
+    );
+    const r = await getSellerMethodReadiness("biz-1" as never);
+    expect(r.qr_manual.ready).toBe(false);
+    expect(r.qr_manual.reason).toBe("lookup_failed");
+  });
 });

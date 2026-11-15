@@ -1,0 +1,16 @@
+HTTP/1.1 200 OK
+Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy: camera=(self), microphone=(self), geolocation=(self), interest-cohort=()
+X-Frame-Options: SAMEORIGIN
+x-request-id: 8fa21d95-fda5-4c48-baa2-33bde23fe342
+Vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding
+Link: </_next/static/chunks/src_app_nex-native_nex-native_1bh6er6.css>; rel=preload; as="style"
+Cache-Control: no-cache, must-revalidate
+X-Powered-By: Next.js
+Content-Type: text/html; charset=utf-8
+Date: Sun, 15 Nov 2026 17:16:43 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+

@@ -2418,19 +2418,24 @@ export async function sendProductInquiryAction(
     );
   }
 
-  // The DB pair-check + service both require url+type set together ·
-  // when a product has no image we skip the attachment entirely and
-  // send the inquiry as plain text (still with the product name in
-  // the body). Once we relax the pair-check for product type, this
-  // guard can go away.
-  const hasImage = !!product.image_url;
+  // Product inquiry write · sealed 2026-11-16 · follow the same D2
+  // pattern (sealed 2026-11-15 for cart orders): the product rides
+  // ENTIRELY inside attachment_meta.product · attachment_type stays
+  // NULL so the sealed DB CHECK (mig 306 · owner comment: "Other
+  // product/menu/cart/sticker/etc attachment types are NOT in this
+  // CHECK · they ride different tables + columns per their sealed
+  // migrations") never trips. The image_url inside the snapshot is
+  // what the bubble renderer reads · attachment_url is unused for
+  // product bubbles (same way cart bubbles hydrate from
+  // attachment_meta.cart.items[].image_url). Readers detect product
+  // via attachment_meta.product presence · not via attachment_type.
   await peerMessageService.sendPeerMessage({
     conversation_id: conversation.id,
     sender_account_id: session.account.id,
     body,
-    attachment_url: hasImage ? product.image_url : null,
-    attachment_type: hasImage ? "product" : null,
-    attachment_meta: hasImage ? { product: snapshot } : null,
+    attachment_url: null,
+    attachment_type: null,
+    attachment_meta: { product: snapshot },
     send_intent_id: sendIntentId,
   });
 
@@ -2461,7 +2466,7 @@ export async function sendProductInquiryAction(
         product_id: product.id,
         conversation_id: conversation.id,
         intent,
-        attachment_type: hasImage ? "product" : null,
+        attachment_shape: "meta_product",
         send_intent_id: sendIntentId ?? null,
         has_live_context: false,
       },
