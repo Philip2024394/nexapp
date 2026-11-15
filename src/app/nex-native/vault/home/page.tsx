@@ -12,7 +12,6 @@
 //   · founder spec 2026-10-03 · dark + glass + modern iconography
 
 import Link from "next/link";
-import Image from "next/image";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { ChevronRight, Lock, Settings, Users } from "lucide-react";
@@ -199,7 +198,7 @@ export default async function VaultWorkspaceHomePage() {
           style={{
             position: "fixed",
             inset: 0,
-            backgroundImage: "url(/nex-native/vault/your-private-space.png)",
+            backgroundImage: "url(/nex-native/vault/your-private-space.webp)",
             backgroundSize: "cover",
             backgroundPosition: "center top",
             backgroundRepeat: "no-repeat",
@@ -316,77 +315,6 @@ function HomeHeader({ t }: { t: (k: I18nKey) => string }) {
         </div>
       </div>
     </header>
-  );
-}
-
-function Hero({ t }: { t: (k: I18nKey) => string }) {
-  return (
-    <section
-      data-nex-vault-hero
-      aria-label={t("vault.home.heroEyebrow")}
-      style={{
-        marginTop: 18,
-        borderRadius: 24,
-        overflow: "hidden",
-        position: "relative",
-        background: "#0a0608",
-        aspectRatio: "16 / 11",
-        boxShadow: NEX.cardShadow,
-        border: `1px solid ${NEX.glassBorder}`,
-      }}
-    >
-      <Image
-        src="/nex-native/vault/nex-doorway.png"
-        alt=""
-        fill
-        priority
-        sizes="(max-width: 480px) 100vw, 480px"
-        style={{ objectFit: "cover", objectPosition: "center 30%" }}
-      />
-      <div
-        aria-hidden
-        style={{
-          position: "absolute",
-          inset: 0,
-          background:
-            "linear-gradient(180deg, rgba(10,6,8,0) 40%, rgba(10,6,8,0.82) 100%)",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          padding: "18px 18px 20px",
-          color: "#F7EFE4",
-        }}
-      >
-        <p
-          style={{
-            margin: 0,
-            fontSize: 11,
-            letterSpacing: "0.22em",
-            textTransform: "uppercase",
-            color: NEX.accent,
-            fontWeight: 700,
-          }}
-        >
-          {t("vault.home.heroEyebrow")}
-        </p>
-        <p
-          style={{
-            margin: "6px 0 0",
-            fontSize: 14,
-            lineHeight: 1.4,
-            color: "#F7EFE4",
-            maxWidth: 320,
-          }}
-        >
-          {t("vault.home.heroBody")}
-        </p>
-      </div>
-    </section>
   );
 }
 
