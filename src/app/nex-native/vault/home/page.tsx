@@ -186,12 +186,35 @@ export default async function VaultWorkspaceHomePage() {
           position: "relative",
         }}
       >
+        {/* Owner-authorised 2026-11-15 · the NEX Vault "Your Private
+            Space" branded hero graphic is now the fixed full-page
+            backdrop. A dark-to-transparent gradient overlay maintains
+            contrast for the sticky header and the glass tile grid
+            below · the image itself carries the NEX Vault title + the
+            padlock + the folder/photo/card iconography that the Hero
+            component previously duplicated in text. */}
         <div
           aria-hidden
+          data-nex-vault-home-backdrop
           style={{
             position: "fixed",
             inset: 0,
-            background: NEX.bgGradient,
+            backgroundImage: "url(/nex-native/vault/your-private-space.png)",
+            backgroundSize: "cover",
+            backgroundPosition: "center top",
+            backgroundRepeat: "no-repeat",
+            pointerEvents: "none",
+            zIndex: 0,
+          }}
+        />
+        <div
+          aria-hidden
+          data-nex-vault-home-backdrop-overlay
+          style={{
+            position: "fixed",
+            inset: 0,
+            background:
+              "linear-gradient(180deg, rgba(6,23,16,0.35) 0%, rgba(6,23,16,0.55) 45%, rgba(6,23,16,0.86) 100%)",
             pointerEvents: "none",
             zIndex: 0,
           }}
@@ -208,7 +231,13 @@ export default async function VaultWorkspaceHomePage() {
           }}
         >
           <MigrationRunner />
-          <Hero t={t} />
+          {/* Owner-authorised 2026-11-15 · the sealed Hero banner is
+              retired now that the "NEX Vault · Your Private Space"
+              branded image is the fixed backdrop. Its title + safe
+              iconography were duplicating what the Hero text panel
+              surfaced. The six-tile grid now sits closer to the
+              viewport top so the landing's primary nav is above the
+              fold on 844h handsets. */}
           {/* Owner-authorised 2026-11-15 · the Vault landing now shows
               the sealed six-tile grid (Chats, Contacts, Videos, Plans,
               Archived, Settings). The direct vaulted-chats list is
