@@ -118,6 +118,24 @@ export default defineConfig({
       timeout: 360_000,
     },
     {
+      // 2026-11-15 · D3 · dashboard product creation through the real
+      // category picker + /create/product/form end-to-end. Uses a
+      // disposable seller · preserves Hammerex/Rosa.
+      name: "product-create-form-390",
+      use: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+      testMatch: /product-create-form\.spec\.ts/,
+      timeout: 360_000,
+    },
+    {
+      // 2026-11-15 · D2 · order visibility for image-less products +
+      // cross-account denial. Two isolated contexts; disposable
+      // seller + buyer.
+      name: "order-visibility-390",
+      use: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+      testMatch: /order-visibility\.spec\.ts/,
+      timeout: 360_000,
+    },
+    {
       // 2026-11-15 · CRUCIAL · session persistence across close / reopen.
       // Verifies app session persists AND Vault stays separately locked
       // after context close + reopen. Uses Hammerex (sign-in only; Vault
@@ -135,6 +153,66 @@ export default defineConfig({
       use: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
       testMatch: /vault-cross-account-reset\.spec\.ts/,
       timeout: 300_000,
+    },
+    {
+      // 2026-11-15 · #13 Stripe TEST activation E2E · authored, execution
+      // gated on STRIPE_WEBHOOK_SECRET (set via `stripe listen`). Each
+      // test skip-reports the exact missing operator prerequisite.
+      name: "stripe-subscription-activation-390",
+      use: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+      testMatch: /stripe-subscription-activation\.spec\.ts/,
+      timeout: 300_000,
+    },
+    {
+      // 2026-11-15 · agreed-journey missing-UI smokes · subscription
+      // return/cancel · signup confirmation callback · /create/product
+      // landing · any other 404 fall-through in the agreed flows.
+      // Base URL respects PLAYWRIGHT_TEST_BASE_URL · falls back to
+      // the standard nexapp dev port 3008 (same convention as the
+      // product-linked-inquiry project · the :3010 no-impersonation
+      // driver isn't required here because we drive real sign-in).
+      name: "missing-ui-journeys-390",
+      use: {
+        viewport: { width: 390, height: 844 },
+        deviceScaleFactor: 2,
+        baseURL:
+          process.env.PLAYWRIGHT_TEST_BASE_URL ?? "http://localhost:3008",
+      },
+      testMatch: /missing-ui-journeys\.spec\.ts/,
+      timeout: 240_000,
+    },
+    {
+      // 2026-11-15 · CP3 · Stripe TEST-mode subscription handoff · signed
+      // seller POST to /billing/checkout/shop returns a `cs_test_` URL +
+      // DB still reflects pre-pay state. Does NOT drive Stripe's hosted
+      // page (operator-side webhook infra required).
+      name: "stripe-subscription-handoff-390",
+      use: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 },
+      testMatch: /stripe-subscription-handoff\.spec\.ts/,
+      timeout: 180_000,
+    },
+    {
+      // 2026-11-15 · CP2 · product-linked inquiry · a customer opens a
+      // product inquiry from a shop surface · the chosen product pins
+      // to the top of the peer conversation for BOTH participants and
+      // survives reload. A second product inquiry on the same shop
+      // stays distinguishable from the first. Ordinary peer chats
+      // (no product context) render NO pinned card. Uses TWO
+      // disposable seeded products on a disposable seller plus a
+      // disposable buyer · hard refuses Hammerex / Rosa.
+      // Base URL respects PLAYWRIGHT_TEST_BASE_URL · falls back to
+      // the standard nexapp dev port 3008 (not :3010 · that port is
+      // reserved for the sealed two-context-isolation driver which
+      // runs without dev-impersonation).
+      name: "product-linked-inquiry-390",
+      use: {
+        viewport: { width: 390, height: 844 },
+        deviceScaleFactor: 2,
+        baseURL:
+          process.env.PLAYWRIGHT_TEST_BASE_URL ?? "http://localhost:3008",
+      },
+      testMatch: /product-linked-inquiry\.spec\.ts/,
+      timeout: 360_000,
     },
   ],
 });

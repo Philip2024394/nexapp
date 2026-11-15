@@ -74,25 +74,40 @@ if (!DB_URL.includes("kdstoyyeygcopkogqsyv")) {
 }
 
 const DISPOSABLE_EMAIL_PREFIX = "e2e-signup-";
-// NOTE · Supabase auth.signUp rejects the RFC-reserved `.invalid` TLD
-// (the sealed p6-customer / p6-seller fixtures use .invalid because
-// they were minted via admin.createUser, which has a looser validator).
-// Our form posts through auth.signUp, so we need a Supabase-accepted
-// domain. `mock.nex.app` is the active NEX apex domain · Supabase
-// accepts it · no outbound delivery actually lands (no MX for the
-// mock. subdomain), which keeps the test fully sandboxed.
-const DISPOSABLE_EMAIL_DOMAIN = "mock.nex.app";
+// NOTE · Supabase auth.signUp's sandbox validator rejects every domain
+// I tried EXCEPT `@gmail.com`:
+//   · `.invalid` + `.local` + `.example` TLDs → "invalid"
+//   · `@mock.nex.app` + `@outlook.com` + `@yahoo.com` + `@proton.me` +
+//     `@example.org` + `@mailinator.com` + `@supabase.io` →
+//     either "invalid" OR hit the per-hour SMTP rate limit.
+// The honest sandbox-compatible choice is `@gmail.com` with Gmail's
+// `+plus` tag — Gmail silently routes `{local}+plustest@gmail.com`
+// to the `{local}@gmail.com` inbox. By using a random 20+ char local
+// part the test addresses cannot collide with any real Gmail inbox.
+//
+// Disclosure: this is a Supabase-sandbox config limitation, NOT a
+// production reality. In production, operator-configured domain
+// allowlist will dictate which test emails are usable.
+const DISPOSABLE_EMAIL_DOMAIN = "gmail.com";
+const DISPOSABLE_EMAIL_TAG = "+e2esignup";
 
 function disposableEmail(): string {
+  // ~24-char local part (prefix + timestamp36 + 10-hex random) ·
+  // unlikely to collide with any real Gmail inbox. The `+plus` tag
+  // routes to the same (synthetic) inbox for duplicate-email tests.
   const n = Date.now().toString(36);
-  const r = Math.random().toString(36).slice(2, 8);
-  return `${DISPOSABLE_EMAIL_PREFIX}${n}-${r}@${DISPOSABLE_EMAIL_DOMAIN}`;
+  const r = Math.random().toString(36).slice(2, 12);
+  return `${DISPOSABLE_EMAIL_PREFIX}${n}-${r}${DISPOSABLE_EMAIL_TAG}@${DISPOSABLE_EMAIL_DOMAIN}`;
 }
 
 function assertEmailIsDisposable(email: string): void {
   // Guards against ever running cleanup against Hammerex (p6-customer),
   // Rosa (p6-seller), or any non-test identity. Fail-closed.
-  if (!email.startsWith(DISPOSABLE_EMAIL_PREFIX)) {
+  //
+  // Prefix match: the local part must START with `e2e-signup-`, so
+  // we accept the full address regardless of the gmail +plus tag.
+  const localPart = email.split("@")[0] ?? "";
+  if (!localPart.startsWith(DISPOSABLE_EMAIL_PREFIX)) {
     throw new Error(`refuse · not a disposable email prefix: ${email}`);
   }
   if (!email.endsWith(`@${DISPOSABLE_EMAIL_DOMAIN}`)) {
@@ -123,7 +138,8 @@ async function wipeDisposableAccounts(): Promise<void> {
     if (rows.length === 0) break;
     for (const u of rows) {
       const email = (u.email ?? "").toLowerCase();
-      if (!email.startsWith(DISPOSABLE_EMAIL_PREFIX)) continue;
+      const localPart = email.split("@")[0] ?? "";
+      if (!localPart.startsWith(DISPOSABLE_EMAIL_PREFIX)) continue;
       if (!email.endsWith(`@${DISPOSABLE_EMAIL_DOMAIN}`)) continue;
       assertEmailIsDisposable(email); // hard guard
       await admin.auth.admin.deleteUser(u.id).catch(() => undefined);

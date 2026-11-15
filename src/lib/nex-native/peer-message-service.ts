@@ -304,6 +304,19 @@ export interface NexPeerCartOrderSnapshot {
     saving_pence: number;
     total_after_discount_pence: number;
   } | null;
+  /** #14 deterministic link · sealed 2026-11-15 · owner-authorised
+   *  existing-JSON-metadata approach. UUID minted at sendCartOrderAction
+   *  time (BEFORE the peer-message insert) as the future order's row id.
+   *  When a downstream code path creates a nex_order for this cart, it
+   *  passes this UUID into `createOrder({ id })` so nex_order.id matches
+   *  attachment_meta.cart.order_id exactly. The reader in
+   *  manage/orders/[orderId]/page.tsx uses this as Tier 0 (exact UUID
+   *  match) and skips every heuristic tier when present. Optional for
+   *  backward compatibility with legacy cart messages written before
+   *  2026-11-15 · those still go through the heuristic tiers (price +
+   *  product, product-only, most-recent) and can land on the explicit
+   *  "ambiguous" state for truly indistinguishable identical carts. */
+  order_id?: string;
 }
 
 /** Product snapshot embedded in an attachment_meta when a peer

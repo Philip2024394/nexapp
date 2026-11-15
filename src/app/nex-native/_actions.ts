@@ -2993,6 +2993,17 @@ export async function sendCartOrderAction(
     );
   }
 
+  // #14 deterministic link · sealed 2026-11-15 · owner-authorised
+  // existing-JSON-metadata approach. Mint the ORDER identifier UPSTREAM
+  // of the peer-message insert so a future createOrder() call can carry
+  // the exact same UUID through. The reader in
+  // manage/orders/[orderId]/page.tsx uses this as Tier 0 (exact match)
+  // and only falls back to the heuristic tiers for legacy messages
+  // without `attachment_meta.cart.order_id`.
+  //
+  // Scope: this UUID lives INSIDE the already-authorised cart JSON.
+  // No schema change. No DDL. No historical backfill.
+  const futureOrderId: string = crypto.randomUUID();
   const snapshot: import("@/lib/nex-native/peer-message-service").NexPeerCartOrderSnapshot = {
     shop_id: shopId,
     shop_slug: shopSlug,
@@ -3005,6 +3016,7 @@ export async function sendCartOrderAction(
     delivery_address: addressComplete ? deliveryAddress : null,
     delivery_quote: deliveryQuote,
     direct_price: directPrice,
+    order_id: futureOrderId,
   };
 
   // Body renders in plain-text clients that don't know cart_order.
@@ -3172,19 +3184,30 @@ export async function sendCartOrderAction(
     conversation_id: conversation.id,
     sender_account_id: session.account.id,
     body,
-    attachment_url: firstImage,
-    attachment_type: firstImage ? "cart_order" : null,
-    attachment_meta: firstImage ? { cart: snapshot } : { cart: snapshot },
+    // D2 fix · sealed 2026-11-15 · cart orders live ENTIRELY inside
+    // attachment_meta.cart. We MUST NOT stamp attachment_type='cart_order'
+    // because the sealed DB CHECK (nex_peer_message_attachment_type_check)
+    // only permits 'image'|'video'|'audio'|'call_invite' (plus other
+    // document/sticker/etc per later migrations · still never 'cart_order').
+    // Writing 'cart_order' here used to fail the insert outright when the
+    // lead item carried an image (CHECK violation) and silently dropped
+    // the snapshot off the seller's reader when it did not (both-or-neither
+    // pair check kept the row but downstream readers filtered on
+    // attachment_type='cart_order' and missed it). The snapshot already
+    // carries every item's image_url inside items[] · the bubble renderer
+    // hydrates the card from attachment_meta.cart, never from
+    // attachment_url. Readers now detect cart orders via attachment_meta
+    // -> 'cart' IS NOT NULL (see seller-insight-service, order detail
+    // page, peer chat page, portrait bloom shell).
+    attachment_url: null,
+    attachment_type: null,
+    attachment_meta: { cart: snapshot },
     // Track C · owner-authorised 2026-10-20 · idempotency key.
     // Undefined when the client did not supply a valid UUID · the
     // service layer treats absent send_intent_id as "no idempotency
     // requested" and uses the original insert path.
     send_intent_id: sendIntentId,
   });
-  // Note · attachment_url + attachment_type must be set together per
-  // the DB CHECK · when no image, we fall back to text-only body.
-  // The snapshot still lives on attachment_meta so if a client wants
-  // to hydrate it via a separate mechanism it can.
 
   // Phase 1 · Slice 1D · emit cart_sent after a confirmed cart
   // delivery. Metadata carries aggregate shape (item_count,

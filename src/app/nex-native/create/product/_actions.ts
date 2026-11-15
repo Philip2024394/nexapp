@@ -304,11 +304,25 @@ export async function createProductAction(
       department_id: input.departmentId,
       category_id: input.categoryId,
       spec: specFinal,
-      // Owner-authorised 2026-11-05 iter 25 · migration 280 applied ·
-      // optional background-media FKs for shoppable-card overlay.
-      background_video_id: input.backgroundVideoId ?? null,
-      background_image_url: input.backgroundImageUrl ?? null,
-      background_music_id: input.backgroundMusicId ?? null,
+      // Owner-authorised 2026-11-05 iter 25 · migration 280 · optional
+      // background-media FKs for shoppable-card overlay.
+      //
+      // 2026-11-15 · schema-drift guard · pass `undefined` (not `null`)
+      // when the input omits a value, so productService.createProduct's
+      // `if (input.background_* !== undefined)` short-circuit skips the
+      // INSERT of columns that may not exist on a sandbox DB that has
+      // not applied migration 280 yet. When the input DOES supply a
+      // value, the service still writes it · no behaviour change for
+      // production or any environment where mig 280 is applied.
+      background_video_id: input.backgroundVideoId !== undefined
+        ? input.backgroundVideoId
+        : undefined,
+      background_image_url: input.backgroundImageUrl !== undefined
+        ? input.backgroundImageUrl
+        : undefined,
+      background_music_id: input.backgroundMusicId !== undefined
+        ? input.backgroundMusicId
+        : undefined,
     });
     // 9 · Variant sync (fail-soft · bad variants surface a diagnostic
     // but DO NOT revoke the parent product. The seller can finish the

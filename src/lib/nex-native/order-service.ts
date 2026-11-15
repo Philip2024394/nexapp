@@ -31,6 +31,26 @@ export interface CreateOrderInput {
   idempotency_key?: string | null;
   /** Optional buyer note attached at placement · trimmed · max 500 chars. */
   customer_note?: string | null;
+  /** #14 deterministic cart→order link · sealed 2026-11-15 ·
+   *  owner-authorised JSON-metadata approach.
+   *
+   *  When provided, the explicit UUID is passed to the INSERT. Postgres
+   *  accepts an explicit UUID insert into a `DEFAULT gen_random_uuid()`
+   *  column (`nex_order.id`) · the DEFAULT only fires when the column
+   *  is omitted from the INSERT column list. No DDL required.
+   *
+   *  The intended caller is a future cart→order code path that passes
+   *  the UUID previously minted by sendCartOrderAction and written into
+   *  `attachment_meta.cart.order_id`, so nex_order.id matches the cart
+   *  message's embedded order_id exactly. The reader in
+   *  manage/orders/[orderId]/page.tsx then resolves the originating
+   *  cart snapshot via a direct equality match (Tier 0) instead of the
+   *  legacy heuristic tiers.
+   *
+   *  When omitted, behaviour is unchanged · Postgres auto-generates the
+   *  id via the column default. Every existing caller (placeOrderAction
+   *  single-product quick-buy · test mocks) is backward-compatible. */
+  id?: NexUuid;
 }
 
 /**
@@ -77,20 +97,27 @@ export async function createOrder(input: CreateOrderInput): Promise<NexOrderRow>
     }
   }
 
-  // 4 · INSERT with snapshotted price/currency from real product record
+  // 4 · INSERT with snapshotted price/currency from real product record.
+  // #14 deterministic cart→order link · if input.id is supplied, pass
+  // it through so nex_order.id = attachment_meta.cart.order_id. When
+  // omitted, the column DEFAULT gen_random_uuid() fires unchanged.
+  const insertRow: Record<string, unknown> = {
+    customer_account_id: input.customer_account_id,
+    business_id: product.business_id,
+    product_id: product.id,
+    source_conversation_id: input.source_conversation_id ?? null,
+    state: "created",
+    price_pence: product.price_pence,
+    currency: product.currency,
+    idempotency_key: input.idempotency_key ?? null,
+    customer_note: customerNote,
+  };
+  if (input.id) {
+    insertRow.id = input.id;
+  }
   const { data, error } = await nexSupabaseAdmin
     .from("nex_order")
-    .insert({
-      customer_account_id: input.customer_account_id,
-      business_id: product.business_id,
-      product_id: product.id,
-      source_conversation_id: input.source_conversation_id ?? null,
-      state: "created",
-      price_pence: product.price_pence,
-      currency: product.currency,
-      idempotency_key: input.idempotency_key ?? null,
-      customer_note: customerNote,
-    })
+    .insert(insertRow)
     .select("*")
     .single();
 

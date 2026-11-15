@@ -218,10 +218,18 @@ async function countEnquiryByBusiness(args: {
         )
         .neq("sender_account_id", args.excludeSender)
         .gte("sent_at", args.windowStart),
+      // D2 fix · sealed 2026-11-15 · the sealed DB CHECK on
+      // nex_peer_message_attachment_type_check does not permit
+      // 'cart_order' as a value of attachment_type, so a filter keyed
+      // on attachment_type='cart_order' always returned zero rows and
+      // this per-business seller-insight count silently reported 0 cart
+      // enquiries. Detect cart rows by the shop_id selector on
+      // attachment_meta.cart · it can only be present when the row IS
+      // a cart order, and it's the same business-match predicate we
+      // already need.
       nexSupabaseAdmin
         .from("nex_peer_message")
         .select("sender_account_id")
-        .eq("attachment_type", "cart_order")
         .filter("attachment_meta->cart->>shop_id", "eq", args.businessId)
         .neq("sender_account_id", args.excludeSender)
         .gte("sent_at", args.windowStart),

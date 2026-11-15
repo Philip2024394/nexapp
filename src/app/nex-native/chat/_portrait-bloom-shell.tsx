@@ -1715,8 +1715,15 @@ export function PortraitBloomShell({
                           hasBody={!!m.body}
                           accent={bubbleRim}
                         />
-                      ) : m.attachment_type === "cart_order" &&
-                        m.attachment_cart ? (
+                      ) : m.attachment_cart ? (
+                        // D2 fix · sealed 2026-11-15 · render by
+                        // attachment_cart presence, not attachment_type.
+                        // The upstream projector in chat/peer/[accountId]
+                        // /page.tsx only sets attachment_cart when
+                        // attachment_meta.cart is present · the sealed
+                        // DB CHECK does not permit a 'cart_order' value
+                        // on attachment_type, so keying this branch off
+                        // attachment_type always falsed-out.
                         <MessageCartOrderCard
                           cart={m.attachment_cart}
                           hasBody={!!m.body}

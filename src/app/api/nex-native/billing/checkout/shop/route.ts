@@ -126,9 +126,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   // 3 · build success/cancel URLs tied to the request origin
+  //
+  // Owner directive 2026-11-15 (agreed-journey #13 · subscription
+  // return page) · Stripe redirects to sealed /subscription/return
+  // + /subscription/cancel pages which honestly represent the three
+  // states (pending / active / cancelled) and never fake entitlement.
+  // The `{CHECKOUT_SESSION_ID}` placeholder is substituted by Stripe
+  // at redirect time · consumed as a transparency breadcrumb only
+  // (never trusted as proof of payment).
   const origin = originFromRequest(req);
-  const successUrl = `${origin}/nex-native/settings/tier?checkout=success`;
-  const cancelUrl = `${origin}/nex-native/pricing?checkout=cancelled`;
+  const successUrl = `${origin}/nex-native/subscription/return?session_id={CHECKOUT_SESSION_ID}`;
+  const cancelUrl = `${origin}/nex-native/subscription/cancel`;
 
   // 4 · create the Stripe Checkout Session
   let stripeClient: Stripe;

@@ -245,6 +245,20 @@ function previewFor(msg: peerMsgService.NexPeerMessageRow | null): string {
   if (!msg) return "No messages yet";
   if (msg.deleted_for_everyone) return "🚫 Message deleted";
   if (msg.encrypted) return "🔒 New message";
+  // 2026-11-15 · D2 completion. Cart orders stamp attachment_type=null
+  // + attachment_meta.cart because the sealed nex_peer_message_
+  // attachment_type_check constraint restricts attachment_type to
+  // ('image','video','audio','call_invite') · 'cart_order' is NOT a
+  // permitted value. Detect cart orders by meta presence BEFORE the
+  // attachment_type switch so the preview label stays correct.
+  if (
+    msg.attachment_meta &&
+    typeof msg.attachment_meta === "object" &&
+    "cart" in msg.attachment_meta &&
+    (msg.attachment_meta as Record<string, unknown>).cart != null
+  ) {
+    return "🧾 Order";
+  }
   if (msg.attachment_type) {
     switch (msg.attachment_type) {
       case "image":          return "📷 Photo";

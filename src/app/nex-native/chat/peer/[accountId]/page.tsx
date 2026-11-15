@@ -986,7 +986,14 @@ export default async function PeerChatPage({
           ? m.attachment_meta.menu_item
           : null,
       attachment_cart:
-        m.attachment_type === "cart_order" &&
+        // D2 fix · sealed 2026-11-15 · detect cart orders by
+        // attachment_meta.cart presence, NOT attachment_type. The
+        // sealed DB CHECK does not permit 'cart_order' on
+        // attachment_type · the write path in _actions.ts now leaves
+        // attachment_type NULL and parks the whole snapshot on
+        // attachment_meta.cart. Meta-based detection is backward
+        // compatible with any legacy row that might still carry
+        // attachment_type='cart_order' (unlikely given the CHECK).
         m.attachment_meta &&
         typeof m.attachment_meta === "object" &&
         "cart" in m.attachment_meta &&
@@ -1325,6 +1332,91 @@ export default async function PeerChatPage({
   );
   const chatViewPrefs = await getChatViewPreferencesSafe(session.account.id);
 
+  // CP2 · 2026-11-15 · Product-linked inquiry pinned anchor.
+  //
+  // 2026-11-15 · Product-Linked Chat Engineer fix · Option A
+  // (latest-pin + visible history). Original CP2 implementation
+  // derived the anchor from the EARLIEST product_share in the
+  // conversation, which silently pinned the wrong product when the
+  // SAME buyer later inquired about a second product (Product X
+  // stayed pinned forever even after the buyer opened an inquiry
+  // for Product Y). That mislabelled the current inquiry context
+  // for both parties. Fix: derive the anchor from the LATEST
+  // product_share instead · the CURRENT inquiry context always
+  // leads. Earlier product inquiries remain visible inline in
+  // message history (rendered as their own product-card bubbles by
+  // the sealed Bridge 11 renderer), so no inquiry is lost or
+  // overwritten · both contexts are distinguishable, and both
+  // participants see the SAME latest-inquiry pin after reload.
+  //
+  // Why Option A (not B · dual pin, or C · scroll-anchored per-
+  // inquiry grouping): latest-pin is the minimal-UX-risk fix that
+  // closes the owner's acceptance ("two different product
+  // inquiries between the SAME buyer and seller retain the correct
+  // context for both parties after reopening/reload, without
+  // overwriting or mislabelling either inquiry"). Dual pin costs
+  // mobile screen real estate and still has to pick an order when
+  // a third inquiry arrives. Per-inquiry scroll grouping needs an
+  // IntersectionObserver + client state and a schema decision about
+  // which product is "active" when nothing is in view. Latest-pin
+  // works with existing data today, is symmetric for buyer + seller,
+  // and keeps the historical inquiries visible as inline bubbles.
+  //
+  // When this conversation was opened from a seller's product (the
+  // customer tapped "Ask about this" on a product detail sheet · the
+  // sealed sendProductInquiryAction wrote a nex_peer_message with
+  // attachment_type='product' + attachment_meta.product snapshot),
+  // render a sticky "Pinned inquiry" card at the TOP of the chat
+  // surface for BOTH participants. Ordinary personal chats (no
+  // attachment_meta.product message) render NO pinned card ·
+  // nothing changes for them.
+  // Preserves the sealed device-only E2E posture · we read exactly
+  // the same persisted snapshot the bubble renderer already reads ·
+  // no new column, no new table, no client-side extra fetch.
+  // Vaulted conversations suppress the card (ssrMessages empty
+  // under vault-locked state · same posture as every other SSR
+  // bubble). Pure derivation from already-fetched rows.
+  const inquiryAnchor: {
+    productId: string;
+    name: string;
+    priceLabel: string;
+    imageUrl: string | null;
+    businessSlug: string | null;
+    sentAt: string;
+  } | null = (() => {
+    if (isVaultedForViewer) return null;
+    // ssrMessages is sorted ascending by sent_at (see
+    // peerMessageService.listPeerMessages order). Walk BACKWARDS to
+    // pick up the LATEST product snapshot in the conversation, so a
+    // follow-up inquiry on a different product correctly rotates the
+    // pin instead of leaving the originating product stuck.
+    for (let i = ssrMessages.length - 1; i >= 0; i--) {
+      const m = ssrMessages[i];
+      if (m.deleted_for_everyone) continue;
+      // Meta-based detection: same posture as D2 cart-order (detect
+      // by attachment_meta.cart presence, not attachment_type). The
+      // sealed sendProductInquiryAction writes attachment_type='product'
+      // AT the CHECK enforcement point in production · sandbox CHECK
+      // today does not include 'product' · meta-based detection works
+      // under both postures AND gracefully supports future rows that
+      // land with attachment_type=NULL to stay inside the sandbox
+      // CHECK envelope (identical to the D2 cart-order fix).
+      const meta = m.attachment_meta;
+      if (!meta || typeof meta !== "object") continue;
+      const snap = (meta as { product?: peerMessageService.NexPeerProductSnapshot }).product;
+      if (!snap || !snap.product_id || !snap.name) continue;
+      return {
+        productId: snap.product_id,
+        name: snap.name,
+        priceLabel: formatProductPriceLabel(snap.price_pence, snap.currency),
+        imageUrl: snap.image_url ?? null,
+        businessSlug: snap.business_slug ?? null,
+        sentAt: m.sent_at,
+      };
+    }
+    return null;
+  })();
+
   return (
     <div
       data-nex-peer-chat-prototype-wrap
@@ -1462,6 +1554,118 @@ export default async function PeerChatPage({
         >
           🏪 Replying as {replyingAsChip}
         </div>
+      ) : null}
+
+      {/* CP2 · 2026-11-15 · Product-linked inquiry pinned anchor card.
+          Visible to BOTH customer AND seller because the derivation
+          reads the SAME persisted attachment_meta.product snapshot
+          from the sealed message log. Survives reload (SSR anchor
+          derived from the earliest attachment_type='product' row).
+          Hidden in ordinary (non-inquiry) peer chats. Positioned
+          fixed under the sealed FreeChatHeader (and under the
+          replying-as chip when active) so it never scrolls away.
+          Links the recipient back to the product detail sheet on
+          the shop surface for context. */}
+      {inquiryAnchor ? (
+        <a
+          data-nex-peer-chat-inquiry-anchor={inquiryAnchor.productId}
+          data-nex-peer-chat-inquiry-anchor-name={inquiryAnchor.name}
+          href={
+            inquiryAnchor.businessSlug
+              ? `/nex-native/${inquiryAnchor.businessSlug}?product=${encodeURIComponent(
+                  inquiryAnchor.productId,
+                )}`
+              : "#"
+          }
+          style={{
+            position: "fixed",
+            top: replyingAsChip ? 58 + 32 : 58,
+            left: 0,
+            right: 0,
+            zIndex: 9,
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "8px 12px",
+            background: "rgba(5, 15, 28, 0.9)",
+            borderBottom: "1px solid rgba(198, 161, 91, 0.45)",
+            color: "#FAF8F4",
+            textDecoration: "none",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+            boxShadow: "0 4px 14px rgba(0,0,0,0.28)",
+          }}
+        >
+          {inquiryAnchor.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={inquiryAnchor.imageUrl}
+              alt=""
+              style={{
+                width: 42,
+                height: 42,
+                objectFit: "cover",
+                borderRadius: 8,
+                border: "1px solid rgba(198,161,91,0.4)",
+                flexShrink: 0,
+              }}
+            />
+          ) : (
+            <div
+              aria-hidden
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 8,
+                background: "rgba(198,161,91,0.14)",
+                border: "1px solid rgba(198,161,91,0.4)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 18,
+                flexShrink: 0,
+              }}
+            >
+              📦
+            </div>
+          )}
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+            <span
+              style={{
+                fontSize: 9,
+                fontWeight: 900,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: "var(--nex-world-secondary, #C6A15B)",
+              }}
+            >
+              📌 Latest inquiry about
+            </span>
+            <span
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: "#FAF8F4",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {inquiryAnchor.name}
+            </span>
+          </div>
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 900,
+              color: "var(--nex-world-secondary, #C6A15B)",
+              flexShrink: 0,
+              marginLeft: 6,
+            }}
+          >
+            {inquiryAnchor.priceLabel}
+          </span>
+        </a>
       ) : null}
 
       {/* Owner-authorised 2026-11-05 · fresh-conversation empty state.
