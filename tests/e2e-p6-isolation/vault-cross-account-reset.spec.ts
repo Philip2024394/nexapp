@@ -197,7 +197,7 @@ async function resetVaultState(accountId: string): Promise<void> {
     );
     await client
       .query(
-        `UPDATE nex_vault_lockout_state
+        `UPDATE nex_vault_pin_lockout
          SET consecutive_failures = 0, reset_required = false, locked_at = NULL
          WHERE account_id = $1`,
         [accountId],

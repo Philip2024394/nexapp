@@ -25,6 +25,13 @@ function hashToken(plaintext: string): Buffer {
   return createHash("sha256").update(plaintext, "utf8").digest();
 }
 
+/** Serialise a 32-byte digest for Postgres bytea · Supabase REST
+ *  expects the `\x` hex-prefixed string form, not a raw Buffer
+ *  (which it base64-encodes, breaking the octet-length CHECK). */
+function bytesToPgBytea(bytes: Buffer): string {
+  return "\\x" + bytes.toString("hex");
+}
+
 /** Issue a reset token. Caller must be the authenticated owner of
  *  accountId AND the account must be in reset_required state (else we
  *  refuse · no silent reset-tokens for already-usable accounts). */
@@ -66,7 +73,7 @@ export async function issuePinResetToken(input: {
     .from("nex_vault_pin_reset_token")
     .insert({
       account_id: input.accountId,
-      token_hash: tokenHash,
+      token_hash: bytesToPgBytea(tokenHash),
       created_at: now.toISOString(),
       expires_at: expiresAt.toISOString(),
       locked_at_at_issue: lockout.lockedAt,
@@ -136,7 +143,7 @@ export async function consumePinResetToken(input: {
   const { data: row, error: readErr } = await nexSupabaseAdmin
     .from("nex_vault_pin_reset_token")
     .select("id, account_id, consumed_at, expires_at, locked_at_at_issue")
-    .eq("token_hash", tokenHash)
+    .eq("token_hash", bytesToPgBytea(tokenHash))
     .maybeSingle();
   if (readErr) {
     throw new Error(`pin_reset_consume_read_failed: ${readErr.message}`);
