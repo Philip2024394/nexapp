@@ -75,6 +75,9 @@ import {
   MOCK_NOTIFICATIONS,
   type NotificationItem,
 } from "@/lib/nex-native/notifications/mock-notifications-data";
+// Owner-authorised 2026-11-16 · bounded read-path wiring of the LEFT
+// notifications drawer's Orders section to real seller orders.
+import { listSellerOrderNotifications } from "@/lib/nex-native/notifications/seller-order-notifications";
 import { ShopDrawer } from "@/components/nex-native/shop-drawer/shop-drawer-client";
 import { ScrollToBottomButton } from "@/components/nex-native/chat-chrome/scroll-to-bottom-button";
 import { effectiveTier } from "@/lib/nex-native/account-service";
@@ -1279,11 +1282,20 @@ export default async function PeerChatPage({
     if (!badge) return n;
     return { ...n, senderHasShop: true };
   };
+  // Owner-authorised 2026-11-16 · real seller orders replace the mock
+  // "orders" rows. Returns [] for buyers / signed-out / query failure.
+  const sellerOrderNotifs = await listSellerOrderNotifications(
+    session.account.id,
+  );
   const notifications: NotificationItem[] = [
     ...incomingInviteNotifs.map(enrichSenderShop),
     ...unreadChatNotifs.map(enrichSenderShop),
+    ...sellerOrderNotifs,
     ...MOCK_NOTIFICATIONS.filter(
-      (n) => n.section !== "follows" && n.section !== "chats",
+      (n) =>
+        n.section !== "follows" &&
+        n.section !== "chats" &&
+        n.section !== "orders",
     ),
   ];
   const peerFirstName =
@@ -1972,11 +1984,33 @@ export default async function PeerChatPage({
       {/* Owner fix 2026-11-05 · prototype UX expects the shop 3-dot FAB
           visible for every viewer (empty state renders cleanly when
           the viewer has no products). Earlier gate `viewerHasBusiness`
-          hid the FAB for founder nex-99901 who has no nex_business row. */}
+          hid the FAB for founder nex-99901 who has no nex_business row.
+
+          Owner directive 2026-11-16 · when the peer owns a business,
+          the drawer flips to PEER-CATALOG mode and renders the peer
+          shop owner's real live `nex_product` rows (resolved server-
+          side above as `peerProducts`). Mock inventory is no longer
+          the default. The Shop FAB glyph swaps to the storefront icon
+          in this mode so it no longer visually collides with the
+          Call Centre FAB stacked above it. */}
       <ShopDrawer
         viewerHasShop={true}
         peerDisplayName={peer.display_name}
         shareAction={bind}
+        peerCatalog={!!peerBusiness}
+        products={
+          peerBusiness
+            ? peerProducts.map((p) => ({
+                id: p.id,
+                name: p.name,
+                priceLabel:
+                  typeof p.price_pence === "number" && p.currency
+                    ? formatProductPriceLabel(p.price_pence, p.currency)
+                    : "",
+                imageUrl: p.image_url ?? null,
+              }))
+            : undefined
+        }
       />
       <ScrollToBottomButton />
     </div>

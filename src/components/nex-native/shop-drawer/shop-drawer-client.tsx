@@ -2,29 +2,34 @@
 
 // src/components/nex-native/shop-drawer/shop-drawer-client.tsx
 //
-// NEX · Shop Drawer · Phase 1 prototype UI.
-// Owner-authorised 2026-11-05.
+// NEX · Shop Drawer.
+// Owner-authorised 2026-11-05 · peer-catalog mode added 2026-11-16.
 // -----------------------------------------------------------------------------
-// Left-slide drawer that opens from the lower-right 3-dot FAB. Shows
-// the viewer's shop products one-per-row (square product card + title +
-// price · visual style modelled on the sealed Music Library card). Tap
-// a card → sends the product to the peer via the sealed share-product
-// server action (zero new backend · reuses sendPeerMessageOrShareProductAction
-// with product_id in the form data).
+// Left-slide drawer opened from a lower-right FAB. Two operating modes:
 //
-// Phase 1 scope:
-//   · Mock product data from mock-shop-products.ts (not live yet).
-//   · Seller gate delegated to the mounting page (hidden entirely for
-//     non-shop accounts via `viewerHasShop={false}`).
-//   · Call Centre is NOT accessible from this FAB · it remains reachable
-//     via the + attach panel's Call Centre tile. The FAB previously
-//     opened Call Centre on existing peer chats · the owner explicitly
-//     repurposed this slot for the Shop drawer on the prototype.
+//   1. VIEWER-SHOP mode (legacy · `peerCatalog=false`) · the drawer
+//      shows the viewer's own shop products (currently still backed by
+//      MOCK_SHOP_PRODUCTS until a viewer-owned-catalogue wiring arrives);
+//      tapping a card sends that product to the peer via
+//      `sendPeerMessageOrShareProductAction`.
 //
-// Phase 2 (NOT authorised yet):
-//   · Server-resolved nex_product rows scoped to viewer's nex_business.
-//   · Real signed image URLs + live price formatting.
-//   · Back-navigation, product-detail preview, quantity/variant picker.
+//   2. PEER-CATALOG mode (new · `peerCatalog=true`) · the drawer shows
+//      the PEER shop owner's live `nex_product` rows, resolved server-
+//      side on the peer chat page and passed in via `products=…`. An
+//      empty array renders the empty state (no mock fallback). Tapping
+//      a card posts the same product_id to the share action so the
+//      buyer "asks about" the product in the conversation.
+//
+// Trigger glyph:
+//   · PEER-CATALOG · `ShopGlyph` (storefront icon) · resolves the
+//     duplicate-three-dot confusion with the Call Centre FAB that
+//     stacks above at bottom:150px.
+//   · VIEWER-SHOP · `ThreeDotsGlyph` (horizontal 3-dot) · retained
+//     for legacy prototype behaviour.
+//
+// Call Centre is NOT accessible from this FAB · it remains reachable
+// via the + attach panel's Call Centre tile and via the stacked
+// `FreeChatCallCenterDrawerClient` FAB above this one.
 //
 // Visual language · Ireland palette (same tokens as NotificationsDrawer
 // + ControlDrawer):
@@ -59,9 +64,17 @@ export interface ShopDrawerProps {
    *  component never sees the raw peer id. */
   readonly shareAction: (formData: FormData) => Promise<void> | Promise<never> | void;
   /** Optional product list · Phase 1 defaults to MOCK_SHOP_PRODUCTS so
-   *  the prototype renders without further wiring. Phase 2 will pass a
-   *  server-resolved array here. */
+   *  the prototype renders without further wiring. In peer-catalog mode
+   *  the mounting page passes real `nex_product` rows scoped to the peer
+   *  shop owner's `nex_business` (never the viewer's). An empty array
+   *  renders the empty state rather than falling back to mocks. */
   readonly products?: ReadonlyArray<ShopProduct>;
+  /** Owner directive 2026-11-16 · when true, the drawer presents the
+   *  PEER shop owner's live product catalogue to the viewer (buyer view).
+   *  Flips header title, instruction copy, empty-state copy, toast text,
+   *  and the trigger glyph. Hides the "Activate your shop" container
+   *  because the viewer is not expected to own a shop in this mode. */
+  readonly peerCatalog?: boolean;
 }
 
 export function ShopDrawer({
@@ -69,6 +82,7 @@ export function ShopDrawer({
   peerDisplayName,
   shareAction,
   products,
+  peerCatalog = false,
 }: ShopDrawerProps): React.JSX.Element | null {
   const [open, setOpen] = React.useState(false);
   const [rendered, setRendered] = React.useState(false);
@@ -79,7 +93,12 @@ export function ShopDrawer({
   const closeRef = React.useRef<HTMLButtonElement | null>(null);
   const searchRef = React.useRef<HTMLInputElement | null>(null);
 
-  const list = products ?? MOCK_SHOP_PRODUCTS;
+  // Owner directive 2026-11-16 · in peer-catalog mode we always honour
+  // the server-provided list (even when empty) and never fall back to
+  // mocks · a buyer must see the peer owner's real catalogue or the
+  // empty state, not fabricated inventory. Legacy prototype mode keeps
+  // the mock fallback until the owner retires it.
+  const list = peerCatalog ? products ?? [] : products ?? MOCK_SHOP_PRODUCTS;
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -129,7 +148,12 @@ export function ShopDrawer({
   // your shop" container with a CTA so buyers-who-are-not-yet-sellers
   // can learn about shop sharing in-context. Call Centre remains
   // reachable via + regardless.
-  const noShopMode = !viewerHasShop;
+  //
+  // Owner directive 2026-11-16 · peerCatalog mode is the buyer's view of
+  // the peer owner's catalogue, so the "activate your shop" CTA is
+  // irrelevant and the no-shop container is suppressed even when the
+  // viewer themselves has no shop.
+  const noShopMode = !peerCatalog && !viewerHasShop;
 
   const overlay = (
     <>
@@ -155,9 +179,14 @@ export function ShopDrawer({
 
       <aside
         role="dialog"
-        aria-label="Your shop · share a product"
+        aria-label={
+          peerCatalog
+            ? `${peerDisplayName}'s shop · browse products`
+            : "Your shop · share a product"
+        }
         aria-modal="true"
         data-nex-shop-drawer
+        data-nex-shop-drawer-mode={peerCatalog ? "peer-catalog" : "viewer-shop"}
         data-nex-shop-drawer-visible={visible ? "true" : "false"}
         style={{
           position: "absolute",
@@ -285,7 +314,7 @@ export function ShopDrawer({
                   color: TEXT,
                 }}
               >
-                Your shop
+                {peerCatalog ? `${peerDisplayName}'s shop` : "Your shop"}
               </h2>
             </div>
             <button
@@ -328,6 +357,12 @@ export function ShopDrawer({
           >
             {noShopMode ? (
               <>Never been as easy to impress and seal the deal.</>
+            ) : peerCatalog ? (
+              <>
+                Tap a product to ask{" "}
+                <span style={{ color: TEXT }}>{peerDisplayName}</span>{" "}
+                about it
+              </>
             ) : (
               <>
                 Tap a product to send it to{" "}
@@ -365,8 +400,12 @@ export function ShopDrawer({
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search your products"
-              aria-label="Search your products"
+              placeholder={
+                peerCatalog ? "Search products" : "Search your products"
+              }
+              aria-label={
+                peerCatalog ? "Search products" : "Search your products"
+              }
               data-nex-shop-drawer-search
               style={{
                 width: "100%",
@@ -399,7 +438,11 @@ export function ShopDrawer({
           {noShopMode ? (
             <ActivateShopContainer onClose={closeDrawer} />
           ) : filtered.length === 0 ? (
-            <EmptyState hasQuery={query.trim().length > 0} />
+            <EmptyState
+              hasQuery={query.trim().length > 0}
+              peerCatalog={peerCatalog}
+              peerDisplayName={peerDisplayName}
+            />
           ) : (
             filtered.map((product) => (
               <ProductCard
@@ -407,6 +450,7 @@ export function ShopDrawer({
                 product={product}
                 shareAction={shareAction}
                 onSent={closeDrawer}
+                peerCatalog={peerCatalog}
               />
             ))
           )}
@@ -417,17 +461,27 @@ export function ShopDrawer({
 
   return (
     <>
-      {/* Trigger · lower-right 3-dot FAB · same slot the Call Centre
-          FAB occupies elsewhere. On the prototype this slot opens the
-          Shop drawer for sellers · hidden entirely for buyers via the
-          component-level gate above. */}
+      {/* Trigger · lower-right FAB · the Call Centre FAB stacks above
+          this one at bottom:150px with a vertical 3-dot glyph, so the
+          two FABs stay distinct both by vertical position AND by
+          glyph · this one now shows a storefront glyph (peer-catalog)
+          or the standard 3-dot (legacy viewer-shop mode). Owner
+          directive 2026-11-16 · resolves the duplicate-three-dot
+          confusion while preserving each drawer's distinct purpose. */}
       <button
         ref={triggerRef}
         type="button"
-        aria-label="Open your shop · share a product"
+        aria-label={
+          peerCatalog
+            ? `Open ${peerDisplayName}'s shop · browse products`
+            : "Open your shop · share a product"
+        }
         aria-expanded={open}
         onClick={openDrawer}
         data-nex-shop-drawer-trigger
+        data-nex-shop-drawer-trigger-mode={
+          peerCatalog ? "peer-catalog" : "viewer-shop"
+        }
         style={{
           position: "absolute",
           bottom: "calc(env(safe-area-inset-bottom, 0px) + 90px)",
@@ -453,7 +507,11 @@ export function ShopDrawer({
           WebkitTapHighlightColor: "transparent",
         }}
       >
-        <ThreeDotsGlyph accent={CYAN} />
+        {peerCatalog ? (
+          <ShopGlyph accent={CYAN} size={22} />
+        ) : (
+          <ThreeDotsGlyph accent={CYAN} />
+        )}
       </button>
 
       {rendered && frameNode ? createPortal(overlay, frameNode) : null}
@@ -467,12 +525,14 @@ function ProductCard({
   product,
   shareAction,
   onSent,
+  peerCatalog,
 }: {
   readonly product: ShopProduct;
   readonly shareAction: (
     formData: FormData,
   ) => Promise<void> | Promise<never> | void;
   readonly onSent: () => void;
+  readonly peerCatalog: boolean;
 }): React.JSX.Element {
   // Server action invocation · tap the whole card to send. The form
   // submission handles the redirect itself · we close the drawer
@@ -487,12 +547,17 @@ function ProductCard({
         // Owner-authored 2026-11-05 · action toast · fires on card tap
         // so the seller sees "Product shared" instantly rather than
         // waiting for the chat round-trip.
+        // Owner directive 2026-11-16 · copy adapts for peer-catalog
+        // mode · a buyer taps to ask about the peer's product rather
+        // than share their own.
         void (async () => {
           const mod = await import(
             "@/components/nex-native/ui/action-toast"
           );
           mod.showActionToast({
-            message: `Shared ${product.name}`,
+            message: peerCatalog
+              ? `Asked about ${product.name}`
+              : `Shared ${product.name}`,
             kind: "success",
           });
         })();
@@ -508,7 +573,11 @@ function ProductCard({
         type="submit"
         disabled={pending}
         data-nex-shop-drawer-card
-        aria-label={`Send ${product.name} to the chat`}
+        aria-label={
+          peerCatalog
+            ? `Ask about ${product.name}`
+            : `Send ${product.name} to the chat`
+        }
         style={{
           width: "100%",
           padding: 0,
@@ -541,17 +610,39 @@ function ProductCard({
             boxSizing: "border-box",
           }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={product.imageUrl}
-            alt=""
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              display: "block",
-            }}
-          />
+          {product.imageUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={product.imageUrl}
+              alt=""
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: "block",
+              }}
+            />
+          ) : (
+            // Owner directive 2026-11-16 · neutral placeholder tile ·
+            // `nex_product.image_url` is nullable and real catalogues
+            // can arrive without a photo. Rather than rendering a
+            // broken img, the drawer paints a muted square with the
+            // shop glyph.
+            <div
+              aria-hidden
+              style={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background:
+                  "color-mix(in srgb, var(--nex-world-background-base, #020914) 72%, transparent)",
+              }}
+            >
+              <ShopGlyph accent={MUTED} size={30} />
+            </div>
+          )}
 
           {/* Send chip · fades in on hover/focus */}
           <span
@@ -628,9 +719,23 @@ function ProductCard({
 
 function EmptyState({
   hasQuery,
+  peerCatalog,
+  peerDisplayName,
 }: {
   readonly hasQuery: boolean;
+  readonly peerCatalog: boolean;
+  readonly peerDisplayName: string;
 }): React.JSX.Element {
+  const emptyTitle = hasQuery
+    ? "No products match"
+    : peerCatalog
+      ? `${peerDisplayName} hasn't listed products yet`
+      : "Your shop is empty";
+  const emptyBody = hasQuery
+    ? "Try a different term, or clear the search to see everything."
+    : peerCatalog
+      ? "When they add live products to their shop you'll be able to browse them here and ask about any item."
+      : "Products you list for sale will appear here · tap any one to share it in this chat for instant selling.";
   return (
     <div
       style={{
@@ -659,12 +764,10 @@ function EmptyState({
         <ShopGlyph accent={CYAN} />
       </div>
       <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: TEXT }}>
-        {hasQuery ? "No products match" : "Your shop is empty"}
+        {emptyTitle}
       </p>
       <p style={{ margin: 0, fontSize: 11.5, lineHeight: 1.45, color: MUTED, maxWidth: 240 }}>
-        {hasQuery
-          ? "Try a different term, or clear the search to see everything."
-          : "Products you list for sale will appear here · tap any one to share it in this chat for instant selling."}
+        {emptyBody}
       </p>
     </div>
   );

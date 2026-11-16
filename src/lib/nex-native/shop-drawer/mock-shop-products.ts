@@ -26,8 +26,10 @@ export interface ShopProduct {
    *  prototype so the drawer doesn't need its own currency helpers. */
   readonly priceLabel: string;
   /** Square product image URL. For the prototype we use solid-colour
-   *  data URIs so the drawer renders without any external assets. */
-  readonly imageUrl: string;
+   *  data URIs so the drawer renders without any external assets. Real
+   *  `nex_product.image_url` is nullable, so the field accepts null and
+   *  the renderer falls back to a neutral placeholder tile. */
+  readonly imageUrl: string | null;
   /** Short category tag · rendered as a sage chip under the title.
    *  Optional · omit for products that don't categorise meaningfully. */
   readonly tag?: string;
