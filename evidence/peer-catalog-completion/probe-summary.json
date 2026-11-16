@@ -1,0 +1,74 @@
+{
+  "journeys": [
+    {
+      "id": "A-nav",
+      "status": "PASS",
+      "note": "buyer landed at /nex-native/chat/peer/b7a0cfb1-c71e-41c9-b84b-c20e515b63b3"
+    },
+    {
+      "id": "A-fab-present",
+      "status": "PASS",
+      "note": "Shop FAB mounted once in peer-catalog mode"
+    },
+    {
+      "id": "A-callcenter-present",
+      "status": "PASS",
+      "note": "Call Centre FAB mounted once (stacked above Shop FAB)"
+    },
+    {
+      "id": "A-fab-no-overlap",
+      "status": "UNVERIFIED",
+      "note": "overlap=null shop={\"x\":330,\"y\":710,\"width\":44,\"height\":44} callcenter=null",
+      "evidence": null
+    },
+    {
+      "id": "A-drawer-mode",
+      "status": "PASS",
+      "note": "drawer mounted in peer-catalog mode"
+    },
+    {
+      "id": "A-drawer-header",
+      "status": "PASS",
+      "note": "drawer header = \"E2E CK5 A's shop\""
+    },
+    {
+      "id": "A-real-products",
+      "status": "PASS",
+      "note": "real products rendered: \"E2E PLQ Widget X mwit8ina\", \"E2E PLQ Widget Y mwit8ina\" · no mock leak"
+    },
+    {
+      "id": "A-drawer-search",
+      "status": "PASS",
+      "note": "search \"Widget X\" filters correctly"
+    },
+    {
+      "id": "A-share-product",
+      "status": "PASS",
+      "note": "product message \"E2E PLQ Widget X mwit8ina\" visible in chat after server-side share"
+    },
+    {
+      "id": "A-share-persist",
+      "status": "PASS",
+      "note": "product message still present after reload"
+    },
+    {
+      "id": "B-no-fab-when-non-seller-peer",
+      "status": "PASS",
+      "note": "no Shop FAB mounted when peer has no nex_business"
+    },
+    {
+      "id": "B-callcenter-still-present",
+      "status": "PASS",
+      "note": "Call Centre FAB still mounted (1) · unrelated to shop drawer"
+    },
+    {
+      "id": "B-ordinary-chat",
+      "status": "UNVERIFIED",
+      "note": "send flow threw: TimeoutError: locator.fill: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-nex-composer-textarea",
+      "evidence": null
+    }
+  ],
+  "mockLeakDetected": false,
+  "startedAt": "2026-11-16T08:44:38.339Z",
+  "finishedAt": "2026-11-16T08:46:03.507Z"
+}

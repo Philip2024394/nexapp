@@ -1981,37 +1981,35 @@ export default async function PeerChatPage({
           (notificationsSlot prop) · owner fix 2026-11-05 · prevents the
           standalone absolute-positioned trigger from sitting over the
           ping-badge avatar. Drawer panel still portals globally. */}
-      {/* Owner fix 2026-11-05 · prototype UX expects the shop 3-dot FAB
-          visible for every viewer (empty state renders cleanly when
-          the viewer has no products). Earlier gate `viewerHasBusiness`
-          hid the FAB for founder nex-99901 who has no nex_business row.
+      {/* Owner directive 2026-11-16 · Peer-catalog completion:
+          the ShopDrawer on peer chat is strictly a view of the PEER
+          shop owner's real live `nex_product` rows. When the peer has
+          no `nex_business` row (ordinary personal chat with a non-
+          seller) there is no catalogue to browse and no shop FAB is
+          mounted · ordinary chat is preserved without a product
+          requirement. Never falls back to MOCK_SHOP_PRODUCTS from
+          this customer-facing path.
 
-          Owner directive 2026-11-16 · when the peer owns a business,
-          the drawer flips to PEER-CATALOG mode and renders the peer
-          shop owner's real live `nex_product` rows (resolved server-
-          side above as `peerProducts`). Mock inventory is no longer
-          the default. The Shop FAB glyph swaps to the storefront icon
-          in this mode so it no longer visually collides with the
-          Call Centre FAB stacked above it. */}
-      <ShopDrawer
-        viewerHasShop={true}
-        peerDisplayName={peer.display_name}
-        shareAction={bind}
-        peerCatalog={!!peerBusiness}
-        products={
-          peerBusiness
-            ? peerProducts.map((p) => ({
-                id: p.id,
-                name: p.name,
-                priceLabel:
-                  typeof p.price_pence === "number" && p.currency
-                    ? formatProductPriceLabel(p.price_pence, p.currency)
-                    : "",
-                imageUrl: p.image_url ?? null,
-              }))
-            : undefined
-        }
-      />
+          The Shop FAB glyph swaps to the storefront icon in this mode
+          so it no longer visually collides with the Call Centre FAB
+          stacked above it. */}
+      {peerBusiness ? (
+        <ShopDrawer
+          viewerHasShop={true}
+          peerDisplayName={peer.display_name}
+          shareAction={bind}
+          peerCatalog={true}
+          products={peerProducts.map((p) => ({
+            id: p.id,
+            name: p.name,
+            priceLabel:
+              typeof p.price_pence === "number" && p.currency
+                ? formatProductPriceLabel(p.price_pence, p.currency)
+                : "",
+            imageUrl: p.image_url ?? null,
+          }))}
+        />
+      ) : null}
       <ScrollToBottomButton />
     </div>
   );

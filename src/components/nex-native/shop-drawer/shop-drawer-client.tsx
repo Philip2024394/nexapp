@@ -31,6 +31,22 @@
 // via the + attach panel's Call Centre tile and via the stacked
 // `FreeChatCallCenterDrawerClient` FAB above this one.
 //
+// ─── Known callers (keep in sync when adding another mount site) ───
+//   · `src/app/nex-native/chat/peer/[accountId]/page.tsx`
+//       Peer-catalog mode. Only mounts when the peer owns a
+//       `nex_business`. Never falls back to mocks.
+//
+//   · `src/app/nex-native/free-chat/page.tsx`
+//       Home-chat viewer-shop prototype. Uses MOCK_SHOP_PRODUCTS +
+//       `peerCatalog=false` deliberately · `shareAction` is
+//       `freeChatShopSharePendingAction` which stashes the chosen
+//       product id in a short-lived cookie and bounces to /contacts
+//       (there is no peer on the home chat). This mount is the
+//       sole remaining reason MOCK_SHOP_PRODUCTS and the
+//       `peerCatalog=false` branch exist. Retiring either requires
+//       migrating this caller to a real viewer-owned-catalogue path
+//       OR retiring the home-chat prototype itself.
+//
 // Visual language · Ireland palette (same tokens as NotificationsDrawer
 // + ControlDrawer):
 //   · Panel BG    · var(--nex-world-drawer-bg)    → Ireland #123D2B
