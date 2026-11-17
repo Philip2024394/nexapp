@@ -38,6 +38,16 @@ import {
   type NotificationItem,
   type NotificationSectionKey,
 } from "@/lib/nex-native/notifications/mock-notifications-data";
+// Owner-authorised 2026-11-16 · MOCK-ONLY review-demo checkpoint.
+// The order-placed rows are rendered as a self-contained section at
+// the top of the drawer and ONLY when the explicit demo flag is on
+// (query ?reviewDemo=1 or NEXT_PUBLIC_NEX_REVIEW_DEMO=1). Gated so
+// no real users see demo content.
+import {
+  useIsReviewDemoOn,
+  useMockOrders,
+} from "@/lib/nex-native/reviews/review-store-provider";
+import { OrderPlacedNotificationRow } from "@/components/nex-native/reviews/OrderPlacedNotificationRow";
 
 const CYAN = "var(--nex-world-secondary, #00AFFF)";
 const TEXT = "var(--nex-world-primary-ink, #F2F5F8)";
@@ -445,6 +455,7 @@ export function NotificationsDrawer({
             padding: "4px 0 14px 0",
           }}
         >
+          <ReviewDemoOrdersSection filter={filter} />
           {filteredItems.length === 0 ? (
             <EmptyState filter={filter} />
           ) : (
@@ -644,6 +655,56 @@ export function NotificationsDrawer({
 }
 
 // ─── Subcomponents ─────────────────────────────────────────────────
+
+// Owner-authorised 2026-11-16 · MOCK-ONLY review-demo section. Only
+// rendered when the explicit demo flag is on. Filter honoured · the
+// section hides under "chats" / "shop" / "follows" / "unread" and
+// shows under "all" and "orders".
+function ReviewDemoOrdersSection({
+  filter,
+}: {
+  readonly filter: FilterKey;
+}): React.JSX.Element | null {
+  const isDemo = useIsReviewDemoOn();
+  const orders = useMockOrders();
+  if (!isDemo) return null;
+  if (filter !== "all" && filter !== "orders") return null;
+  if (orders.length === 0) return null;
+  return (
+    <section
+      data-nex-notifications-section="review-demo-orders"
+      style={{ padding: "10px 0 6px 0" }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "6px 16px 8px 16px",
+        }}
+      >
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            color: MUTED,
+          }}
+        >
+          Orders · demo
+        </span>
+      </div>
+      <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+        {orders.map((o) => (
+          <li key={o.id}>
+            <OrderPlacedNotificationRow order={o} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 // FilterChip removed 2026-11-10 · replaced with native select dropdown
 // inline in the drawer header. Retained as a comment anchor so a future

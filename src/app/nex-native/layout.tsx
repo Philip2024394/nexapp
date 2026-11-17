@@ -85,6 +85,13 @@ import { PrefetchCoverThemes } from "./cover-themes-library/_prefetch-cover-them
 // scrollbar-hide rule, including pages that don't mount the client
 // shell (e.g. /nex-native/search).
 import "./nex-native.css";
+// Owner-authorised 2026-11-16 · MOCK-ONLY review-demo provider. In
+// production the demo flag is off (no env var, no ?reviewDemo=1) and
+// the provider resolves to a NOOP adapter · zero behaviour change.
+// Mounted here so both the product page and the notifications drawer
+// share the same adapter instance + versioned re-reads work across
+// surfaces (post in drawer → product page sees it immediately).
+import { ReviewStoreProvider } from "@/lib/nex-native/reviews/review-store-provider";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -276,7 +283,9 @@ export default async function NexNativeLayout({
               the PHONE to stay static and only the SCREEN CONTENT to
               slide. Moved the name onto this inner wrapper so the
               frame chrome holds still while just the children swap. */}
-          <div data-nex-page-slide-root>{children}</div>
+          <div data-nex-page-slide-root>
+            <ReviewStoreProvider>{children}</ReviewStoreProvider>
+          </div>
           {/* Owner directive 2026-10-16 · the IncomingCallHub +
               PushSubscribeHub are mounted INSIDE the frame (not as
               layout-root siblings) so their position-absolute children
