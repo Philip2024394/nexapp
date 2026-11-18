@@ -778,6 +778,41 @@ export function ControlDrawer({
             border-radius: 44px;
           }
         }
+        /* Owner directive 2026-11-17 · hide the drawer's native
+           vertical scrollbar on the right edge while keeping scroll
+           functionality intact for touch + wheel. */
+        [data-nex-control-drawer] {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        [data-nex-control-drawer]::-webkit-scrollbar {
+          width: 0;
+          height: 0;
+          display: none;
+        }
+        /* Owner directive 2026-11-17 · on real mobile screens the
+           side drawer must render as a full-height viewport panel.
+           On desktop (min-width 500px) the drawer stays position
+           absolute inside the 288x624 phone-frame · unchanged.
+           On mobile (max-width 499.98px), the surrounding
+           .nex-native-frame is min-height 100dvh rather than a
+           fixed scroll container · fix the drawer to the viewport
+           so it always covers the full screen even when the page
+           has been scrolled. */
+        @media (max-width: 499.98px) {
+          [data-nex-control-drawer] {
+            position: fixed !important;
+            top: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            height: 100dvh !important;
+            max-height: 100dvh !important;
+          }
+          [data-nex-control-drawer-backdrop] {
+            position: fixed !important;
+            inset: 0 !important;
+          }
+        }
       `}</style>
     </>
   );
