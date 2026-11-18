@@ -49,6 +49,16 @@ const STATIC_ENTRIES: readonly StaticEntry[] = [
   { path: "/nex-native/features/vault", changeFrequency: "monthly", priority: 0.7 },
   { path: "/nex-native/developers", changeFrequency: "monthly", priority: 0.6 },
   { path: "/nex-native/ireland-entry", changeFrequency: "monthly", priority: 0.6 },
+  // Independent Next editorial buying guides · authorised to go public
+  // 2026-11-17. Each guide is static editorial content (no DB reads · no
+  // auth · no PII) so it fits the public-shell crawl surface.
+  { path: "/nex-generated/buying-guides", changeFrequency: "weekly", priority: 0.8 },
+  { path: "/nex-generated/buying-guides/rolex", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/nex-generated/buying-guides/mobile-phones", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/nex-generated/buying-guides/handbags", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/nex-generated/buying-guides/laptops", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/nex-generated/buying-guides/running-shoes", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/nex-generated/buying-guides/leather-wallets", changeFrequency: "monthly", priority: 0.7 },
 ];
 
 const COUNTRIES: readonly NexCountry[] = ["ireland", "worldwide"];

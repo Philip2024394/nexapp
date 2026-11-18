@@ -40,7 +40,11 @@ export const PRIVATE_PATH_PREFIXES: readonly string[] = [
   "/nex-native/unsubscribe",
   "/nex-native/vault",
   // ── Alt route trees (private) ──
-  "/nex-generated",
+  // Narrow exclusion · 2026-11-17 (buying-guides go-live authorisation):
+  // the whole /nex-generated prefix used to be private, but the owner
+  // authorised /nex-generated/buying-guides/* to go public. Other
+  // /nex-generated/* trees stay private · list them explicitly here.
+  "/nex-generated/tiny-calculator",
   // ── API + auth + defensive root wildcards (no route today but reserved) ──
   "/api",
   "/trpc",
