@@ -26,6 +26,14 @@ import {
   isSecurityRateLimitError,
   recordIfAllowed,
 } from "../security-rate-limit";
+// Lane G · 2026-11-19 · route invite + decline messages through the
+// FREEZE-guarded sendPeerMessage path instead of a direct admin
+// insert. These helpers preserve the bubble renderer's attachment
+// shape AND apply sendPeerMessage's participant check.
+import {
+  sendCallInviteNotice,
+  sendCallStatusNotice,
+} from "../peer-message-service";
 
 const UUID_SHAPE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -305,36 +313,33 @@ export async function inviteToCall(
   }
 
   // 4 · Chat message · call_invite attachment.
+  //
+  // Lane G · 2026-11-19 · sealed FREEZE-guard fix. The prior direct
+  // `nexSupabaseAdmin.from("nex_peer_message").insert(...)` bypassed
+  // BOTH the NEX_CHAT_PLAINTEXT_FREEZE guard in sendPeerMessage AND
+  // the participant-of-conversation check that normally defends
+  // against a spoofed sender id. The call_invite body is bounded
+  // enum text (no user prose) so this routes safely through
+  // sendCallInviteNotice, which uses the module-private bypass
+  // symbol + preserves the on-disk attachment_meta shape consumed
+  // by the chat bubble renderer. Honest metadata · no chat content.
   const acceptHref = `/nex-native/call/preview?session=${sessionId}&accept=1`;
-  const body =
-    input.mediaType === "video"
-      ? "📞 Video call invite · tap Accept to join"
-      : "📞 Voice call invite · tap Accept to join";
-  // Owner directive 2026-11-08 (round 25) · cross-country flag +
-  // the two countries ride the attachment_meta so the receiver's
-  // chat bubble can render the cross-country disclosure WITHOUT
-  // re-querying the session. Honest metadata · no chat content.
-  const messageInsert = await nexSupabaseAdmin
-    .from("nex_peer_message")
-    .insert({
+  let insertedMessageId: string;
+  try {
+    const inserted = await sendCallInviteNotice({
       conversation_id: conversationId,
       sender_account_id: input.selfAccountId,
-      body,
-      attachment_url: acceptHref,
-      attachment_type: "call_invite",
-      attachment_meta: {
-        session_id: sessionId,
-        media_type: input.mediaType,
-        host_account_id: input.selfAccountId,
-        host_country: hostCountry,
-        invitee_country: inviteeCountry,
-        cross_country: crossCountry,
-      },
-    })
-    .select("id")
-    .maybeSingle();
-  if (messageInsert.error || !messageInsert.data) {
-    const msg = messageInsert.error?.message ?? "";
+      session_id: sessionId,
+      media_type: input.mediaType,
+      host_account_id: input.selfAccountId,
+      host_country: hostCountry,
+      invitee_country: inviteeCountry,
+      cross_country: crossCountry,
+      accept_href: acceptHref,
+    });
+    insertedMessageId = inserted.id;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
     // If the CHECK rejects 'call_invite' (pre-306), surface it.
     if (/check constraint|nex_peer_message_attachment_type_check/i.test(msg)) {
       return {
@@ -344,7 +349,12 @@ export async function inviteToCall(
         skipped: "attachment_type_not_available",
       };
     }
-    return { ok: false, sessionId, participantId, error: "message_insert_failed" };
+    return {
+      ok: false,
+      sessionId,
+      participantId,
+      error: "message_insert_failed",
+    };
   }
 
   // 5 · Fail-soft Web Push to the invitee's registered devices.
@@ -379,7 +389,7 @@ export async function inviteToCall(
     ok: true,
     sessionId,
     participantId,
-    messageId: (messageInsert.data as { id: string }).id,
+    messageId: insertedMessageId,
   };
 }
 
@@ -477,34 +487,39 @@ export async function notifyInviteDeclined(
     }
   }
 
-  // 5 · Resolve decliner display name for a legible status line.
-  const decl = await nexSupabaseAdmin
-    .from("nex_account")
-    .select("display_name")
-    .eq("id", input.declinerAccountId)
-    .maybeSingle();
-  const declinerName =
-    (decl.data as { display_name: string | null } | null)?.display_name ??
-    "Member";
-  const mediaWord = host.media_type === "audio" ? "voice" : "video";
-  const body = `✖ ${declinerName} declined the ${mediaWord} call invite`;
-
-  // 6 · Insert the status message · no attachment · ordinary
-  //     body text. Peer-chat renderer paints it as a regular
-  //     message bubble on the host's side.
-  const inserted = await nexSupabaseAdmin
-    .from("nex_peer_message")
-    .insert({
+  // 5 · Insert the status message.
+  //
+  // Lane G · 2026-11-19 · sealed FREEZE-guard fix. The prior path
+  // was a direct `nexSupabaseAdmin.from("nex_peer_message").insert
+  // (...)` that bypassed BOTH the NEX_CHAT_PLAINTEXT_FREEZE guard
+  // AND the sendPeerMessage participant check. The prior body also
+  // embedded the decliner's user-typed display_name (free-form
+  // text), which crossed the prompt-7 §4 doctrine line.
+  //
+  // The replacement routes through sendCallStatusNotice · body is
+  // rendered from a bounded enum (status × media_type) · no
+  // display name appears. The host side attributes the decline to
+  // a specific participant client-side by reading nex_group_call_
+  // participant.left_at · the body only carries the status itself.
+  //
+  // Peer-chat renderer paints it as a regular message bubble on
+  // the host's side (no attachment).
+  let insertedMessageId: string;
+  try {
+    const inserted = await sendCallStatusNotice({
       conversation_id: conversationId,
       sender_account_id: input.declinerAccountId,
-      body,
-    })
-    .select("id")
-    .maybeSingle();
-  if (inserted.error || !inserted.data) {
-    return { ok: false, error: inserted.error?.message ?? "insert_failed" };
+      status: "declined",
+      media_type: host.media_type,
+    });
+    insertedMessageId = inserted.id;
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "insert_failed",
+    };
   }
-  return { ok: true, messageId: (inserted.data as { id: string }).id };
+  return { ok: true, messageId: insertedMessageId };
 }
 
 // ─── Incoming-call inbox reader (round 27) ────────────────────────

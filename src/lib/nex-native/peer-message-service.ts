@@ -265,6 +265,17 @@ export interface NexPeerCartOrderDeliveryAddress {
   postal_code: string;
   country: string;
   notes: string;
+  /** G3-Server · 2026-11-18 · OPTIONAL buyer-device destination
+   *  coordinates. When present, the server recomputes haversine
+   *  distance against the seller's configured origin and rejects a
+   *  tampered client-claimed distance. These are STRAIGHT-LINE
+   *  coordinates captured on the buyer's device (not independently
+   *  verified by a trusted geocoder) · the rate card's 1.25× road
+   *  correction is applied downstream in `estimateBikeFare`. The
+   *  JSONB column is schemaless, so these additions are backward
+   *  compatible with existing carts that omit them. */
+  lat?: number | null;
+  lng?: number | null;
 }
 
 export interface NexPeerCartOrderSnapshot {
@@ -383,6 +394,121 @@ export interface NexPeerMenuItemSnapshot {
  *  service refuses to delete. */
 export const NEX_PEER_MESSAGE_DELETE_WINDOW_MS = 60 * 60 * 1000;
 
+// ── PROMPT-7 2026-11-18 · chat plaintext freeze + code-owned generic notices ──
+//
+// Owner-sealed 2026-11-18 (prompt-7 §4). NEX_CHAT_PLAINTEXT_FREEZE=1
+// turns off the plaintext sendPeerMessage path for every caller except
+// code-owned generic notices routed through sendGenericNotice. The
+// generic-notice body is rendered from a fixed in-code template set
+// with validated enum arguments · no free-form caller text can leak
+// into the plaintext row. Sensitive content (user prose, cart
+// snapshots, product inquiries, share-cards, order updates) must take
+// the encrypted path (sendEncryptedPeerMessages) when the freeze is
+// active.
+//
+// Rollout discipline:
+//   · The flag is read lazily per-send (test-friendly · env flip
+//     between tests is observed immediately).
+//   · Default OFF · no behaviour change until a deploy flips the env.
+//   · This file only installs the guard; rollout is a separate owner
+//     action not authorised today.
+//   · sendPeerMessage keeps its signature so existing callers work
+//     unchanged while the flag is OFF. When the flag is ON, those
+//     callers will see a PlaintextFrozenError thrown.
+//
+// Non-forgery · the bypass that sendGenericNotice uses is a
+// module-private Symbol token. The value is not exported and cannot
+// be reconstructed by callers (Symbol identity is per-instance),
+// which prevents a caller passing a lookalike bypass field.
+
+/** Code-owned template set. These are the ONLY plaintext bodies
+ *  permitted on the sendPeerMessage path when NEX_CHAT_PLAINTEXT_FREEZE=1.
+ *  Each variant carries only validated enum arguments · no free-form
+ *  text and no product-specific or commerce-specific payload. If you
+ *  find yourself wanting to add a kind whose render would include a
+ *  product name / price / order id / user prose, use
+ *  sendEncryptedPeerMessages instead. */
+export type GenericNoticeTemplate =
+  | { readonly kind: "welcome" }
+  | { readonly kind: "call_invite"; readonly call_type: "audio" | "video" }
+  | {
+      readonly kind: "call_response";
+      readonly outcome: "accepted" | "declined" | "missed";
+    }
+  | {
+      readonly kind: "call_ended";
+      readonly reason: "hung_up" | "network" | "unanswered";
+    };
+
+// Per-kind renderer map · adding a new union variant above forces a
+// corresponding entry here at compile time.
+const GENERIC_NOTICE_BODY_RENDERERS: {
+  readonly [K in GenericNoticeTemplate["kind"]]: (
+    t: Extract<GenericNoticeTemplate, { kind: K }>,
+  ) => string;
+} = {
+  welcome: () => "Welcome to NEX",
+  call_invite: (t) =>
+    t.call_type === "video" ? "📞 Video call started" : "📞 Audio call started",
+  call_response: (t) => {
+    switch (t.outcome) {
+      case "accepted":
+        return "Call answered";
+      case "declined":
+        return "Call declined";
+      case "missed":
+        return "Missed call";
+    }
+  },
+  call_ended: (t) => {
+    switch (t.reason) {
+      case "hung_up":
+        return "Call ended";
+      case "network":
+        return "Call ended (network)";
+      case "unanswered":
+        return "Unanswered call";
+    }
+  },
+};
+
+/** Render the plaintext body for a generic notice. Exported for test
+ *  pinning only · production callers should use sendGenericNotice
+ *  below so the row is actually inserted. Throws on unknown kinds
+ *  (defence in depth against a cast that bypasses the type check). */
+export function renderGenericNoticeBody(
+  template: GenericNoticeTemplate,
+): string {
+  const fn = GENERIC_NOTICE_BODY_RENDERERS[template.kind] as
+    | ((t: GenericNoticeTemplate) => string)
+    | undefined;
+  if (typeof fn !== "function") {
+    throw new Error(
+      `peer-message-service.renderGenericNoticeBody: unknown template kind ${JSON.stringify(
+        template,
+      )}`,
+    );
+  }
+  return fn(template);
+}
+
+// Module-private · never exported · never named in a public type.
+const INTERNAL_GENERIC_NOTICE_BYPASS: unique symbol = Symbol(
+  "nex-chat-generic-notice-bypass",
+);
+
+export class PlaintextFrozenError extends Error {
+  readonly code = "plaintext_frozen" as const;
+  constructor(message: string) {
+    super(message);
+    this.name = "PlaintextFrozenError";
+  }
+}
+
+function isPlaintextFreezeOn(): boolean {
+  return process.env.NEX_CHAT_PLAINTEXT_FREEZE === "1";
+}
+
 export interface SendPeerMessageInput {
   conversation_id: NexUuid;
   sender_account_id: NexUuid;
@@ -403,15 +529,33 @@ export interface SendPeerMessageInput {
    *  interpret as "already delivered". Callers without an idempotency
    *  requirement should leave this undefined. */
   send_intent_id?: NexUuid | null;
+  /** @internal · private freeze-bypass used ONLY by sendGenericNotice
+   *  inside this module. External callers cannot set this to a value
+   *  that passes the runtime check (the Symbol identity is private).
+   *  Do not touch. */
+  __internal_bypass?: symbol;
 }
 
 /** Persist a peer chat message. Sender must be a participant of the
  *  conversation · throws otherwise. Bumps last_message_at on the
  *  conversation as a side-effect (so listing conversations sorted by
- *  recency works without an aggregate query). */
+ *  recency works without an aggregate query).
+ *
+ *  Prompt-7 2026-11-18 · when NEX_CHAT_PLAINTEXT_FREEZE=1 and the
+ *  caller did NOT route through sendGenericNotice (which supplies the
+ *  module-private bypass symbol), throws PlaintextFrozenError before
+ *  touching the DB. Rollout of the flag is a separate owner action. */
 export async function sendPeerMessage(
   input: SendPeerMessageInput,
 ): Promise<NexPeerMessageRow> {
+  if (
+    isPlaintextFreezeOn() &&
+    input.__internal_bypass !== INTERNAL_GENERIC_NOTICE_BYPASS
+  ) {
+    throw new PlaintextFrozenError(
+      "peer-message-service.sendPeerMessage: NEX_CHAT_PLAINTEXT_FREEZE=1 · plaintext path frozen · use sendGenericNotice for code-owned notices or sendEncryptedPeerMessages for private content",
+    );
+  }
   const body = input.body.trim();
   const hasAttachment = !!input.attachment_url && !!input.attachment_type;
   if (body.length === 0 && !hasAttachment) {
@@ -565,6 +709,204 @@ export async function sendPeerMessage(
     });
   }
   return row;
+}
+
+/** Prompt-7 2026-11-18 · the ONE legal plaintext entry point when
+ *  NEX_CHAT_PLAINTEXT_FREEZE is active. Renders the body from an
+ *  in-code template with validated enum arguments and routes the
+ *  insert through sendPeerMessage with the module-private bypass
+ *  symbol. Callers CANNOT supply a body · the template is the entire
+ *  input surface, which removes the "arbitrary caller-provided
+ *  system label" bypass risk owner called out in prompt-6 §4.
+ *
+ *  If you think a new kind of system message is "generic" enough to
+ *  belong here, ask: does its rendered body include a product name,
+ *  price, order id, buyer-typed text, or any free-form string? If
+ *  YES · it is not generic · use sendEncryptedPeerMessages instead. */
+export async function sendGenericNotice(input: {
+  readonly conversation_id: NexUuid;
+  readonly sender_account_id: NexUuid;
+  readonly template: GenericNoticeTemplate;
+  /** Optional idempotency key · a duplicate welcome insert is benign
+   *  but callers that want strict-once semantics can supply one. */
+  readonly send_intent_id?: NexUuid | null;
+}): Promise<NexPeerMessageRow> {
+  const body = renderGenericNoticeBody(input.template);
+  return sendPeerMessage({
+    conversation_id: input.conversation_id,
+    sender_account_id: input.sender_account_id,
+    body,
+    send_intent_id: input.send_intent_id ?? null,
+    __internal_bypass: INTERNAL_GENERIC_NOTICE_BYPASS,
+  });
+}
+
+// ── Prompt-7 Lane G · 2026-11-19 · call_invite + call-status helpers ──
+//
+// The Call Center invite-dispatch service used to insert its call_invite
+// + decline-status rows via a direct `nexSupabaseAdmin.from("nex_peer_
+// message").insert(...)` call. That path bypassed BOTH:
+//
+//   (i)  the NEX_CHAT_PLAINTEXT_FREEZE guard in sendPeerMessage, and
+//   (ii) the sendPeerMessage participant-of-conversation check.
+//
+// These helpers route the writes through sendPeerMessage with the
+// module-private bypass symbol so (ii) always applies and (i) is
+// satisfied honestly · bodies are rendered from enums with no
+// free-form text, attachment metadata is strictly typed, and the on-
+// disk JSONB shape of `attachment_meta` is preserved for the existing
+// bubble renderers in /nex-native/chat.
+
+const _LANE_G_UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const _LANE_G_COUNTRY_SET = new Set([
+  "ireland",
+  "indonesia",
+  "worldwide",
+  "global",
+]);
+const _LANE_G_ACCEPT_HREF_PATTERN =
+  /^\/nex-native\/call\/preview\?session=[0-9a-f-]{36}&accept=1$/i;
+
+export interface SendCallInviteNoticeInput {
+  readonly conversation_id: NexUuid;
+  readonly sender_account_id: NexUuid;
+  readonly session_id: NexUuid;
+  readonly media_type: "audio" | "video";
+  readonly host_account_id: NexUuid;
+  readonly host_country: "ireland" | "indonesia" | "worldwide" | "global";
+  readonly invitee_country: "ireland" | "indonesia" | "worldwide" | "global";
+  readonly cross_country: boolean;
+  readonly accept_href: string;
+}
+
+/** Lane G · 2026-11-19 · routes a call_invite peer-message through
+ *  sendPeerMessage under the module-private bypass symbol. Body is
+ *  rendered from the media_type enum · attachment envelope is built
+ *  from strictly validated UUIDs + CallCountry enums + boolean. The
+ *  on-disk JSONB key layout matches the pre-existing bubble renderer
+ *  (fields at attachment_meta top level, not nested). */
+export async function sendCallInviteNotice(
+  input: SendCallInviteNoticeInput,
+): Promise<NexPeerMessageRow> {
+  if (!_LANE_G_UUID_PATTERN.test(input.conversation_id)) {
+    throw new Error("sendCallInviteNotice: conversation_id must be a UUID");
+  }
+  if (!_LANE_G_UUID_PATTERN.test(input.sender_account_id)) {
+    throw new Error("sendCallInviteNotice: sender_account_id must be a UUID");
+  }
+  if (!_LANE_G_UUID_PATTERN.test(input.session_id)) {
+    throw new Error("sendCallInviteNotice: session_id must be a UUID");
+  }
+  if (!_LANE_G_UUID_PATTERN.test(input.host_account_id)) {
+    throw new Error("sendCallInviteNotice: host_account_id must be a UUID");
+  }
+  if (input.media_type !== "audio" && input.media_type !== "video") {
+    throw new Error("sendCallInviteNotice: media_type must be audio|video");
+  }
+  if (!_LANE_G_COUNTRY_SET.has(input.host_country)) {
+    throw new Error(
+      "sendCallInviteNotice: host_country is not a sealed CallCountry",
+    );
+  }
+  if (!_LANE_G_COUNTRY_SET.has(input.invitee_country)) {
+    throw new Error(
+      "sendCallInviteNotice: invitee_country is not a sealed CallCountry",
+    );
+  }
+  if (typeof input.cross_country !== "boolean") {
+    throw new Error("sendCallInviteNotice: cross_country must be a boolean");
+  }
+  if (!_LANE_G_ACCEPT_HREF_PATTERN.test(input.accept_href)) {
+    throw new Error(
+      "sendCallInviteNotice: accept_href shape is unexpected · must be /nex-native/call/preview?session=<uuid>&accept=1",
+    );
+  }
+  // Body is rendered from the enum · no free-form text ever appears.
+  const body =
+    input.media_type === "video"
+      ? "📞 Video call invite · tap Accept to join"
+      : "📞 Voice call invite · tap Accept to join";
+  // Attachment meta carries only validated UUIDs, enums, and the
+  // boolean cross-country flag. No PII · no user-typed strings.
+  // Cast: the typed NexPeerAttachmentMeta interface does not list
+  // these call-invite keys at compile time, but the JSONB column is
+  // schemaless and the bubble renderer reads them at the top level.
+  // Preserving the on-disk shape is the whole point of this helper.
+  const attachmentMeta = {
+    session_id: input.session_id,
+    media_type: input.media_type,
+    host_account_id: input.host_account_id,
+    host_country: input.host_country,
+    invitee_country: input.invitee_country,
+    cross_country: input.cross_country,
+  } as unknown as NexPeerAttachmentMeta;
+  return sendPeerMessage({
+    conversation_id: input.conversation_id,
+    sender_account_id: input.sender_account_id,
+    body,
+    attachment_url: input.accept_href,
+    attachment_type: "call_invite",
+    attachment_meta: attachmentMeta,
+    __internal_bypass: INTERNAL_GENERIC_NOTICE_BYPASS,
+  });
+}
+
+export type CallStatus = "declined" | "accepted" | "missed" | "ended";
+
+/** Lane G · 2026-11-19 · body-only status notice for a call session.
+ *  Body rendered from a bounded enum (status × optional media_type) ·
+ *  NO user-typed display name is embedded (the prior decline body
+ *  "✖ {name} declined the ..." carried a free-form display name,
+ *  which crossed the prompt-7 §4 doctrine line). The host side
+ *  attributes the status to a specific participant client-side by
+ *  reading nex_group_call_participant.left_at / joined_at · the body
+ *  only carries the status itself. */
+export async function sendCallStatusNotice(input: {
+  readonly conversation_id: NexUuid;
+  readonly sender_account_id: NexUuid;
+  readonly status: CallStatus;
+  readonly media_type?: "audio" | "video" | null;
+}): Promise<NexPeerMessageRow> {
+  if (!_LANE_G_UUID_PATTERN.test(input.conversation_id)) {
+    throw new Error("sendCallStatusNotice: conversation_id must be a UUID");
+  }
+  if (!_LANE_G_UUID_PATTERN.test(input.sender_account_id)) {
+    throw new Error("sendCallStatusNotice: sender_account_id must be a UUID");
+  }
+  const media = input.media_type ?? null;
+  if (media !== null && media !== "audio" && media !== "video") {
+    throw new Error(
+      "sendCallStatusNotice: media_type must be audio|video|null",
+    );
+  }
+  const mediaWord =
+    media === "audio" ? "voice" : media === "video" ? "video" : "";
+  let body: string;
+  switch (input.status) {
+    case "declined":
+      body = mediaWord ? `✖ ${mediaWord} call declined` : "✖ Call declined";
+      break;
+    case "accepted":
+      body = mediaWord ? `✅ ${mediaWord} call accepted` : "✅ Call accepted";
+      break;
+    case "missed":
+      body = mediaWord ? `⏱ Missed ${mediaWord} call` : "⏱ Missed call";
+      break;
+    case "ended":
+      body = mediaWord ? `• ${mediaWord} call ended` : "• Call ended";
+      break;
+    default:
+      throw new Error(
+        `sendCallStatusNotice: unknown status ${JSON.stringify(input.status)}`,
+      );
+  }
+  return sendPeerMessage({
+    conversation_id: input.conversation_id,
+    sender_account_id: input.sender_account_id,
+    body,
+    __internal_bypass: INTERNAL_GENERIC_NOTICE_BYPASS,
+  });
 }
 
 /** List messages in a conversation, oldest first. Optional limit. */
